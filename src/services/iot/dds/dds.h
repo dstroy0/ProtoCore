@@ -105,9 +105,6 @@ typedef struct
     void *arg;                                  ///< handed back to it untouched
 } RtpsSinkArgs;
 
-/** @brief The codec's own state and the calls that reach it, described only in dds.c. */
-struct RtpsInternal;
-
 /**
  * @brief The DDSI-RTPS Message framing codec.
  *
@@ -126,7 +123,6 @@ struct RtpsInternal;
  * @var RtpsNs::header      build the 20-octet Header into @c out (sec 9.4.4)
  * @var RtpsNs::submessage  build one SubmessageHeader and its contents into @c out (sec 9.4.5.1)
  * @var RtpsNs::parse       validate the Header and walk the Submessages, surfacing each to @c sink
- * @var RtpsNs::internal    the codec's state and the calls that reach it
  */
 typedef struct
 {
@@ -139,11 +135,9 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*header)(struct RtpsInternal *ctx);
-    void (*submessage)(struct RtpsInternal *ctx);
-    void (*parse)(struct RtpsInternal *ctx);
-
-    struct RtpsInternal *internal;
+    void (*const header)(uint8_t *restrict work);
+    void (*const submessage)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
 } RtpsNs;
 
 /** @brief The protocol version a built Header stamps, major then minor (sec 8.3.3.1). */

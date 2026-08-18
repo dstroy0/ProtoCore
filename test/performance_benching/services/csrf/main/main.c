@@ -25,6 +25,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
+
 // Same fixed secret used by test/test_csrf/test_csrf.cpp - deterministic, known-good.
 static const uint8_t SECRET[32] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa,
                                    0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x10, 0x32, 0x54, 0x76, 0x98, 0xba,
@@ -37,7 +39,7 @@ static void hex_encode_nonce(const uint8_t *raw, char *out)
     Hex.io.n = CSRF_NONCE_BYTES;
     Hex.io.out = out;
     Hex.args.upper = PROTO_FALSE;
-    Hex.encode(Hex.internal);
+    Hex.encode(hex_work);
 }
 
 /** @brief Read CSRF_NONCE_BYTES * 2 hex characters at @p text back into @p out; bytes written. */
@@ -47,7 +49,7 @@ static int32_t hex_decode_nonce(const char *text, uint8_t *out)
     Hex.io.n = CSRF_NONCE_BYTES * 2;
     Hex.io.bytes = out;
     Hex.io.cap = CSRF_NONCE_BYTES;
-    Hex.decode(Hex.internal);
+    Hex.decode(hex_work);
     return Hex.i32;
 }
 

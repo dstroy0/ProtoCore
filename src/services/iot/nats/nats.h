@@ -136,9 +136,6 @@ typedef struct
     size_t len;      ///< octets buffered
 } NatsInboundArgs;
 
-/** @brief The codec's calls, described only in nats.c. */
-struct NatsInternal;
-
 /**
  * @brief The NATS client protocol codec.
  *
@@ -176,7 +173,6 @@ struct NatsInternal;
  * @var NatsNs::ping          write `PING`
  * @var NatsNs::pong          write `PONG`
  * @var NatsNs::parse         decode the operation at the head of @c in into @c msg
- * @var NatsNs::internal      the calls that read this handle
  */
 typedef struct
 {
@@ -192,16 +188,14 @@ typedef struct
     size_t consumed;
     NatsMsg msg;
 
-    void (*connect)(struct NatsInternal *ctx);
-    void (*pub)(struct NatsInternal *ctx);
-    void (*hpub)(struct NatsInternal *ctx);
-    void (*sub)(struct NatsInternal *ctx);
-    void (*unsub)(struct NatsInternal *ctx);
-    void (*ping)(struct NatsInternal *ctx);
-    void (*pong)(struct NatsInternal *ctx);
-    void (*parse)(struct NatsInternal *ctx);
-
-    struct NatsInternal *internal;
+    void (*const connect)(uint8_t *restrict work);
+    void (*const pub)(uint8_t *restrict work);
+    void (*const hpub)(uint8_t *restrict work);
+    void (*const sub)(uint8_t *restrict work);
+    void (*const unsub)(uint8_t *restrict work);
+    void (*const ping)(uint8_t *restrict work);
+    void (*const pong)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
 } NatsNs;
 
 /** @brief The one symbol this module exports. */

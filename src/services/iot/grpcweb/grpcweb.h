@@ -100,9 +100,6 @@ typedef struct
     size_t len;          ///< how many octets are buffered there
 } GrpcWebInArgs;
 
-/** @brief The codec's calls and the handle they read, described only in grpcweb.c. */
-struct GrpcWebInternal;
-
 /**
  * @brief The gRPC-Web framing codec.
  *
@@ -127,7 +124,6 @@ struct GrpcWebInternal;
  * @var GrpcWebNs::parse            decode the frame at the head of @c in
  * @var GrpcWebNs::trailers_status  read Status ("grpc-status") out of the trailer-section in @c in
  * @var GrpcWebNs::trailers_message read Status-Message ("grpc-message") out of that same section
- * @var GrpcWebNs::internal         the codec's calls and the handle they read
  */
 typedef struct
 {
@@ -143,14 +139,12 @@ typedef struct
     const char *text;
     size_t text_len;
 
-    void (*frame)(struct GrpcWebInternal *ctx);
-    void (*frame_message)(struct GrpcWebInternal *ctx);
-    void (*frame_trailers)(struct GrpcWebInternal *ctx);
-    void (*parse)(struct GrpcWebInternal *ctx);
-    void (*trailers_status)(struct GrpcWebInternal *ctx);
-    void (*trailers_message)(struct GrpcWebInternal *ctx);
-
-    struct GrpcWebInternal *internal;
+    void (*const frame)(uint8_t *restrict work);
+    void (*const frame_message)(uint8_t *restrict work);
+    void (*const frame_trailers)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const trailers_status)(uint8_t *restrict work);
+    void (*const trailers_message)(uint8_t *restrict work);
 } GrpcWebNs;
 
 /** @brief The one symbol this module exports. */

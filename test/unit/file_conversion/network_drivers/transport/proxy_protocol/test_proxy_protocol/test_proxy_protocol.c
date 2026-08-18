@@ -33,6 +33,8 @@
 #include <string.h>
 #include <unity.h>
 
+static uint8_t proxy_protocol_work[16]; // the borrow an entry takes; ProxyProtocol never reads it
+
 void setUp(void)
 {
 }
@@ -52,7 +54,12 @@ static const uint8_t SIG[12] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 
 static proto_bool parse_line(const char *line, ProxyInfo *info, size_t *consumed)
 {
     *consumed = 0;
-    return proxy_parse((const uint8_t *)line, strlen(line), info, consumed);
+    ProxyProtocol.parse_args.buf = (const uint8_t *)line;
+    ProxyProtocol.parse_args.len = strlen(line);
+    ProxyProtocol.parse_args.out = info;
+    ProxyProtocol.parse_args.consumed = consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    return ProxyProtocol.ok;
 }
 
 static proto_bool line_is_refused(const char *line)
@@ -79,13 +86,25 @@ static size_t v2_head(uint8_t *buf, uint8_t ver_cmd, uint8_t fam, uint16_t addr_
 void test_v1_published_example_line(void)
 {
     char buf[64];
-    size_t n = proxy_v1_build(buf, sizeof(buf), SRC, DST, 56324, 443);
+    ProxyProtocol.v1_build_args.buf = buf;
+    ProxyProtocol.v1_build_args.cap = sizeof(buf);
+    ProxyProtocol.v1_build_args.src_addr = SRC;
+    ProxyProtocol.v1_build_args.dst_addr = DST;
+    ProxyProtocol.v1_build_args.src_port = 56324;
+    ProxyProtocol.v1_build_args.dst_port = 443;
+    ProxyProtocol.v1_build(proxy_protocol_work);
+    size_t n = ProxyProtocol.n;
     TEST_ASSERT_EQUAL_STRING("PROXY TCP4 192.168.0.1 192.168.0.11 56324 443\r\n", buf);
     TEST_ASSERT_EQUAL_size_t(strlen(buf), n);
 
     ProxyInfo info;
     size_t consumed = 0;
-    TEST_ASSERT_TRUE(proxy_parse((const uint8_t *)buf, n, &info, &consumed));
+    ProxyProtocol.parse_args.buf = (const uint8_t *)buf;
+    ProxyProtocol.parse_args.len = n;
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_TRUE(ProxyProtocol.ok);
     TEST_ASSERT_EQUAL_UINT8(1, info.version);
     TEST_ASSERT_TRUE(info.has_addr);
     TEST_ASSERT_EQUAL_HEX32(SRC, info.src_addr);
@@ -101,7 +120,14 @@ void test_v1_published_example_line(void)
 void test_v1_widest_tcp4_line_is_56_octets(void)
 {
     char buf[64];
-    size_t n = proxy_v1_build(buf, sizeof(buf), 0xFFFFFFFFu, 0xFFFFFFFFu, 65535, 65535);
+    ProxyProtocol.v1_build_args.buf = buf;
+    ProxyProtocol.v1_build_args.cap = sizeof(buf);
+    ProxyProtocol.v1_build_args.src_addr = 0xFFFFFFFFu;
+    ProxyProtocol.v1_build_args.dst_addr = 0xFFFFFFFFu;
+    ProxyProtocol.v1_build_args.src_port = 65535;
+    ProxyProtocol.v1_build_args.dst_port = 65535;
+    ProxyProtocol.v1_build(proxy_protocol_work);
+    size_t n = ProxyProtocol.n;
     TEST_ASSERT_EQUAL_STRING("PROXY TCP4 255.255.255.255 255.255.255.255 65535 65535\r\n", buf);
     TEST_ASSERT_EQUAL_size_t(56u, n);
 }
@@ -160,13 +186,23 @@ void test_v1_line_is_bounded_at_107_octets(void)
     memset(line + 14, 'f', 91);
     line[105] = '\r';
     line[106] = '\n';
-    TEST_ASSERT_TRUE(proxy_parse((const uint8_t *)line, 107u, &info, &consumed));
+    ProxyProtocol.parse_args.buf = (const uint8_t *)line;
+    ProxyProtocol.parse_args.len = 107u;
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_TRUE(ProxyProtocol.ok);
     TEST_ASSERT_EQUAL_size_t(107u, consumed);
 
     memset(line + 14, 'f', 92);
     line[106] = '\r';
     line[107] = '\n';
-    TEST_ASSERT_FALSE(proxy_parse((const uint8_t *)line, 108u, &info, &consumed));
+    ProxyProtocol.parse_args.buf = (const uint8_t *)line;
+    ProxyProtocol.parse_args.len = 108u;
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_FALSE(ProxyProtocol.ok);
 }
 
 // sec 2.1 fixes the field ranges: an IPv4 address is "a series of exactly 4 integers in the range
@@ -257,7 +293,14 @@ void test_v1_the_published_range_endpoints_decode(void)
 void test_v2_published_layout(void)
 {
     uint8_t buf[32];
-    size_t n = proxy_v2_build(buf, sizeof(buf), SRC, DST, 56324, 443);
+    ProxyProtocol.v2_build_args.buf = buf;
+    ProxyProtocol.v2_build_args.cap = sizeof(buf);
+    ProxyProtocol.v2_build_args.src_addr = SRC;
+    ProxyProtocol.v2_build_args.dst_addr = DST;
+    ProxyProtocol.v2_build_args.src_port = 56324;
+    ProxyProtocol.v2_build_args.dst_port = 443;
+    ProxyProtocol.v2_build(proxy_protocol_work);
+    size_t n = ProxyProtocol.n;
 
     static const uint8_t want[28] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49,
                                      0x54, 0x0A, 0x21, 0x11, 0x00, 0x0C, 0xC0, 0xA8, 0x00, 0x01,
@@ -271,10 +314,22 @@ void test_v2_published_layout(void)
 void test_v2_round_trip(void)
 {
     uint8_t buf[32];
-    size_t n = proxy_v2_build(buf, sizeof(buf), SRC, DST, 56324, 443);
+    ProxyProtocol.v2_build_args.buf = buf;
+    ProxyProtocol.v2_build_args.cap = sizeof(buf);
+    ProxyProtocol.v2_build_args.src_addr = SRC;
+    ProxyProtocol.v2_build_args.dst_addr = DST;
+    ProxyProtocol.v2_build_args.src_port = 56324;
+    ProxyProtocol.v2_build_args.dst_port = 443;
+    ProxyProtocol.v2_build(proxy_protocol_work);
+    size_t n = ProxyProtocol.n;
     ProxyInfo info;
     size_t consumed = 0;
-    TEST_ASSERT_TRUE(proxy_parse(buf, n, &info, &consumed));
+    ProxyProtocol.parse_args.buf = buf;
+    ProxyProtocol.parse_args.len = n;
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_TRUE(ProxyProtocol.ok);
     TEST_ASSERT_EQUAL_UINT8(2, info.version);
     TEST_ASSERT_TRUE(info.has_addr);
     TEST_ASSERT_EQUAL_HEX32(SRC, info.src_addr);
@@ -297,7 +352,12 @@ void test_v2_local_command_yields_no_address(void)
 
     size_t n = v2_head(hdr, 0x20, 0x11, 0);
     TEST_ASSERT_EQUAL_size_t(16u, n);
-    TEST_ASSERT_TRUE(proxy_parse(hdr, n, &info, &consumed));
+    ProxyProtocol.parse_args.buf = hdr;
+    ProxyProtocol.parse_args.len = n;
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_TRUE(ProxyProtocol.ok);
     TEST_ASSERT_EQUAL_UINT8(2, info.version);
     TEST_ASSERT_FALSE(info.has_addr);
     TEST_ASSERT_EQUAL_size_t(16u, consumed);
@@ -305,7 +365,12 @@ void test_v2_local_command_yields_no_address(void)
     n = v2_head(hdr, 0x20, 0x11, 12);
     memset(hdr + 16, 0x5A, 12);
     TEST_ASSERT_EQUAL_size_t(28u, n);
-    TEST_ASSERT_TRUE(proxy_parse(hdr, n, &info, &consumed));
+    ProxyProtocol.parse_args.buf = hdr;
+    ProxyProtocol.parse_args.len = n;
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_TRUE(ProxyProtocol.ok);
     TEST_ASSERT_FALSE(info.has_addr);
     TEST_ASSERT_EQUAL_size_t(28u, consumed);
 }
@@ -323,7 +388,12 @@ void test_v2_a_valid_combination_it_does_not_implement_is_skipped(void)
 
     ProxyInfo info;
     size_t consumed = 0;
-    TEST_ASSERT_TRUE(proxy_parse(hdr, n, &info, &consumed));
+    ProxyProtocol.parse_args.buf = hdr;
+    ProxyProtocol.parse_args.len = n;
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_TRUE(ProxyProtocol.ok);
     TEST_ASSERT_EQUAL_UINT8(2, info.version);
     TEST_ASSERT_FALSE(info.has_addr);
     TEST_ASSERT_EQUAL_size_t(52u, consumed);
@@ -342,11 +412,21 @@ void test_v2_only_version_2_is_accepted(void)
         size_t n = v2_head(hdr, (uint8_t)(v << 4), 0x00, 0);
         if (v == 2u)
         {
-            TEST_ASSERT_TRUE(proxy_parse(hdr, n, &info, &consumed));
+            ProxyProtocol.parse_args.buf = hdr;
+            ProxyProtocol.parse_args.len = n;
+            ProxyProtocol.parse_args.out = &info;
+            ProxyProtocol.parse_args.consumed = &consumed;
+            ProxyProtocol.parse(proxy_protocol_work);
+            TEST_ASSERT_TRUE(ProxyProtocol.ok);
         }
         else
         {
-            TEST_ASSERT_FALSE(proxy_parse(hdr, n, &info, &consumed));
+            ProxyProtocol.parse_args.buf = hdr;
+            ProxyProtocol.parse_args.len = n;
+            ProxyProtocol.parse_args.out = &info;
+            ProxyProtocol.parse_args.consumed = &consumed;
+            ProxyProtocol.parse(proxy_protocol_work);
+            TEST_ASSERT_FALSE(ProxyProtocol.ok);
         }
     }
 }
@@ -362,7 +442,12 @@ void test_v2_an_unassigned_command_is_dropped(void)
     for (unsigned c = 2u; c < 16u; c++)
     {
         size_t n = v2_head(hdr, (uint8_t)(0x20u | c), 0x00, 0);
-        TEST_ASSERT_FALSE(proxy_parse(hdr, n, &info, &consumed));
+        ProxyProtocol.parse_args.buf = hdr;
+        ProxyProtocol.parse_args.len = n;
+        ProxyProtocol.parse_args.out = &info;
+        ProxyProtocol.parse_args.consumed = &consumed;
+        ProxyProtocol.parse(proxy_protocol_work);
+        TEST_ASSERT_FALSE(ProxyProtocol.ok);
     }
 }
 
@@ -378,12 +463,22 @@ void test_v2_an_unassigned_address_family_is_rejected(void)
     for (unsigned f = 4u; f < 16u; f++)
     {
         size_t n = v2_head(hdr, 0x21, (uint8_t)((f << 4) | 0x1u), 0);
-        TEST_ASSERT_FALSE(proxy_parse(hdr, n, &info, &consumed));
+        ProxyProtocol.parse_args.buf = hdr;
+        ProxyProtocol.parse_args.len = n;
+        ProxyProtocol.parse_args.out = &info;
+        ProxyProtocol.parse_args.consumed = &consumed;
+        ProxyProtocol.parse(proxy_protocol_work);
+        TEST_ASSERT_FALSE(ProxyProtocol.ok);
     }
     for (unsigned p = 3u; p < 16u; p++)
     {
         size_t n = v2_head(hdr, 0x21, (uint8_t)(0x10u | p), 0);
-        TEST_ASSERT_FALSE(proxy_parse(hdr, n, &info, &consumed));
+        ProxyProtocol.parse_args.buf = hdr;
+        ProxyProtocol.parse_args.len = n;
+        ProxyProtocol.parse_args.out = &info;
+        ProxyProtocol.parse_args.consumed = &consumed;
+        ProxyProtocol.parse(proxy_protocol_work);
+        TEST_ASSERT_FALSE(ProxyProtocol.ok);
     }
 }
 
@@ -396,17 +491,32 @@ void test_partial_headers_are_refused(void)
     size_t consumed = 0;
 
     const char *v1 = "PROXY TCP4 192.168.0.1 192.168.0.11 56324 443";
-    TEST_ASSERT_FALSE(proxy_parse((const uint8_t *)v1, strlen(v1), &info, &consumed));
+    ProxyProtocol.parse_args.buf = (const uint8_t *)v1;
+    ProxyProtocol.parse_args.len = strlen(v1);
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_FALSE(ProxyProtocol.ok);
 
     uint8_t hdr[28];
     memset(hdr, 0, sizeof(hdr));
     (void)v2_head(hdr, 0x21, 0x11, 12);
     for (size_t len = 12; len < 28; len++)
     {
-        TEST_ASSERT_FALSE(proxy_parse(hdr, len, &info, &consumed));
+        ProxyProtocol.parse_args.buf = hdr;
+        ProxyProtocol.parse_args.len = len;
+        ProxyProtocol.parse_args.out = &info;
+        ProxyProtocol.parse_args.consumed = &consumed;
+        ProxyProtocol.parse(proxy_protocol_work);
+        TEST_ASSERT_FALSE(ProxyProtocol.ok);
     }
     memset(hdr + 16, 0, 12);
-    TEST_ASSERT_TRUE(proxy_parse(hdr, 28u, &info, &consumed));
+    ProxyProtocol.parse_args.buf = hdr;
+    ProxyProtocol.parse_args.len = 28u;
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_TRUE(ProxyProtocol.ok);
 }
 
 // sec 2: both formats "were designed to ensure that the header cannot be confused with common
@@ -417,10 +527,20 @@ void test_a_stream_without_a_proxy_header_is_refused(void)
     size_t consumed = 0;
 
     const char *http = "GET / HTTP/1.1\r\n";
-    TEST_ASSERT_FALSE(proxy_parse((const uint8_t *)http, strlen(http), &info, &consumed));
+    ProxyProtocol.parse_args.buf = (const uint8_t *)http;
+    ProxyProtocol.parse_args.len = strlen(http);
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_FALSE(ProxyProtocol.ok);
 
     const uint8_t tiny[2] = {0x00, 0x01};
-    TEST_ASSERT_FALSE(proxy_parse(tiny, sizeof(tiny), &info, &consumed));
+    ProxyProtocol.parse_args.buf = tiny;
+    ProxyProtocol.parse_args.len = sizeof(tiny);
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_FALSE(ProxyProtocol.ok);
 }
 
 // A builder handed less room than the form needs writes nothing and reports nothing: no partial
@@ -428,9 +548,23 @@ void test_a_stream_without_a_proxy_header_is_refused(void)
 void test_builders_fail_closed_on_a_short_buffer(void)
 {
     char small[16];
-    TEST_ASSERT_EQUAL_size_t(0u, proxy_v1_build(small, sizeof(small), SRC, DST, 56324, 443));
+    ProxyProtocol.v1_build_args.buf = small;
+    ProxyProtocol.v1_build_args.cap = sizeof(small);
+    ProxyProtocol.v1_build_args.src_addr = SRC;
+    ProxyProtocol.v1_build_args.dst_addr = DST;
+    ProxyProtocol.v1_build_args.src_port = 56324;
+    ProxyProtocol.v1_build_args.dst_port = 443;
+    ProxyProtocol.v1_build(proxy_protocol_work);
+    TEST_ASSERT_EQUAL_size_t(0u, ProxyProtocol.n);
     uint8_t v2small[27];
-    TEST_ASSERT_EQUAL_size_t(0u, proxy_v2_build(v2small, sizeof(v2small), SRC, DST, 56324, 443));
+    ProxyProtocol.v2_build_args.buf = v2small;
+    ProxyProtocol.v2_build_args.cap = sizeof(v2small);
+    ProxyProtocol.v2_build_args.src_addr = SRC;
+    ProxyProtocol.v2_build_args.dst_addr = DST;
+    ProxyProtocol.v2_build_args.src_port = 56324;
+    ProxyProtocol.v2_build_args.dst_port = 443;
+    ProxyProtocol.v2_build(proxy_protocol_work);
+    TEST_ASSERT_EQUAL_size_t(0u, ProxyProtocol.n);
 }
 
 // A null pointer is reported, never written through.
@@ -439,9 +573,38 @@ void test_null_arguments_are_refused(void)
     ProxyInfo info;
     size_t consumed = 0;
     uint8_t any[16] = {0};
-    TEST_ASSERT_FALSE(proxy_parse(NULL, sizeof(any), &info, &consumed));
-    TEST_ASSERT_FALSE(proxy_parse(any, sizeof(any), NULL, &consumed));
-    TEST_ASSERT_FALSE(proxy_parse(any, sizeof(any), &info, NULL));
-    TEST_ASSERT_EQUAL_size_t(0u, proxy_v1_build(NULL, 64, SRC, DST, 1, 2));
-    TEST_ASSERT_EQUAL_size_t(0u, proxy_v2_build(NULL, 64, SRC, DST, 1, 2));
+    ProxyProtocol.parse_args.buf = NULL;
+    ProxyProtocol.parse_args.len = sizeof(any);
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_FALSE(ProxyProtocol.ok);
+    ProxyProtocol.parse_args.buf = any;
+    ProxyProtocol.parse_args.len = sizeof(any);
+    ProxyProtocol.parse_args.out = NULL;
+    ProxyProtocol.parse_args.consumed = &consumed;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_FALSE(ProxyProtocol.ok);
+    ProxyProtocol.parse_args.buf = any;
+    ProxyProtocol.parse_args.len = sizeof(any);
+    ProxyProtocol.parse_args.out = &info;
+    ProxyProtocol.parse_args.consumed = NULL;
+    ProxyProtocol.parse(proxy_protocol_work);
+    TEST_ASSERT_FALSE(ProxyProtocol.ok);
+    ProxyProtocol.v1_build_args.buf = NULL;
+    ProxyProtocol.v1_build_args.cap = 64;
+    ProxyProtocol.v1_build_args.src_addr = SRC;
+    ProxyProtocol.v1_build_args.dst_addr = DST;
+    ProxyProtocol.v1_build_args.src_port = 1;
+    ProxyProtocol.v1_build_args.dst_port = 2;
+    ProxyProtocol.v1_build(proxy_protocol_work);
+    TEST_ASSERT_EQUAL_size_t(0u, ProxyProtocol.n);
+    ProxyProtocol.v2_build_args.buf = NULL;
+    ProxyProtocol.v2_build_args.cap = 64;
+    ProxyProtocol.v2_build_args.src_addr = SRC;
+    ProxyProtocol.v2_build_args.dst_addr = DST;
+    ProxyProtocol.v2_build_args.src_port = 1;
+    ProxyProtocol.v2_build_args.dst_port = 2;
+    ProxyProtocol.v2_build(proxy_protocol_work);
+    TEST_ASSERT_EQUAL_size_t(0u, ProxyProtocol.n);
 }

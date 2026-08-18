@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for the SCP (rcp) wire codec (network_drivers/application/scp/scp.h).
+// Host tests for the SCP (rcp) wire codec (network_drivers/session/scp/scp.h).
 //
 // The rcp line protocol scp rides on has no published specification: it is defined by 4.2BSD rcp
 // and by OpenSSH's scp, and no standards text states its grammar. So except where noted the
@@ -14,10 +14,12 @@
 // hand and is the load-bearing case, because a mode that survives the round trip but decodes to the
 // wrong number silently changes a file's permissions on the receiving side.
 
-#include "network_drivers/application/scp/scp.h"
+#include "network_drivers/session/scp/scp.h"
 #include <string.h>
 
 #include <unity.h>
+
+static uint8_t scp_work[16]; // the borrow an entry takes; Scp never reads it
 
 void setUp(void)
 {
@@ -28,12 +30,24 @@ void tearDown(void)
 
 static ScpMode parse_cmd(const char *cmd, char *path, size_t cap)
 {
-    return protocore_scp_parse_cmd(cmd, strlen(cmd), path, cap);
+    Scp.parse_cmd_args.cmd = cmd;
+    Scp.parse_cmd_args.cmd_len = strlen(cmd);
+    Scp.parse_cmd_args.path_out = path;
+    Scp.parse_cmd_args.path_cap = cap;
+    Scp.parse_cmd(scp_work);
+    return Scp.value;
 }
 
 static proto_bool parse_cline(const char *line, uint32_t *mode, uint64_t *size, char *name, size_t cap)
 {
-    return protocore_scp_parse_cline(line, strlen(line), mode, size, name, cap);
+    Scp.parse_cline_args.line = line;
+    Scp.parse_cline_args.len = strlen(line);
+    Scp.parse_cline_args.mode_out = mode;
+    Scp.parse_cline_args.size_out = size;
+    Scp.parse_cline_args.name_out = name;
+    Scp.parse_cline_args.name_cap = cap;
+    Scp.parse_cline(scp_work);
+    return Scp.ok;
 }
 
 // POSIX.1 <sys/stat.h> permission bits:
@@ -63,9 +77,21 @@ void test_mode_is_the_posix_permission_word_in_octal(void)
     TEST_ASSERT_EQUAL_UINT32(511u, mode); // 0777 = 7*64 + 7*8 + 7
 
     char out[64];
-    TEST_ASSERT_EQUAL_size_t(strlen("C0644 0 f\n"), protocore_scp_build_cline(420u, 0, "f", out, sizeof(out)));
+    Scp.build_cline_args.mode = 420u;
+    Scp.build_cline_args.size = 0;
+    Scp.build_cline_args.name = "f";
+    Scp.build_cline_args.out = out;
+    Scp.build_cline_args.cap = sizeof(out);
+    Scp.build_cline(scp_work);
+    TEST_ASSERT_EQUAL_size_t(strlen("C0644 0 f\n"), Scp.n);
     TEST_ASSERT_EQUAL_STRING("C0644 0 f\n", out);
-    TEST_ASSERT_EQUAL_size_t(strlen("C0755 0 f\n"), protocore_scp_build_cline(493u, 0, "f", out, sizeof(out)));
+    Scp.build_cline_args.mode = 493u;
+    Scp.build_cline_args.size = 0;
+    Scp.build_cline_args.name = "f";
+    Scp.build_cline_args.out = out;
+    Scp.build_cline_args.cap = sizeof(out);
+    Scp.build_cline(scp_work);
+    TEST_ASSERT_EQUAL_size_t(strlen("C0755 0 f\n"), Scp.n);
     TEST_ASSERT_EQUAL_STRING("C0755 0 f\n", out);
 }
 
@@ -102,14 +128,27 @@ void test_control_line_round_trip(void)
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         char out[64];
-        size_t n = protocore_scp_build_cline(CASES[i].mode, CASES[i].size, CASES[i].name, out, sizeof(out));
+        Scp.build_cline_args.mode = CASES[i].mode;
+        Scp.build_cline_args.size = CASES[i].size;
+        Scp.build_cline_args.name = CASES[i].name;
+        Scp.build_cline_args.out = out;
+        Scp.build_cline_args.cap = sizeof(out);
+        Scp.build_cline(scp_work);
+        size_t n = Scp.n;
         TEST_ASSERT_EQUAL_size_t(strlen(CASES[i].line), n);
         TEST_ASSERT_EQUAL_STRING(CASES[i].line, out);
 
         uint32_t mode = 0;
         uint64_t size = 0;
         char name[32];
-        TEST_ASSERT_TRUE(protocore_scp_parse_cline(out, n, &mode, &size, name, sizeof(name)));
+        Scp.parse_cline_args.line = out;
+        Scp.parse_cline_args.len = n;
+        Scp.parse_cline_args.mode_out = &mode;
+        Scp.parse_cline_args.size_out = &size;
+        Scp.parse_cline_args.name_out = name;
+        Scp.parse_cline_args.name_cap = sizeof(name);
+        Scp.parse_cline(scp_work);
+        TEST_ASSERT_TRUE(Scp.ok);
         TEST_ASSERT_EQUAL_UINT32(CASES[i].mode, mode);
         TEST_ASSERT_EQUAL_UINT64(CASES[i].size, size);
         TEST_ASSERT_EQUAL_STRING(CASES[i].name, name);
@@ -121,10 +160,22 @@ void test_control_line_round_trip(void)
 void test_build_masks_the_file_type_bits(void)
 {
     char out[64];
-    TEST_ASSERT_EQUAL_size_t(strlen("C0644 1 f\n"), protocore_scp_build_cline(0100644u, 1, "f", out, sizeof(out)));
+    Scp.build_cline_args.mode = 0100644u;
+    Scp.build_cline_args.size = 1;
+    Scp.build_cline_args.name = "f";
+    Scp.build_cline_args.out = out;
+    Scp.build_cline_args.cap = sizeof(out);
+    Scp.build_cline(scp_work);
+    TEST_ASSERT_EQUAL_size_t(strlen("C0644 1 f\n"), Scp.n);
     TEST_ASSERT_EQUAL_STRING("C0644 1 f\n", out);
     // The setuid bit is inside the twelve, so it survives as a fifth-column-free 4-digit mode.
-    TEST_ASSERT_EQUAL_size_t(strlen("C4755 1 f\n"), protocore_scp_build_cline(04755u, 1, "f", out, sizeof(out)));
+    Scp.build_cline_args.mode = 04755u;
+    Scp.build_cline_args.size = 1;
+    Scp.build_cline_args.name = "f";
+    Scp.build_cline_args.out = out;
+    Scp.build_cline_args.cap = sizeof(out);
+    Scp.build_cline(scp_work);
+    TEST_ASSERT_EQUAL_size_t(strlen("C4755 1 f\n"), Scp.n);
     TEST_ASSERT_EQUAL_STRING("C4755 1 f\n", out);
 }
 
@@ -156,8 +207,22 @@ void test_truncated_records_are_refused(void)
     TEST_ASSERT_FALSE(parse_cline("C0644 10 \n", &mode, &size, name, sizeof(name)));
     TEST_ASSERT_FALSE(parse_cline("C0644 12x name\n", &mode, &size, name, sizeof(name))); // junk in the size
     TEST_ASSERT_FALSE(parse_cline("C0644  10 n\n", &mode, &size, name, sizeof(name)));    // two separators
-    TEST_ASSERT_FALSE(protocore_scp_parse_cline(NULL, 12, &mode, &size, name, sizeof(name)));
-    TEST_ASSERT_FALSE(protocore_scp_parse_cline("C0644 1 x", 0, &mode, &size, name, sizeof(name)));
+    Scp.parse_cline_args.line = NULL;
+    Scp.parse_cline_args.len = 12;
+    Scp.parse_cline_args.mode_out = &mode;
+    Scp.parse_cline_args.size_out = &size;
+    Scp.parse_cline_args.name_out = name;
+    Scp.parse_cline_args.name_cap = sizeof(name);
+    Scp.parse_cline(scp_work);
+    TEST_ASSERT_FALSE(Scp.ok);
+    Scp.parse_cline_args.line = "C0644 1 x";
+    Scp.parse_cline_args.len = 0;
+    Scp.parse_cline_args.mode_out = &mode;
+    Scp.parse_cline_args.size_out = &size;
+    Scp.parse_cline_args.name_out = name;
+    Scp.parse_cline_args.name_cap = sizeof(name);
+    Scp.parse_cline(scp_work);
+    TEST_ASSERT_FALSE(Scp.ok);
 }
 
 // The trailing newline delimits the record but is not part of the name, and a record handed over
@@ -177,7 +242,14 @@ void test_name_ends_at_the_newline_or_the_length(void)
 
     // An embedded NUL terminates the name the same way a newline does.
     static const char REC[] = "C0644 10 abc\0xyz";
-    TEST_ASSERT_TRUE(protocore_scp_parse_cline(REC, sizeof(REC) - 1, &mode, &size, name, sizeof(name)));
+    Scp.parse_cline_args.line = REC;
+    Scp.parse_cline_args.len = sizeof(REC) - 1;
+    Scp.parse_cline_args.mode_out = &mode;
+    Scp.parse_cline_args.size_out = &size;
+    Scp.parse_cline_args.name_out = name;
+    Scp.parse_cline_args.name_cap = sizeof(name);
+    Scp.parse_cline(scp_work);
+    TEST_ASSERT_TRUE(Scp.ok);
     TEST_ASSERT_EQUAL_STRING("abc", name);
 }
 
@@ -214,12 +286,30 @@ void test_build_refuses_a_short_buffer(void)
 {
     char tiny[6];
     memset(tiny, 'Z', sizeof(tiny));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_scp_build_cline(0644, 1234, "part.nc", tiny, sizeof(tiny)));
+    Scp.build_cline_args.mode = 0644;
+    Scp.build_cline_args.size = 1234;
+    Scp.build_cline_args.name = "part.nc";
+    Scp.build_cline_args.out = tiny;
+    Scp.build_cline_args.cap = sizeof(tiny);
+    Scp.build_cline(scp_work);
+    TEST_ASSERT_EQUAL_size_t(0, Scp.n);
 
     // "C0644 1 f\n" is 10 octets, so 10 leaves no room for the NUL and 11 does.
     char exact[11];
-    TEST_ASSERT_EQUAL_size_t(0, protocore_scp_build_cline(0644, 1, "f", exact, 10));
-    TEST_ASSERT_EQUAL_size_t(10, protocore_scp_build_cline(0644, 1, "f", exact, 11));
+    Scp.build_cline_args.mode = 0644;
+    Scp.build_cline_args.size = 1;
+    Scp.build_cline_args.name = "f";
+    Scp.build_cline_args.out = exact;
+    Scp.build_cline_args.cap = 10;
+    Scp.build_cline(scp_work);
+    TEST_ASSERT_EQUAL_size_t(0, Scp.n);
+    Scp.build_cline_args.mode = 0644;
+    Scp.build_cline_args.size = 1;
+    Scp.build_cline_args.name = "f";
+    Scp.build_cline_args.out = exact;
+    Scp.build_cline_args.cap = 11;
+    Scp.build_cline(scp_work);
+    TEST_ASSERT_EQUAL_size_t(10, Scp.n);
     TEST_ASSERT_EQUAL_STRING("C0644 1 f\n", exact);
 }
 
@@ -290,9 +380,24 @@ void test_path_too_long_is_refused(void)
 void test_command_null_arguments_are_refused(void)
 {
     char path[128];
-    TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, protocore_scp_parse_cmd(NULL, 9, path, sizeof(path)));
-    TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, protocore_scp_parse_cmd("scp -t /x", 9, NULL, sizeof(path)));
-    TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, protocore_scp_parse_cmd("scp -t /x", 9, path, 0));
+    Scp.parse_cmd_args.cmd = NULL;
+    Scp.parse_cmd_args.cmd_len = 9;
+    Scp.parse_cmd_args.path_out = path;
+    Scp.parse_cmd_args.path_cap = sizeof(path);
+    Scp.parse_cmd(scp_work);
+    TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, Scp.value);
+    Scp.parse_cmd_args.cmd = "scp -t /x";
+    Scp.parse_cmd_args.cmd_len = 9;
+    Scp.parse_cmd_args.path_out = NULL;
+    Scp.parse_cmd_args.path_cap = sizeof(path);
+    Scp.parse_cmd(scp_work);
+    TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, Scp.value);
+    Scp.parse_cmd_args.cmd = "scp -t /x";
+    Scp.parse_cmd_args.cmd_len = 9;
+    Scp.parse_cmd_args.path_out = path;
+    Scp.parse_cmd_args.path_cap = 0;
+    Scp.parse_cmd(scp_work);
+    TEST_ASSERT_EQUAL_INT(SCP_MODE_INVALID, Scp.value);
 }
 
 // The acknowledgement octets between records: 0 proceeds, 1 is a warning and 2 a fatal error, each

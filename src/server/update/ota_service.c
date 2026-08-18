@@ -133,23 +133,12 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-/**
- * @brief The service's call - what OtaServiceNs points at.
- *
- * @var OtaServiceInternal::ns  the handle a caller sets the call's members on
- */
-struct OtaServiceInternal
+static void ota_service_begin(uint8_t *restrict work)
 {
-    OtaServiceNs *ns;
-};
-
-static struct OtaServiceInternal s_ota_svc = {.ns = &OtaService};
-
-static void ota_service_begin(struct OtaServiceInternal *restrict ctx)
-{
-    const char *path = ctx->ns->args.path;
-    const char *user = ctx->ns->args.user;
-    const char *pass = ctx->ns->args.pass;
+    (void)work;
+    const char *path = OtaService.args.path;
+    const char *user = OtaService.args.user;
+    const char *pass = OtaService.args.pass;
 
     s_ota.path = path;
     str.copy(s_ota.user, user ? user : "", sizeof(s_ota.user));
@@ -161,23 +150,15 @@ static void ota_service_begin(struct OtaServiceInternal *restrict ctx)
     on_http(path, HTTP_POST, ota_handle);
 }
 
-OtaServiceNs OtaService = {.begin = ota_service_begin, .internal = &s_ota_svc};
+OtaServiceNs OtaService = {.begin = ota_service_begin};
 
 #else
 
-/** @brief The service's call - what OtaServiceNs points at, with no updater to install onto. */
-struct OtaServiceInternal
+static void ota_service_begin(uint8_t *restrict work)
 {
-    OtaServiceNs *ns;
-};
-
-static struct OtaServiceInternal s_ota_svc = {.ns = &OtaService};
-
-static void ota_service_begin(struct OtaServiceInternal *restrict ctx)
-{
-    (void)ctx;
+    (void)work;
 }
 
-OtaServiceNs OtaService = {.begin = ota_service_begin, .internal = &s_ota_svc};
+OtaServiceNs OtaService = {.begin = ota_service_begin};
 
 #endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA

@@ -37,21 +37,6 @@
 // Longest rendering of one JSON Number, the NUL included.
 #define SENML_JSON_NUMBER_MAX 32
 
-/**
- * @brief The builder's calls - what SenmlNs points at.
- *
- * No storage member: every call writes into a region the caller bound, so the module holds nothing
- * of its own.
- *
- * @var SenmlInternal::ns  the handle a caller sets a call's members on
- */
-struct SenmlInternal
-{
-    SenmlNs *ns;
-};
-
-static struct SenmlInternal s_senml = {.ns = &Senml};
-
 // True when d is an integer inside the int64 range, so it converts to one losslessly.
 static proto_bool is_integral(double d)
 {
@@ -125,18 +110,19 @@ static size_t record_fields(const SenmlRecord *r)
 
 // Build the JSON representation of ns->pack into ns->json (RFC 8428 sec 5): an array with one
 // object per Record, the labels as member names. Reports the length in ns->n.
-static void senml_json_build(struct SenmlInternal *restrict ctx)
+static void senml_json_build(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    const SenmlRecord *records = ctx->ns->pack.records;
-    const size_t count = ctx->ns->pack.count;
-    if (!ctx->ns->json.buf || (count && !records))
+    (void)work;
+    Senml.ok = PROTO_FALSE;
+    Senml.n = 0;
+    const SenmlRecord *records = Senml.pack.records;
+    const size_t count = Senml.pack.count;
+    if (!Senml.json.buf || (count && !records))
     {
         return;
     }
     protocore_json_writer w = {0};
-    Json.init(&w, ctx->ns->json.buf, ctx->ns->json.cap);
+    Json.init(&w, Senml.json.buf, Senml.json.cap);
     Json.begin_array(&w);
     for (size_t i = 0; i < count; i++)
     {
@@ -191,24 +177,25 @@ static void senml_json_build(struct SenmlInternal *restrict ctx)
     {
         return;
     }
-    ctx->ns->n = protocore_json_length(&w);
-    ctx->ns->ok = PROTO_TRUE;
+    Senml.n = protocore_json_length(&w);
+    Senml.ok = PROTO_TRUE;
 }
 
 // Build ns->pack into ns->binary through its codec: an array of Records, each a map whose keys the
 // codec writes as the RFC 8428 sec 6 Table 4 integers. Reports the length in ns->n.
-static void senml_binary_build(struct SenmlInternal *restrict ctx)
+static void senml_binary_build(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    const protocore_codec *c = ctx->ns->binary.codec;
-    const SenmlRecord *records = ctx->ns->pack.records;
-    const size_t count = ctx->ns->pack.count;
-    if (!c || !ctx->ns->binary.buf || (count && !records))
+    (void)work;
+    Senml.ok = PROTO_FALSE;
+    Senml.n = 0;
+    const protocore_codec *c = Senml.binary.codec;
+    const SenmlRecord *records = Senml.pack.records;
+    const size_t count = Senml.pack.count;
+    if (!c || !Senml.binary.buf || (count && !records))
     {
         return;
     }
-    protocore_span w = span.from(ctx->ns->binary.buf, ctx->ns->binary.cap);
+    protocore_span w = span.from(Senml.binary.buf, Senml.binary.cap);
     c->put_array(&w, count);
     for (size_t i = 0; i < count; i++)
     {
@@ -266,20 +253,21 @@ static void senml_binary_build(struct SenmlInternal *restrict ctx)
     {
         return;
     }
-    ctx->ns->n = span.len(w);
-    ctx->ns->ok = PROTO_TRUE;
+    Senml.n = span.len(w);
+    Senml.ok = PROTO_TRUE;
 }
 
 // Resolve ns->pack into ns->resolved (RFC 8428 sec 4.6). A Base Name or Base Time becomes active
 // for the Record carrying it and every Record after it, until a later one overrides it: each output
 // Name is the active Base Name concatenated with the Name, and each output Time is the active Base
 // Time added to the Time. Reports the Record count in ns->n.
-static void senml_resolve(struct SenmlInternal *restrict ctx)
+static void senml_resolve(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    const SenmlRecord *in = ctx->ns->pack.records;
-    SenmlResolved *out = ctx->ns->resolved.out;
+    (void)work;
+    Senml.ok = PROTO_FALSE;
+    Senml.n = 0;
+    const SenmlRecord *in = Senml.pack.records;
+    SenmlResolved *out = Senml.resolved.out;
     if (!in || !out)
     {
         return;
@@ -288,7 +276,7 @@ static void senml_resolve(struct SenmlInternal *restrict ctx)
     proto_bool base_time_set = PROTO_FALSE;
     double base_time = 0.0;
 
-    const size_t count = ctx->ns->pack.count < ctx->ns->resolved.max ? ctx->ns->pack.count : ctx->ns->resolved.max;
+    const size_t count = Senml.pack.count < Senml.resolved.max ? Senml.pack.count : Senml.resolved.max;
     for (size_t i = 0; i < count; i++)
     {
         const SenmlRecord *r = &in[i];
@@ -321,12 +309,11 @@ static void senml_resolve(struct SenmlInternal *restrict ctx)
         o->string_value = r->string_value;
         o->boolean_value = r->boolean_value;
     }
-    ctx->ns->n = count;
-    ctx->ns->ok = PROTO_TRUE;
+    Senml.n = count;
+    Senml.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SenmlNs Senml = {
-    .json_build = senml_json_build, .binary_build = senml_binary_build, .resolve = senml_resolve, .internal = &s_senml};
+SenmlNs Senml = {.json_build = senml_json_build, .binary_build = senml_binary_build, .resolve = senml_resolve};
 
 #endif // PROTOCORE_ENABLE_SENML

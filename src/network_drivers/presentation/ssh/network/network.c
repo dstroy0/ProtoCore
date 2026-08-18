@@ -70,14 +70,14 @@ static proto_bool stream_live(uint8_t i)
     if (s_store.kind[i] == SSH_STREAM_DIALED)
     {
         TcpClient.cid = (int)h;
-        TcpClient.connected(TcpClient.internal);
+        TcpClient.connected(protocore_tcp_client_span());
         const proto_bool up = TcpClient.ok;
-        TcpClient.is_closed(TcpClient.internal);
+        TcpClient.is_closed(protocore_tcp_client_span());
         return up && !TcpClient.ok;
     }
 #endif
     ConnPool.slot = h;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     return ConnPool.ok;
 }
 
@@ -95,15 +95,15 @@ static proto_bool stream_write(uint8_t i, const uint8_t *buf, size_t len)
         TcpClient.cid = (int)h;
         TcpClient.io.data = buf;
         TcpClient.io.len = len;
-        TcpClient.send(TcpClient.internal);
+        TcpClient.send(protocore_tcp_client_span());
         return TcpClient.ok;
     }
 #endif
     ConnPool.slot = h;
     ConnPool.io.data = buf;
     ConnPool.io.len = (proto_u16)len;
-    ConnPool.send(ConnPool.internal);
-    ConnPool.flush(ConnPool.internal);
+    ConnPool.send(protocore_conn_pool_span());
+    ConnPool.flush(protocore_conn_pool_span());
     return PROTO_TRUE;
 }
 
@@ -155,9 +155,9 @@ static void emit(struct SshNetworkInternal *restrict ctx)
         }
 #endif
         ConnPool.slot = s_store.conn_for_ssh[i];
-        ConnPool.owner(ConnPool.internal);
+        ConnPool.owner(protocore_conn_pool_span());
         Workers.worker_id = ConnPool.u8;
-        Workers.wake(Workers.internal);
+        Workers.wake(protocore_worker_span());
     }
 }
 
@@ -169,12 +169,12 @@ static void tx_drain(struct SshNetworkInternal *restrict ctx)
     const uint8_t j = ctx->ns->ssh_slot;
     SshPacketState *pkt = &ssh_pkt[j];
     ConnPool.slot = conn_slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!pkt->tx_ready || !ConnPool.ok)
     {
         return;
     }
-    ConnPool.sndbuf(ConnPool.internal);
+    ConnPool.sndbuf(protocore_conn_pool_span());
     size_t room = (size_t)ConnPool.u16;
     size_t n = pkt->tx_len - pkt->tx_off;
     if (n > room)
@@ -185,10 +185,10 @@ static void tx_drain(struct SshNetworkInternal *restrict ctx)
     {
         ConnPool.io.data = pkt->tx_wire + pkt->tx_off;
         ConnPool.io.len = (proto_u16)n;
-        ConnPool.send(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
         if (ConnPool.ok)
         {
-            ConnPool.flush(ConnPool.internal);
+            ConnPool.flush(protocore_conn_pool_span());
             pkt->tx_off += n;
         }
     }
@@ -350,7 +350,7 @@ void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot)
     uint8_t *ident = slot + SSH_OFF_WIRE;
     size_t ilen = 0;
     ConnPool.slot = conn_slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     SshTransport.slot = i;
     SshTransport.out_args.out = ident;
     SshTransport.out_args.cap = SSH_WIRE_CAP;
@@ -360,8 +360,8 @@ void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot)
     {
         ConnPool.io.data = ident;
         ConnPool.io.len = (proto_u16)ilen;
-        ConnPool.send(ConnPool.internal);
-        ConnPool.flush(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
+        ConnPool.flush(protocore_conn_pool_span());
     }
 }
 
@@ -400,7 +400,7 @@ static void net_chan_open(struct SshNetworkInternal *restrict ctx)
     TcpClient.dial.host = host;
     TcpClient.dial.port = port;
     TcpClient.dial.timeout_ms = timeout_ms;
-    TcpClient.open(TcpClient.internal);
+    TcpClient.open(protocore_tcp_client_span());
     int cid = TcpClient.i32;
     if (cid < 0)
     {
@@ -475,7 +475,7 @@ static void net_chan_write(struct SshNetworkInternal *restrict ctx)
     TcpClient.cid = *slot;
     TcpClient.io.data = data;
     TcpClient.io.len = len;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     return (int)len;
 }
 
@@ -494,7 +494,7 @@ static void net_chan_read(struct SshNetworkInternal *restrict ctx)
     TcpClient.cid = *slot;
     TcpClient.io.buf = out;
     TcpClient.io.cap = cap;
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     ctx->ns->n = TcpClient.n;
     return;
 }
@@ -511,9 +511,9 @@ static void net_chan_drained(struct SshNetworkInternal *restrict ctx)
         return;
     }
     TcpClient.cid = *slot;
-    TcpClient.is_closed(TcpClient.internal);
+    TcpClient.is_closed(protocore_tcp_client_span());
     const proto_bool gone = TcpClient.ok;
-    TcpClient.available(TcpClient.internal);
+    TcpClient.available(protocore_tcp_client_span());
     return gone && TcpClient.n == 0;
 }
 
@@ -528,7 +528,7 @@ static void net_chan_avail(struct SshNetworkInternal *restrict ctx)
         return;
     }
     TcpClient.cid = *slot;
-    TcpClient.available(TcpClient.internal);
+    TcpClient.available(protocore_tcp_client_span());
     ctx->ns->n = TcpClient.n;
     return;
 }
@@ -543,7 +543,7 @@ static void net_chan_close(struct SshNetworkInternal *restrict ctx)
         return;
     }
     TcpClient.cid = *slot;
-    TcpClient.close(TcpClient.internal);
+    TcpClient.close(protocore_tcp_client_span());
     *slot = -1;
 }
 

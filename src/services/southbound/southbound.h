@@ -79,9 +79,6 @@ typedef struct
     size_t n;          ///< how many points the span covers
 } SouthboundBlockArgs;
 
-/** @brief The registry and the calls that reach it, described only in southbound.c. */
-struct SouthboundInternal;
-
 /**
  * @brief The southbound facade: register drivers, then move points by driver name.
  *
@@ -103,7 +100,6 @@ struct SouthboundInternal;
  * @var SouthboundNs::write       write @c point.value to @c point.point of @c name
  * @var SouthboundNs::read_block  read @c block.n points from @c name, starting at @c block.first
  * @var SouthboundNs::write_block write @c block.n points to @c name, starting at @c block.first
- * @var SouthboundNs::internal    the registry and the calls that reach it
  */
 typedef struct
 {
@@ -117,20 +113,29 @@ typedef struct
     size_t n;
     const SouthboundDriver *driver;
 
-    void (*add)(struct SouthboundInternal *ctx);
-    void (*clear)(struct SouthboundInternal *ctx);
-    void (*count)(struct SouthboundInternal *ctx);
-    void (*find)(struct SouthboundInternal *ctx);
-    void (*read)(struct SouthboundInternal *ctx);
-    void (*write)(struct SouthboundInternal *ctx);
-    void (*read_block)(struct SouthboundInternal *ctx);
-    void (*write_block)(struct SouthboundInternal *ctx);
-
-    struct SouthboundInternal *internal;
+    void (*const add)(uint8_t *restrict work);
+    void (*const clear)(uint8_t *restrict work);
+    void (*const count)(uint8_t *restrict work);
+    void (*const find)(uint8_t *restrict work);
+    void (*const read)(uint8_t *restrict work);
+    void (*const write)(uint8_t *restrict work);
+    void (*const read_block)(uint8_t *restrict work);
+    void (*const write_block)(uint8_t *restrict work);
 } SouthboundNs;
 
 /** @brief The one symbol this module exports. */
 extern SouthboundNs Southbound;
+
+/**
+ * @brief The PROTOCORE_SOUTHBOUND_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_southbound_span(void);
 
 PROTOCORE_END_DECLS
 

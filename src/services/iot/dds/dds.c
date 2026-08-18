@@ -19,32 +19,18 @@
 // SubmessageHeader: submessageId 1 + flags 1 + octetsToNextHeader 2 (sec 9.4.5.1).
 #define RTPS_SUBMESSAGE_HEADER_LEN 4
 
-/**
- * @brief The codec's state and the calls that reach it - what RtpsNs points at.
- *
- * No storage member: every call reads the caller's buffer and writes the caller's buffer, so the
- * codec keeps nothing between calls.
- *
- * @var RtpsInternal::ns  the handle a caller sets a call's members on
- */
-struct RtpsInternal
-{
-    RtpsNs *ns;
-};
-
 const uint8_t RTPS_VERSION[2] = {2, 4};
 
-static struct RtpsInternal s_rtps = {.ns = &Rtps};
-
 // Build the 20-octet Header (sec 9.4.4) into ns->out, and report its length in ns->n.
-static void rtps_header(struct RtpsInternal *restrict ctx)
+static void rtps_header(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    if (!ctx->ns->hdr.guid_prefix || !ctx->ns->hdr.vendor_id || !ctx->ns->out.buf || ctx->ns->out.cap < RTPS_HEADER_LEN)
+    (void)work;
+    Rtps.n = 0;
+    if (!Rtps.hdr.guid_prefix || !Rtps.hdr.vendor_id || !Rtps.out.buf || Rtps.out.cap < RTPS_HEADER_LEN)
     {
         return;
     }
-    uint8_t *out = ctx->ns->out.buf;
+    uint8_t *out = Rtps.out.buf;
     // PROTOCOL_RTPS is the octets 'R' 'T' 'P' 'S' (sec 9.3.2.1), then version, vendorId, guidPrefix.
     out[0] = 'R';
     out[1] = 'T';
@@ -52,32 +38,33 @@ static void rtps_header(struct RtpsInternal *restrict ctx)
     out[3] = 'S';
     out[4] = RTPS_VERSION[0];
     out[5] = RTPS_VERSION[1];
-    out[6] = ctx->ns->hdr.vendor_id[0];
-    out[7] = ctx->ns->hdr.vendor_id[1];
-    mem.cpy(out + 8, ctx->ns->hdr.guid_prefix, RTPS_GUIDPREFIX_LEN);
-    ctx->ns->n = RTPS_HEADER_LEN;
+    out[6] = Rtps.hdr.vendor_id[0];
+    out[7] = Rtps.hdr.vendor_id[1];
+    mem.cpy(out + 8, Rtps.hdr.guid_prefix, RTPS_GUIDPREFIX_LEN);
+    Rtps.n = RTPS_HEADER_LEN;
 }
 
 // Build one Submessage, its SubmessageHeader then its contents (sec 9.4.5.1), into ns->out.
-static void rtps_submessage(struct RtpsInternal *restrict ctx)
+static void rtps_submessage(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    const uint16_t contents_len = ctx->ns->sub.contents_len;
-    if (!ctx->ns->out.buf || (contents_len && !ctx->ns->sub.contents))
+    (void)work;
+    Rtps.n = 0;
+    const uint16_t contents_len = Rtps.sub.contents_len;
+    if (!Rtps.out.buf || (contents_len && !Rtps.sub.contents))
     {
         return;
     }
     const size_t total = RTPS_SUBMESSAGE_HEADER_LEN + (size_t)contents_len;
-    if (total > ctx->ns->out.cap)
+    if (total > Rtps.out.cap)
     {
         return;
     }
-    uint8_t *out = ctx->ns->out.buf;
-    out[0] = ctx->ns->sub.submessage_id;
-    out[1] = ctx->ns->sub.flags;
+    uint8_t *out = Rtps.out.buf;
+    out[0] = Rtps.sub.submessage_id;
+    out[1] = Rtps.sub.flags;
     // octetsToNextHeader is a CDR ushort in the Submessage's own byte order, the EndiannessFlag in
     // bit 0 of flags deciding it: E=1 little-endian, E=0 big-endian (sec 9.4.5.1).
-    if (ctx->ns->sub.flags & RTPS_FLAG_ENDIAN)
+    if (Rtps.sub.flags & RTPS_FLAG_ENDIAN)
     {
         out[2] = (uint8_t)contents_len;
         out[3] = (uint8_t)(contents_len >> 8);
@@ -89,20 +76,22 @@ static void rtps_submessage(struct RtpsInternal *restrict ctx)
     }
     if (contents_len)
     {
-        mem.cpy(out + RTPS_SUBMESSAGE_HEADER_LEN, ctx->ns->sub.contents, contents_len);
+        mem.cpy(out + RTPS_SUBMESSAGE_HEADER_LEN, Rtps.sub.contents, contents_len);
     }
-    ctx->ns->n = total;
+    Rtps.n = total;
 }
 
 // Validate the Header and walk the Submessages, reporting the verdict in ns->ok.
-static void rtps_parse(struct RtpsInternal *restrict ctx)
+static void rtps_parse(uint8_t *restrict work)
 {
-    const uint8_t *msg = ctx->ns->msg.msg;
-    const size_t len = ctx->ns->msg.len;
+    (void)work;
+    const uint8_t *msg = Rtps.msg.msg;
+    const size_t len = Rtps.msg.len;
 
-    ctx->ns->ok = PROTO_FALSE;
+    Rtps.ok = PROTO_FALSE;
     // sec 8.3.6.3: a Header is invalid with fewer octets than the PSM's 20, with a protocol that is
-    // not PROTOCOL_RTPS, or with a major version above the one this implementation supports.
+    // not PROTOCOL_RTPS, or with a major version above the one this implementation supports. The
+    // minor version is not one of the three, so every minor parses.
     if (!msg || len < RTPS_HEADER_LEN)
     {
         return;
@@ -111,13 +100,14 @@ static void rtps_parse(struct RtpsInternal *restrict ctx)
     {
         return;
     }
-    if (msg[4] != RTPS_VERSION[0] || msg[5] > RTPS_VERSION[1])
+    if (msg[4] != RTPS_VERSION[0])
     {
         return;
     }
 
     size_t off = RTPS_HEADER_LEN;
-    // sec 8.3.4.1 rule 1: a Submessage whose header does not fit ends the walk.
+    // sec 8.3.4.1 rule 1: a Submessage whose header does not fit invalidates the rest of the
+    // Message, which the check after the loop reports - the loop itself only stops.
     while (off + RTPS_SUBMESSAGE_HEADER_LEN <= len)
     {
         const uint8_t submessage_id = msg[off];
@@ -140,18 +130,24 @@ static void rtps_parse(struct RtpsInternal *restrict ctx)
         {
             return;
         }
-        if (ctx->ns->sink.on_submessage)
+        if (Rtps.sink.on_submessage)
         {
-            ctx->ns->sink.on_submessage(submessage_id, flags, contents_len ? (msg + contents_off) : NULL, contents_len,
-                                        ctx->ns->sink.arg);
+            Rtps.sink.on_submessage(submessage_id, flags, contents_len ? (msg + contents_off) : NULL, contents_len,
+                                    Rtps.sink.arg);
         }
         // A run to the end of the Message lands off at len, which fails the loop test.
         off = contents_off + contents_len;
     }
-    ctx->ns->ok = PROTO_TRUE;
+    // Octets left over are fewer than a SubmessageHeader, so rule 1 refuses the rest of the
+    // Message. Landing exactly at len is the clean end of the walk.
+    if (off != len)
+    {
+        return;
+    }
+    Rtps.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-RtpsNs Rtps = {.header = rtps_header, .submessage = rtps_submessage, .parse = rtps_parse, .internal = &s_rtps};
+RtpsNs Rtps = {.header = rtps_header, .submessage = rtps_submessage, .parse = rtps_parse};
 
 #endif // PROTOCORE_ENABLE_DDS

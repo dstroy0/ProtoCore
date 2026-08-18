@@ -28,9 +28,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief The sending side's own state and the call that reaches it, described only in client.c. */
-struct UdpClientInternal;
-
 /**
  * @brief The sending side of UDP.
  *
@@ -44,7 +41,6 @@ struct UdpClientInternal;
  * @var UdpClientNs::len       how many
  * @var UdpClientNs::ok        whether the stack took them
  * @var UdpClientNs::sendto    send a datagram to an address and port
- * @var UdpClientNs::internal  the control block and the call that reaches it
  *
  * sendto() sends the caller's bytes from where they already are, and reports whether the stack took
  * them. There is nothing between the caller and the wire: a refusal means the datagram did not
@@ -60,13 +56,22 @@ typedef struct
 
     proto_bool ok;
 
-    void (*sendto)(struct UdpClientInternal *ctx);
-
-    struct UdpClientInternal *internal;
+    void (*const sendto)(uint8_t *restrict work);
 } UdpClientNs;
 
 /** @brief The one symbol this module exports. */
 extern UdpClientNs UdpClient;
+
+/**
+ * @brief The PROTOCORE_UDP_CLIENT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_udp_client_span(void);
 
 PROTOCORE_END_DECLS
 

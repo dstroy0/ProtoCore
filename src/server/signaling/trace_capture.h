@@ -84,9 +84,6 @@ typedef struct
     protocore_tc_stats *stats; ///< where a stats read copies the tallies
 } TcFeedArgs;
 
-/** @brief The capture's own state and the calls that reach it, described only in trace_capture.c. */
-struct TraceCaptureInternal;
-
 /**
  * @brief The pre/post-trigger sample capture.
  *
@@ -103,7 +100,6 @@ struct TraceCaptureInternal;
  * @var TraceCaptureNs::get_stats  copy the tallies out
  * @var TraceCaptureNs::capturing  a window is being assembled right now
  * @var TraceCaptureNs::end        disarm
- * @var TraceCaptureNs::internal   the ring, the window and the calls that fill them
  *
  * The window completes inside a feed: when the last post-trigger sample lands, the sink is called
  * with the assembled window before the feed returns.
@@ -116,18 +112,27 @@ typedef struct
     proto_bool ok;
     uint16_t accepted;
 
-    void (*begin)(struct TraceCaptureInternal *ctx);
-    void (*feed_in)(struct TraceCaptureInternal *ctx);
-    void (*trigger)(struct TraceCaptureInternal *ctx);
-    void (*get_stats)(struct TraceCaptureInternal *ctx);
-    void (*capturing)(struct TraceCaptureInternal *ctx);
-    void (*end)(struct TraceCaptureInternal *ctx);
-
-    struct TraceCaptureInternal *internal;
+    void (*const begin)(uint8_t *restrict work);
+    void (*const feed_in)(uint8_t *restrict work);
+    void (*const trigger)(uint8_t *restrict work);
+    void (*const get_stats)(uint8_t *restrict work);
+    void (*const capturing)(uint8_t *restrict work);
+    void (*const end)(uint8_t *restrict work);
 } TraceCaptureNs;
 
 /** @brief The one symbol this module exports. */
 extern TraceCaptureNs TraceCapture;
+
+/**
+ * @brief The PROTOCORE_TRACE_CAPTURE_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_trace_capture_span(void);
 
 PROTOCORE_END_DECLS
 

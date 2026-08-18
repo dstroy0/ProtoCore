@@ -121,9 +121,6 @@ typedef struct
     size_t max;         ///< how many Records that array holds
 } SenmlResolvedArgs;
 
-/** @brief The builder's calls, described only in senml.c. */
-struct SenmlInternal;
-
 /**
  * @brief The SenML Pack builders and the Record resolver.
  *
@@ -144,7 +141,6 @@ struct SenmlInternal;
  *                             Table 4 integer labels
  * @var SenmlNs::resolve       carry the Base Name and Base Time across @c pack and fold them into
  *                             each Record, into @c resolved (sec 4.6)
- * @var SenmlNs::internal      the builder's calls
  */
 typedef struct
 {
@@ -156,11 +152,9 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*json_build)(struct SenmlInternal *ctx);
-    void (*binary_build)(struct SenmlInternal *ctx);
-    void (*resolve)(struct SenmlInternal *ctx);
-
-    struct SenmlInternal *internal;
+    void (*const json_build)(uint8_t *restrict work);
+    void (*const binary_build)(uint8_t *restrict work);
+    void (*const resolve)(uint8_t *restrict work);
 } SenmlNs;
 
 /** @brief The one symbol this module exports. */

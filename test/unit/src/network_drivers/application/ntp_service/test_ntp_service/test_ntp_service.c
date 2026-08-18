@@ -39,7 +39,7 @@ void setUp(void)
 void tearDown(void)
 {
     UdpListener.port = PROTOCORE_NTP_CLIENT_PORT;
-    UdpListener.close(UdpListener.internal);
+    UdpListener.close(protocore_udp_listener_span());
 }
 
 static uint32_t rd_be32(const uint8_t *p)
@@ -77,7 +77,7 @@ static void reply_with(uint8_t li, uint8_t mode, uint8_t stratum, uint32_t origi
     wr_be32(r + PROTOCORE_NTP_OFF_ORIGIN_SEC, origin_sec);
     wr_be32(r + PROTOCORE_NTP_OFF_TX_SEC, unix_epoch + PROTOCORE_NTP_UNIX_OFFSET);
     protocore_net_host_udp_deliver(PROTOCORE_NTP_CLIENT_PORT, SERVER_IP, PROTOCORE_NTP_PORT, r, sizeof r);
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
 }
 
 // The cookie the client sent, which a reply has to echo.
@@ -223,7 +223,7 @@ void test_a_reply_short_of_48_octets_is_ignored(void)
     runt[PROTOCORE_NTP_OFF_LI_VN_MODE] =
         PROTOCORE_NTP_LI_VN_MODE(PROTOCORE_NTP_LI_NONE, PROTOCORE_NTP_VERSION, PROTOCORE_NTP_MODE_SERVER);
     protocore_net_host_udp_deliver(PROTOCORE_NTP_CLIENT_PORT, SERVER_IP, PROTOCORE_NTP_PORT, runt, sizeof runt);
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
     TEST_ASSERT_FALSE(protocore_ntp_synced());
 }
 

@@ -73,9 +73,6 @@ typedef struct
     const char *required; ///< the one scope token being looked for
 } JwtScopeArgs;
 
-/** @brief The verifier's calls and the handle they read, described only in jwt.c. */
-struct JwtInternal;
-
 /**
  * @brief The HS256 JWT verifier.
  *
@@ -128,7 +125,6 @@ struct JwtInternal;
  * True when @c scope.required is one whole token of the space-delimited @c scope.claim (RFC 6749
  * sec 3.3, the syntax RFC 8693 sec 4.2 gives the claim). A prefix of a token never passes.
  *
- * @var JwtNs::internal  the handle a call reads its members from
  */
 typedef struct
 {
@@ -141,16 +137,14 @@ typedef struct
     proto_bool ok;
     long num;
 
-    void (*verify_mac)(struct JwtInternal *ctx);
-    void (*verify_bearer)(struct JwtInternal *ctx);
-    void (*time_claims_valid)(struct JwtInternal *ctx);
-    void (*verify_mac_at)(struct JwtInternal *ctx);
-    void (*verify_bearer_at)(struct JwtInternal *ctx);
-    void (*claim_int)(struct JwtInternal *ctx);
-    void (*claim_str)(struct JwtInternal *ctx);
-    void (*scope_allows)(struct JwtInternal *ctx);
-
-    struct JwtInternal *internal;
+    void (*const verify_mac)(uint8_t *restrict work);
+    void (*const verify_bearer)(uint8_t *restrict work);
+    void (*const time_claims_valid)(uint8_t *restrict work);
+    void (*const verify_mac_at)(uint8_t *restrict work);
+    void (*const verify_bearer_at)(uint8_t *restrict work);
+    void (*const claim_int)(uint8_t *restrict work);
+    void (*const claim_str)(uint8_t *restrict work);
+    void (*const scope_allows)(uint8_t *restrict work);
 } JwtNs;
 
 /** @brief The one symbol this module exports. */

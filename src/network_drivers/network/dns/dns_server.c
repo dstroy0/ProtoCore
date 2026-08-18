@@ -7,9 +7,12 @@
  */
 
 #include "network_drivers/network/dns/dns_server.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protostr.h"  // str.len
 #include "mmgr/rawmemcpy.h" // raw.read: the exact mover, for a destination inside a buffer
 #include "protocore_config.h"
+
+static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never reads it
 
 #if PROTOCORE_ENABLE_DNS_SERVER
 
@@ -36,21 +39,16 @@ struct DnsServerStorage
     uint8_t tx[PROTOCORE_DNS_NAME_MAX + 32];
 };
 
-/**
- * @brief The name table and the calls that reach it - what DnsServerNs points at.
- *
- * @var DnsServerInternal::store  the A records and the response stage
- * @var DnsServerInternal::ns     the handle a caller sets a call's members on
- */
-struct DnsServerInternal
-{
-    struct DnsServerStorage *store;
-    DnsServerNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define DNS_SERVER_OFF_CTX 0u
+static_assert(DNS_SERVER_OFF_CTX + sizeof(struct DnsServerStorage) <= PROTOCORE_DNS_SERVER_BORROW,
+              "PROTOCORE_DNS_SERVER_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct DnsServerStorage s_store;
-
-static struct DnsServerInternal s_dns = {.store = &s_store, .ns = &DnsServer};
+// The region, at its offset in the caller's borrow.
+#define DNS_SERVER_CTX(w) ((struct DnsServerStorage *)(void *)((w) + DNS_SERVER_OFF_CTX))
 
 // Parse the first question (RFC 1035 sec 4.1.2): write QNAME into @p name as a dotted string, set
 // *qtype to QTYPE and *qend to the offset just past QTYPE and QCLASS. Returns false on a malformed
@@ -69,7 +67,7 @@ static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size
     DnsWire.msg.out = name;
     DnsWire.msg.out_cap = name_cap;
     DnsWire.msg.allow_ptr = PROTO_FALSE;
-    DnsWire.decode(DnsWire.internal);
+    DnsWire.decode(dns_wire_work);
     if (!DnsWire.ok)
     {
         return PROTO_FALSE;
@@ -87,20 +85,20 @@ static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size
 // The ADDRESS recorded for @p name, host order, 0 when absent. Names compare ignoring ASCII case
 // (RFC 1035 sec 2.3.3) through DnsWire.eq. Reads the table and sets no member of DnsServer, so it
 // serves both the lookup call and the resolver callback a response is being framed around.
-static uint32_t table_find(struct DnsServerInternal *restrict ctx, const char *name)
+static uint32_t table_find(uint8_t *restrict work, const char *name)
 {
     if (!name)
     {
         return 0;
     }
-    for (size_t i = 0; i < ctx->store->count; i++)
+    for (size_t i = 0; i < DNS_SERVER_CTX(work)->count; i++)
     {
-        DnsWire.cmp.a = ctx->store->names[i];
+        DnsWire.cmp.a = DNS_SERVER_CTX(work)->names[i];
         DnsWire.cmp.b = name;
-        DnsWire.eq(DnsWire.internal);
+        DnsWire.eq(dns_wire_work);
         if (DnsWire.ok)
         {
-            return ctx->store->ips[i];
+            return DNS_SERVER_CTX(work)->ips[i];
         }
     }
     return 0;
@@ -108,15 +106,40 @@ static uint32_t table_find(struct DnsServerInternal *restrict ctx, const char *n
 
 // Frame a response to msg.query in msg.out and report its length in ns->n. Header fields are
 // RFC 1035 sec 4.1.1, the question sec 4.1.2, the answer RR sec 4.1.3, the name pointer sec 4.1.4.
-static void dns_build_response(struct DnsServerInternal *restrict ctx)
-{
-    const uint8_t *query = ctx->ns->msg.query;
-    const size_t qlen = ctx->ns->msg.qlen;
-    uint8_t *out = ctx->ns->msg.out;
-    const size_t out_cap = ctx->ns->msg.out_cap;
 
-    ctx->ns->n = 0;
-    if (!query || !out || !ctx->ns->ans.resolve || qlen < 12)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_DNS_SERVER_BORROW persistent bytes, or null while the pool was short
+} DnsServerOwnCtx;
+static DnsServerOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_dns_server_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_DNS_SERVER_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void dns_build_response(uint8_t *restrict work)
+{
+    const uint8_t *query = DnsServer.msg.query;
+    const size_t qlen = DnsServer.msg.qlen;
+    uint8_t *out = DnsServer.msg.out;
+    const size_t out_cap = DnsServer.msg.out_cap;
+
+    DnsServer.n = 0;
+    if (!query || !out || !DnsServer.ans.resolve || qlen < 12)
     {
         return;
     }
@@ -135,7 +158,7 @@ static void dns_build_response(struct DnsServerInternal *restrict ctx)
         out[3] = 0x04;                                // RCODE = 4 Not Implemented
         out[6] = out[7] = 0;                          // ANCOUNT 0
         out[8] = out[9] = out[10] = out[11] = 0;      // NSCOUNT / ARCOUNT 0
-        ctx->ns->n = 12;
+        DnsServer.n = 12;
         return;
     }
 
@@ -158,13 +181,13 @@ static void dns_build_response(struct DnsServerInternal *restrict ctx)
     out[5] = 0x01;                           // QDCOUNT = 1
     out[8] = out[9] = out[10] = out[11] = 0; // NSCOUNT / ARCOUNT = 0
 
-    uint32_t ip = (qtype == 1) ? ctx->ns->ans.resolve(name) : 0; // QTYPE 1 = A (RFC 1035 sec 3.2.2)
+    uint32_t ip = (qtype == 1) ? DnsServer.ans.resolve(name) : 0; // QTYPE 1 = A (RFC 1035 sec 3.2.2)
     if (!ip)
     {
         out[6] = 0x00;
         out[7] = 0x00;                    // ANCOUNT = 0
         out[3] = (qtype == 1) ? 0x03 : 0; // an A miss -> RCODE 3 Name Error; another QTYPE -> no error, no answer
-        ctx->ns->n = qend;
+        DnsServer.n = qend;
         return;
     }
 
@@ -181,26 +204,26 @@ static void dns_build_response(struct DnsServerInternal *restrict ctx)
     out[n++] = 0x01; // TYPE = A
     out[n++] = 0x00;
     out[n++] = 0x01; // CLASS = IN
-    out[n++] = (uint8_t)(ctx->ns->ans.ttl >> 24);
-    out[n++] = (uint8_t)(ctx->ns->ans.ttl >> 16);
-    out[n++] = (uint8_t)(ctx->ns->ans.ttl >> 8);
-    out[n++] = (uint8_t)ctx->ns->ans.ttl;
+    out[n++] = (uint8_t)(DnsServer.ans.ttl >> 24);
+    out[n++] = (uint8_t)(DnsServer.ans.ttl >> 16);
+    out[n++] = (uint8_t)(DnsServer.ans.ttl >> 8);
+    out[n++] = (uint8_t)DnsServer.ans.ttl;
     out[n++] = 0x00;
     out[n++] = 0x04; // RDLENGTH = 4
     out[n++] = (uint8_t)(ip >> 24);
     out[n++] = (uint8_t)(ip >> 16);
     out[n++] = (uint8_t)(ip >> 8);
     out[n++] = (uint8_t)ip; // RDATA: the ADDRESS (RFC 1035 sec 3.4.1)
-    ctx->ns->n = n;
+    DnsServer.n = n;
 }
 
 // Record rec.name with the ADDRESS rec.a.rec.b.rec.c.rec.d; ok is false for an empty, absent, or
 // over-long name, or a full table.
-static void dns_add(struct DnsServerInternal *restrict ctx)
+static void dns_add(uint8_t *restrict work)
 {
-    const char *name = ctx->ns->rec.name;
+    const char *name = DnsServer.rec.name;
 
-    ctx->ns->ok = PROTO_FALSE;
+    DnsServer.ok = PROTO_FALSE;
     if (!name || !name[0])
     {
         return;
@@ -210,30 +233,31 @@ static void dns_add(struct DnsServerInternal *restrict ctx)
     {
         return;
     }
-    if (ctx->store->count >= PROTOCORE_DNS_SERVER_MAX_RECORDS)
+    if (DNS_SERVER_CTX(work)->count >= PROTOCORE_DNS_SERVER_MAX_RECORDS)
     {
         return;
     }
-    raw.read(ctx->store->names[ctx->store->count], name, nlen + 1);
-    ctx->store->ips[ctx->store->count] = ((uint32_t)ctx->ns->rec.a << 24) | ((uint32_t)ctx->ns->rec.b << 16) |
-                                         ((uint32_t)ctx->ns->rec.c << 8) | (uint32_t)ctx->ns->rec.d;
-    ctx->store->count++;
-    ctx->ns->ok = PROTO_TRUE;
+    raw.read(DNS_SERVER_CTX(work)->names[DNS_SERVER_CTX(work)->count], name, nlen + 1);
+    DNS_SERVER_CTX(work)->ips[DNS_SERVER_CTX(work)->count] =
+        ((uint32_t)DnsServer.rec.a << 24) | ((uint32_t)DnsServer.rec.b << 16) | ((uint32_t)DnsServer.rec.c << 8) |
+        (uint32_t)DnsServer.rec.d;
+    DNS_SERVER_CTX(work)->count++;
+    DnsServer.ok = PROTO_TRUE;
 }
 
-static void dns_lookup(struct DnsServerInternal *restrict ctx)
+static void dns_lookup(uint8_t *restrict work)
 {
-    ctx->ns->ip = table_find(ctx, ctx->ns->rec.name);
+    DnsServer.ip = table_find(work, DnsServer.rec.name);
 }
 
-static void dns_clear(struct DnsServerInternal *restrict ctx)
+static void dns_clear(uint8_t *restrict work)
 {
-    ctx->store->count = 0;
+    DNS_SERVER_CTX(work)->count = 0;
 }
 
 uint32_t protocore_dns_server_resolve(const char *name)
 {
-    return table_find(&s_dns, name);
+    return table_find(protocore_dns_server_span(), name);
 }
 
 // One received datagram: build the response on the stage and hand it back to the sender
@@ -241,41 +265,37 @@ uint32_t protocore_dns_server_resolve(const char *name)
 static void dns_udp_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *arg)
 {
     (void)arg;
-    struct DnsServerInternal *ctx = &s_dns;
+    uint8_t *work = protocore_dns_server_span();
 
-    ctx->ns->msg.query = data;
-    ctx->ns->msg.qlen = len;
-    ctx->ns->msg.out = ctx->store->tx;
-    ctx->ns->msg.out_cap = sizeof(ctx->store->tx);
-    ctx->ns->ans.ttl = PROTOCORE_DNS_SERVER_TTL;
-    ctx->ns->ans.resolve = protocore_dns_server_resolve;
-    dns_build_response(ctx);
-    if (ctx->ns->n == 0)
+    DnsServer.msg.query = data;
+    DnsServer.msg.qlen = len;
+    DnsServer.msg.out = DNS_SERVER_CTX(work)->tx;
+    DnsServer.msg.out_cap = sizeof(DNS_SERVER_CTX(work)->tx);
+    DnsServer.ans.ttl = PROTOCORE_DNS_SERVER_TTL;
+    DnsServer.ans.resolve = protocore_dns_server_resolve;
+    dns_build_response(work);
+    if (DnsServer.n == 0)
     {
         return;
     }
     UdpListener.peer_args.peer = peer;
-    UdpListener.send_args.data = ctx->store->tx;
-    UdpListener.send_args.len = ctx->ns->n;
-    UdpListener.reply(UdpListener.internal);
+    UdpListener.send_args.data = DNS_SERVER_CTX(work)->tx;
+    UdpListener.send_args.len = DnsServer.n;
+    UdpListener.reply(protocore_udp_listener_span());
 }
 
 // Bind UDP port 53, the port a DNS message is carried to (RFC 1035 sec 4.2.1).
-static void dns_begin(struct DnsServerInternal *restrict ctx)
+static void dns_begin(uint8_t *restrict work)
 {
     UdpListener.port = 53;
     UdpListener.bind.handler = dns_udp_handler;
     UdpListener.bind.handler_ctx = NULL;
-    UdpListener.listen(UdpListener.internal);
-    ctx->ns->ok = UdpListener.ok;
+    UdpListener.listen(protocore_udp_listener_span());
+    DnsServer.ok = UdpListener.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-DnsServerNs DnsServer = {.build_response = dns_build_response,
-                         .add = dns_add,
-                         .clear = dns_clear,
-                         .begin = dns_begin,
-                         .lookup = dns_lookup,
-                         .internal = &s_dns};
+DnsServerNs DnsServer = {
+    .build_response = dns_build_response, .add = dns_add, .clear = dns_clear, .begin = dns_begin, .lookup = dns_lookup};
 
 #endif // PROTOCORE_ENABLE_DNS_SERVER

@@ -7,7 +7,8 @@
  */
 
 #include "server/core/guardrails/guardrails.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
+#include "mmgr/membuild.h"  // protocore_sb frame builder
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_GUARDRAILS
 
@@ -17,33 +18,53 @@ struct GuardrailsStorage
     protocore_breach_fn cb;
 };
 
-/**
- * @brief The installed callback and the calls that reach it - what GuardrailsNs points at.
- *
- * @var GuardrailsInternal::store  the breach callback
- * @var GuardrailsInternal::ns     the handle a caller sets a call's members on
- */
-struct GuardrailsInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define GUARDRAILS_OFF_CTX 0u
+static_assert(GUARDRAILS_OFF_CTX + sizeof(struct GuardrailsStorage) <= PROTOCORE_GUARDRAILS_BORROW,
+              "PROTOCORE_GUARDRAILS_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define GUARDRAILS_CTX(w) ((struct GuardrailsStorage *)(void *)((w) + GUARDRAILS_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct GuardrailsStorage *store;
-    GuardrailsNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_GUARDRAILS_BORROW persistent bytes, or null while the pool was short
+} GuardrailsOwnCtx;
+static GuardrailsOwnCtx s_own;
 
-static struct GuardrailsStorage s_store;
-
-static struct GuardrailsInternal s_gr = {.store = &s_store, .ns = &Guardrails};
-
-static void guardrails_eval(struct GuardrailsInternal *restrict ctx)
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_guardrails_span(void)
 {
-    const protocore_health *h = ctx->ns->health;
-    const uint32_t heap_min = ctx->ns->floors.heap_min;
-    const uint32_t frag_min_block = ctx->ns->floors.frag_min_block;
-    const uint32_t stack_min = ctx->ns->floors.stack_min;
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_GUARDRAILS_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void guardrails_eval(uint8_t *restrict work)
+{
+    (void)work;
+    const protocore_health *h = Guardrails.health;
+    const uint32_t heap_min = Guardrails.floors.heap_min;
+    const uint32_t frag_min_block = Guardrails.floors.frag_min_block;
+    const uint32_t stack_min = Guardrails.floors.stack_min;
 
     uint8_t b = PROTOCORE_BREACH_NONE;
     if (!h)
     {
-        ctx->ns->breaches = b;
+        Guardrails.breaches = b;
         return;
     }
     if (h->free_heap < heap_min)
@@ -58,16 +79,17 @@ static void guardrails_eval(struct GuardrailsInternal *restrict ctx)
     {
         b |= PROTOCORE_BREACH_STACK;
     }
-    ctx->ns->breaches = b;
+    Guardrails.breaches = b;
 }
 
-static void guardrails_json(struct GuardrailsInternal *restrict ctx)
+static void guardrails_json(uint8_t *restrict work)
 {
-    const protocore_health *h = ctx->ns->health;
-    char *out = ctx->ns->out.out;
-    const size_t cap = ctx->ns->out.cap;
+    (void)work;
+    const protocore_health *h = Guardrails.health;
+    char *out = Guardrails.out.out;
+    const size_t cap = Guardrails.out.cap;
 
-    ctx->ns->n = 0;
+    Guardrails.n = 0;
     if (!out || cap == 0)
     {
         return;
@@ -95,12 +117,13 @@ static void guardrails_json(struct GuardrailsInternal *restrict ctx)
         out[0] = '\0';
         return;
     }
-    ctx->ns->n = w;
+    Guardrails.n = w;
 }
 
-static void guardrails_sample(struct GuardrailsInternal *restrict ctx)
+static void guardrails_sample(uint8_t *restrict work)
 {
-    protocore_health *h = ctx->ns->health;
+    (void)work;
+    protocore_health *h = Guardrails.health;
     if (!h)
     {
         return;
@@ -116,26 +139,34 @@ static void guardrails_sample(struct GuardrailsInternal *restrict ctx)
 #endif
 }
 
-static void guardrails_begin(struct GuardrailsInternal *restrict ctx)
+static void guardrails_begin(uint8_t *restrict work)
 {
-    ctx->store->cb = ctx->ns->cb;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    GUARDRAILS_CTX(work)->cb = Guardrails.cb;
 }
 
-static void guardrails_check(struct GuardrailsInternal *restrict ctx)
+static void guardrails_check(uint8_t *restrict work)
 {
-    protocore_health h;
-    ctx->ns->health = &h;
-    guardrails_sample(ctx);
-    ctx->ns->health = &h;
-    ctx->ns->floors.heap_min = PROTOCORE_GUARDRAIL_HEAP_MIN;
-    ctx->ns->floors.frag_min_block = PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK;
-    ctx->ns->floors.stack_min = PROTOCORE_GUARDRAIL_STACK_MIN;
-    guardrails_eval(ctx);
-    if (ctx->ns->breaches != PROTOCORE_BREACH_NONE && ctx->store->cb)
+    if (!work)
     {
-        ctx->store->cb(ctx->ns->breaches, &h);
+        return; // the pool was short of this module's borrow
     }
-    ctx->ns->health = NULL;
+    protocore_health h;
+    Guardrails.health = &h;
+    guardrails_sample(work);
+    Guardrails.health = &h;
+    Guardrails.floors.heap_min = PROTOCORE_GUARDRAIL_HEAP_MIN;
+    Guardrails.floors.frag_min_block = PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK;
+    Guardrails.floors.stack_min = PROTOCORE_GUARDRAIL_STACK_MIN;
+    guardrails_eval(work);
+    if (Guardrails.breaches != PROTOCORE_BREACH_NONE && GUARDRAILS_CTX(work)->cb)
+    {
+        GUARDRAILS_CTX(work)->cb(Guardrails.breaches, &h);
+    }
+    Guardrails.health = NULL;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -143,7 +174,6 @@ GuardrailsNs Guardrails = {.eval = guardrails_eval,
                            .json = guardrails_json,
                            .sample = guardrails_sample,
                            .begin = guardrails_begin,
-                           .check = guardrails_check,
-                           .internal = &s_gr};
+                           .check = guardrails_check};
 
 #endif // PROTOCORE_ENABLE_GUARDRAILS

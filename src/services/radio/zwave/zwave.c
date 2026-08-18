@@ -9,9 +9,13 @@
  * and Checksum = 0xFF XOR-folded over LEN..last-data (Silicon Labs Serial API spec).
  */
 
-#include "services/radio/zwave/zwave.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_ZWAVE
+
+#include "services/radio/zwave/zwave.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // Checksum: 0xFF XORed with every byte from LEN through the last data byte.
 static uint8_t checksum(const uint8_t *from_len, uint16_t n)
@@ -24,18 +28,32 @@ static uint8_t checksum(const uint8_t *from_len, uint16_t n)
     return c;
 }
 
-uint16_t protocore_zwave_build_frame(protocore_zwave_type type, uint8_t cmd, const uint8_t *data, uint8_t data_len,
-                                     uint8_t *out, uint16_t cap)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void zwave_build_frame(uint8_t *restrict work)
 {
+    (void)work;
+    protocore_zwave_type type = Zwave.build_frame_args.type;
+    uint8_t cmd = Zwave.build_frame_args.cmd;
+    const uint8_t *data = Zwave.build_frame_args.data;
+    uint8_t data_len = Zwave.build_frame_args.data_len;
+    uint8_t *out = Zwave.build_frame_args.out;
+    uint16_t cap = Zwave.build_frame_args.cap;
+
     if (!out || data_len > PROTOCORE_ZWAVE_MAX_DATA || (data == NULL && data_len > 0))
     {
-        return 0;
+        Zwave.value = 0;
+        return;
     }
     uint8_t frame_len = (uint8_t)(data_len + 3); // Type + Command + Data + Checksum
     uint16_t total = (uint16_t)(2 + frame_len);  // SOF + LEN + frame_len bytes
     if (total > cap)
     {
-        return 0;
+        Zwave.value = 0;
+        return;
     }
     out[0] = ZWAVE_SOF;
     out[1] = frame_len;
@@ -47,37 +65,50 @@ uint16_t protocore_zwave_build_frame(protocore_zwave_type type, uint8_t cmd, con
     }
     // Checksum folds LEN..last-data = out[1 .. 1+frame_len-1] = out[1..frame_len].
     out[1 + frame_len] = checksum(&out[1], frame_len);
-    return total;
+    Zwave.value = total;
 }
 
-int protocore_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type, uint8_t *cmd, const uint8_t **pdata,
-                                uint8_t *pdata_len)
+static void zwave_parse_frame(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *raw = Zwave.parse_frame_args.raw;
+    uint16_t len = Zwave.parse_frame_args.len;
+    uint8_t *type = Zwave.parse_frame_args.type;
+    uint8_t *cmd = Zwave.parse_frame_args.cmd;
+    const uint8_t **pdata = Zwave.parse_frame_args.pdata;
+    uint8_t *pdata_len = Zwave.parse_frame_args.pdata_len;
+
     if (!raw || len < 1)
     {
-        return 0;
+        Zwave.n = 0;
+        return;
     }
     if (raw[0] != ZWAVE_SOF)
     {
-        return -1; // not a data frame (could be a control byte - test those first)
+        Zwave.n = -1; // not a data frame (could be a control byte - test those first)
+        return;
     }
     if (len < 2)
     {
-        return 0;
+        Zwave.n = 0;
+        return;
     }
     uint8_t frame_len = raw[1];
     if (frame_len < 3 || frame_len > PROTOCORE_ZWAVE_MAX_DATA + 3)
     {
-        return -1; // too short for Type+Cmd+Checksum, or implausibly long
+        Zwave.n = -1; // too short for Type+Cmd+Checksum, or implausibly long
+        return;
     }
     uint16_t total = (uint16_t)(2 + frame_len);
     if (len < total)
     {
-        return 0; // wait for the rest
+        Zwave.n = 0; // wait for the rest
+        return;
     }
     if (checksum(&raw[1], frame_len) != raw[1 + frame_len])
     {
-        return -1; // checksum mismatch
+        Zwave.n = -1; // checksum mismatch
+        return;
     }
     if (type)
     {
@@ -95,30 +126,53 @@ int protocore_zwave_parse_frame(const uint8_t *raw, uint16_t len, uint8_t *type,
     {
         *pdata_len = (uint8_t)(frame_len - 3);
     }
-    return (int)total;
+    Zwave.n = (int)total;
 }
 
-proto_bool protocore_zwave_is_ack(uint8_t b)
+static void zwave_is_ack(uint8_t *restrict work)
 {
-    return b == ZWAVE_ACK;
+    (void)work;
+    uint8_t b = Zwave.is_ack_args.b;
+
+    Zwave.ok = b == ZWAVE_ACK;
 }
-proto_bool protocore_zwave_is_nak(uint8_t b)
+static void zwave_is_nak(uint8_t *restrict work)
 {
-    return b == ZWAVE_NAK;
+    (void)work;
+    uint8_t b = Zwave.is_nak_args.b;
+
+    Zwave.ok = b == ZWAVE_NAK;
 }
-proto_bool protocore_zwave_is_can(uint8_t b)
+static void zwave_is_can(uint8_t *restrict work)
 {
-    return b == ZWAVE_CAN;
+    (void)work;
+    uint8_t b = Zwave.is_can_args.b;
+
+    Zwave.ok = b == ZWAVE_CAN;
 }
 
-uint16_t protocore_zwave_build_ack(uint8_t *out, uint16_t cap)
+static void zwave_build_ack(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *out = Zwave.build_ack_args.out;
+    uint16_t cap = Zwave.build_ack_args.cap;
+
     if (!out || cap < 1)
     {
-        return 0;
+        Zwave.value = 0;
+        return;
     }
     out[0] = ZWAVE_ACK;
-    return 1;
+    Zwave.value = 1;
 }
+
+ZwaveNs Zwave = {.build_frame = zwave_build_frame,
+                 .parse_frame = zwave_parse_frame,
+                 .is_ack = zwave_is_ack,
+                 .is_nak = zwave_is_nak,
+                 .is_can = zwave_is_can,
+                 .build_ack = zwave_build_ack};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ZWAVE

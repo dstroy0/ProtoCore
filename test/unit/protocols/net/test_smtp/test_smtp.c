@@ -114,6 +114,71 @@ static void mock_happy(Mock *m)
     mock_replies(m, HAPPY, HAPPY_N);
 }
 
+
+// The two records this suite was written against, and the one call that seats them. SmtpNs groups
+// its arguments by concern instead, so the fields land on session, auth, envelope and content.
+typedef struct
+{
+    const char *host;
+    uint16_t port;
+    SmtpSecurity security;
+    const char *user;
+    const char *pass;
+    const char *from;
+    const char *helo;
+} SmtpConfig;
+
+typedef struct
+{
+    const char *to;
+    const char *subject;
+    const char *body;
+} SmtpMessage;
+
+static void seat(const SmtpConfig *c, const SmtpMessage *m, SmtpSendFn send, SmtpRecvFn recv,
+                 SmtpStartTlsFn starttls, void *ctx)
+{
+    Smtp.session.host = c->host;
+    Smtp.session.port = c->port;
+    Smtp.session.security = c->security;
+    Smtp.session.client_name = c->helo;
+    Smtp.auth.user = c->user;
+    Smtp.auth.pass = c->pass;
+    Smtp.envelope.reverse_path = c->from;
+    Smtp.envelope.forward_path = m->to;
+    Smtp.content.subject = m->subject;
+    Smtp.content.body = m->body;
+    Smtp.transport.send = send;
+    Smtp.transport.recv = recv;
+    Smtp.transport.starttls = starttls;
+    Smtp.transport.ctx = ctx;
+}
+
+// Walk the session over the seam the caller supplies.
+static SmtpResult smtp_run(const SmtpConfig *c, const SmtpMessage *m, SmtpSendFn send, SmtpRecvFn recv,
+                           SmtpStartTlsFn starttls, void *ctx)
+{
+    if (!c || !m)
+    {
+        return SMTP_ERR_ARG; // the flat call validated its two records before reading either
+    }
+    seat(c, m, send, recv, starttls, ctx);
+    Smtp.run(protocore_smtp_span());
+    return Smtp.result;
+}
+
+// The entry that opens its own transport instead of taking one.
+static SmtpResult smtp_send(const SmtpConfig *c, const SmtpMessage *m)
+{
+    if (!c || !m)
+    {
+        return SMTP_ERR_ARG;
+    }
+    seat(c, m, NULL, NULL, NULL, NULL);
+    Smtp.send(protocore_smtp_span());
+    return Smtp.result;
+}
+
 static SmtpConfig base_cfg(void)
 {
     SmtpConfig c;
@@ -659,7 +724,8 @@ void test_null_optional_fields(void)
         msg.subject = NULL;
         msg.body = NULL;
         TEST_ASSERT_EQUAL_INT(SMTP_OK, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
-        TEST_ASSERT_TRUE(SENT(m, "EHLO esp32\r\n"));
+        // A caller that names no Domain gets SMTP_DEFAULT_CLIENT_NAME (RFC 5321 sec 4.1.1.1).
+        TEST_ASSERT_TRUE(SENT(m, "EHLO protocore\r\n"));
         TEST_ASSERT_TRUE(SENT(m, "Subject: \r\n"));
         TEST_ASSERT_TRUE(SENT(m, "\r\n\r\n.\r\n"));
     }

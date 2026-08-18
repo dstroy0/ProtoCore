@@ -80,9 +80,6 @@ typedef struct
     size_t cap;            ///< how much room it has
 } PowerOutArgs;
 
-/** @brief The governor's own state and the calls that reach it, described only in power_mgmt.c. */
-struct PowerMgmtInternal;
-
 /**
  * @brief The CPU clock governor.
  *
@@ -105,7 +102,6 @@ struct PowerMgmtInternal;
  * @var PowerMgmtNs::cpu_mhz     the clock the part is running at
  * @var PowerMgmtNs::apply       set the clock a plan asks for, when it is not already there
  * @var PowerMgmtNs::gate_bt     release the radio controller's power domain
- * @var PowerMgmtNs::internal    the latched boot cause and the calls that decide and apply
  *
  * decide takes its own previous output back in as @c plan_args.was_throttled: with one threshold a
  * part sitting at the limit would flap between ceiling and floor every tick, so once throttled it
@@ -123,24 +119,33 @@ typedef struct
     int16_t temp_c;
     uint16_t mhz;
 
-    void (*defaults)(struct PowerMgmtInternal *ctx);
-    void (*decide)(struct PowerMgmtInternal *ctx);
-    void (*json)(struct PowerMgmtInternal *ctx);
+    void (*const defaults)(uint8_t *restrict work);
+    void (*const decide)(uint8_t *restrict work);
+    void (*const json)(uint8_t *restrict work);
 #if PROTOCORE_HAS_VENDOR_PM
-    void (*brownout)(struct PowerMgmtInternal *ctx);
-    void (*die_temp)(struct PowerMgmtInternal *ctx);
-    void (*cpu_mhz)(struct PowerMgmtInternal *ctx);
-    void (*apply)(struct PowerMgmtInternal *ctx);
+    void (*const brownout)(uint8_t *restrict work);
+    void (*const die_temp)(uint8_t *restrict work);
+    void (*const cpu_mhz)(uint8_t *restrict work);
+    void (*const apply)(uint8_t *restrict work);
 #endif
 #if PROTOCORE_HAS_VENDOR_BT
-    void (*gate_bt)(struct PowerMgmtInternal *ctx);
+    void (*const gate_bt)(uint8_t *restrict work);
 #endif
-
-    struct PowerMgmtInternal *internal;
 } PowerMgmtNs;
 
 /** @brief The one symbol this module exports. */
 extern PowerMgmtNs Power;
+
+/**
+ * @brief The PROTOCORE_POWER_MGMT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_power_mgmt_span(void);
 
 PROTOCORE_END_DECLS
 

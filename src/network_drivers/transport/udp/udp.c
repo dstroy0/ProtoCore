@@ -14,22 +14,7 @@
 #include "network_drivers/transport/udp/client/client.h"
 #include "network_drivers/transport/udp/server/server.h"
 
-/**
- * @brief The two sides of UDP.
- *
- * RFC 768 gives the datagram a source port and a destination port; a bound port that receives is
- * the listener, and sending to a destination is the client.
- *
- * @var UdpInternal::listener  a bound port and what arrives on it
- * @var UdpInternal::client    sending a datagram to a destination
- */
-struct UdpInternal
-{
-    UdpListenerNs *listener;
-    UdpClientNs *client;
-};
-
-// Designated, so a member's position in the struct does not decide what it binds to.
-static struct UdpInternal s_udp = {.listener = &UdpListener, .client = &UdpClient};
-
-UdpNs Udp = {.internal = &s_udp};
+// RFC 768 gives the datagram a source port and a destination port; a bound port that receives is
+// the listener, and sending to a destination is the client. Designated, so a member's position in
+// the struct does not decide what it binds to.
+UdpNs Udp = {.listener = &UdpListener, .client = &UdpClient};

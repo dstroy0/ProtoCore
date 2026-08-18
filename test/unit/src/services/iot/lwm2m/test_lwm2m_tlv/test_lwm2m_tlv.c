@@ -40,7 +40,7 @@ static void open_sink(size_t cap)
 {
     Lwm2mTlv.sink.buf = g_buf;
     Lwm2mTlv.sink.cap = cap;
-    Lwm2mTlv.open(Lwm2mTlv.internal);
+    Lwm2mTlv.open(protocore_lwm2m_tlv_span());
 }
 
 static void write_opaque(Lwm2mTlvIdType id_type, uint16_t id, const void *value, size_t len)
@@ -49,7 +49,7 @@ static void write_opaque(Lwm2mTlvIdType id_type, uint16_t id, const void *value,
     Lwm2mTlv.hdr.id = id;
     Lwm2mTlv.val.opaque = (const uint8_t *)value;
     Lwm2mTlv.val.len = len;
-    Lwm2mTlv.write(Lwm2mTlv.internal);
+    Lwm2mTlv.write(protocore_lwm2m_tlv_span());
 }
 
 static void write_string(Lwm2mTlvIdType id_type, uint16_t id, const char *s)
@@ -57,7 +57,7 @@ static void write_string(Lwm2mTlvIdType id_type, uint16_t id, const char *s)
     Lwm2mTlv.hdr.id_type = id_type;
     Lwm2mTlv.hdr.id = id;
     Lwm2mTlv.val.string_value = s;
-    Lwm2mTlv.write_string(Lwm2mTlv.internal);
+    Lwm2mTlv.write_string(protocore_lwm2m_tlv_span());
 }
 
 static void write_integer(Lwm2mTlvIdType id_type, uint16_t id, int64_t v)
@@ -65,12 +65,12 @@ static void write_integer(Lwm2mTlvIdType id_type, uint16_t id, int64_t v)
     Lwm2mTlv.hdr.id_type = id_type;
     Lwm2mTlv.hdr.id = id;
     Lwm2mTlv.val.integer_value = v;
-    Lwm2mTlv.write_integer(Lwm2mTlv.internal);
+    Lwm2mTlv.write_integer(protocore_lwm2m_tlv_span());
 }
 
 static size_t finish(void)
 {
-    Lwm2mTlv.finish(Lwm2mTlv.internal);
+    Lwm2mTlv.finish(protocore_lwm2m_tlv_span());
     return Lwm2mTlv.n;
 }
 
@@ -79,12 +79,12 @@ static size_t walk(const uint8_t *buf, size_t len, Entry *out, size_t max)
 {
     Lwm2mTlv.source.buf = buf;
     Lwm2mTlv.source.len = len;
-    Lwm2mTlv.parse(Lwm2mTlv.internal);
+    Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
     TEST_ASSERT_TRUE(Lwm2mTlv.ok);
     size_t n = 0;
     for (;;)
     {
-        Lwm2mTlv.next(Lwm2mTlv.internal);
+        Lwm2mTlv.next(protocore_lwm2m_tlv_span());
         if (!Lwm2mTlv.ok)
         {
             break;
@@ -103,7 +103,7 @@ static int64_t as_integer(const Entry *e)
 {
     Lwm2mTlv.val.opaque = e->value;
     Lwm2mTlv.val.len = e->len;
-    Lwm2mTlv.value_integer(Lwm2mTlv.internal);
+    Lwm2mTlv.value_integer(protocore_lwm2m_tlv_span());
     TEST_ASSERT_TRUE(Lwm2mTlv.ok);
     return Lwm2mTlv.val.integer_value;
 }
@@ -313,7 +313,7 @@ void test_length_field_widths(void)
     {
         Lwm2mTlv.sink.buf = g_big;
         Lwm2mTlv.sink.cap = sizeof(g_big);
-        Lwm2mTlv.open(Lwm2mTlv.internal);
+        Lwm2mTlv.open(protocore_lwm2m_tlv_span());
         write_opaque(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x05, g_value, CASES[i].len);
         TEST_ASSERT_TRUE(Lwm2mTlv.ok);
         TEST_ASSERT_EQUAL_UINT(CASES[i].header + CASES[i].len, finish());
@@ -329,7 +329,7 @@ void test_length_field_widths(void)
     // octets and 65536 is 0x01 0x00 0x00 over three.
     Lwm2mTlv.sink.buf = g_big;
     Lwm2mTlv.sink.cap = sizeof(g_big);
-    Lwm2mTlv.open(Lwm2mTlv.internal);
+    Lwm2mTlv.open(protocore_lwm2m_tlv_span());
     write_opaque(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x05, g_value, 256);
     TEST_ASSERT_EQUAL_UINT(4u + 256u, finish());
     TEST_ASSERT_EQUAL_HEX8(0x01, g_big[2]);
@@ -337,7 +337,7 @@ void test_length_field_widths(void)
 
     Lwm2mTlv.sink.buf = g_big;
     Lwm2mTlv.sink.cap = sizeof(g_big);
-    Lwm2mTlv.open(Lwm2mTlv.internal);
+    Lwm2mTlv.open(protocore_lwm2m_tlv_span());
     write_opaque(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x05, g_value, 65536);
     TEST_ASSERT_EQUAL_UINT(5u + 65536u, finish());
     TEST_ASSERT_EQUAL_HEX8(0x01, g_big[2]);
@@ -406,10 +406,10 @@ void test_boolean_is_one_octet(void)
     Lwm2mTlv.hdr.id_type = LWM2M_TLV_RESOURCE_WITH_VALUE;
     Lwm2mTlv.hdr.id = 0x0B;
     Lwm2mTlv.val.boolean_value = PROTO_TRUE;
-    Lwm2mTlv.write_boolean(Lwm2mTlv.internal);
+    Lwm2mTlv.write_boolean(protocore_lwm2m_tlv_span());
     Lwm2mTlv.hdr.id = 0x0C;
     Lwm2mTlv.val.boolean_value = PROTO_FALSE;
-    Lwm2mTlv.write_boolean(Lwm2mTlv.internal);
+    Lwm2mTlv.write_boolean(protocore_lwm2m_tlv_span());
     TEST_ASSERT_EQUAL_UINT(6u, finish());
     TEST_ASSERT_EQUAL_MEMORY("\xC1\x0B\x01\xC1\x0C\x00", g_buf, 6);
 }
@@ -423,14 +423,14 @@ void test_float_is_binary64_in_network_byte_order(void)
     Lwm2mTlv.hdr.id_type = LWM2M_TLV_RESOURCE_WITH_VALUE;
     Lwm2mTlv.hdr.id = 0x01;
     Lwm2mTlv.val.float_value = 1.0;
-    Lwm2mTlv.write_float(Lwm2mTlv.internal);
+    Lwm2mTlv.write_float(protocore_lwm2m_tlv_span());
     TEST_ASSERT_EQUAL_UINT(11u, finish());
     TEST_ASSERT_EQUAL_MEMORY("\xC8\x01\x08\x3F\xF0\x00\x00\x00\x00\x00\x00", g_buf, 11);
 
     open_sink(sizeof(g_buf));
     Lwm2mTlv.hdr.id = 0x02;
     Lwm2mTlv.val.float_value = -2.0;
-    Lwm2mTlv.write_float(Lwm2mTlv.internal);
+    Lwm2mTlv.write_float(protocore_lwm2m_tlv_span());
     TEST_ASSERT_EQUAL_UINT(11u, finish());
     TEST_ASSERT_EQUAL_MEMORY("\xC8\x02\x08\xC0\x00\x00\x00\x00\x00\x00\x00", g_buf, 11);
 }
@@ -447,14 +447,14 @@ void test_writer_fails_closed(void)
     // A later write that would have fit is refused too: the cursor stays poisoned.
     write_opaque(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x03, "", 0);
     TEST_ASSERT_FALSE(Lwm2mTlv.ok);
-    Lwm2mTlv.finish(Lwm2mTlv.internal);
+    Lwm2mTlv.finish(protocore_lwm2m_tlv_span());
     TEST_ASSERT_FALSE(Lwm2mTlv.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Lwm2mTlv.n);
 
     // A sink with no buffer starts poisoned.
     Lwm2mTlv.sink.buf = NULL;
     Lwm2mTlv.sink.cap = 64;
-    Lwm2mTlv.open(Lwm2mTlv.internal);
+    Lwm2mTlv.open(protocore_lwm2m_tlv_span());
     TEST_ASSERT_FALSE(Lwm2mTlv.ok);
     write_integer(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x01, 1);
     TEST_ASSERT_FALSE(Lwm2mTlv.ok);
@@ -479,9 +479,9 @@ void test_reader_refuses_a_truncated_entry(void)
     {
         Lwm2mTlv.source.buf = GOOD;
         Lwm2mTlv.source.len = len;
-        Lwm2mTlv.parse(Lwm2mTlv.internal);
+        Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
         TEST_ASSERT_TRUE(Lwm2mTlv.ok);
-        Lwm2mTlv.next(Lwm2mTlv.internal);
+        Lwm2mTlv.next(protocore_lwm2m_tlv_span());
         TEST_ASSERT_FALSE_MESSAGE(Lwm2mTlv.ok, "a cut-short entry must not decode");
     }
 
@@ -489,24 +489,24 @@ void test_reader_refuses_a_truncated_entry(void)
     static const uint8_t SHORT_ID[2] = {0x61, 0x01};
     Lwm2mTlv.source.buf = SHORT_ID;
     Lwm2mTlv.source.len = sizeof(SHORT_ID);
-    Lwm2mTlv.parse(Lwm2mTlv.internal);
-    Lwm2mTlv.next(Lwm2mTlv.internal);
+    Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
+    Lwm2mTlv.next(protocore_lwm2m_tlv_span());
     TEST_ASSERT_FALSE(Lwm2mTlv.ok);
 
     // An 8-bit Length field with no octet behind it.
     static const uint8_t SHORT_LEN[2] = {0xC8, 0x01};
     Lwm2mTlv.source.buf = SHORT_LEN;
     Lwm2mTlv.source.len = sizeof(SHORT_LEN);
-    Lwm2mTlv.parse(Lwm2mTlv.internal);
-    Lwm2mTlv.next(Lwm2mTlv.internal);
+    Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
+    Lwm2mTlv.next(protocore_lwm2m_tlv_span());
     TEST_ASSERT_FALSE(Lwm2mTlv.ok);
 
     // A source with no buffer decodes nothing.
     Lwm2mTlv.source.buf = NULL;
     Lwm2mTlv.source.len = 8;
-    Lwm2mTlv.parse(Lwm2mTlv.internal);
+    Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
     TEST_ASSERT_FALSE(Lwm2mTlv.ok);
-    Lwm2mTlv.next(Lwm2mTlv.internal);
+    Lwm2mTlv.next(protocore_lwm2m_tlv_span());
     TEST_ASSERT_FALSE(Lwm2mTlv.ok);
 }
 
@@ -520,19 +520,19 @@ void test_value_integer_refuses_other_widths(void)
     {
         Lwm2mTlv.val.opaque = V;
         Lwm2mTlv.val.len = GOOD[i];
-        Lwm2mTlv.value_integer(Lwm2mTlv.internal);
+        Lwm2mTlv.value_integer(protocore_lwm2m_tlv_span());
         TEST_ASSERT_TRUE(Lwm2mTlv.ok);
     }
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
         Lwm2mTlv.val.opaque = V;
         Lwm2mTlv.val.len = BAD[i];
-        Lwm2mTlv.value_integer(Lwm2mTlv.internal);
+        Lwm2mTlv.value_integer(protocore_lwm2m_tlv_span());
         TEST_ASSERT_FALSE(Lwm2mTlv.ok);
     }
     Lwm2mTlv.val.opaque = NULL;
     Lwm2mTlv.val.len = 4;
-    Lwm2mTlv.value_integer(Lwm2mTlv.internal);
+    Lwm2mTlv.value_integer(protocore_lwm2m_tlv_span());
     TEST_ASSERT_FALSE(Lwm2mTlv.ok);
 }
 

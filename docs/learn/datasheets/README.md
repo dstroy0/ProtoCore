@@ -29,11 +29,11 @@ Fetched from the vendor; the .txt beside each .pdf is the greppable form, made w
   7-bit API), Table 5 reference registers, multibyte order
   <https://www.st.com/resource/en/datasheet/vl53l0x.pdf>
   The ranging registers are NOT in the datasheet. Two further sources carry them:
-  - `vl53l0x_um2039.pdf` (cached) - the API user manual: Table 1 is the API-level RangeStatus,
-    where 0 is Range Valid. This is a different scale from the raw DeviceRangeStatus in the
-    register, and confusing the two inverts the validity test
-    <https://www.st.com/resource/en/user_manual/um2039-...-stmicroelectronics.pdf>
-  - ST's API header `vl53l0x_device.h` (not cached, it is source not a document) - the register
-    addresses and `VL53L0X_DEVICEERROR_RANGECOMPLETE = 11`, which is the raw DeviceRangeStatus
-    value that means a completed measurement
-    <https://github.com/stm32duino/VL53L0X/blob/main/src/vl53l0x_device.h>
+    - `vl53l0x_um2039.pdf` (cached) - the API user manual: Table 1 is the API-level RangeStatus,
+      where 0 is Range Valid. This is a different scale from the raw DeviceRangeStatus in the
+      register, and confusing the two inverts the validity test
+      <https://www.st.com/resource/en/user_manual/um2039-...-stmicroelectronics.pdf>
+    - ST's API header `vl53l0x_device.h` (not cached, it is source not a document) - the register
+      addresses and `VL53L0X_DEVICEERROR_RANGECOMPLETE = 11`, which is the raw DeviceRangeStatus
+      value that means a completed measurement
+      <https://github.com/stm32duino/VL53L0X/blob/main/src/vl53l0x_device.h>

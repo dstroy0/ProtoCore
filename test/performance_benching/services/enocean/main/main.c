@@ -21,6 +21,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t enocean_work[16]; // the borrow an entry takes; Enocean never reads it
+
 void dbench_run(void)
 {
     // RADIO_ERP1 telegram: RORG + payload + sender(4) + status, plus a 3-byte optional data
@@ -32,8 +34,15 @@ void dbench_run(void)
     static uint8_t build_out[64];
     static uint8_t telegram[64];
 
-    uint16_t tg_len =
-        protocore_esp3_build(ESP3_RADIO_ERP1, data, sizeof(data), opt, sizeof(opt), telegram, sizeof(telegram));
+    Enocean.esp3_build_args.type = ESP3_RADIO_ERP1;
+    Enocean.esp3_build_args.data = data;
+    Enocean.esp3_build_args.data_len = sizeof(data);
+    Enocean.esp3_build_args.opt = opt;
+    Enocean.esp3_build_args.opt_len = sizeof(opt);
+    Enocean.esp3_build_args.out = telegram;
+    Enocean.esp3_build_args.cap = sizeof(telegram);
+    Enocean.esp3_build(enocean_work);
+    uint16_t tg_len = Enocean.u16;
 
     for (;;)
     {

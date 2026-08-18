@@ -138,7 +138,6 @@ typedef struct
 #endif
 
 /** @brief The plane's own tables and the calls that reach them, described only in forward.c. */
-struct ForwardInternal;
 
 /**
  * @brief The interface forwarding plane. RFC 1812 sec 5.2 "FORWARDING WALK-THROUGH".
@@ -165,7 +164,6 @@ struct ForwardInternal;
  * @var ForwardNs::set_inspector    install the ingress inspection hook
  * @var ForwardNs::ingress          run one received frame through the forwarding walk-through
  * @var ForwardNs::get_stats        copy the counters onto the handle
- * @var ForwardNs::internal         the plane's tables and the calls that reach them
  */
 typedef struct
 {
@@ -184,22 +182,32 @@ typedef struct
     uint8_t n;
     protocore_forward_stats stats;
 
-    void (*reset)(struct ForwardInternal *ctx);
-    void (*add_rule)(struct ForwardInternal *ctx);
-    void (*acl_set_default)(struct ForwardInternal *ctx);
-    void (*acl_add)(struct ForwardInternal *ctx);
-    void (*route_add)(struct ForwardInternal *ctx);
+    void (*const reset)(uint8_t *restrict work);
+    void (*const add_rule)(uint8_t *restrict work);
+    void (*const acl_set_default)(uint8_t *restrict work);
+    void (*const acl_add)(uint8_t *restrict work);
+    void (*const route_add)(uint8_t *restrict work);
 #if PROTOCORE_FWD_INSPECT
-    void (*set_inspector)(struct ForwardInternal *ctx);
+    void (*const set_inspector)(uint8_t *restrict work);
 #endif
-    void (*ingress)(struct ForwardInternal *ctx);
-    void (*get_stats)(struct ForwardInternal *ctx);
+    void (*const ingress)(uint8_t *restrict work);
+    void (*const get_stats)(uint8_t *restrict work);
 
-    struct ForwardInternal *internal;
 } ForwardNs;
 
 /** @brief The one symbol this module exports. */
 extern ForwardNs Forward;
+
+/**
+ * @brief The PROTOCORE_FORWARD_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_forward_span(void);
 
 #endif // PROTOCORE_ENABLE_FORWARD
 

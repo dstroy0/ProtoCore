@@ -20,10 +20,10 @@
 
 void setUp(void)
 {
-    Logbuf.reset(Logbuf.internal);
+    Logbuf.reset(protocore_logbuf_span());
     Logbuf.trap.threshold = 0xFF; // the trap outlives a reset, so each case starts with it off
     Logbuf.trap.cb = NULL;
-    Logbuf.set_trap(Logbuf.internal);
+    Logbuf.set_trap(protocore_logbuf_span());
 }
 void tearDown(void)
 {
@@ -33,19 +33,19 @@ static void put(uint8_t level, const char *msg)
 {
     Logbuf.line.level = level;
     Logbuf.line.msg = msg;
-    Logbuf.put(Logbuf.internal);
+    Logbuf.put(protocore_logbuf_span());
 }
 
 static uint16_t held(void)
 {
-    Logbuf.held(Logbuf.internal);
+    Logbuf.held(protocore_logbuf_span());
     return Logbuf.count;
 }
 
 static const char *at(uint16_t i)
 {
     Logbuf.read.i = i;
-    Logbuf.at(Logbuf.internal);
+    Logbuf.at(protocore_logbuf_span());
     return Logbuf.text;
 }
 
@@ -55,7 +55,7 @@ static int dump_into(char *out, size_t cap)
 {
     Logbuf.read.out = out;
     Logbuf.read.cap = cap;
-    Logbuf.dump(Logbuf.internal);
+    Logbuf.dump(protocore_logbuf_span());
     return Logbuf.n;
 }
 
@@ -93,7 +93,7 @@ static void arm_trap(uint8_t threshold)
     g_trap_line[0] = '\0';
     Logbuf.trap.threshold = threshold;
     Logbuf.trap.cb = on_trap;
-    Logbuf.set_trap(Logbuf.internal);
+    Logbuf.set_trap(protocore_logbuf_span());
 }
 
 // A stored line is its severity letter, one space, then the message, so a reader can sort or filter
@@ -263,7 +263,7 @@ void test_the_trap_can_be_turned_off(void)
     arm_trap(PROTOCORE_LOG_DEBUG);
     Logbuf.trap.threshold = PROTOCORE_LOG_DEBUG;
     Logbuf.trap.cb = NULL;
-    Logbuf.set_trap(Logbuf.internal);
+    Logbuf.set_trap(protocore_logbuf_span());
     put(PROTOCORE_LOG_ERROR, "loud");
     TEST_ASSERT_EQUAL_INT(0, g_trap_fires);
 }
@@ -272,7 +272,7 @@ void test_the_trap_can_be_turned_off(void)
 void test_reset_empties_the_ring(void)
 {
     put(PROTOCORE_LOG_INFO, "before");
-    Logbuf.reset(Logbuf.internal);
+    Logbuf.reset(protocore_logbuf_span());
     TEST_ASSERT_EQUAL_UINT16(0, held());
     TEST_ASSERT_NULL(at(0));
     put(PROTOCORE_LOG_INFO, "after");

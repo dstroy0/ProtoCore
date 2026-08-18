@@ -20,6 +20,8 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
 #include "server/core/proto_handler.h"
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp.h"
 #endif
@@ -94,7 +96,7 @@ static void net_accept(uint8_t conn_slot)
     {
         // No SSH capacity: drop the connection (transport owns the teardown).
         ConnPool.slot = conn->id;
-        ConnPool.close(ConnPool.internal);
+        ConnPool.close(protocore_conn_pool_span());
         return;
     }
 
@@ -118,7 +120,7 @@ static void net_accept(uint8_t conn_slot)
 static void close_conn(uint8_t conn_slot)
 {
     ConnPool.slot = conn_slot;
-    ConnPool.close(ConnPool.internal); // transport owns detach + slot reset + close
+    ConnPool.close(protocore_conn_pool_span()); // transport owns detach + slot reset + close
     net_close(conn_slot);
 }
 
@@ -139,7 +141,7 @@ static void net_rx(uint8_t conn_slot)
     ConnPool.slot = conn_slot;
     ConnPool.io.buf = buf;
     ConnPool.io.cap = RX_BUF_SIZE;
-    ConnPool.read(ConnPool.internal);
+    ConnPool.read(protocore_conn_pool_span());
     size_t n = ConnPool.n;
     if (n == 0)
     {
@@ -202,7 +204,7 @@ static void net_poll(uint8_t conn_slot)
 {
     TcpConn *conn = &conn_pool[conn_slot];
     ConnPool.slot = conn_slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         return;
@@ -235,7 +237,7 @@ static void net_poll(uint8_t conn_slot)
             SshNetwork.tx_drain(SshNetwork.internal); // the codec flagged it; put it out before the close
         }
         ConnPool.slot = conn_slot;
-        ConnPool.close(ConnPool.internal);
+        ConnPool.close(protocore_conn_pool_span());
         return;
     }
 
@@ -272,7 +274,7 @@ static void rfwd_on_accept(uint8_t conn_slot)
     if (!SshConnection.ok)
     {
         ConnPool.slot = conn_slot;
-        ConnPool.close(ConnPool.internal); // no binding owns this listener (stale): drop
+        ConnPool.close(protocore_conn_pool_span()); // no binding owns this listener (stale): drop
         return;
     }
     // Originator address (advisory, RFC 4254 sec 7.2); the peer port is not exposed by the
@@ -282,13 +284,13 @@ static void rfwd_on_accept(uint8_t conn_slot)
     protocore_ip rip;
     ConnPool.slot = conn_slot;
     ConnPool.out = &rip;
-    ConnPool.remote_addr(ConnPool.internal);
+    ConnPool.remote_addr(protocore_conn_pool_span());
     if (ConnPool.ok)
     {
         Ip.args.ip = &rip;
         Ip.args.buf = orig;
         Ip.args.cap = sizeof(orig);
-        Ip.format(Ip.internal);
+        Ip.format(ip_work);
     }
     // Open the forwarded-tcpip channel back to the client, echoing the requested bind
     // address as the "address that was connected".
@@ -302,7 +304,7 @@ static void rfwd_on_accept(uint8_t conn_slot)
     if (ch < 0)
     {
         ConnPool.slot = conn_slot;
-        ConnPool.close(ConnPool.internal); // SSH connection gone or channel pool full
+        ConnPool.close(protocore_conn_pool_span()); // SSH connection gone or channel pool full
         return;
     }
     SshNetwork.ssh_slot = ssh_slot;
@@ -354,7 +356,7 @@ static void rfwd_on_poll(uint8_t conn_slot)
     // The dispatch loop now polls every slot uniformly; it used to poll only ACTIVE slots, so preserve
     // that gate here (a closing/free forward slot has nothing to pump).
     ConnPool.slot = conn_slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         return;
@@ -410,7 +412,7 @@ void ssh_rfwd_listener_open(struct SshServerInternal *restrict ctx)
     TcpListener.idx = (uint8_t)li;
     TcpListener.bind.port = bind_port;
     TcpListener.bind.proto = PROTO_SSH_RFWD;
-    TcpListener.add_dynamic(TcpListener.internal);
+    TcpListener.add_dynamic(protocore_tcp_listener_span());
     if (TcpListener.i32 != 1)
     {
         ctx->ns->i32 = -1;
@@ -426,7 +428,7 @@ void ssh_rfwd_listener_close(struct SshServerInternal *restrict ctx)
     if (handle >= 0 && handle < MAX_LISTENERS)
     {
         TcpListener.idx = (uint8_t)handle;
-        TcpListener.stop_dynamic(TcpListener.internal);
+        TcpListener.stop_dynamic(protocore_tcp_listener_span());
     }
 }
 

@@ -14,6 +14,8 @@
 
 #include <unity.h>
 
+static uint8_t wearlevel_work[16]; // the borrow an entry takes; Wearlevel never reads it
+
 void setUp(void)
 {
 }
@@ -25,7 +27,7 @@ static size_t pick(const uint32_t *counts, size_t n)
 {
     Wearlevel.args.counts = counts;
     Wearlevel.args.n = n;
-    Wearlevel.pick(Wearlevel.internal);
+    Wearlevel.pick(wearlevel_work);
     return Wearlevel.n_out;
 }
 
@@ -34,14 +36,14 @@ static void mark(uint32_t *counts, size_t n, size_t idx)
     Wearlevel.args.counts_rw = counts;
     Wearlevel.args.n = n;
     Wearlevel.args.idx = idx;
-    Wearlevel.mark(Wearlevel.internal);
+    Wearlevel.mark(wearlevel_work);
 }
 
 static uint32_t imbalance(const uint32_t *counts, size_t n)
 {
     Wearlevel.args.counts = counts;
     Wearlevel.args.n = n;
-    Wearlevel.imbalance(Wearlevel.internal);
+    Wearlevel.imbalance(wearlevel_work);
     return Wearlevel.spread;
 }
 

@@ -119,9 +119,6 @@ typedef struct
     size_t len;            ///< the length prefix that preceded it
 } ProtobufRecord;
 
-/** @brief The codec's own rows and the calls that reach them, described only in protobuf.c. */
-struct ProtobufInternal;
-
 /**
  * @brief The Protocol Buffers wire format: the record encoder and the record decoder.
  *
@@ -162,7 +159,6 @@ struct ProtobufInternal;
  * @var ProtobufNs::zigzag32      convert the ZigZag varint @c value.u32 to the sint32 @c i32
  * @var ProtobufNs::float_bits    convert the I32 bit pattern @c value.u32 to the float @c f32
  * @var ProtobufNs::double_bits   convert the I64 bit pattern @c value.u64 to the double @c f64
- * @var ProtobufNs::internal      the codec's rows and the calls that reach them
  */
 typedef struct
 {
@@ -182,33 +178,42 @@ typedef struct
     double f64;
     ProtobufRecord record;
 
-    void (*writer_open)(struct ProtobufInternal *ctx);
-    void (*write_varint)(struct ProtobufInternal *ctx);
-    void (*write_tag)(struct ProtobufInternal *ctx);
-    void (*write_uint64)(struct ProtobufInternal *ctx);
-    void (*write_int64)(struct ProtobufInternal *ctx);
-    void (*write_sint64)(struct ProtobufInternal *ctx);
-    void (*write_bool)(struct ProtobufInternal *ctx);
-    void (*write_fixed32)(struct ProtobufInternal *ctx);
-    void (*write_fixed64)(struct ProtobufInternal *ctx);
-    void (*write_float)(struct ProtobufInternal *ctx);
-    void (*write_double)(struct ProtobufInternal *ctx);
-    void (*write_bytes)(struct ProtobufInternal *ctx);
-    void (*write_string)(struct ProtobufInternal *ctx);
-    void (*writer_finish)(struct ProtobufInternal *ctx);
-    void (*reader_open)(struct ProtobufInternal *ctx);
-    void (*read_varint)(struct ProtobufInternal *ctx);
-    void (*read_record)(struct ProtobufInternal *ctx);
-    void (*zigzag64)(struct ProtobufInternal *ctx);
-    void (*zigzag32)(struct ProtobufInternal *ctx);
-    void (*float_bits)(struct ProtobufInternal *ctx);
-    void (*double_bits)(struct ProtobufInternal *ctx);
-
-    struct ProtobufInternal *internal;
+    void (*const writer_open)(uint8_t *restrict work);
+    void (*const write_varint)(uint8_t *restrict work);
+    void (*const write_tag)(uint8_t *restrict work);
+    void (*const write_uint64)(uint8_t *restrict work);
+    void (*const write_int64)(uint8_t *restrict work);
+    void (*const write_sint64)(uint8_t *restrict work);
+    void (*const write_bool)(uint8_t *restrict work);
+    void (*const write_fixed32)(uint8_t *restrict work);
+    void (*const write_fixed64)(uint8_t *restrict work);
+    void (*const write_float)(uint8_t *restrict work);
+    void (*const write_double)(uint8_t *restrict work);
+    void (*const write_bytes)(uint8_t *restrict work);
+    void (*const write_string)(uint8_t *restrict work);
+    void (*const writer_finish)(uint8_t *restrict work);
+    void (*const reader_open)(uint8_t *restrict work);
+    void (*const read_varint)(uint8_t *restrict work);
+    void (*const read_record)(uint8_t *restrict work);
+    void (*const zigzag64)(uint8_t *restrict work);
+    void (*const zigzag32)(uint8_t *restrict work);
+    void (*const float_bits)(uint8_t *restrict work);
+    void (*const double_bits)(uint8_t *restrict work);
 } ProtobufNs;
 
 /** @brief The one symbol this module exports. */
 extern ProtobufNs Protobuf;
+
+/**
+ * @brief The PROTOCORE_PROTOBUF_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_protobuf_span(void);
 
 #endif // PROTOCORE_NEED_PROTOBUF
 

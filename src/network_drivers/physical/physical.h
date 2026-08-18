@@ -30,19 +30,13 @@
 #include "protocore_config.h"                             // protocore_if_kind
 #include "shared/ip/ip.h"
 
-// Is there a physical (L1) backend to drive? The real bring-up (radio, Ethernet PHY, the stack's
+// There is always a physical (L1) backend to drive. The bring-up (radio, Ethernet PHY, the stack's
 // interface access) lives beside its owner - core_setup/physical/<vendor>/ for silicon,
-// core_setup/hal/host/physical/ for a suite. When 0, physical.c supplies the seam as no-op stubs so a build
-// with no PHY still links headless.
-//
-// A detected part answers for its silicon; anything else answers 0 and turns it on with
-// -DPROTOCORE_PHYSICAL_HAS_BACKEND=1, which is how a suite drives the backend path without silicon.
+// core_setup/hal/host/physical/ everywhere else, which is a link that can actually be up and
+// answers from it. Every build compiles one of the two, so a link is driven for real on a host as
+// well as on a part.
 #ifndef PROTOCORE_PHYSICAL_HAS_BACKEND
-#if PROTOCORE_VENDOR_ESP
 #define PROTOCORE_PHYSICAL_HAS_BACKEND 1
-#else
-#define PROTOCORE_PHYSICAL_HAS_BACKEND 0
-#endif
 #endif
 
 // A backend may be written in C++ (it drives the platform's own WiFi and Ethernet objects), so the
@@ -51,8 +45,8 @@ PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // The L1 backend seam. Not the caller API: every name here is defined once per build, by the
-// backend the PROTOCORE_VENDOR_* selector compiled, by a suite's backend, or by the no-op stubs in
-// physical.c. A caller reaches layer 1 through @ref Physical and never through a seam name.
+// backend the PROTOCORE_VENDOR_* selector compiled or by the software backend beside it. A caller
+// reaches layer 1 through @ref Physical and never through a seam name.
 // ---------------------------------------------------------------------------
 
 /**
@@ -222,6 +216,18 @@ void protocore_phy_monitor_set_channel(uint8_t channel);
 /** @brief Leave monitor mode. */
 void protocore_phy_monitor_end(void);
 
+#if PROTOCORE_PHYSICAL_HAS_BACKEND && !PROTOCORE_VENDOR_ESP
+/**
+ * @brief Hand one captured frame up to the armed monitor sink, the way the radio does.
+ *
+ * The mock backend's receive path: with no silicon to put the part in monitor mode, this is where
+ * a frame enters, so a caller above is driven by a real delivery rather than by its own input.
+ *
+ * @return false when monitor mode is not running or the frame is empty.
+ */
+proto_bool protocore_phy_mock_deliver(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
+#endif
+
 // ---------------------------------------------------------------------------
 // The interfaces this device has. An interface is an id, a kind, and the callback that puts octets
 // on the wire - all three physical facts, which is why the registry is here and not in the
@@ -277,9 +283,6 @@ typedef struct
     uint8_t i;                 ///< the registry row a lookup names
 } PhysicalIfaceArgs;
 
-/** @brief The registry's own state and the calls that reach it, described only in physical.c. */
-struct PhysicalInternal;
-
 /**
  * @brief The radio interface, defined in radio_power.h.
  *
@@ -333,7 +336,6 @@ typedef struct RadioNs RadioNs;
  * @var PhysicalNs::iface_count     registered interfaces
  * @var PhysicalNs::iface_send      put the held frame on the named id
  * @var PhysicalNs::radio           the radio handle, radio_power.h's
- * @var PhysicalNs::internal        the registry rows and the calls that reach them
  */
 typedef struct
 {
@@ -350,39 +352,48 @@ typedef struct
     int8_t i8;
     int16_t i16;
 
-    void (*wifi_init)(struct PhysicalInternal *ctx);
-    void (*wifi_ready)(struct PhysicalInternal *ctx);
-    void (*wifi_radio_init)(struct PhysicalInternal *ctx);
-    void (*wifi_ap_init)(struct PhysicalInternal *ctx);
-    void (*wifi_ssid)(struct PhysicalInternal *ctx);
-    void (*wifi_channel)(struct PhysicalInternal *ctx);
-    void (*wifi_rssi)(struct PhysicalInternal *ctx);
-    void (*wifi_ap_ip)(struct PhysicalInternal *ctx);
-    void (*wifi_mac)(struct PhysicalInternal *ctx);
-    void (*eth_init)(struct PhysicalInternal *ctx);
-    void (*eth_ready)(struct PhysicalInternal *ctx);
-    void (*ip6_init)(struct PhysicalInternal *ctx);
-    void (*ip6_global)(struct PhysicalInternal *ctx);
-    void (*ip6_ready)(struct PhysicalInternal *ctx);
-    void (*egress)(struct PhysicalInternal *ctx);
-    void (*egress_ip)(struct PhysicalInternal *ctx);
-    void (*egress_mac)(struct PhysicalInternal *ctx);
-    void (*classify_ip)(struct PhysicalInternal *ctx);
-    void (*iface_add)(struct PhysicalInternal *ctx);
-    void (*iface_reset)(struct PhysicalInternal *ctx);
-    void (*iface_present)(struct PhysicalInternal *ctx);
-    void (*iface_kind)(struct PhysicalInternal *ctx);
-    void (*iface_at)(struct PhysicalInternal *ctx);
-    void (*iface_count)(struct PhysicalInternal *ctx);
-    void (*iface_send)(struct PhysicalInternal *ctx);
+    void (*const wifi_init)(uint8_t *restrict work);
+    void (*const wifi_ready)(uint8_t *restrict work);
+    void (*const wifi_radio_init)(uint8_t *restrict work);
+    void (*const wifi_ap_init)(uint8_t *restrict work);
+    void (*const wifi_ssid)(uint8_t *restrict work);
+    void (*const wifi_channel)(uint8_t *restrict work);
+    void (*const wifi_rssi)(uint8_t *restrict work);
+    void (*const wifi_ap_ip)(uint8_t *restrict work);
+    void (*const wifi_mac)(uint8_t *restrict work);
+    void (*const eth_init)(uint8_t *restrict work);
+    void (*const eth_ready)(uint8_t *restrict work);
+    void (*const ip6_init)(uint8_t *restrict work);
+    void (*const ip6_global)(uint8_t *restrict work);
+    void (*const ip6_ready)(uint8_t *restrict work);
+    void (*const egress)(uint8_t *restrict work);
+    void (*const egress_ip)(uint8_t *restrict work);
+    void (*const egress_mac)(uint8_t *restrict work);
+    void (*const classify_ip)(uint8_t *restrict work);
+    void (*const iface_add)(uint8_t *restrict work);
+    void (*const iface_reset)(uint8_t *restrict work);
+    void (*const iface_present)(uint8_t *restrict work);
+    void (*const iface_kind)(uint8_t *restrict work);
+    void (*const iface_at)(uint8_t *restrict work);
+    void (*const iface_count)(uint8_t *restrict work);
+    void (*const iface_send)(uint8_t *restrict work);
 
     RadioNs *radio;
-
-    struct PhysicalInternal *internal;
 } PhysicalNs;
 
 /** @brief The one symbol this module exports. */
 extern PhysicalNs Physical;
+
+/**
+ * @brief The PROTOCORE_PHYSICAL_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_physical_span(void);
 
 PROTOCORE_END_DECLS
 

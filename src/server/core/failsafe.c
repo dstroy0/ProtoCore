@@ -7,6 +7,7 @@
  */
 
 #include "server/core/failsafe.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_FAILSAFE
 
@@ -20,21 +21,40 @@ struct FailsafeStorage
     void *cb_arg;
 };
 
-/**
- * @brief The lifelines and the calls that reach them - what FailsafeNs points at.
- *
- * @var FailsafeInternal::store  the lifeline table, and what a breach fires
- * @var FailsafeInternal::ns     the handle a caller sets a call's members on
- */
-struct FailsafeInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define FAILSAFE_OFF_CTX 0u
+static_assert(FAILSAFE_OFF_CTX + sizeof(struct FailsafeStorage) <= PROTOCORE_FAILSAFE_BORROW,
+              "PROTOCORE_FAILSAFE_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define FAILSAFE_CTX(w) ((struct FailsafeStorage *)(void *)((w) + FAILSAFE_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct FailsafeStorage *store;
-    FailsafeNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_FAILSAFE_BORROW persistent bytes, or null while the pool was short
+} FailsafeOwnCtx;
+static FailsafeOwnCtx s_own;
 
-static struct FailsafeStorage s_store;
-
-static struct FailsafeInternal s_fs_ctx = {.store = &s_store, .ns = &Failsafe};
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_failsafe_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_FAILSAFE_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // Minimal unsigned -> decimal, no stdlib; returns chars written.
 static size_t u32_dec(uint32_t v, char *out)
@@ -53,68 +73,89 @@ static size_t u32_dec(uint32_t v, char *out)
     return n;
 }
 
-static void failsafe_reset(struct FailsafeInternal *restrict ctx)
+static void failsafe_reset(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     const protocore_lifeline blank = {0};
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
-        ctx->store->lines[i] = blank;
+        FAILSAFE_CTX(work)->lines[i] = blank;
     }
-    ctx->store->cb = NULL;
-    ctx->store->cb_arg = NULL;
+    FAILSAFE_CTX(work)->cb = NULL;
+    FAILSAFE_CTX(work)->cb_arg = NULL;
 }
 
-static void failsafe_add(struct FailsafeInternal *restrict ctx)
+static void failsafe_add(uint8_t *restrict work)
 {
-    const char *name = ctx->ns->args.name;
-    const uint32_t deadline_ms = ctx->ns->args.deadline_ms;
-    const uint32_t now = ctx->ns->args.now;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const char *name = Failsafe.args.name;
+    const uint32_t deadline_ms = Failsafe.args.deadline_ms;
+    const uint32_t now = Failsafe.args.now;
 
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
-        if (!ctx->store->lines[i].armed)
+        if (!FAILSAFE_CTX(work)->lines[i].armed)
         {
-            ctx->store->lines[i].name = name;
-            ctx->store->lines[i].deadline_ms = deadline_ms;
-            ctx->store->lines[i].last_feed_ms = now; // starts fed, so it is not instantly overdue
-            ctx->store->lines[i].armed = PROTO_TRUE;
-            ctx->store->lines[i].breached = PROTO_FALSE;
-            ctx->ns->i32 = i;
+            FAILSAFE_CTX(work)->lines[i].name = name;
+            FAILSAFE_CTX(work)->lines[i].deadline_ms = deadline_ms;
+            FAILSAFE_CTX(work)->lines[i].last_feed_ms = now; // starts fed, so it is not instantly overdue
+            FAILSAFE_CTX(work)->lines[i].armed = PROTO_TRUE;
+            FAILSAFE_CTX(work)->lines[i].breached = PROTO_FALSE;
+            Failsafe.i32 = i;
             return;
         }
     }
-    ctx->ns->i32 = -1;
+    Failsafe.i32 = -1;
 }
 
-static void failsafe_feed(struct FailsafeInternal *restrict ctx)
+static void failsafe_feed(uint8_t *restrict work)
 {
-    const int id = ctx->ns->args.id;
-    const uint32_t now = ctx->ns->args.now;
-
-    if (id < 0 || id >= PROTOCORE_FAILSAFE_MAX_LIFELINES || !ctx->store->lines[id].armed)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    const int id = Failsafe.args.id;
+    const uint32_t now = Failsafe.args.now;
+
+    if (id < 0 || id >= PROTOCORE_FAILSAFE_MAX_LIFELINES || !FAILSAFE_CTX(work)->lines[id].armed)
+    {
+        Failsafe.ok = PROTO_FALSE;
         return;
     }
-    ctx->store->lines[id].last_feed_ms = now;
-    ctx->store->lines[id].breached = PROTO_FALSE; // a fresh check-in clears the breach so it can fire again next time
-    ctx->ns->ok = PROTO_TRUE;
+    FAILSAFE_CTX(work)->lines[id].last_feed_ms = now;
+    FAILSAFE_CTX(work)->lines[id].breached =
+        PROTO_FALSE; // a fresh check-in clears the breach so it can fire again next time
+    Failsafe.ok = PROTO_TRUE;
 }
 
-static void failsafe_on_breach(struct FailsafeInternal *restrict ctx)
+static void failsafe_on_breach(uint8_t *restrict work)
 {
-    ctx->store->cb = ctx->ns->out_args.cb;
-    ctx->store->cb_arg = ctx->ns->out_args.arg;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    FAILSAFE_CTX(work)->cb = Failsafe.out_args.cb;
+    FAILSAFE_CTX(work)->cb_arg = Failsafe.out_args.arg;
 }
 
-static void failsafe_check(struct FailsafeInternal *restrict ctx)
+static void failsafe_check(uint8_t *restrict work)
 {
-    const uint32_t now = ctx->ns->args.now;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint32_t now = Failsafe.args.now;
 
     uint32_t mask = 0;
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
-        protocore_lifeline *l = &ctx->store->lines[i];
+        protocore_lifeline *l = &FAILSAFE_CTX(work)->lines[i];
         if (!l->armed)
         {
             continue;
@@ -129,12 +170,12 @@ static void failsafe_check(struct FailsafeInternal *restrict ctx)
             continue;
         }
         l->breached = PROTO_TRUE;
-        if (ctx->store->cb)
+        if (FAILSAFE_CTX(work)->cb)
         {
-            ctx->store->cb(i, l->name, ctx->store->cb_arg);
+            FAILSAFE_CTX(work)->cb(i, l->name, FAILSAFE_CTX(work)->cb_arg);
         }
     }
-    ctx->ns->breached = mask;
+    Failsafe.breached = mask;
 }
 
 // append a literal into out[*n], bounded by cap (leaving room for the NUL); truncates safely on overflow.
@@ -156,14 +197,18 @@ static void fs_put_u32(char *out, size_t cap, size_t *n, uint32_t v)
     }
 }
 
-static void failsafe_json(struct FailsafeInternal *restrict ctx)
+static void failsafe_json(uint8_t *restrict work)
 {
-    const uint32_t now = ctx->ns->args.now;
-    char *out = ctx->ns->out_args.out;
-    const size_t cap = ctx->ns->out_args.cap;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint32_t now = Failsafe.args.now;
+    char *out = Failsafe.out_args.out;
+    const size_t cap = Failsafe.out_args.cap;
 
     // {"lifelines":[{"name":"...","overdue":false,"age_ms":N,"deadline_ms":N},...]}
-    ctx->ns->n = 0;
+    Failsafe.n = 0;
     if (!out || cap == 0)
     {
         return;
@@ -173,7 +218,7 @@ static void failsafe_json(struct FailsafeInternal *restrict ctx)
     proto_bool first = PROTO_TRUE;
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
-        const protocore_lifeline *l = &ctx->store->lines[i];
+        const protocore_lifeline *l = &FAILSAFE_CTX(work)->lines[i];
         if (!l->armed)
         {
             continue;
@@ -197,7 +242,7 @@ static void failsafe_json(struct FailsafeInternal *restrict ctx)
     // The n >= cap arm is unreachable: fs_put/fs_put_u32 only ever advance n while n + 1 < cap, so n
     // can never reach cap by the time we get here (cap > 0 was already established above).
     out[n < cap ? n : cap - 1] = '\0';
-    ctx->ns->n = (int)n;
+    Failsafe.n = (int)n;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -206,7 +251,6 @@ FailsafeNs Failsafe = {.reset = failsafe_reset,
                        .feed = failsafe_feed,
                        .on_breach = failsafe_on_breach,
                        .check = failsafe_check,
-                       .json = failsafe_json,
-                       .internal = &s_fs_ctx};
+                       .json = failsafe_json};
 
 #endif // PROTOCORE_ENABLE_FAILSAFE

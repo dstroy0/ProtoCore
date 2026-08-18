@@ -15,6 +15,8 @@
 #include "mmgr/protostr.h"
 #include "shared/ip/ip.h" // validate a recovered proxy client IP (v4/v6)
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
 HttpReq http_pool[CONN_POOL_SLOTS];
 
 #if PROTOCORE_ENABLE_STREAM_BODY
@@ -728,7 +730,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     protocore_ip ip;
     Ip.args.text = tok;
     Ip.args.out = &ip;
-    Ip.parse(Ip.internal); // rejects "unknown" / "_obf" / malformed
+    Ip.parse(ip_work); // rejects "unknown" / "_obf" / malformed
     if (!Ip.ok)
     {
         return PROTO_FALSE;
@@ -736,7 +738,7 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     Ip.args.ip = &ip;
     Ip.args.buf = out;
     Ip.args.cap = cap;
-    Ip.format(Ip.internal);
+    Ip.format(ip_work);
     return Ip.n > 0; // false if out is too small for the canonical text
 }
 

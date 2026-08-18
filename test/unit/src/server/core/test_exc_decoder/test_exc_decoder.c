@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t exc_decoder_work[16]; // the borrow an entry takes; Exc never reads it
+
 void setUp(void)
 {
 }
@@ -46,7 +48,7 @@ static proto_bool decode(const char *text)
 {
     Exc.parse_args.text = text;
     Exc.parse_args.info = &g_info;
-    Exc.parse(Exc.internal);
+    Exc.parse(exc_decoder_work);
     return Exc.ok;
 }
 
@@ -55,7 +57,7 @@ static const char *serialize(size_t cap)
     Exc.parse_args.info = &g_info;
     Exc.out_args.out = g_json;
     Exc.out_args.cap = cap;
-    Exc.json(Exc.internal);
+    Exc.json(exc_decoder_work);
     return g_json;
 }
 
@@ -243,28 +245,28 @@ void test_null_arguments_are_refused(void)
 {
     Exc.parse_args.text = NULL;
     Exc.parse_args.info = &g_info;
-    Exc.parse(Exc.internal);
+    Exc.parse(exc_decoder_work);
     TEST_ASSERT_FALSE(Exc.ok);
 
     Exc.parse_args.text = "Backtrace: 0x400d1000:0x3ffb0000\n";
     Exc.parse_args.info = NULL;
-    Exc.parse(Exc.internal);
+    Exc.parse(exc_decoder_work);
     TEST_ASSERT_FALSE(Exc.ok);
 
     Exc.parse_args.info = NULL;
     Exc.out_args.out = g_json;
     Exc.out_args.cap = sizeof(g_json);
-    Exc.json(Exc.internal);
+    Exc.json(exc_decoder_work);
     TEST_ASSERT_EQUAL_size_t(0u, Exc.n);
 
     Exc.parse_args.info = &g_info;
     Exc.out_args.out = NULL;
     Exc.out_args.cap = sizeof(g_json);
-    Exc.json(Exc.internal);
+    Exc.json(exc_decoder_work);
     TEST_ASSERT_EQUAL_size_t(0u, Exc.n);
 
     Exc.out_args.out = g_json;
     Exc.out_args.cap = 0;
-    Exc.json(Exc.internal);
+    Exc.json(exc_decoder_work);
     TEST_ASSERT_EQUAL_size_t(0u, Exc.n);
 }

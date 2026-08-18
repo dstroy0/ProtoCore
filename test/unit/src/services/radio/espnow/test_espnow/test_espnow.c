@@ -23,7 +23,7 @@
 
 void setUp(void)
 {
-    protocore_espnow_peers_reset();
+    Espnow.peers_reset(protocore_espnow_span());
 }
 void tearDown(void)
 {
@@ -34,7 +34,13 @@ void test_envelope_field_layout(void)
 {
     static const uint8_t PAYLOAD[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t out[16];
-    const size_t n = protocore_espnow_encode(0x42, PAYLOAD, sizeof(PAYLOAD), out, sizeof(out));
+    Espnow.encode_args.type = 0x42;
+    Espnow.encode_args.payload = PAYLOAD;
+    Espnow.encode_args.len = sizeof(PAYLOAD);
+    Espnow.encode_args.out = out;
+    Espnow.encode_args.cap = sizeof(out);
+    Espnow.encode(protocore_espnow_span());
+    const size_t n = Espnow.n;
     TEST_ASSERT_EQUAL_size_t(PROTOCORE_ESPNOW_HDR + sizeof(PAYLOAD), n);
     TEST_ASSERT_EQUAL_HEX8(PROTOCORE_ESPNOW_MAGIC, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x42, out[1]);
@@ -42,7 +48,13 @@ void test_envelope_field_layout(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, out + PROTOCORE_ESPNOW_HDR, sizeof(PAYLOAD));
 
     // A message with no payload is the header alone.
-    TEST_ASSERT_EQUAL_size_t(PROTOCORE_ESPNOW_HDR, protocore_espnow_encode(0x01, NULL, 0, out, sizeof(out)));
+    Espnow.encode_args.type = 0x01;
+    Espnow.encode_args.payload = NULL;
+    Espnow.encode_args.len = 0;
+    Espnow.encode_args.out = out;
+    Espnow.encode_args.cap = sizeof(out);
+    Espnow.encode(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_ESPNOW_HDR, Espnow.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[2]);
 }
 
@@ -54,13 +66,25 @@ void test_encode_decode_round_trip(void)
     uint8_t wire[32];
     for (size_t len = 0; len <= sizeof(PAYLOAD); len++)
     {
-        const size_t n = protocore_espnow_encode(0x7F, PAYLOAD, len, wire, sizeof(wire));
+        Espnow.encode_args.type = 0x7F;
+        Espnow.encode_args.payload = PAYLOAD;
+        Espnow.encode_args.len = len;
+        Espnow.encode_args.out = wire;
+        Espnow.encode_args.cap = sizeof(wire);
+        Espnow.encode(protocore_espnow_span());
+        const size_t n = Espnow.n;
         TEST_ASSERT_EQUAL_size_t(PROTOCORE_ESPNOW_HDR + len, n);
 
         uint8_t type = 0;
         const uint8_t *payload = NULL;
         size_t plen = 99;
-        TEST_ASSERT_TRUE(protocore_espnow_decode(wire, n, &type, &payload, &plen));
+        Espnow.decode_args.buf = wire;
+        Espnow.decode_args.len = n;
+        Espnow.decode_args.type = &type;
+        Espnow.decode_args.payload = &payload;
+        Espnow.decode_args.plen = &plen;
+        Espnow.decode(protocore_espnow_span());
+        TEST_ASSERT_TRUE(Espnow.ok);
         TEST_ASSERT_EQUAL_HEX8(0x7F, type);
         TEST_ASSERT_EQUAL_size_t(len, plen);
         TEST_ASSERT_EQUAL_PTR(wire + PROTOCORE_ESPNOW_HDR, payload);
@@ -77,20 +101,56 @@ void test_decode_requires_the_declared_length_exactly(void)
 {
     static const uint8_t PAYLOAD[4] = {1, 2, 3, 4};
     uint8_t wire[16];
-    const size_t n = protocore_espnow_encode(0x10, PAYLOAD, sizeof(PAYLOAD), wire, sizeof(wire));
+    Espnow.encode_args.type = 0x10;
+    Espnow.encode_args.payload = PAYLOAD;
+    Espnow.encode_args.len = sizeof(PAYLOAD);
+    Espnow.encode_args.out = wire;
+    Espnow.encode_args.cap = sizeof(wire);
+    Espnow.encode(protocore_espnow_span());
+    const size_t n = Espnow.n;
 
     uint8_t type;
     const uint8_t *payload;
     size_t plen;
-    TEST_ASSERT_TRUE(protocore_espnow_decode(wire, n, &type, &payload, &plen));
-    TEST_ASSERT_FALSE(protocore_espnow_decode(wire, n - 1, &type, &payload, &plen)); // one octet short
-    TEST_ASSERT_FALSE(protocore_espnow_decode(wire, n + 1, &type, &payload, &plen)); // one octet extra
+    Espnow.decode_args.buf = wire;
+    Espnow.decode_args.len = n;
+    Espnow.decode_args.type = &type;
+    Espnow.decode_args.payload = &payload;
+    Espnow.decode_args.plen = &plen;
+    Espnow.decode(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
+    Espnow.decode_args.buf = wire;
+    Espnow.decode_args.len = n - 1;
+    Espnow.decode_args.type = &type;
+    Espnow.decode_args.payload = &payload;
+    Espnow.decode_args.plen = &plen;
+    Espnow.decode(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok); // one octet short
+    Espnow.decode_args.buf = wire;
+    Espnow.decode_args.len = n + 1;
+    Espnow.decode_args.type = &type;
+    Espnow.decode_args.payload = &payload;
+    Espnow.decode_args.plen = &plen;
+    Espnow.decode(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok); // one octet extra
 
     // The declared length itself is what is checked, not the octet count alone.
     wire[2] = 3;
-    TEST_ASSERT_FALSE(protocore_espnow_decode(wire, n, &type, &payload, &plen));
+    Espnow.decode_args.buf = wire;
+    Espnow.decode_args.len = n;
+    Espnow.decode_args.type = &type;
+    Espnow.decode_args.payload = &payload;
+    Espnow.decode_args.plen = &plen;
+    Espnow.decode(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
     wire[2] = 5;
-    TEST_ASSERT_FALSE(protocore_espnow_decode(wire, n, &type, &payload, &plen));
+    Espnow.decode_args.buf = wire;
+    Espnow.decode_args.len = n;
+    Espnow.decode_args.type = &type;
+    Espnow.decode_args.payload = &payload;
+    Espnow.decode_args.plen = &plen;
+    Espnow.decode(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
 }
 
 // A frame that does not start with the magic octet is not this envelope, so it is refused rather
@@ -99,7 +159,13 @@ void test_decode_requires_the_magic_octet(void)
 {
     static const uint8_t PAYLOAD[2] = {0xAA, 0xBB};
     uint8_t wire[16];
-    const size_t n = protocore_espnow_encode(0x01, PAYLOAD, sizeof(PAYLOAD), wire, sizeof(wire));
+    Espnow.encode_args.type = 0x01;
+    Espnow.encode_args.payload = PAYLOAD;
+    Espnow.encode_args.len = sizeof(PAYLOAD);
+    Espnow.encode_args.out = wire;
+    Espnow.encode_args.cap = sizeof(wire);
+    Espnow.encode(protocore_espnow_span());
+    const size_t n = Espnow.n;
 
     uint8_t type;
     const uint8_t *payload;
@@ -107,7 +173,13 @@ void test_decode_requires_the_magic_octet(void)
     for (unsigned v = 0; v < 256; v++)
     {
         wire[0] = (uint8_t)v;
-        const proto_bool ok = protocore_espnow_decode(wire, n, &type, &payload, &plen);
+        Espnow.decode_args.buf = wire;
+        Espnow.decode_args.len = n;
+        Espnow.decode_args.type = &type;
+        Espnow.decode_args.payload = &payload;
+        Espnow.decode_args.plen = &plen;
+        Espnow.decode(protocore_espnow_span());
+        const proto_bool ok = Espnow.ok;
         if (v == PROTOCORE_ESPNOW_MAGIC)
         {
             TEST_ASSERT_TRUE(ok);
@@ -126,12 +198,30 @@ void test_decode_fails_closed(void)
     uint8_t type;
     const uint8_t *payload;
     size_t plen;
-    TEST_ASSERT_FALSE(protocore_espnow_decode(SHORT, sizeof(SHORT), &type, &payload, &plen));
-    TEST_ASSERT_FALSE(protocore_espnow_decode(NULL, 8, &type, &payload, &plen));
+    Espnow.decode_args.buf = SHORT;
+    Espnow.decode_args.len = sizeof(SHORT);
+    Espnow.decode_args.type = &type;
+    Espnow.decode_args.payload = &payload;
+    Espnow.decode_args.plen = &plen;
+    Espnow.decode(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
+    Espnow.decode_args.buf = NULL;
+    Espnow.decode_args.len = 8;
+    Espnow.decode_args.type = &type;
+    Espnow.decode_args.payload = &payload;
+    Espnow.decode_args.plen = &plen;
+    Espnow.decode(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
 
     // Every output is optional: a caller that wants only the verdict passes none of them.
     static const uint8_t OK3[3] = {PROTOCORE_ESPNOW_MAGIC, 0x05, 0x00};
-    TEST_ASSERT_TRUE(protocore_espnow_decode(OK3, sizeof(OK3), NULL, NULL, NULL));
+    Espnow.decode_args.buf = OK3;
+    Espnow.decode_args.len = sizeof(OK3);
+    Espnow.decode_args.type = NULL;
+    Espnow.decode_args.payload = NULL;
+    Espnow.decode_args.plen = NULL;
+    Espnow.decode(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
 }
 
 // Espressif publishes the v1 ESP-NOW data limit as 250 octets, so the application payload this
@@ -144,13 +234,24 @@ void test_payload_cap_is_the_radio_limit_less_the_header(void)
     TEST_ASSERT_EQUAL_INT(250 - PROTOCORE_ESPNOW_HDR, PROTOCORE_ESPNOW_MAX_PAYLOAD);
 
     memset(g_max, 0x5A, sizeof(g_max));
-    const size_t n = protocore_espnow_encode(0x01, g_max, PROTOCORE_ESPNOW_MAX_PAYLOAD, g_frame, sizeof(g_frame));
+    Espnow.encode_args.type = 0x01;
+    Espnow.encode_args.payload = g_max;
+    Espnow.encode_args.len = PROTOCORE_ESPNOW_MAX_PAYLOAD;
+    Espnow.encode_args.out = g_frame;
+    Espnow.encode_args.cap = sizeof(g_frame);
+    Espnow.encode(protocore_espnow_span());
+    const size_t n = Espnow.n;
     TEST_ASSERT_EQUAL_size_t(250, n);
     // The declared length still fits the one octet that carries it.
     TEST_ASSERT_EQUAL_HEX8(PROTOCORE_ESPNOW_MAX_PAYLOAD, g_frame[2]);
 
-    TEST_ASSERT_EQUAL_size_t(
-        0, protocore_espnow_encode(0x01, g_max, PROTOCORE_ESPNOW_MAX_PAYLOAD + 1, g_frame, sizeof(g_frame)));
+    Espnow.encode_args.type = 0x01;
+    Espnow.encode_args.payload = g_max;
+    Espnow.encode_args.len = PROTOCORE_ESPNOW_MAX_PAYLOAD + 1;
+    Espnow.encode_args.out = g_frame;
+    Espnow.encode_args.cap = sizeof(g_frame);
+    Espnow.encode(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_size_t(0, Espnow.n);
 }
 
 // A frame is written whole or not at all: a region that cannot hold header plus payload yields
@@ -159,9 +260,27 @@ void test_encode_fails_closed(void)
 {
     static const uint8_t PAYLOAD[4] = {1, 2, 3, 4};
     uint8_t out[8];
-    TEST_ASSERT_EQUAL_size_t(0, protocore_espnow_encode(0x01, PAYLOAD, 4, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_espnow_encode(0x01, PAYLOAD, 4, out, 6)); // needs 7
-    TEST_ASSERT_EQUAL_size_t(7, protocore_espnow_encode(0x01, PAYLOAD, 4, out, 7));
+    Espnow.encode_args.type = 0x01;
+    Espnow.encode_args.payload = PAYLOAD;
+    Espnow.encode_args.len = 4;
+    Espnow.encode_args.out = NULL;
+    Espnow.encode_args.cap = sizeof(out);
+    Espnow.encode(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_size_t(0, Espnow.n);
+    Espnow.encode_args.type = 0x01;
+    Espnow.encode_args.payload = PAYLOAD;
+    Espnow.encode_args.len = 4;
+    Espnow.encode_args.out = out;
+    Espnow.encode_args.cap = 6;
+    Espnow.encode(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_size_t(0, Espnow.n); // needs 7
+    Espnow.encode_args.type = 0x01;
+    Espnow.encode_args.payload = PAYLOAD;
+    Espnow.encode_args.len = 4;
+    Espnow.encode_args.out = out;
+    Espnow.encode_args.cap = 7;
+    Espnow.encode(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_size_t(7, Espnow.n);
 }
 
 // The registry answers membership, takes the same address twice without growing, and gives it back
@@ -171,29 +290,57 @@ void test_peer_registry_membership(void)
     static const uint8_t A[6] = {0x24, 0x6F, 0x28, 0x01, 0x02, 0x03};
     static const uint8_t B[6] = {0x24, 0x6F, 0x28, 0x01, 0x02, 0x04}; // one octet apart
 
-    TEST_ASSERT_EQUAL_INT(0, protocore_espnow_peer_count());
-    TEST_ASSERT_FALSE(protocore_espnow_peer_has(A));
+    Espnow.peer_count(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_INT(0, Espnow.n);
+    Espnow.peer_has_args.mac = A;
+    Espnow.peer_has(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
 
-    TEST_ASSERT_TRUE(protocore_espnow_peer_add(A));
-    TEST_ASSERT_TRUE(protocore_espnow_peer_has(A));
-    TEST_ASSERT_FALSE(protocore_espnow_peer_has(B)); // a near miss is not a match
-    TEST_ASSERT_EQUAL_INT(1, protocore_espnow_peer_count());
+    Espnow.peer_add_args.mac = A;
+    Espnow.peer_add(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
+    Espnow.peer_has_args.mac = A;
+    Espnow.peer_has(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
+    Espnow.peer_has_args.mac = B;
+    Espnow.peer_has(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok); // a near miss is not a match
+    Espnow.peer_count(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_INT(1, Espnow.n);
 
-    TEST_ASSERT_TRUE(protocore_espnow_peer_add(A)); // idempotent
-    TEST_ASSERT_EQUAL_INT(1, protocore_espnow_peer_count());
+    Espnow.peer_add_args.mac = A;
+    Espnow.peer_add(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok); // idempotent
+    Espnow.peer_count(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_INT(1, Espnow.n);
 
-    TEST_ASSERT_TRUE(protocore_espnow_peer_add(B));
-    TEST_ASSERT_EQUAL_INT(2, protocore_espnow_peer_count());
+    Espnow.peer_add_args.mac = B;
+    Espnow.peer_add(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
+    Espnow.peer_count(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_INT(2, Espnow.n);
 
-    TEST_ASSERT_TRUE(protocore_espnow_peer_remove(A));
-    TEST_ASSERT_FALSE(protocore_espnow_peer_has(A));
-    TEST_ASSERT_TRUE(protocore_espnow_peer_has(B));
-    TEST_ASSERT_FALSE(protocore_espnow_peer_remove(A)); // already gone
-    TEST_ASSERT_EQUAL_INT(1, protocore_espnow_peer_count());
+    Espnow.peer_remove_args.mac = A;
+    Espnow.peer_remove(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
+    Espnow.peer_has_args.mac = A;
+    Espnow.peer_has(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
+    Espnow.peer_has_args.mac = B;
+    Espnow.peer_has(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
+    Espnow.peer_remove_args.mac = A;
+    Espnow.peer_remove(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok); // already gone
+    Espnow.peer_count(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_INT(1, Espnow.n);
 
-    protocore_espnow_peers_reset();
-    TEST_ASSERT_EQUAL_INT(0, protocore_espnow_peer_count());
-    TEST_ASSERT_FALSE(protocore_espnow_peer_has(B));
+    Espnow.peers_reset(protocore_espnow_span());
+    Espnow.peer_count(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_INT(0, Espnow.n);
+    Espnow.peer_has_args.mac = B;
+    Espnow.peer_has(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
 }
 
 // The table is fixed at build time and has no heap behind it, so it refuses one past its size and
@@ -204,19 +351,30 @@ void test_peer_registry_is_bounded(void)
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
     {
         mac[5] = (uint8_t)i;
-        TEST_ASSERT_TRUE(protocore_espnow_peer_add(mac));
+        Espnow.peer_add_args.mac = mac;
+        Espnow.peer_add(protocore_espnow_span());
+        TEST_ASSERT_TRUE(Espnow.ok);
     }
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_ESPNOW_MAX_PEERS, protocore_espnow_peer_count());
+    Espnow.peer_count(protocore_espnow_span());
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_ESPNOW_MAX_PEERS, Espnow.n);
 
     mac[5] = (uint8_t)PROTOCORE_ESPNOW_MAX_PEERS;
-    TEST_ASSERT_FALSE(protocore_espnow_peer_add(mac)); // full
+    Espnow.peer_add_args.mac = mac;
+    Espnow.peer_add(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok); // full
 
     mac[5] = 0;
-    TEST_ASSERT_TRUE(protocore_espnow_peer_remove(mac));
+    Espnow.peer_remove_args.mac = mac;
+    Espnow.peer_remove(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
     mac[5] = (uint8_t)PROTOCORE_ESPNOW_MAX_PEERS;
-    TEST_ASSERT_TRUE(protocore_espnow_peer_add(mac)); // the freed slot takes it
+    Espnow.peer_add_args.mac = mac;
+    Espnow.peer_add(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok); // the freed slot takes it
 
-    TEST_ASSERT_FALSE(protocore_espnow_peer_add(NULL));
+    Espnow.peer_add_args.mac = NULL;
+    Espnow.peer_add(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
 }
 
 // IEEE 802 broadcast: every octet of the group address is one.
@@ -235,10 +393,26 @@ void test_radio_binding_reports_no_radio(void)
 {
     static const uint8_t MAC[6] = {0x24, 0x6F, 0x28, 0x11, 0x22, 0x33};
     static const uint8_t PAYLOAD[2] = {1, 2};
-    TEST_ASSERT_FALSE(protocore_espnow_begin(1, NULL));
-    TEST_ASSERT_FALSE(protocore_espnow_send(MAC, 0x01, PAYLOAD, sizeof(PAYLOAD)));
-    TEST_ASSERT_FALSE(protocore_espnow_broadcast(0x01, PAYLOAD, sizeof(PAYLOAD)));
+    Espnow.begin_args.channel = 1;
+    Espnow.begin_args.cb = NULL;
+    Espnow.begin(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
+    Espnow.send_args.mac = MAC;
+    Espnow.send_args.type = 0x01;
+    Espnow.send_args.payload = PAYLOAD;
+    Espnow.send_args.len = sizeof(PAYLOAD);
+    Espnow.send(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
+    Espnow.broadcast_args.type = 0x01;
+    Espnow.broadcast_args.payload = PAYLOAD;
+    Espnow.broadcast_args.len = sizeof(PAYLOAD);
+    Espnow.broadcast(protocore_espnow_span());
+    TEST_ASSERT_FALSE(Espnow.ok);
 
-    TEST_ASSERT_TRUE(protocore_espnow_add_peer(MAC));
-    TEST_ASSERT_TRUE(protocore_espnow_peer_has(MAC));
+    Espnow.add_peer_args.mac = MAC;
+    Espnow.add_peer(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
+    Espnow.peer_has_args.mac = MAC;
+    Espnow.peer_has(protocore_espnow_span());
+    TEST_ASSERT_TRUE(Espnow.ok);
 }

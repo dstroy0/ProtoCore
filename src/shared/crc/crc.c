@@ -36,18 +36,6 @@ const protocore_crc_params PROTOCORE_CRC32_ISO_HDLC = {32,         0x04C11DB7u, 
 const protocore_crc_params PROTOCORE_CRC32_BZIP2 = {32,          0x04C11DB7u, 0xFFFFFFFFu,
                                                     PROTO_FALSE, PROTO_FALSE, 0xFFFFFFFFu};
 
-/**
- * @brief The CRC calls - what CrcNs points at.
- *
- * @var CrcInternal::ns  the handle a caller sets a call's members on
- */
-struct CrcInternal
-{
-    CrcNs *ns;
-};
-
-static struct CrcInternal s_crc = {.ns = &Crc};
-
 // Mask of width low bits. Width 32 is handled without a 32-bit shift, which is undefined.
 static uint32_t crc_mask(uint8_t width)
 {
@@ -134,26 +122,30 @@ static uint32_t crc_finish(const protocore_crc_params *p, uint32_t crc)
     return (crc ^ p->xorout) & m;
 }
 
-static void crc_begin(struct CrcInternal *restrict ctx)
+static void crc_begin(uint8_t *restrict work)
 {
-    ctx->ns->value = crc_start(ctx->ns->args.params);
+    (void)work;
+    Crc.value = crc_start(Crc.args.params);
 }
 
-static void crc_update(struct CrcInternal *restrict ctx)
+static void crc_update(uint8_t *restrict work)
 {
-    ctx->ns->value = crc_fold(ctx->ns->args.params, ctx->ns->args.crc, ctx->ns->args.data, ctx->ns->args.len);
+    (void)work;
+    Crc.value = crc_fold(Crc.args.params, Crc.args.crc, Crc.args.data, Crc.args.len);
 }
 
-static void crc_final(struct CrcInternal *restrict ctx)
+static void crc_final(uint8_t *restrict work)
 {
-    ctx->ns->value = crc_finish(ctx->ns->args.params, ctx->ns->args.crc);
+    (void)work;
+    Crc.value = crc_finish(Crc.args.params, Crc.args.crc);
 }
 
-static void crc_compute(struct CrcInternal *restrict ctx)
+static void crc_compute(uint8_t *restrict work)
 {
-    const protocore_crc_params *p = ctx->ns->args.params;
-    ctx->ns->value = crc_finish(p, crc_fold(p, crc_start(p), ctx->ns->args.data, ctx->ns->args.len));
+    (void)work;
+    const protocore_crc_params *p = Crc.args.params;
+    Crc.value = crc_finish(p, crc_fold(p, crc_start(p), Crc.args.data, Crc.args.len));
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-CrcNs Crc = {.begin = crc_begin, .update = crc_update, .final = crc_final, .compute = crc_compute, .internal = &s_crc};
+CrcNs Crc = {.begin = crc_begin, .update = crc_update, .final = crc_final, .compute = crc_compute};

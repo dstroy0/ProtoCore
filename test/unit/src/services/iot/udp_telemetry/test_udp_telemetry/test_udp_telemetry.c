@@ -29,28 +29,28 @@ static void open_line(const char *m, size_t cap)
     UdpTelemetry.line.buf = g_line;
     UdpTelemetry.line.cap = cap;
     UdpTelemetry.line.measurement = m;
-    UdpTelemetry.measurement(UdpTelemetry.internal);
+    UdpTelemetry.measurement(protocore_udp_telemetry_span());
 }
 
 static void tag(const char *k, const char *v)
 {
     UdpTelemetry.tags.key = k;
     UdpTelemetry.tags.value = v;
-    UdpTelemetry.tag(UdpTelemetry.internal);
+    UdpTelemetry.tag(protocore_udp_telemetry_span());
 }
 
 static void field_int(const char *k, int64_t v)
 {
     UdpTelemetry.fields.key = k;
     UdpTelemetry.fields.i64 = v;
-    UdpTelemetry.field_int(UdpTelemetry.internal);
+    UdpTelemetry.field_int(protocore_udp_telemetry_span());
 }
 
 static void field_uint(const char *k, uint64_t v)
 {
     UdpTelemetry.fields.key = k;
     UdpTelemetry.fields.u64 = v;
-    UdpTelemetry.field_uint(UdpTelemetry.internal);
+    UdpTelemetry.field_uint(protocore_udp_telemetry_span());
 }
 
 static void field_float(const char *k, float v, uint8_t decimals)
@@ -58,13 +58,13 @@ static void field_float(const char *k, float v, uint8_t decimals)
     UdpTelemetry.fields.key = k;
     UdpTelemetry.fields.f32 = v;
     UdpTelemetry.fields.decimals = decimals;
-    UdpTelemetry.field_float(UdpTelemetry.internal);
+    UdpTelemetry.field_float(protocore_udp_telemetry_span());
 }
 
 static void stamp(int64_t unix_ns)
 {
     UdpTelemetry.time.unix_ns = unix_ns;
-    UdpTelemetry.timestamp(UdpTelemetry.internal);
+    UdpTelemetry.timestamp(protocore_udp_telemetry_span());
 }
 
 // InfluxData, "InfluxDB line protocol tutorial", prints this point and labels its four elements as
@@ -288,7 +288,7 @@ void test_null_buffer_is_refused(void)
     UdpTelemetry.line.buf = NULL;
     UdpTelemetry.line.cap = 0;
     UdpTelemetry.line.measurement = "m";
-    UdpTelemetry.measurement(UdpTelemetry.internal);
+    UdpTelemetry.measurement(protocore_udp_telemetry_span());
     TEST_ASSERT_TRUE(UdpTelemetry.overflow);
     TEST_ASSERT_FALSE(UdpTelemetry.ok);
 
@@ -312,19 +312,19 @@ void test_send_refuses_without_a_network_stack(void)
 {
     UdpTelemetry.collector.addr = "10.0.0.1";
     UdpTelemetry.collector.port = 8089;
-    UdpTelemetry.begin(UdpTelemetry.internal);
+    UdpTelemetry.begin(protocore_udp_telemetry_span());
     TEST_ASSERT_FALSE(UdpTelemetry.ok);
 
     open_line("m", sizeof(g_line));
     field_int("a", 1);
     TEST_ASSERT_TRUE(UdpTelemetry.ok); // the line itself is a complete point
 
-    UdpTelemetry.write(UdpTelemetry.internal);
+    UdpTelemetry.write(protocore_udp_telemetry_span());
     TEST_ASSERT_FALSE(UdpTelemetry.ok);
 
     UdpTelemetry.payload.data = g_line;
     UdpTelemetry.payload.len = 6;
-    UdpTelemetry.send(UdpTelemetry.internal);
+    UdpTelemetry.send(protocore_udp_telemetry_span());
     TEST_ASSERT_FALSE(UdpTelemetry.ok);
 }
 
@@ -332,6 +332,6 @@ void test_send_refuses_without_a_network_stack(void)
 void test_write_refuses_an_incomplete_line(void)
 {
     open_line("m", sizeof(g_line));
-    UdpTelemetry.write(UdpTelemetry.internal); // no field set
+    UdpTelemetry.write(protocore_udp_telemetry_span()); // no field set
     TEST_ASSERT_FALSE(UdpTelemetry.ok);
 }

@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t nats_work[16]; // the borrow an entry takes; Nats never reads it
+
 void setUp(void)
 {
 }
@@ -46,7 +48,7 @@ static proto_bool parse(const char *wire, size_t len)
 {
     Nats.in.buf = wire;
     Nats.in.len = len;
-    Nats.parse(Nats.internal);
+    Nats.parse(nats_work);
     return Nats.ok;
 }
 
@@ -61,7 +63,7 @@ void test_published_pub_examples(void)
     Nats.publish.reply_to = NULL;
     Nats.publish.payload = (const uint8_t *)"Hello NATS!";
     Nats.publish.payload_len = 11;
-    Nats.pub(Nats.internal);
+    Nats.pub(nats_work);
     expect("PUB FOO 11\r\nHello NATS!\r\n");
 
     bind_out();
@@ -69,7 +71,7 @@ void test_published_pub_examples(void)
     Nats.publish.reply_to = "JOKE.22";
     Nats.publish.payload = (const uint8_t *)"Knock Knock";
     Nats.publish.payload_len = 11;
-    Nats.pub(Nats.internal);
+    Nats.pub(nats_work);
     expect("PUB FRONT.DOOR JOKE.22 11\r\nKnock Knock\r\n");
 
     bind_out();
@@ -77,7 +79,7 @@ void test_published_pub_examples(void)
     Nats.publish.reply_to = NULL;
     Nats.publish.payload = NULL;
     Nats.publish.payload_len = 0;
-    Nats.pub(Nats.internal);
+    Nats.pub(nats_work);
     expect("PUB NOTIFY 0\r\n\r\n");
 }
 
@@ -103,7 +105,7 @@ void test_published_hpub_examples(void)
     Nats.publish.payload_len = 11;
     Nats.headers.block = H1;
     Nats.headers.bytes = sizeof(H1) - 1;
-    Nats.hpub(Nats.internal);
+    Nats.hpub(nats_work);
     expect("HPUB FOO 22 33\r\nNATS/1.0\r\nBar: Baz\r\n\r\nHello NATS!\r\n");
 
     bind_out();
@@ -113,7 +115,7 @@ void test_published_hpub_examples(void)
     Nats.publish.payload_len = 11;
     Nats.headers.block = H2;
     Nats.headers.bytes = sizeof(H2) - 1;
-    Nats.hpub(Nats.internal);
+    Nats.hpub(nats_work);
     expect("HPUB FRONT.DOOR JOKE.22 45 56\r\nNATS/1.0\r\nBREAKFAST: donut\r\nLUNCH: burger\r\n\r\nKnock Knock\r\n");
 
     // A header-only message: #total bytes equals #header bytes.
@@ -124,7 +126,7 @@ void test_published_hpub_examples(void)
     Nats.publish.payload_len = 0;
     Nats.headers.block = H1;
     Nats.headers.bytes = sizeof(H1) - 1;
-    Nats.hpub(Nats.internal);
+    Nats.hpub(nats_work);
     expect("HPUB NOTIFY 22 22\r\nNATS/1.0\r\nBar: Baz\r\n\r\n\r\n");
 }
 
@@ -137,14 +139,14 @@ void test_published_sub_examples(void)
     Nats.subscription.subject = "FOO";
     Nats.subscription.queue_group = NULL;
     Nats.subscription.sid = "1";
-    Nats.sub(Nats.internal);
+    Nats.sub(nats_work);
     expect("SUB FOO 1\r\n");
 
     bind_out();
     Nats.subscription.subject = "BAR";
     Nats.subscription.queue_group = "G1";
     Nats.subscription.sid = "44";
-    Nats.sub(Nats.internal);
+    Nats.sub(nats_work);
     expect("SUB BAR G1 44\r\n");
 }
 
@@ -157,12 +159,12 @@ void test_published_unsub_examples(void)
     Nats.subscription.sid = "1";
     Nats.subscription.with_max = PROTO_FALSE;
     Nats.subscription.max_msgs = 5; // ignored while with_max is clear
-    Nats.unsub(Nats.internal);
+    Nats.unsub(nats_work);
     expect("UNSUB 1\r\n");
 
     bind_out();
     Nats.subscription.with_max = PROTO_TRUE;
-    Nats.unsub(Nats.internal);
+    Nats.unsub(nats_work);
     expect("UNSUB 1 5\r\n");
 }
 
@@ -171,16 +173,16 @@ void test_published_unsub_examples(void)
 void test_ping_pong_and_connect(void)
 {
     bind_out();
-    Nats.ping(Nats.internal);
+    Nats.ping(nats_work);
     expect("PING\r\n");
 
     bind_out();
-    Nats.pong(Nats.internal);
+    Nats.pong(nats_work);
     expect("PONG\r\n");
 
     bind_out();
     Nats.client.options = "{\"verbose\":false,\"pedantic\":false,\"lang\":\"c\"}";
-    Nats.connect(Nats.internal);
+    Nats.connect(nats_work);
     expect("CONNECT {\"verbose\":false,\"pedantic\":false,\"lang\":\"c\"}\r\n");
 }
 
@@ -352,37 +354,37 @@ void test_builders_fail_closed(void)
     Nats.publish.reply_to = NULL;
     Nats.publish.payload = (const uint8_t *)"Hello NATS!";
     Nats.publish.payload_len = 11;
-    Nats.pub(Nats.internal);
+    Nats.pub(nats_work);
     TEST_ASSERT_FALSE(Nats.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Nats.n);
 
     bind_out();
     Nats.publish.subject = NULL;
-    Nats.pub(Nats.internal);
+    Nats.pub(nats_work);
     TEST_ASSERT_FALSE(Nats.ok);
 
     bind_out();
     Nats.publish.subject = "FOO";
     Nats.publish.payload = NULL;
     Nats.publish.payload_len = 4; // octets promised but not lent
-    Nats.pub(Nats.internal);
+    Nats.pub(nats_work);
     TEST_ASSERT_FALSE(Nats.ok);
 
     bind_out();
     Nats.out.buf = NULL;
-    Nats.ping(Nats.internal);
+    Nats.ping(nats_work);
     TEST_ASSERT_FALSE(Nats.ok);
 
     bind_out();
     Nats.client.options = NULL;
-    Nats.connect(Nats.internal);
+    Nats.connect(nats_work);
     TEST_ASSERT_FALSE(Nats.ok);
 
     bind_out();
     Nats.subscription.subject = "FOO";
     Nats.subscription.queue_group = NULL;
     Nats.subscription.sid = NULL;
-    Nats.sub(Nats.internal);
+    Nats.sub(nats_work);
     TEST_ASSERT_FALSE(Nats.ok);
 
     // An HPUB with no header section is not an HPUB.
@@ -392,11 +394,11 @@ void test_builders_fail_closed(void)
     Nats.publish.payload_len = 0;
     Nats.headers.block = NULL;
     Nats.headers.bytes = 22;
-    Nats.hpub(Nats.internal);
+    Nats.hpub(nats_work);
     TEST_ASSERT_FALSE(Nats.ok);
     Nats.headers.block = "NATS/1.0\r\n\r\n";
     Nats.headers.bytes = 0;
-    Nats.hpub(Nats.internal);
+    Nats.hpub(nats_work);
     TEST_ASSERT_FALSE(Nats.ok);
 }
 
@@ -417,7 +419,7 @@ void test_byte_counts_render_and_read_as_decimal(void)
     Nats.publish.reply_to = NULL;
     Nats.publish.payload = payload;
     Nats.publish.payload_len = sizeof(payload);
-    Nats.pub(Nats.internal);
+    Nats.pub(nats_work);
     TEST_ASSERT_TRUE(Nats.ok);
     // "PUB FOO 1234\r\n" is 14 octets ahead of the payload, and the trailing CR LF is 2 behind it.
     TEST_ASSERT_EQUAL_UINT(14u + 1234u + 2u, Nats.n);

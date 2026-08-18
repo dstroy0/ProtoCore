@@ -38,16 +38,22 @@ html {
     --pc-rose: #f2557a; /* error / removed */
     --pc-violet: #b78af0; /* types, keywords */
 
-    --pc-mono: "Fira Code", "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --pc-mono:
+        "Fira Code", "Cascadia Code", ui-monospace, SFMono-Regular, Menlo,
+        Consolas, monospace;
     --pc-sans:
-        ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+        ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto,
+        "Helvetica Neue", Arial, sans-serif;
 
     /* Sizing targets a normal display first - 1440/1920 and phones - with an ultrawide
        simply getting a centred column rather than stretched lines. Both are min() against a
        percentage so nothing overflows a narrow viewport. */
     --pc-prose: min(80ch, 100%);
     --pc-track: min(860px, 96%); /* sized to the text; data breaks out below */
-    --pc-bleed: min(1340px, calc(100vw - 340px)); /* left rule -> right edge of the content area */
+    --pc-bleed: min(
+        1340px,
+        calc(100vw - 340px)
+    ); /* left rule -> right edge of the content area */
     --pc-radius: 6px;
 
     /* Doxygen's own variables, mapped onto the palette. */
@@ -628,8 +634,18 @@ details > summary + * {
     }
 }
 details[open] > .pc-reveal {
-    -webkit-mask-image: linear-gradient(90deg, #000 25%, rgba(0, 0, 0, 0.35) 50%, #000 75%);
-    mask-image: linear-gradient(90deg, #000 25%, rgba(0, 0, 0, 0.35) 50%, #000 75%);
+    -webkit-mask-image: linear-gradient(
+        90deg,
+        #000 25%,
+        rgba(0, 0, 0, 0.35) 50%,
+        #000 75%
+    );
+    mask-image: linear-gradient(
+        90deg,
+        #000 25%,
+        rgba(0, 0, 0, 0.35) 50%,
+        #000 75%
+    );
     -webkit-mask-size: 200% 100%;
     mask-size: 200% 100%;
     animation: pc-reveal 0.5s ease-out 1;
@@ -1213,7 +1229,6 @@ address.footer,
     text-shadow: none !important;
     margin-right: 4px !important;
 }
-
 
 /* ---------------------------------------------------------------------- */
 /* Navbar add-ons: one centre line                                          */

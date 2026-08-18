@@ -36,6 +36,8 @@
 #include <string.h>
 #include <unity.h>
 
+static uint8_t dds_work[16]; // the borrow an entry takes; Rtps never reads it
+
 void setUp(void)
 {
 }
@@ -79,7 +81,7 @@ static size_t build_header(uint8_t *buf, size_t cap)
     Rtps.hdr.vendor_id = VENDOR;
     Rtps.out.buf = buf;
     Rtps.out.cap = cap;
-    Rtps.header(Rtps.internal);
+    Rtps.header(dds_work);
     return Rtps.n;
 }
 
@@ -92,7 +94,7 @@ static size_t build_submessage(uint8_t *buf, size_t cap, uint8_t id, uint8_t fla
     Rtps.sub.contents_len = len;
     Rtps.out.buf = buf;
     Rtps.out.cap = cap;
-    Rtps.submessage(Rtps.internal);
+    Rtps.submessage(dds_work);
     return Rtps.n;
 }
 
@@ -104,7 +106,7 @@ static proto_bool walk(const uint8_t *msg, size_t len)
     Rtps.msg.len = len;
     Rtps.sink.on_submessage = on_submessage;
     Rtps.sink.arg = g_seen;
-    Rtps.parse(Rtps.internal);
+    Rtps.parse(dds_work);
     return Rtps.ok;
 }
 
@@ -468,11 +470,11 @@ void test_parse_without_a_sink_still_validates(void)
     Rtps.msg.len = n;
     Rtps.sink.on_submessage = NULL;
     Rtps.sink.arg = NULL;
-    Rtps.parse(Rtps.internal);
+    Rtps.parse(dds_work);
     TEST_ASSERT_TRUE(Rtps.ok);
 
     Rtps.msg.msg = msg;
     Rtps.msg.len = n - 1;
-    Rtps.parse(Rtps.internal);
+    Rtps.parse(dds_work);
     TEST_ASSERT_FALSE(Rtps.ok);
 }

@@ -162,10 +162,17 @@ typedef struct
 #endif
     proto_bool active; ///< True after listener_add(), false after listener_stop().
     proto_bool tls;    ///< True when connections accepted here begin a TLS handshake.
-#if PROTOCORE_ENABLE_DIFFSERV
-    uint8_t dscp; ///< Per-listener DiffServ DSCP for accepted connections; PROTOCORE_DSCP_UNSET = use the default.
-#endif
+    uint8_t dscp;      ///< Per-listener DiffServ DSCP for accepted connections; PROTOCORE_DSCP_UNSET = use the default.
 } Listener;
+
+/**
+ * @brief The row carries no code point of its own; accept() takes the server-wide default.
+ *
+ * Stated here rather than in diffserv.h because it is a value of ::Listener::dscp, which every
+ * build has: a port either names a code point or does not, and only whether the accept callback
+ * stamps one into the DS field depends on ::PROTOCORE_ENABLE_DIFFSERV.
+ */
+#define PROTOCORE_DSCP_UNSET 0xFF
 
 /** @brief Static pool of listener contexts.  Defined in server.c. */
 extern Listener listener_pool[MAX_LISTENERS];

@@ -82,9 +82,6 @@ typedef struct
     size_t cap; ///< how much room it has
 } ExcOutArgs;
 
-/** @brief The decoder's own calls, described only in exc_decoder.c / exc_coredump.c. */
-struct ExcDecoderInternal;
-
 /**
  * @brief The panic decoder and the stored crash image.
  *
@@ -103,7 +100,6 @@ struct ExcDecoderInternal;
  * @var ExcDecoderNs::read        read a span of the stored image
  * @var ExcDecoderNs::save        stream the whole image to a file
  * @var ExcDecoderNs::erase       discard the stored image
- * @var ExcDecoderNs::internal    the calls that decode and offload
  *
  * No storage member: the parse works in the caller's ExcInfo and the image lives in the part.
  */
@@ -116,17 +112,15 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*parse)(struct ExcDecoderInternal *ctx);
-    void (*json)(struct ExcDecoderInternal *ctx);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const json)(uint8_t *restrict work);
 #if PROTOCORE_HAS_VENDOR_COREDUMP
-    void (*present)(struct ExcDecoderInternal *ctx);
-    void (*summary)(struct ExcDecoderInternal *ctx);
-    void (*read)(struct ExcDecoderInternal *ctx);
-    void (*save)(struct ExcDecoderInternal *ctx);
-    void (*erase)(struct ExcDecoderInternal *ctx);
+    void (*const present)(uint8_t *restrict work);
+    void (*const summary)(uint8_t *restrict work);
+    void (*const read)(uint8_t *restrict work);
+    void (*const save)(uint8_t *restrict work);
+    void (*const erase)(uint8_t *restrict work);
 #endif
-
-    struct ExcDecoderInternal *internal;
 } ExcDecoderNs;
 
 /** @brief The one symbol this module exports. */

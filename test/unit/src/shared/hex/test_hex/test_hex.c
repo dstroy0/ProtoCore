@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
+
 void setUp(void)
 {
 }
@@ -45,12 +47,12 @@ void test_digit_of_nibble(void)
 {
     Hex.args.upper = PROTO_FALSE;
     Hex.args.nibble = 0x0Au;
-    Hex.digit(Hex.internal);
+    Hex.digit(hex_work);
     TEST_ASSERT_EQUAL_CHAR('a', Hex.ch);
 
     Hex.args.upper = PROTO_TRUE;
     Hex.args.nibble = 0x0Fu;
-    Hex.digit(Hex.internal);
+    Hex.digit(hex_work);
     TEST_ASSERT_EQUAL_CHAR('F', Hex.ch);
 }
 
@@ -59,7 +61,7 @@ void test_digit_masks_to_four_bits(void)
 {
     Hex.args.upper = PROTO_FALSE;
     Hex.args.nibble = 0xF3u; // high nibble must be ignored
-    Hex.digit(Hex.internal);
+    Hex.digit(hex_work);
     TEST_ASSERT_EQUAL_CHAR('3', Hex.ch);
 }
 
@@ -71,7 +73,7 @@ void test_val_of_character(void)
     for (size_t i = 0; i < sizeof(OK) - 1; i++)
     {
         Hex.args.ch = OK[i];
-        Hex.val(Hex.internal);
+        Hex.val(hex_work);
         TEST_ASSERT_EQUAL_INT8(WANT[i], Hex.i8);
     }
 }
@@ -83,7 +85,7 @@ void test_val_refuses_non_digits(void)
     for (size_t i = 0; i < sizeof(BAD); i++)
     {
         Hex.args.ch = BAD[i];
-        Hex.val(Hex.internal);
+        Hex.val(hex_work);
         TEST_ASSERT_EQUAL_INT8(-1, Hex.i8);
     }
 }
@@ -99,14 +101,14 @@ void test_encode_decode_round_trip(void)
     Hex.io.in = IN;
     Hex.io.n = (uint32_t)sizeof(IN);
     Hex.io.out = text;
-    Hex.encode(Hex.internal);
+    Hex.encode(hex_work);
     TEST_ASSERT_EQUAL_STRING("00017f80feffa55a", text);
 
     Hex.io.text = text;
     Hex.io.n = (uint32_t)(2 * sizeof(IN));
     Hex.io.bytes = back;
     Hex.io.cap = (uint32_t)sizeof(back);
-    Hex.decode(Hex.internal);
+    Hex.decode(hex_work);
     TEST_ASSERT_EQUAL_INT32((int32_t)sizeof(IN), Hex.i32);
     TEST_ASSERT_EQUAL_MEMORY(IN, back, sizeof(IN));
 }
@@ -119,7 +121,7 @@ void test_decode_refuses_odd_length(void)
     Hex.io.n = 3;
     Hex.io.bytes = back;
     Hex.io.cap = (uint32_t)sizeof(back);
-    Hex.decode(Hex.internal);
+    Hex.decode(hex_work);
     TEST_ASSERT_EQUAL_INT32(-1, Hex.i32);
     TEST_ASSERT_EQUAL_UINT8(0xEEu, back[0]); // untouched
 }
@@ -132,7 +134,7 @@ void test_decode_refuses_overflow(void)
     Hex.io.n = 8;
     Hex.io.bytes = back;
     Hex.io.cap = (uint32_t)sizeof(back);
-    Hex.decode(Hex.internal);
+    Hex.decode(hex_work);
     TEST_ASSERT_EQUAL_INT32(-1, Hex.i32);
     TEST_ASSERT_EQUAL_UINT8(0xEEu, back[0]);
 }
@@ -145,19 +147,19 @@ void test_u32_is_the_chunk_size_form(void)
 
     Hex.args.v = 0u;
     Hex.io.out = out;
-    Hex.u32(Hex.internal);
+    Hex.u32(hex_work);
     TEST_ASSERT_EQUAL_UINT8(1u, Hex.u8);
     TEST_ASSERT_EQUAL_MEMORY("0", out, 1);
 
     Hex.args.v = 0x1Au;
     Hex.io.out = out;
-    Hex.u32(Hex.internal);
+    Hex.u32(hex_work);
     TEST_ASSERT_EQUAL_UINT8(2u, Hex.u8);
     TEST_ASSERT_EQUAL_MEMORY("1a", out, 2);
 
     Hex.args.v = 0xFFFFFFFFu;
     Hex.io.out = out;
-    Hex.u32(Hex.internal);
+    Hex.u32(hex_work);
     TEST_ASSERT_EQUAL_UINT8(8u, Hex.u8);
     TEST_ASSERT_EQUAL_MEMORY("ffffffff", out, 8);
 }

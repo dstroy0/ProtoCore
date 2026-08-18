@@ -49,14 +49,32 @@ JOBS=""
 WORK="${PROTOCORE_PSRAM_WORK:-$HOME/.cache/pc-arduino-psram}"
 
 while [ $# -gt 0 ]; do
-  case "$1" in
-    --branch) BRANCH="$2"; shift 2 ;;
-    --core-dir) CORE_DIR="$2"; shift 2 ;;
-    --no-install) INSTALL=0; shift ;;
-    --jobs) JOBS="$2"; shift 2 ;;
-    -h|--help) sed -n '2,48p' "$0"; exit 0 ;;
-    *) echo "unknown arg: $1" >&2; exit 2 ;;
-  esac
+    case "$1" in
+        --branch)
+            BRANCH="$2"
+            shift 2
+            ;;
+        --core-dir)
+            CORE_DIR="$2"
+            shift 2
+            ;;
+        --no-install)
+            INSTALL=0
+            shift
+            ;;
+        --jobs)
+            JOBS="$2"
+            shift 2
+            ;;
+        -h | --help)
+            sed -n '2,48p' "$0"
+            exit 0
+            ;;
+        *)
+            echo "unknown arg: $1" >&2
+            exit 2
+            ;;
+    esac
 done
 
 # LOW default parallelism ON PURPOSE. The heavy C++ template libraries (esp-tflite-micro /
@@ -71,9 +89,10 @@ export CMAKE_BUILD_PARALLEL_LEVEL="$JOBS"
 echo "==> build parallelism capped at $JOBS core(s) (low on purpose: avoids GCC ICE on tflite/Matter)"
 
 echo "==> esp32-arduino-lib-builder ref: $BRANCH"
-mkdir -p "$WORK"; cd "$WORK"
+mkdir -p "$WORK"
+cd "$WORK"
 if [ ! -d esp32-arduino-lib-builder ]; then
-  git clone --depth 1 -b "$BRANCH" https://github.com/espressif/esp32-arduino-lib-builder.git
+    git clone --depth 1 -b "$BRANCH" https://github.com/espressif/esp32-arduino-lib-builder.git
 fi
 cd esp32-arduino-lib-builder
 # build.sh runs `git symbolic-ref HEAD`; a tag checkout leaves a detached HEAD ("fatal: ref
@@ -90,8 +109,8 @@ git switch -c pc-psram-build 2>/dev/null || git checkout -B pc-psram-build 2>/de
 CFG="configs/defconfig.esp32s3"
 touch "$CFG"
 if ! grep -q "^CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y" "$CFG"; then
-  echo "CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y" >> "$CFG"
-  echo "==> added CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y to $CFG"
+    echo "CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y" >>"$CFG"
+    echo "==> added CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y to $CFG"
 fi
 
 echo "==> building arduino-esp32 libraries for esp32s3 (this is the long part)"
@@ -102,22 +121,26 @@ LIBS_OUT="$(pwd)/out/tools/esp32-arduino-libs/esp32s3"
 echo "==> built libraries at: $LIBS_OUT"
 
 if [ "$INSTALL" = "0" ]; then
-  echo "==> --no-install: copy $LIBS_OUT/* over your core's esp32s3-libs dir yourself."
-  exit 0
+    echo "==> --no-install: copy $LIBS_OUT/* over your core's esp32s3-libs dir yourself."
+    exit 0
 fi
 
 # Auto-detect the arduino-cli / IDE S3 libs dir if not given.
 if [ -z "$CORE_DIR" ]; then
-  for base in "$HOME/.arduino15" "$HOME/Library/Arduino15" "$HOME/AppData/Local/Arduino15"; do
-    cand="$(ls -d "$base"/packages/esp32/tools/esp32s3-libs/* 2>/dev/null | sort -V | tail -1 || true)"
-    [ -n "$cand" ] && CORE_DIR="$cand" && break
-  done
+    for base in "$HOME/.arduino15" "$HOME/Library/Arduino15" "$HOME/AppData/Local/Arduino15"; do
+        cand="$(ls -d "$base"/packages/esp32/tools/esp32s3-libs/* 2>/dev/null | sort -V | tail -1 || true)"
+        [ -n "$cand" ] && CORE_DIR="$cand" && break
+    done
 fi
-[ -n "$CORE_DIR" ] || { echo "ERROR: could not find the arduino esp32s3-libs dir; pass --core-dir" >&2; exit 1; }
+[ -n "$CORE_DIR" ] || {
+    echo "ERROR: could not find the arduino esp32s3-libs dir; pass --core-dir" >&2
+    exit 1
+}
 
 echo "==> installing into: $CORE_DIR"
 BK="${CORE_DIR}.bak.$(date +%s)"
-cp -a "$CORE_DIR" "$BK"; echo "==> backed up original to $BK"
+cp -a "$CORE_DIR" "$BK"
+echo "==> backed up original to $BK"
 cp -a "$LIBS_OUT/." "$CORE_DIR/"
 
 # --- Compatibility post-processing ---------------------------------------------------------
@@ -126,7 +149,7 @@ cp -a "$LIBS_OUT/." "$CORE_DIR/"
 # an otherwise-clean sketch build. Both fixes are targeted and reshape the libs to match stock.
 # (Verified on hardware: an EXT_RAM_BSS_ATTR arena links at 0x3c0xxxxx and is read/write at
 # runtime, board boots clean.)
-TOOLS_DIR="$(cd "$CORE_DIR/../.." && pwd)"                                   # .../packages/esp32/tools
+TOOLS_DIR="$(cd "$CORE_DIR/../.." && pwd)" # .../packages/esp32/tools
 TC_BIN="$(ls -d "$TOOLS_DIR"/esp-x32/*/bin 2>/dev/null | sort -V | tail -1 || true)"
 
 # (1) The rebuilt libs ship include/newlib/platform_include/errno.h - an #include_next wrapper
@@ -136,8 +159,8 @@ TC_BIN="$(ls -d "$TOOLS_DIR"/esp-x32/*/bin 2>/dev/null | sort -V | tail -1 || tr
 #     ship this file; remove it so <errno.h> resolves to the toolchain's newlib header.
 ERRNO_SHIM="$CORE_DIR/include/newlib/platform_include/errno.h"
 if [ -f "$ERRNO_SHIM" ]; then
-  mv "$ERRNO_SHIM" "$ERRNO_SHIM.disabled"
-  echo "==> disabled shadowing platform_include/errno.h (fixes 'errno was not declared' in FS/vfs_api.cpp)"
+    mv "$ERRNO_SHIM" "$ERRNO_SHIM.disabled"
+    echo "==> disabled shadowing platform_include/errno.h (fixes 'errno was not declared' in FS/vfs_api.cpp)"
 fi
 
 # (2) The newer esp_diagnostics wraps esp_log_write/writev; the arduino core's own
@@ -147,14 +170,14 @@ fi
 #     conflicting symbols so the core's definitions win while __wrap_log_printf stays exported.
 DIAG="$CORE_DIR/lib/libespressif__esp_diagnostics.a"
 if [ -n "$TC_BIN" ] && [ -f "$DIAG" ]; then
-  TMP="$(mktemp -d)"
-  ( cd "$TMP" \
-    && "$TC_BIN/xtensa-esp-elf-ar" x "$DIAG" esp_diagnostics_log_hook.c.obj \
-    && "$TC_BIN/xtensa-esp-elf-objcopy" --localize-symbol=__wrap_esp_log_write \
-         --localize-symbol=__wrap_esp_log_writev esp_diagnostics_log_hook.c.obj \
-    && "$TC_BIN/xtensa-esp-elf-ar" r "$DIAG" esp_diagnostics_log_hook.c.obj )
-  rm -rf "$TMP"
-  echo "==> localized duplicate __wrap_esp_log_write/writev in esp_diagnostics (keeps __wrap_log_printf)"
+    TMP="$(mktemp -d)"
+    (cd "$TMP" &&
+        "$TC_BIN/xtensa-esp-elf-ar" x "$DIAG" esp_diagnostics_log_hook.c.obj &&
+        "$TC_BIN/xtensa-esp-elf-objcopy" --localize-symbol=__wrap_esp_log_write \
+            --localize-symbol=__wrap_esp_log_writev esp_diagnostics_log_hook.c.obj &&
+        "$TC_BIN/xtensa-esp-elf-ar" r "$DIAG" esp_diagnostics_log_hook.c.obj)
+    rm -rf "$TMP"
+    echo "==> localized duplicate __wrap_esp_log_write/writev in esp_diagnostics (keeps __wrap_log_printf)"
 fi
 # -------------------------------------------------------------------------------------------
 

@@ -289,7 +289,8 @@ static void edge_fetch_pump(uint8_t *restrict work)
     {
         HttpClient.message.buf = f->buf;
         HttpClient.message.len = f->got;
-        HttpClient.parse_response(HttpClient.internal);
+        // parse_response reads the caller's buffer and holds nothing, so it takes no borrow.
+        HttpClient.parse_response(NULL);
         int status = (int)HttpClient.status;
         if (status < 0)
         {

@@ -23,6 +23,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t nts_work[16]; // the borrow an entry takes; Nts never reads it
+
 // No-op sink satisfying the protocore_nts_ke_cb function-pointer arg of protocore_nts_ke_parse; counts records so the
 // parse cannot be optimized away. Not a hardware/transport stub - the parser has no such dependency.
 static void nts_ke_sink(bool critical, uint16_t type, const uint8_t *body, size_t body_len, void *arg)
@@ -51,7 +53,10 @@ void dbench_run(void)
 
     // Pre-build the standard 16-byte NTS-KE request once; the parse bench walks this known-good stream.
     static uint8_t req[32];
-    size_t req_len = protocore_nts_ke_request(req, sizeof(req));
+    Nts.ke_request_args.out = req;
+    Nts.ke_request_args.cap = sizeof(req);
+    Nts.ke_request(nts_work);
+    size_t req_len = Nts.n;
 
     static uint8_t out[128];
 

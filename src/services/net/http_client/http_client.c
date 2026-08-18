@@ -12,6 +12,7 @@
  */
 
 #include "services/net/http_client/http_client.h"
+#include "mmgr/secure.h" // the persistent end this module's key material is taken from
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
@@ -69,36 +70,48 @@ struct HttpClientStorage
 };
 #endif // PROTOCORE_HAS_NET_STACK
 
-/**
- * @brief The user agent's state and the calls that reach it - what HttpClientNs points at.
- *
- * @var HttpClientInternal::store  one exchange's buffers and its connection slot
- * @var HttpClientInternal::ns     the handle a caller sets a call's members on
- *
- * No storage member on a build without a network stack: the three pure calls work out of the
- * caller's buffers and hold nothing of their own.
- */
-struct HttpClientInternal
-{
-#if PROTOCORE_HAS_NET_STACK
-    struct HttpClientStorage *store;
-#endif
-    HttpClientNs *ns;
-};
-
 // ---------------------------------------------------------------------------
 // The one instance
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_HAS_NET_STACK
-static struct HttpClientStorage s_store = {.cid = -1};
-#endif
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define HTTP_CLIENT_OFF_CTX 0u
+static_assert(HTTP_CLIENT_OFF_CTX + sizeof(struct HttpClientStorage) <= PROTOCORE_HTTP_CLIENT_BORROW,
+              "PROTOCORE_HTTP_CLIENT_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct HttpClientInternal s_http_client = {
-#if PROTOCORE_HAS_NET_STACK
-    .store = &s_store,
+// The region, at its offset in the caller's borrow.
+#define HTTP_CLIENT_CTX(w) ((struct HttpClientStorage *)(void *)((w) + HTTP_CLIENT_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_HTTP_CLIENT_BORROW persistent bytes, or null while the pool was short
+} HttpClientOwnCtx;
+static HttpClientOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_http_client_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_HTTP_CLIENT_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // A borrow arrives zeroed, and these do not start at zero.
+            HTTP_CLIENT_CTX(s_own.span)->cid = -1;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 #endif
-    .ns = &HttpClient};
 
 // ---------------------------------------------------------------------------
 // The target URI (RFC 9110 sec 7.1)
@@ -107,9 +120,10 @@ static struct HttpClientInternal s_http_client = {
 // Split the target URI into the authority to dial and the origin-form request target to send.
 // Scheme defaults are RFC 9110 sec 4.2.1 (http, port 80) and sec 4.2.2 (https, port 443); an empty
 // path component sends "/" (RFC 9112 sec 3.2.1).
-static void parse_target_uri(struct HttpClientInternal *restrict ctx)
+static void parse_target_uri(uint8_t *restrict work)
 {
-    HttpClientNs *ns = ctx->ns;
+    (void)work;
+    HttpClientNs *ns = &HttpClient;
     ns->ok = PROTO_FALSE;
     if (!ns->target.url || !ns->target.host || !ns->target.path)
     {
@@ -196,9 +210,10 @@ static void parse_target_uri(struct HttpClientInternal *restrict ctx)
 
 // Write "method SP request-target SP HTTP/1.1" and the field lines, then the content. Host carries
 // the port only when it is not the scheme's default (RFC 9110 sec 7.2, sec 4.2.1 / 4.2.2).
-static void build_request(struct HttpClientInternal *restrict ctx)
+static void build_request(uint8_t *restrict work)
 {
-    HttpClientNs *ns = ctx->ns;
+    (void)work;
+    HttpClientNs *ns = &HttpClient;
     ns->n = 0;
     if (!ns->request.method || !ns->target.host || !ns->target.path || !ns->request.out || ns->request.cap == 0)
     {
@@ -384,9 +399,10 @@ static size_t decode_chunked(uint8_t *buf, size_t len, size_t off)
 
 // Read the status-line and frame the message body: chunked when it is the final coding, else
 // Content-Length, else the octets received before the close (RFC 9112 sec 6.3 items 4, 6 and 8).
-static void parse_response(struct HttpClientInternal *restrict ctx)
+static void parse_response(uint8_t *restrict work)
 {
-    HttpClientNs *ns = ctx->ns;
+    (void)work;
+    HttpClientNs *ns = &HttpClient;
     ns->body_off = 0;
     ns->body_len = 0;
     uint8_t *buf = ns->message.buf;
@@ -468,27 +484,27 @@ static void parse_response(struct HttpClientInternal *restrict ctx)
 // Without a trust anchor or a pin the exchange is encrypted and the peer unauthenticated. Both are
 // no-ops on a build without client TLS.
 
-static void set_ca(struct HttpClientInternal *restrict ctx)
+static void set_ca(uint8_t *restrict work)
 {
+    (void)work;
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
-    protocore_tls_client_set_ca(ctx->ns->verify.ca, ctx->ns->verify.ca_len);
+    protocore_tls_client_set_ca(HttpClient.verify.ca, HttpClient.verify.ca_len);
 #else
-    (void)ctx;
 #endif
 }
 
-static void set_pin(struct HttpClientInternal *restrict ctx)
+static void set_pin(uint8_t *restrict work)
 {
+    (void)work;
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
-    protocore_tls_client_set_pin(ctx->ns->verify.pin);
+    protocore_tls_client_set_pin(HttpClient.verify.pin);
 #else
-    (void)ctx;
 #endif
 }
 
-static void clear_verify(struct HttpClientInternal *restrict ctx)
+static void clear_verify(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
     protocore_tls_client_clear_verify();
 #endif
@@ -505,85 +521,95 @@ static void clear_verify(struct HttpClientInternal *restrict ctx)
 static int tls_bio_send(void *bio, const unsigned char *buf, size_t len)
 {
     (void)bio;
-    TcpClient.cid = s_http_client.store->cid;
+    TcpClient.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
     TcpClient.io.data = buf;
     TcpClient.io.len = len > 0xFFFF ? 0xFFFF : len;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     return TcpClient.ok ? (int)TcpClient.io.len : -1;
 }
 
 static int tls_bio_recv(void *bio, unsigned char *buf, size_t len)
 {
     (void)bio;
-    TcpClient.cid = s_http_client.store->cid;
+    TcpClient.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
     TcpClient.io.buf = buf;
     TcpClient.io.cap = len;
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     if (TcpClient.n != 0)
     {
         return (int)TcpClient.n;
     }
-    TcpClient.cid = s_http_client.store->cid;
-    TcpClient.is_closed(TcpClient.internal);
+    TcpClient.cid = HTTP_CLIENT_CTX(protocore_http_client_span())->cid;
+    TcpClient.is_closed(protocore_tcp_client_span());
     return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
 }
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
 
-// The library's monotonic millisecond count.
+// The library's monotonic millisecond count. Clock.ms is where the last reading landed, and every
+// loop below runs with no dispatch pass in it, so the reading is taken here.
 static uint32_t now_ms(void)
 {
+    Clock.millis(Clock.internal);
     return Clock.ms;
 }
 
 // The peer closed and its wire ring is drained: no further octet can arrive (RFC 9112 sec 6.3
 // item 8, the close-delimited body).
-static proto_bool peer_done(struct HttpClientInternal *restrict ctx)
+static proto_bool peer_done(uint8_t *restrict work)
 {
-    TcpClient.cid = ctx->store->cid;
-    TcpClient.is_closed(TcpClient.internal);
+    TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+    TcpClient.is_closed(protocore_tcp_client_span());
     if (!TcpClient.ok)
     {
         return PROTO_FALSE;
     }
-    TcpClient.cid = ctx->store->cid;
-    TcpClient.available(TcpClient.internal);
+    TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+    TcpClient.available(protocore_tcp_client_span());
     return TcpClient.n == 0;
 }
 
 // Tear the connection down and free the slot (RFC 9112 sec 9.6: the "close" connection option the
 // request carried).
-static void close_conn(struct HttpClientInternal *restrict ctx)
+static void close_conn(uint8_t *restrict work)
 {
-    if (ctx->store->cid >= 0)
+    if (!work)
     {
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.close(TcpClient.internal);
-        ctx->store->cid = -1;
+        return; // the pool was short of this module's borrow
+    }
+    if (HTTP_CLIENT_CTX(work)->cid >= 0)
+    {
+        TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+        TcpClient.close(protocore_tcp_client_span());
+        HTTP_CLIENT_CTX(work)->cid = -1;
     }
 }
 
 // One exchange: split the target URI, build the request message, open the connection, send, and
 // read until the body is framed or the deadline passes. Fills status, body and body_len.
-static void exchange(struct HttpClientInternal *restrict ctx)
+static void exchange(uint8_t *restrict work)
 {
-    HttpClientNs *ns = ctx->ns;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    HttpClientNs *ns = &HttpClient;
     ns->status = 0;
     ns->body = NULL;
     ns->body_len = 0;
     ns->body_off = 0;
 
-    ns->target.host = ctx->store->host;
-    ns->target.host_cap = sizeof(ctx->store->host);
-    ns->target.path = ctx->store->path;
-    ns->target.path_cap = sizeof(ctx->store->path);
-    parse_target_uri(ctx);
+    ns->target.host = HTTP_CLIENT_CTX(work)->host;
+    ns->target.host_cap = sizeof(HTTP_CLIENT_CTX(work)->host);
+    ns->target.path = HTTP_CLIENT_CTX(work)->path;
+    ns->target.path_cap = sizeof(HTTP_CLIENT_CTX(work)->path);
+    parse_target_uri(work);
     if (!ns->ok)
     {
         ns->status = (int32_t)HTTP_CLIENT_ERR_URL;
         return;
     }
-    CL_DBG("[hc] host=%s port=%u https=%d path=%s\n", ctx->store->host, (unsigned)ns->target.port,
-           (int)ns->target.https, ctx->store->path);
+    CL_DBG("[hc] host=%s port=%u https=%d path=%s\n", HTTP_CLIENT_CTX(work)->host, (unsigned)ns->target.port,
+           (int)ns->target.https, HTTP_CLIENT_CTX(work)->path);
 #if !(PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS)
     if (ns->target.https)
     {
@@ -592,9 +618,9 @@ static void exchange(struct HttpClientInternal *restrict ctx)
     }
 #endif
 
-    ns->request.out = ctx->store->req;
-    ns->request.cap = sizeof(ctx->store->req);
-    build_request(ctx);
+    ns->request.out = HTTP_CLIENT_CTX(work)->req;
+    ns->request.cap = sizeof(HTTP_CLIENT_CTX(work)->req);
+    build_request(work);
     const size_t reqlen = ns->n;
     if (reqlen == 0)
     {
@@ -606,13 +632,13 @@ static void exchange(struct HttpClientInternal *restrict ctx)
 
     // Active OPEN (RFC 9293 sec 3.9.1.1) through the shared transport; the host it dials lives in
     // this module's storage, so it outlives the resolve.
-    TcpClient.dial.host = ctx->store->host;
+    TcpClient.dial.host = HTTP_CLIENT_CTX(work)->host;
     TcpClient.dial.port = ns->target.port;
     TcpClient.dial.timeout_ms = PROTOCORE_HTTP_CLIENT_TIMEOUT_MS;
-    TcpClient.open(TcpClient.internal);
-    ctx->store->cid = (int)TcpClient.i32;
-    CL_DBG("[hc] open cid=%d\n", ctx->store->cid);
-    if (ctx->store->cid < 0)
+    TcpClient.open(protocore_tcp_client_span());
+    HTTP_CLIENT_CTX(work)->cid = (int)TcpClient.i32;
+    CL_DBG("[hc] open cid=%d\n", HTTP_CLIENT_CTX(work)->cid);
+    if (HTTP_CLIENT_CTX(work)->cid < 0)
     {
         ns->status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
         return;
@@ -621,23 +647,23 @@ static void exchange(struct HttpClientInternal *restrict ctx)
     // The open resolves and connects a step at a time; the request waits for it to come up.
     for (;;)
     {
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.connected(TcpClient.internal);
+        TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+        TcpClient.connected(protocore_tcp_client_span());
         if (TcpClient.ok)
         {
             break;
         }
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.is_closed(TcpClient.internal);
+        TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
         if (TcpClient.ok)
         {
-            close_conn(ctx);
+            close_conn(work);
             ns->status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
             return;
         }
         if ((int32_t)(deadline - now_ms()) <= 0)
         {
-            close_conn(ctx);
+            close_conn(work);
             ns->status = (int32_t)HTTP_CLIENT_ERR_TIMEOUT;
             return;
         }
@@ -651,9 +677,9 @@ static void exchange(struct HttpClientInternal *restrict ctx)
     {
         // RFC 9112 sec 9.7: the user agent is also the TLS client, and the handshake finishes before
         // the request message goes out. All HTTP octets then ride as TLS application data.
-        if (!protocore_tls_client_session_begin(ctx->store->host, tls_bio_send, tls_bio_recv))
+        if (!protocore_tls_client_session_begin(HTTP_CLIENT_CTX(work)->host, tls_bio_send, tls_bio_recv))
         {
-            close_conn(ctx);
+            close_conn(work);
             ns->status = (int32_t)HTTP_CLIENT_ERR_TLS;
             return;
         }
@@ -667,32 +693,33 @@ static void exchange(struct HttpClientInternal *restrict ctx)
         if (hs != PROTOCORE_TLS_READY)
         {
             protocore_tls_client_session_end();
-            close_conn(ctx);
+            close_conn(work);
             ns->status = (int32_t)HTTP_CLIENT_ERR_TLS;
             return;
         }
-        if (protocore_tls_client_session_write((const uint8_t *)ctx->store->req, reqlen) != (int)reqlen)
+        if (protocore_tls_client_session_write((const uint8_t *)HTTP_CLIENT_CTX(work)->req, reqlen) != (int)reqlen)
         {
             protocore_tls_client_session_end();
-            close_conn(ctx);
+            close_conn(work);
             ns->status = (int32_t)HTTP_CLIENT_ERR_SEND;
             return;
         }
         while ((int32_t)(deadline - now_ms()) > 0)
         {
-            int got = protocore_tls_client_session_read(ctx->store->rx + msg_len, sizeof(ctx->store->rx) - msg_len);
+            int got = protocore_tls_client_session_read(HTTP_CLIENT_CTX(work)->rx + msg_len,
+                                                        sizeof(HTTP_CLIENT_CTX(work)->rx) - msg_len);
             if (got < 0)
             {
                 break; // closure alert or fatal (RFC 9112 sec 9.8)
             }
             msg_len += (size_t)got;
-            if (msg_len >= sizeof(ctx->store->rx))
+            if (msg_len >= sizeof(HTTP_CLIENT_CTX(work)->rx))
             {
                 break;
             }
             if (got == 0)
             {
-                if (peer_done(ctx))
+                if (peer_done(work))
                 {
                     break;
                 }
@@ -704,29 +731,29 @@ static void exchange(struct HttpClientInternal *restrict ctx)
     else
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
     {
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.io.data = ctx->store->req;
+        TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+        TcpClient.io.data = HTTP_CLIENT_CTX(work)->req;
         TcpClient.io.len = reqlen;
-        TcpClient.send(TcpClient.internal);
+        TcpClient.send(protocore_tcp_client_span());
         if (!TcpClient.ok)
         {
-            close_conn(ctx);
+            close_conn(work);
             ns->status = (int32_t)HTTP_CLIENT_ERR_SEND;
             return;
         }
         while ((int32_t)(deadline - now_ms()) > 0)
         {
-            TcpClient.cid = ctx->store->cid;
-            TcpClient.io.buf = ctx->store->rx + msg_len;
-            TcpClient.io.cap = sizeof(ctx->store->rx) - msg_len;
-            TcpClient.read(TcpClient.internal);
+            TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
+            TcpClient.io.buf = HTTP_CLIENT_CTX(work)->rx + msg_len;
+            TcpClient.io.cap = sizeof(HTTP_CLIENT_CTX(work)->rx) - msg_len;
+            TcpClient.read(protocore_tcp_client_span());
             const size_t got = TcpClient.n;
             msg_len += got;
-            if (msg_len >= sizeof(ctx->store->rx))
+            if (msg_len >= sizeof(HTTP_CLIENT_CTX(work)->rx))
             {
                 break;
             }
-            if (peer_done(ctx))
+            if (peer_done(work))
             {
                 break;
             }
@@ -738,7 +765,7 @@ static void exchange(struct HttpClientInternal *restrict ctx)
     }
 
     CL_DBG("[hc] msg_len=%u\n", (unsigned)msg_len);
-    close_conn(ctx);
+    close_conn(work);
 
     if (msg_len == 0)
     {
@@ -746,48 +773,50 @@ static void exchange(struct HttpClientInternal *restrict ctx)
         return;
     }
 
-    ns->message.buf = ctx->store->rx;
+    ns->message.buf = HTTP_CLIENT_CTX(work)->rx;
     ns->message.len = msg_len;
-    parse_response(ctx);
+    parse_response(work);
     if (ns->status < 0)
     {
         return;
     }
-    ns->body = ctx->store->rx + ns->body_off;
+    ns->body = HTTP_CLIENT_CTX(work)->rx + ns->body_off;
 }
 
 // RFC 9110 sec 9.3.1: GET requests a transfer of the target resource's selected representation, so
 // the request encloses no content.
-static void get(struct HttpClientInternal *restrict ctx)
+static void get(uint8_t *restrict work)
 {
-    ctx->ns->request.method = "GET";
-    ctx->ns->request.content_type = NULL;
-    ctx->ns->request.body = NULL;
-    ctx->ns->request.body_len = 0;
-    exchange(ctx);
+    HttpClient.request.method = "GET";
+    HttpClient.request.content_type = NULL;
+    HttpClient.request.body = NULL;
+    HttpClient.request.body_len = 0;
+    exchange(work);
 }
 
 // RFC 9110 sec 9.3.3: POST asks the target resource to process the enclosed representation.
-static void post(struct HttpClientInternal *restrict ctx)
+static void post(uint8_t *restrict work)
 {
-    ctx->ns->request.method = "POST";
-    exchange(ctx);
+    HttpClient.request.method = "POST";
+    exchange(work);
 }
 
 #else // no network stack: the exchange refuses and the pure calls stand alone
 
-static void get(struct HttpClientInternal *restrict ctx)
+static void get(uint8_t *restrict work)
 {
-    ctx->ns->status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
-    ctx->ns->body = NULL;
-    ctx->ns->body_len = 0;
+    (void)work;
+    HttpClient.status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
+    HttpClient.body = NULL;
+    HttpClient.body_len = 0;
 }
 
-static void post(struct HttpClientInternal *restrict ctx)
+static void post(uint8_t *restrict work)
 {
-    ctx->ns->status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
-    ctx->ns->body = NULL;
-    ctx->ns->body_len = 0;
+    (void)work;
+    HttpClient.status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
+    HttpClient.body = NULL;
+    HttpClient.body_len = 0;
 }
 
 #endif // PROTOCORE_HAS_NET_STACK
@@ -800,7 +829,6 @@ HttpClientNs HttpClient = {.parse_target_uri = parse_target_uri,
                            .post = post,
                            .set_ca = set_ca,
                            .set_pin = set_pin,
-                           .clear_verify = clear_verify,
-                           .internal = &s_http_client};
+                           .clear_verify = clear_verify};
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT

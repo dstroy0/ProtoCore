@@ -24,6 +24,8 @@
 #include "server/clock/clock.h" // protocore_millis() for the stateless nonce
 #include "shared/hex/hex.h"     // protocore_hex_encode/decode
 
+static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
+
 // ---------------------------------------------------------------------------
 // Basic Auth helpers
 // ---------------------------------------------------------------------------
@@ -41,7 +43,7 @@ static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[
     Hex.io.n = PROTOCORE_SHA256_DIGEST_LEN;
     Hex.io.out = out;
     Hex.args.upper = PROTO_FALSE;
-    Hex.encode(Hex.internal);
+    Hex.encode(hex_work);
 }
 
 // Extract the value of @p key from a Digest auth header into @p out.
@@ -253,7 +255,7 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     Hex.io.n = 16;
     Hex.io.out = mac_hex;
     Hex.args.upper = PROTO_FALSE;
-    Hex.encode(Hex.internal); // 16 bytes -> 32 hex chars + NUL
+    Hex.encode(hex_work); // 16 bytes -> 32 hex chars + NUL
     return issue;
 }
 
@@ -273,7 +275,7 @@ static void mint_nonce(struct AuthInternal *restrict ctx)
     Hex.io.n = 4;
     Hex.io.out = issue_hex;
     Hex.args.upper = PROTO_FALSE;
-    Hex.encode(Hex.internal); // 4 bytes -> 8 hex chars
+    Hex.encode(hex_work); // 4 bytes -> 8 hex chars
     char mac_hex[33];
     digest_nonce_mac(work, ctx->store->digest_secret, issue, mac_hex);
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
@@ -306,7 +308,7 @@ static void verify_nonce(struct AuthInternal *restrict ctx)
     Hex.io.n = 8;
     Hex.io.bytes = (uint8_t *)&issue;
     Hex.io.cap = 4;
-    Hex.decode(Hex.internal);
+    Hex.decode(hex_work);
     if (Hex.i32 != 4)
     {
         return PROTO_FALSE;
@@ -343,7 +345,7 @@ static void challenge(struct AuthInternal *restrict ctx)
         return;
     }
     ConnPool.slot = slot_id;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         HttpConn.slot = slot_id;
@@ -412,17 +414,17 @@ static void challenge(struct AuthInternal *restrict ctx)
         ConnPool.slot = slot_id;
         ConnPool.io.data = header;
         ConnPool.io.len = (proto_u16)hlen;
-        ConnPool.send(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
         ConnPool.io.data = body;
         ConnPool.io.len = (proto_u16)(sizeof(body) - 1);
-        ConnPool.send_flush(ConnPool.internal);
+        ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
         ConnPool.slot = slot_id;
         ConnPool.io.data = header;
         ConnPool.io.len = (proto_u16)hlen;
-        ConnPool.send_flush(ConnPool.internal);
+        ConnPool.send_flush(protocore_conn_pool_span());
     }
 
     protocore_resp_end(slot_id, 401, (int)(sizeof(body) - 1), keep, /*pre_flushed=*/PROTO_TRUE);

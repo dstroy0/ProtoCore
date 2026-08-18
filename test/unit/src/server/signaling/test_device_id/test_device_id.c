@@ -20,6 +20,8 @@
 
 #include <unity.h>
 
+static uint8_t device_id_work[16]; // the borrow an entry takes; DeviceId never reads it
+
 static uint8_t tw[4096]; // the borrow every namespace call in this suite runs out of
 
 // RFC 9562 Table 3: the DNS namespace ID, as its sixteen octets.
@@ -77,7 +79,7 @@ static void uuid_of(const uint8_t mac[6], char out[PROTOCORE_UUID_STR_LEN])
     memset(out, '#', PROTOCORE_UUID_STR_LEN);
     DeviceId.args.mac = mac;
     DeviceId.args.out = out;
-    DeviceId.from_mac(DeviceId.internal);
+    DeviceId.from_mac(device_id_work);
 }
 
 // The twelve lowercase hex characters the module names a MAC by.

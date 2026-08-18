@@ -121,9 +121,6 @@ typedef struct
     size_t skip;       ///< value octets a skip steps over
 } SnmpBerReadArgs;
 
-/** @brief The codec's calls, described only in snmp_ber.c. */
-struct SnmpBerInternal;
-
 /**
  * @brief The SNMP serialization (RFC 3417 sec 8, over ITU-T X.690).
  *
@@ -159,7 +156,6 @@ struct SnmpBerInternal;
  * @var SnmpBerNs::read_integer      take an INTEGER, sign-extended from its first octet
  * @var SnmpBerNs::read_oid          take an OBJECT IDENTIFIER into @c read.arc_out
  * @var SnmpBerNs::skip              step the cursor past @c read.skip value octets
- * @var SnmpBerNs::internal          the calls that reach the cursors
  */
 typedef struct
 {
@@ -176,23 +172,21 @@ typedef struct
     long ival;
     size_t n;
 
-    void (*enc_init)(struct SnmpBerInternal *ctx);
-    void (*put_integer)(struct SnmpBerInternal *ctx);
-    void (*put_uint)(struct SnmpBerInternal *ctx);
-    void (*put_octet_string)(struct SnmpBerInternal *ctx);
-    void (*put_null)(struct SnmpBerInternal *ctx);
-    void (*put_oid)(struct SnmpBerInternal *ctx);
-    void (*put_tlv)(struct SnmpBerInternal *ctx);
-    void (*put_raw)(struct SnmpBerInternal *ctx);
-    void (*seq_begin)(struct SnmpBerInternal *ctx);
-    void (*seq_end)(struct SnmpBerInternal *ctx);
-    void (*dec_init)(struct SnmpBerInternal *ctx);
-    void (*read_header)(struct SnmpBerInternal *ctx);
-    void (*read_integer)(struct SnmpBerInternal *ctx);
-    void (*read_oid)(struct SnmpBerInternal *ctx);
-    void (*skip)(struct SnmpBerInternal *ctx);
-
-    struct SnmpBerInternal *internal;
+    void (*const enc_init)(uint8_t *restrict work);
+    void (*const put_integer)(uint8_t *restrict work);
+    void (*const put_uint)(uint8_t *restrict work);
+    void (*const put_octet_string)(uint8_t *restrict work);
+    void (*const put_null)(uint8_t *restrict work);
+    void (*const put_oid)(uint8_t *restrict work);
+    void (*const put_tlv)(uint8_t *restrict work);
+    void (*const put_raw)(uint8_t *restrict work);
+    void (*const seq_begin)(uint8_t *restrict work);
+    void (*const seq_end)(uint8_t *restrict work);
+    void (*const dec_init)(uint8_t *restrict work);
+    void (*const read_header)(uint8_t *restrict work);
+    void (*const read_integer)(uint8_t *restrict work);
+    void (*const read_oid)(uint8_t *restrict work);
+    void (*const skip)(uint8_t *restrict work);
 } SnmpBerNs;
 
 /** @brief The one symbol this module exports. */

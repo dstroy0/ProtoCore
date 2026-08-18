@@ -15,28 +15,60 @@
 #ifndef PROTOCORE_BINARY_ASSET_BLOBS_H
 #define PROTOCORE_BINARY_ASSET_BLOBS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_THEMES
 
-#include <stddef.h>
+PROTOCORE_BEGIN_DECLS
 
-/** @brief One embedded theme: its name and its minified CSS (NUL-terminated flash string). */
-struct protocore_theme_blob
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
+/** @brief What css takes: name. */
+typedef struct
 {
     const char *name;
-    const char *css;
-};
+} BinaryAssetBlobsCssArgs;
 
 /** @brief The embedded theme registry (sorted by name) and its count. */
 extern const protocore_theme_blob PROTOCORE_THEME_BLOBS[];
 extern const size_t PROTOCORE_THEME_BLOB_COUNT;
 
 /**
- * @brief Look up a theme's CSS by name (exact match).
- * @return the NUL-terminated minified CSS, or nullptr if no theme by that name is embedded.
+ * @brief Layer 7 - toggleable embedded theme stylesheets (PROTOCORE_ENABLE_THEMES).
+ *
+ * A caller sets the members a call takes, invokes it through ::BinaryAssetBlobs with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   BinaryAssetBlobs.css_args.name = ...;
+ *   BinaryAssetBlobs.css(work);
+ *   // BinaryAssetBlobs.text is what the call reports
+ *
+ * @var BinaryAssetBlobsNs::css_args  what css takes: name
+ * @var BinaryAssetBlobsNs::ok  a call's true/false outcome
+ * @var BinaryAssetBlobsNs::text  the NUL-terminated minified CSS, or nullptr if no theme by that ...
+ * @var BinaryAssetBlobsNs::css  look up a theme's CSS by name (exact match)
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-const char *protocore_theme_css(const char *name);
+typedef struct
+{
+    BinaryAssetBlobsCssArgs css_args;
+
+    proto_bool ok;
+    const char *text;
+
+    void (*const css)(uint8_t *restrict work);
+} BinaryAssetBlobsNs;
+
+/** @brief The one symbol this module exports. */
+extern BinaryAssetBlobsNs BinaryAssetBlobs;
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_THEMES
+
 #endif // PROTOCORE_BINARY_ASSET_BLOBS_H

@@ -55,9 +55,6 @@ typedef struct
     uint32_t window_ms;      ///< how long it has to confirm before the rollback self-heals
 } OtaDecideArgs;
 
-/** @brief The rollback's own calls, described only in ota_rollback.c. */
-struct OtaRollbackInternal;
-
 /**
  * @brief The OTA confirm-or-roll-back policy.
  *
@@ -73,7 +70,6 @@ struct OtaRollbackInternal;
  * @var OtaRollbackNs::commit       mark the running image valid and cancel the pending rollback
  * @var OtaRollbackNs::rollback     mark it invalid and reboot into the previous one
  * @var OtaRollbackNs::tick         decide against the clock, then carry the decision out
- * @var OtaRollbackNs::internal     the calls that decide and act
  *
  * No storage member: the policy holds nothing between calls; the image state lives in the part.
  */
@@ -85,13 +81,11 @@ typedef struct
     protocore_ota_action action;
     uint8_t img_state;
 
-    void (*decide)(struct OtaRollbackInternal *ctx);
-    void (*state)(struct OtaRollbackInternal *ctx);
-    void (*commit)(struct OtaRollbackInternal *ctx);
-    void (*rollback)(struct OtaRollbackInternal *ctx);
-    void (*tick)(struct OtaRollbackInternal *ctx);
-
-    struct OtaRollbackInternal *internal;
+    void (*const decide)(uint8_t *restrict work);
+    void (*const state)(uint8_t *restrict work);
+    void (*const commit)(uint8_t *restrict work);
+    void (*const rollback)(uint8_t *restrict work);
+    void (*const tick)(uint8_t *restrict work);
 } OtaRollbackNs;
 
 /** @brief The one symbol this module exports. */

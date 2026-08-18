@@ -41,7 +41,7 @@ static uint8_t eval(uint32_t free_heap, uint32_t min_free, uint32_t largest, uin
     Guardrails.floors.heap_min = HEAP_MIN;
     Guardrails.floors.frag_min_block = FRAG_MIN;
     Guardrails.floors.stack_min = STACK_MIN;
-    Guardrails.eval(Guardrails.internal);
+    Guardrails.eval(protocore_guardrails_span());
     return Guardrails.breaches;
 }
 
@@ -51,7 +51,7 @@ static uint8_t eval_snapshot(protocore_health *h)
     Guardrails.floors.heap_min = HEAP_MIN;
     Guardrails.floors.frag_min_block = FRAG_MIN;
     Guardrails.floors.stack_min = STACK_MIN;
-    Guardrails.eval(Guardrails.internal);
+    Guardrails.eval(protocore_guardrails_span());
     return Guardrails.breaches;
 }
 
@@ -60,7 +60,7 @@ static int json_of(protocore_health *h, char *out, size_t cap)
     Guardrails.health = h;
     Guardrails.out.out = out;
     Guardrails.out.cap = cap;
-    Guardrails.json(Guardrails.internal);
+    Guardrails.json(protocore_guardrails_span());
     return Guardrails.n;
 }
 
@@ -176,7 +176,7 @@ void test_the_sampler_reports_the_stated_counters(void)
 
     protocore_health h = {999, 999, 999, 999};
     Guardrails.health = &h;
-    Guardrails.sample(Guardrails.internal);
+    Guardrails.sample(protocore_guardrails_span());
     TEST_ASSERT_EQUAL_UINT32(20000u, h.free_heap);
     TEST_ASSERT_EQUAL_UINT32(15000u, h.min_free_heap);
     TEST_ASSERT_EQUAL_UINT32(10000u, h.largest_free_block);
@@ -184,7 +184,7 @@ void test_the_sampler_reports_the_stated_counters(void)
 
     // A snapshot there is nowhere to write is not a crash.
     Guardrails.health = NULL;
-    Guardrails.sample(Guardrails.internal);
+    Guardrails.sample(protocore_guardrails_span());
 }
 
 // check() samples and judges in one step, so a device stated healthy reports no breach and one
@@ -194,13 +194,13 @@ void test_check_judges_what_the_sampler_read(void)
     protocore_host_set_heap(20000u, 15000u, 65536u, 10000u);
     protocore_host_set_stack(2048u);
     Guardrails.cb = NULL;
-    Guardrails.begin(Guardrails.internal);
-    Guardrails.check(Guardrails.internal);
+    Guardrails.begin(protocore_guardrails_span());
+    Guardrails.check(protocore_guardrails_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_BREACH_NONE, Guardrails.breaches);
 
     protocore_host_set_heap(0u, 0u, 0u, 0u);
     protocore_host_set_stack(0u);
-    Guardrails.check(Guardrails.internal);
+    Guardrails.check(protocore_guardrails_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_BREACH_HEAP | PROTOCORE_BREACH_FRAG | PROTOCORE_BREACH_STACK,
                             Guardrails.breaches);
 }
@@ -224,14 +224,14 @@ void test_begin_installs_and_replaces_the_callback(void)
 
     g_seen_mask = 0u;
     Guardrails.cb = on_breach;
-    Guardrails.begin(Guardrails.internal);
-    Guardrails.check(Guardrails.internal);
+    Guardrails.begin(protocore_guardrails_span());
+    Guardrails.check(protocore_guardrails_span());
     TEST_ASSERT_EQUAL_UINT8(Guardrails.breaches, g_seen_mask); // the callback saw the mask check reports
     TEST_ASSERT_EQUAL_UINT32(0u, g_seen_health.free_heap);     // and the snapshot it judged
 
     g_seen_mask = 0xFFu;
     Guardrails.cb = NULL;
-    Guardrails.begin(Guardrails.internal);
-    Guardrails.check(Guardrails.internal);
+    Guardrails.begin(protocore_guardrails_span());
+    Guardrails.check(protocore_guardrails_span());
     TEST_ASSERT_EQUAL_UINT8(0xFFu, g_seen_mask); // replaced with none: the callback never ran
 }

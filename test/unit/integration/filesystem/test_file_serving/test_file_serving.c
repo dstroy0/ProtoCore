@@ -13,6 +13,8 @@
 #include "rx_feed.h"
 #include <unity.h>
 
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
 static const protocore_mnt_backend *g_fs;
 static proto_bool handler_called = PROTO_FALSE;
 
@@ -61,7 +63,7 @@ void setUp()
     mock_mnt_reset();
 
     Mnt.args.backend = mock_mnt();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     tcp_capture_reset();
 }
 

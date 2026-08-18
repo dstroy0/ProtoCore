@@ -45,96 +45,247 @@ void tearDown()
 void test_format_types()
 {
     char out[64];
-    TEST_ASSERT_TRUE(protocore_statsd_format(out, sizeof(out), "api.hits", "1", STATSD_COUNTER, 1.0f, NULL));
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "api.hits";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_TRUE(Statsd.n);
     TEST_ASSERT_EQUAL_STRING("api.hits:1|c", out);
-    protocore_statsd_format(out, sizeof(out), "temp", "42", STATSD_GAUGE, 1.0f, NULL);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "temp";
+    Statsd.value.text = "42";
+    Statsd.metric.type = STATSD_GAUGE;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("temp:42|g", out);
-    protocore_statsd_format(out, sizeof(out), "req.latency", "120", STATSD_TIMING, 1.0f, NULL);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "req.latency";
+    Statsd.value.text = "120";
+    Statsd.metric.type = STATSD_TIMING;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("req.latency:120|ms", out);
-    protocore_statsd_format(out, sizeof(out), "users", "u42", STATSD_SET, 1.0f, NULL);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "users";
+    Statsd.value.text = "u42";
+    Statsd.metric.type = STATSD_SET;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("users:u42|s", out);
 }
 
 void test_format_sample_rate()
 {
     char out[64];
-    protocore_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.1f, NULL);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.1f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("x:1|c|@0.1", out);
-    protocore_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.5f, NULL);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.5f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("x:1|c|@0.5", out);
-    protocore_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.01f, NULL);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.01f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("x:1|c|@0.01", out);
-    protocore_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 1.0f, NULL);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("x:1|c", out);
 }
 
 void test_format_tags_and_both()
 {
     char out[80];
-    protocore_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 1.0f, "env:prod,host:a");
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = "env:prod,host:a";
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("x:1|c|#env:prod,host:a", out);
-    protocore_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.1f, "env:prod");
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.1f;
+    Statsd.tags.metric = "env:prod";
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("x:1|c|@0.1|#env:prod", out);
 }
 
 void test_format_guards()
 {
     char out[64];
-    TEST_ASSERT_EQUAL_UINT(0, protocore_statsd_format(out, sizeof(out), "x", "1", (StatsdType)'z', 1.0f, NULL));
-    TEST_ASSERT_EQUAL_UINT(0, protocore_statsd_format(out, sizeof(out), NULL, "1", STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_UINT(0, protocore_statsd_format(out, sizeof(out), "", "1", STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_UINT(0, protocore_statsd_format(out, sizeof(out), "x", NULL, STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_UINT(0, protocore_statsd_format(out, 5, "toolongname", "1", STATSD_COUNTER, 1.0f, NULL));
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = "1";
+    Statsd.metric.type = (StatsdType)'z';
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_UINT(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = NULL;
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_UINT(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_UINT(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = NULL;
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_UINT(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 5;
+    Statsd.metric.name = "toolongname";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_UINT(0, Statsd.n);
 }
 
 void test_emit_counter_and_negative()
 {
-    protocore_statsd_begin("192.0.2.10", 8125, NULL);
-    protocore_statsd_count("api.hits", 3);
+    Statsd.server.addr = "192.0.2.10";
+    Statsd.server.port = 8125;
+    Statsd.tags.global = NULL;
+    Statsd.init(protocore_statsd_span());
+    Statsd.metric.name = "api.hits";
+    Statsd.value.i64 = 3;
+    Statsd.metric.rate = 1.0f;
+    Statsd.count(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("api.hits:3|c", captured());
     protocore_net_host_udp_reset();
-    protocore_statsd_count("api.hits", -4);
+    Statsd.metric.name = "api.hits";
+    Statsd.value.i64 = -4;
+    Statsd.metric.rate = 1.0f;
+    Statsd.count(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("api.hits:-4|c", captured());
 }
 
 void test_emit_gauge_and_delta()
 {
-    protocore_statsd_begin("192.0.2.10", 0, NULL);
-    protocore_statsd_gauge("heap.free", 200000);
+    Statsd.server.addr = "192.0.2.10";
+    Statsd.server.port = 0;
+    Statsd.tags.global = NULL;
+    Statsd.init(protocore_statsd_span());
+    Statsd.metric.name = "heap.free";
+    Statsd.value.i64 = 200000;
+    Statsd.gauge(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("heap.free:200000|g", captured());
     protocore_net_host_udp_reset();
-    protocore_statsd_gauge_delta("conns", 5);
+    Statsd.metric.name = "conns";
+    Statsd.value.i64 = 5;
+    Statsd.gauge_delta(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("conns:+5|g", captured());
     protocore_net_host_udp_reset();
-    protocore_statsd_gauge_delta("conns", -2);
+    Statsd.metric.name = "conns";
+    Statsd.value.i64 = -2;
+    Statsd.gauge_delta(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("conns:-2|g", captured());
 }
 
 void test_emit_timing_set_sampled()
 {
-    protocore_statsd_begin("192.0.2.10", 8125, NULL);
-    protocore_statsd_timing("db.query", 120);
+    Statsd.server.addr = "192.0.2.10";
+    Statsd.server.port = 8125;
+    Statsd.tags.global = NULL;
+    Statsd.init(protocore_statsd_span());
+    Statsd.metric.name = "db.query";
+    Statsd.value.ms = 120;
+    Statsd.timing(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("db.query:120|ms", captured());
     protocore_net_host_udp_reset();
-    protocore_statsd_set("uniques", "device-7");
+    Statsd.metric.name = "uniques";
+    Statsd.value.member = "device-7";
+    Statsd.set(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("uniques:device-7|s", captured());
     protocore_net_host_udp_reset();
-    protocore_statsd_count_sampled("rare", 1, 0.25f);
+    Statsd.metric.name = "rare";
+    Statsd.value.i64 = 1;
+    Statsd.metric.rate = 0.25f;
+    Statsd.count(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("rare:1|c|@0.25", captured());
 }
 
 void test_emit_global_tags()
 {
-    protocore_statsd_begin("192.0.2.10", 8125, "env:prod,region:us");
-    protocore_statsd_count("x", 1);
+    Statsd.server.addr = "192.0.2.10";
+    Statsd.server.port = 8125;
+    Statsd.tags.global = "env:prod,region:us";
+    Statsd.init(protocore_statsd_span());
+    Statsd.metric.name = "x";
+    Statsd.value.i64 = 1;
+    Statsd.metric.rate = 1.0f;
+    Statsd.count(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("x:1|c|#env:prod,region:us", captured());
 }
 
 void test_emit_noop_until_begin()
 {
-    protocore_statsd_begin(NULL, 0, NULL);
+    Statsd.server.addr = NULL;
+    Statsd.server.port = 0;
+    Statsd.tags.global = NULL;
+    Statsd.init(protocore_statsd_span());
     protocore_net_host_udp_reset();
-    protocore_statsd_count("x", 1);
+    Statsd.metric.name = "x";
+    Statsd.value.i64 = 1;
+    Statsd.metric.rate = 1.0f;
+    Statsd.count(protocore_statsd_span());
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 
@@ -142,55 +293,191 @@ void test_rate_clamp_and_stage_overflow()
 {
     char out[64];
 
-    TEST_ASSERT_TRUE(protocore_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.0001f, NULL) > 0);
-    TEST_ASSERT_TRUE(protocore_statsd_format(out, sizeof(out), "m", "1", STATSD_COUNTER, 0.9999f, NULL) > 0);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "m";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.0001f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_TRUE(Statsd.n > 0);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "m";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.9999f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_TRUE(Statsd.n > 0);
 
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 2, "metric", "1", STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 4, "m", "1", STATSD_TIMING, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 6, "m", "1", STATSD_COUNTER, 0.5f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 7, "m", "1", STATSD_COUNTER, 1.0f, "#tag:x"));
+    Statsd.line.out = out;
+    Statsd.line.cap = 2;
+    Statsd.metric.name = "metric";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 4;
+    Statsd.metric.name = "m";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_TIMING;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 6;
+    Statsd.metric.name = "m";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.5f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 7;
+    Statsd.metric.name = "m";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = "#tag:x";
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
 }
 
 void test_format_guard_null_out_and_zero_cap()
 {
     char out[64];
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(NULL, sizeof(out), "a", "1", STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 0, "a", "1", STATSD_COUNTER, 1.0f, NULL));
+    Statsd.line.out = NULL;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "a";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 0;
+    Statsd.metric.name = "a";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
 }
 
 void test_format_append_chain_overflow_points()
 {
     char out[64];
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 2, "a", "1", STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 3, "a", "1", STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 5, "a", "1", STATSD_COUNTER, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 6, "a", "1", STATSD_TIMING, 1.0f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 0.5f, NULL));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_statsd_format(out, 8, "a", "1", STATSD_COUNTER, 1.0f, "tg"));
+    Statsd.line.out = out;
+    Statsd.line.cap = 2;
+    Statsd.metric.name = "a";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 3;
+    Statsd.metric.name = "a";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 5;
+    Statsd.metric.name = "a";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 6;
+    Statsd.metric.name = "a";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_TIMING;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 8;
+    Statsd.metric.name = "a";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.5f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
+    Statsd.line.out = out;
+    Statsd.line.cap = 8;
+    Statsd.metric.name = "a";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = "tg";
+    Statsd.format(protocore_statsd_span());
+    TEST_ASSERT_EQUAL_size_t(0, Statsd.n);
 }
 
 void test_format_rate_zero_and_empty_tags()
 {
     char out[64];
-    protocore_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 0.0f, NULL);
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 0.0f;
+    Statsd.tags.metric = NULL;
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("x:1|c", out);
-    protocore_statsd_format(out, sizeof(out), "x", "1", STATSD_COUNTER, 1.0f, "");
+    Statsd.line.out = out;
+    Statsd.line.cap = sizeof(out);
+    Statsd.metric.name = "x";
+    Statsd.value.text = "1";
+    Statsd.metric.type = STATSD_COUNTER;
+    Statsd.metric.rate = 1.0f;
+    Statsd.tags.metric = "";
+    Statsd.format(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("x:1|c", out);
 }
 
 void test_emit_zero_value_and_set_null_member()
 {
-    protocore_statsd_begin("192.0.2.10", 8125, NULL);
-    protocore_statsd_timing("db.zero", 0);
+    Statsd.server.addr = "192.0.2.10";
+    Statsd.server.port = 8125;
+    Statsd.tags.global = NULL;
+    Statsd.init(protocore_statsd_span());
+    Statsd.metric.name = "db.zero";
+    Statsd.value.ms = 0;
+    Statsd.timing(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("db.zero:0|ms", captured());
     protocore_net_host_udp_reset();
-    protocore_statsd_set("uniques", NULL);
+    Statsd.metric.name = "uniques";
+    Statsd.value.member = NULL;
+    Statsd.set(protocore_statsd_span());
     TEST_ASSERT_EQUAL_STRING("uniques:|s", captured());
 }
 
 void test_emit_overlong_name_is_noop()
 {
-    protocore_statsd_begin("192.0.2.10", 8125, NULL);
+    Statsd.server.addr = "192.0.2.10";
+    Statsd.server.port = 8125;
+    Statsd.tags.global = NULL;
+    Statsd.init(protocore_statsd_span());
     char longname[300];
     for (size_t i = 0; i < sizeof(longname) - 1; i++)
     {
@@ -198,7 +485,10 @@ void test_emit_overlong_name_is_noop()
     }
     longname[sizeof(longname) - 1] = '\0';
     protocore_net_host_udp_reset();
-    protocore_statsd_count(longname, 1);
+    Statsd.metric.name = longname;
+    Statsd.value.i64 = 1;
+    Statsd.metric.rate = 1.0f;
+    Statsd.count(protocore_statsd_span());
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 

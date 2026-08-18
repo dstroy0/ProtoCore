@@ -68,9 +68,6 @@ typedef struct
     uint8_t last_exception;      ///< raw Modbus exception code from the last read (0 = none).
 } protocore_sb_modbus_ctx;
 
-/** @brief The module's handle onto its own calls, described only in sb_modbus.c. */
-struct SbModbusInternal;
-
 /**
  * @brief The Modbus-master adapter: fill a driver instance, then build a SouthboundDriver over it.
  *
@@ -86,7 +83,6 @@ struct SbModbusInternal;
  * @var SbModbusNs::i32      SB_OK, or SB_ERR_ARG on a null / out-of-range argument
  * @var SbModbusNs::init     fill @c ctx from @c txn, @c io, @c fc and @c unit
  * @var SbModbusNs::driver   fill @c drv_out with a SouthboundDriver bound to @c ctx
- * @var SbModbusNs::internal the module's handle onto the calls above
  */
 typedef struct
 {
@@ -101,10 +97,8 @@ typedef struct
 
     int32_t i32;
 
-    void (*init)(struct SbModbusInternal *ctx);
-    void (*driver)(struct SbModbusInternal *ctx);
-
-    struct SbModbusInternal *internal;
+    void (*const init)(uint8_t *restrict work);
+    void (*const driver)(uint8_t *restrict work);
 } SbModbusNs;
 
 /** @brief The one symbol this module exports. */

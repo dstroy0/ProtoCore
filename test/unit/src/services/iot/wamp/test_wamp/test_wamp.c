@@ -14,6 +14,8 @@
 
 #include <unity.h>
 
+static uint8_t wamp_work[16]; // the borrow an entry takes; Wamp never reads it
+
 void setUp(void)
 {
 }
@@ -50,7 +52,7 @@ void test_published_subscribe(void)
     reset();
     Wamp.id.request = 713845233u;
     Wamp.uri.topic = "com.myapp.mytopic1";
-    Wamp.build_subscribe(Wamp.internal);
+    Wamp.build_subscribe(wamp_work);
 
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[32,713845233,{},\"com.myapp.mytopic1\"]", g_buf);
@@ -65,13 +67,13 @@ void test_published_hello(void)
     reset();
     Wamp.uri.realm = "somerealm";
     Wamp.payload.details = "{\"roles\":{\"publisher\":{},\"subscriber\":{}}}";
-    Wamp.build_hello(Wamp.internal);
+    Wamp.build_hello(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[1,\"somerealm\",{\"roles\":{\"publisher\":{},\"subscriber\":{}}}]", g_buf);
 
     reset();
     Wamp.uri.realm = "somerealm";
-    Wamp.build_hello(Wamp.internal);
+    Wamp.build_hello(wamp_work);
     TEST_ASSERT_EQUAL_STRING("[1,\"somerealm\",{}]", g_buf);
 }
 
@@ -83,14 +85,14 @@ void test_published_goodbye(void)
 {
     reset();
     Wamp.uri.reason = "wamp.close.goodbye_and_out";
-    Wamp.build_goodbye(Wamp.internal);
+    Wamp.build_goodbye(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[6,{},\"wamp.close.goodbye_and_out\"]", g_buf);
 
     reset();
     Wamp.uri.reason = "wamp.close.system_shutdown";
     Wamp.payload.details = "{\"message\":\"The host is shutting down now.\"}";
-    Wamp.build_goodbye(Wamp.internal);
+    Wamp.build_goodbye(wamp_work);
     TEST_ASSERT_EQUAL_STRING("[6,{\"message\":\"The host is shutting down now.\"},"
                              "\"wamp.close.system_shutdown\"]",
                              g_buf);
@@ -103,7 +105,7 @@ void test_published_unsubscribe(void)
     reset();
     Wamp.id.request = 85346237u;
     Wamp.id.subscription = 5512315355ull;
-    Wamp.build_unsubscribe(Wamp.internal);
+    Wamp.build_unsubscribe(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[34,85346237,5512315355]", g_buf);
 }
@@ -119,7 +121,7 @@ void test_published_publish(void)
     reset();
     Wamp.id.request = 239714735u;
     Wamp.uri.topic = "com.myapp.mytopic1";
-    Wamp.build_publish(Wamp.internal);
+    Wamp.build_publish(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[16,239714735,{},\"com.myapp.mytopic1\"]", g_buf);
 
@@ -127,14 +129,14 @@ void test_published_publish(void)
     Wamp.id.request = 239714735u;
     Wamp.uri.topic = "com.myapp.mytopic1";
     Wamp.payload.arguments = "[\"Hello, world!\"]";
-    Wamp.build_publish(Wamp.internal);
+    Wamp.build_publish(wamp_work);
     TEST_ASSERT_EQUAL_STRING("[16,239714735,{},\"com.myapp.mytopic1\",[\"Hello, world!\"]]", g_buf);
 
     reset();
     Wamp.id.request = 239714735u;
     Wamp.uri.topic = "com.myapp.mytopic1";
     Wamp.payload.arguments_kw = "{\"color\":\"orange\",\"sizes\":[23,42,7]}";
-    Wamp.build_publish(Wamp.internal);
+    Wamp.build_publish(wamp_work);
     TEST_ASSERT_EQUAL_STRING("[16,239714735,{},\"com.myapp.mytopic1\",[],"
                              "{\"color\":\"orange\",\"sizes\":[23,42,7]}]",
                              g_buf);
@@ -147,7 +149,7 @@ void test_published_call(void)
     reset();
     Wamp.id.request = 7814135u;
     Wamp.uri.procedure = "com.myapp.ping";
-    Wamp.build_call(Wamp.internal);
+    Wamp.build_call(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[48,7814135,{},\"com.myapp.ping\"]", g_buf);
 
@@ -155,7 +157,7 @@ void test_published_call(void)
     Wamp.id.request = 7814135u;
     Wamp.uri.procedure = "com.myapp.add2";
     Wamp.payload.arguments = "[23,7]";
-    Wamp.build_call(Wamp.internal);
+    Wamp.build_call(wamp_work);
     TEST_ASSERT_EQUAL_STRING("[48,7814135,{},\"com.myapp.add2\",[23,7]]", g_buf);
 }
 
@@ -167,14 +169,14 @@ void test_published_register_and_unregister(void)
     reset();
     Wamp.id.request = 25349185u;
     Wamp.uri.procedure = "com.myapp.myprocedure1";
-    Wamp.build_register(Wamp.internal);
+    Wamp.build_register(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[64,25349185,{},\"com.myapp.myprocedure1\"]", g_buf);
 
     reset();
     Wamp.id.request = 788923562u;
     Wamp.id.registration = 2103333224u;
-    Wamp.build_unregister(Wamp.internal);
+    Wamp.build_unregister(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[66,788923562,2103333224]", g_buf);
 }
@@ -185,20 +187,20 @@ void test_published_yield(void)
 {
     reset();
     Wamp.id.request = 6131533u;
-    Wamp.build_yield(Wamp.internal);
+    Wamp.build_yield(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[70,6131533,{}]", g_buf);
 
     reset();
     Wamp.id.request = 6131533u;
     Wamp.payload.arguments = "[30]";
-    Wamp.build_yield(Wamp.internal);
+    Wamp.build_yield(wamp_work);
     TEST_ASSERT_EQUAL_STRING("[70,6131533,{},[30]]", g_buf);
 
     reset();
     Wamp.id.request = 6131533u;
     Wamp.payload.arguments_kw = "{\"userid\":123,\"karma\":10}";
-    Wamp.build_yield(Wamp.internal);
+    Wamp.build_yield(wamp_work);
     TEST_ASSERT_EQUAL_STRING("[70,6131533,{},[],{\"userid\":123,\"karma\":10}]", g_buf);
 }
 
@@ -210,7 +212,7 @@ void test_options_dict_is_carried(void)
     Wamp.id.request = 1u;
     Wamp.uri.topic = "com.myapp.t";
     Wamp.payload.options = "{\"acknowledge\":true}";
-    Wamp.build_publish(Wamp.internal);
+    Wamp.build_publish(wamp_work);
     TEST_ASSERT_EQUAL_STRING("[16,1,{\"acknowledge\":true},\"com.myapp.t\"]", g_buf);
 }
 
@@ -221,12 +223,12 @@ void test_id_range(void)
     reset();
     Wamp.id.request = 1u;
     Wamp.id.subscription = 9007199254740992ull; // 2^53
-    Wamp.build_unsubscribe(Wamp.internal);
+    Wamp.build_unsubscribe(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[34,1,9007199254740992]", g_buf);
 
     reset();
-    Wamp.build_unsubscribe(Wamp.internal);
+    Wamp.build_unsubscribe(wamp_work);
     TEST_ASSERT_EQUAL_STRING("[34,0,0]", g_buf);
 }
 
@@ -236,7 +238,7 @@ void test_uri_is_written_as_a_json_string(void)
 {
     reset();
     Wamp.uri.realm = "a\"b";
-    Wamp.build_hello(Wamp.internal);
+    Wamp.build_hello(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("[1,\"a\\\"b\",{}]", g_buf);
 }
@@ -246,20 +248,20 @@ void test_uri_is_written_as_a_json_string(void)
 void test_build_refuses_a_missing_uri(void)
 {
     reset();
-    Wamp.build_hello(Wamp.internal);
+    Wamp.build_hello(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Wamp.n);
 
     reset();
-    Wamp.build_subscribe(Wamp.internal);
+    Wamp.build_subscribe(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 
     reset();
-    Wamp.build_call(Wamp.internal);
+    Wamp.build_call(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 
     reset();
-    Wamp.build_goodbye(Wamp.internal);
+    Wamp.build_goodbye(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 }
 
@@ -273,13 +275,13 @@ void test_build_refuses_a_short_buffer(void)
     Wamp.id.request = 713845233u;
     Wamp.uri.topic = "com.myapp.mytopic1";
     Wamp.payload.options = NULL;
-    Wamp.build_subscribe(Wamp.internal);
+    Wamp.build_subscribe(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Wamp.n);
 
     Wamp.out.buf = NULL;
     Wamp.out.cap = 0;
-    Wamp.build_subscribe(Wamp.internal);
+    Wamp.build_subscribe(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 }
 
@@ -288,16 +290,16 @@ void test_build_refuses_a_short_buffer(void)
 void test_read_message_type(void)
 {
     Wamp.parse.msg = "[32, 713845233, {}, \"com.myapp.mytopic1\"]";
-    Wamp.get_type(Wamp.internal);
+    Wamp.get_type(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_INT32(WAMP_SUBSCRIBE, Wamp.i32);
 
     Wamp.parse.msg = "[2, 9129137332, {\"roles\": {\"broker\": {}}}]"; // sec 3.4.1.2 WELCOME
-    Wamp.get_type(Wamp.internal);
+    Wamp.get_type(wamp_work);
     TEST_ASSERT_EQUAL_INT32(WAMP_WELCOME, Wamp.i32);
 
     Wamp.parse.msg = "[8, 32, 713845233, {}, \"wamp.error.not_authorized\"]"; // sec 3.4.2.4 ERROR
-    Wamp.get_type(Wamp.internal);
+    Wamp.get_type(wamp_work);
     TEST_ASSERT_EQUAL_INT32(WAMP_ERROR, Wamp.i32);
 }
 
@@ -307,12 +309,12 @@ void test_read_ids_by_position(void)
 {
     Wamp.parse.msg = "[33, 713845233, 5512315355]";
     Wamp.parse.index = 1;
-    Wamp.get_id(Wamp.internal);
+    Wamp.get_id(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_UINT64(713845233ull, Wamp.u64);
 
     Wamp.parse.index = 2;
-    Wamp.get_id(Wamp.internal);
+    Wamp.get_id(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_UINT64(5512315355ull, Wamp.u64);
 }
@@ -324,16 +326,16 @@ void test_read_across_nested_elements(void)
 {
     Wamp.parse.msg = "[36, 5512315355, 4429313566, {}, [], {\"color\": \"orange\", \"sizes\": [23, 42, 7]}]";
 
-    Wamp.get_type(Wamp.internal);
+    Wamp.get_type(wamp_work);
     TEST_ASSERT_EQUAL_INT32(WAMP_EVENT, Wamp.i32);
 
     Wamp.parse.index = 2;
-    Wamp.get_id(Wamp.internal);
+    Wamp.get_id(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_UINT64(4429313566ull, Wamp.u64);
 
     Wamp.parse.index = 5;
-    Wamp.element(Wamp.internal);
+    Wamp.element(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_UINT(strlen("{\"color\": \"orange\", \"sizes\": [23, 42, 7]}"), Wamp.n);
     TEST_ASSERT_EQUAL_MEMORY("{\"color\": \"orange\", \"sizes\": [23, 42, 7]}", Wamp.text, Wamp.n);
@@ -347,13 +349,13 @@ void test_read_uri(void)
     Wamp.parse.index = 3;
     Wamp.parse.uri_out = g_uri;
     Wamp.parse.uri_cap = sizeof(g_uri);
-    Wamp.get_uri(Wamp.internal);
+    Wamp.get_uri(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("com.myapp.mytopic1", g_uri);
 
     Wamp.parse.msg = "[8, 32, 713845233, {}, \"wamp.error.not_authorized\"]";
     Wamp.parse.index = 4;
-    Wamp.get_uri(Wamp.internal);
+    Wamp.get_uri(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("wamp.error.not_authorized", g_uri);
 }
@@ -364,7 +366,7 @@ void test_element_slices_the_message(void)
     static const char MSG[] = "[50, 7814135, {}]"; // sec 3.4.3.2 RESULT
     Wamp.parse.msg = MSG;
     Wamp.parse.index = 2;
-    Wamp.element(Wamp.internal);
+    Wamp.element(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_UINT(2u, Wamp.n);
     TEST_ASSERT_EQUAL_MEMORY("{}", Wamp.text, 2);
@@ -376,13 +378,13 @@ void test_read_past_the_end(void)
 {
     Wamp.parse.msg = "[50, 7814135, {}]";
     Wamp.parse.index = 3;
-    Wamp.element(Wamp.internal);
+    Wamp.element(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
     TEST_ASSERT_NULL(Wamp.text);
     TEST_ASSERT_EQUAL_UINT(0u, Wamp.n);
 
     Wamp.parse.index = 9;
-    Wamp.get_id(Wamp.internal);
+    Wamp.get_id(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 }
 
@@ -393,17 +395,17 @@ void test_reads_refuse_the_wrong_element_kind(void)
     Wamp.parse.msg = "[32, 713845233, {}, \"com.myapp.mytopic1\"]";
 
     Wamp.parse.index = 2; // the Options dict
-    Wamp.get_id(Wamp.internal);
+    Wamp.get_id(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 
     Wamp.parse.index = 3; // the topic URI
-    Wamp.get_id(Wamp.internal);
+    Wamp.get_id(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 
     Wamp.parse.index = 1; // the request id
     Wamp.parse.uri_out = g_uri;
     Wamp.parse.uri_cap = sizeof(g_uri);
-    Wamp.get_uri(Wamp.internal);
+    Wamp.get_uri(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 }
 
@@ -416,12 +418,12 @@ void test_get_uri_refuses_a_short_destination(void)
     Wamp.parse.index = 3;
     Wamp.parse.uri_out = small;
     Wamp.parse.uri_cap = sizeof(small);
-    Wamp.get_uri(Wamp.internal);
+    Wamp.get_uri(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 
     Wamp.parse.uri_out = NULL;
     Wamp.parse.uri_cap = 0;
-    Wamp.get_uri(Wamp.internal);
+    Wamp.get_uri(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 }
 
@@ -430,20 +432,20 @@ void test_read_refuses_a_non_list(void)
 {
     Wamp.parse.index = 0;
     Wamp.parse.msg = "{\"a\":1}";
-    Wamp.element(Wamp.internal);
+    Wamp.element(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 
     Wamp.parse.msg = "";
-    Wamp.element(Wamp.internal);
+    Wamp.element(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 
     Wamp.parse.msg = NULL;
-    Wamp.element(Wamp.internal);
+    Wamp.element(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 
     Wamp.parse.msg = "[32, 713845233"; // the list never closes
     Wamp.parse.index = 3;
-    Wamp.element(Wamp.internal);
+    Wamp.element(wamp_work);
     TEST_ASSERT_FALSE(Wamp.ok);
 }
 
@@ -453,21 +455,21 @@ void test_build_then_read_round_trip(void)
     reset();
     Wamp.id.request = 25349185u;
     Wamp.uri.procedure = "com.myapp.myprocedure1";
-    Wamp.build_register(Wamp.internal);
+    Wamp.build_register(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
 
     Wamp.parse.msg = g_buf;
-    Wamp.get_type(Wamp.internal);
+    Wamp.get_type(wamp_work);
     TEST_ASSERT_EQUAL_INT32(WAMP_REGISTER, Wamp.i32);
 
     Wamp.parse.index = 1;
-    Wamp.get_id(Wamp.internal);
+    Wamp.get_id(wamp_work);
     TEST_ASSERT_EQUAL_UINT64(25349185ull, Wamp.u64);
 
     Wamp.parse.index = 3;
     Wamp.parse.uri_out = g_uri;
     Wamp.parse.uri_cap = sizeof(g_uri);
-    Wamp.get_uri(Wamp.internal);
+    Wamp.get_uri(wamp_work);
     TEST_ASSERT_TRUE(Wamp.ok);
     TEST_ASSERT_EQUAL_STRING("com.myapp.myprocedure1", g_uri);
 }

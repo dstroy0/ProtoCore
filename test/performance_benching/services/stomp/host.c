@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint8_t stomp_work[16]; // the borrow an entry takes; Stomp never reads it
+
 /** @brief Write a SEND frame carrying @p body and the two headers into @p out; the octets written. */
 static size_t stomp_send_frame(char *out, size_t cap, const char *const *hk, const char *const *hv, const char *body,
                                size_t blen)
@@ -28,7 +30,7 @@ static size_t stomp_send_frame(char *out, size_t cap, const char *const *hk, con
     Stomp.build_args.header_count = 2;
     Stomp.build_args.body = body;
     Stomp.build_args.body_len = blen;
-    Stomp.build(Stomp.internal);
+    Stomp.build(stomp_work);
     return Stomp.n;
 }
 
@@ -38,7 +40,7 @@ static size_t stomp_take_frame(StompFrame *f, const char *in, size_t len)
     Stomp.frame = f;
     Stomp.buf.in = in;
     Stomp.buf.len = len;
-    Stomp.parse(Stomp.internal);
+    Stomp.parse(stomp_work);
     return Stomp.ok ? Stomp.consumed : 0;
 }
 

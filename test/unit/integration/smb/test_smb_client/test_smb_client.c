@@ -12,6 +12,10 @@
 
 #include <unity.h>
 
+static uint8_t ntlm_work[16]; // the borrow an entry takes; Ntlm never reads it
+
+static uint8_t spnego_work[16]; // the borrow an entry takes; Spnego never reads it
+
 static uint8_t tw[4096];
 
 void setUp()
@@ -167,7 +171,12 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     }
     const uint8_t *auth = NULL;
     size_t auth_len = 0;
-    if (!protocore_spnego_parse_response(msg + sec_off, sec_len, &auth, &auth_len) || auth_len < 28)
+    Spnego.parse_response_args.blob = msg + sec_off;
+    Spnego.parse_response_args.len = sec_len;
+    Spnego.parse_response_args.protocore_resp_token = &auth;
+    Spnego.parse_response_args.protocore_resp_len = &auth_len;
+    Spnego.parse_response(spnego_work);
+    if (!Spnego.ok || auth_len < 28)
     {
         return PROTO_FALSE;
     }
@@ -179,8 +188,15 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     }
     uint8_t nt_hash[16];
     uint8_t owf[16];
-    protocore_ntlm_nt_hash(cfg->pass, nt_hash);
-    if (!protocore_ntlm_ntowfv2(nt_hash, cfg->user, cfg->domain ? cfg->domain : "", owf))
+    Ntlm.nt_hash_args.password = cfg->pass;
+    Ntlm.nt_hash_args.nt_hash = nt_hash;
+    Ntlm.nt_hash(ntlm_work);
+    Ntlm.ntowfv2_args.nt_hash = nt_hash;
+    Ntlm.ntowfv2_args.user = cfg->user;
+    Ntlm.ntowfv2_args.domain = cfg->domain ? cfg->domain : "";
+    Ntlm.ntowfv2_args.owf = owf;
+    Ntlm.ntowfv2(ntlm_work);
+    if (!Ntlm.ok)
     {
         return PROTO_FALSE;
     }
@@ -357,13 +373,23 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                 {
                     uint8_t junk[16];
                     memset(junk, 0x55, sizeof(junk));
-                    sc_n = protocore_spnego_wrap_authenticate(junk, sizeof(junk), sctok, sizeof(sctok));
+                    Spnego.wrap_authenticate_args.ntlm = junk;
+                    Spnego.wrap_authenticate_args.protocore_ntlm_len = sizeof(junk);
+                    Spnego.wrap_authenticate_args.out = sctok;
+                    Spnego.wrap_authenticate_args.cap = sizeof(sctok);
+                    Spnego.wrap_authenticate(spnego_work);
+                    sc_n = Spnego.n;
                 }
                 else
                 {
                     size_t chal_n = m->chal_ti ? protocore_ntlmssp_challenge_ti(chal, sc, m->chal_ti, m->chal_ti_len)
                                                : protocore_ntlmssp_challenge(chal, sc);
-                    sc_n = protocore_spnego_wrap_authenticate(chal, chal_n, sctok, sizeof(sctok));
+                    Spnego.wrap_authenticate_args.ntlm = chal;
+                    Spnego.wrap_authenticate_args.protocore_ntlm_len = chal_n;
+                    Spnego.wrap_authenticate_args.out = sctok;
+                    Spnego.wrap_authenticate_args.cap = sizeof(sctok);
+                    Spnego.wrap_authenticate(spnego_work);
+                    sc_n = Spnego.n;
                 }
                 w16(b + 4, 72);
                 w16(b + 6, (uint16_t)sc_n);

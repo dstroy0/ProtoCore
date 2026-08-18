@@ -26,6 +26,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t proxy_protocol_work[16]; // the borrow an entry takes; ProxyProtocol never reads it
+
 // 203.0.113.50 / 203.0.113.10 in host-order uint32 (straight from the host test).
 static const uint32_t SRC = 0xCB007132u;
 static const uint32_t DST = 0xCB00710Au;
@@ -42,26 +44,54 @@ void dbench_run(void)
     // time only the parser (not the builder that produced their input).
     static uint8_t v1hdr[64];
     static uint8_t v2hdr[32];
-    size_t v1len = proxy_v1_build((char *)v1hdr, sizeof(v1hdr), SRC, DST, 12345, 80);
-    size_t v2len = proxy_v2_build(v2hdr, sizeof(v2hdr), SRC, DST, 12345, 80);
+    ProxyProtocol.v1_build_args.buf = (char *)v1hdr;
+    ProxyProtocol.v1_build_args.cap = sizeof(v1hdr);
+    ProxyProtocol.v1_build_args.src_addr = SRC;
+    ProxyProtocol.v1_build_args.dst_addr = DST;
+    ProxyProtocol.v1_build_args.src_port = 12345;
+    ProxyProtocol.v1_build_args.dst_port = 80;
+    ProxyProtocol.v1_build(proxy_protocol_work);
+    size_t v1len = ProxyProtocol.n;
+    ProxyProtocol.v2_build_args.buf = v2hdr;
+    ProxyProtocol.v2_build_args.cap = sizeof(v2hdr);
+    ProxyProtocol.v2_build_args.src_addr = SRC;
+    ProxyProtocol.v2_build_args.dst_addr = DST;
+    ProxyProtocol.v2_build_args.src_port = 12345;
+    ProxyProtocol.v2_build_args.dst_port = 80;
+    ProxyProtocol.v2_build(proxy_protocol_work);
+    size_t v2len = ProxyProtocol.n;
 
     for (;;)
     {
         DBENCH_BANNER("proxy_protocol");
         volatile size_t sink = 0;
 
-        // v1 (text) build: dotted-quad snprintf formatting - the more expensive builder.
-        DBENCH_OP("proxy_v1_build (TCP4 text)", 50000,
-                  sink += proxy_v1_build(v1buf, sizeof(v1buf), SRC, DST, 12345, 80));
+        // v1 (text) build: dotted-quad snprintf formatting - the more expensive builder. Staged
+        // inside the argument: DBENCH_OP re-evaluates it, so the operands belong in the timed
+        // expression rather than above it.
+        DBENCH_OP("ProxyProtocol.v1_build (TCP4 text)", 50000,
+                  (ProxyProtocol.v1_build_args.buf = v1buf, ProxyProtocol.v1_build_args.cap = sizeof(v1buf),
+                   ProxyProtocol.v1_build_args.src_addr = SRC, ProxyProtocol.v1_build_args.dst_addr = DST,
+                   ProxyProtocol.v1_build_args.src_port = 12345, ProxyProtocol.v1_build_args.dst_port = 80,
+                   ProxyProtocol.v1_build(proxy_protocol_work), sink += ProxyProtocol.n));
         // v2 (binary) build: signature memcpy + big-endian pack - cheap, so a large N.
-        DBENCH_OP("proxy_v2_build (TCP4 binary)", 200000,
-                  sink += proxy_v2_build(v2buf, sizeof(v2buf), SRC, DST, 12345, 80));
+        DBENCH_OP("ProxyProtocol.v2_build (TCP4 binary)", 200000,
+                  (ProxyProtocol.v2_build_args.buf = v2buf, ProxyProtocol.v2_build_args.cap = sizeof(v2buf),
+                   ProxyProtocol.v2_build_args.src_addr = SRC, ProxyProtocol.v2_build_args.dst_addr = DST,
+                   ProxyProtocol.v2_build_args.src_port = 12345, ProxyProtocol.v2_build_args.dst_port = 80,
+                   ProxyProtocol.v2_build(proxy_protocol_work), sink += ProxyProtocol.n));
 
         (void)parsebuf;
         // v1 parse: detect "PROXY ", find CRLF, tokenize, parse_ipv4 x2 + parse_u16 x2.
-        DBENCH_OP("proxy_parse v1 (TCP4 text)", 50000, sink += proxy_parse(v1hdr, v1len, &info, &consumed));
+        DBENCH_OP("ProxyProtocol.parse v1 (TCP4 text)", 50000,
+                  (ProxyProtocol.parse_args.buf = v1hdr, ProxyProtocol.parse_args.len = v1len,
+                   ProxyProtocol.parse_args.out = &info, ProxyProtocol.parse_args.consumed = &consumed,
+                   ProxyProtocol.parse(proxy_protocol_work), sink += ProxyProtocol.ok));
         // v2 parse: match the 12-octet signature, unpack the fixed binary address block.
-        DBENCH_OP("proxy_parse v2 (TCP4 binary)", 200000, sink += proxy_parse(v2hdr, v2len, &info, &consumed));
+        DBENCH_OP("ProxyProtocol.parse v2 (TCP4 binary)", 200000,
+                  (ProxyProtocol.parse_args.buf = v2hdr, ProxyProtocol.parse_args.len = v2len,
+                   ProxyProtocol.parse_args.out = &info, ProxyProtocol.parse_args.consumed = &consumed,
+                   ProxyProtocol.parse(proxy_protocol_work), sink += ProxyProtocol.ok));
 
         (void)sink;
         DBENCH_DONE();

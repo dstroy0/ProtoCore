@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t sigfox_work[16]; // the borrow an entry takes; Sigfox never reads it
+
 void dbench_run(void)
 {
     static const uint8_t payload[12] = {0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x21, 0x40, 0x30, 0x00, 0xAB, 0xCD};

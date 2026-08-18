@@ -40,6 +40,8 @@
 
 #include <unity.h>
 
+static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
+
 void setUp(void)
 {
 }
@@ -54,17 +56,53 @@ void tearDown(void)
 // 600 + 30 = 630, so 631 is the first that must revalidate before serving.
 void test_rfc5861_worked_example(void)
 {
-    TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, protocore_delivery_swr(0, 600, 30));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, protocore_delivery_swr(1, 600, 30));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, protocore_delivery_swr(599, 600, 30));
+    HttpDelivery.swr_args.age_s = 0;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 30;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 1;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 30;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 599;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 30;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, HttpDelivery.value);
 
-    TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(600, 600, 30));
+    HttpDelivery.swr_args.age_s = 600;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 30;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
 
-    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, protocore_delivery_swr(601, 600, 30));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, protocore_delivery_swr(629, 600, 30));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, protocore_delivery_swr(630, 600, 30));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(631, 600, 30));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(100000, 600, 30));
+    HttpDelivery.swr_args.age_s = 601;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 30;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 629;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 30;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 630;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 30;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 631;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 30;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 100000;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 30;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
 }
 
 // The two totals RFC 5861 works out in full.
@@ -75,13 +113,37 @@ void test_rfc5861_worked_example(void)
 //            1800 = 600 + 1200, and the write-through starts only past it.
 void test_rfc5861_published_totals(void)
 {
-    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, protocore_delivery_swr(1199, 600, 600));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, protocore_delivery_swr(1200, 600, 600));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(1201, 600, 600));
+    HttpDelivery.swr_args.age_s = 1199;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 600;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 1200;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 600;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 1201;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 600;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
 
-    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, protocore_delivery_swr(1799, 600, 1200));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, protocore_delivery_swr(1800, 600, 1200));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(1801, 600, 1200));
+    HttpDelivery.swr_args.age_s = 1799;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 1200;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 1800;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 1200;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 1801;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 1200;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
 }
 
 // What every reading of RFC 9111 sec 4.2 and sec 5.2.2.1 agrees on, over the whole range of
@@ -93,8 +155,16 @@ void test_the_second_past_max_age_is_never_fresh(void)
     for (size_t i = 0; i < sizeof(MAX_AGE) / sizeof(MAX_AGE[0]); i++)
     {
         const uint32_t m = MAX_AGE[i];
-        TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, protocore_delivery_swr(m - 1u, m, 10u));
-        TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_FRESH, protocore_delivery_swr(m + 1u, m, 10u));
+        HttpDelivery.swr_args.age_s = m - 1u;
+        HttpDelivery.swr_args.max_age_s = m;
+        HttpDelivery.swr_args.swr_s = 10u;
+        HttpDelivery.swr(http_delivery_work);
+        TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, HttpDelivery.value);
+        HttpDelivery.swr_args.age_s = m + 1u;
+        HttpDelivery.swr_args.max_age_s = m;
+        HttpDelivery.swr_args.swr_s = 10u;
+        HttpDelivery.swr(http_delivery_work);
+        TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_FRESH, HttpDelivery.value);
     }
 }
 
@@ -103,12 +173,32 @@ void test_the_second_past_max_age_is_never_fresh(void)
 // allowance, so one second past max-age must already revalidate.
 void test_a_zero_stale_window_has_no_stale_band(void)
 {
-    TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, protocore_delivery_swr(599, 600, 0));
-    TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(600, 600, 0));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(601, 600, 0));
+    HttpDelivery.swr_args.age_s = 599;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 0;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_FRESH, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 600;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 0;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 601;
+    HttpDelivery.swr_args.max_age_s = 600;
+    HttpDelivery.swr_args.swr_s = 0;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
 
-    TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(0, 0, 0));
-    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(1, 0, 0));
+    HttpDelivery.swr_args.age_s = 0;
+    HttpDelivery.swr_args.max_age_s = 0;
+    HttpDelivery.swr_args.swr_s = 0;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = 1;
+    HttpDelivery.swr_args.max_age_s = 0;
+    HttpDelivery.swr_args.swr_s = 0;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
 }
 
 // Age only ever moves the verdict one way: a response that has revalidation owed to it never gets it
@@ -119,7 +209,11 @@ void test_verdict_is_monotonic_in_age(void)
     DeliveryVerdict prev = DELIVERY_FRESH;
     for (uint32_t age = 0; age <= 200; age++)
     {
-        DeliveryVerdict v = protocore_delivery_swr(age, 100, 50);
+        HttpDelivery.swr_args.age_s = age;
+        HttpDelivery.swr_args.max_age_s = 100;
+        HttpDelivery.swr_args.swr_s = 50;
+        HttpDelivery.swr(http_delivery_work);
+        DeliveryVerdict v = HttpDelivery.value;
         TEST_ASSERT_TRUE(v >= prev);
         prev = v;
     }
@@ -131,8 +225,16 @@ void test_verdict_is_monotonic_in_age(void)
 void test_the_window_sum_does_not_wrap(void)
 {
     const uint32_t huge = 0xFFFFFFFFu;
-    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, protocore_delivery_swr(huge, huge - 1u, 2u));
-    TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_EXPIRED, protocore_delivery_swr(huge, huge, 1u));
+    HttpDelivery.swr_args.age_s = huge;
+    HttpDelivery.swr_args.max_age_s = huge - 1u;
+    HttpDelivery.swr_args.swr_s = 2u;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_EQUAL_INT(DELIVERY_STALE_REVALIDATE, HttpDelivery.value);
+    HttpDelivery.swr_args.age_s = huge;
+    HttpDelivery.swr_args.max_age_s = huge;
+    HttpDelivery.swr_args.swr_s = 1u;
+    HttpDelivery.swr(http_delivery_work);
+    TEST_ASSERT_NOT_EQUAL_INT(DELIVERY_EXPIRED, HttpDelivery.value);
 }
 
 // RFC 5861 sec 3.1 prints the field value "max-age=600, stale-while-revalidate=30"; the module
@@ -140,7 +242,12 @@ void test_the_window_sum_does_not_wrap(void)
 void test_rfc5861_example_cache_control_value(void)
 {
     char out[64];
-    size_t n = protocore_delivery_cache_control(600, 30, out, sizeof(out));
+    HttpDelivery.cache_control_args.max_age_s = 600;
+    HttpDelivery.cache_control_args.swr_s = 30;
+    HttpDelivery.cache_control_args.out = out;
+    HttpDelivery.cache_control_args.cap = sizeof(out);
+    HttpDelivery.cache_control(http_delivery_work);
+    size_t n = HttpDelivery.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_NOT_NULL(strstr(out, "max-age=600, stale-while-revalidate=30"));
     TEST_ASSERT_EQUAL_STRING("public, max-age=600, stale-while-revalidate=30", out);
@@ -154,14 +261,29 @@ void test_cache_control_directive_forms(void)
 {
     char out[80];
 
-    TEST_ASSERT_TRUE(protocore_delivery_cache_control(3600, 0, out, sizeof(out)) > 0);
+    HttpDelivery.cache_control_args.max_age_s = 3600;
+    HttpDelivery.cache_control_args.swr_s = 0;
+    HttpDelivery.cache_control_args.out = out;
+    HttpDelivery.cache_control_args.cap = sizeof(out);
+    HttpDelivery.cache_control(http_delivery_work);
+    TEST_ASSERT_TRUE(HttpDelivery.n > 0);
     TEST_ASSERT_EQUAL_STRING("public, max-age=3600", out);
     TEST_ASSERT_NULL(strstr(out, "stale-while-revalidate"));
 
-    TEST_ASSERT_TRUE(protocore_delivery_cache_control(0, 0, out, sizeof(out)) > 0);
+    HttpDelivery.cache_control_args.max_age_s = 0;
+    HttpDelivery.cache_control_args.swr_s = 0;
+    HttpDelivery.cache_control_args.out = out;
+    HttpDelivery.cache_control_args.cap = sizeof(out);
+    HttpDelivery.cache_control(http_delivery_work);
+    TEST_ASSERT_TRUE(HttpDelivery.n > 0);
     TEST_ASSERT_EQUAL_STRING("public, max-age=0", out);
 
-    TEST_ASSERT_TRUE(protocore_delivery_cache_control(4294967295u, 4294967295u, out, sizeof(out)) > 0);
+    HttpDelivery.cache_control_args.max_age_s = 4294967295u;
+    HttpDelivery.cache_control_args.swr_s = 4294967295u;
+    HttpDelivery.cache_control_args.out = out;
+    HttpDelivery.cache_control_args.cap = sizeof(out);
+    HttpDelivery.cache_control(http_delivery_work);
+    TEST_ASSERT_TRUE(HttpDelivery.n > 0);
     TEST_ASSERT_EQUAL_STRING("public, max-age=4294967295, stale-while-revalidate=4294967295", out);
 }
 
@@ -174,15 +296,40 @@ void test_cache_control_needs_room_for_the_terminator(void)
     char exact[47];
     char tight[46];
 
-    size_t need = protocore_delivery_cache_control(600, 30, out, sizeof(out));
+    HttpDelivery.cache_control_args.max_age_s = 600;
+    HttpDelivery.cache_control_args.swr_s = 30;
+    HttpDelivery.cache_control_args.out = out;
+    HttpDelivery.cache_control_args.cap = sizeof(out);
+    HttpDelivery.cache_control(http_delivery_work);
+    size_t need = HttpDelivery.n;
     TEST_ASSERT_EQUAL_UINT(46u, need);
     TEST_ASSERT_EQUAL_UINT(strlen(out), need);
 
-    TEST_ASSERT_EQUAL_UINT(need, protocore_delivery_cache_control(600, 30, exact, sizeof(exact)));
+    HttpDelivery.cache_control_args.max_age_s = 600;
+    HttpDelivery.cache_control_args.swr_s = 30;
+    HttpDelivery.cache_control_args.out = exact;
+    HttpDelivery.cache_control_args.cap = sizeof(exact);
+    HttpDelivery.cache_control(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(need, HttpDelivery.n);
     TEST_ASSERT_EQUAL_STRING(out, exact);
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_delivery_cache_control(600, 30, tight, sizeof(tight)));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_delivery_cache_control(600, 30, out, 0));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_delivery_cache_control(600, 30, NULL, sizeof(out)));
+    HttpDelivery.cache_control_args.max_age_s = 600;
+    HttpDelivery.cache_control_args.swr_s = 30;
+    HttpDelivery.cache_control_args.out = tight;
+    HttpDelivery.cache_control_args.cap = sizeof(tight);
+    HttpDelivery.cache_control(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDelivery.n);
+    HttpDelivery.cache_control_args.max_age_s = 600;
+    HttpDelivery.cache_control_args.swr_s = 30;
+    HttpDelivery.cache_control_args.out = out;
+    HttpDelivery.cache_control_args.cap = 0;
+    HttpDelivery.cache_control(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDelivery.n);
+    HttpDelivery.cache_control_args.max_age_s = 600;
+    HttpDelivery.cache_control_args.swr_s = 30;
+    HttpDelivery.cache_control_args.out = NULL;
+    HttpDelivery.cache_control_args.cap = sizeof(out);
+    HttpDelivery.cache_control(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDelivery.n);
 }
 
 // http_delivery.h publishes the whole document: {"version":"..","precache":["/a","/b",...]}. RFC 8259
@@ -193,11 +340,23 @@ void test_manifest_documented_shape(void)
     static const char *const PATHS[] = {"/", "/app.js", "/app.css"};
     char out[PROTOCORE_DELIVERY_MANIFEST_BUF];
 
-    size_t n = protocore_delivery_sw_manifest(PATHS, 3, "v1.2.3", out, sizeof(out));
+    HttpDelivery.sw_manifest_args.paths = PATHS;
+    HttpDelivery.sw_manifest_args.n = 3;
+    HttpDelivery.sw_manifest_args.version = "v1.2.3";
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    size_t n = HttpDelivery.n;
     TEST_ASSERT_EQUAL_STRING("{\"version\":\"v1.2.3\",\"precache\":[\"/\",\"/app.js\",\"/app.css\"]}", out);
     TEST_ASSERT_EQUAL_UINT(strlen(out), n);
 
-    TEST_ASSERT_TRUE(protocore_delivery_sw_manifest(NULL, 0, "v1", out, sizeof(out)) > 0);
+    HttpDelivery.sw_manifest_args.paths = NULL;
+    HttpDelivery.sw_manifest_args.n = 0;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_TRUE(HttpDelivery.n > 0);
     TEST_ASSERT_EQUAL_STRING("{\"version\":\"v1\",\"precache\":[]}", out);
 }
 
@@ -220,7 +379,13 @@ void test_manifest_leaves_no_raw_control_character(void)
     ctrl[31] = '\0';
     paths[0] = ctrl;
 
-    size_t n = protocore_delivery_sw_manifest(paths, 1, ctrl, out, sizeof(out));
+    HttpDelivery.sw_manifest_args.paths = paths;
+    HttpDelivery.sw_manifest_args.n = 1;
+    HttpDelivery.sw_manifest_args.version = ctrl;
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    size_t n = HttpDelivery.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT(strlen(out), n);
     for (size_t i = 0; i < n; i++)
@@ -237,7 +402,13 @@ void test_manifest_escapes_a_character_with_no_short_form(void)
     static const char *const BELL[] = {"/\x07"};
     char out[PROTOCORE_DELIVERY_MANIFEST_BUF];
 
-    TEST_ASSERT_TRUE(protocore_delivery_sw_manifest(BELL, 1, "v1", out, sizeof(out)) > 0);
+    HttpDelivery.sw_manifest_args.paths = BELL;
+    HttpDelivery.sw_manifest_args.n = 1;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_TRUE(HttpDelivery.n > 0);
     TEST_ASSERT_EQUAL_STRING("{\"version\":\"v1\",\"precache\":[\"/\\u0007\"]}", out);
 }
 
@@ -249,7 +420,13 @@ void test_manifest_escapes_quote_solidus_and_control(void)
     static const char *const PATHS[] = {"/a\"b", "/c\\d", "/e\tf"};
     char out[PROTOCORE_DELIVERY_MANIFEST_BUF];
 
-    TEST_ASSERT_TRUE(protocore_delivery_sw_manifest(PATHS, 3, "v\n1", out, sizeof(out)) > 0);
+    HttpDelivery.sw_manifest_args.paths = PATHS;
+    HttpDelivery.sw_manifest_args.n = 3;
+    HttpDelivery.sw_manifest_args.version = "v\n1";
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_TRUE(HttpDelivery.n > 0);
     TEST_ASSERT_EQUAL_STRING("{\"version\":\"v\\n1\",\"precache\":[\"/a\\\"b\",\"/c\\\\d\",\"/e\\tf\"]}", out);
 }
 
@@ -267,7 +444,13 @@ void test_full_precache_list_fits_the_configured_buffer(void)
     {
         paths[i] = NAMES[i];
     }
-    size_t n = protocore_delivery_sw_manifest(paths, PROTOCORE_DELIVERY_PRECACHE_MAX, "v1", out, sizeof(out));
+    HttpDelivery.sw_manifest_args.paths = paths;
+    HttpDelivery.sw_manifest_args.n = PROTOCORE_DELIVERY_PRECACHE_MAX;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    size_t n = HttpDelivery.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT(strlen(out), n);
     TEST_ASSERT_EQUAL_CHAR('{', out[0]);
@@ -284,13 +467,37 @@ void test_manifest_refuses_rather_than_truncating(void)
     char exact[PROTOCORE_DELIVERY_MANIFEST_BUF];
 
     memset(out, 'Z', sizeof(out));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_delivery_sw_manifest(PATHS, 3, "v1", out, sizeof(out)));
+    HttpDelivery.sw_manifest_args.paths = PATHS;
+    HttpDelivery.sw_manifest_args.n = 3;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDelivery.n);
 
-    size_t need = protocore_delivery_sw_manifest(PATHS, 3, "v1", big, sizeof(big));
+    HttpDelivery.sw_manifest_args.paths = PATHS;
+    HttpDelivery.sw_manifest_args.n = 3;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = big;
+    HttpDelivery.sw_manifest_args.cap = sizeof(big);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    size_t need = HttpDelivery.n;
     TEST_ASSERT_TRUE(need > 0);
-    TEST_ASSERT_EQUAL_UINT(need, protocore_delivery_sw_manifest(PATHS, 3, "v1", exact, need + 1u));
+    HttpDelivery.sw_manifest_args.paths = PATHS;
+    HttpDelivery.sw_manifest_args.n = 3;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = exact;
+    HttpDelivery.sw_manifest_args.cap = need + 1u;
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(need, HttpDelivery.n);
     TEST_ASSERT_EQUAL_STRING(big, exact);
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_delivery_sw_manifest(PATHS, 3, "v1", exact, need));
+    HttpDelivery.sw_manifest_args.paths = PATHS;
+    HttpDelivery.sw_manifest_args.n = 3;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = exact;
+    HttpDelivery.sw_manifest_args.cap = need;
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDelivery.n);
 }
 
 // Nothing to write into, or paths claimed but not supplied, is a refusal rather than a partial
@@ -301,10 +508,34 @@ void test_manifest_refuses_bad_arguments(void)
     static const char *const PATHS[] = {"/a"};
     char out[64];
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_delivery_sw_manifest(PATHS, 1, "v1", NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_delivery_sw_manifest(PATHS, 1, "v1", out, 0));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_delivery_sw_manifest(NULL, 1, "v1", out, sizeof(out)));
+    HttpDelivery.sw_manifest_args.paths = PATHS;
+    HttpDelivery.sw_manifest_args.n = 1;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = NULL;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDelivery.n);
+    HttpDelivery.sw_manifest_args.paths = PATHS;
+    HttpDelivery.sw_manifest_args.n = 1;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = 0;
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDelivery.n);
+    HttpDelivery.sw_manifest_args.paths = NULL;
+    HttpDelivery.sw_manifest_args.n = 1;
+    HttpDelivery.sw_manifest_args.version = "v1";
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDelivery.n);
 
-    TEST_ASSERT_TRUE(protocore_delivery_sw_manifest(PATHS, 1, NULL, out, sizeof(out)) > 0);
+    HttpDelivery.sw_manifest_args.paths = PATHS;
+    HttpDelivery.sw_manifest_args.n = 1;
+    HttpDelivery.sw_manifest_args.version = NULL;
+    HttpDelivery.sw_manifest_args.out = out;
+    HttpDelivery.sw_manifest_args.cap = sizeof(out);
+    HttpDelivery.sw_manifest(http_delivery_work);
+    TEST_ASSERT_TRUE(HttpDelivery.n > 0);
     TEST_ASSERT_EQUAL_STRING("{\"version\":\"\",\"precache\":[\"/a\"]}", out);
 }

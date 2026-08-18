@@ -1,5 +1,5 @@
 {
-  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini. A hardware path is host-testable: an env declares the capability it needs and the mocks under core_setup/hal/host stand in for silicon, including a queue keyed by handle.",
+  "_note": "Single source of truth for native test envs; run test/gen_test_envs.py to regenerate platformio.ini. A hardware path is host-testable: an env declares the capability it needs and the mocks under core_setup/hal/host stand in for silicon, including a queue keyed by handle. NEVER rewrite this file with json.dump: a whole-file re-render is valid JSON and reformats all 400 envs, so the diff stops naming what changed. Mutate it with harness.py env add/update/addsrc/remove, or from a script through harness.splice_replace + harness.write_verified, which refuses a write that moved an env it was not asked to move.",
   "envs": {
     "native_accept_gate": {
       "desc": "Accept-time connection gates with their flags ON (PROTOCORE_ENABLE_ACCEPT_THROTTLE\n/ PER_IP_THROTTLE / IP_ALLOWLIST): the global fixed-window throttle, the per-source-IP\nbucket table (independent budgets, window rollover, the millis() wrap, bounded LRU\neviction), and the CIDR source-IP allowlist. Compiles the flag-guarded accept-callback\npaths that no other env builds. Budgets overridden small so the boundaries are explicit.",
@@ -514,9 +514,12 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>"
       ],
-      "tests": ["unit/protocols/transport/test_client"]
+      "tests": [
+        "unit/protocols/transport/test_client"
+      ]
     },
     "native_clock": {
       "desc": "Pluggable monotonic clock (server/clock): default millis(), custom clock\ndivided down to the internal 1000 Hz, plus the microsecond base and latency\nbudgeting. Builds server/clock/clock.c, which owns the installed-clock state.",
@@ -572,9 +575,14 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/transport/test_coap"]
+      "tests": [
+        "unit/protocols/transport/test_coap"
+      ]
     },
     "native_coap_observe": {
       "desc": "CoAP with resource observation (RFC 7641) enabled. Compiles + runs test_coap\nwith PROTOCORE_ENABLE_COAP_OBSERVE on, so the Observe-gated code (request Observe\nrecording, the observer registry, protocore_coap_notify) is actually built in CI instead\nof bit-rotting (it is enabled by no other env).",
@@ -601,9 +609,14 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/transport/test_coap"]
+      "tests": [
+        "unit/protocols/transport/test_coap"
+      ]
     },
     "native_coaps": {
       "desc": "CoAP over DTLS (services/iot/coap/coaps, RFC 7252 sec 9): the bridge that drives a DtlsConn\nhandshake and, once established, unwraps each epoch-3 application record, answers it with\ncoap_server_process(), and re-wraps the response. An in-test DTLS 1.3 client completes the handshake\nand exchanges a CoAP GET, decrypting the CoAP response from the returned DTLS record; a replayed\napplication record is dropped. Pure host tests.",
@@ -960,7 +973,12 @@
         "+<shared/pcap/pcap.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/float_bits.c>",
-        "+<server/core/exc_coredump.c>"
+        "+<server/core/exc_coredump.c>",
+        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<core_setup/hal/host/host_platform.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>",
+        "+<server/clock/clock.c>",
+        "+<services/file_transfer/http_delivery/http_delivery_routes.c>"
       ],
       "tests": [
         "unit/integration/fieldbus/test_dispatch"
@@ -1091,6 +1109,22 @@
       ],
       "tests": ["unit/src/crypto/mac/test_crypto_kat"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
+    },
+    
+    "native_x509": {
+      "desc": "RFC 5280 certificate parsing and RFC 6125 name matching (crypto/x509). Checked against real certificates OpenSSL made - an Ed25519 CA with basicConstraints/keyUsage, and Ed25519, P-256 and RSA leaves under it - and against the values OpenSSL reports for them, so a field read wrong is a disagreement with an independent encoder rather than with the author. The name-matching cases are sec 6.4.3's three wildcard rules and each way a wildcard can be stretched past them: spanning a dot, matching the bare domain, and a certificate with no SAN matching nothing at all (sec 6.4.4 forbids the common-name fallback).",
+      "flags": [],
+      "src": [
+        "-<*>",
+        "+<src/crypto/x509/x509.c>",
+        "+<src/shared/der/der.c>",
+        "+<src/mmgr/protomem.c>",
+        "+<src/mmgr/rawmemcpy.c>",
+        "+<src/mmgr/swar.c>"
+      ],
+      "tests": [
+        "unit/src/crypto/x509/test_x509"
+      ]
     },
 
     "native_wycheproof_kat_hw": {
@@ -1234,6 +1268,21 @@
       "tests": ["unit/file_conversion/services/iot/dds/test_dds"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
+    
+    "native_der": {
+      "desc": "ASN.1 DER reader (shared/der): the X.690 canonical subset X.509 is parsed with. The accepting cases are RFC 5280 sec 4.1's Certificate SEQUENCE and the sec 4.1.2.5 times; the refusing ones are each a BER spelling DER forbids - indefinite length (sec 8.1.3.6), a long form that fits the short one or carries a leading zero (sec 10.1), a redundant leading zero on an INTEGER (sec 8.3.2), a negative INTEGER read as unsigned (sec 8.3.3), a BIT STRING with unused bits (sec 8.6.2.2), and a multi-octet tag (sec 8.1.2.4). Accepting a second encoding of a certificate is accepting one the signature does not cover.",
+      "flags": [],
+      "src": [
+        "-<*>",
+        "+<src/shared/der/der.c>",
+        "+<src/mmgr/protomem.c>",
+        "+<src/mmgr/rawmemcpy.c>",
+        "+<src/mmgr/swar.c>"
+      ],
+      "tests": [
+        "unit/src/shared/der/test_der"
+      ]
+    },
     "native_defer": {
       "desc": "test_defer against the native_stack_http stack.",
       "base": "env:native_stack_http",
@@ -1324,8 +1373,11 @@
       "tests": ["unit/integration/transport/test_diag"]
     },
     "native_diffserv": {
-      "desc": "DiffServ QoS marking (PROTOCORE_ENABLE_DIFFSERV): the DSCP->TOS encode (DSCP << 2, ECN 0),\nthe server-wide and UDP DSCP defaults (set/get, 6-bit mask), the per-connection setter\n(protocore_conn_set_dscp writes pcb->tos on the host path), and the per-listener override\n(protocore_listen_set_dscp incl. the UNSET sentinel + mask + unknown-port miss). Compiles the\nflag-guarded transport paths no other env builds. Pure L4 core - host-tested.",
-      "flags": ["-DPROTOCORE_ENABLE_DIFFSERV=1", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "desc": "DiffServ QoS marking (PROTOCORE_ENABLE_DIFFSERV): the DSCP->TOS encode (DSCP << 2, ECN 0), the\nserver-wide and UDP DSCP defaults through the DiffServ entries and through the flat readers the\naccept path uses, and the per-listener override (TcpListener.set_dscp, which names the port, incl.\nthe UNSET sentinel + 6-bit mask + unknown-port miss). A live connection has no setter: RFC 9293 sec\n3.9.2 SHLD-23. The accept callback's three arms - per-listener override, server default, best-effort\nskip - and a dynamic (forwarded) listener taking the sentinel. Pure L4 core, host-tested.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_DIFFSERV=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<shared/ip/ip.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -1342,9 +1394,30 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<src/shared/ip/ip.c>",
+        "+<src/network_drivers/transport/tcp/tcp.c>",
+        "+<src/network_drivers/transport/tcp/client/client.c>",
+        "+<src/network_drivers/transport/tcp/protocol/protocol.c>",
+        "+<src/network_drivers/transport/tcp/lower/lower.c>",
+        "+<src/network_drivers/transport/net_addr/net_addr.c>",
+        "+<src/network_drivers/transport/tcp/server/server.c>",
+        "+<src/server/core/worker.c>",
+        "+<src/mmgr/arena.c>",
+        "+<src/network_drivers/transport/diffserv/diffserv.c>",
+        "+<src/server/clock/clock.c>",
+        "+<src/mmgr/protomem.c>",
+        "+<src/mmgr/rawmemcpy.c>",
+        "+<src/mmgr/span.c>",
+        "+<src/mmgr/swar.c>",
+        "+<src/shared/hex/hex.c>",
+        "+<src/mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/plaintext.c>"
       ],
-      "tests": ["unit/integration/transport/test_diffserv"]
+      "tests": [
+        "unit/integration/transport/test_diffserv"
+      ]
     },
     "native_digest_auth": {
       "desc": "test_digest_auth against the native_stack_http stack.",
@@ -1435,9 +1508,12 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<mmgr/span.c>"
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>"
       ],
-      "tests": ["unit/protocols/mmgr/test_dma"]
+      "tests": [
+        "unit/protocols/mmgr/test_dma"
+      ]
     },
     "native_dmx": {
       "desc": "DMX512 + RDM lighting codec (server/peripherals/dmx): the DMX512 slot packet (build/get) and the\nRDM (ANSI E1.20) packet build/parse with 48-bit UIDs and the 16-bit additive checksum. Pure\nhost tests.",
@@ -1507,10 +1583,15 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/plaintext.c>"
       ],
-      "tests": ["unit/src/network_drivers/transport/udp/test_dns_resolver"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/transport/udp/test_dns_resolver"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_dns_server": {
       "desc": "Authoritative DNS server (network_drivers/network/dns/dns_server): the A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards), the built-in name->IP table (add / case-insensitive lookup / clear), and begin() binding\nport 53 on the UDP listener, driven against the host pcb driver.",
@@ -1533,9 +1614,14 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/network/test_dns_server"]
+      "tests": [
+        "unit/protocols/network/test_dns_server"
+      ]
     },
     "native_dns_wire": {
       "desc": "The DNS name on the wire (network_drivers/network/dns/dns_wire, RFC 1035 sec 3.1 / 4.1.4):\nlabels to a dotted string and back, compression pointers followed for an answer and refused for a\nquestion, the hop limit that makes a self-referential message terminate, the undefined label types,\nthe label and destination bounds, and the case-insensitive compare names are defined to use.",
@@ -1726,9 +1812,14 @@
         "+<shared/http_date/http_date.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/web/test_edge_fetch"]
+      "tests": [
+        "unit/protocols/web/test_edge_fetch"
+      ]
     },
     
     "native_edge_cache_proxy": {
@@ -1753,7 +1844,8 @@
         "+<mmgr/secure.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<mmgr/plaintext.c>"
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/server/web/edge_cache/test_edge_cache_proxy"
@@ -1786,10 +1878,17 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<services/net/http_client/http_client.c>"
+        "+<services/net/http_client/http_client.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/file_conversion/server/web/edge_cache/test_edge_cache"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/file_conversion/server/web/edge_cache/test_edge_cache"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_edge_cache_sd": {
       "desc": "CDN edge-cache L2 SD-persistence tier (server/web/edge_cache/edge_cache_sd): the entry <->\ndbm-value serialization roundtrip (all response metadata, Vary variants, binary and max-size bodies),\nthe spill/promote/del/purge API over a dbm on a RAM-backed WalDev, the L1 store's on_evict write-back\nhook, the storeability gates (no-validator and oversize entries stay L1-only), reboot survival via\nremount + index replay, and that a shared dbm's foreign values are never touched. PROTOCORE_DBM_VAL_MAX is\nsized below a full entry so the oversize-stays-L1 path is exercised. Pure host tests.",
@@ -1821,9 +1920,14 @@
         "+<shared/http_date/http_date.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/web/test_edge_cache_sd"]
+      "tests": [
+        "unit/protocols/web/test_edge_cache_sd"
+      ]
     },
     "native_edge_mesh": {
       "desc": "CDN edge-cache mesh sibling-cache codec (server/web/edge_cache/edge_mesh): the request/response\nwire frames (build + tri-state accumulating parse over partial reads, magic/version/opcode validation),\nthe freshness-carrying entry frame (the shared edge_sd body plus a timing trailer) round-tripped\nbyte-exact, RFC 9111 age propagation (a peer's corrected age transfers so the receiver stays fresh for\nthe remaining lifetime and its Age keeps growing), and the async peer-query engine reaching HIT / MISS /\nFAILED (timeout, peer close, malformed) over a scripted mock transport seam. Pure host tests.",
@@ -1851,9 +1955,14 @@
         "+<shared/http_date/http_date.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/web/test_edge_mesh"]
+      "tests": [
+        "unit/protocols/web/test_edge_mesh"
+      ]
     },
     "native_endian": {
       "desc": "The fixed-width serializers (mmgr/endian.h): a width moved between an integer and\nthe bytes at a pointer, both orders, 16/32/64. Each writer is diffed against a shift loop written\nin the test rather than against its opposite number, so a pair that is wrong the same way both\nways cannot agree its way to a pass. Covers the returned width a caller advances by, the reader\ninverting the writer, a big-endian encoding being the byte reverse of the little-endian one, the\nround trip at every offset within a word (the file writes a byte at a time so a strict-alignment\ndie is served), and a narrow write leaving the bytes above it alone so packed fields do not\nclobber each other.",
@@ -1944,15 +2053,25 @@
     },
     "native_espnow_envelope": {
       "desc": "ESP-NOW typed envelope and peer registry (services/radio/espnow/espnow.c): the magic/type/length header, exact-length and magic validation on decode, the payload cap derived from Espressif's published 250-octet ESP-NOW v1 data limit less the header, and the bounded no-heap peer registry. The envelope is not a standardized format, so the expectations are properties. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_ESPNOW=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_ESPNOW=1"
+      ],
       "src": [
         "+<services/radio/espnow/espnow.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/radio/espnow/test_espnow"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/radio/espnow/test_espnow"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_euromap77": {
       "desc": "EUROMAP 77 (OPC 40077) IMM_MES_Interface model (services/machine_tool/euromap77) - OPC UA for injection\nmolding machines. The Browse hierarchy + the Read resolver over a bound EmImm, including the\nUInt64 production counters, are host-tested here against the published NodeSet. The suite includes\neuromap77.c so the Read and Browse resolvers are reachable - they answer the OPC UA server's handler\ncontract rather than this module's API - which is why the env does not build that .c itself.\nRequires the OPC UA codec. No heap, no stdlib.",
@@ -1980,7 +2099,9 @@
     },
     "native_exc_decoder": {
       "desc": "ESP32 panic / exception decoder (server/exc_decoder): parse a captured Guru Meditation\ndump (cause, register PC + EXCVADDR, backtrace PC:SP frames) into a structured ExcInfo and serialize it\nas JSON for a live /exception panel; tolerates missing fields + a trailing corruption marker. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_EXC_DECODER=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_EXC_DECODER=1"
+      ],
       "src": [
         "+<server/core/exc_decoder.c>",
         "+<mmgr/protostr.c>",
@@ -1989,23 +2110,39 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<server/core/exc_coredump.c>",
+        "+<core_setup/hal/host/host_platform.c>"
       ],
-      "tests": ["unit/src/server/core/test_exc_decoder"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/server/core/test_exc_decoder"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_failsafe": {
       "desc": "Software watchdog / deadlock detection + safe-state (server/failsafe): the wrap-safe\noverdue predicate, the lifeline registry, fire-once-per-episode breach callback, and JSON.\nPure host tests with a synthetic clock.",
-      "flags": ["-DPROTOCORE_ENABLE_FAILSAFE=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_FAILSAFE=1"
+      ],
       "src": [
         "+<server/core/failsafe.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/server/core/test_failsafe"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/server/core/test_failsafe"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_fanuc_j519": {
       "desc": "FANUC Stream Motion / option J519 UDP codec (services/machine_tool/fanuc_j519): the robot\ncounterpart to FOCAS. The 8-octet little-endian header, all six packets (Start/Motion/Stop/Request\nPC->robot, Robot Status/Ack robot->PC), the 9-axis IEEE-754 binary32 pose/joint/current blocks, and\nthe 20-entry threshold tables - byte-checked at every field offset against the public Wireshark\ndissector, plus symmetric build->parse round trips. Includes the length guards that separate the two\npackets sharing a type code per direction (Start 8 vs Status 132, Request 16 vs Ack 184). No heap,\nno stdlib. Pure host tests.",
@@ -2094,16 +2231,26 @@
     },
     "native_flow_export": {
       "desc": "Flow-record export codec (services/net/flow_export): NetFlow v5 fixed header/record\nbuilders + the NetFlow v9 / IPFIX template-then-data cursor (length/count patching,\nv9 4-octet padding). Pure host tests with wire-byte assertions.",
-      "flags": ["-DPROTOCORE_ENABLE_FLOW_EXPORT=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_FLOW_EXPORT=1"
+      ],
       "src": [
         "+<services/net/flow_export/flow_export.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/net/flow_export/test_flow_export"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/net/flow_export/test_flow_export"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_focas": {
       "desc": "FANUC FOCAS Ethernet codec (services/machine_tool/focas): the big-endian frame envelope\n(magic/version/type/length) + open/close handshake, the generic command request (6-octet function\nselector + five i32 args), and the response parsers (echoed selector + FOCAS return code + data),\nincl. ODBSYS SysInfo, the alarm bitmask, and the 8-octet data/base^exp value encoding. FANUC CNC\ndata over TCP 8193, reverse-engineered vs diohpix/pyfanuc. Pure host tests.",
@@ -2142,9 +2289,16 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/net/test_forward"]
+      "tests": [
+        "unit/protocols/net/test_forward"
+      ]
     },
     "native_forwarded_trust": {
       "desc": "Trusted-reverse-proxy forwarded-client resolver (server/security/forwarded_trust): a\nForwarded / X-Forwarded-For client address is honored only when the real TCP peer\nis a configured trusted-upstream CIDR, else the TCP peer is kept. Pure (no\nsockets), so it host-tests; a direct/untrusted peer's spoofed header is never\nbelieved. PROTOCORE_ENABLE_FORWARDED_TRUST (+ its required parents AUTH / AUTH_LOCKOUT)\nare set so the flag-guarded config compiles.",
@@ -2215,6 +2369,54 @@
       ],
       "tests": ["unit/src/services/file_transfer/ftp/test_ftp"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
+    },
+    
+    "native_ftp_session": {
+      "desc": "The FTP client session (services/file_transfer/ftp/ftp_session.c): the stepped store over a real TCP client. RFC 959 sec 5.4's minimum command sequence for a STOR, with the RFC 2428 sec 3 EPSV reply and the RFC 959 sec 4.1.2 PASV fallback under it. Nothing in the matrix compiled this file before.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_FTP_SESSION=1",
+        "-DPROTOCORE_ENABLE_FTP=1"
+      ],
+      "src": [
+        "+<shared/ip/ip.c>",
+        "+<network_drivers/transport/tcp/tcp.c>",
+        "+<network_drivers/transport/tcp/client/client.c>",
+        "+<network_drivers/transport/tcp/protocol/protocol.c>",
+        "+<network_drivers/transport/tcp/lower/lower.c>",
+        "+<network_drivers/transport/tcp/server/server.c>",
+        "+<network_drivers/transport/net_addr/net_addr.c>",
+        "+<server/core/worker.c>",
+        "+<mmgr/arena.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/network/network.c>",
+        "+<network_drivers/network/dns/dns_resolver.c>",
+        "+<network_drivers/network/dns/dns_wire.c>",
+        "+<network_drivers/network/dns/dns.c>",
+        "+<network_drivers/transport/udp/udp.c>",
+        "+<network_drivers/transport/udp/server/server.c>",
+        "+<network_drivers/transport/udp/client/client.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/protostr.c>",
+        "+<mmgr/bytes.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/swar.c>",
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<services/file_transfer/ftp/ftp.c>",
+        "+<shared/log/log.c>",
+        "+<mmgr/protoframe.c>",
+        "+<mmgr/membuild.c>",
+        "+<mmgr/float_bits.c>"
+      ],
+      "tests": [
+        "unit/src/services/file_transfer/ftp/test_ftp_session"
+      ]
     },
     "native_gateway": {
       "desc": "Radio / wireless gateway bridge (server/net/gateway), v5 southbound-to-northbound: an\nuplink envelopes a received frame (src address / port / rssi / seq) and publishes it,\nfail-closed on no sink / unknown port / rate cap / sink refusal; a downlink routes to the\nport transmit callback; the topic helper formats <prefix>/<port>/<addr>; port table limits.\nPure host tests; the DMA + FORWARD-lane ingest is covered by native_dma and native_forward.",
@@ -2318,7 +2520,9 @@
     },
     "native_graphql_exec": {
       "desc": "GraphQL executor (services/iot/graphql), GraphQL spec October 2021 release: the sec 1 Example No. 3 / No. 4 query and result pair, the sec 2.3 query shorthand, sec 2.4 selection-set order, sec 2.5 nesting, sec 2.6 arguments (in scope down the path, unordered, read by name and scalar kind), the sec 7.1.1 data entry and sec 7.2.1 JSON forms of the sec 3.5 scalars, and the sec 7.1.2 request errors for malformed and out-of-scope grammar (mutations, fragments, variables, directives, aliases, list and input-object values) plus the compile-time bounds. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_GRAPHQL=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_GRAPHQL=1"
+      ],
       "src": [
         "+<services/iot/graphql/graphql.c>",
         "+<mmgr/protostr.c>",
@@ -2327,10 +2531,18 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/iot/graphql/test_graphql"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/iot/graphql/test_graphql"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_grpcweb_frame": {
       "desc": "gRPC-Web framing codec (services/iot/grpcweb), grpc/grpc doc/PROTOCOL-HTTP2.md and doc/PROTOCOL-WEB.md: the Length-Prefixed-Message (Compressed-Flag, 4-byte big-endian Message-Length, Message), the 8th (MSB) trailers bit with the published 10000000b / 10000001b spellings, the trailer-section as RFC 9112 sec 7.1.2 field-lines with lower-case grpc-status / grpc-message names, the 1*DIGIT Status round trip over the gRPC status codes, the Percent-Encoded Status-Message slice, the partial-frame wait and the fail-closed short-buffer refusals. Pure host tests.",
@@ -2347,7 +2559,9 @@
     },
     "native_guardrails": {
       "desc": "Heap/stack guardrails (server/core/guardrails): threshold evaluator + JSON,\nhost-tested. Live sampling is ESP32-only (#ifdef ARDUINO).",
-      "flags": ["-DPROTOCORE_ENABLE_GUARDRAILS=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_GUARDRAILS=1"
+      ],
       "src": [
         "+<server/core/guardrails/guardrails.c>",
         "+<mmgr/protostr.c>",
@@ -2357,10 +2571,18 @@
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/host/host_platform.c>"
+        "+<core_setup/hal/host/host_platform.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/server/core/guardrails/test_guardrails"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/server/core/guardrails/test_guardrails"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
 
     "native_boot": {
@@ -2513,7 +2735,10 @@
     "native_h3_server": {
       "desc": "HTTP/3 dispatch bridge end-to-end through PC (the full Layer-7 app built with\nPROTOCORE_ENABLE_HTTP3=1): a QUIC client completes the handshake and sends an HTTP/3 GET, quic_server\nroutes it to the reserved dispatch slot, match_and_execute runs the registered route, and the\nhandler's send() is routed back onto the request stream via protocore_quic_server_respond. Verifies the whole\nwire: a real route handler answers an HTTP/3 request. Reuses the native_stack_http full-app base.",
       "base": "env:native_stack_http",
-      "flags": ["-DPROTOCORE_ENABLE_HTTP3=1", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP3=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "${env:native_stack_http.build_src_filter}",
         "+<network_drivers/transport/udp/udp.c>",
@@ -2565,9 +2790,12 @@
         "+<mmgr/float_bits.c>",
         "+<shared/hex/hex.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>"
       ],
-      "tests": ["unit/integration/http/test_h3_server"]
+      "tests": [
+        "unit/integration/http/test_h3_server"
+      ]
     },
     "native_h3_frame_rfc": {
       "desc": "HTTP/3 framing (network_drivers/presentation/http/http3/h3_frame, RFC 9114 sec 7): the type+length varint header driven through all four sample varint sequences RFC 9000 Appendix A.1 publishes, the long-form spelling that decodes but is never emitted, the sec 11.2.1 frame type registry and its reserved HTTP/2 codes, the sec 7.2.4.1 and RFC 9204 sec 5 settings defaults, the sec 11.2.2 reserved settings identifiers, a SETTINGS round trip with a greased identifier, the DATA / HEADERS / GOAWAY builders, and the truncation and short-destination refusals.",
@@ -2604,19 +2832,27 @@
     },
     "native_happy_eyeballs": {
       "desc": "Dual-stack Happy Eyeballs selection (network_drivers/transport/happy_eyeballs): RFC 6724 destination\npreference scoring, the candidate-list sort + RFC 8305 address-family interleave, and the Connection\nAttempt Delay gate, over the shipped protocore_ip. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_HAPPY_EYEBALLS=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HAPPY_EYEBALLS=1"
+      ],
       "src": [
         "+<network_drivers/transport/happy_eyeballs/happy_eyeballs.c>",
         "+<shared/ip/ip.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/happy_eyeballs/test_happy_eyeballs"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_hart": {
       "desc": "HART / HART-IP codec (services/fieldbus/hart): the HART command frame (longitudinal XOR checksum,\nshort + long addressing) build/parse and the 8-octet HART-IP message header. Pure host tests with\nhand-verified vectors (command-0 checksum 0x82).",
@@ -2746,7 +2982,9 @@
     },
     "native_http_client": {
       "desc": "Outbound HTTP client: URL parser + request builder + response parser. Pure\nstring logic (the lwIP/mbedTLS transport is ESP32-only) so it unit-tests host.",
-      "flags": ["-DPROTOCORE_ENABLE_HTTP_CLIENT=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1"
+      ],
       "src": [
         "+<services/net/http_client/http_client.c>",
         "+<server/clock/clock.c>",
@@ -2757,10 +2995,41 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/net/http_client/test_http_client"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/net/http_client/test_http_client"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
+    "native_http_client_session": {
+      "desc": "HTTP client with a net stack: the connection arm and its storage borrow, which the codec env compiles away",
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
+      "src": [
+        "+<services/net/http_client/http_client.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/protostr.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/membuild.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/swar.c>",
+        "+<mmgr/float_bits.c>",
+        "+<shared/hex/hex.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": []
     },
     "native_http_date": {
       "desc": "IMF-fixdate formatter (shared/http_date): the RFC 9110 sec 5.6.7 preferred format,\nits fixed 29-octet width, the case-sensitive US-ASCII day and month names, and the\nempty-rather-than-partial contract for a short buffer. Pure host tests.",
@@ -2895,8 +3164,7 @@
       "flags": [
         "-DPROTOCORE_ENABLE_IFACE_BRIDGE=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
-        "-DPROTOCORE_ENABLE_SSE=1",
-        "=-DPROTOCORE_ENABLE_IFACE_BRIDGE=1"
+        "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
         "+<server/net/iface_bridge/iface_bridge.c>",
@@ -3314,9 +3582,12 @@
         "+<shared/utf8/utf8.c>",
         "+<mmgr/float_bits.c>",
         "+<crypto/rng/rng.c>",
-        "+<crypto/cipher/chacha20.c>"
+        "+<crypto/cipher/chacha20.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>"
       ],
-      "tests": ["unit/integration/server/test_keepalive"]
+      "tests": [
+        "unit/integration/server/test_keepalive"
+      ]
     },
     "native_ld2410": {
       "desc": "LD2410 mmWave radar codec (server/peripherals/ld2410): decoding a basic and an engineering-mode\nreport frame, rejecting malformed frames, the byte-by-byte stream reassembler (resync past\nnoise, split feeds, absurd-length drop), the presence/distance helpers, and the exact bytes\nof the config-command encoders. Pure - the UART pump is ESP32-only.",
@@ -3404,14 +3675,24 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/shared/log/test_log"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/shared/log/test_log"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_logbuf": {
       "desc": "Rotating log ring + severity trap (server/logbuf): pure, fully host-tested.",
-      "flags": ["-DPROTOCORE_ENABLE_LOGBUF=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_LOGBUF=1"
+      ],
       "src": [
         "+<server/core/logbuf.c>",
         "+<mmgr/protoframe.c>",
@@ -3421,10 +3702,18 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/server/core/test_logbuf"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/server/core/test_logbuf"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_lonworks": {
       "desc": "LonWorks / LON-IP network-variable codec (services/fieldbus/lonworks): the LonTalk NV PDU\n([msg-code][14-bit selector][value]) build + parse and the SNVT_temp / SNVT_switch scalar encodings.\nPure host tests.",
@@ -3465,16 +3754,26 @@
     },
     "native_lwm2m_tlv_codec": {
       "desc": "OMA LwM2M TLV codec (services/iot/lwm2m), OMA-TS-LightweightM2M_Core-V1_2-20201110-A sec 7.4.5: the Table 7.4.5.-1 Type byte (Identifier type in bits 7-6, 8/16-bit Identifier in bit 5, Length-field width in bits 4-3, inline Length in bits 2-0), entries of the sec 7.4.5.1 Read /3/0 Device Object payload reproduced octet for octet, the whole 38-octet sec 7.4.5.2 B) Read /2 Access Control payload parsed three levels deep including its 16-bit Identifier, and the Appendix C Table C.-2 Value forms (shortest signed Integer width, one-octet Boolean, binary64 Float, two's complement sign extension). Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_LWM2M=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_LWM2M=1"
+      ],
       "src": [
         "+<services/iot/lwm2m/lwm2m_tlv.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/iot/lwm2m/test_lwm2m_tlv"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/iot/lwm2m/test_lwm2m_tlv"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_mbplus": {
       "desc": "Modbus Plus HDLC token-bus codec (services/fieldbus/mbplus): the HDLC frame (7E addr ctrl payload\nCRC-16/X-25 7E) build + validate and the token-rotation ring helper. Pure host tests (CRC 0x906E).",
@@ -3522,7 +3821,10 @@
     },
     "native_mdns_service": {
       "desc": "The portable mDNS / DNS-SD responder (network_drivers/application/mdns_service, RFC 6762 /\nRFC 6763) on the build where PROTOCORE_HAS_VENDOR_MDNS is 0: joining 224.0.0.251:5353 through the UDP\nlistener, and answering a query for the service-enumeration name, a service type, and an instance's\nSRV / TXT - each answer read back off the wire and decoded by the test's own label reader.",
-      "flags": ["-DPROTOCORE_ENABLE_MDNS=1", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_MDNS=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<network_drivers/application/mdns_service/mdns_service.c>",
         "+<server/core/worker.c>",
@@ -3544,12 +3846,16 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<mmgr/plaintext.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/mdns_service/test_mdns_service"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_melsec": {
       "desc": "Mitsubishi MELSEC MC protocol binary 3E codec (services/fieldbus/melsec): the batch read / batch write request builders (little-endian routing, request data length, command + subcommand, 3-octet head device, device code, point count) and the response parser (subheader, length field, end code, read data). Anchored on the worked binary 3E request and response of the MELSEC Communication Protocol Reference Manual SH(NA)-080008 appendix 7, its ch. 8.1 device code list and its ch. 5.3 field definitions. Pure host tests.",
@@ -3616,7 +3922,9 @@
     },
     "native_mnt": {
       "desc": "Mounted storage (server/storage/mnt) - the backend vtable and its built-in RAM backend,\nhost-tested through that backend (the Arduino FS backend is board-layer and HW-verified).\nFiles, directories, stat, and the readdir cursor. Pure, no heap.",
-      "flags": ["-DPROTOCORE_ENABLE_MNT=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_MNT=1"
+      ],
       "src": [
         "+<server/storage/mnt.c>",
         "+<server/storage/filesystem.c>",
@@ -3627,9 +3935,15 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/storage/test_mnt"]
+      "tests": [
+        "unit/protocols/storage/test_mnt"
+      ]
     },
     "native_modbus": {
       "desc": "Modbus TCP slave core + RTU framing (services/fieldbus/modbus): the four-table data model, the MBAP header validation and echo, and the PDU dispatch for function codes 01 02 03 04 05 06 0F 10 16 17 with their exception responses. Every request/response pair is the worked example printed in Modbus Application Protocol V1.1b3 sec. 6.1-6.12, 6.16, 6.17 and sec. 7; the MBAP rules are Modbus Messaging on TCP/IP V1.0b sec. 3.1.3. The RTU arm covers CRC-16 validation, unit addressing and the silent broadcast. Data model widened to 256 entries so the spec's own addresses are in range. Pure host tests.",
@@ -3639,7 +3953,8 @@
         "-DPROTOCORE_MODBUS_COILS=256",
         "-DPROTOCORE_MODBUS_DISCRETE_INPUTS=256",
         "-DPROTOCORE_MODBUS_HOLDING_REGS=256",
-        "-DPROTOCORE_MODBUS_INPUT_REGS=256"
+        "-DPROTOCORE_MODBUS_INPUT_REGS=256",
+        "-DPROTOCORE_HAS_NET_STACK=1"
       ],
       "src": [
         "+<services/fieldbus/modbus/modbus.c>",
@@ -3650,7 +3965,15 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<network_drivers/transport/tcp/protocol/protocol.c>",
+        "+<network_drivers/transport/tcp/server/server.c>",
+        "+<network_drivers/transport/tcp/lower/lower.c>",
+        "+<server/clock/clock.c>",
+        "+<server/core/worker.c>",
+        "+<shared/ip/ip.c>",
+        "+<network_drivers/transport/net_addr/net_addr.c>",
+        "+<shared/hex/hex.c>"
       ],
       "tests": [
         "unit/src/services/fieldbus/modbus/test_modbus"
@@ -3663,7 +3986,9 @@
       "desc": "Modbus master codec + scanner (services/fieldbus/modbus/modbus_master): build read\nrequests, parse responses; host-tested as a round-trip against the slave codec.",
       "flags": [
         "-DPROTOCORE_ENABLE_MODBUS=1",
-        "-DPROTOCORE_ENABLE_MODBUS_MASTER=1"
+        "-DPROTOCORE_ENABLE_MODBUS_MASTER=1",
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_MODBUS_RTU=1"
       ],
       "src": [
         "+<services/fieldbus/modbus/modbus.c>",
@@ -3675,7 +4000,15 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<network_drivers/transport/tcp/protocol/protocol.c>",
+        "+<network_drivers/transport/tcp/server/server.c>",
+        "+<network_drivers/transport/tcp/lower/lower.c>",
+        "+<server/clock/clock.c>",
+        "+<server/core/worker.c>",
+        "+<shared/ip/ip.c>",
+        "+<network_drivers/transport/net_addr/net_addr.c>",
+        "+<shared/hex/hex.c>"
       ],
       "tests": [
         "unit/integration/fieldbus/test_modbus_master"
@@ -3706,7 +4039,9 @@
     },
     "native_mqtt_codec": {
       "desc": "MQTT Control Packet codec (services/iot/mqtt), OASIS MQTT 3.1.1: the sec 2.2.3 Table 2.4 Remaining Length boundaries with the octets the table prints, the sec 3.1.2 Figure 3.2 / 3.3 / 3.6 CONNECT Protocol Name, Level, Connect Flags and Keep Alive with the MQTT-3.1.3-1 payload order, the sec 3.3.2.3 Figure 3.11 PUBLISH variable header, the sec 3.8.3.1 Figure 3.23 SUBSCRIBE payload, the Table 2.1 type values and Table 2.2 reserved flag bits, the Table 3.1 Connect Return codes and sec 3.9.3 SUBACK codes, and the MQTT-3.3.2-2 wildcard / MQTT-3.3.1-4 QoS / MQTT-1.5.3 UTF-8 refusals. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_MQTT=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_MQTT=1"
+      ],
       "src": [
         "+<services/iot/mqtt/mqtt.c>",
         "+<server/clock/clock.c>",
@@ -3719,10 +4054,39 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/utf8/utf8.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/plaintext.c>"
       ],
-      "tests": ["unit/src/services/iot/mqtt/test_mqtt"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/iot/mqtt/test_mqtt"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
+    "native_mqtt_session": {
+      "desc": "MQTT with a net stack: the session arm, its storage borrow and the transport half the codec env compiles away",
+      "flags": [
+        "-DPROTOCORE_ENABLE_MQTT=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
+      "src": [
+        "+<services/iot/mqtt/mqtt.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<server/core/worker.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/protostr.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/swar.c>",
+        "+<shared/utf8/utf8.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/plaintext.c>"
+      ],
+      "tests": []
     },
     "native_mqtt_sn_codec": {
       "desc": "MQTT-SN v1.2 wire codec (services/iot/mqtt/mqtt_sn.c), MQTT-SN Protocol Specification Version 1.2 (Stanford-Clark and Truong, IBM, 2013): the sec 5.2.1 Length field and its 1-octet / 3-octet boundary at 255, the sec 5.2.2 Table 3 MsgType octets, the sec 5.3.4 Table 4 Flags bit positions and TopicIdType, the sec 5.3.10 Table 5 ReturnCodes, and the sec 5.4 Message Variable Parts of CONNECT / CONNACK / REGISTER / REGACK / PUBLISH / PUBACK / SUBSCRIBE / SUBACK / PINGREQ / DISCONNECT / SEARCHGW with their optional fields and their fail-closed refusals. Pure host tests.",
@@ -3775,6 +4139,25 @@
       "base": "env:native_stack_http",
       "tests": ["unit/integration/codec/test_multipart"]
     },
+    
+    "native_net_addr": {
+      "desc": "net_addr: the stack address <-> protocore_ip mapping. Both directions for both families, the refusals (null source, null destination, untagged family, empty address), the byte order each direction lands in, and the NetAddr entries, which no call site in src/ reaches.",
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
+      "src": [
+        "-<*>",
+        "+<src/network_drivers/transport/net_addr/net_addr.c>",
+        "+<src/shared/ip/ip.c>",
+        "+<src/mmgr/rawmemcpy.c>",
+        "+<src/mmgr/swar.c>",
+        "+<src/mmgr/protomem.c>",
+        "+<src/shared/hex/hex.c>"
+      ],
+      "tests": [
+        "unit/src/network_drivers/transport/net_addr/test_net_addr"
+      ]
+    },
     "native_nats_proto": {
       "desc": "NATS client protocol codec (services/iot/nats), NATS Protocol client reference (docs.nats.io): the published PUB / HPUB / SUB / UNSUB / PING / PONG / CONNECT builder examples reproduced character for character with their #bytes and #header bytes / #total bytes counts, the MSG / HMSG / INFO / -ERR / +OK parser over the same published examples, the Protocol conventions field delimiter (space or tab, repeated whitespace as one), the wait-for-the-whole-operation framing and the fail-closed builder refusals. Pure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_NATS=1"],
@@ -3810,14 +4193,30 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/physical/test_net_egress"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/physical/test_net_egress"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_IPV6=1",
+        "-DPROTOCORE_ENABLE_ETHERNET=1"
+      ]
     },
     "native_l1_egress": {
       "desc": "Egress-interface reporting with no L1 backend (network_drivers/physical). RFC 1122 sec 3.3.1.2 makes the default route the interface outbound traffic leaves by, so the classifier that maps a live default-route IPv4 against the station and softAP addresses is the one call whose answer varies with its input: each arm returns a different protocore_if_kind, an interface that is down carries address 0 and never claims the route, and the station is compared before the softAP. The addresses are RFC 5737 TEST-NET-1 in the network byte order of RFC 791 appendix B. The rest pins the PROTOCORE_PHYSICAL_HAS_BACKEND == 0 build: bring-up with nothing to do reports success while the link never comes ready, every readout answers its not-available value, and the two RFC 826 six-octet hardware address readouts refuse without writing into the caller's buffer.",
-      "flags": [],
+      "flags": [
+        "-DPROTOCORE_ENABLE_IPV6=1",
+        "-DPROTOCORE_ENABLE_ETHERNET=1"
+      ],
       "src": [
         "+<network_drivers/physical/physical.c>",
         "+<network_drivers/physical/radio_power.c>",
@@ -3825,10 +4224,19 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/physical/test_net_egress"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/physical/test_net_egress"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_netadapt": {
       "desc": "Network adaptation decisions (server/net/netadapt): TCP receive-window sizing from the free\nheap (reserve + quarter-of-spare, clamped) and the DHCP->static-IP fallback trigger. Pure host tests.",
@@ -3928,16 +4336,24 @@
         "+<shared/http_date/http_date.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/membuild.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/file_conversion/network_drivers/application/ntp_server/test_ntp_server"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_ntp_service": {
       "desc": "The SNTP client (network_drivers/application/ntp_service, RFC 4330), which is the client on\nevery target: the mode-3 request it puts on the wire, the mode-4 reply it accepts, and the ones it\nrefuses - a wrong mode, a kiss-o'-death stratum, an origin that does not echo the request's transmit\nstamp, and a pre-2021 clock. Plus the epoch advancing off the monotonic tick between syncs.",
-      "flags": ["-DPROTOCORE_ENABLE_NTP=1", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_NTP=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<network_drivers/application/ntp_service/ntp_service.c>",
         "+<server/core/worker.c>",
@@ -3961,12 +4377,15 @@
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/membuild.c>",
         "+<mmgr/float_bits.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/plaintext.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/ntp_service/test_ntp_service"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_gnss_ntrip_caster": {
       "desc": "NTRIP caster protocol codec (services/timing_position/gnss/ntrip_caster): the RFC 9112 sec 2.1 request line and empty-line-terminated header block with every prefix reported incomplete, RFC 9110 sec 5.1 case-insensitive field names, the RFC 7617 sec 2 Basic credential reproduced from its published Aladdin example, NTRIP 1.0 versus 2.0 response forms, the 404 and 401 refusals with a WWW-Authenticate challenge, and the source table's STR record field positions plus a Content-Length that matches the body it declares.",
@@ -4017,6 +4436,79 @@
       "tests": ["unit/src/services/security/oauth2/test_oauth2"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
+    
+    "native_oauth2_exchange": {
+      "desc": "The oauth2 transport calls: the borrow they carve their request body and reply into, and what they report when the exchange never reached an endpoint. PROTOCORE_ENABLE_HTTP_CLIENT is what compiles them at all, and without a net stack HttpClient.post reports HTTP_CLIENT_ERR_CONNECT.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_OAUTH2=1",
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1"
+      ],
+      "src": [
+        "+<network_drivers/presentation/codec/json/json.c>",
+        "+<mmgr/protostr.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/membuild.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/swar.c>",
+        "+<shared/hex/hex.c>",
+        "+<mmgr/float_bits.c>",
+        "+<services/net/http_client/http_client.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": [
+        "unit/src/services/security/oauth2/test_oauth2_exchange"
+      ]
+    },
+    
+    "native_oauth2_transport": {
+      "desc": "The oauth2 token exchange over a real transport: the RFC 6749 sec 4.1.3 body goes out through http_client, the host peer answers it, and the sec 5.1 parameters come back out of the module's own reply buffer. The exchange env compiles the same two calls with no net stack, where nothing can answer.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_OAUTH2=1"
+      ],
+      "src": [
+        "+<shared/ip/ip.c>",
+        "+<network_drivers/transport/tcp/tcp.c>",
+        "+<network_drivers/transport/tcp/client/client.c>",
+        "+<network_drivers/transport/tcp/protocol/protocol.c>",
+        "+<network_drivers/transport/tcp/lower/lower.c>",
+        "+<network_drivers/transport/tcp/server/server.c>",
+        "+<network_drivers/transport/net_addr/net_addr.c>",
+        "+<server/core/worker.c>",
+        "+<mmgr/arena.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/protomem.c>",
+        "+<network_drivers/network/network.c>",
+        "+<network_drivers/network/dns/dns_resolver.c>",
+        "+<network_drivers/network/dns/dns_wire.c>",
+        "+<network_drivers/network/dns/dns.c>",
+        "+<network_drivers/transport/udp/udp.c>",
+        "+<network_drivers/transport/udp/server/server.c>",
+        "+<network_drivers/transport/udp/client/client.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/protostr.c>",
+        "+<mmgr/bytes.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/swar.c>",
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<services/net/http_client/http_client.c>",
+        "+<network_drivers/presentation/codec/json/json.c>",
+        "+<mmgr/membuild.c>",
+        "+<mmgr/float_bits.c>"
+      ],
+      "tests": [
+        "unit/src/services/security/oauth2/test_oauth2_transport"
+      ]
+    },
     "native_observability": {
       "desc": "Transport observability (PROTOCORE_ENABLE_OBSERVABILITY): the protocore_conn_on_event\nhook, by-reason counters, the live CONN_CLOSING gauge, and that the real lwIP\ncallbacks (recv FIN / error / timeout / local close / backpressure) drive the\nright counter. Pure L4 core - host-tested.",
       "flags": [
@@ -4039,9 +4531,12 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/plaintext.c>"
       ],
-      "tests": ["unit/integration/transport/test_observability"]
+      "tests": [
+        "unit/integration/transport/test_observability"
+      ]
     },
     "native_ocit_msg": {
       "desc": "OCIT-Outstations message codec (services/transportation/ocit): the object message [message-type][object-type:2][instance:2][data-type][value] build and parse, with the two 16-bit address fields asserted big-endian on values a swapped pair would read as a different valid object, the typed uint16 accessor and its type/length gate, the octet-string remainder, and the buffer guards. The OCIT-O specification is not obtainable, so these are properties of the documented layout. Pure host tests.",
@@ -4240,7 +4735,7 @@
       "desc": "The partition monitor's capability arm: the same suite as native_partition, built with PROTOCORE_HAS_VENDOR_OTA=1 so collect compiles the arm that walks the table through protocore_platform_partition_walk. native_partition drives the other arm, which reports no partitions. Both arms ship, so both are run.",
       "flags": [
         "-DPROTOCORE_ENABLE_PARTITION_MONITOR=1",
-        "=-DPROTOCORE_HAS_VENDOR_OTA=1"
+        "-DPROTOCORE_HAS_VENDOR_OTA=1"
       ],
       "src": [
         "+<server/storage/partition_monitor/partition_monitor.c>",
@@ -4375,7 +4870,8 @@
         "-DPROTOCORE_ENABLE_HTTP2=1",
         "-DPROTOCORE_ENABLE_HTTP3=1",
         "-DPROTOCORE_ENABLE_FILE_SERVING=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_MODBUS_RTU=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -4484,10 +4980,18 @@
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/physical/test_phy"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/physical/test_phy"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_l1_link": {
       "desc": "Layer 1 driven through a real backend: the env declares PROTOCORE_PHYSICAL_HAS_BACKEND=1, so core_setup/hal/host/physical stands in for silicon instead of the no-op stubs in physical.c, and the link can actually come up. That is what makes the readouts checkable at all, since a stub answers every one of them with an empty value and a caller that mishandles a live link then reads exactly like one that works. The station associates and reports its SSID, its channel and a negative dBm RSSI; the softAP takes its own address without stealing the route; Ethernet then takes the default route from the station the way a stack picks one when both are up. It is also the only way to separate the same-signature calls a stub build cannot: eth_init from eth_ready, ip6_init from ip6_ready, and wifi_mac from egress_mac, which answer with DIFFERENT addresses once a wired link carries traffic. Addresses are RFC 5737 TEST-NET-1 and RFC 3849 2001:db8::/32, the hardware addresses are checked for the RFC 7042 sec 2.1 U/L and I/G bits, the SSID cap is IEEE 802.11-2020 9.4.2.2's 32 octets, and a global unicast IPv6 address (RFC 4291 sec 2.5.4) is checked not to be an RFC 4291 sec 2.5.6 link-local. PROTOCORE_RADIO_WIFI_PS is set to max modem so the keep-awake refcount is provable: the first hold forces doze off and the balancing release restores the configured mode, which at the default of 0 would be indistinguishable from the held state. This is the only env that compiles radio_power.c's backend arm at all.",
@@ -4506,10 +5010,18 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/physical/test_phy"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/physical/test_phy"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_phy_iface": {
       "desc": "The layer 1 interface registry (network_drivers/physical, Physical.iface): an interface is\nan id, a kind and the callback that puts bytes on the wire, and a device carries several of mixed\nkind. Registration and its refusals (duplicate id, null send, table full), the readbacks, reset,\nrow walking, and that send hands the callback the id and ctx it was registered with. Every\nforwarded byte leaves through this send, so it is covered here and not only through forward.",
@@ -4525,10 +5037,19 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/physical/test_iface"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/physical/test_iface"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_plaintext": {
       "desc": "The plaintext pool accessor (mmgr/plaintext): bump-allocate + reset semantics,\nalignment, and fail-closed exhaustion. Pure host tests - no lwIP/sockets - so it builds from\nthe accessor and the pool mechanism alone.",
@@ -4636,10 +5157,18 @@
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/host/host_platform.c>"
+        "+<core_setup/hal/host/host_platform.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/file_conversion/server/core/test_power_mgmt"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/file_conversion/server/core/test_power_mgmt"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_powerlink": {
       "desc": "Ethernet POWERLINK basic frame codec (services/fieldbus/powerlink): the SoC / PReq / PRes / SoA / ASnd builders over the [messageType][dest][source][payload] frame, the parser, and the node addressing. Anchored on EPSG DS 301 V1.5.1 App. 3.1 (normative message type ids), sec. 4.5 (node id assignment) and sec. 4.6.1.1 (basic frame structure). Pure host tests.",
@@ -4732,10 +5261,16 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>"
       ],
-      "tests": ["unit/src/server/core/test_preempt_queue"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/server/core/test_preempt_queue"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_presentation": {
       "desc": "test_presentation against the native_stack_l46 stack.",
@@ -4812,7 +5347,11 @@
     },
     "native_promisc_dot11": {
       "desc": "Wi-Fi promiscuous capture helpers (services/radio/promisc/promisc.c): the IEEE 802.11 MAC header parser against clause 9.2.4.1 Frame Control, the clause 9.3.2 address-field table for all four To DS / From DS combinations, clause 9.2.4.4 sequence control, and the QoS Control and HT Control header extensions; plus the libpcap savefile global and record headers with LINKTYPE_IEEE802_11 105. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_PROMISC=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_PROMISC=1",
+        "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
+        "-DPROTOCORE_ENABLE_RADIO_POWER=1"
+      ],
       "src": [
         "+<services/radio/promisc/promisc.c>",
         "+<shared/pcap/pcap.c>",
@@ -4821,23 +5360,44 @@
         "+<mmgr/endian.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<network_drivers/physical/physical.c>",
+        "+<network_drivers/physical/radio_power.c>",
+        "+<core_setup/hal/host/physical/physical_mock.c>"
       ],
-      "tests": ["unit/src/services/radio/promisc/test_promisc"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/radio/promisc/test_promisc"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_protobuf_wire": {
       "desc": "Protocol Buffers wire codec (services/iot/protobuf), Google's Encoding document: the published Test1 (08 96 01), Test2 (12 07 testing) and Test3 (1a 03 08 96 01) worked examples, the Base 128 varint over its width boundaries, the (field_number << 3) | wire_type tag formula with the wire type ID table, the published ZigZag table for sint32 and sint64 against two's complement int64, the little-endian I32 / I64 payloads and IEEE 754 float / double bit patterns, packed repeated fields, and the refusal of deprecated group and unassigned wire types plus every truncated record. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_PROTOBUF=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_PROTOBUF=1"
+      ],
       "src": [
         "+<services/iot/protobuf/protobuf.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/iot/protobuf/test_protobuf"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/iot/protobuf/test_protobuf"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_protomem": {
       "desc": "The byte-span walks (mmgr/protomem): copy, move, compare, find, fill, zero, one\nregister-width load or store per step. cpy and set store a WHOLE word and mask the tail, so the\nlanes between n and the end of the word n stops in go to zero - those lanes are the padding of the\nborrow, which is what lets the store stay a dumb word instead of a byte walk. Every assertion here\nis written against that lane boundary rather than against n, and the destinations are aligned\nbecause a borrow is. Covers every length through two full words, a source at every offset within a\nword (the funnel that assembles the wanted word from the two aligned words holding it), both\noverlap directions of move, cmp's sign taken from the first differing byte at every position and\nordered as UNSIGNED, cmp and chr not stopping at a NUL because a span has no terminator, chr's\nbound and its first-match rule, and the fill splatting a high-bit value into every lane. Plus one\ntest that each table member is the walk its name says: the table is initialized positionally.",
@@ -4916,7 +5476,8 @@
         "+<core_setup/hal/host/host_nvs.c>",
         "+<core_setup/hal/host/physical/physical_mock.c>",
         "+<network_drivers/physical/radio_power.c>",
-        "+<network_drivers/transport/udp/client/client.c>"
+        "+<network_drivers/transport/udp/client/client.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": [
         "unit/src/server/core/provisioning_service/test_provisioning"
@@ -5235,7 +5796,9 @@
     },
     "native_radio_power": {
       "desc": "WiFi radio power controls (network_drivers/physical/radio_power): modem-sleep mode names\nhost-tested; the apply/readback are ESP32-only (esp_wifi).",
-      "flags": ["-DPROTOCORE_ENABLE_RADIO_POWER=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_RADIO_POWER=1"
+      ],
       "src": [
         "+<network_drivers/physical/radio_power.c>",
         "+<network_drivers/physical/physical.c>",
@@ -5243,10 +5806,19 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/physical/test_radio_power"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/physical/test_radio_power"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_radio_sniff_tap": {
       "desc": "Receive-only radio sniffer pcap framing (services/radio/radio_sniff/radio_sniff.c): the IEEE-754 binary32 encoding of an integer dBm RSSI derived from the format definition, and the IEEE 802.15.4 TAP pseudo-header of that specification's sections 2.2.1, 2.2.2, 3.2 and 3.4 wrapped in a libpcap record with LINKTYPE_IEEE802_15_4_TAP 283. Pure host tests.",
@@ -5334,9 +5906,12 @@
         "+<shared/utf8/utf8.c>",
         "+<mmgr/float_bits.c>",
         "+<crypto/rng/rng.c>",
-        "+<crypto/cipher/chacha20.c>"
+        "+<crypto/cipher/chacha20.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>"
       ],
-      "tests": ["unit/integration/server/test_range"]
+      "tests": [
+        "unit/integration/server/test_range"
+      ]
     },
     "native_rawl2": {
       "desc": "Raw Layer-2 Ethernet frame codec (services/fieldbus/rawl2): the Ethernet II and 802.1Q VLAN-tagged builders, the parser that separates the two framings, the TCI field widths, and the IEEE 802.3 frame check sequence. Ethertypes checked against the IEEE Registration Authority public EtherType listing; the FCS against the published CRC-32/ISO-HDLC check value 0xCBF43926. Pure host tests.",
@@ -5365,16 +5940,26 @@
     },
     "native_rcwl0516": {
       "desc": "RCWL-0516 Doppler presence sensor + the shared one-GPIO presence facade\n(server/peripherals/rcwl0516): the debounce that swallows comparator chatter, the hold that bridges the\nmodule's ~2s retrigger gaps into one continuous presence span, the consume-once edge event,\nwrap-safety across a millis() rollover, and the degenerate zero-debounce / zero-hold configs.\nPure core driven by a synthetic clock - no GPIO, no real time. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_RCWL0516=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_RCWL0516=1"
+      ],
       "src": [
         "+<server/peripherals/rcwl0516/rcwl0516.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/server/peripherals/rcwl0516/test_rcwl0516"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/server/peripherals/rcwl0516/test_rcwl0516"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_redis_resp": {
       "desc": "RESP codec (services/iot/redis_resp), Redis serialization protocol specification: the published LLEN mylist command encoding, and one parse per printed example of Simple strings, Simple errors, Integers, Bulk strings (empty, null and binary-safe), Arrays (empty, nested, null and with null elements), Nulls, Booleans, Doubles (including inf/-inf/nan and exponents), Big numbers, Bulk errors, Verbatim strings, Maps (2 children per entry), Sets and Pushes, plus the refusal of the Attributes type and of any other first byte, the wait-for-the-whole-value framing and the fail-closed encoder. Pure host tests.",
@@ -5410,8 +5995,7 @@
     "native_relay_listener": {
       "desc": "Relay / DNAT listener bind table (server/net/relay/relay_listener): the published front-port binds, the bridge allocator, and the host-length and table-full refusals. The suite includes relay_listener.c so its file-static bind lookup and bridge allocator are reachable, which is why the env does not build that .c itself.",
       "flags": [
-        "-DPROTOCORE_ENABLE_RELAY=1",
-        "=-DPROTOCORE_ENABLE_RELAY=1"
+        "-DPROTOCORE_ENABLE_RELAY=1"
       ],
       "src": [
         "+<server/net/relay/relay.c>",
@@ -5456,31 +6040,36 @@
     
         
         "native_response_headers": {
-      "desc": "test_response_headers against the native_stack_http stack. Carries PROTOCORE_ENABLE_NTP because the\nDate-header cases drive the clock through the NTP client's own entry points, and with it the UDP\nlistener the portable client binds its reply port on.",
-      "base": "env:native_stack_http",
-      "flags": [
-        "-DPROTOCORE_ENABLE_NTP=1",
-        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
-        "-DPROTOCORE_ENABLE_SSE=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
-      ],
-      "src": [
-        "${env:native_stack_http.build_src_filter}",
-        "+<network_drivers/transport/udp/udp.c>",
-        "+<network_drivers/transport/udp/server/server.c>",
-        "+<network_drivers/transport/udp/client/client.c>",
-        "+<mmgr/protomem.c>",
-        "+<mmgr/bytes.c>",
-        "+<mmgr/endian.c>",
-        "+<mmgr/protostr.c>",
-        "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/span.c>",
-        "+<mmgr/swar.c>",
-        "+<shared/ip/ip.c>",
-        "+<shared/hex/hex.c>"
-      ],
-      "tests": ["unit/integration/application/test_response_headers"]
-    },
+          "desc": "test_response_headers against the native_stack_http stack. Carries PROTOCORE_ENABLE_NTP because the\nDate-header cases drive the clock through the NTP client's own entry points, and with it the UDP\nlistener the portable client binds its reply port on.",
+          "base": "env:native_stack_http",
+          "flags": [
+            "-DPROTOCORE_ENABLE_NTP=1",
+            "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+            "-DPROTOCORE_ENABLE_SSE=1",
+            "-DPROTOCORE_HAS_NET_STACK=1"
+          ],
+          "src": [
+            "${env:native_stack_http.build_src_filter}",
+            "+<network_drivers/transport/udp/udp.c>",
+            "+<network_drivers/transport/udp/server/server.c>",
+            "+<network_drivers/transport/udp/client/client.c>",
+            "+<mmgr/protomem.c>",
+            "+<mmgr/bytes.c>",
+            "+<mmgr/endian.c>",
+            "+<mmgr/protostr.c>",
+            "+<mmgr/rawmemcpy.c>",
+            "+<mmgr/span.c>",
+            "+<mmgr/swar.c>",
+            "+<shared/ip/ip.c>",
+            "+<shared/hex/hex.c>",
+            "+<mmgr/plaintext.c>",
+            "+<mmgr/arena.c>",
+            "+<core_setup/hal/portable/portable_platform.c>"
+          ],
+          "tests": [
+            "unit/integration/application/test_response_headers"
+          ]
+        },
     "native_rfc1951": {
       "desc": "The RFC 1951 sec 3.2.5 length and distance tables and the sec 3.2.6 fixed-Huffman construction over them, defined once in codec/deflate/rfc1951.c and read by both DEFLATE codecs and both SSH zlib codecs. Every expected value is transcribed from RFC 1951, so the tables are checked against the standard rather than against themselves.",
       "flags": [],
@@ -5629,7 +6218,9 @@
       "flags": [
         "-DPROTOCORE_ENABLE_SOUTHBOUND=1",
         "-DPROTOCORE_ENABLE_MODBUS=1",
-        "-DPROTOCORE_ENABLE_MODBUS_MASTER=1"
+        "-DPROTOCORE_ENABLE_MODBUS_MASTER=1",
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_MODBUS_RTU=1"
       ],
       "src": [
         "+<services/southbound/southbound.c>",
@@ -5644,21 +6235,29 @@
         "+<mmgr/plaintext.c>",
         "+<mmgr/span.c>",
         "+<mmgr/arena.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<network_drivers/transport/tcp/protocol/protocol.c>",
+        "+<network_drivers/transport/tcp/server/server.c>",
+        "+<network_drivers/transport/tcp/lower/lower.c>",
+        "+<server/clock/clock.c>",
+        "+<server/core/worker.c>",
+        "+<shared/ip/ip.c>",
+        "+<network_drivers/transport/net_addr/net_addr.c>",
+        "+<shared/hex/hex.c>"
       ],
       "tests": [
         "unit/integration/net/test_sb_modbus"
       ]
     },
     "native_scp": {
-      "desc": "SCP (RCP) protocol wire codec (network_drivers/application/scp): parse an `scp -t/-f <path>` exec command into its\nsink/source role + target, parse + build the `C<mode> <size> <name>` control line (octal mode, decimal\nsize, name; malformed lines rejected), and the ack byte constants. Pure host tests.",
+      "desc": "SCP (RCP) protocol wire codec (network_drivers/session/scp): parse an `scp -t/-f <path>` exec command into its\nsink/source role + target, parse + build the `C<mode> <size> <name>` control line (octal mode, decimal\nsize, name; malformed lines rejected), and the ack byte constants. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_ENABLE_SSH_SCP=1",
         "-DPROTOCORE_ENABLE_MNT=1"
       ],
       "src": [
-        "+<network_drivers/application/scp/scp.c>",
+        "+<network_drivers/session/scp/scp.c>",
         "+<server/storage/filesystem.c>",
         "+<server/storage/mnt.c>",
         "+<mmgr/protoframe.c>",
@@ -5668,16 +6267,27 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/application/scp/test_scp"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/session/scp/test_scp"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_scp_wire": {
-      "desc": "SCP (rcp) wire codec (network_drivers/application/scp): the exec-command role parse (-t sink, -f source, bundled flags, the target path) and the C<mode> <size> <name> control line, built and parsed. The rcp line protocol has no published specification, so except for the mode field the suite states its expectations as properties (round-trip identity, refusals, boundaries) rather than as conformance. The mode field is a POSIX.1 permission word in octal, and those bit values are derived by hand in the suite.",
-      "flags": ["-DPROTOCORE_ENABLE_SSH=1", "-DPROTOCORE_ENABLE_SSH_SCP=1"],
+      "desc": "SCP (rcp) wire codec (network_drivers/session/scp): the exec-command role parse (-t sink, -f source, bundled flags, the target path) and the C<mode> <size> <name> control line, built and parsed. The rcp line protocol has no published specification, so except for the mode field the suite states its expectations as properties (round-trip identity, refusals, boundaries) rather than as conformance. The mode field is a POSIX.1 permission word in octal, and those bit values are derived by hand in the suite.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_SSH=1",
+        "-DPROTOCORE_ENABLE_SSH_SCP=1"
+      ],
       "src": [
-        "+<network_drivers/application/scp/scp.c>",
+        "+<network_drivers/session/scp/scp.c>",
         "+<mmgr/membuild.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
@@ -5686,11 +6296,15 @@
         "+<mmgr/float_bits.c>",
         "+<shared/hex/hex.c>"
       ],
-      "tests": ["unit/src/network_drivers/application/scp/test_scp"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/session/scp/test_scp"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_scp_server": {
-      "desc": "The SCP server (application/scp/ssh_scp.c): the rcp SINK state machine over an exec \"scp -t <path>\" channel - ready ack, C<mode> <size> <name> control line, streamed data, end-of-record byte, final ack. The rcp protocol has no specification; the oracle is OpenSSH's observed control flow, stated as such in the suite. Nothing else in the matrix compiles this file.",
+      "desc": "The SCP server (session/scp/ssh_scp.c): the rcp SINK state machine over an exec \"scp -t <path>\" channel - ready ack, C<mode> <size> <name> control line, streamed data, end-of-record byte, final ack. The rcp protocol has no specification; the oracle is OpenSSH's observed control flow, stated as such in the suite. Nothing else in the matrix compiles this file.",
       "flags": [
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_SSH_MAX_CHANNELS=3",
@@ -5754,8 +6368,7 @@
         "+<mmgr/protoframe.c>",
         "+<server/storage/mnt.c>",
         "+<server/storage/filesystem.c>",
-        "+<network_drivers/application/scp/ssh_scp.c>",
-        "+<network_drivers/application/scp/scp.c>",
+        "+<network_drivers/session/scp/scp.c>",
         "+<mmgr/bytes.c>",
         "+<mmgr/endian.c>",
         "+<mmgr/membuild.c>",
@@ -5769,7 +6382,12 @@
         "+<crypto/mac/ghash.c>",
         "+<network_drivers/presentation/ssh/transport/ssh_kexhash.c>"
       ],
-      "tests": []
+      "tests": [
+        "unit/src/network_drivers/session/scp/test_ssh_scp"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_scpi": {
       "desc": "SCPI / IEEE 488.2 instrument-control codec (services/instrumentation/scpi): the command builder\n(:-hierarchy header + params + terminator), the response parsers (numeric NR1/NR2/NR3,\nboolean, quoted string, definite/indefinite arbitrary block), the STB/ESR/ESE/SRE +\nerror-queue status model, and the SCPI short/long-form header matcher. Pure host tests.",
@@ -5822,16 +6440,26 @@
     },
     "native_sen0192": {
       "desc": "SEN0192 microwave motion sensor presence state machine (server/peripherals/sen0192): presence\nasserts on an active sample and holds for the configured window after the last active sample, clears\nafter it, counts clear->present edges, and honors OUT polarity. Pure - the GPIO read is ESP32-only.",
-      "flags": ["-DPROTOCORE_ENABLE_SEN0192=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SEN0192=1"
+      ],
       "src": [
         "+<server/peripherals/sen0192/sen0192.c>",
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/server/peripherals/sen0192/test_sen0192"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/server/peripherals/sen0192/test_sen0192"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_senml_pack": {
       "desc": "SenML Pack builders and Record resolver (services/iot/senml), RFC 8428: the sec 5.1.1 and sec 5.1.2 JSON Packs reproduced character for character, the sec 4.2 value fields in their sec 5 JSON types, the sec 6 Table 4 CBOR integer map keys as RFC 8949 encodes them (-2 as 0x21, -3 as 0x22, the rest as themselves) with an integral Number as an integer and a non-integral one as a binary32 float, and the sec 4.6 resolve folding Base Name and Base Time forward, plus the zero-byte reports on a short buffer. Pure host tests.",
@@ -6014,10 +6642,18 @@
         "+<server/signaling/signaling.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/server/signaling/test_signaling"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/server/signaling/test_signaling"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_simatic": {
       "desc": "Siemens SIMATIC serial (services/fieldbus/simatic): 3964R block framing (DLE-double + XOR BCC)\n+ the 3964R link state machine (STX/DLE handshake, NAK/QVZ retry, ZVZ timeout, priority\narbitration) + RK512 SEND/FETCH/reaction telegram build/parse (big-endian words). Pure host tests.",
@@ -6251,7 +6887,9 @@
     },
     "native_smtp": {
       "desc": "SMTP client (RFC 5321) dialogue engine (services/net/smtp/smtp_run): greeting/EHLO/AUTH\nLOGIN/MAIL/RCPT/DATA over a send/recv seam, with dot-stuffing + multi-line reply\nparsing. Driven by a scripted mock server on the host - no lwIP or TLS.",
-      "flags": ["-DPROTOCORE_ENABLE_SMTP=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SMTP=1"
+      ],
       "src": [
         "+<services/net/smtp/smtp.c>",
         "+<network_drivers/presentation/codec/base64/base64.c>",
@@ -6263,13 +6901,21 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/net/test_smtp"]
+      "tests": [
+        "unit/protocols/net/test_smtp"
+      ]
     },
     "native_snmp": {
       "desc": "SNMP ASN.1 BER codec (the version-agnostic base for the SNMP agent). Pure\ncodec - no lwIP/UDP - so it unit-tests on the host.",
-      "flags": ["-DPROTOCORE_ENABLE_SNMP=1", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SNMP=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<services/net/snmp/snmp_ber.c>",
         "+<services/net/snmp/snmp_agent.c>",
@@ -6286,13 +6932,19 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/secure.c>"
       ],
       "tests": [
         "unit/src/services/net/snmp/test_snmp_ber",
         "unit/protocols/iot/test_snmp_agent"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_snmp_ber_x690": {
       "desc": "SNMP ASN.1 BER codec (services/net/snmp/snmp_ber.c) against ITU-T X.690 clause 8.1 identifier and length octets, 8.3 INTEGER minimal two's complement, 8.7 OCTET STRING, 8.8 NULL and 8.19 OBJECT IDENTIFIER base-128 subidentifiers, plus RFC 3417 section 8 item 1 (definite form only, indefinite prohibited, an over-long definite length permitted) and the RFC 2578 section 7.1.5 through 7.1.8 application-wide type tags. Pure codec over caller buffers, no transport.",
@@ -6307,7 +6959,10 @@
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
     "native_snmp_trap": {
-      "flags": ["-DPROTOCORE_ENABLE_SNMP=1", "-DPROTOCORE_ENABLE_SNMP_TRAP=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SNMP=1",
+        "-DPROTOCORE_ENABLE_SNMP_TRAP=1"
+      ],
       "src": [
         "+<services/net/snmp/snmp_notify.c>",
         "+<services/net/snmp/snmp_ber.c>",
@@ -6317,25 +6972,44 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/net/snmp/test_snmp_trap"],
+      "tests": [
+        "unit/src/services/net/snmp/test_snmp_trap"
+      ],
       "desc": "",
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_snmp_notify": {
       "desc": "SNMP notification originator (services/net/snmp/snmp_notify.c): the SNMPv2-Trap-PDU and InformRequest-PDU of RFC 3416 section 4.2.6 and 4.2.7 with their two mandatory first variable bindings sysUpTime.0 and snmpTrapOID.0 (RFC 3418 section 2), the context-specific PDU tags of RFC 3416 section 3, the RFC 1901 section 3 SNMPv2c message wrapper, and the RFC 2578 section 7.1 value tags each binding type carries. Build calls only - this build has no UDP transport.",
-      "flags": ["-DPROTOCORE_ENABLE_SNMP=1", "-DPROTOCORE_ENABLE_SNMP_TRAP=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SNMP=1",
+        "-DPROTOCORE_ENABLE_SNMP_TRAP=1"
+      ],
       "src": [
         "+<services/net/snmp/snmp_notify.c>",
         "+<services/net/snmp/snmp_ber.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/net/snmp/test_snmp_trap"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/net/snmp/test_snmp_trap"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_snmp_v3": {
       "desc": "SNMPv3 USM layer: auth (HMAC-SHA-256), privacy (AES-128-CFB), engine discovery,\ntimeliness. Pulls in the SHA-256/HMAC primitives from the SSH crypto layer.",
@@ -6401,15 +7075,23 @@
     },
     "native_southbound": {
       "desc": "Southbound protocol-driver framework (services/southbound): the bounded driver registry\n(register / find / clear / count) and the name-dispatched read/write/read_block/write_block facade,\nincluding capability + not-found handling and transport-error passthrough. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_SOUTHBOUND=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SOUTHBOUND=1"
+      ],
       "src": [
         "+<services/southbound/southbound.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/net/test_southbound"]
+      "tests": [
+        "unit/protocols/net/test_southbound"
+      ]
     },
     "native_spa_router": {
       "desc": "Single-page-app micro-routing (server/web/spa_router): the serve-file / serve-shell /\npassthrough decision from a request path (extension test + API prefix). Pure host tests.",
@@ -6442,17 +7124,27 @@
     },
     "native_sparkplug": {
       "desc": "Sparkplug B codec (services/iot/sparkplug): the topic builder + the Metric / Payload\nprotobuf serializers (over the protobuf codec). Field numbers per the Eclipse Tahu proto.\nPure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_SPARKPLUG=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SPARKPLUG=1"
+      ],
       "src": [
         "+<services/iot/sparkplug/sparkplug.c>",
         "+<services/iot/protobuf/protobuf.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/protostr.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/iot/sparkplug/test_sparkplug"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/iot/sparkplug/test_sparkplug"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_storage_sqlite": {
       "desc": "SQLite3 on-disk file-format reader/writer (services/storage/sqlite): the sec 1.3 database-header offset table, the sec 1.3.2 page-size encoding, the sec 2.1 varint and its 1-9 byte length boundaries, the record serial-type chart, the sec 1.6 b-tree page header and cell pointer array, the sqlite_schema row, sign-extended integer and big-endian IEEE-754 column decoding, whole-table cursor walks and overflow-chain reassembly over real sqlite3-written fixtures, and the bounded writer round-tripped through the reader.",
@@ -7473,10 +8165,18 @@
         "+<mmgr/swar.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/application/sftp/test_ssh_sftp"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/application/sftp/test_ssh_sftp"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_sftp_wire": {
       "desc": "SFTP version 3 wire codec (network_drivers/application/sftp, draft-ietf-secsh-filexfer-02): the sec 3 packet framing whose length field counts the data area and excludes itself, the sec 3 packet type numbers, the sec 5 ATTRS flag bits and field order (including skipping the extended fields), the sec 6.3 SSH_FXP_OPEN pflags, the sec 7 status codes and the STATUS / HANDLE / DATA / NAME / ATTRS response layouts octet by octet, the bounds-checked reader (a string longer than its payload is refused), the length-prefix backfill, and the ls -l longname whose permission column is derived from POSIX.1 permission bits.",
@@ -7598,7 +8298,8 @@
         "+<mmgr/float_bits.c>",
         "+<core_setup/hal/host/host_platform.c>",
         "+<crypto/rng/rng.c>",
-        "+<crypto/cipher/chacha20.c>"
+        "+<crypto/cipher/chacha20.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>"
       ],
       "tests": []
     },
@@ -7644,7 +8345,10 @@
     },
     "native_statsd": {
       "desc": "StatsD metrics client (services/iot/statsd): the pure line formatter (name:value|type,\nsample rate, DogStatsD tags) plus the count/gauge/timing/set emit helpers, whose sent\nbytes are captured through the transport UDP service's host seam.",
-      "flags": ["-DPROTOCORE_ENABLE_STATSD=1", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_STATSD=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<services/iot/statsd/statsd.c>",
         "+<network_drivers/transport/udp/udp.c>",
@@ -7659,9 +8363,14 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/transport/test_statsd"]
+      "tests": [
+        "unit/protocols/transport/test_statsd"
+      ]
     },
     "native_stomp": {
       "desc": "STOMP 1.2 frame codec (services/iot/stomp): the zero-heap frame builder (command +\nescaped headers + NUL body) + the non-mutating parser (command/header slices/body,\nhonoring content-length) + escape/unescape. Pure host tests.",
@@ -7703,7 +8412,10 @@
     },
     "native_syslog": {
       "desc": "Syslog client (RFC 5424) line formatter. Pure formatter - no lwIP/UDP - so it\nunit-tests on the host (udp_transport provides host stubs for protocore_udp_sendto).",
-      "flags": ["-DPROTOCORE_ENABLE_SYSLOG=1", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SYSLOG=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<services/net/syslog/syslog.c>",
         "+<network_drivers/transport/udp/udp.c>",
@@ -7718,13 +8430,20 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/protocols/transport/test_syslog"]
+      "tests": [
+        "unit/protocols/transport/test_syslog"
+      ]
     },
     "native_tcp": {
       "desc": "The TCP path a stack drives, run on the host against the pcb driver in core_setup/hal/host. This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
-      "flags": ["-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<network_drivers/transport/tcp/tcp.c>",
         "+<network_drivers/transport/tcp/protocol/protocol.c>",
@@ -7742,9 +8461,12 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<core_setup/hal/portable/portable_platform.c>"
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<mmgr/plaintext.c>"
       ],
-      "tests": ["unit/protocols/transport/test_tcp"]
+      "tests": [
+        "unit/protocols/transport/test_tcp"
+      ]
     },
     "native_tcp_client": {
       "desc": "tcp_client.h: the outbound client pool - slot claim, the non-blocking resolve/connect\npump, the whole-open timeout bound, the wire ring and its ack-on-consume window\nreopening (RFC 9293 sec 3.8.6). PROTOCORE_ENABLE_HTTP_CLIENT turns PROTOCORE_NEED_CLIENT\non, which is what compiles the translation unit's body at all.",
@@ -7778,12 +8500,16 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/tcp/client/test_tcp_client"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_tcp_conn": {
       "desc": "tcp_conn.h: the connection pool, its RX ring and the stack callback seam, against\nRFC 9293 sec 3.6 (close drains before release), 3.6.1 (data after close), 3.8.6\n(ack-on-consume window management, SHLD-14), 3.10.5 (abort) and 3.10.8 (user timeout).",
@@ -7802,13 +8528,19 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/tcp/protocol/test_tcp_conn"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"],
-      "flags": ["-DPROTOCORE_HAS_NET_STACK=1"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ]
     },
     "native_tcp_evt": {
       "desc": "tcp_evt.h: the event type and record every layer above the transport reads - the packed\none-byte enum the listener queue storage is sized on, and a round trip through a real\nplatform queue.",
@@ -7827,11 +8559,19 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/transport/tcp/test_tcp_evt"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"],
-      "flags": ["-DPROTOCORE_HAS_NET_STACK=1"]
+      "tests": [
+        "unit/src/network_drivers/transport/tcp/test_tcp_evt"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ]
     },
     "native_tcp_listener": {
       "desc": "tcp_listener.h: the accept callback, listener lifecycle, per-listener event queues,\nand the accept-time gates. Throttle budgets overridden small so the boundaries are\nexplicit; allowlist prefix matching per RFC 4632.",
@@ -7864,12 +8604,16 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/src/network_drivers/transport/tcp/protocol/test_tcp_listener"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_tcp_ns": {
       "desc": "tcp.h: the one exported table joining the three halves, and that every member of each\nhalf binds to the function its name promises - ConnPool's initializer is positional,\nso a member inserted in the header would silently shift the bindings.",
@@ -7888,11 +8632,19 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/network_drivers/transport/tcp/test_tcp"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"],
-      "flags": ["-DPROTOCORE_HAS_NET_STACK=1"]
+      "tests": [
+        "unit/src/network_drivers/transport/tcp/test_tcp"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ]
     },
     "native_telemetry": {
       "desc": "Telemetry math (services/iot/telemetry): moving-window stats, rate-of-change, and\ntotalizer. Pure computation (synthetic clock passed in), so it unit-tests on\nthe host.",
@@ -7908,7 +8660,10 @@
     },
     "native_telnet": {
       "desc": "Telnet server (RFC 854 IAC negotiation + line editing) wired through the real\ntransport ring buffer; output checked via the tcp_write capture mock.",
-      "flags": ["-DPROTOCORE_ENABLE_TELNET=1", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_TELNET=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<shared/ip/ip.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -7929,9 +8684,13 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/integration/session/test_telnet"]
+      "tests": [
+        "unit/integration/session/test_telnet"
+      ]
     },
     "native_template": {
       "desc": "test_template against the native_stack_http stack.",
@@ -8035,7 +8794,10 @@
     },
     "native_tls_conn": {
       "desc": "TLS 1.3 handshake driver over the stream record layer (network_drivers/tls/tls_conn,\nRFC 8446 sec 4): the module drives both ends, so the test stands a client and a server up against\neach other and runs the full handshake - ClientHello, the server flight, both Finished messages -\nthen checks the two installed the same application-traffic keys by sealing on one end and opening\non the other. Around that: the profile refusals (a ClientHello without TLS 1.3, without X25519,\nwithout a key_share, without Ed25519, or offering no cipher suite this stack implements) and the\nalert each ends on. The message bytes are pinned against RFC 8448 in test_tls13_msg and the key\nschedule in test_tls13_kdf; what this adds is the state machine and the one secure-pool borrow it\nruns out of.",
-      "flags": ["-DPROTOCORE_ENABLE_TLS=1", "-DPROTOCORE_ENABLE_TLS_RPK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_TLS=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+      ],
       "src": [
         "+<network_drivers/tls/handshake/handshake.c>",
         "+<network_drivers/tls/record/record.c>",
@@ -8065,7 +8827,9 @@
       "tests": [
         "unit/file_conversion/network_drivers/tls/handshake/test_tls_conn"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_tls_policy": {
       "desc": "TLS version negotiation + pinned cipher policy (server/security/tls_policy): the server-style\nversion pick (highest supported not above the client's), the version name, cipher selection by server\npreference from the offered set, and the AEAD-suite classifier. Pure host tests.",
@@ -8105,6 +8869,59 @@
       "tests": ["unit/src/network_drivers/tls/record/test_tls_record"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
     },
+    
+    "native_tls_seam": {
+      "desc": "The slot-indexed TLS surface (network_drivers/tls/tls.c): the RFC 7250 raw-public-key credential, standing a connection up on a slot, the RFC 8446 sec 5.1 record framing out of the slot's receive ring (partial, short-of-header and over-long fragments all consume nothing), a malformed record failing the connection with an alert, a write before the application keys are installed reaching no wire, and a free that wipes every key generation. This surface was eleven ungated stubs returning -1 until 2026-08-18, so it had no coverage at all.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_TLS=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
+      "src": [
+        "-<*>",
+        "+<src/network_drivers/tls/tls.c>",
+        "+<src/network_drivers/tls/handshake/handshake.c>",
+        "+<src/network_drivers/tls/record/record.c>",
+        "+<src/network_drivers/tls/key_schedule/key_schedule.c>",
+        "+<src/network_drivers/transport/tcp/protocol/protocol.c>",
+        "+<src/network_drivers/transport/tcp/lower/lower.c>",
+        "+<src/network_drivers/transport/tcp/server/server.c>",
+        "+<src/network_drivers/transport/net_addr/net_addr.c>",
+        "+<src/crypto/rng/rng.c>",
+        "+<src/mmgr/secure.c>",
+        "+<src/mmgr/plaintext.c>",
+        "+<src/mmgr/arena.c>",
+        "+<src/mmgr/span.c>",
+        "+<src/mmgr/protomem.c>",
+        "+<src/mmgr/rawmemcpy.c>",
+        "+<src/mmgr/swar.c>",
+        "+<src/mmgr/protostr.c>",
+        "+<src/shared/ip/ip.c>",
+        "+<src/shared/hex/hex.c>",
+        "+<src/server/clock/clock.c>",
+        "+<src/server/core/worker.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<src/crypto/hash/sha256.c>",
+        "+<src/crypto/hash/sha512.c>",
+        "+<src/crypto/mac/hmac_sha256.c>",
+        "+<src/crypto/kdf/hkdf.c>",
+        "+<src/crypto/asymmetric/curve25519.c>",
+        "+<src/crypto/asymmetric/ed25519.c>",
+        "+<src/crypto/aead/aes128gcm.c>",
+        "+<src/crypto/cipher/aes.c>",
+        "+<src/crypto/cipher/chacha20.c>",
+        "+<src/network_drivers/presentation/http/http3/tls13_msg.c>",
+        "+<src/crypto/ct_eq.c>",
+        "+<src/mmgr/endian.c>",
+        "+<src/crypto/mac/ghash.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>"
+      ],
+      "tests": [
+        "unit/src/network_drivers/tls/test_tls_seam"
+      ]
+    },
     "native_security_totp": {
       "desc": "One-time passwords (services/security/totp): HOTP over HMAC-SHA-1 against the RFC 4226 Appendix D test values (counts 0-9, the 6-digit HOTP column and the published truncated decimals reduced to 8 digits), TOTP against the RFC 6238 Appendix B SHA1 rows cross-checked at the published value of T, the sec 4.2 time-step floor with T0/X, the sec 6 drift window, and the RFC 4648 sec 10 base32 vectors for the provisioning secret.",
       "flags": ["-DPROTOCORE_ENABLE_TOTP=1"],
@@ -8134,10 +8951,18 @@
         "+<server/clock/clock.c>",
         "+<mmgr/protomem.c>",
         "+<mmgr/rawmemcpy.c>",
-        "+<mmgr/swar.c>"
+        "+<mmgr/swar.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/server/signaling/test_trace_capture"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/server/signaling/test_trace_capture"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_transport": {
       "desc": "test_transport against the native_stack_l46 stack.",
@@ -8186,7 +9011,10 @@
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
-        "+<shared/pcap/pcap.c>"
+        "+<shared/pcap/pcap.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
       "tests": [
         "unit/integration/transport/test_udp"
@@ -8194,7 +9022,9 @@
     },
     "native_udp_telemetry": {
       "desc": "UDP telemetry line builder (services/iot/udp_telemetry): InfluxDB line-protocol\nformatting, host-tested. The UDP cast is ESP32-only (#ifdef ARDUINO).",
-      "flags": ["-DPROTOCORE_ENABLE_UDP_TELEMETRY=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_UDP_TELEMETRY=1"
+      ],
       "src": [
         "+<services/iot/udp_telemetry/udp_telemetry.c>",
         "+<mmgr/protostr.c>",
@@ -8204,14 +9034,24 @@
         "+<mmgr/swar.c>",
         "+<shared/ip/ip.c>",
         "+<mmgr/float_bits.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<mmgr/span.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/iot/udp_telemetry/test_udp_telemetry"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/iot/udp_telemetry/test_udp_telemetry"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_udp_transport": {
       "desc": "UDP transport multicast receive (network_drivers/transport/udp.c): joining an IPv4\nmulticast group by dotted-quad, rejecting a non-multicast or malformed group, delivering a group\ndatagram to the registered handler, and leaving the group (releasing the listener slot). Drives the\nhost UDP mock's inject seam.",
-      "flags": ["-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<network_drivers/transport/udp/udp.c>",
         "+<network_drivers/transport/udp/server/server.c>",
@@ -8225,9 +9065,14 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/integration/transport/test_udp_transport"]
+      "tests": [
+        "unit/integration/transport/test_udp_transport"
+      ]
     },
     "native_umati": {
       "desc": "umati / OPC UA for Machine Tools (OPC 40501-1) MachineTool model (services/machine_tool/umati) - the\nBrowse hierarchy + the Read resolver over a bound UmatiMachineTool are host-tested here.\nRequires the OPC UA codec. No heap, no stdlib.",
@@ -8325,9 +9170,12 @@
         "+<shared/utf8/utf8.c>",
         "+<mmgr/float_bits.c>",
         "+<crypto/rng/rng.c>",
-        "+<crypto/cipher/chacha20.c>"
+        "+<crypto/cipher/chacha20.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>"
       ],
-      "tests": ["unit/integration/server/test_upload"]
+      "tests": [
+        "unit/integration/server/test_upload"
+      ]
     },
     "native_utf8": {
       "desc": "UTF-8 well-formedness (shared/utf8): the RFC 3629 sec 3 shortest-form boundaries, and the\nsec 10 refusals a lax decoder gets wrong - overlong encodings (C0 AF), surrogates\nU+D800..U+DFFF, code points above U+10FFFF, and truncated sequences. Pure host tests.",
@@ -8550,9 +9398,12 @@
         "+<shared/pcap/pcap.c>",
         "+<shared/time_compat/time_compat.c>",
         "+<shared/utf8/utf8.c>",
-        "+<mmgr/float_bits.c>"
+        "+<mmgr/float_bits.c>",
+        "+<core_setup/hal/host/protocore_dma_host.c>"
       ],
-      "tests": ["unit/integration/http/test_webdav_handler"]
+      "tests": [
+        "unit/integration/http/test_webdav_handler"
+      ]
     },
     "native_webhook_json": {
       "desc": "Outbound webhook builders (services/net/webhook/webhook.c): the RFC 8259 section 4 object grammar and the section 7 escaping of the quotation mark and reverse solidus in the value1/value2/value3 content, the RFC 3986 section 3.3 path segment order of the IFTTT Maker target URI, and the fail-closed behavior of both builders. The POST reports a transport error on a build with no HTTP client under it.",
@@ -8578,7 +9429,9 @@
     },
     "native_radio_wifi_sniffer": {
       "desc": "802.11 sniffer core (services/radio/wifi_sniffer). The MAC header decode is anchored on IEEE Std\n802.11 sec 9.2.4.1's Frame Control layout (Protocol Version B0-B1, Type B2-B3, Subtype B4-B7, To DS\nB8, From DS B9, Retry B11, Protected Frame B14, least significant octet first) and Table 9-1's\nType/Subtype assignment, exercised on a beacon header built field by field. Also the truncated\ncapture address count, the per-type tally, the RSSI hysteresis roam decision at and either side of\nits threshold, the channel-hop dwell schedule with its clamping and millis-rollover safety, and the\nper-channel RSSI survey with its strongest-other-channel candidate.",
-      "flags": ["-DPROTOCORE_ENABLE_WIFI_SNIFFER=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WIFI_SNIFFER=1"
+      ],
       "src": [
         "+<services/radio/wifi_sniffer/wifi_sniffer.c>",
         "+<server/clock/clock.c>",
@@ -8586,10 +9439,50 @@
         "+<mmgr/endian.c>",
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/swar.c>",
-        "+<shared/pcap/pcap.c>"
+        "+<shared/pcap/pcap.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/src/services/radio/wifi_sniffer/test_wifi_sniffer"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/radio/wifi_sniffer/test_wifi_sniffer"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
+    "native_wifi_sniffer_promisc": {
+      "desc": "The wifi_sniffer's live binding, the arm PROTOCORE_ENABLE_PROMISC compiles: begin drives services/radio/promisc into monitor mode and the channel-hop dwell moves it. The codec env builds the other arm, where there is no capture source and the sniff does not start.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_WIFI_SNIFFER=1",
+        "-DPROTOCORE_ENABLE_PROMISC=1",
+        "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
+        "-DPROTOCORE_ENABLE_RADIO_POWER=1"
+      ],
+      "src": [
+        "+<services/radio/wifi_sniffer/wifi_sniffer.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/swar.c>",
+        "+<shared/pcap/pcap.c>",
+        "+<mmgr/plaintext.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<services/radio/promisc/promisc.c>",
+        "+<network_drivers/physical/physical.c>",
+        "+<network_drivers/physical/radio_power.c>",
+        "+<core_setup/hal/host/physical/physical_mock.c>",
+        "+<shared/ip/ip.c>",
+        "+<shared/hex/hex.c>"
+      ],
+      "tests": [
+        "unit/src/services/radio/wifi_sniffer/test_wifi_sniffer"
+      ]
     },
     "native_radio_wisun": {
       "desc": "Wi-SUN FAN border-router connector (services/radio/wisun). The CoAP client request builder is\nanchored on RFC 7252: Appendix A Figure 16's Confirmable GET for /temperature (MID 0x7d34, 16\noctets) reproduced octet for octet, sec 3's header packing and 0xFF payload marker, sec 3.1's\noption (delta, length) nibble header with its 13-extension, and sec 5.10.1's one Uri-Path option\nper path segment. Also the FAN node registry (register, refresh, find, joined count, full table)\nover protocore_ip and the RFC 5952 canonical addresses its JSON emits.",
@@ -8610,7 +9503,10 @@
     },
     "native_workers": {
       "desc": "Core-partitioning invariant at N=2 (PROTOCORE_WORKER_COUNT=2): each worker reaps\nonly its owned slots (check_timeouts ownership). The host queue is keyed by handle, so\nper-worker routing is checkable here rather than only on hardware.",
-      "flags": ["-DPROTOCORE_WORKER_COUNT=2", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_WORKER_COUNT=2",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<shared/ip/ip.c>",
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -8626,13 +9522,20 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/integration/transport/test_workers"]
+      "tests": [
+        "unit/integration/transport/test_workers"
+      ]
     },
     "native_workers_stack": {
       "desc": "PROTOCORE_WORKER_COUNT=2 over the stack path, which nothing else compiles: native_tcp is\nsingle-worker and takes the other arm of listener_enqueue, so the multi-worker arm - the per-worker queue routing and the wake that\nfollows it - had no witness in the matrix at all.",
-      "flags": ["-DPROTOCORE_WORKER_COUNT=2", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_WORKER_COUNT=2",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
       "src": [
         "+<network_drivers/transport/tcp/tcp.c>",
         "+<network_drivers/transport/tcp/protocol/protocol.c>",
@@ -8649,9 +9552,13 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<shared/hex/hex.c>"
+        "+<shared/hex/hex.c>",
+        "+<mmgr/plaintext.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
       ],
-      "tests": ["unit/integration/transport/test_workers"]
+      "tests": [
+        "unit/integration/transport/test_workers"
+      ]
     },
     "native_ws_client_rfc6455": {
       "desc": "WebSocket client codec (services/net/ws_client/ws_client.c) against RFC 6455: the section 1.3 and 4.2.2 |Sec-WebSocket-Accept| worked example, the section 4.1 opening handshake field lines and the 101 response check, and the section 5.2 base framing protocol with the section 5.3 masking transformation - checked against the frames section 5.7 prints, including the 256-octet and 64 KiB extended payload lengths. Codec only - this build has no transport.",
@@ -8678,6 +9585,35 @@
       ],
       "tests": ["unit/src/services/net/ws_client/test_ws_client"],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
+    },
+    
+    "native_ws_client_session": {
+      "desc": "WebSocket client with a net stack: the connection arm and its three rings, which the codec env compiles away",
+      "flags": [
+        "-DPROTOCORE_ENABLE_WS_CLIENT=1",
+        "-DPROTOCORE_HAS_NET_STACK=1"
+      ],
+      "src": [
+        "+<services/net/ws_client/ws_client.c>",
+        "+<crypto/hash/sha1.c>",
+        "+<network_drivers/presentation/codec/base64/base64.c>",
+        "+<server/clock/clock.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/span.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/swar.c>",
+        "+<mmgr/membuild.c>",
+        "+<mmgr/protostr.c>",
+        "+<mmgr/float_bits.c>",
+        "+<shared/hex/hex.c>",
+        "+<crypto/rng/rng.c>",
+        "+<crypto/cipher/chacha20.c>",
+        "+<mmgr/secure.c>",
+        "+<mmgr/arena.c>",
+        "+<core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": []
     },
     "native_ws_deflate": {
       "desc": "WebSocket permessage-deflate (RFC 7692) inbound path wired through the real WS\nstack: handshake negotiation, the RSV1 frame path, and INFLATE delivery (with\nthe table scratch borrowed from the shared arena). Runs test_websocket with the\nfeature on (the deflate cases are #if-gated).",

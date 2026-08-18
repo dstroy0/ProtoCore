@@ -44,9 +44,6 @@ typedef struct
     size_t out_cap;      ///< how much room that has
 } CoapsBridgeArgs;
 
-/** @brief The bridge's calls, described only in coaps.c. */
-struct CoapsInternal;
-
 /**
  * @brief CoAP carried over one DTLS connection.
  *
@@ -62,7 +59,6 @@ struct CoapsInternal;
  *                         the handshake failed and @c conn is FAILED
  * @var CoapsNs::process   turn one received datagram: drive the handshake, or answer the CoAP message
  *                         inside an epoch-3 application record and seal the response
- * @var CoapsNs::internal  the calls that reach the connection
  */
 typedef struct
 {
@@ -72,9 +68,7 @@ typedef struct
 
     int32_t i32;
 
-    void (*process)(struct CoapsInternal *ctx);
-
-    struct CoapsInternal *internal;
+    void (*const process)(uint8_t *restrict work);
 } CoapsNs;
 
 /** @brief The one symbol this module exports. */

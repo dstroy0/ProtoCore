@@ -14,6 +14,7 @@
  */
 
 #include "services/net/flow_export/flow_export.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem.h"
 
 #if PROTOCORE_ENABLE_FLOW_EXPORT
@@ -48,34 +49,53 @@ struct FlowExportStorage
     proto_bool error; ///< sticky overflow flag: every put is a no-op once it is set
 };
 
-/**
- * @brief The message state and the calls that reach it - what FlowExportNs points at.
- *
- * @var FlowExportInternal::store  the cursor over the message under construction
- * @var FlowExportInternal::ns     the handle a caller sets a call's members on
- */
-struct FlowExportInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define FLOW_EXPORT_OFF_CTX 0u
+static_assert(FLOW_EXPORT_OFF_CTX + sizeof(struct FlowExportStorage) <= PROTOCORE_FLOW_EXPORT_BORROW,
+              "PROTOCORE_FLOW_EXPORT_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define FLOW_EXPORT_CTX(w) ((struct FlowExportStorage *)(void *)((w) + FLOW_EXPORT_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct FlowExportStorage *store;
-    FlowExportNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_FLOW_EXPORT_BORROW persistent bytes, or null while the pool was short
+} FlowExportOwnCtx;
+static FlowExportOwnCtx s_own;
 
-static struct FlowExportStorage s_message;
-
-static struct FlowExportInternal s_flow = {.store = &s_message, .ns = &FlowExport};
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_flow_export_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_FLOW_EXPORT_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // Closes the Set that template_set, data_set_begin and message_finish find open, above its
 // definition.
-static void data_set_end(struct FlowExportInternal *restrict ctx);
+static void data_set_end(uint8_t *restrict work);
 
 // ---------------------------------------------------------------------------
 // Cursor primitives. Each latches the sticky error on overflow and writes nothing after it.
 // ---------------------------------------------------------------------------
 
 // Append @p v as two octets, most significant first.
-static void put_u16(struct FlowExportInternal *restrict ctx, uint16_t v)
+static void put_u16(uint8_t *restrict work, uint16_t v)
 {
-    struct FlowExportStorage *m = ctx->store;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->error)
     {
         return;
@@ -89,9 +109,9 @@ static void put_u16(struct FlowExportInternal *restrict ctx, uint16_t v)
 }
 
 // Append @p v as four octets, most significant first.
-static void put_u32(struct FlowExportInternal *restrict ctx, uint32_t v)
+static void put_u32(uint8_t *restrict work, uint32_t v)
 {
-    struct FlowExportStorage *m = ctx->store;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->error)
     {
         return;
@@ -105,9 +125,9 @@ static void put_u32(struct FlowExportInternal *restrict ctx, uint32_t v)
 }
 
 // Append @p n octets from @p p.
-static void put_span(struct FlowExportInternal *restrict ctx, const uint8_t *p, size_t n)
+static void put_span(uint8_t *restrict work, const uint8_t *p, size_t n)
 {
-    struct FlowExportStorage *m = ctx->store;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->error)
     {
         return;
@@ -122,9 +142,9 @@ static void put_span(struct FlowExportInternal *restrict ctx, const uint8_t *p, 
 }
 
 // Append @p n zero octets. RFC 7011 sec 3.3.1: padding octets MUST be zero.
-static void put_zero(struct FlowExportInternal *restrict ctx, size_t n)
+static void put_zero(uint8_t *restrict work, size_t n)
 {
-    struct FlowExportStorage *m = ctx->store;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->error)
     {
         return;
@@ -139,9 +159,9 @@ static void put_zero(struct FlowExportInternal *restrict ctx, size_t n)
 }
 
 // Overwrite the two octets at @p off with @p v. Only reached with off + 2 <= pos.
-static void patch_u16(struct FlowExportInternal *restrict ctx, size_t off, uint16_t v)
+static void patch_u16(uint8_t *restrict work, size_t off, uint16_t v)
 {
-    endian.wr16be(ctx->store->buf + off, v);
+    endian.wr16be(FLOW_EXPORT_CTX(work)->buf + off, v);
 }
 
 // ---------------------------------------------------------------------------
@@ -149,13 +169,14 @@ static void patch_u16(struct FlowExportInternal *restrict ctx, size_t off, uint1
 // specification covers this format; RFC 3954 specifies Version 9 only.
 // ---------------------------------------------------------------------------
 
-static void v5_header(struct FlowExportInternal *restrict ctx)
+static void v5_header(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    uint8_t *buf = ctx->ns->out.buf;
-    const FlowV5Header *h = ctx->ns->v5.header;
-    if (!buf || !h || ctx->ns->out.cap < FLOW_V5_HEADER_SIZE)
+    (void)work;
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
+    uint8_t *buf = FlowExport.out.buf;
+    const FlowV5Header *h = FlowExport.v5.header;
+    if (!buf || !h || FlowExport.out.cap < FLOW_V5_HEADER_SIZE)
     {
         return;
     }
@@ -169,17 +190,18 @@ static void v5_header(struct FlowExportInternal *restrict ctx)
     buf[p++] = h->engine_type;
     buf[p++] = h->engine_id;
     p += endian.wr16be(buf + p, h->sampling_interval);
-    ctx->ns->n = p; // 24
-    ctx->ns->ok = PROTO_TRUE;
+    FlowExport.n = p; // 24
+    FlowExport.ok = PROTO_TRUE;
 }
 
-static void v5_record(struct FlowExportInternal *restrict ctx)
+static void v5_record(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    uint8_t *buf = ctx->ns->out.buf;
-    const FlowV5Record *r = ctx->ns->v5.record;
-    if (!buf || !r || ctx->ns->out.cap < FLOW_V5_RECORD_SIZE)
+    (void)work;
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
+    uint8_t *buf = FlowExport.out.buf;
+    const FlowV5Record *r = FlowExport.v5.record;
+    if (!buf || !r || FlowExport.out.cap < FLOW_V5_RECORD_SIZE)
     {
         return;
     }
@@ -205,8 +227,8 @@ static void v5_record(struct FlowExportInternal *restrict ctx)
     buf[p++] = r->dst_mask;
     buf[p++] = 0; // pad2, two octets
     buf[p++] = 0;
-    ctx->ns->n = p; // 48
-    ctx->ns->ok = PROTO_TRUE;
+    FlowExport.n = p; // 48
+    FlowExport.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -215,136 +237,160 @@ static void v5_record(struct FlowExportInternal *restrict ctx)
 
 // RFC 7011 sec 3.1: Version 0x000a, Length, Export Time, Sequence Number, Observation Domain ID.
 // Length stays zero until message_finish.
-static void ipfix_begin(struct FlowExportInternal *restrict ctx)
+static void ipfix_begin(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
+    if (!FlowExport.out.buf)
     {
         return;
     }
-    struct FlowExportStorage *m = ctx->store;
-    m->buf = ctx->ns->out.buf;
-    m->cap = ctx->ns->out.cap;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
+    m->buf = FlowExport.out.buf;
+    m->cap = FlowExport.out.cap;
     m->pos = 0;
     m->set_start = 0;
     m->count = 0;
     m->version = FLOW_IPFIX_VERSION;
     m->error = PROTO_FALSE;
-    put_u16(ctx, FLOW_IPFIX_VERSION);
-    put_u16(ctx, 0);
-    put_u32(ctx, ctx->ns->message.export_time);
-    put_u32(ctx, ctx->ns->message.sequence_number);
-    put_u32(ctx, ctx->ns->message.observation_domain_id);
-    ctx->ns->ok = !m->error;
+    put_u16(work, FLOW_IPFIX_VERSION);
+    put_u16(work, 0);
+    put_u32(work, FlowExport.message.export_time);
+    put_u32(work, FlowExport.message.sequence_number);
+    put_u32(work, FlowExport.message.observation_domain_id);
+    FlowExport.ok = !m->error;
 }
 
 // RFC 3954 sec 5.1: Version 9, Count, sysUpTime, UNIX Secs, Sequence Number, Source ID.
 // Count stays zero until message_finish.
-static void v9_begin(struct FlowExportInternal *restrict ctx)
+static void v9_begin(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
+    if (!FlowExport.out.buf)
     {
         return;
     }
-    struct FlowExportStorage *m = ctx->store;
-    m->buf = ctx->ns->out.buf;
-    m->cap = ctx->ns->out.cap;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
+    m->buf = FlowExport.out.buf;
+    m->cap = FlowExport.out.cap;
     m->pos = 0;
     m->set_start = 0;
     m->count = 0;
     m->version = FLOW_V9_VERSION;
     m->error = PROTO_FALSE;
-    put_u16(ctx, FLOW_V9_VERSION);
-    put_u16(ctx, 0);
-    put_u32(ctx, ctx->ns->message.sys_uptime);
-    put_u32(ctx, ctx->ns->message.unix_secs);
-    put_u32(ctx, ctx->ns->message.sequence_number);
-    put_u32(ctx, ctx->ns->message.observation_domain_id);
-    ctx->ns->ok = !m->error;
+    put_u16(work, FLOW_V9_VERSION);
+    put_u16(work, 0);
+    put_u32(work, FlowExport.message.sys_uptime);
+    put_u32(work, FlowExport.message.unix_secs);
+    put_u32(work, FlowExport.message.sequence_number);
+    put_u32(work, FlowExport.message.observation_domain_id);
+    FlowExport.ok = !m->error;
 }
 
 // RFC 7011 sec 3.4.1 / RFC 3954 sec 5.2: Set ID, Set Length, Template ID, Field Count, then one
 // Field Specifier per field. RFC 3954 sec 5.1 counts a Template Record toward Count.
-static void template_set(struct FlowExportInternal *restrict ctx)
+static void template_set(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    struct FlowExportStorage *m = ctx->store;
-    const FlowFieldSpecifier *fields = ctx->ns->tmpl.fields;
-    const size_t field_count = ctx->ns->tmpl.field_count;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    FlowExport.ok = PROTO_FALSE;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
+    const FlowFieldSpecifier *fields = FlowExport.tmpl.fields;
+    const size_t field_count = FlowExport.tmpl.field_count;
     if (!fields || field_count == 0)
     {
         return;
     }
     if (m->set_start)
     {
-        data_set_end(ctx);
+        data_set_end(work);
     }
     size_t set_off = m->pos;
-    put_u16(ctx, (m->version == FLOW_V9_VERSION) ? FLOW_V9_TEMPLATE_FLOWSET_ID : FLOW_IPFIX_TEMPLATE_SET_ID);
-    put_u16(ctx, 0);
-    put_u16(ctx, ctx->ns->template_id);
-    put_u16(ctx, (uint16_t)field_count);
+    put_u16(work, (m->version == FLOW_V9_VERSION) ? FLOW_V9_TEMPLATE_FLOWSET_ID : FLOW_IPFIX_TEMPLATE_SET_ID);
+    put_u16(work, 0);
+    put_u16(work, FlowExport.template_id);
+    put_u16(work, (uint16_t)field_count);
     for (size_t i = 0; i < field_count; i++)
     {
-        put_u16(ctx, fields[i].information_element_id);
-        put_u16(ctx, fields[i].field_length);
+        put_u16(work, fields[i].information_element_id);
+        put_u16(work, fields[i].field_length);
     }
     if (!m->error)
     {
-        patch_u16(ctx, set_off + 2, (uint16_t)(m->pos - set_off));
+        patch_u16(work, set_off + 2, (uint16_t)(m->pos - set_off));
     }
     m->count++;
-    ctx->ns->ok = !m->error;
+    FlowExport.ok = !m->error;
 }
 
 // RFC 7011 sec 3.3.2: a Data Set's Set ID is the Template ID its records match, 256 or above.
 // RFC 3954 sec 5.2 reserves FlowSet IDs 0 through 255.
-static void data_set_begin(struct FlowExportInternal *restrict ctx)
+static void data_set_begin(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    struct FlowExportStorage *m = ctx->store;
-    if (ctx->ns->template_id < FLOW_TEMPLATE_ID_MIN)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    FlowExport.ok = PROTO_FALSE;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
+    if (FlowExport.template_id < FLOW_TEMPLATE_ID_MIN)
     {
         return;
     }
     if (m->set_start)
     {
-        data_set_end(ctx);
+        data_set_end(work);
     }
     m->set_start = m->pos;
-    put_u16(ctx, ctx->ns->template_id);
-    put_u16(ctx, 0);
-    ctx->ns->ok = !m->error;
+    put_u16(work, FlowExport.template_id);
+    put_u16(work, 0);
+    FlowExport.ok = !m->error;
 }
 
 // RFC 7011 sec 3.4.3: "It consists only of one or more Field Values." The caller encodes them in
 // Template order; this copies them in and counts the record.
-static void data_record(struct FlowExportInternal *restrict ctx)
+static void data_record(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    struct FlowExportStorage *m = ctx->store;
-    if (!m->set_start || !ctx->ns->data.record || ctx->ns->data.len == 0)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    FlowExport.ok = PROTO_FALSE;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
+    if (!m->set_start || !FlowExport.data.record || FlowExport.data.len == 0)
     {
         return;
     }
-    put_span(ctx, ctx->ns->data.record, ctx->ns->data.len);
+    put_span(work, FlowExport.data.record, FlowExport.data.len);
     if (!m->error)
     {
         m->count++;
     }
-    ctx->ns->ok = !m->error;
+    FlowExport.ok = !m->error;
 }
 
 // RFC 3954 sec 5.3: "The Exporter SHOULD insert some padding bytes so that the subsequent FlowSet
 // starts at a 4-byte aligned boundary", and the Length covers those octets. RFC 7011 sec 3.3.2:
 // the Length is the Set Header plus all records plus the optional padding.
-static void data_set_end(struct FlowExportInternal *restrict ctx)
+static void data_set_end(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    struct FlowExportStorage *m = ctx->store;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    FlowExport.ok = PROTO_FALSE;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (!m->set_start)
     {
         return;
@@ -352,28 +398,32 @@ static void data_set_end(struct FlowExportInternal *restrict ctx)
     if (m->version == FLOW_V9_VERSION)
     {
         size_t set_len = m->pos - m->set_start;
-        put_zero(ctx, (4 - (set_len & 3)) & 3);
+        put_zero(work, (4 - (set_len & 3)) & 3);
     }
     if (!m->error)
     {
-        patch_u16(ctx, m->set_start + 2, (uint16_t)(m->pos - m->set_start));
+        patch_u16(work, m->set_start + 2, (uint16_t)(m->pos - m->set_start));
     }
     m->set_start = 0;
-    ctx->ns->ok = !m->error;
+    FlowExport.ok = !m->error;
 }
 
 // RFC 3954 sec 5.1 Count: "the sum of Options FlowSet records, Template FlowSet records, and Data
 // FlowSet records". RFC 7011 sec 3.1 Length: "Total length of the IPFIX Message, measured in
 // octets, including Message Header and Set(s)", a 16-bit field, so a longer message fails closed
 // rather than reporting a truncated length.
-static void message_finish(struct FlowExportInternal *restrict ctx)
+static void message_finish(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    struct FlowExportStorage *m = ctx->store;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
+    struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->set_start)
     {
-        data_set_end(ctx);
+        data_set_end(work);
     }
     if (m->error)
     {
@@ -381,7 +431,7 @@ static void message_finish(struct FlowExportInternal *restrict ctx)
     }
     if (m->version == FLOW_V9_VERSION)
     {
-        patch_u16(ctx, 2, m->count);
+        patch_u16(work, 2, m->count);
     }
     else
     {
@@ -389,10 +439,10 @@ static void message_finish(struct FlowExportInternal *restrict ctx)
         {
             return;
         }
-        patch_u16(ctx, 2, (uint16_t)m->pos);
+        patch_u16(work, 2, (uint16_t)m->pos);
     }
-    ctx->ns->n = m->pos;
-    ctx->ns->ok = PROTO_TRUE;
+    FlowExport.n = m->pos;
+    FlowExport.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -404,7 +454,6 @@ FlowExportNs FlowExport = {.v5_header = v5_header,
                            .data_set_begin = data_set_begin,
                            .data_record = data_record,
                            .data_set_end = data_set_end,
-                           .message_finish = message_finish,
-                           .internal = &s_flow};
+                           .message_finish = message_finish};
 
 #endif // PROTOCORE_ENABLE_FLOW_EXPORT

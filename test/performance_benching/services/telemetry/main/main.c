@@ -13,13 +13,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t telemetry_work[16]; // the borrow an entry takes; Telemetry never reads it
+
 /** @brief Bind @p buf as @p w's sample storage and empty it. */
 static void window_init(TelemetryWindow *w, float *buf, uint16_t cap)
 {
     Telemetry.window.w = w;
     Telemetry.window.buf = buf;
     Telemetry.window.cap = cap;
-    Telemetry.window_init(Telemetry.internal);
+    Telemetry.window_init(telemetry_work);
 }
 
 /** @brief Add @p s to @p w, evicting the oldest sample once full. */
@@ -27,14 +29,14 @@ static void window_push(TelemetryWindow *w, float s)
 {
     Telemetry.window.w = w;
     Telemetry.window.sample = s;
-    Telemetry.window_push(Telemetry.internal);
+    Telemetry.window_push(telemetry_work);
 }
 
 /** @brief The arithmetic mean of the samples @p w holds. */
 static float window_mean(TelemetryWindow *w)
 {
     Telemetry.window.w = w;
-    Telemetry.window_mean(Telemetry.internal);
+    Telemetry.window_mean(telemetry_work);
     return Telemetry.f32;
 }
 
@@ -42,7 +44,7 @@ static float window_mean(TelemetryWindow *w)
 static float window_variance(TelemetryWindow *w)
 {
     Telemetry.window.w = w;
-    Telemetry.window_variance(Telemetry.internal);
+    Telemetry.window_variance(telemetry_work);
     return Telemetry.f32;
 }
 
@@ -50,7 +52,7 @@ static float window_variance(TelemetryWindow *w)
 static void rate_init(TelemetryRate *r)
 {
     Telemetry.rate.r = r;
-    Telemetry.rate_init(Telemetry.internal);
+    Telemetry.rate_init(telemetry_work);
 }
 
 /** @brief Feed @p v at @p now_ms; the change per second since the previous sample. */
@@ -59,7 +61,7 @@ static float rate_update(TelemetryRate *r, float v, uint32_t now_ms)
     Telemetry.rate.r = r;
     Telemetry.rate.value = v;
     Telemetry.rate.now_ms = now_ms;
-    Telemetry.rate_update(Telemetry.internal);
+    Telemetry.rate_update(telemetry_work);
     return Telemetry.f32;
 }
 
@@ -67,7 +69,7 @@ static float rate_update(TelemetryRate *r, float v, uint32_t now_ms)
 static void totalizer_init(TelemetryTotalizer *t)
 {
     Telemetry.totalizer.t = t;
-    Telemetry.totalizer_init(Telemetry.internal);
+    Telemetry.totalizer_init(telemetry_work);
 }
 
 /** @brief Integrate @p rate up to @p now_ms by the trapezoidal rule; the running total. */
@@ -76,7 +78,7 @@ static double totalizer_add(TelemetryTotalizer *t, float rate, uint32_t now_ms)
     Telemetry.totalizer.t = t;
     Telemetry.totalizer.rate = rate;
     Telemetry.totalizer.now_ms = now_ms;
-    Telemetry.totalizer_add(Telemetry.internal);
+    Telemetry.totalizer_add(telemetry_work);
     return Telemetry.f64;
 }
 

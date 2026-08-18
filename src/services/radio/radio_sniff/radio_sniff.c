@@ -6,16 +6,35 @@
  * @brief Receive-only radio channel sniffer -> pcap capture records (see radio_sniff.h).
  */
 
-#include "services/radio/radio_sniff/radio_sniff.h"
-#include "mmgr/endian.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+static uint8_t pcap_work[16]; // the borrow an entry takes; Pcap never reads it
 
 #if PROTOCORE_ENABLE_RADIO_SNIFF
 
-uint32_t protocore_radiosniff_i2f32(int32_t dbm)
+#include "mmgr/endian.h"
+#include "services/radio/radio_sniff/radio_sniff.h"
+#include "shared/pcap/pcap.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void radio_sniff_i2f32(uint8_t *restrict work);
+
+static void radio_sniff_i2f32(uint8_t *restrict work)
 {
+    (void)work;
+    int32_t dbm = RadioSniff.i2f32_args.dbm;
+
     if (dbm == 0)
     {
-        return 0;
+        RadioSniff.u32 = 0;
+        return;
     }
     uint32_t sign = 0;
     uint32_t mag;
@@ -35,30 +54,44 @@ uint32_t protocore_radiosniff_i2f32(int32_t dbm)
     }
     uint32_t exp = (uint32_t)(127 + e);
     uint32_t mant = (e >= 23) ? ((mag >> (e - 23)) & 0x7FFFFFu) : ((mag << (23 - e)) & 0x7FFFFFu);
-    return sign | (exp << 23) | mant;
+    RadioSniff.u32 = sign | (exp << 23) | mant;
 }
 
-size_t protocore_radiosniff_global(uint8_t *out, size_t cap)
+static void radio_sniff_global_header(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *out = RadioSniff.global_header_args.out;
+    size_t cap = RadioSniff.global_header_args.cap;
+
     Pcap.args.out = out;
     Pcap.args.cap = cap;
     Pcap.args.linktype = PROTOCORE_DLT_IEEE802_15_4_TAP;
-    Pcap.global_header(Pcap.internal);
-    return Pcap.n;
+    Pcap.global_header(pcap_work);
+    RadioSniff.n = Pcap.n;
 }
 
-size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *frame, size_t flen, int32_t rssi_dbm,
-                                       uint16_t channel, uint32_t ts_sec, uint32_t ts_usec)
+static void radio_sniff_tap_record(uint8_t *restrict work)
 {
+    uint8_t *out = RadioSniff.tap_record_args.out;
+    size_t cap = RadioSniff.tap_record_args.cap;
+    const uint8_t *frame = RadioSniff.tap_record_args.frame;
+    size_t flen = RadioSniff.tap_record_args.flen;
+    int32_t rssi_dbm = RadioSniff.tap_record_args.rssi_dbm;
+    uint16_t channel = RadioSniff.tap_record_args.channel;
+    uint32_t ts_sec = RadioSniff.tap_record_args.ts_sec;
+    uint32_t ts_usec = RadioSniff.tap_record_args.ts_usec;
+
     if (!out || !frame || flen == 0)
     {
-        return 0;
+        RadioSniff.n = 0;
+        return;
     }
     size_t caplen = RADIO_SNIFF_TAP_LEN + flen;
     size_t total = PROTOCORE_PCAP_REC_HDR_LEN + caplen;
     if (cap < total)
     {
-        return 0;
+        RadioSniff.n = 0;
+        return;
     }
 
     // pcap record header.
@@ -68,7 +101,7 @@ size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *
     Pcap.rec.ts_usec = ts_usec;
     Pcap.rec.caplen = (uint32_t)caplen;
     Pcap.rec.origlen = (uint32_t)caplen;
-    Pcap.record_header(Pcap.internal);
+    Pcap.record_header(pcap_work);
     uint8_t *p = out + PROTOCORE_PCAP_REC_HDR_LEN;
 
     // 802.15.4 TAP header: version(1)=0, reserved(1)=0, length(2 LE) = whole TAP block.
@@ -78,7 +111,9 @@ size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *
     // TLV: Received Signal Strength (type 1, len 4), float32 dBm.
     endian.wr16le(p + 4, 1);
     endian.wr16le(p + 6, 4);
-    endian.wr32le(p + 8, protocore_radiosniff_i2f32(rssi_dbm));
+    RadioSniff.i2f32_args.dbm = rssi_dbm;
+    radio_sniff_i2f32(work);
+    endian.wr32le(p + 8, RadioSniff.u32);
     // TLV: Channel Assignment (type 3, len 3 -> padded to 4): channel number(2 LE) + page(1).
     endian.wr16le(p + 12, 3);
     endian.wr16le(p + 14, 3);
@@ -92,7 +127,12 @@ size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *
     {
         f[i] = frame[i];
     }
-    return total;
+    RadioSniff.n = total;
 }
+
+RadioSniffNs RadioSniff = {
+    .global_header = radio_sniff_global_header, .i2f32 = radio_sniff_i2f32, .tap_record = radio_sniff_tap_record};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RADIO_SNIFF

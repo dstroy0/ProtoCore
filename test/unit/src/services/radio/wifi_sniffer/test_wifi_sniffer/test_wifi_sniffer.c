@@ -43,7 +43,11 @@ static const uint8_t BEACON[24] = {
 void test_beacon_mac_header(void)
 {
     WifiFrame f;
-    TEST_ASSERT_TRUE(protocore_wifi_parse(BEACON, sizeof(BEACON), &f));
+    WifiSniffer.parse_args.frame = BEACON;
+    WifiSniffer.parse_args.len = sizeof(BEACON);
+    WifiSniffer.parse_args.out = &f;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
     TEST_ASSERT_EQUAL_UINT8(0, f.version);
     TEST_ASSERT_EQUAL_UINT8(WIFI_TYPE_MGMT, f.type);
     TEST_ASSERT_EQUAL_UINT8(8, f.subtype);
@@ -67,7 +71,11 @@ void test_frame_control_type_field(void)
         memcpy(frame, BEACON, sizeof(frame));
         frame[0] = (uint8_t)(t << 2);
         WifiFrame f;
-        TEST_ASSERT_TRUE(protocore_wifi_parse(frame, sizeof(frame), &f));
+        WifiSniffer.parse_args.frame = frame;
+        WifiSniffer.parse_args.len = sizeof(frame);
+        WifiSniffer.parse_args.out = &f;
+        WifiSniffer.parse(protocore_wifi_sniffer_span());
+        TEST_ASSERT_TRUE(WifiSniffer.ok);
         TEST_ASSERT_EQUAL_UINT8(WANT[t], f.type);
         TEST_ASSERT_EQUAL_UINT8(0, f.subtype);
         TEST_ASSERT_EQUAL_UINT8(0, f.version);
@@ -85,7 +93,11 @@ void test_frame_control_version_and_subtype(void)
             memcpy(frame, BEACON, sizeof(frame));
             frame[0] = (uint8_t)((sub << 4) | (WIFI_TYPE_DATA << 2) | v);
             WifiFrame f;
-            TEST_ASSERT_TRUE(protocore_wifi_parse(frame, sizeof(frame), &f));
+            WifiSniffer.parse_args.frame = frame;
+            WifiSniffer.parse_args.len = sizeof(frame);
+            WifiSniffer.parse_args.out = &f;
+            WifiSniffer.parse(protocore_wifi_sniffer_span());
+            TEST_ASSERT_TRUE(WifiSniffer.ok);
             TEST_ASSERT_EQUAL_UINT8(v, f.version);
             TEST_ASSERT_EQUAL_UINT8(WIFI_TYPE_DATA, f.type);
             TEST_ASSERT_EQUAL_UINT8(sub, f.subtype);
@@ -123,7 +135,11 @@ void test_frame_control_flag_bit_positions(void)
         memcpy(frame, BEACON, sizeof(frame));
         frame[1] = CASES[i].octet1;
         WifiFrame f;
-        TEST_ASSERT_TRUE(protocore_wifi_parse(frame, sizeof(frame), &f));
+        WifiSniffer.parse_args.frame = frame;
+        WifiSniffer.parse_args.len = sizeof(frame);
+        WifiSniffer.parse_args.out = &f;
+        WifiSniffer.parse(protocore_wifi_sniffer_span());
+        TEST_ASSERT_TRUE(WifiSniffer.ok);
         TEST_ASSERT_EQUAL_INT(CASES[i].to_ds, f.to_ds);
         TEST_ASSERT_EQUAL_INT(CASES[i].from_ds, f.from_ds);
         TEST_ASSERT_EQUAL_INT(CASES[i].retry, f.retry);
@@ -141,27 +157,51 @@ void test_truncated_capture_reports_how_many_addresses_it_held(void)
 
     for (size_t len = 0; len < 10; len++)
     {
-        TEST_ASSERT_FALSE(protocore_wifi_parse(BEACON, len, &f));
+        WifiSniffer.parse_args.frame = BEACON;
+        WifiSniffer.parse_args.len = len;
+        WifiSniffer.parse_args.out = &f;
+        WifiSniffer.parse(protocore_wifi_sniffer_span());
+        TEST_ASSERT_FALSE(WifiSniffer.ok);
     }
 
-    TEST_ASSERT_TRUE(protocore_wifi_parse(BEACON, 10, &f));
+    WifiSniffer.parse_args.frame = BEACON;
+    WifiSniffer.parse_args.len = 10;
+    WifiSniffer.parse_args.out = &f;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
     TEST_ASSERT_EQUAL_UINT8(1, f.naddr);
     TEST_ASSERT_EQUAL_MEMORY(BEACON + 4, f.addr1, 6);
     TEST_ASSERT_EQUAL_MEMORY(ZERO6, f.addr2, 6);
     TEST_ASSERT_EQUAL_MEMORY(ZERO6, f.addr3, 6);
 
-    TEST_ASSERT_TRUE(protocore_wifi_parse(BEACON, 15, &f));
+    WifiSniffer.parse_args.frame = BEACON;
+    WifiSniffer.parse_args.len = 15;
+    WifiSniffer.parse_args.out = &f;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
     TEST_ASSERT_EQUAL_UINT8(1, f.naddr);
 
-    TEST_ASSERT_TRUE(protocore_wifi_parse(BEACON, 16, &f));
+    WifiSniffer.parse_args.frame = BEACON;
+    WifiSniffer.parse_args.len = 16;
+    WifiSniffer.parse_args.out = &f;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
     TEST_ASSERT_EQUAL_UINT8(2, f.naddr);
     TEST_ASSERT_EQUAL_MEMORY(BEACON + 10, f.addr2, 6);
     TEST_ASSERT_EQUAL_MEMORY(ZERO6, f.addr3, 6);
 
-    TEST_ASSERT_TRUE(protocore_wifi_parse(BEACON, 23, &f));
+    WifiSniffer.parse_args.frame = BEACON;
+    WifiSniffer.parse_args.len = 23;
+    WifiSniffer.parse_args.out = &f;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
     TEST_ASSERT_EQUAL_UINT8(2, f.naddr);
 
-    TEST_ASSERT_TRUE(protocore_wifi_parse(BEACON, 24, &f));
+    WifiSniffer.parse_args.frame = BEACON;
+    WifiSniffer.parse_args.len = 24;
+    WifiSniffer.parse_args.out = &f;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
     TEST_ASSERT_EQUAL_UINT8(3, f.naddr);
 }
 
@@ -169,15 +209,24 @@ void test_truncated_capture_reports_how_many_addresses_it_held(void)
 void test_parse_null_arguments(void)
 {
     WifiFrame f;
-    TEST_ASSERT_FALSE(protocore_wifi_parse(NULL, 24, &f));
-    TEST_ASSERT_FALSE(protocore_wifi_parse(BEACON, 24, NULL));
+    WifiSniffer.parse_args.frame = NULL;
+    WifiSniffer.parse_args.len = 24;
+    WifiSniffer.parse_args.out = &f;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
+    WifiSniffer.parse_args.frame = BEACON;
+    WifiSniffer.parse_args.len = 24;
+    WifiSniffer.parse_args.out = NULL;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
 }
 
 // The tally counts one frame per type and keeps the total equal to their sum.
 void test_stats_tally(void)
 {
     WifiStats s;
-    protocore_wifi_stats_reset(&s);
+    WifiSniffer.stats_reset_args.s = &s;
+    WifiSniffer.stats_reset(protocore_wifi_sniffer_span());
     TEST_ASSERT_EQUAL_UINT32(0, s.total);
 
     static const uint8_t TYPES[6] = {WIFI_TYPE_MGMT, WIFI_TYPE_MGMT, WIFI_TYPE_CTRL,
@@ -188,8 +237,14 @@ void test_stats_tally(void)
         memcpy(frame, BEACON, sizeof(frame));
         frame[0] = (uint8_t)(TYPES[i] << 2);
         WifiFrame f;
-        TEST_ASSERT_TRUE(protocore_wifi_parse(frame, sizeof(frame), &f));
-        protocore_wifi_stats_add(&s, &f);
+        WifiSniffer.parse_args.frame = frame;
+        WifiSniffer.parse_args.len = sizeof(frame);
+        WifiSniffer.parse_args.out = &f;
+        WifiSniffer.parse(protocore_wifi_sniffer_span());
+        TEST_ASSERT_TRUE(WifiSniffer.ok);
+        WifiSniffer.stats_add_args.s = &s;
+        WifiSniffer.stats_add_args.f = &f;
+        WifiSniffer.stats_add(protocore_wifi_sniffer_span());
     }
     TEST_ASSERT_EQUAL_UINT32(2, s.mgmt);
     TEST_ASSERT_EQUAL_UINT32(1, s.ctrl);
@@ -198,10 +253,15 @@ void test_stats_tally(void)
     TEST_ASSERT_EQUAL_UINT32(6, s.total);
     TEST_ASSERT_EQUAL_UINT32(s.mgmt + s.ctrl + s.data + s.other, s.total);
 
-    protocore_wifi_stats_reset(&s);
+    WifiSniffer.stats_reset_args.s = &s;
+    WifiSniffer.stats_reset(protocore_wifi_sniffer_span());
     TEST_ASSERT_EQUAL_UINT32(0, s.total);
-    protocore_wifi_stats_add(NULL, NULL); // neither argument is dereferenced
-    protocore_wifi_stats_add(&s, NULL);
+    WifiSniffer.stats_add_args.s = NULL;
+    WifiSniffer.stats_add_args.f = NULL;
+    WifiSniffer.stats_add(protocore_wifi_sniffer_span()); // neither argument is dereferenced
+    WifiSniffer.stats_add_args.s = &s;
+    WifiSniffer.stats_add_args.f = NULL;
+    WifiSniffer.stats_add(protocore_wifi_sniffer_span());
     TEST_ASSERT_EQUAL_UINT32(0, s.total);
 }
 
@@ -210,20 +270,60 @@ void test_stats_tally(void)
 // between two APs that are equally far apart.
 void test_roam_needs_to_clear_the_hysteresis(void)
 {
-    TEST_ASSERT_FALSE(protocore_wifi_should_roam(-70, -75, 5)); // candidate weaker
-    TEST_ASSERT_FALSE(protocore_wifi_should_roam(-70, -70, 5)); // equal
-    TEST_ASSERT_FALSE(protocore_wifi_should_roam(-70, -66, 5)); // 4 dB, under
-    TEST_ASSERT_FALSE(protocore_wifi_should_roam(-70, -65, 5)); // 5 dB, exactly the hysteresis
-    TEST_ASSERT_TRUE(protocore_wifi_should_roam(-70, -64, 5));  // 6 dB, over
+    WifiSniffer.should_roam_args.cur_rssi = -70;
+    WifiSniffer.should_roam_args.cand_rssi = -75;
+    WifiSniffer.should_roam_args.hysteresis_db = 5;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok); // candidate weaker
+    WifiSniffer.should_roam_args.cur_rssi = -70;
+    WifiSniffer.should_roam_args.cand_rssi = -70;
+    WifiSniffer.should_roam_args.hysteresis_db = 5;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok); // equal
+    WifiSniffer.should_roam_args.cur_rssi = -70;
+    WifiSniffer.should_roam_args.cand_rssi = -66;
+    WifiSniffer.should_roam_args.hysteresis_db = 5;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok); // 4 dB, under
+    WifiSniffer.should_roam_args.cur_rssi = -70;
+    WifiSniffer.should_roam_args.cand_rssi = -65;
+    WifiSniffer.should_roam_args.hysteresis_db = 5;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok); // 5 dB, exactly the hysteresis
+    WifiSniffer.should_roam_args.cur_rssi = -70;
+    WifiSniffer.should_roam_args.cand_rssi = -64;
+    WifiSniffer.should_roam_args.hysteresis_db = 5;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok); // 6 dB, over
 
     // Zero hysteresis roams on any improvement at all.
-    TEST_ASSERT_TRUE(protocore_wifi_should_roam(-70, -69, 0));
-    TEST_ASSERT_FALSE(protocore_wifi_should_roam(-70, -70, 0));
+    WifiSniffer.should_roam_args.cur_rssi = -70;
+    WifiSniffer.should_roam_args.cand_rssi = -69;
+    WifiSniffer.should_roam_args.hysteresis_db = 0;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
+    WifiSniffer.should_roam_args.cur_rssi = -70;
+    WifiSniffer.should_roam_args.cand_rssi = -70;
+    WifiSniffer.should_roam_args.hysteresis_db = 0;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
 
     // The widest span an int8 pair can produce must not wrap: -128 to 127 is 255 dB.
-    TEST_ASSERT_TRUE(protocore_wifi_should_roam(-128, 127, 254));
-    TEST_ASSERT_FALSE(protocore_wifi_should_roam(-128, 127, 255));
-    TEST_ASSERT_FALSE(protocore_wifi_should_roam(127, -128, 0));
+    WifiSniffer.should_roam_args.cur_rssi = -128;
+    WifiSniffer.should_roam_args.cand_rssi = 127;
+    WifiSniffer.should_roam_args.hysteresis_db = 254;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
+    WifiSniffer.should_roam_args.cur_rssi = -128;
+    WifiSniffer.should_roam_args.cand_rssi = 127;
+    WifiSniffer.should_roam_args.hysteresis_db = 255;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
+    WifiSniffer.should_roam_args.cur_rssi = 127;
+    WifiSniffer.should_roam_args.cand_rssi = -128;
+    WifiSniffer.should_roam_args.hysteresis_db = 0;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
 }
 
 // A sweep starts on its first channel, hops one channel per dwell, and wraps back to the first
@@ -231,38 +331,73 @@ void test_roam_needs_to_clear_the_hysteresis(void)
 void test_scan_walks_the_range_and_wraps(void)
 {
     WifiScan s;
-    protocore_wifi_scan_init(&s, 1, 3, 100, 1000);
+    WifiSniffer.scan_init_args.s = &s;
+    WifiSniffer.scan_init_args.first = 1;
+    WifiSniffer.scan_init_args.last = 3;
+    WifiSniffer.scan_init_args.dwell_ms = 100;
+    WifiSniffer.scan_init_args.now_ms = 1000;
+    WifiSniffer.scan_init(protocore_wifi_sniffer_span());
     TEST_ASSERT_EQUAL_UINT8(1, s.chan_first);
     TEST_ASSERT_EQUAL_UINT8(3, s.chan_last);
     TEST_ASSERT_EQUAL_UINT8(1, s.channel);
     TEST_ASSERT_EQUAL_UINT32(0, s.sweeps);
 
-    TEST_ASSERT_EQUAL_UINT8(2, protocore_wifi_scan_next(&s, 1100));
+    WifiSniffer.scan_next_args.s = &s;
+    WifiSniffer.scan_next_args.now_ms = 1100;
+    WifiSniffer.scan_next(protocore_wifi_sniffer_span());
+    TEST_ASSERT_EQUAL_UINT8(2, WifiSniffer.value);
     TEST_ASSERT_EQUAL_UINT32(0, s.sweeps);
-    TEST_ASSERT_EQUAL_UINT8(3, protocore_wifi_scan_next(&s, 1200));
+    WifiSniffer.scan_next_args.s = &s;
+    WifiSniffer.scan_next_args.now_ms = 1200;
+    WifiSniffer.scan_next(protocore_wifi_sniffer_span());
+    TEST_ASSERT_EQUAL_UINT8(3, WifiSniffer.value);
     TEST_ASSERT_EQUAL_UINT32(0, s.sweeps);
-    TEST_ASSERT_EQUAL_UINT8(1, protocore_wifi_scan_next(&s, 1300)); // wrap
+    WifiSniffer.scan_next_args.s = &s;
+    WifiSniffer.scan_next_args.now_ms = 1300;
+    WifiSniffer.scan_next(protocore_wifi_sniffer_span());
+    TEST_ASSERT_EQUAL_UINT8(1, WifiSniffer.value); // wrap
     TEST_ASSERT_EQUAL_UINT32(1, s.sweeps);
     TEST_ASSERT_EQUAL_UINT32(1300, s.last_hop_ms);
 
     // A single-channel sweep re-selects the same channel and counts a sweep every hop.
     WifiScan one;
-    protocore_wifi_scan_init(&one, 6, 6, 50, 0);
-    TEST_ASSERT_EQUAL_UINT8(6, protocore_wifi_scan_next(&one, 50));
+    WifiSniffer.scan_init_args.s = &one;
+    WifiSniffer.scan_init_args.first = 6;
+    WifiSniffer.scan_init_args.last = 6;
+    WifiSniffer.scan_init_args.dwell_ms = 50;
+    WifiSniffer.scan_init_args.now_ms = 0;
+    WifiSniffer.scan_init(protocore_wifi_sniffer_span());
+    WifiSniffer.scan_next_args.s = &one;
+    WifiSniffer.scan_next_args.now_ms = 50;
+    WifiSniffer.scan_next(protocore_wifi_sniffer_span());
+    TEST_ASSERT_EQUAL_UINT8(6, WifiSniffer.value);
     TEST_ASSERT_EQUAL_UINT32(1, one.sweeps);
 
-    TEST_ASSERT_EQUAL_UINT8(0, protocore_wifi_scan_next(NULL, 0));
+    WifiSniffer.scan_next_args.s = NULL;
+    WifiSniffer.scan_next_args.now_ms = 0;
+    WifiSniffer.scan_next(protocore_wifi_sniffer_span());
+    TEST_ASSERT_EQUAL_UINT8(0, WifiSniffer.value);
 }
 
 // 2.4 GHz channels run 1..14, and the range cannot end before it starts.
 void test_scan_init_clamps_the_range(void)
 {
     WifiScan s;
-    protocore_wifi_scan_init(&s, 0, 200, 100, 0);
+    WifiSniffer.scan_init_args.s = &s;
+    WifiSniffer.scan_init_args.first = 0;
+    WifiSniffer.scan_init_args.last = 200;
+    WifiSniffer.scan_init_args.dwell_ms = 100;
+    WifiSniffer.scan_init_args.now_ms = 0;
+    WifiSniffer.scan_init(protocore_wifi_sniffer_span());
     TEST_ASSERT_EQUAL_UINT8(1, s.chan_first);
     TEST_ASSERT_EQUAL_UINT8(14, s.chan_last);
 
-    protocore_wifi_scan_init(&s, 11, 3, 100, 0);
+    WifiSniffer.scan_init_args.s = &s;
+    WifiSniffer.scan_init_args.first = 11;
+    WifiSniffer.scan_init_args.last = 3;
+    WifiSniffer.scan_init_args.dwell_ms = 100;
+    WifiSniffer.scan_init_args.now_ms = 0;
+    WifiSniffer.scan_init(protocore_wifi_sniffer_span());
     TEST_ASSERT_EQUAL_UINT8(11, s.chan_first);
     TEST_ASSERT_EQUAL_UINT8(11, s.chan_last); // last is pulled up to first, never below it
     TEST_ASSERT_EQUAL_UINT8(11, s.channel);
@@ -273,19 +408,53 @@ void test_scan_init_clamps_the_range(void)
 void test_scan_due_is_rollover_safe(void)
 {
     WifiScan s;
-    protocore_wifi_scan_init(&s, 1, 11, 120, 1000);
-    TEST_ASSERT_FALSE(protocore_wifi_scan_due(&s, 1000));
-    TEST_ASSERT_FALSE(protocore_wifi_scan_due(&s, 1119));
-    TEST_ASSERT_TRUE(protocore_wifi_scan_due(&s, 1120));
-    TEST_ASSERT_TRUE(protocore_wifi_scan_due(&s, 5000));
+    WifiSniffer.scan_init_args.s = &s;
+    WifiSniffer.scan_init_args.first = 1;
+    WifiSniffer.scan_init_args.last = 11;
+    WifiSniffer.scan_init_args.dwell_ms = 120;
+    WifiSniffer.scan_init_args.now_ms = 1000;
+    WifiSniffer.scan_init(protocore_wifi_sniffer_span());
+    WifiSniffer.scan_due_args.s = &s;
+    WifiSniffer.scan_due_args.now_ms = 1000;
+    WifiSniffer.scan_due(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
+    WifiSniffer.scan_due_args.s = &s;
+    WifiSniffer.scan_due_args.now_ms = 1119;
+    WifiSniffer.scan_due(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
+    WifiSniffer.scan_due_args.s = &s;
+    WifiSniffer.scan_due_args.now_ms = 1120;
+    WifiSniffer.scan_due(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
+    WifiSniffer.scan_due_args.s = &s;
+    WifiSniffer.scan_due_args.now_ms = 5000;
+    WifiSniffer.scan_due(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
 
     // The dwell starts 100 ms before the counter wraps and ends 20 ms after it.
-    protocore_wifi_scan_init(&s, 1, 11, 120, 0xFFFFFF9Cu);
-    TEST_ASSERT_FALSE(protocore_wifi_scan_due(&s, 0xFFFFFFFFu)); // 99 ms in
-    TEST_ASSERT_FALSE(protocore_wifi_scan_due(&s, 0x00000013u)); // 119 ms in, past the wrap
-    TEST_ASSERT_TRUE(protocore_wifi_scan_due(&s, 0x00000014u));  // 120 ms in
+    WifiSniffer.scan_init_args.s = &s;
+    WifiSniffer.scan_init_args.first = 1;
+    WifiSniffer.scan_init_args.last = 11;
+    WifiSniffer.scan_init_args.dwell_ms = 120;
+    WifiSniffer.scan_init_args.now_ms = 0xFFFFFF9Cu;
+    WifiSniffer.scan_init(protocore_wifi_sniffer_span());
+    WifiSniffer.scan_due_args.s = &s;
+    WifiSniffer.scan_due_args.now_ms = 0xFFFFFFFFu;
+    WifiSniffer.scan_due(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok); // 99 ms in
+    WifiSniffer.scan_due_args.s = &s;
+    WifiSniffer.scan_due_args.now_ms = 0x00000013u;
+    WifiSniffer.scan_due(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok); // 119 ms in, past the wrap
+    WifiSniffer.scan_due_args.s = &s;
+    WifiSniffer.scan_due_args.now_ms = 0x00000014u;
+    WifiSniffer.scan_due(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok); // 120 ms in
 
-    TEST_ASSERT_FALSE(protocore_wifi_scan_due(NULL, 0));
+    WifiSniffer.scan_due_args.s = NULL;
+    WifiSniffer.scan_due_args.now_ms = 0;
+    WifiSniffer.scan_due(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
 }
 
 // Build a frame whose transmitter address is the given octet repeated, so a survey entry can be
@@ -301,11 +470,17 @@ static void frame_from(uint8_t tag, uint8_t *out24)
 void test_survey_keeps_the_strongest_per_channel(void)
 {
     WifiSurvey s;
-    protocore_wifi_survey_reset(&s, 1, 3);
+    WifiSniffer.survey_reset_args.s = &s;
+    WifiSniffer.survey_reset_args.first = 1;
+    WifiSniffer.survey_reset_args.count = 3;
+    WifiSniffer.survey_reset(protocore_wifi_sniffer_span());
     TEST_ASSERT_EQUAL_UINT8(1, s.first);
     TEST_ASSERT_EQUAL_UINT8(3, s.count);
 
-    const WifiChannelSurvey *e = protocore_wifi_survey_get(&s, 1);
+    WifiSniffer.survey_get_args.s = &s;
+    WifiSniffer.survey_get_args.channel = 1;
+    WifiSniffer.survey_get(protocore_wifi_sniffer_span());
+    const WifiChannelSurvey *e = WifiSniffer.ptr;
     TEST_ASSERT_NOT_NULL(e);
     TEST_ASSERT_EQUAL_INT8(PROTOCORE_WIFI_RSSI_NONE, e->best_rssi);
     TEST_ASSERT_EQUAL_UINT32(0, e->frames);
@@ -316,28 +491,74 @@ void test_survey_keeps_the_strongest_per_channel(void)
     WifiFrame fs;
     frame_from(0x11, weak);
     frame_from(0x22, strong);
-    TEST_ASSERT_TRUE(protocore_wifi_parse(weak, 24, &fw));
-    TEST_ASSERT_TRUE(protocore_wifi_parse(strong, 24, &fs));
+    WifiSniffer.parse_args.frame = weak;
+    WifiSniffer.parse_args.len = 24;
+    WifiSniffer.parse_args.out = &fw;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
+    WifiSniffer.parse_args.frame = strong;
+    WifiSniffer.parse_args.len = 24;
+    WifiSniffer.parse_args.out = &fs;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
 
-    protocore_wifi_survey_add(&s, 1, -80, &fw);
-    protocore_wifi_survey_add(&s, 1, -60, &fs); // stronger, so it takes the entry
-    protocore_wifi_survey_add(&s, 1, -70, &fw); // weaker again, counted but not recorded
+    WifiSniffer.survey_add_args.s = &s;
+    WifiSniffer.survey_add_args.channel = 1;
+    WifiSniffer.survey_add_args.rssi = -80;
+    WifiSniffer.survey_add_args.f = &fw;
+    WifiSniffer.survey_add(protocore_wifi_sniffer_span());
+    WifiSniffer.survey_add_args.s = &s;
+    WifiSniffer.survey_add_args.channel = 1;
+    WifiSniffer.survey_add_args.rssi = -60;
+    WifiSniffer.survey_add_args.f = &fs;
+    WifiSniffer.survey_add(protocore_wifi_sniffer_span()); // stronger, so it takes the entry
+    WifiSniffer.survey_add_args.s = &s;
+    WifiSniffer.survey_add_args.channel = 1;
+    WifiSniffer.survey_add_args.rssi = -70;
+    WifiSniffer.survey_add_args.f = &fw;
+    WifiSniffer.survey_add(protocore_wifi_sniffer_span()); // weaker again, counted but not recorded
 
-    e = protocore_wifi_survey_get(&s, 1);
+    WifiSniffer.survey_get_args.s = &s;
+    WifiSniffer.survey_get_args.channel = 1;
+    WifiSniffer.survey_get(protocore_wifi_sniffer_span());
+    e = WifiSniffer.ptr;
     TEST_ASSERT_EQUAL_UINT32(3, e->frames);
     TEST_ASSERT_EQUAL_INT8(-60, e->best_rssi);
     static const uint8_t WANT_BSSID[6] = {0x22, 0x22, 0x22, 0x22, 0x22, 0x22};
     TEST_ASSERT_EQUAL_MEMORY(WANT_BSSID, e->best_bssid, 6);
 
     // Channels outside [first, first + count) are dropped, not folded into a neighbor.
-    protocore_wifi_survey_add(&s, 4, -10, &fs);
-    protocore_wifi_survey_add(&s, 0, -10, &fs);
-    TEST_ASSERT_NULL(protocore_wifi_survey_get(&s, 4));
-    TEST_ASSERT_NULL(protocore_wifi_survey_get(&s, 0));
-    TEST_ASSERT_EQUAL_UINT32(3, protocore_wifi_survey_get(&s, 1)->frames);
-    TEST_ASSERT_EQUAL_UINT32(0, protocore_wifi_survey_get(&s, 3)->frames);
+    WifiSniffer.survey_add_args.s = &s;
+    WifiSniffer.survey_add_args.channel = 4;
+    WifiSniffer.survey_add_args.rssi = -10;
+    WifiSniffer.survey_add_args.f = &fs;
+    WifiSniffer.survey_add(protocore_wifi_sniffer_span());
+    WifiSniffer.survey_add_args.s = &s;
+    WifiSniffer.survey_add_args.channel = 0;
+    WifiSniffer.survey_add_args.rssi = -10;
+    WifiSniffer.survey_add_args.f = &fs;
+    WifiSniffer.survey_add(protocore_wifi_sniffer_span());
+    WifiSniffer.survey_get_args.s = &s;
+    WifiSniffer.survey_get_args.channel = 4;
+    WifiSniffer.survey_get(protocore_wifi_sniffer_span());
+    TEST_ASSERT_NULL(WifiSniffer.ptr);
+    WifiSniffer.survey_get_args.s = &s;
+    WifiSniffer.survey_get_args.channel = 0;
+    WifiSniffer.survey_get(protocore_wifi_sniffer_span());
+    TEST_ASSERT_NULL(WifiSniffer.ptr);
+    WifiSniffer.survey_get_args.s = &s;
+    WifiSniffer.survey_get_args.channel = 1;
+    WifiSniffer.survey_get(protocore_wifi_sniffer_span());
+    TEST_ASSERT_EQUAL_UINT32(3, WifiSniffer.ptr->frames);
+    WifiSniffer.survey_get_args.s = &s;
+    WifiSniffer.survey_get_args.channel = 3;
+    WifiSniffer.survey_get(protocore_wifi_sniffer_span());
+    TEST_ASSERT_EQUAL_UINT32(0, WifiSniffer.ptr->frames);
 
-    protocore_wifi_survey_reset(&s, 1, PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS + 1);
+    WifiSniffer.survey_reset_args.s = &s;
+    WifiSniffer.survey_reset_args.first = 1;
+    WifiSniffer.survey_reset_args.count = PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS + 1;
+    WifiSniffer.survey_reset(protocore_wifi_sniffer_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS, s.count);
 }
 
@@ -346,42 +567,106 @@ void test_survey_keeps_the_strongest_per_channel(void)
 void test_survey_best_excludes_the_current_channel(void)
 {
     WifiSurvey s;
-    protocore_wifi_survey_reset(&s, 1, 6);
+    WifiSniffer.survey_reset_args.s = &s;
+    WifiSniffer.survey_reset_args.first = 1;
+    WifiSniffer.survey_reset_args.count = 6;
+    WifiSniffer.survey_reset(protocore_wifi_sniffer_span());
 
     uint8_t channel = 0xFF;
     int8_t rssi = 0;
-    TEST_ASSERT_FALSE(protocore_wifi_survey_best(&s, 0, &channel, &rssi));
+    WifiSniffer.survey_best_args.s = &s;
+    WifiSniffer.survey_best_args.exclude_channel = 0;
+    WifiSniffer.survey_best_args.out_channel = &channel;
+    WifiSniffer.survey_best_args.out_rssi = &rssi;
+    WifiSniffer.survey_best(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
     TEST_ASSERT_EQUAL_UINT8(0xFF, channel); // untouched when nothing was heard
 
     uint8_t frame[24];
     WifiFrame f;
     frame_from(0xAB, frame);
-    TEST_ASSERT_TRUE(protocore_wifi_parse(frame, sizeof(frame), &f));
-    protocore_wifi_survey_add(&s, 1, -75, &f);
-    protocore_wifi_survey_add(&s, 6, -55, &f);
-    protocore_wifi_survey_add(&s, 3, -65, &f);
+    WifiSniffer.parse_args.frame = frame;
+    WifiSniffer.parse_args.len = sizeof(frame);
+    WifiSniffer.parse_args.out = &f;
+    WifiSniffer.parse(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
+    WifiSniffer.survey_add_args.s = &s;
+    WifiSniffer.survey_add_args.channel = 1;
+    WifiSniffer.survey_add_args.rssi = -75;
+    WifiSniffer.survey_add_args.f = &f;
+    WifiSniffer.survey_add(protocore_wifi_sniffer_span());
+    WifiSniffer.survey_add_args.s = &s;
+    WifiSniffer.survey_add_args.channel = 6;
+    WifiSniffer.survey_add_args.rssi = -55;
+    WifiSniffer.survey_add_args.f = &f;
+    WifiSniffer.survey_add(protocore_wifi_sniffer_span());
+    WifiSniffer.survey_add_args.s = &s;
+    WifiSniffer.survey_add_args.channel = 3;
+    WifiSniffer.survey_add_args.rssi = -65;
+    WifiSniffer.survey_add_args.f = &f;
+    WifiSniffer.survey_add(protocore_wifi_sniffer_span());
 
-    TEST_ASSERT_TRUE(protocore_wifi_survey_best(&s, 0, &channel, &rssi));
+    WifiSniffer.survey_best_args.s = &s;
+    WifiSniffer.survey_best_args.exclude_channel = 0;
+    WifiSniffer.survey_best_args.out_channel = &channel;
+    WifiSniffer.survey_best_args.out_rssi = &rssi;
+    WifiSniffer.survey_best(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
     TEST_ASSERT_EQUAL_UINT8(6, channel);
     TEST_ASSERT_EQUAL_INT8(-55, rssi);
 
-    TEST_ASSERT_TRUE(protocore_wifi_survey_best(&s, 6, &channel, &rssi)); // exclude the strongest
+    WifiSniffer.survey_best_args.s = &s;
+    WifiSniffer.survey_best_args.exclude_channel = 6;
+    WifiSniffer.survey_best_args.out_channel = &channel;
+    WifiSniffer.survey_best_args.out_rssi = &rssi;
+    WifiSniffer.survey_best(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok); // exclude the strongest
     TEST_ASSERT_EQUAL_UINT8(3, channel);
     TEST_ASSERT_EQUAL_INT8(-65, rssi);
 
     // The candidate feeds the roam decision: 6 clears 3 by 10 dB, so a 5 dB hysteresis roams.
-    TEST_ASSERT_TRUE(protocore_wifi_should_roam(-65, -55, 5));
+    WifiSniffer.should_roam_args.cur_rssi = -65;
+    WifiSniffer.should_roam_args.cand_rssi = -55;
+    WifiSniffer.should_roam_args.hysteresis_db = 5;
+    WifiSniffer.should_roam(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok);
 
-    TEST_ASSERT_FALSE(protocore_wifi_survey_best(NULL, 0, &channel, &rssi));
-    TEST_ASSERT_TRUE(protocore_wifi_survey_best(&s, 0, NULL, NULL)); // both outputs are optional
+    WifiSniffer.survey_best_args.s = NULL;
+    WifiSniffer.survey_best_args.exclude_channel = 0;
+    WifiSniffer.survey_best_args.out_channel = &channel;
+    WifiSniffer.survey_best_args.out_rssi = &rssi;
+    WifiSniffer.survey_best(protocore_wifi_sniffer_span());
+    TEST_ASSERT_FALSE(WifiSniffer.ok);
+    WifiSniffer.survey_best_args.s = &s;
+    WifiSniffer.survey_best_args.exclude_channel = 0;
+    WifiSniffer.survey_best_args.out_channel = NULL;
+    WifiSniffer.survey_best_args.out_rssi = NULL;
+    WifiSniffer.survey_best(protocore_wifi_sniffer_span());
+    TEST_ASSERT_TRUE(WifiSniffer.ok); // both outputs are optional
 }
 
 // Every entry-point tolerates a null state rather than writing through it.
 void test_null_state_is_refused(void)
 {
-    protocore_wifi_stats_reset(NULL);
-    protocore_wifi_scan_init(NULL, 1, 11, 100, 0);
-    protocore_wifi_survey_reset(NULL, 1, 3);
-    protocore_wifi_survey_add(NULL, 1, -50, NULL);
-    TEST_ASSERT_NULL(protocore_wifi_survey_get(NULL, 1));
+    WifiSniffer.stats_reset_args.s = NULL;
+    WifiSniffer.stats_reset(protocore_wifi_sniffer_span());
+    WifiSniffer.scan_init_args.s = NULL;
+    WifiSniffer.scan_init_args.first = 1;
+    WifiSniffer.scan_init_args.last = 11;
+    WifiSniffer.scan_init_args.dwell_ms = 100;
+    WifiSniffer.scan_init_args.now_ms = 0;
+    WifiSniffer.scan_init(protocore_wifi_sniffer_span());
+    WifiSniffer.survey_reset_args.s = NULL;
+    WifiSniffer.survey_reset_args.first = 1;
+    WifiSniffer.survey_reset_args.count = 3;
+    WifiSniffer.survey_reset(protocore_wifi_sniffer_span());
+    WifiSniffer.survey_add_args.s = NULL;
+    WifiSniffer.survey_add_args.channel = 1;
+    WifiSniffer.survey_add_args.rssi = -50;
+    WifiSniffer.survey_add_args.f = NULL;
+    WifiSniffer.survey_add(protocore_wifi_sniffer_span());
+    WifiSniffer.survey_get_args.s = NULL;
+    WifiSniffer.survey_get_args.channel = 1;
+    WifiSniffer.survey_get(protocore_wifi_sniffer_span());
+    TEST_ASSERT_NULL(WifiSniffer.ptr);
 }

@@ -29,9 +29,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief The link layer's calls, described only in datalink.c. */
-struct DatalinkInternal;
-
 /**
  * @brief The data link layer (RFC 1122 sec 2 "LINK LAYER").
  *
@@ -40,7 +37,6 @@ struct DatalinkInternal;
  * @var DatalinkNs::ok        PROTO_TRUE once @ref init has run
  * @var DatalinkNs::init      bring the layer up: sets @ref ok. The platform's link driver performs
  *                            every RFC 1122 sec 2.3.3 encapsulation step.
- * @var DatalinkNs::internal  the calls that reach the layer
  *
  * No argument members: init takes none.
  * No storage member: the layer holds nothing of its own, so there is no state to hand out.
@@ -49,9 +45,7 @@ typedef struct
 {
     proto_bool ok; ///< PROTO_TRUE once init has run
 
-    void (*init)(struct DatalinkInternal *ctx); ///< link-layer bring-up (RFC 1122 sec 2)
-
-    struct DatalinkInternal *internal;
+    void (*const init)(uint8_t *restrict work); ///< link-layer bring-up (RFC 1122 sec 2)
 } DatalinkNs;
 
 /** @brief The one symbol this module exports. */

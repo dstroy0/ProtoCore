@@ -62,9 +62,6 @@ typedef struct
     size_t cap; ///< how much room it has
 } GuardrailOutArgs;
 
-/** @brief The installed callback and the calls that reach it, described only in guardrails.c. */
-struct GuardrailsInternal;
-
 /**
  * @brief The device's live health, and the floors it is judged against.
  *
@@ -82,7 +79,6 @@ struct GuardrailsInternal;
  * @var GuardrailsNs::sample    fill @ref health from the live counters
  * @var GuardrailsNs::begin     install the breach callback
  * @var GuardrailsNs::check     sample, judge against PROTOCORE_GUARDRAIL_*, fire on a breach
- * @var GuardrailsNs::internal  the installed callback and the calls that reach it
  */
 typedef struct
 {
@@ -94,17 +90,26 @@ typedef struct
     uint8_t breaches;
     int n;
 
-    void (*eval)(struct GuardrailsInternal *ctx);
-    void (*json)(struct GuardrailsInternal *ctx);
-    void (*sample)(struct GuardrailsInternal *ctx);
-    void (*begin)(struct GuardrailsInternal *ctx);
-    void (*check)(struct GuardrailsInternal *ctx);
-
-    struct GuardrailsInternal *internal;
+    void (*const eval)(uint8_t *restrict work);
+    void (*const json)(uint8_t *restrict work);
+    void (*const sample)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const check)(uint8_t *restrict work);
 } GuardrailsNs;
 
 /** @brief The one symbol this module exports. */
 extern GuardrailsNs Guardrails;
+
+/**
+ * @brief The PROTOCORE_GUARDRAILS_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_guardrails_span(void);
 
 PROTOCORE_END_DECLS
 

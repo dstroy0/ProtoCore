@@ -38,20 +38,6 @@ typedef struct
     const char *entity; ///< the entity reference written in its place
 } XmppEntity;
 
-/**
- * @brief The codec's calls and the handle they read - what XmppNs points at.
- *
- * No storage member: every octet a call touches belongs to the caller, so nothing survives a call.
- *
- * @var XmppInternal::ns  the handle a caller sets a call's members on
- */
-struct XmppInternal
-{
-    XmppNs *ns;
-};
-
-static struct XmppInternal s_xmpp = {.ns = &Xmpp};
-
 // XML 1.0 sec 4.6: amp, lt, gt, apos and quot, the only entity references RFC 6120 sec 11.1 leaves
 // an XMPP stream.
 static const XmppEntity s_entities[PROTOCORE_XMPP_ENTITY_COUNT] = {
@@ -82,65 +68,67 @@ static const char *entity_of(char c)
 }
 
 // Open a run at the head of the caller's buffer. A missing buffer or no room fails it here.
-static void start(struct XmppInternal *restrict ctx)
+static void start(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_TRUE;
-    if (ctx->ns->out.buf == NULL || ctx->ns->out.cap == 0)
+    (void)work;
+    Xmpp.n = 0;
+    Xmpp.ok = PROTO_TRUE;
+    if (Xmpp.out.buf == NULL || Xmpp.out.cap == 0)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Xmpp.ok = PROTO_FALSE;
     }
 }
 
 // Terminate the run, or report nothing written.
-static void finish(struct XmppInternal *restrict ctx)
+static void finish(uint8_t *restrict work)
 {
-    if (!ctx->ns->ok)
+    (void)work;
+    if (!Xmpp.ok)
     {
-        ctx->ns->n = 0;
+        Xmpp.n = 0;
         return;
     }
-    ctx->ns->out.buf[ctx->ns->n] = '\0';
+    Xmpp.out.buf[Xmpp.n] = '\0';
 }
 
 // Append one octet, keeping room for the terminator.
-static void put_char(struct XmppInternal *restrict ctx, char c)
+static void put_char(uint8_t *restrict work, char c)
 {
-    if (!ctx->ns->ok)
+    if (!Xmpp.ok)
     {
         return;
     }
-    if (ctx->ns->n + 1 >= ctx->ns->out.cap)
+    if (Xmpp.n + 1 >= Xmpp.out.cap)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Xmpp.ok = PROTO_FALSE;
         return;
     }
-    ctx->ns->out.buf[ctx->ns->n] = c;
-    ctx->ns->n++;
+    Xmpp.out.buf[Xmpp.n] = c;
+    Xmpp.n++;
 }
 
 // Append a NUL-terminated run, keeping room for the terminator.
-static void put(struct XmppInternal *restrict ctx, const char *s)
+static void put(uint8_t *restrict work, const char *s)
 {
-    if (!ctx->ns->ok)
+    if (!Xmpp.ok)
     {
         return;
     }
-    const size_t cap = ctx->ns->out.cap;
+    const size_t cap = Xmpp.out.cap;
     const size_t sl = str.len(s, cap);
-    if (ctx->ns->n + sl >= cap)
+    if (Xmpp.n + sl >= cap)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Xmpp.ok = PROTO_FALSE;
         return;
     }
-    mem.cpy(ctx->ns->out.buf + ctx->ns->n, s, sl);
-    ctx->ns->n += sl;
+    mem.cpy(Xmpp.out.buf + Xmpp.n, s, sl);
+    Xmpp.n += sl;
 }
 
 // Append len octets of s, each character carrying an entity written as that entity instead.
-static void put_escaped(struct XmppInternal *restrict ctx, const char *s, size_t len)
+static void put_escaped(uint8_t *restrict work, const char *s, size_t len)
 {
-    if (!ctx->ns->ok || s == NULL)
+    if (!Xmpp.ok || s == NULL)
     {
         return;
     }
@@ -149,116 +137,116 @@ static void put_escaped(struct XmppInternal *restrict ctx, const char *s, size_t
         const char *rep = entity_of(s[i]);
         if (rep == NULL)
         {
-            put_char(ctx, s[i]);
+            put_char(work, s[i]);
         }
         else
         {
-            put(ctx, rep);
+            put(work, rep);
         }
     }
 }
 
 // Append one attribute specification, `S Name Eq AttValue` (XML 1.0 sec 3.1 production [41]), with
 // the value escaped and double quotes as its delimiter. A NULL value leaves the attribute out.
-static void put_attr(struct XmppInternal *restrict ctx, const char *name, const char *value)
+static void put_attr(uint8_t *restrict work, const char *name, const char *value)
 {
     if (value == NULL)
     {
         return;
     }
-    put_char(ctx, ' ');
-    put(ctx, name);
-    put_char(ctx, '=');
-    put_char(ctx, '"');
-    put_escaped(ctx, value, str.len(value, ctx->ns->out.cap));
-    put_char(ctx, '"');
+    put_char(work, ' ');
+    put(work, name);
+    put_char(work, '=');
+    put_char(work, '"');
+    put_escaped(work, value, str.len(value, Xmpp.out.cap));
+    put_char(work, '"');
 }
 
 // Write text.in into out with the XML 1.0 sec 4.6 entities substituted.
-static void xmpp_escape(struct XmppInternal *restrict ctx)
+static void xmpp_escape(uint8_t *restrict work)
 {
-    start(ctx);
-    if (ctx->ns->text.in == NULL)
+    start(work);
+    if (Xmpp.text.in == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Xmpp.ok = PROTO_FALSE;
     }
-    put_escaped(ctx, ctx->ns->text.in, ctx->ns->text.len);
-    finish(ctx);
+    put_escaped(work, Xmpp.text.in, Xmpp.text.len);
+    finish(work);
 }
 
 // Build the initial stream header (RFC 6120 sec 4.2), preceded by the XML declaration RFC 6120
 // sec 11.5 asks for, with 'jabber:client' as the content namespace (sec 4.8.3) and version '1.0'
 // (sec 4.7.5).
-static void xmpp_stream_open(struct XmppInternal *restrict ctx)
+static void xmpp_stream_open(uint8_t *restrict work)
 {
-    start(ctx);
-    put(ctx, "<?xml version='1.0'?><stream:stream");
-    put_attr(ctx, PROTOCORE_XMPP_ATTR_FROM, ctx->ns->stream.from);
-    put_attr(ctx, PROTOCORE_XMPP_ATTR_TO, ctx->ns->stream.to);
-    put(ctx, " xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>");
-    finish(ctx);
+    start(work);
+    put(work, "<?xml version='1.0'?><stream:stream");
+    put_attr(work, PROTOCORE_XMPP_ATTR_FROM, Xmpp.stream.from);
+    put_attr(work, PROTOCORE_XMPP_ATTR_TO, Xmpp.stream.to);
+    put(work, " xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' version='1.0'>");
+    finish(work);
 }
 
 // Build a `<message/>` (RFC 6120 sec 8.2.1) carrying the `<body/>` of RFC 6121 sec 5.2.3.
-static void xmpp_message(struct XmppInternal *restrict ctx)
+static void xmpp_message(uint8_t *restrict work)
 {
-    start(ctx);
-    put(ctx, "<message");
-    put_attr(ctx, PROTOCORE_XMPP_ATTR_TO, ctx->ns->common.to);
-    put_attr(ctx, PROTOCORE_XMPP_ATTR_FROM, ctx->ns->common.from);
-    put_attr(ctx, PROTOCORE_XMPP_ATTR_TYPE, ctx->ns->common.type);
-    put(ctx, PROTOCORE_XMPP_TAG_END);
-    if (ctx->ns->child.body != NULL)
+    start(work);
+    put(work, "<message");
+    put_attr(work, PROTOCORE_XMPP_ATTR_TO, Xmpp.common.to);
+    put_attr(work, PROTOCORE_XMPP_ATTR_FROM, Xmpp.common.from);
+    put_attr(work, PROTOCORE_XMPP_ATTR_TYPE, Xmpp.common.type);
+    put(work, PROTOCORE_XMPP_TAG_END);
+    if (Xmpp.child.body != NULL)
     {
-        put(ctx, "<body>");
-        put_escaped(ctx, ctx->ns->child.body, str.len(ctx->ns->child.body, ctx->ns->out.cap));
-        put(ctx, "</body>");
+        put(work, "<body>");
+        put_escaped(work, Xmpp.child.body, str.len(Xmpp.child.body, Xmpp.out.cap));
+        put(work, "</body>");
     }
-    put(ctx, "</message>");
-    finish(ctx);
+    put(work, "</message>");
+    finish(work);
 }
 
 // Build a `<presence/>` (RFC 6120 sec 8.2.2) as an empty-element tag. A NULL type signals available
 // (RFC 6121 sec 4.7.1).
-static void xmpp_presence(struct XmppInternal *restrict ctx)
+static void xmpp_presence(uint8_t *restrict work)
 {
-    start(ctx);
-    put(ctx, "<presence");
-    put_attr(ctx, PROTOCORE_XMPP_ATTR_TYPE, ctx->ns->common.type);
-    put(ctx, PROTOCORE_XMPP_EMPTY_END);
-    finish(ctx);
+    start(work);
+    put(work, "<presence");
+    put_attr(work, PROTOCORE_XMPP_ATTR_TYPE, Xmpp.common.type);
+    put(work, PROTOCORE_XMPP_EMPTY_END);
+    finish(work);
 }
 
 // Build an `<iq/>` (RFC 6120 sec 8.2.3) around the extension element of sec 8.4, which is already
 // XML and goes in as it stands.
-static void xmpp_iq(struct XmppInternal *restrict ctx)
+static void xmpp_iq(uint8_t *restrict work)
 {
-    start(ctx);
-    put(ctx, "<iq");
-    put_attr(ctx, PROTOCORE_XMPP_ATTR_TYPE, ctx->ns->common.type);
-    put_attr(ctx, PROTOCORE_XMPP_ATTR_ID, ctx->ns->common.id);
-    put(ctx, PROTOCORE_XMPP_TAG_END);
-    if (ctx->ns->child.extension != NULL)
+    start(work);
+    put(work, "<iq");
+    put_attr(work, PROTOCORE_XMPP_ATTR_TYPE, Xmpp.common.type);
+    put_attr(work, PROTOCORE_XMPP_ATTR_ID, Xmpp.common.id);
+    put(work, PROTOCORE_XMPP_TAG_END);
+    if (Xmpp.child.extension != NULL)
     {
-        put(ctx, ctx->ns->child.extension);
+        put(work, Xmpp.child.extension);
     }
-    put(ctx, "</iq>");
-    finish(ctx);
+    put(work, "</iq>");
+    finish(work);
 }
 
 // Read the Name of the first start-tag in stanza.xml, the element's type (XML 1.0 sec 3.1).
-static void xmpp_stanza_name(struct XmppInternal *restrict ctx)
+static void xmpp_stanza_name(uint8_t *restrict work)
 {
-    start(ctx);
-    const char *xml = ctx->ns->stanza.xml;
-    const size_t len = ctx->ns->stanza.len;
+    start(work);
+    const char *xml = Xmpp.stanza.xml;
+    const size_t len = Xmpp.stanza.len;
     if (xml == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Xmpp.ok = PROTO_FALSE;
     }
-    if (!ctx->ns->ok)
+    if (!Xmpp.ok)
     {
-        finish(ctx);
+        finish(work);
         return;
     }
 
@@ -279,8 +267,8 @@ static void xmpp_stanza_name(struct XmppInternal *restrict ctx)
     }
     if (!found)
     {
-        ctx->ns->ok = PROTO_FALSE;
-        finish(ctx);
+        Xmpp.ok = PROTO_FALSE;
+        finish(work);
         return;
     }
 
@@ -289,27 +277,27 @@ static void xmpp_stanza_name(struct XmppInternal *restrict ctx)
     size_t j = i + 1;
     while (j < len && !xml_space(xml[j]) && xml[j] != '>' && xml[j] != '/')
     {
-        put_char(ctx, xml[j]);
+        put_char(work, xml[j]);
         j++;
     }
-    finish(ctx);
+    finish(work);
 }
 
 // Read the attribute value stanza.attr names out of the start-tag of stanza.xml, as the raw octets
 // between the delimiters (XML 1.0 sec 3.1).
-static void xmpp_attr(struct XmppInternal *restrict ctx)
+static void xmpp_attr(uint8_t *restrict work)
 {
-    start(ctx);
-    const char *xml = ctx->ns->stanza.xml;
-    const size_t len = ctx->ns->stanza.len;
-    const char *name = ctx->ns->stanza.attr;
+    start(work);
+    const char *xml = Xmpp.stanza.xml;
+    const size_t len = Xmpp.stanza.len;
+    const char *name = Xmpp.stanza.attr;
     if (xml == NULL || name == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Xmpp.ok = PROTO_FALSE;
     }
-    if (!ctx->ns->ok)
+    if (!Xmpp.ok)
     {
-        finish(ctx);
+        finish(work);
         return;
     }
     const size_t nl = str.len(name, len);
@@ -347,8 +335,8 @@ static void xmpp_attr(struct XmppInternal *restrict ctx)
     }
     if (!found)
     {
-        ctx->ns->ok = PROTO_FALSE;
-        finish(ctx);
+        Xmpp.ok = PROTO_FALSE;
+        finish(work);
         return;
     }
 
@@ -356,17 +344,17 @@ static void xmpp_attr(struct XmppInternal *restrict ctx)
     const char q = xml[i + nl + 1];
     if (q != '"' && q != '\'')
     {
-        ctx->ns->ok = PROTO_FALSE;
-        finish(ctx);
+        Xmpp.ok = PROTO_FALSE;
+        finish(work);
         return;
     }
     size_t j = i + nl + 2;
     while (j < end && xml[j] != q)
     {
-        put_char(ctx, xml[j]);
+        put_char(work, xml[j]);
         j++;
     }
-    finish(ctx);
+    finish(work);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -376,7 +364,6 @@ XmppNs Xmpp = {.escape = xmpp_escape,
                .presence = xmpp_presence,
                .iq = xmpp_iq,
                .stanza_name = xmpp_stanza_name,
-               .attr = xmpp_attr,
-               .internal = &s_xmpp};
+               .attr = xmpp_attr};
 
 #endif // PROTOCORE_ENABLE_XMPP

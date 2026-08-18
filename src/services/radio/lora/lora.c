@@ -11,9 +11,13 @@
  * peripherals. The RF link itself needs the module.
  */
 
-#include "services/radio/lora/lora.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_LORA
+
+#include "services/radio/lora/lora.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // SX127x LoRa register map (SX1276 datasheet, Table 41).
 #define REG_FIFO 0x00
@@ -61,12 +65,24 @@ static inline void wr(const protocore_lora_bus *b, uint8_t reg, uint8_t val)
     b->write(reg, val, b->ctx);
 }
 
-proto_bool protocore_lora_frame_parse(const uint8_t *raw, uint16_t len, protocore_lora_header *hdr,
-                                      const uint8_t **payload, uint16_t *payload_len)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void lora_frame_parse(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *raw = Lora.frame_parse_args.raw;
+    uint16_t len = Lora.frame_parse_args.len;
+    protocore_lora_header *hdr = Lora.frame_parse_args.hdr;
+    const uint8_t **payload = Lora.frame_parse_args.payload;
+    uint16_t *payload_len = Lora.frame_parse_args.payload_len;
+
     if (!raw || !hdr || len < 4)
     {
-        return PROTO_FALSE;
+        Lora.ok = PROTO_FALSE;
+        return;
     }
     hdr->to = raw[0];
     hdr->from = raw[1];
@@ -80,15 +96,22 @@ proto_bool protocore_lora_frame_parse(const uint8_t *raw, uint16_t len, protocor
     {
         *payload_len = (uint16_t)(len - 4);
     }
-    return PROTO_TRUE;
+    Lora.ok = PROTO_TRUE;
 }
 
-uint16_t protocore_lora_frame_build(const protocore_lora_header *hdr, const uint8_t *payload, uint16_t len,
-                                    uint8_t *out, uint16_t cap)
+static void lora_frame_build(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_lora_header *hdr = Lora.frame_build_args.hdr;
+    const uint8_t *payload = Lora.frame_build_args.payload;
+    uint16_t len = Lora.frame_build_args.len;
+    uint8_t *out = Lora.frame_build_args.out;
+    uint16_t cap = Lora.frame_build_args.cap;
+
     if (!hdr || !out || len > PROTOCORE_LORA_MAX_PAYLOAD || (uint32_t)len + 4 > cap)
     {
-        return 0;
+        Lora.value = 0;
+        return;
     }
     out[0] = hdr->to;
     out[1] = hdr->from;
@@ -98,18 +121,24 @@ uint16_t protocore_lora_frame_build(const protocore_lora_header *hdr, const uint
     {
         out[4 + i] = payload[i];
     }
-    return (uint16_t)(len + 4);
+    Lora.value = (uint16_t)(len + 4);
 }
 
-proto_bool protocore_lora_init(const protocore_lora_bus *bus, const protocore_lora_config *cfg)
+static void lora_init(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_lora_bus *bus = Lora.init_args.bus;
+    const protocore_lora_config *cfg = Lora.init_args.cfg;
+
     if (!bus || !bus->read || !bus->write || !cfg)
     {
-        return PROTO_FALSE;
+        Lora.ok = PROTO_FALSE;
+        return;
     }
     if (rd(bus, REG_VERSION) != SX127X_VERSION)
     {
-        return PROTO_FALSE; // the bus is not talking to an SX127x
+        Lora.ok = PROTO_FALSE; // the bus is not talking to an SX127x
+        return;
     }
 
     // Switch to LoRa mode (only settable from sleep), then standby.
@@ -137,14 +166,20 @@ proto_bool protocore_lora_init(const protocore_lora_bus *bus, const protocore_lo
     wr(bus, REG_PA_CONFIG, (uint8_t)(0x80 | ((cfg->tx_power - 2) & 0x0F))); // PA_BOOST pin
 
     wr(bus, REG_OP_MODE, MODE_LORA | MODE_STDBY);
-    return PROTO_TRUE;
+    Lora.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_lora_send(const protocore_lora_bus *bus, const uint8_t *frame, uint8_t len)
+static void lora_send(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_lora_bus *bus = Lora.send_args.bus;
+    const uint8_t *frame = Lora.send_args.frame;
+    uint8_t len = Lora.send_args.len;
+
     if (!bus || !frame || len == 0 || len > PROTOCORE_LORA_MAX_PAYLOAD + 4)
     {
-        return PROTO_FALSE;
+        Lora.ok = PROTO_FALSE;
+        return;
     }
     wr(bus, REG_OP_MODE, MODE_LORA | MODE_STDBY);
     wr(bus, REG_FIFO_ADDR_PTR, 0x00);
@@ -154,25 +189,33 @@ proto_bool protocore_lora_send(const protocore_lora_bus *bus, const uint8_t *fra
     }
     wr(bus, REG_PAYLOAD_LENGTH, len);
     wr(bus, REG_OP_MODE, MODE_LORA | MODE_TX);
-    return PROTO_TRUE;
+    Lora.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_lora_tx_done(const protocore_lora_bus *bus)
+static void lora_tx_done(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_lora_bus *bus = Lora.tx_done_args.bus;
+
     if (!bus)
     {
-        return PROTO_FALSE;
+        Lora.ok = PROTO_FALSE;
+        return;
     }
     if (rd(bus, REG_IRQ_FLAGS) & IRQ_TX_DONE)
     {
         wr(bus, REG_IRQ_FLAGS, 0xFF); // clear all IRQ flags
-        return PROTO_TRUE;
+        Lora.ok = PROTO_TRUE;
+        return;
     }
-    return PROTO_FALSE;
+    Lora.ok = PROTO_FALSE;
 }
 
-void protocore_lora_set_rx(const protocore_lora_bus *bus)
+static void lora_set_rx(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_lora_bus *bus = Lora.set_rx_args.bus;
+
     if (!bus)
     {
         return;
@@ -181,21 +224,30 @@ void protocore_lora_set_rx(const protocore_lora_bus *bus)
     wr(bus, REG_OP_MODE, MODE_LORA | MODE_RX_CONT);
 }
 
-int protocore_lora_recv(const protocore_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi)
+static void lora_recv(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_lora_bus *bus = Lora.recv_args.bus;
+    uint8_t *buf = Lora.recv_args.buf;
+    uint8_t cap = Lora.recv_args.cap;
+    int16_t *rssi = Lora.recv_args.rssi;
+
     if (!bus || !buf)
     {
-        return -1;
+        Lora.n = -1;
+        return;
     }
     uint8_t flags = rd(bus, REG_IRQ_FLAGS);
     if (!(flags & IRQ_RX_DONE))
     {
-        return -1; // nothing received
+        Lora.n = -1; // nothing received
+        return;
     }
     if (flags & IRQ_PAYLOAD_CRC_ERROR)
     {
         wr(bus, REG_IRQ_FLAGS, 0xFF);
-        return -1; // corrupt frame, dropped
+        Lora.n = -1; // corrupt frame, dropped
+        return;
     }
     uint8_t len = rd(bus, REG_RX_NB_BYTES);
     wr(bus, REG_FIFO_ADDR_PTR, rd(bus, REG_FIFO_RX_CURRENT));
@@ -213,7 +265,17 @@ int protocore_lora_recv(const protocore_lora_bus *bus, uint8_t *buf, uint8_t cap
         *rssi = (int16_t)(-157 + rd(bus, REG_PKT_RSSI)); // HF port (868/915 MHz)
     }
     wr(bus, REG_IRQ_FLAGS, 0xFF);
-    return (int)n;
+    Lora.n = (int)n;
 }
+
+LoraNs Lora = {.frame_parse = lora_frame_parse,
+               .frame_build = lora_frame_build,
+               .init = lora_init,
+               .send = lora_send,
+               .tx_done = lora_tx_done,
+               .set_rx = lora_set_rx,
+               .recv = lora_recv};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_LORA

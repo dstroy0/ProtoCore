@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
+
 void setUp(void)
 {
 }
@@ -29,7 +31,7 @@ static struct tm *conv(time_t epoch, struct tm *dst)
 {
     TimeCompat.args.epoch = epoch;
     TimeCompat.args.out = dst;
-    TimeCompat.gmtime(TimeCompat.internal);
+    TimeCompat.gmtime(time_compat_work);
     return TimeCompat.tm_out;
 }
 

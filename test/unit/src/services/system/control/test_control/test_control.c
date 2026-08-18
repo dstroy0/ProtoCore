@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t control_work[16]; // the borrow an entry takes; Control never reads it
+
 void setUp(void)
 {
 }
@@ -36,7 +38,11 @@ static void close_to(float want, float got)
 void test_proportional_term(void)
 {
     Pid p;
-    pid_init(&p, 2.0f, 0.0f, 0.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 2.0f;
+    Control.pid_init_args.ki = 0.0f;
+    Control.pid_init_args.kd = 0.0f;
+    Control.pid_init(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 10.0f, 4.0f, 0.5f) == 12.0f);
     // The output tracks the error only: halving it halves the command.
     TEST_ASSERT_TRUE(pid_update(&p, 7.0f, 4.0f, 0.5f) == 6.0f);
@@ -49,7 +55,11 @@ void test_proportional_term(void)
 void test_integral_term_accumulates(void)
 {
     Pid p;
-    pid_init(&p, 0.0f, 4.0f, 0.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 0.0f;
+    Control.pid_init_args.ki = 4.0f;
+    Control.pid_init_args.kd = 0.0f;
+    Control.pid_init(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 2.0f, 0.0f, 0.25f) == 2.0f);
     TEST_ASSERT_TRUE(pid_update(&p, 2.0f, 0.0f, 0.25f) == 4.0f);
     TEST_ASSERT_TRUE(pid_update(&p, 2.0f, 0.0f, 0.25f) == 6.0f);
@@ -62,7 +72,11 @@ void test_integral_term_accumulates(void)
 void test_derivative_acts_on_the_measurement(void)
 {
     Pid p;
-    pid_init(&p, 0.0f, 0.0f, 2.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 0.0f;
+    Control.pid_init_args.ki = 0.0f;
+    Control.pid_init_args.kd = 2.0f;
+    Control.pid_init(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 0.0f, 1.0f, 0.5f) == 0.0f);
     TEST_ASSERT_TRUE(pid_update(&p, 0.0f, 3.0f, 0.5f) == -8.0f);
     // A held measurement has no derivative.
@@ -77,8 +91,16 @@ void test_setpoint_step_produces_no_derivative_kick(void)
 {
     Pid held;
     Pid stepped;
-    pid_init(&held, 1.0f, 0.0f, 4.0f);
-    pid_init(&stepped, 1.0f, 0.0f, 4.0f);
+    Control.pid_init_args.p = &held;
+    Control.pid_init_args.kp = 1.0f;
+    Control.pid_init_args.ki = 0.0f;
+    Control.pid_init_args.kd = 4.0f;
+    Control.pid_init(control_work);
+    Control.pid_init_args.p = &stepped;
+    Control.pid_init_args.kp = 1.0f;
+    Control.pid_init_args.ki = 0.0f;
+    Control.pid_init_args.kd = 4.0f;
+    Control.pid_init(control_work);
 
     TEST_ASSERT_TRUE(pid_update(&held, 0.0f, 1.0f, 0.5f) == pid_update(&stepped, 0.0f, 1.0f, 0.5f));
 
@@ -92,8 +114,14 @@ void test_setpoint_step_produces_no_derivative_kick(void)
 void test_derivative_low_pass(void)
 {
     Pid p;
-    pid_init(&p, 0.0f, 0.0f, 1.0f);
-    pid_set_derivative_filter(&p, 0.5f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 0.0f;
+    Control.pid_init_args.ki = 0.0f;
+    Control.pid_init_args.kd = 1.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_derivative_filter_args.p = &p;
+    Control.pid_set_derivative_filter_args.alpha = 0.5f;
+    Control.pid_set_derivative_filter(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 0.0f, 0.0f, 0.5f) == 0.0f); // priming step
     TEST_ASSERT_TRUE(pid_update(&p, 0.0f, 2.0f, 0.5f) == -2.0f);
     TEST_ASSERT_TRUE(pid_update(&p, 0.0f, 4.0f, 0.5f) == -3.0f);
@@ -104,8 +132,14 @@ void test_derivative_low_pass(void)
 void test_feedforward_term(void)
 {
     Pid p;
-    pid_init(&p, 0.0f, 0.0f, 0.0f);
-    pid_set_feedforward(&p, 3.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 0.0f;
+    Control.pid_init_args.ki = 0.0f;
+    Control.pid_init_args.kd = 0.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_feedforward_args.p = &p;
+    Control.pid_set_feedforward_args.kff = 3.0f;
+    Control.pid_set_feedforward(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 2.0f, 0.0f, 1.0f) == 6.0f);
     TEST_ASSERT_TRUE(pid_update(&p, 2.0f, 100.0f, 1.0f) == 6.0f);
 }
@@ -114,8 +148,15 @@ void test_feedforward_term(void)
 void test_output_clamping(void)
 {
     Pid p;
-    pid_init(&p, 1.0f, 0.0f, 0.0f);
-    pid_set_output_limits(&p, -1.0f, 1.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 1.0f;
+    Control.pid_init_args.ki = 0.0f;
+    Control.pid_init_args.kd = 0.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_output_limits_args.p = &p;
+    Control.pid_set_output_limits_args.lo = -1.0f;
+    Control.pid_set_output_limits_args.hi = 1.0f;
+    Control.pid_set_output_limits(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 10.0f, 0.0f, 1.0f) == 1.0f);
     TEST_ASSERT_TRUE(pid_update(&p, -10.0f, 0.0f, 1.0f) == -1.0f);
     TEST_ASSERT_TRUE(pid_update(&p, 0.5f, 0.0f, 1.0f) == 0.5f); // inside the range, untouched
@@ -130,8 +171,15 @@ void test_output_clamping(void)
 void test_anti_windup_freezes_and_releases(void)
 {
     Pid p;
-    pid_init(&p, 0.0f, 1.0f, 0.0f);
-    pid_set_output_limits(&p, -5.0f, 5.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 0.0f;
+    Control.pid_init_args.ki = 1.0f;
+    Control.pid_init_args.kd = 0.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_output_limits_args.p = &p;
+    Control.pid_set_output_limits_args.lo = -5.0f;
+    Control.pid_set_output_limits_args.hi = 5.0f;
+    Control.pid_set_output_limits(control_work);
 
     TEST_ASSERT_TRUE(pid_update(&p, 3.0f, 0.0f, 1.0f) == 3.0f);
     TEST_ASSERT_TRUE(p.integ == 3.0f);
@@ -146,7 +194,8 @@ void test_anti_windup_freezes_and_releases(void)
     TEST_ASSERT_TRUE(p.integ == 2.0f);
 
     // The same freeze applies at the lower rail with a negative error.
-    pid_reset(&p);
+    Control.pid_reset_args.p = &p;
+    Control.pid_reset(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, -3.0f, 0.0f, 1.0f) == -3.0f);
     for (int i = 0; i < 20; i++)
     {
@@ -160,8 +209,15 @@ void test_anti_windup_freezes_and_releases(void)
 void test_integral_hard_clamp(void)
 {
     Pid p;
-    pid_init(&p, 0.0f, 1.0f, 0.0f);
-    pid_set_integral_limits(&p, -2.0f, 2.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 0.0f;
+    Control.pid_init_args.ki = 1.0f;
+    Control.pid_init_args.kd = 0.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_integral_limits_args.p = &p;
+    Control.pid_set_integral_limits_args.lo = -2.0f;
+    Control.pid_set_integral_limits_args.hi = 2.0f;
+    Control.pid_set_integral_limits(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 3.0f, 0.0f, 1.0f) == 2.0f);
     TEST_ASSERT_TRUE(pid_update(&p, 3.0f, 0.0f, 1.0f) == 2.0f);
     TEST_ASSERT_TRUE(p.integ == 2.0f);
@@ -177,8 +233,14 @@ void test_integral_hard_clamp(void)
 void test_all_four_terms_together(void)
 {
     Pid p;
-    pid_init(&p, 2.0f, 4.0f, 1.0f);
-    pid_set_feedforward(&p, 0.5f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 2.0f;
+    Control.pid_init_args.ki = 4.0f;
+    Control.pid_init_args.kd = 1.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_feedforward_args.p = &p;
+    Control.pid_set_feedforward_args.kff = 0.5f;
+    Control.pid_set_feedforward(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 8.0f, 0.0f, 0.5f) == 36.0f);
     TEST_ASSERT_TRUE(pid_update(&p, 8.0f, 2.0f, 0.5f) == 40.0f);
 }
@@ -188,7 +250,11 @@ void test_all_four_terms_together(void)
 void test_non_positive_dt_is_not_a_step(void)
 {
     Pid p;
-    pid_init(&p, 1.0f, 1.0f, 0.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 1.0f;
+    Control.pid_init_args.ki = 1.0f;
+    Control.pid_init_args.kd = 0.0f;
+    Control.pid_init(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 5.0f, 0.0f, 0.0f) == 0.0f);
     TEST_ASSERT_TRUE(pid_update(&p, 5.0f, 0.0f, -1.0f) == 0.0f);
     TEST_ASSERT_TRUE(p.integ == 0.0f);
@@ -202,16 +268,28 @@ void test_fixed_rate_matches_the_variable_rate_law(void)
 {
     Pid fixed;
     Pid variable;
-    pid_init(&fixed, 2.0f, 4.0f, 1.0f);
-    pid_init(&variable, 2.0f, 4.0f, 1.0f);
+    Control.pid_init_args.p = &fixed;
+    Control.pid_init_args.kp = 2.0f;
+    Control.pid_init_args.ki = 4.0f;
+    Control.pid_init_args.kd = 1.0f;
+    Control.pid_init(control_work);
+    Control.pid_init_args.p = &variable;
+    Control.pid_init_args.kp = 2.0f;
+    Control.pid_init_args.ki = 4.0f;
+    Control.pid_init_args.kd = 1.0f;
+    Control.pid_init(control_work);
 
     TEST_ASSERT_TRUE(pid_update_fixed(&fixed, 8.0f, 0.0f) == 0.0f); // no rate yet
     TEST_ASSERT_FALSE(fixed.primed);
 
-    pid_set_rate(&fixed, 0.5f);
+    Control.pid_set_rate_args.p = &fixed;
+    Control.pid_set_rate_args.dt = 0.5f;
+    Control.pid_set_rate(control_work);
     TEST_ASSERT_TRUE(fixed.dt == 0.5f);
     TEST_ASSERT_TRUE(fixed.inv_dt == 2.0f);
-    pid_set_rate(&fixed, 0.0f); // a non-positive rate is ignored, not stored
+    Control.pid_set_rate_args.p = &fixed;
+    Control.pid_set_rate_args.dt = 0.0f;
+    Control.pid_set_rate(control_work); // a non-positive rate is ignored, not stored
     TEST_ASSERT_TRUE(fixed.dt == 0.5f);
 
     static const float MEAS[5] = {0.0f, 2.0f, 3.0f, 3.0f, 1.0f};
@@ -227,14 +305,22 @@ void test_fixed_rate_matches_the_variable_rate_law(void)
 void test_reset_clears_only_the_runtime_state(void)
 {
     Pid p;
-    pid_init(&p, 2.0f, 4.0f, 1.0f);
-    pid_set_output_limits(&p, -100.0f, 100.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 2.0f;
+    Control.pid_init_args.ki = 4.0f;
+    Control.pid_init_args.kd = 1.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_output_limits_args.p = &p;
+    Control.pid_set_output_limits_args.lo = -100.0f;
+    Control.pid_set_output_limits_args.hi = 100.0f;
+    Control.pid_set_output_limits(control_work);
     (void)pid_update(&p, 8.0f, 0.0f, 0.5f);
     (void)pid_update(&p, 8.0f, 2.0f, 0.5f);
     TEST_ASSERT_TRUE(p.integ != 0.0f);
     TEST_ASSERT_TRUE(p.primed);
 
-    pid_reset(&p);
+    Control.pid_reset_args.p = &p;
+    Control.pid_reset(control_work);
     TEST_ASSERT_TRUE(p.integ == 0.0f);
     TEST_ASSERT_TRUE(p.prev_meas == 0.0f);
     TEST_ASSERT_TRUE(p.d_filt == 0.0f);
@@ -243,8 +329,15 @@ void test_reset_clears_only_the_runtime_state(void)
     TEST_ASSERT_TRUE(p.out_max == 100.0f);
 
     Pid fresh;
-    pid_init(&fresh, 2.0f, 4.0f, 1.0f);
-    pid_set_output_limits(&fresh, -100.0f, 100.0f);
+    Control.pid_init_args.p = &fresh;
+    Control.pid_init_args.kp = 2.0f;
+    Control.pid_init_args.ki = 4.0f;
+    Control.pid_init_args.kd = 1.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_output_limits_args.p = &fresh;
+    Control.pid_set_output_limits_args.lo = -100.0f;
+    Control.pid_set_output_limits_args.hi = 100.0f;
+    Control.pid_set_output_limits(control_work);
     TEST_ASSERT_TRUE(pid_update(&p, 8.0f, 0.0f, 0.5f) == pid_update(&fresh, 8.0f, 0.0f, 0.5f));
 }
 
@@ -252,7 +345,11 @@ void test_reset_clears_only_the_runtime_state(void)
 void test_init_defaults(void)
 {
     Pid p;
-    pid_init(&p, 1.0f, 2.0f, 3.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 1.0f;
+    Control.pid_init_args.ki = 2.0f;
+    Control.pid_init_args.kd = 3.0f;
+    Control.pid_init(control_work);
     TEST_ASSERT_TRUE(p.kp == 1.0f);
     TEST_ASSERT_TRUE(p.ki == 2.0f);
     TEST_ASSERT_TRUE(p.kd == 3.0f);
@@ -273,8 +370,16 @@ void test_batched_update_matches_the_single_loop(void)
     Pid one[3];
     for (int i = 0; i < 3; i++)
     {
-        pid_init(&batch[i], (float)(i + 1), 1.0f, 0.5f);
-        pid_init(&one[i], (float)(i + 1), 1.0f, 0.5f);
+        Control.pid_init_args.p = &batch[i];
+        Control.pid_init_args.kp = (float)(i + 1);
+        Control.pid_init_args.ki = 1.0f;
+        Control.pid_init_args.kd = 0.5f;
+        Control.pid_init(control_work);
+        Control.pid_init_args.p = &one[i];
+        Control.pid_init_args.kp = (float)(i + 1);
+        Control.pid_init_args.ki = 1.0f;
+        Control.pid_init_args.kd = 0.5f;
+        Control.pid_init(control_work);
     }
     static const float SP[3] = {4.0f, 8.0f, -2.0f};
     float meas[3] = {0.0f, 1.0f, 0.5f};
@@ -282,7 +387,13 @@ void test_batched_update_matches_the_single_loop(void)
 
     for (int step = 0; step < 4; step++)
     {
-        pid_update_n(batch, SP, meas, 0.25f, out, 3);
+        Control.pid_update_n_args.p = batch;
+        Control.pid_update_n_args.setpoint = SP;
+        Control.pid_update_n_args.measurement = meas;
+        Control.pid_update_n_args.dt = 0.25f;
+        Control.pid_update_n_args.out = out;
+        Control.pid_update_n_args.n = 3;
+        Control.pid_update_n(control_work);
         for (int i = 0; i < 3; i++)
         {
             TEST_ASSERT_TRUE(out[i] == pid_update(&one[i], SP[i], meas[i], 0.25f));
@@ -291,10 +402,34 @@ void test_batched_update_matches_the_single_loop(void)
     }
     // A null array is a no-op rather than a write through it.
     out[0] = 42.0f;
-    pid_update_n(NULL, SP, meas, 0.25f, out, 3);
-    pid_update_n(batch, NULL, meas, 0.25f, out, 3);
-    pid_update_n(batch, SP, NULL, 0.25f, out, 3);
-    pid_update_n(batch, SP, meas, 0.25f, NULL, 3);
+    Control.pid_update_n_args.p = NULL;
+    Control.pid_update_n_args.setpoint = SP;
+    Control.pid_update_n_args.measurement = meas;
+    Control.pid_update_n_args.dt = 0.25f;
+    Control.pid_update_n_args.out = out;
+    Control.pid_update_n_args.n = 3;
+    Control.pid_update_n(control_work);
+    Control.pid_update_n_args.p = batch;
+    Control.pid_update_n_args.setpoint = NULL;
+    Control.pid_update_n_args.measurement = meas;
+    Control.pid_update_n_args.dt = 0.25f;
+    Control.pid_update_n_args.out = out;
+    Control.pid_update_n_args.n = 3;
+    Control.pid_update_n(control_work);
+    Control.pid_update_n_args.p = batch;
+    Control.pid_update_n_args.setpoint = SP;
+    Control.pid_update_n_args.measurement = NULL;
+    Control.pid_update_n_args.dt = 0.25f;
+    Control.pid_update_n_args.out = out;
+    Control.pid_update_n_args.n = 3;
+    Control.pid_update_n(control_work);
+    Control.pid_update_n_args.p = batch;
+    Control.pid_update_n_args.setpoint = SP;
+    Control.pid_update_n_args.measurement = meas;
+    Control.pid_update_n_args.dt = 0.25f;
+    Control.pid_update_n_args.out = NULL;
+    Control.pid_update_n_args.n = 3;
+    Control.pid_update_n(control_work);
     TEST_ASSERT_TRUE(out[0] == 42.0f);
 }
 
@@ -362,13 +497,27 @@ static uint32_t u32le(const uint8_t *p)
 void test_log_header_layout(void)
 {
     Pid p;
-    pid_init(&p, 1.5f, 0.25f, 0.125f);
-    pid_set_feedforward(&p, 2.0f);
-    pid_set_output_limits(&p, -8.0f, 8.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 1.5f;
+    Control.pid_init_args.ki = 0.25f;
+    Control.pid_init_args.kd = 0.125f;
+    Control.pid_init(control_work);
+    Control.pid_set_feedforward_args.p = &p;
+    Control.pid_set_feedforward_args.kff = 2.0f;
+    Control.pid_set_feedforward(control_work);
+    Control.pid_set_output_limits_args.p = &p;
+    Control.pid_set_output_limits_args.lo = -8.0f;
+    Control.pid_set_output_limits_args.hi = 8.0f;
+    Control.pid_set_output_limits(control_work);
 
     uint8_t buf[PID_LOG_HEADER_LEN + 4];
     memset(buf, 0xAA, sizeof(buf));
-    TEST_ASSERT_EQUAL_UINT32(PID_LOG_HEADER_LEN, (uint32_t)pid_log_header(buf, sizeof(buf), &p, 0.5f));
+    Control.pid_log_header_args.buf = buf;
+    Control.pid_log_header_args.cap = sizeof(buf);
+    Control.pid_log_header_args.p = &p;
+    Control.pid_log_header_args.dt = 0.5f;
+    Control.pid_log_header(control_work);
+    TEST_ASSERT_EQUAL_UINT32(PID_LOG_HEADER_LEN, (uint32_t)Control.n);
     TEST_ASSERT_EQUAL_UINT32(36u, (uint32_t)PID_LOG_HEADER_LEN);
 
     TEST_ASSERT_EQUAL_MEMORY(PID_LOG_MAGIC, buf, 4);
@@ -394,10 +543,25 @@ void test_log_header_layout(void)
 
     // A buffer one octet short of the fixed width writes nothing.
     memset(buf, 0xAA, sizeof(buf));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pid_log_header(buf, PID_LOG_HEADER_LEN - 1, &p, 0.5f));
+    Control.pid_log_header_args.buf = buf;
+    Control.pid_log_header_args.cap = PID_LOG_HEADER_LEN - 1;
+    Control.pid_log_header_args.p = &p;
+    Control.pid_log_header_args.dt = 0.5f;
+    Control.pid_log_header(control_work);
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)Control.n);
     TEST_ASSERT_EQUAL_UINT8(0xAA, buf[0]);
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pid_log_header(NULL, sizeof(buf), &p, 0.5f));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pid_log_header(buf, sizeof(buf), NULL, 0.5f));
+    Control.pid_log_header_args.buf = NULL;
+    Control.pid_log_header_args.cap = sizeof(buf);
+    Control.pid_log_header_args.p = &p;
+    Control.pid_log_header_args.dt = 0.5f;
+    Control.pid_log_header(control_work);
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)Control.n);
+    Control.pid_log_header_args.buf = buf;
+    Control.pid_log_header_args.cap = sizeof(buf);
+    Control.pid_log_header_args.p = NULL;
+    Control.pid_log_header_args.dt = 0.5f;
+    Control.pid_log_header(control_work);
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)Control.n);
 }
 
 // One log record: setpoint | measurement | output | status, 16 octets, with bit 0 of status marking
@@ -406,8 +570,14 @@ void test_log_record_layout(void)
 {
     uint8_t buf[PID_LOG_RECORD_LEN + 4];
     memset(buf, 0xAA, sizeof(buf));
-    TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN,
-                             (uint32_t)pid_log_record(buf, sizeof(buf), 4.0f, -1.5f, 2.25f, PROTO_TRUE));
+    Control.pid_log_record_args.buf = buf;
+    Control.pid_log_record_args.cap = sizeof(buf);
+    Control.pid_log_record_args.setpoint = 4.0f;
+    Control.pid_log_record_args.measurement = -1.5f;
+    Control.pid_log_record_args.output = 2.25f;
+    Control.pid_log_record_args.saturated = PROTO_TRUE;
+    Control.pid_log_record(control_work);
+    TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN, (uint32_t)Control.n);
     TEST_ASSERT_EQUAL_UINT32(16u, (uint32_t)PID_LOG_RECORD_LEN);
     TEST_ASSERT_TRUE(f32le(buf + 0) == 4.0f);
     TEST_ASSERT_TRUE(f32le(buf + 4) == -1.5f);
@@ -416,14 +586,34 @@ void test_log_record_layout(void)
     TEST_ASSERT_EQUAL_HEX32(0x1u, PID_LOG_STATUS_SATURATED);
     TEST_ASSERT_EQUAL_UINT8(0xAA, buf[16]);
 
-    TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN,
-                             (uint32_t)pid_log_record(buf, sizeof(buf), 4.0f, -1.5f, 2.25f, PROTO_FALSE));
+    Control.pid_log_record_args.buf = buf;
+    Control.pid_log_record_args.cap = sizeof(buf);
+    Control.pid_log_record_args.setpoint = 4.0f;
+    Control.pid_log_record_args.measurement = -1.5f;
+    Control.pid_log_record_args.output = 2.25f;
+    Control.pid_log_record_args.saturated = PROTO_FALSE;
+    Control.pid_log_record(control_work);
+    TEST_ASSERT_EQUAL_UINT32(PID_LOG_RECORD_LEN, (uint32_t)Control.n);
     TEST_ASSERT_EQUAL_HEX32(0u, u32le(buf + 12));
 
     memset(buf, 0xAA, sizeof(buf));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pid_log_record(buf, PID_LOG_RECORD_LEN - 1, 0.0f, 0.0f, 0.0f, PROTO_FALSE));
+    Control.pid_log_record_args.buf = buf;
+    Control.pid_log_record_args.cap = PID_LOG_RECORD_LEN - 1;
+    Control.pid_log_record_args.setpoint = 0.0f;
+    Control.pid_log_record_args.measurement = 0.0f;
+    Control.pid_log_record_args.output = 0.0f;
+    Control.pid_log_record_args.saturated = PROTO_FALSE;
+    Control.pid_log_record(control_work);
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)Control.n);
     TEST_ASSERT_EQUAL_UINT8(0xAA, buf[0]);
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)pid_log_record(NULL, sizeof(buf), 0.0f, 0.0f, 0.0f, PROTO_FALSE));
+    Control.pid_log_record_args.buf = NULL;
+    Control.pid_log_record_args.cap = sizeof(buf);
+    Control.pid_log_record_args.setpoint = 0.0f;
+    Control.pid_log_record_args.measurement = 0.0f;
+    Control.pid_log_record_args.output = 0.0f;
+    Control.pid_log_record_args.saturated = PROTO_FALSE;
+    Control.pid_log_record(control_work);
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)Control.n);
 }
 
 // A closed loop over a first-order plant must settle at the setpoint: with an integral term the
@@ -431,8 +621,15 @@ void test_log_record_layout(void)
 void test_closed_loop_settles_on_the_setpoint(void)
 {
     Pid p;
-    pid_init(&p, 0.5f, 2.0f, 0.0f);
-    pid_set_output_limits(&p, -10.0f, 10.0f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 0.5f;
+    Control.pid_init_args.ki = 2.0f;
+    Control.pid_init_args.kd = 0.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_output_limits_args.p = &p;
+    Control.pid_set_output_limits_args.lo = -10.0f;
+    Control.pid_set_output_limits_args.hi = 10.0f;
+    Control.pid_set_output_limits(control_work);
 
     float plant = 0.0f;
     const float setpoint = 3.0f;
@@ -445,8 +642,15 @@ void test_closed_loop_settles_on_the_setpoint(void)
 
     // A pure proportional loop leaves the offset the I term removes.
     Pid pp;
-    pid_init(&pp, 0.5f, 0.0f, 0.0f);
-    pid_set_output_limits(&pp, -10.0f, 10.0f);
+    Control.pid_init_args.p = &pp;
+    Control.pid_init_args.kp = 0.5f;
+    Control.pid_init_args.ki = 0.0f;
+    Control.pid_init_args.kd = 0.0f;
+    Control.pid_init(control_work);
+    Control.pid_set_output_limits_args.p = &pp;
+    Control.pid_set_output_limits_args.lo = -10.0f;
+    Control.pid_set_output_limits_args.hi = 10.0f;
+    Control.pid_set_output_limits(control_work);
     float plant_p = 0.0f;
     for (int i = 0; i < 2000; i++)
     {

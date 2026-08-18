@@ -13,13 +13,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t sleep_sched_work[16]; // the borrow an entry takes; SleepSched never reads it
+
 /** @brief The next light-sleep window at @p now given @p last_active_ms, under @p cfg. */
 static uint32_t sleep_next(uint32_t now, uint32_t last_active_ms, const protocore_sleep_cfg *cfg)
 {
     SleepSched.ask.now = now;
     SleepSched.ask.last_active_ms = last_active_ms;
     SleepSched.ask.cfg = cfg;
-    SleepSched.next(SleepSched.internal);
+    SleepSched.next(sleep_sched_work);
     return SleepSched.ms;
 }
 

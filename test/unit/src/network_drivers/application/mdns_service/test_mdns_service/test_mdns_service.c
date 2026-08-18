@@ -43,7 +43,7 @@ void setUp(void)
 void tearDown(void)
 {
     UdpListener.port = MDNS_PORT;
-    UdpListener.close(UdpListener.internal);
+    UdpListener.close(protocore_udp_listener_span());
 }
 
 // --- this file's own label codec, independent of the one under test -----------------------------
@@ -131,7 +131,7 @@ static void deliver(const void *p, uint16_t n)
 {
     protocore_net_host_udp_reset();
     TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(MDNS_PORT, "192.0.2.7", MDNS_PORT, (void *)p, n));
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
 }
 
 static void ask(const char *name, uint16_t qtype)
@@ -200,7 +200,7 @@ void test_begin_joins_the_rfc6762_group(void)
     TEST_ASSERT_NOT_NULL(protocore_net_host_udp_pcb(MDNS_PORT));
 
     UdpListener.port = MDNS_PORT;
-    UdpListener.joined_group(UdpListener.internal);
+    UdpListener.joined_group(protocore_udp_listener_span());
     TEST_ASSERT_EQUAL_STRING("224.0.0.251", UdpListener.text);
 }
 

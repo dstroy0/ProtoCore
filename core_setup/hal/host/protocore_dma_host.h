@@ -88,8 +88,61 @@ static inline uint16_t protocore_dma_stage_get(PcDmaStage *s, uint8_t *out, uint
     return (uint16_t)protocore_ring_read(s->buf, PROTOCORE_DMA_HOST_STAGE, &s->head, &s->tail, out, max);
 }
 
+static inline void protocore_dma_host_complete(PcDmaHostCh *c, uint8_t ch, protocore_dma_dir dir, const uint8_t *data,
+                                               uint16_t len)
+{
+    protocore_dma_event ev;
+    memset(&ev, 0, sizeof(ev));
+    ev.data = data;
+    ev.len = len;
+    ev.seq = c->seq;
+    ev.channel = ch;
+    ev.periph = c->cfg.periph;
+    ev.dir = dir;
+    c->seq = (uint16_t)(c->seq + 1u);
+    c->cfg.on_complete(&ev, c->cfg.ctx);
+}
+
+// --- what a test drives it with ---------------------------------------------
+
+/** @brief Inject @p len bytes as if they arrived on @p ch's RX line. */
+static inline proto_bool protocore_dma_host_feed(uint8_t ch, const uint8_t *bytes, uint16_t len)
+{
+    if (ch >= PROTOCORE_DMA_CHANNELS || !g_protocore_dma[ch].open)
+    {
+        return PROTO_FALSE;
+    }
+    return protocore_dma_stage_put(&g_protocore_dma[ch].rx, bytes, len);
+}
+
+/** @brief Read back up to @p max bytes @p ch transmitted. */
+static inline uint16_t protocore_dma_host_capture(uint8_t ch, uint8_t *out, uint16_t max)
+{
+    if (ch >= PROTOCORE_DMA_CHANNELS || out == NULL || !g_protocore_dma[ch].open)
+    {
+        return 0;
+    }
+    return protocore_dma_stage_get(&g_protocore_dma[ch].tx, out, max);
+}
+
+/** @brief Forget every channel, so one case cannot inherit another's staging. */
+static inline void protocore_dma_host_reset(void)
+{
+    memset(g_protocore_dma, 0, sizeof(g_protocore_dma));
+}
+
 // --- the seam mmgr/dma.c dispatches to --------------------------------------
 
+// Declared here and defined once, in protocore_dma_host.c. They cannot be defined in this header:
+// Unity's runner generator copies a suite's includes into unity_runner.c, so a header definition
+// lands in two translation units and the link fails on all four. They also cannot be weak, because
+// dma.c's defaults already are and the two would tie instead of one winning.
+proto_bool protocore_dma_hw_open(const protocore_dma_config *cfg);
+proto_bool protocore_dma_hw_tx_submit(uint8_t ch, const uint8_t *buf, uint16_t len);
+void protocore_dma_hw_close(uint8_t ch);
+void protocore_dma_hw_poll(void);
+
+#ifdef PROTOCORE_DMA_HOST_IMPL
 proto_bool protocore_dma_hw_open(const protocore_dma_config *cfg)
 {
     if (cfg == NULL || cfg->channel >= PROTOCORE_DMA_CHANNELS || g_protocore_dma[cfg->channel].open)
@@ -132,21 +185,6 @@ void protocore_dma_hw_close(uint8_t ch)
     }
 }
 
-static inline void protocore_dma_host_complete(PcDmaHostCh *c, uint8_t ch, protocore_dma_dir dir, const uint8_t *data,
-                                               uint16_t len)
-{
-    protocore_dma_event ev;
-    memset(&ev, 0, sizeof(ev));
-    ev.data = data;
-    ev.len = len;
-    ev.seq = c->seq;
-    ev.channel = ch;
-    ev.periph = c->cfg.periph;
-    ev.dir = dir;
-    c->seq = (uint16_t)(c->seq + 1u);
-    c->cfg.on_complete(&ev, c->cfg.ctx);
-}
-
 void protocore_dma_hw_poll(void)
 {
     for (uint8_t ch = 0; ch < PROTOCORE_DMA_CHANNELS; ch++)
@@ -183,34 +221,7 @@ void protocore_dma_hw_poll(void)
         }
     }
 }
-
-// --- what a test drives it with ---------------------------------------------
-
-/** @brief Inject @p len bytes as if they arrived on @p ch's RX line. */
-static inline proto_bool protocore_dma_host_feed(uint8_t ch, const uint8_t *bytes, uint16_t len)
-{
-    if (ch >= PROTOCORE_DMA_CHANNELS || !g_protocore_dma[ch].open)
-    {
-        return PROTO_FALSE;
-    }
-    return protocore_dma_stage_put(&g_protocore_dma[ch].rx, bytes, len);
-}
-
-/** @brief Read back up to @p max bytes @p ch transmitted. */
-static inline uint16_t protocore_dma_host_capture(uint8_t ch, uint8_t *out, uint16_t max)
-{
-    if (ch >= PROTOCORE_DMA_CHANNELS || out == NULL || !g_protocore_dma[ch].open)
-    {
-        return 0;
-    }
-    return protocore_dma_stage_get(&g_protocore_dma[ch].tx, out, max);
-}
-
-/** @brief Forget every channel, so one case cannot inherit another's staging. */
-static inline void protocore_dma_host_reset(void)
-{
-    memset(g_protocore_dma, 0, sizeof(g_protocore_dma));
-}
+#endif // PROTOCORE_DMA_HOST_IMPL
 
 #endif // PROTOCORE_ENABLE_DMA
 

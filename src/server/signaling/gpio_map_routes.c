@@ -11,6 +11,8 @@
 
 #include "server/signaling/gpio_map.h"
 
+static uint8_t gpio_map_work[16]; // the borrow an entry takes; GpioMap never reads it
+
 #if PROTOCORE_ENABLE_GPIO_MAP
 
 #include "protocore.h"
@@ -31,12 +33,12 @@ static void gpio_get_handler(uint8_t slot_id, HttpReq *req)
     (void)req;
     GpioMap.args.pins_rw = s_gpior.pins;
     GpioMap.args.count = s_gpior.count;
-    GpioMap.sample(GpioMap.internal);
+    GpioMap.sample(gpio_map_work);
     char buf[PROTOCORE_GPIO_JSON_BUF];
     GpioMap.args.pins = s_gpior.pins;
     GpioMap.out_args.out = buf;
     GpioMap.out_args.cap = sizeof(buf);
-    GpioMap.json(GpioMap.internal);
+    GpioMap.json(gpio_map_work);
     // No instance test: a handler only runs because this service registered the route, and the
     // response goes out through the server's own entry point rather than a pointer to it.
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
@@ -50,7 +52,7 @@ static void gpio_post_handler(uint8_t slot_id, HttpReq *req)
     GpioMap.parse_args.len = req->body_len;
     GpioMap.parse_args.pin_out = &pin;
     GpioMap.parse_args.level_out = &level;
-    GpioMap.parse_set(GpioMap.internal);
+    GpioMap.parse_set(gpio_map_work);
     if (!GpioMap.ok)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "bad request");
@@ -59,7 +61,7 @@ static void gpio_post_handler(uint8_t slot_id, HttpReq *req)
     GpioMap.args.pins = s_gpior.pins;
     GpioMap.args.count = s_gpior.count;
     GpioMap.args.pin = pin;
-    GpioMap.is_output(GpioMap.internal);
+    GpioMap.is_output(gpio_map_work);
     if (!GpioMap.ok)
     {
         send_text(slot_id, 403, PROTOCORE_MIME_TEXT_PLAIN, "pin not a mapped output");
@@ -67,29 +69,29 @@ static void gpio_post_handler(uint8_t slot_id, HttpReq *req)
     }
     GpioMap.args.pin = pin;
     GpioMap.args.level = level;
-    GpioMap.write(GpioMap.internal);
+    GpioMap.write(gpio_map_work);
     GpioMap.args.pins_rw = s_gpior.pins;
     GpioMap.args.count = s_gpior.count;
-    GpioMap.sample(GpioMap.internal);
+    GpioMap.sample(gpio_map_work);
     char buf[PROTOCORE_GPIO_JSON_BUF];
     GpioMap.args.pins = s_gpior.pins;
     GpioMap.out_args.out = buf;
     GpioMap.out_args.cap = sizeof(buf);
-    GpioMap.json(GpioMap.internal);
+    GpioMap.json(gpio_map_work);
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
 
-void protocore_gpio_route_begin(struct GpioMapInternal *restrict ctx)
+void protocore_gpio_route_begin(uint8_t *restrict work)
 {
+    (void)work;
     protocore_gpio_pin *pins = GpioMap.args.pins_rw;
     const uint8_t count = GpioMap.args.count;
     const char *path = GpioMap.args.path;
 
-    (void)ctx;
     s_gpior.pins = pins;
     s_gpior.count = count;
     GpioMap.args.pins = pins;
-    GpioMap.begin_pins(GpioMap.internal);
+    GpioMap.begin_pins(gpio_map_work);
     const char *p = (path && path[0]) ? path : "/gpio";
     on_http(p, HTTP_GET, gpio_get_handler);
     on_http(p, HTTP_POST, gpio_post_handler);

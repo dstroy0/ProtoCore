@@ -21,33 +21,22 @@
 #ifndef PROTOCORE_WISUN_H
 #define PROTOCORE_WISUN_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+#include "shared/ip/ip.h"     // the complete type a public struct below holds by value
 
 #if PROTOCORE_ENABLE_WISUN
 
 PROTOCORE_BEGIN_DECLS
 
-#include "shared/ip/ip.h"
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
 /** @brief CoAP message type + method codes (RFC 7252) used by the connector. */
 #define WISUN_COAP_CON 0 ///< Confirmable.
 #define WISUN_COAP_NON 1 ///< Non-confirmable.
 #define WISUN_COAP_GET 1 ///< method code 0.01.
 #define WISUN_COAP_PUT 3 ///< method code 0.03.
-
-/**
- * @brief Build a CoAP client request: header + Uri-Path options (one per `/` segment) + optional payload.
- * @param type    WISUN_COAP_CON / WISUN_COAP_NON.
- * @param code    method code (WISUN_COAP_GET / WISUN_COAP_PUT).
- * @param msg_id  the 16-bit message id (echoed in the ACK).
- * @param token   correlation token (0..8 bytes; may be null if @p tkl == 0).
- * @param tkl     token length.
- * @param uri_path resource path, e.g. "sensors/temp" (leading / optional).
- * @param payload request body (may be null if @p plen == 0).
- * @param plen    payload length.
- * @return the PDU length, or 0 on overflow / bad args (tkl > 8).
- */
-size_t protocore_wisun_build_coap(uint8_t type, uint8_t code, uint16_t msg_id, const uint8_t *token, uint8_t tkl,
-                                  const char *uri_path, const uint8_t *payload, size_t plen, uint8_t *out, size_t cap);
 
 /** @brief One FAN mesh node behind the border router. */
 typedef struct
@@ -66,26 +55,124 @@ typedef struct
     size_t cap;
 } WisunFan;
 
-/** @brief Initialize the connector over caller storage. */
-void protocore_wisun_init(WisunFan *fan, const protocore_ip *border_router, WisunNode *storage, size_t cap);
+#include "shared/ip/ip.h" // protocore_ip: the type a parameter points at
+
+/** @brief What build_coap takes: type, code, msg_id, token, tkl, ... */
+typedef struct
+{
+    uint8_t type;           ///< WISUN_COAP_CON / WISUN_COAP_NON
+    uint8_t code;           ///< method code (WISUN_COAP_GET / WISUN_COAP_PUT)
+    uint16_t msg_id;        ///< the 16-bit message id (echoed in the ACK)
+    const uint8_t *token;   ///< correlation token (0..8 bytes; may be null if tkl == 0)
+    uint8_t tkl;            ///< token length
+    const char *uri_path;   ///< resource path, e.g. "sensors/temp" (leading / optional)
+    const uint8_t *payload; ///< request body (may be null if plen == 0)
+    size_t plen;            ///< payload length
+    uint8_t *out;
+    size_t cap;
+} WisunBuildCoapArgs;
+
+/** @brief What init takes: fan, border_router, storage, cap. */
+typedef struct
+{
+    WisunFan *fan;
+    const protocore_ip *border_router;
+    WisunNode *storage;
+    size_t cap;
+} WisunInitArgs;
+
+/** @brief What node_register takes: fan, addr, now. */
+typedef struct
+{
+    WisunFan *fan;
+    const protocore_ip *addr;
+    uint32_t now;
+} WisunNodeRegisterArgs;
+
+/** @brief What node_find takes: fan, addr, idx. */
+typedef struct
+{
+    const WisunFan *fan;
+    const protocore_ip *addr;
+    size_t *idx;
+} WisunNodeFindArgs;
+
+/** @brief What joined_count takes: fan. */
+typedef struct
+{
+    const WisunFan *fan;
+} WisunJoinedCountArgs;
+
+/** @brief What nodes_json takes: fan, out, cap. */
+typedef struct
+{
+    const WisunFan *fan;
+    char *out;
+    size_t cap;
+} WisunNodesJsonArgs;
 
 /**
- * @brief Register (or refresh) a node by address; sets joined + last_seen.
- * @return the node index, or -1 if the table is full / bad args.
+ * @brief Wi-SUN FAN border-router connector (PROTOCORE_ENABLE_WISUN).
+ *
+ * A caller sets the members a call takes, invokes it through ::Wisun with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Wisun.build_coap_args.type = ...;
+ *   Wisun.build_coap_args.code = ...;
+ *   Wisun.build_coap_args.msg_id = ...;
+ *   Wisun.build_coap_args.token = ...;
+ *   Wisun.build_coap_args.tkl = ...;
+ *   Wisun.build_coap_args.uri_path = ...;
+ *   Wisun.build_coap_args.payload = ...;
+ *   Wisun.build_coap_args.plen = ...;
+ *   Wisun.build_coap_args.out = ...;
+ *   Wisun.build_coap_args.cap = ...;
+ *   Wisun.build_coap(work);
+ *   // Wisun.n is what the call reports
+ *
+ * @var WisunNs::build_coap_args  what build_coap takes: type, code, msg_id, token, tkl,
+ * @var WisunNs::init_args  what init takes: fan, border_router, storage, cap
+ * @var WisunNs::node_register_args  what node_register takes: fan, addr, now
+ * @var WisunNs::node_find_args  what node_find takes: fan, addr, idx
+ * @var WisunNs::joined_count_args  what joined_count takes: fan
+ * @var WisunNs::nodes_json_args  what nodes_json takes: fan, out, cap
+ * @var WisunNs::ok  a call's true/false outcome
+ * @var WisunNs::n  the PDU length, or 0 on overflow / bad args (tkl > 8)
+ * @var WisunNs::i32  the node index, or -1 if the table is full / bad args
+ * @var WisunNs::build_coap  build a CoAP client request: header + Uri-Path options (one per `/` ...
+ * @var WisunNs::init  initialize the connector over caller storage
+ * @var WisunNs::node_register  register (or refresh) a node by address; sets joined + last_seen
+ * @var WisunNs::node_find  find a node by address. idx (may be null) receives the index. found
+ * @var WisunNs::joined_count  number of joined nodes
+ * @var WisunNs::nodes_json  serialize the node table as `[{"addr":"..","joined":bool},...]` for ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-int protocore_wisun_node_register(WisunFan *fan, const protocore_ip *addr, uint32_t now);
+typedef struct
+{
+    WisunBuildCoapArgs build_coap_args;
+    WisunInitArgs init_args;
+    WisunNodeRegisterArgs node_register_args;
+    WisunNodeFindArgs node_find_args;
+    WisunJoinedCountArgs joined_count_args;
+    WisunNodesJsonArgs nodes_json_args;
 
-/** @brief Find a node by address. @p idx (may be null) receives the index. @return found. */
-proto_bool protocore_wisun_node_find(const WisunFan *fan, const protocore_ip *addr, size_t *idx);
+    proto_bool ok;
+    size_t n;
+    int i32;
 
-/** @brief Number of joined nodes. */
-size_t protocore_wisun_joined_count(const WisunFan *fan);
+    void (*const build_coap)(uint8_t *restrict work);
+    void (*const init)(uint8_t *restrict work);
+    void (*const node_register)(uint8_t *restrict work);
+    void (*const node_find)(uint8_t *restrict work);
+    void (*const joined_count)(uint8_t *restrict work);
+    void (*const nodes_json)(uint8_t *restrict work);
+} WisunNs;
 
-/**
- * @brief Serialize the node table as `[{"addr":"..","joined":bool},...]` for the web.
- * @return length written (excl NUL), or 0 on overflow / bad args.
- */
-size_t protocore_wisun_nodes_json(const WisunFan *fan, char *out, size_t cap);
+/** @brief The one symbol this module exports. */
+extern WisunNs Wisun;
 
 PROTOCORE_END_DECLS
 

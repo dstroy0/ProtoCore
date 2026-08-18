@@ -35,7 +35,7 @@ static const char *topic(const char *group, const char *type, const char *node, 
     Sparkplug.topic.device_id = device;
     Sparkplug.topic_out.out = g_topic;
     Sparkplug.topic_out.cap = sizeof(g_topic);
-    Sparkplug.build_topic(Sparkplug.internal);
+    Sparkplug.build_topic(protocore_sparkplug_span());
     return g_topic;
 }
 
@@ -46,7 +46,7 @@ static size_t encode_metric(const SpbMetric *m)
     Sparkplug.out.cap = sizeof(g_out);
     Sparkplug.metrics.list = m;
     Sparkplug.metrics.count = 1;
-    Sparkplug.build_metric(Sparkplug.internal);
+    Sparkplug.build_metric(protocore_sparkplug_span());
     return Sparkplug.n;
 }
 
@@ -107,7 +107,7 @@ void test_topic_refuses_a_short_buffer(void)
     Sparkplug.topic.device_id = NULL;
     Sparkplug.topic_out.out = small;
     Sparkplug.topic_out.cap = sizeof(small);
-    Sparkplug.build_topic(Sparkplug.internal);
+    Sparkplug.build_topic(protocore_sparkplug_span());
     TEST_ASSERT_FALSE(Sparkplug.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.n);
 }
@@ -225,7 +225,7 @@ void test_payload_wire_octets(void)
     Sparkplug.payload.seq = 0;
     Sparkplug.metrics.list = &m;
     Sparkplug.metrics.count = 1;
-    Sparkplug.build_payload(Sparkplug.internal);
+    Sparkplug.build_payload(protocore_sparkplug_span());
 
     TEST_ASSERT_TRUE(Sparkplug.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Sparkplug.n);
@@ -254,14 +254,14 @@ void test_payload_round_trip(void)
     Sparkplug.payload.seq = 255;                    // sec 6.4.5: 0..255, wrapping to zero
     Sparkplug.metrics.list = list;
     Sparkplug.metrics.count = 2;
-    Sparkplug.build_payload(Sparkplug.internal);
+    Sparkplug.build_payload(protocore_sparkplug_span());
     TEST_ASSERT_TRUE(Sparkplug.ok);
     const size_t len = Sparkplug.n;
 
     Sparkplug.source.buf = g_out;
     Sparkplug.source.len = len;
     Sparkplug.source.cursor = 0;
-    Sparkplug.parse_payload(Sparkplug.internal);
+    Sparkplug.parse_payload(protocore_sparkplug_span());
     TEST_ASSERT_TRUE(Sparkplug.ok);
     TEST_ASSERT_TRUE(Sparkplug.header.has_timestamp);
     TEST_ASSERT_EQUAL_UINT64(1700000000000ull, Sparkplug.header.timestamp);
@@ -270,7 +270,7 @@ void test_payload_round_trip(void)
 
     // metric 0
     Sparkplug.source.cursor = 0;
-    Sparkplug.next_metric(Sparkplug.internal);
+    Sparkplug.next_metric(protocore_sparkplug_span());
     TEST_ASSERT_TRUE(Sparkplug.ok);
     const uint8_t *m0 = Sparkplug.metric_bytes;
     const size_t m0len = Sparkplug.metric_len;
@@ -278,7 +278,7 @@ void test_payload_round_trip(void)
 
     Sparkplug.source.buf = m0;
     Sparkplug.source.len = m0len;
-    Sparkplug.parse_metric(Sparkplug.internal);
+    Sparkplug.parse_metric(protocore_sparkplug_span());
     TEST_ASSERT_TRUE(Sparkplug.ok);
     TEST_ASSERT_EQUAL_UINT(1u, Sparkplug.metric.name_len);
     TEST_ASSERT_EQUAL_CHAR('a', Sparkplug.metric.name[0]);
@@ -291,7 +291,7 @@ void test_payload_round_trip(void)
     Sparkplug.source.buf = g_out;
     Sparkplug.source.len = len;
     Sparkplug.source.cursor = after0;
-    Sparkplug.next_metric(Sparkplug.internal);
+    Sparkplug.next_metric(protocore_sparkplug_span());
     TEST_ASSERT_TRUE(Sparkplug.ok);
     const uint8_t *m1 = Sparkplug.metric_bytes;
     const size_t m1len = Sparkplug.metric_len;
@@ -299,7 +299,7 @@ void test_payload_round_trip(void)
 
     Sparkplug.source.buf = m1;
     Sparkplug.source.len = m1len;
-    Sparkplug.parse_metric(Sparkplug.internal);
+    Sparkplug.parse_metric(protocore_sparkplug_span());
     TEST_ASSERT_TRUE(Sparkplug.ok);
     TEST_ASSERT_TRUE(Sparkplug.metric.has_alias);
     TEST_ASSERT_EQUAL_UINT64(9u, Sparkplug.metric.alias);
@@ -311,7 +311,7 @@ void test_payload_round_trip(void)
     Sparkplug.source.buf = g_out;
     Sparkplug.source.len = len;
     Sparkplug.source.cursor = after1;
-    Sparkplug.next_metric(Sparkplug.internal);
+    Sparkplug.next_metric(protocore_sparkplug_span());
     TEST_ASSERT_FALSE(Sparkplug.ok);
     TEST_ASSERT_NULL(Sparkplug.metric_bytes);
 }
@@ -329,7 +329,7 @@ void test_decoded_strings_point_into_the_source(void)
 
     Sparkplug.source.buf = g_out;
     Sparkplug.source.len = len;
-    Sparkplug.parse_metric(Sparkplug.internal);
+    Sparkplug.parse_metric(protocore_sparkplug_span());
     TEST_ASSERT_TRUE(Sparkplug.ok);
     TEST_ASSERT_TRUE(Sparkplug.metric.name >= (const char *)g_out);
     TEST_ASSERT_TRUE(Sparkplug.metric.name + Sparkplug.metric.name_len <= (const char *)g_out + len);
@@ -342,7 +342,7 @@ void test_parse_reports_absent_header_fields(void)
     static const uint8_t EMPTY[1] = {0};
     Sparkplug.source.buf = EMPTY;
     Sparkplug.source.len = 0;
-    Sparkplug.parse_payload(Sparkplug.internal);
+    Sparkplug.parse_payload(protocore_sparkplug_span());
     TEST_ASSERT_TRUE(Sparkplug.ok);
     TEST_ASSERT_FALSE(Sparkplug.header.has_timestamp);
     TEST_ASSERT_FALSE(Sparkplug.header.has_seq);
@@ -356,7 +356,7 @@ void test_parse_rejects_a_truncated_varint(void)
     static const uint8_t BAD[] = {0x08, 0x80}; // timestamp(1) VARINT, continuation set, nothing after
     Sparkplug.source.buf = BAD;
     Sparkplug.source.len = sizeof(BAD);
-    Sparkplug.parse_payload(Sparkplug.internal);
+    Sparkplug.parse_payload(protocore_sparkplug_span());
     TEST_ASSERT_FALSE(Sparkplug.ok);
 }
 
@@ -368,7 +368,7 @@ void test_next_metric_rejects_an_overlong_length(void)
     Sparkplug.source.buf = BAD;
     Sparkplug.source.len = sizeof(BAD);
     Sparkplug.source.cursor = 0;
-    Sparkplug.next_metric(Sparkplug.internal);
+    Sparkplug.next_metric(protocore_sparkplug_span());
     TEST_ASSERT_FALSE(Sparkplug.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.metric_len);
 }
@@ -390,7 +390,7 @@ void test_build_refuses_a_short_buffer(void)
     Sparkplug.payload.seq = 0;
     Sparkplug.metrics.list = &m;
     Sparkplug.metrics.count = 1;
-    Sparkplug.build_payload(Sparkplug.internal);
+    Sparkplug.build_payload(protocore_sparkplug_span());
     TEST_ASSERT_FALSE(Sparkplug.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.n);
 }
@@ -406,11 +406,11 @@ void test_build_refuses_a_null_buffer(void)
     Sparkplug.out.cap = 0;
     Sparkplug.metrics.list = &m;
     Sparkplug.metrics.count = 1;
-    Sparkplug.build_metric(Sparkplug.internal);
+    Sparkplug.build_metric(protocore_sparkplug_span());
     TEST_ASSERT_FALSE(Sparkplug.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.n);
 
-    Sparkplug.build_payload(Sparkplug.internal);
+    Sparkplug.build_payload(protocore_sparkplug_span());
     TEST_ASSERT_FALSE(Sparkplug.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.n);
 }
@@ -425,7 +425,7 @@ void test_payload_with_no_metrics(void)
     Sparkplug.payload.seq = 3;
     Sparkplug.metrics.list = NULL;
     Sparkplug.metrics.count = 0;
-    Sparkplug.build_payload(Sparkplug.internal);
+    Sparkplug.build_payload(protocore_sparkplug_span());
     TEST_ASSERT_TRUE(Sparkplug.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Sparkplug.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_out, sizeof(WANT));

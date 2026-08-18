@@ -122,7 +122,6 @@ typedef struct
 } RoamBtmArgs;
 
 /** @brief The policy's handle, described only in roaming.c. */
-struct RoamInternal;
 
 /**
  * @brief The roam decision layer.
@@ -163,7 +162,6 @@ struct RoamInternal;
  * Report element of the Preferred Candidate List supplies @c preferred_bssid, read past the optional BSS
  * Termination Duration and Session Information URL.
  *
- * @var RoamNs::internal  the handle the calls reach through
  *
  * No storage member: every call reads its inputs off this handle and writes its result back, so the
  * module holds nothing between calls.
@@ -181,11 +179,10 @@ typedef struct
     uint8_t n;
     proto_bool ok;
 
-    void (*decide)(struct RoamInternal *ctx);
-    void (*parse_neighbor_report)(struct RoamInternal *ctx);
-    void (*parse_btm_request)(struct RoamInternal *ctx);
+    void (*const decide)(uint8_t *restrict work);
+    void (*const parse_neighbor_report)(uint8_t *restrict work);
+    void (*const parse_btm_request)(uint8_t *restrict work);
 
-    struct RoamInternal *internal;
 } RoamNs;
 
 /** @brief The one symbol this module exports. */

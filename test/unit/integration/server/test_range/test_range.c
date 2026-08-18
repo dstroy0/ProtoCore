@@ -10,6 +10,8 @@
 #include "rx_feed.h"
 #include <unity.h>
 
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
 static const char FILE_DATA[] = "0123456789ABCDEFGHIJ";
 
 static void serve_data(uint8_t slot_id, HttpReq *req)
@@ -43,7 +45,7 @@ void setUp()
     Sse.init(protocore_sse_span());
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/data.bin", FILE_DATA));
     tcp_capture_reset();
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT);

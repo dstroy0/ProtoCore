@@ -13,6 +13,8 @@
 #include <string.h>
 #include <unity.h>
 
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
 // The SSE pool, reached through its namespace: set the members a call takes, invoke it, read the
 // outcome off the same handle.
 static SseConn *sse_alloc(uint8_t slot, const char *path)
@@ -168,7 +170,7 @@ void setUp(void)
     memset(g_mark, 0, sizeof(g_mark));
     set_millis(0);
     ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
-    ConnPool.init(ConnPool.internal);
+    ConnPool.init(protocore_conn_pool_span());
     for (int i = 0; i < MAX_CONNS; i++)
     {
         conn_pool[i] = (TcpConn){0};
@@ -660,7 +662,7 @@ void test_serve_static_file_and_mime(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
     serve_static("/", lfsm(), "/www");
@@ -679,7 +681,7 @@ void test_serve_static_cache_control(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
     serve_static("/", lfsm(), "/www");
@@ -708,7 +710,7 @@ void test_serve_static_index_fallback(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     static const char html[] = "<h1>home</h1>";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/index.html", html));
     serve_static("/", lfsm(), "/www");
@@ -727,7 +729,7 @@ void test_serve_static_gzip_when_accepted(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     static const char gzbody[] = "\x1f\x8b"
                                  "FAKEGZIP";
     TEST_ASSERT_TRUE(lfsm_write_file("/www/app.js.gz", gzbody, sizeof(gzbody) - 1));
@@ -747,7 +749,7 @@ void test_serve_static_wildcard_and_route_full(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     static const char js[] = "x=1;";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
     serve_static("/assets*", lfsm(), "/www");
@@ -799,7 +801,7 @@ void test_serve_static_no_gzip_when_not_accepted(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     static const char js[] = "console.log(1)";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js.gz", "GZIPPED"));
@@ -818,7 +820,7 @@ void test_serve_static_traversal_not_leaked(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/secret", "topsecret"));
     serve_static("/", lfsm(), "/www");
     arm_slot(0, "GET /../secret HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -834,7 +836,7 @@ void test_serve_static_missing_is_404(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/www/exists.txt", "hi"));
     serve_static("/", lfsm(), "/www");
     arm_slot(0, "GET /nope.txt HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -850,7 +852,7 @@ void test_serve_static_etag_conditional_get(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
 
@@ -890,7 +892,7 @@ void test_serve_static_inm_star_list_weak(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
 
@@ -956,7 +958,7 @@ void test_serve_static_last_modified_conditional_get(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
     const char *LM = "Thu, 01 Jan 1970 00:16:40 GMT";
@@ -1015,7 +1017,7 @@ void test_serve_static_ims_field_comparisons(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
     const char *ims[] = {
@@ -1052,7 +1054,7 @@ void test_serve_static_no_timestamp(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/www/page.html", "<html>hi</html>"));
     serve_static("/", lfsm(), "/www");
 
@@ -1079,7 +1081,7 @@ void test_serve_static_if_modified_since_malformed(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     serve_static("/", lfsm(), "/www");
     const char *bad[] = {
@@ -1229,7 +1231,7 @@ void test_sse_broadcast_after_upgrade_matches_path(void)
 
     tcp_capture_reset();
     handle();
-    protocore_sse_broadcast("/events", "hello", "msg");
+    protocore_sse_broadcast("/events", "hello", "msg", NULL);
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "text/event-stream"));
     TEST_ASSERT_NOT_NULL(strstr(out, "data: hello"));
@@ -1299,8 +1301,8 @@ void test_sse_send_api(void)
     TEST_ASSERT_NOT_NULL(sse);
 
     tcp_capture_reset();
-    protocore_sse_send(MAX_SSE_CONNS, "x");
-    protocore_sse_send(1, "x");
+    protocore_sse_send(MAX_SSE_CONNS, "x", NULL, NULL);
+    protocore_sse_send(1, "x", NULL, NULL);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 
     tcp_capture_reset();
@@ -1311,7 +1313,7 @@ void test_sse_send_api(void)
     TEST_ASSERT_NOT_NULL(strstr(out, "data: hi"));
 
     tcp_capture_reset();
-    protocore_sse_broadcast("/other", "skip");
+    protocore_sse_broadcast("/other", "skip", NULL, NULL);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
 }
@@ -1432,13 +1434,13 @@ void test_listen_and_begin(void)
     TEST_ASSERT_EQUAL_INT32(PROTOCORE_ERR_LISTENER_FULL, listen(9999, PROTO_HTTP));
 
     TEST_ASSERT_EQUAL_INT32(PROTOCORE_OK, proto_begin(NULL));
-    TcpListener.stop_all(TcpListener.internal);
+    TcpListener.stop_all(protocore_tcp_listener_span());
 }
 
 void test_begin_port_convenience(void)
 {
     TEST_ASSERT_EQUAL_INT32(PROTOCORE_OK, begin_http((uint16_t)8080, NULL));
-    TcpListener.stop_all(TcpListener.internal);
+    TcpListener.stop_all(protocore_tcp_listener_span());
 
     for (int i = 0; i < MAX_LISTENERS; i++)
     {
@@ -1458,7 +1460,7 @@ void test_restart_and_stop(void)
 
     stop();
     stop();
-    TcpListener.stop_all(TcpListener.internal);
+    TcpListener.stop_all(protocore_tcp_listener_span());
 }
 
 void test_route_registration_variants_table_full(void)
@@ -1698,7 +1700,7 @@ void test_cache_control_null_clears_header(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     static const char body[] = "x";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/c.txt", body));
     serve_static("/", lfsm(), "/www");
@@ -1714,7 +1716,7 @@ void test_cache_control_null_clears_header(void)
     tcp_capture_disable();
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
 }
 
 void test_empty_route_pattern_matches_nothing(void)
@@ -1811,13 +1813,13 @@ void test_slot_poll_requires_registered_handler_with_poll(void)
     static const ProtoHandler no_poll = {NULL, NULL, NULL, NULL};
     Protocols.proto = PROTO_TELNET;
     Protocols.h = &no_poll;
-    Protocols.add(Protocols.internal);
+    Protocols.add(protocore_session_span());
     handle();
     TEST_ASSERT_FALSE(handler_called);
 
     Protocols.proto = PROTO_TELNET;
     Protocols.h = NULL;
-    Protocols.add(Protocols.internal);
+    Protocols.add(protocore_session_span());
     conn_pool[0].proto = PROTO_HTTP;
     handle();
     TEST_ASSERT_TRUE(handler_called);
@@ -1901,7 +1903,7 @@ void test_static_mount_rejects_non_get_methods(void)
 {
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     static const char body[] = "hi";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/a.txt", body));
     serve_static("/", lfsm(), "/www");
@@ -1915,7 +1917,7 @@ void test_static_mount_rejects_non_get_methods(void)
     tcp_capture_disable();
     lfsm_format();
     Mnt.args.backend = lfsm();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
 }
 
 void test_send_null_payload_and_slot_bounds(void)
@@ -2254,8 +2256,8 @@ void test_sse_send_on_dead_slot_writes_nothing(void)
     conn_pool[0].pcb = NULL;
 
     tcp_capture_reset();
-    protocore_sse_send(sse->protocore_sse_id, "x");
-    protocore_sse_broadcast("/events", "x");
+    protocore_sse_send(sse->protocore_sse_id, "x", NULL, NULL);
+    protocore_sse_broadcast("/events", "x", NULL, NULL);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
     tcp_capture_disable();
     Sse.init(protocore_sse_span());

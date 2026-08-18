@@ -61,7 +61,7 @@ static void capture(uint8_t level, const char *line)
 static void install(protocore_log_sink_fn fn)
 {
     Log.sink = fn;
-    Log.set_sink(Log.internal);
+    Log.set_sink(protocore_log_span());
 }
 
 // Counts every evaluation of an argument handed to a log macro.
@@ -81,14 +81,14 @@ static const protocore_fval *value_probe(const protocore_fval *v)
 
 static uint16_t held(void)
 {
-    Logbuf.held(Logbuf.internal);
+    Logbuf.held(protocore_logbuf_span());
     return Logbuf.count;
 }
 
 static const char *line_at(uint16_t i)
 {
     Logbuf.read.i = i;
-    Logbuf.at(Logbuf.internal);
+    Logbuf.at(protocore_logbuf_span());
     return Logbuf.text;
 }
 
@@ -96,8 +96,8 @@ void setUp(void)
 {
     Logbuf.trap.threshold = 0xFF;
     Logbuf.trap.cb = NULL;
-    Logbuf.set_trap(Logbuf.internal);
-    Logbuf.reset(Logbuf.internal);
+    Logbuf.set_trap(protocore_logbuf_span());
+    Logbuf.reset(protocore_logbuf_span());
     install(capture);
     g_sink_calls = 0;
     g_sink_level = 0xFF;

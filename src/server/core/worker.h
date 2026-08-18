@@ -77,9 +77,6 @@ typedef struct
     void *arg;                ///< the opaque context it is given
 } WorkerDeferArgs;
 
-/** @brief The workers' own state and the calls that reach it, described only in worker.c. */
-struct WorkerInternal;
-
 /**
  * @brief The Workers module.
  *
@@ -96,7 +93,6 @@ struct WorkerInternal;
  * @var WorkerNs::stop          ask them to exit
  * @var WorkerNs::wake          nudge one so it services now rather than on the idle timeout
  * @var WorkerNs::defer         hand fn+arg to worker_id's queue and wake it
- * @var WorkerNs::internal      the workers' state and the calls that reach it
  */
 typedef struct
 {
@@ -107,22 +103,31 @@ typedef struct
 
     proto_bool ok;
 
-    void (*run_deferred)(struct WorkerInternal *ctx);
-    void (*running)(struct WorkerInternal *ctx);
-    void (*start)(struct WorkerInternal *ctx);
-    void (*stop)(struct WorkerInternal *ctx);
-    void (*wake)(struct WorkerInternal *ctx);
-    void (*defer)(struct WorkerInternal *ctx);
+    void (*const run_deferred)(uint8_t *restrict work);
+    void (*const running)(uint8_t *restrict work);
+    void (*const start)(uint8_t *restrict work);
+    void (*const stop)(uint8_t *restrict work);
+    void (*const wake)(uint8_t *restrict work);
+    void (*const defer)(uint8_t *restrict work);
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
     // The lane the workers jump. They run without it; it only changes what runs first.
     PreemptQueueNs *queue;
 #endif
-
-    struct WorkerInternal *internal;
 } WorkerNs;
 
 /** @brief The one symbol this module exports. */
 extern WorkerNs Workers;
+
+/**
+ * @brief The PROTOCORE_WORKER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_worker_span(void);
 
 PROTOCORE_END_DECLS
 

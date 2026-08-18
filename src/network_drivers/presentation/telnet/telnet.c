@@ -97,7 +97,7 @@ static void find_conn(struct TelnetInternal *restrict ctx)
 static void command_send(uint8_t slot, const void *data, size_t n)
 {
     ConnPool.slot = slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok ||
         // fixed nonzero literal length. (Marker must sit on this line: gcov attributes
         // the whole multi-line condition's branches to the "if" line, not the operand's
@@ -108,8 +108,8 @@ static void command_send(uint8_t slot, const void *data, size_t n)
     }
     ConnPool.io.data = data;
     ConnPool.io.len = (proto_u16)n;
-    ConnPool.send(ConnPool.internal);
-    ConnPool.flush(ConnPool.internal);
+    ConnPool.send(protocore_conn_pool_span());
+    ConnPool.flush(protocore_conn_pool_span());
 }
 
 // Send Telnet *data* (echo + application output): a literal IAC byte (0xFF) MUST be
@@ -119,7 +119,7 @@ static void command_send(uint8_t slot, const void *data, size_t n)
 static void data_send(uint8_t slot, const void *data, size_t n)
 {
     ConnPool.slot = slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok || n == 0)
     {
         return;
@@ -134,11 +134,11 @@ static void data_send(uint8_t slot, const void *data, size_t n)
             {
                 ConnPool.io.data = b + start;
                 ConnPool.io.len = (proto_u16)(i - start);
-                ConnPool.send(ConnPool.internal);
+                ConnPool.send(protocore_conn_pool_span());
             }
             ConnPool.io.data = "\xff\xff"; // doubled IAC
             ConnPool.io.len = 2;
-            ConnPool.send(ConnPool.internal);
+            ConnPool.send(protocore_conn_pool_span());
             start = i + 1;
         }
     }
@@ -146,9 +146,9 @@ static void data_send(uint8_t slot, const void *data, size_t n)
     {
         ConnPool.io.data = b + start;
         ConnPool.io.len = (proto_u16)(n - start);
-        ConnPool.send(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
     }
-    ConnPool.flush(ConnPool.internal);
+    ConnPool.flush(protocore_conn_pool_span());
 }
 
 // ---------------------------------------------------------------------------
@@ -170,7 +170,7 @@ static void accept_conn(struct TelnetInternal *restrict ctx)
     {
         // No Telnet capacity: drop the connection (transport owns the teardown).
         ConnPool.slot = ctx->ns->slot;
-        ConnPool.close(ConnPool.internal);
+        ConnPool.close(protocore_conn_pool_span());
         return;
     }
     mem.set(t, 0, sizeof(*t));
@@ -267,7 +267,7 @@ static void rx(struct TelnetInternal *restrict ctx)
     ConnPool.slot = slot;
     ConnPool.io.buf = ctx->store->rx;
     ConnPool.io.cap = sizeof(ctx->store->rx);
-    ConnPool.read(ConnPool.internal);
+    ConnPool.read(protocore_conn_pool_span());
 
     for (size_t i = 0; i < ConnPool.n; i++)
     {

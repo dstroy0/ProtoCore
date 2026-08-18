@@ -10,11 +10,39 @@
 #include "network_drivers/network/dns/dns_resolver.h"
 #include "mmgr/protomem.h"
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
+static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never reads it
+
 #if PROTOCORE_NEED_DNS_RESOLVER
 
 #include "mmgr/secure.h"                          // protocore_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire.h" // the name codec both DNS halves share
 #include "server/clock/clock.h"                   // Clock.millis: the deadline the resolve waits to
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_DNS_RESOLVER_BORROW persistent bytes, or null while the pool was short
+} ResolverOwnCtx;
+static ResolverOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_dns_resolver_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_DNS_RESOLVER_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 #if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 #include "core_setup/board_profiles/protocore_platform.h" // the platform's own resolver, under our names
@@ -68,21 +96,16 @@ struct ResolverStorage
     proto_bool busy; ///< a query is out; a second host waits for it
 };
 
-/**
- * @brief The resolver's state and the calls that reach it - what ResolverNs points at.
- *
- * @var ResolverInternal::store  the borrowed spans, the query in flight, and its timer
- * @var ResolverInternal::ns     the handle a caller sets a call's members on
- */
-struct ResolverInternal
-{
-    struct ResolverStorage *store;
-    ResolverNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define DNS_RESOLVER_OFF_CTX 0u
+static_assert(DNS_RESOLVER_OFF_CTX + sizeof(struct ResolverStorage) <= PROTOCORE_DNS_RESOLVER_BORROW,
+              "PROTOCORE_DNS_RESOLVER_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct ResolverStorage s_store;
-
-static struct ResolverInternal s_resolver = {.store = &s_store, .ns = &Resolver};
+// The region, at its offset in the caller's borrow.
+#define DNS_RESOLVER_CTX(w) ((struct ResolverStorage *)(void *)((w) + DNS_RESOLVER_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Pure: what an address is, and whether it is a plausible answer
@@ -167,7 +190,7 @@ static size_t question_build(uint8_t *out, size_t cap, uint16_t id, const char *
     DnsWire.text.dotted = host;
     DnsWire.text.out = out + n;
     DnsWire.text.out_cap = cap - n;
-    DnsWire.encode(DnsWire.internal);
+    DnsWire.encode(dns_wire_work);
     size_t w = DnsWire.n;
     if (w == 0)
     {
@@ -191,22 +214,21 @@ static size_t question_build(uint8_t *out, size_t cap, uint16_t id, const char *
 
 // Take the name borrow on first use. False when the pool cannot cover it, and every caller fails
 // closed.
-static proto_bool name_bind(struct ResolverInternal *restrict ctx)
+static proto_bool name_bind(uint8_t *restrict work)
 {
-    if (span.has_storage(ctx->store->name))
+    if (span.has_storage(DNS_RESOLVER_CTX(work)->name))
     {
         return PROTO_TRUE;
     }
-    ctx->store->name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    return span.has_storage(ctx->store->name);
+    DNS_RESOLVER_CTX(work)->name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
+    return span.has_storage(DNS_RESOLVER_CTX(work)->name);
 }
 
 // Read the first A record out of @p pkt into @p out_ip, host order. Accepts the message only when
 // its ID is @p id, QR is set, and RCODE is 0 (RFC 1035 sec 4.1.1, RFC 5452 sec 9.1).
-static proto_bool answer_read(struct ResolverInternal *restrict ctx, const uint8_t *pkt, size_t len, uint16_t id,
-                              uint32_t *out_ip)
+static proto_bool answer_read(uint8_t *restrict work, const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out_ip)
 {
-    if (pkt == NULL || out_ip == NULL || len < PROTOCORE_DNS_HDR_LEN || !name_bind(ctx))
+    if (pkt == NULL || out_ip == NULL || len < PROTOCORE_DNS_HDR_LEN || !name_bind(work))
     {
         return PROTO_FALSE;
     }
@@ -226,16 +248,16 @@ static proto_bool answer_read(struct ResolverInternal *restrict ctx, const uint8
     // Step over the question section: each entry is a QNAME then QTYPE + QCLASS. The name goes into
     // the borrow and is discarded; what the walk wants from the decode is where the fields begin.
     size_t off = PROTOCORE_DNS_HDR_LEN;
-    char *name = (char *)ctx->store->name.buf;
+    char *name = (char *)DNS_RESOLVER_CTX(work)->name.buf;
     for (uint16_t q = 0; q < qd; q++)
     {
         DnsWire.msg.pkt = pkt;
         DnsWire.msg.len = len;
         DnsWire.msg.off = off;
         DnsWire.msg.out = name;
-        DnsWire.msg.out_cap = ctx->store->name.cap;
+        DnsWire.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
         DnsWire.msg.allow_ptr = PROTO_TRUE;
-        DnsWire.decode(DnsWire.internal);
+        DnsWire.decode(dns_wire_work);
         if (!DnsWire.ok)
         {
             return PROTO_FALSE;
@@ -256,9 +278,9 @@ static proto_bool answer_read(struct ResolverInternal *restrict ctx, const uint8
         DnsWire.msg.len = len;
         DnsWire.msg.off = off;
         DnsWire.msg.out = name;
-        DnsWire.msg.out_cap = ctx->store->name.cap;
+        DnsWire.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
         DnsWire.msg.allow_ptr = PROTO_TRUE;
-        DnsWire.decode(DnsWire.internal);
+        DnsWire.decode(dns_wire_work);
         if (!DnsWire.ok)
         {
             return PROTO_FALSE;
@@ -291,14 +313,23 @@ static proto_bool answer_read(struct ResolverInternal *restrict ctx, const uint8
 // The resolve
 // ---------------------------------------------------------------------------
 
+// The one time source (server/clock/clock.h). Clock.ms is where the last reading landed, so a
+// caller that only reads it measures against whichever instant something else stamped. Take the
+// reading, then report it. Above the split: both arms wait to a deadline.
+static uint32_t dns_now(void)
+{
+    Clock.millis(Clock.internal);
+    return Clock.ms;
+}
+
 #if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 
-// The marshal record: the name to resolve and the handle its outcome lands on, carried onto the
+// The marshal record: the name to resolve and the borrow its outcome lands in, carried onto the
 // stack's own thread.
 typedef struct
 {
     protocore_net_call base;
-    struct ResolverInternal *ctx;
+    uint8_t *work; ///< the borrow this ask reads its region out of
     const char *host;
 } DnsMarshal;
 
@@ -315,41 +346,46 @@ static uint32_t addr_host_order(const protocore_net_ip *a)
 static void dns_found(const char *name, const protocore_net_ip *addr, void *arg)
 {
     (void)name;
-    struct ResolverInternal *ctx = (struct ResolverInternal *)arg;
-    if (ctx == NULL)
+    // The stack fixes this signature, so the borrow rides across as the callback's argument.
+    uint8_t *work = (uint8_t *)arg;
+    if (work == NULL)
     {
         return;
     }
     if (addr != NULL)
     {
-        ctx->store->addr = *addr;
-        ctx->store->ok = PROTO_TRUE;
+        DNS_RESOLVER_CTX(work)->addr = *addr;
+        DNS_RESOLVER_CTX(work)->ok = PROTO_TRUE;
     }
-    ctx->store->done = PROTO_TRUE;
+    DNS_RESOLVER_CTX(work)->done = PROTO_TRUE;
 }
 
 // The ask, on the stack's own thread. A name the stack already holds completes inside this call.
 static protocore_net_err dns_ask(protocore_net_call *c)
 {
     DnsMarshal *m = (DnsMarshal *)c;
-    protocore_net_err e = protocore_net_dns_resolve(m->host, &m->ctx->store->addr, dns_found, m->ctx);
+    protocore_net_err e = protocore_net_dns_resolve(m->host, &DNS_RESOLVER_CTX(m->work)->addr, dns_found, m->work);
     if (e == PROTOCORE_NET_OK) // already held
     {
-        m->ctx->store->ok = PROTO_TRUE;
-        m->ctx->store->done = PROTO_TRUE;
+        DNS_RESOLVER_CTX(m->work)->ok = PROTO_TRUE;
+        DNS_RESOLVER_CTX(m->work)->done = PROTO_TRUE;
     }
     else if (e != PROTOCORE_NET_ERR_INPROGRESS) // hard failure
     {
-        m->ctx->store->done = PROTO_TRUE;
+        DNS_RESOLVER_CTX(m->work)->done = PROTO_TRUE;
     }
     return PROTOCORE_NET_OK;
 }
 
-static void resolver_resolve(struct ResolverInternal *restrict ctx)
+static void resolver_resolve(uint8_t *restrict work)
 {
-    ctx->ns->u32 = 0;
-    ctx->ns->state = PROTOCORE_DNS_FAILED;
-    const char *host = ctx->ns->query.host;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Resolver.u32 = 0;
+    Resolver.state = PROTOCORE_DNS_FAILED;
+    const char *host = Resolver.query.host;
     if (host == NULL)
     {
         return;
@@ -358,90 +394,91 @@ static void resolver_resolve(struct ResolverInternal *restrict ctx)
     protocore_net_ip literal;
     if (protocore_net_ip_parse(host, &literal)) // dotted-quad fast path, no query
     {
-        ctx->ns->u32 = addr_host_order(&literal);
-        ctx->ns->state = PROTOCORE_DNS_READY;
+        Resolver.u32 = addr_host_order(&literal);
+        Resolver.state = PROTOCORE_DNS_READY;
         return;
     }
 
     // The query already out: the stack's callback ran, or the timer ran out.
-    if (ctx->store->busy)
+    if (DNS_RESOLVER_CTX(work)->busy)
     {
-        if (ctx->store->done)
+        if (DNS_RESOLVER_CTX(work)->done)
         {
-            ctx->store->busy = PROTO_FALSE;
-            if (!ctx->store->ok)
+            DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
+            if (!DNS_RESOLVER_CTX(work)->ok)
             {
                 return;
             }
-            ctx->ns->u32 = addr_host_order(&ctx->store->addr);
-            ctx->ns->state = PROTOCORE_DNS_READY;
+            Resolver.u32 = addr_host_order(&DNS_RESOLVER_CTX(work)->addr);
+            Resolver.state = PROTOCORE_DNS_READY;
             return;
         }
-        if ((uint32_t)(Clock.ms - ctx->store->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
+        if ((uint32_t)(dns_now() - DNS_RESOLVER_CTX(work)->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
         {
-            ctx->store->busy = PROTO_FALSE;
+            DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
             return;
         }
-        ctx->ns->state = PROTOCORE_DNS_BUSY;
+        Resolver.state = PROTOCORE_DNS_BUSY;
         return;
     }
 
-    ctx->store->done = PROTO_FALSE;
-    ctx->store->ok = PROTO_FALSE;
+    DNS_RESOLVER_CTX(work)->done = PROTO_FALSE;
+    DNS_RESOLVER_CTX(work)->ok = PROTO_FALSE;
     DnsMarshal m;
     mem.set(&m, 0, sizeof(m));
-    m.ctx = ctx;
+    m.work = work;
     m.host = host;
     (void)protocore_net_call_marshal(dns_ask, &m.base);
 
     // Already held, so the callback ran inside the marshal and there is nothing to wait for.
-    if (ctx->store->done)
+    if (DNS_RESOLVER_CTX(work)->done)
     {
-        if (!ctx->store->ok)
+        if (!DNS_RESOLVER_CTX(work)->ok)
         {
             return;
         }
-        ctx->ns->u32 = addr_host_order(&ctx->store->addr);
-        ctx->ns->state = PROTOCORE_DNS_READY;
+        Resolver.u32 = addr_host_order(&DNS_RESOLVER_CTX(work)->addr);
+        Resolver.state = PROTOCORE_DNS_READY;
         return;
     }
-    ctx->store->busy = PROTO_TRUE;
-    ctx->store->timer = Clock.ms;
-    ctx->ns->state = PROTOCORE_DNS_BUSY;
+    DNS_RESOLVER_CTX(work)->busy = PROTO_TRUE;
+    DNS_RESOLVER_CTX(work)->timer = dns_now();
+    Resolver.state = PROTOCORE_DNS_BUSY;
 }
 
 // Reports false and changes nothing. The nameserver list is the stack's, learned from DHCP.
-static void resolver_set_server(struct ResolverInternal *restrict ctx)
+static void resolver_set_server(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    Resolver.ok = PROTO_FALSE;
 }
 
 #else // the portable resolver
 
 // Take the query and nameserver borrows on first use, and seat the configured default in the latter.
-static proto_bool client_bind(struct ResolverInternal *restrict ctx)
+static proto_bool client_bind(uint8_t *restrict work)
 {
-    if (span.has_storage(ctx->store->tx))
+    if (span.has_storage(DNS_RESOLVER_CTX(work)->tx))
     {
         return PROTO_TRUE;
     }
-    if (!name_bind(ctx))
+    if (!name_bind(work))
     {
         return PROTO_FALSE;
     }
-    ctx->store->tx = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX + 32);
-    ctx->store->server = protocore_secure_persist_span(PROTOCORE_IP_STR_MAX);
-    if (!span.has_storage(ctx->store->tx) || !span.has_storage(ctx->store->server))
+    DNS_RESOLVER_CTX(work)->tx = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX + 32);
+    DNS_RESOLVER_CTX(work)->server = protocore_secure_persist_span(PROTOCORE_IP_STR_MAX);
+    if (!span.has_storage(DNS_RESOLVER_CTX(work)->tx) || !span.has_storage(DNS_RESOLVER_CTX(work)->server))
     {
         return PROTO_FALSE;
     }
-    size_t n = str.len(PROTOCORE_DNS_SERVER, ctx->store->server.cap);
-    if (n >= ctx->store->server.cap)
+    size_t n = str.len(PROTOCORE_DNS_SERVER, DNS_RESOLVER_CTX(work)->server.cap);
+    if (n >= DNS_RESOLVER_CTX(work)->server.cap)
     {
         return PROTO_FALSE;
     }
-    raw.read(ctx->store->server.buf, PROTOCORE_DNS_SERVER, n);
-    ctx->store->server.buf[n] = '\0';
+    raw.read(DNS_RESOLVER_CTX(work)->server.buf, PROTOCORE_DNS_SERVER, n);
+    DNS_RESOLVER_CTX(work)->server.buf[n] = '\0';
     return PROTO_TRUE;
 }
 
@@ -451,50 +488,60 @@ static proto_bool client_bind(struct ResolverInternal *restrict ctx)
 static void dns_reply(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *arg)
 {
     (void)peer;
-    struct ResolverInternal *ctx = (struct ResolverInternal *)arg;
-    if (ctx == NULL)
+    // UdpListener fixes this signature and hands back whatever listen was given, which is the
+    // borrow the query in flight lives in.
+    uint8_t *work = (uint8_t *)arg;
+    if (work == NULL)
     {
         return;
     }
     uint32_t ip = 0;
-    if (answer_read(ctx, data, len, ctx->store->id, &ip))
+    if (answer_read(work, data, len, DNS_RESOLVER_CTX(work)->id, &ip))
     {
-        ctx->store->answer = ip;
-        ctx->store->done = PROTO_TRUE;
+        DNS_RESOLVER_CTX(work)->answer = ip;
+        DNS_RESOLVER_CTX(work)->done = PROTO_TRUE;
     }
 }
 
-static void resolver_set_server(struct ResolverInternal *restrict ctx)
+static void resolver_set_server(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    const char *ip = ctx->ns->server.ip;
-    if (ip == NULL || !client_bind(ctx))
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Resolver.ok = PROTO_FALSE;
+    const char *ip = Resolver.server.ip;
+    if (ip == NULL || !client_bind(work))
     {
         return;
     }
     protocore_ip probe = {PROTOCORE_IP_NONE, {0}};
     Ip.args.text = ip;
     Ip.args.out = &probe;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     if (!Ip.ok)
     {
         return;
     }
-    size_t n = str.len(ip, ctx->store->server.cap);
-    if (n >= ctx->store->server.cap)
+    size_t n = str.len(ip, DNS_RESOLVER_CTX(work)->server.cap);
+    if (n >= DNS_RESOLVER_CTX(work)->server.cap)
     {
         return;
     }
-    raw.read(ctx->store->server.buf, ip, n);
-    ctx->store->server.buf[n] = '\0';
-    ctx->ns->ok = PROTO_TRUE;
+    raw.read(DNS_RESOLVER_CTX(work)->server.buf, ip, n);
+    DNS_RESOLVER_CTX(work)->server.buf[n] = '\0';
+    Resolver.ok = PROTO_TRUE;
 }
 
-static void resolver_resolve(struct ResolverInternal *restrict ctx)
+static void resolver_resolve(uint8_t *restrict work)
 {
-    ctx->ns->u32 = 0;
-    ctx->ns->state = PROTOCORE_DNS_FAILED;
-    const char *host = ctx->ns->query.host;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Resolver.u32 = 0;
+    Resolver.state = PROTOCORE_DNS_FAILED;
+    const char *host = Resolver.query.host;
     if (host == NULL)
     {
         return;
@@ -503,62 +550,63 @@ static void resolver_resolve(struct ResolverInternal *restrict ctx)
     protocore_ip literal = {PROTOCORE_IP_NONE, {0}};
     Ip.args.text = host;
     Ip.args.out = &literal;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     if (Ip.ok) // a dotted quad answers itself, no query
     {
-        ctx->ns->u32 = ((uint32_t)literal.bytes[0] << 24) | ((uint32_t)literal.bytes[1] << 16) |
+        Resolver.u32 = ((uint32_t)literal.bytes[0] << 24) | ((uint32_t)literal.bytes[1] << 16) |
                        ((uint32_t)literal.bytes[2] << 8) | (uint32_t)literal.bytes[3];
-        ctx->ns->state = PROTOCORE_DNS_READY;
+        Resolver.state = PROTOCORE_DNS_READY;
         return;
     }
 
     // The query already out: the response landed on the listener's drain, or the timer ran out.
-    if (ctx->store->busy)
+    if (DNS_RESOLVER_CTX(work)->busy)
     {
-        if (ctx->store->done)
+        if (DNS_RESOLVER_CTX(work)->done)
         {
-            ctx->store->busy = PROTO_FALSE;
-            ctx->ns->u32 = ctx->store->answer;
-            ctx->ns->state = PROTOCORE_DNS_READY;
+            DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
+            Resolver.u32 = DNS_RESOLVER_CTX(work)->answer;
+            Resolver.state = PROTOCORE_DNS_READY;
             return;
         }
-        if ((uint32_t)(Clock.ms - ctx->store->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
+        if ((uint32_t)(dns_now() - DNS_RESOLVER_CTX(work)->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
         {
-            ctx->store->busy = PROTO_FALSE;
+            DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
             return;
         }
-        ctx->ns->state = PROTOCORE_DNS_BUSY;
+        Resolver.state = PROTOCORE_DNS_BUSY;
         return;
     }
 
     protocore_ip server = {PROTOCORE_IP_NONE, {0}};
-    if (!client_bind(ctx))
+    if (!client_bind(work))
     {
         return;
     }
-    Ip.args.text = (const char *)ctx->store->server.buf;
+    Ip.args.text = (const char *)DNS_RESOLVER_CTX(work)->server.buf;
     Ip.args.out = &server;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     if (!Ip.ok)
     {
         return;
     }
 
-    // The handler is given this handle back, so the drain reaches the query it is answering.
+    // The handler is given these bytes back, so the drain reaches the query it is answering.
     UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
     UdpListener.bind.handler = dns_reply;
-    UdpListener.bind.handler_ctx = ctx;
-    UdpListener.listen(UdpListener.internal);
+    UdpListener.bind.handler_ctx = work;
+    UdpListener.listen(protocore_udp_listener_span());
     if (!UdpListener.ok)
     {
         return;
     }
 
     // The ID ties the response to this query. It ticks, so two resolves in a row do not share one.
-    ctx->store->id = (uint16_t)(Clock.ms | 1u);
-    ctx->store->answer = 0;
-    ctx->store->done = PROTO_FALSE;
-    size_t n = question_build(ctx->store->tx.buf, ctx->store->tx.cap, ctx->store->id, host);
+    DNS_RESOLVER_CTX(work)->id = (uint16_t)(dns_now() | 1u);
+    DNS_RESOLVER_CTX(work)->answer = 0;
+    DNS_RESOLVER_CTX(work)->done = PROTO_FALSE;
+    size_t n = question_build(DNS_RESOLVER_CTX(work)->tx.buf, DNS_RESOLVER_CTX(work)->tx.cap,
+                              DNS_RESOLVER_CTX(work)->id, host);
     if (n == 0)
     {
         return;
@@ -567,16 +615,16 @@ static void resolver_resolve(struct ResolverInternal *restrict ctx)
     UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
     UdpListener.send_args.dst = &server;
     UdpListener.send_args.dst_port = PROTOCORE_DNS_PORT;
-    UdpListener.send_args.data = ctx->store->tx.buf;
+    UdpListener.send_args.data = DNS_RESOLVER_CTX(work)->tx.buf;
     UdpListener.send_args.len = n;
-    UdpListener.sendto(UdpListener.internal);
+    UdpListener.sendto(protocore_udp_listener_span());
     if (!UdpListener.ok)
     {
         return;
     }
-    ctx->store->busy = PROTO_TRUE;
-    ctx->store->timer = Clock.ms;
-    ctx->ns->state = PROTOCORE_DNS_BUSY;
+    DNS_RESOLVER_CTX(work)->busy = PROTO_TRUE;
+    DNS_RESOLVER_CTX(work)->timer = dns_now();
+    Resolver.state = PROTOCORE_DNS_BUSY;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_DNS_RESOLVER
@@ -585,44 +633,51 @@ static void resolver_resolve(struct ResolverInternal *restrict ctx)
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-static void resolver_classify(struct ResolverInternal *restrict ctx)
+static void resolver_classify(uint8_t *restrict work)
 {
-    ctx->ns->cls = ip_class(ctx->ns->addr.ip);
+    (void)work;
+    Resolver.cls = ip_class(Resolver.addr.ip);
 }
 
-static void resolver_verify(struct ResolverInternal *restrict ctx)
+static void resolver_verify(uint8_t *restrict work)
 {
-    ctx->ns->ok = ip_plausible(ctx->ns->addr.ip);
+    (void)work;
+    Resolver.ok = ip_plausible(Resolver.addr.ip);
 }
 
-static void resolver_query_build(struct ResolverInternal *restrict ctx)
+static void resolver_query_build(uint8_t *restrict work)
 {
-    ctx->ns->n = question_build(ctx->ns->query.out, ctx->ns->query.cap, ctx->ns->query.id, ctx->ns->query.host);
+    (void)work;
+    Resolver.n = question_build(Resolver.query.out, Resolver.query.cap, Resolver.query.id, Resolver.query.host);
 }
 
-static void resolver_answer_parse(struct ResolverInternal *restrict ctx)
+static void resolver_answer_parse(uint8_t *restrict work)
 {
-    ctx->ns->u32 = 0;
-    ctx->ns->ok = answer_read(ctx, ctx->ns->answer.pkt, ctx->ns->answer.len, ctx->ns->query.id, &ctx->ns->u32);
+    Resolver.u32 = 0;
+    Resolver.ok = answer_read(work, Resolver.answer.pkt, Resolver.answer.len, Resolver.query.id, &Resolver.u32);
 }
 
-static void resolver_resolve_verified(struct ResolverInternal *restrict ctx)
+static void resolver_resolve_verified(uint8_t *restrict work)
 {
-    resolver_resolve(ctx);
-    if (ctx->ns->state != PROTOCORE_DNS_READY)
+    resolver_resolve(work);
+    if (Resolver.state != PROTOCORE_DNS_READY)
     {
         return;
     }
-    if (!ip_plausible(ctx->ns->u32))
+    if (!ip_plausible(Resolver.u32))
     {
-        ctx->ns->u32 = 0;
-        ctx->ns->state = PROTOCORE_DNS_FAILED;
+        Resolver.u32 = 0;
+        Resolver.state = PROTOCORE_DNS_FAILED;
     }
 }
 
-static void resolver_busy(struct ResolverInternal *restrict ctx)
+static void resolver_busy(uint8_t *restrict work)
 {
-    ctx->ns->ok = ctx->store->busy;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Resolver.ok = DNS_RESOLVER_CTX(work)->busy;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -633,7 +688,6 @@ ResolverNs Resolver = {.classify = resolver_classify,
                        .resolve = resolver_resolve,
                        .resolve_verified = resolver_resolve_verified,
                        .busy = resolver_busy,
-                       .set_server = resolver_set_server,
-                       .internal = &s_resolver};
+                       .set_server = resolver_set_server};
 
 #endif // PROTOCORE_NEED_DNS_RESOLVER

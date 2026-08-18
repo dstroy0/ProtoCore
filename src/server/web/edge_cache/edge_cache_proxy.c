@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t http_range_work[16]; // the borrow an entry takes; HttpRange never reads it
+
 #if PROTOCORE_ENABLE_EDGE_CACHE
 
 #include "mmgr/membuild.h"  // protocore_sb frame builder
@@ -238,14 +240,14 @@ static int t_open(void *c, const char *host, uint16_t port, uint32_t timeout)
     TcpClient.dial.host = host;
     TcpClient.dial.port = port;
     TcpClient.dial.timeout_ms = timeout;
-    TcpClient.open(TcpClient.internal);
+    TcpClient.open(protocore_tcp_client_span());
     return TcpClient.i32;
 }
 static proto_bool t_connected(void *c, int cid)
 {
     (void)c;
     TcpClient.cid = cid;
-    TcpClient.connected(TcpClient.internal);
+    TcpClient.connected(protocore_tcp_client_span());
     return TcpClient.ok;
 }
 static proto_bool t_send(void *c, int cid, const void *d, size_t l)
@@ -254,7 +256,7 @@ static proto_bool t_send(void *c, int cid, const void *d, size_t l)
     TcpClient.cid = cid;
     TcpClient.io.data = d;
     TcpClient.io.len = l;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     return TcpClient.ok;
 }
 static size_t t_read(void *c, int cid, uint8_t *b, size_t cap)
@@ -263,21 +265,21 @@ static size_t t_read(void *c, int cid, uint8_t *b, size_t cap)
     TcpClient.cid = cid;
     TcpClient.io.buf = b;
     TcpClient.io.cap = cap;
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     return TcpClient.n;
 }
 static proto_bool t_closed(void *c, int cid)
 {
     (void)c;
     TcpClient.cid = cid;
-    TcpClient.is_closed(TcpClient.internal);
+    TcpClient.is_closed(protocore_tcp_client_span());
     return TcpClient.ok;
 }
 static void t_close(void *c, int cid)
 {
     (void)c;
     TcpClient.cid = cid;
-    TcpClient.close(TcpClient.internal);
+    TcpClient.close(protocore_tcp_client_span());
 }
 
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
@@ -292,7 +294,7 @@ static int edge_tls_bio_send(void *ctx, const unsigned char *buf, size_t len)
     TcpClient.cid = edge_tls()->tls_cid;
     TcpClient.io.data = buf;
     TcpClient.io.len = cap;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     return TcpClient.ok ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
 }
 static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
@@ -301,12 +303,12 @@ static int edge_tls_bio_recv(void *ctx, unsigned char *buf, size_t len)
     TcpClient.cid = edge_tls()->tls_cid;
     TcpClient.io.buf = buf;
     TcpClient.io.cap = len;
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     size_t n = TcpClient.n;
     if (n == 0)
     {
         TcpClient.cid = edge_tls()->tls_cid;
-        TcpClient.is_closed(TcpClient.internal);
+        TcpClient.is_closed(protocore_tcp_client_span());
         return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
@@ -318,7 +320,7 @@ static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout
     TcpClient.dial.host = host;
     TcpClient.dial.port = port;
     TcpClient.dial.timeout_ms = timeout;
-    TcpClient.open(TcpClient.internal);
+    TcpClient.open(protocore_tcp_client_span());
     edge_tls()->tls_cid = TcpClient.i32;
     if (edge_tls()->tls_cid < 0)
     {
@@ -329,7 +331,7 @@ static int t_tls_open(void *c, const char *host, uint16_t port, uint32_t timeout
     if (!protocore_tls_client_session_begin(host, edge_tls_bio_send, edge_tls_bio_recv))
     {
         TcpClient.cid = edge_tls()->tls_cid;
-        TcpClient.close(TcpClient.internal);
+        TcpClient.close(protocore_tcp_client_span());
         edge_tls()->tls_cid = -1;
         return -1;
     }
@@ -343,7 +345,7 @@ static proto_bool t_tls_connected(void *c, int cid)
 {
     (void)c;
     TcpClient.cid = cid;
-    TcpClient.connected(TcpClient.internal);
+    TcpClient.connected(protocore_tcp_client_span());
     if (!TcpClient.ok)
     {
         return PROTO_FALSE;
@@ -385,7 +387,7 @@ static proto_bool t_tls_closed(void *c, int cid)
 {
     (void)c;
     TcpClient.cid = cid;
-    TcpClient.is_closed(TcpClient.internal);
+    TcpClient.is_closed(protocore_tcp_client_span());
     return edge_tls()->tls_peer_closed || TcpClient.ok;
 }
 static void t_tls_close(void *c, int cid)
@@ -393,7 +395,7 @@ static void t_tls_close(void *c, int cid)
     (void)c;
     protocore_tls_client_session_end();
     TcpClient.cid = cid;
-    TcpClient.close(TcpClient.internal);
+    TcpClient.close(protocore_tcp_client_span());
     edge_tls()->tls_cid = -1;
     edge_tls()->tls_ready = PROTO_FALSE;
 }
@@ -488,7 +490,12 @@ static void serve_hit(uint8_t *restrict work, uint8_t slot, EdgeEntry *e, uint32
     {
         size_t rs = 0;
         size_t re = 0;
-        int rr = http_parse_byte_range(range, e->body_len, &rs, &re);
+        HttpRange.http_parse_byte_range_args.hdr = range;
+        HttpRange.http_parse_byte_range_args.size = e->body_len;
+        HttpRange.http_parse_byte_range_args.out_start = &rs;
+        HttpRange.http_parse_byte_range_args.out_end = &re;
+        HttpRange.http_parse_byte_range(http_range_work);
+        int rr = HttpRange.n;
         if (rr < 0) // syntactically valid but unsatisfiable -> 416, no body window served
         {
             char cr[48];
@@ -1242,7 +1249,7 @@ static proto_bool edge_cache_poll(uint8_t slot)
     if (fs->phase == EDGE_FETCH_PHASE_MESH)
     {
         ConnPool.slot = slot;
-        ConnPool.active(ConnPool.internal);
+        ConnPool.active(protocore_conn_pool_span());
         if (!ConnPool.ok) // client vanished mid-query: abort
         {
             EdgeMesh.fetch_end_args.m = &fs->mf;
@@ -1285,7 +1292,7 @@ static proto_bool edge_cache_poll(uint8_t slot)
 
     const EdgeFetchTransport *tport = fs->transport; // the transport chosen for this fetch (plaintext or TLS)
     ConnPool.slot = slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok) // client vanished mid-fetch: abort
     {
         EdgeFetcher.end_args.f = &fs->f;
@@ -1489,7 +1496,7 @@ static void mesh_serve_end(MeshConn *mc)
 {
     mc->active = PROTO_FALSE;
     ConnPool.slot = mc->conn_slot;
-    ConnPool.close(ConnPool.internal);
+    ConnPool.close(protocore_conn_pool_span());
 }
 
 // Drive one serve connection: accumulate the request, answer it, then page the response out with backpressure.
@@ -1499,13 +1506,13 @@ static void mesh_serve_pump(uint8_t *restrict work, MeshConn *mc)
     if (!mc->responded)
     {
         ConnPool.slot = slot;
-        ConnPool.available(ConnPool.internal);
+        ConnPool.available(protocore_conn_pool_span());
         if (ConnPool.n && mc->req_len < sizeof(mc->reqbuf))
         {
             ConnPool.slot = slot;
             ConnPool.io.buf = mc->reqbuf + mc->req_len;
             ConnPool.io.cap = sizeof(mc->reqbuf) - mc->req_len;
-            ConnPool.read(ConnPool.internal);
+            ConnPool.read(protocore_conn_pool_span());
             mc->req_len += (uint16_t)ConnPool.n;
         }
         uint8_t digest[32];
@@ -1537,7 +1544,7 @@ static void mesh_serve_pump(uint8_t *restrict work, MeshConn *mc)
     while (mc->out_off < mc->out_len)
     {
         ConnPool.slot = slot;
-        ConnPool.sndbuf(ConnPool.internal);
+        ConnPool.sndbuf(protocore_conn_pool_span());
         proto_u16 room = ConnPool.u16;
         if (room == 0)
         {
@@ -1548,7 +1555,7 @@ static void mesh_serve_pump(uint8_t *restrict work, MeshConn *mc)
         ConnPool.slot = slot;
         ConnPool.io.data = mc->outbuf + mc->out_off;
         ConnPool.io.len = n;
-        ConnPool.send(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
         if (!ConnPool.ok)
         {
             return; // retry next poll
@@ -1560,9 +1567,9 @@ static void mesh_serve_pump(uint8_t *restrict work, MeshConn *mc)
     // COPY'd the bytes into the TCP buffer and the graceful finalize does not call on_close, so free the
     // MeshConn now - the transport owns the drain from here.
     ConnPool.slot = slot;
-    ConnPool.flush(ConnPool.internal);
+    ConnPool.flush(protocore_conn_pool_span());
     ConnPool.slot = slot;
-    ConnPool.begin_close(ConnPool.internal);
+    ConnPool.begin_close(protocore_conn_pool_span());
     mc->active = PROTO_FALSE;
 }
 
@@ -1591,7 +1598,7 @@ static void mesh_on_accept(uint8_t slot)
         }
     }
     ConnPool.slot = slot;
-    ConnPool.close(ConnPool.internal); // no free serve slot
+    ConnPool.close(protocore_conn_pool_span()); // no free serve slot
 }
 
 static void mesh_on_data(uint8_t slot)
@@ -1622,7 +1629,7 @@ static void mesh_on_poll(uint8_t slot)
     }
 
     ConnPool.slot = slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         return;
@@ -1775,7 +1782,8 @@ static void edge_cache_proxy_map(uint8_t *restrict work)
     HttpClient.target.host_cap = sizeof(host);
     HttpClient.target.path = ignore_path;
     HttpClient.target.path_cap = sizeof(ignore_path);
-    HttpClient.parse_target_uri(HttpClient.internal);
+    // parse_target_uri reads the caller's buffer and holds nothing, so it takes no borrow.
+        HttpClient.parse_target_uri(NULL);
     if (!HttpClient.ok)
     {
         EdgeProxy.ok = PROTO_FALSE;
@@ -1865,7 +1873,7 @@ static void edge_cache_proxy_mesh_serve(uint8_t *restrict work)
     {
         Session.proto->proto = PROTO_MESH;
         Session.proto->h = &s_mesh_handler;
-        Session.proto->add(Session.proto->internal);
+        Session.proto->add(protocore_session_span());
         EDGE_CACHE_PROXY_CTX(work)->mesh_registered = PROTO_TRUE;
     }
 }

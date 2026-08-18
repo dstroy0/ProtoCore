@@ -117,9 +117,6 @@ typedef struct
     const char *name;                        ///< the argument's Name, matched case-sensitively (sec 2.1.9)
 } GraphQLArgumentArgs;
 
-/** @brief The executor's own state and the calls that reach it, described only in graphql.c. */
-struct GraphQLInternal;
-
 /**
  * @brief The GraphQL executor (GraphQL spec, October 2021 release; not an IETF standard).
  *
@@ -145,7 +142,6 @@ struct GraphQLInternal;
  * @var GraphQLNs::arg_int   read @c argument as an Int
  * @var GraphQLNs::arg_str   read @c argument as a String
  * @var GraphQLNs::arg_bool  read @c argument as a Boolean
- * @var GraphQLNs::internal  the executor's state and the calls that reach it
  */
 typedef struct
 {
@@ -160,16 +156,25 @@ typedef struct
     const char *text;
     proto_bool b;
 
-    void (*execute)(struct GraphQLInternal *ctx);
-    void (*arg_int)(struct GraphQLInternal *ctx);
-    void (*arg_str)(struct GraphQLInternal *ctx);
-    void (*arg_bool)(struct GraphQLInternal *ctx);
-
-    struct GraphQLInternal *internal;
+    void (*const execute)(uint8_t *restrict work);
+    void (*const arg_int)(uint8_t *restrict work);
+    void (*const arg_str)(uint8_t *restrict work);
+    void (*const arg_bool)(uint8_t *restrict work);
 } GraphQLNs;
 
 /** @brief The one symbol this module exports. */
 extern GraphQLNs GraphQL;
+
+/**
+ * @brief The PROTOCORE_GRAPHQL_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_graphql_span(void);
 
 PROTOCORE_END_DECLS
 

@@ -17,6 +17,18 @@
 
 #include <unity.h>
 
+
+// The borrow the entries take. Without the state this module keeps behind PROTOCORE_HAS_NET_STACK it has no
+// span, and NULL is what a short pool hands over too, which every entry already refuses on.
+static uint8_t *ws_client_work(void)
+{
+#if PROTOCORE_HAS_NET_STACK
+    return protocore_ws_client_span();
+#else
+    return NULL;
+#endif
+}
+
 void setUp(void)
 {
 }
@@ -31,7 +43,7 @@ static const char *accept_for(const char *key, char *out, size_t cap)
     WsClient.handshake.key = key;
     WsClient.handshake.accept = out;
     WsClient.handshake.accept_cap = cap;
-    WsClient.accept_for_key(WsClient.internal);
+    WsClient.accept_for_key(ws_client_work());
     return out;
 }
 
@@ -44,7 +56,7 @@ static size_t build_handshake(uint8_t *out, size_t cap, const char *host, const 
     WsClient.handshake.subprotocol = subprotocol;
     WsClient.buf.out = out;
     WsClient.buf.cap = cap;
-    WsClient.build_opening_handshake(WsClient.internal);
+    WsClient.build_opening_handshake(ws_client_work());
     return WsClient.n;
 }
 
@@ -66,7 +78,7 @@ static proto_bool check_response(const char *response, const char *accept)
         g_expect[i] = '\0';
     }
     WsClient.handshake.accept = accept ? g_expect : NULL;
-    WsClient.check_server_handshake(WsClient.internal);
+    WsClient.check_server_handshake(ws_client_work());
     return WsClient.ok;
 }
 
@@ -79,7 +91,7 @@ static size_t build_frame(uint8_t *out, size_t cap, uint8_t opcode, const uint8_
     WsClient.frame.payload = payload;
     WsClient.frame.payload_len = len;
     WsClient.frame.masking_key = mask;
-    WsClient.build_frame(WsClient.internal);
+    WsClient.build_frame(ws_client_work());
     return WsClient.n;
 }
 
@@ -87,7 +99,7 @@ static proto_bool parse_frame(const uint8_t *in, size_t avail)
 {
     WsClient.buf.in = in;
     WsClient.buf.avail = avail;
-    WsClient.parse_frame(WsClient.internal);
+    WsClient.parse_frame(ws_client_work());
     return WsClient.ok;
 }
 
@@ -446,7 +458,7 @@ void test_check_server_handshake_fails_closed(void)
     WsClient.buf.in = NULL;
     WsClient.buf.avail = 100;
     WsClient.handshake.accept = g_accept;
-    WsClient.check_server_handshake(WsClient.internal);
+    WsClient.check_server_handshake(ws_client_work());
     TEST_ASSERT_FALSE(WsClient.ok);
 
     TEST_ASSERT_FALSE(check_response("abcd", "acc"));                   // shorter than "HTTP/1.1 101"
@@ -460,29 +472,29 @@ void test_check_server_handshake_fails_closed(void)
 void test_transport_reports_no_connection(void)
 {
     WsClient.msg.on_message = NULL;
-    WsClient.on_message(WsClient.internal);
+    WsClient.on_message(ws_client_work());
 
     WsClient.handshake.host = "example.com";
     WsClient.handshake.port = 80;
     WsClient.handshake.secure = PROTO_FALSE;
     WsClient.handshake.resource_name = "/";
-    WsClient.connect(WsClient.internal);
+    WsClient.connect(ws_client_work());
     TEST_ASSERT_FALSE(WsClient.ok);
 
     WsClient.msg.text = "hi";
-    WsClient.send_text(WsClient.internal);
+    WsClient.send_text(ws_client_work());
     TEST_ASSERT_FALSE(WsClient.ok);
 
     WsClient.msg.data = (const uint8_t *)"x";
     WsClient.msg.len = 1;
-    WsClient.send_binary(WsClient.internal);
+    WsClient.send_binary(ws_client_work());
     TEST_ASSERT_FALSE(WsClient.ok);
 
-    WsClient.loop(WsClient.internal);
+    WsClient.loop(ws_client_work());
     TEST_ASSERT_FALSE(WsClient.ok);
 
-    WsClient.connected(WsClient.internal);
+    WsClient.connected(ws_client_work());
     TEST_ASSERT_FALSE(WsClient.ok);
 
-    WsClient.close(WsClient.internal);
+    WsClient.close(ws_client_work());
 }

@@ -20,11 +20,15 @@
 #ifndef PROTOCORE_SIGFOX_H
 #define PROTOCORE_SIGFOX_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SIGFOX
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief Classification of a Sigfox modem response line. */
 typedef enum PROTO_ENUM_PACKED
@@ -34,20 +38,62 @@ typedef enum PROTO_ENUM_PACKED
     SIGFOX_ERROR = 2,   ///< the modem reported an error
 } protocore_sigfox_result;
 
-/**
- * @brief Format an `AT$SF=<hex>\r\n` uplink command for @p payload into @p out (a NUL-
- *        terminated C string).
- * @return the command length (excluding the NUL), or 0 if @p len exceeds
- *         PROTOCORE_SIGFOX_MAX_PAYLOAD or the command would not fit @p cap.
- */
-uint16_t protocore_sigfox_build_uplink(const uint8_t *payload, uint8_t len, char *out, uint16_t cap);
+/** @brief What build_uplink takes: payload, len, out, cap. */
+typedef struct
+{
+    const uint8_t *payload;
+    uint8_t len;
+    char *out;
+    uint16_t cap;
+} SigfoxBuildUplinkArgs;
+
+/** @brief What parse_response takes: buf, len. */
+typedef struct
+{
+    const char *buf;
+    uint16_t len;
+} SigfoxParseResponseArgs;
 
 /**
- * @brief Classify a modem reply (scans @p buf for "OK" / "ERROR").
- * @return SIGFOX_OK, SIGFOX_ERROR, or SIGFOX_PENDING if
- * neither is present yet.
+ * @brief Sigfox modem AT-command codec (PROTOCORE_ENABLE_SIGFOX) - Wisol / Murata over UART.
+ *
+ * A caller sets the members a call takes, invokes it through ::Sigfox with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Sigfox.build_uplink_args.payload = ...;
+ *   Sigfox.build_uplink_args.len = ...;
+ *   Sigfox.build_uplink_args.out = ...;
+ *   Sigfox.build_uplink_args.cap = ...;
+ *   Sigfox.build_uplink(work);
+ *   // Sigfox.value is what the call reports
+ *
+ * @var SigfoxNs::build_uplink_args  what build_uplink takes: payload, len, out, cap
+ * @var SigfoxNs::parse_response_args  what parse_response takes: buf, len
+ * @var SigfoxNs::ok  a call's true/false outcome
+ * @var SigfoxNs::value  the command length (excluding the NUL), or 0 if len exceeds ...
+ * @var SigfoxNs::status  SIGFOX_OK, SIGFOX_ERROR, or SIGFOX_PENDING if neither is present yet
+ * @var SigfoxNs::build_uplink  format an `AT$SF=<hex>\r\n` uplink command for payload into out (a ...
+ * @var SigfoxNs::parse_response  classify a modem reply (scans buf for "OK" / "ERROR")
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-protocore_sigfox_result protocore_sigfox_parse_response(const char *buf, uint16_t len);
+typedef struct
+{
+    SigfoxBuildUplinkArgs build_uplink_args;
+    SigfoxParseResponseArgs parse_response_args;
+
+    proto_bool ok;
+    uint16_t value;
+    protocore_sigfox_result status;
+
+    void (*const build_uplink)(uint8_t *restrict work);
+    void (*const parse_response)(uint8_t *restrict work);
+} SigfoxNs;
+
+/** @brief The one symbol this module exports. */
+extern SigfoxNs Sigfox;
 
 PROTOCORE_END_DECLS
 

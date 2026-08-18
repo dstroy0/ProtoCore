@@ -475,6 +475,54 @@ void test_poly1305(void)
     }
 }
 
+// A wiped AEAD context keeps no key material. blk_free was empty on both arms until 2026-08-18, so
+// the round-key schedule and the GHASH subkey survived a wipe in whatever storage the context sat
+// in - and a TLS connection's keys sit in persistent storage the next connection reuses.
+void test_a_wiped_gcm_context_keeps_no_key_material(void)
+{
+    static const uint8_t KEY[16] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                                    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+    static const uint8_t IV[12] = {0};
+    static const uint8_t PT[16] = {0};
+    uint8_t ct[16];
+    uint8_t tag[16];
+
+    // Key it and seal once, so the schedule and H are really built rather than left zero.
+    (void)gcm(KEY);
+    Aes128Gcm.seal_args.nonce = IV;
+    Aes128Gcm.seal_args.aad = NULL;
+    Aes128Gcm.seal_args.aad_len = 0;
+    Aes128Gcm.seal_args.pt = PT;
+    Aes128Gcm.seal_args.pt_len = sizeof(PT);
+    Aes128Gcm.seal_args.ct_out = ct;
+    Aes128Gcm.seal_args.tag_out = tag;
+    Aes128Gcm.seal(g_gcm_ws);
+    TEST_ASSERT_TRUE(Aes128Gcm.ok);
+
+    Aes128Gcm.key_wipe(g_gcm_ws);
+
+    // The key the caller handed in appears nowhere in the context, in any 16-byte alignment.
+    for (size_t i = 0; i + sizeof(KEY) <= PROTOCORE_AES128GCM_BORROW; i++)
+    {
+        TEST_ASSERT_FALSE_MESSAGE(memcmp(&g_gcm_ws[i], KEY, sizeof(KEY)) == 0,
+                                  "the raw key is still resident after a wipe");
+    }
+
+    // And the schedule is gone: a seal on the wiped context does not reproduce the record.
+    uint8_t ct2[16];
+    uint8_t tag2[16];
+    Aes128Gcm.seal_args.nonce = IV;
+    Aes128Gcm.seal_args.aad = NULL;
+    Aes128Gcm.seal_args.aad_len = 0;
+    Aes128Gcm.seal_args.pt = PT;
+    Aes128Gcm.seal_args.pt_len = sizeof(PT);
+    Aes128Gcm.seal_args.ct_out = ct2;
+    Aes128Gcm.seal_args.tag_out = tag2;
+    Aes128Gcm.seal(g_gcm_ws);
+    TEST_ASSERT_FALSE_MESSAGE(memcmp(tag, tag2, sizeof(tag)) == 0,
+                              "the wiped context still authenticates under the old key");
+}
+
 // The tables are the point of this suite: an empty one would make every case above pass while
 // asserting nothing, so the row counts are checked before anything else runs on them.
 void test_vector_tables_are_populated(void)

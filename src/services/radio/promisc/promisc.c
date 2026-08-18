@@ -7,20 +7,54 @@
  *        esp_wifi promiscuous binding. The parser / PCAP builders are host-identical.
  */
 
-#include "services/radio/promisc/promisc.h"
-#include "mmgr/protomem.h"
-#include "network_drivers/physical/physical.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_PROMISC
 
-#if PROTOCORE_HAS_VENDOR_WIFI
-#include <esp_wifi.h>
-#endif
-proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *out)
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem.h"
+#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/radio_power.h" // Radio: the monitor-mode seam this drives
+#include "services/radio/promisc/promisc.h"
+#include "shared/pcap/pcap.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_PROMISC_BORROW persistent bytes, or null while the pool was short
+} PromiscOwnCtx;
+static PromiscOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_promisc_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_PROMISC_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void promisc_wifi_frame_parse(uint8_t *restrict work)
+{
+    (void)work;
+    const uint8_t *frame = Promisc.wifi_frame_parse_args.frame;
+    uint16_t len = Promisc.wifi_frame_parse_args.len;
+    WifiFrameInfo *out = Promisc.wifi_frame_parse_args.out;
+
     if (!frame || !out || len < 10) // FC(2) + Duration(2) + Addr1(6) - the shortest control frame
     {
-        return PROTO_FALSE;
+        Promisc.ok = PROTO_FALSE;
+        return;
     }
     mem.set(out, 0, sizeof(*out));
 
@@ -37,13 +71,15 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
         // Control frames carry only Addr1 (the receiver); the rest vary by subtype.
         out->dst = frame + 4;
         out->hdr_len = 10;
-        return PROTO_TRUE;
+        Promisc.ok = PROTO_TRUE;
+        return;
     }
 
     // Management / data / extension frames carry the full 3-address header + sequence control.
     if (len < 24)
     {
-        return PROTO_FALSE;
+        Promisc.ok = PROTO_FALSE;
+        return;
     }
     out->seq = (uint16_t)(((uint16_t)frame[22] | ((uint16_t)frame[23] << 8)) >> 4);
     out->is_qos = (out->type == WIFI_FT_DATA) && (out->subtype & 0x08) != 0;
@@ -64,7 +100,8 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
     }
     if (len < hlen)
     {
-        return PROTO_FALSE;
+        Promisc.ok = PROTO_FALSE;
+        return;
     }
     out->hdr_len = hlen;
 
@@ -97,14 +134,13 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
         out->src = frame + 24;
         out->bssid = NULL;
     }
-    return PROTO_TRUE;
+    Promisc.ok = PROTO_TRUE;
 }
 
 // libpcap framing (Pcap.global_header / Pcap.record_header) is in shared/pcap/pcap.h - shared with
 // the other capture features.
 
 // --- radio binding -----------------------------------------------------------------------
-#if PROTOCORE_HAS_VENDOR_WIFI
 
 // All promiscuous-capture state, owned by one instance (internal linkage): the frame sink.
 // One named owner, unreachable from any other translation unit.
@@ -112,58 +148,65 @@ typedef struct
 {
     protocore_promisc_sink_fn sink;
 } PromiscCtx;
-static PromiscCtx s_promisc;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define PROMISC_OFF_CTX 0u
+static_assert(PROMISC_OFF_CTX + sizeof(PromiscCtx) <= PROTOCORE_PROMISC_BORROW,
+              "PROTOCORE_PROMISC_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-proto_bool protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn sink)
+// The region, at its offset in the caller's borrow.
+#define PROMISC_CTX(w) ((PromiscCtx *)(void *)((w) + PROMISC_OFF_CTX))
+
+static void promisc_begin(uint8_t *restrict work)
 {
+    uint8_t channel = Promisc.begin_args.channel;
+    protocore_promisc_sink_fn sink = Promisc.begin_args.sink;
+
     if (!sink)
     {
-        return PROTO_FALSE;
+        Promisc.ok = PROTO_FALSE;
+        return;
     }
-    s_promisc.sink = sink;
+    PROMISC_CTX(work)->sink = sink;
     // protocore_promisc_sink_fn and protocore_phy_frame_fn are the same neutral shape, so the sink goes
     // straight down; the platform's received-packet struct is unwrapped in the backend.
     Radio.monitor.channel = channel;
     Radio.monitor.on_frame = sink;
-    Radio.monitor_begin(Radio.internal);
+    Radio.monitor_begin(protocore_radio_power_span());
     if (!Radio.ok)
     {
-        s_promisc.sink = NULL;
-        return PROTO_FALSE;
+        PROMISC_CTX(work)->sink = NULL;
+        Promisc.ok = PROTO_FALSE;
+        return;
     }
-    return PROTO_TRUE;
+    Promisc.ok = PROTO_TRUE;
 }
 
-void protocore_promisc_set_channel(uint8_t channel)
+static void promisc_set_channel(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t channel = Promisc.set_channel_args.channel;
+
     Radio.monitor.channel = channel;
-    Radio.monitor_set_channel(Radio.internal);
+    Radio.monitor_set_channel(protocore_radio_power_span());
 }
 
-void protocore_promisc_end(void)
+static void promisc_end(uint8_t *restrict work)
 {
-    Radio.monitor_end(Radio.internal);
-    s_promisc.sink = NULL;
+
+    Radio.monitor_end(protocore_radio_power_span());
+    PROMISC_CTX(work)->sink = NULL;
 }
 
-#else // host build - no radio
+PromiscNs Promisc = {
+    .wifi_frame_parse = promisc_wifi_frame_parse,
+    .begin = promisc_begin,
+    .set_channel = promisc_set_channel,
+    .end = promisc_end,
+};
 
-proto_bool protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn sink)
-{
-    (void)channel;
-    (void)sink;
-    return PROTO_FALSE;
-}
-void protocore_promisc_set_channel(uint8_t channel)
-{
-    (void)channel;
-    // host build: no radio, no channel to set
-}
-void protocore_promisc_end(void)
-{
-    // host build: no radio, nothing to stop
-}
-
-#endif // PROTOCORE_HAS_VENDOR_WIFI
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROMISC

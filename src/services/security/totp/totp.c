@@ -26,20 +26,6 @@
 /** @brief The counter C occupies 8 bytes, high-order byte first (RFC 4226 sec 5.2). */
 #define PROTOCORE_TOTP_C_LEN 8
 
-/**
- * @brief The module's handle onto its own calls - what TotpNs points at.
- *
- * No store member: nothing in this file has static lifetime past the handle itself.
- *
- * @var TotpInternal::ns  the handle a caller sets a call's members on
- */
-struct TotpInternal
-{
-    TotpNs *ns;
-};
-
-static struct TotpInternal s_totp = {.ns = &Totp};
-
 // 10^n.
 static uint32_t pow10u(uint8_t n)
 {
@@ -122,51 +108,51 @@ static uint32_t hotp_value(const uint8_t *key, size_t keylen, uint64_t counter, 
 }
 
 // Digit, with 0 taking the RFC 4226 sec 5.3 minimum.
-static uint8_t otp_digit(struct TotpInternal *restrict ctx)
+static uint8_t otp_digit(uint8_t *restrict work)
 {
-    return ctx->ns->digit ? ctx->ns->digit : (uint8_t)PROTOCORE_TOTP_DIGIT_MIN;
+    return Totp.digit ? Totp.digit : (uint8_t)PROTOCORE_TOTP_DIGIT_MIN;
 }
 
 // RFC 6238 sec 4.2 T = (Current Unix time - T0) / X, floored. X of 0 takes the default; a clock
 // behind T0 gives step 0.
-static uint64_t time_step(struct TotpInternal *restrict ctx)
+static uint64_t time_step(uint8_t *restrict work)
 {
-    uint32_t x = ctx->ns->step.x;
+    uint32_t x = Totp.step.x;
     if (x == 0)
     {
         x = PROTOCORE_TOTP_X_DEFAULT;
     }
-    if (ctx->ns->step.unix_time < ctx->ns->step.t0)
+    if (Totp.step.unix_time < Totp.step.t0)
     {
         return 0;
     }
-    return (ctx->ns->step.unix_time - ctx->ns->step.t0) / x;
+    return (Totp.step.unix_time - Totp.step.t0) / x;
 }
 
 // HOTP(K,C) for the counter the caller set (RFC 4226 sec 5.3).
-static void hotp(struct TotpInternal *restrict ctx)
+static void hotp(uint8_t *restrict work)
 {
-    ctx->ns->u32 = hotp_value(ctx->ns->k, ctx->ns->keylen, ctx->ns->step.counter, otp_digit(ctx));
+    Totp.u32 = hotp_value(Totp.k, Totp.keylen, Totp.step.counter, otp_digit(work));
 }
 
 // RFC 6238 sec 4.2 TOTP = HOTP(K, T).
-static void totp(struct TotpInternal *restrict ctx)
+static void totp(uint8_t *restrict work)
 {
-    ctx->ns->u32 = hotp_value(ctx->ns->k, ctx->ns->keylen, time_step(ctx), otp_digit(ctx));
+    Totp.u32 = hotp_value(Totp.k, Totp.keylen, time_step(work), otp_digit(work));
 }
 
 // RFC 6238 sec 6: match the submitted OTP against T and every step within the drift limit forward
 // and backward of it. Steps below the epoch are skipped; a negative drift matches nothing.
-static void verify(struct TotpInternal *restrict ctx)
+static void verify(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    const int32_t drift = ctx->ns->check.drift;
+    Totp.ok = PROTO_FALSE;
+    const int32_t drift = Totp.check.drift;
     if (drift < 0)
     {
         return;
     }
-    const uint8_t digit = otp_digit(ctx);
-    const int64_t t = (int64_t)time_step(ctx);
+    const uint8_t digit = otp_digit(work);
+    const int64_t t = (int64_t)time_step(work);
     for (int32_t w = -drift; w <= drift; w++)
     {
         const int64_t c = t + w;
@@ -174,9 +160,9 @@ static void verify(struct TotpInternal *restrict ctx)
         {
             continue;
         }
-        if (hotp_value(ctx->ns->k, ctx->ns->keylen, (uint64_t)c, digit) == ctx->ns->check.otp)
+        if (hotp_value(Totp.k, Totp.keylen, (uint64_t)c, digit) == Totp.check.otp)
         {
-            ctx->ns->ok = PROTO_TRUE;
+            Totp.ok = PROTO_TRUE;
             return;
         }
     }
@@ -186,13 +172,14 @@ static void verify(struct TotpInternal *restrict ctx)
 // and 2-7 carry 26..31; lowercase carries the same values as uppercase, and '=', ' ' and '-' are
 // skipped rather than rejected under RFC 4648 sec 3.3. Any other character, or a byte past cap,
 // ends the decode at -1.
-static void base32_decode(struct TotpInternal *restrict ctx)
+static void base32_decode(uint8_t *restrict work)
 {
-    const char *b32 = ctx->ns->secret.b32;
-    uint8_t *out = ctx->ns->secret.out;
-    const size_t cap = ctx->ns->secret.cap;
+    (void)work;
+    const char *b32 = Totp.secret.b32;
+    uint8_t *out = Totp.secret.out;
+    const size_t cap = Totp.secret.cap;
 
-    ctx->ns->i32 = -1;
+    Totp.i32 = -1;
     if (!b32 || !out)
     {
         return;
@@ -236,10 +223,10 @@ static void base32_decode(struct TotpInternal *restrict ctx)
             out[n++] = (uint8_t)((buffer >> bits) & 0xFF);
         }
     }
-    ctx->ns->i32 = (int32_t)n;
+    Totp.i32 = (int32_t)n;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-TotpNs Totp = {.hotp = hotp, .totp = totp, .verify = verify, .base32_decode = base32_decode, .internal = &s_totp};
+TotpNs Totp = {.hotp = hotp, .totp = totp, .verify = verify, .base32_decode = base32_decode};
 
 #endif // PROTOCORE_ENABLE_TOTP

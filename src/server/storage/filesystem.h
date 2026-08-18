@@ -204,9 +204,6 @@ typedef struct
     protocore_mnt_stat *stat; ///< where a stat or a directory read lands its entry
 } FsIoArgs;
 
-/** @brief The filesystem's own state and the calls that reach it, described only in filesystem.c. */
-struct FilesystemInternal;
-
 /**
  * @brief The path-safe filesystem surface over a mount.
  *
@@ -244,7 +241,6 @@ struct FilesystemInternal;
  * @var FilesystemNs::readdir   take the next entry from it
  * @var FilesystemNs::read_file  read a whole file into one buffer
  * @var FilesystemNs::write_file write one buffer as a whole file
- * @var FilesystemNs::internal  the mount state and the calls that reach it
  *
  * The joined path is `..`-free by construction, and the small embedded filesystems have no
  * symlinks, so a resolved path cannot leave its root.
@@ -262,33 +258,44 @@ typedef struct
     uint32_t bits;
     const char *text;
 
-    void (*status)(struct FilesystemInternal *ctx);
-    void (*clear)(struct FilesystemInternal *ctx);
-    void (*present)(struct FilesystemInternal *ctx);
-    void (*begin)(struct FilesystemInternal *ctx);
-    void (*resolve)(struct FilesystemInternal *ctx);
-    void (*open)(struct FilesystemInternal *ctx);
-    void (*read)(struct FilesystemInternal *ctx);
-    void (*write)(struct FilesystemInternal *ctx);
-    void (*close)(struct FilesystemInternal *ctx);
-    void (*seek)(struct FilesystemInternal *ctx);
-    void (*size)(struct FilesystemInternal *ctx);
-    void (*exists)(struct FilesystemInternal *ctx);
-    void (*stat)(struct FilesystemInternal *ctx);
-    void (*remove)(struct FilesystemInternal *ctx);
-    void (*rename)(struct FilesystemInternal *ctx);
-    void (*copy)(struct FilesystemInternal *ctx);
-    void (*mkdir)(struct FilesystemInternal *ctx);
-    void (*rmdir)(struct FilesystemInternal *ctx);
-    void (*opendir)(struct FilesystemInternal *ctx);
-    void (*readdir)(struct FilesystemInternal *ctx);
-    void (*read_file)(struct FilesystemInternal *ctx);
-    void (*write_file)(struct FilesystemInternal *ctx);
-
-    struct FilesystemInternal *internal;
+    void (*const status)(uint8_t *restrict work);
+    void (*const clear)(uint8_t *restrict work);
+    void (*const present)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const resolve)(uint8_t *restrict work);
+    void (*const open)(uint8_t *restrict work);
+    void (*const read)(uint8_t *restrict work);
+    void (*const write)(uint8_t *restrict work);
+    void (*const close)(uint8_t *restrict work);
+    void (*const seek)(uint8_t *restrict work);
+    void (*const size)(uint8_t *restrict work);
+    void (*const exists)(uint8_t *restrict work);
+    void (*const stat)(uint8_t *restrict work);
+    void (*const remove)(uint8_t *restrict work);
+    void (*const rename)(uint8_t *restrict work);
+    void (*const copy)(uint8_t *restrict work);
+    void (*const mkdir)(uint8_t *restrict work);
+    void (*const rmdir)(uint8_t *restrict work);
+    void (*const opendir)(uint8_t *restrict work);
+    void (*const readdir)(uint8_t *restrict work);
+    void (*const read_file)(uint8_t *restrict work);
+    void (*const write_file)(uint8_t *restrict work);
 } FilesystemNs;
 
 /** @brief The one symbol this module exports. */
 extern FilesystemNs Fs;
+
+/**
+ * @brief The PROTOCORE_FILESYSTEM_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_filesystem_span(void);
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_FILESYSTEM_H

@@ -26,14 +26,19 @@
 #ifndef PROTOCORE_NRF24_H
 #define PROTOCORE_NRF24_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_NRF24
 
 PROTOCORE_BEGIN_DECLS
 
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
 typedef void (*nrf_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
+
 /** @brief Drive the CE pin (true = high). */
 typedef void (*nrf_ce_fn)(proto_bool level, void *ctx);
 
@@ -54,31 +59,90 @@ typedef struct
     uint8_t tx_power;       ///< power level 0..3 (-18, -12, -6, 0 dBm).
 } nrf_config;
 
-/**
- * @brief Configure the nRF24L01+ and power it up (standby).
- * @return true; false if a written register does not read back - i.e. the bus is not
- *         talking to the chip.
- */
-proto_bool protocore_nrf24_init(const nrf_bus *bus, const nrf_config *cfg);
+/** @brief What init takes: bus, cfg. */
+typedef struct
+{
+    const nrf_bus *bus;
+    const nrf_config *cfg;
+} Nrf24InitArgs;
+
+/** @brief What send takes: bus, data, len. */
+typedef struct
+{
+    const nrf_bus *bus;
+    const uint8_t *data;
+    uint8_t len;
+} Nrf24SendArgs;
+
+/** @brief What tx_done takes: bus. */
+typedef struct
+{
+    const nrf_bus *bus;
+} Nrf24TxDoneArgs;
+
+/** @brief What set_rx takes: bus. */
+typedef struct
+{
+    const nrf_bus *bus;
+} Nrf24SetRxArgs;
+
+/** @brief What recv takes: bus, buf, cap, pipe. */
+typedef struct
+{
+    const nrf_bus *bus;
+    uint8_t *buf;
+    uint8_t cap;
+    uint8_t *pipe;
+} Nrf24RecvArgs;
 
 /**
- * @brief Transmit @p len bytes (zero-padded to PROTOCORE_NRF24_PAYLOAD). Poll protocore_nrf24_tx_done().
- * @return true; false if @p len exceeds PROTOCORE_NRF24_PAYLOAD.
+ * @brief nRF24L01+ radio driver (PROTOCORE_ENABLE_NRF24) - Nordic 2.4 GHz over SPI.
+ *
+ * A caller sets the members a call takes, invokes it through ::Nrf24 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Nrf24.init_args.bus = ...;
+ *   Nrf24.init_args.cfg = ...;
+ *   Nrf24.init(work);
+ *   // Nrf24.ok is what the call reports
+ *
+ * @var Nrf24Ns::init_args  what init takes: bus, cfg
+ * @var Nrf24Ns::send_args  what send takes: bus, data, len
+ * @var Nrf24Ns::tx_done_args  what tx_done takes: bus
+ * @var Nrf24Ns::set_rx_args  what set_rx takes: bus
+ * @var Nrf24Ns::recv_args  what recv takes: bus, buf, cap, pipe
+ * @var Nrf24Ns::ok  true; false if a written register does not read back - i.e. the bus ...
+ * @var Nrf24Ns::n  the payload width (PROTOCORE_NRF24_PAYLOAD, capped at cap), or -1 ...
+ * @var Nrf24Ns::init  configure the nRF24L01+ and power it up (standby)
+ * @var Nrf24Ns::send  transmit len bytes (zero-padded to PROTOCORE_NRF24_PAYLOAD). Poll ...
+ * @var Nrf24Ns::tx_done  true once a transmit has finished (STATUS TX_DS); clears the flag
+ * @var Nrf24Ns::set_rx  enter receive mode (PRX + CE high); then poll protocore_nrf24_recv()
+ * @var Nrf24Ns::recv  if a frame is waiting, copy it into buf and report the pipe it ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_nrf24_send(const nrf_bus *bus, const uint8_t *data, uint8_t len);
+typedef struct
+{
+    Nrf24InitArgs init_args;
+    Nrf24SendArgs send_args;
+    Nrf24TxDoneArgs tx_done_args;
+    Nrf24SetRxArgs set_rx_args;
+    Nrf24RecvArgs recv_args;
 
-/** @brief True once a transmit has finished (STATUS TX_DS); clears the flag. */
-proto_bool protocore_nrf24_tx_done(const nrf_bus *bus);
+    proto_bool ok;
+    int n;
 
-/** @brief Enter receive mode (PRX + CE high); then poll protocore_nrf24_recv(). */
-void protocore_nrf24_set_rx(const nrf_bus *bus);
+    void (*const init)(uint8_t *restrict work);
+    void (*const send)(uint8_t *restrict work);
+    void (*const tx_done)(uint8_t *restrict work);
+    void (*const set_rx)(uint8_t *restrict work);
+    void (*const recv)(uint8_t *restrict work);
+} Nrf24Ns;
 
-/**
- * @brief If a frame is waiting, copy it into @p buf and report the pipe it arrived on.
- * @param[out] pipe set to the receiving pipe number 0..5 (may be null).
- * @return the payload width (PROTOCORE_NRF24_PAYLOAD, capped at @p cap), or -1 if none.
- */
-int protocore_nrf24_recv(const nrf_bus *bus, uint8_t *buf, uint8_t cap, uint8_t *pipe);
+/** @brief The one symbol this module exports. */
+extern Nrf24Ns Nrf24;
 
 PROTOCORE_END_DECLS
 

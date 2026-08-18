@@ -18,7 +18,7 @@
 #include "network_drivers/transport/tcp/common.h"               // TcpConn, conn_pool: the slots a response writes on
 #include "network_drivers/transport/tcp/protocol/protocol.h"    // ConnPool: the slot a response writes on
 #include "protocore.h"                                          // http_pool, and the request and route widths
-#include "server/io/webdav_handler.h" // Dav: a DAV mount is intercepted before the route loop
+#include "server/io/webdav_handler.h"                           // Dav: a DAV mount is intercepted before the route loop
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // protocore_millis() stamps the attempt the lockout counts
 #include "server/security/auth_lockout/auth_lockout.h"
@@ -475,20 +475,20 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
         ConnPool.slot = slot_id;
         ConnPool.io.data = header;
         ConnPool.io.len = (proto_u16)hlen;
-        ConnPool.send(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
         ConnPool.io.data = body;
         ConnPool.io.len = (proto_u16)blen;
-        ConnPool.send_flush(ConnPool.internal);
+        ConnPool.send_flush(protocore_conn_pool_span());
     }
     else
     {
         ConnPool.slot = slot_id;
         ConnPool.io.data = header;
         ConnPool.io.len = (proto_u16)hlen;
-        ConnPool.send_flush(ConnPool.internal);
+        ConnPool.send_flush(protocore_conn_pool_span());
     }
     ConnPool.slot = slot_id;
-    ConnPool.begin_close(ConnPool.internal); // dwell in CONN_CLOSING until the response drains
+    ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
     HttpConn.slot = slot_id;
     HttpConn.reset(HttpConn.internal);
 }
@@ -518,7 +518,7 @@ static protocore_ip lockout_client_ip(uint8_t slot_id)
     ip.family = PROTOCORE_IP_NONE;
     ConnPool.slot = slot_id;
     ConnPool.out = &ip;
-    ConnPool.remote_addr(ConnPool.internal);
+    ConnPool.remote_addr(protocore_conn_pool_span());
     return ip;
 }
 
@@ -557,7 +557,7 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
     // Per-route interface gate: a route bound to STA/AP is invisible on the
     // other interface (falls through to other routes / 404).
     ConnPool.slot = slot_id;
-    ConnPool.iface(ConnPool.internal);
+    ConnPool.iface(protocore_conn_pool_span());
     if (r->iface_filter != PROTOCORE_IF_ANY && r->iface_filter != ConnPool.if_kind)
     {
         return PROTO_FALSE;
@@ -950,7 +950,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
     {
 #if PROTOCORE_ENABLE_TLS
         ConnPool.slot = i;
-        ConnPool.tls(ConnPool.internal);
+        ConnPool.tls(protocore_conn_pool_span());
         if (ConnPool.ok)
         {
             // wss://: the bytes are ciphertext, so decrypt records here and
@@ -987,7 +987,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
                 Ws.slot = i;
                 Ws.free(protocore_ws_span());
                 ConnPool.slot = i;
-                ConnPool.abort_slot(ConnPool.internal); // transport owns TLS-free + detach + reset + RST
+                ConnPool.abort_slot(protocore_conn_pool_span()); // transport owns TLS-free + detach + reset + RST
                 HttpConn.slot = i;
                 HttpConn.reset(HttpConn.internal);
             }
@@ -1014,7 +1014,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
             // post-close bytes are NOT re-parsed as a new HTTP request (the
             // close-frame the WS layer queued still flushes during the dwell).
             ConnPool.slot = i;
-            ConnPool.begin_close(ConnPool.internal);
+            ConnPool.begin_close(protocore_conn_pool_span());
             HttpConn.slot = i;
             HttpConn.reset(HttpConn.internal);
         }
@@ -1038,10 +1038,10 @@ static void poll_slot(struct HttpInternal *restrict ctx)
     // parse. Drain it here each tick so it gets dispatched. TLS slots are
     // skipped - their ring holds ciphertext, decrypted in the session layer.
     ConnPool.slot = i;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     proto_bool live = ConnPool.ok;
 #if PROTOCORE_ENABLE_TLS
-    ConnPool.tls(ConnPool.internal);
+    ConnPool.tls(protocore_conn_pool_span());
     live = live && !ConnPool.ok;
 #endif
     if (live && http_pool[i].parse_state != PARSE_COMPLETE)
@@ -1062,7 +1062,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
     // duration and is governed by the streaming handler + idle timer, not this deadline. WebSocket / SSE were
     // already returned above.
     ConnPool.slot = i;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (ConnPool.ok && http_req_start_ms[i] != 0 && http_pool[i].parse_state < PARSE_BODY &&
         (Clock.ms - http_req_start_ms[i]) >= PROTOCORE_REQUEST_TIMEOUT_MS)
     {

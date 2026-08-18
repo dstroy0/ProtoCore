@@ -16,6 +16,7 @@
 // the one below: the reserved storage has to hold EVT_QUEUE_DEPTH records of whatever size the
 // record is on that target.
 
+#include "network_drivers/transport/tcp/common.h" // listener_pool: the rows whose queue storage is sized here
 #include "network_drivers/transport/tcp/evt.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"

@@ -11,6 +11,10 @@
  * address accessor; UDP needs it once per received datagram. One conversion serves both, so it sits
  * beside them rather than inside either.
  *
+ * RFC 9293 sec 3.9.2: "Any lower-level protocol will have to provide the source address,
+ * destination address, and protocol fields." These two convert between the form the lower-level
+ * module states them in and the family-tagged form every layer above reads.
+ *
  * The address bytes are read out of the vendor value byte by byte rather than shifted out of it. A
  * shift reads the value's arithmetic, which is the host's byte order; the stack holds the address in
  * network order, so the bytes are the address and the number is not.
@@ -43,9 +47,6 @@ typedef struct
     protocore_net_ip *out_addr; ///< where a write lands
 } NetAddrOutArgs;
 
-/** @brief The mapping's own calls, described only in net_addr.c. */
-struct NetAddrInternal;
-
 /**
  * @brief The stack's address, as the library's address.
  *
@@ -58,7 +59,6 @@ struct NetAddrInternal;
  * @var NetAddrNs::to_ip     read @c in.addr into @c in.out_ip, network-order bytes preserved
  * @var NetAddrNs::from_ip   write @c out.ip into @c out.out_addr, ready to hand to a send; false when the
  *                           address names a family this stack cannot send to
- * @var NetAddrNs::internal  the calls that carry an address across
  *
  * Both families cross both ways. IPv6 is carried where the stack has it (::PROTOCORE_NET_HAS_IPV6); where
  * it does not, a v6 address converts to nothing rather than to a wrong v4.
@@ -72,10 +72,8 @@ typedef struct
 
     proto_bool ok;
 
-    void (*to_ip)(struct NetAddrInternal *ctx);
-    void (*from_ip)(struct NetAddrInternal *ctx);
-
-    struct NetAddrInternal *internal;
+    void (*const to_ip)(uint8_t *restrict work);
+    void (*const from_ip)(uint8_t *restrict work);
 } NetAddrNs;
 
 /** @brief The one symbol this module exports. */

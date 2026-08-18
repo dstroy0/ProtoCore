@@ -14,6 +14,8 @@
 #include "rx_feed.h"
 #include <unity.h>
 
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
 static const protocore_mnt_backend *davfs;
 
 static void feed_and_handle(uint8_t slot, const char *req)
@@ -109,7 +111,7 @@ void setUp()
     lfsm_format();
     davfs = lfsm();
     Mnt.args.backend = davfs;
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
 
     lfsm_mkdir("/dav");
     dav("/dav", davfs, "/dav");

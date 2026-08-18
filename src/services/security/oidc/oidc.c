@@ -28,22 +28,6 @@
 #define OIDC_SEG_PAYLOAD 1u   ///< BASE64URL(JWS Payload)
 #define OIDC_SEG_SIGNATURE 2u ///< BASE64URL(JWS Signature)
 
-/**
- * @brief The verifier's calls - what OidcNs points at.
- *
- * No storage member: every buffer a validation uses is either the caller's handle, a bounded local,
- * or a borrow from the per-dispatch arena returned before the call ends, so the module keeps
- * nothing between calls.
- *
- * @var OidcInternal::ns  the handle a caller sets a call's members on
- */
-struct OidcInternal
-{
-    OidcNs *ns;
-};
-
-static struct OidcInternal s_oidc = {.ns = &Oidc};
-
 // Bounded substring search of [hs, he) for the NUL-terminated needle.
 static const char *mem_find(const char *hs, const char *he, const char *needle)
 {
@@ -346,17 +330,18 @@ static void claims_clear(protocore_oidc_claims *claims)
 
 // The `kid` Header Parameter (RFC 7515 sec 4.1.4) out of the JOSE Header: split the Compact
 // Serialization, decode the header part, scan it for the member.
-static void token_kid(struct OidcInternal *restrict ctx)
+static void token_kid(uint8_t *restrict work)
 {
-    ctx->ns->text[0] = '\0';
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->token)
+    (void)work;
+    Oidc.text[0] = '\0';
+    Oidc.ok = PROTO_FALSE;
+    if (!Oidc.token)
     {
         return;
     }
     const char *seg[3];
     size_t seglen[3];
-    if (!split_compact(ctx->ns->token, ctx->ns->token_len, seg, seglen))
+    if (!split_compact(Oidc.token, Oidc.token_len, seg, seglen))
     {
         return;
     }
@@ -367,24 +352,25 @@ static void token_kid(struct OidcInternal *restrict ctx)
         return;
     }
     hdr[hn] = '\0';
-    ctx->ns->ok = get_str((const char *)hdr, (const char *)hdr + hn, "kid", ctx->ns->text, sizeof(ctx->ns->text));
+    Oidc.ok = get_str((const char *)hdr, (const char *)hdr + hn, "kid", Oidc.text, sizeof(Oidc.text));
 }
 
 // The RSA JWK the `kid` names, out of the JWK Set (RFC 7517 sec 5.1). Each member of the "keys"
 // array is taken between its braces; an empty `kid` takes the first JWK whose `n` and `e` parse.
-static void jwks_find(struct OidcInternal *restrict ctx)
+static void jwks_find(uint8_t *restrict work)
 {
+    (void)work;
     size_t scratch = protocore_plaintext_mark();
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->key.rsa.loaded = PROTO_FALSE;
-    if (!ctx->ns->key.jwks)
+    Oidc.ok = PROTO_FALSE;
+    Oidc.key.rsa.loaded = PROTO_FALSE;
+    if (!Oidc.key.jwks)
     {
         protocore_plaintext_release(scratch);
         return;
     }
-    const char *want_kid = ctx->ns->key.kid;
+    const char *want_kid = Oidc.key.kid;
     size_t want_len = want_kid ? str.len(want_kid, PROTOCORE_OIDC_KID_LEN) : 0u;
-    const char *jwks = ctx->ns->key.jwks;
+    const char *jwks = Oidc.key.jwks;
     const char *all_end = jwks + str.len(jwks, PROTOCORE_OIDC_JWKS_MAX);
     const char *p = mem_find(jwks, all_end, "\"keys\"");
     p = p ? (const char *)mem.chr(p, (size_t)(all_end - p), '[') : NULL;
@@ -424,9 +410,9 @@ static void jwks_find(struct OidcInternal *restrict ctx)
             want = PROTO_TRUE; // no `kid` requested -> first usable RSA JWK
         }
 
-        if (want && parse_rsa_jwk(obj, end, &ctx->ns->key.rsa))
+        if (want && parse_rsa_jwk(obj, end, &Oidc.key.rsa))
         {
-            ctx->ns->ok = PROTO_TRUE;
+            Oidc.ok = PROTO_TRUE;
             protocore_plaintext_release(scratch);
             return;
         }
@@ -442,15 +428,16 @@ static void jwks_find(struct OidcInternal *restrict ctx)
 
 // OIDC Core sec 3.1.3.7 against the key already in ns->key.rsa: steps 6 and 7 (signature and `alg`),
 // then 2, 3 and 9 (`iss`, `aud`, `exp`), then the Claims.
-static void verify_with_key(struct OidcInternal *restrict ctx)
+static void verify_with_key(uint8_t *restrict work)
 {
-    claims_clear(&ctx->ns->claims);
-    const char *token = ctx->ns->token;
-    size_t token_len = ctx->ns->token_len;
-    const protocore_oidc_key *key = &ctx->ns->key.rsa;
+    (void)work;
+    claims_clear(&Oidc.claims);
+    const char *token = Oidc.token;
+    size_t token_len = Oidc.token_len;
+    const protocore_oidc_key *key = &Oidc.key.rsa;
     if (!token || !key->loaded || token_len == 0 || token_len > PROTOCORE_OIDC_MAX_LEN)
     {
-        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
 
@@ -458,7 +445,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
     size_t seglen[3];
     if (!split_compact(token, token_len, seg, seglen))
     {
-        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
 
@@ -474,7 +461,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
     if (!hdr || !sig || !pl || !iss)
     {
         protocore_plaintext_release(scope);
-        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
+        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT; // scratch exhausted: fail closed
         return;
     }
 
@@ -484,7 +471,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
     if (hn == 0)
     {
         protocore_plaintext_release(scope);
-        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
     hdr[hn] = '\0';
@@ -493,7 +480,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
         !str.eq(alg, "RS256", sizeof("RS256"), PROTO_FALSE))
     {
         protocore_plaintext_release(scope);
-        ctx->ns->result = PROTOCORE_OIDC_ERR_ALG;
+        Oidc.result = PROTOCORE_OIDC_ERR_ALG;
         return;
     }
 
@@ -502,7 +489,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
         PROTOCORE_OIDC_RSA_BYTES)
     {
         protocore_plaintext_release(scope);
-        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
 
@@ -516,7 +503,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
     {
         protocore_secure_release(vmark);
         protocore_plaintext_release(scope);
-        ctx->ns->result = PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
+        Oidc.result = PROTOCORE_OIDC_ERR_SIGNATURE; // pool exhausted: fail closed
         return;
     }
     Rsa.verify_args.n = key->n;
@@ -532,7 +519,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
     if (!verified)
     {
         protocore_plaintext_release(scope);
-        ctx->ns->result = PROTOCORE_OIDC_ERR_SIGNATURE;
+        Oidc.result = PROTOCORE_OIDC_ERR_SIGNATURE;
         return;
     }
 
@@ -541,7 +528,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
     if (pn == 0)
     {
         protocore_plaintext_release(scope);
-        ctx->ns->result = PROTOCORE_OIDC_ERR_FORMAT;
+        Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
         return;
     }
     pl[pn] = '\0';
@@ -550,7 +537,7 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
 
     // Step 2: `iss` must equal the Issuer Identifier exactly (RFC 7519 sec 4.1.1). The compare reads
     // one byte past the expected string's characters, which is its terminator.
-    const char *want_iss = ctx->ns->expect.iss;
+    const char *want_iss = Oidc.expect.iss;
     if (want_iss && *want_iss)
     {
         size_t want_len = str.len(want_iss, PROTOCORE_OIDC_ISS_LEN);
@@ -558,69 +545,65 @@ static void verify_with_key(struct OidcInternal *restrict ctx)
             !str.eq(iss, want_iss, want_len + 1u, PROTO_FALSE))
         {
             protocore_plaintext_release(scope);
-            ctx->ns->result = PROTOCORE_OIDC_ERR_ISS;
+            Oidc.result = PROTOCORE_OIDC_ERR_ISS;
             return;
         }
     }
     // Step 3: `aud` must contain the client_id.
-    const char *want_aud = ctx->ns->expect.aud;
+    const char *want_aud = Oidc.expect.aud;
     if (want_aud && *want_aud)
     {
         if (!aud_contains(ps, pe, want_aud))
         {
             protocore_plaintext_release(scope);
-            ctx->ns->result = PROTOCORE_OIDC_ERR_AUD;
+            Oidc.result = PROTOCORE_OIDC_ERR_AUD;
             return;
         }
     }
 
     // Step 9: now must be before `exp` (RFC 7519 sec 4.1.4), and at or after `nbf` when the token
     // carries one (RFC 7519 sec 4.1.5).
-    int64_t now = (int64_t)ctx->ns->expect.now_unix;
+    int64_t now = (int64_t)Oidc.expect.now_unix;
     int64_t exp = 0;
     if (!get_int64(ps, pe, "exp", &exp) || now >= exp)
     {
         protocore_plaintext_release(scope);
-        ctx->ns->result = PROTOCORE_OIDC_ERR_EXPIRED;
+        Oidc.result = PROTOCORE_OIDC_ERR_EXPIRED;
         return;
     }
     int64_t nbf = 0;
     if (get_int64(ps, pe, "nbf", &nbf) && now < nbf)
     {
         protocore_plaintext_release(scope);
-        ctx->ns->result = PROTOCORE_OIDC_ERR_NOT_YET;
+        Oidc.result = PROTOCORE_OIDC_ERR_NOT_YET;
         return;
     }
 
-    ctx->ns->claims.exp = exp;
-    get_str(ps, pe, "sub", ctx->ns->claims.sub, sizeof(ctx->ns->claims.sub));
-    get_str(ps, pe, "email", ctx->ns->claims.email, sizeof(ctx->ns->claims.email));
-    get_int64(ps, pe, "iat", &ctx->ns->claims.iat);
+    Oidc.claims.exp = exp;
+    get_str(ps, pe, "sub", Oidc.claims.sub, sizeof(Oidc.claims.sub));
+    get_str(ps, pe, "email", Oidc.claims.email, sizeof(Oidc.claims.email));
+    get_int64(ps, pe, "iat", &Oidc.claims.iat);
     protocore_plaintext_release(scope);
-    ctx->ns->result = PROTOCORE_OIDC_OK;
+    Oidc.result = PROTOCORE_OIDC_OK;
 }
 
 // The whole of OIDC Core sec 3.1.3.7: resolve the signing key from the JWK Set by the token's `kid`,
 // then validate against it. A token with no `kid` takes the first usable RSA JWK.
-static void verify(struct OidcInternal *restrict ctx)
+static void verify(uint8_t *restrict work)
 {
-    claims_clear(&ctx->ns->claims);
-    token_kid(ctx);
-    ctx->ns->key.kid = ctx->ns->text[0] ? ctx->ns->text : NULL;
-    jwks_find(ctx);
-    if (!ctx->ns->ok)
+    claims_clear(&Oidc.claims);
+    token_kid(work);
+    Oidc.key.kid = Oidc.text[0] ? Oidc.text : NULL;
+    jwks_find(work);
+    if (!Oidc.ok)
     {
-        ctx->ns->result = PROTOCORE_OIDC_ERR_KEY;
+        Oidc.result = PROTOCORE_OIDC_ERR_KEY;
         return;
     }
-    verify_with_key(ctx);
+    verify_with_key(work);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-OidcNs Oidc = {.token_kid = token_kid,
-               .jwks_find = jwks_find,
-               .verify_with_key = verify_with_key,
-               .verify = verify,
-               .internal = &s_oidc};
+OidcNs Oidc = {.token_kid = token_kid, .jwks_find = jwks_find, .verify_with_key = verify_with_key, .verify = verify};
 
 #endif // PROTOCORE_ENABLE_OIDC

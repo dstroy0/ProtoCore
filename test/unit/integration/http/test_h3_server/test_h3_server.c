@@ -89,7 +89,7 @@ static void feed(const uint8_t *dg, size_t len, const char *ip, uint16_t port)
     protocore_net_host_udp_reset();
     TEST_ASSERT_TRUE(protocore_net_host_udp_deliver(H3_PORT, ip, port, (void *)dg, (uint16_t)len));
     service_once(0);
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
     harvest();
 }
 

@@ -25,68 +25,15 @@
 #ifndef PROTOCORE_FTP_H
 #define PROTOCORE_FTP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_FTP
 
 PROTOCORE_BEGIN_DECLS
 
-/**
- * @brief Build a control command line: `VERB<CRLF>` or `VERB<SP>ARG<CRLF>`.
- *
- * Covers every simple verb (USER, PASS, TYPE, CWD, CDUP, PASV, EPSV, RETR, STOR, APPE, LIST,
- * NLST, DELE, MKD, RMD, PWD, SIZE, REST, RNFR, RNTO, SYST, FEAT, NOOP, QUIT, ...). The verb and
- * arg are copied verbatim; the caller supplies well-formed values (no embedded CR/LF).
- *
- * @param arg the argument, or nullptr / "" for a bare verb (no trailing space).
- * @return bytes written (excluding the NUL terminator), or 0 on overflow / bad input.
- */
-size_t protocore_ftp_build_command(char *buf, size_t cap, const char *verb, const char *arg);
-
-/**
- * @brief Build an active-mode `PORT h1,h2,h3,h4,p1,p2<CRLF>` from an IPv4 address + port.
- * @return bytes written (excluding NUL), or 0 on overflow.
- */
-size_t protocore_ftp_build_port(char *buf, size_t cap, const uint8_t ip[4], uint16_t port);
-
-/**
- * @brief Build an extended active-mode `EPRT<SP>|net-prt|net-addr|port|<CRLF>` (RFC 2428).
- * @param ip_str dotted-decimal IPv4 or RFC 4291 IPv6 text (copied verbatim).
- * @param ipv6   false => net-prt 1 (IPv4), true => net-prt 2 (IPv6).
- * @return bytes written (excluding NUL), or 0 on overflow.
- */
-size_t protocore_ftp_build_eprt(char *buf, size_t cap, const char *ip_str, proto_bool ipv6, uint16_t port);
-
-/**
- * @brief Detect and measure a complete control-channel reply at the head of @p buf.
- *
- * Handles single-line and multiline replies. On a complete reply, @p code receives the 3-digit
- * reply code and @p consumed the byte count the reply occupied (so the caller can advance past it
- * and keep any pipelined bytes).
- *
- * @return true if a complete reply is present; false if the buffer holds only a partial reply
- *         (need more bytes) or a malformed head (then @p code / @p consumed are unspecified).
- */
-proto_bool protocore_ftp_parse_reply(const char *buf, size_t len, int *code, size_t *consumed);
-
-/**
- * @brief Decode the data address from a `227` passive-mode reply.
- *
- * Reads the `(h1,h2,h3,h4,p1,p2)` tuple anywhere in the reply text; ip = h1.h2.h3.h4,
- * port = p1*256 + p2. Each field must be 0-255.
- *
- * @return true on a well-formed tuple, false otherwise (then @p ip / @p port are unspecified).
- */
-proto_bool protocore_ftp_parse_pasv(const char *buf, size_t len, uint8_t ip[4], uint16_t *port);
-
-/**
- * @brief Decode the port from a `229` extended-passive reply `(<d><d><d>port<d>)` (RFC 2428).
- *
- * The data connection uses the control connection's host; only the port is carried.
- *
- * @return true on a well-formed reply, false otherwise (then @p port is unspecified).
- */
-proto_bool protocore_ftp_parse_epsv(const char *buf, size_t len, uint16_t *port);
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief First digit of a reply code (1 preliminary, 2 complete, 3 intermediate, 4/5 error), or 0. */
 static inline int protocore_ftp_reply_class(int code)
@@ -99,6 +46,115 @@ static inline proto_bool protocore_ftp_reply_ok(int code)
 {
     return protocore_ftp_reply_class(code) == 2;
 }
+
+/** @brief What build_command takes: buf, cap, verb, arg. */
+typedef struct
+{
+    char *buf;
+    size_t cap;
+    const char *verb;
+    const char *arg; ///< the argument, or nullptr / "" for a bare verb (no trailing space)
+} FtpBuildCommandArgs;
+
+/** @brief What build_port takes: buf, cap, ip, port. */
+typedef struct
+{
+    char *buf;
+    size_t cap;
+    const uint8_t *ip; ///< 4 bytes.
+    uint16_t port;
+} FtpBuildPortArgs;
+
+/** @brief What build_eprt takes: buf, cap, ip_str, ipv6, port. */
+typedef struct
+{
+    char *buf;
+    size_t cap;
+    const char *ip_str; ///< dotted-decimal IPv4 or RFC 4291 IPv6 text (copied verbatim)
+    proto_bool ipv6;    ///< false => net-prt 1 (IPv4), true => net-prt 2 (IPv6)
+    uint16_t port;
+} FtpBuildEprtArgs;
+
+/** @brief What parse_reply takes: buf, len, code, consumed. */
+typedef struct
+{
+    const char *buf;
+    size_t len;
+    int *code;
+    size_t *consumed;
+} FtpParseReplyArgs;
+
+/** @brief What parse_pasv takes: buf, len, ip, port. */
+typedef struct
+{
+    const char *buf;
+    size_t len;
+    uint8_t *ip; ///< 4 bytes.
+    uint16_t *port;
+} FtpParsePasvArgs;
+
+/** @brief What parse_epsv takes: buf, len, port. */
+typedef struct
+{
+    const char *buf;
+    size_t len;
+    uint16_t *port;
+} FtpParseEpsvArgs;
+
+/**
+ * @brief FTP client wire codec (RFC 959 + RFC 2428 + RFC 3659), PROTOCORE_ENABLE_FTP.
+ *
+ * A caller sets the members a call takes, invokes it through ::Ftp with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Ftp.build_command_args.buf = ...;
+ *   Ftp.build_command_args.cap = ...;
+ *   Ftp.build_command_args.verb = ...;
+ *   Ftp.build_command_args.arg = ...;
+ *   Ftp.build_command(work);
+ *   // Ftp.n is what the call reports
+ *
+ * @var FtpNs::build_command_args  what build_command takes: buf, cap, verb, arg
+ * @var FtpNs::build_port_args  what build_port takes: buf, cap, ip, port
+ * @var FtpNs::build_eprt_args  what build_eprt takes: buf, cap, ip_str, ipv6, port
+ * @var FtpNs::parse_reply_args  what parse_reply takes: buf, len, code, consumed
+ * @var FtpNs::parse_pasv_args  what parse_pasv takes: buf, len, ip, port
+ * @var FtpNs::parse_epsv_args  what parse_epsv takes: buf, len, port
+ * @var FtpNs::ok  true if a complete reply is present; false if the buffer holds only ...
+ * @var FtpNs::n  bytes written (excluding the NUL terminator), or 0 on overflow / ...
+ * @var FtpNs::build_command  build a control command line: `VERB<CRLF>` or `VERB<SP>ARG<CRLF>`. ...
+ * @var FtpNs::build_port  build an active-mode `PORT h1,h2,h3,h4,p1,p2<CRLF>` from an IPv4 ...
+ * @var FtpNs::build_eprt  build an extended active-mode ...
+ * @var FtpNs::parse_reply  detect and measure a complete control-channel reply at the head of ...
+ * @var FtpNs::parse_pasv  decode the data address from a `227` passive-mode reply. Reads the ...
+ * @var FtpNs::parse_epsv  decode the port from a `229` extended-passive reply ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    FtpBuildCommandArgs build_command_args;
+    FtpBuildPortArgs build_port_args;
+    FtpBuildEprtArgs build_eprt_args;
+    FtpParseReplyArgs parse_reply_args;
+    FtpParsePasvArgs parse_pasv_args;
+    FtpParseEpsvArgs parse_epsv_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const build_command)(uint8_t *restrict work);
+    void (*const build_port)(uint8_t *restrict work);
+    void (*const build_eprt)(uint8_t *restrict work);
+    void (*const parse_reply)(uint8_t *restrict work);
+    void (*const parse_pasv)(uint8_t *restrict work);
+    void (*const parse_epsv)(uint8_t *restrict work);
+} FtpNs;
+
+/** @brief The one symbol this module exports. */
+extern FtpNs Ftp;
 
 PROTOCORE_END_DECLS
 

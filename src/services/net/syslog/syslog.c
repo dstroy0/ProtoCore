@@ -11,6 +11,9 @@
  */
 
 #include "services/net/syslog/syslog.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_SYSLOG
 
@@ -35,21 +38,16 @@ struct SyslogStorage
     char buf[PROTOCORE_SYSLOG_MSG_MAX];        ///< the SYSLOG-MSG a log builds
 };
 
-/**
- * @brief The client's state and the calls that reach it - what SyslogNs points at.
- *
- * @var SyslogInternal::store  the collector, the stored HEADER fields, and the line scratch
- * @var SyslogInternal::ns     the handle a caller sets a call's members on
- */
-struct SyslogInternal
-{
-    struct SyslogStorage *store;
-    SyslogNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SYSLOG_OFF_CTX 0u
+static_assert(SYSLOG_OFF_CTX + sizeof(struct SyslogStorage) <= PROTOCORE_SYSLOG_BORROW,
+              "PROTOCORE_SYSLOG_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct SyslogStorage s_store;
-
-static struct SyslogInternal s_syslog = {.store = &s_store, .ns = &Syslog};
+// The region, at its offset in the caller's borrow.
+#define SYSLOG_CTX(w) ((struct SyslogStorage *)(void *)((w) + SYSLOG_OFF_CTX))
 
 // Copy a NUL-terminated field into a fixed slot, truncating at cap-1, or empty the slot when the
 // source is absent. An empty slot emits the NILVALUE "-" (RFC 5424 sec 6).
@@ -76,40 +74,69 @@ static inline proto_bool line_append(char *out, size_t cap, size_t *pos, const c
     return PROTO_TRUE;
 }
 
-// Parse the collector address and store the HEADER fields every later line carries.
-static void syslog_init(struct SyslogInternal *restrict ctx)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    Ip.args.text = ctx->ns->collector.addr;
-    Ip.args.out = &ctx->store->collector;
-    Ip.parse(Ip.internal);
-    ctx->store->ready = Ip.ok;
-    ctx->store->port = ctx->ns->collector.port;
-    copy_field(ctx->store->hostname, sizeof(ctx->store->hostname), ctx->ns->header.hostname);
-    copy_field(ctx->store->app_name, sizeof(ctx->store->app_name), ctx->ns->header.app_name);
-    ctx->store->facility = ctx->ns->header.facility;
-    ctx->ns->ok = ctx->store->ready;
+    uint8_t *span; ///< PROTOCORE_SYSLOG_BORROW persistent bytes, or null while the pool was short
+} SyslogOwnCtx;
+static SyslogOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_syslog_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SYSLOG_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+// Parse the collector address and store the HEADER fields every later line carries.
+static void syslog_init(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Ip.args.text = Syslog.collector.addr;
+    Ip.args.out = &SYSLOG_CTX(work)->collector;
+    Ip.parse(ip_work);
+    SYSLOG_CTX(work)->ready = Ip.ok;
+    SYSLOG_CTX(work)->port = Syslog.collector.port;
+    copy_field(SYSLOG_CTX(work)->hostname, sizeof(SYSLOG_CTX(work)->hostname), Syslog.header.hostname);
+    copy_field(SYSLOG_CTX(work)->app_name, sizeof(SYSLOG_CTX(work)->app_name), Syslog.header.app_name);
+    SYSLOG_CTX(work)->facility = Syslog.header.facility;
+    Syslog.ok = SYSLOG_CTX(work)->ready;
 }
 
 // Build one SYSLOG-MSG (RFC 5424 sec 6) into ns->line, and report its length in ns->n.
-static void syslog_format(struct SyslogInternal *restrict ctx)
+static void syslog_format(uint8_t *restrict work)
 {
-    char *out = ctx->ns->line.out;
-    const size_t cap = ctx->ns->line.cap;
-    ctx->ns->n = 0;
+    (void)work;
+    char *out = Syslog.line.out;
+    const size_t cap = Syslog.line.cap;
+    Syslog.n = 0;
     if (!out || cap == 0)
     {
         return;
     }
     // RFC 5424 sec 6.2.1: PRIVAL = Facility * 8 + Severity, 1*3DIGIT over 0..191. Both enums are
     // unsigned, so only the top is clamped.
-    int pri = (int)ctx->ns->header.facility * 8 + (int)ctx->ns->record.severity;
+    int pri = (int)Syslog.header.facility * 8 + (int)Syslog.record.severity;
     if (pri > 191)
     {
         pri = 191;
     }
-    const char *h = (ctx->ns->header.hostname && ctx->ns->header.hostname[0]) ? ctx->ns->header.hostname : "-";
-    const char *a = (ctx->ns->header.app_name && ctx->ns->header.app_name[0]) ? ctx->ns->header.app_name : "-";
-    const char *m = ctx->ns->record.msg ? ctx->ns->record.msg : "";
+    const char *h = (Syslog.header.hostname && Syslog.header.hostname[0]) ? Syslog.header.hostname : "-";
+    const char *a = (Syslog.header.app_name && Syslog.header.app_name[0]) ? Syslog.header.app_name : "-";
+    const char *m = Syslog.record.msg ? Syslog.record.msg : "";
 
     // PRIVAL as 1..3 decimal digits, the leading digit dropped below its decade: RFC 5424 sec 6.2.1
     // allows a '0' after '<' only for the Priority value 0, and forbids leading '0's otherwise.
@@ -137,39 +164,43 @@ static void syslog_format(struct SyslogInternal *restrict ctx)
         return;
     }
     out[pos] = '\0'; // pos <= cap-1 by construction
-    ctx->ns->n = pos;
+    Syslog.n = pos;
 }
 
 // Format one record with the stored HEADER fields and send it as one datagram (RFC 5426 sec 3.1).
-static void syslog_log(struct SyslogInternal *restrict ctx)
+static void syslog_log(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->store->ready)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Syslog.ok = PROTO_FALSE;
+    Syslog.n = 0;
+    if (!SYSLOG_CTX(work)->ready)
     {
         return;
     }
-    ctx->ns->header.hostname = ctx->store->hostname;
-    ctx->ns->header.app_name = ctx->store->app_name;
-    ctx->ns->header.facility = ctx->store->facility;
-    ctx->ns->line.out = ctx->store->buf;
-    ctx->ns->line.cap = sizeof(ctx->store->buf);
-    syslog_format(ctx);
-    if (ctx->ns->n == 0)
+    Syslog.header.hostname = SYSLOG_CTX(work)->hostname;
+    Syslog.header.app_name = SYSLOG_CTX(work)->app_name;
+    Syslog.header.facility = SYSLOG_CTX(work)->facility;
+    Syslog.line.out = SYSLOG_CTX(work)->buf;
+    Syslog.line.cap = sizeof(SYSLOG_CTX(work)->buf);
+    syslog_format(work);
+    if (Syslog.n == 0)
     {
         return;
     }
     // The datagram payload is the message and nothing else (RFC 5426 sec 3.1). Nothing acknowledges
     // it (RFC 5426 sec 4.1), so ok reports only that the stack took the octets.
-    UdpClient.dst = &ctx->store->collector;
-    UdpClient.dst_port = ctx->store->port;
-    UdpClient.data = (const uint8_t *)ctx->store->buf;
-    UdpClient.len = ctx->ns->n;
-    UdpClient.sendto(UdpClient.internal);
-    ctx->ns->ok = UdpClient.ok;
+    UdpClient.dst = &SYSLOG_CTX(work)->collector;
+    UdpClient.dst_port = SYSLOG_CTX(work)->port;
+    UdpClient.data = (const uint8_t *)SYSLOG_CTX(work)->buf;
+    UdpClient.len = Syslog.n;
+    UdpClient.sendto(protocore_udp_client_span());
+    Syslog.ok = UdpClient.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SyslogNs Syslog = {.init = syslog_init, .format = syslog_format, .log = syslog_log, .internal = &s_syslog};
+SyslogNs Syslog = {.init = syslog_init, .format = syslog_format, .log = syslog_log};
 
 #endif // PROTOCORE_ENABLE_SYSLOG

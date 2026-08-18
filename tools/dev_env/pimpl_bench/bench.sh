@@ -13,7 +13,8 @@ STD="-std=c11 -D_POSIX_C_SOURCE=200809L"
 
 printf '%-6s %-4s %-5s | %-11s %-11s %-7s | %-11s %-11s %-7s\n' \
     CC OPT LTO "avail opq" "avail inl" "ratio" "drain opq" "drain inl" "ratio"
-printf '%.0s-' {1..90}; echo
+printf '%.0s-' {1..90}
+echo
 
 for CC in gcc cc; do
     command -v "$CC" >/dev/null 2>&1 || continue

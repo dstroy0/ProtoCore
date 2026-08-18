@@ -85,9 +85,6 @@ typedef struct
     uint32_t cap; ///< how much room it has
 } GpioOutArgs;
 
-/** @brief The map's own calls, described only in gpio_map.c. */
-struct GpioMapInternal;
-
 /**
  * @brief The pin map and its HTTP surface.
  *
@@ -108,7 +105,6 @@ struct GpioMapInternal;
  * @var GpioMapNs::sample      read every input pin's level back into the table
  * @var GpioMapNs::write       drive one output pin
  * @var GpioMapNs::begin       install the map's route and arm its pins
- * @var GpioMapNs::internal    the calls that drive and report the pins
  *
  * No storage member: the pin table is the caller's and the pins themselves live in the part.
  */
@@ -122,16 +118,14 @@ typedef struct
     const char *text;
     int32_t n;
 
-    void (*dir_name)(struct GpioMapInternal *ctx);
-    void (*json)(struct GpioMapInternal *ctx);
-    void (*parse_set)(struct GpioMapInternal *ctx);
-    void (*is_output)(struct GpioMapInternal *ctx);
-    void (*begin_pins)(struct GpioMapInternal *ctx);
-    void (*sample)(struct GpioMapInternal *ctx);
-    void (*write)(struct GpioMapInternal *ctx);
-    void (*begin)(struct GpioMapInternal *ctx);
-
-    struct GpioMapInternal *internal;
+    void (*const dir_name)(uint8_t *restrict work);
+    void (*const json)(uint8_t *restrict work);
+    void (*const parse_set)(uint8_t *restrict work);
+    void (*const is_output)(uint8_t *restrict work);
+    void (*const begin_pins)(uint8_t *restrict work);
+    void (*const sample)(uint8_t *restrict work);
+    void (*const write)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
 } GpioMapNs;
 
 /** @brief The one symbol this module exports. */

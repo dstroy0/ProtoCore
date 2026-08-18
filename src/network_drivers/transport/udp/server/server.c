@@ -11,11 +11,14 @@
  */
 
 #include "network_drivers/transport/udp/server/server.h"
+#include "mmgr/plaintext.h"                       // the persistent end this module's state is taken from
 #include "network_drivers/transport/udp/common.h" // the wire layout the receive ring carries
 
 #include "core_setup/board_profiles/protocore_platform.h" // the stack's UDP, under our names
 #include "network_drivers/transport/diffserv/diffserv.h"  // DSCP marking; compiles out when off
 #include "network_drivers/transport/net_addr/net_addr.h"  // NetAddr: the stack's address as a protocore_ip
+
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 PROTOCORE_BEGIN_DECLS
 
@@ -65,29 +68,21 @@ struct UdpListenerStorage
     uint8_t rx_whdr[PROTOCORE_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's producer.
     uint8_t rx_rhdr[PROTOCORE_UDP_DGRAM_HDR];    ///< Header staged by the receive ring's consumer.
     char group_text[PROTOCORE_IP_STR_MAX];       ///< Where joined_group() formats the group it reports.
+    _Atomic uint32_t bound;                      ///< Bit i set = bind[i] is bound; one ctz instead of a scan.
+    proto_bool polling;                          ///< Set for the duration of poll(); a reentrant call returns.
+    UdpBind *slot;                               ///< The slot the private steps below act on.
 };
 
-/**
- * @brief The receiving side's state and the calls that reach it - what UdpListenerNs points at.
- *
- * @var UdpListenerInternal::store    the slot pool and the staging buffers
- * @var UdpListenerInternal::ns       the handle a caller sets a call's members on
- * @var UdpListenerInternal::bound    bit i set = store->bind[i] is bound; one ctz instead of a scan
- * @var UdpListenerInternal::polling  set for the duration of poll(); a reentrant call returns
- * @var UdpListenerInternal::bind     the slot the private steps below act on
- */
-struct UdpListenerInternal
-{
-    struct UdpListenerStorage *store;
-    UdpListenerNs *ns;
-    _Atomic uint32_t bound;
-    proto_bool polling;
-    UdpBind *bind;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define UDP_LISTENER_OFF_CTX 0u
+static_assert(UDP_LISTENER_OFF_CTX + sizeof(struct UdpListenerStorage) <= PROTOCORE_UDP_LISTENER_BORROW,
+              "PROTOCORE_UDP_LISTENER_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct UdpListenerStorage s_store;
-
-static struct UdpListenerInternal s_server = {.store = &s_store, .ns = &UdpListener};
+// The region, at its offset in the caller's borrow.
+#define UDP_LISTENER_CTX(w) ((struct UdpListenerStorage *)(void *)((w) + UDP_LISTENER_OFF_CTX))
 
 /** @brief The reply token a handler is given: the sender, and the slot the datagram arrived on. */
 typedef struct protocore_udp_peer
@@ -105,59 +100,96 @@ static proto_bool addr_is_group(const protocore_ip *a)
         return PROTO_FALSE;
     }
     Ip.args.ip = a;
-    Ip.classify(Ip.internal);
+    Ip.classify(ip_work);
     return Ip.scope == PROTOCORE_IP_SCOPE_MULTICAST;
 }
 
-/** @brief The slot index ctx->bind sits at. */
-static size_t bind_idx(struct UdpListenerInternal *restrict ctx)
+/** @brief The slot index UDP_LISTENER_CTX(work)->slot sits at. */
+static size_t bind_idx(uint8_t *restrict work)
 {
-    return (size_t)(ctx->bind - ctx->store->bind);
+    return (size_t)(UDP_LISTENER_CTX(work)->slot - UDP_LISTENER_CTX(work)->bind);
 }
 
 /** @brief True when slot @p idx is bound. */
-static proto_bool bind_used(struct UdpListenerInternal *restrict ctx, size_t idx)
+static proto_bool bind_used(uint8_t *restrict work, size_t idx)
 {
-    return (PROTO_ATOMIC_LOAD(&ctx->bound) & protocore_slot_bit(idx)) != 0u;
+    return (PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_bit(idx)) != 0u;
 }
 
-/** @brief Point ctx->bind at the bound slot for ns->port, or NULL. */
-static void find_bind(struct UdpListenerInternal *restrict ctx)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    uint32_t m = PROTO_ATOMIC_LOAD(&ctx->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
+    uint8_t *span; ///< PROTOCORE_UDP_LISTENER_BORROW persistent bytes, or null while the pool was short
+} UdpListenerOwnCtx;
+static UdpListenerOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_udp_listener_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_UDP_LISTENER_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+/** @brief Point UDP_LISTENER_CTX(work)->slot at the bound slot for ns->port, or NULL. */
+static void find_bind(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    uint32_t m = PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
     while (m != 0u)
     {
         int32_t i = protocore_slot_next(m);
-        if (ctx->store->bind[i].port == ctx->ns->port)
+        if (UDP_LISTENER_CTX(work)->bind[i].port == UdpListener.port)
         {
-            ctx->bind = &ctx->store->bind[i];
+            UDP_LISTENER_CTX(work)->slot = &UDP_LISTENER_CTX(work)->bind[i];
             return;
         }
         m &= ~protocore_slot_bit((size_t)i);
     }
-    ctx->bind = NULL;
+    UDP_LISTENER_CTX(work)->slot = NULL;
 }
 
-/** @brief Point ctx->bind at the first free slot, or NULL when the pool is full. */
-static void free_bind(struct UdpListenerInternal *restrict ctx)
+/** @brief Point UDP_LISTENER_CTX(work)->slot at the first free slot, or NULL when the pool is full. */
+static void free_bind(uint8_t *restrict work)
 {
-    uint32_t free_slots = ~PROTO_ATOMIC_LOAD(&ctx->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    uint32_t free_slots =
+        ~PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
     int32_t i = protocore_slot_next(free_slots);
-    ctx->bind = (i < 0) ? NULL : &ctx->store->bind[i];
+    UDP_LISTENER_CTX(work)->slot = (i < 0) ? NULL : &UDP_LISTENER_CTX(work)->bind[i];
 }
 
-/** @brief Reset ctx->bind's ring and handler state, leaving it free. */
-static void bind_clear(struct UdpListenerInternal *restrict ctx)
+/** @brief Reset UDP_LISTENER_CTX(work)->slot's ring and handler state, leaving it free. */
+static void bind_clear(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     protocore_ip empty = {PROTOCORE_IP_NONE, {0}};
-    ctx->bind->port = 0;
-    ctx->bind->handler = NULL;
-    ctx->bind->ctx = NULL;
-    ctx->bind->group = empty;
-    ctx->bind->mcast = PROTO_FALSE;
-    protocore_slot_clear(&ctx->bound, bind_idx(ctx));
-    PROTO_ATOMIC_STORE(&ctx->bind->rx_head, 0);
-    PROTO_ATOMIC_STORE(&ctx->bind->rx_tail, 0);
+    UDP_LISTENER_CTX(work)->slot->port = 0;
+    UDP_LISTENER_CTX(work)->slot->handler = NULL;
+    UDP_LISTENER_CTX(work)->slot->ctx = NULL;
+    UDP_LISTENER_CTX(work)->slot->group = empty;
+    UDP_LISTENER_CTX(work)->slot->mcast = PROTO_FALSE;
+    protocore_slot_clear(&UDP_LISTENER_CTX(work)->bound, bind_idx(work));
+    PROTO_ATOMIC_STORE(&UDP_LISTENER_CTX(work)->slot->rx_head, 0);
+    PROTO_ATOMIC_STORE(&UDP_LISTENER_CTX(work)->slot->rx_tail, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +285,16 @@ static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p,
         protocore_net_pbuf_free(p); // ring full: drop, which is what UDP already means
         return;
     }
-    protocore_span w = span.from(s_store.rx_whdr, sizeof(s_store.rx_whdr));
+    // The stack fixes this signature, so there is no borrow to take and the module's own span is
+    // what the producer's header stage lives in.
+    uint8_t *work = protocore_udp_listener_span();
+    if (work == NULL)
+    {
+        protocore_net_pbuf_free(p); // the pool was short: drop, which is what UDP already means
+        return;
+    }
+    uint8_t *whdr = UDP_LISTENER_CTX(work)->rx_whdr;
+    protocore_span w = span.from(whdr, PROTOCORE_UDP_DGRAM_HDR);
     protocore_udp_dgram_encode(&w, &d);
     if (!span.ok(w))
     {
@@ -261,7 +302,7 @@ static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p,
         return;
     }
     size_t h = PROTO_ATOMIC_LOAD(&b->rx_head);
-    h = protocore_ring_write_span(b->rx, PROTOCORE_UDP_RX_RING, h, s_store.rx_whdr, PROTOCORE_UDP_DGRAM_HDR);
+    h = protocore_ring_write_span(b->rx, PROTOCORE_UDP_RX_RING, h, whdr, PROTOCORE_UDP_DGRAM_HDR);
     size_t left = n;
     for (protocore_pbuf *q = p; q != NULL && left > 0; q = q->next)
     {
@@ -362,13 +403,12 @@ static protocore_net_err udp_do(protocore_net_call *c)
     return PROTOCORE_NET_OK;
 }
 
-// Run one marshaled op on ctx->bind and report what it set.
-static proto_bool marshal_op(struct UdpListenerInternal *restrict ctx, protocore_udp_op op, uint16_t port,
-                             const protocore_ip *group)
+// Run one marshaled op on UDP_LISTENER_CTX(work)->slot and report what it set.
+static proto_bool marshal_op(uint8_t *restrict work, protocore_udp_op op, uint16_t port, const protocore_ip *group)
 {
     protocore_udp_call k = {{0}, UDP_OP_BIND, NULL, 0, {PROTOCORE_IP_NONE, {0}}, PROTO_FALSE};
     k.op = op;
-    k.b = ctx->bind;
+    k.b = UDP_LISTENER_CTX(work)->slot;
     k.port = port;
     if (group != NULL)
     {
@@ -378,15 +418,19 @@ static proto_bool marshal_op(struct UdpListenerInternal *restrict ctx, protocore
     return k.result;
 }
 
-// Drop the stack's control block for ctx->bind, leaving its group first when it joined one.
-static void unbind_port(struct UdpListenerInternal *restrict ctx)
+// Drop the stack's control block for UDP_LISTENER_CTX(work)->slot, leaving its group first when it joined one.
+static void unbind_port(uint8_t *restrict work)
 {
-    if (ctx->bind->mcast)
+    if (!work)
     {
-        (void)marshal_op(ctx, UDP_OP_LEAVE_MCAST, 0, NULL);
+        return; // the pool was short of this module's borrow
+    }
+    if (UDP_LISTENER_CTX(work)->slot->mcast)
+    {
+        (void)marshal_op(work, UDP_OP_LEAVE_MCAST, 0, NULL);
         return;
     }
-    (void)marshal_op(ctx, UDP_OP_UNBIND, 0, NULL);
+    (void)marshal_op(work, UDP_OP_UNBIND, 0, NULL);
 }
 
 // The datagram, carried to the stack's thread by pointer. The caller's buffer is the send buffer,
@@ -416,16 +460,17 @@ static protocore_net_err send_do(protocore_net_call *c)
     return PROTOCORE_NET_OK;
 }
 
-// Send one datagram out of ctx->bind to @p a, from where the caller's bytes already are.
-static proto_bool send_now(struct UdpListenerInternal *restrict ctx, const protocore_ip *a, uint16_t port)
+// Send one datagram out of UDP_LISTENER_CTX(work)->slot to @p a, from where the caller's bytes already are.
+static proto_bool send_now(uint8_t *restrict work, const protocore_ip *a, uint16_t port)
 {
-    if (ctx->bind == NULL || a == NULL || ctx->ns->send_args.data == NULL || ctx->ns->send_args.len == 0 ||
-        ctx->ns->send_args.len > PROTOCORE_UDP_RX_BUF_SIZE)
+    if (UDP_LISTENER_CTX(work)->slot == NULL || a == NULL || UdpListener.send_args.data == NULL ||
+        UdpListener.send_args.len == 0 || UdpListener.send_args.len > PROTOCORE_UDP_RX_BUF_SIZE)
     {
         return PROTO_FALSE;
     }
     // The marshal is synchronous, so this outlives the call and carries its answer back.
-    protocore_udp_send_call k = {{0}, ctx->bind, a, ctx->ns->send_args.data, ctx->ns->send_args.len, port, PROTO_FALSE};
+    protocore_udp_send_call k = {
+        {0}, UDP_LISTENER_CTX(work)->slot, a, UdpListener.send_args.data, UdpListener.send_args.len, port, PROTO_FALSE};
     (void)protocore_net_call_marshal(send_do, &k.base);
     return k.ok;
 }
@@ -434,46 +479,54 @@ static proto_bool send_now(struct UdpListenerInternal *restrict ctx, const proto
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-static void listen_on(struct UdpListenerInternal *restrict ctx)
+static void listen_on(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     // A port already bound rebinds its own slot: a second slot on one port is one find_bind() can
     // never reach, and it spends a slot the pool has two of.
-    find_bind(ctx);
-    if (ctx->bind != NULL)
+    find_bind(work);
+    if (UDP_LISTENER_CTX(work)->slot != NULL)
     {
-        ctx->bind->handler = ctx->ns->bind.handler;
-        ctx->bind->ctx = ctx->ns->bind.handler_ctx;
-        ctx->ns->ok = PROTO_TRUE;
+        UDP_LISTENER_CTX(work)->slot->handler = UdpListener.bind.handler;
+        UDP_LISTENER_CTX(work)->slot->ctx = UdpListener.bind.handler_ctx;
+        UdpListener.ok = PROTO_TRUE;
         return;
     }
-    free_bind(ctx);
-    if (ctx->bind == NULL)
+    free_bind(work);
+    if (UDP_LISTENER_CTX(work)->slot == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE; // pool exhausted
+        UdpListener.ok = PROTO_FALSE; // pool exhausted
         return;
     }
-    bind_clear(ctx);
-    // The trampoline reads handler and ctx as soon as recv is armed, so set them first.
-    ctx->bind->handler = ctx->ns->bind.handler;
-    ctx->bind->ctx = ctx->ns->bind.handler_ctx;
-    ctx->bind->port = ctx->ns->port;
-    if (!marshal_op(ctx, UDP_OP_BIND, ctx->ns->port, NULL))
+    bind_clear(work);
+    // The trampoline reads handler and work as soon as recv is armed, so set them first.
+    UDP_LISTENER_CTX(work)->slot->handler = UdpListener.bind.handler;
+    UDP_LISTENER_CTX(work)->slot->ctx = UdpListener.bind.handler_ctx;
+    UDP_LISTENER_CTX(work)->slot->port = UdpListener.port;
+    if (!marshal_op(work, UDP_OP_BIND, UdpListener.port, NULL))
     {
-        ctx->bind->handler = NULL;
-        ctx->ns->ok = PROTO_FALSE;
+        UDP_LISTENER_CTX(work)->slot->handler = NULL;
+        UdpListener.ok = PROTO_FALSE;
         return;
     }
-    protocore_slot_mark(&ctx->bound, bind_idx(ctx));
-    ctx->ns->ok = PROTO_TRUE;
+    protocore_slot_mark(&UDP_LISTENER_CTX(work)->bound, bind_idx(work));
+    UdpListener.ok = PROTO_TRUE;
 }
 
-static void listen_group(struct UdpListenerInternal *restrict ctx)
+static void listen_group(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
-    ctx->ns->ok = PROTO_FALSE;
-    Ip.args.text = ctx->ns->bind.group_ip;
+    UdpListener.ok = PROTO_FALSE;
+    Ip.args.text = UdpListener.bind.group_ip;
     Ip.args.out = &group;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     if (!Ip.ok)
     {
         return;
@@ -482,154 +535,178 @@ static void listen_group(struct UdpListenerInternal *restrict ctx)
     {
         return; // joining a unicast address would silently never deliver
     }
-    free_bind(ctx);
-    if (ctx->bind == NULL)
+    free_bind(work);
+    if (UDP_LISTENER_CTX(work)->slot == NULL)
     {
         return;
     }
-    bind_clear(ctx);
-    ctx->bind->handler = ctx->ns->bind.handler;
-    ctx->bind->ctx = ctx->ns->bind.handler_ctx;
-    ctx->bind->port = ctx->ns->port;
-    if (!marshal_op(ctx, UDP_OP_BIND_MCAST, ctx->ns->port, &group))
+    bind_clear(work);
+    UDP_LISTENER_CTX(work)->slot->handler = UdpListener.bind.handler;
+    UDP_LISTENER_CTX(work)->slot->ctx = UdpListener.bind.handler_ctx;
+    UDP_LISTENER_CTX(work)->slot->port = UdpListener.port;
+    if (!marshal_op(work, UDP_OP_BIND_MCAST, UdpListener.port, &group))
     {
-        ctx->bind->handler = NULL;
+        UDP_LISTENER_CTX(work)->slot->handler = NULL;
         return;
     }
-    protocore_slot_mark(&ctx->bound, bind_idx(ctx));
-    ctx->ns->ok = PROTO_TRUE;
+    protocore_slot_mark(&UDP_LISTENER_CTX(work)->bound, bind_idx(work));
+    UdpListener.ok = PROTO_TRUE;
 }
 
-static void leave_group(struct UdpListenerInternal *restrict ctx)
+static void leave_group(uint8_t *restrict work)
 {
-    find_bind(ctx);
-    if (ctx->bind == NULL || !ctx->bind->mcast)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    find_bind(work);
+    if (UDP_LISTENER_CTX(work)->slot == NULL || !UDP_LISTENER_CTX(work)->slot->mcast)
+    {
+        UdpListener.ok = PROTO_FALSE;
         return;
     }
-    unbind_port(ctx);
-    bind_clear(ctx);
-    ctx->ns->ok = PROTO_TRUE;
+    unbind_port(work);
+    bind_clear(work);
+    UdpListener.ok = PROTO_TRUE;
 }
 
-static void poll_all(struct UdpListenerInternal *restrict ctx)
+static void poll_all(uint8_t *restrict work)
 {
-    if (ctx->polling)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    if (UDP_LISTENER_CTX(work)->polling)
     {
         return; // a handler called back into poll(); the stage is already in use
     }
-    ctx->polling = PROTO_TRUE;
+    UDP_LISTENER_CTX(work)->polling = PROTO_TRUE;
     for (int i = 0; i < PROTOCORE_MAX_UDP_LISTENERS; i++)
     {
-        UdpBind *b = &ctx->store->bind[i];
-        if (bind_used(ctx, (size_t)i))
+        UdpBind *b = &UDP_LISTENER_CTX(work)->bind[i];
+        if (bind_used(work, (size_t)i))
         {
             protocore_udp_dgram d = {{PROTOCORE_IP_NONE, {0}}, 0, 0};
-            while (protocore_udp_dgram_take(b->rx, PROTOCORE_UDP_RX_RING, &b->rx_head, &b->rx_tail, ctx->store->rx_rhdr,
-                                            &d, ctx->store->rx_stage, sizeof(ctx->store->rx_stage)))
+            while (protocore_udp_dgram_take(b->rx, PROTOCORE_UDP_RX_RING, &b->rx_head, &b->rx_tail,
+                                            UDP_LISTENER_CTX(work)->rx_rhdr, &d, UDP_LISTENER_CTX(work)->rx_stage,
+                                            sizeof(UDP_LISTENER_CTX(work)->rx_stage)))
             {
                 if (b->handler != NULL)
                 {
                     protocore_udp_peer peer = {d.addr, d.port, b};
-                    b->handler(ctx->store->rx_stage, d.len, &peer, b->ctx);
+                    b->handler(UDP_LISTENER_CTX(work)->rx_stage, d.len, &peer, b->ctx);
                 }
             }
         }
     }
-    ctx->polling = PROTO_FALSE;
+    UDP_LISTENER_CTX(work)->polling = PROTO_FALSE;
 }
 
-static void reply_to(struct UdpListenerInternal *restrict ctx)
+static void reply_to(uint8_t *restrict work)
 {
-    if (ctx->ns->peer_args.peer == NULL)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    if (UdpListener.peer_args.peer == NULL)
+    {
+        UdpListener.ok = PROTO_FALSE;
         return;
     }
-    ctx->bind = ctx->ns->peer_args.peer->bind;
-    ctx->ns->ok = send_now(ctx, &ctx->ns->peer_args.peer->addr, ctx->ns->peer_args.peer->port);
+    UDP_LISTENER_CTX(work)->slot = UdpListener.peer_args.peer->bind;
+    UdpListener.ok = send_now(work, &UdpListener.peer_args.peer->addr, UdpListener.peer_args.peer->port);
 }
 
-static void peer_addr_of(struct UdpListenerInternal *restrict ctx)
+static void peer_addr_of(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (ctx->ns->peer_args.peer == NULL || ctx->ns->peer_args.ip_out == NULL || ctx->ns->peer_args.ip_cap < 8u)
+    (void)work;
+    UdpListener.ok = PROTO_FALSE;
+    if (UdpListener.peer_args.peer == NULL || UdpListener.peer_args.ip_out == NULL || UdpListener.peer_args.ip_cap < 8u)
     {
         return;
     }
-    Ip.args.ip = &ctx->ns->peer_args.peer->addr;
-    Ip.args.buf = ctx->ns->peer_args.ip_out;
-    Ip.args.cap = ctx->ns->peer_args.ip_cap;
-    Ip.format(Ip.internal);
+    Ip.args.ip = &UdpListener.peer_args.peer->addr;
+    Ip.args.buf = UdpListener.peer_args.ip_out;
+    Ip.args.cap = UdpListener.peer_args.ip_cap;
+    Ip.format(ip_work);
     if (Ip.n == 0)
     {
         return;
     }
-    if (ctx->ns->peer_args.port_out != NULL)
+    if (UdpListener.peer_args.port_out != NULL)
     {
-        *ctx->ns->peer_args.port_out = ctx->ns->peer_args.peer->port;
+        *UdpListener.peer_args.port_out = UdpListener.peer_args.peer->port;
     }
-    ctx->ns->ok = PROTO_TRUE;
+    UdpListener.ok = PROTO_TRUE;
 }
 
-static void send_from(struct UdpListenerInternal *restrict ctx)
+static void send_from(uint8_t *restrict work)
 {
-    find_bind(ctx);
-    if (ctx->bind == NULL || ctx->ns->send_args.dst == NULL || ctx->ns->send_args.dst->family == PROTOCORE_IP_NONE)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    find_bind(work);
+    if (UDP_LISTENER_CTX(work)->slot == NULL || UdpListener.send_args.dst == NULL ||
+        UdpListener.send_args.dst->family == PROTOCORE_IP_NONE)
+    {
+        UdpListener.ok = PROTO_FALSE;
         return;
     }
-    ctx->ns->ok = send_now(ctx, ctx->ns->send_args.dst, ctx->ns->send_args.dst_port);
+    UdpListener.ok = send_now(work, UdpListener.send_args.dst, UdpListener.send_args.dst_port);
 }
 
 // Close ns->port: leave its group when it joined one, drop the control block, free the slot.
-static void close_port(struct UdpListenerInternal *restrict ctx)
+static void close_port(uint8_t *restrict work)
 {
-    find_bind(ctx);
-    if (ctx->bind == NULL)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    find_bind(work);
+    if (UDP_LISTENER_CTX(work)->slot == NULL)
+    {
+        UdpListener.ok = PROTO_FALSE;
         return;
     }
-    unbind_port(ctx);
-    bind_clear(ctx);
-    ctx->ns->ok = PROTO_TRUE;
+    unbind_port(work);
+    bind_clear(work);
+    UdpListener.ok = PROTO_TRUE;
 }
 
 // The group ns->port joined, formatted, or NULL when the port is unbound or joined none.
-static void group_on(struct UdpListenerInternal *restrict ctx)
+static void group_on(uint8_t *restrict work)
 {
-    ctx->ns->text = NULL;
-    find_bind(ctx);
-    if (ctx->bind == NULL || !ctx->bind->mcast)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    UdpListener.text = NULL;
+    find_bind(work);
+    if (UDP_LISTENER_CTX(work)->slot == NULL || !UDP_LISTENER_CTX(work)->slot->mcast)
     {
         return;
     }
-    Ip.args.ip = &ctx->bind->group;
-    Ip.args.buf = ctx->store->group_text;
-    Ip.args.cap = sizeof(ctx->store->group_text);
-    Ip.format(Ip.internal);
+    Ip.args.ip = &UDP_LISTENER_CTX(work)->slot->group;
+    Ip.args.buf = UDP_LISTENER_CTX(work)->group_text;
+    Ip.args.cap = sizeof(UDP_LISTENER_CTX(work)->group_text);
+    Ip.format(ip_work);
     if (Ip.n == 0)
     {
         return;
     }
-    ctx->ns->text = ctx->store->group_text;
+    UdpListener.text = UDP_LISTENER_CTX(work)->group_text;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-UdpListenerNs UdpListener = {
-    .listen = listen_on,
-    .listen_multicast = listen_group,
-    .leave_multicast = leave_group,
-    .poll = poll_all,
-    .reply = reply_to,
-    .peer_addr = peer_addr_of,
-    .sendto = send_from,
-    .close = close_port,
-    .joined_group = group_on,
-    .internal = &s_server,
-};
+UdpListenerNs UdpListener = {.listen = listen_on,
+                             .listen_multicast = listen_group,
+                             .leave_multicast = leave_group,
+                             .poll = poll_all,
+                             .reply = reply_to,
+                             .peer_addr = peer_addr_of,
+                             .sendto = send_from,
+                             .close = close_port,
+                             .joined_group = group_on};
 
 PROTOCORE_END_DECLS

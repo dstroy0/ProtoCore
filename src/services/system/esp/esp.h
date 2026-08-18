@@ -25,56 +25,30 @@
 #ifndef PROTOCORE_ESP_H
 #define PROTOCORE_ESP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_IKEV2
 
 PROTOCORE_BEGIN_DECLS
 
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
 /** @brief ESP header size: SPI(4) + Sequence Number(4). */
 #define PROTOCORE_ESP_HDR_LEN 8
+
 /** @brief Explicit IV length carried in the packet (AES-GCM, RFC 4106). */
 #define PROTOCORE_ESP_IV_LEN 8
+
 /** @brief Implicit salt length (the tail of the ESP key, not on the wire). */
 #define PROTOCORE_ESP_SALT_LEN 4
+
 /** @brief AES-GCM authentication tag / ICV length. */
 #define PROTOCORE_ESP_ICV_LEN 16
+
 /** @brief AES-256 key length. */
 #define PROTOCORE_ESP_KEY_LEN 32
-
-/**
- * @brief Encapsulate @p payload in an RFC 4303 ESP packet with AES-256-GCM.
- *
- * Writes SPI | Seq | @p iv | AES-GCM(payload | Padding | Pad Length | @p next_header) | ICV into @p out.
- * The AAD is SPI | Seq; the GCM nonce is @p salt | @p iv; the plaintext is padded (RFC 4303 §2.4) so that
- * Pad Length + Next Header land on a 4-octet boundary.
- * @param key   32-byte AES-256 key (SK_ei / SK_er without the salt).
- * @param salt  the 4-byte salt (the ESP key's tail).
- * @param iv    the 8-byte explicit IV (unique per packet under a key - e.g. the sequence number).
- * @return the ESP packet length written, or 0 on a bad argument / overflow.
- */
-size_t protocore_esp_gcm_encapsulate(uint32_t spi, uint32_t seq, const uint8_t key[PROTOCORE_ESP_KEY_LEN],
-                                     const uint8_t salt[PROTOCORE_ESP_SALT_LEN], const uint8_t iv[PROTOCORE_ESP_IV_LEN],
-                                     uint8_t next_header, const uint8_t *payload, size_t payload_len, uint8_t *out,
-                                     size_t out_cap);
-
-/**
- * @brief Verify + decapsulate an ESP packet in place (the ciphertext is decrypted within @p packet).
- *
- * Verifies the ICV over SPI | Seq in constant time, decrypts, and strips the RFC 4303 trailer, exposing
- * the inner payload plus its Next Header and the SPI / Sequence Number.
- * @param packet  the ESP packet (mutated: decrypted in place). @param payload_out points into it on success.
- * @return true iff the ICV verifies (a forged / truncated packet returns false and writes no payload).
- */
-proto_bool protocore_esp_gcm_decapsulate(const uint8_t key[PROTOCORE_ESP_KEY_LEN],
-                                         const uint8_t salt[PROTOCORE_ESP_SALT_LEN], uint8_t *packet, size_t len,
-                                         uint32_t *spi_out, uint32_t *seq_out, uint8_t *next_header_out,
-                                         const uint8_t **payload_out, size_t *payload_len_out);
-
-// ── ESP anti-replay window (RFC 4303 §3.4.3) ───────────────────────────────────────────────────
-//
-// One receiver-side sliding window per inbound SA rejects replayed or too-old sequence numbers. This is
-// the 32-bit-sequence (non-ESN) window; the bitmap is a single 64-bit word, so the window is 64 packets.
 
 /** @brief ESP anti-replay window size (fixed by the 64-bit bitmap). */
 #define PROTOCORE_ESP_REPLAY_WINDOW 64
@@ -87,18 +61,101 @@ typedef struct
     proto_bool seen_any; ///< false until the first packet is accepted
 } EspReplay;
 
-/** @brief Reset an anti-replay window (no packets seen yet). */
-void protocore_esp_replay_init(EspReplay *r);
+/** @brief What gcm_encapsulate takes: spi, seq, key, salt, iv, ... */
+typedef struct
+{
+    uint32_t spi;
+    uint32_t seq;
+    const uint8_t *key;  ///< 32-byte AES-256 key (SK_ei / SK_er without the salt) PROTOCORE_ESP_KEY_LEN bytes.
+    const uint8_t *salt; ///< the 4-byte salt (the ESP key's tail) PROTOCORE_ESP_SALT_LEN bytes.
+    const uint8_t *iv;   ///< the 8-byte explicit IV (unique per packet under a key - e.g. the sequence number)
+                         ///< PROTOCORE_ESP_IV_LEN bytes.
+    uint8_t next_header;
+    const uint8_t *payload;
+    size_t payload_len;
+    uint8_t *out;
+    size_t out_cap;
+} EspGcmEncapsulateArgs;
+
+/** @brief What gcm_decapsulate takes: key, salt, packet, len, ... */
+typedef struct
+{
+    const uint8_t *key;  ///< PROTOCORE_ESP_KEY_LEN bytes.
+    const uint8_t *salt; ///< PROTOCORE_ESP_SALT_LEN bytes.
+    uint8_t *packet;     ///< the ESP packet (mutated: decrypted in place). payload_out points into it on success
+    size_t len;
+    uint32_t *spi_out;
+    uint32_t *seq_out;
+    uint8_t *next_header_out;
+    const uint8_t **payload_out;
+    size_t *payload_len_out;
+} EspGcmDecapsulateArgs;
+
+/** @brief What replay_init takes: r. */
+typedef struct
+{
+    EspReplay *r;
+} EspReplayInitArgs;
+
+/** @brief What replay_check takes: r, seq. */
+typedef struct
+{
+    EspReplay *r;
+    uint32_t seq;
+} EspReplayCheckArgs;
 
 /**
- * @brief Anti-replay check + record for a received sequence number @p seq (RFC 4303 §3.4.3).
+ * @brief ESP (RFC 4303) packet transform with AES-256-GCM (RFC 4106) - the IPsec datapath's crypto core.
  *
- * Accepts and records a fresh @p seq (advancing the window when it is the new highest); rejects a
- * duplicate already inside the window (a replay) or one that falls left of the window (too old).
- * Sequence number 0 is invalid (ESP counts from 1) and is rejected.
- * @return true to accept the packet, false to drop it.
+ * A caller sets the members a call takes, invokes it through ::Esp with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Esp.gcm_encapsulate_args.spi = ...;
+ *   Esp.gcm_encapsulate_args.seq = ...;
+ *   Esp.gcm_encapsulate_args.key = ...;
+ *   Esp.gcm_encapsulate_args.salt = ...;
+ *   Esp.gcm_encapsulate_args.iv = ...;
+ *   Esp.gcm_encapsulate_args.next_header = ...;
+ *   Esp.gcm_encapsulate_args.payload = ...;
+ *   Esp.gcm_encapsulate_args.payload_len = ...;
+ *   Esp.gcm_encapsulate_args.out = ...;
+ *   Esp.gcm_encapsulate_args.out_cap = ...;
+ *   Esp.gcm_encapsulate(work);
+ *   // Esp.n is what the call reports
+ *
+ * @var EspNs::gcm_encapsulate_args  what gcm_encapsulate takes: spi, seq, key, salt, iv,
+ * @var EspNs::gcm_decapsulate_args  what gcm_decapsulate takes: key, salt, packet, len,
+ * @var EspNs::replay_init_args  what replay_init takes: r
+ * @var EspNs::replay_check_args  what replay_check takes: r, seq
+ * @var EspNs::ok  true iff the ICV verifies (a forged / truncated packet returns ...
+ * @var EspNs::n  the ESP packet length written, or 0 on a bad argument / overflow
+ * @var EspNs::gcm_encapsulate  encapsulate payload in an RFC 4303 ESP packet with AES-256-GCM. ...
+ * @var EspNs::gcm_decapsulate  verify + decapsulate an ESP packet in place (the ciphertext is ...
+ * @var EspNs::replay_init  reset an anti-replay window (no packets seen yet)
+ * @var EspNs::replay_check  anti-replay check + record for a received sequence number seq (RFC ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_esp_replay_check(EspReplay *r, uint32_t seq);
+typedef struct
+{
+    EspGcmEncapsulateArgs gcm_encapsulate_args;
+    EspGcmDecapsulateArgs gcm_decapsulate_args;
+    EspReplayInitArgs replay_init_args;
+    EspReplayCheckArgs replay_check_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const gcm_encapsulate)(uint8_t *restrict work);
+    void (*const gcm_decapsulate)(uint8_t *restrict work);
+    void (*const replay_init)(uint8_t *restrict work);
+    void (*const replay_check)(uint8_t *restrict work);
+} EspNs;
+
+/** @brief The one symbol this module exports. */
+extern EspNs Esp;
 
 PROTOCORE_END_DECLS
 

@@ -17,21 +17,6 @@
 #include "mmgr/protomem.h" // mem.cpy: the argument octets an encode moves
 #include "mmgr/protostr.h" // str.len: the bounded length of a NUL-terminated argument
 
-/**
- * @brief The codec's state and the calls that reach it - what RespNs points at.
- *
- * No storage member: the codec keeps nothing between calls. An encode writes into the caller's
- * buffer, and every string a parse decodes points into the caller's buffer.
- *
- * @var RespInternal::ns  the handle a caller sets a call's members on
- */
-struct RespInternal
-{
-    RespNs *ns;
-};
-
-static struct RespInternal s_resp = {.ns = &Resp};
-
 // Write "<first_byte><decimal n>\r\n" into buf at *pos and advance it. The digits fall out low first
 // into tmp and are emitted reversed. False when the prefix would reach cap with the NUL reserved.
 static proto_bool put_len_prefix(char *buf, size_t cap, size_t *pos, char first_byte, size_t n)
@@ -253,11 +238,11 @@ static proto_bool parse_double(const uint8_t *buf, size_t from, size_t end, doub
 
 // The length-prefixed bodies: Bulk strings ($), Bulk errors (!), Verbatim strings (=). Checks the
 // declared length and its trailing CRLF against the buffered octets; `$-1` is the Null bulk string.
-static proto_bool parse_bulk_body(struct RespInternal *restrict ctx, uint8_t first_byte, size_t header_from,
-                                  size_t header_to, size_t after_header)
+static proto_bool parse_bulk_body(uint8_t *restrict work, uint8_t first_byte, size_t header_from, size_t header_to,
+                                  size_t after_header)
 {
-    const uint8_t *buf = ctx->ns->wire.buf;
-    const size_t len = ctx->ns->wire.len;
+    const uint8_t *buf = Resp.wire.buf;
+    const size_t len = Resp.wire.len;
     int64_t blen;
     if (!parse_int(buf, header_from, header_to, &blen))
     {
@@ -267,8 +252,8 @@ static proto_bool parse_bulk_body(struct RespInternal *restrict ctx, uint8_t fir
     // has an encoding, so it is a malformed reply rather than another spelling of null.
     if (first_byte == '$' && blen == -1)
     {
-        ctx->ns->reply.type = RESP_NULL;
-        ctx->ns->n = after_header;
+        Resp.reply.type = RESP_NULL;
+        Resp.n = after_header;
         return PROTO_TRUE;
     }
     if (blen < 0)
@@ -287,28 +272,28 @@ static proto_bool parse_bulk_body(struct RespInternal *restrict ctx, uint8_t fir
     }
     if (first_byte == '$')
     {
-        ctx->ns->reply.type = RESP_BULK_STRING;
+        Resp.reply.type = RESP_BULK_STRING;
     }
     else if (first_byte == '!')
     {
-        ctx->ns->reply.type = RESP_BULK_ERROR;
+        Resp.reply.type = RESP_BULK_ERROR;
     }
     else
     {
-        ctx->ns->reply.type = RESP_VERBATIM_STRING;
+        Resp.reply.type = RESP_VERBATIM_STRING;
     }
-    ctx->ns->reply.str = (const char *)(buf + after_header);
-    ctx->ns->reply.str_len = (size_t)blen;
-    ctx->ns->n = after_header + (size_t)blen + 2; // the body and its trailing CRLF
+    Resp.reply.str = (const char *)(buf + after_header);
+    Resp.reply.str_len = (size_t)blen;
+    Resp.n = after_header + (size_t)blen + 2; // the body and its trailing CRLF
     return PROTO_TRUE;
 }
 
 // The aggregate headers whose children follow: Arrays (*), Sets (~), Pushes (>). Only the count is
 // read here, and the caller parses each element next; `*-1` is the Null array.
-static proto_bool parse_aggregate(struct RespInternal *restrict ctx, uint8_t first_byte, size_t header_from,
-                                  size_t header_to, size_t after_header)
+static proto_bool parse_aggregate(uint8_t *restrict work, uint8_t first_byte, size_t header_from, size_t header_to,
+                                  size_t after_header)
 {
-    const uint8_t *buf = ctx->ns->wire.buf;
+    const uint8_t *buf = Resp.wire.buf;
     int64_t elements;
     if (!parse_int(buf, header_from, header_to, &elements))
     {
@@ -317,8 +302,8 @@ static proto_bool parse_aggregate(struct RespInternal *restrict ctx, uint8_t fir
     // The Null array is the length -1 exactly ("Null arrays"), as for the Null bulk string above.
     if (first_byte == '*' && elements == -1)
     {
-        ctx->ns->reply.type = RESP_NULL;
-        ctx->ns->n = after_header;
+        Resp.reply.type = RESP_NULL;
+        Resp.n = after_header;
         return PROTO_TRUE;
     }
     if (elements < 0)
@@ -327,34 +312,35 @@ static proto_bool parse_aggregate(struct RespInternal *restrict ctx, uint8_t fir
     }
     if (first_byte == '*')
     {
-        ctx->ns->reply.type = RESP_ARRAY;
+        Resp.reply.type = RESP_ARRAY;
     }
     else if (first_byte == '~')
     {
-        ctx->ns->reply.type = RESP_SET;
+        Resp.reply.type = RESP_SET;
     }
     else
     {
-        ctx->ns->reply.type = RESP_PUSH;
+        Resp.reply.type = RESP_PUSH;
     }
-    ctx->ns->reply.ival = elements;
-    ctx->ns->reply.count = elements;
-    ctx->ns->n = after_header; // the header alone
+    Resp.reply.ival = elements;
+    Resp.reply.count = elements;
+    Resp.n = after_header; // the header alone
     return PROTO_TRUE;
 }
 
 // Build the array of bulk strings a client sends ("Sending commands to a Redis server") from
 // ns->command into ns->out, NUL-terminate it, and report its length in ns->n.
-static void resp_encode_command(struct RespInternal *restrict ctx)
+static void resp_encode_command(uint8_t *restrict work)
 {
-    char *buf = ctx->ns->out.buf;
-    const size_t cap = ctx->ns->out.cap;
-    const char *const *argv = ctx->ns->command.argv;
-    const size_t *argv_len = ctx->ns->command.argv_len;
-    const size_t argc = ctx->ns->command.argc;
+    (void)work;
+    char *buf = Resp.out.buf;
+    const size_t cap = Resp.out.cap;
+    const char *const *argv = Resp.command.argv;
+    const size_t *argv_len = Resp.command.argv_len;
+    const size_t argc = Resp.command.argc;
 
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
+    Resp.ok = PROTO_FALSE;
+    Resp.n = 0;
     if (!buf || cap == 0 || !argv || argc == 0)
     {
         return;
@@ -385,19 +371,19 @@ static void resp_encode_command(struct RespInternal *restrict ctx)
         buf[pos++] = '\n';
     }
     buf[pos] = '\0';
-    ctx->ns->n = pos;
-    ctx->ns->ok = PROTO_TRUE;
+    Resp.n = pos;
+    Resp.ok = PROTO_TRUE;
 }
 
 // Decode the value at the head of ns->wire into ns->reply, and report the octets it occupied in
 // ns->n. An aggregate header reports the header alone and its child count.
-static void resp_parse_reply(struct RespInternal *restrict ctx)
+static void resp_parse_reply(uint8_t *restrict work)
 {
-    const uint8_t *buf = ctx->ns->wire.buf;
-    const size_t len = ctx->ns->wire.len;
+    const uint8_t *buf = Resp.wire.buf;
+    const size_t len = Resp.wire.len;
 
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
+    Resp.ok = PROTO_FALSE;
+    Resp.n = 0;
     if (!buf || len < 3) // the shortest value is a first byte and its CRLF
     {
         return;
@@ -412,22 +398,22 @@ static void resp_parse_reply(struct RespInternal *restrict ctx)
     const size_t header_to = crlf;
     const size_t after_header = crlf + 2; // past the CRLF terminator
 
-    ctx->ns->reply.str = NULL;
-    ctx->ns->reply.str_len = 0;
-    ctx->ns->reply.ival = 0;
-    ctx->ns->reply.dval = 0;
-    ctx->ns->reply.count = 0;
+    Resp.reply.str = NULL;
+    Resp.reply.str_len = 0;
+    Resp.reply.ival = 0;
+    Resp.reply.dval = 0;
+    Resp.reply.count = 0;
 
     switch (buf[0])
     {
     // Simple strings (+) and Simple errors (-): the line itself, CRLF excluded.
     case '+':
     case '-':
-        ctx->ns->reply.type = (buf[0] == '+') ? RESP_SIMPLE_STRING : RESP_SIMPLE_ERROR;
-        ctx->ns->reply.str = (const char *)(buf + header_from);
-        ctx->ns->reply.str_len = header_to - header_from;
-        ctx->ns->n = after_header;
-        ctx->ns->ok = PROTO_TRUE;
+        Resp.reply.type = (buf[0] == '+') ? RESP_SIMPLE_STRING : RESP_SIMPLE_ERROR;
+        Resp.reply.str = (const char *)(buf + header_from);
+        Resp.reply.str_len = header_to - header_from;
+        Resp.n = after_header;
+        Resp.ok = PROTO_TRUE;
         return;
 
     case ':': { // Integers: a signed, base-10, 64-bit value
@@ -436,10 +422,10 @@ static void resp_parse_reply(struct RespInternal *restrict ctx)
         {
             return;
         }
-        ctx->ns->reply.type = RESP_INTEGER;
-        ctx->ns->reply.ival = v;
-        ctx->ns->n = after_header;
-        ctx->ns->ok = PROTO_TRUE;
+        Resp.reply.type = RESP_INTEGER;
+        Resp.reply.ival = v;
+        Resp.n = after_header;
+        Resp.ok = PROTO_TRUE;
         return;
     }
 
@@ -447,14 +433,14 @@ static void resp_parse_reply(struct RespInternal *restrict ctx)
     case '$':
     case '!':
     case '=':
-        ctx->ns->ok = parse_bulk_body(ctx, buf[0], header_from, header_to, after_header);
+        Resp.ok = parse_bulk_body(work, buf[0], header_from, header_to, after_header);
         return;
 
     // The aggregates whose children follow: Arrays (*), Sets (~), Pushes (>).
     case '*':
     case '~':
     case '>':
-        ctx->ns->ok = parse_aggregate(ctx, buf[0], header_from, header_to, after_header);
+        Resp.ok = parse_aggregate(work, buf[0], header_from, header_to, after_header);
         return;
 
     case '%': { // Maps: N entries, so 2N children follow, one per key and one per value
@@ -464,18 +450,18 @@ static void resp_parse_reply(struct RespInternal *restrict ctx)
             return;
         }
         const int64_t children = (int64_t)((uint64_t)entries * 2u); // doubled unsigned, then reinterpreted
-        ctx->ns->reply.type = RESP_MAP;
-        ctx->ns->reply.ival = children;
-        ctx->ns->reply.count = children;
-        ctx->ns->n = after_header;
-        ctx->ns->ok = PROTO_TRUE;
+        Resp.reply.type = RESP_MAP;
+        Resp.reply.ival = children;
+        Resp.reply.count = children;
+        Resp.n = after_header;
+        Resp.ok = PROTO_TRUE;
         return;
     }
 
     case '_': // Nulls
-        ctx->ns->reply.type = RESP_NULL;
-        ctx->ns->n = after_header;
-        ctx->ns->ok = PROTO_TRUE;
+        Resp.reply.type = RESP_NULL;
+        Resp.n = after_header;
+        Resp.ok = PROTO_TRUE;
         return;
 
     case '#': { // Booleans: exactly one octet, 't' or 'f'
@@ -483,28 +469,28 @@ static void resp_parse_reply(struct RespInternal *restrict ctx)
         {
             return;
         }
-        ctx->ns->reply.type = RESP_BOOLEAN;
-        ctx->ns->reply.ival = (buf[header_from] == 't') ? 1 : 0;
-        ctx->ns->n = after_header;
-        ctx->ns->ok = PROTO_TRUE;
+        Resp.reply.type = RESP_BOOLEAN;
+        Resp.reply.ival = (buf[header_from] == 't') ? 1 : 0;
+        Resp.n = after_header;
+        Resp.ok = PROTO_TRUE;
         return;
     }
 
     case ',': // Doubles: the text is authoritative, dval is decoded from it
-        ctx->ns->reply.type = RESP_DOUBLE;
-        ctx->ns->reply.str = (const char *)(buf + header_from);
-        ctx->ns->reply.str_len = header_to - header_from;
-        parse_double(buf, header_from, header_to, &ctx->ns->reply.dval);
-        ctx->ns->n = after_header;
-        ctx->ns->ok = PROTO_TRUE;
+        Resp.reply.type = RESP_DOUBLE;
+        Resp.reply.str = (const char *)(buf + header_from);
+        Resp.reply.str_len = header_to - header_from;
+        parse_double(buf, header_from, header_to, &Resp.reply.dval);
+        Resp.n = after_header;
+        Resp.ok = PROTO_TRUE;
         return;
 
     case '(': // Big numbers: the digits stay text
-        ctx->ns->reply.type = RESP_BIG_NUMBER;
-        ctx->ns->reply.str = (const char *)(buf + header_from);
-        ctx->ns->reply.str_len = header_to - header_from;
-        ctx->ns->n = after_header;
-        ctx->ns->ok = PROTO_TRUE;
+        Resp.reply.type = RESP_BIG_NUMBER;
+        Resp.reply.str = (const char *)(buf + header_from);
+        Resp.reply.str_len = header_to - header_from;
+        Resp.n = after_header;
+        Resp.ok = PROTO_TRUE;
         return;
 
     default: // no RESP type claims this first byte
@@ -513,6 +499,6 @@ static void resp_parse_reply(struct RespInternal *restrict ctx)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-RespNs Resp = {.encode_command = resp_encode_command, .parse_reply = resp_parse_reply, .internal = &s_resp};
+RespNs Resp = {.encode_command = resp_encode_command, .parse_reply = resp_parse_reply};
 
 #endif // PROTOCORE_ENABLE_REDIS

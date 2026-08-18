@@ -27,6 +27,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
+
 void dbench_run(void)
 {
     // Realistic inputs copied from test/test_http_delivery/test_http_delivery.cpp (known-good, spec-
@@ -42,13 +44,32 @@ void dbench_run(void)
         volatile size_t sinkn = 0;
 
         // Freshness verdict: a single branch + one uint64 add, the per-request hot path. Cheap -> large N.
-        DBENCH_OP("protocore_delivery_swr (stale)", 200000, sinkv += (int)protocore_delivery_swr(75, 60, 30));
+        DBENCH_OP("HttpDelivery.swr (stale)", 200000, {
+            HttpDelivery.swr_args.age_s = 75;
+            HttpDelivery.swr_args.max_age_s = 60;
+            HttpDelivery.swr_args.swr_s = 30;
+            HttpDelivery.swr(delivery_work);
+            sinkv += (int)HttpDelivery.value;
+        });
         // Cache-Control builder: hand-rolled decimal format of two windows into a small buffer.
-        DBENCH_OP("protocore_delivery_cache_control", 100000,
-                  sinkn += protocore_delivery_cache_control(60, 30, cc, sizeof(cc)));
+        DBENCH_OP("HttpDelivery.cache_control", 100000, {
+            HttpDelivery.cache_control_args.max_age_s = 60;
+            HttpDelivery.cache_control_args.swr_s = 30;
+            HttpDelivery.cache_control_args.out = cc;
+            HttpDelivery.cache_control_args.cap = sizeof(cc);
+            HttpDelivery.cache_control(delivery_work);
+            sinkn += HttpDelivery.n;
+        });
         // SW precache manifest: JSON-escaped serialization of the versioned path list (per /precache.json request).
-        DBENCH_OP("protocore_delivery_sw_manifest x3", 50000,
-                  sinkn += protocore_delivery_sw_manifest(paths, 3, "v42", mf, sizeof(mf)));
+        DBENCH_OP("HttpDelivery.sw_manifest x3", 50000, {
+            HttpDelivery.sw_manifest_args.paths = paths;
+            HttpDelivery.sw_manifest_args.n = 3;
+            HttpDelivery.sw_manifest_args.version = "v42";
+            HttpDelivery.sw_manifest_args.out = mf;
+            HttpDelivery.sw_manifest_args.cap = sizeof(mf);
+            HttpDelivery.sw_manifest(delivery_work);
+            sinkn += HttpDelivery.n;
+        });
 
         (void)sinkv;
         (void)sinkn;

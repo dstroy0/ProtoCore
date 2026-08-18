@@ -13,6 +13,10 @@
 #include "shared/http_date/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
 #include <time.h>                       // time_t: the epoch this module reports
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
+static uint8_t http_date_work[16]; // the borrow an entry takes; HttpDate never reads it
+
 #if PROTOCORE_ENABLE_NTP
 
 #include "mmgr/endian.h"                                 // endian.rd32be / endian.wr32be: the timestamp fields
@@ -58,6 +62,15 @@ static proto_bool ntp_mem_bind(void)
  * has to carry the cookie the request went out with, which is what stops an off-path packet setting
  * the clock (RFC 4330 sec 5). Stratum 0 is a kiss-o'-death rather than a time.
  */
+// The one time source (server/clock/clock.h). Clock.ms is where the last reading landed, so a
+// caller that only reads it measures against whichever instant something else stamped. Take the
+// reading, then report it.
+static uint32_t ntp_now(void)
+{
+    Clock.millis(Clock.internal);
+    return Clock.ms;
+}
+
 static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
     (void)peer;
@@ -89,7 +102,7 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
         return; // a server that answers with a pre-2021 clock is not one to follow
     }
     s_ntp_svc.epoch = epoch;
-    s_ntp_svc.sync_ms = Clock.ms;
+    s_ntp_svc.sync_ms = ntp_now();
 }
 
 proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *server2)
@@ -108,7 +121,7 @@ proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *
     }
     Ip.args.text = host;
     Ip.args.out = &dst;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     if (!Ip.ok)
     {
         return PROTO_FALSE; // a name, and this client has no resolver of its own
@@ -120,14 +133,14 @@ proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *
     UdpListener.bind.handler = ntp_reply;
     UdpListener.bind.handler_ctx = NULL;
     UdpListener.bind.group_ip = NULL;
-    UdpListener.listen(UdpListener.internal);
+    UdpListener.listen(protocore_udp_listener_span());
     if (!UdpListener.ok)
     {
         return PROTO_FALSE;
     }
     // The transmit stamp doubles as the cookie the reply has to echo. Ticks, not a clock: this runs
     // before there is one.
-    s_ntp_svc.cookie = Clock.ms | 1u;
+    s_ntp_svc.cookie = ntp_now() | 1u;
     uint8_t *req = s_ntp_svc.req.buf;
     for (size_t i = 0; i < PROTOCORE_NTP_PACKET_LEN; i++)
     {
@@ -139,7 +152,7 @@ proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *
     UdpListener.send_args.dst_port = PROTOCORE_NTP_PORT;
     UdpListener.send_args.data = req;
     UdpListener.send_args.len = PROTOCORE_NTP_PACKET_LEN;
-    UdpListener.sendto(UdpListener.internal);
+    UdpListener.sendto(protocore_udp_listener_span());
     return UdpListener.ok;
 }
 
@@ -155,14 +168,14 @@ time_t protocore_ntp_epoch(void)
         return 0;
     }
     // The reply fixed one instant; the monotonic clock carries it forward from there.
-    uint32_t elapsed = Clock.ms - s_ntp_svc.sync_ms;
+    uint32_t elapsed = ntp_now() - s_ntp_svc.sync_ms;
     return s_ntp_svc.epoch + (time_t)(elapsed / 1000u);
 }
 
 void protocore_ntp_set_test_epoch(time_t epoch)
 {
     s_ntp_svc.epoch = epoch;
-    s_ntp_svc.sync_ms = Clock.ms;
+    s_ntp_svc.sync_ms = ntp_now();
 }
 
 size_t protocore_ntp_http_date(char *out, size_t out_cap)
@@ -170,7 +183,7 @@ size_t protocore_ntp_http_date(char *out, size_t out_cap)
     HttpDate.args.epoch = protocore_ntp_epoch();
     HttpDate.args.out = out;
     HttpDate.args.out_cap = (uint32_t)out_cap;
-    HttpDate.format(HttpDate.internal);
+    HttpDate.format(http_date_work);
     return HttpDate.n;
 }
 
@@ -181,7 +194,7 @@ size_t protocore_ntp_http_date(char *out, size_t out_cap)
     HttpDate.args.epoch = 0;
     HttpDate.args.out = out;
     HttpDate.args.out_cap = out_cap;
-    HttpDate.format(HttpDate.internal);
+    HttpDate.format(http_date_work);
     return HttpDate.n;
 }
 

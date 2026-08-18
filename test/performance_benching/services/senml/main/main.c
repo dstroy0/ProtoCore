@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t senml_work[16]; // the borrow an entry takes; Senml never reads it
+
 /** @brief Encode @p n Records as application/senml+json into @p out; the octets written. */
 static size_t senml_json(char *out, size_t cap, const SenmlRecord *recs, size_t n)
 {
@@ -20,7 +22,7 @@ static size_t senml_json(char *out, size_t cap, const SenmlRecord *recs, size_t 
     Senml.pack.count = n;
     Senml.json.buf = out;
     Senml.json.cap = cap;
-    Senml.json_build(Senml.internal);
+    Senml.json_build(senml_work);
     return Senml.n;
 }
 
@@ -32,7 +34,7 @@ static size_t senml_cbor(uint8_t *out, size_t cap, const SenmlRecord *recs, size
     Senml.binary.codec = &Cbor;
     Senml.binary.buf = out;
     Senml.binary.cap = cap;
-    Senml.binary_build(Senml.internal);
+    Senml.binary_build(senml_work);
     return Senml.n;
 }
 

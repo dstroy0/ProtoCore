@@ -5,6 +5,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
+#include "server/clock/clock.h" // Clock.ms: the stamp check_timeouts judges against
 #include "server/core/worker.h"
 #include <Arduino.h>
 #include <unity.h>
@@ -12,7 +13,7 @@
 void setUp(void)
 {
     ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
-    ConnPool.init(ConnPool.internal);
+    ConnPool.init(protocore_conn_pool_span());
 }
 void tearDown(void)
 {
@@ -38,12 +39,14 @@ void test_check_timeouts_reaps_only_owned_slots(void)
     conn_pool[1].last_activity_ms = 0;
 
     ConnPool.life.worker_id = 0;
-    ConnPool.check_timeouts(ConnPool.internal);
+    Clock.ms = CONN_TIMEOUT_MS + 1u; // the slots were stamped at 0, so this makes them stale
+    ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_EQUAL_INT(CONN_ACTIVE, (ConnState)conn_pool[1].state);
 
     ConnPool.life.worker_id = 1;
-    ConnPool.check_timeouts(ConnPool.internal);
+    Clock.ms = CONN_TIMEOUT_MS + 1u; // the slots were stamped at 0, so this makes them stale
+    ConnPool.check_timeouts(protocore_conn_pool_span());
     TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)conn_pool[1].state);
 }
 
@@ -66,18 +69,28 @@ void test_worker_self_id_roundtrip(void)
 
 void test_worker_lifecycle_raises_and_lowers_the_run_flag(void)
 {
-    TEST_ASSERT_FALSE(Workers.running());
-    Workers.start(NULL);
-    TEST_ASSERT_TRUE(Workers.running());
-    Workers.start(NULL);
-    TEST_ASSERT_TRUE(Workers.running());
-    Workers.wake(0);
-    Workers.wake(-1);
-    Workers.wake(PROTOCORE_WORKER_COUNT);
-    Workers.stop();
-    TEST_ASSERT_FALSE(Workers.running());
-    Workers.stop();
-    TEST_ASSERT_FALSE(Workers.running());
+    Workers.running(protocore_worker_span());
+    TEST_ASSERT_FALSE(Workers.ok);
+    Workers.pump = NULL;
+    Workers.start(protocore_worker_span());
+    Workers.running(protocore_worker_span());
+    TEST_ASSERT_TRUE(Workers.ok);
+    Workers.pump = NULL;
+    Workers.start(protocore_worker_span());
+    Workers.running(protocore_worker_span());
+    TEST_ASSERT_TRUE(Workers.ok);
+    Workers.worker_id = 0;
+    Workers.wake(protocore_worker_span());
+    Workers.worker_id = -1;
+    Workers.wake(protocore_worker_span());
+    Workers.worker_id = PROTOCORE_WORKER_COUNT;
+    Workers.wake(protocore_worker_span());
+    Workers.stop(protocore_worker_span());
+    Workers.running(protocore_worker_span());
+    TEST_ASSERT_FALSE(Workers.ok);
+    Workers.stop(protocore_worker_span());
+    Workers.running(protocore_worker_span());
+    TEST_ASSERT_FALSE(Workers.ok);
 }
 
 static void set_flag_to_42(void *arg)
@@ -88,83 +101,103 @@ static void set_flag_to_42(void *arg)
 void test_defer_queues_and_run_deferred_runs_it(void)
 {
     int flag = 0;
-    Workers.start(NULL);
+    Workers.pump = NULL;
+    Workers.start(protocore_worker_span());
 
-    TEST_ASSERT_FALSE(Workers.defer(0, NULL, NULL));
-    TEST_ASSERT_FALSE(Workers.defer(-1, set_flag_to_42, &flag));
-    TEST_ASSERT_FALSE(Workers.defer(PROTOCORE_WORKER_COUNT, set_flag_to_42, &flag));
+    Workers.worker_id = 0;
+    Workers.defer_args.fn = NULL;
+    Workers.defer_args.arg = NULL;
+    Workers.defer(protocore_worker_span());
+    TEST_ASSERT_FALSE(Workers.ok);
+    Workers.worker_id = -1;
+    Workers.defer_args.fn = set_flag_to_42;
+    Workers.defer_args.arg = &flag;
+    Workers.defer(protocore_worker_span());
+    TEST_ASSERT_FALSE(Workers.ok);
+    Workers.worker_id = PROTOCORE_WORKER_COUNT;
+    Workers.defer_args.fn = set_flag_to_42;
+    Workers.defer_args.arg = &flag;
+    Workers.defer(protocore_worker_span());
+    TEST_ASSERT_FALSE(Workers.ok);
 
-    TEST_ASSERT_TRUE(Workers.defer(0, set_flag_to_42, &flag));
+    Workers.worker_id = 0;
+    Workers.defer_args.fn = set_flag_to_42;
+    Workers.defer_args.arg = &flag;
+    Workers.defer(protocore_worker_span());
+    TEST_ASSERT_TRUE(Workers.ok);
     TEST_ASSERT_EQUAL_INT(0, flag);
-    Workers.run_deferred(0);
+    Workers.worker_id = 0;
+    Workers.run_deferred(protocore_worker_span());
     TEST_ASSERT_EQUAL_INT(42, flag);
 
     flag = 0;
-    Workers.run_deferred(0);
-    Workers.run_deferred(-1);
+    Workers.worker_id = 0;
+    Workers.run_deferred(protocore_worker_span());
+    Workers.worker_id = -1;
+    Workers.run_deferred(protocore_worker_span());
     TEST_ASSERT_EQUAL_INT(0, flag);
 
-    Workers.stop();
+    Workers.stop(protocore_worker_span());
 }
 
 void test_listener_worker_queues_init_and_lookup(void)
 {
-    TcpListener.worker_queues_init(TcpListener.internal);
-    TcpListener.idx = 0;
-    TcpListener.worker_queue(TcpListener.internal);
+    TcpListener.worker_queues_init(protocore_tcp_listener_span());
+    TcpListener.q.worker_id = 0;
+    TcpListener.worker_queue(protocore_tcp_listener_span());
     TEST_ASSERT_NOT_NULL(TcpListener.queue);
-    TcpListener.idx = 1;
-    TcpListener.worker_queue(TcpListener.internal);
+    TcpListener.q.worker_id = 1;
+    TcpListener.worker_queue(protocore_tcp_listener_span());
     TEST_ASSERT_NOT_NULL(TcpListener.queue);
-    TcpListener.idx = -1;
-    TcpListener.worker_queue(TcpListener.internal);
+    TcpListener.q.worker_id = -1;
+    TcpListener.worker_queue(protocore_tcp_listener_span());
     TEST_ASSERT_NULL(TcpListener.queue);
-    TcpListener.idx = PROTOCORE_WORKER_COUNT;
-    TcpListener.worker_queue(TcpListener.internal);
+    TcpListener.q.worker_id = PROTOCORE_WORKER_COUNT;
+    TcpListener.worker_queue(protocore_tcp_listener_span());
     TEST_ASSERT_NULL(TcpListener.queue);
 
-    TcpListener.worker_queues_init(TcpListener.internal);
-    TcpListener.idx = 0;
-    TcpListener.worker_queue(TcpListener.internal);
+    TcpListener.worker_queues_init(protocore_tcp_listener_span());
+    TcpListener.q.worker_id = 0;
+    TcpListener.worker_queue(protocore_tcp_listener_span());
     TEST_ASSERT_NOT_NULL(TcpListener.queue);
 }
 
 void test_enqueue_routes_by_slot_owner_and_rejects_bad_owner(void)
 {
-    TcpListener.worker_queues_init(TcpListener.internal);
+    TcpListener.worker_queues_init(protocore_tcp_listener_span());
     ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
-    ConnPool.init(ConnPool.internal);
+    ConnPool.init(protocore_conn_pool_span());
 
     conn_pool[0].owner = 1;
     TcpEvt evt = {EVT_DATA, 0, 0};
     TcpListener.idx = 0;
     TcpListener.q.evt = &evt;
-    TcpListener.enqueue(TcpListener.internal);
+    TcpListener.enqueue(protocore_tcp_listener_span());
     TEST_ASSERT_TRUE(TcpListener.ok);
 
     conn_pool[0].owner = PROTOCORE_WORKER_COUNT;
     TcpListener.idx = 0;
     TcpListener.q.evt = &evt;
-    TcpListener.enqueue(TcpListener.internal);
+    TcpListener.enqueue(protocore_tcp_listener_span());
     TEST_ASSERT_FALSE(TcpListener.ok);
 
     conn_pool[0].owner = 0;
     mock_queue_send_fail_once();
     TcpListener.idx = 0;
     TcpListener.q.evt = &evt;
-    TcpListener.enqueue(TcpListener.internal);
+    TcpListener.enqueue(protocore_tcp_listener_span());
     TEST_ASSERT_FALSE(TcpListener.ok);
 }
 
 void test_accept_cb_round_robins_slot_owner(void)
 {
     ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
-    ConnPool.init(ConnPool.internal);
+    ConnPool.init(protocore_conn_pool_span());
     TcpListener.idx = 0;
     TcpListener.bind.port = 80;
     TcpListener.bind.proto = PROTO_HTTP;
     TcpListener.bind.tls = PROTO_FALSE;
-    TcpListener.add(TcpListener.internal);
+    TcpListener.add(protocore_tcp_listener_span());
     TEST_ASSERT_EQUAL_INT32(1, TcpListener.i32);
 
     protocore_pcb pcb1 = {0}, pcb2 = {0}, pcb3 = {0};
@@ -178,26 +211,26 @@ void test_accept_cb_round_robins_slot_owner(void)
     TEST_ASSERT_NOT_EQUAL(conn_pool[0].owner, conn_pool[1].owner);
     TEST_ASSERT_EQUAL_UINT8(conn_pool[0].owner, conn_pool[2].owner);
     TcpListener.idx = 0;
-    TcpListener.stop(TcpListener.internal);
+    TcpListener.stop(protocore_tcp_listener_span());
 }
 
 void test_dynamic_listener_creates_worker_queues(void)
 {
     ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
-    ConnPool.init(ConnPool.internal);
+    ConnPool.init(protocore_conn_pool_span());
     TcpListener.bind.port = 2;
     TcpListener.bind.proto = 4444;
     TcpListener.bind.tls = PROTO_HTTP;
-    TcpListener.add_dynamic(TcpListener.internal);
+    TcpListener.add_dynamic(protocore_tcp_listener_span());
     TEST_ASSERT_EQUAL_INT32(1, TcpListener.i32);
-    TcpListener.idx = 0;
-    TcpListener.worker_queue(TcpListener.internal);
+    TcpListener.q.worker_id = 0;
+    TcpListener.worker_queue(protocore_tcp_listener_span());
     TEST_ASSERT_NOT_NULL(TcpListener.queue);
-    TcpListener.idx = 1;
-    TcpListener.worker_queue(TcpListener.internal);
+    TcpListener.q.worker_id = 1;
+    TcpListener.worker_queue(protocore_tcp_listener_span());
     TEST_ASSERT_NOT_NULL(TcpListener.queue);
     TcpListener.idx = 2;
-    TcpListener.stop_dynamic(TcpListener.internal);
+    TcpListener.stop_dynamic(protocore_tcp_listener_span());
 }
 
 int main(void)

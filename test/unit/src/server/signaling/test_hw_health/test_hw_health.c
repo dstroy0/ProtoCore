@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t hw_health_work[16]; // the borrow an entry takes; HwHealth never reads it
+
 void setUp(void)
 {
 }
@@ -28,14 +30,14 @@ static void rail_init(HwRailMonitor *m, uint32_t nominal, uint32_t warn, uint32_
     HwHealth.rail.nominal_mv = nominal;
     HwHealth.rail.warn_mv = warn;
     HwHealth.rail.crit_mv = crit;
-    HwHealth.rail_init(HwHealth.internal);
+    HwHealth.rail_init(hw_health_work);
 }
 
 static HwRailVerdict rail_sample(HwRailMonitor *m, uint32_t mv)
 {
     HwHealth.rail.m = m;
     HwHealth.rail.mv = mv;
-    HwHealth.rail_sample(HwHealth.internal);
+    HwHealth.rail_sample(hw_health_work);
     return HwHealth.rail_verdict;
 }
 
@@ -44,7 +46,7 @@ static size_t rail_json(const HwRailMonitor *m, char *out, size_t cap)
     HwHealth.rail.m_ro = m;
     HwHealth.out_args.out = out;
     HwHealth.out_args.cap = cap;
-    HwHealth.rail_json(HwHealth.internal);
+    HwHealth.rail_json(hw_health_work);
     return HwHealth.n;
 }
 
@@ -56,14 +58,14 @@ static void spi_init(HwSpiBackoff *s, uint32_t start, uint32_t lo, uint32_t hi, 
     HwHealth.spi.max_hz = hi;
     HwHealth.spi.fail_trip = fail_trip;
     HwHealth.spi.ok_trip = ok_trip;
-    HwHealth.spi_init(HwHealth.internal);
+    HwHealth.spi_init(hw_health_work);
 }
 
 static uint32_t spi_result(HwSpiBackoff *s, proto_bool crc_ok)
 {
     HwHealth.spi.s = s;
     HwHealth.spi.crc_ok = crc_ok;
-    HwHealth.spi_result(HwHealth.internal);
+    HwHealth.spi_result(hw_health_work);
     return HwHealth.hz;
 }
 
@@ -71,7 +73,7 @@ static HwGpioVerdict gpio_short(proto_bool driven_high, proto_bool read_high)
 {
     HwHealth.probe.driven_high = driven_high;
     HwHealth.probe.read_high = read_high;
-    HwHealth.gpio_short(HwHealth.internal);
+    HwHealth.gpio_short(hw_health_work);
     return HwHealth.gpio_verdict;
 }
 
@@ -80,7 +82,7 @@ static HwCapVerdict cap_leak(uint32_t measured_ms, uint32_t expected_ms, uint8_t
     HwHealth.probe.measured_ms = measured_ms;
     HwHealth.probe.expected_ms = expected_ms;
     HwHealth.probe.tol_pct = tol_pct;
-    HwHealth.cap_leak(HwHealth.internal);
+    HwHealth.cap_leak(hw_health_work);
     return HwHealth.cap_verdict;
 }
 

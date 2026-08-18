@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t jwt_work[16]; // the borrow an entry takes; Jwt never reads it
+
 // Reference token + secret straight out of test/test_jwt/test_jwt.cpp: HS256 over payload
 // {"sub":"alice","role":"admin","exp":2000000000,"iat":1700000000} with secret "s3cr3t-key".
 static const char *SECRET = "s3cr3t-key";
@@ -54,24 +56,24 @@ void dbench_run(void)
         Jwt.token.jws_len = token_len;
         Jwt.key.secret = secret;
         Jwt.key.secret_len = secret_len;
-        DBENCH_OP("Jwt.verify_mac", 2000, Jwt.verify_mac(Jwt.internal); sink += Jwt.ok ? 1 : 0);
+        DBENCH_OP("Jwt.verify_mac", 2000, Jwt.verify_mac(jwt_work); sink += Jwt.ok ? 1 : 0);
 
         Jwt.token.credentials = auth_hdr;
-        DBENCH_OP("Jwt.verify_bearer", 2000, Jwt.verify_bearer(Jwt.internal); sink += Jwt.ok ? 1 : 0);
+        DBENCH_OP("Jwt.verify_bearer", 2000, Jwt.verify_bearer(jwt_work); sink += Jwt.ok ? 1 : 0);
 
         // --- Codec path: base64url-decode the payload + scan JSON for a claim (medium N). ---
         Jwt.claim.name = "exp";
-        DBENCH_OP("Jwt.claim_int", 10000, Jwt.claim_int(Jwt.internal); lsink = Jwt.num; sink += Jwt.ok ? 1 : 0);
+        DBENCH_OP("Jwt.claim_int", 10000, Jwt.claim_int(jwt_work); lsink = Jwt.num; sink += Jwt.ok ? 1 : 0);
 
         Jwt.claim.name = "sub";
         Jwt.claim.out = strbuf;
         Jwt.claim.out_cap = sizeof(strbuf);
-        DBENCH_OP("Jwt.claim_str", 10000, Jwt.claim_str(Jwt.internal); sink += Jwt.ok ? 1 : 0);
+        DBENCH_OP("Jwt.claim_str", 10000, Jwt.claim_str(jwt_work); sink += Jwt.ok ? 1 : 0);
 
         // --- Pure string path: whole-token scope match, no decode (large N). ---
         Jwt.scope.claim = scope_claim;
         Jwt.scope.required = "admin";
-        DBENCH_OP("Jwt.scope_allows", 50000, Jwt.scope_allows(Jwt.internal); sink += Jwt.ok ? 1 : 0);
+        DBENCH_OP("Jwt.scope_allows", 50000, Jwt.scope_allows(jwt_work); sink += Jwt.ok ? 1 : 0);
 
         (void)sink;
         (void)lsink;

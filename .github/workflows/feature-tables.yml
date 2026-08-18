@@ -38,6 +38,7 @@ jobs:
       #   build_opt        per-example build_opt.h
       #   examples         docs/EXAMPLES.md + the README index
       #   nav_groups       the Doxygen sidebar grouping
+      #   tools_inventory  tools/TOOLS.md's per-directory tables, scanned out of tools/ itself
       #
       # The two diagram generators write .mmd files the render step below turns into PNGs.
       - name: Regenerate source-derived docs (ci.py gen)
@@ -87,7 +88,7 @@ jobs:
         with:
           files: >-
             README.md docs/README.md docs/ARCHITECTURE.md docs/configurator.html docs/EXAMPLES.md
-            docs/THEMES.md docs/FAVICONS.md test/README.md docs/diagrams
+            docs/THEMES.md docs/FAVICONS.md test/README.md tools/TOOLS.md docs/diagrams
             src/web_assets/themes/generated src/web_assets/favicons
             src/network_drivers/application/binary_asset_blobs.c
             src/network_drivers/application/binary_asset_blobs.h

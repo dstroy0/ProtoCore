@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t telemetry_work[16]; // the borrow an entry takes; Telemetry never reads it
+
 void setUp(void)
 {
 }
@@ -32,14 +34,14 @@ static void window_init(uint16_t cap)
     Telemetry.window.w = &g_w;
     Telemetry.window.buf = g_buf;
     Telemetry.window.cap = cap;
-    Telemetry.window_init(Telemetry.internal);
+    Telemetry.window_init(telemetry_work);
 }
 
 static void push(float sample)
 {
     Telemetry.window.w = &g_w;
     Telemetry.window.sample = sample;
-    Telemetry.window_push(Telemetry.internal);
+    Telemetry.window_push(telemetry_work);
 }
 
 static float rate(float value, uint32_t now_ms)
@@ -47,7 +49,7 @@ static float rate(float value, uint32_t now_ms)
     Telemetry.rate.r = &g_r;
     Telemetry.rate.value = value;
     Telemetry.rate.now_ms = now_ms;
-    Telemetry.rate_update(Telemetry.internal);
+    Telemetry.rate_update(telemetry_work);
     return Telemetry.f32;
 }
 
@@ -56,7 +58,7 @@ static double integrate(float r, uint32_t now_ms)
     Telemetry.totalizer.t = &g_t;
     Telemetry.totalizer.rate = r;
     Telemetry.totalizer.now_ms = now_ms;
-    Telemetry.totalizer_add(Telemetry.internal);
+    Telemetry.totalizer_add(telemetry_work);
     return Telemetry.f64;
 }
 
@@ -77,24 +79,24 @@ void test_window_mean_variance_stddev(void)
     }
 
     Telemetry.window.w = &g_w;
-    Telemetry.window_count(Telemetry.internal);
+    Telemetry.window_count(telemetry_work);
     TEST_ASSERT_TRUE(Telemetry.ok);
     TEST_ASSERT_EQUAL_UINT16(8u, Telemetry.u16);
 
-    Telemetry.window_mean(Telemetry.internal);
+    Telemetry.window_mean(telemetry_work);
     TEST_ASSERT_TRUE(Telemetry.ok);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, Telemetry.f32);
 
-    Telemetry.window_variance(Telemetry.internal);
+    Telemetry.window_variance(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(4.0f, Telemetry.f32);
 
-    Telemetry.window_stddev(Telemetry.internal);
+    Telemetry.window_stddev(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(2.0f, Telemetry.f32);
 
-    Telemetry.window_min(Telemetry.internal);
+    Telemetry.window_min(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(2.0f, Telemetry.f32);
 
-    Telemetry.window_max(Telemetry.internal);
+    Telemetry.window_max(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(9.0f, Telemetry.f32);
 }
 
@@ -110,21 +112,21 @@ void test_window_evicts_the_oldest_sample(void)
     push(4.0f);
 
     Telemetry.window.w = &g_w;
-    Telemetry.window_mean(Telemetry.internal);
+    Telemetry.window_mean(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(2.5f, Telemetry.f32); // (1+2+3+4)/4
 
     push(5.0f);
     Telemetry.window.w = &g_w;
-    Telemetry.window_count(Telemetry.internal);
+    Telemetry.window_count(telemetry_work);
     TEST_ASSERT_EQUAL_UINT16(4u, Telemetry.u16);
 
-    Telemetry.window_mean(Telemetry.internal);
+    Telemetry.window_mean(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(3.5f, Telemetry.f32);
 
-    Telemetry.window_min(Telemetry.internal);
+    Telemetry.window_min(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(2.0f, Telemetry.f32);
 
-    Telemetry.window_max(Telemetry.internal);
+    Telemetry.window_max(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, Telemetry.f32);
 }
 
@@ -136,7 +138,7 @@ void test_window_count_stops_at_capacity(void)
     {
         push((float)i);
         Telemetry.window.w = &g_w;
-        Telemetry.window_count(Telemetry.internal);
+        Telemetry.window_count(telemetry_work);
         const uint16_t want = (uint16_t)((i + 1u) < 3u ? (i + 1u) : 3u);
         TEST_ASSERT_EQUAL_UINT16(want, Telemetry.u16);
     }
@@ -152,11 +154,11 @@ void test_window_variance_of_a_constant_is_zero(void)
         push(1000000.0f);
     }
     Telemetry.window.w = &g_w;
-    Telemetry.window_variance(Telemetry.internal);
+    Telemetry.window_variance(telemetry_work);
     TEST_ASSERT_TRUE(Telemetry.ok);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, Telemetry.f32);
 
-    Telemetry.window_stddev(Telemetry.internal);
+    Telemetry.window_stddev(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, Telemetry.f32);
 }
 
@@ -166,13 +168,13 @@ void test_window_of_one_sample(void)
     window_init(8);
     push(-3.5f);
     Telemetry.window.w = &g_w;
-    Telemetry.window_mean(Telemetry.internal);
+    Telemetry.window_mean(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(-3.5f, Telemetry.f32);
-    Telemetry.window_variance(Telemetry.internal);
+    Telemetry.window_variance(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, Telemetry.f32);
-    Telemetry.window_min(Telemetry.internal);
+    Telemetry.window_min(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(-3.5f, Telemetry.f32);
-    Telemetry.window_max(Telemetry.internal);
+    Telemetry.window_max(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(-3.5f, Telemetry.f32);
 }
 
@@ -182,19 +184,19 @@ void test_window_statistics_need_a_sample(void)
     window_init(8);
     Telemetry.window.w = &g_w;
 
-    Telemetry.window_count(Telemetry.internal);
+    Telemetry.window_count(telemetry_work);
     TEST_ASSERT_TRUE(Telemetry.ok); // the count itself is known: it is zero
     TEST_ASSERT_EQUAL_UINT16(0u, Telemetry.u16);
 
-    Telemetry.window_mean(Telemetry.internal);
+    Telemetry.window_mean(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
-    Telemetry.window_variance(Telemetry.internal);
+    Telemetry.window_variance(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
-    Telemetry.window_stddev(Telemetry.internal);
+    Telemetry.window_stddev(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
-    Telemetry.window_min(Telemetry.internal);
+    Telemetry.window_min(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
-    Telemetry.window_max(Telemetry.internal);
+    Telemetry.window_max(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
 }
 
@@ -208,12 +210,12 @@ void test_window_init_empties_the_window(void)
     window_init(8);
 
     Telemetry.window.w = &g_w;
-    Telemetry.window_count(Telemetry.internal);
+    Telemetry.window_count(telemetry_work);
     TEST_ASSERT_EQUAL_UINT16(0u, Telemetry.u16);
 
     push(1.0f);
     Telemetry.window.w = &g_w;
-    Telemetry.window_mean(Telemetry.internal);
+    Telemetry.window_mean(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(1.0f, Telemetry.f32);
 }
 
@@ -224,7 +226,7 @@ void test_window_push_needs_bound_storage(void)
     Telemetry.window.w = &g_w;
     Telemetry.window.buf = NULL;
     Telemetry.window.cap = 8;
-    Telemetry.window_init(Telemetry.internal);
+    Telemetry.window_init(telemetry_work);
     push(1.0f);
     TEST_ASSERT_FALSE(Telemetry.ok);
 
@@ -241,7 +243,7 @@ void test_window_push_needs_bound_storage(void)
 void test_rate_is_the_first_difference_per_second(void)
 {
     Telemetry.rate.r = &g_r;
-    Telemetry.rate_init(Telemetry.internal);
+    Telemetry.rate_init(telemetry_work);
     TEST_ASSERT_TRUE(Telemetry.ok);
 
     TEST_ASSERT_EQUAL_FLOAT(0.0f, rate(10.0f, 1000u));
@@ -254,7 +256,7 @@ void test_rate_is_the_first_difference_per_second(void)
 void test_rate_scales_a_sub_second_interval(void)
 {
     Telemetry.rate.r = &g_r;
-    Telemetry.rate_init(Telemetry.internal);
+    Telemetry.rate_init(telemetry_work);
     (void)rate(0.0f, 0u);
     TEST_ASSERT_EQUAL_FLOAT(20.0f, rate(5.0f, 250u));
 }
@@ -264,7 +266,7 @@ void test_rate_scales_a_sub_second_interval(void)
 void test_rate_of_a_zero_interval_is_zero(void)
 {
     Telemetry.rate.r = &g_r;
-    Telemetry.rate_init(Telemetry.internal);
+    Telemetry.rate_init(telemetry_work);
     (void)rate(1.0f, 5000u);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, rate(9.0f, 5000u));
 }
@@ -277,7 +279,7 @@ void test_rate_of_a_zero_interval_is_zero(void)
 void test_rate_across_a_counter_rollover(void)
 {
     Telemetry.rate.r = &g_r;
-    Telemetry.rate_init(Telemetry.internal);
+    Telemetry.rate_init(telemetry_work);
     (void)rate(100.0f, 4294966796u);
     TEST_ASSERT_EQUAL_FLOAT(10.0f, rate(110.0f, 500u));
 }
@@ -287,12 +289,12 @@ void test_rate_across_a_counter_rollover(void)
 void test_rate_init_drops_the_prior_sample(void)
 {
     Telemetry.rate.r = &g_r;
-    Telemetry.rate_init(Telemetry.internal);
+    Telemetry.rate_init(telemetry_work);
     (void)rate(0.0f, 0u);
     (void)rate(1000.0f, 1000u);
 
     Telemetry.rate.r = &g_r;
-    Telemetry.rate_init(Telemetry.internal);
+    Telemetry.rate_init(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, rate(50.0f, 2000u));
     TEST_ASSERT_EQUAL_FLOAT(0.0f, rate(50.0f, 3000u));
 }
@@ -306,7 +308,7 @@ void test_rate_init_drops_the_prior_sample(void)
 void test_totalizer_is_the_trapezoidal_integral(void)
 {
     Telemetry.totalizer.t = &g_t;
-    Telemetry.totalizer_init(Telemetry.internal);
+    Telemetry.totalizer_init(telemetry_work);
     TEST_ASSERT_TRUE(Telemetry.ok);
 
     // The first sample only seeds an endpoint, so nothing is integrated yet.
@@ -315,7 +317,7 @@ void test_totalizer_is_the_trapezoidal_integral(void)
     TEST_ASSERT_EQUAL_FLOAT(15.0f, (float)integrate(10.0f, 2000u));
 
     Telemetry.totalizer.t = &g_t;
-    Telemetry.totalizer_total(Telemetry.internal);
+    Telemetry.totalizer_total(telemetry_work);
     TEST_ASSERT_TRUE(Telemetry.ok);
     TEST_ASSERT_EQUAL_FLOAT(15.0f, (float)Telemetry.f64);
 }
@@ -325,14 +327,14 @@ void test_totalizer_is_the_trapezoidal_integral(void)
 void test_totalizer_of_a_constant_rate(void)
 {
     Telemetry.totalizer.t = &g_t;
-    Telemetry.totalizer_init(Telemetry.internal);
+    Telemetry.totalizer_init(telemetry_work);
     (void)integrate(100.0f, 0u);
     for (uint32_t i = 1; i <= 10u; i++)
     {
         (void)integrate(100.0f, i * 1000u);
     }
     Telemetry.totalizer.t = &g_t;
-    Telemetry.totalizer_total(Telemetry.internal);
+    Telemetry.totalizer_total(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(1000.0f, (float)Telemetry.f64);
 }
 
@@ -343,7 +345,7 @@ void test_totalizer_of_a_constant_rate(void)
 void test_totalizer_integrates_a_negative_rate(void)
 {
     Telemetry.totalizer.t = &g_t;
-    Telemetry.totalizer_init(Telemetry.internal);
+    Telemetry.totalizer_init(telemetry_work);
     (void)integrate(0.0f, 0u);
     TEST_ASSERT_EQUAL_FLOAT(5.0f, (float)integrate(10.0f, 1000u));
     TEST_ASSERT_EQUAL_FLOAT(5.0f, (float)integrate(-10.0f, 2000u));
@@ -355,16 +357,16 @@ void test_totalizer_integrates_a_negative_rate(void)
 void test_totalizer_reset(void)
 {
     Telemetry.totalizer.t = &g_t;
-    Telemetry.totalizer_init(Telemetry.internal);
+    Telemetry.totalizer_init(telemetry_work);
     (void)integrate(10.0f, 0u);
     (void)integrate(10.0f, 1000u);
 
     Telemetry.totalizer.t = &g_t;
-    Telemetry.totalizer_reset(Telemetry.internal);
+    Telemetry.totalizer_reset(telemetry_work);
     TEST_ASSERT_TRUE(Telemetry.ok);
 
     Telemetry.totalizer.t = &g_t;
-    Telemetry.totalizer_total(Telemetry.internal);
+    Telemetry.totalizer_total(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, (float)Telemetry.f64);
 
     TEST_ASSERT_EQUAL_FLOAT(0.0f, (float)integrate(10.0f, 9000u));
@@ -377,7 +379,7 @@ void test_totalizer_reset(void)
 void test_totalizer_across_a_counter_rollover(void)
 {
     Telemetry.totalizer.t = &g_t;
-    Telemetry.totalizer_init(Telemetry.internal);
+    Telemetry.totalizer_init(telemetry_work);
     (void)integrate(10.0f, 4294966796u);
     TEST_ASSERT_EQUAL_FLOAT(10.0f, (float)integrate(10.0f, 500u));
 }
@@ -386,27 +388,27 @@ void test_totalizer_across_a_counter_rollover(void)
 void test_calls_refuse_a_null_accumulator(void)
 {
     Telemetry.window.w = NULL;
-    Telemetry.window_init(Telemetry.internal);
+    Telemetry.window_init(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
-    Telemetry.window_push(Telemetry.internal);
+    Telemetry.window_push(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
-    Telemetry.window_count(Telemetry.internal);
+    Telemetry.window_count(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
     TEST_ASSERT_EQUAL_UINT16(0u, Telemetry.u16);
 
     Telemetry.rate.r = NULL;
-    Telemetry.rate_init(Telemetry.internal);
+    Telemetry.rate_init(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
-    Telemetry.rate_update(Telemetry.internal);
+    Telemetry.rate_update(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
     TEST_ASSERT_EQUAL_FLOAT(0.0f, Telemetry.f32);
 
     Telemetry.totalizer.t = NULL;
-    Telemetry.totalizer_init(Telemetry.internal);
+    Telemetry.totalizer_init(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
-    Telemetry.totalizer_add(Telemetry.internal);
+    Telemetry.totalizer_add(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
-    Telemetry.totalizer_total(Telemetry.internal);
+    Telemetry.totalizer_total(telemetry_work);
     TEST_ASSERT_FALSE(Telemetry.ok);
 }
 
@@ -424,16 +426,16 @@ void test_two_windows_are_independent(void)
     Telemetry.window.w = &other;
     Telemetry.window.buf = other_buf;
     Telemetry.window.cap = 4;
-    Telemetry.window_init(Telemetry.internal);
+    Telemetry.window_init(telemetry_work);
     Telemetry.window.w = &other;
     Telemetry.window.sample = 1.0f;
-    Telemetry.window_push(Telemetry.internal);
+    Telemetry.window_push(telemetry_work);
 
     Telemetry.window.w = &other;
-    Telemetry.window_mean(Telemetry.internal);
+    Telemetry.window_mean(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(1.0f, Telemetry.f32);
 
     Telemetry.window.w = &g_w;
-    Telemetry.window_mean(Telemetry.internal);
+    Telemetry.window_mean(telemetry_work);
     TEST_ASSERT_EQUAL_FLOAT(15.0f, Telemetry.f32);
 }

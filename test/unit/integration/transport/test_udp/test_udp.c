@@ -11,13 +11,15 @@
 
 #include <unity.h>
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
 static const protocore_ip *addr(const char *s)
 {
     static protocore_ip a;
     a = (protocore_ip){PROTOCORE_IP_NONE, {0}};
     Ip.args.text = s;
     Ip.args.out = &a;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     return &a;
 }
 
@@ -53,7 +55,7 @@ static void on_dgram(const uint8_t *d, size_t n, const struct protocore_udp_peer
         UdpListener.peer_args.ip_out = g_peer_ip[g_calls];
         UdpListener.peer_args.ip_cap = sizeof(g_peer_ip[0]);
         UdpListener.peer_args.port_out = &g_peer_port[g_calls];
-        UdpListener.peer_addr(UdpListener.internal);
+        UdpListener.peer_addr(protocore_udp_listener_span());
     }
     g_calls++;
 }
@@ -66,7 +68,7 @@ static void ensure_listening(void)
         UdpListener.port = PORT;
         UdpListener.bind.handler = on_dgram;
         UdpListener.bind.handler_ctx = NULL;
-        UdpListener.listen(UdpListener.internal);
+        UdpListener.listen(protocore_udp_listener_span());
         TEST_ASSERT_TRUE(UdpListener.ok);
         open = 1;
     }
@@ -84,7 +86,7 @@ void test_listener_delivers_in_order_with_boundaries()
     const uint8_t b[] = {9, 8, 7, 6, 5};
     deliver("10.0.0.5", 1234, a, sizeof(a));
     deliver("10.0.0.6", 4321, b, sizeof(b));
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
 
     TEST_ASSERT_EQUAL_INT(2, g_calls);
     TEST_ASSERT_EQUAL_UINT(3, g_len[0]);
@@ -97,7 +99,7 @@ void test_listener_delivers_in_order_with_boundaries()
     TEST_ASSERT_EQUAL_STRING("10.0.0.6", g_peer_ip[1]);
 
     g_calls = 0;
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
     TEST_ASSERT_EQUAL_INT(0, g_calls);
 }
 
@@ -114,7 +116,7 @@ void test_listener_peer_carries_v6()
     memset(&parsed, 0, sizeof(parsed));
     Ip.args.text = "2001:db8::dead:beef";
     Ip.args.out = &parsed;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     TEST_ASSERT_TRUE(Ip.ok);
     memcpy(protocore_net_ip6_wbytes(&src), parsed.bytes, 16);
 
@@ -125,7 +127,7 @@ void test_listener_peer_carries_v6()
     b.len = 1;
     b.tot_len = 1;
     p->on_recv(p->arg, p, &b, &src, 7777);
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
 
     TEST_ASSERT_EQUAL_INT(1, g_calls);
     TEST_ASSERT_EQUAL_UINT16(7777, g_peer_port[0]);
@@ -146,7 +148,7 @@ void test_listener_sends_from_a_bound_port()
         UdpListener.send_args.dst_port = 99;
         UdpListener.send_args.data = pay;
         UdpListener.send_args.len = sizeof(pay);
-        UdpListener.sendto(UdpListener.internal);
+        UdpListener.sendto(protocore_udp_listener_span());
         TEST_ASSERT_TRUE(UdpListener.ok);
         TEST_ASSERT_EQUAL_UINT(i, protocore_net_host_udp_sent());
     }
@@ -156,7 +158,7 @@ void test_listener_sends_from_a_bound_port()
     UdpListener.send_args.dst_port = 99;
     UdpListener.send_args.data = pay;
     UdpListener.send_args.len = sizeof(pay);
-    UdpListener.sendto(UdpListener.internal);
+    UdpListener.sendto(protocore_udp_listener_span());
     TEST_ASSERT_FALSE(UdpListener.ok);
     TEST_ASSERT_EQUAL_UINT(8, protocore_net_host_udp_sent());
 }
@@ -170,13 +172,13 @@ void test_client_refuses_a_malformed_address_without_sending()
     UdpClient.dst_port = 99;
     UdpClient.data = pay;
     UdpClient.len = sizeof(pay);
-    UdpClient.sendto(UdpClient.internal);
+    UdpClient.sendto(protocore_udp_client_span());
     TEST_ASSERT_FALSE(UdpClient.ok);
     UdpClient.dst = NULL;
     UdpClient.dst_port = 99;
     UdpClient.data = pay;
     UdpClient.len = sizeof(pay);
-    UdpClient.sendto(UdpClient.internal);
+    UdpClient.sendto(protocore_udp_client_span());
     TEST_ASSERT_FALSE(UdpClient.ok);
     TEST_ASSERT_EQUAL_UINT(0, protocore_net_host_udp_sent());
 }
@@ -190,13 +192,13 @@ void test_client_sends_both_families()
     UdpClient.dst_port = 99;
     UdpClient.data = pay;
     UdpClient.len = sizeof(pay);
-    UdpClient.sendto(UdpClient.internal);
+    UdpClient.sendto(protocore_udp_client_span());
     TEST_ASSERT_TRUE(UdpClient.ok);
     UdpClient.dst = addr("2001:db8::1");
     UdpClient.dst_port = 99;
     UdpClient.data = pay;
     UdpClient.len = sizeof(pay);
-    UdpClient.sendto(UdpClient.internal);
+    UdpClient.sendto(protocore_udp_client_span());
     TEST_ASSERT_TRUE(UdpClient.ok);
     TEST_ASSERT_EQUAL_UINT(2, protocore_net_host_udp_count());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_NET_TYPE_V4, protocore_net_host_udp_at(0)->type);
@@ -213,7 +215,7 @@ void test_a_spent_pbuf_pool_drops_the_datagram()
     UdpClient.dst_port = 99;
     UdpClient.data = pay;
     UdpClient.len = sizeof(pay);
-    UdpClient.sendto(UdpClient.internal);
+    UdpClient.sendto(protocore_udp_client_span());
     TEST_ASSERT_FALSE(UdpClient.ok);
     TEST_ASSERT_EQUAL_UINT(0, protocore_net_host_udp_sent());
 
@@ -221,7 +223,7 @@ void test_a_spent_pbuf_pool_drops_the_datagram()
     UdpClient.dst_port = 99;
     UdpClient.data = pay;
     UdpClient.len = sizeof(pay);
-    UdpClient.sendto(UdpClient.internal);
+    UdpClient.sendto(protocore_udp_client_span());
     TEST_ASSERT_TRUE(UdpClient.ok);
     TEST_ASSERT_EQUAL_UINT(1, protocore_net_host_udp_sent());
 }
@@ -236,7 +238,7 @@ void test_every_send_returns_its_pbuf()
         UdpClient.dst_port = 99;
         UdpClient.data = pay;
         UdpClient.len = sizeof(pay);
-        UdpClient.sendto(UdpClient.internal);
+        UdpClient.sendto(protocore_udp_client_span());
         TEST_ASSERT_TRUE(UdpClient.ok);
     }
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_NET_HOST_PBUFS * 3, protocore_net_host_udp_sent());
@@ -255,7 +257,7 @@ void test_capture_renders_a_v4_datagram()
     UdpClient.dst_port = 9999;
     UdpClient.data = pay;
     UdpClient.len = sizeof(pay);
-    UdpClient.sendto(UdpClient.internal);
+    UdpClient.sendto(protocore_udp_client_span());
     TEST_ASSERT_TRUE(UdpClient.ok);
     TEST_ASSERT_EQUAL_UINT(1, protocore_net_host_udp_count());
 
@@ -287,7 +289,7 @@ void test_capture_renders_a_v6_datagram()
     UdpClient.dst_port = 5353;
     UdpClient.data = pay;
     UdpClient.len = sizeof(pay);
-    UdpClient.sendto(UdpClient.internal);
+    UdpClient.sendto(protocore_udp_client_span());
     TEST_ASSERT_TRUE(UdpClient.ok);
 
     size_t n = protocore_net_pcap_render(g_pcap, sizeof(g_pcap));
@@ -315,7 +317,7 @@ void test_capture_refuses_a_buffer_that_cannot_hold_it()
     UdpClient.dst_port = 99;
     UdpClient.data = pay;
     UdpClient.len = sizeof(pay);
-    UdpClient.sendto(UdpClient.internal);
+    UdpClient.sendto(protocore_udp_client_span());
     TEST_ASSERT_TRUE(UdpClient.ok);
     TEST_ASSERT_EQUAL_UINT(0, protocore_net_pcap_render(g_pcap, PROTOCORE_PCAP_GLOBAL_HDR_LEN));
     TEST_ASSERT_EQUAL_UINT(0, protocore_net_pcap_render(g_pcap, 8));

@@ -19,13 +19,15 @@
 #ifndef PROTOCORE_HAPPY_EYEBALLS_H
 #define PROTOCORE_HAPPY_EYEBALLS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
-#include "shared/ip/ip.h"
-
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_HAPPY_EYEBALLS_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 #ifndef PROTOCORE_HE_MAX
 #define PROTOCORE_HE_MAX 16 ///< candidate list size the interleave step handles (larger lists are only sorted).
@@ -34,25 +36,79 @@ PROTOCORE_BEGIN_DECLS
 /** @brief RFC 8305 recommended Connection Attempt Delay (ms); the spec floor is 100, default 250. */
 #define PROTOCORE_HE_ATTEMPT_DELAY_MS 250
 
-/**
- * @brief RFC 6724-style preference score for a destination address (higher is tried first).
- *        Ordered by scope (global > private/ULA > link-local > loopback > multicast > unspecified),
- *        and within a scope a native IPv6 address outranks IPv4 (v4-mapped counts as IPv4).
- */
-int protocore_he_pref(const protocore_ip *ip);
+#include "shared/ip/ip.h" // protocore_ip: the type a parameter points at
+
+/** @brief What pref takes: ip. */
+typedef struct
+{
+    const protocore_ip *ip;
+} HappyEyeballsPrefArgs;
+
+/** @brief What order takes: list, n. */
+typedef struct
+{
+    protocore_ip *list;
+    size_t n;
+} HappyEyeballsOrderArgs;
+
+/** @brief What attempt_due takes: last_start_ms, now_ms, ... */
+typedef struct
+{
+    uint32_t last_start_ms;
+    uint32_t now_ms;
+    uint32_t attempt_delay_ms;
+} HappyEyeballsAttemptDueArgs;
 
 /**
- * @brief Order a candidate list for Happy Eyeballs: stable-sort by preference (desc), then interleave
- *        address families (RFC 8305 sec 4) so successive attempts alternate v6/v4 where possible.
- *        Lists longer than PROTOCORE_HE_MAX are sorted but not interleaved.
+ * @brief Dual-stack destination selection + Happy Eyeballs fallback (PROTOCORE_ENABLE_HAPPY_EYEBALLS).
+ *
+ * A caller sets the members a call takes, invokes it through ::HappyEyeballs with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   HappyEyeballs.pref_args.ip = ...;
+ *   HappyEyeballs.pref(work);
+ *   // HappyEyeballs.n is what the call reports
+ *
+ * @var HappyEyeballsNs::pref_args  what pref takes: ip
+ * @var HappyEyeballsNs::order_args  what order takes: list, n
+ * @var HappyEyeballsNs::attempt_due_args  what attempt_due takes: last_start_ms, now_ms,
+ * @var HappyEyeballsNs::ok  true when now_ms - last_start_ms >= attempt_delay_ms (wrap-safe)
+ * @var HappyEyeballsNs::n  the count a call reports
+ * @var HappyEyeballsNs::pref  RFC 6724-style preference score for a destination address (higher ...
+ * @var HappyEyeballsNs::order  order a candidate list for Happy Eyeballs: stable-sort by ...
+ * @var HappyEyeballsNs::attempt_due  connection Attempt Delay gate (RFC 8305 sec 5): may the next ...
+ *
+ * @c work is PROTOCORE_HAPPY_EYEBALLS_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-void protocore_he_order(protocore_ip *list, size_t n);
+typedef struct
+{
+    HappyEyeballsPrefArgs pref_args;
+    HappyEyeballsOrderArgs order_args;
+    HappyEyeballsAttemptDueArgs attempt_due_args;
+
+    proto_bool ok;
+    int n;
+
+    void (*const pref)(uint8_t *restrict work);
+    void (*const order)(uint8_t *restrict work);
+    void (*const attempt_due)(uint8_t *restrict work);
+} HappyEyeballsNs;
+
+/** @brief The one symbol this module exports. */
+extern HappyEyeballsNs HappyEyeballs;
 
 /**
- * @brief Connection Attempt Delay gate (RFC 8305 sec 5): may the next candidate's attempt start yet?
- * @return true when @p now_ms - @p last_start_ms >= @p attempt_delay_ms (wrap-safe).
+ * @brief The PROTOCORE_HAPPY_EYEBALLS_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-proto_bool protocore_he_attempt_due(uint32_t last_start_ms, uint32_t now_ms, uint32_t attempt_delay_ms);
+uint8_t *protocore_happy_eyeballs_span(void);
 
 PROTOCORE_END_DECLS
 

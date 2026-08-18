@@ -176,9 +176,6 @@ typedef struct
     MqttMessageCb on_message; ///< the Topic Name and Payload sink; null delivers nowhere
 } MqttDeliveryArgs;
 
-/** @brief The Client's own state and the calls that reach it, described only in mqtt.c. */
-struct MqttInternal;
-
 /**
  * @brief The MQTT Client (OASIS MQTT Version 3.1.1).
  *
@@ -264,7 +261,6 @@ struct MqttInternal;
  * @var MqttNs::connected  true while the Server has accepted the CONNECT
  * @var MqttNs::disconnect
  * Send DISCONNECT and close the Network Connection (sec 3.14).
- * @var MqttNs::internal   the Client's state and the calls that reach it
  */
 typedef struct
 {
@@ -283,34 +279,45 @@ typedef struct
     uint8_t u8;
     proto_bool session_present;
 
-    void (*encode_remaining_length)(struct MqttInternal *ctx);
-    void (*decode_remaining_length)(struct MqttInternal *ctx);
-    void (*build_connect)(struct MqttInternal *ctx);
-    void (*build_publish)(struct MqttInternal *ctx);
-    void (*build_subscribe)(struct MqttInternal *ctx);
-    void (*build_unsubscribe)(struct MqttInternal *ctx);
-    void (*build_ack)(struct MqttInternal *ctx);
-    void (*build_pingreq)(struct MqttInternal *ctx);
-    void (*build_disconnect)(struct MqttInternal *ctx);
-    void (*parse_fixed_header)(struct MqttInternal *ctx);
-    void (*parse_publish)(struct MqttInternal *ctx);
-    void (*parse_ack)(struct MqttInternal *ctx);
-    void (*parse_connack)(struct MqttInternal *ctx);
-    void (*parse_suback)(struct MqttInternal *ctx);
-    void (*on_message)(struct MqttInternal *ctx);
-    void (*connect)(struct MqttInternal *ctx);
-    void (*publish)(struct MqttInternal *ctx);
-    void (*subscribe)(struct MqttInternal *ctx);
-    void (*unsubscribe)(struct MqttInternal *ctx);
-    void (*loop)(struct MqttInternal *ctx);
-    void (*connected)(struct MqttInternal *ctx);
-    void (*disconnect)(struct MqttInternal *ctx);
-
-    struct MqttInternal *internal;
+    void (*const encode_remaining_length)(uint8_t *restrict work);
+    void (*const decode_remaining_length)(uint8_t *restrict work);
+    void (*const build_connect)(uint8_t *restrict work);
+    void (*const build_publish)(uint8_t *restrict work);
+    void (*const build_subscribe)(uint8_t *restrict work);
+    void (*const build_unsubscribe)(uint8_t *restrict work);
+    void (*const build_ack)(uint8_t *restrict work);
+    void (*const build_pingreq)(uint8_t *restrict work);
+    void (*const build_disconnect)(uint8_t *restrict work);
+    void (*const parse_fixed_header)(uint8_t *restrict work);
+    void (*const parse_publish)(uint8_t *restrict work);
+    void (*const parse_ack)(uint8_t *restrict work);
+    void (*const parse_connack)(uint8_t *restrict work);
+    void (*const parse_suback)(uint8_t *restrict work);
+    void (*const on_message)(uint8_t *restrict work);
+    void (*const connect)(uint8_t *restrict work);
+    void (*const publish)(uint8_t *restrict work);
+    void (*const subscribe)(uint8_t *restrict work);
+    void (*const unsubscribe)(uint8_t *restrict work);
+    void (*const loop)(uint8_t *restrict work);
+    void (*const connected)(uint8_t *restrict work);
+    void (*const disconnect)(uint8_t *restrict work);
 } MqttNs;
 
 /** @brief The one symbol this module exports. */
 extern MqttNs Mqtt;
+
+/**
+ * @brief The PROTOCORE_MQTT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+#if PROTOCORE_HAS_NET_STACK
+uint8_t *protocore_mqtt_span(void);
+#endif // PROTOCORE_HAS_NET_STACK
 
 PROTOCORE_END_DECLS
 

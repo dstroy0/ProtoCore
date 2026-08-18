@@ -7,7 +7,8 @@
  */
 
 #include "server/core/power_mgmt.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
+#include "mmgr/membuild.h"  // protocore_sb frame builder
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_POWER_MGMT
 
@@ -25,25 +26,45 @@ struct PowerMgmtStorage
     proto_bool bt_released;
 };
 
-/**
- * @brief The governor's state and the calls that reach it - what PowerMgmtNs points at.
- *
- * @var PowerMgmtInternal::store  what it latched about this boot
- * @var PowerMgmtInternal::ns     the handle a caller sets a call's members on
- */
-struct PowerMgmtInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define POWER_MGMT_OFF_CTX 0u
+static_assert(POWER_MGMT_OFF_CTX + sizeof(struct PowerMgmtStorage) <= PROTOCORE_POWER_MGMT_BORROW,
+              "PROTOCORE_POWER_MGMT_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define POWER_MGMT_CTX(w) ((struct PowerMgmtStorage *)(void *)((w) + POWER_MGMT_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct PowerMgmtStorage *store;
-    PowerMgmtNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_POWER_MGMT_BORROW persistent bytes, or null while the pool was short
+} PowerOwnCtx;
+static PowerOwnCtx s_own;
 
-static struct PowerMgmtStorage s_store = {PROTO_FALSE, PROTO_FALSE, PROTO_FALSE};
-
-static struct PowerMgmtInternal s_pwr = {.store = &s_store, .ns = &Power};
-
-static void power_defaults(struct PowerMgmtInternal *restrict ctx)
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_power_mgmt_span(void)
 {
-    PowerCfg *cfg = ctx->ns->cfg_out;
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_POWER_MGMT_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void power_defaults(uint8_t *restrict work)
+{
+    (void)work;
+    PowerCfg *cfg = Power.cfg_out;
     if (!cfg)
     {
         return;
@@ -56,14 +77,15 @@ static void power_defaults(struct PowerMgmtInternal *restrict ctx)
     cfg->recover_ms = PROTOCORE_POWER_RECOVER_MS;
 }
 
-static void power_decide(struct PowerMgmtInternal *restrict ctx)
+static void power_decide(uint8_t *restrict work)
 {
-    const PowerCfg *cfg = ctx->ns->plan_args.cfg;
-    uint8_t load_pct = ctx->ns->plan_args.load_pct;
-    const int16_t temp_c = ctx->ns->plan_args.temp_c;
-    const proto_bool brownout_boot = ctx->ns->plan_args.brownout_boot;
-    const uint32_t since_boot_ms = ctx->ns->plan_args.since_boot_ms;
-    const proto_bool was_throttled = ctx->ns->plan_args.was_throttled;
+    (void)work;
+    const PowerCfg *cfg = Power.plan_args.cfg;
+    uint8_t load_pct = Power.plan_args.load_pct;
+    const int16_t temp_c = Power.plan_args.temp_c;
+    const proto_bool brownout_boot = Power.plan_args.brownout_boot;
+    const uint32_t since_boot_ms = Power.plan_args.since_boot_ms;
+    const proto_bool was_throttled = Power.plan_args.was_throttled;
 
     PowerPlan p;
     p.cpu_mhz = 0;
@@ -71,7 +93,7 @@ static void power_decide(struct PowerMgmtInternal *restrict ctx)
     p.recovering = PROTO_FALSE;
     if (!cfg)
     {
-        ctx->ns->plan = p;
+        Power.plan = p;
         return;
     }
 
@@ -95,7 +117,7 @@ static void power_decide(struct PowerMgmtInternal *restrict ctx)
     if (p.recovering || p.throttled)
     {
         p.cpu_mhz = cfg->mhz_min;
-        ctx->ns->plan = p;
+        Power.plan = p;
         return;
     }
     if (load_pct > 100)
@@ -103,17 +125,21 @@ static void power_decide(struct PowerMgmtInternal *restrict ctx)
         load_pct = 100;
     }
     p.cpu_mhz = (load_pct >= cfg->busy_pct) ? cfg->mhz_max : cfg->mhz_min;
-    ctx->ns->plan = p;
+    Power.plan = p;
 }
 
-static void power_json(struct PowerMgmtInternal *restrict ctx)
+static void power_json(uint8_t *restrict work)
 {
-    const PowerPlan *plan = ctx->ns->out_args.plan;
-    const int16_t temp_c = ctx->ns->out_args.temp_c;
-    char *out = ctx->ns->out_args.out;
-    const size_t cap = ctx->ns->out_args.cap;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const PowerPlan *plan = Power.out_args.plan;
+    const int16_t temp_c = Power.out_args.temp_c;
+    char *out = Power.out_args.out;
+    const size_t cap = Power.out_args.cap;
 
-    ctx->ns->n = 0;
+    Power.n = 0;
     if (!plan || !out || cap == 0)
     {
         return;
@@ -145,7 +171,7 @@ static void power_json(struct PowerMgmtInternal *restrict ctx)
         out[0] = '\0';
         return;
     }
-    ctx->ns->n = n;
+    Power.n = n;
 }
 
 // ---------------------------------------------------------------------------
@@ -154,33 +180,40 @@ static void power_json(struct PowerMgmtInternal *restrict ctx)
 
 #if PROTOCORE_HAS_VENDOR_PM
 
-static void power_brownout(struct PowerMgmtInternal *restrict ctx)
+static void power_brownout(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     // Read once and latch: the reset reason describes this boot, so it must not change under a
     // caller polling it every tick through the recovery window.
-    if (!ctx->store->boot_checked)
+    if (!POWER_MGMT_CTX(work)->boot_checked)
     {
-        ctx->store->brownout_latched = protocore_platform_reset_was_brownout() ? PROTO_TRUE : PROTO_FALSE;
-        ctx->store->boot_checked = PROTO_TRUE;
+        POWER_MGMT_CTX(work)->brownout_latched = protocore_platform_reset_was_brownout() ? PROTO_TRUE : PROTO_FALSE;
+        POWER_MGMT_CTX(work)->boot_checked = PROTO_TRUE;
     }
-    ctx->ns->ok = ctx->store->brownout_latched;
+    Power.ok = POWER_MGMT_CTX(work)->brownout_latched;
 }
 
-static void power_die_temp(struct PowerMgmtInternal *restrict ctx)
+static void power_die_temp(uint8_t *restrict work)
 {
-    ctx->ns->temp_c = protocore_platform_die_temp_c();
+    (void)work;
+    Power.temp_c = protocore_platform_die_temp_c();
 }
 
-static void power_cpu_mhz(struct PowerMgmtInternal *restrict ctx)
+static void power_cpu_mhz(uint8_t *restrict work)
 {
-    ctx->ns->mhz = protocore_platform_cpu_mhz();
+    (void)work;
+    Power.mhz = protocore_platform_cpu_mhz();
 }
 
-static void power_apply(struct PowerMgmtInternal *restrict ctx)
+static void power_apply(uint8_t *restrict work)
 {
-    const PowerPlan *plan = ctx->ns->out_args.plan;
+    (void)work;
+    const PowerPlan *plan = Power.out_args.plan;
 
-    ctx->ns->ok = PROTO_FALSE;
+    Power.ok = PROTO_FALSE;
     if (!plan || plan->cpu_mhz == 0)
     {
         return;
@@ -189,38 +222,43 @@ static void power_apply(struct PowerMgmtInternal *restrict ctx)
     {
         return; // already there; re-setting the clock is not free
     }
-    ctx->ns->ok = protocore_platform_set_cpu_mhz((uint32_t)plan->cpu_mhz) ? PROTO_TRUE : PROTO_FALSE;
+    Power.ok = protocore_platform_set_cpu_mhz((uint32_t)plan->cpu_mhz) ? PROTO_TRUE : PROTO_FALSE;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_PM
 
 #if PROTOCORE_HAS_VENDOR_BT
-static void power_gate_bt(struct PowerMgmtInternal *restrict ctx)
+static void power_gate_bt(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (ctx->store->bt_released)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Power.ok = PROTO_FALSE;
+    if (POWER_MGMT_CTX(work)->bt_released)
     {
         return; // already handed back, so this call released nothing
     }
     proto_bool ok = protocore_platform_bt_release() ? PROTO_TRUE : PROTO_FALSE;
-    ctx->store->bt_released = ok;
-    ctx->ns->ok = ok;
+    POWER_MGMT_CTX(work)->bt_released = ok;
+    Power.ok = ok;
 }
 #endif // PROTOCORE_HAS_VENDOR_BT
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-PowerMgmtNs Power = {.defaults = power_defaults,
-                     .decide = power_decide,
-                     .json = power_json,
+PowerMgmtNs Power = {
+    .defaults = power_defaults,
+    .decide = power_decide,
+    .json = power_json,
 #if PROTOCORE_HAS_VENDOR_PM
-                     .brownout = power_brownout,
-                     .die_temp = power_die_temp,
-                     .cpu_mhz = power_cpu_mhz,
-                     .apply = power_apply,
+    .brownout = power_brownout,
+    .die_temp = power_die_temp,
+    .cpu_mhz = power_cpu_mhz,
+    .apply = power_apply,
 #endif
 #if PROTOCORE_HAS_VENDOR_BT
-                     .gate_bt = power_gate_bt,
+    .gate_bt = power_gate_bt,
 #endif
-                     .internal = &s_pwr};
+};
 
 #endif // PROTOCORE_ENABLE_POWER_MGMT

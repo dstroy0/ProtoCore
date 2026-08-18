@@ -14,8 +14,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # Every type Prettier owns, not just markdown: the JSON, the workflow YAML, the docs CSS and
+      # the hand-edited web-asset HTML drift the same way and nothing was checking them.
+      # .prettierignore states what is out of scope and why. `tools/harness.py ci fmt` runs the
+      # same glob locally, and the pre-commit hook formats these types on the way in.
       - name: Run Prettier check
-        run: npx prettier@3.9.6 --check "**/*.md"
+        run: npx prettier@3.9.6 --check "**/*.{md,json,yml,yaml,css,html,js,cjs,mjs}"
 
       # On a pull request, flag stale tables so the author regenerates them. On a
       # push to main the Feature Tables workflow regenerates and commits them
@@ -63,6 +67,8 @@ jobs:
       #   flag_deps        the README flag-dependency block
       #   readme_sections  the docs/README.md reference sections
       #   changelog        the changelog decoration
+      #   tools_inventory  tools/TOOLS.md's per-directory tables, scanned out of tools/ itself:
+      #                    a PR that adds a script, or changes one's flags, makes them stale
       #   configurator     not markdown, but the same staleness class, and this is the only
       #   build_opt        workflow that runs on a pull request: Feature Tables regenerates both
       #                    on push to main, so without them a PR could not tell you it had made
@@ -72,4 +78,4 @@ jobs:
         run: |
           python3 -m tools.ci_tooling.ci gen --check \
             interop_matrix hardware_ref readme_intro api_flow examples \
-            flag_deps readme_sections changelog configurator build_opt
+            flag_deps readme_sections changelog configurator build_opt tools_inventory

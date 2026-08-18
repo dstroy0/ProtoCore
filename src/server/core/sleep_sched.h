@@ -44,9 +44,6 @@ typedef struct
     const protocore_sleep_cfg *cfg; ///< the thresholds
 } SleepAskArgs;
 
-/** @brief The scheduler's own call, described only in sleep_sched.c. */
-struct SleepSchedInternal;
-
 /**
  * @brief The dynamic sleep-cycle scheduler.
  *
@@ -56,7 +53,6 @@ struct SleepSchedInternal;
  * @var SleepSchedNs::ask       where the clock stands against the last activity
  * @var SleepSchedNs::ms        milliseconds to sleep, or 0 to stay awake
  * @var SleepSchedNs::next      decide the window
- * @var SleepSchedNs::internal  the call that decides it
  *
  * Wrap-safe: uses the unsigned delta `now - last_active_ms`, correct across a millis() rollover.
  * Reports 0 while idle < `idle_ms`; otherwise a window clamped to [min_ms, max_ms] that grows with
@@ -71,9 +67,7 @@ typedef struct
 
     uint32_t ms;
 
-    void (*next)(struct SleepSchedInternal *ctx);
-
-    struct SleepSchedInternal *internal;
+    void (*const next)(uint8_t *restrict work);
 } SleepSchedNs;
 
 /** @brief The one symbol this module exports. */

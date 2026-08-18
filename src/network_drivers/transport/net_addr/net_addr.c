@@ -82,34 +82,19 @@ proto_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *o
     return PROTO_TRUE;
 }
 
-/**
- * @brief Carrying an address between the stack's form and this library's.
- *
- * RFC 9293 sec 3.9.2: "Any lower-level protocol will have to provide the source address,
- * destination address, and protocol fields." These two convert between the form the lower-level
- * module states them in and the family-tagged form every layer above reads. No state - the
- * conversion is a pure function of its operands.
- *
- * @var NetAddrInternal::ns  the handle a caller sets a call's operands on
- */
-struct NetAddrInternal
+static void to_ip(uint8_t *restrict work)
 {
-    NetAddrNs *ns;
-};
-
-static struct NetAddrInternal s_net_addr = {.ns = &NetAddr};
-
-static void to_ip(struct NetAddrInternal *restrict ctx)
-{
-    protocore_net_addr_to_ip(ctx->ns->in.addr, ctx->ns->in.out_ip);
+    (void)work;
+    protocore_net_addr_to_ip(NetAddr.in.addr, NetAddr.in.out_ip);
 }
 
-static void from_ip(struct NetAddrInternal *restrict ctx)
+static void from_ip(uint8_t *restrict work)
 {
-    ctx->ns->ok = protocore_net_addr_from_ip(ctx->ns->out.ip, ctx->ns->out.out_addr);
+    (void)work;
+    NetAddr.ok = protocore_net_addr_from_ip(NetAddr.out.ip, NetAddr.out.out_addr);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-NetAddrNs NetAddr = {.to_ip = to_ip, .from_ip = from_ip, .internal = &s_net_addr};
+NetAddrNs NetAddr = {.to_ip = to_ip, .from_ip = from_ip};
 
 PROTOCORE_END_DECLS

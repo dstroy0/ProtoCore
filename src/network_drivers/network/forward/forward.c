@@ -13,6 +13,7 @@
  */
 
 #include "network_drivers/network/forward/forward.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem.h"
 
 #if PROTOCORE_ENABLE_FORWARD
@@ -77,29 +78,23 @@ struct ForwardStorage
     protocore_forward_stats stats; ///< the counters
 };
 
-/**
- * @brief The plane's tables and the calls that reach them - what ForwardNs points at.
- *
- * @var ForwardInternal::store  the controls, the access list, the routes and the counters
- * @var ForwardInternal::ns     the handle a caller sets a call's members on
- */
-struct ForwardInternal
-{
-    struct ForwardStorage *store;
-    ForwardNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every region is
+// that pointer plus a compile-time offset, so the assert below proves the span covers them before
+// anything runs.
+#define FORWARD_OFF_CTX 0u
+static_assert(FORWARD_OFF_CTX + sizeof(struct ForwardStorage) <= PROTOCORE_FORWARD_BORROW,
+              "PROTOCORE_FORWARD_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-// acl_default starts at PROTOCORE_FWD_ALLOW, so an empty access list passes every frame; a zero
-// fill would read as PROTOCORE_FWD_DENY.
-static struct ForwardStorage s_store = {
-    .acl_default = PROTOCORE_FWD_ALLOW,
-};
+// The region, at its offset in the caller's borrow.
+#define FORWARD_CTX(w) ((struct ForwardStorage *)(void *)((w) + FORWARD_OFF_CTX))
 
-static struct ForwardInternal s_forward = {.store = &s_store, .ns = &Forward};
-
-// The one time source (server/clock/clock.h): read the millisecond count off the clock handle.
+// The one time source (server/clock/clock.h). Clock.ms is where the LAST reading landed, not a
+// live read, so a rate window that only looked at it measured against whichever instant something
+// else happened to stamp. Take the reading, then report it.
 static uint32_t fwd_now(void)
 {
+    Clock.millis(Clock.internal);
     return Clock.ms;
 }
 
@@ -109,7 +104,7 @@ static uint32_t fwd_now(void)
 static proto_bool fwd_iface_present(uint8_t id)
 {
     Physical.iface.id = id;
-    Physical.iface_present(Physical.internal);
+    Physical.iface_present(protocore_physical_span());
     return Physical.ok;
 }
 
@@ -117,17 +112,17 @@ static proto_bool fwd_iface_present(uint8_t id)
 static int16_t fwd_iface_at(uint8_t i)
 {
     Physical.iface.i = i;
-    Physical.iface_at(Physical.internal);
+    Physical.iface_at(protocore_physical_span());
     return Physical.i16;
 }
 
 // Hand the held frame to layer 1 for interface @p id.
-static proto_bool fwd_iface_send(struct ForwardInternal *restrict ctx, uint8_t id)
+static proto_bool fwd_iface_send(uint8_t *restrict work, uint8_t id)
 {
     Physical.iface.id = id;
-    Physical.iface.data = ctx->ns->frame.data;
-    Physical.iface.len = ctx->ns->frame.len;
-    Physical.iface_send(Physical.internal);
+    Physical.iface.data = Forward.frame.data;
+    Physical.iface.len = Forward.frame.len;
+    Physical.iface_send(protocore_physical_span());
     return Physical.ok;
 }
 
@@ -141,14 +136,14 @@ typedef enum PROTO_ENUM_PACKED
 
 // Resolve the control on forwarding for (src_if -> dst): a DENY wins; otherwise the first matching
 // ALLOW governs and its index lands in @p allow_idx; otherwise nothing matched.
-static resolve_result fwd_resolve(struct ForwardInternal *restrict ctx, uint8_t dst, int *allow_idx)
+static resolve_result fwd_resolve(uint8_t *restrict work, uint8_t dst, int *allow_idx)
 {
-    const uint8_t src = ctx->ns->src_if;
+    const uint8_t src = Forward.src_if;
     int allow = -1;
     proto_bool deny = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_RULES; i++)
     {
-        const rule *r = &ctx->store->rules[i];
+        const rule *r = &FORWARD_CTX(work)->rules[i];
         if (!r->used || r->src != src || r->dst != dst)
         {
             continue;
@@ -237,17 +232,17 @@ static proto_bool acl_match(const acl_entry *a, uint8_t src, const uint8_t *data
 
 // The access list: the first matching entry's action decides, otherwise the fallback.
 // RFC 1812 sec 5.3.9.
-static proto_bool fwd_acl_permits(struct ForwardInternal *restrict ctx)
+static proto_bool fwd_acl_permits(uint8_t *restrict work)
 {
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ACL; i++)
     {
-        const acl_entry *a = &ctx->store->acl[i];
-        if (a->used && acl_match(a, ctx->ns->src_if, ctx->ns->frame.data, ctx->ns->frame.len))
+        const acl_entry *a = &FORWARD_CTX(work)->acl[i];
+        if (a->used && acl_match(a, Forward.src_if, Forward.frame.data, Forward.frame.len))
         {
             return a->action == PROTOCORE_FWD_ALLOW;
         }
     }
-    return ctx->store->acl_default == PROTOCORE_FWD_ALLOW;
+    return FORWARD_CTX(work)->acl_default == PROTOCORE_FWD_ALLOW;
 }
 
 // Copy @p patlen already-masked bytes of @p pattern and @p mask into @p dst_pattern / @p dst_mask,
@@ -274,98 +269,125 @@ static proto_bool pat_args_valid(const FwdMatchArgs *m)
     return m->patlen == 0 || (m->pattern != NULL && m->mask != NULL);
 }
 
-static void forward_reset(struct ForwardInternal *restrict ctx)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_FORWARD_BORROW persistent bytes, or null while the pool was short
+} ForwardOwnCtx;
+static ForwardOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_forward_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_FORWARD_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // An empty access list passes every frame, and the borrow arrives zeroed, which reads
+            // as PROTOCORE_FWD_DENY. The carve happens once, so the default is applied here.
+            FORWARD_CTX(s_own.span)->acl_default = PROTOCORE_FWD_ALLOW;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void forward_reset(uint8_t *restrict work)
 {
     // The interfaces are layer 1's; emptying this plane leaves them registered.
-    mem.set(ctx->store->rules, 0, sizeof(ctx->store->rules));
-    mem.set(ctx->store->acl, 0, sizeof(ctx->store->acl));
-    mem.set(ctx->store->routes, 0, sizeof(ctx->store->routes));
-    ctx->store->acl_default = PROTOCORE_FWD_ALLOW;
+    mem.set(FORWARD_CTX(work)->rules, 0, sizeof(FORWARD_CTX(work)->rules));
+    mem.set(FORWARD_CTX(work)->acl, 0, sizeof(FORWARD_CTX(work)->acl));
+    mem.set(FORWARD_CTX(work)->routes, 0, sizeof(FORWARD_CTX(work)->routes));
+    FORWARD_CTX(work)->acl_default = PROTOCORE_FWD_ALLOW;
 #if PROTOCORE_FWD_INSPECT
-    ctx->store->inspector = NULL;
-    ctx->store->inspect_ctx = NULL;
+    FORWARD_CTX(work)->inspector = NULL;
+    FORWARD_CTX(work)->inspect_ctx = NULL;
 #endif
-    mem.set(&ctx->store->stats, 0, sizeof(ctx->store->stats));
+    mem.set(&FORWARD_CTX(work)->stats, 0, sizeof(FORWARD_CTX(work)->stats));
 }
 
-static void forward_acl_set_default(struct ForwardInternal *restrict ctx)
+static void forward_acl_set_default(uint8_t *restrict work)
 {
-    ctx->store->acl_default = ctx->ns->acl.fallback;
+    FORWARD_CTX(work)->acl_default = Forward.acl.fallback;
 }
 
-static void forward_acl_add(struct ForwardInternal *restrict ctx)
+static void forward_acl_add(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!pat_args_valid(&ctx->ns->match))
+    Forward.ok = PROTO_FALSE;
+    if (!pat_args_valid(&Forward.match))
     {
         return;
     }
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ACL; i++)
     {
-        acl_entry *a = &ctx->store->acl[i];
+        acl_entry *a = &FORWARD_CTX(work)->acl[i];
         if (a->used)
         {
             continue;
         }
-        pat_store(a->pattern, a->mask, ctx->ns->match.pattern, ctx->ns->match.mask, ctx->ns->match.patlen);
-        a->offset = ctx->ns->match.offset;
-        a->src = ctx->ns->src_if;
-        a->patlen = ctx->ns->match.patlen;
-        a->action = ctx->ns->acl.action;
+        pat_store(a->pattern, a->mask, Forward.match.pattern, Forward.match.mask, Forward.match.patlen);
+        a->offset = Forward.match.offset;
+        a->src = Forward.src_if;
+        a->patlen = Forward.match.patlen;
+        a->action = Forward.acl.action;
         a->used = PROTO_TRUE;
-        ctx->ns->ok = PROTO_TRUE;
+        Forward.ok = PROTO_TRUE;
         return;
     }
     // table full
 }
 
-static void forward_route_add(struct ForwardInternal *restrict ctx)
+static void forward_route_add(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!pat_args_valid(&ctx->ns->match))
+    Forward.ok = PROTO_FALSE;
+    if (!pat_args_valid(&Forward.match))
     {
         return;
     }
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ROUTES; i++)
     {
-        route *rt = &ctx->store->routes[i];
+        route *rt = &FORWARD_CTX(work)->routes[i];
         if (rt->used)
         {
             continue;
         }
-        pat_store(rt->pattern, rt->mask, ctx->ns->match.pattern, ctx->ns->match.mask, ctx->ns->match.patlen);
+        pat_store(rt->pattern, rt->mask, Forward.match.pattern, Forward.match.mask, Forward.match.patlen);
         rt->window_start = 0;
-        rt->offset = ctx->ns->match.offset;
-        rt->rate_cap = ctx->ns->route.rate_cap_per_sec;
+        rt->offset = Forward.match.offset;
+        rt->rate_cap = Forward.route.rate_cap_per_sec;
         rt->count = 0;
-        rt->src = ctx->ns->src_if;
-        rt->patlen = ctx->ns->match.patlen;
-        rt->egress = ctx->ns->route.egress_if;
+        rt->src = Forward.src_if;
+        rt->patlen = Forward.match.patlen;
+        rt->egress = Forward.route.egress_if;
         rt->used = PROTO_TRUE;
-        ctx->ns->ok = PROTO_TRUE;
+        Forward.ok = PROTO_TRUE;
         return;
     }
     // table full
 }
 
-static void forward_add_rule(struct ForwardInternal *restrict ctx)
+static void forward_add_rule(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    Forward.ok = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_RULES; i++)
     {
-        rule *r = &ctx->store->rules[i];
+        rule *r = &FORWARD_CTX(work)->rules[i];
         if (r->used)
         {
             continue;
         }
         r->window_start = 0;
-        r->rate_cap = ctx->ns->rule.rate_cap_per_sec;
+        r->rate_cap = Forward.rule.rate_cap_per_sec;
         r->count = 0;
-        r->src = ctx->ns->src_if;
-        r->dst = ctx->ns->rule.dst_if;
-        r->action = ctx->ns->rule.action;
+        r->src = Forward.src_if;
+        r->dst = Forward.rule.dst_if;
+        r->action = Forward.rule.action;
         r->used = PROTO_TRUE;
-        ctx->ns->ok = PROTO_TRUE;
+        Forward.ok = PROTO_TRUE;
         return;
     }
     // table full
@@ -374,67 +396,68 @@ static void forward_add_rule(struct ForwardInternal *restrict ctx)
 // The first matching policy route decides the frame: it leaves on that one next hop, or it is
 // dropped. Returns true when a route matched, and writes the next hops reached to ns->n.
 // RFC 1812 sec 5.2.4.3.
-static proto_bool fwd_policy_route(struct ForwardInternal *restrict ctx)
+static proto_bool fwd_policy_route(uint8_t *restrict work)
 {
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ROUTES; i++)
     {
-        route *rt = &ctx->store->routes[i];
-        if (!rt->used || (rt->src != PROTOCORE_FWD_IF_ANY && rt->src != ctx->ns->src_if))
+        route *rt = &FORWARD_CTX(work)->routes[i];
+        if (!rt->used || (rt->src != PROTOCORE_FWD_IF_ANY && rt->src != Forward.src_if))
         {
             continue;
         }
-        if (!pat_match(rt->offset, rt->pattern, rt->mask, rt->patlen, ctx->ns->frame.data, ctx->ns->frame.len))
+        if (!pat_match(rt->offset, rt->pattern, rt->mask, rt->patlen, Forward.frame.data, Forward.frame.len))
         {
             continue;
         }
-        ctx->store->stats.policy_routed++;
-        if (rt->egress == ctx->ns->src_if) // a frame never leaves on the interface it arrived on
+        FORWARD_CTX(work)->stats.policy_routed++;
+        if (rt->egress == Forward.src_if) // a frame never leaves on the interface it arrived on
         {
             return PROTO_TRUE;
         }
         if (!fwd_iface_present(rt->egress)) // an unregistered next hop drops the frame
         {
-            ctx->store->stats.send_fail++;
+            FORWARD_CTX(work)->stats.send_fail++;
             return PROTO_TRUE;
         }
         if (rate_gate(&rt->window_start, &rt->count, rt->rate_cap))
         {
-            ctx->store->stats.rate_dropped++;
+            FORWARD_CTX(work)->stats.rate_dropped++;
             return PROTO_TRUE;
         }
-        if (fwd_iface_send(ctx, rt->egress))
+        if (fwd_iface_send(work, rt->egress))
         {
-            ctx->store->stats.forwarded++;
-            ctx->ns->n = 1;
+            FORWARD_CTX(work)->stats.forwarded++;
+            Forward.n = 1;
             return PROTO_TRUE;
         }
-        ctx->store->stats.send_fail++;
+        FORWARD_CTX(work)->stats.send_fail++;
         return PROTO_TRUE;
     }
     return PROTO_FALSE;
 }
 
-static void forward_ingress(struct ForwardInternal *restrict ctx)
+static void forward_ingress(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->store->stats.frames_in++;
-    if (!fwd_acl_permits(ctx)) // the access list runs before any control on forwarding
+    Forward.n = 0;
+    FORWARD_CTX(work)->stats.frames_in++;
+    if (!fwd_acl_permits(work)) // the access list runs before any control on forwarding
     {
-        ctx->store->stats.acl_denied++;
+        FORWARD_CTX(work)->stats.acl_denied++;
         return;
     }
 #if PROTOCORE_FWD_INSPECT
     // The inspection hook reads the frame between the access list and the route lookup.
-    if (ctx->store->inspector && ctx->store->inspector(ctx->ns->src_if, ctx->ns->frame.data, ctx->ns->frame.len,
-                                                       ctx->store->inspect_ctx) == PROTOCORE_FWD_INSPECT_DROP)
+    if (FORWARD_CTX(work)->inspector &&
+        FORWARD_CTX(work)->inspector(Forward.src_if, Forward.frame.data, Forward.frame.len,
+                                     FORWARD_CTX(work)->inspect_ctx) == PROTOCORE_FWD_INSPECT_DROP)
     {
-        ctx->store->stats.inspect_dropped++;
+        FORWARD_CTX(work)->stats.inspect_dropped++;
         return;
     }
 #endif
     // A policy route is taken ahead of the (src, dst) fan-out: the first matching route sends the
     // frame to its one next hop and ends the walk-through.
-    if (fwd_policy_route(ctx))
+    if (fwd_policy_route(work))
     {
         return;
     }
@@ -442,49 +465,49 @@ static void forward_ingress(struct ForwardInternal *restrict ctx)
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
         int16_t dst = fwd_iface_at(i);
-        if (dst == PROTOCORE_IF_NONE || (uint8_t)dst == ctx->ns->src_if) // never back out the source
+        if (dst == PROTOCORE_IF_NONE || (uint8_t)dst == Forward.src_if) // never back out the source
         {
             continue;
         }
         int idx = -1;
-        resolve_result r = fwd_resolve(ctx, (uint8_t)dst, &idx);
+        resolve_result r = fwd_resolve(work, (uint8_t)dst, &idx);
         if (r == RESOLVE_RESULT_R_NOROUTE)
         {
             continue;
         }
         if (r == RESOLVE_RESULT_R_DENY)
         {
-            ctx->store->stats.blocked++;
+            FORWARD_CTX(work)->stats.blocked++;
             continue;
         }
-        if (rate_exceeded(&ctx->store->rules[idx]))
+        if (rate_exceeded(&FORWARD_CTX(work)->rules[idx]))
         {
-            ctx->store->stats.rate_dropped++;
+            FORWARD_CTX(work)->stats.rate_dropped++;
             continue;
         }
-        if (fwd_iface_send(ctx, (uint8_t)dst))
+        if (fwd_iface_send(work, (uint8_t)dst))
         {
-            ctx->store->stats.forwarded++;
+            FORWARD_CTX(work)->stats.forwarded++;
             n++;
         }
         else
         {
-            ctx->store->stats.send_fail++;
+            FORWARD_CTX(work)->stats.send_fail++;
         }
     }
-    ctx->ns->n = n;
+    Forward.n = n;
 }
 
-static void forward_get_stats(struct ForwardInternal *restrict ctx)
+static void forward_get_stats(uint8_t *restrict work)
 {
-    ctx->ns->stats = ctx->store->stats;
+    Forward.stats = FORWARD_CTX(work)->stats;
 }
 
 #if PROTOCORE_FWD_INSPECT
-static void forward_set_inspector(struct ForwardInternal *restrict ctx)
+static void forward_set_inspector(uint8_t *restrict work)
 {
-    ctx->store->inspector = ctx->ns->inspect.fn;
-    ctx->store->inspect_ctx = ctx->ns->inspect.ctx;
+    FORWARD_CTX(work)->inspector = Forward.inspect.fn;
+    FORWARD_CTX(work)->inspect_ctx = Forward.inspect.ctx;
 }
 #endif
 
@@ -499,7 +522,6 @@ ForwardNs Forward = {.reset = forward_reset,
                      .set_inspector = forward_set_inspector,
 #endif
                      .ingress = forward_ingress,
-                     .get_stats = forward_get_stats,
-                     .internal = &s_forward};
+                     .get_stats = forward_get_stats};
 
 #endif // PROTOCORE_ENABLE_FORWARD

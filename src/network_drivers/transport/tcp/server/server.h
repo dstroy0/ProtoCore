@@ -74,9 +74,6 @@ typedef struct
     uint8_t conn_slot; ///< the slot that event names
 } TcpQueueArgs;
 
-/** @brief The listener pool's own state and the calls that reach it, described only in server.c. */
-struct TcpListenerInternal;
-
 /**
  * @brief The accepting side of TCP: bound ports, their worker queues, and the accept-time gates.
  *
@@ -116,7 +113,6 @@ struct TcpListenerInternal;
  * @var TcpListenerNs::ip_allow_add_cidr    add one CIDR rule to the allowlist
  * @var TcpListenerNs::ip_allowed           the allowlist verdict for an address
  * @var TcpListenerNs::ip_allowlist_reset   clear every allowlist rule
- * @var TcpListenerNs::internal             the pool's state and the calls that reach it
  */
 typedef struct
 {
@@ -130,37 +126,44 @@ typedef struct
     int32_t i32;
     protocore_platform_queue queue;
 
-    void (*stop)(struct TcpListenerInternal *ctx);
-    void (*stop_all)(struct TcpListenerInternal *ctx);
-    void (*stop_dynamic)(struct TcpListenerInternal *ctx);
-    void (*add)(struct TcpListenerInternal *ctx);
-    void (*add_dynamic)(struct TcpListenerInternal *ctx);
-    void (*enqueue)(struct TcpListenerInternal *ctx);
-#if PROTOCORE_ENABLE_DIFFSERV
-    void (*set_dscp)(struct TcpListenerInternal *ctx);
-#endif
+    void (*const stop)(uint8_t *restrict work);
+    void (*const stop_all)(uint8_t *restrict work);
+    void (*const stop_dynamic)(uint8_t *restrict work);
+    void (*const add)(uint8_t *restrict work);
+    void (*const add_dynamic)(uint8_t *restrict work);
+    void (*const enqueue)(uint8_t *restrict work);
+    void (*const set_dscp)(uint8_t *restrict work);
 #if PROTOCORE_WORKER_COUNT > 1
     // One worker owns every slot at N=1, so there are no per-worker queues to name.
-    void (*worker_queues_init)(struct TcpListenerInternal *ctx);
-    void (*worker_queue)(struct TcpListenerInternal *ctx);
+    void (*const worker_queues_init)(uint8_t *restrict work);
+    void (*const worker_queue)(uint8_t *restrict work);
 #else
     // Above one worker an event routes to its slot owner's queue, so a listener row has none.
-    void (*listener_queue)(struct TcpListenerInternal *ctx);
+    void (*const listener_queue)(uint8_t *restrict work);
 #endif
-    void (*accept_allowed)(struct TcpListenerInternal *ctx);
-    void (*accept_throttle_reset)(struct TcpListenerInternal *ctx);
-    void (*accept_allowed_ip)(struct TcpListenerInternal *ctx);
-    void (*per_ip_throttle_reset)(struct TcpListenerInternal *ctx);
-    void (*ip_allow_add)(struct TcpListenerInternal *ctx);
-    void (*ip_allow_add_cidr)(struct TcpListenerInternal *ctx);
-    void (*ip_allowed)(struct TcpListenerInternal *ctx);
-    void (*ip_allowlist_reset)(struct TcpListenerInternal *ctx);
-
-    struct TcpListenerInternal *internal;
+    void (*const accept_allowed)(uint8_t *restrict work);
+    void (*const accept_throttle_reset)(uint8_t *restrict work);
+    void (*const accept_allowed_ip)(uint8_t *restrict work);
+    void (*const per_ip_throttle_reset)(uint8_t *restrict work);
+    void (*const ip_allow_add)(uint8_t *restrict work);
+    void (*const ip_allow_add_cidr)(uint8_t *restrict work);
+    void (*const ip_allowed)(uint8_t *restrict work);
+    void (*const ip_allowlist_reset)(uint8_t *restrict work);
 } TcpListenerNs;
 
 /** @brief The one symbol this module exports. */
 extern TcpListenerNs TcpListener;
+
+/**
+ * @brief The PROTOCORE_TCP_LISTENER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_tcp_listener_span(void);
 
 PROTOCORE_END_DECLS
 

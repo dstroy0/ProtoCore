@@ -15106,11 +15106,11 @@
   "native_web_terminal",
   "native_webdav_handler"
  ],
- "src/network_drivers/application/scp/scp.c": [
+ "src/network_drivers/session/scp/scp.c": [
   "native_scp",
   "native_scp_wire"
  ],
- "src/network_drivers/application/scp/scp.h": [
+ "src/network_drivers/session/scp/scp.h": [
   "native_application",
   "native_auth",
   "native_chunked",
@@ -15139,7 +15139,7 @@
   "native_web_terminal",
   "native_webdav_handler"
  ],
- "src/network_drivers/application/scp/ssh_scp.h": [
+ "src/network_drivers/session/scp/ssh_scp.h": [
   "native_application",
   "native_auth",
   "native_chunked",

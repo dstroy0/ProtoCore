@@ -23,6 +23,8 @@
 
 #include <unity.h>
 
+static uint8_t roaming_work[16]; // the borrow an entry takes; Roam never reads it
+
 void setUp(void)
 {
 }
@@ -72,14 +74,14 @@ static void parse_nr(const uint8_t *elems, size_t len, protocore_roam_neighbor *
     Roam.nr.len = len;
     Roam.nr.out = out;
     Roam.nr.max = max;
-    Roam.parse_neighbor_report(Roam.internal);
+    Roam.parse_neighbor_report(roaming_work);
 }
 
 static void parse_btm(const uint8_t *frame, size_t len)
 {
     Roam.btm.frame = frame;
     Roam.btm.len = len;
-    Roam.parse_btm_request(Roam.internal);
+    Roam.parse_btm_request(roaming_work);
 }
 
 static void decide(const uint8_t *serving, int8_t rssi, const protocore_roam_neighbor *list, uint8_t n,
@@ -91,7 +93,7 @@ static void decide(const uint8_t *serving, int8_t rssi, const protocore_roam_nei
     Roam.cand.n = n;
     Roam.rules.request = req;
     Roam.rules.policy = pol;
-    Roam.decide(Roam.internal);
+    Roam.decide(roaming_work);
 }
 
 // Element ID 52 yields BSSID and Channel Number. The report carries no signal reading, so every

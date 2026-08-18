@@ -60,9 +60,6 @@ typedef struct
     proto_bool up;           ///< that interface's new carrier state
 } LinkArgs;
 
-/** @brief The manager's own calls, described only in link_manager.c. */
-struct LinkManagerInternal;
-
 /**
  * @brief The interface failover policy over a caller-owned manager.
  *
@@ -78,7 +75,6 @@ struct LinkManagerInternal;
  * @var LinkManagerNs::select    the highest-priority interface that is up, -1 when none is
  * @var LinkManagerNs::active    the interface currently carrying traffic
  * @var LinkManagerNs::set       change one interface's carrier state and reselect
- * @var LinkManagerNs::internal  the calls that select and switch
  *
  * Higher priority wins; the lower index breaks a tie. No storage member: the manager is the
  * caller's, so nothing is held here.
@@ -92,12 +88,10 @@ typedef struct
     int to;
     proto_bool changed;
 
-    void (*init)(struct LinkManagerInternal *ctx);
-    void (*select)(struct LinkManagerInternal *ctx);
-    void (*active)(struct LinkManagerInternal *ctx);
-    void (*set)(struct LinkManagerInternal *ctx);
-
-    struct LinkManagerInternal *internal;
+    void (*const init)(uint8_t *restrict work);
+    void (*const select)(uint8_t *restrict work);
+    void (*const active)(uint8_t *restrict work);
+    void (*const set)(uint8_t *restrict work);
 } LinkManagerNs;
 
 /** @brief The one symbol this module exports. */

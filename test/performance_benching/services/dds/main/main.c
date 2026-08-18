@@ -21,6 +21,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t dds_work[16]; // the borrow an entry takes; Rtps never reads it
+
 // Same fixtures as test/test_dds/test_dds.cpp (known-good, spec-conformant).
 static const uint8_t GUID[12] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 static const uint8_t VENDOR[2] = {0x01, 0x03};
@@ -48,7 +50,7 @@ void dbench_run(void)
     Rtps.hdr.vendor_id = VENDOR;
     Rtps.out.buf = msg;
     Rtps.out.cap = sizeof(msg);
-    Rtps.header(Rtps.internal);
+    Rtps.header(dds_work);
     size_t msg_len = Rtps.n;
 
     uint8_t ts_body[8] = {0};
@@ -58,7 +60,7 @@ void dbench_run(void)
     Rtps.sub.contents_len = 8;
     Rtps.out.buf = msg + msg_len;
     Rtps.out.cap = sizeof(msg) - msg_len;
-    Rtps.submessage(Rtps.internal);
+    Rtps.submessage(dds_work);
     msg_len += Rtps.n;
 
     uint8_t data_body[4] = {0xDE, 0xAD, 0xBE, 0xEF};
@@ -68,7 +70,7 @@ void dbench_run(void)
     Rtps.sub.contents_len = 4;
     Rtps.out.buf = msg + msg_len;
     Rtps.out.cap = sizeof(msg) - msg_len;
-    Rtps.submessage(Rtps.internal);
+    Rtps.submessage(dds_work);
     msg_len += Rtps.n;
 
     for (;;)
@@ -80,7 +82,7 @@ void dbench_run(void)
         Rtps.hdr.vendor_id = VENDOR;
         Rtps.out.buf = hdr_out;
         Rtps.out.cap = sizeof(hdr_out);
-        DBENCH_OP("Rtps.header", 100000, Rtps.header(Rtps.internal); sink += Rtps.n);
+        DBENCH_OP("Rtps.header", 100000, Rtps.header(dds_work); sink += Rtps.n);
 
         Rtps.sub.submessage_id = RTPS_SM_INFO_TS;
         Rtps.sub.flags = RTPS_FLAG_ENDIAN;
@@ -88,17 +90,17 @@ void dbench_run(void)
         Rtps.sub.contents_len = sizeof(sm_body);
         Rtps.out.buf = sm_out;
         Rtps.out.cap = sizeof(sm_out);
-        DBENCH_OP("Rtps.submessage LE", 100000, Rtps.submessage(Rtps.internal); sink += Rtps.n);
+        DBENCH_OP("Rtps.submessage LE", 100000, Rtps.submessage(dds_work); sink += Rtps.n);
 
         Rtps.sub.submessage_id = RTPS_SM_DATA;
         Rtps.sub.flags = 0x00;
-        DBENCH_OP("Rtps.submessage BE", 100000, Rtps.submessage(Rtps.internal); sink += Rtps.n);
+        DBENCH_OP("Rtps.submessage BE", 100000, Rtps.submessage(dds_work); sink += Rtps.n);
 
         Rtps.msg.msg = msg;
         Rtps.msg.len = msg_len;
         Rtps.sink.on_submessage = count_submessage;
         Rtps.sink.arg = NULL;
-        DBENCH_BULK("Rtps.parse", 50000, msg_len, Rtps.parse(Rtps.internal); sink += Rtps.ok ? 1 : 0);
+        DBENCH_BULK("Rtps.parse", 50000, msg_len, Rtps.parse(dds_work); sink += Rtps.ok ? 1 : 0);
 
         (void)sink;
         DBENCH_DONE();

@@ -13,11 +13,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t zwave_work[16]; // the borrow an entry takes; Zwave never reads it
+
 void dbench_run(void)
 {
     static const uint8_t data[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
     static uint8_t frame[32];
-    uint16_t flen = protocore_zwave_build_frame(ZWAVE_REQ, 0x13, data, sizeof(data), frame, sizeof(frame));
+    Zwave.build_frame_args.type = ZWAVE_REQ;
+    Zwave.build_frame_args.cmd = 0x13;
+    Zwave.build_frame_args.data = data;
+    Zwave.build_frame_args.data_len = sizeof(data);
+    Zwave.build_frame_args.out = frame;
+    Zwave.build_frame_args.cap = sizeof(frame);
+    Zwave.build_frame(zwave_work);
+    uint16_t flen = Zwave.value;
 
     for (;;)
     {
@@ -31,7 +40,14 @@ void dbench_run(void)
             uint8_t cmd;
             const uint8_t *pdata;
             uint8_t pdata_len;
-            sink += protocore_zwave_parse_frame(frame, flen, &type, &cmd, &pdata, &pdata_len) >= 0 ? cmd : 0;
+            Zwave.parse_frame_args.raw = frame;
+            Zwave.parse_frame_args.len = flen;
+            Zwave.parse_frame_args.type = &type;
+            Zwave.parse_frame_args.cmd = &cmd;
+            Zwave.parse_frame_args.pdata = &pdata;
+            Zwave.parse_frame_args.pdata_len = &pdata_len;
+            Zwave.parse_frame(zwave_work);
+            sink += Zwave.n >= 0 ? cmd : 0;
         });
         DBENCH_OP("protocore_zwave_build_ack", 200000, sink += protocore_zwave_build_ack(out, sizeof(out)));
         (void)sink;

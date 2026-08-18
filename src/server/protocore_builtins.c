@@ -32,7 +32,7 @@ static inline void register_if(ProtoConn proto, const ProtoHandler *h)
     {
         Protocols.proto = proto;
         Protocols.h = h;
-        Protocols.add(Protocols.internal);
+        Protocols.add(protocore_session_span());
     }
 }
 

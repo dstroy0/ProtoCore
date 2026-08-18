@@ -50,7 +50,7 @@ static proto_bool begin(uint16_t pre, uint16_t post, void *ctx)
     cfg.sink = on_window;
     cfg.ctx = ctx;
     TraceCapture.cfg = &cfg;
-    TraceCapture.begin(TraceCapture.internal);
+    TraceCapture.begin(protocore_trace_capture_span());
     return TraceCapture.ok;
 }
 
@@ -58,19 +58,19 @@ static uint16_t feed(const uint16_t *s, uint16_t n)
 {
     TraceCapture.feed.samples = s;
     TraceCapture.feed.n = n;
-    TraceCapture.feed_in(TraceCapture.internal);
+    TraceCapture.feed_in(protocore_trace_capture_span());
     return TraceCapture.accepted;
 }
 
 static proto_bool trigger(void)
 {
-    TraceCapture.trigger(TraceCapture.internal);
+    TraceCapture.trigger(protocore_trace_capture_span());
     return TraceCapture.ok;
 }
 
 static proto_bool capturing(void)
 {
-    TraceCapture.capturing(TraceCapture.internal);
+    TraceCapture.capturing(protocore_trace_capture_span());
     return TraceCapture.ok;
 }
 
@@ -78,7 +78,7 @@ static protocore_tc_stats stats(void)
 {
     protocore_tc_stats st;
     TraceCapture.feed.stats = &st;
-    TraceCapture.get_stats(TraceCapture.internal);
+    TraceCapture.get_stats(protocore_trace_capture_span());
     return st;
 }
 
@@ -89,11 +89,11 @@ void setUp(void)
     g_windows = 0;
     g_ctx_seen = NULL;
     (void)begin(1, 1, NULL);
-    TraceCapture.end(TraceCapture.internal);
+    TraceCapture.end(protocore_trace_capture_span());
 }
 void tearDown(void)
 {
-    TraceCapture.end(TraceCapture.internal);
+    TraceCapture.end(protocore_trace_capture_span());
 }
 
 // The window straddles the trigger: its first pretrigger_samples are the last samples that arrived
@@ -210,7 +210,7 @@ void test_trace_id_counts_completed_windows(void)
 void test_arming_is_refused_when_it_cannot_be_honored(void)
 {
     TraceCapture.cfg = NULL;
-    TraceCapture.begin(TraceCapture.internal);
+    TraceCapture.begin(protocore_trace_capture_span());
     TEST_ASSERT_FALSE(TraceCapture.ok);
 
     static protocore_tc_config cfg;
@@ -219,7 +219,7 @@ void test_arming_is_refused_when_it_cannot_be_honored(void)
     cfg.sink = NULL;
     cfg.ctx = NULL;
     TraceCapture.cfg = &cfg;
-    TraceCapture.begin(TraceCapture.internal);
+    TraceCapture.begin(protocore_trace_capture_span());
     TEST_ASSERT_FALSE(TraceCapture.ok);
 
     TEST_ASSERT_FALSE(begin(0, 0, NULL)); // no samples on either side of the trigger
@@ -244,7 +244,7 @@ void test_samples_with_nothing_armed_are_counted_dropped(void)
     TEST_ASSERT_EQUAL_UINT16(0, feed(NULL, 5));
     TEST_ASSERT_EQUAL_UINT32(5u, stats().samples_dropped);
 
-    TraceCapture.end(TraceCapture.internal);
+    TraceCapture.end(protocore_trace_capture_span());
     TEST_ASSERT_EQUAL_UINT16(0, feed(s, 3));
     TEST_ASSERT_EQUAL_UINT32(8u, stats().samples_dropped);
     TEST_ASSERT_FALSE(trigger()); // and a trigger with nothing armed is refused
@@ -331,6 +331,6 @@ void test_a_stats_read_with_no_destination_is_refused(void)
     (void)feed(s, 2); // nothing armed: two samples dropped
 
     TraceCapture.feed.stats = NULL;
-    TraceCapture.get_stats(TraceCapture.internal);
+    TraceCapture.get_stats(protocore_trace_capture_span());
     TEST_ASSERT_EQUAL_UINT32(2u, stats().samples_dropped);
 }

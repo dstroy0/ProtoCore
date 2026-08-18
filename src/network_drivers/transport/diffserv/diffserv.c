@@ -10,9 +10,12 @@
  * pcb pool it touches, and both read these defaults.
  */
 
-#include "diffserv.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DIFFSERV
+
+#include "diffserv.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 /**
  * @brief The two code points this server marks with, held where only this file describes them.
@@ -27,58 +30,94 @@ struct DiffServStorage
     uint8_t udp_dscp; ///< default DSCP for outbound UDP datagrams (0 = best-effort)
 };
 
-/**
- * @brief The marks and the calls that reach them - what DiffServNs points at.
- *
- * @var DiffServInternal::store  the two code points
- * @var DiffServInternal::ns     the handle a caller sets a call's mark on
- */
-struct DiffServInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define DIFFSERV_OFF_CTX 0u
+static_assert(DIFFSERV_OFF_CTX + sizeof(struct DiffServStorage) <= PROTOCORE_DIFFSERV_BORROW,
+              "PROTOCORE_DIFFSERV_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define DIFFSERV_CTX(w) ((struct DiffServStorage *)(void *)((w) + DIFFSERV_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct DiffServStorage *store;
-    DiffServNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_DIFFSERV_BORROW persistent bytes, or null while the pool was short
+} DiffServOwnCtx;
+static DiffServOwnCtx s_own;
 
-static struct DiffServStorage s_store;
-
-static struct DiffServInternal s_diffserv = {.store = &s_store, .ns = &DiffServ};
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_diffserv_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_DIFFSERV_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // Masked to six bits on write, so a caller cannot spill into the two currently-unused bits.
-static void set_default(struct DiffServInternal *restrict ctx)
+static void set_default(uint8_t *restrict work)
 {
-    ctx->store->tcp_dscp = (uint8_t)(ctx->ns->dscp & 0x3F);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    DIFFSERV_CTX(work)->tcp_dscp = (uint8_t)(DiffServ.dscp & 0x3F);
 }
 
-static void default_dscp(struct DiffServInternal *restrict ctx)
+static void default_dscp(uint8_t *restrict work)
 {
-    ctx->ns->u8 = ctx->store->tcp_dscp;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    DiffServ.u8 = DIFFSERV_CTX(work)->tcp_dscp;
 }
 
-static void set_udp(struct DiffServInternal *restrict ctx)
+static void set_udp(uint8_t *restrict work)
 {
-    ctx->store->udp_dscp = (uint8_t)(ctx->ns->dscp & 0x3F);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    DIFFSERV_CTX(work)->udp_dscp = (uint8_t)(DiffServ.dscp & 0x3F);
 }
 
-static void udp_dscp(struct DiffServInternal *restrict ctx)
+static void udp_dscp(uint8_t *restrict work)
 {
-    ctx->ns->u8 = ctx->store->udp_dscp;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    DiffServ.u8 = DIFFSERV_CTX(work)->udp_dscp;
 }
 
+// Not entries: these take no borrow, so they read the module's own span. A null span is the pool
+// coming up short, and reports the all-zero DSCP, which RFC 2474 sec 4.1 makes the default PHB.
 uint8_t protocore_diffserv_default_dscp(void)
 {
-    return s_store.tcp_dscp;
+    uint8_t *work = protocore_diffserv_span();
+    return work ? DIFFSERV_CTX(work)->tcp_dscp : 0u;
 }
 
 uint8_t protocore_diffserv_udp_dscp(void)
 {
-    return s_store.udp_dscp;
+    uint8_t *work = protocore_diffserv_span();
+    return work ? DIFFSERV_CTX(work)->udp_dscp : 0u;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-DiffServNs DiffServ = {.set_default = set_default,
-                       .default_dscp = default_dscp,
-                       .set_udp = set_udp,
-                       .udp_dscp = udp_dscp,
-                       .internal = &s_diffserv};
+DiffServNs DiffServ = {
+    .set_default = set_default, .default_dscp = default_dscp, .set_udp = set_udp, .udp_dscp = udp_dscp};
 
 #endif // PROTOCORE_ENABLE_DIFFSERV

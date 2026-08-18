@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t ikev2_work[16]; // the borrow an entry takes; Ike never reads it
+
 void setUp(void)
 {
 }
@@ -60,7 +62,7 @@ void test_rfc7296_ike_header_layout(void)
     Ike.hdr.length = 0x0000012Cu; // 300
     Ike.out.buf = g_out;
     Ike.out.cap = sizeof(g_out);
-    Ike.hdr_build(Ike.internal);
+    Ike.hdr_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(28, Ike.n);
 
     static const uint8_t WANT[28] = {0x92, 0x1F, 0x4E, 0x77, 0x9B, 0x28, 0xC1, 0x03, // Initiator's SPI
@@ -77,7 +79,7 @@ void test_rfc7296_ike_header_layout(void)
     memset(&Ike.hdr, 0, sizeof(Ike.hdr));
     Ike.wire.msg = WANT;
     Ike.wire.len = sizeof(WANT);
-    Ike.hdr_parse(Ike.internal);
+    Ike.hdr_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SPI_I, Ike.hdr.init_spi, 8);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SPI_R, Ike.hdr.resp_spi, 8);
@@ -93,7 +95,7 @@ void test_rfc7296_ike_header_layout(void)
     {
         Ike.wire.msg = WANT;
         Ike.wire.len = len;
-        Ike.hdr_parse(Ike.internal);
+        Ike.hdr_parse(ikev2_work);
         TEST_ASSERT_FALSE(Ike.ok);
     }
 }
@@ -105,7 +107,7 @@ void test_length_is_patched_in_place(void)
     Ike.out.buf = g_out;
     Ike.out.cap = sizeof(g_out);
     Ike.msg.length = 0xDEADBEEFu;
-    Ike.set_length(Ike.internal);
+    Ike.set_length(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_HEX8(0xDE, g_out[24]);
     TEST_ASSERT_EQUAL_HEX8(0xAD, g_out[25]);
@@ -115,11 +117,11 @@ void test_length_is_patched_in_place(void)
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[28]); // nor after it
 
     Ike.out.cap = 27;
-    Ike.set_length(Ike.internal);
+    Ike.set_length(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     Ike.out.buf = NULL;
     Ike.out.cap = sizeof(g_out);
-    Ike.set_length(Ike.internal);
+    Ike.set_length(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -137,7 +139,7 @@ void test_rfc7296_generic_payload_header(void)
     Ike.pl.critical = PROTO_FALSE;
     Ike.pl.data = BODY;
     Ike.pl.data_len = sizeof(BODY);
-    Ike.payload_build(Ike.internal);
+    Ike.payload_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(10, Ike.n);  // 4 + 6
     TEST_ASSERT_EQUAL_HEX8(40, g_out[0]); // Nonce
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[1]);
@@ -146,14 +148,14 @@ void test_rfc7296_generic_payload_header(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(BODY, g_out + 4, 6);
 
     Ike.pl.critical = PROTO_TRUE;
-    Ike.payload_build(Ike.internal);
+    Ike.payload_build(ikev2_work);
     TEST_ASSERT_EQUAL_HEX8(0x80, g_out[1]);
 
     // A payload with an empty body is still four octets long.
     Ike.pl.critical = PROTO_FALSE;
     Ike.pl.data = NULL;
     Ike.pl.data_len = 0;
-    Ike.payload_build(Ike.internal);
+    Ike.payload_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(0x04, g_out[3]);
 
@@ -161,16 +163,16 @@ void test_rfc7296_generic_payload_header(void)
     Ike.pl.data = BODY;
     Ike.pl.data_len = sizeof(BODY);
     Ike.out.cap = 9;
-    Ike.payload_build(Ike.internal);
+    Ike.payload_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
     Ike.out.cap = sizeof(g_out);
     Ike.out.buf = NULL;
-    Ike.payload_build(Ike.internal);
+    Ike.payload_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
     Ike.out.buf = g_out;
     Ike.pl.data = NULL;
     Ike.pl.data_len = 4;
-    Ike.payload_build(Ike.internal);
+    Ike.payload_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
 }
 
@@ -189,9 +191,9 @@ void test_payload_chain_is_walked_forward(void)
     Ike.walk.first_type = IKE_PL_NONCE;
     Ike.wire.msg = AREA;
     Ike.wire.len = sizeof(AREA);
-    Ike.payload_iter_init(Ike.internal);
+    Ike.payload_iter_init(ikev2_work);
 
-    Ike.payload_next(Ike.internal);
+    Ike.payload_next(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_PL_NONCE, Ike.payload.type);
     TEST_ASSERT_EQUAL_INT(IKE_PL_NOTIFY, Ike.payload.next_payload);
@@ -199,18 +201,18 @@ void test_payload_chain_is_walked_forward(void)
     TEST_ASSERT_EQUAL_size_t(4, Ike.payload.body_len); // Payload Length counts the header
     TEST_ASSERT_EQUAL_HEX8(0x01, Ike.payload.body[0]);
 
-    Ike.payload_next(Ike.internal);
+    Ike.payload_next(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_PL_NOTIFY, Ike.payload.type);
     TEST_ASSERT_EQUAL_INT(IKE_PL_DELETE, Ike.payload.next_payload);
     TEST_ASSERT_EQUAL_size_t(8, Ike.payload.body_len);
 
-    Ike.payload_next(Ike.internal);
+    Ike.payload_next(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_PL_DELETE, Ike.payload.type);
     TEST_ASSERT_EQUAL_INT(IKE_PL_NONE, Ike.payload.next_payload);
 
-    Ike.payload_next(Ike.internal); // the chain ended
+    Ike.payload_next(ikev2_work); // the chain ended
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -225,30 +227,30 @@ void test_payload_chain_rejects_bad_lengths(void)
     Ike.walk.first_type = IKE_PL_NONCE;
     Ike.wire.msg = TOO_SHORT;
     Ike.wire.len = sizeof(TOO_SHORT);
-    Ike.payload_iter_init(Ike.internal);
-    Ike.payload_next(Ike.internal);
+    Ike.payload_iter_init(ikev2_work);
+    Ike.payload_next(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 
     static const uint8_t PAST_END[4] = {0, 0x00, 0x00, 0x40}; // Payload Length 64, area is 4
     Ike.wire.msg = PAST_END;
     Ike.wire.len = sizeof(PAST_END);
-    Ike.payload_iter_init(Ike.internal);
-    Ike.payload_next(Ike.internal);
+    Ike.payload_iter_init(ikev2_work);
+    Ike.payload_next(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 
     static const uint8_t TRUNCATED[3] = {0, 0x00, 0x00}; // not even a generic header
     Ike.wire.msg = TRUNCATED;
     Ike.wire.len = sizeof(TRUNCATED);
-    Ike.payload_iter_init(Ike.internal);
-    Ike.payload_next(Ike.internal);
+    Ike.payload_iter_init(ikev2_work);
+    Ike.payload_next(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 
     // A first type of none says the chain is empty before it starts.
     Ike.walk.first_type = IKE_PL_NONE;
     Ike.wire.msg = TOO_SHORT;
     Ike.wire.len = sizeof(TOO_SHORT);
-    Ike.payload_iter_init(Ike.internal);
-    Ike.payload_next(Ike.internal);
+    Ike.payload_iter_init(ikev2_work);
+    Ike.payload_next(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -272,7 +274,7 @@ void test_rfc7296_sa_proposal_transform_tree(void)
     Ike.prop.spi_size = 0;
     Ike.prop.transforms = TRANSFORMS;
     Ike.prop.num_transforms = 3;
-    Ike.sa_build(Ike.internal);
+    Ike.sa_build(ikev2_work);
 
     //  4 generic header + 8 proposal header + 12 (ENCR with attribute) + 8 (PRF) + 8 (DH) = 40
     static const uint8_t WANT[40] = {
@@ -290,7 +292,7 @@ void test_rfc7296_sa_proposal_transform_tree(void)
     // The same octets read back as the same tree.
     Ike.wire.msg = g_out + PROTOCORE_IKE_PAYLOAD_HDR_LEN;
     Ike.wire.len = Ike.n - PROTOCORE_IKE_PAYLOAD_HDR_LEN;
-    Ike.sa_first_proposal(Ike.internal);
+    Ike.sa_first_proposal(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_TRUE(Ike.proposal.last);
     TEST_ASSERT_EQUAL_UINT8(1, Ike.proposal.proposal_num);
@@ -302,28 +304,28 @@ void test_rfc7296_sa_proposal_transform_tree(void)
     IkeTransformIter tit;
     Ike.walk.transforms = &tit;
     Ike.walk.proposal = &prop;
-    Ike.transform_iter_init(Ike.internal);
+    Ike.transform_iter_init(ikev2_work);
 
-    Ike.transform_next(Ike.internal);
+    Ike.transform_next(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_TRANSFORM_ENCR, Ike.transform.type);
     TEST_ASSERT_EQUAL_UINT16(IKE_ENCR_AES_GCM_16, Ike.transform.id);
     TEST_ASSERT_EQUAL_INT32(256, Ike.transform.key_length);
     TEST_ASSERT_FALSE(Ike.transform.last);
 
-    Ike.transform_next(Ike.internal);
+    Ike.transform_next(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_TRANSFORM_PRF, Ike.transform.type);
     TEST_ASSERT_EQUAL_UINT16(IKE_PRF_HMAC_SHA2_256, Ike.transform.id);
     TEST_ASSERT_EQUAL_INT32(-1, Ike.transform.key_length); // absent, not zero
 
-    Ike.transform_next(Ike.internal);
+    Ike.transform_next(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_TRANSFORM_DH, Ike.transform.type);
     TEST_ASSERT_EQUAL_UINT16(IKE_DH_CURVE25519, Ike.transform.id);
     TEST_ASSERT_TRUE(Ike.transform.last);
 
-    Ike.transform_next(Ike.internal);
+    Ike.transform_next(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -341,7 +343,7 @@ void test_sa_proposal_with_an_spi(void)
     Ike.prop.spi_size = 4;
     Ike.prop.transforms = ONE;
     Ike.prop.num_transforms = 1;
-    Ike.sa_build(Ike.internal);
+    Ike.sa_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 8 + 4 + 12, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(3, g_out[9]);  // Protocol ID: ESP
     TEST_ASSERT_EQUAL_HEX8(4, g_out[10]); // SPI Size
@@ -349,7 +351,7 @@ void test_sa_proposal_with_an_spi(void)
 
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = Ike.n - 4;
-    Ike.sa_first_proposal(Ike.internal);
+    Ike.sa_first_proposal(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_UINT8(4, Ike.proposal.spi_size);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ESP_SPI, Ike.proposal.spi, 4);
@@ -357,11 +359,11 @@ void test_sa_proposal_with_an_spi(void)
 
     // A proposal with no transforms is not a proposal, and an SPI Size with no SPI is not one either.
     Ike.prop.num_transforms = 0;
-    Ike.sa_build(Ike.internal);
+    Ike.sa_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
     Ike.prop.num_transforms = 1;
     Ike.prop.spi = NULL;
-    Ike.sa_build(Ike.internal);
+    Ike.sa_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
 }
 
@@ -377,7 +379,7 @@ void test_rfc7296_ke_payload(void)
     Ike.pl.data = KE_DATA;
     Ike.pl.data_len = sizeof(KE_DATA);
     Ike.ke.dh_group = IKE_DH_CURVE25519;
-    Ike.ke_build(Ike.internal);
+    Ike.ke_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 4 + 32, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(40, g_out[0]);   // next = Nonce
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[2]); // Payload Length 40
@@ -390,7 +392,7 @@ void test_rfc7296_ke_payload(void)
 
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = Ike.n - 4;
-    Ike.ke_parse(Ike.internal);
+    Ike.ke_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_UINT16(IKE_DH_CURVE25519, Ike.ke_ref.dh_group);
     TEST_ASSERT_EQUAL_size_t(32, Ike.ke_ref.ke_len);
@@ -400,7 +402,7 @@ void test_rfc7296_ke_payload(void)
     static const uint8_t SHORT[3] = {0, 31, 0};
     Ike.wire.msg = SHORT;
     Ike.wire.len = sizeof(SHORT);
-    Ike.ke_parse(Ike.internal);
+    Ike.ke_parse(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -415,7 +417,7 @@ void test_rfc7296_nonce_id_and_auth_payloads(void)
     Ike.pl.next_payload = IKE_PL_NONE;
     Ike.pl.data = NONCE;
     Ike.pl.data_len = sizeof(NONCE);
-    Ike.nonce_build(Ike.internal);
+    Ike.nonce_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(20, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(0x14, g_out[3]);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(NONCE, g_out + 4, 16);
@@ -426,7 +428,7 @@ void test_rfc7296_nonce_id_and_auth_payloads(void)
     Ike.pl.data = (const uint8_t *)EMAIL;
     Ike.pl.data_len = sizeof(EMAIL) - 1;
     Ike.id.id_type = IKE_ID_RFC822_ADDR;
-    Ike.id_build(Ike.internal);
+    Ike.id_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 4 + 15, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(39, g_out[0]); // next = AUTH
     TEST_ASSERT_EQUAL_HEX8(0x17, g_out[3]);
@@ -438,7 +440,7 @@ void test_rfc7296_nonce_id_and_auth_payloads(void)
 
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = Ike.n - 4;
-    Ike.id_parse(Ike.internal);
+    Ike.id_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_ID_RFC822_ADDR, Ike.id_ref.id_type);
     TEST_ASSERT_EQUAL_size_t(15, Ike.id_ref.id_len);
@@ -450,14 +452,14 @@ void test_rfc7296_nonce_id_and_auth_payloads(void)
     Ike.pl.data = AUTH_DATA;
     Ike.pl.data_len = sizeof(AUTH_DATA);
     Ike.auth.auth_method = IKE_AUTH_PSK;
-    Ike.auth_build(Ike.internal);
+    Ike.auth_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 4 + 32, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(2, g_out[4]); // Auth Method: PSK
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[5]);
 
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = Ike.n - 4;
-    Ike.auth_parse(Ike.internal);
+    Ike.auth_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_AUTH_PSK, Ike.auth_ref.auth_method);
     TEST_ASSERT_EQUAL_size_t(32, Ike.auth_ref.auth_len);
@@ -466,10 +468,10 @@ void test_rfc7296_nonce_id_and_auth_payloads(void)
     static const uint8_t SHORT[3] = {1, 0, 0};
     Ike.wire.msg = SHORT;
     Ike.wire.len = sizeof(SHORT);
-    Ike.id_parse(Ike.internal);
+    Ike.id_parse(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_ID_RESERVED, Ike.id_ref.id_type);
-    Ike.auth_parse(Ike.internal);
+    Ike.auth_parse(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_AUTH_RESERVED, Ike.auth_ref.auth_method);
 }
@@ -493,7 +495,7 @@ void test_rfc7296_notify_payload(void)
     Ike.prop.spi = ESP_SPI;
     Ike.prop.spi_size = 4;
     Ike.notify.notify_type = PROTOCORE_IKE_N_FRAGMENTATION_SUPPORTED;
-    Ike.notify_build(Ike.internal);
+    Ike.notify_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 4 + 4 + 3, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(0x0F, g_out[3]); // Payload Length 15
     TEST_ASSERT_EQUAL_HEX8(3, g_out[4]);    // Protocol ID: ESP
@@ -505,7 +507,7 @@ void test_rfc7296_notify_payload(void)
 
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = Ike.n - 4;
-    Ike.notify_parse(Ike.internal);
+    Ike.notify_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_PROTO_ESP, Ike.notify_ref.protocol_id);
     TEST_ASSERT_EQUAL_UINT8(4, Ike.notify_ref.spi_size);
@@ -520,11 +522,11 @@ void test_rfc7296_notify_payload(void)
     Ike.prop.spi_size = 0;
     Ike.pl.data = NULL;
     Ike.pl.data_len = 0;
-    Ike.notify_build(Ike.internal);
+    Ike.notify_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(8, Ike.n);
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = 4;
-    Ike.notify_parse(Ike.internal);
+    Ike.notify_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_NULL(Ike.notify_ref.spi);
     TEST_ASSERT_EQUAL_size_t(0, Ike.notify_ref.data_len);
@@ -533,7 +535,7 @@ void test_rfc7296_notify_payload(void)
     static const uint8_t LIES[4] = {0x01, 0x08, 0x40, 0x06}; // SPI Size 8, body is 4
     Ike.wire.msg = LIES;
     Ike.wire.len = sizeof(LIES);
-    Ike.notify_parse(Ike.internal);
+    Ike.notify_parse(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -548,7 +550,7 @@ void test_rfc7296_delete_payload(void)
     Ike.prop.protocol_id = IKE_PROTO_ESP;
     Ike.prop.spi_size = 4;
     Ike.prop.num_spis = 2;
-    Ike.delete_build(Ike.internal);
+    Ike.delete_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 4 + 8, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(0x10, g_out[3]);
     TEST_ASSERT_EQUAL_HEX8(3, g_out[4]);
@@ -559,7 +561,7 @@ void test_rfc7296_delete_payload(void)
 
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = Ike.n - 4;
-    Ike.delete_parse(Ike.internal);
+    Ike.delete_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_PROTO_ESP, Ike.delete_ref.protocol_id);
     TEST_ASSERT_EQUAL_UINT8(4, Ike.delete_ref.spi_size);
@@ -570,11 +572,11 @@ void test_rfc7296_delete_payload(void)
     Ike.prop.protocol_id = IKE_PROTO_IKE;
     Ike.prop.spi_size = 0;
     Ike.prop.num_spis = 0;
-    Ike.delete_build(Ike.internal);
+    Ike.delete_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(8, Ike.n);
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = 4;
-    Ike.delete_parse(Ike.internal);
+    Ike.delete_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_NULL(Ike.delete_ref.spis);
 
@@ -582,7 +584,7 @@ void test_rfc7296_delete_payload(void)
     static const uint8_t LIES[4] = {0x03, 0x04, 0x00, 0x09}; // 9 SPIs of 4 octets, body is 4
     Ike.wire.msg = LIES;
     Ike.wire.len = sizeof(LIES);
-    Ike.delete_parse(Ike.internal);
+    Ike.delete_parse(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -604,7 +606,7 @@ void test_rfc7296_traffic_selectors(void)
     Ike.pl.next_payload = IKE_PL_NONE;
     Ike.ts.sels = SELS;
     Ike.ts.num = 2;
-    Ike.ts_build(Ike.internal);
+    Ike.ts_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 4 + 16 + 40, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(2, g_out[4]);    // Number of TSs
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[5]); // RESERVED
@@ -623,11 +625,11 @@ void test_rfc7296_traffic_selectors(void)
 
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = Ike.n - 4;
-    Ike.ts_count(Ike.internal);
+    Ike.ts_count(ikev2_work);
     TEST_ASSERT_EQUAL_UINT8(2, Ike.u8);
 
     Ike.ts.index = 0;
-    Ike.ts_get(Ike.internal);
+    Ike.ts_get(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_TS_IPV4_ADDR_RANGE, Ike.sel.ts_type);
     TEST_ASSERT_EQUAL_UINT8(6, Ike.sel.ip_protocol);
@@ -638,7 +640,7 @@ void test_rfc7296_traffic_selectors(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(HI4, Ike.sel.end_addr, 4);
 
     Ike.ts.index = 1;
-    Ike.ts_get(Ike.internal);
+    Ike.ts_get(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_TS_IPV6_ADDR_RANGE, Ike.sel.ts_type);
     TEST_ASSERT_EQUAL_UINT16(443, Ike.sel.start_port);
@@ -646,7 +648,7 @@ void test_rfc7296_traffic_selectors(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(HI6, Ike.sel.end_addr, 16);
 
     Ike.ts.index = 2; // past Number of TSs
-    Ike.ts_get(Ike.internal);
+    Ike.ts_get(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 
     // A selector whose address halves are not the same length is malformed: the remainder after the
@@ -655,7 +657,7 @@ void test_rfc7296_traffic_selectors(void)
     Ike.wire.msg = ODD;
     Ike.wire.len = sizeof(ODD);
     Ike.ts.index = 0;
-    Ike.ts_get(Ike.internal);
+    Ike.ts_get(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -677,7 +679,7 @@ void test_rfc7296_configuration_payload(void)
     Ike.cp.cfg_type = IKE_CFG_REPLY;
     Ike.cp.attrs = ATTRS;
     Ike.cp.num_attrs = 3;
-    Ike.cp_build(Ike.internal);
+    Ike.cp_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 4 + 8 + 8 + 4, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(2, g_out[4]);     // CFG Type: CFG_REPLY
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[8]);  // the reserved bit stays clear
@@ -688,7 +690,7 @@ void test_rfc7296_configuration_payload(void)
 
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = Ike.n - 4;
-    Ike.cp_parse(Ike.internal);
+    Ike.cp_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_INT(IKE_CFG_REPLY, Ike.cp_ref.cfg_type);
 
@@ -696,34 +698,34 @@ void test_rfc7296_configuration_payload(void)
     Ike.walk.attrs = &it;
     Ike.wire.msg = Ike.cp_ref.attrs;
     Ike.wire.len = Ike.cp_ref.attrs_len;
-    Ike.cp_attr_iter_init(Ike.internal);
+    Ike.cp_attr_iter_init(ikev2_work);
 
-    Ike.cp_attr_next(Ike.internal);
+    Ike.cp_attr_next(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_IKE_CFG_INTERNAL_IP4_ADDRESS, Ike.attr.type);
     TEST_ASSERT_EQUAL_UINT16(4, Ike.attr.value_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(IP4, Ike.attr.value, 4);
 
-    Ike.cp_attr_next(Ike.internal);
+    Ike.cp_attr_next(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_IKE_CFG_INTERNAL_IP4_DNS, Ike.attr.type);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(DNS, Ike.attr.value, 4);
 
-    Ike.cp_attr_next(Ike.internal);
+    Ike.cp_attr_next(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_IKE_CFG_INTERNAL_IP4_NETMASK, Ike.attr.type);
     TEST_ASSERT_EQUAL_UINT16(0, Ike.attr.value_len);
     TEST_ASSERT_NULL(Ike.attr.value);
 
-    Ike.cp_attr_next(Ike.internal);
+    Ike.cp_attr_next(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 
     // A Length that runs past the attribute area is malformed.
     static const uint8_t LIES[6] = {0x00, 0x01, 0x00, 0x40, 0x00, 0x00};
     Ike.wire.msg = LIES;
     Ike.wire.len = sizeof(LIES);
-    Ike.cp_attr_iter_init(Ike.internal);
-    Ike.cp_attr_next(Ike.internal);
+    Ike.cp_attr_iter_init(ikev2_work);
+    Ike.cp_attr_next(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -750,7 +752,7 @@ void test_rfc5282_sk_payload_envelope(void)
     Ike.sk.ct_len = sizeof(CT);
     Ike.sk.icv = ICV;
     Ike.sk.icv_len = sizeof(ICV);
-    Ike.sk_build(Ike.internal);
+    Ike.sk_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 8 + 10 + 16, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(35, g_out[0]);   // next = IDi
     TEST_ASSERT_EQUAL_HEX8(0x26, g_out[3]); // Payload Length 38
@@ -761,7 +763,7 @@ void test_rfc5282_sk_payload_envelope(void)
     // The body carves back apart by the lengths the negotiated transform defines.
     Ike.wire.msg = g_out + 4;
     Ike.wire.len = Ike.n - 4;
-    Ike.sk_parse(Ike.internal);
+    Ike.sk_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(IV, Ike.sk_ref.iv, 8);
     TEST_ASSERT_EQUAL_size_t(10, Ike.sk_ref.ct_len);
@@ -770,10 +772,10 @@ void test_rfc5282_sk_payload_envelope(void)
 
     // A body too short to hold the IV and the ICV is malformed.
     Ike.wire.len = 23;
-    Ike.sk_parse(Ike.internal);
+    Ike.sk_parse(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     Ike.wire.len = 24; // exactly IV + ICV, with no ciphertext, is still well formed
-    Ike.sk_parse(Ike.internal);
+    Ike.sk_parse(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_size_t(0, Ike.sk_ref.ct_len);
 }
@@ -812,12 +814,12 @@ void test_rfc7748_curve25519_key_exchange(void)
     Ike.ke.our_priv_len = 32;
     Ike.out.buf = pub;
     Ike.out.cap = sizeof(pub);
-    Ike.dh_public(Ike.internal);
+    Ike.dh_public(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(32, Ike.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(A_PUB, pub, 32);
 
     Ike.ke.our_priv = B_PRIV;
-    Ike.dh_public(Ike.internal);
+    Ike.dh_public(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(32, Ike.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(B_PUB, pub, 32);
 
@@ -829,14 +831,14 @@ void test_rfc7748_curve25519_key_exchange(void)
     Ike.ke.our_priv_len = 32;
     Ike.ke.peer_pub = B_PUB;
     Ike.ke.peer_pub_len = 32;
-    Ike.dh_compute(Ike.internal);
+    Ike.dh_compute(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(32, Ike.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K, secret, 32);
 
     memset(secret, 0, sizeof(secret));
     Ike.ke.our_priv = B_PRIV;
     Ike.ke.peer_pub = A_PUB;
-    Ike.dh_compute(Ike.internal);
+    Ike.dh_compute(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(32, Ike.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(K, secret, 32);
 }
@@ -859,36 +861,36 @@ void test_dh_refuses_other_groups_and_lengths(void)
     for (size_t i = 0; i < 3; i++)
     {
         Ike.ke.dh_group = OTHER_GROUPS[i];
-        Ike.dh_public(Ike.internal);
+        Ike.dh_public(ikev2_work);
         TEST_ASSERT_EQUAL_size_t(0, Ike.n);
-        Ike.dh_compute(Ike.internal);
+        Ike.dh_compute(ikev2_work);
         TEST_ASSERT_EQUAL_size_t(0, Ike.n);
     }
 
     Ike.ke.dh_group = IKE_DH_CURVE25519;
     Ike.ke.our_priv_len = 31;
-    Ike.dh_public(Ike.internal);
+    Ike.dh_public(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
-    Ike.dh_compute(Ike.internal);
+    Ike.dh_compute(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
 
     Ike.ke.our_priv_len = 32;
     Ike.ke.peer_pub_len = 31;
-    Ike.dh_compute(Ike.internal);
+    Ike.dh_compute(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
 
     Ike.ke.peer_pub_len = 32;
     Ike.out.cap = 31;
-    Ike.dh_public(Ike.internal);
+    Ike.dh_public(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
-    Ike.dh_compute(Ike.internal);
+    Ike.dh_compute(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
 
     Ike.out.cap = sizeof(out);
     Ike.ke.our_priv = NULL;
-    Ike.dh_public(Ike.internal);
+    Ike.dh_public(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
-    Ike.dh_compute(Ike.internal);
+    Ike.dh_compute(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(0, Ike.n);
 }
 
@@ -909,7 +911,7 @@ void test_rfc7296_suite_key_lengths(void)
     suite.dh = IKE_DH_CURVE25519;
     Ike.keymat.suite = &suite;
     Ike.keymat.lens = &lens;
-    Ike.suite_keylengths(Ike.internal);
+    Ike.suite_keylengths(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_size_t(32, lens.sk_d);
     TEST_ASSERT_EQUAL_size_t(32, lens.sk_p);
@@ -919,7 +921,7 @@ void test_rfc7296_suite_key_lengths(void)
     // AES-CBC-256 with AUTH_HMAC_SHA2_256_128: a separate integrity key and no salt.
     suite.encr = IKE_ENCR_AES_CBC;
     suite.integ = IKE_INTEG_HMAC_SHA2_256_128;
-    Ike.suite_keylengths(Ike.internal);
+    Ike.suite_keylengths(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_size_t(32, lens.sk_a);
     TEST_ASSERT_EQUAL_size_t(32, lens.sk_e);
@@ -928,29 +930,29 @@ void test_rfc7296_suite_key_lengths(void)
     suite.encr = IKE_ENCR_AES_GCM_16;
     suite.encr_keylen = 128;
     suite.integ = 0;
-    Ike.suite_keylengths(Ike.internal);
+    Ike.suite_keylengths(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_size_t(20, lens.sk_e);
 
     // A PRF this schedule does not implement, an unknown integrity transform, and a key length that
     // is not a whole number of octets, are each refused rather than guessed at.
     suite.prf = 2;
-    Ike.suite_keylengths(Ike.internal);
+    Ike.suite_keylengths(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     suite.prf = IKE_PRF_HMAC_SHA2_256;
     suite.integ = 99;
-    Ike.suite_keylengths(Ike.internal);
+    Ike.suite_keylengths(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     suite.integ = 0;
     suite.encr_keylen = 129;
-    Ike.suite_keylengths(Ike.internal);
+    Ike.suite_keylengths(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     suite.encr_keylen = -1;
-    Ike.suite_keylengths(Ike.internal);
+    Ike.suite_keylengths(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     Ike.keymat.lens = NULL;
     suite.encr_keylen = 256;
-    Ike.suite_keylengths(Ike.internal);
+    Ike.suite_keylengths(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -974,12 +976,12 @@ void test_rfc7296_prf_plus_is_one_stream(void)
 
     Ike.out.buf = short_out;
     Ike.out.cap = sizeof(short_out);
-    Ike.prf_plus(Ike.internal);
+    Ike.prf_plus(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
 
     Ike.out.buf = long_out;
     Ike.out.cap = sizeof(long_out);
-    Ike.prf_plus(Ike.internal);
+    Ike.prf_plus(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(short_out, long_out, 32); // T1 is the same block either way
 
@@ -993,33 +995,33 @@ void test_rfc7296_prf_plus_is_one_stream(void)
     Ike.out.cap = sizeof(other);
     static const uint8_t SEED2[8] = {'H', 'i', ' ', 'T', 'h', 'e', 'r', 'f'};
     Ike.keymat.seed = SEED2;
-    Ike.prf_plus(Ike.internal);
+    Ike.prf_plus(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_TRUE(memcmp(short_out, other, 32) != 0);
 
     Ike.keymat.seed = SEED;
     static const uint8_t KEY2[32] = {0x0c};
     Ike.keymat.prf_key = KEY2;
-    Ike.prf_plus(Ike.internal);
+    Ike.prf_plus(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_TRUE(memcmp(short_out, other, 32) != 0);
 
     // Nothing to expand into, no key and no seed are each refused.
     Ike.keymat.prf_key = KEY;
     Ike.out.cap = 0;
-    Ike.prf_plus(Ike.internal);
+    Ike.prf_plus(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     Ike.out.buf = NULL;
     Ike.out.cap = sizeof(other);
-    Ike.prf_plus(Ike.internal);
+    Ike.prf_plus(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     Ike.out.buf = other;
     Ike.keymat.prf_key = NULL;
-    Ike.prf_plus(Ike.internal);
+    Ike.prf_plus(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     Ike.keymat.prf_key = KEY;
     Ike.keymat.seed = NULL;
-    Ike.prf_plus(Ike.internal);
+    Ike.prf_plus(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 }
 
@@ -1047,25 +1049,25 @@ void test_rfc7296_stateless_cookie(void)
     Ike.notify.spii = SPI_I;
     Ike.out.buf = cookie;
     Ike.out.cap = sizeof(cookie);
-    Ike.cookie_compute(Ike.internal);
+    Ike.cookie_compute(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(33, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(7, cookie[0]); // VersionIDofSecret leads, so the secret can be rotated
 
     Ike.notify.cookie = cookie;
     Ike.notify.cookie_len = sizeof(cookie);
-    Ike.cookie_verify(Ike.internal);
+    Ike.cookie_verify(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
 
     // A cookie made for a different initiator, address or nonce does not verify here.
     static const uint8_t OTHER_IP[4] = {198, 51, 100, 7};
     Ike.notify.ipi = OTHER_IP;
-    Ike.cookie_verify(Ike.internal);
+    Ike.cookie_verify(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     Ike.notify.ipi = IPI;
 
     static const uint8_t OTHER_SECRET[16] = {0xB0};
     Ike.notify.secret = OTHER_SECRET;
-    Ike.cookie_verify(Ike.internal);
+    Ike.cookie_verify(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     Ike.notify.secret = SECRET;
 
@@ -1078,7 +1080,7 @@ void test_rfc7296_stateless_cookie(void)
     reversioned[0] = (uint8_t)(reversioned[0] ^ 0x01);
     Ike.notify.cookie = reversioned;
     Ike.notify.cookie_len = sizeof(reversioned);
-    Ike.cookie_verify(Ike.internal);
+    Ike.cookie_verify(ikev2_work);
     TEST_ASSERT_TRUE(Ike.ok);
     TEST_ASSERT_EQUAL_HEX8(6, reversioned[0]); // the same secret, tagged as a different version
 
@@ -1090,18 +1092,18 @@ void test_rfc7296_stateless_cookie(void)
         bad[i] = (uint8_t)(bad[i] ^ 0x01);
         Ike.notify.cookie = bad;
         Ike.notify.cookie_len = sizeof(bad);
-        Ike.cookie_verify(Ike.internal);
+        Ike.cookie_verify(ikev2_work);
         TEST_ASSERT_FALSE(Ike.ok);
     }
 
     // A cookie of the wrong length, or none at all, is not a cookie.
     Ike.notify.cookie = cookie;
     Ike.notify.cookie_len = 32;
-    Ike.cookie_verify(Ike.internal);
+    Ike.cookie_verify(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
     Ike.notify.cookie = NULL;
     Ike.notify.cookie_len = sizeof(cookie);
-    Ike.cookie_verify(Ike.internal);
+    Ike.cookie_verify(ikev2_work);
     TEST_ASSERT_FALSE(Ike.ok);
 
     // The COOKIE goes back as a Notify with Protocol ID and SPI Size zero (sec 2.6, sec 3.10).
@@ -1110,7 +1112,7 @@ void test_rfc7296_stateless_cookie(void)
     Ike.out.buf = g_out;
     Ike.out.cap = sizeof(g_out);
     Ike.pl.next_payload = IKE_PL_NONE;
-    Ike.cookie_notify_build(Ike.internal);
+    Ike.cookie_notify_build(ikev2_work);
     TEST_ASSERT_EQUAL_size_t(4 + 4 + 33, Ike.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[4]); // Protocol ID
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[5]); // SPI Size

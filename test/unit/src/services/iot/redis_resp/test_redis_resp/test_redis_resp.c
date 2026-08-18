@@ -16,6 +16,8 @@
 
 #include <unity.h>
 
+static uint8_t redis_resp_work[16]; // the borrow an entry takes; Resp never reads it
+
 void setUp(void)
 {
 }
@@ -40,7 +42,7 @@ static size_t encode(const char *const *argv, size_t argc, const size_t *argv_le
     Resp.command.argc = argc;
     Resp.out.buf = g_out;
     Resp.out.cap = sizeof(g_out);
-    Resp.encode_command(Resp.internal);
+    Resp.encode_command(redis_resp_work);
     return Resp.n;
 }
 
@@ -48,7 +50,7 @@ static proto_bool parse(const char *wire, size_t len)
 {
     Resp.wire.buf = (const uint8_t *)wire;
     Resp.wire.len = len;
-    Resp.parse_reply(Resp.internal);
+    Resp.parse_reply(redis_resp_work);
     return Resp.ok;
 }
 
@@ -458,7 +460,7 @@ void test_encode_fails_closed(void)
     Resp.command.argc = 2;
     Resp.out.buf = small;
     Resp.out.cap = sizeof(small); // the command needs 26 plus a NUL
-    Resp.encode_command(Resp.internal);
+    Resp.encode_command(redis_resp_work);
     TEST_ASSERT_FALSE(Resp.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Resp.n);
 
@@ -477,11 +479,11 @@ void test_encode_fails_closed(void)
     Resp.command.argc = 2;
     Resp.out.buf = NULL;
     Resp.out.cap = sizeof(g_out);
-    Resp.encode_command(Resp.internal);
+    Resp.encode_command(redis_resp_work);
     TEST_ASSERT_FALSE(Resp.ok);
     Resp.out.buf = g_out;
     Resp.out.cap = 0;
-    Resp.encode_command(Resp.internal);
+    Resp.encode_command(redis_resp_work);
     TEST_ASSERT_FALSE(Resp.ok);
 }
 

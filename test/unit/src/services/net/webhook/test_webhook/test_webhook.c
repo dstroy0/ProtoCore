@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t webhook_work[16]; // the borrow an entry takes; Webhook never reads it
+
 void setUp(void)
 {
 }
@@ -33,7 +35,7 @@ static int build_url(const char *event, const char *key, char *out, size_t cap)
     Webhook.ifttt.key = key;
     Webhook.build.out = out;
     Webhook.build.cap = cap;
-    Webhook.ifttt_url(Webhook.internal);
+    Webhook.ifttt_url(webhook_work);
     return Webhook.n;
 }
 
@@ -44,7 +46,7 @@ static int build_payload(const char *v1, const char *v2, const char *v3, char *o
     Webhook.ifttt.value3 = v3;
     Webhook.build.out = out;
     Webhook.build.cap = cap;
-    Webhook.ifttt_payload(Webhook.internal);
+    Webhook.ifttt_payload(webhook_work);
     return Webhook.n;
 }
 
@@ -182,7 +184,7 @@ void test_post_reports_no_transport(void)
 {
     Webhook.request.target_uri = "https://maker.ifttt.com/trigger/e/with/key/k";
     Webhook.request.content = "{}";
-    Webhook.post(Webhook.internal);
+    Webhook.post(webhook_work);
     TEST_ASSERT_EQUAL_INT(-1, Webhook.i32);
     TEST_ASSERT_TRUE(Webhook.i32 < 0);
 }
@@ -196,14 +198,14 @@ void test_trigger_builds_then_posts(void)
     Webhook.ifttt.value1 = "1";
     Webhook.ifttt.value2 = "2";
     Webhook.ifttt.value3 = "3";
-    Webhook.ifttt_trigger(Webhook.internal);
+    Webhook.ifttt_trigger(webhook_work);
     TEST_ASSERT_EQUAL_INT(-1, Webhook.i32);
 
     char long_event[200];
     memset(long_event, 'e', 190);
     long_event[190] = '\0';
     Webhook.ifttt.event = long_event; // the URI frame is 160 octets
-    Webhook.ifttt_trigger(Webhook.internal);
+    Webhook.ifttt_trigger(webhook_work);
     TEST_ASSERT_EQUAL_INT(-1, Webhook.i32);
     TEST_ASSERT_EQUAL_INT(0, Webhook.n);
 
@@ -214,7 +216,7 @@ void test_trigger_builds_then_posts(void)
     Webhook.ifttt.value1 = long_value; // the content frame is 256 octets
     Webhook.ifttt.value2 = NULL;
     Webhook.ifttt.value3 = NULL;
-    Webhook.ifttt_trigger(Webhook.internal);
+    Webhook.ifttt_trigger(webhook_work);
     TEST_ASSERT_EQUAL_INT(-1, Webhook.i32);
     TEST_ASSERT_EQUAL_INT(0, Webhook.n);
 }
@@ -224,11 +226,11 @@ void test_post_argument_guards(void)
 {
     Webhook.request.target_uri = NULL;
     Webhook.request.content = "{}";
-    Webhook.post(Webhook.internal);
+    Webhook.post(webhook_work);
     TEST_ASSERT_TRUE(Webhook.i32 < 0);
 
     Webhook.request.target_uri = "https://example.com/hook";
     Webhook.request.content = NULL;
-    Webhook.post(Webhook.internal);
+    Webhook.post(webhook_work);
     TEST_ASSERT_TRUE(Webhook.i32 < 0);
 }

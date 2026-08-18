@@ -12,30 +12,19 @@
 
 #include "shared/time_compat/time_compat.h"
 
-/**
- * @brief The conversion's call - what TimeCompatNs points at.
- *
- * @var TimeCompatInternal::ns  the handle a caller sets the call's members on
- */
-struct TimeCompatInternal
+static void time_gmtime(uint8_t *restrict work)
 {
-    TimeCompatNs *ns;
-};
-
-static struct TimeCompatInternal s_time = {.ns = &TimeCompat};
-
-static void time_gmtime(struct TimeCompatInternal *restrict ctx)
-{
-    const time_t epoch = ctx->ns->args.epoch;
-    struct tm *out = ctx->ns->args.out;
+    (void)work;
+    const time_t epoch = TimeCompat.args.epoch;
+    struct tm *out = TimeCompat.args.out;
 
 #if defined(_WIN32)
     // One runtime takes (tm, time) and returns an errno_t; the other takes (time, tm) and returns
     // the destination. Both are reduced to "the destination, or NULL" here.
-    ctx->ns->tm_out = (gmtime_s(out, &epoch) == 0) ? out : NULL;
+    TimeCompat.tm_out = (gmtime_s(out, &epoch) == 0) ? out : NULL;
 #else
-    ctx->ns->tm_out = gmtime_r(&epoch, out);
+    TimeCompat.tm_out = gmtime_r(&epoch, out);
 #endif
 }
 
-TimeCompatNs TimeCompat = {.gmtime = time_gmtime, .internal = &s_time};
+TimeCompatNs TimeCompat = {.gmtime = time_gmtime};

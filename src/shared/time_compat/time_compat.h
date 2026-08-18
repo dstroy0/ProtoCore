@@ -28,16 +28,12 @@ typedef struct
     struct tm *out; ///< the caller's destination; must be non-null
 } TimeCompatArgs;
 
-/** @brief The conversion's own call, described only in time_compat.c. */
-struct TimeCompatInternal;
-
 /**
  * @brief Broken-down UTC in caller storage, whichever runtime is underneath.
  *
  * @var TimeCompatNs::args      the instant a conversion reads, and the storage it fills
  * @var TimeCompatNs::tm_out    @c args.out on success, or NULL when the instant cannot be represented
  * @var TimeCompatNs::gmtime    convert to broken-down UTC
- * @var TimeCompatNs::internal  the call that converts
  *
  * Reentrant: the destination is the caller's. One runtime takes (tm, time) and reports an errno_t,
  * the other takes (time, tm) and reports the destination; both are reduced to @ref tm_out here.
@@ -50,9 +46,7 @@ typedef struct
 
     struct tm *tm_out;
 
-    void (*gmtime)(struct TimeCompatInternal *ctx);
-
-    struct TimeCompatInternal *internal;
+    void (*const gmtime)(uint8_t *restrict work);
 } TimeCompatNs;
 
 /** @brief The one symbol this module exports. */

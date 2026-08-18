@@ -19,6 +19,8 @@
 
 #include <unity.h>
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
 void setUp(void)
 {
     ForwardedTrust.reset(protocore_forwarded_trust_span());
@@ -32,7 +34,7 @@ static protocore_ip parsed(const char *text)
     protocore_ip ip;
     Ip.args.text = text;
     Ip.args.out = &ip;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     TEST_ASSERT_TRUE_MESSAGE(Ip.ok, text);
     return ip;
 }
@@ -41,7 +43,7 @@ static proto_bool same(const protocore_ip *a, const protocore_ip *b)
 {
     Ip.args.ip = a;
     Ip.args.b = b;
-    Ip.equal(Ip.internal);
+    Ip.equal(ip_work);
     return Ip.ok;
 }
 

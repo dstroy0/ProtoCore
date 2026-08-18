@@ -23,28 +23,17 @@
 #define COAPS_UHDR_EPOCH_MASK 0x03u ///< the two low bits, the low-order bits of the epoch
 #define COAPS_EPOCH_APP 3u          ///< the epoch application data travels in
 
-/**
- * @brief The bridge's calls - what CoapsNs points at.
- *
- * @var CoapsInternal::ns  the handle a caller sets a call's members on
- */
-struct CoapsInternal
-{
-    CoapsNs *ns;
-};
-
-static struct CoapsInternal s_coaps = {.ns = &Coaps};
-
 // Turn one datagram for the connection in ns->conn.
-static void coaps_process(struct CoapsInternal *restrict ctx)
+static void coaps_process(uint8_t *restrict work)
 {
-    DtlsConn *c = ctx->ns->conn;
-    const uint8_t *dgram = ctx->ns->dgram.data;
-    const size_t len = ctx->ns->dgram.len;
-    uint8_t *out = ctx->ns->dgram.out;
-    const size_t out_cap = ctx->ns->dgram.out_cap;
+    (void)work;
+    DtlsConn *c = Coaps.conn;
+    const uint8_t *dgram = Coaps.dgram.data;
+    const size_t len = Coaps.dgram.len;
+    uint8_t *out = Coaps.dgram.out;
+    const size_t out_cap = Coaps.dgram.out_cap;
 
-    ctx->ns->i32 = 0;
+    Coaps.i32 = 0;
     if (!c || !dgram || !out)
     {
         return;
@@ -52,7 +41,7 @@ static void coaps_process(struct CoapsInternal *restrict ctx)
 
     if (!DtlsServer.established(c))
     {
-        ctx->ns->i32 = DtlsServer.process(c, dgram, len, out, out_cap); // still handshaking, or -1 fatal
+        Coaps.i32 = DtlsServer.process(c, dgram, len, out, out_cap); // still handshaking, or -1 fatal
         return;
     }
 
@@ -72,18 +61,18 @@ static void coaps_process(struct CoapsInternal *restrict ctx)
         Coap.msg.req_len = req_len;
         Coap.msg.resp = resp;
         Coap.msg.resp_cap = sizeof(resp);
-        Coap.process(Coap.internal);
+        Coap.process(protocore_coap_span());
         if (Coap.n == 0)
         {
             return; // nothing to send, as for a Non-confirmable message the server does not answer
         }
-        ctx->ns->i32 = (int32_t)DtlsServer.seal_app(c, resp, Coap.n, out, out_cap);
+        Coaps.i32 = (int32_t)DtlsServer.seal_app(c, resp, Coap.n, out, out_cap);
         return;
     }
-    ctx->ns->i32 = DtlsServer.process(c, dgram, len, out, out_cap);
+    Coaps.i32 = DtlsServer.process(c, dgram, len, out, out_cap);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-CoapsNs Coaps = {.process = coaps_process, .internal = &s_coaps};
+CoapsNs Coaps = {.process = coaps_process};
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP

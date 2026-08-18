@@ -44,8 +44,8 @@ printf '%s\n' "$list" | while IFS=$'\t' read -r num head title; do
     # Merge it; on a conflict abort so the branch is left exactly as it was before the attempt.
     if out=$(git merge --no-ff --no-edit -m "Merge Dependabot #$num: $title" FETCH_HEAD 2>&1); then
         case "$out" in
-        *"Already up to date"*) echo "post-commit: Dependabot #$num already integrated" ;;
-        *) echo "post-commit: merged Dependabot #$num ($title)" ;;
+            *"Already up to date"*) echo "post-commit: Dependabot #$num already integrated" ;;
+            *) echo "post-commit: merged Dependabot #$num ($title)" ;;
         esac
     else
         git merge --abort >/dev/null 2>&1 || true

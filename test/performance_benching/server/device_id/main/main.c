@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t device_id_work[16]; // the borrow an entry takes; DeviceId never reads it
+
 void dbench_run(void)
 {
     // Known-good MAC vectors from test/test_device_id/test_device_id.cpp (checked against
@@ -36,9 +38,9 @@ void dbench_run(void)
     {
         DBENCH_BANNER("device_id");
         DeviceId.args.mac = mac_a;
-        DBENCH_OP("DeviceId.from_mac (aabbccddeeff)", 20000, DeviceId.from_mac(DeviceId.internal));
+        DBENCH_OP("DeviceId.from_mac (aabbccddeeff)", 20000, DeviceId.from_mac(device_id_work));
         DeviceId.args.mac = mac_b;
-        DBENCH_OP("DeviceId.from_mac (001122334455)", 20000, DeviceId.from_mac(DeviceId.internal));
+        DBENCH_OP("DeviceId.from_mac (001122334455)", 20000, DeviceId.from_mac(device_id_work));
         DBENCH_DONE();
     }
 }

@@ -100,9 +100,6 @@ typedef struct
     uint32_t now_ms;       ///< the monotonic millisecond count it arrived at
 } TelemetryTotalizerArgs;
 
-/** @brief The aggregator's calls, described only in telemetry.c. */
-struct TelemetryInternal;
-
 /**
  * @brief The sample aggregators: a moving window, a rate of change, and a totalizer.
  *
@@ -136,7 +133,6 @@ struct TelemetryInternal;
  *                                     @c totalizer.now_ms by the trapezoidal rule, into @c f64
  * @var TelemetryNs::totalizer_total   the running total, into @c f64 (SenML Sum, RFC 8428 sec 4.2)
  * @var TelemetryNs::totalizer_reset   zero the running total and drop the prior rate sample
- * @var TelemetryNs::internal          the aggregator's calls
  */
 typedef struct
 {
@@ -149,22 +145,20 @@ typedef struct
     float f32;
     double f64;
 
-    void (*window_init)(struct TelemetryInternal *ctx);
-    void (*window_push)(struct TelemetryInternal *ctx);
-    void (*window_count)(struct TelemetryInternal *ctx);
-    void (*window_mean)(struct TelemetryInternal *ctx);
-    void (*window_variance)(struct TelemetryInternal *ctx);
-    void (*window_stddev)(struct TelemetryInternal *ctx);
-    void (*window_min)(struct TelemetryInternal *ctx);
-    void (*window_max)(struct TelemetryInternal *ctx);
-    void (*rate_init)(struct TelemetryInternal *ctx);
-    void (*rate_update)(struct TelemetryInternal *ctx);
-    void (*totalizer_init)(struct TelemetryInternal *ctx);
-    void (*totalizer_add)(struct TelemetryInternal *ctx);
-    void (*totalizer_total)(struct TelemetryInternal *ctx);
-    void (*totalizer_reset)(struct TelemetryInternal *ctx);
-
-    struct TelemetryInternal *internal;
+    void (*const window_init)(uint8_t *restrict work);
+    void (*const window_push)(uint8_t *restrict work);
+    void (*const window_count)(uint8_t *restrict work);
+    void (*const window_mean)(uint8_t *restrict work);
+    void (*const window_variance)(uint8_t *restrict work);
+    void (*const window_stddev)(uint8_t *restrict work);
+    void (*const window_min)(uint8_t *restrict work);
+    void (*const window_max)(uint8_t *restrict work);
+    void (*const rate_init)(uint8_t *restrict work);
+    void (*const rate_update)(uint8_t *restrict work);
+    void (*const totalizer_init)(uint8_t *restrict work);
+    void (*const totalizer_add)(uint8_t *restrict work);
+    void (*const totalizer_total)(uint8_t *restrict work);
+    void (*const totalizer_reset)(uint8_t *restrict work);
 } TelemetryNs;
 
 /** @brief The one symbol this module exports. */

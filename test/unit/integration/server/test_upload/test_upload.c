@@ -16,6 +16,8 @@
 #include "rx_feed.h"
 #include <unity.h>
 
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
 void setUp()
 {
     protocore_server_reset();
@@ -33,7 +35,7 @@ void setUp()
     Sse.init(protocore_sse_span());
     mock_mnt_reset();
     Mnt.args.backend = mock_mnt();
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     mock_mnt_write_reset();
     tcp_capture_reset();
 }

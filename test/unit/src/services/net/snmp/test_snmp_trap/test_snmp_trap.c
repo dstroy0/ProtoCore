@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
+
 void setUp(void)
 {
 }
@@ -44,18 +46,18 @@ static void dec_open(const uint8_t *buf, size_t len)
     SnmpBer.dec = &g_dec;
     SnmpBer.buf.in = buf;
     SnmpBer.buf.cap = len;
-    SnmpBer.dec_init(SnmpBer.internal);
+    SnmpBer.dec_init(snmp_ber_work);
 }
 
 static proto_bool read_header(void)
 {
-    SnmpBer.read_header(SnmpBer.internal);
+    SnmpBer.read_header(snmp_ber_work);
     return SnmpBer.ok;
 }
 
 static proto_bool read_integer(void)
 {
-    SnmpBer.read_integer(SnmpBer.internal);
+    SnmpBer.read_integer(snmp_ber_work);
     return SnmpBer.ok;
 }
 
@@ -65,7 +67,7 @@ static void expect_oid(const uint32_t *want, size_t n, const char *msg)
     uint32_t got[SNMP_MAX_OID_LEN];
     SnmpBer.read_args.arc_out = got;
     SnmpBer.read_args.arc_cap = SNMP_MAX_OID_LEN;
-    SnmpBer.read_oid(SnmpBer.internal);
+    SnmpBer.read_oid(snmp_ber_work);
     TEST_ASSERT_TRUE_MESSAGE(SnmpBer.ok, msg);
     TEST_ASSERT_EQUAL_size_t_MESSAGE(n, SnmpBer.n, msg);
     for (size_t i = 0; i < n; i++)
@@ -77,7 +79,7 @@ static void expect_oid(const uint32_t *want, size_t n, const char *msg)
 static void skip_value(size_t n)
 {
     SnmpBer.read_args.skip = n;
-    SnmpBer.skip(SnmpBer.internal);
+    SnmpBer.skip(snmp_ber_work);
 }
 
 // Set every PDU member a build reads, then build a complete SNMPv2c message.
@@ -94,7 +96,7 @@ static size_t build(uint8_t *out, size_t cap, uint8_t pdu_tag, uint32_t request_
     SnmpNotify.dst.community = community;
     SnmpNotify.buf.out = out;
     SnmpNotify.buf.cap = cap;
-    SnmpNotify.build_v2c(SnmpNotify.internal);
+    SnmpNotify.build_v2c(protocore_snmp_notify_span());
     return SnmpNotify.n;
 }
 
@@ -215,7 +217,7 @@ void test_request_id_is_the_callers(void)
     TEST_ASSERT_TRUE(read_integer());
     TEST_ASSERT_TRUE(read_header()); // community
     SnmpBer.read_args.skip = SnmpBer.vlen;
-    SnmpBer.skip(SnmpBer.internal);
+    SnmpBer.skip(snmp_ber_work);
     TEST_ASSERT_TRUE(read_header()); // PDU
     TEST_ASSERT_TRUE(read_integer());
     TEST_ASSERT_EQUAL_INT(305419896, SnmpBer.ival);
@@ -328,7 +330,7 @@ void test_build_pdu_appends_to_an_open_encoder(void)
     SnmpBer.enc = &e;
     SnmpBer.buf.out = buf;
     SnmpBer.buf.cap = sizeof(buf);
-    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.enc_init(snmp_ber_work);
 
     SnmpNotify.pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2;
     SnmpNotify.pdu.request_id = 3;
@@ -338,7 +340,7 @@ void test_build_pdu_appends_to_an_open_encoder(void)
     SnmpNotify.pdu.vbs = NULL;
     SnmpNotify.pdu.vb_count = 0;
     SnmpNotify.buf.enc = &e;
-    SnmpNotify.build_pdu(SnmpNotify.internal);
+    SnmpNotify.build_pdu(protocore_snmp_notify_span());
     TEST_ASSERT_TRUE(SnmpNotify.ok);
     TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2, buf[0]);
 
@@ -396,7 +398,7 @@ void test_missing_arguments_are_refused(void)
     SnmpNotify.dst.community = "public";
     SnmpNotify.buf.out = msg;
     SnmpNotify.buf.cap = sizeof(msg);
-    SnmpNotify.build_v2c(SnmpNotify.internal);
+    SnmpNotify.build_v2c(protocore_snmp_notify_span());
     TEST_ASSERT_EQUAL_size_t(0, SnmpNotify.n);
     TEST_ASSERT_FALSE(SnmpNotify.ok);
 
@@ -404,7 +406,7 @@ void test_missing_arguments_are_refused(void)
     SnmpNotify.buf.enc = NULL;
     SnmpNotify.pdu.trap_oid = TRAP_OID;
     SnmpNotify.pdu.trap_oid_len = sizeof(TRAP_OID) / sizeof(TRAP_OID[0]);
-    SnmpNotify.build_pdu(SnmpNotify.internal);
+    SnmpNotify.build_pdu(protocore_snmp_notify_span());
     TEST_ASSERT_FALSE(SnmpNotify.ok);
 }
 
@@ -420,12 +422,12 @@ void test_sends_report_no_transport(void)
     SnmpNotify.dst.port = 162; // RFC 3417 sec 3.2
     SnmpNotify.dst.community = "public";
 
-    SnmpNotify.trap_v2c(SnmpNotify.internal);
+    SnmpNotify.trap_v2c(protocore_snmp_notify_span());
     TEST_ASSERT_FALSE(SnmpNotify.ok);
     TEST_ASSERT_EQUAL_size_t(0, SnmpNotify.n);
 
     SnmpNotify.pdu.request_id = 1;
-    SnmpNotify.inform_v2c(SnmpNotify.internal);
+    SnmpNotify.inform_v2c(protocore_snmp_notify_span());
     TEST_ASSERT_FALSE(SnmpNotify.ok);
     TEST_ASSERT_EQUAL_size_t(0, SnmpNotify.n);
 }

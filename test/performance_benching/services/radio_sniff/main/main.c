@@ -19,10 +19,13 @@
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
 #include "services/radio/radio_sniff/radio_sniff.h"
+#include "shared/pcap/pcap.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+static uint8_t radio_sniff_work[16]; // the borrow an entry takes; RadioSniff never reads it
 
 void dbench_run(void)
 {

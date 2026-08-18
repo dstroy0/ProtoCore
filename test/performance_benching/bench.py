@@ -106,6 +106,47 @@ def cmd_add(a):
         lock_release(lock)
 
 
+def cmd_rename(a):
+    """Change a bench's key. A module that moves takes its bench's name with it, and the name is
+    stored rather than derived, so without this the table keeps naming the tree the module left."""
+    lock = lock_acquire(TABLE)
+    if not lock:
+        print("could not take the bench table lock")
+        return 1
+    try:
+        text, before = read_table(TABLE)
+        envs = before["envs"]
+        if a.name not in envs:
+            print("bench not found:", a.name)
+            return 1
+        if a.to in envs:
+            print("bench already present:", a.to)
+            return 1
+        entry = json.loads(json.dumps(envs[a.name]))
+        # The key is spliced as text so nothing else in the table is reformatted.
+        old_key = '    "%s": {' % a.name
+        if text.count(old_key) != 1:
+            print("the key is not unique in the table:", a.name)
+            return 1
+        text = text.replace(old_key, '    "%s": {' % a.to, 1)
+        after = json.loads(text)
+        if after["envs"].get(a.to) != entry or a.name in after["envs"]:
+            print("the rename did not round-trip:", a.name)
+            return 1
+        for k in envs:
+            if k == a.name:
+                continue
+            if envs[k] != after["envs"].get(k):
+                print("collateral change in", k)
+                return 1
+        with open(TABLE, "w", encoding="utf-8", newline="") as fh:
+            fh.write(text)
+        print("renamed %s -> %s; run: bench.py gen" % (a.name, a.to))
+        return 0
+    finally:
+        lock_release(lock)
+
+
 def cmd_update(a):
     lock = lock_acquire(TABLE)
     if not lock:
@@ -521,6 +562,11 @@ def cmd_run(a):
             failed.append(name)
             continue
         incs, defs = host_flags(e)
+        # 'host' leaves both rates unstated, so the counter is the host CPU's own and the bench
+        # measures it once and reports against it - the host runs all the way. A number pins the
+        # reported rate instead, for comparing a host figure against a part's.
+        if str(getattr(a, "mhz", "host")).lower() != "host":
+            defs += ["-DPROTOCORE_HOST_CYCLE_MHZ=%du" % int(a.mhz), "-DDBENCH_CPU_MHZ=%du" % int(a.mhz)]
         main_c = os.path.relpath(os.path.join(bench_dir(e), "main", "main.c"), ROOT).replace("\\", "/")
         exe = os.path.join(outdir, name + ".exe")
         lib, err = host_arm_archive(cc, e, incs, defs, outdir, name)
@@ -641,6 +687,11 @@ def build_parser():
     p.add_argument("--desc", default=None)
     p.set_defaults(fn=cmd_update)
 
+    p = sub.add_parser("rename", help="change a bench's name (a module that moved took it along)")
+    p.add_argument("name")
+    p.add_argument("to")
+    p.set_defaults(fn=cmd_rename)
+
     p = sub.add_parser("gen", help="regenerate every bench project's platformio.ini")
     p.add_argument("--check", action="store_true", help="exit 1 if any is out of date (no write)")
     p.set_defaults(fn=cmd_gen)
@@ -658,6 +709,12 @@ def build_parser():
     p = sub.add_parser("run", help="build and run benches on the host")
     p.add_argument("benches", nargs="*")
     p.add_argument("--timeout", type=int, default=120)
+    p.add_argument(
+        "--mhz",
+        default="host",
+        help="the clock the counts are reported against: 'host' (default) measures the host's own "
+        "and runs all the way; a number pins that rate instead",
+    )
     p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(fn=cmd_run)
 

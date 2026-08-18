@@ -35,29 +35,29 @@ static size_t pb_encode_sample(uint8_t *buf, size_t cap)
     Protobuf.slot = PB_WRITER_SLOT;
     Protobuf.writer.buf = buf;
     Protobuf.writer.cap = cap;
-    Protobuf.writer_open(Protobuf.internal);
+    Protobuf.writer_open(protocore_protobuf_span());
 
     Protobuf.tag.field_number = 1;
     Protobuf.value.u64 = 150;
-    Protobuf.write_uint64(Protobuf.internal);
+    Protobuf.write_uint64(protocore_protobuf_span());
 
     Protobuf.tag.field_number = 2;
     Protobuf.value.text = "hi";
-    Protobuf.write_string(Protobuf.internal);
+    Protobuf.write_string(protocore_protobuf_span());
 
     Protobuf.tag.field_number = 3;
     Protobuf.value.u32 = 0x01020304;
-    Protobuf.write_fixed32(Protobuf.internal);
+    Protobuf.write_fixed32(protocore_protobuf_span());
 
     Protobuf.tag.field_number = 4;
     Protobuf.value.f64 = 2.5;
-    Protobuf.write_double(Protobuf.internal);
+    Protobuf.write_double(protocore_protobuf_span());
 
     Protobuf.tag.field_number = 5;
     Protobuf.value.i64 = -1234567;
-    Protobuf.write_sint64(Protobuf.internal);
+    Protobuf.write_sint64(protocore_protobuf_span());
 
-    Protobuf.writer_finish(Protobuf.internal);
+    Protobuf.writer_finish(protocore_protobuf_span());
     return Protobuf.n;
 }
 
@@ -68,12 +68,12 @@ static size_t pb_decode_all(const uint8_t *buf, size_t len)
     Protobuf.source.buf = buf;
     Protobuf.source.len = len;
     Protobuf.source.pos = 0;
-    Protobuf.reader_open(Protobuf.internal);
+    Protobuf.reader_open(protocore_protobuf_span());
 
     size_t count = 0;
     for (;;)
     {
-        Protobuf.read_record(Protobuf.internal);
+        Protobuf.read_record(protocore_protobuf_span());
         if (!Protobuf.ok)
         {
             return count;
@@ -88,10 +88,10 @@ static size_t pb_write_one_varint(uint8_t *buf, size_t cap, uint64_t v)
     Protobuf.slot = PB_WRITER_SLOT;
     Protobuf.writer.buf = buf;
     Protobuf.writer.cap = cap;
-    Protobuf.writer_open(Protobuf.internal);
+    Protobuf.writer_open(protocore_protobuf_span());
     Protobuf.value.u64 = v;
-    Protobuf.write_varint(Protobuf.internal);
-    Protobuf.writer_finish(Protobuf.internal);
+    Protobuf.write_varint(protocore_protobuf_span());
+    Protobuf.writer_finish(protocore_protobuf_span());
     return Protobuf.n;
 }
 
@@ -102,8 +102,8 @@ static uint64_t pb_read_one_varint(const uint8_t *buf, size_t len)
     Protobuf.source.buf = buf;
     Protobuf.source.len = len;
     Protobuf.source.pos = 0;
-    Protobuf.reader_open(Protobuf.internal);
-    Protobuf.read_varint(Protobuf.internal);
+    Protobuf.reader_open(protocore_protobuf_span());
+    Protobuf.read_varint(protocore_protobuf_span());
     return Protobuf.u64;
 }
 
@@ -111,7 +111,7 @@ static uint64_t pb_read_one_varint(const uint8_t *buf, size_t len)
 static int64_t pb_zigzag64(uint64_t v)
 {
     Protobuf.value.u64 = v;
-    Protobuf.zigzag64(Protobuf.internal);
+    Protobuf.zigzag64(protocore_protobuf_span());
     return Protobuf.i64;
 }
 

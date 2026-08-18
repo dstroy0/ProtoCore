@@ -16,6 +16,8 @@
 
 #include <unity.h>
 
+static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never reads it
+
 void setUp(void)
 {
 }
@@ -31,7 +33,7 @@ static proto_bool decode(const uint8_t *pkt, size_t len, size_t off, char *out, 
     DnsWire.msg.out = out;
     DnsWire.msg.out_cap = cap;
     DnsWire.msg.allow_ptr = allow_ptr;
-    DnsWire.decode(DnsWire.internal);
+    DnsWire.decode(dns_wire_work);
     return DnsWire.ok;
 }
 
@@ -40,7 +42,7 @@ static size_t encode(const char *dotted, uint8_t *out, size_t cap)
     DnsWire.text.dotted = dotted;
     DnsWire.text.out = out;
     DnsWire.text.out_cap = cap;
-    DnsWire.encode(DnsWire.internal);
+    DnsWire.encode(dns_wire_work);
     return DnsWire.n;
 }
 
@@ -48,7 +50,7 @@ static proto_bool eq(const char *a, const char *b)
 {
     DnsWire.cmp.a = a;
     DnsWire.cmp.b = b;
-    DnsWire.eq(DnsWire.internal);
+    DnsWire.eq(dns_wire_work);
     return DnsWire.ok;
 }
 

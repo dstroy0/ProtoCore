@@ -30,6 +30,9 @@
 
 #include "protocore_config.h"
 
+#include "network_drivers/transport/udp/client/client.h" // UdpClientNs: the sending half
+#include "network_drivers/transport/udp/server/server.h" // UdpListenerNs: the receiving half
+
 PROTOCORE_BEGIN_DECLS
 
 /**
@@ -38,11 +41,10 @@ PROTOCORE_BEGIN_DECLS
  * @var UdpNs::listener  bound ports: receiving, replying, and sending from the bound endpoint
  * @var UdpNs::client    an ephemeral source port: sending only
  */
-struct UdpInternal;
-
 typedef struct
 {
-    struct UdpInternal *internal;
+    UdpListenerNs *const listener;
+    UdpClientNs *const client;
 } UdpNs;
 
 /** @brief The one symbol this module exports. */

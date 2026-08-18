@@ -6,23 +6,40 @@
  * @brief Shared single-range `Range: bytes=...` parser. See http_range.h.
  */
 
-#include "network_drivers/application/http_range.h"
-#include "mmgr/protostr.h" // str.starts / str.find: the unit prefix and the multi-range comma
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_RANGE
 
+#include "mmgr/protostr.h" // str.starts / str.find: the unit prefix and the multi-range comma
+#include "network_drivers/application/http_range.h"
+
+PROTOCORE_BEGIN_DECLS
+
 // strncasecmp, strchr
 
-int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_t *out_end)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void http_range_http_parse_byte_range(uint8_t *restrict work)
 {
+    (void)work;
+    const char *hdr = HttpRange.http_parse_byte_range_args.hdr;
+    size_t size = HttpRange.http_parse_byte_range_args.size;
+    size_t *out_start = HttpRange.http_parse_byte_range_args.out_start;
+    size_t *out_end = HttpRange.http_parse_byte_range_args.out_end;
+
     if (!hdr)
     {
-        return 0;
+        HttpRange.n = 0;
+        return;
     }
     // Require the "bytes=" unit (case-insensitive).
     if (!str.starts(hdr, "bytes=", 6, PROTO_TRUE))
     {
-        return 0;
+        HttpRange.n = 0;
+        return;
     }
     const char *p = hdr + 6;
     while (*p == ' ')
@@ -31,7 +48,8 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
     }
     if (str.find(p, MAX_VAL_LEN, ",", sizeof(","), PROTO_FALSE)) // multi-range not supported -> fall back to full 200
     {
-        return 0;
+        HttpRange.n = 0;
+        return;
     }
 
     proto_bool have_start = PROTO_FALSE;
@@ -51,7 +69,8 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
     }
     if (*p != '-')
     {
-        return 0; // malformed
+        HttpRange.n = 0; // malformed
+        return;
     }
     p++;
     if (*p >= '0' && *p <= '9')
@@ -70,7 +89,8 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
     }
     if (*p != '\0')
     {
-        return 0; // trailing garbage -> ignore the header
+        HttpRange.n = 0; // trailing garbage -> ignore the header
+        return;
     }
 
     if (!have_start)
@@ -78,7 +98,8 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
         // Suffix form "bytes=-N": the last N bytes.
         if (!have_end || end == 0)
         {
-            return -1; // "-" alone, or "-0" -> unsatisfiable
+            HttpRange.n = -1; // "-" alone, or "-0" -> unsatisfiable
+            return;
         }
         if (size == 0)
         {
@@ -88,7 +109,8 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
             // which an inclusive [start, end] cannot express, so the caller is told there is no
             // usable range and serves the whole (empty) representation with 200 - which is what
             // sec 14.2 permits a server to do with any Range it does not act on.
-            return 0;
+            HttpRange.n = 0;
+            return;
         }
         start = (end >= size) ? 0 : (size - end);
         end = size - 1;
@@ -97,7 +119,8 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
     {
         if (start >= size)
         {
-            return -1; // start past EOF -> unsatisfiable
+            HttpRange.n = -1; // start past EOF -> unsatisfiable
+            return;
         }
         if (!have_end || end >= size)
         {
@@ -105,12 +128,19 @@ int http_parse_byte_range(const char *hdr, size_t size, size_t *out_start, size_
         }
         if (start > end)
         {
-            return -1;
+            HttpRange.n = -1;
+            return;
         }
     }
     *out_start = start;
     *out_end = end;
-    return 1;
+    HttpRange.n = 1;
 }
+
+HttpRangeNs HttpRange = {
+    .http_parse_byte_range = http_range_http_parse_byte_range,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RANGE

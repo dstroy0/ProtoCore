@@ -106,9 +106,6 @@ typedef struct
     const HttpReq *req; ///< the parsed request whose `ce-` prefixed headers carry the attributes
 } CloudEventMessageArgs;
 
-/** @brief The envelope's calls, described only in cloudevents.c. */
-struct CloudEventsInternal;
-
 /**
  * @brief The CloudEvents envelope: structured-mode build, binary-mode read.
  *
@@ -132,7 +129,6 @@ struct CloudEventsInternal;
  * @var CloudEventsNs::n                octets a build wrote, excluding the NUL; 0 when it wrote none
  * @var CloudEventsNs::build_structured build the one JSON object of Structured Content Mode into @c envelope
  * @var CloudEventsNs::read_binary      take @c attr off the `ce-` prefixed headers of Binary Content Mode
- * @var CloudEventsNs::internal         the calls that read this handle
  *
  * build_structured emits
  * `{"specversion":"1.0","id":...,"source":...,"type":...[,"subject":...][,"datacontenttype":...][,"data":...]}`.
@@ -153,10 +149,8 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*build_structured)(struct CloudEventsInternal *ctx);
-    void (*read_binary)(struct CloudEventsInternal *ctx);
-
-    struct CloudEventsInternal *internal;
+    void (*const build_structured)(uint8_t *restrict work);
+    void (*const read_binary)(uint8_t *restrict work);
 } CloudEventsNs;
 
 /** @brief The one symbol this module exports. */

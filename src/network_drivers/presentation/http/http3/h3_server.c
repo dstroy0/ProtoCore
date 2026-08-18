@@ -10,12 +10,12 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "mmgr/protostr.h"                                   // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"                                  // raw.read: each field moves into the slot
-#include "network_drivers/presentation/http/http.h"          // Http.match_and_execute
-#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the reserved dispatch slot
+#include "mmgr/protostr.h"                          // str: the bounded-run walks
+#include "mmgr/rawmemcpy.h"                         // raw.read: each field moves into the slot
+#include "network_drivers/presentation/http/http.h" // Http.match_and_execute
 #include "network_drivers/presentation/http/http3/h3_server.h"
-#include "network_drivers/session/session.h" // the per-connection tables this reads
+#include "network_drivers/session/session.h"                 // the per-connection tables this reads
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the reserved dispatch slot
 
 /**
  * @brief The bridge's state and the calls that reach it - what H3ServerNs points at.
@@ -141,7 +141,7 @@ static void request(struct H3ServerInternal *restrict ctx)
     http_resp_sink[slot] = protocore_h3_resp_sink;
     ConnPool.slot = slot;
     ConnPool.st = CONN_ACTIVE;
-    ConnPool.set_state(ConnPool.internal); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
+    ConnPool.set_state(protocore_conn_pool_span()); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
 
     Http.slot = slot;
     Http.match_and_execute(
@@ -152,7 +152,7 @@ static void request(struct H3ServerInternal *restrict ctx)
     http_resp_sink[slot] = NULL;
     ConnPool.slot = slot;
     ConnPool.st = CONN_FREE;
-    ConnPool.set_state(ConnPool.internal); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
+    ConnPool.set_state(protocore_conn_pool_span()); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
     http_parser_reset(&http_pool[slot]);
 }
 

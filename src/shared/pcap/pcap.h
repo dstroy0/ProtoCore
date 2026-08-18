@@ -49,9 +49,6 @@ typedef struct
     uint32_t origlen; ///< octets the frame had on the wire
 } PcapRecArgs;
 
-/** @brief The writers' own calls, described only in pcap.c. */
-struct PcapInternal;
-
 /**
  * @brief The two libpcap headers a capture file is built from.
  *
@@ -60,7 +57,6 @@ struct PcapInternal;
  * @var PcapNs::n              octets written, or 0 when the buffer is too small
  * @var PcapNs::global_header  the 24-byte file header (little-endian, microsecond timestamps)
  * @var PcapNs::record_header  the 16-byte per-frame header
- * @var PcapNs::internal       the calls that write them
  *
  * No storage member: both headers are written into the caller's buffer.
  */
@@ -71,10 +67,8 @@ typedef struct
 
     size_t n;
 
-    void (*global_header)(struct PcapInternal *ctx);
-    void (*record_header)(struct PcapInternal *ctx);
-
-    struct PcapInternal *internal;
+    void (*const global_header)(uint8_t *restrict work);
+    void (*const record_header)(uint8_t *restrict work);
 } PcapNs;
 
 /** @brief The one symbol this module exports. */

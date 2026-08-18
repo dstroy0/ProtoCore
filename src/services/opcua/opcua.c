@@ -27,7 +27,7 @@
 // Built-in type codec
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/tcp/common.h" // TcpConn: the slot's ring the reader walks
+#include "network_drivers/transport/tcp/common.h"            // TcpConn: the slot's ring the reader walks
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
 #include <time.h>
@@ -1323,7 +1323,7 @@ OpcUaBrowseHandler protocore_opcua_browse_handler(void)
 static size_t ring_avail(const TcpConn *c)
 {
     ConnPool.slot = c->id;
-    ConnPool.available(ConnPool.internal);
+    ConnPool.available(protocore_conn_pool_span());
     return ConnPool.n;
 }
 static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
@@ -1332,18 +1332,18 @@ static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
     ConnPool.io.off = off;
     ConnPool.io.buf = dst;
     ConnPool.io.count = n;
-    ConnPool.peek(ConnPool.internal);
+    ConnPool.peek(protocore_conn_pool_span());
 }
 static void ring_consume(TcpConn *c, size_t n)
 {
     ConnPool.slot = c->id;
     ConnPool.io.count = n;
-    ConnPool.consume(ConnPool.internal);
+    ConnPool.consume(protocore_conn_pool_span());
 }
 static void raw_send(uint8_t slot, const void *data, size_t n)
 {
     ConnPool.slot = slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok || n == 0)
     {
         return;
@@ -1351,20 +1351,20 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     ConnPool.slot = slot;
     ConnPool.io.data = data;
     ConnPool.io.len = (proto_u16)n;
-    ConnPool.send(ConnPool.internal);
+    ConnPool.send(protocore_conn_pool_span());
     ConnPool.slot = slot;
-    ConnPool.flush(ConnPool.internal);
+    ConnPool.flush(protocore_conn_pool_span());
 }
 static void close_conn(uint8_t slot)
 {
     ConnPool.slot = slot;
-    ConnPool.close(ConnPool.internal); // transport owns detach + slot reset + close
+    ConnPool.close(protocore_conn_pool_span()); // transport owns detach + slot reset + close
 }
 
 void protocore_opcua_rx(uint8_t slot)
 {
     ConnPool.slot = slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         return;

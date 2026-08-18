@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
 void setUp(void)
 {
     auth_lockout_reset();
@@ -35,7 +37,7 @@ static protocore_ip parsed(const char *text)
     protocore_ip ip;
     Ip.args.text = text;
     Ip.args.out = &ip;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     TEST_ASSERT_TRUE_MESSAGE(Ip.ok, text);
     return ip;
 }

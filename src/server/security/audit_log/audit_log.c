@@ -20,6 +20,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
+
 #if PROTOCORE_ENABLE_AUDIT_LOG
 
 #include "crypto/hash/sha256.h"
@@ -103,7 +105,7 @@ static char hex_digit(uint8_t nibble)
 {
     Hex.args.nibble = nibble;
     Hex.args.upper = PROTO_FALSE;
-    Hex.digit(Hex.internal);
+    Hex.digit(hex_work);
     return Hex.ch;
 }
 

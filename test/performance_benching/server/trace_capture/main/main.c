@@ -24,7 +24,7 @@ static void sink_cb(const protocore_tc_window *, void *)
 static proto_bool tc_begin(const protocore_tc_config *cfg)
 {
     TraceCapture.cfg = cfg;
-    TraceCapture.begin(TraceCapture.internal);
+    TraceCapture.begin(protocore_trace_capture_span());
     return TraceCapture.ok;
 }
 
@@ -33,7 +33,7 @@ static uint16_t tc_feed(const uint16_t *samples, uint16_t n)
 {
     TraceCapture.feed.samples = samples;
     TraceCapture.feed.n = n;
-    TraceCapture.feed_in(TraceCapture.internal);
+    TraceCapture.feed_in(protocore_trace_capture_span());
     return TraceCapture.accepted;
 }
 
@@ -54,7 +54,7 @@ void dbench_run(void)
         // Steady pre-trigger feeding: the continuous ring fill that runs every DMA-complete.
         DBENCH_OP("TraceCapture.feed_in (64 samples)", 100000, sink += tc_feed(batch, 64));
         (void)sink;
-        TraceCapture.end(TraceCapture.internal);
+        TraceCapture.end(protocore_trace_capture_span());
         DBENCH_DONE();
     }
 }

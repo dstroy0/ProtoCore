@@ -14,6 +14,8 @@
 
 #include <unity.h>
 
+static uint8_t zigbee_work[16]; // the borrow an entry takes; Zigbee never reads it
+
 void setUp(void)
 {
 }
@@ -27,7 +29,10 @@ static const uint8_t CHECK9[9] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
 // CRC-16/IBM-3740 (poly 0x1021, init 0xFFFF, unreflected, no final XOR): check value 0x29B1.
 void test_crc16_catalog_check_value(void)
 {
-    TEST_ASSERT_EQUAL_HEX16(0x29B1u, protocore_ash_crc16(CHECK9, sizeof(CHECK9)));
+    Zigbee.ash_crc16_args.buf = CHECK9;
+    Zigbee.ash_crc16_args.len = sizeof(CHECK9);
+    Zigbee.ash_crc16(zigbee_work);
+    TEST_ASSERT_EQUAL_HEX16(0x29B1u, Zigbee.value);
 }
 
 // UG101: the RST frame carries control byte 0xC0 and no payload, so it goes out as C0 38 BC 7E.
@@ -47,10 +52,19 @@ void test_crc16_catalog_check_value(void)
 void test_ug101_rst_frame(void)
 {
     static const uint8_t WANT[4] = {ASH_RST, 0x38, 0xBC, ASH_FLAG};
-    TEST_ASSERT_EQUAL_HEX16(0x38BCu, protocore_ash_crc16(WANT, 1));
+    Zigbee.ash_crc16_args.buf = WANT;
+    Zigbee.ash_crc16_args.len = 1;
+    Zigbee.ash_crc16(zigbee_work);
+    TEST_ASSERT_EQUAL_HEX16(0x38BCu, Zigbee.value);
 
     uint8_t out[16];
-    TEST_ASSERT_EQUAL_UINT16(4, protocore_ash_frame_encode(ASH_RST, NULL, 0, out, sizeof(out)));
+    Zigbee.ash_frame_encode_args.control = ASH_RST;
+    Zigbee.ash_frame_encode_args.payload = NULL;
+    Zigbee.ash_frame_encode_args.len = 0;
+    Zigbee.ash_frame_encode_args.out = out;
+    Zigbee.ash_frame_encode_args.cap = sizeof(out);
+    Zigbee.ash_frame_encode(zigbee_work);
+    TEST_ASSERT_EQUAL_UINT16(4, Zigbee.value);
     TEST_ASSERT_EQUAL_MEMORY(WANT, out, 4);
 }
 
@@ -71,7 +85,10 @@ static void stuff(uint8_t *out, uint16_t *p, uint8_t b)
 void test_crc_covers_control_then_payload_msb_first(void)
 {
     static const uint8_t JOINED[4] = {0x42, 0x01, 0x02, 0x03};
-    const uint16_t crc = protocore_ash_crc16(JOINED, sizeof(JOINED));
+    Zigbee.ash_crc16_args.buf = JOINED;
+    Zigbee.ash_crc16_args.len = sizeof(JOINED);
+    Zigbee.ash_crc16(zigbee_work);
+    const uint16_t crc = Zigbee.value;
     TEST_ASSERT_TRUE((uint8_t)(crc >> 8) != (uint8_t)(crc & 0xFF)); // the swap has to be observable
 
     uint8_t good[32];
@@ -87,7 +104,14 @@ void test_crc_covers_control_then_payload_msb_first(void)
     uint8_t control = 0;
     uint8_t back[32];
     uint16_t back_len = 0;
-    TEST_ASSERT_EQUAL_INT((int)g, protocore_ash_frame_decode(good, g, &control, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = good;
+    Zigbee.ash_frame_decode_args.len = g;
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT((int)g, Zigbee.n);
     TEST_ASSERT_EQUAL_HEX8(0x42, control);
     TEST_ASSERT_EQUAL_UINT16(3, back_len);
     TEST_ASSERT_EQUAL_MEMORY(JOINED + 1, back, 3);
@@ -101,11 +125,24 @@ void test_crc_covers_control_then_payload_msb_first(void)
     stuff(swapped, &s, (uint8_t)(crc & 0xFF));
     stuff(swapped, &s, (uint8_t)(crc >> 8));
     swapped[s++] = ASH_FLAG;
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ash_frame_decode(swapped, s, &control, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = swapped;
+    Zigbee.ash_frame_decode_args.len = s;
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT(-1, Zigbee.n);
 
     // And the encoder lays out the same octets the hand-built frame does.
     uint8_t out[32];
-    TEST_ASSERT_EQUAL_UINT16(g, protocore_ash_frame_encode(0x42, JOINED + 1, 3, out, sizeof(out)));
+    Zigbee.ash_frame_encode_args.control = 0x42;
+    Zigbee.ash_frame_encode_args.payload = JOINED + 1;
+    Zigbee.ash_frame_encode_args.len = 3;
+    Zigbee.ash_frame_encode_args.out = out;
+    Zigbee.ash_frame_encode_args.cap = sizeof(out);
+    Zigbee.ash_frame_encode(zigbee_work);
+    TEST_ASSERT_EQUAL_UINT16(g, Zigbee.value);
     TEST_ASSERT_EQUAL_MEMORY(good, out, g);
 }
 
@@ -117,7 +154,13 @@ void test_reserved_octets_are_escaped(void)
     static const uint8_t WANT[12] = {0x7D, 0x5E, 0x7D, 0x5D, 0x7D, 0x31, 0x7D, 0x33, 0x7D, 0x38, 0x7D, 0x3A};
 
     uint8_t out[48];
-    const uint16_t n = protocore_ash_frame_encode(0x00, RESERVED, sizeof(RESERVED), out, sizeof(out));
+    Zigbee.ash_frame_encode_args.control = 0x00;
+    Zigbee.ash_frame_encode_args.payload = RESERVED;
+    Zigbee.ash_frame_encode_args.len = sizeof(RESERVED);
+    Zigbee.ash_frame_encode_args.out = out;
+    Zigbee.ash_frame_encode_args.cap = sizeof(out);
+    Zigbee.ash_frame_encode(zigbee_work);
+    const uint16_t n = Zigbee.value;
     TEST_ASSERT_TRUE(n > 13);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0]); // the control byte, not reserved
     TEST_ASSERT_EQUAL_MEMORY(WANT, out + 1, 12);
@@ -133,13 +176,26 @@ void test_frame_round_trip(void)
 {
     static const uint8_t PAYLOAD[8] = {0x7E, 0x00, 0x7D, 0x11, 0x13, 0x18, 0x1A, 0xFF};
     uint8_t frame[64];
-    const uint16_t n = protocore_ash_frame_encode(0x25, PAYLOAD, sizeof(PAYLOAD), frame, sizeof(frame));
+    Zigbee.ash_frame_encode_args.control = 0x25;
+    Zigbee.ash_frame_encode_args.payload = PAYLOAD;
+    Zigbee.ash_frame_encode_args.len = sizeof(PAYLOAD);
+    Zigbee.ash_frame_encode_args.out = frame;
+    Zigbee.ash_frame_encode_args.cap = sizeof(frame);
+    Zigbee.ash_frame_encode(zigbee_work);
+    const uint16_t n = Zigbee.value;
     TEST_ASSERT_TRUE(n > 0);
 
     uint8_t control = 0;
     uint8_t back[64];
     uint16_t back_len = 0;
-    TEST_ASSERT_EQUAL_INT((int)n, protocore_ash_frame_decode(frame, n, &control, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = frame;
+    Zigbee.ash_frame_decode_args.len = n;
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT((int)n, Zigbee.n);
     TEST_ASSERT_EQUAL_HEX8(0x25, control);
     TEST_ASSERT_EQUAL_UINT16(sizeof(PAYLOAD), back_len);
     TEST_ASSERT_EQUAL_MEMORY(PAYLOAD, back, sizeof(PAYLOAD));
@@ -149,13 +205,26 @@ void test_frame_round_trip(void)
 void test_empty_payload_round_trip(void)
 {
     uint8_t frame[16];
-    const uint16_t n = protocore_ash_frame_encode(ASH_RSTACK, NULL, 0, frame, sizeof(frame));
+    Zigbee.ash_frame_encode_args.control = ASH_RSTACK;
+    Zigbee.ash_frame_encode_args.payload = NULL;
+    Zigbee.ash_frame_encode_args.len = 0;
+    Zigbee.ash_frame_encode_args.out = frame;
+    Zigbee.ash_frame_encode_args.cap = sizeof(frame);
+    Zigbee.ash_frame_encode(zigbee_work);
+    const uint16_t n = Zigbee.value;
     TEST_ASSERT_EQUAL_UINT16(4, n);
 
     uint8_t control = 0;
     uint8_t back[16];
     uint16_t back_len = 0xFFFF;
-    TEST_ASSERT_EQUAL_INT(4, protocore_ash_frame_decode(frame, n, &control, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = frame;
+    Zigbee.ash_frame_decode_args.len = n;
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT(4, Zigbee.n);
     TEST_ASSERT_EQUAL_HEX8(ASH_RSTACK, control);
     TEST_ASSERT_EQUAL_UINT16(0, back_len);
 }
@@ -165,7 +234,13 @@ void test_decode_rejects_a_corrupted_frame(void)
 {
     static const uint8_t PAYLOAD[5] = {0x00, 0x01, 0x02, 0x03, 0x04};
     uint8_t frame[32];
-    const uint16_t n = protocore_ash_frame_encode(0x35, PAYLOAD, sizeof(PAYLOAD), frame, sizeof(frame));
+    Zigbee.ash_frame_encode_args.control = 0x35;
+    Zigbee.ash_frame_encode_args.payload = PAYLOAD;
+    Zigbee.ash_frame_encode_args.len = sizeof(PAYLOAD);
+    Zigbee.ash_frame_encode_args.out = frame;
+    Zigbee.ash_frame_encode_args.cap = sizeof(frame);
+    Zigbee.ash_frame_encode(zigbee_work);
+    const uint16_t n = Zigbee.value;
     TEST_ASSERT_TRUE(n > 0);
 
     uint8_t control = 0;
@@ -180,7 +255,14 @@ void test_decode_rejects_a_corrupted_frame(void)
         {
             continue; // a flip onto a delimiter changes the framing, not the CRC
         }
-        TEST_ASSERT_EQUAL_INT(-1, protocore_ash_frame_decode(bad, n, &control, back, sizeof(back), &back_len));
+        Zigbee.ash_frame_decode_args.raw = bad;
+        Zigbee.ash_frame_decode_args.len = n;
+        Zigbee.ash_frame_decode_args.control = &control;
+        Zigbee.ash_frame_decode_args.payload = back;
+        Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+        Zigbee.ash_frame_decode_args.pay_len = &back_len;
+        Zigbee.ash_frame_decode(zigbee_work);
+        TEST_ASSERT_EQUAL_INT(-1, Zigbee.n);
     }
 }
 
@@ -192,18 +274,43 @@ void test_decode_framing_faults(void)
     uint16_t back_len = 0;
 
     static const uint8_t NO_FLAG[4] = {0xC0, 0x38, 0xBC, 0x00};
-    TEST_ASSERT_EQUAL_INT(
-        0, protocore_ash_frame_decode(NO_FLAG, sizeof(NO_FLAG), &control, back, sizeof(back), &back_len));
-    TEST_ASSERT_EQUAL_INT(0, protocore_ash_frame_decode(NO_FLAG, 0, &control, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = NO_FLAG;
+    Zigbee.ash_frame_decode_args.len = sizeof(NO_FLAG);
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT(0, Zigbee.n);
+    Zigbee.ash_frame_decode_args.raw = NO_FLAG;
+    Zigbee.ash_frame_decode_args.len = 0;
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT(0, Zigbee.n);
 
     static const uint8_t DANGLING[3] = {0xC0, ASH_ESCAPE, ASH_FLAG};
-    TEST_ASSERT_EQUAL_INT(
-        -1, protocore_ash_frame_decode(DANGLING, sizeof(DANGLING), &control, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = DANGLING;
+    Zigbee.ash_frame_decode_args.len = sizeof(DANGLING);
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT(-1, Zigbee.n);
 
     // Two octets cannot hold a control byte plus a two-octet CRC.
     static const uint8_t TOO_SHORT[3] = {0xC0, 0x38, ASH_FLAG};
-    TEST_ASSERT_EQUAL_INT(
-        -1, protocore_ash_frame_decode(TOO_SHORT, sizeof(TOO_SHORT), &control, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = TOO_SHORT;
+    Zigbee.ash_frame_decode_args.len = sizeof(TOO_SHORT);
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT(-1, Zigbee.n);
 }
 
 // A payload larger than the caller's buffer is refused, not truncated into it.
@@ -211,12 +318,25 @@ void test_decode_refuses_a_short_payload_buffer(void)
 {
     static const uint8_t PAYLOAD[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t frame[32];
-    const uint16_t n = protocore_ash_frame_encode(0x01, PAYLOAD, sizeof(PAYLOAD), frame, sizeof(frame));
+    Zigbee.ash_frame_encode_args.control = 0x01;
+    Zigbee.ash_frame_encode_args.payload = PAYLOAD;
+    Zigbee.ash_frame_encode_args.len = sizeof(PAYLOAD);
+    Zigbee.ash_frame_encode_args.out = frame;
+    Zigbee.ash_frame_encode_args.cap = sizeof(frame);
+    Zigbee.ash_frame_encode(zigbee_work);
+    const uint16_t n = Zigbee.value;
 
     uint8_t control = 0;
     uint8_t small[4];
     uint16_t back_len = 0;
-    TEST_ASSERT_EQUAL_INT(-1, protocore_ash_frame_decode(frame, n, &control, small, sizeof(small), &back_len));
+    Zigbee.ash_frame_decode_args.raw = frame;
+    Zigbee.ash_frame_decode_args.len = n;
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = small;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(small);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT(-1, Zigbee.n);
 }
 
 // The decoder consumes exactly up to and including the first flag, leaving the next frame in place.
@@ -225,20 +345,44 @@ void test_decode_consumes_one_frame_from_a_stream(void)
     static const uint8_t A[2] = {0xAA, 0xBB};
     static const uint8_t B[3] = {0x01, 0x02, 0x03};
     uint8_t stream[64];
-    const uint16_t na = protocore_ash_frame_encode(0x10, A, sizeof(A), stream, sizeof(stream));
-    const uint16_t nb = protocore_ash_frame_encode(0x20, B, sizeof(B), stream + na, (uint16_t)(sizeof(stream) - na));
+    Zigbee.ash_frame_encode_args.control = 0x10;
+    Zigbee.ash_frame_encode_args.payload = A;
+    Zigbee.ash_frame_encode_args.len = sizeof(A);
+    Zigbee.ash_frame_encode_args.out = stream;
+    Zigbee.ash_frame_encode_args.cap = sizeof(stream);
+    Zigbee.ash_frame_encode(zigbee_work);
+    const uint16_t na = Zigbee.value;
+    Zigbee.ash_frame_encode_args.control = 0x20;
+    Zigbee.ash_frame_encode_args.payload = B;
+    Zigbee.ash_frame_encode_args.len = sizeof(B);
+    Zigbee.ash_frame_encode_args.out = stream + na;
+    Zigbee.ash_frame_encode_args.cap = (uint16_t)(sizeof(stream) - na);
+    Zigbee.ash_frame_encode(zigbee_work);
+    const uint16_t nb = Zigbee.value;
     TEST_ASSERT_TRUE(na > 0 && nb > 0);
 
     uint8_t control = 0;
     uint8_t back[32];
     uint16_t back_len = 0;
-    TEST_ASSERT_EQUAL_INT(
-        (int)na, protocore_ash_frame_decode(stream, (uint16_t)(na + nb), &control, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = stream;
+    Zigbee.ash_frame_decode_args.len = (uint16_t)(na + nb);
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT((int)na, Zigbee.n);
     TEST_ASSERT_EQUAL_HEX8(0x10, control);
     TEST_ASSERT_EQUAL_MEMORY(A, back, sizeof(A));
 
-    TEST_ASSERT_EQUAL_INT((int)nb,
-                          protocore_ash_frame_decode(stream + na, nb, &control, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = stream + na;
+    Zigbee.ash_frame_decode_args.len = nb;
+    Zigbee.ash_frame_decode_args.control = &control;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT((int)nb, Zigbee.n);
     TEST_ASSERT_EQUAL_HEX8(0x20, control);
     TEST_ASSERT_EQUAL_MEMORY(B, back, sizeof(B));
 }
@@ -250,15 +394,51 @@ void test_encode_bounds(void)
     uint8_t big[PROTOCORE_ZIGBEE_MAX_DATA + 1];
     memset(big, 0x41, sizeof(big));
     uint8_t out[PROTOCORE_ZIGBEE_MAX_DATA * 2 + 8];
-    TEST_ASSERT_EQUAL_UINT16(0, protocore_ash_frame_encode(0x00, big, sizeof(big), out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT16(0, protocore_ash_frame_encode(0x00, NULL, 4, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_UINT16(0, protocore_ash_frame_encode(0x00, big, 4, NULL, sizeof(out)));
+    Zigbee.ash_frame_encode_args.control = 0x00;
+    Zigbee.ash_frame_encode_args.payload = big;
+    Zigbee.ash_frame_encode_args.len = sizeof(big);
+    Zigbee.ash_frame_encode_args.out = out;
+    Zigbee.ash_frame_encode_args.cap = sizeof(out);
+    Zigbee.ash_frame_encode(zigbee_work);
+    TEST_ASSERT_EQUAL_UINT16(0, Zigbee.value);
+    Zigbee.ash_frame_encode_args.control = 0x00;
+    Zigbee.ash_frame_encode_args.payload = NULL;
+    Zigbee.ash_frame_encode_args.len = 4;
+    Zigbee.ash_frame_encode_args.out = out;
+    Zigbee.ash_frame_encode_args.cap = sizeof(out);
+    Zigbee.ash_frame_encode(zigbee_work);
+    TEST_ASSERT_EQUAL_UINT16(0, Zigbee.value);
+    Zigbee.ash_frame_encode_args.control = 0x00;
+    Zigbee.ash_frame_encode_args.payload = big;
+    Zigbee.ash_frame_encode_args.len = 4;
+    Zigbee.ash_frame_encode_args.out = NULL;
+    Zigbee.ash_frame_encode_args.cap = sizeof(out);
+    Zigbee.ash_frame_encode(zigbee_work);
+    TEST_ASSERT_EQUAL_UINT16(0, Zigbee.value);
 
     static const uint8_t SMALL[4] = {1, 2, 3, 4};
-    const uint16_t exact = protocore_ash_frame_encode(0x00, SMALL, sizeof(SMALL), out, sizeof(out));
+    Zigbee.ash_frame_encode_args.control = 0x00;
+    Zigbee.ash_frame_encode_args.payload = SMALL;
+    Zigbee.ash_frame_encode_args.len = sizeof(SMALL);
+    Zigbee.ash_frame_encode_args.out = out;
+    Zigbee.ash_frame_encode_args.cap = sizeof(out);
+    Zigbee.ash_frame_encode(zigbee_work);
+    const uint16_t exact = Zigbee.value;
     TEST_ASSERT_TRUE(exact >= 8); // control + 4 payload + CRC(2) + flag
-    TEST_ASSERT_EQUAL_UINT16(0, protocore_ash_frame_encode(0x00, SMALL, sizeof(SMALL), out, (uint16_t)(exact - 1)));
-    TEST_ASSERT_EQUAL_UINT16(exact, protocore_ash_frame_encode(0x00, SMALL, sizeof(SMALL), out, exact));
+    Zigbee.ash_frame_encode_args.control = 0x00;
+    Zigbee.ash_frame_encode_args.payload = SMALL;
+    Zigbee.ash_frame_encode_args.len = sizeof(SMALL);
+    Zigbee.ash_frame_encode_args.out = out;
+    Zigbee.ash_frame_encode_args.cap = (uint16_t)(exact - 1);
+    Zigbee.ash_frame_encode(zigbee_work);
+    TEST_ASSERT_EQUAL_UINT16(0, Zigbee.value);
+    Zigbee.ash_frame_encode_args.control = 0x00;
+    Zigbee.ash_frame_encode_args.payload = SMALL;
+    Zigbee.ash_frame_encode_args.len = sizeof(SMALL);
+    Zigbee.ash_frame_encode_args.out = out;
+    Zigbee.ash_frame_encode_args.cap = exact;
+    Zigbee.ash_frame_encode(zigbee_work);
+    TEST_ASSERT_EQUAL_UINT16(exact, Zigbee.value);
 }
 
 // A null raw pointer is reported as "nothing to frame yet", never dereferenced.
@@ -266,5 +446,12 @@ void test_decode_null_input(void)
 {
     uint8_t back[8];
     uint16_t back_len = 0;
-    TEST_ASSERT_EQUAL_INT(0, protocore_ash_frame_decode(NULL, 8, NULL, back, sizeof(back), &back_len));
+    Zigbee.ash_frame_decode_args.raw = NULL;
+    Zigbee.ash_frame_decode_args.len = 8;
+    Zigbee.ash_frame_decode_args.control = NULL;
+    Zigbee.ash_frame_decode_args.payload = back;
+    Zigbee.ash_frame_decode_args.pay_cap = sizeof(back);
+    Zigbee.ash_frame_decode_args.pay_len = &back_len;
+    Zigbee.ash_frame_decode(zigbee_work);
+    TEST_ASSERT_EQUAL_INT(0, Zigbee.n);
 }

@@ -6,56 +6,97 @@
  * @brief SFTP protocol v3 wire codec - implementation. See sftp.h.
  */
 
-#include "network_drivers/application/sftp/sftp.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
+static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 
+#include "mmgr/membuild.h" // protocore_sb frame builder
+#include "mmgr/protomem.h"
+#include "mmgr/protostr.h"
+#include "network_drivers/application/sftp/sftp.h"
+
+#include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
+
 #include <time.h>
+
+PROTOCORE_BEGIN_DECLS
 
 // --- reader (big-endian, bounds-checked) ---------------------------------------------------------
 
-void protocore_sftp_rd_init(SftpReader *r, const uint8_t *payload, size_t len)
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void sftp_rd_string(uint8_t *restrict work);
+static void sftp_rd_u32(uint8_t *restrict work);
+static void sftp_rd_u64(uint8_t *restrict work);
+static void sftp_wr_attrs(uint8_t *restrict work);
+static void sftp_wr_bytes(uint8_t *restrict work);
+static void sftp_wr_finish(uint8_t *restrict work);
+static void sftp_wr_init(uint8_t *restrict work);
+static void sftp_wr_string(uint8_t *restrict work);
+static void sftp_wr_u32(uint8_t *restrict work);
+static void sftp_wr_u64(uint8_t *restrict work);
+static void sftp_wr_u8(uint8_t *restrict work);
+
+static void sftp_rd_init(uint8_t *restrict work)
 {
+    (void)work;
+    SftpReader *r = Sftp.rd_init_args.r;
+    const uint8_t *payload = Sftp.rd_init_args.payload;
+    size_t len = Sftp.rd_init_args.len;
+
     r->p = payload;
     r->len = len;
     r->off = 0;
     r->ok = PROTO_TRUE;
 }
 
-uint8_t protocore_sftp_rd_u8(SftpReader *r)
+static void sftp_rd_u8(uint8_t *restrict work)
 {
+    (void)work;
+    SftpReader *r = Sftp.rd_u8_args.r;
+
     if (!r->ok || r->off + 1 > r->len)
     {
         r->ok = PROTO_FALSE;
-        return 0;
+        Sftp.value = 0;
+        return;
     }
-    return r->p[r->off++];
+    Sftp.value = r->p[r->off++];
 }
 
-uint32_t protocore_sftp_rd_u32(SftpReader *r)
+static void sftp_rd_u32(uint8_t *restrict work)
 {
+    (void)work;
+    SftpReader *r = Sftp.rd_u32_args.r;
+
     if (!r->ok || r->off + 4 > r->len)
     {
         r->ok = PROTO_FALSE;
-        return 0;
+        Sftp.u32 = 0;
+        return;
     }
     uint32_t v = ((uint32_t)r->p[r->off] << 24) | ((uint32_t)r->p[r->off + 1] << 16) |
                  ((uint32_t)r->p[r->off + 2] << 8) | (uint32_t)r->p[r->off + 3];
     r->off += 4;
-    return v;
+    Sftp.u32 = v;
 }
 
-uint64_t protocore_sftp_rd_u64(SftpReader *r)
+static void sftp_rd_u64(uint8_t *restrict work)
 {
+    (void)work;
+    SftpReader *r = Sftp.rd_u64_args.r;
+
     if (!r->ok || r->off + 8 > r->len)
     {
         r->ok = PROTO_FALSE;
-        return 0;
+        Sftp.u64 = 0;
+        return;
     }
     uint64_t v = 0;
     for (int i = 0; i < 8; i++)
@@ -63,16 +104,23 @@ uint64_t protocore_sftp_rd_u64(SftpReader *r)
         v = (v << 8) | r->p[r->off + i];
     }
     r->off += 8;
-    return v;
+    Sftp.u64 = v;
 }
 
-proto_bool protocore_sftp_rd_string(SftpReader *r, const uint8_t **out, uint32_t *out_len)
+static void sftp_rd_string(uint8_t *restrict work)
 {
-    uint32_t n = protocore_sftp_rd_u32(r);
+    SftpReader *r = Sftp.rd_string_args.r;
+    const uint8_t **out = Sftp.rd_string_args.out;
+    uint32_t *out_len = Sftp.rd_string_args.out_len;
+
+    Sftp.rd_u32_args.r = r;
+    sftp_rd_u32(work);
+    uint32_t n = Sftp.u32;
     if (!r->ok || r->off + n > r->len)
     {
         r->ok = PROTO_FALSE;
-        return PROTO_FALSE;
+        Sftp.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
@@ -83,58 +131,90 @@ proto_bool protocore_sftp_rd_string(SftpReader *r, const uint8_t **out, uint32_t
         *out_len = n;
     }
     r->off += n;
-    return PROTO_TRUE;
+    Sftp.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_sftp_rd_attrs(SftpReader *r, SftpAttrs *a)
+static void sftp_rd_attrs(uint8_t *restrict work)
 {
-    a->flags = protocore_sftp_rd_u32(r);
+    SftpReader *r = Sftp.rd_attrs_args.r;
+    SftpAttrs *a = Sftp.rd_attrs_args.a;
+
+    Sftp.rd_u32_args.r = r;
+    sftp_rd_u32(work);
+    a->flags = Sftp.u32;
     a->size = 0;
     a->permissions = 0;
     a->atime = 0;
     a->mtime = 0;
     if (a->flags & PROTOCORE_SSH_FILEXFER_ATTR_SIZE)
     {
-        a->size = protocore_sftp_rd_u64(r);
+        Sftp.rd_u64_args.r = r;
+        sftp_rd_u64(work);
+        a->size = Sftp.u64;
     }
     if (a->flags & PROTOCORE_SSH_FILEXFER_ATTR_UIDGID)
     {
-        protocore_sftp_rd_u32(r); // uid (ignored)
-        protocore_sftp_rd_u32(r); // gid (ignored)
+        Sftp.rd_u32_args.r = r;
+        sftp_rd_u32(work); // uid (ignored)
+        Sftp.rd_u32_args.r = r;
+        sftp_rd_u32(work); // gid (ignored)
     }
     if (a->flags & PROTOCORE_SSH_FILEXFER_ATTR_PERMS)
     {
-        a->permissions = protocore_sftp_rd_u32(r);
+        Sftp.rd_u32_args.r = r;
+        sftp_rd_u32(work);
+        a->permissions = Sftp.u32;
     }
     if (a->flags & PROTOCORE_SSH_FILEXFER_ATTR_ACMODTIME)
     {
-        a->atime = protocore_sftp_rd_u32(r);
-        a->mtime = protocore_sftp_rd_u32(r);
+        Sftp.rd_u32_args.r = r;
+        sftp_rd_u32(work);
+        a->atime = Sftp.u32;
+        Sftp.rd_u32_args.r = r;
+        sftp_rd_u32(work);
+        a->mtime = Sftp.u32;
     }
     if (a->flags & PROTOCORE_SSH_FILEXFER_ATTR_EXTENDED)
     {
-        uint32_t ec = protocore_sftp_rd_u32(r);
+        Sftp.rd_u32_args.r = r;
+        sftp_rd_u32(work);
+        uint32_t ec = Sftp.u32;
         for (uint32_t i = 0; i < ec && r->ok; i++)
         {
-            protocore_sftp_rd_string(r, NULL, NULL); // extended type
-            protocore_sftp_rd_string(r, NULL, NULL); // extended data
+            Sftp.rd_string_args.r = r;
+            Sftp.rd_string_args.out = NULL;
+            Sftp.rd_string_args.out_len = NULL;
+            sftp_rd_string(work); // extended type
+            Sftp.rd_string_args.r = r;
+            Sftp.rd_string_args.out = NULL;
+            Sftp.rd_string_args.out_len = NULL;
+            sftp_rd_string(work); // extended data
         }
     }
-    return r->ok;
+    Sftp.ok = r->ok;
 }
 
 // --- writer --------------------------------------------------------------------------------------
 
-void protocore_sftp_wr_init(SftpWriter *w, uint8_t *out, size_t cap)
+static void sftp_wr_init(uint8_t *restrict work)
 {
+    (void)work;
+    SftpWriter *w = Sftp.wr_init_args.w;
+    uint8_t *out = Sftp.wr_init_args.out;
+    size_t cap = Sftp.wr_init_args.cap;
+
     w->p = out;
     w->cap = cap;
     w->off = 4; // reserve the length prefix
     w->ovf = (cap < 4);
 }
 
-void protocore_sftp_wr_u8(SftpWriter *w, uint8_t v)
+static void sftp_wr_u8(uint8_t *restrict work)
 {
+    (void)work;
+    SftpWriter *w = Sftp.wr_u8_args.w;
+    uint8_t v = Sftp.wr_u8_args.v;
+
     if (w->ovf || w->off + 1 > w->cap)
     {
         w->ovf = PROTO_TRUE;
@@ -143,8 +223,12 @@ void protocore_sftp_wr_u8(SftpWriter *w, uint8_t v)
     w->p[w->off++] = v;
 }
 
-void protocore_sftp_wr_u32(SftpWriter *w, uint32_t v)
+static void sftp_wr_u32(uint8_t *restrict work)
 {
+    (void)work;
+    SftpWriter *w = Sftp.wr_u32_args.w;
+    uint32_t v = Sftp.wr_u32_args.v;
+
     if (w->ovf || w->off + 4 > w->cap)
     {
         w->ovf = PROTO_TRUE;
@@ -156,8 +240,12 @@ void protocore_sftp_wr_u32(SftpWriter *w, uint32_t v)
     w->p[w->off++] = (uint8_t)v;
 }
 
-void protocore_sftp_wr_u64(SftpWriter *w, uint64_t v)
+static void sftp_wr_u64(uint8_t *restrict work)
 {
+    (void)work;
+    SftpWriter *w = Sftp.wr_u64_args.w;
+    uint64_t v = Sftp.wr_u64_args.v;
+
     if (w->ovf || w->off + 8 > w->cap)
     {
         w->ovf = PROTO_TRUE;
@@ -169,8 +257,13 @@ void protocore_sftp_wr_u64(SftpWriter *w, uint64_t v)
     }
 }
 
-void protocore_sftp_wr_bytes(SftpWriter *w, const void *b, size_t n)
+static void sftp_wr_bytes(uint8_t *restrict work)
 {
+    (void)work;
+    SftpWriter *w = Sftp.wr_bytes_args.w;
+    const void *b = Sftp.wr_bytes_args.b;
+    size_t n = Sftp.wr_bytes_args.n;
+
     if (w->ovf || w->off + n > w->cap)
     {
         w->ovf = PROTO_TRUE;
@@ -180,56 +273,94 @@ void protocore_sftp_wr_bytes(SftpWriter *w, const void *b, size_t n)
     w->off += n;
 }
 
-void protocore_sftp_wr_string(SftpWriter *w, const void *s, uint32_t n)
+static void sftp_wr_string(uint8_t *restrict work)
 {
-    protocore_sftp_wr_u32(w, n);
-    protocore_sftp_wr_bytes(w, s, n);
+    SftpWriter *w = Sftp.wr_string_args.w;
+    const void *s = Sftp.wr_string_args.s;
+    uint32_t n = Sftp.wr_string_args.n;
+
+    Sftp.wr_u32_args.w = w;
+    Sftp.wr_u32_args.v = n;
+    sftp_wr_u32(work);
+    Sftp.wr_bytes_args.w = w;
+    Sftp.wr_bytes_args.b = s;
+    Sftp.wr_bytes_args.n = n;
+    sftp_wr_bytes(work);
 }
 
-void protocore_sftp_wr_attrs(SftpWriter *w, const SftpAttrs *a)
+static void sftp_wr_attrs(uint8_t *restrict work)
 {
-    protocore_sftp_wr_u32(w, a->flags);
+    SftpWriter *w = Sftp.wr_attrs_args.w;
+    const SftpAttrs *a = Sftp.wr_attrs_args.a;
+
+    Sftp.wr_u32_args.w = w;
+    Sftp.wr_u32_args.v = a->flags;
+    sftp_wr_u32(work);
     if (a->flags & PROTOCORE_SSH_FILEXFER_ATTR_SIZE)
     {
-        protocore_sftp_wr_u64(w, a->size);
+        Sftp.wr_u64_args.w = w;
+        Sftp.wr_u64_args.v = a->size;
+        sftp_wr_u64(work);
     }
     if (a->flags & PROTOCORE_SSH_FILEXFER_ATTR_UIDGID)
     {
-        protocore_sftp_wr_u32(w, 0);
-        protocore_sftp_wr_u32(w, 0);
+        Sftp.wr_u32_args.w = w;
+        Sftp.wr_u32_args.v = 0;
+        sftp_wr_u32(work);
+        Sftp.wr_u32_args.w = w;
+        Sftp.wr_u32_args.v = 0;
+        sftp_wr_u32(work);
     }
     if (a->flags & PROTOCORE_SSH_FILEXFER_ATTR_PERMS)
     {
-        protocore_sftp_wr_u32(w, a->permissions);
+        Sftp.wr_u32_args.w = w;
+        Sftp.wr_u32_args.v = a->permissions;
+        sftp_wr_u32(work);
     }
     if (a->flags & PROTOCORE_SSH_FILEXFER_ATTR_ACMODTIME)
     {
-        protocore_sftp_wr_u32(w, a->atime);
-        protocore_sftp_wr_u32(w, a->mtime);
+        Sftp.wr_u32_args.w = w;
+        Sftp.wr_u32_args.v = a->atime;
+        sftp_wr_u32(work);
+        Sftp.wr_u32_args.w = w;
+        Sftp.wr_u32_args.v = a->mtime;
+        sftp_wr_u32(work);
     }
 }
 
-size_t protocore_sftp_wr_finish(SftpWriter *w)
+static void sftp_wr_finish(uint8_t *restrict work)
 {
+    (void)work;
+    SftpWriter *w = Sftp.wr_finish_args.w;
+
     if (w->ovf)
     {
-        return 0;
+        Sftp.n = 0;
+        return;
     }
     uint32_t plen = (uint32_t)(w->off - 4);
     w->p[0] = (uint8_t)(plen >> 24);
     w->p[1] = (uint8_t)(plen >> 16);
     w->p[2] = (uint8_t)(plen >> 8);
     w->p[3] = (uint8_t)plen;
-    return w->off;
+    Sftp.n = w->off;
 }
 
-size_t protocore_sftp_wr_pos(const SftpWriter *w)
+static void sftp_wr_pos(uint8_t *restrict work)
 {
-    return w->off;
+    (void)work;
+    const SftpWriter *w = Sftp.wr_pos_args.w;
+
+    Sftp.n = w->off;
 }
 
-void protocore_sftp_wr_patch_u32(SftpWriter *w, size_t at, uint32_t v)
+static void sftp_wr_patch_u32(uint8_t *restrict work)
 {
+    (void)work;
+    SftpWriter *w = Sftp.wr_patch_u32_args.w;
+    size_t at = Sftp.wr_patch_u32_args.at;
+    uint32_t v = Sftp.wr_patch_u32_args.v;
+
     if (at + 4 > w->cap)
     {
         return;
@@ -242,92 +373,213 @@ void protocore_sftp_wr_patch_u32(SftpWriter *w, size_t at, uint32_t v)
 
 // --- framing -------------------------------------------------------------------------------------
 
-size_t protocore_sftp_frame_len(const uint8_t *buf, size_t have, size_t max)
+static void sftp_frame_len(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = Sftp.frame_len_args.buf;
+    size_t have = Sftp.frame_len_args.have;
+    size_t max = Sftp.frame_len_args.max;
+
     if (have < 4)
     {
-        return 0; // need at least the length prefix
+        Sftp.n = 0; // need at least the length prefix
+        return;
     }
     uint32_t plen = ((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | (uint32_t)buf[3];
     size_t total = (size_t)plen + 4;
     if (plen == 0 || total > max)
     {
-        return (size_t)-1; // malformed (0-length) or larger than the caller can hold -> drop
+        Sftp.n = (size_t)-1; // malformed (0-length) or larger than the caller can hold -> drop
+        return;
     }
-    return total;
+    Sftp.n = total;
 }
 
 // --- response builders ---------------------------------------------------------------------------
 
-size_t protocore_sftp_build_version(uint8_t *out, size_t cap)
+static void sftp_build_version(uint8_t *restrict work)
 {
+    uint8_t *out = Sftp.build_version_args.out;
+    size_t cap = Sftp.build_version_args.cap;
+
     SftpWriter w;
-    protocore_sftp_wr_init(&w, out, cap);
-    protocore_sftp_wr_u8(&w, PROTOCORE_SSH_FXP_VERSION);
-    protocore_sftp_wr_u32(&w, PROTOCORE_SFTP_VERSION);
-    return protocore_sftp_wr_finish(&w);
+    Sftp.wr_init_args.w = &w;
+    Sftp.wr_init_args.out = out;
+    Sftp.wr_init_args.cap = cap;
+    sftp_wr_init(work);
+    Sftp.wr_u8_args.w = &w;
+    Sftp.wr_u8_args.v = PROTOCORE_SSH_FXP_VERSION;
+    sftp_wr_u8(work);
+    Sftp.wr_u32_args.w = &w;
+    Sftp.wr_u32_args.v = PROTOCORE_SFTP_VERSION;
+    sftp_wr_u32(work);
+    Sftp.wr_finish_args.w = &w;
+    sftp_wr_finish(work);
 }
 
-size_t protocore_sftp_build_status(uint32_t id, uint32_t code, const char *msg, uint8_t *out, size_t cap)
+static void sftp_build_status(uint8_t *restrict work)
 {
+    uint32_t id = Sftp.build_status_args.id;
+    uint32_t code = Sftp.build_status_args.code;
+    const char *msg = Sftp.build_status_args.msg;
+    uint8_t *out = Sftp.build_status_args.out;
+    size_t cap = Sftp.build_status_args.cap;
+
     SftpWriter w;
-    protocore_sftp_wr_init(&w, out, cap);
-    protocore_sftp_wr_u8(&w, PROTOCORE_SSH_FXP_STATUS);
-    protocore_sftp_wr_u32(&w, id);
-    protocore_sftp_wr_u32(&w, code);
+    Sftp.wr_init_args.w = &w;
+    Sftp.wr_init_args.out = out;
+    Sftp.wr_init_args.cap = cap;
+    sftp_wr_init(work);
+    Sftp.wr_u8_args.w = &w;
+    Sftp.wr_u8_args.v = PROTOCORE_SSH_FXP_STATUS;
+    sftp_wr_u8(work);
+    Sftp.wr_u32_args.w = &w;
+    Sftp.wr_u32_args.v = id;
+    sftp_wr_u32(work);
+    Sftp.wr_u32_args.w = &w;
+    Sftp.wr_u32_args.v = code;
+    sftp_wr_u32(work);
     size_t ml = msg ? str.len(msg, cap) : 0;
-    protocore_sftp_wr_string(&w, msg ? msg : "", (uint32_t)ml);
-    protocore_sftp_wr_string(&w, "", 0); // language tag
-    return protocore_sftp_wr_finish(&w);
+    Sftp.wr_string_args.w = &w;
+    Sftp.wr_string_args.s = msg ? msg : "";
+    Sftp.wr_string_args.n = (uint32_t)ml;
+    sftp_wr_string(work);
+    Sftp.wr_string_args.w = &w;
+    Sftp.wr_string_args.s = "";
+    Sftp.wr_string_args.n = 0;
+    sftp_wr_string(work); // language tag
+    Sftp.wr_finish_args.w = &w;
+    sftp_wr_finish(work);
 }
 
-size_t protocore_sftp_build_handle(uint32_t id, const void *handle, uint32_t hlen, uint8_t *out, size_t cap)
+static void sftp_build_handle(uint8_t *restrict work)
 {
+    uint32_t id = Sftp.build_handle_args.id;
+    const void *handle = Sftp.build_handle_args.handle;
+    uint32_t hlen = Sftp.build_handle_args.hlen;
+    uint8_t *out = Sftp.build_handle_args.out;
+    size_t cap = Sftp.build_handle_args.cap;
+
     SftpWriter w;
-    protocore_sftp_wr_init(&w, out, cap);
-    protocore_sftp_wr_u8(&w, PROTOCORE_SSH_FXP_HANDLE);
-    protocore_sftp_wr_u32(&w, id);
-    protocore_sftp_wr_string(&w, handle, hlen);
-    return protocore_sftp_wr_finish(&w);
+    Sftp.wr_init_args.w = &w;
+    Sftp.wr_init_args.out = out;
+    Sftp.wr_init_args.cap = cap;
+    sftp_wr_init(work);
+    Sftp.wr_u8_args.w = &w;
+    Sftp.wr_u8_args.v = PROTOCORE_SSH_FXP_HANDLE;
+    sftp_wr_u8(work);
+    Sftp.wr_u32_args.w = &w;
+    Sftp.wr_u32_args.v = id;
+    sftp_wr_u32(work);
+    Sftp.wr_string_args.w = &w;
+    Sftp.wr_string_args.s = handle;
+    Sftp.wr_string_args.n = hlen;
+    sftp_wr_string(work);
+    Sftp.wr_finish_args.w = &w;
+    sftp_wr_finish(work);
 }
 
-size_t protocore_sftp_build_attrs(uint32_t id, const SftpAttrs *a, uint8_t *out, size_t cap)
+static void sftp_build_attrs(uint8_t *restrict work)
 {
+    uint32_t id = Sftp.build_attrs_args.id;
+    const SftpAttrs *a = Sftp.build_attrs_args.a;
+    uint8_t *out = Sftp.build_attrs_args.out;
+    size_t cap = Sftp.build_attrs_args.cap;
+
     SftpWriter w;
-    protocore_sftp_wr_init(&w, out, cap);
-    protocore_sftp_wr_u8(&w, PROTOCORE_SSH_FXP_ATTRS);
-    protocore_sftp_wr_u32(&w, id);
-    protocore_sftp_wr_attrs(&w, a);
-    return protocore_sftp_wr_finish(&w);
+    Sftp.wr_init_args.w = &w;
+    Sftp.wr_init_args.out = out;
+    Sftp.wr_init_args.cap = cap;
+    sftp_wr_init(work);
+    Sftp.wr_u8_args.w = &w;
+    Sftp.wr_u8_args.v = PROTOCORE_SSH_FXP_ATTRS;
+    sftp_wr_u8(work);
+    Sftp.wr_u32_args.w = &w;
+    Sftp.wr_u32_args.v = id;
+    sftp_wr_u32(work);
+    Sftp.wr_attrs_args.w = &w;
+    Sftp.wr_attrs_args.a = a;
+    sftp_wr_attrs(work);
+    Sftp.wr_finish_args.w = &w;
+    sftp_wr_finish(work);
 }
 
-size_t protocore_sftp_build_data(uint32_t id, const void *data, uint32_t dlen, uint8_t *out, size_t cap)
+static void sftp_build_data(uint8_t *restrict work)
 {
+    uint32_t id = Sftp.build_data_args.id;
+    const void *data = Sftp.build_data_args.data;
+    uint32_t dlen = Sftp.build_data_args.dlen;
+    uint8_t *out = Sftp.build_data_args.out;
+    size_t cap = Sftp.build_data_args.cap;
+
     SftpWriter w;
-    protocore_sftp_wr_init(&w, out, cap);
-    protocore_sftp_wr_u8(&w, PROTOCORE_SSH_FXP_DATA);
-    protocore_sftp_wr_u32(&w, id);
-    protocore_sftp_wr_string(&w, data, dlen);
-    return protocore_sftp_wr_finish(&w);
+    Sftp.wr_init_args.w = &w;
+    Sftp.wr_init_args.out = out;
+    Sftp.wr_init_args.cap = cap;
+    sftp_wr_init(work);
+    Sftp.wr_u8_args.w = &w;
+    Sftp.wr_u8_args.v = PROTOCORE_SSH_FXP_DATA;
+    sftp_wr_u8(work);
+    Sftp.wr_u32_args.w = &w;
+    Sftp.wr_u32_args.v = id;
+    sftp_wr_u32(work);
+    Sftp.wr_string_args.w = &w;
+    Sftp.wr_string_args.s = data;
+    Sftp.wr_string_args.n = dlen;
+    sftp_wr_string(work);
+    Sftp.wr_finish_args.w = &w;
+    sftp_wr_finish(work);
 }
 
-size_t protocore_sftp_build_name1(uint32_t id, const char *name, const char *longname, const SftpAttrs *a, uint8_t *out,
-                                  size_t cap)
+static void sftp_build_name1(uint8_t *restrict work)
 {
+    uint32_t id = Sftp.build_name1_args.id;
+    const char *name = Sftp.build_name1_args.name;
+    const char *longname = Sftp.build_name1_args.longname;
+    const SftpAttrs *a = Sftp.build_name1_args.a;
+    uint8_t *out = Sftp.build_name1_args.out;
+    size_t cap = Sftp.build_name1_args.cap;
+
     SftpWriter w;
-    protocore_sftp_wr_init(&w, out, cap);
-    protocore_sftp_wr_u8(&w, PROTOCORE_SSH_FXP_NAME);
-    protocore_sftp_wr_u32(&w, id);
-    protocore_sftp_wr_u32(&w, 1); // one entry
-    protocore_sftp_wr_string(&w, name, (uint32_t)str.len(name, cap));
-    protocore_sftp_wr_string(&w, longname, (uint32_t)str.len(longname, cap));
-    protocore_sftp_wr_attrs(&w, a);
-    return protocore_sftp_wr_finish(&w);
+    Sftp.wr_init_args.w = &w;
+    Sftp.wr_init_args.out = out;
+    Sftp.wr_init_args.cap = cap;
+    sftp_wr_init(work);
+    Sftp.wr_u8_args.w = &w;
+    Sftp.wr_u8_args.v = PROTOCORE_SSH_FXP_NAME;
+    sftp_wr_u8(work);
+    Sftp.wr_u32_args.w = &w;
+    Sftp.wr_u32_args.v = id;
+    sftp_wr_u32(work);
+    Sftp.wr_u32_args.w = &w;
+    Sftp.wr_u32_args.v = 1;
+    sftp_wr_u32(work); // one entry
+    Sftp.wr_string_args.w = &w;
+    Sftp.wr_string_args.s = name;
+    Sftp.wr_string_args.n = (uint32_t)str.len(name, cap);
+    sftp_wr_string(work);
+    Sftp.wr_string_args.w = &w;
+    Sftp.wr_string_args.s = longname;
+    Sftp.wr_string_args.n = (uint32_t)str.len(longname, cap);
+    sftp_wr_string(work);
+    Sftp.wr_attrs_args.w = &w;
+    Sftp.wr_attrs_args.a = a;
+    sftp_wr_attrs(work);
+    Sftp.wr_finish_args.w = &w;
+    sftp_wr_finish(work);
 }
 
-size_t protocore_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_t size, uint32_t mtime,
-                                      const char *name, char *out, size_t cap)
+static void sftp_format_longname(uint8_t *restrict work)
 {
+    (void)work;
+    proto_bool is_dir = Sftp.format_longname_args.is_dir;
+    uint32_t perms = Sftp.format_longname_args.perms;
+    uint64_t size = Sftp.format_longname_args.size;
+    uint32_t mtime = Sftp.format_longname_args.mtime;
+    const char *name = Sftp.format_longname_args.name;
+    char *out = Sftp.format_longname_args.out;
+    size_t cap = Sftp.format_longname_args.cap;
+
     static const char *kMonths[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
     char mode[11];
@@ -343,7 +595,7 @@ size_t protocore_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_
     mem.set(&tmv, 0, sizeof(tmv));
     TimeCompat.args.epoch = (time_t)mtime; // mtime==0 -> epoch, a harmless placeholder date
     TimeCompat.args.out = &tmv;
-    TimeCompat.gmtime(TimeCompat.internal);
+    TimeCompat.gmtime(time_compat_work);
     // mtime is a uint32_t, so t is always inside the range every gmtime implementation accepts and the
     // conversion yields tm_mon in [0,11] by definition; tmv is zeroed above, so even a failed conversion
     // leaves month 0. The range test is purely a bounds guard on the kMonths[] index below.
@@ -368,7 +620,36 @@ size_t protocore_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_
     Sb.u64_clip(&sb_out, (uint64_t)(tmv.tm_year + 1900), 5);
     Sb.put_clip(&sb_out, " ");
     Sb.put_clip(&sb_out, name);
-    return Sb.finish(&sb_out);
+    Sftp.n = Sb.finish(&sb_out);
 }
+
+SftpNs Sftp = {
+    .rd_init = sftp_rd_init,
+    .rd_u8 = sftp_rd_u8,
+    .rd_u32 = sftp_rd_u32,
+    .rd_u64 = sftp_rd_u64,
+    .rd_string = sftp_rd_string,
+    .rd_attrs = sftp_rd_attrs,
+    .wr_init = sftp_wr_init,
+    .wr_u8 = sftp_wr_u8,
+    .wr_u32 = sftp_wr_u32,
+    .wr_u64 = sftp_wr_u64,
+    .wr_bytes = sftp_wr_bytes,
+    .wr_string = sftp_wr_string,
+    .wr_attrs = sftp_wr_attrs,
+    .wr_finish = sftp_wr_finish,
+    .wr_pos = sftp_wr_pos,
+    .wr_patch_u32 = sftp_wr_patch_u32,
+    .frame_len = sftp_frame_len,
+    .build_version = sftp_build_version,
+    .build_status = sftp_build_status,
+    .build_handle = sftp_build_handle,
+    .build_attrs = sftp_build_attrs,
+    .build_data = sftp_build_data,
+    .build_name1 = sftp_build_name1,
+    .format_longname = sftp_format_longname,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_SFTP

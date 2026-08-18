@@ -18,17 +18,24 @@
 #ifndef PROTOCORE_WIFI_SNIFFER_H
 #define PROTOCORE_WIFI_SNIFFER_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_WIFI_SNIFFER
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_WIFI_SNIFFER_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /** @brief 802.11 frame type (Frame Control bits 2-3). */
 #define WIFI_TYPE_MGMT 0 ///< management (beacon, probe, auth, assoc, ...).
 #define WIFI_TYPE_CTRL 1 ///< control (RTS/CTS/ACK, ...).
 #define WIFI_TYPE_DATA 2 ///< data.
 #define WIFI_TYPE_EXT 3  ///< extension.
+
+/** @brief Sentinel for "no frame heard yet" in WifiChannelSurvey::best_rssi. */
+#define PROTOCORE_WIFI_RSSI_NONE (-128)
 
 /** @brief A decoded 802.11 MAC header. Addresses not present for the frame's length are left zeroed. */
 typedef struct
@@ -46,15 +53,6 @@ typedef struct
     uint8_t addr3[6];           ///< BSSID / source / dest (present when naddr >= 3).
 } WifiFrame;
 
-/**
- * @brief Decode the 802.11 MAC header of a captured frame.
- *
- * Requires at least the Frame Control + Duration + Address1 (10 bytes); Address2 is decoded at >= 16
- * bytes and Address3 at >= 24 bytes, with @p out->naddr reporting how many were present.
- * @return true if @p len >= 10 and @p frame is non-null; false otherwise.
- */
-proto_bool protocore_wifi_parse(const uint8_t *frame, size_t len, WifiFrame *out);
-
 /** @brief Running per-type frame tally. */
 typedef struct
 {
@@ -64,24 +62,6 @@ typedef struct
     uint32_t other;
     uint32_t total;
 } WifiStats;
-
-/** @brief Zero a tally. */
-void protocore_wifi_stats_reset(WifiStats *s);
-
-/** @brief Fold one decoded frame into the tally. */
-void protocore_wifi_stats_add(WifiStats *s, const WifiFrame *f);
-
-/**
- * @brief Channel-agility roaming decision.
- * @return true if @p cand_rssi exceeds @p cur_rssi by more than @p hysteresis_db (so a switch is worth it).
- */
-proto_bool protocore_wifi_should_roam(int8_t cur_rssi, int8_t cand_rssi, uint8_t hysteresis_db);
-
-// --- Channel-hop scan schedule ----------------------------------------------------------
-//
-// A survey walks a channel range, dwelling on each long enough to hear its traffic, then wraps.
-// The schedule is pure (wrap-safe time math on protocore_millis()); driving the radio is the binding
-// below.
 
 /** @brief Channel-hop schedule across [chan_first, chan_last]. */
 typedef struct
@@ -94,20 +74,6 @@ typedef struct
     uint32_t sweeps;      ///< completed wraps back to chan_first
 } WifiScan;
 
-/** @brief Start a sweep at @p first, dwelling @p dwell_ms per channel. Clamps to 1..14 and first<=last. */
-void protocore_wifi_scan_init(WifiScan *s, uint8_t first, uint8_t last, uint16_t dwell_ms, uint32_t now_ms);
-
-/** @brief True once the current channel's dwell has elapsed (wrap-safe against a millis rollover). */
-proto_bool protocore_wifi_scan_due(const WifiScan *s, uint32_t now_ms);
-
-/**
- * @brief Advance to the next channel (wrapping to chan_first and counting a sweep) and restart the dwell.
- * @return the new channel, or 0 if @p s is null.
- */
-uint8_t protocore_wifi_scan_next(WifiScan *s, uint32_t now_ms);
-
-// --- Per-channel RSSI survey ------------------------------------------------------------
-
 /** @brief What was heard on one channel during the survey. */
 typedef struct
 {
@@ -115,9 +81,6 @@ typedef struct
     int8_t best_rssi;      ///< strongest RSSI seen (dBm); PROTOCORE_WIFI_RSSI_NONE if nothing heard
     uint8_t best_bssid[6]; ///< transmitter of the strongest frame
 } WifiChannelSurvey;
-
-/** @brief Sentinel for "no frame heard yet" in WifiChannelSurvey::best_rssi. */
-#define PROTOCORE_WIFI_RSSI_NONE (-128)
 
 /** @brief Survey across the scanned channel range (index 0 == @c first). */
 typedef struct
@@ -127,61 +90,206 @@ typedef struct
     uint8_t count; ///< channels tracked (<= PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS)
 } WifiSurvey;
 
-/** @brief Clear the survey to track @p count channels starting at @p first. */
-void protocore_wifi_survey_reset(WifiSurvey *s, uint8_t first, uint8_t count);
+/** @brief What parse takes: frame, len, out. */
+typedef struct
+{
+    const uint8_t *frame;
+    size_t len;
+    WifiFrame *out;
+} WifiSnifferParseArgs;
 
-/** @brief Fold one captured frame (on @p channel, at @p rssi) into the survey. Out-of-range channels are ignored. */
-void protocore_wifi_survey_add(WifiSurvey *s, uint8_t channel, int8_t rssi, const WifiFrame *f);
+/** @brief What stats_reset takes: s. */
+typedef struct
+{
+    WifiStats *s;
+} WifiSnifferStatsResetArgs;
 
-/** @brief The survey entry for @p channel, or nullptr if it is outside the tracked range. */
-const WifiChannelSurvey *protocore_wifi_survey_get(const WifiSurvey *s, uint8_t channel);
+/** @brief What stats_add takes: s, f. */
+typedef struct
+{
+    WifiStats *s;
+    const WifiFrame *f;
+} WifiSnifferStatsAddArgs;
+
+/** @brief What should_roam takes: cur_rssi, cand_rssi, hysteresis_db. */
+typedef struct
+{
+    int8_t cur_rssi;
+    int8_t cand_rssi;
+    uint8_t hysteresis_db;
+} WifiSnifferShouldRoamArgs;
+
+/** @brief What scan_init takes: s, first, last, dwell_ms, now_ms. */
+typedef struct
+{
+    WifiScan *s;
+    uint8_t first;
+    uint8_t last;
+    uint16_t dwell_ms;
+    uint32_t now_ms;
+} WifiSnifferScanInitArgs;
+
+/** @brief What scan_due takes: s, now_ms. */
+typedef struct
+{
+    const WifiScan *s;
+    uint32_t now_ms;
+} WifiSnifferScanDueArgs;
+
+/** @brief What scan_next takes: s, now_ms. */
+typedef struct
+{
+    WifiScan *s;
+    uint32_t now_ms;
+} WifiSnifferScanNextArgs;
+
+/** @brief What survey_reset takes: s, first, count. */
+typedef struct
+{
+    WifiSurvey *s;
+    uint8_t first;
+    uint8_t count;
+} WifiSnifferSurveyResetArgs;
+
+/** @brief What survey_add takes: s, channel, rssi, f. */
+typedef struct
+{
+    WifiSurvey *s;
+    uint8_t channel;
+    int8_t rssi;
+    const WifiFrame *f;
+} WifiSnifferSurveyAddArgs;
+
+/** @brief What survey_get takes: s, channel. */
+typedef struct
+{
+    const WifiSurvey *s;
+    uint8_t channel;
+} WifiSnifferSurveyGetArgs;
+
+/** @brief What survey_best takes: s, exclude_channel, out_channel, ... */
+typedef struct
+{
+    const WifiSurvey *s;
+    uint8_t exclude_channel;
+    uint8_t *out_channel;
+    int8_t *out_rssi;
+} WifiSnifferSurveyBestArgs;
+
+/** @brief What begin takes: first_chan, last_chan, dwell_ms. */
+typedef struct
+{
+    uint8_t first_chan;
+    uint8_t last_chan;
+    uint16_t dwell_ms;
+} WifiSnifferBeginArgs;
 
 /**
- * @brief Find the strongest channel heard, ignoring @p exclude_channel (pass 0 to exclude nothing).
- * @return true if any channel had traffic; @p out_channel / @p out_rssi are then set.
- */
-proto_bool protocore_wifi_survey_best(const WifiSurvey *s, uint8_t exclude_channel, uint8_t *out_channel,
-                                      int8_t *out_rssi);
-
-#if PROTOCORE_ENABLE_PROMISC
-// --- Live capture binding (ESP32) -------------------------------------------------------
-//
-// Drives the promiscuous-capture owner (services/radio/promisc) rather than installing a second radio
-// callback: protocore_promisc_begin() delivers each frame to an internal sink that decodes it
-// (protocore_wifi_parse), tallies it (protocore_wifi_stats_add), and folds it into the survey. Call
-// protocore_wifi_sniffer_tick() from the loop to hop channels on the dwell schedule.
-//
-// Concurrency: the sink runs in the Wi-Fi driver's callback context, so the stats and survey are
-// updated underneath a reader. They are deliberately lock-free - the accessors below hand back a
-// live snapshot that may be a frame or two ahead of a value read a moment earlier, which is the
-// right trade for a passive diagnostics panel (a lock in the radio callback would risk stalling
-// capture). Counters are aligned 32-bit and RSSI is a byte, so a reader sees whole values, never
-// torn ones; do not treat a report as an instantaneous consistent cut across channels.
-
-/**
- * @brief Start a live channel-hopping sniff across [first_chan, last_chan].
+ * @brief 802.11 frame decode + traffic tally + RSSI roaming decision (PROTOCORE_ENABLE_WIFI_SNIFFER).
  *
- * Requires the radio to be up (Physical.wifi_init or Physical.wifi_radio_init).
- * Resets the stats + survey.
- * @return true if capture started.
+ * A caller sets the members a call takes, invokes it through ::WifiSniffer with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   WifiSniffer.parse_args.frame = ...;
+ *   WifiSniffer.parse_args.len = ...;
+ *   WifiSniffer.parse_args.out = ...;
+ *   WifiSniffer.parse(work);
+ *   // WifiSniffer.ok is what the call reports
+ *
+ * @var WifiSnifferNs::parse_args  what parse takes: frame, len, out
+ * @var WifiSnifferNs::stats_reset_args  what stats_reset takes: s
+ * @var WifiSnifferNs::stats_add_args  what stats_add takes: s, f
+ * @var WifiSnifferNs::should_roam_args  what should_roam takes: cur_rssi, cand_rssi, hysteresis_db
+ * @var WifiSnifferNs::scan_init_args  what scan_init takes: s, first, last, dwell_ms, now_ms
+ * @var WifiSnifferNs::scan_due_args  what scan_due takes: s, now_ms
+ * @var WifiSnifferNs::scan_next_args  what scan_next takes: s, now_ms
+ * @var WifiSnifferNs::survey_reset_args  what survey_reset takes: s, first, count
+ * @var WifiSnifferNs::survey_add_args  what survey_add takes: s, channel, rssi, f
+ * @var WifiSnifferNs::survey_get_args  what survey_get takes: s, channel
+ * @var WifiSnifferNs::survey_best_args  what survey_best takes: s, exclude_channel, out_channel,
+ * @var WifiSnifferNs::begin_args  what begin takes: first_chan, last_chan, dwell_ms
+ * @var WifiSnifferNs::ok  true if len >= 10 and frame is non-null; false otherwise
+ * @var WifiSnifferNs::value  the new channel, or 0 if s is null
+ * @var WifiSnifferNs::ptr  the pointer a call reports
+ * @var WifiSnifferNs::stats_out   the running per-type tally the sniff fills
+ * @var WifiSnifferNs::survey_out  the per-channel survey the sniff fills
+ * @var WifiSnifferNs::scan_out    the channel-hop schedule the sniff is running
+ * @var WifiSnifferNs::parse  decode the 802.11 MAC header of a captured frame. Requires at least ...
+ * @var WifiSnifferNs::stats_reset  zero a tally
+ * @var WifiSnifferNs::stats_add  fold one decoded frame into the tally
+ * @var WifiSnifferNs::should_roam  channel-agility roaming decision
+ * @var WifiSnifferNs::scan_init  start a sweep at first, dwelling dwell_ms per channel. Clamps to ...
+ * @var WifiSnifferNs::scan_due  true once the current channel's dwell has elapsed (wrap-safe ...
+ * @var WifiSnifferNs::scan_next  advance to the next channel (wrapping to chan_first and counting a ...
+ * @var WifiSnifferNs::survey_reset  clear the survey to track count channels starting at first
+ * @var WifiSnifferNs::survey_add  fold one captured frame (on channel, at rssi) into the survey. ...
+ * @var WifiSnifferNs::survey_get  the survey entry for channel, or nullptr if it is outside the ...
+ * @var WifiSnifferNs::survey_best  find the strongest channel heard, ignoring exclude_channel (pass 0 ...
+ * @var WifiSnifferNs::begin  start a live channel-hopping sniff across [first_chan, last_chan]. ...
+ * @var WifiSnifferNs::tick  hop to the next channel when the dwell has elapsed. Cheap to call ...
+ * @var WifiSnifferNs::end  stop capture
+ * @var WifiSnifferNs::stats  the running traffic tally (never null)
+ * @var WifiSnifferNs::survey  the per-channel survey (never null)
+ * @var WifiSnifferNs::scan  the live scan schedule (never null) - current channel, sweeps ...
+ *
+ * @c work is PROTOCORE_WIFI_SNIFFER_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_wifi_sniffer_begin(uint8_t first_chan, uint8_t last_chan, uint16_t dwell_ms);
+typedef struct
+{
+    WifiSnifferParseArgs parse_args;
+    WifiSnifferStatsResetArgs stats_reset_args;
+    WifiSnifferStatsAddArgs stats_add_args;
+    WifiSnifferShouldRoamArgs should_roam_args;
+    WifiSnifferScanInitArgs scan_init_args;
+    WifiSnifferScanDueArgs scan_due_args;
+    WifiSnifferScanNextArgs scan_next_args;
+    WifiSnifferSurveyResetArgs survey_reset_args;
+    WifiSnifferSurveyAddArgs survey_add_args;
+    WifiSnifferSurveyGetArgs survey_get_args;
+    WifiSnifferSurveyBestArgs survey_best_args;
+    WifiSnifferBeginArgs begin_args;
 
-/** @brief Hop to the next channel when the dwell has elapsed. Cheap to call every loop. */
-void protocore_wifi_sniffer_tick(void);
+    proto_bool ok;
+    uint8_t value;
+    const WifiChannelSurvey *ptr;
+    const WifiStats *stats_out;
+    const WifiSurvey *survey_out;
+    const WifiScan *scan_out;
 
-/** @brief Stop capture. */
-void protocore_wifi_sniffer_end(void);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const stats_reset)(uint8_t *restrict work);
+    void (*const stats_add)(uint8_t *restrict work);
+    void (*const should_roam)(uint8_t *restrict work);
+    void (*const scan_init)(uint8_t *restrict work);
+    void (*const scan_due)(uint8_t *restrict work);
+    void (*const scan_next)(uint8_t *restrict work);
+    void (*const survey_reset)(uint8_t *restrict work);
+    void (*const survey_add)(uint8_t *restrict work);
+    void (*const survey_get)(uint8_t *restrict work);
+    void (*const survey_best)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const tick)(uint8_t *restrict work);
+    void (*const end)(uint8_t *restrict work);
+    void (*const stats)(uint8_t *restrict work);
+    void (*const survey)(uint8_t *restrict work);
+    void (*const scan)(uint8_t *restrict work);
+} WifiSnifferNs;
 
-/** @brief The running traffic tally (never null). */
-const WifiStats *protocore_wifi_sniffer_stats(void);
+/** @brief The one symbol this module exports. */
+extern WifiSnifferNs WifiSniffer;
 
-/** @brief The per-channel survey (never null). */
-const WifiSurvey *protocore_wifi_sniffer_survey(void);
-
-/** @brief The live scan schedule (never null) - current channel, sweeps completed. */
-const WifiScan *protocore_wifi_sniffer_scan(void);
-#endif // PROTOCORE_ENABLE_PROMISC
+/**
+ * @brief The PROTOCORE_WIFI_SNIFFER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_wifi_sniffer_span(void);
 
 PROTOCORE_END_DECLS
 

@@ -47,9 +47,9 @@ for n in 1 2 4 8; do
     # The platform's queue and control-block types come from the host driver under core_setup/hal/host,
     # the same one the native envs build against.
     cc -std=c11 -I "$SRC" -I "$ROOT" -I "$ROOT/core_setup/hal/host" \
-       -include "$ROOT/core_setup/hal/host/protocore_net_host.h" \
-       -DPROTOCORE_WORKER_COUNT="$n" \
-       "$(dirname "$0")/probe.c" -o "$OUT/probe_$n" 2> "$OUT/err_$n"
+        -include "$ROOT/core_setup/hal/host/protocore_net_host.h" \
+        -DPROTOCORE_WORKER_COUNT="$n" \
+        "$(dirname "$0")/probe.c" -o "$OUT/probe_$n" 2>"$OUT/err_$n"
     if [ $? -ne 0 ]; then
         echo "  build failed at N=$n:"
         sed 's/^/    /' "$OUT/err_$n" | head -20

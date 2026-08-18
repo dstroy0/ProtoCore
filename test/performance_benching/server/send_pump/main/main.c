@@ -15,6 +15,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
+
 #define RESERVE 8
 #define CHUNK 1440 // CHUNK_BUF_SIZE (one TCP MSS)
 static uint8_t framed[RESERVE + CHUNK + 2];
@@ -37,7 +39,7 @@ static inline size_t frame_hex_u32(uint8_t *body, size_t n)
     char digits[8];
     Hex.args.v = (uint32_t)n;
     Hex.io.out = digits;
-    Hex.u32(Hex.internal);
+    Hex.u32(hex_work);
     size_t nd = Hex.u8;
     uint8_t *start = body - (nd + 2);
     memcpy(start, digits, nd);

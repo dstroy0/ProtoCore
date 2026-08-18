@@ -204,7 +204,6 @@ struct CoapInternal;
  * @var CoapNs::dedup_store    cache the response sent for @c exchange so a repeat is answered from it
  * @var CoapNs::begin          bind @c bind.port and route its datagrams into the server
  * @var CoapNs::notify         send the current representation of @c observe.path to every observer
- * @var CoapNs::internal       the server's state and the calls that reach it
  */
 typedef struct
 {
@@ -218,24 +217,33 @@ typedef struct
     size_t n;
     const uint8_t *bytes;
 
-    void (*reset)(struct CoapInternal *ctx);
-    void (*add_resource)(struct CoapInternal *ctx);
-    void (*process)(struct CoapInternal *ctx);
-    void (*process_observe)(struct CoapInternal *ctx);
+    void (*const reset)(uint8_t *restrict work);
+    void (*const add_resource)(uint8_t *restrict work);
+    void (*const process)(uint8_t *restrict work);
+    void (*const process_observe)(uint8_t *restrict work);
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
-    void (*dedup_lookup)(struct CoapInternal *ctx);
-    void (*dedup_store)(struct CoapInternal *ctx);
+    void (*const dedup_lookup)(uint8_t *restrict work);
+    void (*const dedup_store)(uint8_t *restrict work);
 #endif
-    void (*begin)(struct CoapInternal *ctx);
+    void (*const begin)(uint8_t *restrict work);
 #if PROTOCORE_ENABLE_COAP_OBSERVE
-    void (*notify)(struct CoapInternal *ctx);
+    void (*const notify)(uint8_t *restrict work);
 #endif
-
-    struct CoapInternal *internal;
 } CoapNs;
 
 /** @brief The one symbol this module exports. */
 extern CoapNs Coap;
+
+/**
+ * @brief The PROTOCORE_COAP_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_coap_span(void);
 
 PROTOCORE_END_DECLS
 

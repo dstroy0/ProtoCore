@@ -22,7 +22,7 @@ static size_t spb_topic(char *out, size_t cap)
     Sparkplug.topic.message_type = "NDATA";
     Sparkplug.topic.edge_node_id = "edge1";
     Sparkplug.topic.device_id = "dev1";
-    Sparkplug.build_topic(Sparkplug.internal);
+    Sparkplug.build_topic(protocore_sparkplug_span());
     return Sparkplug.n;
 }
 
@@ -32,7 +32,7 @@ static size_t spb_metric(uint8_t *out, size_t cap, const SpbMetric *m)
     Sparkplug.out.buf = out;
     Sparkplug.out.cap = cap;
     Sparkplug.metrics.list = m;
-    Sparkplug.build_metric(Sparkplug.internal);
+    Sparkplug.build_metric(protocore_sparkplug_span());
     return Sparkplug.n;
 }
 
@@ -45,7 +45,7 @@ static size_t spb_payload(uint8_t *out, size_t cap, const SpbMetric *m, size_t n
     Sparkplug.payload.seq = seq;
     Sparkplug.metrics.list = m;
     Sparkplug.metrics.count = n;
-    Sparkplug.build_payload(Sparkplug.internal);
+    Sparkplug.build_payload(protocore_sparkplug_span());
     return Sparkplug.n;
 }
 

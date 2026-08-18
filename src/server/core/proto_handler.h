@@ -45,9 +45,6 @@ typedef struct ProtoHandler
  */
 void protocore_register_builtins(void);
 
-/** @brief The registry's own table and the calls that reach it, described only in session.c. */
-struct ProtoRegistryInternal;
-
 /**
  * @brief The protocol registry.
  *
@@ -60,7 +57,6 @@ struct ProtoRegistryInternal;
  * @var ProtoRegistryNs::register_builtins  install every handler the build compiled in
  * @var ProtoRegistryNs::add                bind one handler to one protocol
  * @var ProtoRegistryNs::get                the handler for a protocol, or null if none is bound
- * @var ProtoRegistryNs::internal           the table and the calls that reach it
  */
 typedef struct
 {
@@ -69,11 +65,9 @@ typedef struct
 
     const ProtoHandler *handler;
 
-    void (*register_builtins)(struct ProtoRegistryInternal *ctx);
-    void (*add)(struct ProtoRegistryInternal *ctx);
-    void (*get)(struct ProtoRegistryInternal *ctx);
-
-    struct ProtoRegistryInternal *internal;
+    void (*const register_builtins)(uint8_t *restrict work);
+    void (*const add)(uint8_t *restrict work);
+    void (*const get)(uint8_t *restrict work);
 } ProtoRegistryNs;
 
 /** @brief The one symbol this module exports. ProtoHandler is the per-protocol record above. */

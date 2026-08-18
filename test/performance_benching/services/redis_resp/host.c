@@ -16,6 +16,8 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint8_t redis_resp_work[16]; // the borrow an entry takes; Resp never reads it
+
 /** @brief Encode @p argc bulk strings as one command into @p out; the octets written. */
 static size_t resp_encode(char *out, size_t cap, const char *const *argv, size_t argc)
 {
@@ -24,7 +26,7 @@ static size_t resp_encode(char *out, size_t cap, const char *const *argv, size_t
     Resp.command.argv = argv;
     Resp.command.argv_len = NULL;
     Resp.command.argc = argc;
-    Resp.encode_command(Resp.internal);
+    Resp.encode_command(redis_resp_work);
     return Resp.n;
 }
 
@@ -33,7 +35,7 @@ static size_t resp_take(RespReply *r, const uint8_t *buf, size_t len)
 {
     Resp.wire.buf = buf;
     Resp.wire.len = len;
-    Resp.parse_reply(Resp.internal);
+    Resp.parse_reply(redis_resp_work);
     *r = Resp.reply;
     return Resp.ok ? Resp.n : 0;
 }

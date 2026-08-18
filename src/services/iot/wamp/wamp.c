@@ -16,21 +16,6 @@
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer a build emits through
 
-/**
- * @brief The codec's calls - what WampNs points at.
- *
- * No storage member: a build writes the caller's buffer and a read scans the caller's message, so
- * nothing survives a call.
- *
- * @var WampInternal::ns  the handle a caller sets a call's members on
- */
-struct WampInternal
-{
-    WampNs *ns;
-};
-
-static struct WampInternal s_wamp = {.ns = &Wamp};
-
 // Emit a uint64 as a JSON number: digits generated low end first, then reversed into the writer.
 static void emit_uint(protocore_json_writer *w, uint64_t v)
 {
@@ -57,27 +42,27 @@ static void emit_uint(protocore_json_writer *w, uint64_t v)
 }
 
 // Bind the writer to ns->out and open the list with its message type code (WAMP sec 3.3).
-static void begin_msg(struct WampInternal *restrict ctx, protocore_json_writer *w, int code)
+static void begin_msg(uint8_t *restrict work, protocore_json_writer *w, int code)
 {
-    Json.init(w, ctx->ns->out.buf, ctx->ns->out.cap);
+    Json.init(w, Wamp.out.buf, Wamp.out.cap);
     Json.begin_array(w);
     Json.put_int(w, code);
 }
 
 // Close out a build: the byte count in ns->n, 0 unless the writer stayed inside the buffer.
-static void finish(struct WampInternal *restrict ctx, protocore_json_writer *w)
+static void finish(uint8_t *restrict work, protocore_json_writer *w)
 {
     Json.end_array(w);
-    ctx->ns->ok = protocore_json_ok(w);
-    ctx->ns->n = ctx->ns->ok ? protocore_json_length(w) : 0;
+    Wamp.ok = protocore_json_ok(w);
+    Wamp.n = Wamp.ok ? protocore_json_length(w) : 0;
 }
 
 // Append the trailing Arguments|list and ArgumentsKw|dict, both left off when neither is set.
 // ArgumentsKw sits one position past Arguments, so a keyword-only payload emits `[]` to hold it.
-static void emit_args(struct WampInternal *restrict ctx, protocore_json_writer *w)
+static void emit_args(uint8_t *restrict work, protocore_json_writer *w)
 {
-    const char *args = ctx->ns->payload.arguments;
-    const char *kwargs = ctx->ns->payload.arguments_kw;
+    const char *args = Wamp.payload.arguments;
+    const char *kwargs = Wamp.payload.arguments_kw;
     if (!args && !kwargs)
     {
         return;
@@ -92,154 +77,154 @@ static void emit_args(struct WampInternal *restrict ctx, protocore_json_writer *
 // ---- builders ----
 
 // [HELLO, Realm|uri, Details|dict] (WAMP sec 3.4.1.1).
-static void wamp_build_hello(struct WampInternal *restrict ctx)
+static void wamp_build_hello(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf || !ctx->ns->uri.realm)
+    Wamp.ok = PROTO_FALSE;
+    Wamp.n = 0;
+    if (!Wamp.out.buf || !Wamp.uri.realm)
     {
         return;
     }
     protocore_json_writer w = {0};
-    begin_msg(ctx, &w, WAMP_HELLO);
-    Json.put_str(&w, ctx->ns->uri.realm);
-    Json.put_raw(&w, ctx->ns->payload.details ? ctx->ns->payload.details : "{}");
-    finish(ctx, &w);
+    begin_msg(work, &w, WAMP_HELLO);
+    Json.put_str(&w, Wamp.uri.realm);
+    Json.put_raw(&w, Wamp.payload.details ? Wamp.payload.details : "{}");
+    finish(work, &w);
 }
 
 // [GOODBYE, Details|dict, Reason|uri] (WAMP sec 3.4.1.4).
-static void wamp_build_goodbye(struct WampInternal *restrict ctx)
+static void wamp_build_goodbye(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf || !ctx->ns->uri.reason)
+    Wamp.ok = PROTO_FALSE;
+    Wamp.n = 0;
+    if (!Wamp.out.buf || !Wamp.uri.reason)
     {
         return;
     }
     protocore_json_writer w = {0};
-    begin_msg(ctx, &w, WAMP_GOODBYE);
-    Json.put_raw(&w, ctx->ns->payload.details ? ctx->ns->payload.details : "{}");
-    Json.put_str(&w, ctx->ns->uri.reason);
-    finish(ctx, &w);
+    begin_msg(work, &w, WAMP_GOODBYE);
+    Json.put_raw(&w, Wamp.payload.details ? Wamp.payload.details : "{}");
+    Json.put_str(&w, Wamp.uri.reason);
+    finish(work, &w);
 }
 
 // [SUBSCRIBE, Request|id, Options|dict, Topic|uri] (WAMP sec 3.4.2.3).
-static void wamp_build_subscribe(struct WampInternal *restrict ctx)
+static void wamp_build_subscribe(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf || !ctx->ns->uri.topic)
+    Wamp.ok = PROTO_FALSE;
+    Wamp.n = 0;
+    if (!Wamp.out.buf || !Wamp.uri.topic)
     {
         return;
     }
     protocore_json_writer w = {0};
-    begin_msg(ctx, &w, WAMP_SUBSCRIBE);
-    emit_uint(&w, ctx->ns->id.request);
-    Json.put_raw(&w, ctx->ns->payload.options ? ctx->ns->payload.options : "{}");
-    Json.put_str(&w, ctx->ns->uri.topic);
-    finish(ctx, &w);
+    begin_msg(work, &w, WAMP_SUBSCRIBE);
+    emit_uint(&w, Wamp.id.request);
+    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
+    Json.put_str(&w, Wamp.uri.topic);
+    finish(work, &w);
 }
 
 // [UNSUBSCRIBE, Request|id, SUBSCRIBED.Subscription|id] (WAMP sec 3.4.2.5).
-static void wamp_build_unsubscribe(struct WampInternal *restrict ctx)
+static void wamp_build_unsubscribe(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf)
+    Wamp.ok = PROTO_FALSE;
+    Wamp.n = 0;
+    if (!Wamp.out.buf)
     {
         return;
     }
     protocore_json_writer w = {0};
-    begin_msg(ctx, &w, WAMP_UNSUBSCRIBE);
-    emit_uint(&w, ctx->ns->id.request);
-    emit_uint(&w, ctx->ns->id.subscription);
-    finish(ctx, &w);
+    begin_msg(work, &w, WAMP_UNSUBSCRIBE);
+    emit_uint(&w, Wamp.id.request);
+    emit_uint(&w, Wamp.id.subscription);
+    finish(work, &w);
 }
 
 // [PUBLISH, Request|id, Options|dict, Topic|uri] and its payload tail (WAMP sec 3.4.2.1).
-static void wamp_build_publish(struct WampInternal *restrict ctx)
+static void wamp_build_publish(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf || !ctx->ns->uri.topic)
+    Wamp.ok = PROTO_FALSE;
+    Wamp.n = 0;
+    if (!Wamp.out.buf || !Wamp.uri.topic)
     {
         return;
     }
     protocore_json_writer w = {0};
-    begin_msg(ctx, &w, WAMP_PUBLISH);
-    emit_uint(&w, ctx->ns->id.request);
-    Json.put_raw(&w, ctx->ns->payload.options ? ctx->ns->payload.options : "{}");
-    Json.put_str(&w, ctx->ns->uri.topic);
-    emit_args(ctx, &w);
-    finish(ctx, &w);
+    begin_msg(work, &w, WAMP_PUBLISH);
+    emit_uint(&w, Wamp.id.request);
+    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
+    Json.put_str(&w, Wamp.uri.topic);
+    emit_args(work, &w);
+    finish(work, &w);
 }
 
 // [CALL, Request|id, Options|dict, Procedure|uri] and its payload tail (WAMP sec 3.4.3.1).
-static void wamp_build_call(struct WampInternal *restrict ctx)
+static void wamp_build_call(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf || !ctx->ns->uri.procedure)
+    Wamp.ok = PROTO_FALSE;
+    Wamp.n = 0;
+    if (!Wamp.out.buf || !Wamp.uri.procedure)
     {
         return;
     }
     protocore_json_writer w = {0};
-    begin_msg(ctx, &w, WAMP_CALL);
-    emit_uint(&w, ctx->ns->id.request);
-    Json.put_raw(&w, ctx->ns->payload.options ? ctx->ns->payload.options : "{}");
-    Json.put_str(&w, ctx->ns->uri.procedure);
-    emit_args(ctx, &w);
-    finish(ctx, &w);
+    begin_msg(work, &w, WAMP_CALL);
+    emit_uint(&w, Wamp.id.request);
+    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
+    Json.put_str(&w, Wamp.uri.procedure);
+    emit_args(work, &w);
+    finish(work, &w);
 }
 
 // [REGISTER, Request|id, Options|dict, Procedure|uri] (WAMP sec 3.4.3.3).
-static void wamp_build_register(struct WampInternal *restrict ctx)
+static void wamp_build_register(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf || !ctx->ns->uri.procedure)
+    Wamp.ok = PROTO_FALSE;
+    Wamp.n = 0;
+    if (!Wamp.out.buf || !Wamp.uri.procedure)
     {
         return;
     }
     protocore_json_writer w = {0};
-    begin_msg(ctx, &w, WAMP_REGISTER);
-    emit_uint(&w, ctx->ns->id.request);
-    Json.put_raw(&w, ctx->ns->payload.options ? ctx->ns->payload.options : "{}");
-    Json.put_str(&w, ctx->ns->uri.procedure);
-    finish(ctx, &w);
+    begin_msg(work, &w, WAMP_REGISTER);
+    emit_uint(&w, Wamp.id.request);
+    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
+    Json.put_str(&w, Wamp.uri.procedure);
+    finish(work, &w);
 }
 
 // [UNREGISTER, Request|id, REGISTERED.Registration|id] (WAMP sec 3.4.3.5).
-static void wamp_build_unregister(struct WampInternal *restrict ctx)
+static void wamp_build_unregister(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf)
+    Wamp.ok = PROTO_FALSE;
+    Wamp.n = 0;
+    if (!Wamp.out.buf)
     {
         return;
     }
     protocore_json_writer w = {0};
-    begin_msg(ctx, &w, WAMP_UNREGISTER);
-    emit_uint(&w, ctx->ns->id.request);
-    emit_uint(&w, ctx->ns->id.registration);
-    finish(ctx, &w);
+    begin_msg(work, &w, WAMP_UNREGISTER);
+    emit_uint(&w, Wamp.id.request);
+    emit_uint(&w, Wamp.id.registration);
+    finish(work, &w);
 }
 
 // [YIELD, INVOCATION.Request|id, Options|dict] and its payload tail (WAMP sec 3.4.3.8).
-static void wamp_build_yield(struct WampInternal *restrict ctx)
+static void wamp_build_yield(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->ns->out.buf)
+    Wamp.ok = PROTO_FALSE;
+    Wamp.n = 0;
+    if (!Wamp.out.buf)
     {
         return;
     }
     protocore_json_writer w = {0};
-    begin_msg(ctx, &w, WAMP_YIELD);
-    emit_uint(&w, ctx->ns->id.request);
-    Json.put_raw(&w, ctx->ns->payload.options ? ctx->ns->payload.options : "{}");
-    emit_args(ctx, &w);
-    finish(ctx, &w);
+    begin_msg(work, &w, WAMP_YIELD);
+    emit_uint(&w, Wamp.id.request);
+    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
+    emit_args(work, &w);
+    finish(work, &w);
 }
 
 // ---- positional reader ----
@@ -328,12 +313,13 @@ static size_t scan_value(const char *s, size_t i)
 
 // Slice the raw element at ns->parse.index out of the received list (WAMP sec 3.3) into ns->text
 // and ns->n.
-static void wamp_element(struct WampInternal *restrict ctx)
+static void wamp_element(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->text = NULL;
-    ctx->ns->n = 0;
-    const char *msg = ctx->ns->parse.msg;
+    (void)work;
+    Wamp.ok = PROTO_FALSE;
+    Wamp.text = NULL;
+    Wamp.n = 0;
+    const char *msg = Wamp.parse.msg;
     if (!msg)
     {
         return;
@@ -357,11 +343,11 @@ static void wamp_element(struct WampInternal *restrict ctx)
         {
             return;
         }
-        if (idx == ctx->ns->parse.index)
+        if (idx == Wamp.parse.index)
         {
-            ctx->ns->text = msg + s;
-            ctx->ns->n = e - s;
-            ctx->ns->ok = PROTO_TRUE;
+            Wamp.text = msg + s;
+            Wamp.n = e - s;
+            Wamp.ok = PROTO_TRUE;
             return;
         }
         i = skip_ws(msg, e);
@@ -374,62 +360,62 @@ static void wamp_element(struct WampInternal *restrict ctx)
 }
 
 // Read the element at ns->parse.index as an id, decimal digits only (WAMP sec 2.1.2), into ns->u64.
-static void wamp_get_id(struct WampInternal *restrict ctx)
+static void wamp_get_id(uint8_t *restrict work)
 {
-    ctx->ns->u64 = 0;
-    wamp_element(ctx);
+    Wamp.u64 = 0;
+    wamp_element(work);
     // n == 0 is defensive only: scan_value() either fails (0, rejected inside wamp_element) or returns
     // an index strictly past where it started, so a sliced element is never empty.
-    if (!ctx->ns->ok || ctx->ns->n == 0)
+    if (!Wamp.ok || Wamp.n == 0)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Wamp.ok = PROTO_FALSE;
         return;
     }
     uint64_t v = 0;
-    for (size_t i = 0; i < ctx->ns->n; i++)
+    for (size_t i = 0; i < Wamp.n; i++)
     {
-        const char c = ctx->ns->text[i];
+        const char c = Wamp.text[i];
         if (c < '0' || c > '9')
         {
-            ctx->ns->ok = PROTO_FALSE;
+            Wamp.ok = PROTO_FALSE;
             return;
         }
         v = v * 10 + (uint64_t)(c - '0');
     }
-    ctx->ns->u64 = v;
+    Wamp.u64 = v;
 }
 
 // Read the message type code, element 0 of the list (WAMP sec 3.5), into ns->i32.
-static void wamp_get_type(struct WampInternal *restrict ctx)
+static void wamp_get_type(uint8_t *restrict work)
 {
-    ctx->ns->i32 = 0;
-    ctx->ns->parse.index = 0;
-    wamp_get_id(ctx);
-    if (ctx->ns->ok)
+    Wamp.i32 = 0;
+    Wamp.parse.index = 0;
+    wamp_get_id(work);
+    if (Wamp.ok)
     {
-        ctx->ns->i32 = (int32_t)ctx->ns->u64;
+        Wamp.i32 = (int32_t)Wamp.u64;
     }
 }
 
 // Copy the URI element at ns->parse.index into ns->parse.uri_out, the quotes stripped. WAMP sec
 // 2.1.1 bars whitespace and `#` from URI components, so the copy carries no escape to undo.
-static void wamp_get_uri(struct WampInternal *restrict ctx)
+static void wamp_get_uri(uint8_t *restrict work)
 {
-    char *out = ctx->ns->parse.uri_out;
-    const size_t cap = ctx->ns->parse.uri_cap;
+    char *out = Wamp.parse.uri_out;
+    const size_t cap = Wamp.parse.uri_cap;
     if (!out || cap == 0)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Wamp.ok = PROTO_FALSE;
         return;
     }
-    wamp_element(ctx);
-    if (!ctx->ns->ok)
+    wamp_element(work);
+    if (!Wamp.ok)
     {
         return;
     }
-    ctx->ns->ok = PROTO_FALSE;
-    const char *s = ctx->ns->text;
-    const size_t n = ctx->ns->n;
+    Wamp.ok = PROTO_FALSE;
+    const char *s = Wamp.text;
+    const size_t n = Wamp.n;
     // The trailing-quote arm is defensive only: an element that starts with '"' was scanned by
     // scan_string(), which returns the index just past the CLOSING quote or fails outright, so
     // s[n-1] is always '"' once s[0] is.
@@ -447,25 +433,22 @@ static void wamp_get_uri(struct WampInternal *restrict ctx)
         out[i] = s[i + 1];
     }
     out[body] = '\0';
-    ctx->ns->ok = PROTO_TRUE;
+    Wamp.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-WampNs Wamp = {
-    .build_hello = wamp_build_hello,
-    .build_goodbye = wamp_build_goodbye,
-    .build_subscribe = wamp_build_subscribe,
-    .build_unsubscribe = wamp_build_unsubscribe,
-    .build_publish = wamp_build_publish,
-    .build_call = wamp_build_call,
-    .build_register = wamp_build_register,
-    .build_unregister = wamp_build_unregister,
-    .build_yield = wamp_build_yield,
-    .element = wamp_element,
-    .get_type = wamp_get_type,
-    .get_id = wamp_get_id,
-    .get_uri = wamp_get_uri,
-    .internal = &s_wamp,
-};
+WampNs Wamp = {.build_hello = wamp_build_hello,
+               .build_goodbye = wamp_build_goodbye,
+               .build_subscribe = wamp_build_subscribe,
+               .build_unsubscribe = wamp_build_unsubscribe,
+               .build_publish = wamp_build_publish,
+               .build_call = wamp_build_call,
+               .build_register = wamp_build_register,
+               .build_unregister = wamp_build_unregister,
+               .build_yield = wamp_build_yield,
+               .element = wamp_element,
+               .get_type = wamp_get_type,
+               .get_id = wamp_get_id,
+               .get_uri = wamp_get_uri};
 
 #endif // PROTOCORE_ENABLE_WAMP

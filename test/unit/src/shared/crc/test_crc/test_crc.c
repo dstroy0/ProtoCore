@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
 void setUp(void)
 {
 }
@@ -32,14 +34,14 @@ static uint32_t compute(const protocore_crc_params *p, const uint8_t *d, size_t 
     Crc.args.params = p;
     Crc.args.data = d;
     Crc.args.len = n;
-    Crc.compute(Crc.internal);
+    Crc.compute(crc_work);
     return Crc.value;
 }
 
 static uint32_t begin(const protocore_crc_params *p)
 {
     Crc.args.params = p;
-    Crc.begin(Crc.internal);
+    Crc.begin(crc_work);
     return Crc.value;
 }
 
@@ -49,7 +51,7 @@ static uint32_t update(const protocore_crc_params *p, uint32_t crc, const uint8_
     Crc.args.crc = crc;
     Crc.args.data = d;
     Crc.args.len = n;
-    Crc.update(Crc.internal);
+    Crc.update(crc_work);
     return Crc.value;
 }
 
@@ -57,7 +59,7 @@ static uint32_t finish(const protocore_crc_params *p, uint32_t crc)
 {
     Crc.args.params = p;
     Crc.args.crc = crc;
-    Crc.final(Crc.internal);
+    Crc.final(crc_work);
     return Crc.value;
 }
 

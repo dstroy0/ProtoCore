@@ -39,16 +39,12 @@ typedef struct
     uint32_t out_cap; ///< how much room it has; ::PROTOCORE_HTTP_DATE_MAX holds the whole form
 } HttpDateArgs;
 
-/** @brief The formatter's own call, described only in http_date.c. */
-struct HttpDateInternal;
-
 /**
  * @brief The IMF-fixdate an HTTP Date header carries.
  *
  * @var HttpDateNs::args      the instant a format renders, and where it lands
  * @var HttpDateNs::n         characters written, excluding the NUL, or 0 on any rejection
  * @var HttpDateNs::format    render the instant in GMT
- * @var HttpDateNs::internal  the call that renders it
  *
  * A buffer smaller than ::PROTOCORE_HTTP_DATE_MAX truncates to empty rather than to a partial date,
  * because the formatter writes nothing and reports 0 when the result does not fit.
@@ -61,9 +57,7 @@ typedef struct
 
     uint8_t n;
 
-    void (*format)(struct HttpDateInternal *ctx);
-
-    struct HttpDateInternal *internal;
+    void (*const format)(uint8_t *restrict work);
 } HttpDateNs;
 
 /** @brief The one symbol this module exports. */

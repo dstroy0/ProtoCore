@@ -57,9 +57,6 @@ typedef struct
     size_t len;                         ///< how many
 } CrcArgs;
 
-/** @brief The CRC calls, described only in crc.c. */
-struct CrcInternal;
-
 /**
  * @brief The Rocksoft CRC model.
  *
@@ -73,7 +70,6 @@ struct CrcInternal;
  * @var CrcNs::update    fold args.len octets at args.data into args.crc
  * @var CrcNs::final     apply the output reflection and the final XOR to args.crc
  * @var CrcNs::compute   one-shot: begin, update and final over args.data
- * @var CrcNs::internal  the calls that fold a register
  *
  * The three steps are split so a caller can checksum a frame that is not contiguous in memory (a
  * header struct then a payload buffer) without copying it together first. Input reflection is
@@ -88,12 +84,10 @@ typedef struct
 
     uint32_t value;
 
-    void (*begin)(struct CrcInternal *ctx);
-    void (*update)(struct CrcInternal *ctx);
-    void (*final)(struct CrcInternal *ctx);
-    void (*compute)(struct CrcInternal *ctx);
-
-    struct CrcInternal *internal;
+    void (*const begin)(uint8_t *restrict work);
+    void (*const update)(uint8_t *restrict work);
+    void (*const final)(uint8_t *restrict work);
+    void (*const compute)(uint8_t *restrict work);
 } CrcNs;
 
 /** @brief The one symbol this module exports. */

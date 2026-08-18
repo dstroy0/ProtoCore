@@ -14,6 +14,7 @@
 
 #include "network_drivers/application/file_serving/file_serving.h"
 #include "network_drivers/presentation/http/http.h"
+#include "network_drivers/session/session.h"                 // file_send: the transfer the connection carries
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a response is written on
 
 #include "mmgr/membuild.h"                          // protocore_sb frame builder
@@ -27,6 +28,13 @@
 #include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
 #include <stdio.h>                          // snprintf, sscanf
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
+
+
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
+static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
+
+static uint8_t http_range_work[16]; // the borrow an entry takes; HttpRange never reads it
 
 // ---------------------------------------------------------------------------
 // File serving
@@ -44,22 +52,9 @@
 // ConnPool.sndbuf() bytes per worker loop and resumes as the window drains. One transfer per slot.
 // Nothing outside this file can name the state: the poll asks protocore_file_holds_slot().
 
-// Per-slot file-send continuation: the open file and how much of it is left.
+/** @brief What this TU owns: the accessor root. The per-slot transfer is session's. */
 typedef struct
 {
-    int fh;            ///< accessor handle for the open source file, held across loops.
-    size_t off;        ///< absolute file offset of the next byte to send.
-    size_t remaining;  ///< body bytes still to send.
-    int status;        ///< response status (200 / 206) for note_response.
-    int total;         ///< total body length, for the access log.
-    proto_bool keep;   ///< keep-alive vs close at completion.
-    proto_bool active; ///< a transfer is in progress on this slot.
-} FileSend;
-
-/** @brief The file-send state this TU owns, one entry per connection slot. */
-typedef struct
-{
-    FileSend send[MAX_CONNS];
     int root; ///< the accessor root everything here resolves against (see file_root).
 } FileCtx;
 
@@ -80,7 +75,7 @@ static int file_root(void)
     if (s_file.root < 0)
     {
         Fs.mount = "/";
-        Fs.begin(Fs.internal);
+        Fs.begin(protocore_filesystem_span());
         s_file.root = Fs.i32;
     }
     return s_file.root;
@@ -88,7 +83,7 @@ static int file_root(void)
 
 proto_bool protocore_file_holds_slot(uint8_t slot)
 {
-    return s_file.send[slot].active;
+    return file_send[slot].active;
 }
 
 // HTTP-date helpers (shared by file serving's Last-Modified / If-Modified-Since and
@@ -107,7 +102,7 @@ void http_rfc1123(int64_t epoch, char *out, size_t cap)
     struct tm tmv;
     TimeCompat.args.epoch = epoch;
     TimeCompat.args.out = &tmv;
-    TimeCompat.gmtime(TimeCompat.internal); // reentrant: never the shared static buffer (worker-safe)
+    TimeCompat.gmtime(time_compat_work); // reentrant: never the shared static buffer (worker-safe)
     if (!TimeCompat.tm_out)
     {
         return;
@@ -151,7 +146,7 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
     struct tm tf;
     TimeCompat.args.epoch = (uint32_t)mtime;
     TimeCompat.args.out = &tf;
-    TimeCompat.gmtime(TimeCompat.internal); // reentrant: never the shared static buffer (worker-safe)
+    TimeCompat.gmtime(time_compat_work); // reentrant: never the shared static buffer (worker-safe)
     if (!TimeCompat.tm_out)
     {
         return PROTO_FALSE;
@@ -239,7 +234,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     Fs.path.dir = fs_path;
     Fs.path.name = "";
     Fs.io.mode = PROTOCORE_MNT_READ;
-    Fs.open(Fs.internal);
+    Fs.open(protocore_filesystem_span());
     int fh = Fs.i32;
     if (fh < 0)
     {
@@ -248,11 +243,11 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     }
 
     ConnPool.slot = slot_id;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         Fs.io.handle = fh;
-        Fs.close(Fs.internal);
+        Fs.close(protocore_filesystem_span());
         http_parser_reset(&http_pool[slot_id]);
         return;
     }
@@ -264,11 +259,11 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     Fs.path.dir = fs_path;
     Fs.path.name = "";
     Fs.io.stat = &st;
-    Fs.stat(Fs.internal);
+    Fs.stat(protocore_filesystem_span());
     if (!Fs.ok)
     {
         Fs.io.handle = fh;
-        Fs.close(Fs.internal);
+        Fs.close(protocore_filesystem_span());
         send_text(slot_id, 404, PROTOCORE_MIME_TEXT_PLAIN, "Not Found");
         return;
     }
@@ -333,7 +328,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     if (not_modified)
     {
         Fs.io.handle = fh;
-        Fs.close(Fs.internal);
+        Fs.close(protocore_filesystem_span());
         char h304[RESP_HDR_BUF_SIZE];
         protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
         Sb.put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
@@ -348,7 +343,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         ConnPool.slot = slot_id;
         ConnPool.io.data = h304;
         ConnPool.io.len = (proto_u16)n304;
-        ConnPool.send_flush(ConnPool.internal); // header-only reply: write and flush in one marshal
+        ConnPool.send_flush(protocore_conn_pool_span()); // header-only reply: write and flush in one marshal
         protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
@@ -378,12 +373,17 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     accept_ranges = "Accept-Ranges: bytes\r\n"; // advertise range support on every file response
     size_t r_start = 0;
     size_t r_end = 0;
-    int rr = http_parse_byte_range(http_get_header(&http_pool[slot_id], "Range"), file_size, &r_start, &r_end);
+    HttpRange.http_parse_byte_range_args.hdr = http_get_header(&http_pool[slot_id], "Range");
+    HttpRange.http_parse_byte_range_args.size = file_size;
+    HttpRange.http_parse_byte_range_args.out_start = &r_start;
+    HttpRange.http_parse_byte_range_args.out_end = &r_end;
+    HttpRange.http_parse_byte_range(http_range_work);
+    int rr = HttpRange.n;
     if (rr < 0)
     {
         // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
         Fs.io.handle = fh;
-        Fs.close(Fs.internal);
+        Fs.close(protocore_filesystem_span());
         char h416[RESP_HDR_BUF_SIZE];
         protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
         Sb.put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
@@ -396,7 +396,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         ConnPool.slot = slot_id;
         ConnPool.io.data = h416;
         ConnPool.io.len = (proto_u16)n416;
-        ConnPool.send_flush(ConnPool.internal);
+        ConnPool.send_flush(protocore_conn_pool_span());
         protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
         return;
     }
@@ -420,7 +420,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         // matching the headers. RFC 9110 14.2 permits a server to ignore Range.
         Fs.io.handle = fh;
         Fs.io.off = (uint64_t)r_start;
-        Fs.seek(Fs.internal);
+        Fs.seek(protocore_filesystem_span());
         if (Fs.ok)
         {
             body_off = r_start;
@@ -465,13 +465,13 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     ConnPool.slot = slot_id;
     ConnPool.io.data = header;
     ConnPool.io.len = (proto_u16)hlen;
-    ConnPool.send(ConnPool.internal);
+    ConnPool.send(protocore_conn_pool_span());
 
     // HEAD or empty body: headers only, finish now.
     if (head || body_len == 0)
     {
         Fs.io.handle = fh;
-        Fs.close(Fs.internal);
+        Fs.close(protocore_filesystem_span());
         protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
         return;
     }
@@ -480,7 +480,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     // window now and resumes on later loops as the window drains, so a file larger
     // than TCP_SND_BUF is never truncated. The pump owns the file and calls
     // protocore_resp_end() at completion - do not close f or end the response here.
-    FileSend *s = &s_file.send[slot_id];
+    FileSend *s = &file_send[slot_id];
     s->fh = fh;
     s->off = body_off;
     s->remaining = body_len;
@@ -497,19 +497,19 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
 // truncates, never blocks the worker.
 void file_send_pump(uint8_t slot_id)
 {
-    FileSend *s = &s_file.send[slot_id];
+    FileSend *s = &file_send[slot_id];
     if (!s->active)
     {
         return;
     }
 
     ConnPool.slot = slot_id;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         // Connection went away mid-transfer: drop the source and the continuation.
         Fs.io.handle = s->fh;
-        Fs.close(Fs.internal);
+        Fs.close(protocore_filesystem_span());
         s->active = PROTO_FALSE;
         return;
     }
@@ -517,18 +517,18 @@ void file_send_pump(uint8_t slot_id)
     // A file body still being paged out is active, not idle: keep the CONN_TIMEOUT_MS idle sweep
     // off it so a transient send stall on a large file cannot reap the slot mid-transfer.
     ConnPool.slot = slot_id;
-    ConnPool.touch_active(ConnPool.internal);
+    ConnPool.touch_active(protocore_conn_pool_span());
 
     uint8_t chunk[FILE_CHUNK_SIZE];
     while (s->remaining > 0)
     {
         ConnPool.slot = slot_id;
-        ConnPool.sndbuf(ConnPool.internal);
+        ConnPool.sndbuf(protocore_conn_pool_span());
         proto_u16 avail = ConnPool.u16;
         if (avail == 0)
         {
             ConnPool.slot = slot_id;
-            ConnPool.flush(ConnPool.internal); // push what is queued; resume on a later loop
+            ConnPool.flush(protocore_conn_pool_span()); // push what is queued; resume on a later loop
             return;
         }
         size_t want = s->remaining < sizeof(chunk) ? s->remaining : sizeof(chunk);
@@ -541,7 +541,7 @@ void file_send_pump(uint8_t slot_id)
         Fs.io.handle = s->fh;
         Fs.io.buf = chunk;
         Fs.io.n = want;
-        Fs.read(Fs.internal);
+        Fs.read(protocore_filesystem_span());
         int n = Fs.i32;
         if (n <= 0)
         {
@@ -551,23 +551,23 @@ void file_send_pump(uint8_t slot_id)
         ConnPool.slot = slot_id;
         ConnPool.io.data = chunk;
         ConnPool.io.len = (proto_u16)n;
-        ConnPool.send(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
         if (!ConnPool.ok)
         {
             // Un-read the bytes that did not go out so the next loop resends them. A backend that
             // cannot rewind would resume at the wrong offset, so the transfer ends there instead.
             Fs.io.handle = s->fh;
             Fs.io.off = s->off;
-            Fs.seek(Fs.internal);
+            Fs.seek(protocore_filesystem_span());
             if (!Fs.ok)
             {
                 Fs.io.handle = s->fh;
-                Fs.close(Fs.internal);
+                Fs.close(protocore_filesystem_span());
                 s->active = PROTO_FALSE;
                 s->remaining = 0;
             }
             ConnPool.slot = slot_id;
-            ConnPool.flush(ConnPool.internal);
+            ConnPool.flush(protocore_conn_pool_span());
             return;
         }
         s->off += (size_t)(n);
@@ -576,10 +576,10 @@ void file_send_pump(uint8_t slot_id)
 
     // Whole body queued: finish the response (flush, keep-alive/close, log, reset).
     Fs.io.handle = s->fh;
-    Fs.close(Fs.internal);
+    Fs.close(protocore_filesystem_span());
     s->active = PROTO_FALSE;
     ConnPool.slot = slot_id;
-    ConnPool.flush(ConnPool.internal);
+    ConnPool.flush(protocore_conn_pool_span());
     protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
@@ -622,7 +622,7 @@ void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys,
     r->method = HTTP_GET;
     Mnt.args.backend = file_sys;
     Mnt.args.root = fs_root;
-    Mnt.point_add(Mnt.internal); // null backend is legal: whatever is mounted
+    Mnt.point_add(mnt_work); // null backend is legal: whatever is mounted
     r->mnt_id = Mnt.u8;
 }
 
@@ -651,7 +651,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
     }
 
     Mnt.args.id = r->mnt_id;
-    Mnt.root_of(Mnt.internal);
+    Mnt.root_of(mnt_work);
     const char *root = Mnt.text;
     size_t rlen = str.len(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
@@ -705,18 +705,18 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         Fs.path.root = file_root();
         Fs.path.dir = gz;
         Fs.path.name = "";
-        Fs.exists(Fs.internal);
+        Fs.exists(protocore_filesystem_span());
         if (gn > 0 && gn < (int)sizeof(gz) && Fs.ok)
         {
             Mnt.args.id = r->mnt_id;
-            Mnt.point_of(Mnt.internal);
+            Mnt.point_of(mnt_work);
             serve_file_internal(slot_id, head, Mnt.backend, gz, ctype, "gzip");
             return;
         }
     }
 
     Mnt.args.id = r->mnt_id;
-    Mnt.point_of(Mnt.internal);
+    Mnt.point_of(mnt_work);
     serve_file_internal(slot_id, head, Mnt.backend, fs_path, ctype, NULL);
 }
 #endif // PROTOCORE_ENABLE_FILE_SERVING

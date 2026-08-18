@@ -13,6 +13,8 @@
 
 #include <unity.h>
 
+static uint8_t link_manager_work[16]; // the borrow an entry takes; Link never reads it
+
 // Eth (prio 20), WiFi STA (prio 10), softAP (prio 5) - a device with all three brought up.
 static LinkIface g_ifaces[3];
 static LinkManager g_m;
@@ -22,20 +24,20 @@ static void bind(LinkManager *m, LinkIface *ifaces, size_t n)
     Link.args.m = m;
     Link.args.ifaces = ifaces;
     Link.args.n = n;
-    Link.init(Link.internal);
+    Link.init(link_manager_work);
 }
 
 static int active(const LinkManager *m)
 {
     Link.args.m_ro = m;
-    Link.active(Link.internal);
+    Link.active(link_manager_work);
     return Link.i32;
 }
 
 static int select_best(const LinkManager *m)
 {
     Link.args.m_ro = m;
-    Link.select(Link.internal);
+    Link.select(link_manager_work);
     return Link.i32;
 }
 
@@ -44,7 +46,7 @@ static proto_bool set_up(LinkManager *m, size_t idx, proto_bool up)
     Link.args.m = m;
     Link.args.idx = idx;
     Link.args.up = up;
-    Link.set(Link.internal);
+    Link.set(link_manager_work);
     return Link.changed;
 }
 

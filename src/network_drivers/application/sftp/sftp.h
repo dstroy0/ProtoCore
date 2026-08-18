@@ -21,11 +21,15 @@
 #ifndef PROTOCORE_SFTP_H
 #define PROTOCORE_SFTP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define PROTOCORE_SFTP_VERSION 3
 
@@ -94,7 +98,6 @@ typedef struct
     uint32_t mtime;       ///< modify time, unix epoch (ATTR_ACMODTIME)
 } SftpAttrs;
 
-// --- reader: a bounds-checked cursor over a packet payload (the bytes after the 4-byte length prefix) ---
 typedef struct
 {
     const uint8_t *p;
@@ -103,16 +106,6 @@ typedef struct
     proto_bool ok; ///< false once any read ran past the end (all further reads are no-ops)
 } SftpReader;
 
-void protocore_sftp_rd_init(SftpReader *r, const uint8_t *payload, size_t len);
-uint8_t protocore_sftp_rd_u8(SftpReader *r);
-uint32_t protocore_sftp_rd_u32(SftpReader *r);
-uint64_t protocore_sftp_rd_u64(SftpReader *r);
-/** @brief Read a `uint32 len || bytes` string as a pointer into the payload (no copy). @return r->ok. */
-proto_bool protocore_sftp_rd_string(SftpReader *r, const uint8_t **out, uint32_t *out_len);
-/** @brief Parse an ATTRS blob (only known fields kept; unknown/extended fields skipped). @return r->ok. */
-proto_bool protocore_sftp_rd_attrs(SftpReader *r, SftpAttrs *a);
-
-// --- writer: build a packet into a caller buffer; reserves the 4-byte length prefix, backfilled by finish ---
 typedef struct
 {
     uint8_t *p;
@@ -121,45 +114,327 @@ typedef struct
     proto_bool ovf; ///< set once a write would exceed cap
 } SftpWriter;
 
-void protocore_sftp_wr_init(SftpWriter *w, uint8_t *out, size_t cap);
-void protocore_sftp_wr_u8(SftpWriter *w, uint8_t v);
-void protocore_sftp_wr_u32(SftpWriter *w, uint32_t v);
-void protocore_sftp_wr_u64(SftpWriter *w, uint64_t v);
-void protocore_sftp_wr_bytes(SftpWriter *w, const void *b, size_t n);
-void protocore_sftp_wr_string(SftpWriter *w, const void *s, uint32_t n); ///< uint32 len + bytes
-void protocore_sftp_wr_attrs(SftpWriter *w, const SftpAttrs *a);
-/** @brief Backfill the length prefix (= off-4). @return the total packet length, or 0 on overflow. */
-size_t protocore_sftp_wr_finish(SftpWriter *w);
-/** @brief Position where the next byte will be written (used to remember a patch point, e.g. a NAME count). */
-size_t protocore_sftp_wr_pos(const SftpWriter *w);
-/** @brief Overwrite a big-endian uint32 already written at @p at (for backfilling a count). */
-void protocore_sftp_wr_patch_u32(SftpWriter *w, size_t at, uint32_t v);
+/** @brief What rd_init takes: r, payload, len. */
+typedef struct
+{
+    SftpReader *r;
+    const uint8_t *payload;
+    size_t len;
+} SftpRdInitArgs;
 
-// --- framing ---
+/** @brief What rd_u8 takes: r. */
+typedef struct
+{
+    SftpReader *r;
+} SftpRdU8Args;
+
+/** @brief What rd_u32 takes: r. */
+typedef struct
+{
+    SftpReader *r;
+} SftpRdU32Args;
+
+/** @brief What rd_u64 takes: r. */
+typedef struct
+{
+    SftpReader *r;
+} SftpRdU64Args;
+
+/** @brief What rd_string takes: r, out, out_len. */
+typedef struct
+{
+    SftpReader *r;
+    const uint8_t **out;
+    uint32_t *out_len;
+} SftpRdStringArgs;
+
+/** @brief What rd_attrs takes: r, a. */
+typedef struct
+{
+    SftpReader *r;
+    SftpAttrs *a;
+} SftpRdAttrsArgs;
+
+/** @brief What wr_init takes: w, out, cap. */
+typedef struct
+{
+    SftpWriter *w;
+    uint8_t *out;
+    size_t cap;
+} SftpWrInitArgs;
+
+/** @brief What wr_u8 takes: w, v. */
+typedef struct
+{
+    SftpWriter *w;
+    uint8_t v;
+} SftpWrU8Args;
+
+/** @brief What wr_u32 takes: w, v. */
+typedef struct
+{
+    SftpWriter *w;
+    uint32_t v;
+} SftpWrU32Args;
+
+/** @brief What wr_u64 takes: w, v. */
+typedef struct
+{
+    SftpWriter *w;
+    uint64_t v;
+} SftpWrU64Args;
+
+/** @brief What wr_bytes takes: w, b, n. */
+typedef struct
+{
+    SftpWriter *w;
+    const void *b;
+    size_t n;
+} SftpWrBytesArgs;
+
+/** @brief What wr_string takes: w, s, n. */
+typedef struct
+{
+    SftpWriter *w;
+    const void *s;
+    uint32_t n;
+} SftpWrStringArgs;
+
+/** @brief What wr_attrs takes: w, a. */
+typedef struct
+{
+    SftpWriter *w;
+    const SftpAttrs *a;
+} SftpWrAttrsArgs;
+
+/** @brief What wr_finish takes: w. */
+typedef struct
+{
+    SftpWriter *w;
+} SftpWrFinishArgs;
+
+/** @brief What wr_pos takes: w. */
+typedef struct
+{
+    const SftpWriter *w;
+} SftpWrPosArgs;
+
+/** @brief What wr_patch_u32 takes: w, at, v. */
+typedef struct
+{
+    SftpWriter *w;
+    size_t at;
+    uint32_t v;
+} SftpWrPatchU32Args;
+
+/** @brief What frame_len takes: buf, have, max. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t have;
+    size_t max;
+} SftpFrameLenArgs;
+
+/** @brief What build_version takes: out, cap. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+} SftpBuildVersionArgs;
+
+/** @brief What build_status takes: id, code, msg, out, cap. */
+typedef struct
+{
+    uint32_t id;
+    uint32_t code;
+    const char *msg;
+    uint8_t *out;
+    size_t cap;
+} SftpBuildStatusArgs;
+
+/** @brief What build_handle takes: id, handle, hlen, out, cap. */
+typedef struct
+{
+    uint32_t id;
+    const void *handle;
+    uint32_t hlen;
+    uint8_t *out;
+    size_t cap;
+} SftpBuildHandleArgs;
+
+/** @brief What build_attrs takes: id, a, out, cap. */
+typedef struct
+{
+    uint32_t id;
+    const SftpAttrs *a;
+    uint8_t *out;
+    size_t cap;
+} SftpBuildAttrsArgs;
+
+/** @brief What build_data takes: id, data, dlen, out, cap. */
+typedef struct
+{
+    uint32_t id;
+    const void *data;
+    uint32_t dlen;
+    uint8_t *out;
+    size_t cap;
+} SftpBuildDataArgs;
+
+/** @brief What build_name1 takes: id, name, longname, a, out, cap. */
+typedef struct
+{
+    uint32_t id;
+    const char *name;
+    const char *longname;
+    const SftpAttrs *a;
+    uint8_t *out;
+    size_t cap;
+} SftpBuildName1Args;
+
+/** @brief What format_longname takes: is_dir, perms, size, mtime, ... */
+typedef struct
+{
+    proto_bool is_dir;
+    uint32_t perms;
+    uint64_t size;
+    uint32_t mtime;
+    const char *name;
+    char *out;
+    size_t cap;
+} SftpFormatLongnameArgs;
+
 /**
- * @brief The full length of the leading packet in @p buf (4-byte prefix + payload), 0 if fewer than 4 bytes
- *        are present (need more), or (size_t)-1 when the declared length is 0 or exceeds @p max
- *        (unparseable: the caller drops the connection).
+ * @brief SFTP protocol v3 wire codec (SSH_FXP_*, draft-ietf-secsh-filexfer-02) - the pure, host-testable half of the
+ * SSH SFTP subsystem (PROTOCORE_ENABLE_SSH_SFTP).
+ *
+ * A caller sets the members a call takes, invokes it through ::Sftp with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Sftp.rd_init_args.r = ...;
+ *   Sftp.rd_init_args.payload = ...;
+ *   Sftp.rd_init_args.len = ...;
+ *   Sftp.rd_init(work);
+ *
+ * @var SftpNs::rd_init_args  what rd_init takes: r, payload, len
+ * @var SftpNs::rd_u8_args  what rd_u8 takes: r
+ * @var SftpNs::rd_u32_args  what rd_u32 takes: r
+ * @var SftpNs::rd_u64_args  what rd_u64 takes: r
+ * @var SftpNs::rd_string_args  what rd_string takes: r, out, out_len
+ * @var SftpNs::rd_attrs_args  what rd_attrs takes: r, a
+ * @var SftpNs::wr_init_args  what wr_init takes: w, out, cap
+ * @var SftpNs::wr_u8_args  what wr_u8 takes: w, v
+ * @var SftpNs::wr_u32_args  what wr_u32 takes: w, v
+ * @var SftpNs::wr_u64_args  what wr_u64 takes: w, v
+ * @var SftpNs::wr_bytes_args  what wr_bytes takes: w, b, n
+ * @var SftpNs::wr_string_args  what wr_string takes: w, s, n
+ * @var SftpNs::wr_attrs_args  what wr_attrs takes: w, a
+ * @var SftpNs::wr_finish_args  what wr_finish takes: w
+ * @var SftpNs::wr_pos_args  what wr_pos takes: w
+ * @var SftpNs::wr_patch_u32_args  what wr_patch_u32 takes: w, at, v
+ * @var SftpNs::frame_len_args  what frame_len takes: buf, have, max
+ * @var SftpNs::build_version_args  what build_version takes: out, cap
+ * @var SftpNs::build_status_args  what build_status takes: id, code, msg, out, cap
+ * @var SftpNs::build_handle_args  what build_handle takes: id, handle, hlen, out, cap
+ * @var SftpNs::build_attrs_args  what build_attrs takes: id, a, out, cap
+ * @var SftpNs::build_data_args  what build_data takes: id, data, dlen, out, cap
+ * @var SftpNs::build_name1_args  what build_name1 takes: id, name, longname, a, out, cap
+ * @var SftpNs::format_longname_args  what format_longname takes: is_dir, perms, size, mtime,
+ * @var SftpNs::ok  a call's true/false outcome
+ * @var SftpNs::value  the value a call reports
+ * @var SftpNs::u32  what a call reports
+ * @var SftpNs::u64  what a call reports
+ * @var SftpNs::n  the string length written (excluding NUL), clamped to cap-1
+ * @var SftpNs::rd_init  rd_init
+ * @var SftpNs::rd_u8  rd_u8
+ * @var SftpNs::rd_u32  rd_u32
+ * @var SftpNs::rd_u64  rd_u64
+ * @var SftpNs::rd_string  read a `uint32 len || bytes` string as a pointer into the payload ...
+ * @var SftpNs::rd_attrs  parse an ATTRS blob (only known fields kept; unknown/extended ...
+ * @var SftpNs::wr_init  wr_init
+ * @var SftpNs::wr_u8  wr_u8
+ * @var SftpNs::wr_u32  wr_u32
+ * @var SftpNs::wr_u64  wr_u64
+ * @var SftpNs::wr_bytes  wr_bytes
+ * @var SftpNs::wr_string  wr_string
+ * @var SftpNs::wr_attrs  wr_attrs
+ * @var SftpNs::wr_finish  backfill the length prefix (= off-4). the total packet length, or 0 ...
+ * @var SftpNs::wr_pos  position where the next byte will be written (used to remember a ...
+ * @var SftpNs::wr_patch_u32  overwrite a big-endian uint32 already written at at (for ...
+ * @var SftpNs::frame_len  the full length of the leading packet in buf (4-byte prefix + ...
+ * @var SftpNs::build_version  build_version
+ * @var SftpNs::build_status  build_status
+ * @var SftpNs::build_handle  build_handle
+ * @var SftpNs::build_attrs  build_attrs
+ * @var SftpNs::build_data  PROTOCORE_SSH_FXP_DATA carrying data[0..dlen)
+ * @var SftpNs::build_name1  PROTOCORE_SSH_FXP_NAME with one entry (filename + longname + attrs) ...
+ * @var SftpNs::format_longname  format a Unix `ls -l`-style longname for a NAME entry, e.g. ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_sftp_frame_len(const uint8_t *buf, size_t have, size_t max);
+typedef struct
+{
+    SftpRdInitArgs rd_init_args;
+    SftpRdU8Args rd_u8_args;
+    SftpRdU32Args rd_u32_args;
+    SftpRdU64Args rd_u64_args;
+    SftpRdStringArgs rd_string_args;
+    SftpRdAttrsArgs rd_attrs_args;
+    SftpWrInitArgs wr_init_args;
+    SftpWrU8Args wr_u8_args;
+    SftpWrU32Args wr_u32_args;
+    SftpWrU64Args wr_u64_args;
+    SftpWrBytesArgs wr_bytes_args;
+    SftpWrStringArgs wr_string_args;
+    SftpWrAttrsArgs wr_attrs_args;
+    SftpWrFinishArgs wr_finish_args;
+    SftpWrPosArgs wr_pos_args;
+    SftpWrPatchU32Args wr_patch_u32_args;
+    SftpFrameLenArgs frame_len_args;
+    SftpBuildVersionArgs build_version_args;
+    SftpBuildStatusArgs build_status_args;
+    SftpBuildHandleArgs build_handle_args;
+    SftpBuildAttrsArgs build_attrs_args;
+    SftpBuildDataArgs build_data_args;
+    SftpBuildName1Args build_name1_args;
+    SftpFormatLongnameArgs format_longname_args;
 
-// --- response builders (return the total packet length written, or 0 on overflow) ---
-size_t protocore_sftp_build_version(uint8_t *out, size_t cap);
-size_t protocore_sftp_build_status(uint32_t id, uint32_t code, const char *msg, uint8_t *out, size_t cap);
-size_t protocore_sftp_build_handle(uint32_t id, const void *handle, uint32_t hlen, uint8_t *out, size_t cap);
-size_t protocore_sftp_build_attrs(uint32_t id, const SftpAttrs *a, uint8_t *out, size_t cap);
-/** @brief PROTOCORE_SSH_FXP_DATA carrying @p data[0..dlen). */
-size_t protocore_sftp_build_data(uint32_t id, const void *data, uint32_t dlen, uint8_t *out, size_t cap);
-/** @brief PROTOCORE_SSH_FXP_NAME with one entry (filename + longname + attrs) - used by REALPATH. */
-size_t protocore_sftp_build_name1(uint32_t id, const char *name, const char *longname, const SftpAttrs *a, uint8_t *out,
-                                  size_t cap);
+    proto_bool ok;
+    uint8_t value;
+    uint32_t u32;
+    uint64_t u64;
+    size_t n;
 
-/**
- * @brief Format a Unix `ls -l`-style longname for a NAME entry, e.g. "-rw-r--r-- 1 0 0 1234 Jan  1 2026 name".
- *        @return the string length written (excluding NUL), clamped to @p cap-1.
- */
-size_t protocore_sftp_format_longname(proto_bool is_dir, uint32_t perms, uint64_t size, uint32_t mtime,
-                                      const char *name, char *out, size_t cap);
+    void (*const rd_init)(uint8_t *restrict work);
+    void (*const rd_u8)(uint8_t *restrict work);
+    void (*const rd_u32)(uint8_t *restrict work);
+    void (*const rd_u64)(uint8_t *restrict work);
+    void (*const rd_string)(uint8_t *restrict work);
+    void (*const rd_attrs)(uint8_t *restrict work);
+    void (*const wr_init)(uint8_t *restrict work);
+    void (*const wr_u8)(uint8_t *restrict work);
+    void (*const wr_u32)(uint8_t *restrict work);
+    void (*const wr_u64)(uint8_t *restrict work);
+    void (*const wr_bytes)(uint8_t *restrict work);
+    void (*const wr_string)(uint8_t *restrict work);
+    void (*const wr_attrs)(uint8_t *restrict work);
+    void (*const wr_finish)(uint8_t *restrict work);
+    void (*const wr_pos)(uint8_t *restrict work);
+    void (*const wr_patch_u32)(uint8_t *restrict work);
+    void (*const frame_len)(uint8_t *restrict work);
+    void (*const build_version)(uint8_t *restrict work);
+    void (*const build_status)(uint8_t *restrict work);
+    void (*const build_handle)(uint8_t *restrict work);
+    void (*const build_attrs)(uint8_t *restrict work);
+    void (*const build_data)(uint8_t *restrict work);
+    void (*const build_name1)(uint8_t *restrict work);
+    void (*const format_longname)(uint8_t *restrict work);
+} SftpNs;
+
+/** @brief The one symbol this module exports. */
+extern SftpNs Sftp;
 
 PROTOCORE_END_DECLS
 

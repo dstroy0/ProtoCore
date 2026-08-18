@@ -128,60 +128,60 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_TLS_FAILED,    ///< the session did not stand up, or it is closed / fatal
 } protocore_tls_state;
 
-static inline proto_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key,
-                                                   size_t key_len)
-{
-    (void)cert;
-    (void)cert_len;
-    (void)key;
-    (void)key_len;
-    return PROTO_FALSE;
-}
-static inline proto_bool protocore_tls_ready(void)
-{
-    return PROTO_FALSE;
-}
-static inline proto_bool protocore_tls_conn_begin(uint8_t slot)
-{
-    (void)slot;
-    return PROTO_FALSE;
-}
-static inline int protocore_tls_handshake(uint8_t slot)
-{
-    (void)slot;
-    return -1;
-}
-static inline proto_bool protocore_tls_established(uint8_t slot)
-{
-    (void)slot;
-    return PROTO_FALSE;
-}
-static inline int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len)
-{
-    (void)slot;
-    (void)buf;
-    (void)len;
-    return -1;
-}
-static inline int protocore_tls_write(uint8_t slot, const void *data, size_t len)
-{
-    (void)slot;
-    (void)data;
-    (void)len;
-    return -1;
-}
-static inline void protocore_tls_conn_end(uint8_t slot)
-{
-    (void)slot;
-}
-static inline void protocore_tls_conn_free(uint8_t slot)
-{
-    (void)slot;
-}
-static inline size_t protocore_tls_arena_peak(void)
-{
-    return 0;
-}
+/**
+ * @brief Install the credential this end presents, before any connection begins.
+ *
+ * The two arms take different credentials, because they are different engines:
+ *   - software (PROTOCORE_TLS_SOFTWARE): RFC 7250 raw public keys. @p cert is the 32-byte Ed25519
+ *     public key and @p key the 32-byte signing seed that matches it.
+ *   - a vendor engine (PROTOCORE_HAS_VENDOR_TLS): whatever that engine parses, an X.509 chain and
+ *     its private key for the mbedTLS binding.
+ *
+ * @return true once a connection may begin.
+ */
+proto_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len);
+
+/** @brief Whether a credential is installed and a connection may begin. */
+proto_bool protocore_tls_ready(void);
+
+/** @brief Stand a TLS connection up on @p slot, taking the pcb it will write through. */
+proto_bool protocore_tls_conn_begin(uint8_t slot);
+
+/**
+ * @brief Pump the handshake on @p slot with whatever ciphertext has arrived.
+ *
+ * @return < 0 the connection failed and must be aborted; 0 still handshaking, ask again when more
+ *         ciphertext lands; > 0 the handshake completed.
+ */
+int protocore_tls_handshake(uint8_t slot);
+
+/** @brief Whether the handshake on @p slot has completed. */
+proto_bool protocore_tls_established(uint8_t slot);
+
+/**
+ * @brief Open one received application record on @p slot into @p buf.
+ *
+ * @return the plaintext length, 0 when no whole record has arrived, or < 0 on an AEAD failure,
+ *         which RFC 8446 sec 5.2 makes fatal to the connection.
+ */
+int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len);
+
+/**
+ * @brief Seal @p len bytes into one application record on @p slot and put it on the wire.
+ *
+ * @return @p len once the record is queued, or < 0 when it did not fit one record or the transport
+ *         refused it.
+ */
+int protocore_tls_write(uint8_t slot, const void *data, size_t len);
+
+/** @brief End the connection on @p slot and wipe every key generation it installed. */
+void protocore_tls_conn_end(uint8_t slot);
+
+/** @brief Release @p slot's connection without ending it: the transport is already gone. */
+void protocore_tls_conn_free(uint8_t slot);
+
+/** @brief The high-water mark of the pool this engine's connections are taken from. */
+size_t protocore_tls_arena_peak(void);
 
 #if PROTOCORE_ENABLE_MTLS
 static inline proto_bool protocore_tls_set_client_ca(const uint8_t *ca, size_t ca_len)

@@ -25,29 +25,60 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t control_work[16]; // the borrow an entry takes; Control never reads it
+
 void dbench_run(void)
 {
     // Variable-rate loop: pid_update() computes 1/dt itself each call.
     Pid p;
-    pid_init(&p, 1.5f, 4.0f, 0.05f);
-    pid_set_output_limits(&p, -10.0f, 10.0f);
-    pid_set_integral_limits(&p, -5.0f, 5.0f);
-    pid_set_derivative_filter(&p, 0.2f);
-    pid_set_feedforward(&p, 0.1f);
+    Control.pid_init_args.p = &p;
+    Control.pid_init_args.kp = 1.5f;
+    Control.pid_init_args.ki = 4.0f;
+    Control.pid_init_args.kd = 0.05f;
+    Control.pid_init(control_work);
+    Control.pid_set_output_limits_args.p = &p;
+    Control.pid_set_output_limits_args.lo = -10.0f;
+    Control.pid_set_output_limits_args.hi = 10.0f;
+    Control.pid_set_output_limits(control_work);
+    Control.pid_set_integral_limits_args.p = &p;
+    Control.pid_set_integral_limits_args.lo = -5.0f;
+    Control.pid_set_integral_limits_args.hi = 5.0f;
+    Control.pid_set_integral_limits(control_work);
+    Control.pid_set_derivative_filter_args.p = &p;
+    Control.pid_set_derivative_filter_args.alpha = 0.2f;
+    Control.pid_set_derivative_filter(control_work);
+    Control.pid_set_feedforward_args.p = &p;
+    Control.pid_set_feedforward_args.kff = 0.1f;
+    Control.pid_set_feedforward(control_work);
 
     // Fixed-rate loop: pid_set_rate() caches dt/inv_dt once, so pid_update_fixed() is all
     // multiplies (no per-call divide).
     Pid pf;
-    pid_init(&pf, 1.5f, 4.0f, 0.05f);
-    pid_set_output_limits(&pf, -10.0f, 10.0f);
-    pid_set_derivative_filter(&pf, 0.2f);
-    pid_set_rate(&pf, 0.01f);
+    Control.pid_init_args.p = &pf;
+    Control.pid_init_args.kp = 1.5f;
+    Control.pid_init_args.ki = 4.0f;
+    Control.pid_init_args.kd = 0.05f;
+    Control.pid_init(control_work);
+    Control.pid_set_output_limits_args.p = &pf;
+    Control.pid_set_output_limits_args.lo = -10.0f;
+    Control.pid_set_output_limits_args.hi = 10.0f;
+    Control.pid_set_output_limits(control_work);
+    Control.pid_set_derivative_filter_args.p = &pf;
+    Control.pid_set_derivative_filter_args.alpha = 0.2f;
+    Control.pid_set_derivative_filter(control_work);
+    Control.pid_set_rate_args.p = &pf;
+    Control.pid_set_rate_args.dt = 0.01f;
+    Control.pid_set_rate(control_work);
 
     // Batched multi-axis update (a motion master driving 4 axes off one control tick).
     Pid axes[4];
     for (uint8_t i = 0; i < 4; i++)
     {
-        pid_init(&axes[i], 1.0f + (float)i, 0.0f, 0.0f);
+        Control.pid_init_args.p = &axes[i];
+        Control.pid_init_args.kp = 1.0f + (float)i;
+        Control.pid_init_args.ki = 0.0f;
+        Control.pid_init_args.kd = 0.0f;
+        Control.pid_init(control_work);
     }
     static const float sp4[4] = {5.0f, 2.0f, -3.0f, 1.0f};
     static const float meas4[4] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -64,10 +95,33 @@ void dbench_run(void)
 
         DBENCH_OP("pid_update", 100000, sinkf += pid_update(&p, 3.0f, 0.5f, 0.01f));
         DBENCH_OP("pid_update_fixed", 100000, sinkf += pid_update_fixed(&pf, 3.0f, 0.5f));
-        DBENCH_OP("pid_update_n x4", 50000, pid_update_n(axes, sp4, meas4, 0.01f, out4, 4));
-        DBENCH_OP("pid_log_header", 100000, sinksz += pid_log_header(logbuf, sizeof(logbuf), &p, 0.01f));
-        DBENCH_OP("pid_log_record", 100000,
-                  sinksz += pid_log_record(logbuf, sizeof(logbuf), 3.0f, 0.5f, out4[0], false));
+        DBENCH_OP("Control.pid_update_n x4", 50000, {
+            Control.pid_update_n_args.p = axes;
+            Control.pid_update_n_args.setpoint = sp4;
+            Control.pid_update_n_args.measurement = meas4;
+            Control.pid_update_n_args.dt = 0.01f;
+            Control.pid_update_n_args.out = out4;
+            Control.pid_update_n_args.n = 4;
+            Control.pid_update_n(control_work);
+        });
+        DBENCH_OP("Control.pid_log_header", 100000, {
+            Control.pid_log_header_args.buf = logbuf;
+            Control.pid_log_header_args.cap = sizeof(logbuf);
+            Control.pid_log_header_args.p = &p;
+            Control.pid_log_header_args.dt = 0.01f;
+            Control.pid_log_header(control_work);
+            sinksz += Control.n;
+        });
+        DBENCH_OP("Control.pid_log_record", 100000, {
+            Control.pid_log_record_args.buf = logbuf;
+            Control.pid_log_record_args.cap = sizeof(logbuf);
+            Control.pid_log_record_args.setpoint = 3.0f;
+            Control.pid_log_record_args.measurement = 0.5f;
+            Control.pid_log_record_args.output = out4[0];
+            Control.pid_log_record_args.saturated = false;
+            Control.pid_log_record(control_work);
+            sinksz += Control.n;
+        });
 
         (void)sinkf;
         (void)sinksz;

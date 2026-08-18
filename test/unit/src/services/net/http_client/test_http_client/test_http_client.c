@@ -27,6 +27,18 @@ static char g_path[160];
 static char g_req[768];
 static uint8_t g_msg[512];
 
+
+// The borrow the entries take. Without the state this module keeps behind PROTOCORE_HAS_NET_STACK it has no
+// span, and NULL is what a short pool hands over too, which every entry already refuses on.
+static uint8_t *http_client_work(void)
+{
+#if PROTOCORE_HAS_NET_STACK
+    return protocore_http_client_span();
+#else
+    return NULL;
+#endif
+}
+
 void setUp(void)
 {
     memset(g_host, 0, sizeof(g_host));
@@ -46,7 +58,7 @@ void tearDown(void)
 static proto_bool split(const char *url)
 {
     HttpClient.target.url = url;
-    HttpClient.parse_target_uri(HttpClient.internal);
+    HttpClient.parse_target_uri(http_client_work());
     return HttpClient.ok;
 }
 
@@ -59,7 +71,7 @@ static void parse(const char *text)
     memcpy(g_msg, text, n);
     HttpClient.message.buf = g_msg;
     HttpClient.message.len = n;
-    HttpClient.parse_response(HttpClient.internal);
+    HttpClient.parse_response(http_client_work());
 }
 
 static void assert_body(const char *want)
@@ -152,7 +164,7 @@ void test_get_request_message(void)
     HttpClient.request.body_len = 0;
     HttpClient.request.out = g_req;
     HttpClient.request.cap = sizeof(g_req);
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
 
     static const char WANT[] = "GET /path?q=1 HTTP/1.1\r\n"
                                "Host: example.com\r\n"
@@ -176,20 +188,20 @@ void test_host_field_carries_only_a_non_default_port(void)
     HttpClient.request.cap = sizeof(g_req);
 
     TEST_ASSERT_TRUE(split("http://example.com:80/x"));
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     TEST_ASSERT_NOT_NULL(strstr(g_req, "Host: example.com\r\n"));
 
     TEST_ASSERT_TRUE(split("https://example.com:443/x"));
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     TEST_ASSERT_NOT_NULL(strstr(g_req, "Host: example.com\r\n"));
 
     TEST_ASSERT_TRUE(split("http://example.com:8080/x"));
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     TEST_ASSERT_NOT_NULL(strstr(g_req, "Host: example.com:8080\r\n"));
 
     // 443 is not the default for http, so it is carried
     TEST_ASSERT_TRUE(split("http://example.com:443/x"));
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     TEST_ASSERT_NOT_NULL(strstr(g_req, "Host: example.com:443\r\n"));
 }
 
@@ -205,7 +217,7 @@ void test_post_request_message(void)
     HttpClient.request.body_len = 5;
     HttpClient.request.out = g_req;
     HttpClient.request.cap = sizeof(g_req);
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
 
     static const char WANT[] = "POST /submit HTTP/1.1\r\n"
                                "Host: example.com\r\n"
@@ -230,7 +242,7 @@ void test_post_defaults_the_content_type(void)
     HttpClient.request.body_len = sizeof(BODY);
     HttpClient.request.out = g_req;
     HttpClient.request.cap = sizeof(g_req);
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
 
     TEST_ASSERT_TRUE(HttpClient.n > 0);
     TEST_ASSERT_NOT_NULL(strstr(g_req, "Content-Type: application/octet-stream\r\n"));
@@ -248,12 +260,12 @@ void test_build_refuses_a_short_buffer(void)
     HttpClient.request.body_len = 0;
     HttpClient.request.out = g_req;
     HttpClient.request.cap = sizeof(g_req);
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     size_t full = HttpClient.n;
     TEST_ASSERT_TRUE(full > 0);
 
     HttpClient.request.cap = full; // one octet short of the message plus its NUL
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     TEST_ASSERT_EQUAL_size_t(0u, HttpClient.n);
 
     // the field section fits but the content does not: one octet short of header plus body
@@ -262,21 +274,21 @@ void test_build_refuses_a_short_buffer(void)
     HttpClient.request.body = BODY;
     HttpClient.request.body_len = 5;
     HttpClient.request.cap = sizeof(g_req);
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     size_t post_full = HttpClient.n;
     TEST_ASSERT_TRUE(post_full > 5);
 
     HttpClient.request.cap = post_full - 1;
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     TEST_ASSERT_EQUAL_size_t(0u, HttpClient.n);
 
     HttpClient.request.out = NULL;
     HttpClient.request.cap = sizeof(g_req);
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     TEST_ASSERT_EQUAL_size_t(0u, HttpClient.n);
     HttpClient.request.out = g_req;
     HttpClient.request.method = NULL;
-    HttpClient.build_request(HttpClient.internal);
+    HttpClient.build_request(http_client_work());
     TEST_ASSERT_EQUAL_size_t(0u, HttpClient.n);
 }
 
@@ -327,7 +339,7 @@ void test_malformed_responses_are_refused(void)
 
     HttpClient.message.buf = NULL;
     HttpClient.message.len = 64;
-    HttpClient.parse_response(HttpClient.internal);
+    HttpClient.parse_response(http_client_work());
     TEST_ASSERT_EQUAL_INT32((int32_t)HTTP_CLIENT_ERR_RESPONSE, HttpClient.status);
 }
 

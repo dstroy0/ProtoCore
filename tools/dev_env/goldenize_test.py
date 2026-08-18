@@ -9,15 +9,20 @@ import sys
 
 sys.path.insert(0, __file__.rsplit("goldenize_test.py", 1)[0])
 from goldenize import (  # noqa: E402
+    drop_empty_else,
+    guard_borrow,
     drop_self_assign,
     drop_void_work,
     dropped_names,
     dropped_tag_decls,
+    gutted_macros,
     enclosing_has_work,
     first_sentence,
     land_returns,
     module_inlines,
     module_macros,
+    ns_owns_state,
+    rename_handle,
 )
 
 FAIL = 0
@@ -39,7 +44,9 @@ check(
     first_sentence("TI INA219 monitor codec (PROTOCORE_ENABLE_INA219). The INA219 measures a drop."),
     "TI INA219 monitor codec (PROTOCORE_ENABLE_INA219)",
 )
-check("a brief with no full stop is kept whole", first_sentence("A brief with no full stop"), "A brief with no full stop")
+check(
+    "a brief with no full stop is kept whole", first_sentence("A brief with no full stop"), "A brief with no full stop"
+)
 check("one sentence loses only its full stop", first_sentence("One sentence only."), "One sentence only")
 check(
     "an abbreviation mid-clause does not end the sentence",
@@ -51,7 +58,9 @@ check(
     first_sentence("Ends with version 1.0 inline. Second sentence."),
     "Ends with version 1.0 inline",
 )
-check("a doc tag is stripped and the newlines collapse", first_sentence("@brief  Does\n a thing. More."), "Does a thing")
+check(
+    "a doc tag is stripped and the newlines collapse", first_sentence("@brief  Does\n a thing. More."), "Does a thing"
+)
 
 USES_WORK = """static void mod_read(uint8_t *restrict work)
 {
@@ -83,7 +92,11 @@ MENTIONS_WORK_IN_A_COMMENT = """static void mod_pure(uint8_t *restrict work)
 """
 
 print("drop_void_work: the cast stays only where it is true")
-check("an entry that threads work into a helper drops the cast", drop_void_work(USES_WORK), USES_WORK.replace("    (void)work;\n", "", 1))
+check(
+    "an entry that threads work into a helper drops the cast",
+    drop_void_work(USES_WORK),
+    USES_WORK.replace("    (void)work;\n", "", 1),
+)
 check("an entry that never touches the borrow keeps it", drop_void_work(NO_WORK), NO_WORK)
 check(
     "a mention inside a comment is not a use",
@@ -126,7 +139,7 @@ check(
 )
 check(
     "two documented defines keep their own blocks, not each other's",
-    module_macros('/** first. */\n#define A 1\n\n/** second. */\n#define B 2\n', ""),
+    module_macros("/** first. */\n#define A 1\n\n/** second. */\n#define B 2\n", ""),
     ["/** first. */\n#define A 1", "/** second. */\n#define B 2"],
 )
 check(
@@ -204,6 +217,19 @@ check(
     len(module_inlines(INL + INL.replace("ok(", "ok2("))),
     2,
 )
+# Asserting only the COUNT here is what let a truncation ship: each block ended at the next `;`
+# after its closing brace, so the first swallowed the second's head and thread.h came out with two
+# unterminated bodies nested inside each other. Assert the text.
+check(
+    "each of two in a row is whole",
+    module_inlines(INL + INL.replace("ok(", "ok2(")),
+    [INL.strip(), INL.replace("ok(", "ok2(").strip()],
+)
+check(
+    "a block ends at its brace, not at the next semicolon",
+    module_inlines(INL + "\nuint16_t later(void);\n"),
+    [INL.strip()],
+)
 
 # The catch-all: whatever the tool failed to carry across is named rather than silently lost.
 SPEC = {"entries": [{"flat": "protocore_x_build"}]}
@@ -246,6 +272,27 @@ check(
     [],
 )
 
+# A macro continued with a trailing backslash: the greedy line match swallowed the backslash, so the
+# continuation never matched and the macro came out as its first line - name intact, body gone.
+CONT = "#define FLAGS \\\n    (A | B | \\\n     C)\n"
+check("a continued macro is captured whole", module_macros(CONT, "")[0].count("\n"), 2)
+check("its body survives", "C)" in module_macros(CONT, "")[0], True)
+check(
+    "a macro that lost its body is reported",
+    gutted_macros(CONT, "#define FLAGS\n"),
+    ["FLAGS"],
+)
+check(
+    "one that kept its body is not",
+    gutted_macros(CONT, CONT),
+    [],
+)
+check(
+    "one that was always empty is not reported",
+    gutted_macros("#define GUARD\n", "#define GUARD\n"),
+    [],
+)
+
 # A comment after `return X;` describes X, so it lands on the assignment, not on the bare return.
 check(
     "a returned value's comment travels with the value",
@@ -269,6 +316,126 @@ check(
     "a real assignment between two members stays",
     drop_self_assign("    Enip.n = Enip.value;\n", "Enip"),
     "    Enip.n = Enip.value;\n",
+)
+
+
+# The handle rename shipped a defect twice, and both times it renamed a struct MEMBER spelled ctx
+# while every `->ctx` reader kept the old name, because `>` guarded them.
+print("\nrename_handle: ctx is the handle where it is a parameter or an argument, nowhere else")
+check(
+    "an entry's own parameter is the handle",
+    rename_handle("static void f(uint8_t *restrict ctx)\n"),
+    "static void f(uint8_t *restrict work)\n",
+)
+check(
+    "so is a helper's, without restrict",
+    rename_handle("static void f(uint8_t *ctx, size_t n)\n"),
+    "static void f(uint8_t *work, size_t n)\n",
+)
+check(
+    "a bare ctx handed on to a sibling entry is the handle",
+    rename_handle("    radio_power(ctx);\n"),
+    "    radio_power(work);\n",
+)
+check(
+    "an unrelated struct's `void *ctx;` member is not - UdpBind's handler context",
+    rename_handle("typedef struct\n{\n    void *ctx;\n} UdpBind;\n"),
+    "typedef struct\n{\n    void *ctx;\n} UdpBind;\n",
+)
+check(
+    "nor is the borrow riding on a marshal record as a member",
+    rename_handle("typedef struct\n{\n    uint8_t *ctx;\n} protocore_tcp_call;\n"),
+    "typedef struct\n{\n    uint8_t *ctx;\n} protocore_tcp_call;\n",
+)
+check(
+    "a member READ keeps its name too",
+    rename_handle("    return do_op(k->ctx);\n"),
+    "    return do_op(k->ctx);\n",
+)
+
+print("\ndrop_empty_else: a branch the conversion emptied")
+check(
+    "an #else with nothing under it goes",
+    drop_empty_else("#if X\nint a;\n#else\n#endif\n"),
+    "#if X\nint a;\n#endif\n",
+)
+check(
+    "so does one holding only blank lines",
+    drop_empty_else("#if X\nint a;\n#else\n\n   \n#endif\n"),
+    "#if X\nint a;\n#endif\n",
+)
+check(
+    "a comment on the #else line does not make the branch non-empty",
+    drop_empty_else("#if X\nint a;\n#else // no state on this arm\n#endif\n"),
+    "#if X\nint a;\n#endif\n",
+)
+check(
+    "a branch that still emits code is left alone",
+    drop_empty_else("#if X\nint a;\n#else\nint b;\n#endif\n"),
+    "#if X\nint a;\n#else\nint b;\n#endif\n",
+)
+check(
+    "so is one holding only a comment line, which is a statement about the arm",
+    drop_empty_else("#if X\nint a;\n#else\n// nothing here\n#endif\n"),
+    "#if X\nint a;\n#else\n// nothing here\n#endif\n",
+)
+
+print("\nguard_borrow: an entry that reaches the context refuses a null borrow")
+DIRECT = "static void a(uint8_t *restrict work)\n{\n    X.n = FS_CTX(work)->n;\n}\n"
+check(
+    "a written-out dereference gets the refusal",
+    guard_borrow(DIRECT, "FS"),
+    "static void a(uint8_t *restrict work)\n{\n    if (!work)\n    {\n        return;"
+    " // the pool was short of this module's borrow\n    }\n    X.n = FS_CTX(work)->n;\n}\n",
+)
+HELPER = "static void a(uint8_t *restrict work)\n{\n    X.ok = store(work) != NULL;\n}\n"
+check(
+    "so does one that hands the borrow to a helper",
+    guard_borrow(HELPER, "FS"),
+    "static void a(uint8_t *restrict work)\n{\n    if (!work)\n    {\n        return;"
+    " // the pool was short of this module's borrow\n    }\n    X.ok = store(work) != NULL;\n}\n",
+)
+VOIDED = "static void a(uint8_t *restrict work)\n{\n    (void)work;\n    X.n = 1;\n}\n"
+check("an entry that says it ignores the borrow is left alone", guard_borrow(VOIDED, "FS"), VOIDED)
+AGAIN = ("static void a(uint8_t *restrict work)\n{\n    if (!work)\n    {\n        return;\n    }\n"
+         "    X.n = FS_CTX(work)->n;\n}\n")
+check("a refusal already there is not written twice", guard_borrow(AGAIN, "FS"), AGAIN)
+COMMENT = "static void a(uint8_t *restrict work)\n{\n    // work is the borrow\n    X.n = 1;\n}\n"
+check("the word in a comment is not the borrow being reached", guard_borrow(COMMENT, "FS"), COMMENT)
+
+print("\nns_owns_state: both shapes of held state")
+check(
+    "a Storage on the internal handle is state",
+    ns_owns_state("struct FooInternal { struct FooStorage *store; };\n"),
+    True,
+)
+check(
+    "so is a file-static context beside it",
+    ns_owns_state("typedef struct { int n; } FooCtx;\nstatic FooCtx s_foo;\n"),
+    True,
+)
+check(
+    "a module with neither holds nothing",
+    ns_owns_state("static void foo(uint8_t *restrict work) { (void)work; }\n"),
+    False,
+)
+
+print("\nmodule_macros: an overridable constant keeps its guard")
+check(
+    "the #ifndef and #endif come with the define",
+    module_macros("/** @brief How long presence is held. */\n#ifndef PROTOCORE_HOLD_MS\n#define PROTOCORE_HOLD_MS 2000\n#endif\n", "PROTOCORE_X_H"),
+    ["/** @brief How long presence is held. */\n#ifndef PROTOCORE_HOLD_MS\n"
+     "#define PROTOCORE_HOLD_MS 2000\n#endif"],
+)
+check(
+    "a bare define is still taken bare",
+    module_macros("/** @brief A wire value. */\n#define PROTOCORE_ACK 6\n", "PROTOCORE_X_H"),
+    ["/** @brief A wire value. */\n#define PROTOCORE_ACK 6"],
+)
+check(
+    "an #ifndef naming a different constant does not widen it",
+    module_macros("#ifndef PROTOCORE_OTHER\n#define PROTOCORE_ACK 6\n#endif\n", "PROTOCORE_X_H"),
+    ["#define PROTOCORE_ACK 6"],
 )
 
 print("\nFAILURES: %d" % FAIL)

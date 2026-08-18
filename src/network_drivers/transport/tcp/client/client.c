@@ -12,7 +12,32 @@
  */
 
 #include "client.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem.h"
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_TCP_CLIENT_BORROW persistent bytes, or null while the pool was short
+} TcpClientOwnCtx;
+static TcpClientOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_tcp_client_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_TCP_CLIENT_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // Compiles only when a client transport is enabled (HTTP client / MQTT / WS client). A server-only
 // build leaves DNS_RESOLVER off, so the resolver symbols this unit calls would not be declared -
@@ -55,30 +80,22 @@ static_assert(PROTOCORE_RING_POW2(PROTOCORE_CLIENT_RX_BUF),
 struct TcpClientStorage
 {
     ClientConn cc[PROTOCORE_CLIENT_CONNS];
-};
-
-/**
- * @brief The dialing side's state and the calls that reach it - what TcpClientNs points at.
- *
- * @var TcpClientInternal::store  the outbound slot pool
- * @var TcpClientInternal::ns     the handle a caller sets a call's members on
- * @var TcpClientInternal::conn   the slot the private steps below act on
- * @var TcpClientInternal::pump   step one slot from resolving to connected
- */
-struct TcpClientInternal
-{
-    struct TcpClientStorage *store;
-    TcpClientNs *ns;
     ClientConn *conn;
-    void (*pump)(struct TcpClientInternal *ctx);
 };
 
 // The private step every public call runs first, named here so the binding below can reach it.
-static void cc_pump(struct TcpClientInternal *restrict ctx);
+static void cc_pump(uint8_t *restrict work);
 
-static struct TcpClientStorage s_store;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define TCP_CLIENT_OFF_CTX 0u
+static_assert(TCP_CLIENT_OFF_CTX + sizeof(struct TcpClientStorage) <= PROTOCORE_TCP_CLIENT_BORROW,
+              "PROTOCORE_TCP_CLIENT_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct TcpClientInternal s_client = {.store = &s_store, .ns = &TcpClient, .pump = cc_pump};
+// The region, at its offset in the caller's borrow.
+#define TCP_CLIENT_CTX(w) ((struct TcpClientStorage *)(void *)((w) + TCP_CLIENT_OFF_CTX))
 
 // Hostname resolution goes through @ref Resolver, the library's one DNS owner.
 
@@ -190,7 +207,7 @@ static protocore_net_err cc_do_connect(protocore_net_call *cd)
     // RFC 9293 sec 3.9.2 MUST-49: stamped before the SYN goes out, so the whole connection carries
     // the configured TTL. Runs in the stack's thread (this is the marshalled connect op).
     TcpLower.pcb = c->pcb;
-    TcpLower.apply_ttl(TcpLower.internal);
+    TcpLower.apply_ttl(protocore_tcp_lower_span());
 #if PROTOCORE_ENABLE_DIFFSERV
     {
         // Mark the outbound connection with the server-wide default DSCP (the SYN onward). Runs in
@@ -253,17 +270,30 @@ static protocore_net_err cc_do_recved(protocore_net_call *cd)
 
 // --- public API --------------------------------------------------------------
 
-// Step the slot in ctx->conn from resolving to connected. Each call does at most one step and
+// Step the slot in TCP_CLIENT_CTX(work)->conn from resolving to connected. Each call does at most one step and
 // nothing waits: the slot's timer bounds the whole open, and a caller reaches this from its own tick
 // through connected() or is_closed().
-static void cc_pump(struct TcpClientInternal *restrict ctx)
+// The one time source (server/clock/clock.h). Clock.ms is where the last reading landed, and the
+// caller polling this module is in a loop of its own with no dispatch pass in it, so the reading is
+// taken here.
+static uint32_t cc_now(void)
 {
-    ClientConn *c = ctx->conn;
+    Clock.millis(Clock.internal);
+    return Clock.ms;
+}
+
+static void cc_pump(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    ClientConn *c = TCP_CLIENT_CTX(work)->conn;
     if (!c->in_use || c->connected || c->closed)
     {
         return;
     }
-    if ((uint32_t)(Clock.ms - c->timer) >= c->timeout_ms)
+    if ((uint32_t)(cc_now() - c->timer) >= c->timeout_ms)
     {
         c->closed = PROTO_TRUE; // out of time, whether it was still resolving or already connecting
         return;
@@ -275,7 +305,7 @@ static void cc_pump(struct TcpClientInternal *restrict ctx)
 
     // Resolve through the shared DNS owner, which reports busy until its own answer lands.
     Resolver.query.host = c->host;
-    Resolver.resolve(Resolver.internal);
+    Resolver.resolve(protocore_dns_resolver_span());
     protocore_dns_state s = Resolver.state;
     uint32_t ip = Resolver.u32;
     if (s == PROTOCORE_DNS_BUSY)
@@ -301,131 +331,161 @@ static void cc_pump(struct TcpClientInternal *restrict ctx)
     }
 }
 
-static void protocore_client_open(struct TcpClientInternal *restrict ctx)
+static void protocore_client_open(uint8_t *restrict work)
 {
-    if (ctx->ns->dial.host == NULL)
+    if (!work)
     {
-        ctx->ns->i32 = -2;
+        return; // the pool was short of this module's borrow
+    }
+    if (TcpClient.dial.host == NULL)
+    {
+        TcpClient.i32 = -2;
         return;
     }
-    ctx->ns->i32 = -1;
+    TcpClient.i32 = -1;
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        if (!ctx->store->cc[i].in_use)
+        if (!TCP_CLIENT_CTX(work)->cc[i].in_use)
         {
-            ctx->ns->i32 = i;
+            TcpClient.i32 = i;
             break;
         }
     }
-    if (ctx->ns->i32 < 0)
+    if (TcpClient.i32 < 0)
     {
         return; // pool full
     }
 
-    ClientConn *c = &ctx->store->cc[ctx->ns->i32];
+    ClientConn *c = &TCP_CLIENT_CTX(work)->cc[TcpClient.i32];
     c->pcb = NULL;
     c->connected = PROTO_FALSE;
     c->closed = PROTO_FALSE;
     PROTO_ATOMIC_STORE(&c->head, 0);
     PROTO_ATOMIC_STORE(&c->tail, 0);
-    c->host = ctx->ns->dial.host;
-    c->port = ctx->ns->dial.port;
-    c->timeout_ms = ctx->ns->dial.timeout_ms;
-    c->timer = Clock.ms;
+    c->host = TcpClient.dial.host;
+    c->port = TcpClient.dial.port;
+    c->timeout_ms = TcpClient.dial.timeout_ms;
+    c->timer = cc_now();
     c->resolving = PROTO_TRUE;
     c->in_use = PROTO_TRUE;
-    ctx->conn = c;
-    ctx->pump(ctx); // a name that needs no query connects here, in the opening call
+    TCP_CLIENT_CTX(work)->conn = c;
+    cc_pump(work); // a name that needs no query connects here, in the opening call
 }
 
-static void protocore_client_connected(struct TcpClientInternal *restrict ctx)
+static void protocore_client_connected(uint8_t *restrict work)
 {
-    if (ctx->ns->cid < 0 || ctx->ns->cid >= PROTOCORE_CLIENT_CONNS || !ctx->store->cc[ctx->ns->cid].in_use)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS || !TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use)
+    {
+        TcpClient.ok = PROTO_FALSE;
         return;
     }
-    ctx->conn = &ctx->store->cc[ctx->ns->cid];
-    ctx->pump(ctx);
-    ctx->ns->ok = ctx->conn->connected && !ctx->conn->closed;
+    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
+    cc_pump(work);
+    TcpClient.ok = TCP_CLIENT_CTX(work)->conn->connected && !TCP_CLIENT_CTX(work)->conn->closed;
 }
 
-static void protocore_client_is_closed(struct TcpClientInternal *restrict ctx)
+static void protocore_client_is_closed(uint8_t *restrict work)
 {
-    if (ctx->ns->cid < 0 || ctx->ns->cid >= PROTOCORE_CLIENT_CONNS)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_TRUE;
+        return; // the pool was short of this module's borrow
+    }
+    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS)
+    {
+        TcpClient.ok = PROTO_TRUE;
         return;
     }
-    ctx->conn = &ctx->store->cc[ctx->ns->cid];
-    ctx->pump(ctx);
-    ctx->ns->ok = ctx->conn->closed;
+    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
+    cc_pump(work);
+    TcpClient.ok = TCP_CLIENT_CTX(work)->conn->closed;
 }
 
-static void protocore_client_send(struct TcpClientInternal *restrict ctx)
+static void protocore_client_send(uint8_t *restrict work)
 {
-    if (ctx->ns->cid < 0 || ctx->ns->cid >= PROTOCORE_CLIENT_CONNS || !ctx->store->cc[ctx->ns->cid].in_use)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS || !TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use)
+    {
+        TcpClient.ok = PROTO_FALSE;
         return;
     }
     CcSendCall k;
     mem.set(&k, 0, sizeof(k));
-    k.c = &ctx->store->cc[ctx->ns->cid];
-    k.data = ctx->ns->io.data;
-    k.len = (proto_u16)(ctx->ns->io.len > 0xFFFF ? 0xFFFF : ctx->ns->io.len);
+    k.c = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
+    k.data = TcpClient.io.data;
+    k.len = (proto_u16)(TcpClient.io.len > 0xFFFF ? 0xFFFF : TcpClient.io.len);
     protocore_net_call_marshal(cc_do_send, &k.base);
-    ctx->ns->ok = k.result == PROTOCORE_NET_OK;
+    TcpClient.ok = k.result == PROTOCORE_NET_OK;
 }
 
-static void protocore_client_available(struct TcpClientInternal *restrict ctx)
+static void protocore_client_available(uint8_t *restrict work)
 {
-    if (ctx->ns->cid < 0 || ctx->ns->cid >= PROTOCORE_CLIENT_CONNS)
+    if (!work)
     {
-        ctx->ns->n = 0;
+        return; // the pool was short of this module's borrow
+    }
+    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS)
+    {
+        TcpClient.n = 0;
         return;
     }
-    ctx->conn = &ctx->store->cc[ctx->ns->cid];
+    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
     // Step the open here too, not only in connected() / is_closed(): a caller that polls a slot by
     // asking what has arrived would otherwise never advance a connect that has not come up, and sit
     // on an empty ring until its own timer expired.
-    ctx->pump(ctx);
-    ctx->ns->n = protocore_ring_available(&ctx->conn->head, &ctx->conn->tail, PROTOCORE_CLIENT_RX_BUF);
+    cc_pump(work);
+    TcpClient.n = protocore_ring_available(&TCP_CLIENT_CTX(work)->conn->head, &TCP_CLIENT_CTX(work)->conn->tail,
+                                           PROTOCORE_CLIENT_RX_BUF);
 }
 
-static void protocore_client_read(struct TcpClientInternal *restrict ctx)
+static void protocore_client_read(uint8_t *restrict work)
 {
-    if (ctx->ns->cid < 0 || ctx->ns->cid >= PROTOCORE_CLIENT_CONNS)
+    if (!work)
     {
-        ctx->ns->n = 0;
+        return; // the pool was short of this module's borrow
+    }
+    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS)
+    {
+        TcpClient.n = 0;
         return;
     }
-    ctx->conn = &ctx->store->cc[ctx->ns->cid];
-    ctx->pump(ctx); // as in available(): a caller that only ever reads still steps its open along
-    ctx->ns->n = protocore_ring_read(ctx->conn->rx, PROTOCORE_CLIENT_RX_BUF, &ctx->conn->head, &ctx->conn->tail,
-                                     ctx->ns->io.buf, ctx->ns->io.cap);
-    if (ctx->ns->n > 0 && ctx->conn->pcb)
+    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
+    cc_pump(work); // as in available(): a caller that only ever reads still steps its open along
+    TcpClient.n =
+        protocore_ring_read(TCP_CLIENT_CTX(work)->conn->rx, PROTOCORE_CLIENT_RX_BUF, &TCP_CLIENT_CTX(work)->conn->head,
+                            &TCP_CLIENT_CTX(work)->conn->tail, TcpClient.io.buf, TcpClient.io.cap);
+    if (TcpClient.n > 0 && TCP_CLIENT_CTX(work)->conn->pcb)
     {
         // Ack-on-consume: reopen the receive window by exactly what we just drained.
         CcRecvedCall k;
         mem.set(&k, 0, sizeof(k));
-        k.c = ctx->conn;
-        k.len = (proto_u16)ctx->ns->n;
+        k.c = TCP_CLIENT_CTX(work)->conn;
+        k.len = (proto_u16)TcpClient.n;
         protocore_net_call_marshal(cc_do_recved, &k.base);
     }
 }
 
-static void protocore_client_close(struct TcpClientInternal *restrict ctx)
+static void protocore_client_close(uint8_t *restrict work)
 {
-    if (ctx->ns->cid < 0 || ctx->ns->cid >= PROTOCORE_CLIENT_CONNS || !ctx->store->cc[ctx->ns->cid].in_use)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS || !TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use)
     {
         return;
     }
     CcSendCall k;
     mem.set(&k, 0, sizeof(k));
-    k.c = &ctx->store->cc[ctx->ns->cid];
+    k.c = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
     protocore_net_call_marshal(cc_do_close, &k.base);
-    ctx->store->cc[ctx->ns->cid].in_use = PROTO_FALSE;
+    TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use = PROTO_FALSE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -435,7 +495,6 @@ TcpClientNs TcpClient = {.open = protocore_client_open,
                          .send = protocore_client_send,
                          .available = protocore_client_available,
                          .read = protocore_client_read,
-                         .close = protocore_client_close,
-                         .internal = &s_client};
+                         .close = protocore_client_close};
 
 #endif // PROTOCORE_NEED_CLIENT

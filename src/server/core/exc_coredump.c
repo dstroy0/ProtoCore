@@ -21,9 +21,10 @@
 
 #if PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP
 
-void protocore_exc_cd_present(struct ExcDecoderInternal *restrict ctx)
+void protocore_exc_cd_present(uint8_t *restrict work)
 {
-    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    (void)work;
+    (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
     ExcCoreDump *out = Exc.dump.img;
 
     // The seam reports what is stored only once it verifies, so a torn write from a crash mid-dump
@@ -42,9 +43,10 @@ void protocore_exc_cd_present(struct ExcDecoderInternal *restrict ctx)
     Exc.ok = PROTO_TRUE;
 }
 
-void protocore_exc_cd_summary(struct ExcDecoderInternal *restrict ctx)
+void protocore_exc_cd_summary(uint8_t *restrict work)
 {
-    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    (void)work;
+    (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
     ExcInfo *out = Exc.parse_args.info;
 
     Exc.ok = PROTO_FALSE;
@@ -85,9 +87,10 @@ void protocore_exc_cd_summary(struct ExcDecoderInternal *restrict ctx)
     Exc.ok = PROTO_TRUE;
 }
 
-void protocore_exc_cd_read(struct ExcDecoderInternal *restrict ctx)
+void protocore_exc_cd_read(uint8_t *restrict work)
 {
-    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    (void)work;
+    (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
     void *buf = Exc.dump.buf;
     const size_t len = Exc.dump.len;
 
@@ -107,9 +110,10 @@ void protocore_exc_cd_read(struct ExcDecoderInternal *restrict ctx)
                       : PROTO_FALSE;
 }
 
-void protocore_exc_cd_save(struct ExcDecoderInternal *restrict ctx)
+void protocore_exc_cd_save(uint8_t *restrict work)
 {
-    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    (void)work;
+    (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
     const protocore_mnt_backend *file_sys = Exc.dump.file_sys;
     const char *path = Exc.dump.path;
 
@@ -153,9 +157,10 @@ void protocore_exc_cd_save(struct ExcDecoderInternal *restrict ctx)
     Exc.ok = ok;
 }
 
-void protocore_exc_cd_erase(struct ExcDecoderInternal *restrict ctx)
+void protocore_exc_cd_erase(uint8_t *restrict work)
 {
-    (void)ctx; // the namespace below IS the module's one symbol; the handle names nothing else
+    (void)work;
+    (void)work; // the namespace below IS the module's one symbol; the handle names nothing else
     Exc.ok = protocore_platform_crashdump_erase() ? PROTO_TRUE : PROTO_FALSE;
 }
 

@@ -16,3 +16,49 @@ test/dep_graph.json
 # Likewise the SonarQube compile-commands baseline (ci_tooling/sonar/merge_compiledb.py json.dump,
 # @ROOT@-tokenized); affected runs overlay it verbatim, so keep Prettier off it.
 test/compile_commands.json
+
+# The two matrices are spliced, never re-rendered: a mutation goes through a subcommand that edits
+# the text in place so the diff names the one env it changed. A whole-file reformat is valid JSON
+# and moves all 400 of them, which is exactly what the harnesses refuse to do.
+test/test_matrix.json
+test/performance_benching/bench_matrix.json
+
+# Ratchet baselines, written by ci_tooling/lib/baseline.py json.dump. Prettier reformats them and
+# the next `ci.py baseline` writes them back, so the two tools would fight over every run.
+tools/ci_tooling/check/*_baseline.json
+tools/ci_tooling/check/check_test_coverage_baseline.json
+
+# Measured output, written by the generators that produce it.
+docs/footprints.json
+docs/feature_ranges.json
+
+# Upstream test vectors, curated out of a pinned checkout by tools/crypto/curate_crypto_vectors.py
+# (json.dump, indent=1). Their shape is the curator's, not Prettier's, or the two rewrite each
+# other on every refresh.
+test/vectors/
+
+# npm owns the lockfile's shape.
+package-lock.json
+
+# Editor and agent state, untracked and not the repo's source.
+.vscode/
+
+# The theme CSS and the favicon SVGs are written by src/web_assets/wizard/gen_themes.py and
+# gen_favicons.py, and Feature Tables regenerates and commits them, so Prettier would lose to the
+# next run. src/web_assets/input/ is NOT here: those are hand-edited, and build_assets.py minifies
+# them into the served string, so their formatting never reaches a blob. The pre-commit hook
+# formats them on purpose.
+src/web_assets/themes/
+src/web_assets/favicons/
+# A response template, not a document: the {{uptime_ms}} placeholders are substituted at serve
+# time, so it does not parse as JSON and Prettier errors rather than formatting it.
+src/web_assets/input/PROTOCORE_STATS_JSON.json
+
+# Generated pages: gen_configurator.py and gen_features_page.py own these.
+docs/configurator.html
+docs/features.html
+
+# Doxygen's own templates. The $token substitutions and the <!--BEGIN ...--> conditional markers
+# are line-oriented, and reflowing them breaks the generated site rather than the file.
+docs/footer.html
+docs/header.html

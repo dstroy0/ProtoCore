@@ -10,24 +10,13 @@
 
 #include "shared/utf8/utf8.h"
 
-/**
- * @brief The validator's call - what Utf8Ns points at.
- *
- * @var Utf8Internal::ns  the handle a caller sets the call's members on
- */
-struct Utf8Internal
+static void utf8_valid(uint8_t *restrict work)
 {
-    Utf8Ns *ns;
-};
+    (void)work;
+    const uint8_t *s = Utf8.args.s;
+    const size_t n = Utf8.args.n;
 
-static struct Utf8Internal s_utf8 = {.ns = &Utf8};
-
-static void utf8_valid(struct Utf8Internal *restrict ctx)
-{
-    const uint8_t *s = ctx->ns->args.s;
-    const size_t n = ctx->ns->args.n;
-
-    ctx->ns->ok = PROTO_FALSE;
+    Utf8.ok = PROTO_FALSE;
     size_t i = 0;
     while (i < n)
     {
@@ -81,7 +70,7 @@ static void utf8_valid(struct Utf8Internal *restrict ctx)
         }
         i += need + 1;
     }
-    ctx->ns->ok = PROTO_TRUE;
+    Utf8.ok = PROTO_TRUE;
 }
 
-Utf8Ns Utf8 = {.valid = utf8_valid, .internal = &s_utf8};
+Utf8Ns Utf8 = {.valid = utf8_valid};

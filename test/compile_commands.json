@@ -1530,10 +1530,10 @@
     "output": ".pio/build/native_swar/src/services/southbound/southbound.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/scp/scp.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/application/scp/scp.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/session/scp/scp.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/session/scp/scp.c",
     "directory": "@ROOT@",
-    "file": "src/network_drivers/application/scp/scp.c",
-    "output": ".pio/build/native_swar/src/network_drivers/application/scp/scp.o"
+    "file": "src/network_drivers/session/scp/scp.c",
+    "output": ".pio/build/native_swar/src/network_drivers/session/scp/scp.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/services/instrumentation/scpi/scpi.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/services/instrumentation/scpi/scpi.c",
@@ -1830,10 +1830,10 @@
     "output": ".pio/build/native_swar/src/network_drivers/application/mdns_service/mdns_service.o"
   },
   {
-    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/scp/ssh_scp.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/application/scp/ssh_scp.c",
+    "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/session/scp/ssh_scp.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/session/scp/ssh_scp.c",
     "directory": "@ROOT@",
-    "file": "src/network_drivers/application/scp/ssh_scp.c",
-    "output": ".pio/build/native_swar/src/network_drivers/application/scp/ssh_scp.o"
+    "file": "src/network_drivers/session/scp/ssh_scp.c",
+    "output": ".pio/build/native_swar/src/network_drivers/session/scp/ssh_scp.o"
   },
   {
     "command": "/usr/bin/gcc -o .pio/build/native_swar/src/network_drivers/application/sftp/ssh_sftp.o -c -std=c11 -fno-exceptions -DPLATFORMIO=60119 -D_POSIX_C_SOURCE=200809L -DPROTOCORE_HOST=1 -I.pio/libdeps/native_swar/littlefs/include -I.pio/libdeps/native_swar/littlefs/src -Itest/mocks -Itest/support -Isrc src/network_drivers/application/sftp/ssh_sftp.c",

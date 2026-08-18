@@ -19,6 +19,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t ble_gatt_work[16]; // the borrow an entry takes; BleGatt never reads it
+
 void dbench_run(void)
 {
     // Sample data lifted straight from test/test_ble_gatt/test_ble_gatt.cpp (known-good).

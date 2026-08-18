@@ -42,16 +42,12 @@ typedef struct
     char *out;          ///< PROTOCORE_UUID_STR_LEN bytes the formatted UUID is written into
 } DeviceIdArgs;
 
-/** @brief The identity's own calls, described only in device_id.c. */
-struct DeviceIdInternal;
-
 /**
  * @brief The stable MAC-derived device identity.
  *
  * @var DeviceIdNs::args      the address a UUID is derived from, and where the text lands
  * @var DeviceIdNs::from_mac  format a UUIDv5 from the caller's address
  * @var DeviceIdNs::uuid      format one from the part's own burned-in address
- * @var DeviceIdNs::internal  the calls that derive it
  *
  * No storage member: both calls write into the caller's buffer and hold nothing.
  */
@@ -59,10 +55,8 @@ typedef struct
 {
     DeviceIdArgs args;
 
-    void (*from_mac)(struct DeviceIdInternal *ctx);
-    void (*uuid)(struct DeviceIdInternal *ctx);
-
-    struct DeviceIdInternal *internal;
+    void (*const from_mac)(uint8_t *restrict work);
+    void (*const uuid)(uint8_t *restrict work);
 } DeviceIdNs;
 
 /** @brief The one symbol this module exports. */

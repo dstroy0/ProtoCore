@@ -11,6 +11,7 @@
  */
 
 #include "server/core/preempt_queue.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
 
@@ -46,21 +47,40 @@ struct PreemptQueueStorage
     PqQueueCtx qq; ///< the platform queue and task backing each lane
 };
 
-/**
- * @brief The lanes' state and the calls that reach them - what PreemptQueueNs points at.
- *
- * @var PreemptQueueInternal::store  the lane pool and its queue storage
- * @var PreemptQueueInternal::ns     the handle a caller sets a call's members on
- */
-struct PreemptQueueInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define PREEMPT_QUEUE_OFF_CTX 0u
+static_assert(PREEMPT_QUEUE_OFF_CTX + sizeof(struct PreemptQueueStorage) <= PROTOCORE_PREEMPT_QUEUE_BORROW,
+              "PROTOCORE_PREEMPT_QUEUE_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define PREEMPT_QUEUE_CTX(w) ((struct PreemptQueueStorage *)(void *)((w) + PREEMPT_QUEUE_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct PreemptQueueStorage *store;
-    PreemptQueueNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_PREEMPT_QUEUE_BORROW persistent bytes, or null while the pool was short
+} PreemptQueueOwnCtx;
+static PreemptQueueOwnCtx s_own;
 
-static struct PreemptQueueStorage s_store;
-
-static struct PreemptQueueInternal s_pq = {.store = &s_store, .ns = &PreemptQueue};
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_preempt_queue_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_PREEMPT_QUEUE_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 static const char *lane_name(protocore_pq_lane lane)
 {
@@ -100,11 +120,11 @@ static uint8_t lane_priority(protocore_pq_lane lane)
     }
 }
 
-static void note_depth(struct PreemptQueueInternal *restrict ctx, protocore_pq_lane lane, size_t waiting)
+static void note_depth(uint8_t *restrict work, protocore_pq_lane lane, size_t waiting)
 {
-    if (waiting > ctx->store->pq.high_water[(size_t)lane])
+    if (waiting > PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)lane])
     {
-        ctx->store->pq.high_water[(size_t)lane] = waiting;
+        PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)lane] = waiting;
     }
 }
 
@@ -123,145 +143,176 @@ static void pq_task(void *arg)
     }
     for (;;)
     {
-        if (protocore_platform_queue_recv(s_store.qq.q[(size_t)lane], item.buf, PROTOCORE_PLATFORM_WAIT_FOREVER) ==
-                PROTOCORE_PLATFORM_OK &&
-            s_store.pq.handler[(size_t)lane])
+        if (protocore_platform_queue_recv(PREEMPT_QUEUE_CTX(protocore_preempt_queue_span())->qq.q[(size_t)lane],
+                                          item.buf, PROTOCORE_PLATFORM_WAIT_FOREVER) == PROTOCORE_PLATFORM_OK &&
+            PREEMPT_QUEUE_CTX(protocore_preempt_queue_span())->pq.handler[(size_t)lane])
         {
-            s_store.pq.handler[(size_t)lane](item.buf, s_store.pq.ctx[(size_t)lane]);
+            PREEMPT_QUEUE_CTX(protocore_preempt_queue_span())
+                ->pq.handler[(size_t)lane](item.buf,
+                                           PREEMPT_QUEUE_CTX(protocore_preempt_queue_span())->pq.ctx[(size_t)lane]);
         }
     }
 }
 
-static void pq_start(struct PreemptQueueInternal *restrict ctx)
+static void pq_start(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = ctx->ns->lane;
-    const protocore_pq_config *cfg = ctx->ns->cfg;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const protocore_pq_lane lane = PreemptQueue.lane;
+    const protocore_pq_config *cfg = PreemptQueue.cfg;
 
-    ctx->ns->ok = PROTO_FALSE;
-    if (!lane_ok(lane) || ctx->store->qq.run[(size_t)lane] || !cfg || !cfg->handler)
+    PreemptQueue.ok = PROTO_FALSE;
+    if (!lane_ok(lane) || PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] || !cfg || !cfg->handler)
     {
         return;
     }
-    ctx->store->pq.handler[(size_t)lane] = cfg->handler;
-    ctx->store->pq.ctx[(size_t)lane] = cfg->ctx;
-    ctx->store->pq.high_water[(size_t)lane] = 0;
-    if (!ctx->store->qq.q[(size_t)lane])
+    PREEMPT_QUEUE_CTX(work)->pq.handler[(size_t)lane] = cfg->handler;
+    PREEMPT_QUEUE_CTX(work)->pq.ctx[(size_t)lane] = cfg->ctx;
+    PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)lane] = 0;
+    if (!PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane])
     {
-        ctx->store->qq.q[(size_t)lane] = protocore_platform_queue_create(PROTOCORE_PQ_DEPTH, PROTOCORE_PQ_ITEM_SIZE,
-                                                                         ctx->store->qq.q_storage[(size_t)lane],
-                                                                         &ctx->store->qq.q_struct[(size_t)lane]);
+        PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] = protocore_platform_queue_create(
+            PROTOCORE_PQ_DEPTH, PROTOCORE_PQ_ITEM_SIZE, PREEMPT_QUEUE_CTX(work)->qq.q_storage[(size_t)lane],
+            &PREEMPT_QUEUE_CTX(work)->qq.q_struct[(size_t)lane]);
     }
-    if (!ctx->store->qq.q[(size_t)lane])
+    if (!PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane])
     {
         return;
     }
-    ctx->store->qq.run[(size_t)lane] = PROTO_TRUE;
+    PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = PROTO_TRUE;
     uint8_t prio = cfg->priority ? cfg->priority : lane_priority(lane);
     int core = cfg->core % PROTOCORE_PLATFORM_CORES;
     if (protocore_platform_task_start(pq_task, cfg->name ? cfg->name : lane_name(lane), PROTOCORE_PQ_STACK,
-                                      (void *)(uintptr_t)lane, prio, &ctx->store->qq.task[(size_t)lane],
+                                      (void *)(uintptr_t)lane, prio, &PREEMPT_QUEUE_CTX(work)->qq.task[(size_t)lane],
                                       core) != PROTOCORE_PLATFORM_PASS)
     {
-        ctx->store->qq.run[(size_t)lane] = PROTO_FALSE;
+        PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = PROTO_FALSE;
         return;
     }
-    ctx->ns->ok = PROTO_TRUE;
+    PreemptQueue.ok = PROTO_TRUE;
 }
 
-static void pq_post(struct PreemptQueueInternal *restrict ctx)
+static void pq_post(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = ctx->ns->lane;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const protocore_pq_lane lane = PreemptQueue.lane;
 
-    ctx->ns->ok = PROTO_FALSE;
-    if (!lane_ok(lane) || !ctx->store->qq.q[(size_t)lane] || !ctx->ns->post_args.item)
+    PreemptQueue.ok = PROTO_FALSE;
+    if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueue.post_args.item)
     {
         return;
     }
-    if (protocore_platform_queue_send(ctx->store->qq.q[(size_t)lane], ctx->ns->post_args.item,
-                                      (protocore_platform_ticks)ctx->ns->post_args.timeout_ticks) !=
+    if (protocore_platform_queue_send(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane], PreemptQueue.post_args.item,
+                                      (protocore_platform_ticks)PreemptQueue.post_args.timeout_ticks) !=
         PROTOCORE_PLATFORM_OK)
     {
         return;
     }
-    note_depth(ctx, lane, protocore_platform_queue_waiting(ctx->store->qq.q[(size_t)lane]));
-    ctx->ns->ok = PROTO_TRUE;
+    note_depth(work, lane, protocore_platform_queue_waiting(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane]));
+    PreemptQueue.ok = PROTO_TRUE;
 }
 
-static void pq_post_urgent(struct PreemptQueueInternal *restrict ctx)
+static void pq_post_urgent(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = ctx->ns->lane;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const protocore_pq_lane lane = PreemptQueue.lane;
 
-    ctx->ns->ok = PROTO_FALSE;
-    if (!lane_ok(lane) || !ctx->store->qq.q[(size_t)lane] || !ctx->ns->post_args.item)
+    PreemptQueue.ok = PROTO_FALSE;
+    if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueue.post_args.item)
     {
         return;
     }
-    if (protocore_platform_queue_send_front(ctx->store->qq.q[(size_t)lane], ctx->ns->post_args.item,
-                                            (protocore_platform_ticks)ctx->ns->post_args.timeout_ticks) !=
+    if (protocore_platform_queue_send_front(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane], PreemptQueue.post_args.item,
+                                            (protocore_platform_ticks)PreemptQueue.post_args.timeout_ticks) !=
         PROTOCORE_PLATFORM_OK)
     {
         return;
     }
-    note_depth(ctx, lane, protocore_platform_queue_waiting(ctx->store->qq.q[(size_t)lane]));
-    ctx->ns->ok = PROTO_TRUE;
+    note_depth(work, lane, protocore_platform_queue_waiting(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane]));
+    PreemptQueue.ok = PROTO_TRUE;
 }
 
-static void pq_post_from_isr(struct PreemptQueueInternal *restrict ctx)
+static void pq_post_from_isr(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = ctx->ns->lane;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const protocore_pq_lane lane = PreemptQueue.lane;
 
-    ctx->ns->ok = PROTO_FALSE;
-    if (!lane_ok(lane) || !ctx->store->qq.q[(size_t)lane] || !ctx->ns->post_args.item)
+    PreemptQueue.ok = PROTO_FALSE;
+    if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueue.post_args.item)
     {
         return;
     }
     protocore_platform_status woke = PROTOCORE_PLATFORM_FALSE;
-    if (protocore_platform_queue_send_isr(ctx->store->qq.q[(size_t)lane], ctx->ns->post_args.item, &woke) !=
-        PROTOCORE_PLATFORM_OK)
+    if (protocore_platform_queue_send_isr(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane], PreemptQueue.post_args.item,
+                                          &woke) != PROTOCORE_PLATFORM_OK)
     {
         return;
     }
-    note_depth(ctx, lane, protocore_platform_queue_waiting_isr(ctx->store->qq.q[(size_t)lane]));
+    note_depth(work, lane, protocore_platform_queue_waiting_isr(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane]));
     protocore_platform_task_yield_from_isr(woke); // switch to the processing task now if it outranks us
-    ctx->ns->ok = PROTO_TRUE;
+    PreemptQueue.ok = PROTO_TRUE;
 }
 
-static void pq_drain(struct PreemptQueueInternal *restrict ctx)
+static void pq_drain(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
     // The lane's task drains it; a build whose task backend does not run the entry function
     // drains nothing, so a caller that relies on this must pump the lane itself.
 }
 
-static void pq_stop(struct PreemptQueueInternal *restrict ctx)
+static void pq_stop(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = ctx->ns->lane;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const protocore_pq_lane lane = PreemptQueue.lane;
 
     if (!lane_ok(lane))
     {
         return;
     }
-    ctx->store->qq.run[(size_t)lane] = PROTO_FALSE;
-    if (ctx->store->qq.task[(size_t)lane]) // the task blocks on the queue forever, so stop it directly
+    PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = PROTO_FALSE;
+    if (PREEMPT_QUEUE_CTX(work)->qq.task[(size_t)lane]) // the task blocks on the queue forever, so stop it directly
     {
-        protocore_platform_task_stop(ctx->store->qq.task[(size_t)lane]);
-        ctx->store->qq.task[(size_t)lane] = NULL;
+        protocore_platform_task_stop(PREEMPT_QUEUE_CTX(work)->qq.task[(size_t)lane]);
+        PREEMPT_QUEUE_CTX(work)->qq.task[(size_t)lane] = NULL;
     }
 }
 
-static void pq_running(struct PreemptQueueInternal *restrict ctx)
+static void pq_running(uint8_t *restrict work)
 {
-    ctx->ns->ok = lane_ok(ctx->ns->lane) && ctx->store->qq.run[(size_t)ctx->ns->lane];
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    PreemptQueue.ok = lane_ok(PreemptQueue.lane) && PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)PreemptQueue.lane];
 }
 
-static void pq_high_water(struct PreemptQueueInternal *restrict ctx)
+static void pq_high_water(uint8_t *restrict work)
 {
-    ctx->ns->n = lane_ok(ctx->ns->lane) ? ctx->store->pq.high_water[(size_t)ctx->ns->lane] : 0;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    PreemptQueue.n = lane_ok(PreemptQueue.lane) ? PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)PreemptQueue.lane] : 0;
 }
 
-static void pq_priority(struct PreemptQueueInternal *restrict ctx)
+static void pq_priority(uint8_t *restrict work)
 {
-    ctx->ns->u8 = lane_priority(ctx->ns->lane);
+    (void)work;
+    PreemptQueue.u8 = lane_priority(PreemptQueue.lane);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -273,7 +324,6 @@ PreemptQueueNs PreemptQueue = {.post_from_isr = pq_post_from_isr,
                                .start = pq_start,
                                .post = pq_post,
                                .drain = pq_drain,
-                               .stop = pq_stop,
-                               .internal = &s_pq};
+                               .stop = pq_stop};
 
 #endif // PROTOCORE_ENABLE_PREEMPT_QUEUE

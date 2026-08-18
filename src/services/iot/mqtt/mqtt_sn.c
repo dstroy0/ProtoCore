@@ -31,20 +31,6 @@
 // Typedefs
 // ---------------------------------------------------------------------------
 
-/**
- * @brief The codec's calls - what MqttsnNs points at.
- *
- * @var MqttsnInternal::ns  the handle a caller sets a call's members on
- *
- * No storage member: the codec works in the caller's buffer and holds nothing between calls.
- */
-struct MqttsnInternal
-{
-    MqttsnNs *ns;
-};
-
-static struct MqttsnInternal s_mqttsn = {.ns = &Mqttsn};
-
 // ---------------------------------------------------------------------------
 // The octet moves every message is made of (pure)
 // ---------------------------------------------------------------------------
@@ -106,29 +92,30 @@ static size_t frame_header(uint8_t *buf, size_t cap, uint8_t msg_type, size_t bo
 // Flags
 // ---------------------------------------------------------------------------
 
-static void mqttsn_make_flags(struct MqttsnInternal *restrict ctx)
+static void mqttsn_make_flags(uint8_t *restrict work)
 {
+    (void)work;
     uint8_t f = 0;
-    if (ctx->ns->flags.dup)
+    if (Mqttsn.flags.dup)
     {
         f |= MQTTSN_FLAG_DUP;
     }
-    f |= (uint8_t)((ctx->ns->flags.qos << MQTTSN_FLAG_QOS_SHIFT) & MQTTSN_FLAG_QOS_MASK);
-    if (ctx->ns->flags.retain)
+    f |= (uint8_t)((Mqttsn.flags.qos << MQTTSN_FLAG_QOS_SHIFT) & MQTTSN_FLAG_QOS_MASK);
+    if (Mqttsn.flags.retain)
     {
         f |= MQTTSN_FLAG_RETAIN;
     }
-    if (ctx->ns->flags.will)
+    if (Mqttsn.flags.will)
     {
         f |= MQTTSN_FLAG_WILL;
     }
-    if (ctx->ns->flags.clean_session)
+    if (Mqttsn.flags.clean_session)
     {
         f |= MQTTSN_FLAG_CLEAN;
     }
-    f |= (uint8_t)(ctx->ns->flags.topic_id_type & MQTTSN_FLAG_TOPICIDTYPE_MASK);
-    ctx->ns->flags.octet = f;
-    ctx->ns->ok = PROTO_TRUE;
+    f |= (uint8_t)(Mqttsn.flags.topic_id_type & MQTTSN_FLAG_TOPICIDTYPE_MASK);
+    Mqttsn.flags.octet = f;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,202 +123,210 @@ static void mqttsn_make_flags(struct MqttsnInternal *restrict ctx)
 // ---------------------------------------------------------------------------
 
 // CONNECT: Flags, ProtocolId, Duration, ClientId (sec 5.4.4).
-static void mqttsn_build_connect(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_connect(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
-    const size_t cap = ctx->ns->buf.cap;
-    if (!buf || !ctx->ns->field.client_id)
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
+    const size_t cap = Mqttsn.buf.cap;
+    if (!buf || !Mqttsn.field.client_id)
     {
         return;
     }
-    size_t idlen = str.len(ctx->ns->field.client_id, cap);
+    size_t idlen = str.len(Mqttsn.field.client_id, cap);
     size_t total = 0;
     size_t p = frame_header(buf, cap, MQTTSN_CONNECT, 1 + 1 + MQTTSN_ID_OCTETS + idlen, &total);
     if (!p)
     {
         return;
     }
-    buf[p++] = ctx->ns->flags.octet;
+    buf[p++] = Mqttsn.flags.octet;
     buf[p++] = MQTTSN_PROTOCOL_ID;
-    wr16(buf + p, ctx->ns->field.duration);
+    wr16(buf + p, Mqttsn.field.duration);
     p += MQTTSN_ID_OCTETS;
-    mem.cpy(buf + p, ctx->ns->field.client_id, idlen);
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    mem.cpy(buf + p, Mqttsn.field.client_id, idlen);
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // REGISTER: TopicId, MsgId, TopicName (sec 5.4.10).
-static void mqttsn_build_register(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_register(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
-    const size_t cap = ctx->ns->buf.cap;
-    if (!buf || !ctx->ns->topic.topic_name)
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
+    const size_t cap = Mqttsn.buf.cap;
+    if (!buf || !Mqttsn.topic.topic_name)
     {
         return;
     }
-    size_t nlen = str.len(ctx->ns->topic.topic_name, cap);
+    size_t nlen = str.len(Mqttsn.topic.topic_name, cap);
     size_t total = 0;
     size_t p = frame_header(buf, cap, MQTTSN_REGISTER, MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + nlen, &total);
     if (!p)
     {
         return;
     }
-    wr16(buf + p, ctx->ns->topic.topic_id);
+    wr16(buf + p, Mqttsn.topic.topic_id);
     p += MQTTSN_ID_OCTETS;
-    wr16(buf + p, ctx->ns->field.msg_id);
+    wr16(buf + p, Mqttsn.field.msg_id);
     p += MQTTSN_ID_OCTETS;
-    mem.cpy(buf + p, ctx->ns->topic.topic_name, nlen);
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    mem.cpy(buf + p, Mqttsn.topic.topic_name, nlen);
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // REGACK: TopicId, MsgId, ReturnCode (sec 5.4.11).
-static void mqttsn_build_regack(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_regack(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
     if (!buf)
     {
         return;
     }
     size_t total = 0;
-    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_REGACK, MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1, &total);
+    size_t p = frame_header(buf, Mqttsn.buf.cap, MQTTSN_REGACK, MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1, &total);
     if (!p)
     {
         return;
     }
-    wr16(buf + p, ctx->ns->topic.topic_id);
+    wr16(buf + p, Mqttsn.topic.topic_id);
     p += MQTTSN_ID_OCTETS;
-    wr16(buf + p, ctx->ns->field.msg_id);
+    wr16(buf + p, Mqttsn.field.msg_id);
     p += MQTTSN_ID_OCTETS;
-    buf[p] = ctx->ns->field.return_code;
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    buf[p] = Mqttsn.field.return_code;
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // PUBLISH: Flags, TopicId, MsgId, Data (sec 5.4.12).
-static void mqttsn_build_publish(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_publish(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
-    const size_t data_len = ctx->ns->data.data_len;
-    if (!buf || (data_len && !ctx->ns->data.data))
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
+    const size_t data_len = Mqttsn.data.data_len;
+    if (!buf || (data_len && !Mqttsn.data.data))
     {
         return;
     }
     size_t total = 0;
     size_t p =
-        frame_header(buf, ctx->ns->buf.cap, MQTTSN_PUBLISH, 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + data_len, &total);
+        frame_header(buf, Mqttsn.buf.cap, MQTTSN_PUBLISH, 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + data_len, &total);
     if (!p)
     {
         return;
     }
-    buf[p++] = ctx->ns->flags.octet;
-    wr16(buf + p, ctx->ns->topic.topic_id);
+    buf[p++] = Mqttsn.flags.octet;
+    wr16(buf + p, Mqttsn.topic.topic_id);
     p += MQTTSN_ID_OCTETS;
-    wr16(buf + p, ctx->ns->field.msg_id);
+    wr16(buf + p, Mqttsn.field.msg_id);
     p += MQTTSN_ID_OCTETS;
     if (data_len)
     {
-        mem.cpy(buf + p, ctx->ns->data.data, data_len);
+        mem.cpy(buf + p, Mqttsn.data.data, data_len);
     }
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // PUBACK: TopicId, MsgId, ReturnCode (sec 5.4.13).
-static void mqttsn_build_puback(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_puback(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
     if (!buf)
     {
         return;
     }
     size_t total = 0;
-    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_PUBACK, MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1, &total);
+    size_t p = frame_header(buf, Mqttsn.buf.cap, MQTTSN_PUBACK, MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1, &total);
     if (!p)
     {
         return;
     }
-    wr16(buf + p, ctx->ns->topic.topic_id);
+    wr16(buf + p, Mqttsn.topic.topic_id);
     p += MQTTSN_ID_OCTETS;
-    wr16(buf + p, ctx->ns->field.msg_id);
+    wr16(buf + p, Mqttsn.field.msg_id);
     p += MQTTSN_ID_OCTETS;
-    buf[p] = ctx->ns->field.return_code;
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    buf[p] = Mqttsn.field.return_code;
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // SUBSCRIBE naming a TopicName: Flags, MsgId, TopicName (sec 5.4.15).
-static void mqttsn_build_subscribe_name(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_subscribe_name(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
-    const size_t cap = ctx->ns->buf.cap;
-    if (!buf || !ctx->ns->topic.topic_name)
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
+    const size_t cap = Mqttsn.buf.cap;
+    if (!buf || !Mqttsn.topic.topic_name)
     {
         return;
     }
-    size_t nlen = str.len(ctx->ns->topic.topic_name, cap);
+    size_t nlen = str.len(Mqttsn.topic.topic_name, cap);
     size_t total = 0;
     size_t p = frame_header(buf, cap, MQTTSN_SUBSCRIBE, 1 + MQTTSN_ID_OCTETS + nlen, &total);
     if (!p)
     {
         return;
     }
-    buf[p++] = ctx->ns->flags.octet;
-    wr16(buf + p, ctx->ns->field.msg_id);
+    buf[p++] = Mqttsn.flags.octet;
+    wr16(buf + p, Mqttsn.field.msg_id);
     p += MQTTSN_ID_OCTETS;
-    mem.cpy(buf + p, ctx->ns->topic.topic_name, nlen);
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    mem.cpy(buf + p, Mqttsn.topic.topic_name, nlen);
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // SUBSCRIBE naming a pre-defined TopicId: Flags, MsgId, TopicId (sec 5.4.15).
-static void mqttsn_build_subscribe_id(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_subscribe_id(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
     if (!buf)
     {
         return;
     }
     size_t total = 0;
-    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_SUBSCRIBE, 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS, &total);
+    size_t p = frame_header(buf, Mqttsn.buf.cap, MQTTSN_SUBSCRIBE, 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS, &total);
     if (!p)
     {
         return;
     }
-    buf[p++] = ctx->ns->flags.octet;
-    wr16(buf + p, ctx->ns->field.msg_id);
+    buf[p++] = Mqttsn.flags.octet;
+    wr16(buf + p, Mqttsn.field.msg_id);
     p += MQTTSN_ID_OCTETS;
-    wr16(buf + p, ctx->ns->topic.topic_id);
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    wr16(buf + p, Mqttsn.topic.topic_id);
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // PINGREQ, with the optional ClientId a woken sleeping client includes (sec 5.4.19, sec 6.14).
-static void mqttsn_build_pingreq(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_pingreq(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
-    const size_t cap = ctx->ns->buf.cap;
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
+    const size_t cap = Mqttsn.buf.cap;
     if (!buf)
     {
         return;
     }
-    size_t idlen = ctx->ns->field.client_id ? str.len(ctx->ns->field.client_id, cap) : 0;
+    size_t idlen = Mqttsn.field.client_id ? str.len(Mqttsn.field.client_id, cap) : 0;
     size_t total = 0;
     size_t p = frame_header(buf, cap, MQTTSN_PINGREQ, idlen, &total);
     if (!p)
@@ -340,56 +335,58 @@ static void mqttsn_build_pingreq(struct MqttsnInternal *restrict ctx)
     }
     if (idlen)
     {
-        mem.cpy(buf + p, ctx->ns->field.client_id, idlen);
+        mem.cpy(buf + p, Mqttsn.field.client_id, idlen);
     }
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // DISCONNECT, carrying the sleep Duration when asked (sec 5.4.21, sec 6.14).
-static void mqttsn_build_disconnect(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_disconnect(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
     if (!buf)
     {
         return;
     }
     size_t total = 0;
-    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_DISCONNECT,
-                            ctx->ns->field.with_duration ? MQTTSN_ID_OCTETS : 0, &total);
+    size_t p =
+        frame_header(buf, Mqttsn.buf.cap, MQTTSN_DISCONNECT, Mqttsn.field.with_duration ? MQTTSN_ID_OCTETS : 0, &total);
     if (!p)
     {
         return;
     }
-    if (ctx->ns->field.with_duration)
+    if (Mqttsn.field.with_duration)
     {
-        wr16(buf + p, ctx->ns->field.duration);
+        wr16(buf + p, Mqttsn.field.duration);
     }
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // SEARCHGW: Radius (sec 5.4.2).
-static void mqttsn_build_searchgw(struct MqttsnInternal *restrict ctx)
+static void mqttsn_build_searchgw(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *buf = ctx->ns->buf.out;
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    uint8_t *buf = Mqttsn.buf.out;
     if (!buf)
     {
         return;
     }
     size_t total = 0;
-    size_t p = frame_header(buf, ctx->ns->buf.cap, MQTTSN_SEARCHGW, 1, &total);
+    size_t p = frame_header(buf, Mqttsn.buf.cap, MQTTSN_SEARCHGW, 1, &total);
     if (!p)
     {
         return;
     }
-    buf[p] = ctx->ns->field.radius;
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    buf[p] = Mqttsn.field.radius;
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -398,12 +395,13 @@ static void mqttsn_build_searchgw(struct MqttsnInternal *restrict ctx)
 
 // The Length and MsgType at the head of the buffer, and the Message Variable Part behind them
 // (sec 5.2). n reports the whole message length so the caller can advance.
-static void mqttsn_parse_header(struct MqttsnInternal *restrict ctx)
+static void mqttsn_parse_header(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    const uint8_t *buf = ctx->ns->buf.in;
-    const size_t len = ctx->ns->buf.avail;
+    (void)work;
+    Mqttsn.n = 0;
+    Mqttsn.ok = PROTO_FALSE;
+    const uint8_t *buf = Mqttsn.buf.in;
+    const size_t len = Mqttsn.buf.avail;
     if (!buf || len < 2)
     {
         return;
@@ -432,97 +430,102 @@ static void mqttsn_parse_header(struct MqttsnInternal *restrict ctx)
     {
         return; // the message is not fully buffered yet
     }
-    ctx->ns->header.msg_type = buf[lenfield];
-    ctx->ns->header.variable = buf + lenfield + 1;
-    ctx->ns->header.variable_len = total - lenfield - 1;
-    ctx->ns->n = total;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqttsn.header.msg_type = buf[lenfield];
+    Mqttsn.header.variable = buf + lenfield + 1;
+    Mqttsn.header.variable_len = total - lenfield - 1;
+    Mqttsn.n = total;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // CONNACK: ReturnCode (sec 5.4.5).
-static void mqttsn_parse_connack(struct MqttsnInternal *restrict ctx)
+static void mqttsn_parse_connack(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.in || ctx->ns->buf.avail < 1)
+    (void)work;
+    Mqttsn.ok = PROTO_FALSE;
+    if (!Mqttsn.buf.in || Mqttsn.buf.avail < 1)
     {
         return;
     }
-    ctx->ns->field.return_code = ctx->ns->buf.in[0];
-    ctx->ns->ok = PROTO_TRUE;
+    Mqttsn.field.return_code = Mqttsn.buf.in[0];
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // REGACK: TopicId, MsgId, ReturnCode (sec 5.4.11).
-static void mqttsn_parse_regack(struct MqttsnInternal *restrict ctx)
+static void mqttsn_parse_regack(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    const uint8_t *p = ctx->ns->buf.in;
-    if (!p || ctx->ns->buf.avail < MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1)
+    (void)work;
+    Mqttsn.ok = PROTO_FALSE;
+    const uint8_t *p = Mqttsn.buf.in;
+    if (!p || Mqttsn.buf.avail < MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1)
     {
         return;
     }
-    ctx->ns->topic.topic_id = rd16(p);
-    ctx->ns->field.msg_id = rd16(p + MQTTSN_ID_OCTETS);
-    ctx->ns->field.return_code = p[MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS];
-    ctx->ns->ok = PROTO_TRUE;
+    Mqttsn.topic.topic_id = rd16(p);
+    Mqttsn.field.msg_id = rd16(p + MQTTSN_ID_OCTETS);
+    Mqttsn.field.return_code = p[MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS];
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // PUBACK, whose Message Variable Part has REGACK's layout (sec 5.4.13).
-static void mqttsn_parse_puback(struct MqttsnInternal *restrict ctx)
+static void mqttsn_parse_puback(uint8_t *restrict work)
 {
-    mqttsn_parse_regack(ctx);
+    mqttsn_parse_regack(work);
 }
 
 // SUBACK: Flags, TopicId, MsgId, ReturnCode (sec 5.4.16).
-static void mqttsn_parse_suback(struct MqttsnInternal *restrict ctx)
+static void mqttsn_parse_suback(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    const uint8_t *p = ctx->ns->buf.in;
-    if (!p || ctx->ns->buf.avail < 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1)
+    (void)work;
+    Mqttsn.ok = PROTO_FALSE;
+    const uint8_t *p = Mqttsn.buf.in;
+    if (!p || Mqttsn.buf.avail < 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS + 1)
     {
         return;
     }
-    ctx->ns->flags.octet = p[0];
-    ctx->ns->topic.topic_id = rd16(p + 1);
-    ctx->ns->field.msg_id = rd16(p + 1 + MQTTSN_ID_OCTETS);
-    ctx->ns->field.return_code = p[1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS];
-    ctx->ns->ok = PROTO_TRUE;
+    Mqttsn.flags.octet = p[0];
+    Mqttsn.topic.topic_id = rd16(p + 1);
+    Mqttsn.field.msg_id = rd16(p + 1 + MQTTSN_ID_OCTETS);
+    Mqttsn.field.return_code = p[1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS];
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // PUBLISH: Flags, TopicId, MsgId, then the Data that fills the rest (sec 5.4.12).
-static void mqttsn_parse_publish(struct MqttsnInternal *restrict ctx)
+static void mqttsn_parse_publish(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    const uint8_t *p = ctx->ns->buf.in;
-    const size_t len = ctx->ns->buf.avail;
+    (void)work;
+    Mqttsn.ok = PROTO_FALSE;
+    const uint8_t *p = Mqttsn.buf.in;
+    const size_t len = Mqttsn.buf.avail;
     const size_t head = 1 + MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS;
     if (!p || len < head)
     {
         return;
     }
-    ctx->ns->flags.octet = p[0];
-    ctx->ns->topic.topic_id = rd16(p + 1);
-    ctx->ns->field.msg_id = rd16(p + 1 + MQTTSN_ID_OCTETS);
-    ctx->ns->data.data = p + head;
-    ctx->ns->data.data_len = len - head;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqttsn.flags.octet = p[0];
+    Mqttsn.topic.topic_id = rd16(p + 1);
+    Mqttsn.field.msg_id = rd16(p + 1 + MQTTSN_ID_OCTETS);
+    Mqttsn.data.data = p + head;
+    Mqttsn.data.data_len = len - head;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // REGISTER: TopicId, MsgId, then the TopicName that fills the rest (sec 5.4.10).
-static void mqttsn_parse_register(struct MqttsnInternal *restrict ctx)
+static void mqttsn_parse_register(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    const uint8_t *p = ctx->ns->buf.in;
-    const size_t len = ctx->ns->buf.avail;
+    (void)work;
+    Mqttsn.ok = PROTO_FALSE;
+    const uint8_t *p = Mqttsn.buf.in;
+    const size_t len = Mqttsn.buf.avail;
     const size_t head = MQTTSN_ID_OCTETS + MQTTSN_ID_OCTETS;
     if (!p || len < head)
     {
         return;
     }
-    ctx->ns->topic.topic_id = rd16(p);
-    ctx->ns->field.msg_id = rd16(p + MQTTSN_ID_OCTETS);
-    ctx->ns->topic.topic_name = (const char *)(p + head);
-    ctx->ns->topic.topic_name_len = len - head;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqttsn.topic.topic_id = rd16(p);
+    Mqttsn.field.msg_id = rd16(p + MQTTSN_ID_OCTETS);
+    Mqttsn.topic.topic_name = (const char *)(p + head);
+    Mqttsn.topic.topic_name_len = len - head;
+    Mqttsn.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -543,7 +546,6 @@ MqttsnNs Mqttsn = {.make_flags = mqttsn_make_flags,
                    .parse_puback = mqttsn_parse_puback,
                    .parse_suback = mqttsn_parse_suback,
                    .parse_publish = mqttsn_parse_publish,
-                   .parse_register = mqttsn_parse_register,
-                   .internal = &s_mqttsn};
+                   .parse_register = mqttsn_parse_register};
 
 #endif // PROTOCORE_ENABLE_MQTT_SN

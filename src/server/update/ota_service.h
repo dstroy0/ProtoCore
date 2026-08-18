@@ -46,23 +46,17 @@ typedef struct
     const char *pass; ///< required HTTP Basic password
 } OtaServiceArgs;
 
-/** @brief The service's own call, described only in ota_service.c. */
-struct OtaServiceInternal;
-
 /**
  * @brief The firmware upload route.
  *
  * @var OtaServiceNs::args      what installing the route takes
  * @var OtaServiceNs::begin     install the route and the streaming-body hooks
- * @var OtaServiceNs::internal  the credentials and the call that installs the route
  */
 typedef struct
 {
     OtaServiceArgs args;
 
-    void (*begin)(struct OtaServiceInternal *ctx);
-
-    struct OtaServiceInternal *internal;
+    void (*const begin)(uint8_t *restrict work);
 } OtaServiceNs;
 
 /** @brief The one symbol this module exports. */

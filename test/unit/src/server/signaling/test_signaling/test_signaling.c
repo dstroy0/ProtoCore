@@ -21,19 +21,29 @@
 static int g_close_calls;
 static uint8_t g_close_slot;
 
-static void stub_close(struct ConnPoolInternal *ctx)
+// The double this env links in place of protocol.c: it builds the signaling half only, so the pool
+// is the one symbol it has to supply. Every entry takes the borrow, and this one never reads it.
+static void stub_close(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
     g_close_calls++;
     g_close_slot = ConnPool.slot;
 }
 
-ConnPoolNs ConnPool = {.close = stub_close, .internal = NULL};
+ConnPoolNs ConnPool = {.close = stub_close};
+
+// The pool owns state now, so it publishes the bytes that state lives in and signaling.c passes
+// them to every call. The double holds none, and the entry above never reads what it is handed.
+static uint8_t g_conn_pool_work[16];
+uint8_t *protocore_conn_pool_span(void)
+{
+    return g_conn_pool_work;
+}
 
 static void put_response(int code)
 {
     Signal.put.code = code;
-    Signal.put_response(Signal.internal);
+    Signal.put_response(protocore_signaling_span());
 }
 
 static void put_tick(uint32_t uptime_ms, uint32_t conns, uint32_t listeners)
@@ -41,28 +51,28 @@ static void put_tick(uint32_t uptime_ms, uint32_t conns, uint32_t listeners)
     Signal.put.uptime_ms = uptime_ms;
     Signal.put.conns_active = conns;
     Signal.put.listeners_up = listeners;
-    Signal.put_tick(Signal.internal);
+    Signal.put_tick(protocore_signaling_span());
 }
 
 static protocore_signal_snapshot know(void)
 {
     protocore_signal_snapshot s;
     Signal.out = &s;
-    Signal.know(Signal.internal);
+    Signal.know(protocore_signaling_span());
     return s;
 }
 
 static void kill_slot(uint8_t slot)
 {
     Signal.slot = slot;
-    Signal.kill(Signal.internal);
+    Signal.kill(protocore_signaling_span());
 }
 
 void setUp(void)
 {
     g_close_calls = 0;
     g_close_slot = 0xFF;
-    Signal.reset(Signal.internal);
+    Signal.reset(protocore_signaling_span());
 }
 void tearDown(void)
 {
@@ -101,7 +111,7 @@ void test_class_ranges_are_a_hundred_wide(void)
     protocore_signal_snapshot s = know();
     TEST_ASSERT_EQUAL_UINT32(2u, s.responses_2xx);
 
-    Signal.reset(Signal.internal);
+    Signal.reset(protocore_signaling_span());
     put_response(399);
     put_response(400);
     put_response(499);
@@ -110,7 +120,7 @@ void test_class_ranges_are_a_hundred_wide(void)
     TEST_ASSERT_EQUAL_UINT32(2u, s.responses_4xx);
     TEST_ASSERT_EQUAL_UINT32(1u, s.responses_5xx);
 
-    Signal.reset(Signal.internal);
+    Signal.reset(protocore_signaling_span());
     put_response(99);
     put_response(600);
     s = know();
@@ -188,7 +198,7 @@ void test_reset_empties_every_field(void)
     put_response(404);
     put_response(500);
 
-    Signal.reset(Signal.internal);
+    Signal.reset(protocore_signaling_span());
     protocore_signal_snapshot s = know();
     TEST_ASSERT_EQUAL_UINT32(0u, s.uptime_ms);
     TEST_ASSERT_EQUAL_UINT32(0u, s.requests_total);
@@ -204,7 +214,7 @@ void test_a_read_with_no_destination_is_refused(void)
 {
     put_tick(5u, 1u, 1u);
     Signal.out = NULL;
-    Signal.know(Signal.internal);
+    Signal.know(protocore_signaling_span());
 
     protocore_signal_snapshot s = know();
     TEST_ASSERT_EQUAL_UINT32(5u, s.uptime_ms);

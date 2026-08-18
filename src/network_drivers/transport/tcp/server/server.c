@@ -25,9 +25,12 @@
 #include "../protocol/protocol.h"    // ConnPool: the slots an accept claims
 #include "../tcp.h"                  // the aggregate the halves hang off
 #include "core_setup/board_profiles/protocore_platform.h" // the stack's queues, under our names
+#include "mmgr/plaintext.h"                               // the persistent end this module's state is taken from
 #include "network_drivers/tls/tls.h"                      // TLS handshake begin (self-stubbing)
 #include "server/clock/clock.h"                           // protocore_millis() pluggable monotonic clock
 #include "server/core/worker.h"                           // Workers.wake() - nudge the owning worker task
+
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 // Listener pool - all storage in BSS.
 Listener listener_pool[MAX_LISTENERS];
@@ -37,9 +40,33 @@ extern protocore_net_err lowlevel_recv_cb(void *arg, protocore_pcb *tpcb, protoc
 extern protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len);
 extern void lowlevel_err_cb(void *arg, protocore_net_err err);
 
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_TCP_LISTENER_BORROW persistent bytes, or null while the pool was short
+} TcpListenerOwnCtx;
+static TcpListenerOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_tcp_listener_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_TCP_LISTENER_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
 // Both teardowns are called by the add that replaces an active row, above their definitions.
-static void listener_stop(struct TcpListenerInternal *restrict ctx);
-static void listener_stop_dynamic(struct TcpListenerInternal *restrict ctx);
+static void listener_stop(uint8_t *restrict work);
+static void listener_stop_dynamic(uint8_t *restrict work);
 
 // ---------------------------------------------------------------------------
 // The accepting side's state: every bounded table, and the handle that reaches it
@@ -112,48 +139,52 @@ struct TcpListenerStorage
 #endif
 };
 
-/**
- * @brief The accepting side's state and the calls that reach it - what TcpListenerNs points at.
- *
- * @var TcpListenerInternal::store  every bounded table the gates and the queues keep
- * @var TcpListenerInternal::ns     the handle a caller sets a call's members on
- */
-struct TcpListenerInternal
-{
-    struct TcpListenerStorage *store;
-    TcpListenerNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define TCP_LISTENER_OFF_CTX 0u
+static_assert(TCP_LISTENER_OFF_CTX + sizeof(struct TcpListenerStorage) <= PROTOCORE_TCP_LISTENER_BORROW,
+              "PROTOCORE_TCP_LISTENER_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct TcpListenerStorage s_store;
-
-static struct TcpListenerInternal s_listener = {.store = &s_store, .ns = &TcpListener};
+// The region, at its offset in the caller's borrow.
+#define TCP_LISTENER_CTX(w) ((struct TcpListenerStorage *)(void *)((w) + TCP_LISTENER_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Accept-rate throttle (fixed window, global). State persists across accepts.
 // Always compiled (unit-testable); only consulted when the feature is enabled.
 // ---------------------------------------------------------------------------
 
-static void listener_accept_allowed(struct TcpListenerInternal *restrict ctx)
+static void listener_accept_allowed(uint8_t *restrict work)
 {
-    // Unsigned subtraction wraps correctly across the millis() rollover.
-    if ((uint32_t)(ctx->ns->gate.now_ms - ctx->store->accept.window_start) >= PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS)
+    if (!work)
     {
-        ctx->store->accept.window_start = ctx->ns->gate.now_ms;
-        ctx->store->accept.count = 0;
+        return; // the pool was short of this module's borrow
     }
-    if (ctx->store->accept.count >= PROTOCORE_ACCEPT_THROTTLE_MAX)
+    // Unsigned subtraction wraps correctly across the millis() rollover.
+    if ((uint32_t)(TcpListener.gate.now_ms - TCP_LISTENER_CTX(work)->accept.window_start) >=
+        PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        TCP_LISTENER_CTX(work)->accept.window_start = TcpListener.gate.now_ms;
+        TCP_LISTENER_CTX(work)->accept.count = 0;
+    }
+    if (TCP_LISTENER_CTX(work)->accept.count >= PROTOCORE_ACCEPT_THROTTLE_MAX)
+    {
+        TcpListener.ok = PROTO_FALSE;
         return;
     }
-    ctx->store->accept.count++;
-    ctx->ns->ok = PROTO_TRUE;
+    TCP_LISTENER_CTX(work)->accept.count++;
+    TcpListener.ok = PROTO_TRUE;
 }
 
-static void listener_accept_throttle_reset(struct TcpListenerInternal *restrict ctx)
+static void listener_accept_throttle_reset(uint8_t *restrict work)
 {
-    ctx->store->accept.window_start = 0;
-    ctx->store->accept.count = 0;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    TCP_LISTENER_CTX(work)->accept.window_start = 0;
+    TCP_LISTENER_CTX(work)->accept.count = 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -162,13 +193,17 @@ static void listener_accept_throttle_reset(struct TcpListenerInternal *restrict 
 // feature is enabled.
 // ---------------------------------------------------------------------------
 
-static void listener_accept_allowed_ip(struct TcpListenerInternal *restrict ctx)
+static void listener_accept_allowed_ip(uint8_t *restrict work)
 {
-    Ip.args.ip = ctx->ns->gate.addr;
-    Ip.is_unspecified(Ip.internal);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Ip.args.ip = TcpListener.gate.addr;
+    Ip.is_unspecified(ip_work);
     if (Ip.ok)
     {
-        ctx->ns->ok = PROTO_TRUE; // untrackable source - defer to the global accept throttle
+        TcpListener.ok = PROTO_TRUE; // untrackable source - defer to the global accept throttle
         return;
     }
 
@@ -177,25 +212,25 @@ static void listener_accept_allowed_ip(struct TcpListenerInternal *restrict ctx)
     int lru = 0;
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
-        IpThrottleBucket *b = &ctx->store->iptt.buckets[i];
+        IpThrottleBucket *b = &TCP_LISTENER_CTX(work)->iptt.buckets[i];
         Ip.args.ip = &b->addr;
-        Ip.args.b = ctx->ns->gate.addr;
-        Ip.equal(Ip.internal);
+        Ip.args.b = TcpListener.gate.addr;
+        Ip.equal(ip_work);
         if (b->addr.family != PROTOCORE_IP_NONE && Ip.ok)
         {
             // Unsigned subtraction wraps correctly across the millis() rollover.
-            if ((uint32_t)(ctx->ns->gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
+            if ((uint32_t)(TcpListener.gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
             {
-                b->window_start = ctx->ns->gate.now_ms;
+                b->window_start = TcpListener.gate.now_ms;
                 b->count = 0;
             }
             if (b->count >= PROTOCORE_PER_IP_THROTTLE_MAX)
             {
-                ctx->ns->ok = PROTO_FALSE;
+                TcpListener.ok = PROTO_FALSE;
                 return;
             }
             b->count++;
-            ctx->ns->ok = PROTO_TRUE;
+            TcpListener.ok = PROTO_TRUE;
             return;
         }
         if (b->addr.family == PROTOCORE_IP_NONE)
@@ -208,13 +243,13 @@ static void listener_accept_allowed_ip(struct TcpListenerInternal *restrict ctx)
         else
         {
             if (expired < 0 &&
-                (uint32_t)(ctx->ns->gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
+                (uint32_t)(TcpListener.gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
             {
                 expired = i;
             }
             // Track the oldest active bucket (largest elapsed) as the eviction victim.
-            if ((uint32_t)(ctx->ns->gate.now_ms - b->window_start) >
-                (uint32_t)(ctx->ns->gate.now_ms - ctx->store->iptt.buckets[lru].window_start))
+            if ((uint32_t)(TcpListener.gate.now_ms - b->window_start) >
+                (uint32_t)(TcpListener.gate.now_ms - TCP_LISTENER_CTX(work)->iptt.buckets[lru].window_start))
             {
                 lru = i;
             }
@@ -224,20 +259,24 @@ static void listener_accept_allowed_ip(struct TcpListenerInternal *restrict ctx)
     // No bucket yet for this address: claim one - empty, else expired, else evict
     // the least-recently-started active bucket.
     int slot = (empty >= 0) ? empty : (expired >= 0) ? expired : lru;
-    IpThrottleBucket *b = &ctx->store->iptt.buckets[slot];
-    b->addr = *ctx->ns->gate.addr;
-    b->window_start = ctx->ns->gate.now_ms;
+    IpThrottleBucket *b = &TCP_LISTENER_CTX(work)->iptt.buckets[slot];
+    b->addr = *TcpListener.gate.addr;
+    b->window_start = TcpListener.gate.now_ms;
     b->count = 1;
-    ctx->ns->ok = PROTO_TRUE; // first connection of a fresh window is always allowed
+    TcpListener.ok = PROTO_TRUE; // first connection of a fresh window is always allowed
 }
 
-static void listener_per_ip_throttle_reset(struct TcpListenerInternal *restrict ctx)
+static void listener_per_ip_throttle_reset(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
-        ctx->store->iptt.buckets[i].addr.family = PROTOCORE_IP_NONE;
-        ctx->store->iptt.buckets[i].window_start = 0;
-        ctx->store->iptt.buckets[i].count = 0;
+        TCP_LISTENER_CTX(work)->iptt.buckets[i].addr.family = PROTOCORE_IP_NONE;
+        TCP_LISTENER_CTX(work)->iptt.buckets[i].window_start = 0;
+        TCP_LISTENER_CTX(work)->iptt.buckets[i].count = 0;
     }
 }
 
@@ -248,34 +287,38 @@ static void listener_per_ip_throttle_reset(struct TcpListenerInternal *restrict 
 // the feature before adding rules cannot lock the device out.
 // ---------------------------------------------------------------------------
 
-static void listener_ip_allow_add(struct TcpListenerInternal *restrict ctx)
+static void listener_ip_allow_add(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->gate.addr)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    TcpListener.ok = PROTO_FALSE;
+    if (!TcpListener.gate.addr)
     {
         return;
     }
-    int bits = (ctx->ns->gate.addr->family == PROTOCORE_IP_V4)
+    int bits = (TcpListener.gate.addr->family == PROTOCORE_IP_V4)
                    ? 32
-                   : (ctx->ns->gate.addr->family == PROTOCORE_IP_V6 ? 128 : -1);
-    if (bits < 0 || ctx->ns->gate.prefix_len > (uint8_t)bits)
+                   : (TcpListener.gate.addr->family == PROTOCORE_IP_V6 ? 128 : -1);
+    if (bits < 0 || TcpListener.gate.prefix_len > (uint8_t)bits)
     {
         return; // reject a malformed family or an over-long prefix
     }
-    if (ctx->store->allow.count >= PROTOCORE_IP_ALLOWLIST_SLOTS)
+    if (TCP_LISTENER_CTX(work)->allow.count >= PROTOCORE_IP_ALLOWLIST_SLOTS)
     {
         return;
     }
-    ctx->store->allow.rules[ctx->store->allow.count].network = *ctx->ns->gate.addr;
-    ctx->store->allow.rules[ctx->store->allow.count].prefix_len = ctx->ns->gate.prefix_len;
-    ctx->store->allow.count++;
-    ctx->ns->ok = PROTO_TRUE;
+    TCP_LISTENER_CTX(work)->allow.rules[TCP_LISTENER_CTX(work)->allow.count].network = *TcpListener.gate.addr;
+    TCP_LISTENER_CTX(work)->allow.rules[TCP_LISTENER_CTX(work)->allow.count].prefix_len = TcpListener.gate.prefix_len;
+    TCP_LISTENER_CTX(work)->allow.count++;
+    TcpListener.ok = PROTO_TRUE;
 }
 
-static void listener_ip_allow_add_cidr(struct TcpListenerInternal *restrict ctx)
+static void listener_ip_allow_add_cidr(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->gate.cidr)
+    TcpListener.ok = PROTO_FALSE;
+    if (!TcpListener.gate.cidr)
     {
         return;
     }
@@ -285,7 +328,7 @@ static void listener_ip_allow_add_cidr(struct TcpListenerInternal *restrict ctx)
     char addr[PROTOCORE_IP_STR_MAX];
     const char *slash = NULL;
     size_t n = 0;
-    for (const char *p = ctx->ns->gate.cidr; *p; p++)
+    for (const char *p = TcpListener.gate.cidr; *p; p++)
     {
         if (*p == '/')
         {
@@ -304,7 +347,7 @@ static void listener_ip_allow_add_cidr(struct TcpListenerInternal *restrict ctx)
     net.family = PROTOCORE_IP_NONE;
     Ip.args.text = addr;
     Ip.args.out = &net;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     if (!Ip.ok)
     {
         return;
@@ -336,123 +379,146 @@ static void listener_ip_allow_add_cidr(struct TcpListenerInternal *restrict ctx)
         prefix = (uint8_t)v;
     }
 
-    ctx->ns->gate.addr = &net;
-    ctx->ns->gate.prefix_len = prefix;
-    listener_ip_allow_add(ctx);
+    TcpListener.gate.addr = &net;
+    TcpListener.gate.prefix_len = prefix;
+    listener_ip_allow_add(work);
 }
 
-static void listener_ip_allowed(struct TcpListenerInternal *restrict ctx)
+static void listener_ip_allowed(uint8_t *restrict work)
 {
-    if (ctx->store->allow.count == 0)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_TRUE; // no rules configured -> allow all (fail-open by design)
+        return; // the pool was short of this module's borrow
+    }
+    if (TCP_LISTENER_CTX(work)->allow.count == 0)
+    {
+        TcpListener.ok = PROTO_TRUE; // no rules configured -> allow all (fail-open by design)
         return;
     }
-    for (uint8_t i = 0; i < ctx->store->allow.count; i++)
+    for (uint8_t i = 0; i < TCP_LISTENER_CTX(work)->allow.count; i++)
     {
         // protocore_ip_prefix_match requires the same family, so a v4 peer never matches a v6 rule.
-        Ip.args.ip = ctx->ns->gate.addr;
-        Ip.args.b = &ctx->store->allow.rules[i].network;
-        Ip.args.prefix_len = ctx->store->allow.rules[i].prefix_len;
-        Ip.prefix_match(Ip.internal);
+        Ip.args.ip = TcpListener.gate.addr;
+        Ip.args.b = &TCP_LISTENER_CTX(work)->allow.rules[i].network;
+        Ip.args.prefix_len = TCP_LISTENER_CTX(work)->allow.rules[i].prefix_len;
+        Ip.prefix_match(ip_work);
         if (Ip.ok)
         {
-            ctx->ns->ok = PROTO_TRUE;
+            TcpListener.ok = PROTO_TRUE;
             return;
         }
     }
-    ctx->ns->ok = PROTO_FALSE;
+    TcpListener.ok = PROTO_FALSE;
 }
 
-static void listener_ip_allowlist_reset(struct TcpListenerInternal *restrict ctx)
+static void listener_ip_allowlist_reset(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     for (int i = 0; i < PROTOCORE_IP_ALLOWLIST_SLOTS; i++)
     {
-        ctx->store->allow.rules[i].network.family = PROTOCORE_IP_NONE;
+        TCP_LISTENER_CTX(work)->allow.rules[i].network.family = PROTOCORE_IP_NONE;
     }
-    ctx->store->allow.count = 0;
+    TCP_LISTENER_CTX(work)->allow.count = 0;
 }
 
 #if PROTOCORE_WORKER_COUNT > 1
 
-static void listener_worker_queues_init(struct TcpListenerInternal *restrict ctx)
+static void listener_worker_queues_init(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
-        if (!ctx->store->lq.wq[i])
+        if (!TCP_LISTENER_CTX(work)->lq.wq[i])
         {
-            ctx->store->lq.wq[i] = protocore_platform_queue_create(
-                EVT_QUEUE_DEPTH, sizeof(TcpEvt), ctx->store->lq.wq_storage[i], &ctx->store->lq.wq_struct[i]);
+            TCP_LISTENER_CTX(work)->lq.wq[i] = protocore_platform_queue_create(
+                EVT_QUEUE_DEPTH, sizeof(TcpEvt), TCP_LISTENER_CTX(work)->lq.wq_storage[i],
+                &TCP_LISTENER_CTX(work)->lq.wq_struct[i]);
         }
     }
 }
 
-static void listener_worker_queue(struct TcpListenerInternal *restrict ctx)
+static void listener_worker_queue(uint8_t *restrict work)
 {
-    if (ctx->ns->q.worker_id < 0 || ctx->ns->q.worker_id >= PROTOCORE_WORKER_COUNT)
+    if (!work)
     {
-        ctx->ns->queue = NULL;
+        return; // the pool was short of this module's borrow
+    }
+    if (TcpListener.q.worker_id < 0 || TcpListener.q.worker_id >= PROTOCORE_WORKER_COUNT)
+    {
+        TcpListener.queue = NULL;
         return;
     }
-    ctx->ns->queue = ctx->store->lq.wq[ctx->ns->q.worker_id];
+    TcpListener.queue = TCP_LISTENER_CTX(work)->lq.wq[TcpListener.q.worker_id];
 }
 #else
 // The queue listener ns->idx drains, NULL when the row is inactive or out of range. One worker owns
 // every slot here, so the listener's own queue is the only path an event takes.
-static void listener_queue(struct TcpListenerInternal *restrict ctx)
+static void listener_queue(uint8_t *restrict work)
 {
-    ctx->ns->queue = NULL;
-    if (ctx->ns->idx >= MAX_LISTENERS)
+    (void)work;
+    TcpListener.queue = NULL;
+    if (TcpListener.idx >= MAX_LISTENERS)
     {
         return;
     }
-    Listener *lst = &listener_pool[ctx->ns->idx];
+    Listener *lst = &listener_pool[TcpListener.idx];
     if (!lst->active)
     {
         return;
     }
-    ctx->ns->queue = lst->queue;
+    TcpListener.queue = lst->queue;
 }
 #endif // PROTOCORE_WORKER_COUNT > 1
 
-static void listener_enqueue(struct TcpListenerInternal *restrict ctx)
+static void listener_enqueue(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (ctx->ns->q.evt == NULL || ctx->ns->q.evt->slot_id >= CONN_POOL_SLOTS)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    TcpListener.ok = PROTO_FALSE;
+    if (TcpListener.q.evt == NULL || TcpListener.q.evt->slot_id >= CONN_POOL_SLOTS)
     {
         return;
     }
 #if PROTOCORE_WORKER_COUNT > 1
     // HttpRoute by the slot's owner so the owning worker is the sole consumer.
-    uint8_t owner = conn_pool[ctx->ns->q.evt->slot_id].owner;
-    if (owner >= PROTOCORE_WORKER_COUNT || !ctx->store->lq.wq[owner])
+    uint8_t owner = conn_pool[TcpListener.q.evt->slot_id].owner;
+    if (owner >= PROTOCORE_WORKER_COUNT || !TCP_LISTENER_CTX(work)->lq.wq[owner])
     {
         return;
     }
-    if (protocore_platform_queue_send(ctx->store->lq.wq[owner], ctx->ns->q.evt, 0) != PROTOCORE_PLATFORM_OK)
+    if (protocore_platform_queue_send(TCP_LISTENER_CTX(work)->lq.wq[owner], TcpListener.q.evt, 0) !=
+        PROTOCORE_PLATFORM_OK)
     {
         return;
     }
     Workers.worker_id = owner; // nudge the owning worker so it services this now
-    Workers.wake(Workers.internal);
+    Workers.wake(protocore_worker_span());
 #else
-    if (ctx->ns->idx >= MAX_LISTENERS)
+    if (TcpListener.idx >= MAX_LISTENERS)
     {
         return;
     }
-    Listener *lst = &listener_pool[ctx->ns->idx];
+    Listener *lst = &listener_pool[TcpListener.idx];
     if (!lst->active || !lst->queue)
     {
         return;
     }
-    if (protocore_platform_queue_send(lst->queue, ctx->ns->q.evt, 0) != PROTOCORE_PLATFORM_OK)
+    if (protocore_platform_queue_send(lst->queue, TcpListener.q.evt, 0) != PROTOCORE_PLATFORM_OK)
     {
         return;
     }
     Workers.worker_id = 0; // single worker owns every slot - nudge it now
-    Workers.wake(Workers.internal);
+    Workers.wake(protocore_worker_span());
 #endif
-    ctx->ns->ok = PROTO_TRUE;
+    TcpListener.ok = PROTO_TRUE;
 }
 
 /**
@@ -487,7 +553,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // Connection-flood defense: drop accepts beyond the per-window budget before
     // claiming a pool slot or doing any per-connection work.
     TcpListener.gate.now_ms = Clock.ms;
-    listener_accept_allowed(&s_listener);
+    listener_accept_allowed(protocore_tcp_listener_span());
     if (!TcpListener.ok)
     {
         protocore_net_abort(newpcb);
@@ -518,7 +584,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // peer address this host build can never resolve, cannot be driven to the false case.
     TcpListener.gate.addr = &remote;
     TcpListener.gate.now_ms = Clock.ms;
-    listener_accept_allowed_ip(&s_listener);
+    listener_accept_allowed_ip(protocore_tcp_listener_span());
     if (!TcpListener.ok)
     {
         protocore_net_abort(newpcb);
@@ -531,7 +597,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // allowlist (an empty allowlist allows all, so this is a no-op until rules are
     // added). CIDR prefix match on the full v4/v6 address.
     TcpListener.gate.addr = &remote;
-    listener_ip_allowed(&s_listener);
+    listener_ip_allowed(protocore_tcp_listener_span());
     if (!TcpListener.ok)
     {
         protocore_net_abort(newpcb);
@@ -542,7 +608,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // First free slot as one ctz on the live-slot bitmask (was a MAX_CONNS scan). Runs in stack context, and
     // accepts are serialized here, so the slot found is claimed by the protocore_conn_set_state() below before any
     // other accept runs.
-    ConnPool.alloc_free(ConnPool.internal);
+    ConnPool.alloc_free(protocore_conn_pool_span());
     int32_t free_slot = ConnPool.i32;
     if (free_slot < 0)
     {
@@ -564,7 +630,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
 #endif
     ConnPool.slot = (uint8_t)free_slot;
     ConnPool.st = CONN_ACTIVE;
-    ConnPool.set_state(ConnPool.internal); // reserves the slot in the bitmask
+    ConnPool.set_state(protocore_conn_pool_span()); // reserves the slot in the bitmask
     slot->pcb = newpcb;
     slot->last_activity_ms = Clock.ms;
     slot->rx_head = 0;
@@ -597,7 +663,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     // here - before the connection carries anything - so every segment of it leaves with the same
     // one. Same context as protocore_net_nagle_disable above, so touching the pcb is race-free.
     TcpLower.pcb = newpcb;
-    TcpLower.apply_ttl(TcpLower.internal);
+    TcpLower.apply_ttl(protocore_tcp_lower_span());
 
 #if PROTOCORE_ENABLE_DIFFSERV
     // DiffServ (RFC 2474): stamp this connection's DS field so a QoS-aware network - and the Wi-Fi WMM
@@ -633,7 +699,7 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
     TcpEvt evt = {EVT_CONNECT, (uint8_t)free_slot, 0};
     TcpListener.idx = idx;
     TcpListener.q.evt = &evt;
-    listener_enqueue(&s_listener);
+    listener_enqueue(protocore_tcp_listener_span());
     if (!TcpListener.ok)
     {
         PROTOCORE_OBS_NOTICE((uint8_t)free_slot, CONN_ACTIVE, PROTOCORE_CONN_R_DEFER_DROP);
@@ -644,35 +710,33 @@ protocore_net_err listener_accept_cb(void *arg, protocore_pcb *newpcb, protocore
 
 static protocore_net_err listener_pcb_marshal(uint8_t idx, uint16_t port, proto_bool create);
 
-static void listener_add(struct TcpListenerInternal *restrict ctx)
+static void listener_add(uint8_t *restrict work)
 {
-    if (ctx->ns->idx >= MAX_LISTENERS)
+    if (TcpListener.idx >= MAX_LISTENERS)
     {
-        ctx->ns->i32 = -1;
+        TcpListener.i32 = -1;
         return;
     }
 
-    listener_stop(ctx); // clean up if already active
+    listener_stop(work); // clean up if already active
 
 #if PROTOCORE_WORKER_COUNT > 1
-    listener_worker_queues_init(ctx); // create the per-worker event queues once (idempotent)
+    listener_worker_queues_init(work); // create the per-worker event queues once (idempotent)
 #endif
 
-    Listener *lst = &listener_pool[ctx->ns->idx];
-    lst->port = ctx->ns->bind.port;
-    lst->proto = ctx->ns->bind.proto;
-    lst->tls = ctx->ns->bind.tls;
-#if PROTOCORE_ENABLE_DIFFSERV
-    lst->dscp =
-        PROTOCORE_DSCP_UNSET; // no per-listener override until protocore_listen_set_dscp(); accept() uses the default
-#endif
+    Listener *lst = &listener_pool[TcpListener.idx];
+    lst->port = TcpListener.bind.port;
+    lst->proto = TcpListener.bind.proto;
+    lst->tls = TcpListener.bind.tls;
+    // no per-listener override until TcpListener.set_dscp; accept() uses the server-wide default
+    lst->dscp = PROTOCORE_DSCP_UNSET;
 
 #if PROTOCORE_WORKER_COUNT == 1
     lst->queue =
         protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
     if (!lst->queue)
     {
-        ctx->ns->i32 = -1;
+        TcpListener.i32 = -1;
         return;
     }
 #endif
@@ -681,33 +745,34 @@ static void listener_add(struct TcpListenerInternal *restrict ctx)
     // worker task that calls begin() trips the stack's core-locking assert, so marshal it -
     // the same path the dynamic listener uses. Fields the accept callback reads (proto, queue) are
     // set above, before the pcb can accept.
-    if (listener_pcb_marshal(ctx->ns->idx, ctx->ns->bind.port, PROTO_TRUE) != PROTOCORE_NET_OK)
+    if (listener_pcb_marshal(TcpListener.idx, TcpListener.bind.port, PROTO_TRUE) != PROTOCORE_NET_OK)
     {
 #if PROTOCORE_WORKER_COUNT == 1
         protocore_platform_queue_delete(lst->queue);
         lst->queue = NULL;
 #endif
-        ctx->ns->i32 = -1;
+        TcpListener.i32 = -1;
         return;
     }
     lst->active = PROTO_TRUE;
 
-    ctx->ns->i32 = 1;
+    TcpListener.i32 = 1;
 }
 
-static void listener_stop(struct TcpListenerInternal *restrict ctx)
+static void listener_stop(uint8_t *restrict work)
 {
-    if (ctx->ns->idx >= MAX_LISTENERS)
+    (void)work;
+    if (TcpListener.idx >= MAX_LISTENERS)
     {
         return;
     }
-    Listener *lst = &listener_pool[ctx->ns->idx];
+    Listener *lst = &listener_pool[TcpListener.idx];
     if (!lst->active)
     {
         return;
     }
     lst->active = PROTO_FALSE;
-    (void)listener_pcb_marshal(ctx->ns->idx, 0, PROTO_FALSE); // close the listen pcb in stack context
+    (void)listener_pcb_marshal(TcpListener.idx, 0, PROTO_FALSE); // close the listen pcb in stack context
 #if PROTOCORE_WORKER_COUNT == 1
     if (lst->queue)
     {
@@ -717,12 +782,12 @@ static void listener_stop(struct TcpListenerInternal *restrict ctx)
 #endif
 }
 
-static void listener_stop_all(struct TcpListenerInternal *restrict ctx)
+static void listener_stop_all(uint8_t *restrict work)
 {
     for (uint8_t i = 0; i < MAX_LISTENERS; i++)
     {
-        ctx->ns->idx = i;
-        listener_stop(ctx);
+        TcpListener.idx = i;
+        listener_stop(work);
     }
 }
 
@@ -791,89 +856,90 @@ static protocore_net_err listener_pcb_marshal(uint8_t idx, uint16_t port, proto_
     return k.result;
 }
 
-#if PROTOCORE_ENABLE_DIFFSERV
-static void set_dscp(struct TcpListenerInternal *restrict ctx)
+// Install the code point every connection accepted on a port takes. The store is unconditional:
+// PROTOCORE_ENABLE_DIFFSERV decides whether the accept callback stamps it, not whether a caller can
+// name it.
+static void set_dscp(uint8_t *restrict work)
 {
+    (void)work;
     for (uint8_t i = 0; i < MAX_LISTENERS; i++)
     {
         Listener *lst = &listener_pool[i];
-        if (lst->active && lst->port == ctx->ns->bind.port)
+        if (lst->active && lst->port == TcpListener.bind.port)
         {
             // Preserve the UNSET sentinel; mask any real code point to 6 bits. Applied (via the accept
             // callback's newpcb->tos) to connections accepted after this call - existing connections keep the
             // DSCP they were stamped with. The handshake (SYN-ACK) stays best-effort: the stack emits it
             // before any app callback and does not inherit the listening block's DS field, so marking
             // begins at the connection's first data segment.
-            lst->dscp = (ctx->ns->bind.dscp == PROTOCORE_DSCP_UNSET) ? PROTOCORE_DSCP_UNSET
-                                                                     : (uint8_t)(ctx->ns->bind.dscp & 0x3F);
-            ctx->ns->ok = PROTO_TRUE;
+            lst->dscp = (TcpListener.bind.dscp == PROTOCORE_DSCP_UNSET) ? PROTOCORE_DSCP_UNSET
+                                                                        : (uint8_t)(TcpListener.bind.dscp & 0x3F);
+            TcpListener.ok = PROTO_TRUE;
             return;
         }
     }
-    ctx->ns->ok = PROTO_FALSE;
+    TcpListener.ok = PROTO_FALSE;
 }
-#endif // PROTOCORE_ENABLE_DIFFSERV
 
-static void listener_add_dynamic(struct TcpListenerInternal *restrict ctx)
+static void listener_add_dynamic(uint8_t *restrict work)
 {
-    if (ctx->ns->idx >= MAX_LISTENERS)
+    if (TcpListener.idx >= MAX_LISTENERS)
     {
-        ctx->ns->i32 = -1;
+        TcpListener.i32 = -1;
         return;
     }
-    listener_stop_dynamic(ctx); // clean up if this slot was already active
+    listener_stop_dynamic(work); // clean up if this slot was already active
 
 #if PROTOCORE_WORKER_COUNT > 1
-    listener_worker_queues_init(ctx); // idempotent (queue creation is task-safe)
+    listener_worker_queues_init(work); // idempotent (queue creation is task-safe)
 #endif
 
-    Listener *lst = &listener_pool[ctx->ns->idx];
-    lst->port = ctx->ns->bind.port;
-    lst->proto = ctx->ns->bind.proto;
-    lst->tls = PROTO_FALSE; // forwarded ports are plaintext bridges
-#if PROTOCORE_ENABLE_DIFFSERV
+    Listener *lst = &listener_pool[TcpListener.idx];
+    lst->port = TcpListener.bind.port;
+    lst->proto = TcpListener.bind.proto;
+    lst->tls = PROTO_FALSE;           // forwarded ports are plaintext bridges
     lst->dscp = PROTOCORE_DSCP_UNSET; // dynamic (forwarded) listeners inherit the server-wide default DSCP
-#endif
 
 #if PROTOCORE_WORKER_COUNT == 1
     lst->queue =
         protocore_platform_queue_create(EVT_QUEUE_DEPTH, sizeof(TcpEvt), lst->_queue_storage, &lst->_queue_struct);
     if (!lst->queue)
     {
-        ctx->ns->i32 = -1;
+        TcpListener.i32 = -1;
         return;
     }
 #endif
 
     // Create the listening PCB in stack context. Fields the accept callback reads
     // (proto, queue) are set above, before the pcb can accept anything.
-    if (listener_pcb_marshal(ctx->ns->idx, ctx->ns->bind.port, PROTO_TRUE) != PROTOCORE_NET_OK)
+    if (listener_pcb_marshal(TcpListener.idx, TcpListener.bind.port, PROTO_TRUE) != PROTOCORE_NET_OK)
     {
 #if PROTOCORE_WORKER_COUNT == 1
         protocore_platform_queue_delete(lst->queue);
         lst->queue = NULL;
 #endif
-        ctx->ns->i32 = -1;
+        TcpListener.i32 = -1;
         return;
     }
 
     lst->active = PROTO_TRUE;
-    ctx->ns->i32 = 1;
+    TcpListener.i32 = 1;
 }
 
-static void listener_stop_dynamic(struct TcpListenerInternal *restrict ctx)
+static void listener_stop_dynamic(uint8_t *restrict work)
 {
-    if (ctx->ns->idx >= MAX_LISTENERS)
+    (void)work;
+    if (TcpListener.idx >= MAX_LISTENERS)
     {
         return;
     }
-    Listener *lst = &listener_pool[ctx->ns->idx];
+    Listener *lst = &listener_pool[TcpListener.idx];
     if (!lst->active)
     {
         return;
     }
     lst->active = PROTO_FALSE;
-    (void)listener_pcb_marshal(ctx->ns->idx, 0, PROTO_FALSE); // close the listen pcb in stack context
+    (void)listener_pcb_marshal(TcpListener.idx, 0, PROTO_FALSE); // close the listen pcb in stack context
 #if PROTOCORE_WORKER_COUNT == 1
     if (lst->queue)
     {
@@ -890,9 +956,7 @@ TcpListenerNs TcpListener = {.stop = listener_stop,
                              .add = listener_add,
                              .add_dynamic = listener_add_dynamic,
                              .enqueue = listener_enqueue,
-#if PROTOCORE_ENABLE_DIFFSERV
                              .set_dscp = set_dscp,
-#endif
 #if PROTOCORE_WORKER_COUNT > 1
                              .worker_queues_init = listener_worker_queues_init,
                              .worker_queue = listener_worker_queue,
@@ -906,5 +970,4 @@ TcpListenerNs TcpListener = {.stop = listener_stop,
                              .ip_allow_add = listener_ip_allow_add,
                              .ip_allow_add_cidr = listener_ip_allow_add_cidr,
                              .ip_allowed = listener_ip_allowed,
-                             .ip_allowlist_reset = listener_ip_allowlist_reset,
-                             .internal = &s_listener};
+                             .ip_allowlist_reset = listener_ip_allowlist_reset};

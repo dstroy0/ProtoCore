@@ -24,11 +24,27 @@
 #ifndef PROTOCORE_WEBDAV_H
 #define PROTOCORE_WEBDAV_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_WEBDAV
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
+/** @brief Depth: infinity sentinel (a lone constant). */
+#define PROTOCORE_DAV_DEPTH_INFINITY 0x7fffffff
+
+/** @brief Maximum concurrent locks (fixed - a small structural bound, not a per-board tunable). */
+#define PROTOCORE_DAV_LOCK_MAX 8
+
+/** @brief Maximum locked-path length, including the NUL. */
+#define PROTOCORE_DAV_LOCK_PATH_MAX 128
+
+/** @brief Maximum lock-token length, including the NUL (e.g. "opaquelocktoken:xxxxxxxx-pc"). */
+#define PROTOCORE_DAV_LOCK_TOKEN_MAX 48
 
 /** @brief WebDAV request methods recognized by the server. */
 typedef enum PROTO_ENUM_PACKED
@@ -48,90 +64,6 @@ typedef enum PROTO_ENUM_PACKED
     DAV_M_UNSUPPORTED ///< Anything else - answered 405 Method Not Allowed.
 } WebDavMethod;
 
-/** @brief "infinity" Depth value (RFC 4918 §10.2). */
-/** @brief Depth: infinity sentinel (a lone constant). */
-#define PROTOCORE_DAV_DEPTH_INFINITY 0x7fffffff
-
-/** @brief Classify an HTTP method token (e.g. "PROPFIND") into a WebDavMethod. */
-WebDavMethod protocore_webdav_method(const char *m);
-
-/**
- * @brief Parse a Depth header value ("0", "1", or "infinity").
- * @return 0, 1, or PROTOCORE_DAV_DEPTH_INFINITY; @p dflt when @p depth_hdr is null/empty.
- */
-int protocore_webdav_depth(const char *depth_hdr, int dflt);
-
-/**
- * @brief XML-escape @p src into @p dst (`&`, `<`, `>`, `"`, `'`).
- * @return length written (NUL-terminated; truncated to fit @p cap).
- */
-size_t protocore_webdav_xml_escape(char *dst, size_t cap, const char *src);
-
-/**
- * @brief Extract and percent-decode the path of a Destination header.
- *
- * Accepts an absolute URI ("http://host/p/q") or an absolute path ("/p/q"); the
- * scheme + authority are skipped and `%xx` escapes are decoded into @p out.
- * @return false on overflow or a malformed value.
- */
-proto_bool protocore_webdav_dest_path(const char *destination, char *out, size_t cap);
-
-// 207 Multi-Status incremental builder. Each call appends to a buffer already
-// holding @p len bytes and returns the new length, never exceeding @p cap. A
-// return value equal to @p len means the fragment did not fit (the caller should
-// stop adding entries and close the document).
-
-/** @brief Write the XML prolog and the open <multistatus> element. */
-size_t protocore_webdav_ms_begin(char *buf, size_t cap, size_t len);
-
-/**
- * @brief Append one <response> describing a resource.
- *
- * @param href           the resource's URL path (XML-escaped here).
- * @param is_collection  true for a directory (emits <collection/>).
- * @param size           content length (files only).
- * @param rfc1123_mtime  Last-Modified string, or "" to omit.
- * @param content_type   MIME type (files only), or "" to omit.
- */
-size_t protocore_webdav_ms_entry(char *buf, size_t cap, size_t len, const char *href, proto_bool is_collection,
-                                 uint32_t size, const char *rfc1123_mtime, const char *content_type);
-
-/** @brief Close the <multistatus> element. */
-size_t protocore_webdav_ms_end(char *buf, size_t cap, size_t len);
-
-/**
- * @brief Build a complete 207 Multi-Status body answering a PROPPATCH.
- *
- * The server has no dead-property store and its live properties are read-only, so
- * every requested property is refused with 403 Forbidden. The property elements
- * are echoed verbatim (self-closed) from the request @p body so the client sees
- * exactly which properties it asked for, namespace declarations intact; a property
- * whose tag would contain a stray '<' is skipped (no XML injection). Up to
- * PROTOCORE_WEBDAV_MAX_PROPS properties are echoed.
- *
- * @param buf       destination buffer (whole document, NUL-terminated).
- * @param cap       buffer capacity.
- * @param href      the resource path (XML-escaped here).
- * @param body      the PROPPATCH request body (not required to be NUL-terminated).
- * @param body_len  length of @p body.
- * @return bytes written, or 0 if the document did not fit @p cap.
- */
-size_t protocore_webdav_proppatch_ms(char *buf, size_t cap, const char *href, const char *body, size_t body_len);
-
-// ── lock manager (RFC 4918 §6-7, class 2) ──────────────────────────────────────────────────────
-//
-// A small fixed lock table that makes LOCK/UNLOCK enforceable rather than advisory: a locked resource
-// rejects a write (PUT / DELETE / MKCOL / MOVE / PROPPATCH) unless the request presents the matching lock
-// token in its If header. This is the pure, host-testable core - the handler supplies the token (its own
-// RNG) and wires the checks into the mutating methods.
-
-/** @brief Maximum concurrent locks (fixed - a small structural bound, not a per-board tunable). */
-#define PROTOCORE_DAV_LOCK_MAX 8
-/** @brief Maximum locked-path length, including the NUL. */
-#define PROTOCORE_DAV_LOCK_PATH_MAX 128
-/** @brief Maximum lock-token length, including the NUL (e.g. "opaquelocktoken:xxxxxxxx-pc"). */
-#define PROTOCORE_DAV_LOCK_TOKEN_MAX 48
-
 /** @brief One active lock (RFC 4918 §6.4). */
 typedef struct
 {
@@ -149,61 +81,233 @@ typedef struct
     DavLock locks[PROTOCORE_DAV_LOCK_MAX];
 } DavLockTable;
 
-/** @brief Reset a lock table (no locks held). */
-void protocore_dav_lock_init(DavLockTable *t);
+/** @brief What method takes: m. */
+typedef struct
+{
+    const char *m;
+} WebdavMethodArgs;
+
+/** @brief What depth takes: depth_hdr, dflt. */
+typedef struct
+{
+    const char *depth_hdr;
+    int dflt;
+} WebdavDepthArgs;
+
+/** @brief What xml_escape takes: dst, cap, src. */
+typedef struct
+{
+    char *dst;
+    size_t cap;
+    const char *src;
+} WebdavXmlEscapeArgs;
+
+/** @brief What dest_path takes: destination, out, cap. */
+typedef struct
+{
+    const char *destination;
+    char *out;
+    size_t cap;
+} WebdavDestPathArgs;
+
+/** @brief What ms_begin takes: buf, cap, len. */
+typedef struct
+{
+    char *buf;
+    size_t cap;
+    size_t len;
+} WebdavMsBeginArgs;
+
+/** @brief What ms_entry takes: buf, cap, len, href, is_collection, ... */
+typedef struct
+{
+    char *buf;
+    size_t cap;
+    size_t len;
+    const char *href;          ///< the resource's URL path (XML-escaped here)
+    proto_bool is_collection;  ///< true for a directory (emits <collection/>)
+    uint32_t size;             ///< content length (files only)
+    const char *rfc1123_mtime; ///< Last-Modified string, or "" to omit
+    const char *content_type;  ///< MIME type (files only), or "" to omit
+} WebdavMsEntryArgs;
+
+/** @brief What ms_end takes: buf, cap, len. */
+typedef struct
+{
+    char *buf;
+    size_t cap;
+    size_t len;
+} WebdavMsEndArgs;
+
+/** @brief What proppatch_ms takes: buf, cap, href, body, body_len. */
+typedef struct
+{
+    char *buf;        ///< destination buffer (whole document, NUL-terminated)
+    size_t cap;       ///< buffer capacity
+    const char *href; ///< the resource path (XML-escaped here)
+    const char *body; ///< the PROPPATCH request body (not required to be NUL-terminated)
+    size_t body_len;  ///< length of body
+} WebdavProppatchMsArgs;
+
+/** @brief What lock_init takes: t. */
+typedef struct
+{
+    DavLockTable *t;
+} WebdavLockInitArgs;
+
+/** @brief What lock_acquire takes: t, path, token, exclusive, ... */
+typedef struct
+{
+    DavLockTable *t;
+    const char *path;
+    const char *token;
+    proto_bool exclusive;
+    proto_bool depth_infinity;
+    uint32_t expiry_s; ///< the monotonic second the lock expires (0 = no timeout); protocore_dav_lock_sweep drops a ...
+} WebdavLockAcquireArgs;
+
+/** @brief What lock_sweep takes: t, now_s. */
+typedef struct
+{
+    DavLockTable *t;
+    uint32_t now_s; ///< the caller's current monotonic second
+} WebdavLockSweepArgs;
+
+/** @brief What lock_refresh takes: t, token, new_expiry_s. */
+typedef struct
+{
+    DavLockTable *t;
+    const char *token;
+    uint32_t new_expiry_s;
+} WebdavLockRefreshArgs;
+
+/** @brief What lock_find takes: t, path. */
+typedef struct
+{
+    const DavLockTable *t;
+    const char *path;
+} WebdavLockFindArgs;
+
+/** @brief What lock_release takes: t, token. */
+typedef struct
+{
+    DavLockTable *t;
+    const char *token;
+} WebdavLockReleaseArgs;
+
+/** @brief What lock_can_write takes: t, path, presented_token. */
+typedef struct
+{
+    const DavLockTable *t;
+    const char *path;
+    const char *presented_token;
+} WebdavLockCanWriteArgs;
+
+/** @brief What if_token takes: if_header, out, cap. */
+typedef struct
+{
+    const char *if_header;
+    char *out;
+    size_t cap;
+} WebdavIfTokenArgs;
 
 /**
- * @brief Acquire a lock on @p path with the caller-supplied @p token (RFC 4918 §6-7).
+ * @brief WebDAV wire format (RFC 4918): method classification, header parsing, and the 207 Multi-Status XML builder.
  *
- * Fails when a conflicting lock already covers @p path or its subtree - an exclusive request conflicts
- * with any overlapping lock, a shared request only with an overlapping exclusive one - or when the table
- * is full / an argument is bad.
- * @param expiry_s  the monotonic second the lock expires (0 = no timeout); @ref protocore_dav_lock_sweep drops
- *                  a lock once now reaches it. The clock stays out of this pure core - the caller passes
- *                  its own now + timeout.
- * @return the stored lock on success, nullptr on conflict / full.
- */
-const DavLock *protocore_dav_lock_acquire(DavLockTable *t, const char *path, const char *token, proto_bool exclusive,
-                                          proto_bool depth_infinity, uint32_t expiry_s);
-
-/**
- * @brief Expire and drop every lock whose timeout has passed (RFC 4918 §6.6). Call before a lock query so
- *        stale locks never gate a write. A lock with @c expiry_s == 0 never expires.
- * @param now_s  the caller's current monotonic second.
- * @return the number of locks dropped.
- */
-size_t protocore_dav_lock_sweep(DavLockTable *t, uint32_t now_s);
-
-/**
- * @brief Refresh a held lock's timeout to @p new_expiry_s, keyed by @p token (a LOCK refresh, RFC 4918
- *        §9.10.2). @return the refreshed lock, or nullptr if no live lock has that token.
- */
-const DavLock *protocore_dav_lock_refresh(DavLockTable *t, const char *token, uint32_t new_expiry_s);
-
-/**
- * @brief Find a lock covering @p path: one on @p path itself, or a Depth-infinity lock on an ancestor.
- * @return the covering lock, or nullptr if @p path is unlocked.
- */
-const DavLock *protocore_dav_lock_find(const DavLockTable *t, const char *path);
-
-/** @brief Release the lock whose token equals @p token (UNLOCK). @return true if one was removed. */
-proto_bool protocore_dav_lock_release(DavLockTable *t, const char *token);
-
-/**
- * @brief May a write to @p path proceed given the token the request presented (RFC 4918 §7)?
+ * A caller sets the members a call takes, invokes it through ::Webdav with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * Allowed when no lock covers @p path, or when @p presented_token (from the If header, may be nullptr)
- * matches a covering lock. A locked resource with no / wrong token is denied (the handler answers 423).
- */
-proto_bool protocore_dav_lock_can_write(const DavLockTable *t, const char *path, const char *presented_token);
-
-/**
- * @brief Extract the first lock token from an If header value (RFC 4918 §10.4).
+ *   Webdav.method_args.m = ...;
+ *   Webdav.method(work);
+ *   // Webdav.value is what the call reports
  *
- * Handles the tagged (`<res> (<token>)`) and untagged (`(<token>)`) list forms and a `Not` condition by
- * taking the first Coded-URL inside the first condition list. @return true and fills @p out on success.
+ * @var WebdavNs::method_args  what method takes: m
+ * @var WebdavNs::depth_args  what depth takes: depth_hdr, dflt
+ * @var WebdavNs::xml_escape_args  what xml_escape takes: dst, cap, src
+ * @var WebdavNs::dest_path_args  what dest_path takes: destination, out, cap
+ * @var WebdavNs::ms_begin_args  what ms_begin takes: buf, cap, len
+ * @var WebdavNs::ms_entry_args  what ms_entry takes: buf, cap, len, href, is_collection,
+ * @var WebdavNs::ms_end_args  what ms_end takes: buf, cap, len
+ * @var WebdavNs::proppatch_ms_args  what proppatch_ms takes: buf, cap, href, body, body_len
+ * @var WebdavNs::lock_init_args  what lock_init takes: t
+ * @var WebdavNs::lock_acquire_args  what lock_acquire takes: t, path, token, exclusive,
+ * @var WebdavNs::lock_sweep_args  what lock_sweep takes: t, now_s
+ * @var WebdavNs::lock_refresh_args  what lock_refresh takes: t, token, new_expiry_s
+ * @var WebdavNs::lock_find_args  what lock_find takes: t, path
+ * @var WebdavNs::lock_release_args  what lock_release takes: t, token
+ * @var WebdavNs::lock_can_write_args  what lock_can_write takes: t, path, presented_token
+ * @var WebdavNs::if_token_args  what if_token takes: if_header, out, cap
+ * @var WebdavNs::ok  false on overflow or a malformed value
+ * @var WebdavNs::value  the value a call reports
+ * @var WebdavNs::i32  0, 1, or PROTOCORE_DAV_DEPTH_INFINITY; dflt when depth_hdr is ...
+ * @var WebdavNs::n  length written (NUL-terminated; truncated to fit cap)
+ * @var WebdavNs::ptr  the stored lock on success, nullptr on conflict / full
+ * @var WebdavNs::method  classify an HTTP method token (e.g. "PROPFIND") into a WebDavMethod
+ * @var WebdavNs::depth  parse a Depth header value ("0", "1", or "infinity")
+ * @var WebdavNs::xml_escape  XML-escape src into dst (`&`, `<`, `>`, `"`, `'`)
+ * @var WebdavNs::dest_path  extract and percent-decode the path of a Destination header. ...
+ * @var WebdavNs::ms_begin  write the XML prolog and the open <multistatus> element
+ * @var WebdavNs::ms_entry  append one <response> describing a resource
+ * @var WebdavNs::ms_end  close the <multistatus> element
+ * @var WebdavNs::proppatch_ms  build a complete 207 Multi-Status body answering a PROPPATCH. The ...
+ * @var WebdavNs::lock_init  reset a lock table (no locks held)
+ * @var WebdavNs::lock_acquire  acquire a lock on path with the caller-supplied token (RFC 4918 ...
+ * @var WebdavNs::lock_sweep  expire and drop every lock whose timeout has passed (RFC 4918 ...
+ * @var WebdavNs::lock_refresh  refresh a held lock's timeout to new_expiry_s, keyed by token (a ...
+ * @var WebdavNs::lock_find  find a lock covering path: one on path itself, or a Depth-infinity ...
+ * @var WebdavNs::lock_release  release the lock whose token equals token (UNLOCK). true if one was ...
+ * @var WebdavNs::lock_can_write  may a write to path proceed given the token the request presented ...
+ * @var WebdavNs::if_token  extract the first lock token from an If header value (RFC 4918 ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_dav_if_token(const char *if_header, char *out, size_t cap);
+typedef struct
+{
+    WebdavMethodArgs method_args;
+    WebdavDepthArgs depth_args;
+    WebdavXmlEscapeArgs xml_escape_args;
+    WebdavDestPathArgs dest_path_args;
+    WebdavMsBeginArgs ms_begin_args;
+    WebdavMsEntryArgs ms_entry_args;
+    WebdavMsEndArgs ms_end_args;
+    WebdavProppatchMsArgs proppatch_ms_args;
+    WebdavLockInitArgs lock_init_args;
+    WebdavLockAcquireArgs lock_acquire_args;
+    WebdavLockSweepArgs lock_sweep_args;
+    WebdavLockRefreshArgs lock_refresh_args;
+    WebdavLockFindArgs lock_find_args;
+    WebdavLockReleaseArgs lock_release_args;
+    WebdavLockCanWriteArgs lock_can_write_args;
+    WebdavIfTokenArgs if_token_args;
+
+    proto_bool ok;
+    WebDavMethod value;
+    int i32;
+    size_t n;
+    const DavLock *ptr;
+
+    void (*const method)(uint8_t *restrict work);
+    void (*const depth)(uint8_t *restrict work);
+    void (*const xml_escape)(uint8_t *restrict work);
+    void (*const dest_path)(uint8_t *restrict work);
+    void (*const ms_begin)(uint8_t *restrict work);
+    void (*const ms_entry)(uint8_t *restrict work);
+    void (*const ms_end)(uint8_t *restrict work);
+    void (*const proppatch_ms)(uint8_t *restrict work);
+    void (*const lock_init)(uint8_t *restrict work);
+    void (*const lock_acquire)(uint8_t *restrict work);
+    void (*const lock_sweep)(uint8_t *restrict work);
+    void (*const lock_refresh)(uint8_t *restrict work);
+    void (*const lock_find)(uint8_t *restrict work);
+    void (*const lock_release)(uint8_t *restrict work);
+    void (*const lock_can_write)(uint8_t *restrict work);
+    void (*const if_token)(uint8_t *restrict work);
+} WebdavNs;
+
+/** @brief The one symbol this module exports. */
+extern WebdavNs Webdav;
 
 PROTOCORE_END_DECLS
 

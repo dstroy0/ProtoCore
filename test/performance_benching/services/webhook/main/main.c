@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t webhook_work[16]; // the borrow an entry takes; Webhook never reads it
+
 /** @brief Build the Maker target URI into @p out; the octets written. */
 static int ifttt_url(char *out, size_t cap)
 {
@@ -20,7 +22,7 @@ static int ifttt_url(char *out, size_t cap)
     Webhook.build.cap = cap;
     Webhook.ifttt.event = "temp_alert";
     Webhook.ifttt.key = "bXlrZXktMTIzNDU";
-    Webhook.ifttt_url(Webhook.internal);
+    Webhook.ifttt_url(webhook_work);
     return Webhook.n;
 }
 
@@ -32,7 +34,7 @@ static int ifttt_payload(char *out, size_t cap)
     Webhook.ifttt.value1 = "84.0";
     Webhook.ifttt.value2 = "threshold";
     Webhook.ifttt.value3 = "rig-1";
-    Webhook.ifttt_payload(Webhook.internal);
+    Webhook.ifttt_payload(webhook_work);
     return Webhook.n;
 }
 

@@ -63,9 +63,6 @@ typedef struct
     size_t nv;                          ///< how many
 } LogFrameArgs;
 
-/** @brief The sink and the calls that reach it, described only in log.c. */
-struct LogInternal;
-
 /**
  * @brief The frame logger.
  *
@@ -76,7 +73,6 @@ struct LogInternal;
  * @var LogNs::sink      the sink an install registers; NULL clears it
  * @var LogNs::emit      build the line and route it to the ring and/or the sink
  * @var LogNs::set_sink  install (or clear) the sink emitted lines are handed to
- * @var LogNs::internal  the installed sink and the calls that reach it
  *
  * A spec, not a format string: the shape of the message is decided when the code is written, so
  * nothing here parses anything at runtime, and a build whose logs declare no float field links no
@@ -88,14 +84,23 @@ typedef struct
     LogFrameArgs frame;
     protocore_log_sink_fn sink;
 
-    void (*emit)(struct LogInternal *ctx);
-    void (*set_sink)(struct LogInternal *ctx);
-
-    struct LogInternal *internal;
+    void (*const emit)(uint8_t *restrict work);
+    void (*const set_sink)(uint8_t *restrict work);
 } LogNs;
 
 /** @brief The one symbol this module exports. */
 extern LogNs Log;
+
+/**
+ * @brief The PROTOCORE_LOG_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_log_span(void);
 
 /** @brief Set the frame members and emit, as one statement. */
 #define PROTOCORE_LOG_EMIT(lvl, spec_, v_, nv_)                                                                        \
@@ -105,7 +110,7 @@ extern LogNs Log;
         Log.frame.spec = (spec_);                                                                                      \
         Log.frame.v = (v_);                                                                                            \
         Log.frame.nv = (nv_);                                                                                          \
-        Log.emit(Log.internal);                                                                                        \
+        Log.emit(protocore_log_span());                                                                                \
     } while (0)
 
 #if PROTOCORE_LOG_LEVEL <= PROTOCORE_LOG_LEVEL_DEBUG

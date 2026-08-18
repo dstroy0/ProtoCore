@@ -73,7 +73,7 @@ static SouthboundDriver g_full = {"fake", fake_read, fake_write, fake_read_block
 static int32_t sb_add(const SouthboundDriver *drv)
 {
     Southbound.drv = drv;
-    Southbound.add(Southbound.internal);
+    Southbound.add(protocore_southbound_span());
     return Southbound.i32;
 }
 
@@ -81,7 +81,7 @@ static int32_t sb_add(const SouthboundDriver *drv)
 static const SouthboundDriver *sb_find(const char *name)
 {
     Southbound.name = name;
-    Southbound.find(Southbound.internal);
+    Southbound.find(protocore_southbound_span());
     return Southbound.driver;
 }
 
@@ -90,7 +90,7 @@ static int32_t sb_read(const char *name, uint32_t point, int32_t *value_out)
     Southbound.name = name;
     Southbound.point.point = point;
     Southbound.point.value_out = value_out;
-    Southbound.read(Southbound.internal);
+    Southbound.read(protocore_southbound_span());
     return Southbound.i32;
 }
 
@@ -99,7 +99,7 @@ static int32_t sb_write(const char *name, uint32_t point, int32_t value)
     Southbound.name = name;
     Southbound.point.point = point;
     Southbound.point.value = value;
-    Southbound.write(Southbound.internal);
+    Southbound.write(protocore_southbound_span());
     return Southbound.i32;
 }
 
@@ -109,7 +109,7 @@ static int32_t sb_read_block(const char *name, uint32_t first, int32_t *out, siz
     Southbound.block.first = first;
     Southbound.block.out = out;
     Southbound.block.n = n;
-    Southbound.read_block(Southbound.internal);
+    Southbound.read_block(protocore_southbound_span());
     return Southbound.i32;
 }
 
@@ -119,19 +119,19 @@ static int32_t sb_write_block(const char *name, uint32_t first, const int32_t *i
     Southbound.block.first = first;
     Southbound.block.in = in;
     Southbound.block.n = n;
-    Southbound.write_block(Southbound.internal);
+    Southbound.write_block(protocore_southbound_span());
     return Southbound.i32;
 }
 
 static size_t sb_count(void)
 {
-    Southbound.count(Southbound.internal);
+    Southbound.count(protocore_southbound_span());
     return Southbound.n;
 }
 
 void setUp(void)
 {
-    Southbound.clear(Southbound.internal);
+    Southbound.clear(protocore_southbound_span());
     for (int i = 0; i < 16; i++)
     {
         g_ctx.regs[i] = i * 10;
@@ -232,7 +232,7 @@ void test_registry_full(void)
 
 void test_dispatch_not_found_guards()
 {
-    Southbound.clear(Southbound.internal);
+    Southbound.clear(protocore_southbound_span());
     TEST_ASSERT_NULL(sb_find("nope"));
     int32_t v = 0;
     TEST_ASSERT_EQUAL_INT(SB_ERR_NOT_FOUND, sb_read("nope", 0, &v));

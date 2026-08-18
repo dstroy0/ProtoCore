@@ -11,39 +11,29 @@
 
 #if PROTOCORE_ENABLE_HW_HEALTH
 
-/**
- * @brief The checks' calls - what HwHealthNs points at.
- *
- * @var HwHealthInternal::ns  the handle a caller sets a call's members on
- */
-struct HwHealthInternal
+static void rail_init(uint8_t *restrict work)
 {
-    HwHealthNs *ns;
-};
-
-static struct HwHealthInternal s_hw = {.ns = &HwHealth};
-
-static void rail_init(struct HwHealthInternal *restrict ctx)
-{
-    HwRailMonitor *m = ctx->ns->rail.m;
+    (void)work;
+    HwRailMonitor *m = HwHealth.rail.m;
     if (!m)
     {
         return;
     }
-    m->nominal_mv = ctx->ns->rail.nominal_mv;
-    m->warn_mv = ctx->ns->rail.warn_mv;
-    m->crit_mv = ctx->ns->rail.crit_mv;
-    m->min_mv = ctx->ns->rail.nominal_mv;
+    m->nominal_mv = HwHealth.rail.nominal_mv;
+    m->warn_mv = HwHealth.rail.warn_mv;
+    m->crit_mv = HwHealth.rail.crit_mv;
+    m->min_mv = HwHealth.rail.nominal_mv;
     m->sag_events = 0;
     m->brownout_events = 0;
 }
 
-static void rail_sample(struct HwHealthInternal *restrict ctx)
+static void rail_sample(uint8_t *restrict work)
 {
-    HwRailMonitor *m = ctx->ns->rail.m;
-    const uint32_t mv = ctx->ns->rail.mv;
+    (void)work;
+    HwRailMonitor *m = HwHealth.rail.m;
+    const uint32_t mv = HwHealth.rail.mv;
 
-    ctx->ns->rail_verdict = HW_RAIL_OK;
+    HwHealth.rail_verdict = HW_RAIL_OK;
     if (!m)
     {
         return;
@@ -55,23 +45,24 @@ static void rail_sample(struct HwHealthInternal *restrict ctx)
     if (mv < m->crit_mv)
     {
         m->brownout_events++;
-        ctx->ns->rail_verdict = HW_RAIL_BROWNOUT;
+        HwHealth.rail_verdict = HW_RAIL_BROWNOUT;
         return;
     }
     if (mv < m->warn_mv)
     {
         m->sag_events++;
-        ctx->ns->rail_verdict = HW_RAIL_SAG;
+        HwHealth.rail_verdict = HW_RAIL_SAG;
     }
 }
 
-static void rail_json(struct HwHealthInternal *restrict ctx)
+static void rail_json(uint8_t *restrict work)
 {
-    const HwRailMonitor *m = ctx->ns->rail.m_ro;
-    char *out = ctx->ns->out_args.out;
-    const size_t cap = ctx->ns->out_args.cap;
+    (void)work;
+    const HwRailMonitor *m = HwHealth.rail.m_ro;
+    char *out = HwHealth.out_args.out;
+    const size_t cap = HwHealth.out_args.cap;
 
-    ctx->ns->n = 0;
+    HwHealth.n = 0;
     if (!m || !out || cap == 0)
     {
         return;
@@ -91,46 +82,48 @@ static void rail_json(struct HwHealthInternal *restrict ctx)
         return;
     }
     out[b.len] = '\0';
-    ctx->ns->n = b.len;
+    HwHealth.n = b.len;
 }
 
-static void spi_init(struct HwHealthInternal *restrict ctx)
+static void spi_init(uint8_t *restrict work)
 {
-    HwSpiBackoff *s = ctx->ns->spi.s;
+    (void)work;
+    HwSpiBackoff *s = HwHealth.spi.s;
     if (!s)
     {
         return;
     }
-    s->min_hz = ctx->ns->spi.min_hz;
-    s->max_hz = ctx->ns->spi.max_hz;
-    if (ctx->ns->spi.start_hz < ctx->ns->spi.min_hz)
+    s->min_hz = HwHealth.spi.min_hz;
+    s->max_hz = HwHealth.spi.max_hz;
+    if (HwHealth.spi.start_hz < HwHealth.spi.min_hz)
     {
-        s->hz = ctx->ns->spi.min_hz;
+        s->hz = HwHealth.spi.min_hz;
     }
-    else if (ctx->ns->spi.start_hz > ctx->ns->spi.max_hz)
+    else if (HwHealth.spi.start_hz > HwHealth.spi.max_hz)
     {
-        s->hz = ctx->ns->spi.max_hz;
+        s->hz = HwHealth.spi.max_hz;
     }
     else
     {
-        s->hz = ctx->ns->spi.start_hz;
+        s->hz = HwHealth.spi.start_hz;
     }
     s->fail_streak = 0;
     s->ok_streak = 0;
-    s->fail_trip = ctx->ns->spi.fail_trip ? ctx->ns->spi.fail_trip : 1;
-    s->ok_trip = ctx->ns->spi.ok_trip ? ctx->ns->spi.ok_trip : 1;
+    s->fail_trip = HwHealth.spi.fail_trip ? HwHealth.spi.fail_trip : 1;
+    s->ok_trip = HwHealth.spi.ok_trip ? HwHealth.spi.ok_trip : 1;
 }
 
-static void spi_result(struct HwHealthInternal *restrict ctx)
+static void spi_result(uint8_t *restrict work)
 {
-    HwSpiBackoff *s = ctx->ns->spi.s;
+    (void)work;
+    HwSpiBackoff *s = HwHealth.spi.s;
 
-    ctx->ns->hz = 0;
+    HwHealth.hz = 0;
     if (!s)
     {
         return;
     }
-    if (ctx->ns->spi.crc_ok)
+    if (HwHealth.spi.crc_ok)
     {
         s->fail_streak = 0;
         if (++s->ok_streak >= s->ok_trip)
@@ -158,46 +151,48 @@ static void spi_result(struct HwHealthInternal *restrict ctx)
             s->hz = down;
         }
     }
-    ctx->ns->hz = s->hz;
+    HwHealth.hz = s->hz;
 }
 
-static void gpio_short(struct HwHealthInternal *restrict ctx)
+static void gpio_short(uint8_t *restrict work)
 {
-    if (ctx->ns->probe.driven_high && !ctx->ns->probe.read_high)
+    (void)work;
+    if (HwHealth.probe.driven_high && !HwHealth.probe.read_high)
     {
-        ctx->ns->gpio_verdict = HW_GPIO_SHORT_GND;
+        HwHealth.gpio_verdict = HW_GPIO_SHORT_GND;
         return;
     }
-    if (!ctx->ns->probe.driven_high && ctx->ns->probe.read_high)
+    if (!HwHealth.probe.driven_high && HwHealth.probe.read_high)
     {
-        ctx->ns->gpio_verdict = HW_GPIO_SHORT_VCC;
+        HwHealth.gpio_verdict = HW_GPIO_SHORT_VCC;
         return;
     }
-    ctx->ns->gpio_verdict = HW_GPIO_OK;
+    HwHealth.gpio_verdict = HW_GPIO_OK;
 }
 
-static void cap_leak(struct HwHealthInternal *restrict ctx)
+static void cap_leak(uint8_t *restrict work)
 {
-    const uint32_t measured_ms = ctx->ns->probe.measured_ms;
-    const uint32_t expected_ms = ctx->ns->probe.expected_ms;
+    (void)work;
+    const uint32_t measured_ms = HwHealth.probe.measured_ms;
+    const uint32_t expected_ms = HwHealth.probe.expected_ms;
 
-    ctx->ns->cap_verdict = HW_CAP_OK;
+    HwHealth.cap_verdict = HW_CAP_OK;
     if (expected_ms == 0)
     {
         return;
     }
     // Tolerance band around expected, computed in 64-bit to avoid overflow.
-    uint64_t band = (uint64_t)expected_ms * ctx->ns->probe.tol_pct / 100;
+    uint64_t band = (uint64_t)expected_ms * HwHealth.probe.tol_pct / 100;
     uint64_t lo = (uint64_t)expected_ms > band ? (uint64_t)expected_ms - band : 0;
     uint64_t hi = (uint64_t)expected_ms + band;
     if (measured_ms < lo)
     {
-        ctx->ns->cap_verdict = HW_CAP_LEAK; // discharges too fast
+        HwHealth.cap_verdict = HW_CAP_LEAK; // discharges too fast
         return;
     }
     if (measured_ms > hi)
     {
-        ctx->ns->cap_verdict = HW_CAP_HIGH_ESR; // discharges too slow
+        HwHealth.cap_verdict = HW_CAP_HIGH_ESR; // discharges too slow
     }
 }
 
@@ -208,7 +203,6 @@ HwHealthNs HwHealth = {.rail_init = rail_init,
                        .spi_init = spi_init,
                        .spi_result = spi_result,
                        .gpio_short = gpio_short,
-                       .cap_leak = cap_leak,
-                       .internal = &s_hw};
+                       .cap_leak = cap_leak};
 
 #endif // PROTOCORE_ENABLE_HW_HEALTH

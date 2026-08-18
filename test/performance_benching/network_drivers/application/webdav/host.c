@@ -20,6 +20,8 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint8_t webdav_work[16]; // the borrow an entry takes; Webdav never reads it
+
 int main(void)
 {
     hbench_header();
@@ -34,13 +36,29 @@ int main(void)
         HBENCH_NS(
             1000000,
             {
-                size_t n =
-                    protocore_webdav_ms_entry(buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain");
+                Webdav.ms_entry_args.buf = buf;
+                Webdav.ms_entry_args.cap = sizeof(buf);
+                Webdav.ms_entry_args.len = 0;
+                Webdav.ms_entry_args.href = "/dav/report.txt";
+                Webdav.ms_entry_args.is_collection = false;
+                Webdav.ms_entry_args.size = 4096;
+                Webdav.ms_entry_args.rfc1123_mtime = mtime;
+                Webdav.ms_entry_args.content_type = "text/plain";
+                Webdav.ms_entry(webdav_work);
+                size_t n = Webdav.n;
                 sink += n;
             },
             ns);
-        size_t bytes =
-            protocore_webdav_ms_entry(buf, sizeof(buf), 0, "/dav/report.txt", false, 4096, mtime, "text/plain");
+        Webdav.ms_entry_args.buf = buf;
+        Webdav.ms_entry_args.cap = sizeof(buf);
+        Webdav.ms_entry_args.len = 0;
+        Webdav.ms_entry_args.href = "/dav/report.txt";
+        Webdav.ms_entry_args.is_collection = false;
+        Webdav.ms_entry_args.size = 4096;
+        Webdav.ms_entry_args.rfc1123_mtime = mtime;
+        Webdav.ms_entry_args.content_type = "text/plain";
+        Webdav.ms_entry(webdav_work);
+        size_t bytes = Webdav.n;
         hbench_row("webdav", "ms_entry file", ns, (double)bytes);
         (void)sink;
     }
@@ -52,25 +70,75 @@ int main(void)
         HBENCH_NS(
             200000,
             {
-                size_t len = protocore_webdav_ms_begin(buf, sizeof(buf), 0);
-                len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/", true, 0, mtime, "");
+                Webdav.ms_begin_args.buf = buf;
+                Webdav.ms_begin_args.cap = sizeof(buf);
+                Webdav.ms_begin_args.len = 0;
+                Webdav.ms_begin(webdav_work);
+                size_t len = Webdav.n;
+                Webdav.ms_entry_args.buf = buf;
+                Webdav.ms_entry_args.cap = sizeof(buf);
+                Webdav.ms_entry_args.len = len;
+                Webdav.ms_entry_args.href = "/dav/";
+                Webdav.ms_entry_args.is_collection = true;
+                Webdav.ms_entry_args.size = 0;
+                Webdav.ms_entry_args.rfc1123_mtime = mtime;
+                Webdav.ms_entry_args.content_type = "";
+                Webdav.ms_entry(webdav_work);
+                len = Webdav.n;
                 for (int k = 0; k < 8; k++)
                 {
-                    len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime,
-                                                    "text/csv");
+                    Webdav.ms_entry_args.buf = buf;
+                    Webdav.ms_entry_args.cap = sizeof(buf);
+                    Webdav.ms_entry_args.len = len;
+                    Webdav.ms_entry_args.href = "/dav/sensor-log.csv";
+                    Webdav.ms_entry_args.is_collection = false;
+                    Webdav.ms_entry_args.size = 12800;
+                    Webdav.ms_entry_args.rfc1123_mtime = mtime;
+                    Webdav.ms_entry_args.content_type = "text/csv";
+                    Webdav.ms_entry(webdav_work);
+                    len = Webdav.n;
                 }
-                len = protocore_webdav_ms_end(buf, sizeof(buf), len);
+                Webdav.ms_end_args.buf = buf;
+                Webdav.ms_end_args.cap = sizeof(buf);
+                Webdav.ms_end_args.len = len;
+                Webdav.ms_end(webdav_work);
+                len = Webdav.n;
                 sink += len;
             },
             ns);
-        size_t len = protocore_webdav_ms_begin(buf, sizeof(buf), 0);
-        len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/", true, 0, mtime, "");
+        Webdav.ms_begin_args.buf = buf;
+        Webdav.ms_begin_args.cap = sizeof(buf);
+        Webdav.ms_begin_args.len = 0;
+        Webdav.ms_begin(webdav_work);
+        size_t len = Webdav.n;
+        Webdav.ms_entry_args.buf = buf;
+        Webdav.ms_entry_args.cap = sizeof(buf);
+        Webdav.ms_entry_args.len = len;
+        Webdav.ms_entry_args.href = "/dav/";
+        Webdav.ms_entry_args.is_collection = true;
+        Webdav.ms_entry_args.size = 0;
+        Webdav.ms_entry_args.rfc1123_mtime = mtime;
+        Webdav.ms_entry_args.content_type = "";
+        Webdav.ms_entry(webdav_work);
+        len = Webdav.n;
         for (int k = 0; k < 8; k++)
         {
-            len = protocore_webdav_ms_entry(buf, sizeof(buf), len, "/dav/sensor-log.csv", false, 12800, mtime,
-                                            "text/csv");
+            Webdav.ms_entry_args.buf = buf;
+            Webdav.ms_entry_args.cap = sizeof(buf);
+            Webdav.ms_entry_args.len = len;
+            Webdav.ms_entry_args.href = "/dav/sensor-log.csv";
+            Webdav.ms_entry_args.is_collection = false;
+            Webdav.ms_entry_args.size = 12800;
+            Webdav.ms_entry_args.rfc1123_mtime = mtime;
+            Webdav.ms_entry_args.content_type = "text/csv";
+            Webdav.ms_entry(webdav_work);
+            len = Webdav.n;
         }
-        len = protocore_webdav_ms_end(buf, sizeof(buf), len);
+        Webdav.ms_end_args.buf = buf;
+        Webdav.ms_end_args.cap = sizeof(buf);
+        Webdav.ms_end_args.len = len;
+        Webdav.ms_end(webdav_work);
+        len = Webdav.n;
         hbench_row("webdav", "PROPFIND depth-1 (8)", ns, (double)len);
         (void)sink;
     }
@@ -80,8 +148,16 @@ int main(void)
         char esc[256];
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000, sink += protocore_webdav_xml_escape(esc, sizeof(esc), "/dav/a&b<c>\"d'e.txt"), ns);
-        size_t bytes = protocore_webdav_xml_escape(esc, sizeof(esc), "/dav/a&b<c>\"d'e.txt");
+        Webdav.xml_escape_args.dst = esc;
+        Webdav.xml_escape_args.cap = sizeof(esc);
+        Webdav.xml_escape_args.src = "/dav/a&b<c>\"d'e.txt";
+        Webdav.xml_escape(webdav_work);
+        HBENCH_NS(2000000, sink += Webdav.n, ns);
+        Webdav.xml_escape_args.dst = esc;
+        Webdav.xml_escape_args.cap = sizeof(esc);
+        Webdav.xml_escape_args.src = "/dav/a&b<c>\"d'e.txt";
+        Webdav.xml_escape(webdav_work);
+        size_t bytes = Webdav.n;
         hbench_row("webdav", "xml_escape", ns, (double)bytes);
         (void)sink;
     }

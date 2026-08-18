@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t wamp_work[16]; // the borrow an entry takes; Wamp never reads it
+
 /** @brief Build `[HELLO, Realm|uri, Details|dict]` into @p buf; the octets written. */
 static size_t wamp_hello(char *buf, size_t cap)
 {
@@ -20,7 +22,7 @@ static size_t wamp_hello(char *buf, size_t cap)
     Wamp.out.cap = cap;
     Wamp.uri.realm = "realm1";
     Wamp.payload.details = "{\"roles\":{\"subscriber\":{}}}";
-    Wamp.build_hello(Wamp.internal);
+    Wamp.build_hello(wamp_work);
     return Wamp.n;
 }
 
@@ -32,7 +34,7 @@ static size_t wamp_subscribe(char *buf, size_t cap)
     Wamp.id.request = 713845233ull;
     Wamp.uri.topic = "com.pc.telemetry";
     Wamp.payload.options = NULL;
-    Wamp.build_subscribe(Wamp.internal);
+    Wamp.build_subscribe(wamp_work);
     return Wamp.n;
 }
 
@@ -43,7 +45,7 @@ static size_t wamp_goodbye(char *buf, size_t cap)
     Wamp.out.cap = cap;
     Wamp.uri.reason = "wamp.close.normal";
     Wamp.payload.details = NULL;
-    Wamp.build_goodbye(Wamp.internal);
+    Wamp.build_goodbye(wamp_work);
     return Wamp.n;
 }
 
@@ -51,7 +53,7 @@ static size_t wamp_goodbye(char *buf, size_t cap)
 static proto_bool wamp_type(const char *msg, int32_t *type)
 {
     Wamp.parse.msg = msg;
-    Wamp.get_type(Wamp.internal);
+    Wamp.get_type(wamp_work);
     *type = Wamp.i32;
     return Wamp.ok;
 }

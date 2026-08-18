@@ -38,7 +38,8 @@ PROTOCORE_BEGIN_DECLS
  *
  * RFC 9293 sec 3.9.2 MUST-49: "The TTL value used to send TCP segments MUST be configurable." RFC
  * 793 fixed it at one minute; RFC 1122 replaced that with this requirement. Overridable at build
- * time; the running value is set through protocore_tcp_set_ttl().
+ * time; the running value is set through ::TcpLowerNs::set_ttl, which takes the candidate in
+ * @c len, and stamped onto a control block by ::TcpLowerNs::apply_ttl.
  */
 #ifndef PROTOCORE_TCP_TTL
 #define PROTOCORE_TCP_TTL 64
@@ -59,9 +60,6 @@ typedef enum PROTO_ENUM_PACKED
 } protocore_tcp_op;
 static_assert(sizeof(protocore_tcp_op) == 1, "protocore_tcp_op must stay one byte (PROTO_ENUM_PACKED)");
 
-/** @brief The seam's own state, held where only lower.c describes it. */
-struct TcpLowerInternal;
-
 /**
  * @brief The lower-level interface: what this endpoint can ask the module below it to do.
  *
@@ -76,7 +74,7 @@ struct TcpLowerInternal;
  * @var TcpLowerNs::len       how many, or the byte a stamping op carries
  * @var TcpLowerNs::flush     SEND: push after a successful write
  * @var TcpLowerNs::result    what the op reported
- * @var TcpLowerNs::internal  the seam's state and the calls that reach it
+ * @var TcpLowerNs::ok        a call's true/false outcome
  */
 typedef struct
 {
@@ -87,23 +85,33 @@ typedef struct
     proto_u16 len;
     proto_bool flush;
     protocore_net_err result;
+    proto_bool ok;
 
-    /// Run the op set above, in the one context where it is safe.
-    protocore_net_err (*marshal)(struct TcpLowerInternal *ctx);
+    /// Run the op set above, in the one context where it is safe. The outcome lands in @c result.
+    void (*const marshal)(uint8_t *restrict work);
     /// Drop the control block's back-reference, so a late callback finds a null arg.
-    void (*detach)(struct TcpLowerInternal *ctx);
+    void (*const detach)(uint8_t *restrict work);
     /// Reset the control block (RFC 9293 sec 3.10.5): a hard close, no FIN.
-    void (*abort)(struct TcpLowerInternal *ctx);
-    /// Install the TTL outbound segments carry; the candidate arrives in len.
-    proto_bool (*set_ttl)(struct TcpLowerInternal *ctx);
+    void (*const abort)(uint8_t *restrict work);
+    /// Install the TTL outbound segments carry; the candidate arrives in len, the verdict in @c ok.
+    void (*const set_ttl)(uint8_t *restrict work);
     /// Stamp the control block above with the configured TTL.
-    void (*apply_ttl)(struct TcpLowerInternal *ctx);
-
-    struct TcpLowerInternal *internal;
+    void (*const apply_ttl)(uint8_t *restrict work);
 } TcpLowerNs;
 
 /** @brief The one symbol this module exports. */
 extern TcpLowerNs TcpLower;
+
+/**
+ * @brief The PROTOCORE_TCP_LOWER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_tcp_lower_span(void);
 
 PROTOCORE_END_DECLS
 

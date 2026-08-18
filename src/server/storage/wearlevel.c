@@ -10,24 +10,13 @@
 
 #if PROTOCORE_ENABLE_WEARLEVEL
 
-/**
- * @brief The wear policy's calls - what WearlevelNs points at.
- *
- * @var WearlevelInternal::ns  the handle a caller sets a call's members on
- */
-struct WearlevelInternal
+static void wear_pick(uint8_t *restrict work)
 {
-    WearlevelNs *ns;
-};
+    (void)work;
+    const uint32_t *counts = Wearlevel.args.counts;
+    const size_t n = Wearlevel.args.n;
 
-static struct WearlevelInternal s_wear = {.ns = &Wearlevel};
-
-static void wear_pick(struct WearlevelInternal *restrict ctx)
-{
-    const uint32_t *counts = ctx->ns->args.counts;
-    const size_t n = ctx->ns->args.n;
-
-    ctx->ns->n_out = 0;
+    Wearlevel.n_out = 0;
     if (!counts || n == 0)
     {
         return;
@@ -42,15 +31,16 @@ static void wear_pick(struct WearlevelInternal *restrict ctx)
             best = i;
         }
     }
-    ctx->ns->n_out = best;
+    Wearlevel.n_out = best;
 }
 
-static void wear_mark(struct WearlevelInternal *restrict ctx)
+static void wear_mark(uint8_t *restrict work)
 {
-    uint32_t *counts = ctx->ns->args.counts_rw;
-    const size_t idx = ctx->ns->args.idx;
+    (void)work;
+    uint32_t *counts = Wearlevel.args.counts_rw;
+    const size_t idx = Wearlevel.args.idx;
 
-    if (!counts || idx >= ctx->ns->args.n)
+    if (!counts || idx >= Wearlevel.args.n)
     {
         return;
     }
@@ -60,12 +50,13 @@ static void wear_mark(struct WearlevelInternal *restrict ctx)
     }
 }
 
-static void wear_imbalance(struct WearlevelInternal *restrict ctx)
+static void wear_imbalance(uint8_t *restrict work)
 {
-    const uint32_t *counts = ctx->ns->args.counts;
-    const size_t n = ctx->ns->args.n;
+    (void)work;
+    const uint32_t *counts = Wearlevel.args.counts;
+    const size_t n = Wearlevel.args.n;
 
-    ctx->ns->spread = 0;
+    Wearlevel.spread = 0;
     if (!counts || n == 0)
     {
         return;
@@ -83,9 +74,9 @@ static void wear_imbalance(struct WearlevelInternal *restrict ctx)
             hi = counts[i];
         }
     }
-    ctx->ns->spread = hi - lo;
+    Wearlevel.spread = hi - lo;
 }
 
-WearlevelNs Wearlevel = {.pick = wear_pick, .mark = wear_mark, .imbalance = wear_imbalance, .internal = &s_wear};
+WearlevelNs Wearlevel = {.pick = wear_pick, .mark = wear_mark, .imbalance = wear_imbalance};
 
 #endif // PROTOCORE_ENABLE_WEARLEVEL

@@ -87,9 +87,6 @@ typedef struct
     uint32_t listeners_up; ///< one bit per listener that is bound
 } SignalPutArgs;
 
-/** @brief The bucket's own state and the calls that reach it, described only in signaling.c. */
-struct SignalingInternal;
-
 /**
  * @brief The server's signalling bucket.
  *
@@ -104,7 +101,6 @@ struct SignalingInternal;
  * @var SignalingNs::put_response  deposit a response, from the send path, as the status goes out
  * @var SignalingNs::put_tick      deposit what the loop iteration already established
  * @var SignalingNs::kill          end a connection, for an application that does not talk transport
- * @var SignalingNs::internal      the bucket and the calls that reach it
  *
  * know copies rather than handing out a pointer: a reader formats several fields and the loop
  * deposits between its reads, so lending the storage would let one report mix two server states.
@@ -124,17 +120,26 @@ typedef struct
     uint8_t slot;
     protocore_signal_snapshot *out;
 
-    void (*know)(struct SignalingInternal *ctx);
-    void (*reset)(struct SignalingInternal *ctx);
-    void (*put_response)(struct SignalingInternal *ctx);
-    void (*put_tick)(struct SignalingInternal *ctx);
-    void (*kill)(struct SignalingInternal *ctx);
-
-    struct SignalingInternal *internal;
+    void (*const know)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *restrict work);
+    void (*const put_response)(uint8_t *restrict work);
+    void (*const put_tick)(uint8_t *restrict work);
+    void (*const kill)(uint8_t *restrict work);
 } SignalingNs;
 
 /** @brief The one symbol this module exports. */
 extern SignalingNs Signal;
+
+/**
+ * @brief The PROTOCORE_SIGNALING_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_signaling_span(void);
 
 PROTOCORE_END_DECLS
 

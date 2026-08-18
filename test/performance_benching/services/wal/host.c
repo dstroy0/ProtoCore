@@ -26,6 +26,8 @@
 // The 40-row, 2-level b-tree fixture the sqlite table scan reads, shared with the unit suite.
 #include "unit/storage/test_sqlite/db_multipage.h"
 
+static uint8_t redis_resp_work[16]; // the borrow an entry takes; Resp never reads it
+
 // A RAM-backed WalDev over a caller buffer (no I/O; measures pure CPU cost).
 struct RamDisk
 {
@@ -87,7 +89,7 @@ static size_t resp_encode(char *out, size_t cap, const char *const *argv, const 
     Resp.command.argv = argv;
     Resp.command.argv_len = lens;
     Resp.command.argc = argc;
-    Resp.encode_command(Resp.internal);
+    Resp.encode_command(redis_resp_work);
     return Resp.n;
 }
 
@@ -96,7 +98,7 @@ static size_t resp_take(RespReply *r, const uint8_t *buf, size_t len)
 {
     Resp.wire.buf = buf;
     Resp.wire.len = len;
-    Resp.parse_reply(Resp.internal);
+    Resp.parse_reply(redis_resp_work);
     *r = Resp.reply;
     return Resp.ok ? Resp.n : 0;
 }

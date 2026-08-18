@@ -250,24 +250,13 @@ static void parse_backtrace(const char *text, ExcInfo *out)
     }
 }
 
-/**
- * @brief The decoder's calls - what ExcDecoderNs points at.
- *
- * @var ExcDecoderInternal::ns  the handle a caller sets a call's members on
- */
-struct ExcDecoderInternal
+static void exc_parse(uint8_t *restrict work)
 {
-    ExcDecoderNs *ns;
-};
+    (void)work;
+    const char *text = Exc.parse_args.text;
+    ExcInfo *out = Exc.parse_args.info;
 
-static struct ExcDecoderInternal s_exc = {.ns = &Exc};
-
-static void exc_parse(struct ExcDecoderInternal *restrict ctx)
-{
-    const char *text = ctx->ns->parse_args.text;
-    ExcInfo *out = ctx->ns->parse_args.info;
-
-    ctx->ns->ok = PROTO_FALSE;
+    Exc.ok = PROTO_FALSE;
     if (!text || !out)
     {
         return;
@@ -290,18 +279,19 @@ static void exc_parse(struct ExcDecoderInternal *restrict ctx)
         out->pc = out->frames[0].pc;
     }
 
-    ctx->ns->ok = out->cause[0] != '\0' || out->pc != 0 || out->frame_count > 0;
+    Exc.ok = out->cause[0] != '\0' || out->pc != 0 || out->frame_count > 0;
 }
 
-static void exc_json(struct ExcDecoderInternal *restrict ctx)
+static void exc_json(uint8_t *restrict work)
 {
-    const ExcInfo *info = ctx->ns->parse_args.info;
-    char *out = ctx->ns->out_args.out;
-    const size_t cap = ctx->ns->out_args.cap;
+    (void)work;
+    const ExcInfo *info = Exc.parse_args.info;
+    char *out = Exc.out_args.out;
+    const size_t cap = Exc.out_args.cap;
 
     if (!info || !out || cap == 0)
     {
-        ctx->ns->n = 0;
+        Exc.n = 0;
         return;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
@@ -339,33 +329,34 @@ static void exc_json(struct ExcDecoderInternal *restrict ctx)
     if (!b.ok)
     {
         out[0] = '\0';
-        ctx->ns->n = 0;
+        Exc.n = 0;
         return;
     }
     out[b.len] = '\0';
-    ctx->ns->n = b.len;
+    Exc.n = b.len;
 }
 
 #if PROTOCORE_HAS_VENDOR_COREDUMP
 // The image half lives in exc_coredump.c, the arm that has one to read; it is bound here so the
 // whole surface is one initializer rather than a runtime install with an order to get wrong.
-void protocore_exc_cd_present(struct ExcDecoderInternal *restrict ctx);
-void protocore_exc_cd_summary(struct ExcDecoderInternal *restrict ctx);
-void protocore_exc_cd_read(struct ExcDecoderInternal *restrict ctx);
-void protocore_exc_cd_save(struct ExcDecoderInternal *restrict ctx);
-void protocore_exc_cd_erase(struct ExcDecoderInternal *restrict ctx);
+void protocore_exc_cd_present(uint8_t *restrict work);
+void protocore_exc_cd_summary(uint8_t *restrict work);
+void protocore_exc_cd_read(uint8_t *restrict work);
+void protocore_exc_cd_save(uint8_t *restrict work);
+void protocore_exc_cd_erase(uint8_t *restrict work);
 #endif
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-ExcDecoderNs Exc = {.parse = exc_parse,
-                    .json = exc_json,
+ExcDecoderNs Exc = {
+    .parse = exc_parse,
+    .json = exc_json,
 #if PROTOCORE_HAS_VENDOR_COREDUMP
-                    .present = protocore_exc_cd_present,
-                    .summary = protocore_exc_cd_summary,
-                    .read = protocore_exc_cd_read,
-                    .save = protocore_exc_cd_save,
-                    .erase = protocore_exc_cd_erase,
+    .present = protocore_exc_cd_present,
+    .summary = protocore_exc_cd_summary,
+    .read = protocore_exc_cd_read,
+    .save = protocore_exc_cd_save,
+    .erase = protocore_exc_cd_erase,
 #endif
-                    .internal = &s_exc};
+};
 
 #endif // PROTOCORE_ENABLE_EXC_DECODER

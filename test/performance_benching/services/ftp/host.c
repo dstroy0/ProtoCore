@@ -17,6 +17,8 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint8_t ftp_work[16]; // the borrow an entry takes; Ftp never reads it
+
 int main(void)
 {
     // A multiline FEAT reply (RFC 959 4.2): 211- head, continuation lines, 211<SP>End terminator.
@@ -28,7 +30,12 @@ int main(void)
     const size_t pasvlen = sizeof(pasv) - 1;
 
     char cmd[128];
-    size_t clen = protocore_ftp_build_command(cmd, sizeof(cmd), "STOR", "protocore_rig.txt");
+    Ftp.build_command_args.buf = cmd;
+    Ftp.build_command_args.cap = sizeof(cmd);
+    Ftp.build_command_args.verb = "STOR";
+    Ftp.build_command_args.arg = "protocore_rig.txt";
+    Ftp.build_command(ftp_work);
+    size_t clen = Ftp.n;
 
     hbench_header();
 
@@ -36,7 +43,12 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(2000000, sink += protocore_ftp_build_command(cmd, sizeof(cmd), "STOR", "protocore_rig.txt"), ns);
+        Ftp.build_command_args.buf = cmd;
+        Ftp.build_command_args.cap = sizeof(cmd);
+        Ftp.build_command_args.verb = "STOR";
+        Ftp.build_command_args.arg = "protocore_rig.txt";
+        Ftp.build_command(ftp_work);
+        HBENCH_NS(2000000, sink += Ftp.n, ns);
         hbench_row("ftp", "build STOR command", ns, (double)clen);
         (void)sink;
     }
@@ -49,7 +61,12 @@ int main(void)
             {
                 int code = 0;
                 size_t used = 0;
-                sink += protocore_ftp_parse_reply(feat, featlen, &code, &used) ? code : 0;
+                Ftp.parse_reply_args.buf = feat;
+                Ftp.parse_reply_args.len = featlen;
+                Ftp.parse_reply_args.code = &code;
+                Ftp.parse_reply_args.consumed = &used;
+                Ftp.parse_reply(ftp_work);
+                sink += Ftp.ok ? code : 0;
             },
             ns);
         hbench_row("ftp", "parse multiline reply", ns, (double)featlen);
@@ -64,7 +81,12 @@ int main(void)
             {
                 uint8_t ip[4];
                 uint16_t port = 0;
-                sink += protocore_ftp_parse_pasv(pasv, pasvlen, ip, &port) ? port : 0;
+                Ftp.parse_pasv_args.buf = pasv;
+                Ftp.parse_pasv_args.len = pasvlen;
+                Ftp.parse_pasv_args.ip = ip;
+                Ftp.parse_pasv_args.port = &port;
+                Ftp.parse_pasv(ftp_work);
+                sink += Ftp.ok ? port : 0;
             },
             ns);
         hbench_row("ftp", "parse 227 PASV address", ns, (double)pasvlen);

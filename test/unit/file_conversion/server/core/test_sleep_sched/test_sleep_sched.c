@@ -42,6 +42,8 @@
 
 #include <unity.h>
 
+static uint8_t sleep_sched_work[16]; // the borrow an entry takes; SleepSched never reads it
+
 void setUp(void)
 {
 }
@@ -63,7 +65,7 @@ static uint32_t window(const protocore_sleep_cfg *cfg, uint32_t now, uint32_t la
     SleepSched.ask.now = now;
     SleepSched.ask.last_active_ms = last_active_ms;
     SleepSched.ask.cfg = cfg;
-    SleepSched.next(SleepSched.internal);
+    SleepSched.next(sleep_sched_work);
     return SleepSched.ms;
 }
 
