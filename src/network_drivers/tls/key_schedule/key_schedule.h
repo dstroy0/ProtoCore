@@ -9,8 +9,13 @@
  * API, so the handshake is hand-rolled here. This module is the key schedule: the chain of
  * HKDF-Extract and Derive-Secret steps (RFC 8446 sec 7.1) that turns the (EC)DHE shared secret and
  * the running handshake transcript hash into the traffic secrets for each encryption level, plus the
- * per-message Finished MAC (sec 4.4.4). It is cipher-suite TLS_AES_128_GCM_SHA256 only, so the hash
- * is SHA-256 throughout and every secret is 32 bytes.
+ * per-message Finished MAC (sec 4.4.4).
+ *
+ * RFC 8446 sec 7.1 keys the whole schedule off the negotiated cipher suite's hash, so a schedule
+ * binds SHA-256 or SHA-384 at @ref Tls13KsNs::early and every secret is 32 or 48 bytes from there on.
+ * The term layout is stated at the wider of the two (@ref TLS13_SECRET_MAX) so a connection's storage
+ * does not depend on what it negotiates, and the length actually in force is read back off @ref
+ * Tls13KsNs::len rather than assumed.
  *
  * The schedule is transcript-hash-driven: each step takes a Transcript-Hash the caller computed over
  * the handshake messages so far, so this module has no dependency on the message wire formats and is
@@ -36,8 +41,15 @@ PROTOCORE_BEGIN_DECLS
 // Shared by the HTTP/3 (QUIC) handshake and the DTLS 1.3 handshake - both run the same TLS 1.3 key
 // schedule (see protocore_tls13_msg.h for the matching guard on the message layer).
 
-/** @brief SHA-256 secret length; every TLS 1.3 secret here is 32 bytes. */
-#define TLS13_SECRET_LEN PROTOCORE_TLS13_SECRET_LEN
+/** @brief Longest secret the two schedule hashes produce (SHA-384). The term layout is stated at this
+ *  width; the length a schedule actually derives is @ref Tls13KsNs::len. */
+#define TLS13_SECRET_MAX PROTOCORE_TLS13_SECRET_MAX
+
+/** @brief SHA-256 secret length: what a TLS_AES_128_GCM_SHA256 schedule binds. */
+#define TLS13_SECRET_SHA256 32
+
+/** @brief SHA-384 secret length: what a TLS_AES_256_GCM_SHA384 schedule binds. */
+#define TLS13_SECRET_SHA384 48
 
 /**
  * @brief The one thing that differs between the TLS 1.3 and DTLS 1.3 key schedules: the
@@ -64,26 +76,29 @@ extern const Tls13Kdf DTLS13_KDF;
  * Each step also derives that level's client and server traffic secrets, from which the record/packet
  * keys are made.
  */
-// Offsets into Tls13KeySchedule::s. Each term is one TLS13_SECRET_LEN value.
-#define TLS13_KS_EARLY 0                             ///< HKDF-Extract(0, PSK|0) - no-PSK: Extract(0, 0^32)
-#define TLS13_KS_HANDSHAKE TLS13_SECRET_LEN          ///< HKDF-Extract(Derive(early,"derived"), (EC)DHE)
-#define TLS13_KS_MASTER (2 * TLS13_SECRET_LEN)       ///< HKDF-Extract(Derive(handshake,"derived"), 0^32)
-#define TLS13_KS_CLIENT_HS (3 * TLS13_SECRET_LEN)    ///< Derive-Secret(handshake, "c hs traffic", CH..SH)
-#define TLS13_KS_SERVER_HS (4 * TLS13_SECRET_LEN)    ///< Derive-Secret(handshake, "s hs traffic", CH..SH)
-#define TLS13_KS_CLIENT_AP (5 * TLS13_SECRET_LEN)    ///< Derive-Secret(master, "c ap traffic", CH..SFIN)
-#define TLS13_KS_SERVER_AP (6 * TLS13_SECRET_LEN)    ///< Derive-Secret(master, "s ap traffic", CH..SFIN)
-#define TLS13_KS_EMPTY_HASH (7 * TLS13_SECRET_LEN)   ///< Transcript-Hash("")
-#define TLS13_KS_DERIVED (8 * TLS13_SECRET_LEN)      ///< Derive-Secret(X, "derived", "")
-#define TLS13_KS_FINISHED_KEY (9 * TLS13_SECRET_LEN) ///< HKDF-Expand-Label(traffic, "finished", "", L)
-#define TLS13_KS_ZEROS (10 * TLS13_SECRET_LEN)       ///< 0^Hash.length, never written: the borrow arrives zeroed
-#define TLS13_KS_VERIFY (11 * TLS13_SECRET_LEN)      ///< the Finished verify_data this end built or expects
-#define PROTOCORE_TLS13_KS_CAP ((size_t)PROTOCORE_TLS13_KS_TERMS * TLS13_SECRET_LEN)
+// Offsets into Tls13KeySchedule::s. Each term is one TLS13_SECRET_MAX slot, so a term sits at the
+// same address whichever hash the schedule bound and only the bytes written inside it differ.
+#define TLS13_KS_EARLY 0                             ///< HKDF-Extract(0, PSK|0) - no-PSK: Extract(0, 0^L)
+#define TLS13_KS_HANDSHAKE TLS13_SECRET_MAX          ///< HKDF-Extract(Derive(early,"derived"), (EC)DHE)
+#define TLS13_KS_MASTER (2 * TLS13_SECRET_MAX)       ///< HKDF-Extract(Derive(handshake,"derived"), 0^L)
+#define TLS13_KS_CLIENT_HS (3 * TLS13_SECRET_MAX)    ///< Derive-Secret(handshake, "c hs traffic", CH..SH)
+#define TLS13_KS_SERVER_HS (4 * TLS13_SECRET_MAX)    ///< Derive-Secret(handshake, "s hs traffic", CH..SH)
+#define TLS13_KS_CLIENT_AP (5 * TLS13_SECRET_MAX)    ///< Derive-Secret(master, "c ap traffic", CH..SFIN)
+#define TLS13_KS_SERVER_AP (6 * TLS13_SECRET_MAX)    ///< Derive-Secret(master, "s ap traffic", CH..SFIN)
+#define TLS13_KS_EMPTY_HASH (7 * TLS13_SECRET_MAX)   ///< Transcript-Hash("")
+#define TLS13_KS_DERIVED (8 * TLS13_SECRET_MAX)      ///< Derive-Secret(X, "derived", "")
+#define TLS13_KS_FINISHED_KEY (9 * TLS13_SECRET_MAX) ///< HKDF-Expand-Label(traffic, "finished", "", L)
+#define TLS13_KS_ZEROS (10 * TLS13_SECRET_MAX)       ///< 0^Hash.length, never written: the borrow arrives zeroed
+#define TLS13_KS_VERIFY (11 * TLS13_SECRET_MAX)      ///< the Finished verify_data this end built or expects
+#define PROTOCORE_TLS13_KS_CAP ((size_t)PROTOCORE_TLS13_KS_TERMS * TLS13_SECRET_MAX)
 #define TLS13_KS_WORK PROTOCORE_TLS13_KS_CAP ///< past the terms: the bytes this schedule's HKDF works out of
 
 typedef struct
 {
     const Tls13Kdf *kdf; ///< variant (label prefix) bound by @ref Tls13KsNs::early
     uint8_t *s;          ///< PROTOCORE_TLS13_KS_BORROW secure bytes: the terms, then the HKDF's own
+    size_t len;          ///< the bound hash's secret length, 32 or 48
+    proto_bool is384;    ///< true when the suite's hash is SHA-384
 } Tls13KeySchedule;
 
 /** @brief The variant a call runs under, and the schedule it advances. */
@@ -92,6 +107,7 @@ typedef struct
     const Tls13Kdf *kdf;  ///< variant (label prefix) an early step binds
     Tls13KeySchedule *ks; ///< the schedule a step advances
     uint8_t *s;           ///< PROTOCORE_TLS13_KS_BORROW secure bytes the schedule runs out of
+    proto_bool is384;     ///< the negotiated suite's hash: true for SHA-384, false for SHA-256
 } Tls13KsBind;
 
 /** @brief RFC 8446 sec 7.1 HKDF-Expand-Label / Derive-Secret: one derivation's terms. */
@@ -119,7 +135,7 @@ typedef struct
 {
     const uint8_t *base_secret;     ///< the Finished sender's handshake traffic secret
     const uint8_t *transcript_hash; ///< the handshake up to but excluding this Finished
-    uint8_t *out;                   ///< 32-byte verify_data
+    uint8_t *out;                   ///< @ref Tls13KsNs::len bytes of verify_data
 } Tls13FinishedArgs;
 
 /**
@@ -133,9 +149,10 @@ typedef struct
  * @var Tls13KsNs::step            the (EC)DHE input and the transcript each level is keyed off
  * @var Tls13KsNs::finished_args   what the Finished verify_data is taken over
  * @var Tls13KsNs::ok              a call's true/false outcome
- * @var Tls13KsNs::expand_label    HKDF-Expand-Label under the bound variant's prefix
- * @var Tls13KsNs::derive_secret   Derive-Secret: Expand-Label over a transcript hash, 32 bytes out
- * @var Tls13KsNs::early           step 1: bind the variant and the borrow, then early_secret
+ * @var Tls13KsNs::len             the bound hash's secret length, 32 or 48, from @ref Tls13KsNs::early
+ * @var Tls13KsNs::expand_label    HKDF-Expand-Label under the bound variant's prefix and hash
+ * @var Tls13KsNs::derive_secret   Derive-Secret: Expand-Label over a transcript hash, @c len bytes out
+ * @var Tls13KsNs::early           step 1: bind the variant, the hash and the borrow, then early_secret
  * @var Tls13KsNs::handshake       step 2: handshake_secret and the handshake traffic secrets
  * @var Tls13KsNs::master          step 3: master_secret and the application traffic secrets
  * @var Tls13KsNs::finished_mac    the Finished verify_data (sec 4.4.4)
@@ -154,6 +171,7 @@ typedef struct
     Tls13FinishedArgs finished_args;
 
     proto_bool ok;
+    size_t len;
 
     void (*const expand_label)(uint8_t *restrict work);
     void (*const derive_secret)(uint8_t *restrict work);

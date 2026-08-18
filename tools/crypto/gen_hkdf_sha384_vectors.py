@@ -65,12 +65,23 @@ LABELS = [
     ("iv", "", 12),
 ]
 
+# The inputs to one whole RFC 8446 sec 7.1 schedule at SHA-384: an X25519 shared secret and the three
+# Transcript-Hash values a handshake feeds it. Arbitrary but fixed, so the trace is reproducible.
+SCHED_ECDHE = "".join("%02x" % ((i * 13 + 1) & 0xFF) for i in range(32))
+SCHED_CH_SH = "".join("%02x" % ((i * 3 + 17) & 0xFF) for i in range(48))
+SCHED_CH_CV = "".join("%02x" % ((i * 5 + 29) & 0xFF) for i in range(48))
+SCHED_CH_SFIN = "".join("%02x" % ((i * 9 + 41) & 0xFF) for i in range(48))
+
 # The two published values that calibrate the CLI. RFC 5869 A.1 OKM, and the RFC 8448 sec 3
 # early-secret "derived" step, whose inputs are the early secret and Transcript-Hash("").
 CAL_HKDF = "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865"
 CAL_TLS13_SECRET = "33ad0a1c607ec03b09e6cd9893680ce210adf300aa1f2660e1b22e10f170f92a"
 CAL_TLS13_CTX = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 CAL_TLS13 = "6f2615a108c702c5678f54fc9dbab69716c076189c48250cebeac3576c3611ba"
+# RFC 6234 sec 8.5 SHA384 row 1 ("abc") and RFC 4231 sec 4.2 HMAC-SHA-384 case 1, which calibrate the
+# two openssl dgst forms the schedule trace below leans on.
+CAL_SHA384_ABC = "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7"
+CAL_HMAC384 = "afd03944d84895626b0825f4ab46907f15f9dadbe4101ec682aa034c7cebc59cfaea9ea9076ede7f4af152e8b2fa9cb6"
 
 
 def _kdf(args):
@@ -119,6 +130,69 @@ def expand_label(digest, keylen, secret, label, context):
     )
 
 
+def digest(digest_name, hexmsg):
+    """One openssl one-shot digest over hex input, as lowercase hex."""
+    p = subprocess.run(
+        ["openssl", "dgst", "-" + digest_name, "-r"],
+        input=bytes.fromhex(hexmsg),
+        capture_output=True,
+        check=True,
+    )
+    return p.stdout.decode().split()[0].lower()
+
+
+def hmac(digest_name, hexkey, hexmsg):
+    """One openssl HMAC over hex input under a hex key, as lowercase hex."""
+    p = subprocess.run(
+        ["openssl", "dgst", "-" + digest_name, "-mac", "HMAC", "-macopt", "hexkey:" + hexkey, "-r"],
+        input=bytes.fromhex(hexmsg),
+        capture_output=True,
+        check=True,
+    )
+    return p.stdout.decode().split()[0].lower()
+
+
+def schedule_sha384():
+    """One whole RFC 8446 sec 7.1 schedule at SHA-384, every term answered by openssl."""
+    zeros = "00" * 48
+    empty = digest("sha384", "")
+    early = hkdf("EXTRACT_ONLY", "SHA384", 48, zeros, zeros)
+    derived_early = expand_label("SHA384", 48, early, "derived", empty)
+    handshake = hkdf("EXTRACT_ONLY", "SHA384", 48, SCHED_ECDHE, derived_early)
+    c_hs = expand_label("SHA384", 48, handshake, "c hs traffic", SCHED_CH_SH)
+    s_hs = expand_label("SHA384", 48, handshake, "s hs traffic", SCHED_CH_SH)
+    derived_hs = expand_label("SHA384", 48, handshake, "derived", empty)
+    master = hkdf("EXTRACT_ONLY", "SHA384", 48, zeros, derived_hs)
+    c_ap = expand_label("SHA384", 48, master, "c ap traffic", SCHED_CH_SFIN)
+    s_ap = expand_label("SHA384", 48, master, "s ap traffic", SCHED_CH_SFIN)
+    finished_key = expand_label("SHA384", 48, s_hs, "finished", "")
+    verify = hmac("sha384", finished_key, SCHED_CH_CV)
+    return [
+        {
+            "tcId": 1,
+            "comment": "one RFC 8446 sec 7.1 schedule at SHA-384, every term from openssl",
+            "result": "valid",
+            "flags": [],
+            "ecdhe": SCHED_ECDHE,
+            "ch_sh": SCHED_CH_SH,
+            "ch_cv": SCHED_CH_CV,
+            "ch_sfin": SCHED_CH_SFIN,
+            "empty_hash": empty,
+            "early": early,
+            "derived_early": derived_early,
+            "handshake": handshake,
+            "c_hs": c_hs,
+            "s_hs": s_hs,
+            "derived_hs": derived_hs,
+            "master": master,
+            "c_ap": c_ap,
+            "s_ap": s_ap,
+            "finished_key": finished_key,
+            "verify": verify,
+        }
+    ]
+
+
 def calibrate():
     """Refuse to emit anything unless the CLI reproduces both published SHA-256 answers."""
     got = hkdf("EXTRACT_AND_EXPAND", "SHA256", 42, RFC5869[0]["ikm"], RFC5869[0]["salt"], RFC5869[0]["info"])
@@ -127,7 +201,13 @@ def calibrate():
     got = expand_label("SHA256", 32, CAL_TLS13_SECRET, "derived", CAL_TLS13_CTX)
     if got != CAL_TLS13:
         raise SystemExit("openssl TLS13-KDF disagrees with RFC 8448 sec 3:\n  got %s\n  want %s" % (got, CAL_TLS13))
-    print("calibrated: RFC 5869 A.1 and RFC 8448 sec 3 both reproduced at SHA-256")
+    got = digest("sha384", "616263")
+    if got != CAL_SHA384_ABC:
+        raise SystemExit("openssl dgst -sha384 disagrees with RFC 6234 sec 8.5:\n  got %s" % got)
+    got = hmac("sha384", "0b" * 20, "4869205468657265")
+    if got != CAL_HMAC384:
+        raise SystemExit("openssl HMAC-SHA-384 disagrees with RFC 4231 sec 4.2:\n  got %s" % got)
+    print("calibrated: RFC 5869 A.1, RFC 8448 sec 3, RFC 6234 sec 8.5 and RFC 4231 sec 4.2 all reproduced")
 
 
 def write(name, rows, note):
@@ -189,6 +269,11 @@ def main():
     write("openssl_hkdf_sha384_extract.json", extract, "HKDF-SHA384 mode EXTRACT_ONLY over the RFC 5869 A.1-A.3 inputs")
     write("openssl_hkdf_sha384_expand.json", expand, "HKDF-SHA384 mode EXPAND_ONLY over the same inputs")
     write("openssl_hkdf_sha384_label.json", label, "TLS13-KDF HKDF-Expand-Label at SHA-384 (RFC 8446 sec 7.1)")
+    write(
+        "openssl_tls13_sha384_schedule.json",
+        schedule_sha384(),
+        "one whole RFC 8446 sec 7.1 key schedule at SHA-384, term by term",
+    )
 
 
 if __name__ == "__main__":

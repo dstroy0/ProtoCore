@@ -7787,6 +7787,19 @@ from halves and is slower than the width it decomposes into"
 #ifndef PROTOCORE_AES128GCM_BORROW
 #define PROTOCORE_AES128GCM_BORROW (PROTOCORE_WORK_AES128GCM + PROTOCORE_WORK_AES128)
 #endif
+
+// A TLS 1.3 record key holds one keyed AEAD context per direction, and which AEAD that is depends on
+// the suite the connection negotiated: AEAD_AES_128_GCM for 0x1301, AEAD_AES_256_GCM for 0x1302. The
+// slot is the wider of the two. AES-128-GCM's is not the smaller one despite the shorter key: that
+// borrow carries the single-block context aes128gcm.h also exposes, which AES-256-GCM has no
+// counterpart for. Proved against both by a static_assert in record.c.
+#ifndef PROTOCORE_TLS_RECORD_AEAD_BORROW
+#if PROTOCORE_AES128GCM_BORROW > PROTOCORE_AESGCM_BORROW
+#define PROTOCORE_TLS_RECORD_AEAD_BORROW PROTOCORE_AES128GCM_BORROW
+#else
+#define PROTOCORE_TLS_RECORD_AEAD_BORROW PROTOCORE_AESGCM_BORROW
+#endif
+#endif
 // The X25519 borrow: the clamped scalar, the base point, and the Montgomery ladder's running points
 // and per-bit intermediates. The radix-2^16 protocore_gf arm is the larger of the two at 960 octets,
 // seven 128-octet field elements over the two 32-octet scalars; the radix-2^32 fe arm is 576. Proved
@@ -7853,9 +7866,11 @@ from halves and is slower than the width it decomposes into"
 #ifndef PROTOCORE_TLS_CONN_REC_CAP
 #define PROTOCORE_TLS_CONN_REC_CAP 1024
 #endif
-// SHA-256 sizes the TLS 1.3 key schedule, so every schedule term is one of these.
-#ifndef PROTOCORE_TLS13_SECRET_LEN
-#define PROTOCORE_TLS13_SECRET_LEN 32
+// RFC 8446 sec 7.1 keys the schedule off the negotiated cipher suite's hash, so a term is 32 octets
+// under a SHA-256 suite and 48 under a SHA-384 one. The layout is stated at the wider of the two and
+// a connection reads back the length its suite bound (Tls13KsNs::len).
+#ifndef PROTOCORE_TLS13_SECRET_MAX
+#define PROTOCORE_TLS13_SECRET_MAX 48
 #endif
 // The key share, the ECDHE secret, the transcript hash in hand, the Finished MAC, and
 // Transcript-Hash(CH..server Finished). The peer's public key is NOT one of these: it can be an
@@ -7864,14 +7879,16 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_TLS_CONN_TERMS 5
 #endif
 #ifndef PROTOCORE_TLS_CONN_TERMS_CAP
-#define PROTOCORE_TLS_CONN_TERMS_CAP ((size_t)PROTOCORE_TLS_CONN_TERMS * PROTOCORE_TLS13_SECRET_LEN)
+#define PROTOCORE_TLS_CONN_TERMS_CAP ((size_t)PROTOCORE_TLS_CONN_TERMS * PROTOCORE_TLS13_SECRET_MAX)
 #endif
 // The transcript's working bytes, the parsed ClientHello, the key schedule, and the SHA-512 an
 // Ed25519 signature runs through, which the driver reaches by pointer. Stated in bytes here and
 // proved against their real sizes by a static_assert in handshake.c:
-// 256 (SHA256_BORROW) + sizeof(Tls13ClientHello) + 1826 (TLS13_KS_BORROW) + 448 (SHA512_BORROW).
+// 256 (SHA256_BORROW) + sizeof(Tls13ClientHello) + 2802 (TLS13_KS_BORROW) + 448 (SHA512_BORROW),
+// which is 3650 with the PQC arm off and 3658 with it on. Rounded up to a multiple of 32 so the
+// offsets after it stay aligned.
 #ifndef PROTOCORE_TLS_CONN_STATE_CAP
-#define PROTOCORE_TLS_CONN_STATE_CAP 2816
+#define PROTOCORE_TLS_CONN_STATE_CAP 3680
 #endif
 // The peer's subjectPublicKey, kept from the Certificate that carried it to the CertificateVerify
 // checked under it: the message buffer the certificate arrived in is reused by the next handshake
@@ -7889,10 +7906,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_TLS13_KS_TERMS 12
 #endif
 // The schedule's terms, then the bytes its HKDF works out of. One borrow, split by offset in
-// tls13_kdf.h, taken by whichever connection runs the handshake.
+// key_schedule.h, taken by whichever connection runs the handshake. The HKDF figure is the SHA-384
+// one because it is the larger of the two and a connection binds either.
 #ifndef PROTOCORE_TLS13_KS_BORROW
 #define PROTOCORE_TLS13_KS_BORROW                                                                                      \
-    ((size_t)PROTOCORE_TLS13_KS_TERMS * PROTOCORE_TLS13_SECRET_LEN + PROTOCORE_HKDF_BORROW)
+    ((size_t)PROTOCORE_TLS13_KS_TERMS * PROTOCORE_TLS13_SECRET_MAX + PROTOCORE_HKDF_SHA384_BORROW)
 #endif
 #ifndef PROTOCORE_WORK_TLS_CONN
 #define PROTOCORE_WORK_TLS_CONN                                                                                        \
@@ -8132,7 +8150,7 @@ from halves and is slower than the width it decomposes into"
 // only these carry key material. One per connection, taken from the persistent end so it lasts the
 // connection. Proved against sizeof(QuicConnCtx) by a static_assert in quic_conn.c.
 #ifndef PROTOCORE_QUIC_CONN_CTX_BORROW
-#define PROTOCORE_QUIC_CONN_CTX_BORROW 12544
+#define PROTOCORE_QUIC_CONN_CTX_BORROW 13568
 #endif
 
 #ifndef PROTOCORE_SECURE_ARENA_SIZE

@@ -71,12 +71,14 @@ static_assert(PROTOCORE_ENABLE_TLS_RPK,
 /** @brief Handshake message header: msg_type(1) + 24-bit length. */
 #define TLS_HS_HDR_LEN 4
 
-// Offsets into TlsConn::terms. Each term is one TLS13_SECRET_LEN value.
+// Offsets into TlsConn::terms. Each term is one TLS13_SECRET_MAX slot: the three hash-length terms
+// hold 32 or 48 octets depending on the suite the connection bound, and the two X25519 terms hold 32
+// whatever it bound, so the stride is the widest of them and a term never moves.
 #define TLS_TERM_SHARE 0                       // this end's X25519 public key_share
-#define TLS_TERM_SECRET TLS13_SECRET_LEN       // the X25519 shared secret
-#define TLS_TERM_HASH (2 * TLS13_SECRET_LEN)   // the transcript hash the step in hand needs
-#define TLS_TERM_MAC (3 * TLS13_SECRET_LEN)    // the Finished MAC built, or the one expected
-#define TLS_TERM_HS_FIN (4 * TLS13_SECRET_LEN) // Transcript-Hash(CH..server Finished)
+#define TLS_TERM_SECRET TLS13_SECRET_MAX       // the X25519 shared secret
+#define TLS_TERM_HASH (2 * TLS13_SECRET_MAX)   // the transcript hash the step in hand needs
+#define TLS_TERM_MAC (3 * TLS13_SECRET_MAX)    // the Finished MAC built, or the one expected
+#define TLS_TERM_HS_FIN (4 * TLS13_SECRET_MAX) // Transcript-Hash(CH..server Finished)
 
 // Fail the connection with an alert and report it as a driver error.
 static void fail(uint8_t alert)
@@ -200,7 +202,7 @@ static void server_flight(uint8_t *restrict work)
     // ServerHello travels as TLSPlaintext: the keys it establishes do not protect it.
     size_t n = protocore_tls13_build_server_hello(
         c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->cfg->random, c->hello->session_id, c->hello->session_id_len,
-        c->terms + TLS_TERM_SHARE, TLS13_SECRET_LEN, TLS_GROUP_X25519, PROTO_FALSE, NULL, 0);
+        c->terms + TLS_TERM_SHARE, TLS_X25519_SHARE_LEN, TLS_GROUP_X25519, PROTO_FALSE, NULL, 0);
     if (n == 0)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
@@ -225,7 +227,7 @@ static void server_flight(uint8_t *restrict work)
     transcript_peek(TLS_TERM_HASH);
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.step.ecdhe = c->terms + TLS_TERM_SECRET;
-    Tls13Ks.step.ecdhe_len = TLS13_SECRET_LEN;
+    Tls13Ks.step.ecdhe_len = TLS_X25519_SHARE_LEN;
     Tls13Ks.step.ch_sh_hash = c->terms + TLS_TERM_HASH;
     Tls13Ks.handshake(NULL);
     keys_derive(&c->hs_tx, c->ks.s + TLS13_KS_SERVER_HS);
@@ -413,13 +415,14 @@ static void server_on_client_hello(const uint8_t *msg, size_t len)
 static void server_on_finished(const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnection.conn;
-    if (msg[0] != TLS_HS_FINISHED || hs_body_len(msg) != TLS13_SECRET_LEN || len != TLS_HS_HDR_LEN + TLS13_SECRET_LEN)
+    // sec 4.4.4: verify_data is Hash.length octets, so its width is the suite's, not a constant.
+    if (msg[0] != TLS_HS_FINISHED || hs_body_len(msg) != c->ks.len || len != TLS_HS_HDR_LEN + c->ks.len)
     {
         fail(TLS_ALERT_DECODE_ERROR);
         return;
     }
     finished_mac(c->ks.s + TLS13_KS_CLIENT_HS, TLS_TERM_HS_FIN);
-    if (!protocore_ct_eq(c->terms + TLS_TERM_MAC, msg + TLS_HS_HDR_LEN, TLS13_SECRET_LEN))
+    if (!protocore_ct_eq(c->terms + TLS_TERM_MAC, msg + TLS_HS_HDR_LEN, c->ks.len))
     {
         fail(TLS_ALERT_DECRYPT_ERROR);
         return;
@@ -486,6 +489,9 @@ static void conn_init(uint8_t *restrict work)
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.bind.s = c->ks_work;
+    // This driver offers TLS_AES_128_GCM_SHA256 only, so the schedule's hash is SHA-256. It is stated
+    // rather than assumed because the schedule binds either, and c->ks.len is read back from here on.
+    Tls13Ks.bind.is384 = PROTO_FALSE;
     Tls13Ks.early(NULL);
     TlsConnection.ok = Tls13Ks.ok;
 }
@@ -514,7 +520,7 @@ static void client_on_server_hello(const uint8_t *msg, size_t len)
         return;
     }
     if (!sh.selected_tls13 || sh.cipher_suite != PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256 || !sh.has_key_share ||
-        sh.group != TLS_GROUP_X25519 || sh.share_len != TLS13_SECRET_LEN)
+        sh.group != TLS_GROUP_X25519 || sh.share_len != TLS_X25519_SHARE_LEN)
     {
         fail(TLS_ALERT_ILLEGAL_PARAMETER);
         return;
@@ -535,7 +541,7 @@ static void client_on_server_hello(const uint8_t *msg, size_t len)
     transcript_peek(TLS_TERM_HASH);
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.step.ecdhe = c->terms + TLS_TERM_SECRET;
-    Tls13Ks.step.ecdhe_len = TLS13_SECRET_LEN;
+    Tls13Ks.step.ecdhe_len = TLS_X25519_SHARE_LEN;
     Tls13Ks.step.ch_sh_hash = c->terms + TLS_TERM_HASH;
     Tls13Ks.handshake(NULL);
     keys_derive(&c->hs_tx, c->ks.s + TLS13_KS_CLIENT_HS);
@@ -643,12 +649,12 @@ static void client_on_certificate(const uint8_t *msg, size_t len)
     }
     // sec 4.4.2: the credential has to be the one this connection was configured to accept. A
     // connection with no configured key is unauthenticated by its own choice (see TlsConnConfig).
-    if (c->cfg->peer_pub && !protocore_ct_eq(c->cfg->peer_pub, pub, TLS13_SECRET_LEN))
+    if (c->cfg->peer_pub && !protocore_ct_eq(c->cfg->peer_pub, pub, PROTOCORE_ED25519_PUBKEY_LEN))
     {
         fail(TLS_ALERT_HANDSHAKE_FAILURE);
         return;
     }
-    if (!peer_key_keep(PROTOCORE_X509_KEY_ED25519, pub, TLS13_SECRET_LEN))
+    if (!peer_key_keep(PROTOCORE_X509_KEY_ED25519, pub, PROTOCORE_ED25519_PUBKEY_LEN))
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
         return;
@@ -695,7 +701,7 @@ static void client_on_cert_verify(const uint8_t *msg, size_t len)
         return;
     }
     transcript_peek(TLS_TERM_HASH);
-    uint8_t content[64 + 33 + 1 + TLS13_SECRET_LEN];
+    uint8_t content[64 + 33 + 1 + TLS13_SECRET_MAX];
     size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), c->terms + TLS_TERM_HASH, PROTO_TRUE);
     if (clen == 0)
     {
@@ -738,7 +744,7 @@ static void client_on_server_finished(const uint8_t *msg, size_t len)
     }
     transcript_peek(TLS_TERM_HASH);
     finished_mac(c->ks.s + TLS13_KS_SERVER_HS, TLS_TERM_HASH);
-    if (!protocore_ct_eq(c->terms + TLS_TERM_MAC, vd, TLS13_SECRET_LEN))
+    if (!protocore_ct_eq(c->terms + TLS_TERM_MAC, vd, c->ks.len))
     {
         fail(TLS_ALERT_DECRYPT_ERROR);
         return;
@@ -810,7 +816,7 @@ static void conn_start(uint8_t *restrict work)
 
     const char *alpn = (c->cfg->alpn && c->cfg->alpn_count) ? c->cfg->alpn[0] : NULL;
     size_t n = protocore_tls13_build_client_hello(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->cfg->random, NULL, 0,
-                                                  c->terms + TLS_TERM_SHARE, TLS13_SECRET_LEN, TLS_GROUP_X25519,
+                                                  c->terms + TLS_TERM_SHARE, TLS_X25519_SHARE_LEN, TLS_GROUP_X25519,
                                                   c->cfg->hostname, alpn, NULL, 0, PROTO_TRUE, PROTO_FALSE);
     if (n == 0)
     {

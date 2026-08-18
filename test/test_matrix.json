@@ -660,7 +660,10 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<crypto/aead/aes128gcm.c>",
-        "+<crypto/mac/ghash.c>"
+        "+<crypto/mac/ghash.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/integration/iot/test_coaps"
@@ -709,7 +712,10 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/integration/iot/test_coaps_server"
@@ -758,7 +764,10 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/integration/iot/test_coaps_server"
@@ -1843,7 +1852,9 @@
     },
     "native_dtls": {
       "desc": "DTLS 1.3 record layer (network_drivers/presentation/security/dtls/dtls_record, RFC 9147 sec 4):\nDTLSPlaintext + DTLSCiphertext protect/unprotect, the unified header, sequence-number encryption\n(sec 4.2.3) and reconstruction (sec 4.2.2), the AEAD nonce, and the anti-replay window (sec 4.5.1).\nThe key + record KAT is byte-exact against an independent HKDF-Expand-Label + AEAD_AES_128_GCM +\nAES-ECB reconstruction (RFC 5869 / RFC 8446 / SP 800-38D). Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_DTLS=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_DTLS=1"
+      ],
       "src": [
         "+<network_drivers/presentation/security/dtls/dtls_record.c>",
         "+<network_drivers/tls/key_schedule/key_schedule.c>",
@@ -1862,16 +1873,24 @@
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/security/dtls/test_dtls_record"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_dtls_conn": {
       "desc": "DTLS 1.3 server handshake state machine (network_drivers/presentation/security/dtls/dtls_conn,\nRFC 9147 sec 5-6): the one-round-trip full handshake (TLS_AES_128_GCM_SHA256 / X25519 / Ed25519)\nover the DTLS record + framing layers, reusing the TLS 1.3 messages + key schedule. A minimal\nin-test DTLS client completes the handshake end to end - deprotecting the server flight, verifying\nthe CertificateVerify signature and Finished MAC over the real transcript, and confirming both\nsides install identical application-traffic keys. Also drives the HelloRetryRequest group\nrenegotiation (sec 5.1): a ClientHello with no X25519 key_share draws an HRR + address-bound cookie,\nand the retry that echoes it completes over the message_hash || HRR || ClientHello2 transcript; a\nretry without the cookie is rejected. An RFC 7250 Raw Public Keys case (PROTOCORE_ENABLE_TLS_RPK) offers\nserver_certificate_type = RawPublicKey and confirms the server answers with a 44-byte Ed25519\nSubjectPublicKeyInfo whose key CertificateVerify signs. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_DTLS=1", "-DPROTOCORE_ENABLE_TLS_RPK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_DTLS=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+      ],
       "src": [
         "+<network_drivers/presentation/security/dtls/dtls_conn.c>",
         "+<network_drivers/presentation/security/dtls/dtls_record.c>",
@@ -1897,9 +1916,14 @@
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
-      "tests": ["unit/protocols/tls/test_dtls_conn"]
+      "tests": [
+        "unit/protocols/tls/test_dtls_conn"
+      ]
     },
     "native_dtls_hs": {
       "desc": "DTLS 1.3 handshake framing + reliability (network_drivers/presentation/security/dtls/dtls_handshake,\nRFC 9147 sec 5 + 7): the 12-byte DTLS handshake header, overlap-tolerant message reassembly, the\nACK message (content type 26), and the stateless HelloRetryRequest cookie (sec 5.1). The cookie\nwire format is byte-exact against an independent Python-stdlib HMAC-SHA256, proving the field\nlayout and the client-address binding. Pure host tests.",
@@ -2850,7 +2874,10 @@
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/protocols/http/test_h3_conn"
@@ -2894,7 +2921,10 @@
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/integration/http/test_h3_e2e"
@@ -2960,7 +2990,10 @@
         "+<shared/hex/hex.c>",
         "+<crypto/mac/ghash.c>",
         "+<crypto/aead/aes128gcm.c>",
-        "+<core_setup/hal/host/protocore_dma_host.c>"
+        "+<core_setup/hal/host/protocore_dma_host.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/integration/http/test_h3_server"
@@ -5750,7 +5783,10 @@
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/protocols/http/test_quic_conn"
@@ -5861,7 +5897,10 @@
         "+<mmgr/swar.c>",
         "+<shared/hex/hex.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/integration/http/test_quic_server"
@@ -5899,7 +5938,10 @@
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_quic_tls"
@@ -5944,7 +5986,10 @@
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_quic_tls"
@@ -8936,7 +8981,9 @@
     },
     "native_tls13_kdf": {
       "desc": "TLS 1.3 key schedule for the QUIC handshake (network_drivers/tls/tls13_kdf,\nRFC 8446 sec 7.1 / 4.4.4): Early/Handshake/Master secret Extract chain, client/server handshake +\napplication traffic secrets, the server handshake write key/iv label path, and the server Finished\nverify_data over a full ClientHello..CertificateVerify transcript. Pinned to RFC 8448 sec 3.",
-      "flags": ["-DPROTOCORE_ENABLE_HTTP3=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP3=1"
+      ],
       "src": [
         "+<network_drivers/tls/key_schedule/key_schedule.c>",
         "+<crypto/kdf/hkdf.c>",
@@ -8952,10 +8999,17 @@
         "+<mmgr/rawmemcpy.c>",
         "+<mmgr/span.c>",
         "+<mmgr/swar.c>",
-        "+<mmgr/protostr.c>"
+        "+<mmgr/protostr.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>"
       ],
-      "tests": ["unit/src/network_drivers/tls/key_schedule/test_tls13_kdf"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/tls/key_schedule/test_tls13_kdf"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_tls13_msg": {
       "desc": "TLS 1.3 handshake messages for the QUIC handshake (network_drivers/presentation/http/http3/\ntls13_msg, RFC 8446 sec 4): ClientHello parse (X25519 key_share + capability flags), and the server\nflight. Byte-exact vs RFC 8448 sec 3 for ServerHello / Certificate / Finished, plus the ALPN + QUIC\ntransport-params EncryptedExtensions and an Ed25519 CertificateVerify sign/verify round-trip.",
@@ -9025,7 +9079,11 @@
         "+<src/crypto/asymmetric/rsa.c>",
         "+<src/crypto/mac/hmac_sha256.c>",
         "+<src/crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>"
+        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>",
+        "+<crypto/aead/aesgcm.c>"
       ],
       "tests": [
         "unit/file_conversion/network_drivers/tls/handshake/test_tls_conn"
@@ -9048,7 +9106,9 @@
     },
     "native_tls_record": {
       "desc": "TLS 1.3 stream record layer (network_drivers/tls/tls_record, RFC 8446 sec 5), the software arm\nselected when the vendor ships no TLS stack (PROTOCORE_TLS_SOFTWARE): the 5-byte TLSPlaintext header and\nits length-validating parse, TLSCiphertext protect/unprotect with the real content type sealed\ninside the record, the iv XOR seq nonce, the backward scan that recovers the type past the padding,\nand the record counter that never travels and does not advance on a forged record. The key + record\nKAT is byte-exact against an independent reconstruction (tools/crypto/gen_tls_record_kat.py):\nstdlib HKDF-Expand-Label under the \"tls13 \" prefix plus OpenSSL AES-128-GCM. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_TLS=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_TLS=1"
+      ],
       "src": [
         "+<network_drivers/tls/record/record.c>",
         "+<network_drivers/tls/key_schedule/key_schedule.c>",
@@ -9067,10 +9127,18 @@
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
         "+<crypto/aead/aes128gcm.c>",
-        "+<crypto/mac/ghash.c>"
+        "+<crypto/mac/ghash.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>",
+        "+<crypto/aead/aesgcm.c>"
       ],
-      "tests": ["unit/src/network_drivers/tls/record/test_tls_record"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/tls/record/test_tls_record"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     
     "native_tls_seam": {
@@ -9125,7 +9193,11 @@
         "+<src/crypto/asymmetric/ecdsa.c>",
         "+<src/crypto/asymmetric/rsa.c>",
         "+<src/crypto/asymmetric/bignum.c>",
-        "+<core_setup/hal/portable/portable_bignum.c>"
+        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/kdf/hkdf_sha384.c>",
+        "+<crypto/aead/aesgcm.c>"
       ],
       "tests": [
         "unit/src/network_drivers/tls/test_tls_seam"

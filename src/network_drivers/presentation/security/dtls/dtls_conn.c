@@ -399,6 +399,9 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     Tls13Ks.bind.kdf = &DTLS13_KDF;
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.bind.s = c->ks_store;
+    // This handshake offers TLS_AES_128_GCM_SHA256 only, so the schedule's hash is SHA-256. It is
+    // stated rather than assumed because the schedule binds either.
+    Tls13Ks.bind.is384 = PROTO_FALSE;
     Tls13Ks.early(NULL);
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.step.ecdhe = ecdhe;
@@ -525,7 +528,7 @@ static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_le
     Tls13Ks.finished_args.transcript_hash = c->hs_finished_hash;
     Tls13Ks.finished_args.out = c->ks.s + TLS13_KS_VERIFY;
     Tls13Ks.finished_mac(NULL);
-    if (!protocore_ct_eq(c->ks.s + TLS13_KS_VERIFY, msg + 4, TLS13_SECRET_LEN))
+    if (!protocore_ct_eq(c->ks.s + TLS13_KS_VERIFY, msg + 4, c->ks.len))
     {
         return fail(c, ALERT_DECRYPT_ERROR);
     }

@@ -80,7 +80,7 @@ typedef struct
 {
     DtlsCipher cipher; ///< negotiated AEAD (phase 1: AES-128-GCM)
     uint16_t epoch;    ///< this epoch number; its low 2 bits appear in the unified header
-    _Alignas(8) uint8_t gcm[PROTOCORE_AES128GCM_BORROW]; ///< this epoch's AEAD borrow. Carries both keyed
+    uint8_t gcm[PROTOCORE_AES128GCM_BORROW]; ///< this epoch's AEAD borrow. Carries both keyed
                                                          ///< contexts: the record AEAD and the
                                                          ///< sequence-number-protection block. Replaces the raw
                                                          ///< keys, so neither stays resident.

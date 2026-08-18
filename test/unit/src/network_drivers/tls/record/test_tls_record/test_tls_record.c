@@ -90,6 +90,14 @@ static void derive(const uint8_t *secret)
     TlsRecord.keys_derive(NULL);
 }
 
+static void derive384(const uint8_t *secret)
+{
+    TlsRecord.key.keys = &g_keys;
+    TlsRecord.key.cipher = TLS_CIPHER_AES_256_GCM_SHA384;
+    TlsRecord.key.secret = secret;
+    TlsRecord.keys_derive(NULL);
+}
+
 static size_t protect(uint8_t type, const uint8_t *pt, size_t pt_len, size_t cap)
 {
     TlsRecord.key.keys = &g_keys;
@@ -444,4 +452,87 @@ void test_rederiving_restarts_the_sequence(void)
     size_t again = protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD), sizeof(g_out));
     TEST_ASSERT_EQUAL_UINT(first, again);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(saved, g_out, first);
+}
+
+// ---- TLS_AES_256_GCM_SHA384 (0x1302) --------------------------------------
+//
+// RFC 8448's trace is 0x1301 throughout, so the cases above pin that suite and these pin the other.
+// The AEAD itself is AES-256-GCM, already vector-tested against NIST/McGrew in its own suite; what is
+// new here is the record layer picking it and expanding sec 7.3's key and iv at SHA-384.
+
+// A 48-octet traffic secret, and the "key" and "iv" HKDF-Expand-Label produces from it at SHA-384.
+// Same secret and same answers as test/vectors/openssl_hkdf_sha384_label.json rows 7 and 8, which
+// openssl produced (tools/harness.py crypto hkdf384).
+static const uint8_t AP_SECRET_384[48] = {0x03, 0x0a, 0x11, 0x18, 0x1f, 0x26, 0x2d, 0x34, 0x3b, 0x42, 0x49, 0x50,
+                                          0x57, 0x5e, 0x65, 0x6c, 0x73, 0x7a, 0x81, 0x88, 0x8f, 0x96, 0x9d, 0xa4,
+                                          0xab, 0xb2, 0xb9, 0xc0, 0xc7, 0xce, 0xd5, 0xdc, 0xe3, 0xea, 0xf1, 0xf8,
+                                          0xff, 0x06, 0x0d, 0x14, 0x1b, 0x22, 0x29, 0x30, 0x37, 0x3e, 0x45, 0x4c};
+static const uint8_t AP_IV_384[12] = {0x56, 0xcb, 0x24, 0xb5, 0xcf, 0x79, 0xfc, 0xc2, 0x21, 0xef, 0x63, 0xfc};
+
+// The write IV the record layer expands must be the one openssl expands from the same secret. The
+// key is not readable back - key_init consumes it and only the schedule stays resident - so the iv
+// is the term this can compare directly, and the round trip below covers the key.
+void test_sha384_suite_expands_the_published_iv(void)
+{
+    derive384(AP_SECRET_384);
+    TEST_ASSERT_TRUE(g_keys.ready);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(AP_IV_384, g_keys.iv, sizeof(AP_IV_384));
+    TEST_ASSERT_EQUAL_UINT64(0u, g_keys.seq);
+}
+
+// A record sealed under 0x1302 opens back to the same plaintext and inner content type.
+void test_sha384_suite_round_trips_a_record(void)
+{
+    derive384(AP_SECRET_384);
+    size_t n = protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD), sizeof(g_out));
+    TEST_ASSERT_TRUE(n > sizeof(APP_PAYLOAD));
+
+    uint8_t sealed[512];
+    memcpy(sealed, g_out, n);
+
+    uint8_t opened[512];
+    TlsCiphertext info;
+    derive384(AP_SECRET_384); // a fresh generation: the reader's sequence starts at zero too
+    TEST_ASSERT_TRUE(unprotect(sealed, n, opened, sizeof(opened), &info));
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_TLS_CT_APPLICATION_DATA, info.content_type);
+    TEST_ASSERT_EQUAL_UINT(sizeof(APP_PAYLOAD), info.pt_len);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(APP_PAYLOAD, opened, sizeof(APP_PAYLOAD));
+}
+
+// The two suites are different keys over different AEADs, so a record sealed under one must not open
+// under the other. Without this a build that ignored TlsRecordKeys::cipher would still round-trip.
+void test_the_two_suites_do_not_open_each_other(void)
+{
+    derive384(AP_SECRET_384);
+    size_t n384 = protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD), sizeof(g_out));
+    uint8_t sealed384[512];
+    memcpy(sealed384, g_out, n384);
+
+    derive(C_AP_SECRET);
+    size_t n256 = protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD), sizeof(g_out));
+    uint8_t sealed256[512];
+    memcpy(sealed256, g_out, n256);
+
+    uint8_t opened[512];
+    TlsCiphertext info;
+
+    derive(C_AP_SECRET);
+    TEST_ASSERT_FALSE(unprotect(sealed384, n384, opened, sizeof(opened), &info));
+
+    derive384(AP_SECRET_384);
+    TEST_ASSERT_FALSE(unprotect(sealed256, n256, opened, sizeof(opened), &info));
+
+    // And the two seals of the same plaintext are not the same bytes.
+    TEST_ASSERT_TRUE(n384 != n256 || memcmp(sealed384, sealed256, n384) != 0);
+}
+
+// The suite rides on the key, so wiping one leaves it refusing exactly as the other does.
+void test_sha384_suite_fails_closed_when_unkeyed(void)
+{
+    derive384(AP_SECRET_384);
+    TlsRecord.key.keys = &g_keys;
+    TlsRecord.keys_wipe(NULL);
+    TEST_ASSERT_FALSE(g_keys.ready);
+    TEST_ASSERT_EQUAL_UINT(0u,
+                           protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD), sizeof(g_out)));
 }
