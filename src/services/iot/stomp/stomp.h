@@ -103,9 +103,6 @@ typedef struct
     const char *name; ///< the header-name to match, NUL-terminated
 } StompLookupArgs;
 
-/** @brief The codec's calls, described only in stomp.c. */
-struct StompInternal;
-
 /**
  * @brief The STOMP 1.2 frame codec (stomp.github.io, not an IETF document).
  *
@@ -130,7 +127,6 @@ struct StompInternal;
  *                           content-length when present (sec 4.3.1)
  * @var StompNs::header      find @c lookup.name among @c *frame header entries, first match wins (sec 4.4)
  * @var StompNs::unescape    decode the sec 4.1 escapes in @c buf.in into @c buf.out
- * @var StompNs::internal    the calls that reach the buffers
  */
 typedef struct
 {
@@ -146,12 +142,10 @@ typedef struct
     const char *value;
     size_t value_len;
 
-    void (*build)(struct StompInternal *ctx);
-    void (*parse)(struct StompInternal *ctx);
-    void (*header)(struct StompInternal *ctx);
-    void (*unescape)(struct StompInternal *ctx);
-
-    struct StompInternal *internal;
+    void (*const build)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const header)(uint8_t *restrict work);
+    void (*const unescape)(uint8_t *restrict work);
 } StompNs;
 
 /** @brief The one symbol this module exports. */

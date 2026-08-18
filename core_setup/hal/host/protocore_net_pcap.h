@@ -143,6 +143,7 @@ static inline size_t protocore_net_pcap_packet(const protocore_net_host_dgram *d
  */
 static inline size_t protocore_net_pcap_render(uint8_t *out, size_t cap)
 {
+    uint8_t pcap_work[16]; // the borrow an entry takes; Pcap never reads it
     if (!out)
     {
         return 0;
@@ -150,7 +151,7 @@ static inline size_t protocore_net_pcap_render(uint8_t *out, size_t cap)
     Pcap.args.out = out;
     Pcap.args.cap = cap;
     Pcap.args.linktype = PROTOCORE_DLT_RAW;
-    Pcap.global_header(Pcap.internal);
+    Pcap.global_header(pcap_work);
     if (Pcap.n == 0)
     {
         return 0;
@@ -175,7 +176,7 @@ static inline size_t protocore_net_pcap_render(uint8_t *out, size_t cap)
         Pcap.rec.ts_usec = (d->ms % 1000u) * 1000u;
         Pcap.rec.caplen = (uint32_t)n;
         Pcap.rec.origlen = (uint32_t)n;
-        Pcap.record_header(Pcap.internal);
+        Pcap.record_header(pcap_work);
         w += PROTOCORE_PCAP_REC_HDR_LEN + n;
     }
     return w;

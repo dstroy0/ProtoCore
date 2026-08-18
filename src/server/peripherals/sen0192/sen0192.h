@@ -23,11 +23,15 @@
 #ifndef PROTOCORE_SEN0192_H
 #define PROTOCORE_SEN0192_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SEN0192
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_SEN0192_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /**
  * @brief Debounced motion-presence tracker over a single digital line.
@@ -45,46 +49,121 @@ typedef struct
     uint32_t motion_events;  ///< count of clear -> present transitions (rising edges of presence)
 } Sen0192Motion;
 
-/** @brief Initialize a tracker: @p active_high sets the motion polarity, @p hold_ms the presence hold. */
-void protocore_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high);
+/** @brief What motion_init takes: m, hold_ms, active_high. */
+typedef struct
+{
+    Sen0192Motion *m;
+    uint32_t hold_ms;
+    proto_bool active_high;
+} Sen0192MotionInitArgs;
+
+/** @brief What motion_update takes: m, level_high, now_ms. */
+typedef struct
+{
+    Sen0192Motion *m;
+    proto_bool level_high;
+    uint32_t now_ms;
+} Sen0192MotionUpdateArgs;
+
+/** @brief What motion_tick takes: m, now_ms. */
+typedef struct
+{
+    Sen0192Motion *m;
+    uint32_t now_ms;
+} Sen0192MotionTickArgs;
+
+/** @brief What motion_present takes: m. */
+typedef struct
+{
+    const Sen0192Motion *m;
+} Sen0192MotionPresentArgs;
+
+/** @brief What motion_events takes: m. */
+typedef struct
+{
+    const Sen0192Motion *m;
+} Sen0192MotionEventsArgs;
+
+/** @brief What motion_active_age_ms takes: m, now_ms. */
+typedef struct
+{
+    const Sen0192Motion *m;
+    uint32_t now_ms;
+} Sen0192MotionActiveAgeMsArgs;
 
 /**
- * @brief Feed one sampled line level at @p now_ms.
- * @return true iff this sample started a new presence (a clear -> present edge).
+ * @brief DFRobot SEN0192 10.525 GHz microwave Doppler motion sensor (PROTOCORE_ENABLE_SEN0192).
+ *
+ * A caller sets the members a call takes, invokes it through ::Sen0192 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Sen0192.motion_init_args.m = ...;
+ *   Sen0192.motion_init_args.hold_ms = ...;
+ *   Sen0192.motion_init_args.active_high = ...;
+ *   Sen0192.motion_init(work);
+ *
+ * @var Sen0192Ns::motion_init_args  what motion_init takes: m, hold_ms, active_high
+ * @var Sen0192Ns::motion_update_args  what motion_update takes: m, level_high, now_ms
+ * @var Sen0192Ns::motion_tick_args  what motion_tick takes: m, now_ms
+ * @var Sen0192Ns::motion_present_args  what motion_present takes: m
+ * @var Sen0192Ns::motion_events_args  what motion_events takes: m
+ * @var Sen0192Ns::motion_active_age_ms_args  what motion_active_age_ms takes: m, now_ms
+ * @var Sen0192Ns::ok  true iff this sample started a new presence (a clear -> present ...
+ * @var Sen0192Ns::n  the count a call reports
+ * @var Sen0192Ns::ms  the milliseconds a call reports
+ * @var Sen0192Ns::motion_init  initialize a tracker: active_high sets the motion polarity, hold_ms ...
+ * @var Sen0192Ns::motion_update  feed one sampled line level at now_ms
+ * @var Sen0192Ns::motion_tick  re-evaluate presence against the hold window at now_ms without a ...
+ * @var Sen0192Ns::motion_present  current presence (respecting the hold window)
+ * @var Sen0192Ns::motion_events  number of clear -> present transitions since init
+ * @var Sen0192Ns::motion_active_age_ms  milliseconds since the last active-level sample (0 if none yet)
+ * @var Sen0192Ns::begin  configure PROTOCORE_SEN0192_PIN as an input and start tracking ...
+ * @var Sen0192Ns::poll  sample the pin now (via protocore_millis()). true iff a new ...
+ * @var Sen0192Ns::present  current presence
+ * @var Sen0192Ns::motion_count  count of motion events (clear -> present transitions) since ...
+ *
+ * @c work is PROTOCORE_SEN0192_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_sen0192_motion_update(Sen0192Motion *m, proto_bool level_high, uint32_t now_ms);
+typedef struct
+{
+    Sen0192MotionInitArgs motion_init_args;
+    Sen0192MotionUpdateArgs motion_update_args;
+    Sen0192MotionTickArgs motion_tick_args;
+    Sen0192MotionPresentArgs motion_present_args;
+    Sen0192MotionEventsArgs motion_events_args;
+    Sen0192MotionActiveAgeMsArgs motion_active_age_ms_args;
+
+    proto_bool ok;
+    uint32_t n;
+    uint32_t ms;
+
+    void (*const motion_init)(uint8_t *restrict work);
+    void (*const motion_update)(uint8_t *restrict work);
+    void (*const motion_tick)(uint8_t *restrict work);
+    void (*const motion_present)(uint8_t *restrict work);
+    void (*const motion_events)(uint8_t *restrict work);
+    void (*const motion_active_age_ms)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const poll)(uint8_t *restrict work);
+    void (*const present)(uint8_t *restrict work);
+    void (*const motion_count)(uint8_t *restrict work);
+} Sen0192Ns;
+
+/** @brief The one symbol this module exports. */
+extern Sen0192Ns Sen0192;
 
 /**
- * @brief Re-evaluate presence against the hold window at @p now_ms without a new sample (call each tick so
- *        presence clears on time even when no fresh sample arrives). @return the current presence.
+ * @brief The PROTOCORE_SEN0192_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-proto_bool protocore_sen0192_motion_tick(Sen0192Motion *m, uint32_t now_ms);
-
-/** @brief Current presence (respecting the hold window). */
-proto_bool protocore_sen0192_motion_present(const Sen0192Motion *m);
-
-/** @brief Number of clear -> present transitions since init. */
-uint32_t protocore_sen0192_motion_events(const Sen0192Motion *m);
-
-/** @brief Milliseconds since the last active-level sample (0 if none yet). */
-uint32_t protocore_sen0192_motion_active_age_ms(const Sen0192Motion *m, uint32_t now_ms);
-
-// --- Pin binding (GPIO poll) -----------------------------------------
-
-/**
- * @brief Configure PROTOCORE_SEN0192_PIN as an input and start tracking (polarity / hold from ServerConfig).
- * @return true where the pin was configured, false where there is no pin seam.
- */
-proto_bool protocore_sen0192_begin(void);
-
-/** @brief Sample the pin now (via protocore_millis()). @return true iff a new presence just started. */
-proto_bool protocore_sen0192_poll(void);
-
-/** @brief Current presence. */
-proto_bool protocore_sen0192_present(void);
-
-/** @brief Count of motion events (clear -> present transitions) since protocore_sen0192_begin(). */
-uint32_t protocore_sen0192_motion_count(void);
+uint8_t *protocore_sen0192_span(void);
 
 PROTOCORE_END_DECLS
 

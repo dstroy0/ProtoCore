@@ -26,19 +26,31 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPoolNs: the accepted connections
+#include "network_drivers/transport/tcp/server/server.h"     // TcpListenerNs: the bound ports
+#if PROTOCORE_NEED_CLIENT
+#include "network_drivers/transport/tcp/client/client.h" // TcpClientNs: dialing out
+#endif
 
-/** @brief The three halves, held where only tcp.c describes them. */
-struct TcpInternal;
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief The connection oriented transport.
  *
- * @var TcpNs::internal  the pool, the listener and the client, reached through tcp.c
+ * @var TcpNs::conn      the pool of accepted connections
+ * @var TcpNs::listener  bound ports, their worker queues, and the accept-time gates
+ * @var TcpNs::client    dialing out; present only when a client transport is enabled
+ *
+ * Pointers rather than values because a table in one translation unit is not a constant expression
+ * in another, so a by-value member could not be initialized from tcp.c.
  */
 typedef struct
 {
-    struct TcpInternal *internal;
+    ConnPoolNs *const conn;
+    TcpListenerNs *const listener;
+#if PROTOCORE_NEED_CLIENT
+    TcpClientNs *const client;
+#endif
 } TcpNs;
 
 /** @brief The one symbol this module exports. */

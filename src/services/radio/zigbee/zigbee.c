@@ -10,10 +10,16 @@
  * 0x18 / 0x1A are escaped as 0x7D, (byte XOR 0x20).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
+#if PROTOCORE_ENABLE_ZIGBEE
+
 #include "services/radio/zigbee/zigbee.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_IBM_3740
 
-#if PROTOCORE_ENABLE_ZIGBEE
+PROTOCORE_BEGIN_DECLS
 
 static proto_bool is_reserved(uint8_t b)
 {
@@ -43,68 +49,99 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
     return PROTO_TRUE;
 }
 
-uint16_t protocore_ash_crc16(const uint8_t *buf, uint16_t len)
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void zigbee_ash_crc16(uint8_t *restrict work);
+
+static void zigbee_ash_crc16(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = Zigbee.ash_crc16_args.buf;
+    uint16_t len = Zigbee.ash_crc16_args.len;
+
     // ASH uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as CRC-16/IBM-3740.
     Crc.args.params = &PROTOCORE_CRC16_IBM_3740;
     Crc.args.data = buf;
     Crc.args.len = len;
-    Crc.compute(Crc.internal);
-    return (uint16_t)Crc.value;
+    Crc.compute(crc_work);
+    Zigbee.value = (uint16_t)Crc.value;
 }
 
-uint16_t protocore_ash_frame_encode(uint8_t control, const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap)
+static void zigbee_ash_frame_encode(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t control = Zigbee.ash_frame_encode_args.control;
+    const uint8_t *payload = Zigbee.ash_frame_encode_args.payload;
+    uint16_t len = Zigbee.ash_frame_encode_args.len;
+    uint8_t *out = Zigbee.ash_frame_encode_args.out;
+    uint16_t cap = Zigbee.ash_frame_encode_args.cap;
+
     if (!out || len > PROTOCORE_ZIGBEE_MAX_DATA || (payload == NULL && len > 0))
     {
-        return 0;
+        Zigbee.value = 0;
+        return;
     }
     // CRC over control + payload. They are not contiguous in memory, which is what the engine's
     // begin/update/final split is for - no scratch buffer to assemble them into.
     Crc.args.params = &PROTOCORE_CRC16_IBM_3740;
-    Crc.begin(Crc.internal);
+    Crc.begin(crc_work);
     Crc.args.crc = Crc.value;
     Crc.args.data = &control;
     Crc.args.len = 1;
-    Crc.update(Crc.internal);
+    Crc.update(crc_work);
     Crc.args.crc = Crc.value;
     Crc.args.data = payload;
     Crc.args.len = len;
-    Crc.update(Crc.internal);
+    Crc.update(crc_work);
     Crc.args.crc = Crc.value;
-    Crc.final(Crc.internal);
+    Crc.final(crc_work);
     const uint16_t crc = (uint16_t)Crc.value;
 
     uint16_t p = 0;
     if (!put_stuffed(out, &p, cap, control))
     {
-        return 0;
+        Zigbee.value = 0;
+        return;
     }
     for (uint16_t i = 0; i < len; i++)
     {
         if (!put_stuffed(out, &p, cap, payload[i]))
         {
-            return 0;
+            Zigbee.value = 0;
+            return;
         }
     }
     if (!put_stuffed(out, &p, cap, (uint8_t)(crc >> 8)) || !put_stuffed(out, &p, cap, (uint8_t)(crc & 0xFF)))
     {
-        return 0;
+        Zigbee.value = 0;
+        return;
     }
     if (p + 1 > cap)
     {
-        return 0;
+        Zigbee.value = 0;
+        return;
     }
     out[p++] = ASH_FLAG; // the delimiter is never stuffed
-    return p;
+    Zigbee.value = p;
 }
 
-int protocore_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint8_t *payload, uint16_t pay_cap,
-                               uint16_t *pay_len)
+static void zigbee_ash_frame_decode(uint8_t *restrict work)
 {
+    const uint8_t *raw = Zigbee.ash_frame_decode_args.raw;
+    uint16_t len = Zigbee.ash_frame_decode_args.len;
+    uint8_t *control = Zigbee.ash_frame_decode_args.control;
+    uint8_t *payload = Zigbee.ash_frame_decode_args.payload;
+    uint16_t pay_cap = Zigbee.ash_frame_decode_args.pay_cap;
+    uint16_t *pay_len = Zigbee.ash_frame_decode_args.pay_len;
+
     if (!raw)
     {
-        return 0;
+        Zigbee.n = 0;
+        return;
     }
     // Find the frame delimiter.
     uint16_t flag = 0;
@@ -114,7 +151,8 @@ int protocore_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *contro
     }
     if (flag >= len)
     {
-        return 0; // no complete frame yet
+        Zigbee.n = 0; // no complete frame yet
+        return;
     }
 
     // Remove the byte-stuffing from raw[0, flag) into a fixed scratch: control + payload + CRC(2).
@@ -127,31 +165,39 @@ int protocore_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *contro
         {
             if (++i >= flag)
             {
-                return -1; // dangling escape
+                Zigbee.n = -1; // dangling escape
+                return;
             }
             b = (uint8_t)(raw[i] ^ 0x20);
         }
         if (n >= sizeof(un))
         {
-            return -1; // frame longer than we accept
+            Zigbee.n = -1; // frame longer than we accept
+            return;
         }
         un[n++] = b;
     }
     if (n < 3)
     {
-        return -1; // need at least control + CRC(2)
+        Zigbee.n = -1; // need at least control + CRC(2)
+        return;
     }
     uint16_t body = (uint16_t)(n - 2);
-    uint16_t crc = protocore_ash_crc16(un, body);
+    Zigbee.ash_crc16_args.buf = un;
+    Zigbee.ash_crc16_args.len = body;
+    zigbee_ash_crc16(work);
+    uint16_t crc = Zigbee.value;
     if ((uint16_t)((un[n - 2] << 8) | un[n - 1]) != crc)
     {
-        return -1; // CRC mismatch
+        Zigbee.n = -1; // CRC mismatch
+        return;
     }
 
     uint16_t plen = (uint16_t)(body - 1); // minus the control byte
     if (plen > pay_cap)
     {
-        return -1; // caller buffer too small
+        Zigbee.n = -1; // caller buffer too small
+        return;
     }
     if (control)
     {
@@ -165,7 +211,13 @@ int protocore_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *contro
     {
         *pay_len = plen;
     }
-    return (int)(flag + 1); // consume up to and including the flag
+    Zigbee.n = (int)(flag + 1); // consume up to and including the flag
 }
+
+ZigbeeNs Zigbee = {.ash_crc16 = zigbee_ash_crc16,
+                   .ash_frame_encode = zigbee_ash_frame_encode,
+                   .ash_frame_decode = zigbee_ash_frame_decode};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ZIGBEE

@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
 #if PROTOCORE_ENABLE_SDI12
 
 #include "mmgr/protomem.h"
@@ -396,7 +398,7 @@ static void sdi12_crc16(uint8_t *restrict work)
     Crc.args.params = &PROTOCORE_CRC16_ARC;
     Crc.args.data = data;
     Crc.args.len = len;
-    Crc.compute(Crc.internal);
+    Crc.compute(crc_work);
     Sdi12.crc = (uint16_t)Crc.value;
 }
 

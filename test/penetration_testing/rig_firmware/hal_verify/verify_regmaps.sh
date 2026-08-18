@@ -20,15 +20,15 @@ cp "$REPO/core_setup/hal/esp/esp_crypto_hal.h" "$STAGE/HalRegmapVerify/esp_crypt
 
 rc=0
 for fqbn in $DIES; do
-  echo "==================== $fqbn ===================="
-  if arduino-cli compile --fqbn "esp32:esp32:$fqbn" --build-path "$STAGE/build_$fqbn" "$STAGE/HalRegmapVerify" \
-       >"$STAGE/$fqbn.log" 2>&1; then
-    echo "  $fqbn: REGMAP MATCHES MANUFACTURER (static_asserts pass)"
-  else
-    grep -iE "static_assert|static assertion|error:" "$STAGE/$fqbn.log" | head -8
-    echo "  $fqbn: MISMATCH / FAILED"
-    rc=1
-  fi
+    echo "==================== $fqbn ===================="
+    if arduino-cli compile --fqbn "esp32:esp32:$fqbn" --build-path "$STAGE/build_$fqbn" "$STAGE/HalRegmapVerify" \
+        >"$STAGE/$fqbn.log" 2>&1; then
+        echo "  $fqbn: REGMAP MATCHES MANUFACTURER (static_asserts pass)"
+    else
+        grep -iE "static_assert|static assertion|error:" "$STAGE/$fqbn.log" | head -8
+        echo "  $fqbn: MISMATCH / FAILED"
+        rc=1
+    fi
 done
 echo ">> verify_regmaps rc=$rc"
 exit $rc

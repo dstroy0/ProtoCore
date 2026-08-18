@@ -26,6 +26,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t hw_health_work[16]; // the borrow an entry takes; HwHealth never reads it
+
 void dbench_run(void)
 {
     // Rail monitor: nominal 3.3V, warn 3.1V, crit 2.9V (same params the host test exercises).
@@ -34,7 +36,7 @@ void dbench_run(void)
     HwHealth.rail.nominal_mv = 3300;
     HwHealth.rail.warn_mv = 3100;
     HwHealth.rail.crit_mv = 2900;
-    HwHealth.rail_init(HwHealth.internal);
+    HwHealth.rail_init(hw_health_work);
 
     // SPI backoff: 8MHz start, floor 1MHz, ceil 8MHz, halve after 3 fails, double after 4 oks.
     HwSpiBackoff spi;
@@ -44,7 +46,7 @@ void dbench_run(void)
     HwHealth.spi.max_hz = 8000000;
     HwHealth.spi.fail_trip = 3;
     HwHealth.spi.ok_trip = 4;
-    HwHealth.spi_init(HwHealth.internal);
+    HwHealth.spi_init(hw_health_work);
 
     static char json[96];
 
@@ -57,31 +59,31 @@ void dbench_run(void)
         // worst-droop min + counters.
         HwHealth.rail.m = &rail;
         HwHealth.rail.mv = 3050;
-        DBENCH_OP("HwHealth.rail_sample", 200000, HwHealth.rail_sample(HwHealth.internal);
+        DBENCH_OP("HwHealth.rail_sample", 200000, HwHealth.rail_sample(hw_health_work);
                   sink += (uint32_t)HwHealth.rail_verdict);
 
         // Serialize the monitor to the "/health" JSON fragment (strbuf u32 formatting).
         HwHealth.rail.m_ro = &rail;
         HwHealth.out_args.out = json;
         HwHealth.out_args.cap = sizeof(json);
-        DBENCH_OP("HwHealth.rail_json", 100000, HwHealth.rail_json(HwHealth.internal); sink += (uint32_t)HwHealth.n);
+        DBENCH_OP("HwHealth.rail_json", 100000, HwHealth.rail_json(hw_health_work); sink += (uint32_t)HwHealth.n);
 
         // Hysteretic SPI-clock backoff: feed a failing CRC result through the state machine.
         HwHealth.spi.s = &spi;
         HwHealth.spi.crc_ok = PROTO_FALSE;
-        DBENCH_OP("HwHealth.spi_result", 200000, HwHealth.spi_result(HwHealth.internal); sink += HwHealth.hz);
+        DBENCH_OP("HwHealth.spi_result", 200000, HwHealth.spi_result(hw_health_work); sink += HwHealth.hz);
 
         // GPIO short-circuit test: drove high, read low -> shorted to ground.
         HwHealth.probe.driven_high = PROTO_TRUE;
         HwHealth.probe.read_high = PROTO_FALSE;
-        DBENCH_OP("HwHealth.gpio_short", 200000, HwHealth.gpio_short(HwHealth.internal);
+        DBENCH_OP("HwHealth.gpio_short", 200000, HwHealth.gpio_short(hw_health_work);
                   sink += (uint32_t)HwHealth.gpio_verdict);
 
         // Cap-leakage: measured 90 ms vs 100 ms expected, 10% band (64-bit tolerance math).
         HwHealth.probe.measured_ms = 90;
         HwHealth.probe.expected_ms = 100;
         HwHealth.probe.tol_pct = 10;
-        DBENCH_OP("HwHealth.cap_leak", 200000, HwHealth.cap_leak(HwHealth.internal);
+        DBENCH_OP("HwHealth.cap_leak", 200000, HwHealth.cap_leak(hw_health_work);
                   sink += (uint32_t)HwHealth.cap_verdict);
 
         (void)sink;

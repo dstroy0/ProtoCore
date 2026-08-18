@@ -11,21 +11,7 @@
 
 #include "shared/hex/hex.h"
 
-/**
- * @brief The digit tables and the calls that read them - what HexNs points at.
- *
- * @var HexInternal::store  the two digit tables
- * @var HexInternal::ns     the handle a caller sets a call's members on
- */
-struct HexInternal
-{
-    const HexStorage *store;
-    HexNs *ns;
-};
-
 const HexStorage PROTOCORE_HEX = {"0123456789abcdef", "0123456789ABCDEF"};
-
-static struct HexInternal s_hex = {.store = &PROTOCORE_HEX, .ns = &Hex};
 
 // A hex character as 0..15, or -1 when it is not a hex digit of either case.
 static int8_t hex_value(char c)
@@ -45,21 +31,22 @@ static int8_t hex_value(char c)
     return -1;
 }
 
-static void hex_digit(struct HexInternal *restrict ctx)
+static void hex_digit(uint8_t *restrict work)
 {
-    const char *digits = ctx->ns->args.upper ? ctx->store->upper : ctx->store->lower;
-    ctx->ns->ch = digits[ctx->ns->args.nibble & 0x0Fu];
+    const char *digits = Hex.args.upper ? PROTOCORE_HEX.upper : PROTOCORE_HEX.lower;
+    Hex.ch = digits[Hex.args.nibble & 0x0Fu];
 }
 
-static void hex_val(struct HexInternal *restrict ctx)
+static void hex_val(uint8_t *restrict work)
 {
-    ctx->ns->i8 = hex_value(ctx->ns->args.ch);
+    (void)work;
+    Hex.i8 = hex_value(Hex.args.ch);
 }
 
-static void hex_u32(struct HexInternal *restrict ctx)
+static void hex_u32(uint8_t *restrict work)
 {
-    uint32_t v = ctx->ns->args.v;
-    char *out = ctx->ns->io.out;
+    uint32_t v = Hex.args.v;
+    char *out = Hex.io.out;
 
     // The width is counted before any digit is written so each digit lands at its final index,
     // which is why no reversal buffer is needed.
@@ -70,18 +57,18 @@ static void hex_u32(struct HexInternal *restrict ctx)
     }
     for (uint8_t i = digits; i > 0; i--)
     {
-        out[i - 1] = ctx->store->lower[v & 0x0Fu];
+        out[i - 1] = PROTOCORE_HEX.lower[v & 0x0Fu];
         v >>= 4;
     }
-    ctx->ns->u8 = digits;
+    Hex.u8 = digits;
 }
 
-static void hex_encode(struct HexInternal *restrict ctx)
+static void hex_encode(uint8_t *restrict work)
 {
-    const uint8_t *in = ctx->ns->io.in;
-    const uint32_t n = ctx->ns->io.n;
-    char *out = ctx->ns->io.out;
-    const char *digits = ctx->ns->args.upper ? ctx->store->upper : ctx->store->lower;
+    const uint8_t *in = Hex.io.in;
+    const uint32_t n = Hex.io.n;
+    char *out = Hex.io.out;
+    const char *digits = Hex.args.upper ? PROTOCORE_HEX.upper : PROTOCORE_HEX.lower;
 
     for (uint32_t i = 0; i < n; i++)
     {
@@ -91,14 +78,15 @@ static void hex_encode(struct HexInternal *restrict ctx)
     out[2 * n] = '\0';
 }
 
-static void hex_decode(struct HexInternal *restrict ctx)
+static void hex_decode(uint8_t *restrict work)
 {
-    const char *in = ctx->ns->io.text;
-    const uint32_t hexlen = ctx->ns->io.n;
-    uint8_t *out = ctx->ns->io.bytes;
-    const uint32_t out_cap = ctx->ns->io.cap;
+    (void)work;
+    const char *in = Hex.io.text;
+    const uint32_t hexlen = Hex.io.n;
+    uint8_t *out = Hex.io.bytes;
+    const uint32_t out_cap = Hex.io.cap;
 
-    ctx->ns->i32 = -1;
+    Hex.i32 = -1;
     if ((hexlen % 2) != 0 || (hexlen / 2) > out_cap)
     {
         return;
@@ -113,9 +101,8 @@ static void hex_decode(struct HexInternal *restrict ctx)
         }
         out[i / 2] = (uint8_t)((hi << 4) | lo);
     }
-    ctx->ns->i32 = (int32_t)(hexlen / 2);
+    Hex.i32 = (int32_t)(hexlen / 2);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-HexNs Hex = {
-    .digit = hex_digit, .val = hex_val, .u32 = hex_u32, .encode = hex_encode, .decode = hex_decode, .internal = &s_hex};
+HexNs Hex = {.digit = hex_digit, .val = hex_val, .u32 = hex_u32, .encode = hex_encode, .decode = hex_decode};

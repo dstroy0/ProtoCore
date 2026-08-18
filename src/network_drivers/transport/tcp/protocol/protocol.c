@@ -20,6 +20,7 @@
 #include "../lower/lower.h"          // every call into the stack below goes through the seam
 #include "../server/server.h"        // TcpListener.enqueue: the owning listener posts the event
 #include "core_setup/board_profiles/protocore_platform.h"
+#include "mmgr/plaintext.h"     // the persistent end this module's state is taken from
 #include "mmgr/rawmemcpy.h"     // raw.read: the unaligned v6 address load
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock
 
@@ -48,87 +49,48 @@ struct ConnPoolStorage
 #if PROTOCORE_ENABLE_OBSERVABILITY
     _Atomic uint32_t ctr[9]; ///< one per protocore_conn_reason, indexed by the reason itself
 #endif
-};
-
-/**
- * @brief The pool's state, the call it is serving, and the calls that reach both.
- *
- * @var ConnPoolInternal::conn_timeout_ms  the idle deadline the sweep measures against
- * @var ConnPoolInternal::store            the zeroed template and the counters
- * @var ConnPoolInternal::slot             the connection a call acts on
- * @var ConnPoolInternal::st               the state a write installs
- * @var ConnPoolInternal::data             bytes for a send
- * @var ConnPoolInternal::len              how many
- * @var ConnPoolInternal::pcb              the control block a raw call acts on
- * @var ConnPoolInternal::worker_id        whose slots the sweep reaps
- * @var ConnPoolInternal::out              where the peer address is written
- * @var ConnPoolInternal::evt              the event an enqueue posts
- * @var ConnPoolInternal::conn             the slot an enqueue posts for
- * @var ConnPoolInternal::ok               a call's true/false outcome
- * @var ConnPoolInternal::u16              a call's 16-bit outcome
- * @var ConnPoolInternal::u32              a call's 32-bit outcome
- * @var ConnPoolInternal::u8               a call's 8-bit outcome
- * @var ConnPoolInternal::i32              a call's signed outcome
- */
-struct ConnPoolInternal
-{
-    uint32_t conn_timeout_ms;
-    struct ConnPoolStorage *store;
-    ConnPoolNs *ns; ///< the handle a caller sets a call's members on, and reads its result from
+    uint32_t conn_timeout_ms; ///< the idle deadline the sweep measures against; init loads it
 #if PROTOCORE_ENABLE_OBSERVABILITY
     protocore_conn_event_cb event_cb; ///< the installed observer
 #endif
-
-    void (*set_state)(struct ConnPoolInternal *ctx);
-    void (*alloc_free)(struct ConnPoolInternal *ctx);
-    void (*timeout_ms)(struct ConnPoolInternal *ctx);
-    void (*send)(struct ConnPoolInternal *ctx);
-    void (*send_flush)(struct ConnPoolInternal *ctx);
-    void (*sndbuf)(struct ConnPoolInternal *ctx);
-    void (*flush)(struct ConnPoolInternal *ctx);
-    void (*ack_consumed)(struct ConnPoolInternal *ctx);
-    void (*raw_send)(struct ConnPoolInternal *ctx);
-    void (*close)(struct ConnPoolInternal *ctx);
-    void (*abort_slot)(struct ConnPoolInternal *ctx);
-    void (*closing_finalize)(struct ConnPoolInternal *ctx);
-    void (*closing_check)(struct ConnPoolInternal *ctx);
-    void (*begin_close)(struct ConnPoolInternal *ctx);
-    void (*enqueue)(struct ConnPoolInternal *ctx);
-    void (*init)(struct ConnPoolInternal *ctx);
-    void (*stop)(struct ConnPoolInternal *ctx);
-    void (*active_count)(struct ConnPoolInternal *ctx);
-    void (*remote_ip)(struct ConnPoolInternal *ctx);
-    void (*remote_addr)(struct ConnPoolInternal *ctx);
-    void (*touch_active)(struct ConnPoolInternal *ctx);
-    void (*check_timeouts)(struct ConnPoolInternal *ctx);
-#if PROTOCORE_ENABLE_OBSERVABILITY
-    void (*on_event)(struct ConnPoolInternal *ctx);
-    void (*counters_get)(struct ConnPoolInternal *ctx);
-    void (*counters_reset)(struct ConnPoolInternal *ctx);
-    void (*obs_bump)(struct ConnPoolInternal *ctx);
-    void (*obs_transition)(struct ConnPoolInternal *ctx);
-    void (*obs_notice)(struct ConnPoolInternal *ctx);
-#endif
-
-    void (*available)(struct ConnPoolInternal *ctx);
-    void (*read_byte)(struct ConnPoolInternal *ctx);
-    void (*peek)(struct ConnPoolInternal *ctx);
-    void (*consume)(struct ConnPoolInternal *ctx);
-    void (*read)(struct ConnPoolInternal *ctx);
-    void (*active)(struct ConnPoolInternal *ctx);
-    void (*iface)(struct ConnPoolInternal *ctx);
-    void (*listener_id)(struct ConnPoolInternal *ctx);
-    void (*tls)(struct ConnPoolInternal *ctx);
-    void (*owner)(struct ConnPoolInternal *ctx);
-    void (*proto_of)(struct ConnPoolInternal *ctx);
-    void (*pcb_of)(struct ConnPoolInternal *ctx);
 };
 
-static struct ConnPoolStorage s_store;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define CONN_POOL_OFF_CTX 0u
+static_assert(CONN_POOL_OFF_CTX + sizeof(struct ConnPoolStorage) <= PROTOCORE_CONN_POOL_BORROW,
+              "PROTOCORE_CONN_POOL_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-// Tentative here so the functions below can reach the state; the members are bound at the bottom,
-// where every function they name has been defined.
-static struct ConnPoolInternal s_conn;
+// The region, at its offset in the caller's borrow.
+#define CONN_POOL_CTX(w) ((struct ConnPoolStorage *)(void *)((w) + CONN_POOL_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_CONN_POOL_BORROW persistent bytes, or null while the pool was short
+} ConnPoolOwnCtx;
+static ConnPoolOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_conn_pool_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_CONN_POOL_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // A borrow arrives zeroed, and these do not start at zero.
+            CONN_POOL_CTX(s_own.span)->conn_timeout_ms = CONN_TIMEOUT_MS;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // ---------------------------------------------------------------------------
 // Observability - event hook and lock-free counters
@@ -139,32 +101,47 @@ static struct ConnPoolInternal s_conn;
 
 // The counters are relaxed atomics: bumped from the stack's callback context and from the workers,
 // so the increments must not tear, but nothing orders anything against them.
-static void obs_bump(struct ConnPoolInternal *restrict ctx)
+static void obs_bump(uint8_t *restrict work)
 {
-    // DRAINED is gauge-only: the close reason that entered the dwell was already counted.
-    if (ctx->ns->obs.reason != PROTOCORE_CONN_R_DRAINED)
+    if (!work)
     {
-        atomic_fetch_add_explicit(&ctx->store->ctr[ctx->ns->obs.reason], 1, memory_order_relaxed);
+        return; // the pool was short of this module's borrow
+    }
+    // DRAINED is gauge-only: the close reason that entered the dwell was already counted.
+    if (ConnPool.obs.reason != PROTOCORE_CONN_R_DRAINED)
+    {
+        atomic_fetch_add_explicit(&CONN_POOL_CTX(work)->ctr[ConnPool.obs.reason], 1, memory_order_relaxed);
     }
 }
 
 // Install the observer a call is carrying. Null unregisters.
-static void on_event(struct ConnPoolInternal *restrict ctx)
+static void on_event(uint8_t *restrict work)
 {
-    ctx->event_cb = ctx->ns->obs.event_cb_in;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    CONN_POOL_CTX(work)->event_cb = ConnPool.obs.event_cb_in;
 }
 
-static void counters_get(struct ConnPoolInternal *restrict ctx)
+static void counters_get(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     protocore_conn_counters c;
-    c.accepts = atomic_load_explicit(&ctx->store->ctr[PROTOCORE_CONN_R_ACCEPT], memory_order_relaxed);
-    c.closes_remote = atomic_load_explicit(&ctx->store->ctr[PROTOCORE_CONN_R_CLOSE_REMOTE], memory_order_relaxed);
-    c.closes_local = atomic_load_explicit(&ctx->store->ctr[PROTOCORE_CONN_R_CLOSE_LOCAL], memory_order_relaxed);
-    c.closes_error = atomic_load_explicit(&ctx->store->ctr[PROTOCORE_CONN_R_ERROR], memory_order_relaxed);
-    c.closes_timeout = atomic_load_explicit(&ctx->store->ctr[PROTOCORE_CONN_R_TIMEOUT], memory_order_relaxed);
-    c.closes_abort = atomic_load_explicit(&ctx->store->ctr[PROTOCORE_CONN_R_ABORT], memory_order_relaxed);
-    c.backpressure = atomic_load_explicit(&ctx->store->ctr[PROTOCORE_CONN_R_BACKPRESSURE], memory_order_relaxed);
-    c.defer_drops = atomic_load_explicit(&ctx->store->ctr[PROTOCORE_CONN_R_DEFER_DROP], memory_order_relaxed);
+    c.accepts = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ACCEPT], memory_order_relaxed);
+    c.closes_remote =
+        atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_CLOSE_REMOTE], memory_order_relaxed);
+    c.closes_local =
+        atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_CLOSE_LOCAL], memory_order_relaxed);
+    c.closes_error = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ERROR], memory_order_relaxed);
+    c.closes_timeout = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_TIMEOUT], memory_order_relaxed);
+    c.closes_abort = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ABORT], memory_order_relaxed);
+    c.backpressure =
+        atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_BACKPRESSURE], memory_order_relaxed);
+    c.defer_drops = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_DEFER_DROP], memory_order_relaxed);
     // Derived from the pool on read, so it cannot drift out of step with the actual slot states.
     c.closing_gauge = 0;
     for (int i = 0; i < MAX_CONNS; i++)
@@ -174,34 +151,46 @@ static void counters_get(struct ConnPoolInternal *restrict ctx)
             c.closing_gauge++;
         }
     }
-    ctx->ns->obs.counters = c;
+    ConnPool.obs.counters = c;
 }
 
-static void counters_reset(struct ConnPoolInternal *restrict ctx)
+static void counters_reset(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     for (int i = 0; i < 9; i++)
     {
-        atomic_store_explicit(&ctx->store->ctr[i], 0, memory_order_relaxed);
+        atomic_store_explicit(&CONN_POOL_CTX(work)->ctr[i], 0, memory_order_relaxed);
     }
 }
 
 // A real state transition: bump the reason counter and fire the callback.
-static void obs_transition(struct ConnPoolInternal *restrict ctx)
+static void obs_transition(uint8_t *restrict work)
 {
-    ctx->obs_bump(ctx);
-    if (ctx->event_cb != NULL)
+    if (!work)
     {
-        ctx->event_cb(ctx->ns->slot, ctx->ns->obs.olds, ctx->ns->obs.news, ctx->ns->obs.reason);
+        return; // the pool was short of this module's borrow
+    }
+    obs_bump(work);
+    if (CONN_POOL_CTX(work)->event_cb != NULL)
+    {
+        CONN_POOL_CTX(work)->event_cb(ConnPool.slot, ConnPool.obs.olds, ConnPool.obs.news, ConnPool.obs.reason);
     }
 }
 
 // A non-transition notice (backpressure / defer-drop): bump and fire with old == new.
-static void obs_notice(struct ConnPoolInternal *restrict ctx)
+static void obs_notice(uint8_t *restrict work)
 {
-    ctx->obs_bump(ctx);
-    if (ctx->event_cb != NULL)
+    if (!work)
     {
-        ctx->event_cb(ctx->ns->slot, ctx->ns->st, ctx->ns->st, ctx->ns->obs.reason);
+        return; // the pool was short of this module's borrow
+    }
+    obs_bump(work);
+    if (CONN_POOL_CTX(work)->event_cb != NULL)
+    {
+        CONN_POOL_CTX(work)->event_cb(ConnPool.slot, ConnPool.st, ConnPool.st, ConnPool.obs.reason);
     }
 }
 
@@ -211,7 +200,7 @@ void protocore_obs_transition(uint8_t slot, ConnState olds, ConnState news, prot
     ConnPool.obs.olds = olds;
     ConnPool.obs.news = news;
     ConnPool.obs.reason = reason;
-    s_conn.obs_transition(&s_conn);
+    obs_transition(protocore_conn_pool_span());
 }
 
 void protocore_obs_notice(uint8_t slot, ConnState st, protocore_conn_reason reason)
@@ -219,7 +208,7 @@ void protocore_obs_notice(uint8_t slot, ConnState st, protocore_conn_reason reas
     ConnPool.slot = slot;
     ConnPool.st = st;
     ConnPool.obs.reason = reason;
-    s_conn.obs_notice(&s_conn);
+    obs_notice(protocore_conn_pool_span());
 }
 #endif // PROTOCORE_ENABLE_OBSERVABILITY
 
@@ -232,32 +221,33 @@ void protocore_obs_notice(uint8_t slot, ConnState st, protocore_conn_reason reas
 // already cleaned the slot - and reserve BEFORE the store to any non-free state, so a concurrent
 // allocator never picks a slot that is mid-claim. The bit ops are atomic because CONN_FREE is
 // written from the stack callbacks and from the worker.
-static void set_state(struct ConnPoolInternal *restrict ctx)
+static void set_state(uint8_t *restrict work)
 {
+    (void)work;
     // Bound every write to the real array size, so the setter is memory-safe on its own rather than
     // relying on the caller never over-indexing.
-    if (ctx->ns->slot >= CONN_POOL_SLOTS)
+    if (ConnPool.slot >= CONN_POOL_SLOTS)
     {
         return;
     }
 #if PROTOCORE_INTERNAL_SLOTS > 0
     // Reserved internal slots are not part of the accept pool and are never handed out by the
     // allocator, so they carry state but no bitmask bit.
-    if (ctx->ns->slot >= MAX_CONNS)
+    if (ConnPool.slot >= MAX_CONNS)
     {
-        PROTO_ATOMIC_STORE(&conn_pool[ctx->ns->slot].state, ctx->ns->st);
+        PROTO_ATOMIC_STORE(&conn_pool[ConnPool.slot].state, ConnPool.st);
         return;
     }
 #endif
-    if (ctx->ns->st == CONN_FREE)
+    if (ConnPool.st == CONN_FREE)
     {
-        PROTO_ATOMIC_STORE(&conn_pool[ctx->ns->slot].state, ctx->ns->st);
-        protocore_slot_mark(&protocore_conn_bits.free, ctx->ns->slot);
+        PROTO_ATOMIC_STORE(&conn_pool[ConnPool.slot].state, ConnPool.st);
+        protocore_slot_mark(&protocore_conn_bits.free, ConnPool.slot);
     }
     else
     {
-        protocore_slot_clear(&protocore_conn_bits.free, ctx->ns->slot);
-        PROTO_ATOMIC_STORE(&conn_pool[ctx->ns->slot].state, ctx->ns->st);
+        protocore_slot_clear(&protocore_conn_bits.free, ConnPool.slot);
+        PROTO_ATOMIC_STORE(&conn_pool[ConnPool.slot].state, ConnPool.st);
     }
 }
 
@@ -265,26 +255,31 @@ static void protocore_conn_set_state(uint8_t slot, ConnState st)
 {
     ConnPool.slot = slot;
     ConnPool.st = st;
-    s_conn.set_state(&s_conn);
+    set_state(protocore_conn_pool_span());
 }
 
 // First free slot as one ctz on the bitmask. Reports -1 when the pool is full. Free AND not held: a
 // slot whose bytes the wire has not finished with is not available, however free its state says.
-static void alloc_free(struct ConnPoolInternal *restrict ctx)
+static void alloc_free(uint8_t *restrict work)
 {
-    ctx->ns->i32 =
+    (void)work;
+    ConnPool.i32 =
         protocore_slot_next(protocore_slot_ready(&protocore_conn_bits.free, &protocore_conn_bits.held, MAX_CONNS));
 }
 
 static int32_t protocore_conn_alloc_free(void)
 {
-    s_conn.alloc_free(&s_conn);
+    alloc_free(protocore_conn_pool_span());
     return ConnPool.i32;
 }
 
-static void timeout_ms(struct ConnPoolInternal *restrict ctx)
+static void timeout_ms(uint8_t *restrict work)
 {
-    ctx->ns->u32 = ctx->conn_timeout_ms;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    ConnPool.u32 = CONN_POOL_CTX(work)->conn_timeout_ms;
 }
 
 // ---------------------------------------------------------------------------
@@ -295,67 +290,73 @@ static void timeout_ms(struct ConnPoolInternal *restrict ctx)
 
 // The write target is always the slot's own control block, so it cannot disagree with the ingress
 // reads that resolve it the same way.
-static void send(struct ConnPoolInternal *restrict ctx)
+static void send(uint8_t *restrict work)
 {
+    (void)work;
     TcpLower.op = PROTOCORE_OP_SEND;
-    TcpLower.slot = ctx->ns->slot;
-    TcpLower.pcb = conn_pool[ctx->ns->slot].pcb;
-    TcpLower.data = ctx->ns->io.data;
-    TcpLower.len = ctx->ns->io.len;
+    TcpLower.slot = ConnPool.slot;
+    TcpLower.pcb = conn_pool[ConnPool.slot].pcb;
+    TcpLower.data = ConnPool.io.data;
+    TcpLower.len = ConnPool.io.len;
     TcpLower.flush = PROTO_FALSE;
-    ctx->ns->ok = TcpLower.marshal(TcpLower.internal) == PROTOCORE_NET_OK;
+    TcpLower.marshal(protocore_tcp_lower_span());
+    ConnPool.ok = TcpLower.result == PROTOCORE_NET_OK;
 }
 
 // Terminal single-shot write: the bytes and their push happen in one round trip into the stack's
 // context, so a small response costs one marshal instead of a send and a flush. For a TLS slot this
 // is identical to send: the record BIO already pushes ciphertext per record.
-static void send_flush(struct ConnPoolInternal *restrict ctx)
+static void send_flush(uint8_t *restrict work)
 {
+    (void)work;
     TcpLower.op = PROTOCORE_OP_SEND;
-    TcpLower.slot = ctx->ns->slot;
-    TcpLower.pcb = conn_pool[ctx->ns->slot].pcb;
-    TcpLower.data = ctx->ns->io.data;
-    TcpLower.len = ctx->ns->io.len;
+    TcpLower.slot = ConnPool.slot;
+    TcpLower.pcb = conn_pool[ConnPool.slot].pcb;
+    TcpLower.data = ConnPool.io.data;
+    TcpLower.len = ConnPool.io.len;
     TcpLower.flush = PROTO_TRUE;
-    ctx->ns->ok = TcpLower.marshal(TcpLower.internal) == PROTOCORE_NET_OK;
+    TcpLower.marshal(protocore_tcp_lower_span());
+    ConnPool.ok = TcpLower.result == PROTOCORE_NET_OK;
 }
 
-static void sndbuf(struct ConnPoolInternal *restrict ctx)
+static void sndbuf(uint8_t *restrict work)
 {
-    protocore_pcb *pcb = conn_pool[ctx->ns->slot].pcb;
+    (void)work;
+    protocore_pcb *pcb = conn_pool[ConnPool.slot].pcb;
     if (pcb == NULL)
     {
-        ctx->ns->u16 = 0;
+        ConnPool.u16 = 0;
         return;
     }
     proto_u16 avail = protocore_net_sndbuf(pcb);
 #if PROTOCORE_ENABLE_TLS
     // A TLS record adds header and tag overhead; report a conservative plaintext budget so a caller
     // that fills it does not overrun the cipher's framing.
-    if (conn_pool[ctx->ns->slot].tls)
+    if (conn_pool[ConnPool.slot].tls)
     {
         avail = (avail > 64) ? (proto_u16)(avail - 64) : 0;
     }
 #endif
-    ctx->ns->u16 = avail;
+    ConnPool.u16 = avail;
 }
 
-static void flush(struct ConnPoolInternal *restrict ctx)
+static void flush(uint8_t *restrict work)
 {
+    (void)work;
 #if PROTOCORE_ENABLE_TLS
-    if (conn_pool[ctx->ns->slot].tls)
+    if (conn_pool[ConnPool.slot].tls)
     {
         return; // the BIO already pushed ciphertext per record; a flush must not end the session,
                 // since persistent TLS reuses it
     }
 #endif
     TcpLower.op = PROTOCORE_OP_OUTPUT;
-    TcpLower.slot = ctx->ns->slot;
-    TcpLower.pcb = conn_pool[ctx->ns->slot].pcb;
+    TcpLower.slot = ConnPool.slot;
+    TcpLower.pcb = conn_pool[ConnPool.slot].pcb;
     TcpLower.data = NULL;
     TcpLower.len = 0;
     TcpLower.flush = PROTO_FALSE;
-    (void)TcpLower.marshal(TcpLower.internal);
+    TcpLower.marshal(protocore_tcp_lower_span());
 }
 
 // The DS field is stamped where the control block is created - the listener's code point at accept,
@@ -365,13 +366,14 @@ static void flush(struct ConnPoolInternal *restrict ctx)
 
 // Reopen the receive window by exactly what the reader took (ack-on-consume), so the advertised
 // window tracks ring occupancy and a slow consumer cannot overflow it.
-static void ack_consumed(struct ConnPoolInternal *restrict ctx)
+static void ack_consumed(uint8_t *restrict work)
 {
-    if (ctx->ns->slot >= MAX_CONNS)
+    (void)work;
+    if (ConnPool.slot >= MAX_CONNS)
     {
         return;
     }
-    TcpConn *c = &conn_pool[ctx->ns->slot];
+    TcpConn *c = &conn_pool[ConnPool.slot];
     // Only the owning worker calls this, so the tail and the ack cursor are read race-free; the
     // head is not touched. Ack nothing for a slot that is not actively receiving.
     if (PROTO_ATOMIC_LOAD(&c->state) != CONN_ACTIVE || c->pcb == NULL)
@@ -386,41 +388,44 @@ static void ack_consumed(struct ConnPoolInternal *restrict ctx)
     }
     c->rx_acked = tail; // advance first: the marshaled window update is the slow part
     TcpLower.op = PROTOCORE_OP_RECVED;
-    TcpLower.slot = ctx->ns->slot;
+    TcpLower.slot = ConnPool.slot;
     TcpLower.pcb = c->pcb;
     TcpLower.data = NULL;
     TcpLower.len = (proto_u16)consumed;
     TcpLower.flush = PROTO_FALSE;
-    (void)TcpLower.marshal(TcpLower.internal);
+    TcpLower.marshal(protocore_tcp_lower_span());
 }
 
 // A raw write of already-encrypted bytes, for a control block reached without its slot. The seam
 // owns the context choice and re-checks the block is still bound.
-static void raw_send(struct ConnPoolInternal *restrict ctx)
+static void raw_send(uint8_t *restrict work)
 {
-    if (ctx->ns->pcb == NULL)
+    (void)work;
+    if (ConnPool.pcb == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        ConnPool.ok = PROTO_FALSE;
         return;
     }
     TcpLower.op = PROTOCORE_OP_RAWSEND;
     TcpLower.slot = 0;
-    TcpLower.pcb = ctx->ns->pcb;
-    TcpLower.data = ctx->ns->io.data;
-    TcpLower.len = ctx->ns->io.len;
+    TcpLower.pcb = ConnPool.pcb;
+    TcpLower.data = ConnPool.io.data;
+    TcpLower.len = ConnPool.io.len;
     TcpLower.flush = PROTO_FALSE;
-    ctx->ns->ok = TcpLower.marshal(TcpLower.internal) == PROTOCORE_NET_OK;
+    TcpLower.marshal(protocore_tcp_lower_span());
+    ConnPool.ok = TcpLower.result == PROTOCORE_NET_OK;
 }
 
 // The application-initiated close. Remote FIN, error and timeout closes are observed at their own
 // sites, so this one is uniquely local.
-static void close_slot(struct ConnPoolInternal *restrict ctx)
+static void close_slot(uint8_t *restrict work)
 {
-    if (ctx->ns->slot >= MAX_CONNS)
+    (void)work;
+    if (ConnPool.slot >= MAX_CONNS)
     {
         return;
     }
-    TcpConn *c = &conn_pool[ctx->ns->slot];
+    TcpConn *c = &conn_pool[ConnPool.slot];
     protocore_pcb *pcb = c->pcb;
     if (pcb == NULL)
     {
@@ -429,51 +434,52 @@ static void close_slot(struct ConnPoolInternal *restrict ctx)
     // The state is read rather than assumed: a worker, a stack callback and the sweep can all reach
     // the same slot, so it may already be in the drain dwell.
     const ConnState was = PROTO_ATOMIC_LOAD(&c->state);
-    PROTOCORE_OBS_TRANSITION(ctx->ns->slot, was, CONN_FREE, PROTOCORE_CONN_R_CLOSE_LOCAL);
+    PROTOCORE_OBS_TRANSITION(ConnPool.slot, was, CONN_FREE, PROTOCORE_CONN_R_CLOSE_LOCAL);
     // Detach and free the slot before the close, so a late callback for this block finds a null arg.
     // The close targets the captured block, so nulling the slot first is safe.
     TcpLower.pcb = pcb;
-    TcpLower.slot = ctx->ns->slot;
-    TcpLower.detach(TcpLower.internal);
+    TcpLower.slot = ConnPool.slot;
+    TcpLower.detach(protocore_tcp_lower_span());
     protocore_conn_set_state(c->id, CONN_FREE);
     c->pcb = NULL;
     TcpLower.op = PROTOCORE_OP_CLOSE;
     TcpLower.pcb = pcb;
-    TcpLower.slot = ctx->ns->slot;
+    TcpLower.slot = ConnPool.slot;
     TcpLower.data = NULL;
     TcpLower.len = 0;
     TcpLower.flush = PROTO_FALSE;
-    (void)TcpLower.marshal(TcpLower.internal); // TLS teardown and FIN, in the stack's context
+    TcpLower.marshal(protocore_tcp_lower_span()); // TLS teardown and FIN, in the stack's context
 }
 
-static void abort_slot(struct ConnPoolInternal *restrict ctx)
+static void abort_slot(uint8_t *restrict work)
 {
-    if (ctx->ns->slot >= MAX_CONNS)
+    (void)work;
+    if (ConnPool.slot >= MAX_CONNS)
     {
         return;
     }
-    TcpConn *c = &conn_pool[ctx->ns->slot];
+    TcpConn *c = &conn_pool[ConnPool.slot];
     protocore_pcb *pcb = c->pcb;
     if (pcb == NULL)
     {
         return;
     }
     const ConnState was = PROTO_ATOMIC_LOAD(&c->state);
-    PROTOCORE_OBS_TRANSITION(ctx->ns->slot, was, CONN_FREE, PROTOCORE_CONN_R_ABORT);
+    PROTOCORE_OBS_TRANSITION(ConnPool.slot, was, CONN_FREE, PROTOCORE_CONN_R_ABORT);
 #if PROTOCORE_ENABLE_TLS
     if (c->tls)
     {
-        protocore_tls_conn_free(ctx->ns->slot); // abrupt: free the per-conn context, no close_notify
+        protocore_tls_conn_free(ConnPool.slot); // abrupt: free the per-conn context, no close_notify
     }
 #endif
     TcpLower.pcb = pcb;
-    TcpLower.slot = ctx->ns->slot;
-    TcpLower.detach(TcpLower.internal);
+    TcpLower.slot = ConnPool.slot;
+    TcpLower.detach(protocore_tcp_lower_span());
     protocore_conn_set_state(c->id, CONN_FREE);
     c->pcb = NULL;
     TcpLower.pcb = pcb;
-    TcpLower.slot = ctx->ns->slot;
-    TcpLower.abort(TcpLower.internal);
+    TcpLower.slot = ConnPool.slot;
+    TcpLower.abort(protocore_tcp_lower_span());
 }
 
 // ---------------------------------------------------------------------------
@@ -482,38 +488,39 @@ static void abort_slot(struct ConnPoolInternal *restrict ctx)
 // These run in the stack's context, so they touch the control block directly.
 
 // Tear the connection down and free the slot.
-static void closing_finalize(struct ConnPoolInternal *restrict ctx)
+static void closing_finalize(uint8_t *restrict work)
 {
-    TcpConn *c = &conn_pool[ctx->ns->slot];
+    (void)work;
+    TcpConn *c = &conn_pool[ConnPool.slot];
 #if PROTOCORE_ENABLE_TLS
     if (c->tls)
     {
-        protocore_tls_conn_end(ctx->ns->slot); // close_notify and free the context, in-thread
+        protocore_tls_conn_end(ConnPool.slot); // close_notify and free the context, in-thread
     }
 #endif
     protocore_conn_set_state(c->id, CONN_FREE);
     c->pcb = NULL;
-    if (ctx->ns->pcb != NULL)
+    if (ConnPool.pcb != NULL)
     {
-        protocore_net_arg(ctx->ns->pcb, NULL);
-        if (protocore_net_close(ctx->ns->pcb) != PROTOCORE_NET_OK)
+        protocore_net_arg(ConnPool.pcb, NULL);
+        if (protocore_net_close(ConnPool.pcb) != PROTOCORE_NET_OK)
         {
-            protocore_net_abort(ctx->ns->pcb);
+            protocore_net_abort(ConnPool.pcb);
         }
     }
-    PROTOCORE_OBS_TRANSITION(ctx->ns->slot, CONN_CLOSING, CONN_FREE, PROTOCORE_CONN_R_DRAINED);
+    PROTOCORE_OBS_TRANSITION(ConnPool.slot, CONN_CLOSING, CONN_FREE, PROTOCORE_CONN_R_DRAINED);
 }
 
 // Finalize now if the slot is dwelling and its transmit queue has drained.
-static void closing_check(struct ConnPoolInternal *restrict ctx)
+static void closing_check(uint8_t *restrict work)
 {
-    if (ctx->ns->slot >= MAX_CONNS || PROTO_ATOMIC_LOAD(&conn_pool[ctx->ns->slot].state) != CONN_CLOSING)
+    if (ConnPool.slot >= MAX_CONNS || PROTO_ATOMIC_LOAD(&conn_pool[ConnPool.slot].state) != CONN_CLOSING)
     {
         return;
     }
-    if (ctx->ns->pcb == NULL || ctx->ns->pcb->snd_queuelen == 0)
+    if (ConnPool.pcb == NULL || ConnPool.pcb->snd_queuelen == 0)
     {
-        ctx->closing_finalize(ctx);
+        closing_finalize(work);
     }
 }
 
@@ -521,16 +528,17 @@ static void protocore_conn_closing_check(uint8_t slot, protocore_pcb *pcb)
 {
     ConnPool.slot = slot;
     ConnPool.pcb = pcb;
-    s_conn.closing_check(&s_conn);
+    closing_check(protocore_conn_pool_span());
 }
 
-static void begin_close(struct ConnPoolInternal *restrict ctx)
+static void begin_close(uint8_t *restrict work)
 {
-    if (ctx->ns->slot >= MAX_CONNS)
+    (void)work;
+    if (ConnPool.slot >= MAX_CONNS)
     {
         return;
     }
-    TcpConn *c = &conn_pool[ctx->ns->slot];
+    TcpConn *c = &conn_pool[ConnPool.slot];
     if (PROTO_ATOMIC_LOAD(&c->state) != CONN_ACTIVE) // an error during the write may have freed it
     {
         return;
@@ -538,29 +546,30 @@ static void begin_close(struct ConnPoolInternal *restrict ctx)
     protocore_pcb *pcb = c->pcb;
     c->last_activity_ms = Clock.ms;                // start the dwell clock
     protocore_conn_set_state(c->id, CONN_CLOSING); // release store: the callbacks now see CLOSING
-    PROTOCORE_OBS_TRANSITION(ctx->ns->slot, CONN_ACTIVE, CONN_CLOSING, PROTOCORE_CONN_R_CLOSE_LOCAL);
+    PROTOCORE_OBS_TRANSITION(ConnPool.slot, CONN_ACTIVE, CONN_CLOSING, PROTOCORE_CONN_R_CLOSE_LOCAL);
     // Finalize immediately if the response already drained, else dwell until the sent callback or
     // the sweep reclaims it. The control-block read happens in the stack's context, so it marshals.
     TcpLower.op = PROTOCORE_OP_CLOSE_CHECK;
-    TcpLower.slot = ctx->ns->slot;
+    TcpLower.slot = ConnPool.slot;
     TcpLower.pcb = pcb;
     TcpLower.data = NULL;
     TcpLower.len = 0;
     TcpLower.flush = PROTO_FALSE;
-    (void)TcpLower.marshal(TcpLower.internal);
+    TcpLower.marshal(protocore_tcp_lower_span());
 }
 
 // Forward the event to the queue owned by the connection's listener. The enqueue does not block: it
 // returns immediately if the queue is full. A full queue means the application is not draining fast
 // enough; dropped events are recoverable via the idle sweep.
-static void enqueue(struct ConnPoolInternal *restrict ctx)
+static void enqueue(uint8_t *restrict work)
 {
-    TcpListener.idx = conn_pool[ctx->ns->slot].listener_id;
-    TcpListener.q.evt = ctx->ns->evt;
-    TcpListener.enqueue(TcpListener.internal);
+    (void)work;
+    TcpListener.idx = conn_pool[ConnPool.slot].listener_id;
+    TcpListener.q.evt = ConnPool.evt;
+    TcpListener.enqueue(protocore_tcp_listener_span());
     if (!TcpListener.ok)
     {
-        PROTOCORE_OBS_NOTICE(ctx->ns->slot, PROTO_ATOMIC_LOAD(&conn_pool[ctx->ns->slot].state),
+        PROTOCORE_OBS_NOTICE(ConnPool.slot, PROTO_ATOMIC_LOAD(&conn_pool[ConnPool.slot].state),
                              PROTOCORE_CONN_R_DEFER_DROP);
     }
 }
@@ -569,21 +578,25 @@ static void protocore_conn_enqueue(TcpConn *slot, const TcpEvt *evt)
 {
     ConnPool.slot = slot->id;
     ConnPool.evt = evt;
-    s_conn.enqueue(&s_conn);
+    enqueue(protocore_conn_pool_span());
 }
 
 // ---------------------------------------------------------------------------
 // Pool lifecycle
 // ---------------------------------------------------------------------------
 
-static void init(struct ConnPoolInternal *restrict ctx)
+static void init(uint8_t *restrict work)
 {
-    ctx->conn_timeout_ms = ctx->ns->life.conn_timeout_ms;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    CONN_POOL_CTX(work)->conn_timeout_ms = ConnPool.life.conn_timeout_ms;
     // The template lives in storage and the copy runs before any listener is accepting, so the
     // non-atomic struct assignment over the atomic members races nothing.
     for (int i = 0; i < MAX_CONNS; i++)
     {
-        conn_pool[i] = ctx->store->blank;
+        conn_pool[i] = CONN_POOL_CTX(work)->blank;
         conn_pool[i].id = (uint8_t)i;
         protocore_conn_set_state((uint8_t)i, CONN_FREE);
     }
@@ -591,8 +604,9 @@ static void init(struct ConnPoolInternal *restrict ctx)
 
 // Abort every live connection. Listening control blocks and queues belong to the server half and
 // must be torn down through it first.
-static void stop(struct ConnPoolInternal *restrict ctx)
+static void stop(uint8_t *restrict work)
 {
+    (void)work;
     for (int i = 0; i < MAX_CONNS; i++)
     {
         ConnState st = PROTO_ATOMIC_LOAD(&conn_pool[i].state);
@@ -603,16 +617,15 @@ static void stop(struct ConnPoolInternal *restrict ctx)
             conn_pool[i].pcb = NULL;
             TcpLower.pcb = pcb;
             TcpLower.slot = (uint8_t)i;
-            TcpLower.detach(TcpLower.internal);
+            TcpLower.detach(protocore_tcp_lower_span());
             TcpLower.pcb = pcb;
             TcpLower.slot = (uint8_t)i;
-            TcpLower.abort(TcpLower.internal);
+            TcpLower.abort(protocore_tcp_lower_span());
             PROTOCORE_OBS_TRANSITION((uint8_t)i, st, CONN_FREE, PROTOCORE_CONN_R_ABORT);
         }
         protocore_conn_set_state((uint8_t)i, CONN_FREE);
         conn_pool[i].pcb = NULL;
     }
-    (void)ctx;
 }
 
 // ---------------------------------------------------------------------------
@@ -624,74 +637,87 @@ static void stop(struct ConnPoolInternal *restrict ctx)
 // slot (the owning worker), so nothing locks here. All five delegate to the shared SPSC ring
 // primitive over the slot's rx_buffer - this layer never reimplements the ring math.
 
-static void available(struct ConnPoolInternal *restrict ctx)
+static void available(uint8_t *restrict work)
 {
-    const TcpConn *c = &conn_pool[ctx->ns->slot];
-    ctx->ns->n = protocore_ring_available(&c->rx_head, &c->rx_tail, RX_BUF_SIZE);
+    (void)work;
+    const TcpConn *c = &conn_pool[ConnPool.slot];
+    ConnPool.n = protocore_ring_available(&c->rx_head, &c->rx_tail, RX_BUF_SIZE);
 }
 
-static void read_byte(struct ConnPoolInternal *restrict ctx)
+static void read_byte(uint8_t *restrict work)
 {
-    TcpConn *c = &conn_pool[ctx->ns->slot];
-    ctx->ns->ok = protocore_ring_read_byte(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, &ctx->ns->u8);
+    (void)work;
+    TcpConn *c = &conn_pool[ConnPool.slot];
+    ConnPool.ok = protocore_ring_read_byte(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, &ConnPool.u8);
 }
 
-static void peek(struct ConnPoolInternal *restrict ctx)
+static void peek(uint8_t *restrict work)
 {
-    const TcpConn *c = &conn_pool[ctx->ns->slot];
-    protocore_ring_peek(c->rx_buffer, RX_BUF_SIZE, &c->rx_tail, ctx->ns->io.off, ctx->ns->io.buf, ctx->ns->io.count);
+    (void)work;
+    const TcpConn *c = &conn_pool[ConnPool.slot];
+    protocore_ring_peek(c->rx_buffer, RX_BUF_SIZE, &c->rx_tail, ConnPool.io.off, ConnPool.io.buf, ConnPool.io.count);
 }
 
-static void consume(struct ConnPoolInternal *restrict ctx)
+static void consume(uint8_t *restrict work)
 {
-    protocore_ring_consume(&conn_pool[ctx->ns->slot].rx_tail, RX_BUF_SIZE, ctx->ns->io.count);
+    (void)work;
+    protocore_ring_consume(&conn_pool[ConnPool.slot].rx_tail, RX_BUF_SIZE, ConnPool.io.count);
 }
 
-static void read(struct ConnPoolInternal *restrict ctx)
+static void read(uint8_t *restrict work)
 {
-    TcpConn *c = &conn_pool[ctx->ns->slot];
-    ctx->ns->n =
-        protocore_ring_read(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, ctx->ns->io.buf, ctx->ns->io.cap);
+    (void)work;
+    TcpConn *c = &conn_pool[ConnPool.slot];
+    ConnPool.n =
+        protocore_ring_read(c->rx_buffer, RX_BUF_SIZE, &c->rx_head, &c->rx_tail, ConnPool.io.buf, ConnPool.io.cap);
 }
 
-static void active(struct ConnPoolInternal *restrict ctx)
+static void active(uint8_t *restrict work)
 {
-    const TcpConn *c = &conn_pool[ctx->ns->slot];
-    ctx->ns->ok = PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE && c->pcb != NULL;
+    (void)work;
+    const TcpConn *c = &conn_pool[ConnPool.slot];
+    ConnPool.ok = PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE && c->pcb != NULL;
 }
 
-static void iface(struct ConnPoolInternal *restrict ctx)
+static void iface(uint8_t *restrict work)
 {
-    ctx->ns->if_kind = conn_pool[ctx->ns->slot].iface;
+    (void)work;
+    ConnPool.if_kind = conn_pool[ConnPool.slot].iface;
 }
 
-static void listener_id(struct ConnPoolInternal *restrict ctx)
+static void listener_id(uint8_t *restrict work)
 {
-    ctx->ns->u8 = conn_pool[ctx->ns->slot].listener_id;
+    (void)work;
+    ConnPool.u8 = conn_pool[ConnPool.slot].listener_id;
 }
 
-static void tls(struct ConnPoolInternal *restrict ctx)
+static void tls(uint8_t *restrict work)
 {
-    ctx->ns->ok = conn_pool[ctx->ns->slot].tls != 0;
+    (void)work;
+    ConnPool.ok = conn_pool[ConnPool.slot].tls != 0;
 }
 
-static void owner(struct ConnPoolInternal *restrict ctx)
+static void owner(uint8_t *restrict work)
 {
-    ctx->ns->u8 = conn_pool[ctx->ns->slot].owner;
+    (void)work;
+    ConnPool.u8 = conn_pool[ConnPool.slot].owner;
 }
 
-static void proto_of(struct ConnPoolInternal *restrict ctx)
+static void proto_of(uint8_t *restrict work)
 {
-    ctx->ns->proto = conn_pool[ctx->ns->slot].proto;
+    (void)work;
+    ConnPool.proto = conn_pool[ConnPool.slot].proto;
 }
 
-static void pcb_of(struct ConnPoolInternal *restrict ctx)
+static void pcb_of(uint8_t *restrict work)
 {
-    ctx->ns->pcb = conn_pool[ctx->ns->slot].pcb;
+    (void)work;
+    ConnPool.pcb = conn_pool[ConnPool.slot].pcb;
 }
 
-static void active_count(struct ConnPoolInternal *restrict ctx)
+static void active_count(uint8_t *restrict work)
 {
+    (void)work;
     uint8_t n = 0;
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
@@ -700,68 +726,75 @@ static void active_count(struct ConnPoolInternal *restrict ctx)
             n++;
         }
     }
-    ctx->ns->u8 = n;
+    ConnPool.u8 = n;
 }
 
-static void remote_ip(struct ConnPoolInternal *restrict ctx)
+static void remote_ip(uint8_t *restrict work)
 {
-    ctx->ns->u32 = 0;
-    if (ctx->ns->slot >= MAX_CONNS)
+    (void)work;
+    ConnPool.u32 = 0;
+    if (ConnPool.slot >= MAX_CONNS)
     {
         return;
     }
-    TcpConn *conn = &conn_pool[ctx->ns->slot];
+    TcpConn *conn = &conn_pool[ConnPool.slot];
     if (PROTO_ATOMIC_LOAD(&conn->state) == CONN_ACTIVE && conn->pcb != NULL)
     {
-        ctx->ns->u32 = protocore_net_ip4_u32(protocore_net_ip_as_v4(&conn->pcb->remote_ip));
+        ConnPool.u32 = protocore_net_ip4_u32(protocore_net_ip_as_v4(&conn->pcb->remote_ip));
     }
 }
 
-static void remote_addr(struct ConnPoolInternal *restrict ctx)
+static void remote_addr(uint8_t *restrict work)
 {
-    if (ctx->ns->out != NULL)
+    (void)work;
+    if (ConnPool.out != NULL)
     {
-        ctx->ns->out->family = PROTOCORE_IP_NONE;
+        ConnPool.out->family = PROTOCORE_IP_NONE;
     }
-    if (ctx->ns->out == NULL || ctx->ns->slot >= MAX_CONNS)
+    if (ConnPool.out == NULL || ConnPool.slot >= MAX_CONNS)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        ConnPool.ok = PROTO_FALSE;
         return;
     }
-    TcpConn *conn = &conn_pool[ctx->ns->slot];
+    TcpConn *conn = &conn_pool[ConnPool.slot];
     if (PROTO_ATOMIC_LOAD(&conn->state) != CONN_ACTIVE || conn->pcb == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        ConnPool.ok = PROTO_FALSE;
         return;
     }
-    protocore_net_addr_to_ip(&conn->pcb->remote_ip, ctx->ns->out);
-    ctx->ns->ok = PROTO_TRUE;
+    protocore_net_addr_to_ip(&conn->pcb->remote_ip, ConnPool.out);
+    ConnPool.ok = PROTO_TRUE;
 }
 
 // Restart a slot's idle timer while a response body is still being paged out. Such a slot is
 // streaming, or briefly blocked on a full send window, NOT idle - so the sweep must not reap it
 // mid-transfer and truncate a body larger than one window. Dead-peer teardown for an in-flight
 // response stays with the stack's retransmission timers, which abort through the error callback.
-static void touch_active(struct ConnPoolInternal *restrict ctx)
+static void touch_active(uint8_t *restrict work)
 {
-    if (ctx->ns->slot >= MAX_CONNS)
+    (void)work;
+    if (ConnPool.slot >= MAX_CONNS)
     {
         return;
     }
-    TcpConn *c = &conn_pool[ctx->ns->slot];
+    TcpConn *c = &conn_pool[ConnPool.slot];
     if (PROTO_ATOMIC_LOAD(&c->state) == CONN_ACTIVE)
     {
         c->last_activity_ms = Clock.ms;
     }
 }
 
-static void check_timeouts(struct ConnPoolInternal *restrict ctx)
+static void check_timeouts(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     uint32_t now = Clock.ms;
     for (int i = 0; i < MAX_CONNS; i++)
     {
         TcpConn *slot = &conn_pool[i];
-        if (slot->owner != ctx->ns->life.worker_id) // each worker reaps only its own slots
+        if (slot->owner != ConnPool.life.worker_id) // each worker reaps only its own slots
         {
             continue;
         }
@@ -790,10 +823,10 @@ static void check_timeouts(struct ConnPoolInternal *restrict ctx)
 #endif
                 TcpLower.pcb = cpcb;
                 TcpLower.slot = slot->id;
-                TcpLower.detach(TcpLower.internal);
+                TcpLower.detach(protocore_tcp_lower_span());
                 TcpLower.pcb = cpcb;
                 TcpLower.slot = slot->id;
-                TcpLower.abort(TcpLower.internal);
+                TcpLower.abort(protocore_tcp_lower_span());
             }
             protocore_conn_set_state(slot->id, CONN_FREE);
             slot->pcb = NULL;
@@ -807,7 +840,7 @@ static void check_timeouts(struct ConnPoolInternal *restrict ctx)
         {
             continue;
         }
-        if ((now - slot->last_activity_ms) < ctx->conn_timeout_ms)
+        if ((now - slot->last_activity_ms) < CONN_POOL_CTX(work)->conn_timeout_ms)
         {
             continue;
         }
@@ -821,10 +854,10 @@ static void check_timeouts(struct ConnPoolInternal *restrict ctx)
         {
             TcpLower.pcb = pcb;
             TcpLower.slot = slot->id;
-            TcpLower.detach(TcpLower.internal);
+            TcpLower.detach(protocore_tcp_lower_span());
             TcpLower.pcb = pcb;
             TcpLower.slot = slot->id;
-            TcpLower.abort(TcpLower.internal);
+            TcpLower.abort(protocore_tcp_lower_span());
         }
         PROTOCORE_OBS_TRANSITION((uint8_t)i, CONN_ACTIVE, CONN_FREE, PROTOCORE_CONN_R_TIMEOUT);
         TcpEvt evt = {EVT_ERROR, (uint8_t)i, 0};
@@ -959,7 +992,7 @@ protocore_net_err lowlevel_sent_cb(void *arg, protocore_pcb *tpcb, proto_u16 len
             // The send window just freed: wake the owning worker so a paced response resumes now
             // rather than on the next idle sweep.
             Workers.worker_id = slot->owner;
-            Workers.wake(Workers.internal);
+            Workers.wake(protocore_worker_span());
         }
     }
     return PROTOCORE_NET_OK;
@@ -995,51 +1028,6 @@ void lowlevel_err_cb(void *arg, protocore_net_err err)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-static struct ConnPoolInternal s_conn = {.conn_timeout_ms = CONN_TIMEOUT_MS,
-                                         .store = &s_store,
-                                         .ns = &ConnPool,
-                                         .set_state = set_state,
-                                         .alloc_free = alloc_free,
-                                         .timeout_ms = timeout_ms,
-                                         .send = send,
-                                         .send_flush = send_flush,
-                                         .sndbuf = sndbuf,
-                                         .flush = flush,
-                                         .ack_consumed = ack_consumed,
-                                         .raw_send = raw_send,
-                                         .close = close_slot,
-                                         .abort_slot = abort_slot,
-                                         .closing_finalize = closing_finalize,
-                                         .closing_check = closing_check,
-                                         .begin_close = begin_close,
-                                         .enqueue = enqueue,
-                                         .init = init,
-                                         .stop = stop,
-                                         .active_count = active_count,
-                                         .remote_ip = remote_ip,
-                                         .remote_addr = remote_addr,
-                                         .touch_active = touch_active,
-                                         .check_timeouts = check_timeouts,
-#if PROTOCORE_ENABLE_OBSERVABILITY
-                                         .on_event = on_event,
-                                         .counters_get = counters_get,
-                                         .counters_reset = counters_reset,
-                                         .obs_bump = obs_bump,
-                                         .obs_transition = obs_transition,
-                                         .obs_notice = obs_notice,
-#endif
-                                         .available = available,
-                                         .read_byte = read_byte,
-                                         .peek = peek,
-                                         .consume = consume,
-                                         .read = read,
-                                         .active = active,
-                                         .iface = iface,
-                                         .listener_id = listener_id,
-                                         .tls = tls,
-                                         .owner = owner,
-                                         .proto_of = proto_of,
-                                         .pcb_of = pcb_of};
 
 // The same calls the pool reaches internally, published so a caller outside this file can invoke
 // them. Designated, so a member's position in the struct does not decide what it binds to.
@@ -1084,5 +1072,4 @@ ConnPoolNs ConnPool = {.set_state = set_state,
                        .tls = tls,
                        .owner = owner,
                        .proto_of = proto_of,
-                       .pcb_of = pcb_of,
-                       .internal = &s_conn};
+                       .pcb_of = pcb_of};

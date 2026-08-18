@@ -11,6 +11,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
+
 #if PROTOCORE_ENABLE_PROVISIONING
 
 #include "mmgr/protomem.h"
@@ -112,13 +114,13 @@ static void provisioning_service_form_field(uint8_t *restrict work)
         else if (c == '%')
         {
             Hex.args.ch = q[1];
-            Hex.val(Hex.internal);
+            Hex.val(hex_work);
             int h = Hex.i8;
             int l = -1;
             if (h >= 0)
             {
                 Hex.args.ch = q[2];
-                Hex.val(Hex.internal);
+                Hex.val(hex_work);
                 l = Hex.i8;
             }
             if (h >= 0 && l >= 0)
@@ -239,7 +241,7 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     UdpListener.peer_args.peer = peer;
     UdpListener.send_args.data = resp;
     UdpListener.send_args.len = n;
-    UdpListener.reply(UdpListener.internal);
+    UdpListener.reply(protocore_udp_listener_span());
 }
 
 static void provisioning_service_load(uint8_t *restrict work)
@@ -326,8 +328,8 @@ static void provisioning_service_begin(uint8_t *restrict work)
 
     Physical.wifi.ssid = ap_ssid;
     Physical.wifi.password = NULL;
-    Physical.wifi_ap_init(Physical.internal); // AP mode is implied by which bring-up you call
-    Physical.wifi_ap_ip(Physical.internal);
+    Physical.wifi_ap_init(protocore_physical_span()); // AP mode is implied by which bring-up you call
+    Physical.wifi_ap_ip(protocore_physical_span());
     uint32_t ip = Physical.u32; // network byte order
     PROVISIONING_SERVICE_CTX(work)->ap_ip[0] = (uint8_t)(ip & 0xFF);
     PROVISIONING_SERVICE_CTX(work)->ap_ip[1] = (uint8_t)((ip >> 8) & 0xFF);
@@ -339,7 +341,7 @@ static void provisioning_service_begin(uint8_t *restrict work)
     UdpListener.bind.handler = prov_dns_recv;
     UdpListener.bind.handler_ctx = NULL;
     UdpListener.bind.group_ip = NULL;
-    UdpListener.listen(UdpListener.internal);
+    UdpListener.listen(protocore_udp_listener_span());
 
     on_http("/save", HTTP_POST, prov_save_handler);
     on_http("/*", HTTP_GET, prov_form_handler); // any other path -> the form

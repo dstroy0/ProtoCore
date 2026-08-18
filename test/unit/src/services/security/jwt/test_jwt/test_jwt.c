@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t jwt_work[16]; // the borrow an entry takes; Jwt never reads it
+
 void setUp(void)
 {
 }
@@ -44,7 +46,7 @@ static proto_bool verify(const char *jws, const uint8_t *key, size_t key_len)
     Jwt.token.jws_len = strlen(jws);
     Jwt.key.secret = key;
     Jwt.key.secret_len = key_len;
-    Jwt.verify_mac(Jwt.internal);
+    Jwt.verify_mac(jwt_work);
     return Jwt.ok;
 }
 
@@ -136,7 +138,7 @@ void test_malformed_serializations_are_refused(void)
     TEST_ASSERT_FALSE(verify(RFC7515_A1, RFC7515_A1_KEY, 0));
     Jwt.token.jws = NULL;
     Jwt.token.jws_len = 0;
-    Jwt.verify_mac(Jwt.internal);
+    Jwt.verify_mac(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
 }
 
@@ -153,7 +155,7 @@ void test_bearer_credentials(void)
         Jwt.token.credentials = field;
         Jwt.key.secret = RFC7515_A1_KEY;
         Jwt.key.secret_len = sizeof(RFC7515_A1_KEY);
-        Jwt.verify_bearer(Jwt.internal);
+        Jwt.verify_bearer(jwt_work);
         TEST_ASSERT_TRUE_MESSAGE(Jwt.ok, SCHEMES[i]);
         // The token that was found is left on the handle.
         TEST_ASSERT_EQUAL_STRING(RFC7515_A1, Jwt.token.jws);
@@ -165,12 +167,12 @@ void test_bearer_credentials(void)
         Jwt.token.credentials = NOT_BEARER[i];
         Jwt.key.secret = RFC7515_A1_KEY;
         Jwt.key.secret_len = sizeof(RFC7515_A1_KEY);
-        Jwt.verify_bearer(Jwt.internal);
+        Jwt.verify_bearer(jwt_work);
         TEST_ASSERT_FALSE_MESSAGE(Jwt.ok, NOT_BEARER[i]);
     }
 
     Jwt.token.credentials = NULL;
-    Jwt.verify_bearer(Jwt.internal);
+    Jwt.verify_bearer(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
 }
 
@@ -182,7 +184,7 @@ void test_rfc7515_a1_claims(void)
     Jwt.token.jws_len = strlen(RFC7515_A1);
 
     Jwt.claim.name = "exp";
-    Jwt.claim_int(Jwt.internal);
+    Jwt.claim_int(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
     TEST_ASSERT_EQUAL_INT32(1300819380L, Jwt.num);
 
@@ -190,18 +192,18 @@ void test_rfc7515_a1_claims(void)
     Jwt.claim.name = "iss";
     Jwt.claim.out = out;
     Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(Jwt.internal);
+    Jwt.claim_str(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
     TEST_ASSERT_EQUAL_STRING("joe", out);
 
     // An absent claim is reported, not invented.
     Jwt.claim.name = "sub";
-    Jwt.claim_int(Jwt.internal);
+    Jwt.claim_int(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
     Jwt.claim.name = "sub";
     Jwt.claim.out = out;
     Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(Jwt.internal);
+    Jwt.claim_str(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
     TEST_ASSERT_EQUAL_STRING("", out);
 
@@ -209,7 +211,7 @@ void test_rfc7515_a1_claims(void)
     Jwt.claim.name = "exp";
     Jwt.claim.out = out;
     Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(Jwt.internal);
+    Jwt.claim_str(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
 }
 
@@ -228,7 +230,7 @@ static proto_bool time_valid(long now, long leeway)
     Jwt.token.jws_len = strlen(TIMED);
     Jwt.time.now = now;
     Jwt.time.leeway_s = leeway;
-    Jwt.time_claims_valid(Jwt.internal);
+    Jwt.time_claims_valid(jwt_work);
     return Jwt.ok;
 }
 
@@ -254,10 +256,10 @@ void test_time_claims_window(void)
     Jwt.token.jws_len = strlen(RFC7515_A1);
     Jwt.time.now = 1300819379L;
     Jwt.time.leeway_s = 0;
-    Jwt.time_claims_valid(Jwt.internal);
+    Jwt.time_claims_valid(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
     Jwt.time.now = 1300819381L;
-    Jwt.time_claims_valid(Jwt.internal);
+    Jwt.time_claims_valid(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
 }
 
@@ -271,11 +273,11 @@ void test_verify_mac_at_needs_both(void)
     Jwt.time.leeway_s = 0;
 
     Jwt.time.now = 1300819379L; // one second before exp
-    Jwt.verify_mac_at(Jwt.internal);
+    Jwt.verify_mac_at(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
 
     Jwt.time.now = 1300819381L; // one second after exp: the MAC still passes, the window does not
-    Jwt.verify_mac_at(Jwt.internal);
+    Jwt.verify_mac_at(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
 
     char field[256];
@@ -283,10 +285,10 @@ void test_verify_mac_at_needs_both(void)
     strcat(field, RFC7515_A1);
     Jwt.token.credentials = field;
     Jwt.time.now = 1300819379L;
-    Jwt.verify_bearer_at(Jwt.internal);
+    Jwt.verify_bearer_at(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
     Jwt.time.now = 1300819381L;
-    Jwt.verify_bearer_at(Jwt.internal);
+    Jwt.verify_bearer_at(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
 }
 
@@ -300,12 +302,12 @@ void test_claim_str_escapes_and_bounds(void)
     Jwt.claim.name = "role";
     Jwt.claim.out = out;
     Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(Jwt.internal);
+    Jwt.claim_str(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
     TEST_ASSERT_EQUAL_STRING("a\"b", out);
 
     Jwt.claim.name = "sub";
-    Jwt.claim_str(Jwt.internal);
+    Jwt.claim_str(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
     TEST_ASSERT_EQUAL_STRING("1234567890", out);
 
@@ -314,18 +316,18 @@ void test_claim_str_escapes_and_bounds(void)
     Jwt.claim.name = "sub";
     Jwt.claim.out = small;
     Jwt.claim.out_cap = sizeof(small);
-    Jwt.claim_str(Jwt.internal);
+    Jwt.claim_str(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
     TEST_ASSERT_EQUAL_STRING("", small);
 
     Jwt.claim.out = NULL;
     Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(Jwt.internal);
+    Jwt.claim_str(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
 
     // iat is read like any other integer claim (RFC 7519 sec 4.1.6).
     Jwt.claim.name = "iat";
-    Jwt.claim_int(Jwt.internal);
+    Jwt.claim_int(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
     TEST_ASSERT_EQUAL_INT32(1000000001L, Jwt.num);
 }
@@ -357,17 +359,17 @@ void test_scope_matches_whole_tokens(void)
     {
         Jwt.scope.claim = CASES[i].claim;
         Jwt.scope.required = CASES[i].required;
-        Jwt.scope_allows(Jwt.internal);
+        Jwt.scope_allows(jwt_work);
         TEST_ASSERT_EQUAL_INT_MESSAGE(CASES[i].want, Jwt.ok, CASES[i].required);
     }
 
     Jwt.scope.claim = NULL;
     Jwt.scope.required = "read";
-    Jwt.scope_allows(Jwt.internal);
+    Jwt.scope_allows(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
     Jwt.scope.claim = "read";
     Jwt.scope.required = NULL;
-    Jwt.scope_allows(Jwt.internal);
+    Jwt.scope_allows(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
 }
 
@@ -380,16 +382,16 @@ void test_scope_claim_then_check(void)
     Jwt.claim.name = "scope";
     Jwt.claim.out = scope;
     Jwt.claim.out_cap = sizeof(scope);
-    Jwt.claim_str(Jwt.internal);
+    Jwt.claim_str(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
     TEST_ASSERT_EQUAL_STRING("read write admin", scope);
 
     Jwt.scope.claim = scope;
     Jwt.scope.required = "admin";
-    Jwt.scope_allows(Jwt.internal);
+    Jwt.scope_allows(jwt_work);
     TEST_ASSERT_TRUE(Jwt.ok);
 
     Jwt.scope.required = "delete";
-    Jwt.scope_allows(Jwt.internal);
+    Jwt.scope_allows(jwt_work);
     TEST_ASSERT_FALSE(Jwt.ok);
 }

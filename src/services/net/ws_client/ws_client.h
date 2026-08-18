@@ -112,9 +112,6 @@ typedef struct
     WsClientMessageCb on_message; ///< where a reassembled Text or Binary message is delivered
 } WsMessageArgs;
 
-/** @brief The connection's own state and the calls that reach it, described only in ws_client.c. */
-struct WsClientInternal;
-
 /**
  * @brief The client end of the WebSocket Protocol (RFC 6455).
  *
@@ -157,7 +154,6 @@ struct WsClientInternal;
  * @var WsClientNs::connected  true while the WebSocket connection is established
  * @var WsClientNs::close
  * Send a Close frame and then Close the WebSocket Connection (RFC 6455 sec 5.5.1, sec 7.1.1).
- * @var WsClientNs::internal   the connection's state and the calls that reach it
  */
 typedef struct
 {
@@ -169,24 +165,35 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*accept_for_key)(struct WsClientInternal *ctx);
-    void (*build_opening_handshake)(struct WsClientInternal *ctx);
-    void (*check_server_handshake)(struct WsClientInternal *ctx);
-    void (*build_frame)(struct WsClientInternal *ctx);
-    void (*parse_frame)(struct WsClientInternal *ctx);
-    void (*on_message)(struct WsClientInternal *ctx);
-    void (*connect)(struct WsClientInternal *ctx);
-    void (*send_text)(struct WsClientInternal *ctx);
-    void (*send_binary)(struct WsClientInternal *ctx);
-    void (*loop)(struct WsClientInternal *ctx);
-    void (*connected)(struct WsClientInternal *ctx);
-    void (*close)(struct WsClientInternal *ctx);
-
-    struct WsClientInternal *internal;
+    void (*const accept_for_key)(uint8_t *restrict work);
+    void (*const build_opening_handshake)(uint8_t *restrict work);
+    void (*const check_server_handshake)(uint8_t *restrict work);
+    void (*const build_frame)(uint8_t *restrict work);
+    void (*const parse_frame)(uint8_t *restrict work);
+    void (*const on_message)(uint8_t *restrict work);
+    void (*const connect)(uint8_t *restrict work);
+    void (*const send_text)(uint8_t *restrict work);
+    void (*const send_binary)(uint8_t *restrict work);
+    void (*const loop)(uint8_t *restrict work);
+    void (*const connected)(uint8_t *restrict work);
+    void (*const close)(uint8_t *restrict work);
 } WsClientNs;
 
 /** @brief The one symbol this module exports. */
 extern WsClientNs WsClient;
+
+/**
+ * @brief The PROTOCORE_WS_CLIENT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+#if PROTOCORE_HAS_NET_STACK
+uint8_t *protocore_ws_client_span(void);
+#endif // PROTOCORE_HAS_NET_STACK
 
 PROTOCORE_END_DECLS
 

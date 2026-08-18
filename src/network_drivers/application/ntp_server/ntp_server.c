@@ -98,7 +98,7 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
         UdpListener.peer_args.peer = peer;
         UdpListener.send_args.data = resp;
         UdpListener.send_args.len = n;
-        UdpListener.reply(UdpListener.internal);
+        UdpListener.reply(protocore_udp_listener_span());
     }
 }
 
@@ -110,7 +110,7 @@ proto_bool protocore_ntp_server_begin(uint8_t stratum, uint32_t refid)
     UdpListener.bind.handler = protocore_ntp_server_udp_handler;
     UdpListener.bind.handler_ctx = NULL;
     UdpListener.bind.group_ip = NULL;
-    UdpListener.listen(UdpListener.internal);
+    UdpListener.listen(protocore_udp_listener_span());
     return UdpListener.ok;
 }
 

@@ -87,9 +87,6 @@ typedef struct
     size_t cap;   ///< how many octets that holds
 } SnmpNotifyBufArgs;
 
-/** @brief The originator's own state and the calls that reach it, described only in snmp_notify.c. */
-struct SnmpNotifyInternal;
-
 /**
  * @brief The notification originator (RFC 3416 sec 4.2.6, sec 4.2.7).
  *
@@ -105,7 +102,6 @@ struct SnmpNotifyInternal;
  * @var SnmpNotifyNs::build_v2c     build a complete SNMPv2c notification message into @c buf.out
  * @var SnmpNotifyNs::trap_v2c      build and send an SNMPv2-Trap-PDU, sysUpTime.0 from the clock
  * @var SnmpNotifyNs::inform_v2c    build and send an InformRequest-PDU under the caller's request-id
- * @var SnmpNotifyNs::internal      the request-id counter and the calls that reach it
  */
 typedef struct
 {
@@ -116,16 +112,25 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*build_pdu)(struct SnmpNotifyInternal *ctx);
-    void (*build_v2c)(struct SnmpNotifyInternal *ctx);
-    void (*trap_v2c)(struct SnmpNotifyInternal *ctx);
-    void (*inform_v2c)(struct SnmpNotifyInternal *ctx);
-
-    struct SnmpNotifyInternal *internal;
+    void (*const build_pdu)(uint8_t *restrict work);
+    void (*const build_v2c)(uint8_t *restrict work);
+    void (*const trap_v2c)(uint8_t *restrict work);
+    void (*const inform_v2c)(uint8_t *restrict work);
 } SnmpNotifyNs;
 
 /** @brief The one symbol this module exports. */
 extern SnmpNotifyNs SnmpNotify;
+
+/**
+ * @brief The PROTOCORE_SNMP_NOTIFY_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_snmp_notify_span(void);
 
 PROTOCORE_END_DECLS
 

@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
 #if PROTOCORE_ENABLE_DF1
 
 #include "services/fieldbus/df1/df1.h"
@@ -42,17 +44,17 @@ static void df1_bcc(uint8_t *restrict work)
 static uint16_t df1_crc_data_plus_etx(const uint8_t *data, size_t len, uint8_t etx)
 {
     Crc.args.params = &PROTOCORE_CRC16_ARC;
-    Crc.begin(Crc.internal);
+    Crc.begin(crc_work);
     Crc.args.crc = Crc.value;
     Crc.args.data = data;
     Crc.args.len = len;
-    Crc.update(Crc.internal);
+    Crc.update(crc_work);
     Crc.args.crc = Crc.value;
     Crc.args.data = &etx;
     Crc.args.len = 1;
-    Crc.update(Crc.internal);
+    Crc.update(crc_work);
     Crc.args.crc = Crc.value;
-    Crc.final(Crc.internal);
+    Crc.final(crc_work);
     return (uint16_t)Crc.value;
 }
 
@@ -65,7 +67,7 @@ static void df1_crc(uint8_t *restrict work)
     Crc.args.params = &PROTOCORE_CRC16_ARC;
     Crc.args.data = data;
     Crc.args.len = len;
-    Crc.compute(Crc.internal);
+    Crc.compute(crc_work);
     Df1.u16 = (uint16_t)Crc.value;
 }
 

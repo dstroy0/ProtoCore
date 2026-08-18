@@ -26,11 +26,19 @@
 #include <stdlib.h> // exit: the host arm runs one pass, so the timing loop has to end
 #endif
 
-/// The rig's pinned CPU clock, in MHz. A compile-time fact, not a runtime read: protocore_cycles_to_ns()
-/// takes the frequency as a parameter, and the bench runs the part at one clock. Override with
-/// -DDBENCH_CPU_MHZ=<n> to bench at another.
+/// The clock the cycle counts are taken against, in MHz.
+///
+/// On silicon that is the rig's pinned CPU clock, a compile-time fact. On host there is no pinned
+/// clock and nothing throttles the CPU to one, so it is the host's own measured rate and the bench
+/// runs all the way: counts are real host cycles and the times derived from them are real. Pinning
+/// it there instead reported a host figure as though the part ran at some other clock.
+/// Override with -DDBENCH_CPU_MHZ=<n> to report against a fixed rate on either arm.
 #ifndef DBENCH_CPU_MHZ
+#if PROTOCORE_VENDOR_SILICON
 #define DBENCH_CPU_MHZ 240u
+#else
+#define DBENCH_CPU_MHZ protocore_platform_cycle_mhz()
+#endif
 #endif
 
 /// One cycle-counter read. Clock.cycles writes the count to Clock.cyc.
@@ -92,9 +100,16 @@
 /// runtime initializer is as legal here as it was in the sketch.
 void dbench_run(void);
 
+/// What the counter is on this arm, for the banner: the part's cycle counter, or the host's.
+#if PROTOCORE_VENDOR_SILICON
+#define DBENCH_COUNTER "CCOUNT"
+#else
+#define DBENCH_COUNTER "host cycles"
+#endif
+
 /// Start-of-cycle line, naming the feature and the clock the cycle counts are taken against.
 #define DBENCH_BANNER(label)                                                                                           \
-    printf("DB ==== " label " device microbench start (CCOUNT @ %u MHz) ====\n", (unsigned)DBENCH_CPU_MHZ)
+    printf("DB ==== " label " microbench start (" DBENCH_COUNTER " @ %u MHz) ====\n", (unsigned)DBENCH_CPU_MHZ)
 
 /// End-of-cycle marker. On silicon it pauses and the caller's loop starts the next pass; on host it
 /// ends the process, so the one pass a runner asked for is the one it gets.

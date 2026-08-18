@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t http_date_work[16]; // the borrow an entry takes; HttpDate never reads it
+
 void setUp(void)
 {
 }
@@ -32,7 +34,7 @@ static const char *fmt(time_t epoch)
     HttpDate.args.epoch = epoch;
     HttpDate.args.out = g_out;
     HttpDate.args.out_cap = (uint32_t)sizeof(g_out);
-    HttpDate.format(HttpDate.internal);
+    HttpDate.format(http_date_work);
     return g_out;
 }
 
@@ -118,7 +120,7 @@ void test_short_buffer_yields_empty_not_partial(void)
     HttpDate.args.epoch = (time_t)784111777;
     HttpDate.args.out = small;
     HttpDate.args.out_cap = (uint32_t)sizeof(small);
-    HttpDate.format(HttpDate.internal);
+    HttpDate.format(http_date_work);
     TEST_ASSERT_EQUAL_UINT(0u, HttpDate.n);
     TEST_ASSERT_EQUAL_CHAR('\0', small[0]);
 }
@@ -129,7 +131,7 @@ void test_null_destination_is_refused(void)
     HttpDate.args.epoch = (time_t)784111777;
     HttpDate.args.out = NULL;
     HttpDate.args.out_cap = PROTOCORE_HTTP_DATE_MAX;
-    HttpDate.format(HttpDate.internal);
+    HttpDate.format(http_date_work);
     TEST_ASSERT_EQUAL_UINT(0u, HttpDate.n);
 }
 
@@ -141,7 +143,7 @@ void test_zero_capacity_is_refused(void)
     HttpDate.args.epoch = (time_t)784111777;
     HttpDate.args.out = one;
     HttpDate.args.out_cap = 0;
-    HttpDate.format(HttpDate.internal);
+    HttpDate.format(http_date_work);
     TEST_ASSERT_EQUAL_UINT(0u, HttpDate.n);
     TEST_ASSERT_EQUAL_CHAR('x', one[0]); // untouched, not terminated into
 }

@@ -138,9 +138,6 @@ typedef struct
     proto_bool v2c;         ///< report per-binding exceptions rather than v1 error-status
 } SnmpPduArgs;
 
-/** @brief The MIB's own state and the calls that reach it, described only in snmp_agent.c. */
-struct SnmpAgentInternal;
-
 /**
  * @brief The command responder: the MIB, the PDU processing, and the message framing.
  *
@@ -164,7 +161,6 @@ struct SnmpAgentInternal;
  * @var SnmpAgentNs::dispatch_pdu   run one request PDU against the MIB and write a Response-PDU
  * @var SnmpAgentNs::process        decode one message, dispatch it, and frame the response message
  * @var SnmpAgentNs::listen         answer requests arriving on @c port
- * @var SnmpAgentNs::internal       the MIB and the calls that reach it
  */
 typedef struct
 {
@@ -179,21 +175,30 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*init)(struct SnmpAgentInternal *ctx);
-    void (*set_rw_community)(struct SnmpAgentInternal *ctx);
-    void (*set_system)(struct SnmpAgentInternal *ctx);
-    void (*add_string)(struct SnmpAgentInternal *ctx);
-    void (*add_integer)(struct SnmpAgentInternal *ctx);
-    void (*add_dynamic)(struct SnmpAgentInternal *ctx);
-    void (*dispatch_pdu)(struct SnmpAgentInternal *ctx);
-    void (*process)(struct SnmpAgentInternal *ctx);
-    void (*listen)(struct SnmpAgentInternal *ctx);
-
-    struct SnmpAgentInternal *internal;
+    void (*const init)(uint8_t *restrict work);
+    void (*const set_rw_community)(uint8_t *restrict work);
+    void (*const set_system)(uint8_t *restrict work);
+    void (*const add_string)(uint8_t *restrict work);
+    void (*const add_integer)(uint8_t *restrict work);
+    void (*const add_dynamic)(uint8_t *restrict work);
+    void (*const dispatch_pdu)(uint8_t *restrict work);
+    void (*const process)(uint8_t *restrict work);
+    void (*const listen)(uint8_t *restrict work);
 } SnmpAgentNs;
 
 /** @brief The one symbol this module exports. */
 extern SnmpAgentNs SnmpAgent;
+
+/**
+ * @brief The PROTOCORE_SNMP_AGENT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_snmp_agent_span(void);
 
 PROTOCORE_END_DECLS
 

@@ -46,79 +46,72 @@ typedef struct
 } MntPointCtx;
 static MntPointCtx s_point;
 
-/**
- * @brief The mount table and the calls that reach it - what MntNs points at.
- *
- * @var MntInternal::ns  the handle a caller sets a call's members on
- */
-struct MntInternal
+static void mnt_point_add(uint8_t *restrict work)
 {
-    MntNs *ns;
-};
-
-static struct MntInternal s_mnt_ctx = {.ns = &Mnt};
-
-static void mnt_point_add(struct MntInternal *restrict ctx)
-{
-    const protocore_mnt_backend *backend = ctx->ns->args.backend;
-    const char *root = ctx->ns->args.root;
+    (void)work;
+    const protocore_mnt_backend *backend = Mnt.args.backend;
+    const char *root = Mnt.args.root;
 
     if (s_point.count >= MAX_ROUTES)
     {
-        ctx->ns->u8 = PROTOCORE_MNT_NONE;
+        Mnt.u8 = PROTOCORE_MNT_NONE;
         return;
     }
     MntPoint *m = &s_point.point[s_point.count];
     m->backend = backend;
     m->root = root;
-    ctx->ns->u8 = s_point.count++;
+    Mnt.u8 = s_point.count++;
 }
 
-static void mnt_point_of(struct MntInternal *restrict ctx)
+static void mnt_point_of(uint8_t *restrict work)
 {
-    const uint8_t id = ctx->ns->args.id;
+    (void)work;
+    const uint8_t id = Mnt.args.id;
 
     if (id >= s_point.count)
     {
-        ctx->ns->backend = NULL;
+        Mnt.backend = NULL;
         return;
     }
-    ctx->ns->backend = s_point.point[id].backend;
+    Mnt.backend = s_point.point[id].backend;
 }
 
-static void mnt_root_of(struct MntInternal *restrict ctx)
+static void mnt_root_of(uint8_t *restrict work)
 {
-    const uint8_t id = ctx->ns->args.id;
+    (void)work;
+    const uint8_t id = Mnt.args.id;
 
     // Empty rather than null, because every caller wants the subtree as a path piece to compare or
     // append: handing back null would put the same null test at each of them.
     if (id >= s_point.count || s_point.point[id].root == NULL)
     {
-        ctx->ns->text = "";
+        Mnt.text = "";
         return;
     }
-    ctx->ns->text = s_point.point[id].root;
+    Mnt.text = s_point.point[id].root;
 }
 
-static void mnt_reset(struct MntInternal *restrict ctx)
+static void mnt_reset(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
 
     // The count is the table: a row above it is unreachable, and add() writes both fields before the
     // count reaches it, so there is nothing to clear here.
     s_point.count = 0;
 }
 
-static void mnt_mount(struct MntInternal *restrict ctx)
+static void mnt_mount(uint8_t *restrict work)
 {
-    const protocore_mnt_backend *backend = ctx->ns->args.backend;
+    (void)work;
+    const protocore_mnt_backend *backend = Mnt.args.backend;
 
     s_hal.backend = backend;
 }
 
-static void mnt_active(struct MntInternal *restrict ctx)
+static void mnt_active(uint8_t *restrict work)
 {
-    ctx->ns->backend = s_hal.backend;
+    (void)work;
+    Mnt.backend = s_hal.backend;
 }
 
 // --- the RAM disk: the part with a footprint ------------------------------------------------------
@@ -509,14 +502,15 @@ static const protocore_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_w
                                                     ram_size,  ram_exists, ram_remove,  ram_rename,  ram_mkdir,
                                                     ram_rmdir, ram_stat,   ram_opendir, ram_readdir, NULL};
 
-static void mnt_ram(struct MntInternal *restrict ctx)
+static void mnt_ram(uint8_t *restrict work)
 {
-    ctx->ns->backend = &s_ram_backend;
+    (void)work;
+    Mnt.backend = &s_ram_backend;
 }
 
-static void mnt_ram_format(struct MntInternal *restrict ctx)
+static void mnt_ram_format(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
 
     s_mnt.used = 0; // the whole pool, one store rather than a loop
     for (int h = 0; h < PROTOCORE_MNT_MAX_OPEN; h++)
@@ -529,14 +523,15 @@ static void mnt_ram_format(struct MntInternal *restrict ctx)
 
 // Designated, so a member's position in the struct does not decide what it binds to. The two RAM
 // calls exist only where the flag compiled the backend in.
-MntNs Mnt = {.point_add = mnt_point_add,
-             .point_of = mnt_point_of,
-             .root_of = mnt_root_of,
-             .reset = mnt_reset,
-             .mount = mnt_mount,
-             .active = mnt_active,
+MntNs Mnt = {
+    .point_add = mnt_point_add,
+    .point_of = mnt_point_of,
+    .root_of = mnt_root_of,
+    .reset = mnt_reset,
+    .mount = mnt_mount,
+    .active = mnt_active,
 #if PROTOCORE_ENABLE_MNT
-             .ram = mnt_ram,
-             .ram_format = mnt_ram_format,
+    .ram = mnt_ram,
+    .ram_format = mnt_ram_format,
 #endif
-             .internal = &s_mnt_ctx};
+};

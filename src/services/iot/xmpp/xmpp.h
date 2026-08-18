@@ -93,9 +93,6 @@ typedef struct
     const char *attr; ///< the attribute name to find in the start-tag (XML 1.0 sec 3.1)
 } XmppStanzaArgs;
 
-/** @brief The codec's calls, described only in xmpp.c. */
-struct XmppInternal;
-
 /**
  * @brief The XMPP stanza codec.
  *
@@ -124,7 +121,6 @@ struct XmppInternal;
  * @var XmppNs::stanza_name  read the start-tag Name of @c stanza, the element's type (XML 1.0 sec 3.1)
  * @var XmppNs::attr         read the attribute value @c stanza names out of its start-tag, as the raw
  *                           octets between the quotes with no entity expanded (XML 1.0 sec 3.1)
- * @var XmppNs::internal     the codec's calls
  */
 typedef struct
 {
@@ -138,15 +134,13 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*escape)(struct XmppInternal *ctx);
-    void (*stream_open)(struct XmppInternal *ctx);
-    void (*message)(struct XmppInternal *ctx);
-    void (*presence)(struct XmppInternal *ctx);
-    void (*iq)(struct XmppInternal *ctx);
-    void (*stanza_name)(struct XmppInternal *ctx);
-    void (*attr)(struct XmppInternal *ctx);
-
-    struct XmppInternal *internal;
+    void (*const escape)(uint8_t *restrict work);
+    void (*const stream_open)(uint8_t *restrict work);
+    void (*const message)(uint8_t *restrict work);
+    void (*const presence)(uint8_t *restrict work);
+    void (*const iq)(uint8_t *restrict work);
+    void (*const stanza_name)(uint8_t *restrict work);
+    void (*const attr)(uint8_t *restrict work);
 } XmppNs;
 
 /** @brief The one symbol this module exports. */

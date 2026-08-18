@@ -23,6 +23,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t nrf24_work[16]; // the borrow an entry takes; Nrf24 never reads it
+
 // Canned-response bus stub (same shape as test/test_nrf24's mock_spi). Never a real SPI/CE
 // transaction - this rig has no nRF24 module attached. Every command sees STATUS on the first byte;
 // a register read returns the configured channel (so init's RF_CH read-back detects the chip) and a

@@ -75,17 +75,17 @@ static void h_big(const CoapRequest *req, CoapResponse *resp)
 
 void dbench_run(void)
 {
-    Coap.reset(Coap.internal);
+    Coap.reset(protocore_coap_span());
 
     Coap.resource.path = "/temp";
     Coap.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT | COAP_ALLOW_DELETE;
     Coap.resource.handler = h_temp;
-    Coap.add_resource(Coap.internal);
+    Coap.add_resource(protocore_coap_span());
 
     Coap.resource.path = "/big";
     Coap.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT;
     Coap.resource.handler = h_big;
-    Coap.add_resource(Coap.internal);
+    Coap.add_resource(protocore_coap_span());
 
     // GET /temp, token AA BB CC DD, MID 0x1234 (test_get_content): hdr(Ver1,CON,TKL4) + code GET +
     // MID + token + Uri-Path "temp".
@@ -130,23 +130,23 @@ void dbench_run(void)
 
         Coap.msg.req = get_temp;
         Coap.msg.req_len = sizeof(get_temp);
-        DBENCH_OP("Coap.process GET", 20000, Coap.process(Coap.internal); sink += Coap.n);
+        DBENCH_OP("Coap.process GET", 20000, Coap.process(protocore_coap_span()); sink += Coap.n);
 
         Coap.msg.req = put_temp;
         Coap.msg.req_len = sizeof(put_temp);
-        DBENCH_OP("Coap.process PUT", 20000, Coap.process(Coap.internal); sink += Coap.n);
+        DBENCH_OP("Coap.process PUT", 20000, Coap.process(protocore_coap_span()); sink += Coap.n);
 
         Coap.msg.req = get_discovery;
         Coap.msg.req_len = sizeof(get_discovery);
-        DBENCH_OP("Coap.process discovery", 20000, Coap.process(Coap.internal); sink += Coap.n);
+        DBENCH_OP("Coap.process discovery", 20000, Coap.process(protocore_coap_span()); sink += Coap.n);
 
         Coap.msg.req = get_block2;
         Coap.msg.req_len = sizeof(get_block2);
-        DBENCH_BULK("Coap.process block2", 20000, 64, Coap.process(Coap.internal); sink += Coap.n);
+        DBENCH_BULK("Coap.process block2", 20000, 64, Coap.process(protocore_coap_span()); sink += Coap.n);
 
         Coap.msg.req = post_block1;
         Coap.msg.req_len = sizeof(post_block1);
-        DBENCH_BULK("Coap.process block1", 20000, 64, Coap.process(Coap.internal); sink += Coap.n);
+        DBENCH_BULK("Coap.process block1", 20000, 64, Coap.process(protocore_coap_span()); sink += Coap.n);
 
         (void)sink;
         DBENCH_DONE();

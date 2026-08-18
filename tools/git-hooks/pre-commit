@@ -6,7 +6,9 @@
 #   1b. a read-only drift WARNING for tracked C/C++/.ino files that are not part of this commit
 #      (CI lints the whole tree, so pre-existing drift fails CI on an unrelated commit)
 #   2. black on staged .py  (line-length from pyproject.toml)
-#   3. prettier --write on staged .md/.json/.yml/.yaml (+ web .html)
+#   3. prettier --write on staged .md/.json/.yml/.yaml/.css/.html/.js/.cjs/.mjs, minus
+#      .prettierignore
+#   3b. shfmt -i 4 -ci on staged .sh and on these hooks
 #   4. auto-add any unknown cspell words from the staged docs (README.md + docs/**/*.md) to
 #      cspell.json  (CI: cspell config cspell.json over README.md + docs/**/*.md)
 #   5. regenerate the test-matrix-derived files (platformio.ini + test/README.md) when
@@ -68,17 +70,21 @@ if [ "${#PY[@]}" -gt 0 ] && python -m black --version >/dev/null 2>&1; then
     python -m black -q "${PY[@]}" 2>/dev/null && git add -- "${PY[@]}"
 fi
 
-# 3) prettier markdown / json / yaml (the CRLF-safe end-of-line so Windows checkouts do not false-flag)
-mapfile -t PF < <(staged '*.md' '*.json' '*.yml' '*.yaml')
+# 3) prettier over every type it owns (the CRLF-safe end-of-line so Windows checkouts do not
+# false-flag). .prettierignore decides what is out of scope and says why for each entry - the two
+# spliced matrices, the json.dump baselines, the generated theme CSS and docs/*.html - so this
+# lists file types and nothing else. The web-asset HTML under src/web_assets/input IS formatted:
+# build_assets.py minifies it into the served string, so its shape never reaches a blob.
+mapfile -t PF < <(staged '*.md' '*.json' '*.yml' '*.yaml' '*.css' '*.html' '*.js' '*.cjs' '*.mjs')
 if [ "${#PF[@]}" -gt 0 ]; then
     npx --no-install prettier --write --end-of-line auto "${PF[@]}" >/dev/null 2>&1 && git add -- "${PF[@]}"
 fi
 
-# 3b) prettier the user-editable web-asset HTML under src/web_assets (kept readable; build_assets.py
-# minifies it into the served string). Scoped there so generated docs/*.html (configurator) is left alone.
-mapfile -t HF < <(git diff --cached --name-only --diff-filter=ACM -- 'src/web_assets' 2>/dev/null | grep -E '\.html$')
-if [ "${#HF[@]}" -gt 0 ]; then
-    npx --no-install prettier --write --end-of-line auto "${HF[@]}" >/dev/null 2>&1 && git add -- "${HF[@]}"
+# 3b) shfmt on the staged shell, including the hooks themselves, which are shell with no extension.
+# -i 4 -ci is what the tree already uses; `ci.py fmt` runs the same flags over the whole tree.
+mapfile -t SH < <(staged '*.sh' 'tools/git-hooks/pre-commit' 'tools/git-hooks/post-commit')
+if [ "${#SH[@]}" -gt 0 ] && command -v shfmt >/dev/null 2>&1; then
+    shfmt -i 4 -ci -w "${SH[@]}" >/dev/null 2>&1 && git add -- "${SH[@]}"
 fi
 
 # 4) cspell: add unknown words from the scanned files (README.md + docs/**/*.md) to cspell.json

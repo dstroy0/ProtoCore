@@ -34,9 +34,6 @@ typedef struct
     size_t idx;             ///< the slot a mark records a write to
 } WearArgs;
 
-/** @brief The wear policy's own calls, described only in wearlevel.c. */
-struct WearlevelInternal;
-
 /**
  * @brief The wear-levelling policy over a caller-owned count table.
  *
@@ -49,7 +46,6 @@ struct WearlevelInternal;
  * @var WearlevelNs::pick      the least-worn slot to write next
  * @var WearlevelNs::mark      record a write to args.idx (saturating, so a count never wraps to 0)
  * @var WearlevelNs::imbalance max count - min count across the slots (0 = perfectly level)
- * @var WearlevelNs::internal  the calls that read and bump the table
  *
  * pick round-robins naturally: after writing to the chosen slot the app bumps its count with mark,
  * so the next pick moves on and the region wears uniformly. Ties resolve to the lowest index, and a
@@ -65,11 +61,9 @@ typedef struct
     size_t n_out;
     uint32_t spread;
 
-    void (*pick)(struct WearlevelInternal *ctx);
-    void (*mark)(struct WearlevelInternal *ctx);
-    void (*imbalance)(struct WearlevelInternal *ctx);
-
-    struct WearlevelInternal *internal;
+    void (*const pick)(uint8_t *restrict work);
+    void (*const mark)(uint8_t *restrict work);
+    void (*const imbalance)(uint8_t *restrict work);
 } WearlevelNs;
 
 /** @brief The one symbol this module exports. */

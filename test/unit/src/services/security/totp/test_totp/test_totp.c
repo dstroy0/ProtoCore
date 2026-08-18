@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t totp_work[16]; // the borrow an entry takes; Totp never reads it
+
 void setUp(void)
 {
 }
@@ -33,7 +35,7 @@ static uint32_t hotp_of(uint64_t counter, uint8_t digit)
     Totp.keylen = sizeof(RFC_SECRET);
     Totp.digit = digit;
     Totp.step.counter = counter;
-    Totp.hotp(Totp.internal);
+    Totp.hotp(totp_work);
     return Totp.u32;
 }
 
@@ -45,7 +47,7 @@ static uint32_t totp_of(uint64_t unix_time, uint64_t t0, uint32_t x, uint8_t dig
     Totp.step.unix_time = unix_time;
     Totp.step.t0 = t0;
     Totp.step.x = x;
-    Totp.totp(Totp.internal);
+    Totp.totp(totp_work);
     return Totp.u32;
 }
 
@@ -176,7 +178,7 @@ static proto_bool verify_at(uint64_t unix_time, uint32_t otp, int32_t drift)
     Totp.step.x = 30;
     Totp.check.otp = otp;
     Totp.check.drift = drift;
-    Totp.verify(Totp.internal);
+    Totp.verify(totp_work);
     return Totp.ok;
 }
 
@@ -217,7 +219,7 @@ static int32_t b32(const char *text, uint8_t *out, size_t cap)
     Totp.secret.b32 = text;
     Totp.secret.out = out;
     Totp.secret.cap = cap;
-    Totp.base32_decode(Totp.internal);
+    Totp.base32_decode(totp_work);
     return Totp.i32;
 }
 
@@ -290,7 +292,7 @@ void test_long_key_is_hashed_to_the_block(void)
     Totp.keylen = sizeof(longk);
     Totp.digit = 6;
     Totp.step.counter = 1;
-    Totp.hotp(Totp.internal);
+    Totp.hotp(totp_work);
     uint32_t from_long = Totp.u32;
 
     uint8_t exact[64];
@@ -301,7 +303,7 @@ void test_long_key_is_hashed_to_the_block(void)
     Totp.k = exact;
     Totp.keylen = sizeof(exact);
     Totp.step.counter = 1;
-    Totp.hotp(Totp.internal);
+    Totp.hotp(totp_work);
     // 65 bytes takes the hashed path, 64 the padded one, so the two OTPs must differ.
     TEST_ASSERT_NOT_EQUAL_UINT32(from_long, Totp.u32);
 
@@ -309,7 +311,7 @@ void test_long_key_is_hashed_to_the_block(void)
     Totp.k = longk;
     Totp.keylen = sizeof(longk);
     Totp.step.counter = 1;
-    Totp.hotp(Totp.internal);
+    Totp.hotp(totp_work);
     TEST_ASSERT_EQUAL_UINT32(from_long, Totp.u32);
 }
 

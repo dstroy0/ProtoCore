@@ -20,6 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t amqp_work[16]; // the borrow an entry takes; Amqp never reads it
+
 void dbench_run(void)
 {
     // A Connection.Start-ish method (class 10, method 10) on channel 1 - mirrors
@@ -37,7 +39,7 @@ void dbench_run(void)
     Amqp.method.method_id = 10;
     Amqp.method.args = method_args;
     Amqp.method.args_len = sizeof(method_args);
-    Amqp.build_method(Amqp.internal);
+    Amqp.build_method(amqp_work);
     size_t method_len = Amqp.n;
 
     for (;;)
@@ -47,7 +49,7 @@ void dbench_run(void)
 
         Amqp.out.buf = hdr_buf;
         Amqp.out.cap = sizeof(hdr_buf);
-        DBENCH_OP("Amqp.protocol_header", 200000, Amqp.protocol_header(Amqp.internal); sink += Amqp.n);
+        DBENCH_OP("Amqp.protocol_header", 200000, Amqp.protocol_header(amqp_work); sink += Amqp.n);
 
         Amqp.out.buf = method_buf;
         Amqp.out.cap = sizeof(method_buf);
@@ -56,17 +58,17 @@ void dbench_run(void)
         Amqp.method.method_id = 10;
         Amqp.method.args = method_args;
         Amqp.method.args_len = sizeof(method_args);
-        DBENCH_OP("Amqp.build_method", 100000, Amqp.build_method(Amqp.internal); sink += Amqp.n);
+        DBENCH_OP("Amqp.build_method", 100000, Amqp.build_method(amqp_work); sink += Amqp.n);
 
         Amqp.out.buf = heartbeat_buf;
         Amqp.out.cap = sizeof(heartbeat_buf);
-        DBENCH_OP("Amqp.build_heartbeat", 200000, Amqp.build_heartbeat(Amqp.internal); sink += Amqp.n);
+        DBENCH_OP("Amqp.build_heartbeat", 200000, Amqp.build_heartbeat(amqp_work); sink += Amqp.n);
 
         Amqp.in.buf = method_buf;
         Amqp.in.len = method_len;
-        DBENCH_OP("Amqp.parse_frame", 100000, Amqp.parse_frame(Amqp.internal); sink += Amqp.ok ? Amqp.consumed : 0);
+        DBENCH_OP("Amqp.parse_frame", 100000, Amqp.parse_frame(amqp_work); sink += Amqp.ok ? Amqp.consumed : 0);
 
-        DBENCH_OP("Amqp.parse_method", 100000, Amqp.parse_method(Amqp.internal); sink += Amqp.ok ? 1 : 0);
+        DBENCH_OP("Amqp.parse_method", 100000, Amqp.parse_method(amqp_work); sink += Amqp.ok ? 1 : 0);
 
         (void)sink;
         DBENCH_DONE();

@@ -7,7 +7,8 @@ harness.py - the one entry point for the native test matrix.
 Everything the harness can do is a subcommand here, so `harness.py -h` is the whole surface:
 
   env add       splice a new env into test/test_matrix.json
-  env update    change an existing env's flags / src / tests / extra_scripts
+  env update    change an existing env's flags / src / tests / extra_scripts (adds; --drop-* removes)
+  env addsrc    add the same deps to EVERY env that builds a given .c
   env gen       regenerate the generated block of platformio.ini from the matrix
   env select    map changed files to the envs they affect
   env list      print the envs the matrix defines
@@ -56,8 +57,22 @@ neither is invoked directly: this is the one entry point, so what a session lear
 the tests does not have to be re-derived. `harness.py bare help` and `harness.py bench help` are
 their full surfaces.
 
-The matrix is the single source of truth. Nothing here hand-writes one: every mutation takes the
-table's lock, splices text so the file is not reformatted, and re-parses to prove no other env moved.
+NEVER WRITE test/test_matrix.json WITH json.dump. Not from a script, not once, not "just this
+one field". A whole-file re-render is valid JSON and reformats all 400 envs, so the diff stops
+naming what changed and a reviewer cannot see the one env that did. There is no case where that is
+the answer, and no flag to json.dump that avoids it.
+
+Mutate it through a subcommand. `env update` ADDS to flags / src / tests (its --drop-* twins
+remove), `env addsrc` fans one set of deps out across every env that builds a file, `env add` and
+`env remove` splice a whole env in or out. If the change you need has no subcommand, ADD ONE here
+next to these - that is cheaper than the script, and the next session gets it too.
+
+A script that must touch the table imports this module and calls splice_replace / splice_after /
+splice_remove, then write_verified, which re-parses and refuses a write that moved any env it was
+not asked to move. Those five are the whole supported surface.
+
+The matrix is the single source of truth. Every mutation takes the table's lock, splices text so
+the file is not reformatted, and re-parses to prove no other env moved.
 """
 
 import argparse
@@ -161,6 +176,17 @@ def env_span(text, name):
 
 def reindent(block, pad):
     return "\n".join(pad + l[2:] if l.startswith("  ") else pad + l.strip() for l in block.split("\n"))
+
+
+def unescape_flag(f):
+    """Drop the `=` a caller prefixes so argparse does not read `-DNAME=1` as an option.
+
+    The metavar says `=-DNAME=VALUE`, and the prefix is for argparse alone - stored, it becomes part
+    of the flag and the compiler is handed `=-DNAME=1`, which it takes as a file name and the define
+    never happens. Two envs were written that way before this stripped it, and both compiled and
+    passed while silently building the wrong arm.
+    """
+    return f[1:] if f.startswith("=-") else f
 
 
 def splice_after(text, anchor, name, entry):
@@ -295,7 +321,7 @@ def cmd_env_add(a):
         src = list(envs[a.clone]["src"]) if a.clone else (["-<*>"] if a.only else [])
         flags = list(envs[a.clone].get("flags", [])) if a.clone else []
         src += ["+<%s>" % p for p in a.src if "+<%s>" % p not in src]
-        flags += [f for f in a.flags if f not in flags]
+        flags += [f for f in (unescape_flag(x) for x in a.flags) if f not in flags]
         # A --base env EXTENDS a stack: it inherits that stack's flags and build_src_filter through
         # platformio, so it states only what it adds. Copying the stack's src instead (--clone)
         # loses the ini-level inheritance the stack's own children rely on.
@@ -347,7 +373,7 @@ def cmd_env_update(a):
             if cur or key in entry:
                 entry[key] = cur
 
-        merge("flags", a.flags, a.drop_flags)
+        merge("flags", a.flags, a.drop_flags, wrap=unescape_flag)
         merge("src", a.src, a.drop_src, wrap=lambda p: "+<%s>" % p)
         merge("tests", a.tests, a.drop_tests)
         merge("extra_scripts", a.extra_scripts, a.drop_extra_scripts)
@@ -368,6 +394,45 @@ def cmd_env_update(a):
         rc = write_verified(TABLE, text, before, {a.name}, {a.name: entry})
         if rc == 0:
             print("updated %s; run: harness.py env gen" % a.name)
+        return rc
+    finally:
+        lock_release(lock)
+
+
+def cmd_env_addsrc(a):
+    """Add the same deps to every env that already builds a given .c.
+
+    A module that starts taking a borrow calls into the pool, and the pool calls into the arena and
+    the platform, so every env that built it before needs those three added at once. Doing that by
+    hand is what makes a session reach for a script and rewrite the whole table.
+    """
+    lock = lock_acquire(TABLE)
+    if not lock:
+        print("could not take the table lock within %.0fs" % LOCK_TIMEOUT_S)
+        return 1
+    try:
+        text, before = read_table(TABLE)
+        changed, expect = set(), {}
+        for name, e in before["envs"].items():
+            src = e.get("src")
+            if not src or not any(a.builds in x for x in src):
+                continue
+            add = ["+<%s>" % d for d in a.dep]
+            add = [x for x in add if x not in src]
+            if not add:
+                continue
+            entry = json.loads(json.dumps(e))
+            entry["src"] = src + add
+            text = splice_replace(text, name, entry)
+            changed.add(name)
+            expect[name] = entry
+            print("%-40s + %s" % (name, ", ".join(x[2:-1] for x in add)))
+        if not changed:
+            print("no env builds %s that is missing those deps" % a.builds)
+            return 0
+        rc = write_verified(TABLE, text, before, changed, expect)
+        if rc == 0:
+            print("\n%d envs updated; run: harness.py env gen" % len(changed))
         return rc
     finally:
         lock_release(lock)
@@ -2081,7 +2146,15 @@ def build_parser():
     p.set_defaults(fn=cmd_help)
 
     # env ---------------------------------------------------------------
-    env = sub.add_parser("env", help="the native test matrix").add_subparsers(dest="cmd", required=True)
+    env = sub.add_parser(
+        "env",
+        help="the native test matrix",
+        description="Every mutation of test/test_matrix.json goes through one of these. NEVER "
+        "rewrite the file with json.dump - a whole-file re-render is valid JSON and reformats all "
+        "400 envs, so the diff stops naming what changed. If the change you need has no subcommand "
+        "here, add one; a script that must touch the table imports this module and calls "
+        "splice_replace / splice_after / splice_remove then write_verified.",
+    ).add_subparsers(dest="cmd", required=True)
 
     p = env.add_parser("add", help="splice a new env into the matrix")
     p.add_argument("name")
@@ -2124,6 +2197,17 @@ def build_parser():
         "needing the stack built around it.",
     )
     p.set_defaults(fn=cmd_env_update)
+
+    p = env.add_parser(
+        "addsrc",
+        help="add the same deps to every env that builds a given .c",
+        description="A module that starts taking a borrow needs the pool, the arena and the "
+        "platform in every env that already builds it. This adds them everywhere in one splice, "
+        "so no session has to write a script that rewrites the table.",
+    )
+    p.add_argument("builds", help="the .c whose envs get the deps, e.g. udp/client/client.c")
+    p.add_argument("--dep", nargs="+", required=True, help="repo-relative .c paths to add")
+    p.set_defaults(fn=cmd_env_addsrc)
 
     p = env.add_parser("remove", help="cut envs out of the matrix")
     p.add_argument("name", nargs="+")

@@ -145,7 +145,6 @@ typedef struct
     size_t protocore_resp_cap;
 } ModbusProcessAduArgs;
 
-#if PROTOCORE_ENABLE_MODBUS_RTU
 /** @brief What rtu_process_adu takes: req, req_len, resp, ... */
 typedef struct
 {
@@ -155,15 +154,12 @@ typedef struct
     size_t protocore_resp_cap;
     uint8_t my_addr;
 } ModbusRtuProcessAduArgs;
-#endif
 
-#if PROTOCORE_HAS_NET_STACK
 /** @brief What rx takes: slot. */
 typedef struct
 {
     uint8_t slot;
 } ModbusRxArgs;
-#endif
 
 /** @brief The Layer 5 dispatch record; server/core/proto_handler.h defines it. */
 struct ProtoHandler;
@@ -223,12 +219,8 @@ typedef struct
     ModbusGetInputRegArgs get_input_reg_args;
     ModbusSetInputRegArgs set_input_reg_args;
     ModbusProcessAduArgs process_adu_args;
-#if PROTOCORE_ENABLE_MODBUS_RTU
     ModbusRtuProcessAduArgs rtu_process_adu_args;
-#endif
-#if PROTOCORE_HAS_NET_STACK
     ModbusRxArgs rx_args;
-#endif
 
     proto_bool ok;
     uint16_t value;
@@ -246,12 +238,8 @@ typedef struct
     void (*const get_input_reg)(uint8_t *restrict work);
     void (*const set_input_reg)(uint8_t *restrict work);
     void (*const process_adu)(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_MODBUS_RTU
     void (*const rtu_process_adu)(uint8_t *restrict work);
-#endif
-#if PROTOCORE_HAS_NET_STACK
     void (*const rx)(uint8_t *restrict work);
-#endif
     void (*const handler)(uint8_t *restrict work);
 } ModbusNs;
 

@@ -13,6 +13,8 @@
 
 #include "mmgr/membuild.h" // ::Sb: the builder each fixed-width field is appended through
 
+static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
+
 // The day-name and month literals of RFC 9110 sec 5.6.7, in the order struct tm numbers them:
 // tm_wday counts from Sunday and tm_mon from January. The grammar spells both with ABNF's
 // case-sensitive %s prefix and states "HTTP-date is case sensitive", so these are the exact octets.
@@ -28,37 +30,26 @@ static const char PROTOCORE_HTTP_DATE_MON[12][3] = {{'J', 'a', 'n'}, {'F', 'e', 
 #define PROTOCORE_HTTP_DATE_YEAR_BASE 1900 // tm_year counts from here
 #define PROTOCORE_HTTP_DATE_YEAR_MAX 9999  // the widest year 4DIGIT holds
 
-/**
- * @brief The formatter's call - what HttpDateNs points at.
- *
- * @var HttpDateInternal::ns  the handle a caller sets the call's members on
- */
-struct HttpDateInternal
+static void http_date_format(uint8_t *restrict work)
 {
-    HttpDateNs *ns;
-};
+    (void)work;
+    char *out = HttpDate.args.out;
+    const uint32_t out_cap = HttpDate.args.out_cap;
 
-static struct HttpDateInternal s_date = {.ns = &HttpDate};
-
-static void http_date_format(struct HttpDateInternal *restrict ctx)
-{
-    char *out = ctx->ns->args.out;
-    const uint32_t out_cap = ctx->ns->args.out_cap;
-
-    ctx->ns->n = 0;
+    HttpDate.n = 0;
     if (!out || out_cap == 0)
     {
         return;
     }
-    if (ctx->ns->args.epoch == 0)
+    if (HttpDate.args.epoch == 0)
     {
         out[0] = '\0';
         return;
     }
     struct tm broken_down;
-    TimeCompat.args.epoch = ctx->ns->args.epoch;
+    TimeCompat.args.epoch = HttpDate.args.epoch;
     TimeCompat.args.out = &broken_down;
-    TimeCompat.gmtime(TimeCompat.internal);
+    TimeCompat.gmtime(time_compat_work);
     if (!TimeCompat.tm_out)
     {
         out[0] = '\0';
@@ -91,8 +82,8 @@ static void http_date_format(struct HttpDateInternal *restrict ctx)
     Sb.ch(&b, ':');
     Sb.u32w(&b, (uint32_t)broken_down.tm_sec, PROTOCORE_HTTP_DATE_2DIGIT);
     Sb.put_n(&b, " GMT", 4);
-    ctx->ns->n = (uint8_t)Sb.finish(&b);
-    if (ctx->ns->n == 0)
+    HttpDate.n = (uint8_t)Sb.finish(&b);
+    if (HttpDate.n == 0)
     {
         // The builder appends as it goes, so an overflow leaves the octets it managed to write.
         // Half an IMF-fixdate is a different instant, so the destination is emptied.
@@ -100,4 +91,4 @@ static void http_date_format(struct HttpDateInternal *restrict ctx)
     }
 }
 
-HttpDateNs HttpDate = {.format = http_date_format, .internal = &s_date};
+HttpDateNs HttpDate = {.format = http_date_format};

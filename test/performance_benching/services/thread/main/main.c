@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t thread_work[16]; // the borrow an entry takes; Thread never reads it
+
 void dbench_run(void)
 {
     static const uint8_t val[8] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};

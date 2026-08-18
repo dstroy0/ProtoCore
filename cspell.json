@@ -1637,7 +1637,11 @@
     "autostash",
     "liboqs",
     "serialises",
-    "icmpv"
+    "icmpv",
+    "DEVICEERROR",
+    "greppable",
+    "pdftotext",
+    "RANGECOMPLETE"
   ],
   "ignorePaths": [
     "node_modules/**",

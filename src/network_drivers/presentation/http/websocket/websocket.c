@@ -17,11 +17,13 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t utf8_work[16]; // the borrow an entry takes; Utf8 never reads it
+
 #if PROTOCORE_ENABLE_WEBSOCKET
 
 #include "mmgr/protomem.h"
-#include "mmgr/secure.h"                                     // the persistent end this module's state is taken from
-#include "mmgr/span.h"                                       // span.ok: whether the pool had the bytes
+#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "mmgr/span.h"   // span.ok: whether the pool had the bytes
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a frame goes out on
 #include "shared/utf8/utf8.h"
@@ -234,7 +236,7 @@ static proto_bool ws_emit_one(uint8_t slot, uint8_t b0, const uint8_t *payload, 
     ConnPool.slot = slot;
     ConnPool.io.data = header;
     ConnPool.io.len = hlen;
-    ConnPool.send(ConnPool.internal);
+    ConnPool.send(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         return PROTO_FALSE;
@@ -243,7 +245,7 @@ static proto_bool ws_emit_one(uint8_t slot, uint8_t b0, const uint8_t *payload, 
     {
         ConnPool.io.data = payload;
         ConnPool.io.len = len;
-        ConnPool.send(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
         if (!ConnPool.ok)
         {
             return PROTO_FALSE;
@@ -262,7 +264,7 @@ static void send_frame(uint8_t *restrict work)
 
     Ws.ok = PROTO_FALSE;
     ConnPool.slot = slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         return;
@@ -363,10 +365,10 @@ static void close_socket(uint8_t *restrict work)
     send_frame(work);
 
     ConnPool.slot = ws->slot_id;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (ConnPool.ok)
     {
-        ConnPool.flush(ConnPool.internal);
+        ConnPool.flush(protocore_conn_pool_span());
     }
 
     ws->parse_state = WS_CLOSED;
@@ -402,10 +404,10 @@ static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
             Ws.frame.len = (uint16_t)ws->payload_idx;
             send_frame(work);
             ConnPool.slot = ws->slot_id;
-            ConnPool.active(ConnPool.internal);
+            ConnPool.active(protocore_conn_pool_span());
             if (ConnPool.ok)
             {
-                ConnPool.flush(ConnPool.internal);
+                ConnPool.flush(protocore_conn_pool_span());
             }
         }
         else if (ws->opcode == WS_OP_CLOSE)
@@ -489,7 +491,7 @@ static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
         // reassembled + decompressed message); otherwise fail the connection with 1007.
         Utf8.args.s = ws->buf;
         Utf8.args.n = n;
-        Utf8.valid(Utf8.internal);
+        Utf8.valid(utf8_work);
         if (ws->msg_opcode == WS_OP_TEXT && !Utf8.ok)
         {
             Ws.conn = ws;
@@ -522,7 +524,7 @@ static void parse(uint8_t *restrict work)
 {
     WsConn *ws = Ws.conn;
     ConnPool.slot = ws->slot_id;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         return;
@@ -530,7 +532,7 @@ static void parse(uint8_t *restrict work)
 
     ConnPool.io.buf = WS_CTX(work)->rx;
     ConnPool.io.cap = sizeof(WS_CTX(work)->rx);
-    ConnPool.read(ConnPool.internal);
+    ConnPool.read(protocore_conn_pool_span());
 
     for (size_t i = 0; i < ConnPool.n; i++)
     {

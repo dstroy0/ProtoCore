@@ -6,11 +6,15 @@
  * @brief HAProxy PROXY protocol v1 / v2 parser + builder (pure, host-tested).
  */
 
-#include "network_drivers/transport/proxy_protocol/proxy_protocol.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_PROXY_PROTOCOL
+
+#include "mmgr/membuild.h" // protocore_sb frame builder
+#include "mmgr/protomem.h"
+#include "network_drivers/transport/proxy_protocol/proxy_protocol.h"
+
+PROTOCORE_BEGIN_DECLS
 
 static const uint8_t kV2Sig[PROXY_V2_SIG_LEN] = {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D,
                                                  0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
@@ -172,11 +176,23 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
     return PROTO_TRUE;
 }
 
-proto_bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *consumed)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void proxy_protocol_parse(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = ProxyProtocol.parse_args.buf;
+    size_t len = ProxyProtocol.parse_args.len;
+    ProxyInfo *out = ProxyProtocol.parse_args.out;
+    size_t *consumed = ProxyProtocol.parse_args.consumed;
+
     if (!buf || !out || !consumed)
     {
-        return PROTO_FALSE;
+        ProxyProtocol.ok = PROTO_FALSE;
+        return;
     }
 
     // v2: the 12-octet binary signature.
@@ -184,7 +200,8 @@ proto_bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *c
     {
         if (len < 16) // signature + ver_cmd + fam + 2-octet length
         {
-            return PROTO_FALSE;
+            ProxyProtocol.ok = PROTO_FALSE;
+            return;
         }
         uint8_t ver_cmd = buf[12];
         uint8_t fam = buf[13];
@@ -192,20 +209,24 @@ proto_bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *c
         size_t total = 16 + (size_t)addr_len;
         if (total > len)
         {
-            return PROTO_FALSE; // address block not fully buffered
+            ProxyProtocol.ok = PROTO_FALSE; // address block not fully buffered
+            return;
         }
         if ((ver_cmd & 0xF0) != 0x20) // must be version 2
         {
-            return PROTO_FALSE;
+            ProxyProtocol.ok = PROTO_FALSE;
+            return;
         }
         if ((ver_cmd & 0x0Fu) > 0x1u) // LOCAL and PROXY are the assigned commands
         {
-            return PROTO_FALSE;
+            ProxyProtocol.ok = PROTO_FALSE;
+            return;
         }
         // AF_UNSPEC/AF_INET/AF_INET6/AF_UNIX over UNSPEC/STREAM/DGRAM are the assigned pairs.
         if ((fam >> 4) > 0x3u || (fam & 0x0Fu) > 0x2u)
         {
-            return PROTO_FALSE;
+            ProxyProtocol.ok = PROTO_FALSE;
+            return;
         }
         out->version = 2;
         out->has_addr = PROTO_FALSE;
@@ -220,23 +241,34 @@ proto_bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *c
             out->has_addr = PROTO_TRUE;
         }
         *consumed = total;
-        return PROTO_TRUE;
+        ProxyProtocol.ok = PROTO_TRUE;
+        return;
     }
 
     // v1: the "PROXY " text prefix.
     if (len >= 6 && mem.cmp(buf, "PROXY ", 6) == 0)
     {
-        return parse_v1(buf, len, out, consumed);
+        ProxyProtocol.ok = parse_v1(buf, len, out, consumed);
+        return;
     }
 
-    return PROTO_FALSE; // no PROXY header present
+    ProxyProtocol.ok = PROTO_FALSE; // no PROXY header present
 }
 
-size_t proxy_v1_build(char *buf, size_t cap, uint32_t src_addr, uint32_t dst_addr, uint16_t src_port, uint16_t dst_port)
+static void proxy_protocol_v1_build(uint8_t *restrict work)
 {
+    (void)work;
+    char *buf = ProxyProtocol.v1_build_args.buf;
+    size_t cap = ProxyProtocol.v1_build_args.cap;
+    uint32_t src_addr = ProxyProtocol.v1_build_args.src_addr;
+    uint32_t dst_addr = ProxyProtocol.v1_build_args.dst_addr;
+    uint16_t src_port = ProxyProtocol.v1_build_args.src_port;
+    uint16_t dst_port = ProxyProtocol.v1_build_args.dst_port;
+
     if (!buf)
     {
-        return 0;
+        ProxyProtocol.n = 0;
+        return;
     }
     protocore_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
     Sb.put(&sb_buf, "PROXY TCP4 ");
@@ -265,18 +297,27 @@ size_t proxy_v1_build(char *buf, size_t cap, uint32_t src_addr, uint32_t dst_add
     // specifiers), so snprintf can't fail with an encoding error for this call.
     if (n < 0 || (size_t)n >= cap)
     {
-        return 0;
+        ProxyProtocol.n = 0;
+        return;
     }
-    return (size_t)n;
+    ProxyProtocol.n = (size_t)n;
 }
 
-size_t proxy_v2_build(uint8_t *buf, size_t cap, uint32_t src_addr, uint32_t dst_addr, uint16_t src_port,
-                      uint16_t dst_port)
+static void proxy_protocol_v2_build(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *buf = ProxyProtocol.v2_build_args.buf;
+    size_t cap = ProxyProtocol.v2_build_args.cap;
+    uint32_t src_addr = ProxyProtocol.v2_build_args.src_addr;
+    uint32_t dst_addr = ProxyProtocol.v2_build_args.dst_addr;
+    uint16_t src_port = ProxyProtocol.v2_build_args.src_port;
+    uint16_t dst_port = ProxyProtocol.v2_build_args.dst_port;
+
     const size_t total = 16 + 12; // header + TCP/IPv4 address block
     if (!buf || cap < total)
     {
-        return 0;
+        ProxyProtocol.n = 0;
+        return;
     }
     mem.cpy(buf, kV2Sig, PROXY_V2_SIG_LEN);
     buf[12] = PROXY_V2_VER_CMD_PROXY;
@@ -295,7 +336,15 @@ size_t proxy_v2_build(uint8_t *buf, size_t cap, uint32_t src_addr, uint32_t dst_
     buf[25] = (uint8_t)(src_port);
     buf[26] = (uint8_t)(dst_port >> 8);
     buf[27] = (uint8_t)(dst_port);
-    return total;
+    ProxyProtocol.n = total;
 }
+
+ProxyProtocolNs ProxyProtocol = {
+    .parse = proxy_protocol_parse,
+    .v1_build = proxy_protocol_v1_build,
+    .v2_build = proxy_protocol_v2_build,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_PROXY_PROTOCOL

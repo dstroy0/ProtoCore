@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t sftp_work[16]; // the borrow an entry takes; Sftp never reads it
+
 void dbench_run(void)
 {
     // A representative PROTOCORE_SSH_FXP_OPEN-ish payload: id(u32) + filename(string) + pflags(u32).
@@ -26,20 +28,38 @@ void dbench_run(void)
         volatile size_t sink = 0;
         DBENCH_OP("protocore_sftp reader (u32+string+u32)", 200000, {
             SftpReader r;
-            protocore_sftp_rd_init(&r, payload, sizeof(payload));
-            uint32_t id = protocore_sftp_rd_u32(&r);
+            Sftp.rd_init_args.r = &r;
+            Sftp.rd_init_args.payload = payload;
+            Sftp.rd_init_args.len = sizeof(payload);
+            Sftp.rd_init(sftp_work);
+            Sftp.rd_u32_args.r = &r;
+            Sftp.rd_u32(sftp_work);
+            uint32_t id = Sftp.u32;
             const uint8_t *nm;
             uint32_t nl;
-            protocore_sftp_rd_string(&r, &nm, &nl);
+            Sftp.rd_string_args.r = &r;
+            Sftp.rd_string_args.out = &nm;
+            Sftp.rd_string_args.out_len = &nl;
+            Sftp.rd_string(sftp_work);
             sink += id + nl;
         });
         static uint8_t out[64];
         DBENCH_OP("protocore_sftp writer (u32+string+finish)", 200000, {
             SftpWriter w;
-            protocore_sftp_wr_init(&w, out, sizeof(out));
-            protocore_sftp_wr_u32(&w, 42);
-            protocore_sftp_wr_string(&w, "/log.txt", 8);
-            sink += protocore_sftp_wr_finish(&w);
+            Sftp.wr_init_args.w = &w;
+            Sftp.wr_init_args.out = out;
+            Sftp.wr_init_args.cap = sizeof(out);
+            Sftp.wr_init(sftp_work);
+            Sftp.wr_u32_args.w = &w;
+            Sftp.wr_u32_args.v = 42;
+            Sftp.wr_u32(sftp_work);
+            Sftp.wr_string_args.w = &w;
+            Sftp.wr_string_args.s = "/log.txt";
+            Sftp.wr_string_args.n = 8;
+            Sftp.wr_string(sftp_work);
+            Sftp.wr_finish_args.w = &w;
+            Sftp.wr_finish(sftp_work);
+            sink += Sftp.n;
         });
         (void)sink;
         DBENCH_DONE();

@@ -24,33 +24,85 @@
 #ifndef PROTOCORE_SPNEGO_H
 #define PROTOCORE_SPNEGO_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SMB
 
 PROTOCORE_BEGIN_DECLS
 
-/**
- * @brief Wrap an NTLMSSP NEGOTIATE token in a SPNEGO GSS-API InitialContextToken (the first
- *        SESSION_SETUP security buffer).
- * @return the token length written to @p out, or 0 on overflow.
- */
-size_t protocore_spnego_wrap_negotiate(const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out, size_t cap);
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
+/** @brief What wrap_negotiate takes: ntlm, protocore_ntlm_len, out, ... */
+typedef struct
+{
+    const uint8_t *ntlm;
+    size_t protocore_ntlm_len;
+    uint8_t *out;
+    size_t cap;
+} SpnegoWrapNegotiateArgs;
+
+/** @brief What parse_response takes: blob, len, protocore_resp_token, ... */
+typedef struct
+{
+    const uint8_t *blob;
+    size_t len;
+    const uint8_t **protocore_resp_token; ///< receives a pointer INTO blob; protocore_resp_len its length
+    size_t *protocore_resp_len;
+} SpnegoParseResponseArgs;
+
+/** @brief What wrap_authenticate takes: ntlm, protocore_ntlm_len, ... */
+typedef struct
+{
+    const uint8_t *ntlm;
+    size_t protocore_ntlm_len;
+    uint8_t *out;
+    size_t cap;
+} SpnegoWrapAuthenticateArgs;
 
 /**
- * @brief Extract the responseToken (the NTLMSSP CHALLENGE) from a server NegTokenResp.
- * @param protocore_resp_token receives a pointer INTO @p blob; @p protocore_resp_len its length.
- * @return true if a `[2]` responseToken OCTET STRING was found and is within bounds.
+ * @brief SPNEGO (RFC 4178) GSS-API wrapping of the NTLMSSP tokens for the SMB2 client (PROTOCORE_ENABLE_SMB).
+ *
+ * A caller sets the members a call takes, invokes it through ::Spnego with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Spnego.wrap_negotiate_args.ntlm = ...;
+ *   Spnego.wrap_negotiate_args.protocore_ntlm_len = ...;
+ *   Spnego.wrap_negotiate_args.out = ...;
+ *   Spnego.wrap_negotiate_args.cap = ...;
+ *   Spnego.wrap_negotiate(work);
+ *   // Spnego.n is what the call reports
+ *
+ * @var SpnegoNs::wrap_negotiate_args  what wrap_negotiate takes: ntlm, protocore_ntlm_len, out,
+ * @var SpnegoNs::parse_response_args  what parse_response takes: blob, len, protocore_resp_token,
+ * @var SpnegoNs::wrap_authenticate_args  what wrap_authenticate takes: ntlm, protocore_ntlm_len,
+ * @var SpnegoNs::ok  true if a `[2]` responseToken OCTET STRING was found and is within ...
+ * @var SpnegoNs::n  the token length written to out, or 0 on overflow
+ * @var SpnegoNs::wrap_negotiate  wrap an NTLMSSP NEGOTIATE token in a SPNEGO GSS-API ...
+ * @var SpnegoNs::parse_response  extract the responseToken (the NTLMSSP CHALLENGE) from a server ...
+ * @var SpnegoNs::wrap_authenticate  wrap an NTLMSSP AUTHENTICATE token in a SPNEGO NegTokenResp (the ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_spnego_parse_response(const uint8_t *blob, size_t len, const uint8_t **protocore_resp_token,
-                                           size_t *protocore_resp_len);
+typedef struct
+{
+    SpnegoWrapNegotiateArgs wrap_negotiate_args;
+    SpnegoParseResponseArgs parse_response_args;
+    SpnegoWrapAuthenticateArgs wrap_authenticate_args;
 
-/**
- * @brief Wrap an NTLMSSP AUTHENTICATE token in a SPNEGO NegTokenResp (the second SESSION_SETUP
- *        security buffer).
- * @return the token length written to @p out, or 0 on overflow.
- */
-size_t protocore_spnego_wrap_authenticate(const uint8_t *ntlm, size_t protocore_ntlm_len, uint8_t *out, size_t cap);
+    proto_bool ok;
+    size_t n;
+
+    void (*const wrap_negotiate)(uint8_t *restrict work);
+    void (*const parse_response)(uint8_t *restrict work);
+    void (*const wrap_authenticate)(uint8_t *restrict work);
+} SpnegoNs;
+
+/** @brief The one symbol this module exports. */
+extern SpnegoNs Spnego;
 
 PROTOCORE_END_DECLS
 

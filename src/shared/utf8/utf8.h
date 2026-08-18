@@ -26,16 +26,12 @@ typedef struct
     size_t n;         ///< how many
 } Utf8Args;
 
-/** @brief The validator's own call, described only in utf8.c. */
-struct Utf8Internal;
-
 /**
  * @brief UTF-8 well-formedness.
  *
  * @var Utf8Ns::args      the octet run a check walks
  * @var Utf8Ns::ok        the run is well-formed UTF-8
  * @var Utf8Ns::valid     walk the run and judge it
- * @var Utf8Ns::internal  the call that walks it
  *
  * Rejects overlong encodings, surrogate code points (U+D800..U+DFFF), values above U+10FFFF, bad
  * continuation bytes, and truncated multi-byte sequences.
@@ -48,9 +44,7 @@ typedef struct
 
     proto_bool ok;
 
-    void (*valid)(struct Utf8Internal *ctx);
-
-    struct Utf8Internal *internal;
+    void (*const valid)(uint8_t *restrict work);
 } Utf8Ns;
 
 /** @brief The one symbol this module exports. */

@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t senml_work[16]; // the borrow an entry takes; Senml never reads it
+
 void setUp(void)
 {
 }
@@ -43,7 +45,7 @@ static size_t json_build(const SenmlRecord *records, size_t count, size_t cap)
     Senml.pack.count = count;
     Senml.json.buf = g_json;
     Senml.json.cap = cap;
-    Senml.json_build(Senml.internal);
+    Senml.json_build(senml_work);
     return Senml.n;
 }
 
@@ -55,7 +57,7 @@ static size_t binary_build(const SenmlRecord *records, size_t count, size_t cap)
     Senml.binary.codec = &Cbor;
     Senml.binary.buf = g_bin;
     Senml.binary.cap = cap;
-    Senml.binary_build(Senml.internal);
+    Senml.binary_build(senml_work);
     return Senml.n;
 }
 
@@ -66,7 +68,7 @@ static size_t resolve(const SenmlRecord *records, size_t count)
     Senml.pack.count = count;
     Senml.resolved.out = g_resolved;
     Senml.resolved.max = sizeof(g_resolved) / sizeof(g_resolved[0]);
-    Senml.resolve(Senml.internal);
+    Senml.resolve(senml_work);
     return Senml.n;
 }
 
@@ -288,7 +290,7 @@ void test_resolve_overrides_and_absent_time(void)
     Senml.pack.count = 4;
     Senml.resolved.out = g_resolved;
     Senml.resolved.max = 2;
-    Senml.resolve(Senml.internal);
+    Senml.resolve(senml_work);
     TEST_ASSERT_TRUE(Senml.ok);
     TEST_ASSERT_EQUAL_UINT(2u, Senml.n);
 }
@@ -344,34 +346,34 @@ void test_missing_arguments_are_refused(void)
     Senml.pack.count = 1;
     Senml.json.buf = NULL;
     Senml.json.cap = sizeof(g_json);
-    Senml.json_build(Senml.internal);
+    Senml.json_build(senml_work);
     TEST_ASSERT_FALSE(Senml.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Senml.n);
 
     Senml.json.buf = g_json;
     Senml.pack.records = NULL;
-    Senml.json_build(Senml.internal);
+    Senml.json_build(senml_work);
     TEST_ASSERT_FALSE(Senml.ok);
 
     Senml.pack.records = PACK;
     Senml.binary.codec = NULL;
     Senml.binary.buf = g_bin;
     Senml.binary.cap = sizeof(g_bin);
-    Senml.binary_build(Senml.internal);
+    Senml.binary_build(senml_work);
     TEST_ASSERT_FALSE(Senml.ok);
 
     Senml.binary.codec = &Cbor;
     Senml.binary.buf = NULL;
-    Senml.binary_build(Senml.internal);
+    Senml.binary_build(senml_work);
     TEST_ASSERT_FALSE(Senml.ok);
 
     Senml.pack.records = NULL;
     Senml.resolved.out = g_resolved;
     Senml.resolved.max = 4;
-    Senml.resolve(Senml.internal);
+    Senml.resolve(senml_work);
     TEST_ASSERT_FALSE(Senml.ok);
     Senml.pack.records = PACK;
     Senml.resolved.out = NULL;
-    Senml.resolve(Senml.internal);
+    Senml.resolve(senml_work);
     TEST_ASSERT_FALSE(Senml.ok);
 }

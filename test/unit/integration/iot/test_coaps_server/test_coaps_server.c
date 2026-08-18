@@ -121,8 +121,8 @@ static proto_bool ingest_dgram(const uint8_t *data, size_t len, const char *ip, 
 static void pump(void)
 {
     Clock.millis(Clock.internal);
-    UdpListener.poll(UdpListener.internal);
-    CoapsServer.poll(CoapsServer.internal);
+    UdpListener.poll(protocore_udp_listener_span());
+    CoapsServer.poll(protocore_coaps_server_span());
 }
 
 #else
@@ -178,14 +178,14 @@ static proto_bool ingest_dgram(const uint8_t *data, size_t len, const char *ip, 
     CoapsServer.dgram.len = len;
     CoapsServer.dgram.ip = ip;
     CoapsServer.dgram.port = port;
-    CoapsServer.ingest(CoapsServer.internal);
+    CoapsServer.ingest(protocore_coaps_server_span());
     return CoapsServer.ok;
 }
 
 static void pump(void)
 {
     Clock.millis(Clock.internal);
-    CoapsServer.poll(CoapsServer.internal);
+    CoapsServer.poll(protocore_coaps_server_span());
 }
 
 #endif
@@ -194,11 +194,11 @@ static uint8_t g_server_cert[32];
 
 void setUp()
 {
-    Coap.reset(Coap.internal);
+    Coap.reset(protocore_coap_span());
     Coap.resource.path = "/temp";
     Coap.resource.methods = COAP_ALLOW_GET;
     Coap.resource.handler = h_temp;
-    Coap.add_resource(Coap.internal);
+    Coap.add_resource(protocore_coap_span());
     Clock.src.fn = test_clock;
     Clock.src.ticks_per_second = 1000;
     Clock.set_ms(Clock.internal);
@@ -216,17 +216,17 @@ void setUp()
     memcpy(CoapsServer.identity.cookie_key, SERVER_COOKIE_KEY, 32);
     CoapsServer.identity.rng = test_rng;
     CoapsServer.bind.port = PROTOCORE_COAPS_PORT;
-    CoapsServer.begin(CoapsServer.internal);
+    CoapsServer.begin(protocore_coaps_server_span());
     TEST_ASSERT_TRUE(CoapsServer.ok);
 #if !PROTOCORE_HAS_NET_STACK
     CoapsServer.sink.fn = out_sink;
     CoapsServer.sink.ctx = NULL;
-    CoapsServer.set_out_sink(CoapsServer.internal);
+    CoapsServer.set_out_sink(protocore_coaps_server_span());
 #endif
 }
 void tearDown()
 {
-    CoapsServer.stop(CoapsServer.internal);
+    CoapsServer.stop(protocore_coaps_server_span());
     Clock.src.fn = NULL;
     Clock.src.ticks_per_second = 0;
     Clock.set_ms(Clock.internal);
@@ -555,7 +555,7 @@ static void test_server_single_peer(void)
 {
     DtlsRecordKeys w, r;
     client_handshake("10.0.0.5", 40001, &w, &r, NULL, 0, NULL, NULL);
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 
     uint8_t rec[128];
@@ -573,7 +573,7 @@ static void test_two_peers_routing(void)
     DtlsRecordKeys wA, rA, wB, rB;
     client_handshake("10.0.0.5", 40001, &wA, &rA, NULL, 0, NULL, NULL);
     client_handshake("10.0.0.6", 40002, &wB, &rB, NULL, 0, NULL, NULL);
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(2, CoapsServer.u8);
 
     uint8_t recA[128], recB[128];
@@ -594,12 +594,12 @@ static void test_idle_reap(void)
 {
     DtlsRecordKeys w, r;
     client_handshake("10.0.0.5", 40001, &w, &r, NULL, 0, NULL, NULL);
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 
     g_ms += PROTOCORE_COAPS_IDLE_MS + 1;
     pump();
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, CoapsServer.u8);
 }
 
@@ -633,7 +633,7 @@ static void test_pto_retransmit_driven_by_poll(void)
     OutDg f2;
     TEST_ASSERT_TRUE(take_out_for("10.0.0.7", 40003, &f2));
     TEST_ASSERT_TRUE(f2.len > 0);
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 }
 
@@ -645,7 +645,7 @@ static void test_cid_address_migration(void)
     DtlsRecordKeys w, r;
     client_handshake("10.0.0.5", 40001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
     TEST_ASSERT_TRUE(scid_len > 0);
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 
     uint8_t rec[128];
@@ -658,7 +658,7 @@ static void test_cid_address_migration(void)
     OutDg stale;
     TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 40001, &stale));
     assert_coap_205(&r, &dg, client_cid, sizeof(client_cid));
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 }
 
@@ -701,28 +701,28 @@ static void test_begin_rejects_invalid_cfg(void)
     CoapsServer.bind.port = PROTOCORE_COAPS_PORT;
 
     memset(&CoapsServer.identity, 0, sizeof CoapsServer.identity);
-    CoapsServer.begin(CoapsServer.internal);
+    CoapsServer.begin(protocore_coaps_server_span());
     TEST_ASSERT_FALSE(CoapsServer.ok);
 
     memset(&CoapsServer.identity, 0, sizeof CoapsServer.identity);
     CoapsServer.identity.cert_der = g_server_cert;
     CoapsServer.identity.cert_len = 32;
     CoapsServer.identity.rng = NULL;
-    CoapsServer.begin(CoapsServer.internal);
+    CoapsServer.begin(protocore_coaps_server_span());
     TEST_ASSERT_FALSE(CoapsServer.ok);
 
     memset(&CoapsServer.identity, 0, sizeof CoapsServer.identity);
     CoapsServer.identity.rng = test_rng;
     CoapsServer.identity.cert_der = NULL;
     CoapsServer.identity.cert_len = 32;
-    CoapsServer.begin(CoapsServer.internal);
+    CoapsServer.begin(protocore_coaps_server_span());
     TEST_ASSERT_FALSE(CoapsServer.ok);
 
     memset(&CoapsServer.identity, 0, sizeof CoapsServer.identity);
     CoapsServer.identity.rng = test_rng;
     CoapsServer.identity.cert_der = g_server_cert;
     CoapsServer.identity.cert_len = 0;
-    CoapsServer.begin(CoapsServer.internal);
+    CoapsServer.begin(protocore_coaps_server_span());
     TEST_ASSERT_FALSE(CoapsServer.ok);
 
     memset(&CoapsServer.identity, 0, sizeof CoapsServer.identity);
@@ -732,15 +732,15 @@ static void test_begin_rejects_invalid_cfg(void)
     memcpy(CoapsServer.identity.ed25519_seed, SERVER_ED_SEED, 32);
     memcpy(CoapsServer.identity.cookie_key, SERVER_COOKIE_KEY, 32);
     CoapsServer.bind.port = 0;
-    CoapsServer.begin(CoapsServer.internal);
+    CoapsServer.begin(protocore_coaps_server_span());
     TEST_ASSERT_TRUE(CoapsServer.ok);
 }
 
 static void test_poll_when_stopped(void)
 {
-    CoapsServer.stop(CoapsServer.internal);
+    CoapsServer.stop(protocore_coaps_server_span());
     pump();
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, CoapsServer.u8);
 }
 
@@ -760,7 +760,7 @@ static void test_a_zero_length_datagram_is_dropped(void)
     ingest_dgram(d, 0, "10.0.0.5", 1);
     pump();
 
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, CoapsServer.u8);
     OutDg dg;
     TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 1, &dg));
@@ -812,7 +812,7 @@ static void test_malformed_peer_addr(void)
     {
         ingest_bad_client_hello(bad[i], (uint16_t)(50000 + i));
         pump();
-        CoapsServer.active_conns(CoapsServer.internal);
+        CoapsServer.active_conns(protocore_coaps_server_span());
         TEST_ASSERT_EQUAL_UINT8(0, CoapsServer.u8);
     }
 }
@@ -823,7 +823,7 @@ static void test_fatal_handshake_frees_slot(void)
 {
     ingest_bad_client_hello("10.0.0.5", 40001);
     pump();
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, CoapsServer.u8);
     OutDg dg;
     TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 40001, &dg));
@@ -838,13 +838,13 @@ static void test_pool_full_rejects_new_peer(void)
         ingest_real_client_hello(ip, (uint16_t)(1000 + i));
         pump();
     }
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_COAPS_MAX_CONNS, CoapsServer.u8);
 
     out_reset();
     ingest_real_client_hello("10.0.1.9", 1099);
     pump();
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_COAPS_MAX_CONNS, CoapsServer.u8);
     OutDg dg;
     TEST_ASSERT_FALSE(take_out_for("10.0.1.9", 1099, &dg));
@@ -854,7 +854,7 @@ static void test_pto_ceiling_frees_slot(void)
 {
     ingest_real_client_hello("10.0.0.7", 40003);
     pump();
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 
     for (uint8_t i = 0; i < PROTOCORE_DTLS_MAX_RETRANSMITS; i++)
@@ -863,7 +863,7 @@ static void test_pto_ceiling_frees_slot(void)
         out_reset();
         ingest_noop("10.0.0.7", 40003);
         pump();
-        CoapsServer.active_conns(CoapsServer.internal);
+        CoapsServer.active_conns(protocore_coaps_server_span());
         TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
     }
 
@@ -871,7 +871,7 @@ static void test_pto_ceiling_frees_slot(void)
     out_reset();
     ingest_noop("10.0.0.7", 40003);
     pump();
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, CoapsServer.u8);
 }
 
@@ -883,7 +883,7 @@ static void test_unknown_cid_dropped(void)
     DtlsRecordKeys w, r;
     client_handshake("10.0.0.5", 40001, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
     TEST_ASSERT_TRUE(scid_len > 0);
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 
     uint8_t unknown[PROTOCORE_DTLS_CID_MAX];
@@ -898,7 +898,7 @@ static void test_unknown_cid_dropped(void)
     pump();
     OutDg dg;
     TEST_ASSERT_FALSE(take_out_for("10.9.9.9", 55555, &dg));
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 }
 
@@ -910,7 +910,7 @@ static void test_a_refused_send_keeps_the_slot(void)
     mock_udp_send_fail_after(0);
     ingest_real_client_hello("10.0.0.5", 40001);
     pump();
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
     OutDg dg;
     TEST_ASSERT_FALSE(take_out_for("10.0.0.5", 40001, &dg));
@@ -922,7 +922,7 @@ static void test_slot_lookup_same_port_different_ip(void)
     DtlsRecordKeys wA, rA, wB, rB;
     client_handshake("10.0.2.5", 41000, &wA, &rA, NULL, 0, NULL, NULL);
     client_handshake("10.0.2.6", 41000, &wB, &rB, NULL, 0, NULL, NULL);
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(2, CoapsServer.u8);
 
     uint8_t recA[128], recB[128];
@@ -951,7 +951,7 @@ static void test_slot_by_cid_skips_and_bounds(void)
     DtlsRecordKeys w, r;
     client_handshake("10.0.3.2", 42002, &w, &r, client_cid, sizeof(client_cid), scid, &scid_len);
     TEST_ASSERT_TRUE(scid_len > 0);
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(2, CoapsServer.u8);
 
     uint8_t rec[128];
@@ -968,7 +968,7 @@ static void test_slot_by_cid_skips_and_bounds(void)
     pump();
     OutDg none;
     TEST_ASSERT_FALSE(take_out_for("10.9.9.8", 60000, &none));
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(2, CoapsServer.u8);
 }
 
@@ -988,7 +988,7 @@ static void test_cid_no_migration_when_address_unchanged(void)
     OutDg dg1;
     TEST_ASSERT_TRUE(take_out_for("10.0.4.1", 43001, &dg1));
     assert_coap_205(&r, &dg1, client_cid, sizeof(client_cid));
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 }
 
@@ -1011,7 +1011,7 @@ static void test_cid_migration_same_port_different_ip(void)
     OutDg stale;
     TEST_ASSERT_FALSE(take_out_for("10.0.5.1", 44001, &stale));
     assert_coap_205(&r, &dg, client_cid, sizeof(client_cid));
-    CoapsServer.active_conns(CoapsServer.internal);
+    CoapsServer.active_conns(protocore_coaps_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, CoapsServer.u8);
 }
 

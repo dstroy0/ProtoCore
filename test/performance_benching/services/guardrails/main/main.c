@@ -44,18 +44,18 @@ void dbench_run(void)
 
         // Threshold evaluator - a handful of unsigned compares + bit-ORs; cheap, so large N.
         Guardrails.health = &clear;
-        DBENCH_OP("Guardrails.eval all-clear", 200000, Guardrails.eval(Guardrails.internal);
+        DBENCH_OP("Guardrails.eval all-clear", 200000, Guardrails.eval(protocore_guardrails_span());
                   sink8 += Guardrails.breaches);
 
         Guardrails.health = &breach;
-        DBENCH_OP("Guardrails.eval all-breach", 200000, Guardrails.eval(Guardrails.internal);
+        DBENCH_OP("Guardrails.eval all-breach", 200000, Guardrails.eval(protocore_guardrails_span());
                   sink8 += Guardrails.breaches);
 
         // JSON serializer - one snprintf of four uint32s; still cheap, moderate N.
         Guardrails.health = &clear;
         Guardrails.out.out = json;
         Guardrails.out.cap = sizeof(json);
-        DBENCH_OP("Guardrails.json", 50000, Guardrails.json(Guardrails.internal); sinki += Guardrails.n);
+        DBENCH_OP("Guardrails.json", 50000, Guardrails.json(protocore_guardrails_span()); sinki += Guardrails.n);
 
         (void)sink8;
         (void)sinki;

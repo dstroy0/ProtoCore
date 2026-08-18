@@ -61,9 +61,6 @@ typedef struct
     const char *value3; ///< third member; NULL omits it
 } WebhookIftttArgs;
 
-/** @brief The webhook's arguments and the calls that reach them, described only in webhook.c. */
-struct WebhookInternal;
-
 /**
  * @brief The outbound webhook module: build a target URI and a JSON object, then POST them.
  *
@@ -84,7 +81,6 @@ struct WebhookInternal;
  * @var WebhookNs::post           POST @c request.content as application/json to
  *                                @c request.target_uri (RFC 9110 sec 9.3.3)
  * @var WebhookNs::ifttt_trigger  build the URI and the object into its own frames, then POST them
- * @var WebhookNs::internal       the handle the calls read their arguments through
  */
 typedef struct
 {
@@ -95,12 +91,10 @@ typedef struct
     int n;
     int i32;
 
-    void (*ifttt_url)(struct WebhookInternal *ctx);
-    void (*ifttt_payload)(struct WebhookInternal *ctx);
-    void (*post)(struct WebhookInternal *ctx);
-    void (*ifttt_trigger)(struct WebhookInternal *ctx);
-
-    struct WebhookInternal *internal;
+    void (*const ifttt_url)(uint8_t *restrict work);
+    void (*const ifttt_payload)(uint8_t *restrict work);
+    void (*const post)(uint8_t *restrict work);
+    void (*const ifttt_trigger)(uint8_t *restrict work);
 } WebhookNs;
 
 /** @brief The one symbol this module exports. */

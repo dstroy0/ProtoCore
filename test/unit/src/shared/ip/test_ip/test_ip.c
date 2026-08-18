@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
 void setUp(void)
 {
 }
@@ -29,7 +31,7 @@ static proto_bool parse(const char *s, protocore_ip *out)
 {
     Ip.args.text = s;
     Ip.args.out = out;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     return Ip.ok;
 }
 
@@ -38,7 +40,7 @@ static const char *format(const protocore_ip *ip, char *buf, size_t cap)
     Ip.args.ip = ip;
     Ip.args.buf = buf;
     Ip.args.cap = cap;
-    Ip.format(Ip.internal);
+    Ip.format(ip_work);
     return buf;
 }
 
@@ -47,7 +49,7 @@ static protocore_ip_scope scope_of(const char *s)
     protocore_ip ip;
     TEST_ASSERT_TRUE_MESSAGE(parse(s, &ip), s);
     Ip.args.ip = &ip;
-    Ip.classify(Ip.internal);
+    Ip.classify(ip_work);
     return Ip.scope;
 }
 
@@ -142,7 +144,7 @@ void test_constructors_match_the_parser(void)
 
     Ip.args.ip = &built;
     Ip.args.b = &parsed;
-    Ip.equal(Ip.internal);
+    Ip.equal(ip_work);
     TEST_ASSERT_TRUE(Ip.ok);
 
     static const uint8_t SIX[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01};
@@ -151,7 +153,7 @@ void test_constructors_match_the_parser(void)
     TEST_ASSERT_TRUE(parse("2001:db8::1", &p6));
     Ip.args.ip = &v6;
     Ip.args.b = &p6;
-    Ip.equal(Ip.internal);
+    Ip.equal(ip_work);
     TEST_ASSERT_TRUE(Ip.ok);
 }
 
@@ -178,7 +180,7 @@ void test_equal_separates_families(void)
     TEST_ASSERT_TRUE(parse("::", &b));
     Ip.args.ip = &a;
     Ip.args.b = &b;
-    Ip.equal(Ip.internal);
+    Ip.equal(ip_work);
     TEST_ASSERT_FALSE(Ip.ok);
 }
 
@@ -187,17 +189,17 @@ void test_is_unspecified(void)
     protocore_ip ip;
     TEST_ASSERT_TRUE(parse("0.0.0.0", &ip));
     Ip.args.ip = &ip;
-    Ip.is_unspecified(Ip.internal);
+    Ip.is_unspecified(ip_work);
     TEST_ASSERT_TRUE(Ip.ok);
 
     TEST_ASSERT_TRUE(parse("::", &ip));
     Ip.args.ip = &ip;
-    Ip.is_unspecified(Ip.internal);
+    Ip.is_unspecified(ip_work);
     TEST_ASSERT_TRUE(Ip.ok);
 
     TEST_ASSERT_TRUE(parse("0.0.0.1", &ip));
     Ip.args.ip = &ip;
-    Ip.is_unspecified(Ip.internal);
+    Ip.is_unspecified(ip_work);
     TEST_ASSERT_FALSE(Ip.ok);
 }
 
@@ -241,14 +243,14 @@ void test_prefix_match(void)
     Ip.args.ip = &addr;
     Ip.args.b = &net;
     Ip.args.prefix_len = 24;
-    Ip.prefix_match(Ip.internal);
+    Ip.prefix_match(ip_work);
     TEST_ASSERT_TRUE(Ip.ok);
 
     TEST_ASSERT_TRUE(parse("192.168.2.42", &addr));
     Ip.args.ip = &addr;
     Ip.args.b = &net;
     Ip.args.prefix_len = 24;
-    Ip.prefix_match(Ip.internal);
+    Ip.prefix_match(ip_work);
     TEST_ASSERT_FALSE(Ip.ok);
 
     // /0 contains everything
@@ -256,7 +258,7 @@ void test_prefix_match(void)
     Ip.args.ip = &addr;
     Ip.args.b = &net;
     Ip.args.prefix_len = 0;
-    Ip.prefix_match(Ip.internal);
+    Ip.prefix_match(ip_work);
     TEST_ASSERT_TRUE(Ip.ok);
 }
 
@@ -269,6 +271,6 @@ void test_format_refuses_a_short_buffer(void)
     Ip.args.ip = &ip;
     Ip.args.buf = small;
     Ip.args.cap = sizeof(small);
-    Ip.format(Ip.internal);
+    Ip.format(ip_work);
     TEST_ASSERT_EQUAL_UINT(0u, Ip.n);
 }

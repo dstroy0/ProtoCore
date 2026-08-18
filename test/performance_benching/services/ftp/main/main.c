@@ -20,6 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t ftp_work[16]; // the borrow an entry takes; Ftp never reads it
+
 void dbench_run(void)
 {
     static char cmdbuf[64];
@@ -51,18 +53,54 @@ void dbench_run(void)
         uint8_t out_ip[4] = {0, 0, 0, 0};
         uint16_t out_port = 0;
 
-        DBENCH_OP("protocore_ftp_build_command", 100000,
-                  sinkz += protocore_ftp_build_command(cmdbuf, sizeof(cmdbuf), "RETR", "/programs/O1234.nc"));
-        DBENCH_OP("protocore_ftp_build_port", 100000,
-                  sinkz += protocore_ftp_build_port(portbuf, sizeof(portbuf), ip, 40000));
-        DBENCH_OP("protocore_ftp_build_eprt", 100000,
-                  sinkz += protocore_ftp_build_eprt(eprtbuf, sizeof(eprtbuf), "132.235.1.2", false, 6275));
-        DBENCH_OP("protocore_ftp_parse_reply multiline", 50000,
-                  sinkb = protocore_ftp_parse_reply(feat, sizeof(feat) - 1, &code, &consumed));
-        DBENCH_OP("protocore_ftp_parse_pasv", 100000,
-                  sinkb = protocore_ftp_parse_pasv(pasv_reply, sizeof(pasv_reply) - 1, out_ip, &out_port));
-        DBENCH_OP("protocore_ftp_parse_epsv", 100000,
-                  sinkb = protocore_ftp_parse_epsv(epsv_reply, sizeof(epsv_reply) - 1, &out_port));
+        DBENCH_OP("Ftp.build_command", 100000, {
+            Ftp.build_command_args.buf = cmdbuf;
+            Ftp.build_command_args.cap = sizeof(cmdbuf);
+            Ftp.build_command_args.verb = "RETR";
+            Ftp.build_command_args.arg = "/programs/O1234.nc";
+            Ftp.build_command(ftp_work);
+            sinkz += Ftp.n;
+        });
+        DBENCH_OP("Ftp.build_port", 100000, {
+            Ftp.build_port_args.buf = portbuf;
+            Ftp.build_port_args.cap = sizeof(portbuf);
+            Ftp.build_port_args.ip = ip;
+            Ftp.build_port_args.port = 40000;
+            Ftp.build_port(ftp_work);
+            sinkz += Ftp.n;
+        });
+        DBENCH_OP("Ftp.build_eprt", 100000, {
+            Ftp.build_eprt_args.buf = eprtbuf;
+            Ftp.build_eprt_args.cap = sizeof(eprtbuf);
+            Ftp.build_eprt_args.ip_str = "132.235.1.2";
+            Ftp.build_eprt_args.ipv6 = false;
+            Ftp.build_eprt_args.port = 6275;
+            Ftp.build_eprt(ftp_work);
+            sinkz += Ftp.n;
+        });
+        DBENCH_OP("Ftp.parse_reply multiline", 50000, {
+            Ftp.parse_reply_args.buf = feat;
+            Ftp.parse_reply_args.len = sizeof(feat) - 1;
+            Ftp.parse_reply_args.code = &code;
+            Ftp.parse_reply_args.consumed = &consumed;
+            Ftp.parse_reply(ftp_work);
+            sinkb = Ftp.ok;
+        });
+        DBENCH_OP("Ftp.parse_pasv", 100000, {
+            Ftp.parse_pasv_args.buf = pasv_reply;
+            Ftp.parse_pasv_args.len = sizeof(pasv_reply) - 1;
+            Ftp.parse_pasv_args.ip = out_ip;
+            Ftp.parse_pasv_args.port = &out_port;
+            Ftp.parse_pasv(ftp_work);
+            sinkb = Ftp.ok;
+        });
+        DBENCH_OP("Ftp.parse_epsv", 100000, {
+            Ftp.parse_epsv_args.buf = epsv_reply;
+            Ftp.parse_epsv_args.len = sizeof(epsv_reply) - 1;
+            Ftp.parse_epsv_args.port = &out_port;
+            Ftp.parse_epsv(ftp_work);
+            sinkb = Ftp.ok;
+        });
         (void)sinkz;
         (void)sinkb;
         DBENCH_DONE();

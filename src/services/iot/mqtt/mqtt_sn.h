@@ -163,9 +163,6 @@ typedef struct
     size_t avail;      ///< how many are readable there
 } MqttsnBufArgs;
 
-/** @brief The codec's own calls, described only in mqtt_sn.c. */
-struct MqttsnInternal;
-
 /**
  * @brief The MQTT-SN v1.2 wire codec.
  *
@@ -224,7 +221,6 @@ struct MqttsnInternal;
  * PUBLISH: Flags, TopicId, MsgId, and the Data slice into @c data (sec 5.4.12).
  * @var MqttsnNs::parse_register
  * REGISTER: TopicId, MsgId, and the TopicName slice into @c topic (sec 5.4.10).
- * @var MqttsnNs::internal  the calls that walk the caller's buffer
  *
  * No storage member: every call works in the buffer the caller lends and holds nothing between
  * calls.
@@ -241,26 +237,24 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*make_flags)(struct MqttsnInternal *ctx);
-    void (*build_connect)(struct MqttsnInternal *ctx);
-    void (*build_register)(struct MqttsnInternal *ctx);
-    void (*build_regack)(struct MqttsnInternal *ctx);
-    void (*build_publish)(struct MqttsnInternal *ctx);
-    void (*build_puback)(struct MqttsnInternal *ctx);
-    void (*build_subscribe_name)(struct MqttsnInternal *ctx);
-    void (*build_subscribe_id)(struct MqttsnInternal *ctx);
-    void (*build_pingreq)(struct MqttsnInternal *ctx);
-    void (*build_disconnect)(struct MqttsnInternal *ctx);
-    void (*build_searchgw)(struct MqttsnInternal *ctx);
-    void (*parse_header)(struct MqttsnInternal *ctx);
-    void (*parse_connack)(struct MqttsnInternal *ctx);
-    void (*parse_regack)(struct MqttsnInternal *ctx);
-    void (*parse_puback)(struct MqttsnInternal *ctx);
-    void (*parse_suback)(struct MqttsnInternal *ctx);
-    void (*parse_publish)(struct MqttsnInternal *ctx);
-    void (*parse_register)(struct MqttsnInternal *ctx);
-
-    struct MqttsnInternal *internal;
+    void (*const make_flags)(uint8_t *restrict work);
+    void (*const build_connect)(uint8_t *restrict work);
+    void (*const build_register)(uint8_t *restrict work);
+    void (*const build_regack)(uint8_t *restrict work);
+    void (*const build_publish)(uint8_t *restrict work);
+    void (*const build_puback)(uint8_t *restrict work);
+    void (*const build_subscribe_name)(uint8_t *restrict work);
+    void (*const build_subscribe_id)(uint8_t *restrict work);
+    void (*const build_pingreq)(uint8_t *restrict work);
+    void (*const build_disconnect)(uint8_t *restrict work);
+    void (*const build_searchgw)(uint8_t *restrict work);
+    void (*const parse_header)(uint8_t *restrict work);
+    void (*const parse_connack)(uint8_t *restrict work);
+    void (*const parse_regack)(uint8_t *restrict work);
+    void (*const parse_puback)(uint8_t *restrict work);
+    void (*const parse_suback)(uint8_t *restrict work);
+    void (*const parse_publish)(uint8_t *restrict work);
+    void (*const parse_register)(uint8_t *restrict work);
 } MqttsnNs;
 
 /** @brief The one symbol this module exports. */

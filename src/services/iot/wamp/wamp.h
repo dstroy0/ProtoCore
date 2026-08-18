@@ -102,9 +102,6 @@ typedef struct
     size_t uri_cap;  ///< how much room that has, the NUL included
 } WampParseArgs;
 
-/** @brief The codec's calls, described only in wamp.c. */
-struct WampInternal;
-
 /**
  * @brief The WAMP message codec: the builders and the positional element reader.
  *
@@ -139,7 +136,6 @@ struct WampInternal;
  * @var WampNs::get_type  read the message type code into @c i32, naming element 0 itself (sec 3.5)
  * @var WampNs::get_id    read the id at @c parse.index into @c u64 (sec 2.1.2)
  * @var WampNs::get_uri   copy the URI at @c parse.index into @c parse.uri_out, quotes stripped
- * @var WampNs::internal  the codec's calls
  */
 typedef struct
 {
@@ -155,22 +151,20 @@ typedef struct
     int32_t i32;
     const char *text;
 
-    void (*build_hello)(struct WampInternal *ctx);
-    void (*build_goodbye)(struct WampInternal *ctx);
-    void (*build_subscribe)(struct WampInternal *ctx);
-    void (*build_unsubscribe)(struct WampInternal *ctx);
-    void (*build_publish)(struct WampInternal *ctx);
-    void (*build_call)(struct WampInternal *ctx);
-    void (*build_register)(struct WampInternal *ctx);
-    void (*build_unregister)(struct WampInternal *ctx);
-    void (*build_yield)(struct WampInternal *ctx);
+    void (*const build_hello)(uint8_t *restrict work);
+    void (*const build_goodbye)(uint8_t *restrict work);
+    void (*const build_subscribe)(uint8_t *restrict work);
+    void (*const build_unsubscribe)(uint8_t *restrict work);
+    void (*const build_publish)(uint8_t *restrict work);
+    void (*const build_call)(uint8_t *restrict work);
+    void (*const build_register)(uint8_t *restrict work);
+    void (*const build_unregister)(uint8_t *restrict work);
+    void (*const build_yield)(uint8_t *restrict work);
 
-    void (*element)(struct WampInternal *ctx);
-    void (*get_type)(struct WampInternal *ctx);
-    void (*get_id)(struct WampInternal *ctx);
-    void (*get_uri)(struct WampInternal *ctx);
-
-    struct WampInternal *internal;
+    void (*const element)(uint8_t *restrict work);
+    void (*const get_type)(uint8_t *restrict work);
+    void (*const get_id)(uint8_t *restrict work);
+    void (*const get_uri)(uint8_t *restrict work);
 } WampNs;
 
 /** @brief The one symbol this module exports. */

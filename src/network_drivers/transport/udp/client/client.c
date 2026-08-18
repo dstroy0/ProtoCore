@@ -10,6 +10,7 @@
  */
 
 #include "network_drivers/transport/udp/client/client.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #include "core_setup/board_profiles/protocore_platform.h" // the stack's UDP, under our names
 #include "mmgr/rawmemcpy.h"                               // raw.read: the caller's bytes into the pbuf
@@ -29,24 +30,16 @@ struct UdpClientStorage
     protocore_udp_pcb *out;
 };
 
-/**
- * @brief The sending side's state and the call that reaches it - what UdpClientNs points at.
- *
- * RFC 768 names the datagram's destination by address and port, which is the whole of what a send
- * needs; there is no connection to hold, so the only state is the shared outbound control block.
- *
- * @var UdpClientInternal::store  the shared control block every datagram leaves through
- * @var UdpClientInternal::ns     the handle a caller sets the call's members on
- */
-struct UdpClientInternal
-{
-    struct UdpClientStorage *store;
-    UdpClientNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define UDP_CLIENT_OFF_CTX 0u
+static_assert(UDP_CLIENT_OFF_CTX + sizeof(struct UdpClientStorage) <= PROTOCORE_UDP_CLIENT_BORROW,
+              "PROTOCORE_UDP_CLIENT_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct UdpClientStorage s_store;
-
-static struct UdpClientInternal s_cli = {.store = &s_store, .ns = &UdpClient};
+// The region, at its offset in the caller's borrow.
+#define UDP_CLIENT_CTX(w) ((struct UdpClientStorage *)(void *)((w) + UDP_CLIENT_OFF_CTX))
 
 // The datagram, carried to the stack's thread by pointer. The caller's buffer is the send buffer,
 // so nothing is copied into this and it holds no storage of its own.
@@ -96,20 +89,27 @@ static proto_bool wire_send(protocore_udp_pcb *pcb, const protocore_ip *a, uint1
 }
 
 // The send, on the stack's thread. The control block is created here on first use, in the thread
-// that owns it.
+// that owns it. The stack fixes this signature, so there is no borrow to take and the module's own
+// span is what it reads.
 static protocore_net_err send_do(protocore_net_call *c)
 {
     protocore_udp_send_call *k = (protocore_udp_send_call *)c;
-    if (s_store.out == NULL)
+    uint8_t *work = protocore_udp_client_span();
+    if (work == NULL)
     {
-        s_store.out = protocore_net_udp_new();
+        return PROTOCORE_NET_OK; // the pool was short: k->ok stays false and the caller still holds its bytes
     }
-    if (s_store.out == NULL)
+    struct UdpClientStorage *st = UDP_CLIENT_CTX(work);
+    if (st->out == NULL)
+    {
+        st->out = protocore_net_udp_new();
+    }
+    if (st->out == NULL)
     {
         return PROTOCORE_NET_OK; // no control block: k->ok stays false and the caller still holds its bytes
     }
-    apply_dscp(s_store.out);
-    k->ok = wire_send(s_store.out, k->dst, k->port, k->data, k->len);
+    apply_dscp(st->out);
+    k->ok = wire_send(st->out, k->dst, k->port, k->data, k->len);
     return PROTOCORE_NET_OK;
 }
 
@@ -117,21 +117,46 @@ static protocore_net_err send_do(protocore_net_call *c)
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-static void send_to(struct UdpClientInternal *restrict ctx)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    if (ctx->ns->data == NULL || ctx->ns->len == 0 || ctx->ns->len > PROTOCORE_UDP_RX_BUF_SIZE ||
-        ctx->ns->dst == NULL || ctx->ns->dst->family == PROTOCORE_IP_NONE)
+    uint8_t *span; ///< PROTOCORE_UDP_CLIENT_BORROW persistent bytes, or null while the pool was short
+} UdpClientOwnCtx;
+static UdpClientOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_udp_client_span(void)
+{
+    if (s_own.span == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_UDP_CLIENT_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void send_to(uint8_t *restrict work)
+{
+    (void)work;
+    if (UdpClient.data == NULL || UdpClient.len == 0 || UdpClient.len > PROTOCORE_UDP_RX_BUF_SIZE ||
+        UdpClient.dst == NULL || UdpClient.dst->family == PROTOCORE_IP_NONE)
+    {
+        UdpClient.ok = PROTO_FALSE;
         return;
     }
     // The marshal is synchronous, so this outlives the call and carries its answer back.
-    protocore_udp_send_call k = {{0}, ctx->ns->dst, ctx->ns->data, ctx->ns->len, ctx->ns->dst_port, PROTO_FALSE};
+    protocore_udp_send_call k = {{0}, UdpClient.dst, UdpClient.data, UdpClient.len, UdpClient.dst_port, PROTO_FALSE};
     (void)protocore_net_call_marshal(send_do, &k.base);
-    ctx->ns->ok = k.ok;
+    UdpClient.ok = k.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-UdpClientNs UdpClient = {.sendto = send_to, .internal = &s_cli};
+UdpClientNs UdpClient = {.sendto = send_to};
 
 PROTOCORE_END_DECLS

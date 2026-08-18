@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t utf8_work[16]; // the borrow an entry takes; Utf8 never reads it
+
 void setUp(void)
 {
 }
@@ -28,7 +30,7 @@ static proto_bool ok_of(const void *p, size_t n)
 {
     Utf8.args.s = (const uint8_t *)p;
     Utf8.args.n = n;
-    Utf8.valid(Utf8.internal);
+    Utf8.valid(utf8_work);
     return Utf8.ok;
 }
 

@@ -6,9 +6,13 @@
  * @brief CC1101 sub-GHz radio driver (see cc1101.h).
  */
 
-#include "services/radio/cc1101/cc1101.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_CC1101
+
+#include "services/radio/cc1101/cc1101.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // SPI header bits.
 static const uint8_t READ = 0x80;
@@ -61,18 +65,34 @@ static uint8_t status_byte(const protocore_cc1101_bus *b)
     return rx[0];
 }
 
-int16_t protocore_cc1101_rssi_dbm(uint8_t raw)
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void cc1101_rssi_dbm(uint8_t *restrict work);
+
+static void cc1101_rssi_dbm(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t raw = Cc1101.rssi_dbm_args.raw;
+
     // TI CC1101 datasheet: dBm = (raw >= 128 ? (raw - 256) : raw) / 2 - 74.
     int16_t r = raw >= 128 ? (int16_t)raw - 256 : (int16_t)raw;
-    return (int16_t)(r / 2 - 74);
+    Cc1101.value = (int16_t)(r / 2 - 74);
 }
 
-proto_bool protocore_cc1101_init(const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg)
+static void cc1101_init(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_cc1101_bus *bus = Cc1101.init_args.bus;
+    const protocore_cc1101_config *cfg = Cc1101.init_args.cfg;
+
     if (!bus || !bus->spi || !cfg)
     {
-        return PROTO_FALSE;
+        Cc1101.ok = PROTO_FALSE;
+        return;
     }
     strobe(bus, STROBE_SRES);
     for (size_t i = 0; i < cfg->nregs && cfg->regs; i++)
@@ -81,14 +101,20 @@ proto_bool protocore_cc1101_init(const protocore_cc1101_bus *bus, const protocor
     }
     write_reg(bus, REG_CHANNR, cfg->channel);
     uint8_t ver = read_reg(bus, STAT_VERSION, PROTO_TRUE);
-    return ver != 0x00 && ver != 0xFF; // a floating bus reads all-0 or all-1
+    Cc1101.ok = ver != 0x00 && ver != 0xFF; // a floating bus reads all-0 or all-1
 }
 
-proto_bool protocore_cc1101_send(const protocore_cc1101_bus *bus, const uint8_t *data, uint8_t len)
+static void cc1101_send(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_cc1101_bus *bus = Cc1101.send_args.bus;
+    const uint8_t *data = Cc1101.send_args.data;
+    uint8_t len = Cc1101.send_args.len;
+
     if (!bus || !bus->spi || !data || len == 0 || len > 63)
     {
-        return PROTO_FALSE;
+        Cc1101.ok = PROTO_FALSE;
+        return;
     }
     strobe(bus, STROBE_SIDLE);
     strobe(bus, STROBE_SFTX);
@@ -103,21 +129,28 @@ proto_bool protocore_cc1101_send(const protocore_cc1101_bus *bus, const uint8_t 
     }
     bus->spi(tx, rx, (uint8_t)(2 + len), bus->ctx);
     strobe(bus, STROBE_STX);
-    return PROTO_TRUE;
+    Cc1101.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_cc1101_tx_done(const protocore_cc1101_bus *bus)
+static void cc1101_tx_done(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_cc1101_bus *bus = Cc1101.tx_done_args.bus;
+
     if (!bus || !bus->spi)
     {
-        return PROTO_FALSE;
+        Cc1101.ok = PROTO_FALSE;
+        return;
     }
     uint8_t st = (uint8_t)((status_byte(bus) >> 4) & 0x07);
-    return st == STATE_IDLE;
+    Cc1101.ok = st == STATE_IDLE;
 }
 
-void protocore_cc1101_set_rx(const protocore_cc1101_bus *bus)
+static void cc1101_set_rx(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_cc1101_bus *bus = Cc1101.set_rx_args.bus;
+
     if (!bus || !bus->spi)
     {
         return;
@@ -127,22 +160,30 @@ void protocore_cc1101_set_rx(const protocore_cc1101_bus *bus)
     strobe(bus, STROBE_SRX);
 }
 
-int protocore_cc1101_recv(const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi_dbm)
+static void cc1101_recv(uint8_t *restrict work)
 {
+    const protocore_cc1101_bus *bus = Cc1101.recv_args.bus;
+    uint8_t *buf = Cc1101.recv_args.buf;
+    uint8_t cap = Cc1101.recv_args.cap;
+    int16_t *rssi_dbm = Cc1101.recv_args.rssi_dbm;
+
     if (!bus || !bus->spi || !buf)
     {
-        return -1;
+        Cc1101.n = -1;
+        return;
     }
     uint8_t rxbytes = (uint8_t)(read_reg(bus, STAT_RXBYTES, PROTO_TRUE) & 0x7F); // low 7 bits = count
     if (rxbytes == 0)
     {
-        return -1;
+        Cc1101.n = -1;
+        return;
     }
     uint8_t len = read_reg(bus, FIFO, PROTO_FALSE); // variable-length: leading length byte
     if (len == 0 || len > 63)
     {
         strobe(bus, STROBE_SFRX); // corrupt length: flush and bail
-        return -1;
+        Cc1101.n = -1;
+        return;
     }
     // Burst-read payload + 2 appended status bytes (RSSI, LQI/CRC).
     uint8_t tx[66];
@@ -156,14 +197,25 @@ int protocore_cc1101_recv(const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t
     bus->spi(tx, rx, (uint8_t)(1 + n), bus->ctx);
     if (rssi_dbm)
     {
-        *rssi_dbm = protocore_cc1101_rssi_dbm(rx[1 + len]); // first appended status byte is raw RSSI
+        Cc1101.rssi_dbm_args.raw = rx[1 + len];
+        cc1101_rssi_dbm(work);
+        *rssi_dbm = Cc1101.value; // first appended status byte is raw RSSI
     }
     uint8_t out = len < cap ? len : cap;
     for (uint8_t i = 0; i < out; i++)
     {
         buf[i] = rx[1 + i];
     }
-    return out;
+    Cc1101.n = out;
 }
+
+Cc1101Ns Cc1101 = {.init = cc1101_init,
+                   .send = cc1101_send,
+                   .tx_done = cc1101_tx_done,
+                   .set_rx = cc1101_set_rx,
+                   .recv = cc1101_recv,
+                   .rssi_dbm = cc1101_rssi_dbm};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_CC1101

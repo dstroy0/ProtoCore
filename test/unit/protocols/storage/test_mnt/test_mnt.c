@@ -7,14 +7,19 @@
 
 #include <unity.h>
 
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
 static int s_root;
 
 void setUp()
 {
-    Mnt.args.backend = protocore_mnt_ram();
-    Mnt.mount(Mnt.internal);
-    protocore_mnt_ram_format();
-    s_root = protocore_fs_begin("/");
+    Mnt.ram(mnt_work);
+    Mnt.args.backend = Mnt.backend;
+    Mnt.mount(mnt_work);
+    Mnt.ram_format(mnt_work);
+    Fs.mount = "/";
+    Fs.begin(protocore_filesystem_span());
+    s_root = Fs.i32;
 }
 void tearDown()
 {
@@ -23,12 +28,32 @@ void tearDown()
 void test_write_then_read_file()
 {
     const char *msg = "hello vfs";
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/a.txt", "", msg, strlen(msg)));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/a.txt", ""));
-    TEST_ASSERT_EQUAL_INT32((long)strlen(msg), protocore_fs_size(s_root, "/a.txt", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a.txt";
+    Fs.path.name = "";
+    Fs.io.wbuf = msg;
+    Fs.io.n = strlen(msg);
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a.txt";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a.txt";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32((long)strlen(msg), Fs.len);
 
     char buf[32];
-    long n = protocore_fs_read_file(s_root, "/a.txt", "", buf, sizeof(buf));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a.txt";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    long n = Fs.len;
     TEST_ASSERT_EQUAL_INT32((long)strlen(msg), n);
     buf[n] = '\0';
     TEST_ASSERT_EQUAL_STRING(msg, buf);
@@ -36,114 +61,317 @@ void test_write_then_read_file()
 
 void test_streamed_write_and_read()
 {
-    int h = protocore_fs_open(s_root, "/s.bin", "", PROTOCORE_MNT_WRITE);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/s.bin";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_WRITE;
+    Fs.open(protocore_filesystem_span());
+    int h = Fs.i32;
     TEST_ASSERT_TRUE(h >= 0);
-    TEST_ASSERT_EQUAL_INT(3, protocore_fs_write(h, "abc", 3));
-    TEST_ASSERT_EQUAL_INT(3, protocore_fs_write(h, "def", 3));
-    protocore_fs_close(h);
-    TEST_ASSERT_EQUAL_INT32(6, protocore_fs_size(s_root, "/s.bin", ""));
+    Fs.io.handle = h;
+    Fs.io.wbuf = "abc";
+    Fs.io.n = 3;
+    Fs.write(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(3, Fs.i32);
+    Fs.io.handle = h;
+    Fs.io.wbuf = "def";
+    Fs.io.n = 3;
+    Fs.write(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(3, Fs.i32);
+    Fs.io.handle = h;
+    Fs.close(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/s.bin";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(6, Fs.len);
 
-    h = protocore_fs_open(s_root, "/s.bin", "", PROTOCORE_MNT_READ);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/s.bin";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
+    Fs.open(protocore_filesystem_span());
+    h = Fs.i32;
     TEST_ASSERT_TRUE(h >= 0);
     char buf[8] = {0};
-    TEST_ASSERT_EQUAL_INT(4, protocore_fs_read(h, buf, 4));
+    Fs.io.handle = h;
+    Fs.io.buf = buf;
+    Fs.io.n = 4;
+    Fs.read(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(4, Fs.i32);
     TEST_ASSERT_EQUAL_STRING("abcd", buf);
-    TEST_ASSERT_EQUAL_INT(2, protocore_fs_read(h, buf, 4));
-    TEST_ASSERT_EQUAL_INT(0, protocore_fs_read(h, buf, 4));
-    protocore_fs_close(h);
+    Fs.io.handle = h;
+    Fs.io.buf = buf;
+    Fs.io.n = 4;
+    Fs.read(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(2, Fs.i32);
+    Fs.io.handle = h;
+    Fs.io.buf = buf;
+    Fs.io.n = 4;
+    Fs.read(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(0, Fs.i32);
+    Fs.io.handle = h;
+    Fs.close(protocore_filesystem_span());
 }
 
 void test_write_mode_truncates()
 {
-    protocore_fs_write_file(s_root, "/t.txt", "", "longer original", 15);
-    protocore_fs_write_file(s_root, "/t.txt", "", "short", 5);
-    TEST_ASSERT_EQUAL_INT32(5, protocore_fs_size(s_root, "/t.txt", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/t.txt";
+    Fs.path.name = "";
+    Fs.io.wbuf = "longer original";
+    Fs.io.n = 15;
+    Fs.write_file(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/t.txt";
+    Fs.path.name = "";
+    Fs.io.wbuf = "short";
+    Fs.io.n = 5;
+    Fs.write_file(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/t.txt";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(5, Fs.len);
     char buf[16];
-    long n = protocore_fs_read_file(s_root, "/t.txt", "", buf, sizeof(buf));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/t.txt";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    long n = Fs.len;
     buf[n] = '\0';
     TEST_ASSERT_EQUAL_STRING("short", buf);
 }
 
 void test_append_extends()
 {
-    protocore_fs_write_file(s_root, "/log", "", "line1\n", 6);
-    int h = protocore_fs_open(s_root, "/log", "", PROTOCORE_MNT_APPEND);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/log";
+    Fs.path.name = "";
+    Fs.io.wbuf = "line1\n";
+    Fs.io.n = 6;
+    Fs.write_file(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/log";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_APPEND;
+    Fs.open(protocore_filesystem_span());
+    int h = Fs.i32;
     TEST_ASSERT_TRUE(h >= 0);
-    protocore_fs_write(h, "line2\n", 6);
-    protocore_fs_close(h);
-    TEST_ASSERT_EQUAL_INT32(12, protocore_fs_size(s_root, "/log", ""));
+    Fs.io.handle = h;
+    Fs.io.wbuf = "line2\n";
+    Fs.io.n = 6;
+    Fs.write(protocore_filesystem_span());
+    Fs.io.handle = h;
+    Fs.close(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/log";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(12, Fs.len);
     char buf[16];
-    long n = protocore_fs_read_file(s_root, "/log", "", buf, sizeof(buf));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/log";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    long n = Fs.len;
     buf[n] = '\0';
     TEST_ASSERT_EQUAL_STRING("line1\nline2\n", buf);
 }
 
 void test_remove_and_rename()
 {
-    protocore_fs_write_file(s_root, "/old", "", "data", 4);
-    TEST_ASSERT_TRUE(protocore_fs_rename(s_root, "/old", "", "/new", ""));
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/old", ""));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/new", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/old";
+    Fs.path.name = "";
+    Fs.io.wbuf = "data";
+    Fs.io.n = 4;
+    Fs.write_file(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/old";
+    Fs.path.name = "";
+    Fs.dest.dir = "/new";
+    Fs.dest.name = "";
+    Fs.rename(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/old";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/new";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
     char buf[8];
-    long n = protocore_fs_read_file(s_root, "/new", "", buf, sizeof(buf));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/new";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    long n = Fs.len;
     buf[n] = '\0';
     TEST_ASSERT_EQUAL_STRING("data", buf);
 
-    TEST_ASSERT_TRUE(protocore_fs_remove(s_root, "/new", ""));
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/new", ""));
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_fs_size(s_root, "/new", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/new";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/new";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/new";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
 }
 
 void test_missing_file_fails_closed()
 {
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/nope", ""));
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_fs_size(s_root, "/nope", ""));
-    TEST_ASSERT_TRUE(protocore_fs_open(s_root, "/nope", "", PROTOCORE_MNT_READ) < 0);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/nope";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/nope";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/nope";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
+    Fs.open(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.i32 < 0);
     char buf[8];
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_fs_read_file(s_root, "/nope", "", buf, sizeof(buf)));
-    TEST_ASSERT_FALSE(protocore_fs_remove(s_root, "/nope", ""));
-    TEST_ASSERT_FALSE(protocore_fs_rename(s_root, "/nope", "", "/x", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/nope";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/nope";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/nope";
+    Fs.path.name = "";
+    Fs.dest.dir = "/x";
+    Fs.dest.name = "";
+    Fs.rename(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 }
 
 void test_remove_refuses_the_root_itself()
 {
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/keep.txt", "", "data", 4));
-    TEST_ASSERT_TRUE(protocore_fs_mkdir(s_root, "/sub", ""));
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/sub/deep.txt", "", "more", 4));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/keep.txt";
+    Fs.path.name = "";
+    Fs.io.wbuf = "data";
+    Fs.io.n = 4;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/sub";
+    Fs.path.name = "";
+    Fs.mkdir(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/sub/deep.txt";
+    Fs.path.name = "";
+    Fs.io.wbuf = "more";
+    Fs.io.n = 4;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
 
-    TEST_ASSERT_FALSE(protocore_fs_remove(s_root, "/", ""));
-    TEST_ASSERT_FALSE(protocore_fs_remove(s_root, "", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/keep.txt", ""));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/sub/deep.txt", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/keep.txt";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/sub/deep.txt";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
 }
 
 void test_read_buffer_too_small_fails_closed()
 {
-    protocore_fs_write_file(s_root, "/big", "", "0123456789", 10);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/big";
+    Fs.path.name = "";
+    Fs.io.wbuf = "0123456789";
+    Fs.io.n = 10;
+    Fs.write_file(protocore_filesystem_span());
     char tiny[4];
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_fs_read_file(s_root, "/big", "", tiny, sizeof(tiny)));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/big";
+    Fs.path.name = "";
+    Fs.io.buf = tiny;
+    Fs.io.n = sizeof(tiny);
+    Fs.read_file(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
 }
 
 void test_file_full_is_bounded()
 {
-    int h = protocore_fs_open(s_root, "/full", "", PROTOCORE_MNT_WRITE);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/full";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_WRITE;
+    Fs.open(protocore_filesystem_span());
+    int h = Fs.i32;
     TEST_ASSERT_TRUE(h >= 0);
     static uint8_t chunk[256];
     memset(chunk, 'x', sizeof(chunk));
     size_t written = 0;
     for (int i = 0; i < 100; i++)
     {
-        int w = protocore_fs_write(h, chunk, sizeof(chunk));
+        Fs.io.handle = h;
+        Fs.io.wbuf = chunk;
+        Fs.io.n = sizeof(chunk);
+        Fs.write(protocore_filesystem_span());
+        int w = Fs.i32;
         if (w <= 0)
         {
             break;
         }
         written += (size_t)w;
     }
-    protocore_fs_close(h);
+    Fs.io.handle = h;
+    Fs.close(protocore_filesystem_span());
 
-    TEST_ASSERT_EQUAL_INT32((long)PROTOCORE_MNT_RAM_FILE_SIZE, protocore_fs_size(s_root, "/full", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/full";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32((long)PROTOCORE_MNT_RAM_FILE_SIZE, Fs.len);
     TEST_ASSERT_EQUAL_UINT32(PROTOCORE_MNT_RAM_FILE_SIZE, (uint32_t)written);
 }
 
@@ -153,125 +381,357 @@ void test_file_pool_exhaustion()
     for (int i = 0; i < PROTOCORE_MNT_RAM_FILES; i++)
     {
         snprintf(name, sizeof(name), "/f%d", i);
-        TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, name, "", "x", 1));
+        Fs.path.root = s_root;
+        Fs.path.dir = name;
+        Fs.path.name = "";
+        Fs.io.wbuf = "x";
+        Fs.io.n = 1;
+        Fs.write_file(protocore_filesystem_span());
+        TEST_ASSERT_TRUE(Fs.ok);
     }
 
-    TEST_ASSERT_FALSE(protocore_fs_write_file(s_root, "/overflow", "", "x", 1));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/overflow";
+    Fs.path.name = "";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 }
 
 void test_handle_pool_exhaustion()
 {
-    protocore_fs_write_file(s_root, "/h", "", "data", 4);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/h";
+    Fs.path.name = "";
+    Fs.io.wbuf = "data";
+    Fs.io.n = 4;
+    Fs.write_file(protocore_filesystem_span());
     int handles[PROTOCORE_MNT_MAX_OPEN];
     for (int i = 0; i < PROTOCORE_MNT_MAX_OPEN; i++)
     {
-        handles[i] = protocore_fs_open(s_root, "/h", "", PROTOCORE_MNT_READ);
+        Fs.path.root = s_root;
+        Fs.path.dir = "/h";
+        Fs.path.name = "";
+        Fs.io.mode = PROTOCORE_MNT_READ;
+        Fs.open(protocore_filesystem_span());
+        handles[i] = Fs.i32;
         TEST_ASSERT_TRUE(handles[i] >= 0);
     }
-    TEST_ASSERT_TRUE(protocore_fs_open(s_root, "/h", "", PROTOCORE_MNT_READ) < 0);
-    protocore_fs_close(handles[0]);
-    TEST_ASSERT_TRUE(protocore_fs_open(s_root, "/h", "", PROTOCORE_MNT_READ) >= 0);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/h";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
+    Fs.open(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.i32 < 0);
+    Fs.io.handle = handles[0];
+    Fs.close(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/h";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
+    Fs.open(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.i32 >= 0);
 }
 
 void test_unmounted_fails_closed()
 {
     Mnt.args.backend = NULL;
-    Mnt.mount(Mnt.internal);
-    TEST_ASSERT_TRUE(protocore_fs_open(s_root, "/a", "", PROTOCORE_MNT_READ) < 0);
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/a", ""));
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_fs_size(s_root, "/a", ""));
-    TEST_ASSERT_FALSE(protocore_fs_write_file(s_root, "/a", "", "x", 1));
+    Mnt.mount(mnt_work);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
+    Fs.open(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.i32 < 0);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 }
 
 void test_ram_guard_subconditions()
 {
-    Mnt.args.backend = protocore_mnt_ram();
-    Mnt.mount(Mnt.internal);
-    protocore_mnt_ram_format();
+    Mnt.ram(mnt_work);
+    Mnt.args.backend = Mnt.backend;
+    Mnt.mount(mnt_work);
+    Mnt.ram_format(mnt_work);
     uint8_t b[8] = {0};
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_open(s_root, NULL, "", PROTOCORE_MNT_WRITE));
+    Fs.path.root = s_root;
+    Fs.path.dir = NULL;
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_WRITE;
+    Fs.open(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
     char longname[256];
     for (int i = 0; i < 255; i++)
     {
         longname[i] = 'a';
     }
     longname[255] = '\0';
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_open(s_root, longname, "", PROTOCORE_MNT_WRITE));
+    Fs.path.root = s_root;
+    Fs.path.dir = longname;
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_WRITE;
+    Fs.open(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_read(999, b, sizeof(b)));
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_write(999, b, sizeof(b)));
-    protocore_fs_close(999);
+    Fs.io.handle = 999;
+    Fs.io.buf = b;
+    Fs.io.n = sizeof(b);
+    Fs.read(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
+    Fs.io.handle = 999;
+    Fs.io.wbuf = b;
+    Fs.io.n = sizeof(b);
+    Fs.write(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
+    Fs.io.handle = 999;
+    Fs.close(protocore_filesystem_span());
 
-    TEST_ASSERT_TRUE(protocore_fs_read_file(s_root, "/nope", "", b, sizeof(b)) < 0);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/nope";
+    Fs.path.name = "";
+    Fs.io.buf = b;
+    Fs.io.n = sizeof(b);
+    Fs.read_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.len < 0);
 }
 
 void test_unmounted_all_entry_points()
 {
     Mnt.args.backend = NULL;
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     uint8_t b[8] = {0};
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_read(0, b, sizeof(b)));
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_write(0, b, sizeof(b)));
-    protocore_fs_close(0);
-    TEST_ASSERT_FALSE(protocore_fs_remove(s_root, "/a", ""));
-    TEST_ASSERT_FALSE(protocore_fs_rename(s_root, "/a", "", "/b", ""));
-    TEST_ASSERT_TRUE(protocore_fs_read_file(s_root, "/a", "", b, sizeof(b)) < 0);
-    Mnt.args.backend = protocore_mnt_ram();
-    Mnt.mount(Mnt.internal);
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/a", "", "x", 1));
+    Fs.io.handle = 0;
+    Fs.io.buf = b;
+    Fs.io.n = sizeof(b);
+    Fs.read(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
+    Fs.io.handle = 0;
+    Fs.io.wbuf = b;
+    Fs.io.n = sizeof(b);
+    Fs.write(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
+    Fs.io.handle = 0;
+    Fs.close(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.dest.dir = "/b";
+    Fs.dest.name = "";
+    Fs.rename(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.io.buf = b;
+    Fs.io.n = sizeof(b);
+    Fs.read_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.len < 0);
+    Mnt.ram(mnt_work);
+    Mnt.args.backend = Mnt.backend;
+    Mnt.mount(mnt_work);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
 }
 
 void test_handle_validity_edges()
 {
     uint8_t b[8] = {0};
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_read(-1, b, sizeof(b)));
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_write(-1, b, sizeof(b)));
-    protocore_fs_close(-1);
+    Fs.io.handle = -1;
+    Fs.io.buf = b;
+    Fs.io.n = sizeof(b);
+    Fs.read(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
+    Fs.io.handle = -1;
+    Fs.io.wbuf = b;
+    Fs.io.n = sizeof(b);
+    Fs.write(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
+    Fs.io.handle = -1;
+    Fs.close(protocore_filesystem_span());
 
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/hv", "", "data", 4));
-    int h = protocore_fs_open(s_root, "/hv", "", PROTOCORE_MNT_READ);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/hv";
+    Fs.path.name = "";
+    Fs.io.wbuf = "data";
+    Fs.io.n = 4;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/hv";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
+    Fs.open(protocore_filesystem_span());
+    int h = Fs.i32;
     TEST_ASSERT_TRUE(h >= 0);
-    protocore_fs_close(h);
+    Fs.io.handle = h;
+    Fs.close(protocore_filesystem_span());
 
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_read(h, b, sizeof(b)));
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_write(h, b, sizeof(b)));
-    TEST_ASSERT_TRUE(protocore_fs_open(s_root, "/hv", "", PROTOCORE_MNT_READ) >= 0);
+    Fs.io.handle = h;
+    Fs.io.buf = b;
+    Fs.io.n = sizeof(b);
+    Fs.read(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
+    Fs.io.handle = h;
+    Fs.io.wbuf = b;
+    Fs.io.n = sizeof(b);
+    Fs.write(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/hv";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
+    Fs.open(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.i32 >= 0);
 }
 
 void test_write_to_read_handle_rejected()
 {
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/ro", "", "data", 4));
-    int h = protocore_fs_open(s_root, "/ro", "", PROTOCORE_MNT_READ);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/ro";
+    Fs.path.name = "";
+    Fs.io.wbuf = "data";
+    Fs.io.n = 4;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/ro";
+    Fs.path.name = "";
+    Fs.io.mode = PROTOCORE_MNT_READ;
+    Fs.open(protocore_filesystem_span());
+    int h = Fs.i32;
     TEST_ASSERT_TRUE(h >= 0);
-    TEST_ASSERT_EQUAL_INT(-1, protocore_fs_write(h, "xx", 2));
-    protocore_fs_close(h);
-    TEST_ASSERT_EQUAL_INT32(4, protocore_fs_size(s_root, "/ro", ""));
+    Fs.io.handle = h;
+    Fs.io.wbuf = "xx";
+    Fs.io.n = 2;
+    Fs.write(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT(-1, Fs.i32);
+    Fs.io.handle = h;
+    Fs.close(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/ro";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(4, Fs.len);
 }
 
 void test_rename_argument_guards()
 {
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/r1", "", "data", 4));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/r1";
+    Fs.path.name = "";
+    Fs.io.wbuf = "data";
+    Fs.io.n = 4;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
     char longname[PROTOCORE_MNT_NAME_MAX + 8];
     memset(longname, 'a', sizeof(longname) - 1);
     longname[sizeof(longname) - 1] = '\0';
-    TEST_ASSERT_FALSE(protocore_fs_rename(s_root, NULL, "", "/r2", ""));
-    TEST_ASSERT_FALSE(protocore_fs_rename(s_root, "/r1", "", NULL, ""));
-    TEST_ASSERT_FALSE(protocore_fs_rename(s_root, "/r1", "", longname, ""));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/r1", ""));
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/r2", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = NULL;
+    Fs.path.name = "";
+    Fs.dest.dir = "/r2";
+    Fs.dest.name = "";
+    Fs.rename(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/r1";
+    Fs.path.name = "";
+    Fs.dest.dir = NULL;
+    Fs.dest.name = "";
+    Fs.rename(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/r1";
+    Fs.path.name = "";
+    Fs.dest.dir = longname;
+    Fs.dest.name = "";
+    Fs.rename(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/r1";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/r2";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 }
 
 void test_rename_overwrites_destination()
 {
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/src", "", "NEW", 3));
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/dst", "", "oldcontent", 10));
-    TEST_ASSERT_TRUE(protocore_fs_rename(s_root, "/src", "", "/dst", ""));
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/src", ""));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/dst", ""));
-    TEST_ASSERT_EQUAL_INT32(3, protocore_fs_size(s_root, "/dst", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/src";
+    Fs.path.name = "";
+    Fs.io.wbuf = "NEW";
+    Fs.io.n = 3;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/dst";
+    Fs.path.name = "";
+    Fs.io.wbuf = "oldcontent";
+    Fs.io.n = 10;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/src";
+    Fs.path.name = "";
+    Fs.dest.dir = "/dst";
+    Fs.dest.name = "";
+    Fs.rename(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/src";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/dst";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/dst";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(3, Fs.len);
     char buf[16];
-    long n = protocore_fs_read_file(s_root, "/dst", "", buf, sizeof(buf));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/dst";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    long n = Fs.len;
     TEST_ASSERT_EQUAL_INT32(3, n);
     buf[n] = '\0';
     TEST_ASSERT_EQUAL_STRING("NEW", buf);
@@ -279,28 +739,62 @@ void test_rename_overwrites_destination()
 
 void test_read_file_handle_exhaustion()
 {
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/rf", "", "0123456789", 10));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/rf";
+    Fs.path.name = "";
+    Fs.io.wbuf = "0123456789";
+    Fs.io.n = 10;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
     int handles[PROTOCORE_MNT_MAX_OPEN];
     for (int i = 0; i < PROTOCORE_MNT_MAX_OPEN; i++)
     {
-        handles[i] = protocore_fs_open(s_root, "/rf", "", PROTOCORE_MNT_READ);
+        Fs.path.root = s_root;
+        Fs.path.dir = "/rf";
+        Fs.path.name = "";
+        Fs.io.mode = PROTOCORE_MNT_READ;
+        Fs.open(protocore_filesystem_span());
+        handles[i] = Fs.i32;
         TEST_ASSERT_TRUE(handles[i] >= 0);
     }
     char buf[16];
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_fs_read_file(s_root, "/rf", "", buf, sizeof(buf)));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/rf";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
     for (int i = 0; i < PROTOCORE_MNT_MAX_OPEN; i++)
     {
-        protocore_fs_close(handles[i]);
+        Fs.io.handle = handles[i];
+        Fs.close(protocore_filesystem_span());
     }
-    TEST_ASSERT_EQUAL_INT32(10, protocore_fs_read_file(s_root, "/rf", "", buf, sizeof(buf)));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/rf";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(10, Fs.len);
 }
 
 void test_write_file_larger_than_capacity()
 {
     static uint8_t big[PROTOCORE_MNT_RAM_FILE_SIZE + 16];
     memset(big, 'z', sizeof(big));
-    TEST_ASSERT_FALSE(protocore_fs_write_file(s_root, "/cap", "", big, sizeof(big)));
-    TEST_ASSERT_EQUAL_INT32((long)PROTOCORE_MNT_RAM_FILE_SIZE, protocore_fs_size(s_root, "/cap", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/cap";
+    Fs.path.name = "";
+    Fs.io.wbuf = big;
+    Fs.io.n = sizeof(big);
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/cap";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32((long)PROTOCORE_MNT_RAM_FILE_SIZE, Fs.len);
 }
 
 static int stall_open(const char *path, int mode)
@@ -377,73 +871,230 @@ static const protocore_mnt_backend s_stall_backend = {stall_open, stall_read, st
 void test_zero_progress_backend_terminates()
 {
     Mnt.args.backend = &s_stall_backend;
-    Mnt.mount(Mnt.internal);
+    Mnt.mount(mnt_work);
     char buf[16];
-    TEST_ASSERT_EQUAL_INT32(0, protocore_fs_read_file(s_root, "/x", "", buf, sizeof(buf)));
-    TEST_ASSERT_FALSE(protocore_fs_write_file(s_root, "/x", "", "abcd", 4));
-    Mnt.args.backend = protocore_mnt_ram();
-    Mnt.mount(Mnt.internal);
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/x", "", "abcd", 4));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/x";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(0, Fs.len);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/x";
+    Fs.path.name = "";
+    Fs.io.wbuf = "abcd";
+    Fs.io.n = 4;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Mnt.ram(mnt_work);
+    Mnt.args.backend = Mnt.backend;
+    Mnt.mount(mnt_work);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/x";
+    Fs.path.name = "";
+    Fs.io.wbuf = "abcd";
+    Fs.io.n = 4;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
 }
 
 void test_root_without_trailing_slash()
 {
 
-    int gcode = protocore_fs_begin("/gcode");
-    int bare = protocore_fs_begin("/");
-    int gcode_slash = protocore_fs_begin("/gcode/");
+    Fs.mount = "/gcode";
+    Fs.begin(protocore_filesystem_span());
+    int gcode = Fs.i32;
+    Fs.mount = "/";
+    Fs.begin(protocore_filesystem_span());
+    int bare = Fs.i32;
+    Fs.mount = "/gcode/";
+    Fs.begin(protocore_filesystem_span());
+    int gcode_slash = Fs.i32;
     TEST_ASSERT_TRUE(gcode >= 0 && bare >= 0 && gcode_slash >= 0);
 
-    TEST_ASSERT_TRUE(protocore_fs_write_file(gcode, "/p.nc", "", "G0", 2));
-    TEST_ASSERT_EQUAL_INT32(2, protocore_fs_size(gcode, "/p.nc", ""));
+    Fs.path.root = gcode;
+    Fs.path.dir = "/p.nc";
+    Fs.path.name = "";
+    Fs.io.wbuf = "G0";
+    Fs.io.n = 2;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = gcode;
+    Fs.path.dir = "/p.nc";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(2, Fs.len);
 
-    TEST_ASSERT_TRUE(protocore_fs_exists(bare, "/gcode/p.nc", ""));
-    TEST_ASSERT_FALSE(protocore_fs_exists(bare, "/gcodep.nc", ""));
+    Fs.path.root = bare;
+    Fs.path.dir = "/gcode/p.nc";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = bare;
+    Fs.path.dir = "/gcodep.nc";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 
-    TEST_ASSERT_TRUE(protocore_fs_exists(gcode_slash, "/p.nc", ""));
+    Fs.path.root = gcode_slash;
+    Fs.path.dir = "/p.nc";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
 }
 
 void test_leaf_joins_onto_a_directory()
 {
-    TEST_ASSERT_TRUE(protocore_fs_mkdir(s_root, "/d", ""));
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/d/", "f.txt", "xy", 2));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/d/f.txt", ""));
-    TEST_ASSERT_EQUAL_INT32(2, protocore_fs_size(s_root, "/d/", "f.txt"));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/d";
+    Fs.path.name = "";
+    Fs.mkdir(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/d/";
+    Fs.path.name = "f.txt";
+    Fs.io.wbuf = "xy";
+    Fs.io.n = 2;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/d/f.txt";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/d/";
+    Fs.path.name = "f.txt";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(2, Fs.len);
 
-    TEST_ASSERT_FALSE(protocore_fs_write_file(s_root, "/d/", "../esc", "x", 1));
-    TEST_ASSERT_FALSE(protocore_fs_write_file(s_root, "/../d/", "f.txt", "x", 1));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/d/";
+    Fs.path.name = "../esc";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/../d/";
+    Fs.path.name = "f.txt";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 }
 
 void test_remove_takes_the_whole_subtree()
 {
-    TEST_ASSERT_TRUE(protocore_fs_mkdir(s_root, "/tree", ""));
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/tree/", "a", "1", 1));
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/tree/", "b", "22", 2));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/tree";
+    Fs.path.name = "";
+    Fs.mkdir(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/tree/";
+    Fs.path.name = "a";
+    Fs.io.wbuf = "1";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/tree/";
+    Fs.path.name = "b";
+    Fs.io.wbuf = "22";
+    Fs.io.n = 2;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
 
-    TEST_ASSERT_FALSE(protocore_fs_rmdir(s_root, "/tree", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/tree";
+    Fs.path.name = "";
+    Fs.rmdir(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 
-    TEST_ASSERT_TRUE(protocore_fs_remove(s_root, "/tree", ""));
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/tree", ""));
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/tree/a", ""));
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/tree/b", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/tree";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/tree";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/tree/a";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/tree/b";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 }
 
 void test_remove_file_and_missing_unchanged()
 {
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/one.txt", "", "x", 1));
-    TEST_ASSERT_TRUE(protocore_fs_remove(s_root, "/one.txt", ""));
-    TEST_ASSERT_FALSE(protocore_fs_exists(s_root, "/one.txt", ""));
-    TEST_ASSERT_FALSE(protocore_fs_remove(s_root, "/one.txt", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/one.txt";
+    Fs.path.name = "";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/one.txt";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/one.txt";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/one.txt";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 }
 
 void test_copy_file()
 {
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/c1", "", "payload", 7));
-    TEST_ASSERT_TRUE(protocore_fs_copy(s_root, "/c1", "", "/c2", ""));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/c1", ""));
-    TEST_ASSERT_EQUAL_INT32(7, protocore_fs_size(s_root, "/c2", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/c1";
+    Fs.path.name = "";
+    Fs.io.wbuf = "payload";
+    Fs.io.n = 7;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/c1";
+    Fs.path.name = "";
+    Fs.dest.dir = "/c2";
+    Fs.dest.name = "";
+    Fs.copy(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/c1";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/c2";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(7, Fs.len);
     char buf[16];
-    long n = protocore_fs_read_file(s_root, "/c2", "", buf, sizeof(buf));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/c2";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    long n = Fs.len;
     TEST_ASSERT_EQUAL_INT32(7, n);
     buf[n] = '\0';
     TEST_ASSERT_EQUAL_STRING("payload", buf);
@@ -451,80 +1102,205 @@ void test_copy_file()
 
 void test_copy_takes_the_whole_subtree()
 {
-    TEST_ASSERT_TRUE(protocore_fs_mkdir(s_root, "/s", ""));
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/s/", "f", "xyz", 3));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/s";
+    Fs.path.name = "";
+    Fs.mkdir(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/s/";
+    Fs.path.name = "f";
+    Fs.io.wbuf = "xyz";
+    Fs.io.n = 3;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
 
-    TEST_ASSERT_TRUE(protocore_fs_copy(s_root, "/s", "", "/t", ""));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/t", ""));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/t/f", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/s";
+    Fs.path.name = "";
+    Fs.dest.dir = "/t";
+    Fs.dest.name = "";
+    Fs.copy(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/t";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/t/f";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
     char buf[8];
-    long n = protocore_fs_read_file(s_root, "/t/f", "", buf, sizeof(buf));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/t/f";
+    Fs.path.name = "";
+    Fs.io.buf = buf;
+    Fs.io.n = sizeof(buf);
+    Fs.read_file(protocore_filesystem_span());
+    long n = Fs.len;
     TEST_ASSERT_EQUAL_INT32(3, n);
     buf[n] = '\0';
     TEST_ASSERT_EQUAL_STRING("xyz", buf);
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/s/f", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/s/f";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
 }
 
 void test_tree_ops_refuse_traversal()
 {
-    TEST_ASSERT_FALSE(protocore_fs_remove(s_root, "/../escape", ""));
-    TEST_ASSERT_FALSE(protocore_fs_copy(s_root, "/../escape", "", "/x", ""));
-    TEST_ASSERT_FALSE(protocore_fs_copy(s_root, "/x", "", "/../escape", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/../escape";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/../escape";
+    Fs.path.name = "";
+    Fs.dest.dir = "/x";
+    Fs.dest.name = "";
+    Fs.copy(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/x";
+    Fs.path.name = "";
+    Fs.dest.dir = "/../escape";
+    Fs.dest.name = "";
+    Fs.copy(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
 }
 
 void test_unbound_root_fails_closed()
 {
-    TEST_ASSERT_TRUE(protocore_fs_write_file(s_root, "/u", "", "x", 1));
-    TEST_ASSERT_FALSE(protocore_fs_exists(-1, "/u", ""));
-    TEST_ASSERT_FALSE(protocore_fs_remove(-1, "/u", ""));
-    TEST_ASSERT_FALSE(protocore_fs_copy(-1, "/u", "", "/v", ""));
-    TEST_ASSERT_TRUE(protocore_fs_exists(s_root, "/u", ""));
+    Fs.path.root = s_root;
+    Fs.path.dir = "/u";
+    Fs.path.name = "";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.path.root = -1;
+    Fs.path.dir = "/u";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = -1;
+    Fs.path.dir = "/u";
+    Fs.path.name = "";
+    Fs.remove(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = -1;
+    Fs.path.dir = "/u";
+    Fs.path.name = "";
+    Fs.dest.dir = "/v";
+    Fs.dest.name = "";
+    Fs.copy(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/u";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
 }
 
 void test_null_store_is_intentional_and_says_so()
 {
     Mnt.args.backend = NULL;
-    Mnt.mount(Mnt.internal);
-    protocore_fs_clear_status();
+    Mnt.mount(mnt_work);
+    Fs.clear(protocore_filesystem_span());
 
-    int r = protocore_fs_begin("/local");
+    Fs.mount = "/local";
+    Fs.begin(protocore_filesystem_span());
+    int r = Fs.i32;
     TEST_ASSERT_TRUE(r >= 0);
-    TEST_ASSERT_FALSE(protocore_fs_storage_present());
-    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_FS_OK, protocore_fs_status());
+    Fs.present(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_FS_OK, Fs.bits);
 
-    TEST_ASSERT_FALSE(protocore_fs_write_file(r, "/a", "", "x", 1));
-    TEST_ASSERT_TRUE((protocore_fs_status() & PROTOCORE_FS_STORAGE_EXHAUSTED) != 0);
-    TEST_ASSERT_FALSE(protocore_fs_exists(r, "/a", ""));
-    TEST_ASSERT_EQUAL_INT32(-1, protocore_fs_size(r, "/a", ""));
+    Fs.path.root = r;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_TRUE((Fs.bits & PROTOCORE_FS_STORAGE_EXHAUSTED) != 0);
+    Fs.path.root = r;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.path.root = r;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.size(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
 
-    Mnt.args.backend = protocore_mnt_ram();
-    Mnt.mount(Mnt.internal);
-    protocore_mnt_ram_format();
-    TEST_ASSERT_TRUE(protocore_fs_storage_present());
-    TEST_ASSERT_TRUE((protocore_fs_status() & PROTOCORE_FS_STORAGE_EXHAUSTED) != 0);
-    protocore_fs_clear_status();
-    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_FS_OK, protocore_fs_status());
-    TEST_ASSERT_TRUE(protocore_fs_write_file(r, "/a", "", "x", 1));
-    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_FS_OK, protocore_fs_status());
+    Mnt.ram(mnt_work);
+    Mnt.args.backend = Mnt.backend;
+    Mnt.mount(mnt_work);
+    Mnt.ram_format(mnt_work);
+    Fs.present(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_TRUE((Fs.bits & PROTOCORE_FS_STORAGE_EXHAUSTED) != 0);
+    Fs.clear(protocore_filesystem_span());
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_FS_OK, Fs.bits);
+    Fs.path.root = r;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_TRUE(Fs.ok);
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_UINT32(PROTOCORE_FS_OK, Fs.bits);
 }
 
 void test_status_separates_the_reasons()
 {
-    protocore_fs_clear_status();
-    TEST_ASSERT_FALSE(protocore_fs_exists(-1, "/a", ""));
-    TEST_ASSERT_TRUE((protocore_fs_status() & PROTOCORE_FS_BAD_ROOT) != 0);
-    TEST_ASSERT_EQUAL_UINT32(0u, protocore_fs_status() & PROTOCORE_FS_TRAVERSAL);
+    Fs.clear(protocore_filesystem_span());
+    Fs.path.root = -1;
+    Fs.path.dir = "/a";
+    Fs.path.name = "";
+    Fs.exists(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_TRUE((Fs.bits & PROTOCORE_FS_BAD_ROOT) != 0);
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_UINT32(0u, Fs.bits & PROTOCORE_FS_TRAVERSAL);
 
-    protocore_fs_clear_status();
-    TEST_ASSERT_FALSE(protocore_fs_write_file(s_root, "/../escape", "", "x", 1));
-    TEST_ASSERT_TRUE((protocore_fs_status() & PROTOCORE_FS_TRAVERSAL) != 0);
-    TEST_ASSERT_EQUAL_UINT32(0u, protocore_fs_status() & PROTOCORE_FS_BAD_ROOT);
+    Fs.clear(protocore_filesystem_span());
+    Fs.path.root = s_root;
+    Fs.path.dir = "/../escape";
+    Fs.path.name = "";
+    Fs.io.wbuf = "x";
+    Fs.io.n = 1;
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_TRUE((Fs.bits & PROTOCORE_FS_TRAVERSAL) != 0);
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_EQUAL_UINT32(0u, Fs.bits & PROTOCORE_FS_BAD_ROOT);
 
-    protocore_fs_clear_status();
+    Fs.clear(protocore_filesystem_span());
     static uint8_t big[PROTOCORE_MNT_RAM_FILE_SIZE + 16];
     memset(big, 'z', sizeof(big));
-    TEST_ASSERT_FALSE(protocore_fs_write_file(s_root, "/toobig", "", big, sizeof(big)));
-    TEST_ASSERT_TRUE((protocore_fs_status() & PROTOCORE_FS_STORAGE_EXHAUSTED) != 0);
+    Fs.path.root = s_root;
+    Fs.path.dir = "/toobig";
+    Fs.path.name = "";
+    Fs.io.wbuf = big;
+    Fs.io.n = sizeof(big);
+    Fs.write_file(protocore_filesystem_span());
+    TEST_ASSERT_FALSE(Fs.ok);
+    Fs.status(protocore_filesystem_span());
+    TEST_ASSERT_TRUE((Fs.bits & PROTOCORE_FS_STORAGE_EXHAUSTED) != 0);
 }
 
 int main()

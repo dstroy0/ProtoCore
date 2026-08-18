@@ -9,6 +9,9 @@
 #include "services/net/snmp/snmp_agent.h"
 #include "mmgr/protomem.h" // mem.set / mem.cmp: the fixed-width compares and clears
 #include "mmgr/protostr.h" // str.len / str.copy: the bounded community and string handling
+#include "mmgr/secure.h"   // the persistent end this module's key material is taken from
+
+static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
 
 #if PROTOCORE_ENABLE_SNMP
 
@@ -93,23 +96,44 @@ struct SnmpAgentStorage
     uint8_t tx[SNMP_MSG_BUF_SIZE];
 };
 
-/**
- * @brief The MIB and the calls that reach it - what SnmpAgentNs points at.
- *
- * @var SnmpAgentInternal::store  the MIB, the communities, and the request scratch
- * @var SnmpAgentInternal::ns     the handle a caller sets a call's members on
- */
-struct SnmpAgentInternal
-{
-    struct SnmpAgentStorage *store;
-    SnmpAgentNs *ns;
-};
-
 // The read-only community is the one field that does not start at zero; static storage zeroes the
 // MIB, its count, the read-write community and rw_set.
-static struct SnmpAgentStorage s_store = {.ro = PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SNMP_AGENT_OFF_CTX 0u
+static_assert(SNMP_AGENT_OFF_CTX + sizeof(struct SnmpAgentStorage) <= PROTOCORE_SNMP_AGENT_BORROW,
+              "PROTOCORE_SNMP_AGENT_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct SnmpAgentInternal s_agent = {.store = &s_store, .ns = &SnmpAgent};
+// The region, at its offset in the caller's borrow.
+#define SNMP_AGENT_CTX(w) ((struct SnmpAgentStorage *)(void *)((w) + SNMP_AGENT_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_SNMP_AGENT_BORROW persistent bytes, or null while the pool was short
+} SnmpAgentOwnCtx;
+static SnmpAgentOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_snmp_agent_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SNMP_AGENT_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // A borrow arrives zeroed, and these do not start at zero.
+            (void)str.copy(SNMP_AGENT_CTX(s_own.span)->ro, PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY, SNMP_COMMUNITY_MAX);
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // community_match()'s non-empty test is a no-op only while the read-only community is never
 // empty. It is seeded from this macro and init() falls back to it, so an override that emptied it
@@ -148,29 +172,30 @@ static int oid_cmp(const uint32_t *a, size_t an, const uint32_t *b, size_t bn)
 }
 
 // The entry whose name is exactly (oid, n), or NULL. Reads the MIB, so it takes ctx.
-static const SnmpMibEntry *mib_find_exact(struct SnmpAgentInternal *restrict ctx, const uint32_t *oid, size_t n)
+static const SnmpMibEntry *mib_find_exact(uint8_t *restrict work, const uint32_t *oid, size_t n)
 {
-    for (size_t i = 0; i < ctx->store->mib_count; i++)
+    for (size_t i = 0; i < SNMP_AGENT_CTX(work)->mib_count; i++)
     {
-        if (oid_cmp(ctx->store->mib[i].oid, ctx->store->mib[i].oid_len, oid, n) == 0)
+        if (oid_cmp(SNMP_AGENT_CTX(work)->mib[i].oid, SNMP_AGENT_CTX(work)->mib[i].oid_len, oid, n) == 0)
         {
-            return &ctx->store->mib[i];
+            return &SNMP_AGENT_CTX(work)->mib[i];
         }
     }
     return NULL;
 }
 
 // The smallest registered name strictly greater than (oid, n), or NULL at the end of the MIB view.
-static const SnmpMibEntry *mib_find_next(struct SnmpAgentInternal *restrict ctx, const uint32_t *oid, size_t n)
+static const SnmpMibEntry *mib_find_next(uint8_t *restrict work, const uint32_t *oid, size_t n)
 {
     const SnmpMibEntry *best = NULL;
-    for (size_t i = 0; i < ctx->store->mib_count; i++)
+    for (size_t i = 0; i < SNMP_AGENT_CTX(work)->mib_count; i++)
     {
-        if (oid_cmp(ctx->store->mib[i].oid, ctx->store->mib[i].oid_len, oid, n) > 0)
+        if (oid_cmp(SNMP_AGENT_CTX(work)->mib[i].oid, SNMP_AGENT_CTX(work)->mib[i].oid_len, oid, n) > 0)
         {
-            if (!best || oid_cmp(ctx->store->mib[i].oid, ctx->store->mib[i].oid_len, best->oid, best->oid_len) < 0)
+            if (!best || oid_cmp(SNMP_AGENT_CTX(work)->mib[i].oid, SNMP_AGENT_CTX(work)->mib[i].oid_len, best->oid,
+                                 best->oid_len) < 0)
             {
-                best = &ctx->store->mib[i];
+                best = &SNMP_AGENT_CTX(work)->mib[i];
             }
         }
     }
@@ -181,12 +206,12 @@ static const SnmpMibEntry *mib_find_next(struct SnmpAgentInternal *restrict ctx,
 // only the instance is absent, noSuchObject when no such object exists. Every entry is a full
 // instance name, so its object name is that minus the trailing instance subidentifier, and the
 // request names a known object exactly when that prefix is a prefix of the request.
-static proto_bool mib_object_exists(struct SnmpAgentInternal *restrict ctx, const uint32_t *oid, size_t n)
+static proto_bool mib_object_exists(uint8_t *restrict work, const uint32_t *oid, size_t n)
 {
-    for (size_t i = 0; i < ctx->store->mib_count; i++)
+    for (size_t i = 0; i < SNMP_AGENT_CTX(work)->mib_count; i++)
     {
-        size_t objn = ctx->store->mib[i].oid_len - 1;
-        if (objn <= n && oid_cmp(ctx->store->mib[i].oid, objn, oid, objn) == 0)
+        size_t objn = SNMP_AGENT_CTX(work)->mib[i].oid_len - 1;
+        if (objn <= n && oid_cmp(SNMP_AGENT_CTX(work)->mib[i].oid, objn, oid, objn) == 0)
         {
             return PROTO_TRUE;
         }
@@ -210,15 +235,15 @@ static proto_bool fetch_value(const SnmpMibEntry *en, SnmpValue *out)
 
 // Claim the next table row for the name ns->object names, or NULL when the table is full or the
 // name is unusable.
-static SnmpMibEntry *mib_alloc(struct SnmpAgentInternal *restrict ctx)
+static SnmpMibEntry *mib_alloc(uint8_t *restrict work)
 {
-    const uint32_t *oid = ctx->ns->object.oid;
-    const size_t n = ctx->ns->object.oid_len;
-    if (ctx->store->mib_count >= SNMP_MAX_MIB_ENTRIES || n < 2 || n > SNMP_MAX_OID_LEN)
+    const uint32_t *oid = SnmpAgent.object.oid;
+    const size_t n = SnmpAgent.object.oid_len;
+    if (SNMP_AGENT_CTX(work)->mib_count >= SNMP_MAX_MIB_ENTRIES || n < 2 || n > SNMP_MAX_OID_LEN)
     {
         return NULL;
     }
-    SnmpMibEntry *e = &ctx->store->mib[ctx->store->mib_count++];
+    SnmpMibEntry *e = &SNMP_AGENT_CTX(work)->mib[SNMP_AGENT_CTX(work)->mib_count++];
     mem.set(e, 0, sizeof(*e));
     for (size_t i = 0; i < n; i++)
     {
@@ -228,76 +253,84 @@ static SnmpMibEntry *mib_alloc(struct SnmpAgentInternal *restrict ctx)
     return e;
 }
 
-static void agent_init(struct SnmpAgentInternal *restrict ctx)
+static void agent_init(uint8_t *restrict work)
 {
-    ctx->store->mib_count = 0;
-    ctx->store->rw_set = PROTO_FALSE;
-    ctx->store->rw[0] = '\0';
-    const char *ro = ctx->ns->community.ro;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    SNMP_AGENT_CTX(work)->mib_count = 0;
+    SNMP_AGENT_CTX(work)->rw_set = PROTO_FALSE;
+    SNMP_AGENT_CTX(work)->rw[0] = '\0';
+    const char *ro = SnmpAgent.community.ro;
     if (!ro || !ro[0])
     {
         ro = PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY;
     }
-    (void)str.copy(ctx->store->ro, ro, sizeof(ctx->store->ro));
-    ctx->ns->ok = PROTO_TRUE;
+    (void)str.copy(SNMP_AGENT_CTX(work)->ro, ro, sizeof(SNMP_AGENT_CTX(work)->ro));
+    SnmpAgent.ok = PROTO_TRUE;
 }
 
-static void set_rw_community(struct SnmpAgentInternal *restrict ctx)
+static void set_rw_community(uint8_t *restrict work)
 {
-    const char *rw = ctx->ns->community.rw;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const char *rw = SnmpAgent.community.rw;
     if (!rw || !rw[0])
     {
-        ctx->store->rw_set = PROTO_FALSE;
-        ctx->store->rw[0] = '\0';
-        ctx->ns->ok = PROTO_FALSE;
+        SNMP_AGENT_CTX(work)->rw_set = PROTO_FALSE;
+        SNMP_AGENT_CTX(work)->rw[0] = '\0';
+        SnmpAgent.ok = PROTO_FALSE;
         return;
     }
-    (void)str.copy(ctx->store->rw, rw, sizeof(ctx->store->rw));
-    ctx->store->rw_set = PROTO_TRUE;
-    ctx->ns->ok = PROTO_TRUE;
+    (void)str.copy(SNMP_AGENT_CTX(work)->rw, rw, sizeof(SNMP_AGENT_CTX(work)->rw));
+    SNMP_AGENT_CTX(work)->rw_set = PROTO_TRUE;
+    SnmpAgent.ok = PROTO_TRUE;
 }
 
-static void add_string(struct SnmpAgentInternal *restrict ctx)
+static void add_string(uint8_t *restrict work)
 {
-    SnmpMibEntry *e = mib_alloc(ctx);
+    SnmpMibEntry *e = mib_alloc(work);
     if (!e)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        SnmpAgent.ok = PROTO_FALSE;
         return;
     }
-    const char *value = ctx->ns->object.text;
+    const char *value = SnmpAgent.object.text;
     e->val.type = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     e->val.str = value;
     e->val.str_len = value ? str.len(value, SNMP_MSG_BUF_SIZE) : 0;
-    e->setter = ctx->ns->object.setter;
-    ctx->ns->ok = PROTO_TRUE;
+    e->setter = SnmpAgent.object.setter;
+    SnmpAgent.ok = PROTO_TRUE;
 }
 
-static void add_integer(struct SnmpAgentInternal *restrict ctx)
+static void add_integer(uint8_t *restrict work)
 {
-    SnmpMibEntry *e = mib_alloc(ctx);
+    SnmpMibEntry *e = mib_alloc(work);
     if (!e)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        SnmpAgent.ok = PROTO_FALSE;
         return;
     }
     e->val.type = (uint8_t)SNMP_TAG_BER_INTEGER;
-    e->val.ival = ctx->ns->object.ival;
-    e->setter = ctx->ns->object.setter;
-    ctx->ns->ok = PROTO_TRUE;
+    e->val.ival = SnmpAgent.object.ival;
+    e->setter = SnmpAgent.object.setter;
+    SnmpAgent.ok = PROTO_TRUE;
 }
 
-static void add_dynamic(struct SnmpAgentInternal *restrict ctx)
+static void add_dynamic(uint8_t *restrict work)
 {
-    SnmpMibEntry *e = mib_alloc(ctx);
+    SnmpMibEntry *e = mib_alloc(work);
     if (!e)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        SnmpAgent.ok = PROTO_FALSE;
         return;
     }
-    e->val.type = ctx->ns->object.type;
-    e->getter = ctx->ns->object.getter;
-    ctx->ns->ok = PROTO_TRUE;
+    e->val.type = SnmpAgent.object.type;
+    e->getter = SnmpAgent.object.getter;
+    SnmpAgent.ok = PROTO_TRUE;
 }
 
 // sysUpTime.0 is TimeTicks: hundredths of a second since the network management portion of the
@@ -321,7 +354,7 @@ static proto_bool sys_uptime_get(SnmpValue *out)
 // The system group, 1.3.6.1.2.1.1 (RFC 3418 sec 2): sysDescr.0 through sysServices.0. sysUpTime.0
 // is dynamic; sysObjectID.0 is written straight into its row because no registration call carries
 // an OBJECT IDENTIFIER value.
-static void set_system(struct SnmpAgentInternal *restrict ctx)
+static void set_system(uint8_t *restrict work)
 {
     static const uint32_t o_descr[] = {1, 3, 6, 1, 2, 1, 1, 1, 0};
     static const uint32_t o_oid[] = {1, 3, 6, 1, 2, 1, 1, 2, 0};
@@ -331,21 +364,21 @@ static void set_system(struct SnmpAgentInternal *restrict ctx)
     static const uint32_t o_loc[] = {1, 3, 6, 1, 2, 1, 1, 6, 0};
     static const uint32_t o_svc[] = {1, 3, 6, 1, 2, 1, 1, 7, 0};
 
-    const char *descr = ctx->ns->system.descr;
-    const char *contact = ctx->ns->system.contact;
-    const char *name = ctx->ns->system.name;
-    const char *location = ctx->ns->system.location;
-    const long services = ctx->ns->system.services;
+    const char *descr = SnmpAgent.system.descr;
+    const char *contact = SnmpAgent.system.contact;
+    const char *name = SnmpAgent.system.name;
+    const char *location = SnmpAgent.system.location;
+    const long services = SnmpAgent.system.services;
 
-    ctx->ns->object.setter = NULL;
-    ctx->ns->object.oid = o_descr;
-    ctx->ns->object.oid_len = 9;
-    ctx->ns->object.text = descr;
-    add_string(ctx);
+    SnmpAgent.object.setter = NULL;
+    SnmpAgent.object.oid = o_descr;
+    SnmpAgent.object.oid_len = 9;
+    SnmpAgent.object.text = descr;
+    add_string(work);
 
-    ctx->ns->object.oid = o_oid;
-    ctx->ns->object.oid_len = 9;
-    SnmpMibEntry *e = mib_alloc(ctx);
+    SnmpAgent.object.oid = o_oid;
+    SnmpAgent.object.oid_len = 9;
+    SnmpMibEntry *e = mib_alloc(work);
     if (e)
     {
         e->val.type = (uint8_t)SNMP_TAG_BER_OID;
@@ -353,32 +386,32 @@ static void set_system(struct SnmpAgentInternal *restrict ctx)
         e->val.oid_len = sizeof(g_sys_object_id) / sizeof(g_sys_object_id[0]);
     }
 
-    ctx->ns->object.oid = o_uptime;
-    ctx->ns->object.oid_len = 9;
-    ctx->ns->object.type = (uint8_t)SNMP_TAG_SNMP_TIMETICKS;
-    ctx->ns->object.getter = sys_uptime_get;
-    add_dynamic(ctx);
-    ctx->ns->object.getter = NULL;
+    SnmpAgent.object.oid = o_uptime;
+    SnmpAgent.object.oid_len = 9;
+    SnmpAgent.object.type = (uint8_t)SNMP_TAG_SNMP_TIMETICKS;
+    SnmpAgent.object.getter = sys_uptime_get;
+    add_dynamic(work);
+    SnmpAgent.object.getter = NULL;
 
-    ctx->ns->object.oid = o_contact;
-    ctx->ns->object.oid_len = 9;
-    ctx->ns->object.text = contact;
-    add_string(ctx);
+    SnmpAgent.object.oid = o_contact;
+    SnmpAgent.object.oid_len = 9;
+    SnmpAgent.object.text = contact;
+    add_string(work);
 
-    ctx->ns->object.oid = o_name;
-    ctx->ns->object.oid_len = 9;
-    ctx->ns->object.text = name;
-    add_string(ctx);
+    SnmpAgent.object.oid = o_name;
+    SnmpAgent.object.oid_len = 9;
+    SnmpAgent.object.text = name;
+    add_string(work);
 
-    ctx->ns->object.oid = o_loc;
-    ctx->ns->object.oid_len = 9;
-    ctx->ns->object.text = location;
-    add_string(ctx);
+    SnmpAgent.object.oid = o_loc;
+    SnmpAgent.object.oid_len = 9;
+    SnmpAgent.object.text = location;
+    add_string(work);
 
-    ctx->ns->object.oid = o_svc;
-    ctx->ns->object.oid_len = 9;
-    ctx->ns->object.ival = services;
-    add_integer(ctx);
+    SnmpAgent.object.oid = o_svc;
+    SnmpAgent.object.oid_len = 9;
+    SnmpAgent.object.ival = services;
+    add_integer(work);
 }
 
 // ---------------------------------------------------------------------------
@@ -393,26 +426,26 @@ static void enc_value(BerEnc *e, const SnmpValue *v)
     {
     case (uint8_t)SNMP_TAG_BER_INTEGER:
         SnmpBer.tlv.ival = v->ival;
-        SnmpBer.put_integer(SnmpBer.internal);
+        SnmpBer.put_integer(snmp_ber_work);
         break;
     case (uint8_t)SNMP_TAG_BER_OCTET_STRING:
     case (uint8_t)SNMP_TAG_SNMP_OPAQUE:
         SnmpBer.tlv.tag = v->type;
         SnmpBer.tlv.bytes = (const uint8_t *)v->str;
         SnmpBer.tlv.len = v->str_len;
-        SnmpBer.put_octet_string(SnmpBer.internal);
+        SnmpBer.put_octet_string(snmp_ber_work);
         break;
     case (uint8_t)SNMP_TAG_BER_OID:
         SnmpBer.tlv.arcs = v->oid;
         SnmpBer.tlv.arc_count = v->oid_len;
-        SnmpBer.put_oid(SnmpBer.internal);
+        SnmpBer.put_oid(snmp_ber_work);
         break;
     case (uint8_t)SNMP_TAG_SNMP_TIMETICKS:
     case (uint8_t)SNMP_TAG_SNMP_COUNTER32:
     case (uint8_t)SNMP_TAG_SNMP_GAUGE32:
         SnmpBer.tlv.tag = v->type;
         SnmpBer.tlv.uval = v->uval;
-        SnmpBer.put_uint(SnmpBer.internal);
+        SnmpBer.put_uint(snmp_ber_work);
         break;
     case (uint8_t)SNMP_TAG_SNMP_IPADDRESS: {
         // RFC 2578 sec 7.1.5: an OCTET STRING of length 4, network byte order.
@@ -421,18 +454,18 @@ static void enc_value(BerEnc *e, const SnmpValue *v)
         SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_IPADDRESS;
         SnmpBer.tlv.bytes = ip;
         SnmpBer.tlv.len = 4;
-        SnmpBer.put_octet_string(SnmpBer.internal);
+        SnmpBer.put_octet_string(snmp_ber_work);
         break;
     }
     case (uint8_t)SNMP_TAG_BER_NULL:
-        SnmpBer.put_null(SnmpBer.internal);
+        SnmpBer.put_null(snmp_ber_work);
         break;
     default:
         // A VarBind exception marker (RFC 3416 sec 3): the tag with a zero-length value.
         SnmpBer.tlv.tag = v->type;
         SnmpBer.tlv.bytes = NULL;
         SnmpBer.tlv.len = 0;
-        SnmpBer.put_tlv(SnmpBer.internal);
+        SnmpBer.put_tlv(snmp_ber_work);
         break;
     }
 }
@@ -444,7 +477,7 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
     mem.set(v, 0, sizeof(*v));
     size_t save = d->pos;
     SnmpBer.dec = d;
-    SnmpBer.read_header(SnmpBer.internal);
+    SnmpBer.read_header(snmp_ber_work);
     if (!SnmpBer.ok)
     {
         return PROTO_FALSE;
@@ -456,7 +489,7 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
     {
     case (uint8_t)SNMP_TAG_BER_INTEGER:
         d->pos = save;
-        SnmpBer.read_integer(SnmpBer.internal);
+        SnmpBer.read_integer(snmp_ber_work);
         v->ival = SnmpBer.ival;
         return SnmpBer.ok;
     case (uint8_t)SNMP_TAG_SNMP_TIMETICKS:
@@ -482,7 +515,7 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
         d->pos = save;
         SnmpBer.read_args.arc_out = oidbuf;
         SnmpBer.read_args.arc_cap = SNMP_MAX_OID_LEN;
-        SnmpBer.read_oid(SnmpBer.internal);
+        SnmpBer.read_oid(snmp_ber_work);
         if (!SnmpBer.ok)
         {
             return PROTO_FALSE;
@@ -503,12 +536,12 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
 // Apply each binding of a SetRequest-PDU in order, stopping at the first failure and reporting it
 // as error-status with the 1-based error-index (RFC 3416 sec 4.2.5). Both outputs are left alone
 // when every binding succeeds.
-static void apply_set_all(struct SnmpAgentInternal *restrict ctx, size_t nvb, proto_bool v2c, long *err_status,
-                          long *err_index)
+static void apply_set_all(uint8_t *restrict work, size_t nvb, proto_bool v2c, long *err_status, long *err_index)
 {
     for (size_t i = 0; i < nvb; i++)
     {
-        const SnmpMibEntry *en = mib_find_exact(ctx, ctx->store->in[i].oid, ctx->store->in[i].oid_len);
+        const SnmpMibEntry *en =
+            mib_find_exact(work, SNMP_AGENT_CTX(work)->in[i].oid, SNMP_AGENT_CTX(work)->in[i].oid_len);
         int e = 0;
         if (!en)
         {
@@ -518,7 +551,7 @@ static void apply_set_all(struct SnmpAgentInternal *restrict ctx, size_t nvb, pr
         {
             e = (!v2c) ? (int)SNMP_ERR_READ_ONLY : (int)SNMP_ERR_NOT_WRITABLE;
         }
-        else if (!en->setter(&ctx->store->in[i].val))
+        else if (!en->setter(&SNMP_AGENT_CTX(work)->in[i].val))
         {
             e = (!v2c) ? (int)SNMP_ERR_BAD_VALUE : (int)SNMP_ERR_WRONG_TYPE;
         }
@@ -541,51 +574,51 @@ static proto_bool community_match(const char *stored, const char *p, size_t len)
 
 // Response-PDU (RFC 3416 sec 4.2.4): request-id, error-status, error-index, then the first nout
 // bindings of the output scratch. Reads that scratch, so it takes ctx.
-static size_t encode_response(struct SnmpAgentInternal *restrict ctx, long request_id, long err_status, long err_index,
-                              size_t nout, uint8_t *buf, size_t cap)
+static size_t encode_response(uint8_t *restrict work, long request_id, long err_status, long err_index, size_t nout,
+                              uint8_t *buf, size_t cap)
 {
     BerEnc e;
     SnmpBer.enc = &e;
     SnmpBer.buf.out = buf;
     SnmpBer.buf.cap = cap;
-    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.enc_init(snmp_ber_work);
     SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_PDU_RESPONSE;
-    SnmpBer.seq_begin(SnmpBer.internal);
+    SnmpBer.seq_begin(snmp_ber_work);
     const size_t pdu = SnmpBer.tlv.token;
     SnmpBer.tlv.ival = request_id;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.tlv.ival = err_status;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.tlv.ival = err_index;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(SnmpBer.internal);
+    SnmpBer.seq_begin(snmp_ber_work);
     const size_t vbl = SnmpBer.tlv.token;
     for (size_t i = 0; i < nout; i++)
     {
         SnmpBer.enc = &e;
         SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-        SnmpBer.seq_begin(SnmpBer.internal);
+        SnmpBer.seq_begin(snmp_ber_work);
         const size_t vb = SnmpBer.tlv.token;
-        SnmpBer.tlv.arcs = ctx->store->out[i].oid;
-        SnmpBer.tlv.arc_count = ctx->store->out[i].oid_len;
-        SnmpBer.put_oid(SnmpBer.internal);
-        enc_value(&e, &ctx->store->out[i].val);
+        SnmpBer.tlv.arcs = SNMP_AGENT_CTX(work)->out[i].oid;
+        SnmpBer.tlv.arc_count = SNMP_AGENT_CTX(work)->out[i].oid_len;
+        SnmpBer.put_oid(snmp_ber_work);
+        enc_value(&e, &SNMP_AGENT_CTX(work)->out[i].val);
         SnmpBer.enc = &e;
         SnmpBer.tlv.token = vb;
-        SnmpBer.seq_end(SnmpBer.internal);
+        SnmpBer.seq_end(snmp_ber_work);
     }
     SnmpBer.enc = &e;
     SnmpBer.tlv.token = vbl;
-    SnmpBer.seq_end(SnmpBer.internal);
+    SnmpBer.seq_end(snmp_ber_work);
     SnmpBer.tlv.token = pdu;
-    SnmpBer.seq_end(SnmpBer.internal);
+    SnmpBer.seq_end(snmp_ber_work);
     return e.ok ? e.len : 0;
 }
 
 // Decode the VarBindList of the request into the input scratch. Reports the binding count, or
 // SNMP_MAX_VARBINDS + 1 when the list is malformed or longer than the scratch holds.
-static size_t decode_varbinds(struct SnmpAgentInternal *restrict ctx, BerDec *d, size_t vbl_end)
+static size_t decode_varbinds(uint8_t *restrict work, BerDec *d, size_t vbl_end)
 {
     size_t nvb = 0;
     // Every read inside the loop that could clear d->ok is answered by its own guard first, so the
@@ -597,20 +630,20 @@ static size_t decode_varbinds(struct SnmpAgentInternal *restrict ctx, BerDec *d,
             return SNMP_MAX_VARBINDS + 1;
         }
         SnmpBer.dec = d;
-        SnmpBer.read_header(SnmpBer.internal);
+        SnmpBer.read_header(snmp_ber_work);
         if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
         {
             return SNMP_MAX_VARBINDS + 1;
         }
-        SnmpBer.read_args.arc_out = ctx->store->in[nvb].oid;
+        SnmpBer.read_args.arc_out = SNMP_AGENT_CTX(work)->in[nvb].oid;
         SnmpBer.read_args.arc_cap = SNMP_MAX_OID_LEN;
-        SnmpBer.read_oid(SnmpBer.internal);
+        SnmpBer.read_oid(snmp_ber_work);
         if (!SnmpBer.ok)
         {
             return SNMP_MAX_VARBINDS + 1;
         }
-        ctx->store->in[nvb].oid_len = SnmpBer.n;
-        if (!dec_value(d, &ctx->store->in[nvb].val, ctx->store->in[nvb].valoid))
+        SNMP_AGENT_CTX(work)->in[nvb].oid_len = SnmpBer.n;
+        if (!dec_value(d, &SNMP_AGENT_CTX(work)->in[nvb].val, SNMP_AGENT_CTX(work)->in[nvb].valoid))
         {
             return SNMP_MAX_VARBINDS + 1;
         }
@@ -621,27 +654,28 @@ static size_t decode_varbinds(struct SnmpAgentInternal *restrict ctx, BerDec *d,
 
 // Copy the request bindings into the response unchanged, which is what a v1 error report and every
 // SetRequest-PDU response carry (RFC 1157 sec 4.1.1, RFC 3416 sec 4.2.5).
-static void echo_varbinds(struct SnmpAgentInternal *restrict ctx, size_t nvb)
+static void echo_varbinds(uint8_t *restrict work, size_t nvb)
 {
     for (size_t k = 0; k < nvb; k++)
     {
-        ctx->store->out[k].oid = ctx->store->in[k].oid;
-        ctx->store->out[k].oid_len = ctx->store->in[k].oid_len;
-        ctx->store->out[k].val = ctx->store->in[k].val;
+        SNMP_AGENT_CTX(work)->out[k].oid = SNMP_AGENT_CTX(work)->in[k].oid;
+        SNMP_AGENT_CTX(work)->out[k].oid_len = SNMP_AGENT_CTX(work)->in[k].oid_len;
+        SNMP_AGENT_CTX(work)->out[k].val = SNMP_AGENT_CTX(work)->in[k].val;
     }
 }
 
 // GetRequest-PDU (RFC 3416 sec 4.2.1) and GetNextRequest-PDU (sec 4.2.2). Reports the binding
 // count written; a v1 name failure stops the walk and reports through err_status/err_index.
-static size_t run_get(struct SnmpAgentInternal *restrict ctx, uint8_t pdu_tag, size_t nvb, proto_bool v2c,
-                      long *err_status, long *err_index)
+static size_t run_get(uint8_t *restrict work, uint8_t pdu_tag, size_t nvb, proto_bool v2c, long *err_status,
+                      long *err_index)
 {
     const proto_bool is_next = (pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_GETNEXT);
     size_t nout = 0;
     for (size_t i = 0; i < nvb; i++)
     {
-        const SnmpMibEntry *en = is_next ? mib_find_next(ctx, ctx->store->in[i].oid, ctx->store->in[i].oid_len)
-                                         : mib_find_exact(ctx, ctx->store->in[i].oid, ctx->store->in[i].oid_len);
+        const SnmpMibEntry *en =
+            is_next ? mib_find_next(work, SNMP_AGENT_CTX(work)->in[i].oid, SNMP_AGENT_CTX(work)->in[i].oid_len)
+                    : mib_find_exact(work, SNMP_AGENT_CTX(work)->in[i].oid, SNMP_AGENT_CTX(work)->in[i].oid_len);
         SnmpValue val;
         proto_bool ok = en && fetch_value(en, &val);
         if (!ok)
@@ -652,7 +686,7 @@ static size_t run_get(struct SnmpAgentInternal *restrict ctx, uint8_t pdu_tag, s
                 // response repeats the request's bindings.
                 *err_status = (int)SNMP_ERR_NO_SUCH_NAME;
                 *err_index = (long)(i + 1);
-                echo_varbinds(ctx, nvb);
+                echo_varbinds(work, nvb);
                 return nvb;
             }
             // RFC 3416 sec 4.2.1 and sec 4.2.2: the exception rides in the binding's value. A Get
@@ -660,23 +694,24 @@ static size_t run_get(struct SnmpAgentInternal *restrict ctx, uint8_t pdu_tag, s
             // the last name in the view is always endOfMibView.
             if (!is_next)
             {
-                proto_bool inst = en || mib_object_exists(ctx, ctx->store->in[i].oid, ctx->store->in[i].oid_len);
+                proto_bool inst =
+                    en || mib_object_exists(work, SNMP_AGENT_CTX(work)->in[i].oid, SNMP_AGENT_CTX(work)->in[i].oid_len);
                 val.type = inst ? (uint8_t)SNMP_TAG_SNMP_NO_SUCH_INSTANCE : (uint8_t)SNMP_TAG_SNMP_NO_SUCH_OBJECT;
             }
             else
             {
                 val.type = (uint8_t)SNMP_TAG_SNMP_END_OF_MIB_VIEW;
             }
-            ctx->store->out[nout].oid = en ? en->oid : ctx->store->in[i].oid;
-            ctx->store->out[nout].oid_len = en ? en->oid_len : ctx->store->in[i].oid_len;
-            ctx->store->out[nout].val = val;
+            SNMP_AGENT_CTX(work)->out[nout].oid = en ? en->oid : SNMP_AGENT_CTX(work)->in[i].oid;
+            SNMP_AGENT_CTX(work)->out[nout].oid_len = en ? en->oid_len : SNMP_AGENT_CTX(work)->in[i].oid_len;
+            SNMP_AGENT_CTX(work)->out[nout].val = val;
             nout++;
             continue;
         }
         // A Next answers under the name it found; a Get answers under the name it was asked.
-        ctx->store->out[nout].oid = is_next ? en->oid : ctx->store->in[i].oid;
-        ctx->store->out[nout].oid_len = is_next ? en->oid_len : ctx->store->in[i].oid_len;
-        ctx->store->out[nout].val = val;
+        SNMP_AGENT_CTX(work)->out[nout].oid = is_next ? en->oid : SNMP_AGENT_CTX(work)->in[i].oid;
+        SNMP_AGENT_CTX(work)->out[nout].oid_len = is_next ? en->oid_len : SNMP_AGENT_CTX(work)->in[i].oid_len;
+        SNMP_AGENT_CTX(work)->out[nout].val = val;
         nout++;
     }
     return nout;
@@ -685,7 +720,7 @@ static size_t run_get(struct SnmpAgentInternal *restrict ctx, uint8_t pdu_tag, s
 // GetBulkRequest-PDU (RFC 3416 sec 4.2.3): the first non-repeaters bindings get one successor
 // each, and each remaining binding is walked for up to max-repetitions successors. Reports the
 // binding count written.
-static size_t run_bulk(struct SnmpAgentInternal *restrict ctx, size_t nvb, long non_repeaters, long max_repetitions)
+static size_t run_bulk(uint8_t *restrict work, size_t nvb, long non_repeaters, long max_repetitions)
 {
     long non_rep = non_repeaters < 0 ? 0 : non_repeaters;
     long max_rep = max_repetitions < 0 ? 0 : max_repetitions;
@@ -701,18 +736,19 @@ static size_t run_bulk(struct SnmpAgentInternal *restrict ctx, size_t nvb, long 
         {
             break;
         }
-        const SnmpMibEntry *en = mib_find_next(ctx, ctx->store->in[i].oid, ctx->store->in[i].oid_len);
+        const SnmpMibEntry *en =
+            mib_find_next(work, SNMP_AGENT_CTX(work)->in[i].oid, SNMP_AGENT_CTX(work)->in[i].oid_len);
         if (en)
         {
-            ctx->store->out[nout].oid = en->oid;
-            ctx->store->out[nout].oid_len = en->oid_len;
-            fetch_value(en, &ctx->store->out[nout].val);
+            SNMP_AGENT_CTX(work)->out[nout].oid = en->oid;
+            SNMP_AGENT_CTX(work)->out[nout].oid_len = en->oid_len;
+            fetch_value(en, &SNMP_AGENT_CTX(work)->out[nout].val);
         }
         else
         {
-            ctx->store->out[nout].oid = ctx->store->in[i].oid;
-            ctx->store->out[nout].oid_len = ctx->store->in[i].oid_len;
-            ctx->store->out[nout].val.type = (uint8_t)SNMP_TAG_SNMP_END_OF_MIB_VIEW;
+            SNMP_AGENT_CTX(work)->out[nout].oid = SNMP_AGENT_CTX(work)->in[i].oid;
+            SNMP_AGENT_CTX(work)->out[nout].oid_len = SNMP_AGENT_CTX(work)->in[i].oid_len;
+            SNMP_AGENT_CTX(work)->out[nout].val.type = (uint8_t)SNMP_TAG_SNMP_END_OF_MIB_VIEW;
         }
         nout++;
     }
@@ -720,37 +756,38 @@ static size_t run_bulk(struct SnmpAgentInternal *restrict ctx, size_t nvb, long 
     const size_t nrep = nvb - (size_t)non_rep;
     for (size_t r = 0; r < nrep; r++)
     {
-        ctx->store->cur_oid[r] = ctx->store->in[non_rep + r].oid;
-        ctx->store->cur_len[r] = ctx->store->in[non_rep + r].oid_len;
-        ctx->store->ended[r] = PROTO_FALSE;
+        SNMP_AGENT_CTX(work)->cur_oid[r] = SNMP_AGENT_CTX(work)->in[non_rep + r].oid;
+        SNMP_AGENT_CTX(work)->cur_len[r] = SNMP_AGENT_CTX(work)->in[non_rep + r].oid_len;
+        SNMP_AGENT_CTX(work)->ended[r] = PROTO_FALSE;
     }
     for (long rep = 0; rep < max_rep && nout < SNMP_MAX_VARBINDS; rep++)
     {
         for (size_t r = 0; r < nrep && nout < SNMP_MAX_VARBINDS; r++)
         {
-            if (ctx->store->ended[r])
+            if (SNMP_AGENT_CTX(work)->ended[r])
             {
-                ctx->store->out[nout].oid = ctx->store->cur_oid[r];
-                ctx->store->out[nout].oid_len = ctx->store->cur_len[r];
-                ctx->store->out[nout].val.type = (uint8_t)SNMP_TAG_SNMP_END_OF_MIB_VIEW;
+                SNMP_AGENT_CTX(work)->out[nout].oid = SNMP_AGENT_CTX(work)->cur_oid[r];
+                SNMP_AGENT_CTX(work)->out[nout].oid_len = SNMP_AGENT_CTX(work)->cur_len[r];
+                SNMP_AGENT_CTX(work)->out[nout].val.type = (uint8_t)SNMP_TAG_SNMP_END_OF_MIB_VIEW;
                 nout++;
                 continue;
             }
-            const SnmpMibEntry *en = mib_find_next(ctx, ctx->store->cur_oid[r], ctx->store->cur_len[r]);
+            const SnmpMibEntry *en =
+                mib_find_next(work, SNMP_AGENT_CTX(work)->cur_oid[r], SNMP_AGENT_CTX(work)->cur_len[r]);
             if (en)
             {
-                ctx->store->out[nout].oid = en->oid;
-                ctx->store->out[nout].oid_len = en->oid_len;
-                fetch_value(en, &ctx->store->out[nout].val);
-                ctx->store->cur_oid[r] = en->oid;
-                ctx->store->cur_len[r] = en->oid_len;
+                SNMP_AGENT_CTX(work)->out[nout].oid = en->oid;
+                SNMP_AGENT_CTX(work)->out[nout].oid_len = en->oid_len;
+                fetch_value(en, &SNMP_AGENT_CTX(work)->out[nout].val);
+                SNMP_AGENT_CTX(work)->cur_oid[r] = en->oid;
+                SNMP_AGENT_CTX(work)->cur_len[r] = en->oid_len;
             }
             else
             {
-                ctx->store->out[nout].oid = ctx->store->cur_oid[r];
-                ctx->store->out[nout].oid_len = ctx->store->cur_len[r];
-                ctx->store->out[nout].val.type = (uint8_t)SNMP_TAG_SNMP_END_OF_MIB_VIEW;
-                ctx->store->ended[r] = PROTO_TRUE;
+                SNMP_AGENT_CTX(work)->out[nout].oid = SNMP_AGENT_CTX(work)->cur_oid[r];
+                SNMP_AGENT_CTX(work)->out[nout].oid_len = SNMP_AGENT_CTX(work)->cur_len[r];
+                SNMP_AGENT_CTX(work)->out[nout].val.type = (uint8_t)SNMP_TAG_SNMP_END_OF_MIB_VIEW;
+                SNMP_AGENT_CTX(work)->ended[r] = PROTO_TRUE;
             }
             nout++;
         }
@@ -760,23 +797,23 @@ static size_t run_bulk(struct SnmpAgentInternal *restrict ctx, size_t nvb, long 
 
 // One request PDU against the MIB, answered by one Response-PDU (RFC 3416 sec 4.2). The v1 and
 // v2c community framing and the v3 USM layer both arrive here.
-static void dispatch_pdu(struct SnmpAgentInternal *restrict ctx)
+static void dispatch_pdu(uint8_t *restrict work)
 {
-    const uint8_t *pdu = ctx->ns->pdu.req;
-    const size_t pdu_len = ctx->ns->pdu.req_len;
-    const proto_bool allow_write = ctx->ns->pdu.allow_write;
-    const proto_bool v2c = ctx->ns->pdu.v2c;
-    uint8_t *out = ctx->ns->pdu.out;
-    const size_t out_cap = ctx->ns->pdu.out_cap;
-    ctx->ns->n = 0;
+    const uint8_t *pdu = SnmpAgent.pdu.req;
+    const size_t pdu_len = SnmpAgent.pdu.req_len;
+    const proto_bool allow_write = SnmpAgent.pdu.allow_write;
+    const proto_bool v2c = SnmpAgent.pdu.v2c;
+    uint8_t *out = SnmpAgent.pdu.out;
+    const size_t out_cap = SnmpAgent.pdu.out_cap;
+    SnmpAgent.n = 0;
 
     BerDec d;
     SnmpBer.dec = &d;
     SnmpBer.buf.in = pdu;
     SnmpBer.buf.cap = pdu_len;
-    SnmpBer.dec_init(SnmpBer.internal);
+    SnmpBer.dec_init(snmp_ber_work);
 
-    SnmpBer.read_header(SnmpBer.internal);
+    SnmpBer.read_header(snmp_ber_work);
     if (!SnmpBer.ok)
     {
         return;
@@ -785,33 +822,33 @@ static void dispatch_pdu(struct SnmpAgentInternal *restrict ctx)
 
     // Positions 2 and 3: error-status and error-index in a PDU, non-repeaters and max-repetitions
     // in a BulkPDU (RFC 3416 sec 3).
-    SnmpBer.read_integer(SnmpBer.internal);
+    SnmpBer.read_integer(snmp_ber_work);
     if (!SnmpBer.ok)
     {
         return;
     }
     const long request_id = SnmpBer.ival;
-    SnmpBer.read_integer(SnmpBer.internal);
+    SnmpBer.read_integer(snmp_ber_work);
     if (!SnmpBer.ok)
     {
         return;
     }
     const long field2 = SnmpBer.ival;
-    SnmpBer.read_integer(SnmpBer.internal);
+    SnmpBer.read_integer(snmp_ber_work);
     if (!SnmpBer.ok)
     {
         return;
     }
     const long field3 = SnmpBer.ival;
 
-    SnmpBer.read_header(SnmpBer.internal);
+    SnmpBer.read_header(snmp_ber_work);
     if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return;
     }
     const size_t vbl_end = d.pos + SnmpBer.vlen;
 
-    const size_t nvb = decode_varbinds(ctx, &d, vbl_end);
+    const size_t nvb = decode_varbinds(work, &d, vbl_end);
     if (nvb > SNMP_MAX_VARBINDS)
     {
         return;
@@ -823,7 +860,7 @@ static void dispatch_pdu(struct SnmpAgentInternal *restrict ctx)
 
     if (pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_GET || pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_GETNEXT)
     {
-        nout = run_get(ctx, pdu_tag, nvb, v2c, &err_status, &err_index);
+        nout = run_get(work, pdu_tag, nvb, v2c, &err_status, &err_index);
     }
     else if (pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_GETBULK)
     {
@@ -831,14 +868,14 @@ static void dispatch_pdu(struct SnmpAgentInternal *restrict ctx)
         {
             return;
         }
-        nout = run_bulk(ctx, nvb, field2, field3);
+        nout = run_bulk(work, nvb, field2, field3);
     }
     else if (pdu_tag == (uint8_t)SNMP_TAG_SNMP_PDU_SET)
     {
         // A SetRequest-PDU reports through error-status in both framings, and its response repeats
         // the request's bindings (RFC 3416 sec 4.2.5).
         nout = nvb;
-        echo_varbinds(ctx, nvb);
+        echo_varbinds(work, nvb);
         if (!allow_write)
         {
             err_status = (!v2c) ? (int)SNMP_ERR_NO_SUCH_NAME : (int)SNMP_ERR_NO_ACCESS;
@@ -846,7 +883,7 @@ static void dispatch_pdu(struct SnmpAgentInternal *restrict ctx)
         }
         else
         {
-            apply_set_all(ctx, nvb, v2c, &err_status, &err_index);
+            apply_set_all(work, nvb, v2c, &err_status, &err_index);
         }
     }
     else
@@ -854,14 +891,14 @@ static void dispatch_pdu(struct SnmpAgentInternal *restrict ctx)
         return; // a PDU this responder does not answer
     }
 
-    size_t n = encode_response(ctx, request_id, err_status, err_index, nout, out, out_cap);
+    size_t n = encode_response(work, request_id, err_status, err_index, nout, out, out_cap);
     if (n == 0 && nout > 0)
     {
         // RFC 3416 sec 4.2.1: a response too large for its buffer is answered tooBig with an empty
         // VarBindList.
-        n = encode_response(ctx, request_id, (int)SNMP_ERR_TOO_BIG, 0, 0, out, out_cap);
+        n = encode_response(work, request_id, (int)SNMP_ERR_TOO_BIG, 0, 0, out, out_cap);
     }
-    ctx->ns->n = n;
+    SnmpAgent.n = n;
 }
 
 // ---------------------------------------------------------------------------
@@ -869,27 +906,31 @@ static void dispatch_pdu(struct SnmpAgentInternal *restrict ctx)
 // is the USM layer's.
 // ---------------------------------------------------------------------------
 
-static void agent_process(struct SnmpAgentInternal *restrict ctx)
+static void agent_process(uint8_t *restrict work)
 {
-    const uint8_t *req = ctx->ns->msg.req;
-    const size_t req_len = ctx->ns->msg.req_len;
-    uint8_t *resp = ctx->ns->msg.resp;
-    const size_t resp_cap = ctx->ns->msg.resp_cap;
-    ctx->ns->n = 0;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t *req = SnmpAgent.msg.req;
+    const size_t req_len = SnmpAgent.msg.req_len;
+    uint8_t *resp = SnmpAgent.msg.resp;
+    const size_t resp_cap = SnmpAgent.msg.resp_cap;
+    SnmpAgent.n = 0;
 
     BerDec d;
     SnmpBer.dec = &d;
     SnmpBer.buf.in = req;
     SnmpBer.buf.cap = req_len;
-    SnmpBer.dec_init(SnmpBer.internal);
+    SnmpBer.dec_init(snmp_ber_work);
 
-    SnmpBer.read_header(SnmpBer.internal);
+    SnmpBer.read_header(snmp_ber_work);
     if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE) // the message wrapper
     {
         return;
     }
 
-    SnmpBer.read_integer(SnmpBer.internal);
+    SnmpBer.read_integer(snmp_ber_work);
     if (!SnmpBer.ok)
     {
         return;
@@ -903,8 +944,8 @@ static void agent_process(struct SnmpAgentInternal *restrict ctx)
         SnmpV3.msg.req_len = req_len;
         SnmpV3.msg.resp = resp;
         SnmpV3.msg.resp_cap = resp_cap;
-        SnmpV3.process(SnmpV3.internal);
-        ctx->ns->n = SnmpV3.n;
+        SnmpV3.process(protocore_snmp_v3_span());
+        SnmpAgent.n = SnmpV3.n;
 #endif
         return; // without the USM layer a v3 message is answered with nothing
     }
@@ -913,7 +954,7 @@ static void agent_process(struct SnmpAgentInternal *restrict ctx)
         return;
     }
 
-    SnmpBer.read_header(SnmpBer.internal);
+    SnmpBer.read_header(snmp_ber_work);
     if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return;
@@ -924,8 +965,9 @@ static void agent_process(struct SnmpAgentInternal *restrict ctx)
 
     // RFC 1157 sec 3.2.5: the message is authentic when it names a community it belongs to. The
     // read-write community also authorizes reads.
-    const proto_bool is_rw = ctx->store->rw_set && community_match(ctx->store->rw, community, community_len);
-    const proto_bool is_ro = is_rw || community_match(ctx->store->ro, community, community_len);
+    const proto_bool is_rw =
+        SNMP_AGENT_CTX(work)->rw_set && community_match(SNMP_AGENT_CTX(work)->rw, community, community_len);
+    const proto_bool is_ro = is_rw || community_match(SNMP_AGENT_CTX(work)->ro, community, community_len);
     if (!is_ro)
     {
         return; // RFC 1157 sec 4.1: an authentication failure discards the datagram
@@ -933,15 +975,15 @@ static void agent_process(struct SnmpAgentInternal *restrict ctx)
 
     // The PDU is the rest of the datagram: dispatch it, then wrap the response in the same framing.
     const size_t pdu_off = d.pos;
-    ctx->ns->pdu.req = req + pdu_off;
-    ctx->ns->pdu.req_len = req_len - pdu_off;
-    ctx->ns->pdu.allow_write = is_rw;
-    ctx->ns->pdu.v2c = (version == (int)SNMP_V2C);
-    ctx->ns->pdu.out = ctx->store->pdu_stage;
-    ctx->ns->pdu.out_cap = sizeof(ctx->store->pdu_stage);
-    dispatch_pdu(ctx);
-    const size_t pn = ctx->ns->n;
-    ctx->ns->n = 0;
+    SnmpAgent.pdu.req = req + pdu_off;
+    SnmpAgent.pdu.req_len = req_len - pdu_off;
+    SnmpAgent.pdu.allow_write = is_rw;
+    SnmpAgent.pdu.v2c = (version == (int)SNMP_V2C);
+    SnmpAgent.pdu.out = SNMP_AGENT_CTX(work)->pdu_stage;
+    SnmpAgent.pdu.out_cap = sizeof(SNMP_AGENT_CTX(work)->pdu_stage);
+    dispatch_pdu(work);
+    const size_t pn = SnmpAgent.n;
+    SnmpAgent.n = 0;
     if (pn == 0)
     {
         return;
@@ -951,22 +993,22 @@ static void agent_process(struct SnmpAgentInternal *restrict ctx)
     SnmpBer.enc = &e;
     SnmpBer.buf.out = resp;
     SnmpBer.buf.cap = resp_cap;
-    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.enc_init(snmp_ber_work);
     SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
-    SnmpBer.seq_begin(SnmpBer.internal);
+    SnmpBer.seq_begin(snmp_ber_work);
     const size_t msg = SnmpBer.tlv.token;
     SnmpBer.tlv.ival = version;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
     SnmpBer.tlv.bytes = (const uint8_t *)community;
     SnmpBer.tlv.len = community_len;
-    SnmpBer.put_octet_string(SnmpBer.internal);
-    SnmpBer.tlv.bytes = ctx->store->pdu_stage;
+    SnmpBer.put_octet_string(snmp_ber_work);
+    SnmpBer.tlv.bytes = SNMP_AGENT_CTX(work)->pdu_stage;
     SnmpBer.tlv.len = pn;
-    SnmpBer.put_raw(SnmpBer.internal);
+    SnmpBer.put_raw(snmp_ber_work);
     SnmpBer.tlv.token = msg;
-    SnmpBer.seq_end(SnmpBer.internal);
-    ctx->ns->n = e.ok ? e.len : 0;
+    SnmpBer.seq_end(snmp_ber_work);
+    SnmpAgent.n = e.ok ? e.len : 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -981,30 +1023,31 @@ static void snmp_udp_handler(const uint8_t *data, size_t len, const struct proto
     (void)cbctx;
     SnmpAgent.msg.req = data;
     SnmpAgent.msg.req_len = len;
-    SnmpAgent.msg.resp = s_store.tx;
-    SnmpAgent.msg.resp_cap = sizeof(s_store.tx);
-    agent_process(&s_agent);
+    SnmpAgent.msg.resp = SNMP_AGENT_CTX(protocore_snmp_agent_span())->tx;
+    SnmpAgent.msg.resp_cap = sizeof(((struct SnmpAgentStorage *)0)->tx);
+    agent_process(protocore_snmp_agent_span());
     if (SnmpAgent.n == 0)
     {
         return;
     }
     UdpListener.peer_args.peer = peer;
-    UdpListener.send_args.data = s_store.tx;
+    UdpListener.send_args.data = SNMP_AGENT_CTX(protocore_snmp_agent_span())->tx;
     UdpListener.send_args.len = SnmpAgent.n;
-    UdpListener.reply(UdpListener.internal);
+    UdpListener.reply(protocore_udp_listener_span());
 }
 #endif // PROTOCORE_HAS_NET_STACK
 
-static void agent_listen(struct SnmpAgentInternal *restrict ctx)
+static void agent_listen(uint8_t *restrict work)
 {
+    (void)work;
 #if PROTOCORE_HAS_NET_STACK
-    UdpListener.port = ctx->ns->port;
+    UdpListener.port = SnmpAgent.port;
     UdpListener.bind.handler = snmp_udp_handler;
     UdpListener.bind.handler_ctx = NULL;
-    UdpListener.listen(UdpListener.internal);
-    ctx->ns->ok = UdpListener.ok;
+    UdpListener.listen(protocore_udp_listener_span());
+    SnmpAgent.ok = UdpListener.ok;
 #else
-    ctx->ns->ok = PROTO_FALSE; // no transport in this build
+    SnmpAgent.ok = PROTO_FALSE; // no transport in this build
 #endif
 }
 
@@ -1017,7 +1060,6 @@ SnmpAgentNs SnmpAgent = {.init = agent_init,
                          .add_dynamic = add_dynamic,
                          .dispatch_pdu = dispatch_pdu,
                          .process = agent_process,
-                         .listen = agent_listen,
-                         .internal = &s_agent};
+                         .listen = agent_listen};
 
 #endif // PROTOCORE_ENABLE_SNMP

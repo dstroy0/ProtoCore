@@ -48,9 +48,6 @@ typedef struct
     size_t cap;       ///< how much room it has
 } TcpClientIoArgs;
 
-/** @brief The client pool's own state and the calls that reach it, described only in client.c. */
-struct TcpClientInternal;
-
 /**
  * @brief The outbound side of TCP.
  *
@@ -70,7 +67,6 @@ struct TcpClientInternal;
  * @var TcpClientNs::available  wire bytes buffered and ready to read
  * @var TcpClientNs::read       drain buffered wire bytes
  * @var TcpClientNs::close      tear the connection down and free the slot
- * @var TcpClientNs::internal   the pool's state and the calls that reach it
  *
  * open() returns before the connection exists. @ref host is read on every step until the name
  * resolves, so it has to outlive the open. The caller polls connected() until it is true, or
@@ -87,19 +83,28 @@ typedef struct
     int32_t i32;
     size_t n;
 
-    void (*open)(struct TcpClientInternal *ctx);
-    void (*connected)(struct TcpClientInternal *ctx);
-    void (*is_closed)(struct TcpClientInternal *ctx);
-    void (*send)(struct TcpClientInternal *ctx);
-    void (*available)(struct TcpClientInternal *ctx);
-    void (*read)(struct TcpClientInternal *ctx);
-    void (*close)(struct TcpClientInternal *ctx);
-
-    struct TcpClientInternal *internal;
+    void (*const open)(uint8_t *restrict work);
+    void (*const connected)(uint8_t *restrict work);
+    void (*const is_closed)(uint8_t *restrict work);
+    void (*const send)(uint8_t *restrict work);
+    void (*const available)(uint8_t *restrict work);
+    void (*const read)(uint8_t *restrict work);
+    void (*const close)(uint8_t *restrict work);
 } TcpClientNs;
 
 /** @brief The one symbol this module exports. */
 extern TcpClientNs TcpClient;
+
+/**
+ * @brief The PROTOCORE_TCP_CLIENT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_tcp_client_span(void);
 
 PROTOCORE_END_DECLS
 

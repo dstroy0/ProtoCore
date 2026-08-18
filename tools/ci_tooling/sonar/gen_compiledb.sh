@@ -54,5 +54,5 @@ fi
 rm -rf "$FRAGS"
 
 # Expand the tokenized baseline into the copy the scanner reads (absolute directory).
-sed "s#@ROOT@#${ROOT}#g" "$BASELINE" > compile_commands.json
+sed "s#@ROOT@#${ROOT}#g" "$BASELINE" >compile_commands.json
 echo "wrote compile_commands.json (scan copy) from $BASELINE"

@@ -33,18 +33,6 @@
 #define PROTOCORE_WEBHOOK_URI_CAP 160u
 #define PROTOCORE_WEBHOOK_CONTENT_CAP 256u
 
-/**
- * @brief The calls' arguments - what WebhookNs points at.
- *
- * @var WebhookInternal::ns  the handle a caller sets a call's members on
- */
-struct WebhookInternal
-{
-    WebhookNs *ns;
-};
-
-static struct WebhookInternal s_webhook = {.ns = &Webhook};
-
 // Append the NUL-terminated s at *pos, terminator included in the bound. Leaves the region
 // untouched and reports false when the whole string would not fit.
 static proto_bool json_append(char *out, size_t cap, size_t *pos, const char *s)
@@ -91,14 +79,15 @@ static proto_bool json_append_escaped(char *out, size_t cap, size_t *pos, const 
 
 // Build "https://maker.ifttt.com/trigger/<event>/with/key/<key>" into the build region: an https
 // URI (RFC 9110 sec 4.2.2) whose last two segments are the event and the key.
-static void ifttt_url(struct WebhookInternal *restrict ctx)
+static void ifttt_url(uint8_t *restrict work)
 {
-    char *out = ctx->ns->build.out;
-    const size_t cap = ctx->ns->build.cap;
-    const char *event = ctx->ns->ifttt.event;
-    const char *key = ctx->ns->ifttt.key;
+    (void)work;
+    char *out = Webhook.build.out;
+    const size_t cap = Webhook.build.cap;
+    const char *event = Webhook.ifttt.event;
+    const char *key = Webhook.ifttt.key;
 
-    ctx->ns->n = 0;
+    Webhook.n = 0;
     if (!out || cap == 0 || !event || !key)
     {
         if (out && cap)
@@ -120,20 +109,21 @@ static void ifttt_url(struct WebhookInternal *restrict ctx)
         out[0] = '\0';
         return;
     }
-    ctx->ns->n = w;
+    Webhook.n = w;
 }
 
 // Build the object {"value1":..,"value2":..,"value3":..} into the build region: begin-object,
 // members separated by a value-separator, end-object (RFC 8259 sec 4). A NULL value omits its
 // member, so three NULLs yield {}.
-static void ifttt_payload(struct WebhookInternal *restrict ctx)
+static void ifttt_payload(uint8_t *restrict work)
 {
-    char *out = ctx->ns->build.out;
-    const size_t cap = ctx->ns->build.cap;
+    (void)work;
+    char *out = Webhook.build.out;
+    const size_t cap = Webhook.build.cap;
     const char *const names[3] = {"value1", "value2", "value3"};
-    const char *const vals[3] = {ctx->ns->ifttt.value1, ctx->ns->ifttt.value2, ctx->ns->ifttt.value3};
+    const char *const vals[3] = {Webhook.ifttt.value1, Webhook.ifttt.value2, Webhook.ifttt.value3};
 
-    ctx->ns->n = 0;
+    Webhook.n = 0;
     if (!out || cap == 0)
     {
         return;
@@ -167,7 +157,7 @@ static void ifttt_payload(struct WebhookInternal *restrict ctx)
         out[0] = '\0';
         return;
     }
-    ctx->ns->n = (int)pos;
+    Webhook.n = (int)pos;
 }
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
@@ -175,26 +165,28 @@ static void ifttt_payload(struct WebhookInternal *restrict ctx)
 // POST the content to the target URI (RFC 9110 sec 9.3.3), typed application/json
 // (RFC 9110 sec 8.3), its length measured for the Content-Length the client sends
 // (RFC 9110 sec 8.6). Reports the status code (RFC 9110 sec 15.1) or a negative transport error.
-static void post(struct WebhookInternal *restrict ctx)
+static void post(uint8_t *restrict work)
 {
-    const char *target_uri = ctx->ns->request.target_uri;
-    const char *content = ctx->ns->request.content;
+    (void)work;
+    const char *target_uri = Webhook.request.target_uri;
+    const char *content = Webhook.request.content;
     if (!target_uri || !content)
     {
-        ctx->ns->i32 = (int)HTTP_CLIENT_ERR_URL;
+        Webhook.i32 = (int)HTTP_CLIENT_ERR_URL;
         return;
     }
     HttpClientResult r;
-    ctx->ns->i32 = http_post(target_uri, PROTOCORE_MIME_JSON, (const uint8_t *)content,
-                             str.len(content, PROTOCORE_HTTP_CLIENT_BUF_SIZE), &r);
+    Webhook.i32 = http_post(target_uri, PROTOCORE_MIME_JSON, (const uint8_t *)content,
+                            str.len(content, PROTOCORE_HTTP_CLIENT_BUF_SIZE), &r);
 }
 
 #else // no outbound HTTP client in this build
 
 // Nothing can be sent, so every POST reports -1 and no request is formed.
-static void post(struct WebhookInternal *restrict ctx)
+static void post(uint8_t *restrict work)
 {
-    ctx->ns->i32 = -1;
+    (void)work;
+    Webhook.i32 = -1;
 }
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT
@@ -202,42 +194,39 @@ static void post(struct WebhookInternal *restrict ctx)
 // Build the target URI and the object into this call's own frames, then POST them. A build that
 // does not fit reports -1 and sends nothing. The frames die at return, so the handle stops naming
 // them before the call ends.
-static void ifttt_trigger(struct WebhookInternal *restrict ctx)
+static void ifttt_trigger(uint8_t *restrict work)
 {
     char uri[PROTOCORE_WEBHOOK_URI_CAP];
     char content[PROTOCORE_WEBHOOK_CONTENT_CAP];
 
-    ctx->ns->build.out = uri;
-    ctx->ns->build.cap = sizeof(uri);
-    ifttt_url(ctx);
-    if (ctx->ns->n == 0)
+    Webhook.build.out = uri;
+    Webhook.build.cap = sizeof(uri);
+    ifttt_url(work);
+    if (Webhook.n == 0)
     {
-        ctx->ns->build.out = NULL;
-        ctx->ns->i32 = -1;
+        Webhook.build.out = NULL;
+        Webhook.i32 = -1;
         return;
     }
-    ctx->ns->build.out = content;
-    ctx->ns->build.cap = sizeof(content);
-    ifttt_payload(ctx);
-    if (ctx->ns->n == 0)
+    Webhook.build.out = content;
+    Webhook.build.cap = sizeof(content);
+    ifttt_payload(work);
+    if (Webhook.n == 0)
     {
-        ctx->ns->build.out = NULL;
-        ctx->ns->i32 = -1;
+        Webhook.build.out = NULL;
+        Webhook.i32 = -1;
         return;
     }
-    ctx->ns->request.target_uri = uri;
-    ctx->ns->request.content = content;
-    post(ctx);
-    ctx->ns->request.target_uri = NULL;
-    ctx->ns->request.content = NULL;
-    ctx->ns->build.out = NULL;
+    Webhook.request.target_uri = uri;
+    Webhook.request.content = content;
+    post(work);
+    Webhook.request.target_uri = NULL;
+    Webhook.request.content = NULL;
+    Webhook.build.out = NULL;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-WebhookNs Webhook = {.ifttt_url = ifttt_url,
-                     .ifttt_payload = ifttt_payload,
-                     .post = post,
-                     .ifttt_trigger = ifttt_trigger,
-                     .internal = &s_webhook};
+WebhookNs Webhook = {
+    .ifttt_url = ifttt_url, .ifttt_payload = ifttt_payload, .post = post, .ifttt_trigger = ifttt_trigger};
 
 #endif // PROTOCORE_ENABLE_WEBHOOK

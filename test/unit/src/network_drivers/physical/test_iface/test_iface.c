@@ -64,34 +64,34 @@ static proto_bool add(uint8_t id, protocore_if_kind kind, protocore_if_send_fn f
     Physical.iface.kind = kind;
     Physical.iface.send = fn;
     Physical.iface.ctx = ctx;
-    Physical.iface_add(Physical.internal);
+    Physical.iface_add(protocore_physical_span());
     return Physical.ok;
 }
 
 static uint8_t count(void)
 {
-    Physical.iface_count(Physical.internal);
+    Physical.iface_count(protocore_physical_span());
     return Physical.u8;
 }
 
 static proto_bool present(uint8_t id)
 {
     Physical.iface.id = id;
-    Physical.iface_present(Physical.internal);
+    Physical.iface_present(protocore_physical_span());
     return Physical.ok;
 }
 
 static protocore_if_kind kind_of(uint8_t id)
 {
     Physical.iface.id = id;
-    Physical.iface_kind(Physical.internal);
+    Physical.iface_kind(protocore_physical_span());
     return Physical.if_kind;
 }
 
 static int16_t at(uint8_t i)
 {
     Physical.iface.i = i;
-    Physical.iface_at(Physical.internal);
+    Physical.iface_at(protocore_physical_span());
     return Physical.i16;
 }
 
@@ -100,7 +100,7 @@ static proto_bool send(uint8_t id, const char *text, uint16_t n)
     Physical.iface.id = id;
     Physical.iface.data = (const uint8_t *)text;
     Physical.iface.len = n;
-    Physical.iface_send(Physical.internal);
+    Physical.iface_send(protocore_physical_span());
     return Physical.ok;
 }
 
@@ -111,12 +111,12 @@ void setUp(void)
     {
         g_cap[i].accept = PROTO_TRUE;
     }
-    Physical.iface_reset(Physical.internal);
+    Physical.iface_reset(protocore_physical_span());
 }
 
 void tearDown(void)
 {
-    Physical.iface_reset(Physical.internal);
+    Physical.iface_reset(protocore_physical_span());
 }
 
 // An empty table answers every query with its "nothing here" value.
@@ -179,7 +179,7 @@ void test_reset_empties_the_registry(void)
 {
     TEST_ASSERT_TRUE(add(1, PROTOCORE_IF_ETH, cap_send, NULL));
     TEST_ASSERT_TRUE(add(2, PROTOCORE_IF_BUS, cap_send, NULL));
-    Physical.iface_reset(Physical.internal);
+    Physical.iface_reset(protocore_physical_span());
     TEST_ASSERT_EQUAL_UINT8(0, count());
     TEST_ASSERT_FALSE(present(1));
     TEST_ASSERT_FALSE(present(2));

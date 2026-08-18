@@ -12,12 +12,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t zigbee_work[16]; // the borrow an entry takes; Zigbee never reads it
+
 void dbench_run(void)
 {
     static const uint8_t payload[16] = {0x00, 0x00, 0x00, 0x02, 0x11, 0x22, 0x33, 0x44,
                                         0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC};
     static uint8_t frame[64];
-    uint16_t flen = protocore_ash_frame_encode(0x25, payload, sizeof(payload), frame, sizeof(frame));
+    Zigbee.ash_frame_encode_args.control = 0x25;
+    Zigbee.ash_frame_encode_args.payload = payload;
+    Zigbee.ash_frame_encode_args.len = sizeof(payload);
+    Zigbee.ash_frame_encode_args.out = frame;
+    Zigbee.ash_frame_encode_args.cap = sizeof(frame);
+    Zigbee.ash_frame_encode(zigbee_work);
+    uint16_t flen = Zigbee.value;
 
     for (;;)
     {
@@ -32,7 +40,14 @@ void dbench_run(void)
             uint8_t ctl;
             uint8_t pay[64];
             uint16_t plen = 0;
-            sink += protocore_ash_frame_decode(frame, flen, &ctl, pay, sizeof(pay), &plen) >= 0 ? plen : 0;
+            Zigbee.ash_frame_decode_args.raw = frame;
+            Zigbee.ash_frame_decode_args.len = flen;
+            Zigbee.ash_frame_decode_args.control = &ctl;
+            Zigbee.ash_frame_decode_args.payload = pay;
+            Zigbee.ash_frame_decode_args.pay_cap = sizeof(pay);
+            Zigbee.ash_frame_decode_args.pay_len = &plen;
+            Zigbee.ash_frame_decode(zigbee_work);
+            sink += Zigbee.n >= 0 ? plen : 0;
         });
         (void)sink;
         DBENCH_DONE();

@@ -117,9 +117,6 @@ typedef struct
     size_t cap; ///< how much room it has
 } HwOutArgs;
 
-/** @brief The checks' own calls, described only in hw_health.c. */
-struct HwHealthInternal;
-
 /**
  * @brief The hardware health checks over caller-owned monitors.
  *
@@ -142,7 +139,6 @@ struct HwHealthInternal;
  * @var HwHealthNs::spi_result  feed one transfer's outcome in and take the new clock
  * @var HwHealthNs::gpio_short  a pin that does not read back what it was driven to
  * @var HwHealthNs::cap_leak    a discharge outside its tolerance band
- * @var HwHealthNs::internal    the calls that judge and tally
  *
  * No storage member: every call works in the caller's monitor.
  */
@@ -159,15 +155,13 @@ typedef struct
     uint32_t hz;
     size_t n;
 
-    void (*rail_init)(struct HwHealthInternal *ctx);
-    void (*rail_sample)(struct HwHealthInternal *ctx);
-    void (*rail_json)(struct HwHealthInternal *ctx);
-    void (*spi_init)(struct HwHealthInternal *ctx);
-    void (*spi_result)(struct HwHealthInternal *ctx);
-    void (*gpio_short)(struct HwHealthInternal *ctx);
-    void (*cap_leak)(struct HwHealthInternal *ctx);
-
-    struct HwHealthInternal *internal;
+    void (*const rail_init)(uint8_t *restrict work);
+    void (*const rail_sample)(uint8_t *restrict work);
+    void (*const rail_json)(uint8_t *restrict work);
+    void (*const spi_init)(uint8_t *restrict work);
+    void (*const spi_result)(uint8_t *restrict work);
+    void (*const gpio_short)(uint8_t *restrict work);
+    void (*const cap_leak)(uint8_t *restrict work);
 } HwHealthNs;
 
 /** @brief The one symbol this module exports. */

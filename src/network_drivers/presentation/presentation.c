@@ -140,7 +140,7 @@ static void parse(struct HttpConnInternal *restrict ctx)
     ConnPool.slot = ctx->ns->slot;
     ConnPool.io.buf = ctx->store->rx;
     ConnPool.io.cap = sizeof(ctx->store->rx);
-    ConnPool.read(ConnPool.internal);
+    ConnPool.read(protocore_conn_pool_span());
 
     for (size_t i = 0; i < ConnPool.n; i++)
     {
@@ -176,7 +176,7 @@ static void parse(struct HttpConnInternal *restrict ctx)
 static void tls_abort(uint8_t slot)
 {
     ConnPool.slot = slot;
-    ConnPool.abort_slot(ConnPool.internal);
+    ConnPool.abort_slot(protocore_conn_pool_span());
     HttpConn.slot = slot;
     reset(&s_http);
 }
@@ -273,7 +273,7 @@ static void http_evt_data(uint8_t slot)
 {
 #if PROTOCORE_ENABLE_TLS
     ConnPool.slot = slot;
-    ConnPool.tls(ConnPool.internal);
+    ConnPool.tls(protocore_conn_pool_span());
     if (ConnPool.ok)
     {
         tls_data(slot);
@@ -287,7 +287,7 @@ static void http_evt_close(uint8_t slot)
 {
 #if PROTOCORE_ENABLE_TLS
     ConnPool.slot = slot;
-    ConnPool.tls(ConnPool.internal);
+    ConnPool.tls(protocore_conn_pool_span());
     if (ConnPool.ok)
     {
         protocore_tls_conn_free(slot); // also covers timeouts (EVT_ERROR)

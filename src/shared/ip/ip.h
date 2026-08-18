@@ -118,9 +118,6 @@ typedef struct
     uint8_t prefix_len;     ///< the prefix length a match tests to
 } IpArgs;
 
-/** @brief The address calls, described only in ip.c. */
-struct IpInternal;
-
 /**
  * @brief An IP address, as a value.
  *
@@ -143,14 +140,12 @@ typedef struct
     size_t n;
     protocore_ip_scope scope;
 
-    void (*parse)(struct IpInternal *ctx);
-    void (*format)(struct IpInternal *ctx);
-    void (*classify)(struct IpInternal *ctx);
-    void (*equal)(struct IpInternal *ctx);
-    void (*is_unspecified)(struct IpInternal *ctx);
-    void (*prefix_match)(struct IpInternal *ctx);
-
-    struct IpInternal *internal;
+    void (*const parse)(uint8_t *restrict work);
+    void (*const format)(uint8_t *restrict work);
+    void (*const classify)(uint8_t *restrict work);
+    void (*const equal)(uint8_t *restrict work);
+    void (*const is_unspecified)(uint8_t *restrict work);
+    void (*const prefix_match)(uint8_t *restrict work);
 } IpNs;
 
 /** @brief The one symbol this module exports. */

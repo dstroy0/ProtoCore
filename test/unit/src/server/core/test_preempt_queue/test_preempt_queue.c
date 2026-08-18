@@ -74,7 +74,7 @@ static proto_bool lane_start(protocore_pq_lane lane, const protocore_pq_config *
 {
     PreemptQueue.lane = lane;
     PreemptQueue.cfg = cfg;
-    PreemptQueue.start(PreemptQueue.internal);
+    PreemptQueue.start(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 
@@ -83,7 +83,7 @@ static proto_bool lane_post(protocore_pq_lane lane, const void *item)
     PreemptQueue.lane = lane;
     PreemptQueue.post_args.item = item;
     PreemptQueue.post_args.timeout_ticks = 0;
-    PreemptQueue.post(PreemptQueue.internal);
+    PreemptQueue.post(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 
@@ -92,7 +92,7 @@ static proto_bool lane_post_urgent(protocore_pq_lane lane, const void *item)
     PreemptQueue.lane = lane;
     PreemptQueue.post_args.item = item;
     PreemptQueue.post_args.timeout_ticks = 0;
-    PreemptQueue.post_urgent(PreemptQueue.internal);
+    PreemptQueue.post_urgent(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 
@@ -100,35 +100,35 @@ static proto_bool lane_post_isr(protocore_pq_lane lane, const void *item)
 {
     PreemptQueue.lane = lane;
     PreemptQueue.post_args.item = item;
-    PreemptQueue.post_from_isr(PreemptQueue.internal);
+    PreemptQueue.post_from_isr(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 
 static proto_bool lane_running(protocore_pq_lane lane)
 {
     PreemptQueue.lane = lane;
-    PreemptQueue.running(PreemptQueue.internal);
+    PreemptQueue.running(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 
 static size_t lane_high_water(protocore_pq_lane lane)
 {
     PreemptQueue.lane = lane;
-    PreemptQueue.high_water(PreemptQueue.internal);
+    PreemptQueue.high_water(protocore_preempt_queue_span());
     return PreemptQueue.n;
 }
 
 static uint8_t lane_rank(protocore_pq_lane lane)
 {
     PreemptQueue.lane = lane;
-    PreemptQueue.priority(PreemptQueue.internal);
+    PreemptQueue.priority(protocore_preempt_queue_span());
     return PreemptQueue.u8;
 }
 
 static void lane_stop(protocore_pq_lane lane)
 {
     PreemptQueue.lane = lane;
-    PreemptQueue.stop(PreemptQueue.internal);
+    PreemptQueue.stop(protocore_preempt_queue_span());
 }
 
 // The host has no scheduler, so a lane's task runs when this says so: the entry drains its own

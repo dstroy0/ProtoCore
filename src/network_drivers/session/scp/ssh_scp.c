@@ -15,38 +15,23 @@
  * put a root, a path buffer, its capacity, and a copy of the `..` guard into a protocol server.
  */
 
-#include "network_drivers/application/scp/ssh_scp.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SSH_SCP
 
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "network_drivers/session/scp/ssh_scp.h"
+
+static uint8_t scp_work[16]; // the borrow an entry takes; Scp never reads it
+
 #include "mmgr/protostr.h" // str: the bounded-run walks
-#include "network_drivers/application/scp/scp.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
+#include "network_drivers/session/scp/scp.h"
+#include "network_drivers/session/session.h" // scp_conns: the transfer the connection carries
 #include "server/storage/filesystem.h"
 
-typedef enum PROTO_ENUM_PACKED
-{
-    PROTOCORE_NONE,
-    WAIT_CLINE, ///< reading the C<mode> <size> <name> control line
-    RECV,       ///< streaming file data to disk
-    WAIT_END    ///< the file's bytes are in; awaiting the end-of-record byte
-} ScpSt;
-
-typedef struct
-{
-    proto_bool active;
-    uint8_t slot;
-    uint32_t channel;
-    ScpSt st;
-    char dest[PROTOCORE_FILESYSTEM_PATH_MAX]; ///< the -t target (a file, or a dir if it ends with '/')
-    proto_bool dest_is_dir;
-    int fh;             ///< open file handle, or -1
-    uint64_t remaining; ///< data bytes still to receive
-    proto_bool err;
-    uint16_t cl_len; ///< control-line accumulator length
-    char cl[PROTOCORE_FILESYSTEM_PATH_MAX + 64];
-} ScpConn;
+PROTOCORE_BEGIN_DECLS
 
 // All SCP state in one owner with internal linkage, the work buffer included: a stack array is the
 // one allocation the fixed-footprint accounting cannot see, and the buffer does not outlive the
@@ -57,13 +42,21 @@ typedef struct
     // The root this server works through, bound once in begin(). A handle, not a path: this file
     // cannot name where storage begins.
     int root;
-    ScpConn conns[MAX_SSH_CONNS];
     char leaf[PROTOCORE_FILESYSTEM_PATH_MAX]; ///< one control line's filename, live only until the open
 } SshScpCtx;
 
 // -1 until bound, not the 0 static storage would give: root 0 is a valid root, so a zeroed field
 // would resolve against somebody else's storage before protocore_ssh_scp_begin() ran.
-static SshScpCtx s_scp = {.root = -1};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SSH_SCP_OFF_CTX 0u
+static_assert(SSH_SCP_OFF_CTX + sizeof(SshScpCtx) <= PROTOCORE_SSH_SCP_BORROW,
+              "PROTOCORE_SSH_SCP_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define SSH_SCP_CTX(w) ((SshScpCtx *)(void *)((w) + SSH_SCP_OFF_CTX))
 
 // An error ack is a status byte, a message, and a terminator, and all three are fixed - so each one
 // is a single rodata string, sent as it stands. Staging one in a buffer would copy a constant and
@@ -117,7 +110,7 @@ static void close_file(ScpConn *c)
     if (c->fh >= 0)
     {
         Fs.io.handle = c->fh;
-        Fs.close(Fs.internal);
+        Fs.close(protocore_filesystem_span());
         c->fh = -1;
     }
 }
@@ -136,7 +129,7 @@ static void protocore_scp_on_open(uint8_t slot, uint32_t channel, const char *cm
     {
         return;
     }
-    ScpConn *c = &s_scp.conns[slot];
+    ScpConn *c = &scp_conns[slot];
     close_file(c);
     c->active = PROTO_TRUE;
     c->slot = slot;
@@ -146,7 +139,12 @@ static void protocore_scp_on_open(uint8_t slot, uint32_t channel, const char *cm
 
     // Parsed straight into the field that keeps it. Parsing into scratch and copying would move a
     // whole path twice and then rescan the copy for a length the parse already walked past.
-    ScpMode mode = protocore_scp_parse_cmd(cmd, cmd_len, c->dest, sizeof(c->dest));
+    Scp.parse_cmd_args.cmd = cmd;
+    Scp.parse_cmd_args.cmd_len = cmd_len;
+    Scp.parse_cmd_args.path_out = c->dest;
+    Scp.parse_cmd_args.path_cap = sizeof(c->dest);
+    Scp.parse_cmd(scp_work);
+    ScpMode mode = Scp.value;
     if (mode == SCP_MODE_SINK)
     {
         // A '/' terminator is what makes the target a directory, and it is also the separator the
@@ -170,11 +168,19 @@ static void protocore_scp_on_open(uint8_t slot, uint32_t channel, const char *cm
 
 static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_ssh_scp_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     if (slot >= MAX_SSH_CONNS)
     {
         return;
     }
-    ScpConn *c = &s_scp.conns[slot];
+    ScpConn *c = &scp_conns[slot];
     if (!c->active || c->channel != channel)
     {
         return;
@@ -208,7 +214,14 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
 
             uint32_t mode = 0;
             uint64_t size = 0;
-            if (!protocore_scp_parse_cline(c->cl, c->cl_len, &mode, &size, s_scp.leaf, sizeof(s_scp.leaf)))
+            Scp.parse_cline_args.line = c->cl;
+            Scp.parse_cline_args.len = c->cl_len;
+            Scp.parse_cline_args.mode_out = &mode;
+            Scp.parse_cline_args.size_out = &size;
+            Scp.parse_cline_args.name_out = SSH_SCP_CTX(work)->leaf;
+            Scp.parse_cline_args.name_cap = sizeof(SSH_SCP_CTX(work)->leaf);
+            Scp.parse_cline(scp_work);
+            if (!Scp.ok)
             {
                 // e.g. a D/E directory record (no -r support)
                 err_ack(c, SCP_ERR_BAD_RECORD, sizeof(SCP_ERR_BAD_RECORD) - 1);
@@ -217,11 +230,11 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
             }
             // A directory target takes the control line's filename; a file target is the whole
             // destination on its own. Either way the accessor gets the pieces and frames once.
-            Fs.path.root = s_scp.root;
+            Fs.path.root = SSH_SCP_CTX(work)->root;
             Fs.path.dir = c->dest;
-            Fs.path.name = c->dest_is_dir ? s_scp.leaf : "";
+            Fs.path.name = c->dest_is_dir ? SSH_SCP_CTX(work)->leaf : "";
             Fs.io.mode = PROTOCORE_MNT_WRITE;
-            Fs.open(Fs.internal);
+            Fs.open(protocore_filesystem_span());
             c->fh = Fs.i32;
             if (c->fh < 0)
             {
@@ -241,7 +254,7 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
             Fs.io.handle = c->fh;
             Fs.io.wbuf = data;
             Fs.io.n = take;
-            Fs.write(Fs.internal);
+            Fs.write(protocore_filesystem_span());
             if (Fs.i32 != (int)take)
             {
                 c->err = PROTO_TRUE;
@@ -275,29 +288,66 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
     }
 }
 
-void protocore_ssh_scp_begin(void)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_SSH_SCP_BORROW persistent bytes, or null while the pool was short
+} SshScpOwnCtx;
+static SshScpOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_ssh_scp_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SSH_SCP_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // A borrow arrives zeroed, and these do not start at zero.
+            SSH_SCP_CTX(s_own.span)->root = -1;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void ssh_scp_begin(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
     // Bind the root this server answers from. Naming a different one than SFTP is how the two end up
     // over different storage; naming the same one shares it and costs one entry.
     Fs.mount = "mnt/scp";
-    Fs.begin(Fs.internal);
-    s_scp.root = Fs.i32;
+    Fs.begin(protocore_filesystem_span());
+    SSH_SCP_CTX(work)->root = Fs.i32;
 
     for (int i = 0; i < MAX_SSH_CONNS; i++)
     {
-        s_scp.conns[i].active = PROTO_FALSE;
+        scp_conns[i].active = PROTO_FALSE;
         // BSS zeroes this table, and 0 is a valid handle, so the free marker is set rather than
         // assumed - closing handle 0 here would take a file another server had open.
-        s_scp.conns[i].fh = -1;
+        scp_conns[i].fh = -1;
     }
-    if (!s_scp.registered)
+    if (!SSH_SCP_CTX(work)->registered)
     {
         SshConnection.scp_open_cb = protocore_scp_on_open;
         SshConnection.set_scp_open_cb(SshConnection.internal);
         SshConnection.scp_data_cb = protocore_scp_on_data;
         SshConnection.set_scp_data_cb(SshConnection.internal);
-        s_scp.registered = PROTO_TRUE;
+        SSH_SCP_CTX(work)->registered = PROTO_TRUE;
     }
 }
+
+SshScpNs SshScp = {
+    .begin = ssh_scp_begin,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_SCP

@@ -7,6 +7,7 @@
  */
 
 #include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
+#include "shared/pcap/pcap.h"
 
 #if PROTOCORE_ENABLE_MDNS_ADAPTIVE
 
@@ -158,7 +159,7 @@ proto_bool protocore_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
     {
         return PROTO_FALSE;
     }
-    Physical.wifi_channel(Physical.internal);
+    Physical.wifi_channel(protocore_physical_span());
     uint8_t ch = Physical.u8;
     if (ch == 0)
     {
@@ -185,7 +186,10 @@ proto_bool protocore_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
     s_ad.channel = ch;
 
     // Pin capture to the station's OWN channel and never hop, or the association drops.
-    s_ad.running = protocore_promisc_begin(ch, adaptive_sink);
+    Promisc.begin_args.channel = ch;
+    Promisc.begin_args.sink = adaptive_sink;
+    Promisc.begin(protocore_promisc_span());
+    s_ad.running = Promisc.ok;
     return s_ad.running;
 }
 
@@ -198,11 +202,12 @@ void protocore_mdns_adaptive_tick(void)
     uint32_t now = Clock.ms;
 
     // Follow the station if it roamed to another channel, so capture stays on the live link.
-    Physical.wifi_channel(Physical.internal);
+    Physical.wifi_channel(protocore_physical_span());
     uint8_t ch = Physical.u8;
     if (ch != 0 && ch != s_ad.channel)
     {
-        protocore_promisc_set_channel(ch);
+        Promisc.set_channel_args.channel = ch;
+        Promisc.set_channel(protocore_promisc_span());
         s_ad.channel = ch;
     }
 
@@ -230,7 +235,7 @@ void protocore_mdns_adaptive_end(void)
     {
         return;
     }
-    protocore_promisc_end();
+    Promisc.end(protocore_promisc_span());
     s_ad.running = PROTO_FALSE;
 }
 

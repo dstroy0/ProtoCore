@@ -25,6 +25,8 @@
 
 #include <unity.h>
 
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
 void setUp(void)
 {
 }
@@ -37,7 +39,7 @@ static uint32_t x25_of(const uint8_t *d, size_t n)
     Crc.args.params = &PROTOCORE_CRC16_X25;
     Crc.args.data = d;
     Crc.args.len = n;
-    Crc.compute(Crc.internal);
+    Crc.compute(crc_work);
     return Crc.value;
 }
 

@@ -28,20 +28,6 @@
 /** @brief Offset of Channel Number inside a Neighbor Report element body. */
 #define PROTOCORE_ROAM_NR_CHANNEL_OFF 11u
 
-/**
- * @brief The handle the calls reach through - what RoamNs points at.
- *
- * @var RoamInternal::ns  the handle a caller sets a call's members on
- *
- * No storage member: every call reads its inputs off the handle and writes its result back.
- */
-struct RoamInternal
-{
-    RoamNs *ns;
-};
-
-static struct RoamInternal s_roam = {.ns = &Roam};
-
 static proto_bool mac_eq(const uint8_t *a, const uint8_t *b)
 {
     return mem.cmp(a, b, PROTOCORE_ROAM_BSSID_LEN) == 0;
@@ -79,29 +65,29 @@ static int find_bssid(const uint8_t *target, const protocore_roam_neighbor *nb, 
 }
 
 // Write candidate idx into the decision with the reason that chose it.
-static void pick(struct RoamInternal *restrict ctx, int idx, protocore_roam_reason reason)
+static void pick(struct RoamInternal *restrict work, int idx, protocore_roam_reason reason)
 {
-    const protocore_roam_neighbor *nb = ctx->ns->cand.list;
+    const protocore_roam_neighbor *nb = Roam.cand.list;
 
-    ctx->ns->decision.roam = PROTO_TRUE;
-    mem.cpy(ctx->ns->decision.target_bssid, nb[idx].bssid, PROTOCORE_ROAM_BSSID_LEN);
-    ctx->ns->decision.target_channel = nb[idx].channel;
-    ctx->ns->decision.reason = reason;
+    Roam.decision.roam = PROTO_TRUE;
+    mem.cpy(Roam.decision.target_bssid, nb[idx].bssid, PROTOCORE_ROAM_BSSID_LEN);
+    Roam.decision.target_channel = nb[idx].channel;
+    Roam.decision.reason = reason;
 }
 
-static void roam_decide(struct RoamInternal *restrict ctx)
+static void roam_decide(uint8_t *restrict work)
 {
-    const uint8_t *serving = ctx->ns->link.bssid;
-    const int8_t serving_rssi = ctx->ns->link.rssi_dbm;
-    const protocore_roam_neighbor *nb = ctx->ns->cand.list;
-    const uint8_t n = ctx->ns->cand.n;
-    const protocore_roam_btm *btm = ctx->ns->rules.request;
-    const protocore_roam_policy *policy = ctx->ns->rules.policy;
+    const uint8_t *serving = Roam.link.bssid;
+    const int8_t serving_rssi = Roam.link.rssi_dbm;
+    const protocore_roam_neighbor *nb = Roam.cand.list;
+    const uint8_t n = Roam.cand.n;
+    const protocore_roam_btm *btm = Roam.rules.request;
+    const protocore_roam_policy *policy = Roam.rules.policy;
 
-    ctx->ns->decision.roam = PROTO_FALSE;
-    mem.zero(ctx->ns->decision.target_bssid, PROTOCORE_ROAM_BSSID_LEN);
-    ctx->ns->decision.target_channel = 0;
-    ctx->ns->decision.reason = PROTOCORE_ROAM_NONE;
+    Roam.decision.roam = PROTO_FALSE;
+    mem.zero(Roam.decision.target_bssid, PROTOCORE_ROAM_BSSID_LEN);
+    Roam.decision.target_channel = 0;
+    Roam.decision.reason = PROTOCORE_ROAM_NONE;
     if (!serving || (n && !nb))
     {
         return;
@@ -128,7 +114,7 @@ static void roam_decide(struct RoamInternal *restrict ctx)
         }
         if (target >= 0)
         {
-            pick(ctx, target, PROTOCORE_ROAM_BTM_IMMINENT);
+            pick(work, target, PROTOCORE_ROAM_BTM_IMMINENT);
         }
         return;
     }
@@ -140,7 +126,7 @@ static void roam_decide(struct RoamInternal *restrict ctx)
         const int target = find_bssid(btm->preferred_bssid, nb, n);
         if (target >= 0 && nb[target].rssi_dbm >= serving_rssi)
         {
-            pick(ctx, target, PROTOCORE_ROAM_BTM_SUGGESTED);
+            pick(work, target, PROTOCORE_ROAM_BTM_SUGGESTED);
             return;
         }
     }
@@ -149,21 +135,21 @@ static void roam_decide(struct RoamInternal *restrict ctx)
     //    by at least the hysteresis margin.
     if (best >= 0 && serving_rssi <= threshold && (int)nb[best].rssi_dbm >= (int)serving_rssi + (int)hysteresis)
     {
-        pick(ctx, best, PROTOCORE_ROAM_LOW_RSSI);
+        pick(work, best, PROTOCORE_ROAM_LOW_RSSI);
         return;
     }
 
     // 4. Otherwise stay put.
 }
 
-static void roam_parse_neighbor_report(struct RoamInternal *restrict ctx)
+static void roam_parse_neighbor_report(uint8_t *restrict work)
 {
-    const uint8_t *elems = ctx->ns->nr.elems;
-    const size_t len = ctx->ns->nr.len;
-    protocore_roam_neighbor *out = ctx->ns->nr.out;
-    const uint8_t max = ctx->ns->nr.max;
+    const uint8_t *elems = Roam.nr.elems;
+    const size_t len = Roam.nr.len;
+    protocore_roam_neighbor *out = Roam.nr.out;
+    const uint8_t max = Roam.nr.max;
 
-    ctx->ns->n = 0;
+    Roam.n = 0;
     if (!elems || !out)
     {
         return;
@@ -188,16 +174,16 @@ static void roam_parse_neighbor_report(struct RoamInternal *restrict ctx)
         }
         off += (size_t)2 + elen; // step over this element, matched or not
     }
-    ctx->ns->n = count;
+    Roam.n = count;
 }
 
-static void roam_parse_btm_request(struct RoamInternal *restrict ctx)
+static void roam_parse_btm_request(uint8_t *restrict work)
 {
-    const uint8_t *frame = ctx->ns->btm.frame;
-    const size_t len = ctx->ns->btm.len;
-    protocore_roam_btm *out = &ctx->ns->hint;
+    const uint8_t *frame = Roam.btm.frame;
+    const size_t len = Roam.btm.len;
+    protocore_roam_btm *out = &Roam.hint;
 
-    ctx->ns->ok = PROTO_FALSE;
+    Roam.ok = PROTO_FALSE;
     mem.zero(out, sizeof(*out));
     if (!frame || len < PROTOCORE_ROAM_BTM_FIXED_LEN || frame[0] != PROTOCORE_ROAM_WNM_CATEGORY ||
         frame[1] != PROTOCORE_ROAM_BTM_REQ_ACTION)
@@ -207,7 +193,7 @@ static void roam_parse_btm_request(struct RoamInternal *restrict ctx)
     const uint8_t mode = frame[3]; // Request Mode
     out->present = PROTO_TRUE;
     out->disassoc_imminent = (mode & PROTOCORE_ROAM_BTM_DISASSOC) != 0;
-    ctx->ns->ok = PROTO_TRUE;
+    Roam.ok = PROTO_TRUE;
 
     // Step past the optional fields to the BSS Transition Candidate List Entries.
     size_t off = PROTOCORE_ROAM_BTM_FIXED_LEN;
@@ -235,7 +221,6 @@ static void roam_parse_btm_request(struct RoamInternal *restrict ctx)
 // Designated, so a member's position in the struct does not decide what it binds to.
 RoamNs Roam = {.decide = roam_decide,
                .parse_neighbor_report = roam_parse_neighbor_report,
-               .parse_btm_request = roam_parse_btm_request,
-               .internal = &s_roam};
+               .parse_btm_request = roam_parse_btm_request};
 
 #endif // PROTOCORE_ENABLE_ROAMING

@@ -111,9 +111,6 @@ typedef struct
     uint32_t now_unix; ///< the current time `exp` and `nbf` are read against (step 9, RFC 7519 sec 4.1.4 / 4.1.5)
 } OidcExpectArgs;
 
-/** @brief The verifier's calls, described only in oidc.c. */
-struct OidcInternal;
-
 /**
  * @brief The Relying Party verifier: one ID Token, one JWK Set, one verdict.
  *
@@ -132,7 +129,6 @@ struct OidcInternal;
  * @var OidcNs::jwks_find        take the RSA JWK the `kid` names out of the JWK Set (RFC 7517 sec 5.1)
  * @var OidcNs::verify_with_key  validate the ID Token against the key already in @c key.rsa
  * @var OidcNs::verify           the two above in order: resolve the key by the token's `kid`, then validate
- * @var OidcNs::internal   the calls that reach the verifier
  */
 typedef struct
 {
@@ -147,12 +143,10 @@ typedef struct
     char text[PROTOCORE_OIDC_KID_LEN];
     protocore_oidc_claims claims;
 
-    void (*token_kid)(struct OidcInternal *ctx);
-    void (*jwks_find)(struct OidcInternal *ctx);
-    void (*verify_with_key)(struct OidcInternal *ctx);
-    void (*verify)(struct OidcInternal *ctx);
-
-    struct OidcInternal *internal;
+    void (*const token_kid)(uint8_t *restrict work);
+    void (*const jwks_find)(uint8_t *restrict work);
+    void (*const verify_with_key)(uint8_t *restrict work);
+    void (*const verify)(uint8_t *restrict work);
 } OidcNs;
 
 /** @brief The one symbol this module exports. */

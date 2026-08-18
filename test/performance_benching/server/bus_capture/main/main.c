@@ -24,6 +24,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t pcap_work[16]; // the borrow an entry takes; Pcap never reads it
+
 void dbench_run(void)
 {
     // Standard data frame, id 0x123, 8 data bytes (test_standard_data_frame in test_bus_capture.cpp).
@@ -72,7 +74,7 @@ void dbench_run(void)
         Pcap.args.out = pcap_hdr;
         Pcap.args.cap = sizeof(pcap_hdr);
         Pcap.args.linktype = PROTOCORE_DLT_CAN_SOCKETCAN;
-        DBENCH_OP("Pcap.global_header can", 100000, Pcap.global_header(Pcap.internal); sink += Pcap.n);
+        DBENCH_OP("Pcap.global_header can", 100000, Pcap.global_header(pcap_work); sink += Pcap.n);
         (void)sink;
         DBENCH_DONE();
     }

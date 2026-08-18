@@ -31,7 +31,7 @@ static size_t syslog_line(char *out, size_t cap, const char *msg)
     Syslog.header.app_name = "rig-app";
     Syslog.record.severity = SYSLOG_INFO;
     Syslog.record.msg = msg;
-    Syslog.format(Syslog.internal);
+    Syslog.format(protocore_syslog_span());
     return Syslog.n;
 }
 

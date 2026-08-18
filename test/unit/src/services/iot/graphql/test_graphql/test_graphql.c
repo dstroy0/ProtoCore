@@ -34,7 +34,7 @@ static proto_bool arg_int(const struct protocore_gql_args *args, const char *nam
 {
     GraphQL.argument.values = args;
     GraphQL.argument.name = name;
-    GraphQL.arg_int(GraphQL.internal);
+    GraphQL.arg_int(protocore_graphql_span());
     *out = GraphQL.i64;
     return GraphQL.ok;
 }
@@ -179,7 +179,7 @@ static const char *run(const char *doc)
     GraphQL.request.resolver = resolver;
     GraphQL.response.out = g_out;
     GraphQL.response.cap = sizeof(g_out);
-    GraphQL.execute(GraphQL.internal);
+    GraphQL.execute(protocore_graphql_span());
     return g_out;
 }
 
@@ -274,32 +274,32 @@ static proto_bool probe_resolver(const char *path, const struct protocore_gql_ar
     GraphQL.argument.values = args;
 
     GraphQL.argument.name = "count";
-    GraphQL.arg_int(GraphQL.internal);
+    GraphQL.arg_int(protocore_graphql_span());
     g_probe.int_ok = GraphQL.ok;
     g_probe.i = GraphQL.i64;
 
     GraphQL.argument.name = "label";
-    GraphQL.arg_str(GraphQL.internal);
+    GraphQL.arg_str(protocore_graphql_span());
     g_probe.str_ok = GraphQL.ok;
     g_probe.s = GraphQL.text;
 
     GraphQL.argument.name = "flag";
-    GraphQL.arg_bool(GraphQL.internal);
+    GraphQL.arg_bool(protocore_graphql_span());
     g_probe.bool_ok = GraphQL.ok;
     g_probe.b = GraphQL.b;
 
     // sec 2.1.9: Names are case-sensitive, so "Count" is not "count".
     GraphQL.argument.name = "Count";
-    GraphQL.arg_int(GraphQL.internal);
+    GraphQL.arg_int(protocore_graphql_span());
     g_probe.wrong_case_ok = GraphQL.ok;
 
     // "label" is a String, so reading it as an Int reports absence.
     GraphQL.argument.name = "label";
-    GraphQL.arg_int(GraphQL.internal);
+    GraphQL.arg_int(protocore_graphql_span());
     g_probe.wrong_type_ok = GraphQL.ok;
 
     GraphQL.argument.name = "absent";
-    GraphQL.arg_str(GraphQL.internal);
+    GraphQL.arg_str(protocore_graphql_span());
     g_probe.missing_ok = GraphQL.ok;
 
     out->type = PROTOCORE_GQL_NULL;
@@ -316,7 +316,7 @@ void test_argument_accessors_are_named_and_typed(void)
     GraphQL.request.resolver = probe_resolver;
     GraphQL.response.out = g_out;
     GraphQL.response.cap = sizeof(g_out);
-    GraphQL.execute(GraphQL.internal);
+    GraphQL.execute(protocore_graphql_span());
     TEST_ASSERT_EQUAL_STRING("{\"data\":{\"probe\":null}}", g_out);
 
     TEST_ASSERT_TRUE(g_probe.int_ok);
@@ -338,7 +338,7 @@ void test_no_resolver_completes_every_leaf_as_null(void)
     GraphQL.request.resolver = NULL;
     GraphQL.response.out = g_out;
     GraphQL.response.cap = sizeof(g_out);
-    GraphQL.execute(GraphQL.internal);
+    GraphQL.execute(protocore_graphql_span());
     TEST_ASSERT_TRUE(GraphQL.ok);
     TEST_ASSERT_EQUAL_STRING("{\"data\":{\"user\":{\"name\":null},\"id\":null}}", g_out);
 }
@@ -488,7 +488,7 @@ void test_short_buffer_reports_overflow(void)
     GraphQL.request.resolver = resolver;
     GraphQL.response.out = small;
     GraphQL.response.cap = sizeof(small);
-    GraphQL.execute(GraphQL.internal);
+    GraphQL.execute(protocore_graphql_span());
     TEST_ASSERT_FALSE(GraphQL.ok);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_OVERFLOW, GraphQL.result);
     TEST_ASSERT_EQUAL_UINT(0u, GraphQL.n);
@@ -502,7 +502,7 @@ void test_null_inputs_are_refused(void)
     GraphQL.request.resolver = resolver;
     GraphQL.response.out = g_out;
     GraphQL.response.cap = sizeof(g_out);
-    GraphQL.execute(GraphQL.internal);
+    GraphQL.execute(protocore_graphql_span());
     TEST_ASSERT_FALSE(GraphQL.ok);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_PARSE, GraphQL.result);
 
@@ -510,12 +510,12 @@ void test_null_inputs_are_refused(void)
     GraphQL.request.len = 6;
     GraphQL.response.out = NULL;
     GraphQL.response.cap = sizeof(g_out);
-    GraphQL.execute(GraphQL.internal);
+    GraphQL.execute(protocore_graphql_span());
     TEST_ASSERT_FALSE(GraphQL.ok);
 
     GraphQL.response.out = g_out;
     GraphQL.response.cap = 0;
-    GraphQL.execute(GraphQL.internal);
+    GraphQL.execute(protocore_graphql_span());
     TEST_ASSERT_FALSE(GraphQL.ok);
 }
 
@@ -524,15 +524,15 @@ void test_argument_accessor_without_values_reports_absence(void)
 {
     GraphQL.argument.values = NULL;
     GraphQL.argument.name = "id";
-    GraphQL.arg_int(GraphQL.internal);
+    GraphQL.arg_int(protocore_graphql_span());
     TEST_ASSERT_FALSE(GraphQL.ok);
     TEST_ASSERT_EQUAL_INT64(0, GraphQL.i64);
 
-    GraphQL.arg_str(GraphQL.internal);
+    GraphQL.arg_str(protocore_graphql_span());
     TEST_ASSERT_FALSE(GraphQL.ok);
     TEST_ASSERT_NULL(GraphQL.text);
 
-    GraphQL.arg_bool(GraphQL.internal);
+    GraphQL.arg_bool(protocore_graphql_span());
     TEST_ASSERT_FALSE(GraphQL.ok);
     TEST_ASSERT_FALSE(GraphQL.b);
 }

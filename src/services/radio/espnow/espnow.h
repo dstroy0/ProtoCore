@@ -26,80 +26,181 @@
 #ifndef PROTOCORE_ESPNOW_H
 #define PROTOCORE_ESPNOW_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_ESPNOW
 
 PROTOCORE_BEGIN_DECLS
 
+// PROTOCORE_ESPNOW_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
+
 /** @brief Envelope header size (magic + type + length). */
 #define PROTOCORE_ESPNOW_HDR 3
+
 /** @brief Magic byte marking a library envelope. */
 #define PROTOCORE_ESPNOW_MAGIC 0xE5
+
 /** @brief Max application payload per frame (250-byte radio MTU minus the header). */
 #define PROTOCORE_ESPNOW_MAX_PAYLOAD 247
-
-/** @brief 6-byte broadcast address (send to all peers in range). */
-extern const uint8_t PROTOCORE_ESPNOW_BROADCAST[6];
-
-// ---------------------------------------------------------------------------
-// Host-testable core: envelope codec
-// ---------------------------------------------------------------------------
-
-/**
- * @brief Frame a message: [magic][type][len] + payload.
- * @return total bytes written to @p out, or 0 if it does not fit / payload too big.
- */
-size_t protocore_espnow_encode(uint8_t type, const uint8_t *payload, size_t len, uint8_t *out, size_t cap);
-
-/**
- * @brief Validate and unpack a framed message.
- *
- * Checks the magic and that the declared length matches @p len exactly.
- * @param payload  set to point inside @p buf (no copy).
- * @return true on a well-formed envelope.
- */
-proto_bool protocore_espnow_decode(const uint8_t *buf, size_t len, uint8_t *type, const uint8_t **payload,
-                                   size_t *plen);
-
-// ---------------------------------------------------------------------------
-// Host-testable core: bounded peer registry
-// ---------------------------------------------------------------------------
-
-/** @brief Forget all registered peers. */
-void protocore_espnow_peers_reset(void);
-/** @brief Register @p mac (idempotent). @return false if the table is full. */
-proto_bool protocore_espnow_peer_add(const uint8_t mac[6]);
-/** @brief @return true if @p mac is in the peer registry. */
-proto_bool protocore_espnow_peer_has(const uint8_t mac[6]);
-/** @brief Remove @p mac from the registry. @return true if it was present. */
-proto_bool protocore_espnow_peer_remove(const uint8_t mac[6]);
-/** @brief @return the number of registered peers. */
-int protocore_espnow_peer_count(void);
-
-// ---------------------------------------------------------------------------
-// ESP32 radio binding (returns false on host)
-// ---------------------------------------------------------------------------
 
 /** @brief Decoded-frame callback: sender MAC, message type, payload. */
 typedef void (*protocore_espnow_recv_fn)(const uint8_t mac[6], uint8_t type, const uint8_t *payload, size_t len);
 
+/** @brief What encode takes: type, payload, len, out, cap. */
+typedef struct
+{
+    uint8_t type;
+    const uint8_t *payload;
+    size_t len;
+    uint8_t *out;
+    size_t cap;
+} EspnowEncodeArgs;
+
+/** @brief What decode takes: buf, len, type, payload, plen. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    uint8_t *type;
+    const uint8_t **payload; ///< set to point inside buf (no copy)
+    size_t *plen;
+} EspnowDecodeArgs;
+
+/** @brief What peer_add takes: mac. */
+typedef struct
+{
+    const uint8_t *mac; ///< 6 bytes.
+} EspnowPeerAddArgs;
+
+/** @brief What peer_has takes: mac. */
+typedef struct
+{
+    const uint8_t *mac; ///< 6 bytes.
+} EspnowPeerHasArgs;
+
+/** @brief What peer_remove takes: mac. */
+typedef struct
+{
+    const uint8_t *mac; ///< 6 bytes.
+} EspnowPeerRemoveArgs;
+
+/** @brief What begin takes: channel, cb. */
+typedef struct
+{
+    uint8_t channel;
+    protocore_espnow_recv_fn cb;
+} EspnowBeginArgs;
+
+/** @brief What add_peer takes: mac. */
+typedef struct
+{
+    const uint8_t *mac; ///< 6 bytes.
+} EspnowAddPeerArgs;
+
+/** @brief What send takes: mac, type, payload, len. */
+typedef struct
+{
+    const uint8_t *mac; ///< 6 bytes.
+    uint8_t type;
+    const uint8_t *payload;
+    size_t len;
+} EspnowSendArgs;
+
+/** @brief What broadcast takes: type, payload, len. */
+typedef struct
+{
+    uint8_t type;
+    const uint8_t *payload;
+    size_t len;
+} EspnowBroadcastArgs;
+
 /**
- * @brief Initialize ESP-NOW on @p channel and deliver decoded frames to @p cb.
+ * @brief ESP-NOW peer messaging with a typed envelope (PROTOCORE_ENABLE_ESPNOW).
  *
- * WiFi must already be started (STA or AP). Registers the broadcast peer.
- * @return true on success (ESP32 only).
+ * A caller sets the members a call takes, invokes it through ::Espnow with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Espnow.encode_args.type = ...;
+ *   Espnow.encode_args.payload = ...;
+ *   Espnow.encode_args.len = ...;
+ *   Espnow.encode_args.out = ...;
+ *   Espnow.encode_args.cap = ...;
+ *   Espnow.encode(work);
+ *   // Espnow.n is what the call reports
+ *
+ * @var EspnowNs::encode_args  what encode takes: type, payload, len, out, cap
+ * @var EspnowNs::decode_args  what decode takes: buf, len, type, payload, plen
+ * @var EspnowNs::peer_add_args  what peer_add takes: mac
+ * @var EspnowNs::peer_has_args  what peer_has takes: mac
+ * @var EspnowNs::peer_remove_args  what peer_remove takes: mac
+ * @var EspnowNs::begin_args  what begin takes: channel, cb
+ * @var EspnowNs::add_peer_args  what add_peer takes: mac
+ * @var EspnowNs::send_args  what send takes: mac, type, payload, len
+ * @var EspnowNs::broadcast_args  what broadcast takes: type, payload, len
+ * @var EspnowNs::ok  true on a well-formed envelope
+ * @var EspnowNs::n  total bytes written to out, or 0 if it does not fit / payload too ...
+ * @var EspnowNs::encode  frame a message: [magic][type][len] + payload
+ * @var EspnowNs::decode  validate and unpack a framed message. Checks the magic and that the ...
+ * @var EspnowNs::peers_reset  forget all registered peers
+ * @var EspnowNs::peer_add  register mac (idempotent). false if the table is full
+ * @var EspnowNs::peer_has  true if mac is in the peer registry
+ * @var EspnowNs::peer_remove  remove mac from the registry. true if it was present
+ * @var EspnowNs::peer_count  the number of registered peers
+ * @var EspnowNs::begin  initialize ESP-NOW on channel and deliver decoded frames to cb. ...
+ * @var EspnowNs::add_peer  add a unicast peer to both the registry and the radio
+ * @var EspnowNs::send  encode and transmit a message to mac. true if queued to the radio
+ * @var EspnowNs::broadcast  send to the broadcast address (all peers in range)
+ *
+ * @c work is PROTOCORE_ESPNOW_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_espnow_begin(uint8_t channel, protocore_espnow_recv_fn cb);
+typedef struct
+{
+    EspnowEncodeArgs encode_args;
+    EspnowDecodeArgs decode_args;
+    EspnowPeerAddArgs peer_add_args;
+    EspnowPeerHasArgs peer_has_args;
+    EspnowPeerRemoveArgs peer_remove_args;
+    EspnowBeginArgs begin_args;
+    EspnowAddPeerArgs add_peer_args;
+    EspnowSendArgs send_args;
+    EspnowBroadcastArgs broadcast_args;
 
-/** @brief Add a unicast peer to both the registry and the radio. */
-proto_bool protocore_espnow_add_peer(const uint8_t mac[6]);
+    proto_bool ok;
+    size_t n;
 
-/** @brief Encode and transmit a message to @p mac. @return true if queued to the radio. */
-proto_bool protocore_espnow_send(const uint8_t mac[6], uint8_t type, const uint8_t *payload, size_t len);
+    void (*const encode)(uint8_t *restrict work);
+    void (*const decode)(uint8_t *restrict work);
+    void (*const peers_reset)(uint8_t *restrict work);
+    void (*const peer_add)(uint8_t *restrict work);
+    void (*const peer_has)(uint8_t *restrict work);
+    void (*const peer_remove)(uint8_t *restrict work);
+    void (*const peer_count)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const add_peer)(uint8_t *restrict work);
+    void (*const send)(uint8_t *restrict work);
+    void (*const broadcast)(uint8_t *restrict work);
+} EspnowNs;
 
-/** @brief Send to the broadcast address (all peers in range). */
-proto_bool protocore_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len);
+/** @brief The 6-octet broadcast address every peer accepts, and always a peer itself. */
+extern const uint8_t PROTOCORE_ESPNOW_BROADCAST[6];
+
+/** @brief The one symbol this module exports. */
+extern EspnowNs Espnow;
+
+/**
+ * @brief The PROTOCORE_ESPNOW_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_espnow_span(void);
 
 PROTOCORE_END_DECLS
 

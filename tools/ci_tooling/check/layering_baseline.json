@@ -6,7 +6,7 @@
   "network_drivers/application/ntp_server/ntp_server.c -> server/clock/clock.h",
   "network_drivers/application/ntp_server/ntp_server.c -> services/timing_position/time_source/time_source.h",
   "network_drivers/application/ntp_service/ntp_service.c -> server/clock/clock.h",
-  "network_drivers/application/scp/ssh_scp.c -> server/storage/filesystem.h",
+  "network_drivers/session/scp/ssh_scp.c -> server/storage/filesystem.h",
   "network_drivers/application/sftp/ssh_sftp.c -> server/storage/filesystem.h",
   "network_drivers/application/upload_service/upload_service.c -> server/storage/mnt.h",
   "network_drivers/network/dns/dns_resolver.c -> server/clock/clock.h",

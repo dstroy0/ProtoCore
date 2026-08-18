@@ -10,7 +10,10 @@
  * begin() binds the receive port and feeds every datagram it delivers through the same path.
  */
 
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 #include "services/iot/coap/coap.h"
+
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_COAP
 
@@ -115,21 +118,40 @@ struct CoapStorage
 #endif
 };
 
-/**
- * @brief The server's state and the calls that reach it - what CoapNs points at.
- *
- * @var CoapInternal::store  the resource table, the codec scratch, and the caches
- * @var CoapInternal::ns     the handle a caller sets a call's members on
- */
-struct CoapInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define COAP_OFF_CTX 0u
+static_assert(COAP_OFF_CTX + sizeof(struct CoapStorage) <= PROTOCORE_COAP_BORROW,
+              "PROTOCORE_COAP_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define COAP_CTX(w) ((struct CoapStorage *)(void *)((w) + COAP_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct CoapStorage *store;
-    CoapNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_COAP_BORROW persistent bytes, or null while the pool was short
+} CoapOwnCtx;
+static CoapOwnCtx s_own;
 
-static struct CoapStorage s_store;
-
-static struct CoapInternal s_coap = {.store = &s_store, .ns = &Coap};
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_coap_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_COAP_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // ---------------------------------------------------------------------------
 // Pure helpers: they read what they are given and hold nothing
@@ -296,11 +318,11 @@ static size_t emit_options_payload(uint8_t *resp, size_t cap, size_t n, uint8_t 
 }
 
 // The row whose path is @p path, or -1. The table is small and scanned end to end.
-static int32_t find_resource_index(const struct CoapInternal *ctx, const char *path)
+static int32_t find_resource_index(const uint8_t *work, const char *path)
 {
-    for (size_t i = 0; i < ctx->store->res_count; i++)
+    for (size_t i = 0; i < COAP_CTX(work)->res_count; i++)
     {
-        if (text_eq(ctx->store->res[i].path, path, PROTOCORE_COAP_MAX_PATH))
+        if (text_eq(COAP_CTX(work)->res[i].path, path, PROTOCORE_COAP_MAX_PATH))
         {
             return (int32_t)i;
         }
@@ -313,36 +335,44 @@ static int32_t find_resource_index(const struct CoapInternal *ctx, const char *p
 // ---------------------------------------------------------------------------
 
 // Empty the table and every cache.
-static void coap_reset(struct CoapInternal *restrict ctx)
+static void coap_reset(uint8_t *restrict work)
 {
-    ctx->store->res_count = 0;
-    mem.set(ctx->store->res, 0, sizeof(ctx->store->res));
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    COAP_CTX(work)->res_count = 0;
+    mem.set(COAP_CTX(work)->res, 0, sizeof(COAP_CTX(work)->res));
 #if PROTOCORE_ENABLE_COAP_BLOCK
-    ctx->store->b1_len = 0;
-    ctx->store->b1_szx = 0;
+    COAP_CTX(work)->b1_len = 0;
+    COAP_CTX(work)->b1_szx = 0;
 #endif
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     for (size_t i = 0; i < PROTOCORE_COAP_DEDUP_ENTRIES; i++)
     {
-        ctx->store->dedup[i].valid = PROTO_FALSE;
+        COAP_CTX(work)->dedup[i].valid = PROTO_FALSE;
     }
 #endif
-    ctx->ns->ok = PROTO_TRUE;
+    Coap.ok = PROTO_TRUE;
 }
 
 // Take one more row of the table for ns->resource.
-static void coap_add_resource(struct CoapInternal *restrict ctx)
+static void coap_add_resource(uint8_t *restrict work)
 {
-    if (ctx->store->res_count >= PROTOCORE_COAP_MAX_RESOURCES || !ctx->ns->resource.path || !ctx->ns->resource.handler)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    if (COAP_CTX(work)->res_count >= PROTOCORE_COAP_MAX_RESOURCES || !Coap.resource.path || !Coap.resource.handler)
+    {
+        Coap.ok = PROTO_FALSE;
         return;
     }
-    ctx->store->res[ctx->store->res_count].path = ctx->ns->resource.path;
-    ctx->store->res[ctx->store->res_count].methods = ctx->ns->resource.methods;
-    ctx->store->res[ctx->store->res_count].handler = ctx->ns->resource.handler;
-    ctx->store->res_count++;
-    ctx->ns->ok = PROTO_TRUE;
+    COAP_CTX(work)->res[COAP_CTX(work)->res_count].path = Coap.resource.path;
+    COAP_CTX(work)->res[COAP_CTX(work)->res_count].methods = Coap.resource.methods;
+    COAP_CTX(work)->res[COAP_CTX(work)->res_count].handler = Coap.resource.handler;
+    COAP_CTX(work)->res_count++;
+    Coap.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -351,21 +381,25 @@ static void coap_add_resource(struct CoapInternal *restrict ctx)
 
 // Answer ns->msg.req into ns->msg.resp, reporting the response length in ns->n. A 2.xx response
 // carries the Observe option when ns->observe.seq is at or above 0 (RFC 7641 sec 4.2).
-static void coap_process_observe(struct CoapInternal *restrict ctx)
+static void coap_process_observe(uint8_t *restrict work)
 {
-    const uint8_t *req = ctx->ns->msg.req;
-    const size_t req_len = ctx->ns->msg.req_len;
-    uint8_t *resp = ctx->ns->msg.resp;
-    const size_t resp_cap = ctx->ns->msg.resp_cap;
-    const int32_t observe_seq = ctx->ns->observe.seq;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t *req = Coap.msg.req;
+    const size_t req_len = Coap.msg.req_len;
+    uint8_t *resp = Coap.msg.resp;
+    const size_t resp_cap = Coap.msg.resp_cap;
+    const int32_t observe_seq = Coap.observe.seq;
 
-    ctx->ns->n = 0;
+    Coap.n = 0;
 #if PROTOCORE_ENABLE_COAP_OBSERVE
     // Cleared before any early return, so a request that never reaches the option walk cannot leave
     // the previous one's Code, Token and Observe value standing for it.
-    ctx->store->last_observe = -1;
-    ctx->store->last_code = 0;
-    ctx->store->last_tkl = 0;
+    COAP_CTX(work)->last_observe = -1;
+    COAP_CTX(work)->last_code = 0;
+    COAP_CTX(work)->last_tkl = 0;
 #endif
     if (!req || !resp || req_len < COAP_HDR_LEN)
     {
@@ -394,7 +428,7 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
     {
         if (type == COAP_TYPE_CON)
         {
-            ctx->ns->n = emit_header(resp, resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0);
+            Coap.n = emit_header(resp, resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0);
         }
         return;
     }
@@ -405,7 +439,7 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
     {
         if (type == COAP_TYPE_CON)
         {
-            ctx->ns->n = emit_header(resp, resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0);
+            Coap.n = emit_header(resp, resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0);
         }
         return;
     }
@@ -417,25 +451,25 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
     {
         if (type == COAP_TYPE_CON)
         {
-            ctx->ns->n = emit_header(resp, resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0);
+            Coap.n = emit_header(resp, resp_cap, COAP_TYPE_RST, 0, mid, NULL, 0);
         }
         return;
     }
 
 #if PROTOCORE_ENABLE_COAP_OBSERVE
-    ctx->store->last_code = code;
-    ctx->store->last_tkl = tkl;
+    COAP_CTX(work)->last_code = code;
+    COAP_CTX(work)->last_tkl = tkl;
     if (tkl)
     {
-        mem.cpy(ctx->store->last_token, token, tkl);
+        mem.cpy(COAP_CTX(work)->last_token, token, tkl);
     }
 #endif
 
     // Walk the options, rejoining Uri-Path and Uri-Query and reading Content-Format.
     size_t path_len = 0;
     size_t query_len = 0;
-    ctx->store->path[0] = '\0';
-    ctx->store->query[0] = '\0';
+    COAP_CTX(work)->path[0] = '\0';
+    COAP_CTX(work)->query[0] = '\0';
     CoapContentFormat req_cf = COAP_CF_NONE;
     const uint8_t *payload = NULL;
     size_t payload_len = 0;
@@ -514,14 +548,14 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
         switch (opt_num)
         {
         case COAP_OPT_URI_PATH:
-            if (!seg_append(ctx->store->path, sizeof(ctx->store->path), &path_len, '/', val, olen))
+            if (!seg_append(COAP_CTX(work)->path, sizeof(COAP_CTX(work)->path), &path_len, '/', val, olen))
             {
                 format_error = PROTO_TRUE;
             }
             break;
         case COAP_OPT_URI_QUERY:
-            if (!seg_append(ctx->store->query, sizeof(ctx->store->query), &query_len, query_len ? '&' : '\0', val,
-                            olen))
+            if (!seg_append(COAP_CTX(work)->query, sizeof(COAP_CTX(work)->query), &query_len, query_len ? '&' : '\0',
+                            val, olen))
             {
                 format_error = PROTO_TRUE;
             }
@@ -531,7 +565,7 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
             break;
 #if PROTOCORE_ENABLE_COAP_OBSERVE
         case COAP_OPT_OBSERVE:
-            ctx->store->last_observe = (int32_t)opt_uint(val, olen); // 0 registers, 1 deregisters
+            COAP_CTX(work)->last_observe = (int32_t)opt_uint(val, olen); // 0 registers, 1 deregisters
             break;
 #endif
 #if PROTOCORE_ENABLE_COAP_BLOCK
@@ -574,26 +608,26 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
 
     if (format_error)
     {
-        ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
+        Coap.n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
         return;
     }
     if (unknown_critical)
     {
-        ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_OPTION, mid, token, tkl);
+        Coap.n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_OPTION, mid, token, tkl);
         return;
     }
 
     if (path_len == 0)
     {
-        ctx->store->path[0] = '/';
-        ctx->store->path[1] = '\0';
+        COAP_CTX(work)->path[0] = '/';
+        COAP_CTX(work)->path[1] = '\0';
     }
 
     // RFC 7252 sec 5.8: "A request with an unrecognized or unsupported Method Code MUST generate a
     // 4.05 (Method Not Allowed) piggybacked response."
     if ((code >> 5) != 0 || code < (uint8_t)COAP_GET || code > (uint8_t)COAP_DELETE)
     {
-        ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
+        Coap.n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
         return;
     }
 
@@ -601,54 +635,54 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
     CoapResponse cresp;
     cresp.code = (uint8_t)COAP_RSP_CONTENT;
     cresp.content_format = COAP_CF_NONE;
-    cresp.payload = ctx->store->pl;
-    cresp.payload_cap = sizeof(ctx->store->pl);
+    cresp.payload = COAP_CTX(work)->pl;
+    cresp.payload_cap = sizeof(COAP_CTX(work)->pl);
     cresp.payload_len = 0;
     int32_t block1_echo = -1; // the Block1 option the final block's response echoes
 
     // RFC 6690 sec 4: a GET on "/.well-known/core" returns the registered resources in the CoRE Link
     // Format of sec 2, `link-value-list` of `"<" URI-Reference ">"` separated by commas.
-    if (text_eq(ctx->store->path, COAP_WELL_KNOWN_CORE, PROTOCORE_COAP_MAX_PATH))
+    if (text_eq(COAP_CTX(work)->path, COAP_WELL_KNOWN_CORE, PROTOCORE_COAP_MAX_PATH))
     {
         if (code != (uint8_t)COAP_GET)
         {
-            ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
+            Coap.n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
             return;
         }
         size_t pl = 0;
-        for (size_t i = 0; i < ctx->store->res_count; i++)
+        for (size_t i = 0; i < COAP_CTX(work)->res_count; i++)
         {
-            const char *rpath = ctx->store->res[i].path;
-            size_t plen = str.len(rpath, sizeof(ctx->store->pl));
+            const char *rpath = COAP_CTX(work)->res[i].path;
+            size_t plen = str.len(rpath, sizeof(COAP_CTX(work)->pl));
             size_t need = (pl ? 1u : 0u) + 2u + plen; // ',' then '<' then the path then '>'
-            if (pl + need > sizeof(ctx->store->pl))
+            if (pl + need > sizeof(COAP_CTX(work)->pl))
             {
                 break; // the listing outgrew the body buffer; it ends on a whole link-value
             }
             if (pl)
             {
-                ctx->store->pl[pl++] = ',';
+                COAP_CTX(work)->pl[pl++] = ',';
             }
-            ctx->store->pl[pl++] = '<';
-            mem.cpy(ctx->store->pl + pl, rpath, plen);
+            COAP_CTX(work)->pl[pl++] = '<';
+            mem.cpy(COAP_CTX(work)->pl + pl, rpath, plen);
             pl += plen;
-            ctx->store->pl[pl++] = '>';
+            COAP_CTX(work)->pl[pl++] = '>';
         }
         cresp.content_format = COAP_CF_LINK;
         cresp.payload_len = pl;
     }
     else
     {
-        int32_t ridx = find_resource_index(ctx, ctx->store->path);
+        int32_t ridx = find_resource_index(work, COAP_CTX(work)->path);
         if (ridx < 0)
         {
-            ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_NOT_FOUND, mid, token, tkl);
+            Coap.n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_NOT_FOUND, mid, token, tkl);
             return;
         }
-        const CoapResource *r = &ctx->store->res[ridx];
+        const CoapResource *r = &COAP_CTX(work)->res[ridx];
         if (!(r->methods & (1u << code)))
         {
-            ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
+            Coap.n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, mid, token, tkl);
             return;
         }
 
@@ -667,36 +701,36 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
             {
                 // RFC 7959 sec 2.2: SZX 7 "MUST NOT be sent and MUST lead to a 4.00 Bad Request
                 // response code upon reception in a request".
-                ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
+                Coap.n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
                 return;
             }
             uint32_t bsize = 1u << (szx + 4); // block size = 2**(SZX + 4)
             if (num == 0)                     // block number 0 starts a fresh body
             {
-                ctx->store->b1_len = 0;
-                ctx->store->b1_szx = szx;
+                COAP_CTX(work)->b1_len = 0;
+                COAP_CTX(work)->b1_szx = szx;
             }
             // The size is fixed for one transfer and each block starts at NUM << (SZX + 4). A gap
             // means a block was lost or reordered, which sec 2.5 answers 4.08.
-            if (szx != ctx->store->b1_szx || (size_t)num * bsize != ctx->store->b1_len)
+            if (szx != COAP_CTX(work)->b1_szx || (size_t)num * bsize != COAP_CTX(work)->b1_len)
             {
-                ctx->store->b1_len = 0;
-                ctx->ns->n =
+                COAP_CTX(work)->b1_len = 0;
+                Coap.n =
                     emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_ENTITY_INCOMPLETE, mid, token, tkl);
                 return;
             }
-            if (ctx->store->b1_len + payload_len > sizeof(ctx->store->b1))
+            if (COAP_CTX(work)->b1_len + payload_len > sizeof(COAP_CTX(work)->b1))
             {
-                ctx->store->b1_len = 0;
-                ctx->ns->n =
+                COAP_CTX(work)->b1_len = 0;
+                Coap.n =
                     emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_REQUEST_ENTITY_TOO_LARGE, mid, token, tkl);
                 return;
             }
             if (payload_len)
             {
-                mem.cpy(ctx->store->b1 + ctx->store->b1_len, payload, payload_len);
+                mem.cpy(COAP_CTX(work)->b1 + COAP_CTX(work)->b1_len, payload, payload_len);
             }
-            ctx->store->b1_len += payload_len;
+            COAP_CTX(work)->b1_len += payload_len;
 
             if (more)
             {
@@ -707,29 +741,29 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
                 {
                     return;
                 }
-                ctx->ns->n = emit_options_payload(resp, resp_cap, cn, (uint8_t)COAP_RSP_CONTINUE, -1, COAP_CF_NONE, -1,
-                                                  (int32_t)((num << 4) | (1u << 3) | szx), NULL, 0);
+                Coap.n = emit_options_payload(resp, resp_cap, cn, (uint8_t)COAP_RSP_CONTINUE, -1, COAP_CF_NONE, -1,
+                                              (int32_t)((num << 4) | (1u << 3) | szx), NULL, 0);
                 return;
             }
             // The final block: the whole reassembled body goes to the handler.
-            eff_payload = ctx->store->b1;
-            eff_payload_len = ctx->store->b1_len;
+            eff_payload = COAP_CTX(work)->b1;
+            eff_payload_len = COAP_CTX(work)->b1_len;
             block1_echo = (int32_t)((num << 4) | szx); // M unset
         }
 #endif
 
         CoapRequest creq;
         creq.method = (CoapMethod)code;
-        creq.path = ctx->store->path;
-        creq.query = ctx->store->query;
+        creq.path = COAP_CTX(work)->path;
+        creq.query = COAP_CTX(work)->query;
         creq.payload = eff_payload;
         creq.payload_len = eff_payload_len;
         creq.content_format = req_cf;
 
         r->handler(&creq, &cresp);
-        if (cresp.payload_len > sizeof(ctx->store->pl))
+        if (cresp.payload_len > sizeof(COAP_CTX(work)->pl))
         {
-            cresp.payload_len = sizeof(ctx->store->pl); // a handler that overstated what it wrote
+            cresp.payload_len = sizeof(COAP_CTX(work)->pl); // a handler that overstated what it wrote
         }
     }
 
@@ -738,7 +772,7 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
 #if PROTOCORE_ENABLE_COAP_BLOCK
     if (block1_echo >= 0)
     {
-        ctx->store->b1_len = 0; // the reassembled body reached the handler
+        COAP_CTX(work)->b1_len = 0; // the reassembled body reached the handler
     }
 
     // Block2 (RFC 7959 sec 2.4): serve a representation one block at a time, either because the
@@ -756,7 +790,7 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
             if (szx == COAP_SZX_RESERVED)
             {
                 // RFC 7959 sec 2.2: the reserved SZX leads to 4.00 Bad Request.
-                ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
+                Coap.n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
                 return;
             }
             if (szx > PROTOCORE_COAP_BLOCK_SZX_MAX)
@@ -776,7 +810,7 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
             // A block number past the end of the representation names nothing.
             if (off > cresp.payload_len || (off == cresp.payload_len && num > 0))
             {
-                ctx->ns->n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
+                Coap.n = emit_header(resp, resp_cap, rsp_type, (uint8_t)COAP_RSP_BAD_REQUEST, mid, token, tkl);
                 return;
             }
             size_t this_len = cresp.payload_len - off;
@@ -799,15 +833,15 @@ static void coap_process_observe(struct CoapInternal *restrict ctx)
     {
         return;
     }
-    ctx->ns->n = emit_options_payload(resp, resp_cap, n, cresp.code, observe_seq, cresp.content_format, block2_echo,
-                                      block1_echo, cresp.payload, cresp.payload_len);
+    Coap.n = emit_options_payload(resp, resp_cap, n, cresp.code, observe_seq, cresp.content_format, block2_echo,
+                                  block1_echo, cresp.payload, cresp.payload_len);
 }
 
 // Answer ns->msg.req with no Observe option in the response.
-static void coap_process(struct CoapInternal *restrict ctx)
+static void coap_process(uint8_t *restrict work)
 {
-    ctx->ns->observe.seq = -1;
-    coap_process_observe(ctx);
+    Coap.observe.seq = -1;
+    coap_process_observe(work);
 }
 
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
@@ -816,37 +850,45 @@ static void coap_process(struct CoapInternal *restrict ctx)
 // ---------------------------------------------------------------------------
 
 // The response already sent for ns->exchange, when its row is still fresh.
-static void coap_dedup_lookup(struct CoapInternal *restrict ctx)
+static void coap_dedup_lookup(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->bytes = NULL;
-    ctx->ns->n = 0;
-    if (!ctx->ns->exchange.src_ip)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Coap.ok = PROTO_FALSE;
+    Coap.bytes = NULL;
+    Coap.n = 0;
+    if (!Coap.exchange.src_ip)
     {
         return;
     }
     const uint32_t now = Clock.ms;
     for (size_t i = 0; i < PROTOCORE_COAP_DEDUP_ENTRIES; i++)
     {
-        const CoapDedupEntry *e = &ctx->store->dedup[i];
-        if (e->valid && e->mid == ctx->ns->exchange.mid && e->port == ctx->ns->exchange.src_port &&
+        const CoapDedupEntry *e = &COAP_CTX(work)->dedup[i];
+        if (e->valid && e->mid == Coap.exchange.mid && e->port == Coap.exchange.src_port &&
             (now - e->stamp_ms) < PROTOCORE_COAP_DEDUP_LIFETIME_MS &&
-            text_eq(e->ip, ctx->ns->exchange.src_ip, sizeof(e->ip)))
+            text_eq(e->ip, Coap.exchange.src_ip, sizeof(e->ip)))
         {
-            ctx->ns->bytes = e->resp;
-            ctx->ns->n = e->len;
-            ctx->ns->ok = PROTO_TRUE;
+            Coap.bytes = e->resp;
+            Coap.n = e->len;
+            Coap.ok = PROTO_TRUE;
             return;
         }
     }
 }
 
 // Keep the response sent for ns->exchange so its repeat is answered without the handler.
-static void coap_dedup_store(struct CoapInternal *restrict ctx)
+static void coap_dedup_store(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->exchange.src_ip || !ctx->ns->exchange.resp || ctx->ns->exchange.resp_len == 0 ||
-        ctx->ns->exchange.resp_len > PROTOCORE_COAP_DEDUP_RESP_MAX)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Coap.ok = PROTO_FALSE;
+    if (!Coap.exchange.src_ip || !Coap.exchange.resp || Coap.exchange.resp_len == 0 ||
+        Coap.exchange.resp_len > PROTOCORE_COAP_DEDUP_RESP_MAX)
     {
         return; // an over-long response is not cached, so its repeat is processed again
     }
@@ -856,9 +898,9 @@ static void coap_dedup_store(struct CoapInternal *restrict ctx)
     uint32_t oldest = 0;
     for (size_t i = 0; i < PROTOCORE_COAP_DEDUP_ENTRIES; i++)
     {
-        const CoapDedupEntry *e = &ctx->store->dedup[i];
-        if (e->valid && e->mid == ctx->ns->exchange.mid && e->port == ctx->ns->exchange.src_port &&
-            text_eq(e->ip, ctx->ns->exchange.src_ip, sizeof(e->ip)))
+        const CoapDedupEntry *e = &COAP_CTX(work)->dedup[i];
+        if (e->valid && e->mid == Coap.exchange.mid && e->port == Coap.exchange.src_port &&
+            text_eq(e->ip, Coap.exchange.src_ip, sizeof(e->ip)))
         {
             victim = i;
             break;
@@ -875,15 +917,15 @@ static void coap_dedup_store(struct CoapInternal *restrict ctx)
             victim = i;
         }
     }
-    CoapDedupEntry *e = &ctx->store->dedup[victim];
-    (void)str.copy(e->ip, ctx->ns->exchange.src_ip, sizeof(e->ip));
-    e->port = ctx->ns->exchange.src_port;
-    e->mid = ctx->ns->exchange.mid;
+    CoapDedupEntry *e = &COAP_CTX(work)->dedup[victim];
+    (void)str.copy(e->ip, Coap.exchange.src_ip, sizeof(e->ip));
+    e->port = Coap.exchange.src_port;
+    e->mid = Coap.exchange.mid;
     e->stamp_ms = now;
-    e->len = (uint16_t)ctx->ns->exchange.resp_len;
-    mem.cpy(e->resp, ctx->ns->exchange.resp, ctx->ns->exchange.resp_len);
+    e->len = (uint16_t)Coap.exchange.resp_len;
+    mem.cpy(e->resp, Coap.exchange.resp, Coap.exchange.resp_len);
     e->valid = PROTO_TRUE;
-    ctx->ns->ok = PROTO_TRUE;
+    Coap.ok = PROTO_TRUE;
 }
 #endif // PROTOCORE_COAP_DEDUP_ENTRIES > 0
 
@@ -897,7 +939,7 @@ static void peer_reply(const struct protocore_udp_peer *peer, const uint8_t *dat
     UdpListener.peer_args.peer = peer;
     UdpListener.send_args.data = data;
     UdpListener.send_args.len = len;
-    UdpListener.reply(UdpListener.internal);
+    UdpListener.reply(protocore_udp_listener_span());
 }
 
 #if PROTOCORE_ENABLE_COAP_OBSERVE || PROTOCORE_COAP_DEDUP_ENTRIES > 0
@@ -908,7 +950,7 @@ static proto_bool peer_text(const struct protocore_udp_peer *peer, char *ip, siz
     UdpListener.peer_args.ip_out = ip;
     UdpListener.peer_args.ip_cap = cap;
     UdpListener.peer_args.port_out = port;
-    UdpListener.peer_addr(UdpListener.internal);
+    UdpListener.peer_addr(protocore_udp_listener_span());
     return UdpListener.ok;
 }
 
@@ -933,42 +975,43 @@ static uint16_t dgram_mid(const uint8_t *data)
 // ---------------------------------------------------------------------------
 
 // The entry's Token is the one the request in flight carried (RFC 7641 sec 4.1).
-static proto_bool same_token(const struct CoapInternal *ctx, const CoapObserver *o)
+static proto_bool same_token(const uint8_t *work, const CoapObserver *o)
 {
-    return o->tkl == ctx->store->last_tkl && (o->tkl == 0 || mem.cmp(o->token, ctx->store->last_token, o->tkl) == 0);
+    return o->tkl == COAP_CTX(work)->last_tkl &&
+           (o->tkl == 0 || mem.cmp(o->token, COAP_CTX(work)->last_token, o->tkl) == 0);
 }
 
 // The entry is this endpoint's (RFC 7641 sec 4.1: the list is keyed by client endpoint and Token).
-static proto_bool same_endpoint(const struct CoapInternal *ctx, const CoapObserver *o)
+static proto_bool same_endpoint(const uint8_t *work, const CoapObserver *o)
 {
-    return o->port == ctx->ns->exchange.src_port && text_eq(o->ip, ctx->ns->exchange.src_ip, sizeof(o->ip));
+    return o->port == Coap.exchange.src_port && text_eq(o->ip, Coap.exchange.src_ip, sizeof(o->ip));
 }
 
 // Add the request in flight to the list of observers of resource @p res_idx, or refresh the entry
 // already there (sec 4.1: a matching endpoint/token pair updates rather than adds). Returns the slot,
 // or -1 when the list is full, which leaves the GET answered without an Observe option.
-static int32_t obs_register(struct CoapInternal *restrict ctx, int32_t res_idx)
+static int32_t obs_register(uint8_t *restrict work, int32_t res_idx)
 {
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
-        CoapObserver *o = &ctx->store->obs[i];
-        if (o->active && o->res_idx == res_idx && same_endpoint(ctx, o) && same_token(ctx, o))
+        CoapObserver *o = &COAP_CTX(work)->obs[i];
+        if (o->active && o->res_idx == res_idx && same_endpoint(work, o) && same_token(work, o))
         {
             return i;
         }
     }
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
-        CoapObserver *o = &ctx->store->obs[i];
+        CoapObserver *o = &COAP_CTX(work)->obs[i];
         if (!o->active)
         {
             o->active = PROTO_TRUE;
-            (void)str.copy(o->ip, ctx->ns->exchange.src_ip, sizeof(o->ip));
-            o->port = ctx->ns->exchange.src_port;
-            o->tkl = ctx->store->last_tkl;
+            (void)str.copy(o->ip, Coap.exchange.src_ip, sizeof(o->ip));
+            o->port = Coap.exchange.src_port;
+            o->tkl = COAP_CTX(work)->last_tkl;
             if (o->tkl)
             {
-                mem.cpy(o->token, ctx->store->last_token, o->tkl);
+                mem.cpy(o->token, COAP_CTX(work)->last_token, o->tkl);
             }
             o->res_idx = res_idx;
             o->seq = 1;
@@ -979,12 +1022,16 @@ static int32_t obs_register(struct CoapInternal *restrict ctx, int32_t res_idx)
 }
 
 // Remove the endpoint's entry carrying the request's Token (sec 4.1, a deregister GET).
-static void obs_drop_token(struct CoapInternal *restrict ctx)
+static void obs_drop_token(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
-        CoapObserver *o = &ctx->store->obs[i];
-        if (o->active && same_endpoint(ctx, o) && same_token(ctx, o))
+        CoapObserver *o = &COAP_CTX(work)->obs[i];
+        if (o->active && same_endpoint(work, o) && same_token(work, o))
         {
             o->active = PROTO_FALSE;
         }
@@ -992,12 +1039,16 @@ static void obs_drop_token(struct CoapInternal *restrict ctx)
 }
 
 // Remove every entry of an endpoint (sec 4.5: a Reset rejecting a notification ends the observation).
-static void obs_drop_endpoint(struct CoapInternal *restrict ctx)
+static void obs_drop_endpoint(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
-        CoapObserver *o = &ctx->store->obs[i];
-        if (o->active && same_endpoint(ctx, o))
+        CoapObserver *o = &COAP_CTX(work)->obs[i];
+        if (o->active && same_endpoint(work, o))
         {
             o->active = PROTO_FALSE;
         }
@@ -1005,17 +1056,21 @@ static void obs_drop_endpoint(struct CoapInternal *restrict ctx)
 }
 
 // Send the current representation of ns->observe.path to every observer of it (RFC 7641 sec 4.2).
-static void coap_notify(struct CoapInternal *restrict ctx)
+static void coap_notify(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    int32_t ridx = find_resource_index(ctx, ctx->ns->observe.path);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Coap.ok = PROTO_FALSE;
+    int32_t ridx = find_resource_index(work, Coap.observe.path);
     if (ridx < 0)
     {
         return;
     }
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
-        CoapObserver *o = &ctx->store->obs[i];
+        CoapObserver *o = &COAP_CTX(work)->obs[i];
         if (!o->active || o->res_idx != ridx)
         {
             continue;
@@ -1023,7 +1078,7 @@ static void coap_notify(struct CoapInternal *restrict ctx)
         // Re-render the resource through its GET handler.
         CoapRequest creq;
         creq.method = COAP_GET;
-        creq.path = ctx->store->res[ridx].path;
+        creq.path = COAP_CTX(work)->res[ridx].path;
         creq.query = "";
         creq.payload = NULL;
         creq.payload_len = 0;
@@ -1031,85 +1086,85 @@ static void coap_notify(struct CoapInternal *restrict ctx)
         CoapResponse cresp;
         cresp.code = (uint8_t)COAP_RSP_CONTENT;
         cresp.content_format = COAP_CF_NONE;
-        cresp.payload = ctx->store->pl;
-        cresp.payload_cap = sizeof(ctx->store->pl);
+        cresp.payload = COAP_CTX(work)->pl;
+        cresp.payload_cap = sizeof(COAP_CTX(work)->pl);
         cresp.payload_len = 0;
-        ctx->store->res[ridx].handler(&creq, &cresp);
-        if (cresp.payload_len > sizeof(ctx->store->pl))
+        COAP_CTX(work)->res[ridx].handler(&creq, &cresp);
+        if (cresp.payload_len > sizeof(COAP_CTX(work)->pl))
         {
-            cresp.payload_len = sizeof(ctx->store->pl);
+            cresp.payload_len = sizeof(COAP_CTX(work)->pl);
         }
 
         // A Non-confirmable notification: header, Token, Observe, then the body. Sec 4.4 puts the
         // sequence number in the low 24 bits and requires it to rise for a given token and resource.
         uint16_t mid = (uint16_t)Clock.ms;
         o->seq = (o->seq + 1) & 0xFFFFFF;
-        size_t n =
-            emit_header(ctx->store->tx, sizeof(ctx->store->tx), COAP_TYPE_NON, cresp.code, mid, o->token, o->tkl);
+        size_t n = emit_header(COAP_CTX(work)->tx, sizeof(COAP_CTX(work)->tx), COAP_TYPE_NON, cresp.code, mid, o->token,
+                               o->tkl);
         if (n)
         {
-            n = emit_options_payload(ctx->store->tx, sizeof(ctx->store->tx), n, cresp.code, (int32_t)o->seq,
+            n = emit_options_payload(COAP_CTX(work)->tx, sizeof(COAP_CTX(work)->tx), n, cresp.code, (int32_t)o->seq,
                                      cresp.content_format, -1, -1, cresp.payload, cresp.payload_len);
         }
         protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
         Ip.args.text = o->ip;
         Ip.args.out = &dst;
-        Ip.parse(Ip.internal);
+        Ip.parse(ip_work);
         if (!n || !Ip.ok)
         {
             o->active = PROTO_FALSE; // unreachable, so the entry goes
             continue;
         }
-        UdpListener.port = ctx->store->port;
+        UdpListener.port = COAP_CTX(work)->port;
         UdpListener.send_args.dst = &dst;
         UdpListener.send_args.dst_port = o->port;
-        UdpListener.send_args.data = ctx->store->tx;
+        UdpListener.send_args.data = COAP_CTX(work)->tx;
         UdpListener.send_args.len = n;
-        UdpListener.sendto(UdpListener.internal);
+        UdpListener.sendto(protocore_udp_listener_span());
         if (!UdpListener.ok)
         {
             o->active = PROTO_FALSE;
         }
     }
-    ctx->ns->ok = PROTO_TRUE;
+    Coap.ok = PROTO_TRUE;
 }
 
 static void coap_udp_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *user)
 {
     (void)user;
-    struct CoapInternal *ctx = &s_coap;
+    uint8_t *work = protocore_coap_span();
     char ip[COAP_ENDPOINT_TEXT] = {0};
     uint16_t pport = 0;
     proto_bool have_peer = peer_text(peer, ip, sizeof(ip), &pport);
-    ctx->ns->exchange.src_ip = ip;
-    ctx->ns->exchange.src_port = pport;
+    Coap.exchange.src_ip = ip;
+    Coap.exchange.src_port = pport;
 
     // A Reset rejects a notification, which ends every observation from that endpoint (sec 4.5).
     if (len >= 1 && dgram_type(data) == COAP_TYPE_RST)
     {
         if (have_peer)
         {
-            obs_drop_endpoint(ctx);
+            obs_drop_endpoint(work);
         }
         return;
     }
 
     const proto_bool confirmable = have_peer && len >= COAP_HDR_LEN && dgram_type(data) == COAP_TYPE_CON;
 
-    ctx->ns->msg.req = data;
-    ctx->ns->msg.req_len = len;
-    ctx->ns->msg.resp = ctx->store->tx;
-    ctx->ns->msg.resp_cap = sizeof(ctx->store->tx);
+    Coap.msg.req = data;
+    Coap.msg.req_len = len;
+    Coap.msg.resp = COAP_CTX(work)->tx;
+    Coap.msg.resp_cap = sizeof(COAP_CTX(work)->tx);
 
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     // A repeated Confirmable message is answered from the cache, without the handler (sec 4.5).
     if (confirmable)
     {
-        ctx->ns->exchange.mid = dgram_mid(data);
-        coap_dedup_lookup(ctx);
-        if (ctx->ns->ok)
+        Coap.exchange.mid = dgram_mid(data);
+        coap_dedup_lookup(work);
+        if (Coap.ok)
         {
-            peer_reply(peer, ctx->ns->bytes, ctx->ns->n);
+            peer_reply(peer, Coap.bytes, Coap.n);
             return;
         }
     }
@@ -1117,62 +1172,66 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct proto
     (void)confirmable;
 #endif
 
-    coap_process(ctx);
-    if (ctx->ns->n == 0)
+    coap_process(work);
+    if (Coap.n == 0)
     {
         return;
     }
-    size_t rn = ctx->ns->n;
+    size_t rn = Coap.n;
 
-    if (ctx->store->last_code == (uint8_t)COAP_GET && ctx->store->last_observe == 0 && have_peer)
+    if (COAP_CTX(work)->last_code == (uint8_t)COAP_GET && COAP_CTX(work)->last_observe == 0 && have_peer)
     {
-        int32_t ridx = find_resource_index(ctx, ctx->store->path);
+        int32_t ridx = find_resource_index(work, COAP_CTX(work)->path);
         if (ridx >= 0)
         {
-            int32_t slot = obs_register(ctx, ridx);
+            int32_t slot = obs_register(work, ridx);
             if (slot >= 0)
             {
                 // Re-encode the same response carrying the Observe option, which is what tells the
                 // client the entry was added (sec 3.1).
-                ctx->ns->observe.seq = (int32_t)ctx->store->obs[slot].seq;
-                coap_process_observe(ctx);
-                if (ctx->ns->n)
+                Coap.observe.seq = (int32_t)COAP_CTX(work)->obs[slot].seq;
+                coap_process_observe(work);
+                if (Coap.n)
                 {
-                    rn = ctx->ns->n;
+                    rn = Coap.n;
                 }
             }
         }
     }
-    else if (ctx->store->last_observe == 1 && have_peer)
+    else if (COAP_CTX(work)->last_observe == 1 && have_peer)
     {
-        obs_drop_token(ctx);
+        obs_drop_token(work);
     }
 
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     if (confirmable)
     {
-        ctx->ns->exchange.mid = dgram_mid(data);
-        ctx->ns->exchange.resp = ctx->store->tx;
-        ctx->ns->exchange.resp_len = rn;
-        coap_dedup_store(ctx);
+        Coap.exchange.mid = dgram_mid(data);
+        Coap.exchange.resp = COAP_CTX(work)->tx;
+        Coap.exchange.resp_len = rn;
+        coap_dedup_store(work);
     }
 #endif
-    peer_reply(peer, ctx->store->tx, rn);
+    peer_reply(peer, COAP_CTX(work)->tx, rn);
 }
 
 // Bind ns->bind.port and route its datagrams into the server, emptying the list of observers first.
-static void coap_begin(struct CoapInternal *restrict ctx)
+static void coap_begin(uint8_t *restrict work)
 {
-    ctx->store->port = ctx->ns->bind.port;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    COAP_CTX(work)->port = Coap.bind.port;
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
-        ctx->store->obs[i].active = PROTO_FALSE;
+        COAP_CTX(work)->obs[i].active = PROTO_FALSE;
     }
-    UdpListener.port = ctx->ns->bind.port;
+    UdpListener.port = Coap.bind.port;
     UdpListener.bind.handler = coap_udp_handler;
     UdpListener.bind.handler_ctx = NULL;
-    UdpListener.listen(UdpListener.internal);
-    ctx->ns->ok = UdpListener.ok;
+    UdpListener.listen(protocore_udp_listener_span());
+    Coap.ok = UdpListener.ok;
 }
 
 #else // the plain request and response path, with no list of observers
@@ -1180,7 +1239,7 @@ static void coap_begin(struct CoapInternal *restrict ctx)
 static void coap_udp_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *user)
 {
     (void)user;
-    struct CoapInternal *ctx = &s_coap;
+    uint8_t *work = protocore_coap_span();
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     char ip[COAP_ENDPOINT_TEXT] = {0};
     uint16_t pport = 0;
@@ -1188,46 +1247,47 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct proto
     const proto_bool confirmable = have_peer && len >= COAP_HDR_LEN && dgram_type(data) == COAP_TYPE_CON;
     if (confirmable)
     {
-        ctx->ns->exchange.src_ip = ip;
-        ctx->ns->exchange.src_port = pport;
-        ctx->ns->exchange.mid = dgram_mid(data);
-        coap_dedup_lookup(ctx);
-        if (ctx->ns->ok)
+        Coap.exchange.src_ip = ip;
+        Coap.exchange.src_port = pport;
+        Coap.exchange.mid = dgram_mid(data);
+        coap_dedup_lookup(work);
+        if (Coap.ok)
         {
-            peer_reply(peer, ctx->ns->bytes, ctx->ns->n); // answered from the cache (RFC 7252 sec 4.5)
+            peer_reply(peer, Coap.bytes, Coap.n); // answered from the cache (RFC 7252 sec 4.5)
             return;
         }
     }
 #endif
-    ctx->ns->msg.req = data;
-    ctx->ns->msg.req_len = len;
-    ctx->ns->msg.resp = ctx->store->tx;
-    ctx->ns->msg.resp_cap = sizeof(ctx->store->tx);
-    coap_process(ctx);
-    if (ctx->ns->n == 0)
+    Coap.msg.req = data;
+    Coap.msg.req_len = len;
+    Coap.msg.resp = COAP_CTX(work)->tx;
+    Coap.msg.resp_cap = sizeof(COAP_CTX(work)->tx);
+    coap_process(work);
+    if (Coap.n == 0)
     {
         return;
     }
-    size_t rn = ctx->ns->n;
+    size_t rn = Coap.n;
 #if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     if (confirmable)
     {
-        ctx->ns->exchange.resp = ctx->store->tx;
-        ctx->ns->exchange.resp_len = rn;
-        coap_dedup_store(ctx);
+        Coap.exchange.resp = COAP_CTX(work)->tx;
+        Coap.exchange.resp_len = rn;
+        coap_dedup_store(work);
     }
 #endif
-    peer_reply(peer, ctx->store->tx, rn);
+    peer_reply(peer, COAP_CTX(work)->tx, rn);
 }
 
 // Bind ns->bind.port and route its datagrams into the server.
-static void coap_begin(struct CoapInternal *restrict ctx)
+static void coap_begin(uint8_t *restrict work)
 {
-    UdpListener.port = ctx->ns->bind.port;
+    (void)work;
+    UdpListener.port = Coap.bind.port;
     UdpListener.bind.handler = coap_udp_handler;
     UdpListener.bind.handler_ctx = NULL;
-    UdpListener.listen(UdpListener.internal);
-    ctx->ns->ok = UdpListener.ok;
+    UdpListener.listen(protocore_udp_listener_span());
+    Coap.ok = UdpListener.ok;
 }
 
 #endif // PROTOCORE_ENABLE_COAP_OBSERVE
@@ -1246,7 +1306,6 @@ CoapNs Coap = {
 #if PROTOCORE_ENABLE_COAP_OBSERVE
     .notify = coap_notify,
 #endif
-    .internal = &s_coap,
 };
 
 #endif // PROTOCORE_ENABLE_COAP

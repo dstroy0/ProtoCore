@@ -6,9 +6,14 @@
  * @brief SEN0192 microwave motion sensor - debounced presence tracker + GPIO binding. See sen0192.h.
  */
 
-#include "server/peripherals/sen0192/sen0192.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SEN0192
+
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "server/peripherals/sen0192/sen0192.h"
+
+PROTOCORE_BEGIN_DECLS
 
 #if !PROTOCORE_HAS_GPIO
 #error                                                                                                                 \
@@ -22,8 +27,45 @@
 
 #include "server/clock/clock.h" // Clock.millis
 
-void protocore_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_bool active_high)
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_SEN0192_BORROW persistent bytes, or null while the pool was short
+} Sen0192OwnCtx;
+static Sen0192OwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_sen0192_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SEN0192_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void sen0192_motion_events(uint8_t *restrict work);
+static void sen0192_motion_init(uint8_t *restrict work);
+static void sen0192_motion_present(uint8_t *restrict work);
+static void sen0192_motion_tick(uint8_t *restrict work);
+static void sen0192_motion_update(uint8_t *restrict work);
+
+static void sen0192_motion_init(uint8_t *restrict work)
+{
+    (void)work;
+    Sen0192Motion *m = Sen0192.motion_init_args.m;
+    uint32_t hold_ms = Sen0192.motion_init_args.hold_ms;
+    proto_bool active_high = Sen0192.motion_init_args.active_high;
+
     m->present = PROTO_FALSE;
     m->seeded = PROTO_FALSE;
     m->active_high = active_high;
@@ -32,8 +74,16 @@ void protocore_sen0192_motion_init(Sen0192Motion *m, uint32_t hold_ms, proto_boo
     m->motion_events = 0;
 }
 
-proto_bool protocore_sen0192_motion_update(Sen0192Motion *m, proto_bool level_high, uint32_t now_ms)
+static void sen0192_motion_update(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Sen0192Motion *m = Sen0192.motion_update_args.m;
+    proto_bool level_high = Sen0192.motion_update_args.level_high;
+    uint32_t now_ms = Sen0192.motion_update_args.now_ms;
+
     proto_bool active = (level_high == m->active_high);
     if (active)
     {
@@ -43,36 +93,54 @@ proto_bool protocore_sen0192_motion_update(Sen0192Motion *m, proto_bool level_hi
         {
             m->present = PROTO_TRUE;
             m->motion_events++;
-            return PROTO_TRUE; // clear -> present edge
+            Sen0192.ok = PROTO_TRUE; // clear -> present edge
+            return;
         }
-        return PROTO_FALSE;
+        Sen0192.ok = PROTO_FALSE;
+        return;
     }
-    protocore_sen0192_motion_tick(m, now_ms); // inactive sample: presence may age out
-    return PROTO_FALSE;
+    Sen0192.motion_tick_args.m = m;
+    Sen0192.motion_tick_args.now_ms = now_ms;
+    sen0192_motion_tick(work); // inactive sample: presence may age out
+    Sen0192.ok = PROTO_FALSE;
 }
 
-proto_bool protocore_sen0192_motion_tick(Sen0192Motion *m, uint32_t now_ms)
+static void sen0192_motion_tick(uint8_t *restrict work)
 {
+    (void)work;
+    Sen0192Motion *m = Sen0192.motion_tick_args.m;
+    uint32_t now_ms = Sen0192.motion_tick_args.now_ms;
+
     if (m->present && m->seeded && (uint32_t)(now_ms - m->last_active_ms) > m->hold_ms)
     {
         m->present = PROTO_FALSE;
     }
-    return m->present;
+    Sen0192.ok = m->present;
 }
 
-proto_bool protocore_sen0192_motion_present(const Sen0192Motion *m)
+static void sen0192_motion_present(uint8_t *restrict work)
 {
-    return m->present;
+    (void)work;
+    const Sen0192Motion *m = Sen0192.motion_present_args.m;
+
+    Sen0192.ok = m->present;
 }
 
-uint32_t protocore_sen0192_motion_events(const Sen0192Motion *m)
+static void sen0192_motion_events(uint8_t *restrict work)
 {
-    return m->motion_events;
+    (void)work;
+    const Sen0192Motion *m = Sen0192.motion_events_args.m;
+
+    Sen0192.n = m->motion_events;
 }
 
-uint32_t protocore_sen0192_motion_active_age_ms(const Sen0192Motion *m, uint32_t now_ms)
+static void sen0192_motion_active_age_ms(uint8_t *restrict work)
 {
-    return m->seeded ? (uint32_t)(now_ms - m->last_active_ms) : 0;
+    (void)work;
+    const Sen0192Motion *m = Sen0192.motion_active_age_ms_args.m;
+    uint32_t now_ms = Sen0192.motion_active_age_ms_args.now_ms;
+
+    Sen0192.ms = m->seeded ? (uint32_t)(now_ms - m->last_active_ms) : 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,46 +154,101 @@ typedef struct
     int pin;
     proto_bool begun; ///< begin() ran; until it has, the pin reports -1
 } Sen0192Ctx;
-static Sen0192Ctx s_sen;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SEN0192_OFF_CTX 0u
+static_assert(SEN0192_OFF_CTX + sizeof(Sen0192Ctx) <= PROTOCORE_SEN0192_BORROW,
+              "PROTOCORE_SEN0192_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define SEN0192_CTX(w) ((Sen0192Ctx *)(void *)((w) + SEN0192_OFF_CTX))
 
 // The pin, or -1 for "there is none" - which is what a failed or absent begin() reports, the way a
 // main() reports failure. Stated here rather than as an initializer on the declaration so the
 // context carries none and can live in a borrow that arrives zeroed. It takes a flag rather than a
 // sentinel value because pin 0 is a real pin, so zero cannot mean "unset".
-static int dev_pin(void)
+static int dev_pin(uint8_t *restrict work)
 {
-    return s_sen.begun ? s_sen.pin : -1;
+    return SEN0192_CTX(work)->begun ? SEN0192_CTX(work)->pin : -1;
 }
 
-proto_bool protocore_sen0192_begin(void)
+static void sen0192_begin(uint8_t *restrict work)
 {
-    s_sen.pin = PROTOCORE_SEN0192_PIN;
-    s_sen.begun = PROTO_TRUE;
-    protocore_platform_gpio_mode((uint8_t)(s_sen.pin), PROTOCORE_GPIO_IN);
-    protocore_sen0192_motion_init(&s_sen.motion, PROTOCORE_SEN0192_HOLD_MS, PROTOCORE_SEN0192_ACTIVE_HIGH != 0);
-    return PROTO_TRUE;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    SEN0192_CTX(work)->pin = PROTOCORE_SEN0192_PIN;
+    SEN0192_CTX(work)->begun = PROTO_TRUE;
+    protocore_platform_gpio_mode((uint8_t)(SEN0192_CTX(work)->pin), PROTOCORE_GPIO_IN);
+    Sen0192.motion_init_args.m = &SEN0192_CTX(work)->motion;
+    Sen0192.motion_init_args.hold_ms = PROTOCORE_SEN0192_HOLD_MS;
+    Sen0192.motion_init_args.active_high = PROTOCORE_SEN0192_ACTIVE_HIGH != 0;
+    sen0192_motion_init(work);
+    Sen0192.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_sen0192_poll(void)
+static void sen0192_poll(uint8_t *restrict work)
 {
-    const int pin = dev_pin();
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    const int pin = dev_pin(work);
     if (pin < 0)
     {
-        return PROTO_FALSE;
+        Sen0192.ok = PROTO_FALSE;
+        return;
     }
     proto_bool level = protocore_platform_gpio_read((uint8_t)(pin)) != 0;
-    return protocore_sen0192_motion_update(&s_sen.motion, level, Clock.ms);
+    Sen0192.motion_update_args.m = &SEN0192_CTX(work)->motion;
+    Sen0192.motion_update_args.level_high = level;
+    Sen0192.motion_update_args.now_ms = Clock.ms;
+    sen0192_motion_update(work);
 }
 
-proto_bool protocore_sen0192_present(void)
+static void sen0192_present(uint8_t *restrict work)
 {
-    protocore_sen0192_motion_tick(&s_sen.motion, Clock.ms); // age presence out even between poll()s
-    return protocore_sen0192_motion_present(&s_sen.motion);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    Sen0192.motion_tick_args.m = &SEN0192_CTX(work)->motion;
+    Sen0192.motion_tick_args.now_ms = Clock.ms;
+    sen0192_motion_tick(work); // age presence out even between poll()s
+    Sen0192.motion_present_args.m = &SEN0192_CTX(work)->motion;
+    sen0192_motion_present(work);
 }
 
-uint32_t protocore_sen0192_motion_count(void)
+static void sen0192_motion_count(uint8_t *restrict work)
 {
-    return protocore_sen0192_motion_events(&s_sen.motion);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    Sen0192.motion_events_args.m = &SEN0192_CTX(work)->motion;
+    sen0192_motion_events(work);
 }
+
+Sen0192Ns Sen0192 = {
+    .motion_init = sen0192_motion_init,
+    .motion_update = sen0192_motion_update,
+    .motion_tick = sen0192_motion_tick,
+    .motion_present = sen0192_motion_present,
+    .motion_events = sen0192_motion_events,
+    .motion_active_age_ms = sen0192_motion_active_age_ms,
+    .begin = sen0192_begin,
+    .poll = sen0192_poll,
+    .present = sen0192_present,
+    .motion_count = sen0192_motion_count,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SEN0192

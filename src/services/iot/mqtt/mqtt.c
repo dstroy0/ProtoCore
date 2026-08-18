@@ -14,6 +14,8 @@
 
 #include "services/iot/mqtt/mqtt.h"
 
+static uint8_t utf8_work[16]; // the borrow an entry takes; Utf8 never reads it
+
 #if PROTOCORE_ENABLE_MQTT
 
 #include "mmgr/protomem.h"    // mem.cpy / mem.chr / mem.move / mem.set: the spans a packet is built from
@@ -160,29 +162,45 @@ struct MqttStorage
 
 #endif // PROTOCORE_HAS_NET_STACK
 
-/**
- * @brief The Client's state and the calls that reach it - what MqttNs points at.
- *
- * @var MqttInternal::store  the Network Connection, its buffers and its in-flight window
- * @var MqttInternal::ns     the handle a caller sets a call's members on
- *
- * No storage member on a build with no network stack: the codec works in the caller's buffers and
- * there is no Network Connection to hold.
- */
-struct MqttInternal
-{
 #if PROTOCORE_HAS_NET_STACK
-    struct MqttStorage *store;
-#endif
-    MqttNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define MQTT_OFF_CTX 0u
+static_assert(MQTT_OFF_CTX + sizeof(struct MqttStorage) <= PROTOCORE_MQTT_BORROW,
+              "PROTOCORE_MQTT_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-#if PROTOCORE_HAS_NET_STACK
-static struct MqttStorage s_store = {.cid = -1, .next_packet_id = 1};
-static struct MqttInternal s_mqtt = {.store = &s_store, .ns = &Mqtt};
-#else
-static struct MqttInternal s_mqtt = {.ns = &Mqtt};
-#endif
+// The region, at its offset in the caller's borrow.
+#define MQTT_CTX(w) ((struct MqttStorage *)(void *)((w) + MQTT_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_MQTT_BORROW persistent bytes, or null while the pool was short
+} MqttOwnCtx;
+static MqttOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_mqtt_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_MQTT_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // A borrow arrives zeroed, and these do not start at zero.
+            MQTT_CTX(s_own.span)->cid = -1;
+            MQTT_CTX(s_own.span)->next_packet_id = 1;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+#endif // PROTOCORE_HAS_NET_STACK
 
 // ---------------------------------------------------------------------------
 // Codec: the octet moves every build and parse is made of (pure, host-testable)
@@ -294,52 +312,55 @@ static size_t compose(uint8_t *out, size_t cap, uint8_t byte1, const uint8_t *bo
 // Codec: the calls
 // ---------------------------------------------------------------------------
 
-static void mqtt_encode_remaining_length(struct MqttInternal *restrict ctx)
+static void mqtt_encode_remaining_length(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.out)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.buf.out)
     {
         return;
     }
     uint8_t rl[MQ_REMLEN_OCTETS_MAX];
-    size_t used = encode_remlen(rl, ctx->ns->packet.remaining_length);
-    if (used == 0 || used > ctx->ns->buf.cap)
+    size_t used = encode_remlen(rl, Mqtt.packet.remaining_length);
+    if (used == 0 || used > Mqtt.buf.cap)
     {
         return;
     }
-    mem.cpy(ctx->ns->buf.out, rl, used);
-    ctx->ns->n = used;
-    ctx->ns->ok = PROTO_TRUE;
+    mem.cpy(Mqtt.buf.out, rl, used);
+    Mqtt.n = used;
+    Mqtt.ok = PROTO_TRUE;
 }
 
-static void mqtt_decode_remaining_length(struct MqttInternal *restrict ctx)
+static void mqtt_decode_remaining_length(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.in)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.buf.in)
     {
         return;
     }
     uint32_t value = 0;
     size_t used = 0;
-    if (!decode_remlen(ctx->ns->buf.in, ctx->ns->buf.avail, &value, &used))
+    if (!decode_remlen(Mqtt.buf.in, Mqtt.buf.avail, &value, &used))
     {
         return;
     }
-    ctx->ns->packet.remaining_length = value;
-    ctx->ns->n = used;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.packet.remaining_length = value;
+    Mqtt.n = used;
+    Mqtt.ok = PROTO_TRUE;
 }
 
 // CONNECT: Protocol Name, Protocol Level, Connect Flags, Keep Alive, then the payload's Client
 // Identifier, Will Topic, Will Message, User Name and Password, in that order (sec 3.1).
-static void mqtt_build_connect(struct MqttInternal *restrict ctx)
+static void mqtt_build_connect(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *body = ctx->ns->buf.body;
-    if (!ctx->ns->buf.out || !body || !ctx->ns->session.client_id)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    uint8_t *body = Mqtt.buf.body;
+    if (!Mqtt.buf.out || !body || !Mqtt.session.client_id)
     {
         return;
     }
@@ -349,80 +370,80 @@ static void mqtt_build_connect(struct MqttInternal *restrict ctx)
     body[n++] = PROTOCORE_MQTT_PROTOCOL_LEVEL;
 
     uint8_t flags = 0;
-    if (ctx->ns->session.clean_session)
+    if (Mqtt.session.clean_session)
     {
         flags |= MQ_CONNECT_CLEAN_SESSION;
     }
-    if (ctx->ns->will.topic)
+    if (Mqtt.will.topic)
     {
         flags |= MQ_CONNECT_WILL_FLAG;
-        flags |= (uint8_t)((ctx->ns->will.qos & MQ_PUB_QOS_MASK) << MQ_CONNECT_WILL_QOS_SHIFT);
-        if (ctx->ns->will.retain)
+        flags |= (uint8_t)((Mqtt.will.qos & MQ_PUB_QOS_MASK) << MQ_CONNECT_WILL_QOS_SHIFT);
+        if (Mqtt.will.retain)
         {
             flags |= MQ_CONNECT_WILL_RETAIN;
         }
     }
-    if (ctx->ns->session.user_name)
+    if (Mqtt.session.user_name)
     {
         flags |= MQ_CONNECT_USER_NAME;
     }
-    if (ctx->ns->session.password)
+    if (Mqtt.session.password)
     {
         flags |= MQ_CONNECT_PASSWORD;
     }
     body[n++] = flags;
-    put_u16(body + n, ctx->ns->session.keep_alive);
+    put_u16(body + n, Mqtt.session.keep_alive);
     n += MQ_FIELD_PREFIX;
 
     // Every payload field the flags called for, measured against the body scratch before any of it
     // is written.
-    size_t need = MQ_FIELD_PREFIX + str.len(ctx->ns->session.client_id, PROTOCORE_MQTT_BUF_SIZE);
-    if (ctx->ns->will.topic)
+    size_t need = MQ_FIELD_PREFIX + str.len(Mqtt.session.client_id, PROTOCORE_MQTT_BUF_SIZE);
+    if (Mqtt.will.topic)
     {
-        need += MQ_FIELD_PREFIX + str.len(ctx->ns->will.topic, PROTOCORE_MQTT_BUF_SIZE) + MQ_FIELD_PREFIX +
-                ctx->ns->will.message_len;
+        need += MQ_FIELD_PREFIX + str.len(Mqtt.will.topic, PROTOCORE_MQTT_BUF_SIZE) + MQ_FIELD_PREFIX +
+                Mqtt.will.message_len;
     }
-    if (ctx->ns->session.user_name)
+    if (Mqtt.session.user_name)
     {
-        need += MQ_FIELD_PREFIX + str.len(ctx->ns->session.user_name, PROTOCORE_MQTT_BUF_SIZE);
+        need += MQ_FIELD_PREFIX + str.len(Mqtt.session.user_name, PROTOCORE_MQTT_BUF_SIZE);
     }
-    if (ctx->ns->session.password)
+    if (Mqtt.session.password)
     {
-        need += MQ_FIELD_PREFIX + str.len(ctx->ns->session.password, PROTOCORE_MQTT_BUF_SIZE);
+        need += MQ_FIELD_PREFIX + str.len(Mqtt.session.password, PROTOCORE_MQTT_BUF_SIZE);
     }
-    if (n + need > ctx->ns->buf.body_cap)
+    if (n + need > Mqtt.buf.body_cap)
     {
         return;
     }
 
-    n += put_str(body + n, ctx->ns->session.client_id);
-    if (ctx->ns->will.topic)
+    n += put_str(body + n, Mqtt.session.client_id);
+    if (Mqtt.will.topic)
     {
-        n += put_str(body + n, ctx->ns->will.topic);
-        n += put_field(body + n, ctx->ns->will.message, ctx->ns->will.message_len);
+        n += put_str(body + n, Mqtt.will.topic);
+        n += put_field(body + n, Mqtt.will.message, Mqtt.will.message_len);
     }
-    if (ctx->ns->session.user_name)
+    if (Mqtt.session.user_name)
     {
-        n += put_str(body + n, ctx->ns->session.user_name);
+        n += put_str(body + n, Mqtt.session.user_name);
     }
-    if (ctx->ns->session.password)
+    if (Mqtt.session.password)
     {
-        n += put_str(body + n, ctx->ns->session.password);
+        n += put_str(body + n, Mqtt.session.password);
     }
 
-    ctx->ns->n =
-        compose(ctx->ns->buf.out, ctx->ns->buf.cap, (uint8_t)((uint8_t)MQTT_CONNECT << MQ_TYPE_SHIFT), body, n);
-    ctx->ns->ok = ctx->ns->n != 0;
+    Mqtt.n = compose(Mqtt.buf.out, Mqtt.buf.cap, (uint8_t)((uint8_t)MQTT_CONNECT << MQ_TYPE_SHIFT), body, n);
+    Mqtt.ok = Mqtt.n != 0;
 }
 
 // PUBLISH: Topic Name, the Packet Identifier when QoS is above 0, then the Payload (sec 3.3).
-static void mqtt_build_publish(struct MqttInternal *restrict ctx)
+static void mqtt_build_publish(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *body = ctx->ns->buf.body;
-    const char *topic = ctx->ns->message.topic_name;
-    if (!ctx->ns->buf.out || !body || !topic || ctx->ns->message.qos > 2)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    uint8_t *body = Mqtt.buf.body;
+    const char *topic = Mqtt.message.topic_name;
+    if (!Mqtt.buf.out || !body || !topic || Mqtt.message.qos > 2)
     {
         return;
     }
@@ -436,165 +457,170 @@ static void mqtt_build_publish(struct MqttInternal *restrict ctx)
         }
     }
     size_t tlen = str.len(topic, PROTOCORE_MQTT_BUF_SIZE);
-    size_t blen =
-        MQ_FIELD_PREFIX + tlen + (ctx->ns->message.qos > 0 ? MQ_FIELD_PREFIX : 0) + ctx->ns->message.payload_len;
-    if (blen > ctx->ns->buf.body_cap)
+    size_t blen = MQ_FIELD_PREFIX + tlen + (Mqtt.message.qos > 0 ? MQ_FIELD_PREFIX : 0) + Mqtt.message.payload_len;
+    if (blen > Mqtt.buf.body_cap)
     {
         return;
     }
     size_t n = 0;
     n += put_field(body + n, (const uint8_t *)topic, tlen);
-    if (ctx->ns->message.qos > 0)
+    if (Mqtt.message.qos > 0)
     {
-        put_u16(body + n, ctx->ns->packet.packet_id);
+        put_u16(body + n, Mqtt.packet.packet_id);
         n += MQ_FIELD_PREFIX;
     }
-    if (ctx->ns->message.payload_len)
+    if (Mqtt.message.payload_len)
     {
-        mem.cpy(body + n, ctx->ns->message.payload, ctx->ns->message.payload_len);
+        mem.cpy(body + n, Mqtt.message.payload, Mqtt.message.payload_len);
     }
-    n += ctx->ns->message.payload_len;
+    n += Mqtt.message.payload_len;
 
-    uint8_t f = (uint8_t)((ctx->ns->message.qos & MQ_PUB_QOS_MASK) << MQ_PUB_QOS_SHIFT);
-    if (ctx->ns->message.retain)
+    uint8_t f = (uint8_t)((Mqtt.message.qos & MQ_PUB_QOS_MASK) << MQ_PUB_QOS_SHIFT);
+    if (Mqtt.message.retain)
     {
         f |= MQ_PUB_RETAIN;
     }
-    if (ctx->ns->message.dup)
+    if (Mqtt.message.dup)
     {
         f |= MQ_PUB_DUP;
     }
-    ctx->ns->n =
-        compose(ctx->ns->buf.out, ctx->ns->buf.cap, (uint8_t)(((uint8_t)MQTT_PUBLISH << MQ_TYPE_SHIFT) | f), body, n);
-    ctx->ns->ok = ctx->ns->n != 0;
+    Mqtt.n = compose(Mqtt.buf.out, Mqtt.buf.cap, (uint8_t)(((uint8_t)MQTT_PUBLISH << MQ_TYPE_SHIFT) | f), body, n);
+    Mqtt.ok = Mqtt.n != 0;
 }
 
 // SUBSCRIBE: the Packet Identifier, then one Topic Filter and its Requested QoS (sec 3.8).
-static void mqtt_build_subscribe(struct MqttInternal *restrict ctx)
+static void mqtt_build_subscribe(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *body = ctx->ns->buf.body;
-    const char *topic = ctx->ns->filter.topic_filter;
-    if (!ctx->ns->buf.out || !body || !topic || ctx->ns->filter.qos > 2)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    uint8_t *body = Mqtt.buf.body;
+    const char *topic = Mqtt.filter.topic_filter;
+    if (!Mqtt.buf.out || !body || !topic || Mqtt.filter.qos > 2)
     {
         return;
     }
     size_t tlen = str.len(topic, PROTOCORE_MQTT_BUF_SIZE);
-    if (MQ_FIELD_PREFIX + MQ_FIELD_PREFIX + tlen + 1 > ctx->ns->buf.body_cap)
+    if (MQ_FIELD_PREFIX + MQ_FIELD_PREFIX + tlen + 1 > Mqtt.buf.body_cap)
     {
         return;
     }
     size_t n = 0;
-    put_u16(body + n, ctx->ns->packet.packet_id);
+    put_u16(body + n, Mqtt.packet.packet_id);
     n += MQ_FIELD_PREFIX;
     n += put_field(body + n, (const uint8_t *)topic, tlen);
-    body[n++] = (uint8_t)(ctx->ns->filter.qos & MQ_PUB_QOS_MASK);
-    ctx->ns->n = compose(ctx->ns->buf.out, ctx->ns->buf.cap,
-                         (uint8_t)(((uint8_t)MQTT_SUBSCRIBE << MQ_TYPE_SHIFT) | MQ_FLAGS_RESERVED_0010), body, n);
-    ctx->ns->ok = ctx->ns->n != 0;
+    body[n++] = (uint8_t)(Mqtt.filter.qos & MQ_PUB_QOS_MASK);
+    Mqtt.n = compose(Mqtt.buf.out, Mqtt.buf.cap,
+                     (uint8_t)(((uint8_t)MQTT_SUBSCRIBE << MQ_TYPE_SHIFT) | MQ_FLAGS_RESERVED_0010), body, n);
+    Mqtt.ok = Mqtt.n != 0;
 }
 
 // UNSUBSCRIBE: the Packet Identifier, then one Topic Filter (sec 3.10).
-static void mqtt_build_unsubscribe(struct MqttInternal *restrict ctx)
+static void mqtt_build_unsubscribe(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    uint8_t *body = ctx->ns->buf.body;
-    const char *topic = ctx->ns->filter.topic_filter;
-    if (!ctx->ns->buf.out || !body || !topic)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    uint8_t *body = Mqtt.buf.body;
+    const char *topic = Mqtt.filter.topic_filter;
+    if (!Mqtt.buf.out || !body || !topic)
     {
         return;
     }
     size_t tlen = str.len(topic, PROTOCORE_MQTT_BUF_SIZE);
-    if (MQ_FIELD_PREFIX + MQ_FIELD_PREFIX + tlen > ctx->ns->buf.body_cap)
+    if (MQ_FIELD_PREFIX + MQ_FIELD_PREFIX + tlen > Mqtt.buf.body_cap)
     {
         return;
     }
     size_t n = 0;
-    put_u16(body + n, ctx->ns->packet.packet_id);
+    put_u16(body + n, Mqtt.packet.packet_id);
     n += MQ_FIELD_PREFIX;
     n += put_field(body + n, (const uint8_t *)topic, tlen);
-    ctx->ns->n = compose(ctx->ns->buf.out, ctx->ns->buf.cap,
-                         (uint8_t)(((uint8_t)MQTT_UNSUBSCRIBE << MQ_TYPE_SHIFT) | MQ_FLAGS_RESERVED_0010), body, n);
-    ctx->ns->ok = ctx->ns->n != 0;
+    Mqtt.n = compose(Mqtt.buf.out, Mqtt.buf.cap,
+                     (uint8_t)(((uint8_t)MQTT_UNSUBSCRIBE << MQ_TYPE_SHIFT) | MQ_FLAGS_RESERVED_0010), body, n);
+    Mqtt.ok = Mqtt.n != 0;
 }
 
 // PUBACK, PUBREC, PUBREL or PUBCOMP: a Packet Identifier and nothing else (sec 3.4 - sec 3.7).
-static void mqtt_build_ack(struct MqttInternal *restrict ctx)
+static void mqtt_build_ack(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.out || ctx->ns->buf.cap < MQ_ACK_PACKET_LEN)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.buf.out || Mqtt.buf.cap < MQ_ACK_PACKET_LEN)
     {
         return;
     }
-    uint8_t f = (ctx->ns->packet.type == MQTT_PUBREL) ? MQ_FLAGS_RESERVED_0010 : 0;
-    ctx->ns->buf.out[0] = (uint8_t)(((uint8_t)ctx->ns->packet.type << MQ_TYPE_SHIFT) | f);
-    ctx->ns->buf.out[1] = MQ_ACK_REMAINING_LENGTH;
-    put_u16(ctx->ns->buf.out + MQ_FIELD_PREFIX, ctx->ns->packet.packet_id);
-    ctx->ns->n = MQ_ACK_PACKET_LEN;
-    ctx->ns->ok = PROTO_TRUE;
+    uint8_t f = (Mqtt.packet.type == MQTT_PUBREL) ? MQ_FLAGS_RESERVED_0010 : 0;
+    Mqtt.buf.out[0] = (uint8_t)(((uint8_t)Mqtt.packet.type << MQ_TYPE_SHIFT) | f);
+    Mqtt.buf.out[1] = MQ_ACK_REMAINING_LENGTH;
+    put_u16(Mqtt.buf.out + MQ_FIELD_PREFIX, Mqtt.packet.packet_id);
+    Mqtt.n = MQ_ACK_PACKET_LEN;
+    Mqtt.ok = PROTO_TRUE;
 }
 
-static void mqtt_build_pingreq(struct MqttInternal *restrict ctx)
+static void mqtt_build_pingreq(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.out || ctx->ns->buf.cap < MQ_EMPTY_PACKET_LEN)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.buf.out || Mqtt.buf.cap < MQ_EMPTY_PACKET_LEN)
     {
         return;
     }
-    ctx->ns->buf.out[0] = (uint8_t)((uint8_t)MQTT_PINGREQ << MQ_TYPE_SHIFT);
-    ctx->ns->buf.out[1] = 0x00;
-    ctx->ns->n = MQ_EMPTY_PACKET_LEN;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.buf.out[0] = (uint8_t)((uint8_t)MQTT_PINGREQ << MQ_TYPE_SHIFT);
+    Mqtt.buf.out[1] = 0x00;
+    Mqtt.n = MQ_EMPTY_PACKET_LEN;
+    Mqtt.ok = PROTO_TRUE;
 }
 
-static void mqtt_build_disconnect(struct MqttInternal *restrict ctx)
+static void mqtt_build_disconnect(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.out || ctx->ns->buf.cap < MQ_EMPTY_PACKET_LEN)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.buf.out || Mqtt.buf.cap < MQ_EMPTY_PACKET_LEN)
     {
         return;
     }
-    ctx->ns->buf.out[0] = (uint8_t)((uint8_t)MQTT_DISCONNECT << MQ_TYPE_SHIFT);
-    ctx->ns->buf.out[1] = 0x00;
-    ctx->ns->n = MQ_EMPTY_PACKET_LEN;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.buf.out[0] = (uint8_t)((uint8_t)MQTT_DISCONNECT << MQ_TYPE_SHIFT);
+    Mqtt.buf.out[1] = 0x00;
+    Mqtt.n = MQ_EMPTY_PACKET_LEN;
+    Mqtt.ok = PROTO_TRUE;
 }
 
 // The fixed header: the type and flags of byte 1, then the Remaining Length behind it (sec 2.2).
-static void mqtt_parse_fixed_header(struct MqttInternal *restrict ctx)
+static void mqtt_parse_fixed_header(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.in || ctx->ns->buf.avail < MQ_EMPTY_PACKET_LEN)
+    (void)work;
+    Mqtt.n = 0;
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.buf.in || Mqtt.buf.avail < MQ_EMPTY_PACKET_LEN)
     {
         return;
     }
     uint32_t rl = 0;
     size_t used = 0;
-    if (!decode_remlen(ctx->ns->buf.in + 1, ctx->ns->buf.avail - 1, &rl, &used))
+    if (!decode_remlen(Mqtt.buf.in + 1, Mqtt.buf.avail - 1, &rl, &used))
     {
         return;
     }
-    ctx->ns->packet.type = (MqttType)(ctx->ns->buf.in[0] >> MQ_TYPE_SHIFT);
-    ctx->ns->packet.flags = (uint8_t)(ctx->ns->buf.in[0] & MQ_FLAGS_MASK);
-    ctx->ns->packet.remaining_length = rl;
-    ctx->ns->n = 1 + used;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.packet.type = (MqttType)(Mqtt.buf.in[0] >> MQ_TYPE_SHIFT);
+    Mqtt.packet.flags = (uint8_t)(Mqtt.buf.in[0] & MQ_FLAGS_MASK);
+    Mqtt.packet.remaining_length = rl;
+    Mqtt.n = 1 + used;
+    Mqtt.ok = PROTO_TRUE;
 }
 
 // A PUBLISH variable header and payload: the Topic Name, the Packet Identifier when QoS is above 0,
 // and the Payload that fills what the Remaining Length leaves (sec 3.3).
-static void mqtt_parse_publish(struct MqttInternal *restrict ctx)
+static void mqtt_parse_publish(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    const uint8_t *buf = ctx->ns->buf.in;
-    const uint32_t rl = ctx->ns->packet.remaining_length;
-    if (!buf || rl < MQ_FIELD_PREFIX || !ctx->ns->message.topic_out)
+    (void)work;
+    Mqtt.ok = PROTO_FALSE;
+    const uint8_t *buf = Mqtt.buf.in;
+    const uint32_t rl = Mqtt.packet.remaining_length;
+    if (!buf || rl < MQ_FIELD_PREFIX || !Mqtt.message.topic_out)
     {
         return;
     }
@@ -604,7 +630,7 @@ static void mqtt_parse_publish(struct MqttInternal *restrict ctx)
     {
         return;
     }
-    if ((size_t)tlen + 1 > ctx->ns->message.topic_cap)
+    if ((size_t)tlen + 1 > Mqtt.message.topic_cap)
     {
         return; // the Topic Name and its NUL must fit
     }
@@ -612,79 +638,82 @@ static void mqtt_parse_publish(struct MqttInternal *restrict ctx)
     // U+0000 (MQTT-1.5.3-2).
     Utf8.args.s = buf + off;
     Utf8.args.n = tlen;
-    Utf8.valid(Utf8.internal);
+    Utf8.valid(utf8_work);
     if (!Utf8.ok || mem.chr(buf + off, tlen, 0x00))
     {
         return;
     }
-    mem.cpy(ctx->ns->message.topic_out, buf + off, tlen);
-    ctx->ns->message.topic_out[tlen] = '\0';
-    ctx->ns->message.topic_len = tlen;
+    mem.cpy(Mqtt.message.topic_out, buf + off, tlen);
+    Mqtt.message.topic_out[tlen] = '\0';
+    Mqtt.message.topic_len = tlen;
     off += tlen;
 
-    uint8_t qos = (uint8_t)((ctx->ns->packet.flags >> MQ_PUB_QOS_SHIFT) & MQ_PUB_QOS_MASK);
+    uint8_t qos = (uint8_t)((Mqtt.packet.flags >> MQ_PUB_QOS_SHIFT) & MQ_PUB_QOS_MASK);
     if (qos == 3)
     {
         return; // MQTT-3.3.1-4: a PUBLISH MUST NOT have both QoS bits set
     }
-    ctx->ns->message.qos = qos;
-    ctx->ns->message.retain = (ctx->ns->packet.flags & MQ_PUB_RETAIN) != 0;
-    ctx->ns->message.dup = (ctx->ns->packet.flags & MQ_PUB_DUP) != 0;
-    ctx->ns->packet.packet_id = 0;
+    Mqtt.message.qos = qos;
+    Mqtt.message.retain = (Mqtt.packet.flags & MQ_PUB_RETAIN) != 0;
+    Mqtt.message.dup = (Mqtt.packet.flags & MQ_PUB_DUP) != 0;
+    Mqtt.packet.packet_id = 0;
     if (qos > 0)
     {
         if ((uint32_t)off + MQ_FIELD_PREFIX > rl)
         {
             return;
         }
-        ctx->ns->packet.packet_id = get_u16(buf + off);
+        Mqtt.packet.packet_id = get_u16(buf + off);
         off += MQ_FIELD_PREFIX;
     }
-    ctx->ns->message.payload = buf + off;
-    ctx->ns->message.payload_len = rl - off;
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.message.payload = buf + off;
+    Mqtt.message.payload_len = rl - off;
+    Mqtt.ok = PROTO_TRUE;
 }
 
 // The Packet Identifier a PUBACK, PUBREC, PUBREL, PUBCOMP or UNSUBACK body carries (sec 2.3.1).
-static void mqtt_parse_ack(struct MqttInternal *restrict ctx)
+static void mqtt_parse_ack(uint8_t *restrict work)
 {
-    ctx->ns->packet.packet_id = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.in || ctx->ns->packet.remaining_length < MQ_ACK_REMAINING_LENGTH)
+    (void)work;
+    Mqtt.packet.packet_id = 0;
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.buf.in || Mqtt.packet.remaining_length < MQ_ACK_REMAINING_LENGTH)
     {
         return;
     }
-    ctx->ns->packet.packet_id = get_u16(ctx->ns->buf.in);
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.packet.packet_id = get_u16(Mqtt.buf.in);
+    Mqtt.ok = PROTO_TRUE;
 }
 
 // A CONNACK body: the Connect Acknowledge Flags then the Connect Return code (sec 3.2.2).
-static void mqtt_parse_connack(struct MqttInternal *restrict ctx)
+static void mqtt_parse_connack(uint8_t *restrict work)
 {
-    ctx->ns->i32 = -1;
-    ctx->ns->session_present = PROTO_FALSE;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.in || ctx->ns->packet.remaining_length < MQ_ACK_REMAINING_LENGTH)
+    (void)work;
+    Mqtt.i32 = -1;
+    Mqtt.session_present = PROTO_FALSE;
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.buf.in || Mqtt.packet.remaining_length < MQ_ACK_REMAINING_LENGTH)
     {
         return;
     }
-    ctx->ns->session_present = (ctx->ns->buf.in[0] & MQ_CONNACK_SESSION_PRESENT) != 0;
-    ctx->ns->i32 = ctx->ns->buf.in[1];
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.session_present = (Mqtt.buf.in[0] & MQ_CONNACK_SESSION_PRESENT) != 0;
+    Mqtt.i32 = Mqtt.buf.in[1];
+    Mqtt.ok = PROTO_TRUE;
 }
 
 // A SUBACK body: the Packet Identifier then the payload's return-code list (sec 3.9.2, sec 3.9.3).
-static void mqtt_parse_suback(struct MqttInternal *restrict ctx)
+static void mqtt_parse_suback(uint8_t *restrict work)
 {
-    ctx->ns->u8 = PROTOCORE_MQTT_SUBACK_FAILURE;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->buf.in || ctx->ns->packet.remaining_length < MQ_ACK_REMAINING_LENGTH + 1)
+    (void)work;
+    Mqtt.u8 = PROTOCORE_MQTT_SUBACK_FAILURE;
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.buf.in || Mqtt.packet.remaining_length < MQ_ACK_REMAINING_LENGTH + 1)
     {
         return;
     }
-    ctx->ns->packet.packet_id = get_u16(ctx->ns->buf.in);
-    ctx->ns->u8 = ctx->ns->buf.in[MQ_ACK_REMAINING_LENGTH];
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.packet.packet_id = get_u16(Mqtt.buf.in);
+    Mqtt.u8 = Mqtt.buf.in[MQ_ACK_REMAINING_LENGTH];
+    Mqtt.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -693,33 +722,37 @@ static void mqtt_parse_suback(struct MqttInternal *restrict ctx)
 #if PROTOCORE_HAS_NET_STACK
 
 // The next Packet Identifier, skipping 0 because a real one is never 0 (sec 2.3.1).
-static uint16_t next_packet_id(struct MqttInternal *restrict ctx)
+static uint16_t next_packet_id(uint8_t *restrict work)
 {
-    uint16_t p = ctx->store->next_packet_id++;
-    if (ctx->store->next_packet_id == 0)
+    uint16_t p = MQTT_CTX(work)->next_packet_id++;
+    if (MQTT_CTX(work)->next_packet_id == 0)
     {
-        ctx->store->next_packet_id = 1;
+        MQTT_CTX(work)->next_packet_id = 1;
     }
     return p;
 }
 
 // Point the codec's buffers at this Client's own storage: the body assembles in rx, the whole
 // Control Packet lands in tx.
-static void bind_codec_buffers(struct MqttInternal *restrict ctx)
+static void bind_codec_buffers(uint8_t *restrict work)
 {
-    ctx->ns->buf.out = ctx->store->tx;
-    ctx->ns->buf.cap = PROTOCORE_MQTT_BUF_SIZE;
-    ctx->ns->buf.body = ctx->store->rx;
-    ctx->ns->buf.body_cap = PROTOCORE_MQTT_BUF_SIZE;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Mqtt.buf.out = MQTT_CTX(work)->tx;
+    Mqtt.buf.cap = PROTOCORE_MQTT_BUF_SIZE;
+    Mqtt.buf.body = MQTT_CTX(work)->rx;
+    Mqtt.buf.body_cap = PROTOCORE_MQTT_BUF_SIZE;
 }
 
 // Take this module's storage on first use and hold it: one borrow from the secure pool's persistent
 // end - the end no mark walks - reused for every packet. One borrow and not two, because each
 // carries a block header rounded up to the arena alignment; the region is split at a stated offset,
 // rx first and tx behind it.
-static proto_bool mem_bind(struct MqttInternal *restrict ctx)
+static proto_bool mem_bind(uint8_t *restrict work)
 {
-    if (ctx->store->rx != NULL)
+    if (MQTT_CTX(work)->rx != NULL)
     {
         return PROTO_TRUE;
     }
@@ -728,47 +761,51 @@ static proto_bool mem_bind(struct MqttInternal *restrict ctx)
     {
         return PROTO_FALSE;
     }
-    ctx->store->rx = region.buf;
-    ctx->store->tx = region.buf + PROTOCORE_MQTT_BUF_SIZE;
+    MQTT_CTX(work)->rx = region.buf;
+    MQTT_CTX(work)->tx = region.buf + PROTOCORE_MQTT_BUF_SIZE;
     return PROTO_TRUE;
 }
 
 // Send plaintext octets to the Server.
-static proto_bool tx_plain(struct MqttInternal *restrict ctx, const uint8_t *data, size_t len)
+static proto_bool tx_plain(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
-    TcpClient.cid = ctx->store->cid;
+    TcpClient.cid = MQTT_CTX(work)->cid;
     TcpClient.io.data = data;
     TcpClient.io.len = len;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     return TcpClient.ok;
 }
 
 // Append what the transport holds to the reassembly buffer. One read: the transport already knows
 // how much it has and the worker is calling across passes, so a loop here would only ask a socket
 // that has nothing. A full buffer stops draining, which is the backpressure the peer sees.
-static void fill_plain(struct MqttInternal *restrict ctx)
+static void fill_plain(uint8_t *restrict work)
 {
-    size_t room = PROTOCORE_MQTT_BUF_SIZE - ctx->store->rx_len;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    size_t room = PROTOCORE_MQTT_BUF_SIZE - MQTT_CTX(work)->rx_len;
     if (room == 0)
     {
         return;
     }
-    TcpClient.cid = ctx->store->cid;
-    TcpClient.io.buf = ctx->store->rx + ctx->store->rx_len;
+    TcpClient.cid = MQTT_CTX(work)->cid;
+    TcpClient.io.buf = MQTT_CTX(work)->rx + MQTT_CTX(work)->rx_len;
     TcpClient.io.cap = room;
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     size_t n = TcpClient.n;
     if (n == 0)
     {
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.is_closed(TcpClient.internal);
+        TcpClient.cid = MQTT_CTX(work)->cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
         if (TcpClient.ok)
         {
-            ctx->store->closed = PROTO_TRUE;
+            MQTT_CTX(work)->closed = PROTO_TRUE;
         }
         return;
     }
-    ctx->store->rx_len += n;
+    MQTT_CTX(work)->rx_len += n;
 }
 
 #if PROTOCORE_ENABLE_MQTT_TLS
@@ -787,109 +824,122 @@ static int tls_recv(void *bio, unsigned char *buf, size_t len)
     TcpClient.cid = s_mqtt.store->cid;
     TcpClient.io.buf = buf;
     TcpClient.io.cap = len;
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     size_t n = TcpClient.n;
     if (n == 0)
     {
         TcpClient.cid = s_mqtt.store->cid;
-        TcpClient.is_closed(TcpClient.internal);
+        TcpClient.is_closed(protocore_tcp_client_span());
         return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
 }
 
 // Append what the session has decrypted to the reassembly buffer. Same shape as fill_plain.
-static void fill_tls(struct MqttInternal *restrict ctx)
+static void fill_tls(uint8_t *restrict work)
 {
-    size_t room = PROTOCORE_MQTT_BUF_SIZE - ctx->store->rx_len;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    size_t room = PROTOCORE_MQTT_BUF_SIZE - MQTT_CTX(work)->rx_len;
     if (room == 0)
     {
         return;
     }
-    int n = protocore_tls_client_session_read(ctx->store->rx + ctx->store->rx_len, room);
+    int n = protocore_tls_client_session_read(MQTT_CTX(work)->rx + MQTT_CTX(work)->rx_len, room);
     if (n <= 0)
     {
         if (n < 0)
         {
-            ctx->store->closed = PROTO_TRUE;
+            MQTT_CTX(work)->closed = PROTO_TRUE;
         }
         return;
     }
-    ctx->store->rx_len += (size_t)n;
+    MQTT_CTX(work)->rx_len += (size_t)n;
 }
 #endif // PROTOCORE_ENABLE_MQTT_TLS
 
 // Raise the flag over the Control Packet the codec just framed into tx. A packet offered while one
 // is still going out is refused rather than overwriting it. This layer never reaches the wire.
-static proto_bool tx_arm(struct MqttInternal *restrict ctx, size_t len)
+static proto_bool tx_arm(uint8_t *restrict work, size_t len)
 {
-    if (ctx->store->tx_ready || len == 0)
+    if (MQTT_CTX(work)->tx_ready || len == 0)
     {
         return PROTO_FALSE;
     }
-    ctx->store->tx_len = len;
-    ctx->store->tx_off = 0;
-    ctx->store->tx_ready = PROTO_TRUE;
+    MQTT_CTX(work)->tx_len = len;
+    MQTT_CTX(work)->tx_off = 0;
+    MQTT_CTX(work)->tx_ready = PROTO_TRUE;
     return PROTO_TRUE;
 }
 
 // Put the flagged packet on the wire. The worker owns this connection and the pool the packet sits
 // in, so it moves the octets itself: what the transport takes now, the rest on a later pass, and the
 // flag drops once the last octet is out.
-static void tx_drain(struct MqttInternal *restrict ctx)
+static void tx_drain(uint8_t *restrict work)
 {
-    if (!ctx->store->tx_ready)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    if (!MQTT_CTX(work)->tx_ready)
     {
         return;
     }
-    size_t n = ctx->store->tx_len - ctx->store->tx_off;
+    size_t n = MQTT_CTX(work)->tx_len - MQTT_CTX(work)->tx_off;
 #if PROTOCORE_ENABLE_MQTT_TLS
-    if (ctx->store->use_tls)
+    if (MQTT_CTX(work)->use_tls)
     {
-        int w = protocore_tls_client_session_write(ctx->store->tx + ctx->store->tx_off, n);
+        int w = protocore_tls_client_session_write(MQTT_CTX(work)->tx + MQTT_CTX(work)->tx_off, n);
         if (w > 0)
         {
-            ctx->store->tx_off += (size_t)w;
+            MQTT_CTX(work)->tx_off += (size_t)w;
         }
     }
     else
 #endif
-        if (tx_plain(ctx, ctx->store->tx + ctx->store->tx_off, n))
+        if (tx_plain(work, MQTT_CTX(work)->tx + MQTT_CTX(work)->tx_off, n))
     {
-        ctx->store->tx_off += n;
+        MQTT_CTX(work)->tx_off += n;
     }
-    if (ctx->store->tx_off >= ctx->store->tx_len)
+    if (MQTT_CTX(work)->tx_off >= MQTT_CTX(work)->tx_len)
     {
-        ctx->store->last_tx_ms = Clock.ms;
-        ctx->store->tx_ready = PROTO_FALSE;
+        MQTT_CTX(work)->last_tx_ms = Clock.ms;
+        MQTT_CTX(work)->tx_ready = PROTO_FALSE;
     }
 }
 
 // Close the Network Connection (sec 4.2). A link still coming up is given up with the slot.
-static void link_close(struct MqttInternal *restrict ctx)
+static void link_close(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
 #if PROTOCORE_ENABLE_MQTT_TLS
-    if (ctx->store->use_tls)
+    if (MQTT_CTX(work)->use_tls)
     {
         protocore_tls_client_session_end();
     }
 #endif
-    if (ctx->store->cid >= 0)
+    if (MQTT_CTX(work)->cid >= 0)
     {
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.close(TcpClient.internal);
+        TcpClient.cid = MQTT_CTX(work)->cid;
+        TcpClient.close(protocore_tcp_client_span());
     }
-    ctx->store->cid = -1;
-    ctx->store->session_up = PROTO_FALSE;
-    ctx->store->link = MQTT_LINK_IDLE;
+    MQTT_CTX(work)->cid = -1;
+    MQTT_CTX(work)->session_up = PROTO_FALSE;
+    MQTT_CTX(work)->link = MQTT_LINK_IDLE;
 }
 
 // The in-flight slot running the exchange for this Packet Identifier, or -1.
-static int inflight_find(struct MqttInternal *restrict ctx, uint16_t packet_id)
+static int inflight_find(uint8_t *restrict work, uint16_t packet_id)
 {
     for (int i = 0; i < PROTOCORE_MQTT_MAX_INFLIGHT; i++)
     {
-        if (ctx->store->inflight[i].state != MQTT_INFLIGHT_FREE && ctx->store->inflight[i].packet_id == packet_id)
+        if (MQTT_CTX(work)->inflight[i].state != MQTT_INFLIGHT_FREE &&
+            MQTT_CTX(work)->inflight[i].packet_id == packet_id)
         {
             return i;
         }
@@ -899,23 +949,23 @@ static int inflight_find(struct MqttInternal *restrict ctx, uint16_t packet_id)
 
 // Hold an inbound QoS 2 Packet Identifier from PUBREC until PUBCOMP, so a repeat of the same
 // PUBLISH delivers the Application Message once (sec 4.3.3).
-static void rx_id_add(struct MqttInternal *restrict ctx, uint16_t packet_id)
+static void rx_id_add(uint8_t *restrict work, uint16_t packet_id)
 {
     for (int i = 0; i < PROTOCORE_MQTT_RX_QOS2_SLOTS; i++)
     {
-        if (ctx->store->rx_packet_id[i] == 0)
+        if (MQTT_CTX(work)->rx_packet_id[i] == 0)
         {
-            ctx->store->rx_packet_id[i] = packet_id;
+            MQTT_CTX(work)->rx_packet_id[i] = packet_id;
             return;
         }
     }
 }
 
-static proto_bool rx_id_has(struct MqttInternal *restrict ctx, uint16_t packet_id)
+static proto_bool rx_id_has(uint8_t *restrict work, uint16_t packet_id)
 {
     for (int i = 0; i < PROTOCORE_MQTT_RX_QOS2_SLOTS; i++)
     {
-        if (ctx->store->rx_packet_id[i] == packet_id)
+        if (MQTT_CTX(work)->rx_packet_id[i] == packet_id)
         {
             return PROTO_TRUE;
         }
@@ -923,85 +973,84 @@ static proto_bool rx_id_has(struct MqttInternal *restrict ctx, uint16_t packet_i
     return PROTO_FALSE;
 }
 
-static void rx_id_del(struct MqttInternal *restrict ctx, uint16_t packet_id)
+static void rx_id_del(uint8_t *restrict work, uint16_t packet_id)
 {
     for (int i = 0; i < PROTOCORE_MQTT_RX_QOS2_SLOTS; i++)
     {
-        if (ctx->store->rx_packet_id[i] == packet_id)
+        if (MQTT_CTX(work)->rx_packet_id[i] == packet_id)
         {
-            ctx->store->rx_packet_id[i] = 0;
+            MQTT_CTX(work)->rx_packet_id[i] = 0;
         }
     }
 }
 
 // Frame one acknowledgement into tx and flag it for the worker (sec 3.4 - sec 3.7). False when a
 // packet is already going out and this one was refused rather than overwriting it.
-static proto_bool send_ack(struct MqttInternal *restrict ctx, MqttType type, uint16_t packet_id)
+static proto_bool send_ack(uint8_t *restrict work, MqttType type, uint16_t packet_id)
 {
-    bind_codec_buffers(ctx);
-    ctx->ns->packet.type = type;
-    ctx->ns->packet.packet_id = packet_id;
-    mqtt_build_ack(ctx);
-    return tx_arm(ctx, ctx->ns->n);
+    bind_codec_buffers(work);
+    Mqtt.packet.type = type;
+    Mqtt.packet.packet_id = packet_id;
+    mqtt_build_ack(work);
+    return tx_arm(work, Mqtt.n);
 }
 
 // Act on one whole Control Packet sitting where the worker put it.
-static void handle_packet(struct MqttInternal *restrict ctx, const uint8_t *body, MqttType type, uint8_t flags,
-                          uint32_t rl)
+static void handle_packet(uint8_t *restrict work, const uint8_t *body, MqttType type, uint8_t flags, uint32_t rl)
 {
-    ctx->ns->buf.in = body;
-    ctx->ns->packet.flags = flags;
-    ctx->ns->packet.remaining_length = rl;
+    Mqtt.buf.in = body;
+    Mqtt.packet.flags = flags;
+    Mqtt.packet.remaining_length = rl;
 
     switch (type)
     {
     case MQTT_CONNACK:
-        mqtt_parse_connack(ctx);
-        ctx->store->connack_code = ctx->ns->i32;
-        if (ctx->store->connack_code == 0)
+        mqtt_parse_connack(work);
+        MQTT_CTX(work)->connack_code = Mqtt.i32;
+        if (MQTT_CTX(work)->connack_code == 0)
         {
-            ctx->store->session_up = PROTO_TRUE;
+            MQTT_CTX(work)->session_up = PROTO_TRUE;
         }
-        MQ_DBG("[mqtt] CONNACK return code=%d\n", ctx->store->connack_code);
+        MQ_DBG("[mqtt] CONNACK return code=%d\n", MQTT_CTX(work)->connack_code);
         break;
 
     case MQTT_PUBLISH: {
-        ctx->ns->message.topic_out = ctx->store->topic;
-        ctx->ns->message.topic_cap = sizeof(ctx->store->topic);
-        mqtt_parse_publish(ctx);
-        if (!ctx->ns->ok)
+        Mqtt.message.topic_out = MQTT_CTX(work)->topic;
+        Mqtt.message.topic_cap = sizeof(MQTT_CTX(work)->topic);
+        mqtt_parse_publish(work);
+        if (!Mqtt.ok)
         {
             // MQTT-4.8.0-1: a protocol violation MUST close the Network Connection the offending
             // Control Packet arrived on. Both QoS bits set is one (MQTT-3.3.1-4).
-            link_close(ctx);
+            link_close(work);
             break;
         }
-        uint16_t packet_id = ctx->ns->packet.packet_id;
-        const uint8_t *payload = ctx->ns->message.payload;
-        size_t payload_len = ctx->ns->message.payload_len;
-        uint8_t qos = ctx->ns->message.qos;
+        uint16_t packet_id = Mqtt.packet.packet_id;
+        const uint8_t *payload = Mqtt.message.payload;
+        size_t payload_len = Mqtt.message.payload_len;
+        uint8_t qos = Mqtt.message.qos;
         if (qos < 2)
         {
-            if (ctx->store->on_message)
+            if (MQTT_CTX(work)->on_message)
             {
-                ctx->store->on_message(ctx->store->topic, payload, payload_len);
+                MQTT_CTX(work)->on_message(MQTT_CTX(work)->topic, payload, payload_len);
             }
             if (qos == 1)
             {
-                (void)send_ack(ctx, MQTT_PUBACK, packet_id); // sec 4.3.2
+                (void)send_ack(work, MQTT_PUBACK, packet_id); // sec 4.3.2
             }
         }
         else // sec 4.3.3: deliver once, and hold the identifier until PUBREL completes
         {
-            if (!rx_id_has(ctx, packet_id))
+            if (!rx_id_has(work, packet_id))
             {
-                if (ctx->store->on_message)
+                if (MQTT_CTX(work)->on_message)
                 {
-                    ctx->store->on_message(ctx->store->topic, payload, payload_len);
+                    MQTT_CTX(work)->on_message(MQTT_CTX(work)->topic, payload, payload_len);
                 }
-                rx_id_add(ctx, packet_id);
+                rx_id_add(work, packet_id);
             }
-            (void)send_ack(ctx, MQTT_PUBREC, packet_id);
+            (void)send_ack(work, MQTT_PUBREC, packet_id);
         }
         break;
     }
@@ -1009,44 +1058,44 @@ static void handle_packet(struct MqttInternal *restrict ctx, const uint8_t *body
     case MQTT_PUBACK:  // our QoS 1 PUBLISH acknowledged (sec 4.3.2)
     case MQTT_PUBCOMP: // our QoS 2 PUBLISH complete (sec 4.3.3)
     {
-        mqtt_parse_ack(ctx);
-        int slot = inflight_find(ctx, ctx->ns->packet.packet_id);
+        mqtt_parse_ack(work);
+        int slot = inflight_find(work, Mqtt.packet.packet_id);
         if (slot >= 0)
         {
-            ctx->store->inflight[slot].state = MQTT_INFLIGHT_FREE;
+            MQTT_CTX(work)->inflight[slot].state = MQTT_INFLIGHT_FREE;
         }
         break;
     }
 
     case MQTT_PUBREC: // our QoS 2 PUBLISH received: answer PUBREL, await PUBCOMP (sec 4.3.3)
     {
-        mqtt_parse_ack(ctx);
-        uint16_t packet_id = ctx->ns->packet.packet_id;
-        int slot = inflight_find(ctx, packet_id);
+        mqtt_parse_ack(work);
+        uint16_t packet_id = Mqtt.packet.packet_id;
+        int slot = inflight_find(work, packet_id);
         if (slot >= 0)
         {
-            ctx->store->inflight[slot].state = MQTT_INFLIGHT_COMP;
-            ctx->store->inflight[slot].sent_ms = Clock.ms;
+            MQTT_CTX(work)->inflight[slot].state = MQTT_INFLIGHT_COMP;
+            MQTT_CTX(work)->inflight[slot].sent_ms = Clock.ms;
         }
-        (void)send_ack(ctx, MQTT_PUBREL, packet_id);
+        (void)send_ack(work, MQTT_PUBREL, packet_id);
         break;
     }
 
     case MQTT_PUBREL: // the Server releasing an inbound QoS 2 message: answer PUBCOMP (sec 4.3.3)
     {
-        mqtt_parse_ack(ctx);
-        uint16_t packet_id = ctx->ns->packet.packet_id;
-        rx_id_del(ctx, packet_id);
-        (void)send_ack(ctx, MQTT_PUBCOMP, packet_id);
+        mqtt_parse_ack(work);
+        uint16_t packet_id = Mqtt.packet.packet_id;
+        rx_id_del(work, packet_id);
+        (void)send_ack(work, MQTT_PUBCOMP, packet_id);
         break;
     }
 
     case MQTT_PINGRESP: // sec 3.13
-        ctx->store->ping_pending = PROTO_FALSE;
+        MQTT_CTX(work)->ping_pending = PROTO_FALSE;
         break;
 
     case MQTT_SUBACK:
-        mqtt_parse_suback(ctx);
+        mqtt_parse_suback(work);
         break;
 
     case MQTT_CONNECT:
@@ -1064,79 +1113,87 @@ static void handle_packet(struct MqttInternal *restrict ctx, const uint8_t *body
 // bounded by the octets already received and never waits: it ends on the first packet that is not
 // all here, and what is left of it shifts down to wait for the next fill. Each packet is handled
 // where it landed, so nothing is copied out to parse it.
-static void process_rx(struct MqttInternal *restrict ctx)
+static void process_rx(uint8_t *restrict work)
 {
-#if PROTOCORE_ENABLE_MQTT_TLS
-    if (ctx->store->use_tls)
+    if (!work)
     {
-        fill_tls(ctx);
+        return; // the pool was short of this module's borrow
+    }
+#if PROTOCORE_ENABLE_MQTT_TLS
+    if (MQTT_CTX(work)->use_tls)
+    {
+        fill_tls(work);
     }
     else
 #endif
-        fill_plain(ctx);
+        fill_plain(work);
 
     size_t off = 0;
     for (;;)
     {
-        ctx->ns->buf.in = ctx->store->rx + off;
-        ctx->ns->buf.avail = ctx->store->rx_len - off;
-        mqtt_parse_fixed_header(ctx);
-        if (!ctx->ns->ok)
+        Mqtt.buf.in = MQTT_CTX(work)->rx + off;
+        Mqtt.buf.avail = MQTT_CTX(work)->rx_len - off;
+        mqtt_parse_fixed_header(work);
+        if (!Mqtt.ok)
         {
             break; // the fixed header is not all here yet
         }
-        size_t header_len = ctx->ns->n;
-        MqttType type = ctx->ns->packet.type;
-        uint8_t flags = ctx->ns->packet.flags;
-        uint32_t rl = ctx->ns->packet.remaining_length;
+        size_t header_len = Mqtt.n;
+        MqttType type = Mqtt.packet.type;
+        uint8_t flags = Mqtt.packet.flags;
+        uint32_t rl = Mqtt.packet.remaining_length;
         size_t total = header_len + rl;
-        if (ctx->store->rx_len - off < total)
+        if (MQTT_CTX(work)->rx_len - off < total)
         {
             break; // the body is not all here yet
         }
-        handle_packet(ctx, ctx->store->rx + off + header_len, type, flags, rl);
+        handle_packet(work, MQTT_CTX(work)->rx + off + header_len, type, flags, rl);
         off += total;
     }
     if (off != 0)
     {
-        ctx->store->rx_len -= off;
-        if (ctx->store->rx_len != 0)
+        MQTT_CTX(work)->rx_len -= off;
+        if (MQTT_CTX(work)->rx_len != 0)
         {
             // The tail overlaps what it moves onto, so this is the overlapping move.
-            mem.move(ctx->store->rx, ctx->store->rx + off, ctx->store->rx_len);
+            mem.move(MQTT_CTX(work)->rx, MQTT_CTX(work)->rx + off, MQTT_CTX(work)->rx_len);
         }
     }
 }
 
 // Step the Network Connection one stage per call. Nothing here waits: the transport slot, the
 // handshake and the CONNACK each report where they are and the caller comes back on its own tick.
-static void link_step(struct MqttInternal *restrict ctx)
+static void link_step(uint8_t *restrict work)
 {
-    if (ctx->store->closed || (Clock.ms - ctx->store->timer) >= ctx->store->link_budget_ms)
+    if (!work)
     {
-        link_close(ctx);
+        return; // the pool was short of this module's borrow
+    }
+    if (MQTT_CTX(work)->closed || (Clock.ms - MQTT_CTX(work)->timer) >= MQTT_CTX(work)->link_budget_ms)
+    {
+        link_close(work);
         return;
     }
-    switch (ctx->store->link)
+    switch (MQTT_CTX(work)->link)
     {
     case MQTT_LINK_TCP:
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.connected(TcpClient.internal);
+        TcpClient.cid = MQTT_CTX(work)->cid;
+        TcpClient.connected(protocore_tcp_client_span());
         if (!TcpClient.ok)
         {
             return;
         }
 #if PROTOCORE_ENABLE_MQTT_TLS
-        if (ctx->store->use_tls)
+        if (MQTT_CTX(work)->use_tls)
         {
-            ctx->store->link = MQTT_LINK_TLS;
+            MQTT_CTX(work)->link = MQTT_LINK_TLS;
             return;
         }
 #endif
-        ctx->store->link = MQTT_LINK_CONNACK;
-        if (!tx_arm(ctx, ctx->store->tx_len)) // CONNECT is already framed in tx; this flags it
+        MQTT_CTX(work)->link = MQTT_LINK_CONNACK;
+        if (!tx_arm(work, MQTT_CTX(work)->tx_len)) // CONNECT is already framed in tx; this flags it
         {
-            link_close(ctx);
+            link_close(work);
         }
         return;
 
@@ -1151,28 +1208,28 @@ static void link_step(struct MqttInternal *restrict ctx)
         if (hs != PROTOCORE_TLS_READY)
         {
             MQ_DBG("[mqtt] TLS handshake failed (%d)\n", (int)hs);
-            link_close(ctx);
+            link_close(work);
             return;
         }
-        ctx->store->link = MQTT_LINK_CONNACK;
-        if (!tx_arm(ctx, ctx->store->tx_len)) // CONNECT is already framed in tx; this flags it
+        MQTT_CTX(work)->link = MQTT_LINK_CONNACK;
+        if (!tx_arm(work, MQTT_CTX(work)->tx_len)) // CONNECT is already framed in tx; this flags it
         {
-            link_close(ctx);
+            link_close(work);
         }
     }
 #endif
         return;
 
     case MQTT_LINK_CONNACK:
-        process_rx(ctx);
-        if (ctx->store->session_up)
+        process_rx(work);
+        if (MQTT_CTX(work)->session_up)
         {
-            ctx->store->link = MQTT_LINK_IDLE;
-            ctx->store->last_tx_ms = Clock.ms;
+            MQTT_CTX(work)->link = MQTT_LINK_IDLE;
+            MQTT_CTX(work)->last_tx_ms = Clock.ms;
         }
-        else if (ctx->store->connack_code >= 0)
+        else if (MQTT_CTX(work)->connack_code >= 0)
         {
-            link_close(ctx); // the Server answered and refused (sec 3.2.2.3)
+            link_close(work); // the Server answered and refused (sec 3.2.2.3)
         }
         return;
 
@@ -1185,61 +1242,69 @@ static void link_step(struct MqttInternal *restrict ctx)
 // Transport: the calls
 // ---------------------------------------------------------------------------
 
-static void mqtt_on_message(struct MqttInternal *restrict ctx)
+static void mqtt_on_message(uint8_t *restrict work)
 {
-    ctx->store->on_message = ctx->ns->delivery.on_message;
-    ctx->ns->ok = PROTO_TRUE;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    MQTT_CTX(work)->on_message = Mqtt.delivery.on_message;
+    Mqtt.ok = PROTO_TRUE;
 }
 
-static void mqtt_connect(struct MqttInternal *restrict ctx)
+static void mqtt_connect(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->server.host || !ctx->ns->session.client_id)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Mqtt.ok = PROTO_FALSE;
+    if (!Mqtt.server.host || !Mqtt.session.client_id)
     {
         return;
     }
 #if !PROTOCORE_ENABLE_MQTT_TLS
-    if (ctx->ns->server.use_tls)
+    if (Mqtt.server.use_tls)
     {
         return; // built without mqtts:// support
     }
 #endif
-    if (!mem_bind(ctx))
+    if (!mem_bind(work))
     {
         return; // no storage: fail closed rather than build into nothing
     }
 
     // Every session-scoped field starts over.
-    mem.set(ctx->store->inflight, 0, sizeof(ctx->store->inflight));
-    mem.set(ctx->store->rx_packet_id, 0, sizeof(ctx->store->rx_packet_id));
-    ctx->store->rx_len = 0;
-    ctx->store->tx_len = 0;
-    ctx->store->tx_off = 0;
-    ctx->store->tx_ready = PROTO_FALSE;
-    ctx->store->closed = PROTO_FALSE;
-    ctx->store->session_up = PROTO_FALSE;
-    ctx->store->ping_pending = PROTO_FALSE;
-    ctx->store->connack_code = -1;
-    ctx->store->keep_alive = ctx->ns->session.keep_alive;
-    ctx->store->use_tls = ctx->ns->server.use_tls;
+    mem.set(MQTT_CTX(work)->inflight, 0, sizeof(MQTT_CTX(work)->inflight));
+    mem.set(MQTT_CTX(work)->rx_packet_id, 0, sizeof(MQTT_CTX(work)->rx_packet_id));
+    MQTT_CTX(work)->rx_len = 0;
+    MQTT_CTX(work)->tx_len = 0;
+    MQTT_CTX(work)->tx_off = 0;
+    MQTT_CTX(work)->tx_ready = PROTO_FALSE;
+    MQTT_CTX(work)->closed = PROTO_FALSE;
+    MQTT_CTX(work)->session_up = PROTO_FALSE;
+    MQTT_CTX(work)->ping_pending = PROTO_FALSE;
+    MQTT_CTX(work)->connack_code = -1;
+    MQTT_CTX(work)->keep_alive = Mqtt.session.keep_alive;
+    MQTT_CTX(work)->use_tls = Mqtt.server.use_tls;
 
     // Frame CONNECT now, while the caller's session and will members still hold: the payload
     // assembles in rx and the whole packet lands in tx, where it waits for the link.
-    bind_codec_buffers(ctx);
-    mqtt_build_connect(ctx);
-    if (ctx->ns->n == 0)
+    bind_codec_buffers(work);
+    mqtt_build_connect(work);
+    if (Mqtt.n == 0)
     {
         return;
     }
-    ctx->store->tx_len = ctx->ns->n;
+    MQTT_CTX(work)->tx_len = Mqtt.n;
 
-    ctx->store->link_budget_ms = PROTOCORE_MQTT_CONNECT_MS;
-    TcpClient.dial.host = ctx->ns->server.host;
-    TcpClient.dial.port = ctx->ns->server.port;
-    TcpClient.dial.timeout_ms = ctx->store->link_budget_ms;
-    TcpClient.open(TcpClient.internal);
-    ctx->store->cid = TcpClient.i32;
-    if (ctx->store->cid < 0)
+    MQTT_CTX(work)->link_budget_ms = PROTOCORE_MQTT_CONNECT_MS;
+    TcpClient.dial.host = Mqtt.server.host;
+    TcpClient.dial.port = Mqtt.server.port;
+    TcpClient.dial.timeout_ms = MQTT_CTX(work)->link_budget_ms;
+    TcpClient.open(protocore_tcp_client_span());
+    MQTT_CTX(work)->cid = TcpClient.i32;
+    if (MQTT_CTX(work)->cid < 0)
     {
         return;
     }
@@ -1247,33 +1312,37 @@ static void mqtt_connect(struct MqttInternal *restrict ctx)
 #if PROTOCORE_ENABLE_MQTT_TLS
     // Bind the session here, while host is still in scope. Its BIO reads the transport slot, so
     // nothing moves until the loop starts stepping the handshake.
-    if (ctx->store->use_tls && !protocore_tls_client_session_begin(ctx->ns->server.host, tls_send, tls_recv))
+    if (MQTT_CTX(work)->use_tls && !protocore_tls_client_session_begin(Mqtt.server.host, tls_send, tls_recv))
     {
-        link_close(ctx);
+        link_close(work);
         return;
     }
 #endif
 
-    ctx->store->link = MQTT_LINK_TCP;
-    ctx->store->timer = Clock.ms;
-    ctx->ns->ok = PROTO_TRUE; // started, not connected: step the loop and read connected()
+    MQTT_CTX(work)->link = MQTT_LINK_TCP;
+    MQTT_CTX(work)->timer = Clock.ms;
+    Mqtt.ok = PROTO_TRUE; // started, not connected: step the loop and read connected()
 }
 
-static void mqtt_publish(struct MqttInternal *restrict ctx)
+static void mqtt_publish(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->store->session_up || ctx->ns->message.qos > 2)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Mqtt.ok = PROTO_FALSE;
+    if (!MQTT_CTX(work)->session_up || Mqtt.message.qos > 2)
     {
         return;
     }
-    bind_codec_buffers(ctx);
-    ctx->ns->message.dup = PROTO_FALSE;
+    bind_codec_buffers(work);
+    Mqtt.message.dup = PROTO_FALSE;
 
-    if (ctx->ns->message.qos == 0)
+    if (Mqtt.message.qos == 0)
     {
-        ctx->ns->packet.packet_id = 0;
-        mqtt_build_publish(ctx);
-        ctx->ns->ok = ctx->ns->n != 0 && tx_arm(ctx, ctx->ns->n);
+        Mqtt.packet.packet_id = 0;
+        mqtt_build_publish(work);
+        Mqtt.ok = Mqtt.n != 0 && tx_arm(work, Mqtt.n);
         return;
     }
 
@@ -1283,7 +1352,7 @@ static void mqtt_publish(struct MqttInternal *restrict ctx)
     int slot = -1;
     for (int i = 0; i < PROTOCORE_MQTT_MAX_INFLIGHT; i++)
     {
-        if (ctx->store->inflight[i].state == MQTT_INFLIGHT_FREE)
+        if (MQTT_CTX(work)->inflight[i].state == MQTT_INFLIGHT_FREE)
         {
             slot = i;
             break;
@@ -1293,70 +1362,82 @@ static void mqtt_publish(struct MqttInternal *restrict ctx)
     {
         return; // the in-flight window is full
     }
-    uint16_t packet_id = next_packet_id(ctx);
-    ctx->ns->packet.packet_id = packet_id;
-    mqtt_build_publish(ctx);
-    if (ctx->ns->n == 0)
+    uint16_t packet_id = next_packet_id(work);
+    Mqtt.packet.packet_id = packet_id;
+    mqtt_build_publish(work);
+    if (Mqtt.n == 0)
     {
         return;
     }
-    ctx->store->inflight[slot].packet_id = packet_id;
-    ctx->store->inflight[slot].state = MQTT_INFLIGHT_ACK;
-    ctx->store->inflight[slot].len = ctx->ns->n;
-    ctx->store->inflight[slot].sent_ms = Clock.ms;
-    ctx->ns->ok = tx_arm(ctx, ctx->ns->n);
+    MQTT_CTX(work)->inflight[slot].packet_id = packet_id;
+    MQTT_CTX(work)->inflight[slot].state = MQTT_INFLIGHT_ACK;
+    MQTT_CTX(work)->inflight[slot].len = Mqtt.n;
+    MQTT_CTX(work)->inflight[slot].sent_ms = Clock.ms;
+    Mqtt.ok = tx_arm(work, Mqtt.n);
 }
 
-static void mqtt_subscribe(struct MqttInternal *restrict ctx)
+static void mqtt_subscribe(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->store->session_up)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Mqtt.ok = PROTO_FALSE;
+    if (!MQTT_CTX(work)->session_up)
     {
         return;
     }
-    bind_codec_buffers(ctx);
-    ctx->ns->packet.packet_id = next_packet_id(ctx);
-    mqtt_build_subscribe(ctx);
-    ctx->ns->ok = ctx->ns->n != 0 && tx_arm(ctx, ctx->ns->n);
+    bind_codec_buffers(work);
+    Mqtt.packet.packet_id = next_packet_id(work);
+    mqtt_build_subscribe(work);
+    Mqtt.ok = Mqtt.n != 0 && tx_arm(work, Mqtt.n);
 }
 
-static void mqtt_unsubscribe(struct MqttInternal *restrict ctx)
+static void mqtt_unsubscribe(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->store->session_up)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Mqtt.ok = PROTO_FALSE;
+    if (!MQTT_CTX(work)->session_up)
     {
         return;
     }
-    bind_codec_buffers(ctx);
-    ctx->ns->packet.packet_id = next_packet_id(ctx);
-    mqtt_build_unsubscribe(ctx);
-    ctx->ns->ok = ctx->ns->n != 0 && tx_arm(ctx, ctx->ns->n);
+    bind_codec_buffers(work);
+    Mqtt.packet.packet_id = next_packet_id(work);
+    mqtt_build_unsubscribe(work);
+    Mqtt.ok = Mqtt.n != 0 && tx_arm(work, Mqtt.n);
 }
 
-static void mqtt_loop(struct MqttInternal *restrict ctx)
+static void mqtt_loop(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     // A connect still coming up takes one step per call, and nothing below it runs until the Server
     // has answered: this is the tick the connect hands the link to.
-    if (ctx->store->link != MQTT_LINK_IDLE)
+    if (MQTT_CTX(work)->link != MQTT_LINK_IDLE)
     {
-        tx_drain(ctx); // CONNECT is framed and flagged from the first step; carry it out
-        link_step(ctx);
-        ctx->ns->ok = ctx->store->session_up;
+        tx_drain(work); // CONNECT is framed and flagged from the first step; carry it out
+        link_step(work);
+        Mqtt.ok = MQTT_CTX(work)->session_up;
         return;
     }
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->store->session_up)
+    Mqtt.ok = PROTO_FALSE;
+    if (!MQTT_CTX(work)->session_up)
     {
         return;
     }
-    tx_drain(ctx); // whatever the codec flagged last pass goes out before more arrives
-    process_rx(ctx);
-    if (ctx->store->closed)
+    tx_drain(work); // whatever the codec flagged last pass goes out before more arrives
+    process_rx(work);
+    if (MQTT_CTX(work)->closed)
     {
-        link_close(ctx);
+        link_close(work);
         return;
     }
-    if (!ctx->store->session_up)
+    if (!MQTT_CTX(work)->session_up)
     {
         return; // a protocol violation in the batch above already closed it (MQTT-4.8.0-1)
     }
@@ -1366,22 +1447,22 @@ static void mqtt_loop(struct MqttInternal *restrict ctx)
     // Keep Alive (sec 3.1.2.10): send PINGREQ once the interval has passed with nothing sent
     // (sec 3.12), and close the Network Connection when no PINGRESP comes back within another
     // interval, which sec 3.1.2.10 says a Client SHOULD do after a reasonable time (sec 3.13).
-    if (ctx->store->keep_alive)
+    if (MQTT_CTX(work)->keep_alive)
     {
-        uint32_t ka = (uint32_t)ctx->store->keep_alive * 1000u;
-        if (ctx->store->ping_pending && (now - ctx->store->ping_sent_ms) > ka)
+        uint32_t ka = (uint32_t)MQTT_CTX(work)->keep_alive * 1000u;
+        if (MQTT_CTX(work)->ping_pending && (now - MQTT_CTX(work)->ping_sent_ms) > ka)
         {
-            link_close(ctx);
+            link_close(work);
             return;
         }
-        if (!ctx->store->ping_pending && (now - ctx->store->last_tx_ms) >= ka)
+        if (!MQTT_CTX(work)->ping_pending && (now - MQTT_CTX(work)->last_tx_ms) >= ka)
         {
-            bind_codec_buffers(ctx);
-            mqtt_build_pingreq(ctx);
-            if (tx_arm(ctx, ctx->ns->n))
+            bind_codec_buffers(work);
+            mqtt_build_pingreq(work);
+            if (tx_arm(work, Mqtt.n))
             {
-                ctx->store->ping_pending = PROTO_TRUE;
-                ctx->store->ping_sent_ms = now;
+                MQTT_CTX(work)->ping_pending = PROTO_TRUE;
+                MQTT_CTX(work)->ping_sent_ms = now;
             }
         }
     }
@@ -1392,82 +1473,98 @@ static void mqtt_loop(struct MqttInternal *restrict ctx)
     // (MQTT-4.3.3-1 forbids resending the PUBLISH once PUBREL has gone).
     for (int i = 0; i < PROTOCORE_MQTT_MAX_INFLIGHT; i++)
     {
-        if (ctx->store->inflight[i].state == MQTT_INFLIGHT_FREE)
+        if (MQTT_CTX(work)->inflight[i].state == MQTT_INFLIGHT_FREE)
         {
             continue;
         }
-        if ((now - ctx->store->inflight[i].sent_ms) < PROTOCORE_MQTT_RETRANSMIT_MS)
+        if ((now - MQTT_CTX(work)->inflight[i].sent_ms) < PROTOCORE_MQTT_RETRANSMIT_MS)
         {
             continue;
         }
-        if (ctx->store->inflight[i].state == MQTT_INFLIGHT_ACK)
+        if (MQTT_CTX(work)->inflight[i].state == MQTT_INFLIGHT_ACK)
         {
             // One packet is in flight at a time, so tx holds that PUBLISH.
-            ctx->store->tx[0] |= MQ_PUB_DUP;
-            if (!tx_arm(ctx, ctx->store->inflight[i].len))
+            MQTT_CTX(work)->tx[0] |= MQ_PUB_DUP;
+            if (!tx_arm(work, MQTT_CTX(work)->inflight[i].len))
             {
                 continue; // still going out; the next pass retries
             }
         }
-        else if (!send_ack(ctx, MQTT_PUBREL, ctx->store->inflight[i].packet_id))
+        else if (!send_ack(work, MQTT_PUBREL, MQTT_CTX(work)->inflight[i].packet_id))
         {
             continue; // still going out; the next pass retries
         }
-        ctx->store->inflight[i].sent_ms = now;
+        MQTT_CTX(work)->inflight[i].sent_ms = now;
     }
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.ok = PROTO_TRUE;
 }
 
-static void mqtt_connected(struct MqttInternal *restrict ctx)
+static void mqtt_connected(uint8_t *restrict work)
 {
-    ctx->ns->ok = ctx->store->session_up;
-}
-
-static void mqtt_disconnect(struct MqttInternal *restrict ctx)
-{
-    if (ctx->store->cid >= 0 && ctx->store->session_up)
+    if (!work)
     {
-        bind_codec_buffers(ctx);
-        mqtt_build_disconnect(ctx);
-        (void)tx_arm(ctx, ctx->ns->n);
+        return; // the pool was short of this module's borrow
     }
-    link_close(ctx);
-    ctx->ns->ok = PROTO_TRUE;
+    Mqtt.ok = MQTT_CTX(work)->session_up;
+}
+
+static void mqtt_disconnect(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    if (MQTT_CTX(work)->cid >= 0 && MQTT_CTX(work)->session_up)
+    {
+        bind_codec_buffers(work);
+        mqtt_build_disconnect(work);
+        (void)tx_arm(work, Mqtt.n);
+    }
+    link_close(work);
+    Mqtt.ok = PROTO_TRUE;
 }
 
 #else // no network stack: the codec still builds, the transport refuses
 
-static void mqtt_on_message(struct MqttInternal *restrict ctx)
+static void mqtt_on_message(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    Mqtt.ok = PROTO_FALSE;
 }
-static void mqtt_connect(struct MqttInternal *restrict ctx)
+static void mqtt_connect(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    Mqtt.ok = PROTO_FALSE;
 }
-static void mqtt_publish(struct MqttInternal *restrict ctx)
+static void mqtt_publish(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    Mqtt.ok = PROTO_FALSE;
 }
-static void mqtt_subscribe(struct MqttInternal *restrict ctx)
+static void mqtt_subscribe(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    Mqtt.ok = PROTO_FALSE;
 }
-static void mqtt_unsubscribe(struct MqttInternal *restrict ctx)
+static void mqtt_unsubscribe(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    Mqtt.ok = PROTO_FALSE;
 }
-static void mqtt_loop(struct MqttInternal *restrict ctx)
+static void mqtt_loop(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    Mqtt.ok = PROTO_FALSE;
 }
-static void mqtt_connected(struct MqttInternal *restrict ctx)
+static void mqtt_connected(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    Mqtt.ok = PROTO_FALSE;
 }
-static void mqtt_disconnect(struct MqttInternal *restrict ctx)
+static void mqtt_disconnect(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    Mqtt.ok = PROTO_FALSE;
 }
 
 #endif // PROTOCORE_HAS_NET_STACK
@@ -1494,7 +1591,6 @@ MqttNs Mqtt = {.encode_remaining_length = mqtt_encode_remaining_length,
                .unsubscribe = mqtt_unsubscribe,
                .loop = mqtt_loop,
                .connected = mqtt_connected,
-               .disconnect = mqtt_disconnect,
-               .internal = &s_mqtt};
+               .disconnect = mqtt_disconnect};
 
 #endif // PROTOCORE_ENABLE_MQTT

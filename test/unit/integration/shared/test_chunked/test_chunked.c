@@ -11,6 +11,8 @@
 #include "rx_feed.h"
 #include <unity.h>
 
+static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
+
 static int g_log_status;
 static int g_log_len;
 static void log_cb(const char *method, const char *path, int status, int body_len)
@@ -367,7 +369,7 @@ void test_hex_u32_size_line()
     char out[8];
     Hex.args.v = 0;
     Hex.io.out = out;
-    Hex.u32(Hex.internal);
+    Hex.u32(hex_work);
     TEST_ASSERT_EQUAL_size_t(1, (size_t)Hex.u8);
     TEST_ASSERT_EQUAL_HEX8('0', out[0]);
 
@@ -378,7 +380,7 @@ void test_hex_u32_size_line()
         int rn = snprintf(ref, sizeof(ref), "%x", (unsigned)vals[i]);
         Hex.args.v = vals[i];
         Hex.io.out = out;
-        Hex.u32(Hex.internal);
+        Hex.u32(hex_work);
         TEST_ASSERT_EQUAL_size_t((size_t)rn, (size_t)Hex.u8);
         TEST_ASSERT_EQUAL_MEMORY(ref, out, (size_t)Hex.u8);
     }

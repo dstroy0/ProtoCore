@@ -103,9 +103,6 @@ typedef struct
     const uint8_t *pin; ///< 32 octets: the SHA-256 of the peer certificate's DER; null clears
 } HttpVerifyArgs;
 
-/** @brief The client's own state and the calls that reach it, described only in http_client.c. */
-struct HttpClientInternal;
-
 /**
  * @brief The HTTP user agent (RFC 9110 sec 3.5).
  *
@@ -134,7 +131,6 @@ struct HttpClientInternal;
  * @var HttpClientNs::set_ca            install the trust anchor an https handshake verifies against
  * @var HttpClientNs::set_pin           install the certificate pin an https handshake verifies against
  * @var HttpClientNs::clear_verify      drop both, back to encrypt-only
- * @var HttpClientNs::internal          the client's state and the calls that reach it
  */
 typedef struct
 {
@@ -150,20 +146,31 @@ typedef struct
     size_t body_len;
     const uint8_t *body;
 
-    void (*parse_target_uri)(struct HttpClientInternal *ctx);
-    void (*build_request)(struct HttpClientInternal *ctx);
-    void (*parse_response)(struct HttpClientInternal *ctx);
-    void (*get)(struct HttpClientInternal *ctx);
-    void (*post)(struct HttpClientInternal *ctx);
-    void (*set_ca)(struct HttpClientInternal *ctx);
-    void (*set_pin)(struct HttpClientInternal *ctx);
-    void (*clear_verify)(struct HttpClientInternal *ctx);
-
-    struct HttpClientInternal *internal;
+    void (*const parse_target_uri)(uint8_t *restrict work);
+    void (*const build_request)(uint8_t *restrict work);
+    void (*const parse_response)(uint8_t *restrict work);
+    void (*const get)(uint8_t *restrict work);
+    void (*const post)(uint8_t *restrict work);
+    void (*const set_ca)(uint8_t *restrict work);
+    void (*const set_pin)(uint8_t *restrict work);
+    void (*const clear_verify)(uint8_t *restrict work);
 } HttpClientNs;
 
 /** @brief The one symbol this module exports. */
 extern HttpClientNs HttpClient;
+
+/**
+ * @brief The PROTOCORE_HTTP_CLIENT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+#if PROTOCORE_HAS_NET_STACK
+uint8_t *protocore_http_client_span(void);
+#endif // PROTOCORE_HAS_NET_STACK
 
 PROTOCORE_END_DECLS
 

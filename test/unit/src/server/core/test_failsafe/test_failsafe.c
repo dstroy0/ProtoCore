@@ -22,7 +22,7 @@
 
 void setUp(void)
 {
-    Failsafe.reset(Failsafe.internal);
+    Failsafe.reset(protocore_failsafe_span());
 }
 void tearDown(void)
 {
@@ -33,7 +33,7 @@ static int add(const char *name, uint32_t deadline_ms, uint32_t now)
     Failsafe.args.name = name;
     Failsafe.args.deadline_ms = deadline_ms;
     Failsafe.args.now = now;
-    Failsafe.add(Failsafe.internal);
+    Failsafe.add(protocore_failsafe_span());
     return Failsafe.i32;
 }
 
@@ -41,14 +41,14 @@ static proto_bool feed(int id, uint32_t now)
 {
     Failsafe.args.id = id;
     Failsafe.args.now = now;
-    Failsafe.feed(Failsafe.internal);
+    Failsafe.feed(protocore_failsafe_span());
     return Failsafe.ok;
 }
 
 static uint32_t check(uint32_t now)
 {
     Failsafe.args.now = now;
-    Failsafe.check(Failsafe.internal);
+    Failsafe.check(protocore_failsafe_span());
     return Failsafe.breached;
 }
 
@@ -59,7 +59,7 @@ static const char *report(uint32_t now)
     Failsafe.args.now = now;
     Failsafe.out_args.out = g_json;
     Failsafe.out_args.cap = sizeof(g_json);
-    Failsafe.json(Failsafe.internal);
+    Failsafe.json(protocore_failsafe_span());
     return g_json;
 }
 
@@ -82,7 +82,7 @@ static void install(protocore_failsafe_cb cb)
     g_last_name = NULL;
     Failsafe.out_args.cb = cb;
     Failsafe.out_args.arg = NULL;
-    Failsafe.on_breach(Failsafe.internal);
+    Failsafe.on_breach(protocore_failsafe_span());
 }
 
 // overdue is (uint32_t)(now - last_feed) > deadline, so the gap is the modular difference.
@@ -227,7 +227,7 @@ void test_the_report_stays_inside_its_buffer(void)
     Failsafe.args.now = 500u;
     Failsafe.out_args.out = small;
     Failsafe.out_args.cap = sizeof(small);
-    Failsafe.json(Failsafe.internal);
+    Failsafe.json(protocore_failsafe_span());
     TEST_ASSERT_LESS_THAN_size_t(sizeof(small), strlen(small));
     TEST_ASSERT_EQUAL_INT((int)strlen(small), Failsafe.n);
 }
@@ -240,12 +240,12 @@ void test_the_report_refuses_null_and_zero_capacity(void)
     Failsafe.args.now = 0u;
     Failsafe.out_args.out = NULL;
     Failsafe.out_args.cap = sizeof(buf);
-    Failsafe.json(Failsafe.internal);
+    Failsafe.json(protocore_failsafe_span());
     TEST_ASSERT_EQUAL_INT(0, Failsafe.n);
 
     Failsafe.out_args.out = buf;
     Failsafe.out_args.cap = 0;
-    Failsafe.json(Failsafe.internal);
+    Failsafe.json(protocore_failsafe_span());
     TEST_ASSERT_EQUAL_INT(0, Failsafe.n);
     TEST_ASSERT_EQUAL_CHAR('x', buf[0]);
 }
@@ -256,7 +256,7 @@ void test_reset_empties_the_registry_and_drops_the_callback(void)
 {
     install(on_breach);
     const int id = add("motor", 100u, 0u);
-    Failsafe.reset(Failsafe.internal);
+    Failsafe.reset(protocore_failsafe_span());
     TEST_ASSERT_EQUAL_HEX32(0u, check(100000u));
     TEST_ASSERT_EQUAL_INT(0, g_fires);
     TEST_ASSERT_FALSE(feed(id, 0u));

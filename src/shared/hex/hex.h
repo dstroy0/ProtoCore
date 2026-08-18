@@ -56,9 +56,6 @@ typedef struct
     uint32_t cap;      ///< how much room that has
 } HexIoArgs;
 
-/** @brief The digit tables and the calls that read them, described only in hex.c. */
-struct HexInternal;
-
 /**
  * @brief Hex digits, and the conversions both directions.
  *
@@ -76,7 +73,6 @@ struct HexInternal;
  * @var HexNs::u32       render a value as lowercase hex, most significant digit first
  * @var HexNs::encode    render a byte run as hex characters plus a NUL
  * @var HexNs::decode    read a hex run back into bytes
- * @var HexNs::internal  the digit tables and the calls that read them
  *
  * u32 writes no `0x` prefix, no NUL, and no leading zeros, which is the form the HTTP/1.1 chunked
  * size line takes; zero renders as a single "0" and @c io.out needs room for 8 characters.
@@ -95,13 +91,11 @@ typedef struct
     uint8_t u8;
     int32_t i32;
 
-    void (*digit)(struct HexInternal *ctx);
-    void (*val)(struct HexInternal *ctx);
-    void (*u32)(struct HexInternal *ctx);
-    void (*encode)(struct HexInternal *ctx);
-    void (*decode)(struct HexInternal *ctx);
-
-    struct HexInternal *internal;
+    void (*const digit)(uint8_t *restrict work);
+    void (*const val)(uint8_t *restrict work);
+    void (*const u32)(uint8_t *restrict work);
+    void (*const encode)(uint8_t *restrict work);
+    void (*const decode)(uint8_t *restrict work);
 } HexNs;
 
 /** @brief The one symbol this module exports. */

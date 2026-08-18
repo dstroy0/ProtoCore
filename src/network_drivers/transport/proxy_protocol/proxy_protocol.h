@@ -25,11 +25,15 @@
 #ifndef PROTOCORE_PROXY_PROTOCOL_H
 #define PROTOCORE_PROXY_PROTOCOL_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_PROXY_PROTOCOL
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define PROXY_V2_SIG_LEN 12         ///< v2 signature length
 #define PROXY_V2_VER_CMD_PROXY 0x21 ///< version 2 | PROXY command
@@ -47,20 +51,81 @@ typedef struct
     uint16_t dst_port;
 } ProxyInfo;
 
+/** @brief What parse takes: buf, len, out, consumed. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    ProxyInfo *out;
+    size_t *consumed; ///< receives the header length so the caller can skip it before the stream
+} ProxyProtocolParseArgs;
+
+/** @brief What v1_build takes: buf, cap, src_addr, dst_addr, ... */
+typedef struct
+{
+    char *buf;
+    size_t cap;
+    uint32_t src_addr;
+    uint32_t dst_addr;
+    uint16_t src_port;
+    uint16_t dst_port;
+} ProxyProtocolV1BuildArgs;
+
+/** @brief What v2_build takes: buf, cap, src_addr, dst_addr, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint32_t src_addr;
+    uint32_t dst_addr;
+    uint16_t src_port;
+    uint16_t dst_port;
+} ProxyProtocolV2BuildArgs;
+
 /**
- * @brief Detect + parse a PROXY header (v1 or v2) at the head of [buf, buf+len).
- * @param consumed receives the header length so the caller can skip it before the stream.
- * @return true if a complete v1/v2 header was parsed; false if absent or not fully buffered.
+ * @brief HAProxy PROXY protocol codec (PROTOCORE_ENABLE_PROXY_PROTOCOL) - zero-heap parser + builder for the v1 (text)
+ * and v2 (binary) headers a load balancer / proxy prepends, so the server can recover the real client IPv4 when it sits
+ * behind one.
+ *
+ * A caller sets the members a call takes, invokes it through ::ProxyProtocol with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   ProxyProtocol.parse_args.buf = ...;
+ *   ProxyProtocol.parse_args.len = ...;
+ *   ProxyProtocol.parse_args.out = ...;
+ *   ProxyProtocol.parse_args.consumed = ...;
+ *   ProxyProtocol.parse(work);
+ *   // ProxyProtocol.ok is what the call reports
+ *
+ * @var ProxyProtocolNs::parse_args  what parse takes: buf, len, out, consumed
+ * @var ProxyProtocolNs::v1_build_args  what v1_build takes: buf, cap, src_addr, dst_addr,
+ * @var ProxyProtocolNs::v2_build_args  what v2_build takes: buf, cap, src_addr, dst_addr,
+ * @var ProxyProtocolNs::ok  true if a complete v1/v2 header was parsed; false if absent or not ...
+ * @var ProxyProtocolNs::n  the count a call reports
+ * @var ProxyProtocolNs::parse  detect + parse a PROXY header (v1 or v2) at the head of [buf, ...
+ * @var ProxyProtocolNs::v1_build  build a v1 (text) TCP4 header. Returns bytes written (excluding ...
+ * @var ProxyProtocolNs::v2_build  build a v2 (binary) TCP/IPv4 PROXY header. Returns 28, or 0 on ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool proxy_parse(const uint8_t *buf, size_t len, ProxyInfo *out, size_t *consumed);
+typedef struct
+{
+    ProxyProtocolParseArgs parse_args;
+    ProxyProtocolV1BuildArgs v1_build_args;
+    ProxyProtocolV2BuildArgs v2_build_args;
 
-/** @brief Build a v1 (text) TCP4 header. Returns bytes written (excluding NUL), or 0. */
-size_t proxy_v1_build(char *buf, size_t cap, uint32_t src_addr, uint32_t dst_addr, uint16_t src_port,
-                      uint16_t dst_port);
+    proto_bool ok;
+    size_t n;
 
-/** @brief Build a v2 (binary) TCP/IPv4 PROXY header. Returns 28, or 0 on overflow. */
-size_t proxy_v2_build(uint8_t *buf, size_t cap, uint32_t src_addr, uint32_t dst_addr, uint16_t src_port,
-                      uint16_t dst_port);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const v1_build)(uint8_t *restrict work);
+    void (*const v2_build)(uint8_t *restrict work);
+} ProxyProtocolNs;
+
+/** @brief The one symbol this module exports. */
+extern ProxyProtocolNs ProxyProtocol;
 
 PROTOCORE_END_DECLS
 

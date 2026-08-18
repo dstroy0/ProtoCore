@@ -30,13 +30,15 @@
 #ifndef PROTOCORE_LORA_H
 #define PROTOCORE_LORA_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_LORA
 
 PROTOCORE_BEGIN_DECLS
 
-// --- Codec: the RadioHead RH_RF95 4-byte header ---------------------------------------
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief RadioHead-compatible LoRa frame header (precedes the payload). */
 typedef struct
@@ -47,26 +49,9 @@ typedef struct
     uint8_t flags; ///< application flags
 } protocore_lora_header;
 
-/**
- * @brief Split a received frame into its header and payload.
- * @param[out] payload set to the first payload byte (points into @p raw).
- * @param[out] payload_len set to the payload length.
- * @return true; false if @p raw is shorter than the 4-byte header.
- */
-proto_bool protocore_lora_frame_parse(const uint8_t *raw, uint16_t len, protocore_lora_header *hdr,
-                                      const uint8_t **payload, uint16_t *payload_len);
-
-/**
- * @brief Build a frame (header + payload) into @p out.
- * @return the total frame length, or 0 if it would not fit @p cap or exceeds the payload max.
- */
-uint16_t protocore_lora_frame_build(const protocore_lora_header *hdr, const uint8_t *payload, uint16_t len,
-                                    uint8_t *out, uint16_t cap);
-
-// --- Driver: SX127x over a register-access bus ----------------------------------------
-
 /** @brief Read one SX127x register (@p reg is the bare 7-bit address). */
 typedef uint8_t (*protocore_lora_reg_read_fn)(uint8_t reg, void *ctx);
+
 /** @brief Write one SX127x register (@p reg is the bare 7-bit address). */
 typedef void (*protocore_lora_reg_write_fn)(uint8_t reg, uint8_t val, void *ctx);
 
@@ -89,32 +74,123 @@ typedef struct
     uint8_t tx_power;    ///< PA_BOOST power 2..17 dBm.
 } protocore_lora_config;
 
-/**
- * @brief Initialize the SX127x: verify the chip, switch to LoRa mode, and apply @p cfg.
- * @return true; false if the register at RegVersion is not the SX127x id (0x12) - i.e. the
- *         bus is not talking to the chip.
- */
-proto_bool protocore_lora_init(const protocore_lora_bus *bus, const protocore_lora_config *cfg);
+/** @brief What frame_parse takes: raw, len, hdr, payload, payload_len. */
+typedef struct
+{
+    const uint8_t *raw;
+    uint16_t len;
+    protocore_lora_header *hdr;
+    const uint8_t **payload;
+    uint16_t *payload_len;
+} LoraFrameParseArgs;
+
+/** @brief What frame_build takes: hdr, payload, len, out, cap. */
+typedef struct
+{
+    const protocore_lora_header *hdr;
+    const uint8_t *payload;
+    uint16_t len;
+    uint8_t *out;
+    uint16_t cap;
+} LoraFrameBuildArgs;
+
+/** @brief What init takes: bus, cfg. */
+typedef struct
+{
+    const protocore_lora_bus *bus;
+    const protocore_lora_config *cfg;
+} LoraInitArgs;
+
+/** @brief What send takes: bus, frame, len. */
+typedef struct
+{
+    const protocore_lora_bus *bus;
+    const uint8_t *frame;
+    uint8_t len;
+} LoraSendArgs;
+
+/** @brief What tx_done takes: bus. */
+typedef struct
+{
+    const protocore_lora_bus *bus;
+} LoraTxDoneArgs;
+
+/** @brief What set_rx takes: bus. */
+typedef struct
+{
+    const protocore_lora_bus *bus;
+} LoraSetRxArgs;
+
+/** @brief What recv takes: bus, buf, cap, rssi. */
+typedef struct
+{
+    const protocore_lora_bus *bus;
+    uint8_t *buf;
+    uint8_t cap;
+    int16_t *rssi;
+} LoraRecvArgs;
 
 /**
- * @brief Load @p frame into the FIFO and start a transmit (the radio returns to standby on
- *        TxDone). Poll protocore_lora_tx_done() for completion.
- * @return true; false if @p len exceeds PROTOCORE_LORA_MAX_PAYLOAD + 4.
+ * @brief LoRa radio codec + driver (PROTOCORE_ENABLE_LORA) - Semtech SX127x / RFM95-96.
+ *
+ * A caller sets the members a call takes, invokes it through ::Lora with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Lora.frame_parse_args.raw = ...;
+ *   Lora.frame_parse_args.len = ...;
+ *   Lora.frame_parse_args.hdr = ...;
+ *   Lora.frame_parse_args.payload = ...;
+ *   Lora.frame_parse_args.payload_len = ...;
+ *   Lora.frame_parse(work);
+ *   // Lora.ok is what the call reports
+ *
+ * @var LoraNs::frame_parse_args  what frame_parse takes: raw, len, hdr, payload, payload_len
+ * @var LoraNs::frame_build_args  what frame_build takes: hdr, payload, len, out, cap
+ * @var LoraNs::init_args  what init takes: bus, cfg
+ * @var LoraNs::send_args  what send takes: bus, frame, len
+ * @var LoraNs::tx_done_args  what tx_done takes: bus
+ * @var LoraNs::set_rx_args  what set_rx takes: bus
+ * @var LoraNs::recv_args  what recv takes: bus, buf, cap, rssi
+ * @var LoraNs::ok  true; false if raw is shorter than the 4-byte header
+ * @var LoraNs::value  the total frame length, or 0 if it would not fit cap or exceeds the ...
+ * @var LoraNs::n  the frame length (>=0), or -1 if no frame is ready or the CRC failed
+ * @var LoraNs::frame_parse  split a received frame into its header and payload
+ * @var LoraNs::frame_build  build a frame (header + payload) into out
+ * @var LoraNs::init  initialize the SX127x: verify the chip, switch to LoRa mode, and ...
+ * @var LoraNs::send  load frame into the FIFO and start a transmit (the radio returns to ...
+ * @var LoraNs::tx_done  true once a transmit has finished (RegIrqFlags TxDone); clears the ...
+ * @var LoraNs::set_rx  put the radio in continuous-receive mode (call once, then poll ...
+ * @var LoraNs::recv  if a frame has been received, copy it into buf and report its RSSI
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_lora_send(const protocore_lora_bus *bus, const uint8_t *frame, uint8_t len);
+typedef struct
+{
+    LoraFrameParseArgs frame_parse_args;
+    LoraFrameBuildArgs frame_build_args;
+    LoraInitArgs init_args;
+    LoraSendArgs send_args;
+    LoraTxDoneArgs tx_done_args;
+    LoraSetRxArgs set_rx_args;
+    LoraRecvArgs recv_args;
 
-/** @brief True once a transmit has finished (RegIrqFlags TxDone); clears the flag. */
-proto_bool protocore_lora_tx_done(const protocore_lora_bus *bus);
+    proto_bool ok;
+    uint16_t value;
+    int n;
 
-/** @brief Put the radio in continuous-receive mode (call once, then poll protocore_lora_recv()). */
-void protocore_lora_set_rx(const protocore_lora_bus *bus);
+    void (*const frame_parse)(uint8_t *restrict work);
+    void (*const frame_build)(uint8_t *restrict work);
+    void (*const init)(uint8_t *restrict work);
+    void (*const send)(uint8_t *restrict work);
+    void (*const tx_done)(uint8_t *restrict work);
+    void (*const set_rx)(uint8_t *restrict work);
+    void (*const recv)(uint8_t *restrict work);
+} LoraNs;
 
-/**
- * @brief If a frame has been received, copy it into @p buf and report its RSSI.
- * @param[out] rssi set to the packet RSSI in dBm (may be null).
- * @return the frame length (>=0), or -1 if no frame is ready or the CRC failed.
- */
-int protocore_lora_recv(const protocore_lora_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi);
+/** @brief The one symbol this module exports. */
+extern LoraNs Lora;
 
 PROTOCORE_END_DECLS
 

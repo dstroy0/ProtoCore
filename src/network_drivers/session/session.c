@@ -18,11 +18,14 @@
 #include "network_drivers/session/session.h"
 #include "mmgr/plaintext.h"
 #include "network_drivers/presentation/presentation.h" // http_req_start_ms: the request deadline a first byte arms
-#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot an event names
-#include "network_drivers/transport/tcp/server/server.h"     // TcpListener: the queues this tick drains
-#include "network_drivers/transport/udp/server/server.h"     // UdpListener: the datagram rings this tick drains
-#include "server/clock/clock.h"                              // Clock.ms: the pass stamp an arm takes
+#include "network_drivers/presentation/ssh/network/network.h" // SshNetwork.owns: which SSH slot this stream carries
+#include "network_drivers/transport/tcp/protocol/protocol.h"  // ConnPool: the slot an event names
+#include "network_drivers/transport/tcp/server/server.h"      // TcpListener: the queues this tick drains
+#include "network_drivers/transport/udp/server/server.h"      // UdpListener: the datagram rings this tick drains
+#include "server/clock/clock.h"                               // Clock.ms: the pass stamp an arm takes
 #include "server/core/proto_handler.h"
+#include "server/storage/filesystem.h" // Fs: the source a released transfer still holds open
+
 
 // This layer is protocol-agnostic: it owns the dispatch mechanism only (register / look up /
 // route / drain) and names no protocol. Each protocol's handler lives in its own module and is
@@ -44,6 +47,15 @@ uint8_t http_h2[CONN_POOL_SLOTS];
 uint8_t http_h2_checked[CONN_POOL_SLOTS];
 uint32_t http_h2_stream[CONN_POOL_SLOTS];
 #endif
+#if PROTOCORE_ENABLE_FILE_SERVING
+FileSend file_send[CONN_POOL_SLOTS];
+#endif
+#if PROTOCORE_ENABLE_SSH_SCP
+ScpConn scp_conns[MAX_SSH_CONNS];
+#endif
+#if PROTOCORE_ENABLE_SSH_SFTP
+SftpSession sftp_sess[MAX_SSH_CONNS];
+#endif
 #if PROTOCORE_ENABLE_HTTP3
 uint8_t http_h3[CONN_POOL_SLOTS];
 uint32_t http_h3_conn_id[CONN_POOL_SLOTS];
@@ -55,68 +67,136 @@ struct SessionStorage
     const ProtoHandler *proto_handlers[PROTO_MAX_HANDLERS];
 };
 
-/**
- * @brief The layer's state and the calls that reach it - what SessionNs points at.
- *
- * @var SessionInternal::store  the per-protocol handler table
- * @var SessionInternal::ns     the handle a caller sets a call's members on
- */
-struct SessionInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SESSION_OFF_CTX 0u
+static_assert(SESSION_OFF_CTX + sizeof(struct SessionStorage) <= PROTOCORE_SESSION_BORROW,
+              "PROTOCORE_SESSION_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define SESSION_CTX(w) ((struct SessionStorage *)(void *)((w) + SESSION_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct SessionStorage *store;
-    SessionNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_SESSION_BORROW persistent bytes, or null while the pool was short
+} SessionOwnCtx;
+static SessionOwnCtx s_own;
 
-static struct SessionStorage s_store;
-
-static struct SessionInternal s_session = {.store = &s_store, .ns = &Session};
-
-/**
- * @brief The registry's table and the calls that reach it - what ProtoRegistryNs points at.
- *
- * @var ProtoRegistryInternal::ns  the handle a caller sets a call's members on
- */
-struct ProtoRegistryInternal
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_session_span(void)
 {
-    ProtoRegistryNs *ns;
-};
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SESSION_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
-static struct ProtoRegistryInternal s_registry = {.ns = &Protocols};
-
-static void proto_builtins(struct ProtoRegistryInternal *restrict ctx)
+static void proto_builtins(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
     protocore_register_builtins();
 }
 
-static void proto_register(struct ProtoRegistryInternal *restrict ctx)
+static void proto_register(uint8_t *restrict work)
 {
-    if ((unsigned)ctx->ns->proto < PROTO_MAX_HANDLERS)
+    if (!work)
     {
-        s_store.proto_handlers[(unsigned)ctx->ns->proto] = ctx->ns->h;
+        return; // the pool was short of the session borrow
+    }
+    if ((unsigned)Protocols.proto < PROTO_MAX_HANDLERS)
+    {
+        SESSION_CTX(work)->proto_handlers[(unsigned)Protocols.proto] = Protocols.h;
     }
 }
 
-static void proto_get(struct ProtoRegistryInternal *restrict ctx)
+static void proto_get(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        Protocols.handler = NULL;
+        return; // the pool was short of the session borrow
+    }
     // The protocol asked for, read before the bootstrap below can touch it. Registering the
     // built-ins runs back through THIS namespace - protocore_builtins.c sets Protocols.proto once
-    // per entry - so a lookup that read ctx->ns->proto afterwards would answer for whichever
+    // per entry - so a lookup that read Protocols.proto afterwards would answer for whichever
     // protocol happened to register last instead of the one the caller named.
-    const ProtoConn want = ctx->ns->proto;
+    const ProtoConn want = Protocols.proto;
 
     // Install the built-ins on first lookup so dispatch works before begin() (the native test
     // harness drives server_tick() directly). The list itself lives in protocore_builtins.c -
     // this dispatcher names no protocol; it just knows PROTO_HTTP is always registered, and
     // uses that as the "already bootstrapped" sentinel.
-    if (!s_store.proto_handlers[(unsigned)PROTO_HTTP])
+    if (!SESSION_CTX(work)->proto_handlers[(unsigned)PROTO_HTTP])
     {
         protocore_register_builtins();
-        ctx->ns->proto = want; // the handle names what the caller asked for, not the last built-in
+        Protocols.proto = want; // the handle names what the caller asked for, not the last built-in
     }
     // No implicit fallback: a slot must carry an explicit, registered protocol.
     // PROTO_NONE and any unregistered protocol resolve to NULL (event dropped).
-    ctx->ns->handler = ((unsigned)want < PROTO_MAX_HANDLERS) ? s_store.proto_handlers[(unsigned)want] : NULL;
+    Protocols.handler =
+        ((unsigned)want < PROTO_MAX_HANDLERS) ? SESSION_CTX(work)->proto_handlers[(unsigned)want] : NULL;
+}
+
+// The connection is over, so everything it carried between its requests is released here. This
+// layer opens and closes the connection, so it is the one that decides a slot's state is finished -
+// an application that polled the transport to work that out for itself would be deciding the
+// connection's life from above it.
+static void conn_release(uint8_t slot)
+{
+    http_req_start_ms[slot] = 0;
+#if PROTOCORE_ENABLE_FILE_SERVING
+    if (file_send[slot].active)
+    {
+        Fs.io.handle = file_send[slot].fh; // the source outlived the connection reading it
+        Fs.close(protocore_filesystem_span());
+        file_send[slot].active = PROTO_FALSE;
+    }
+#endif
+#if PROTOCORE_ENABLE_SSH_SCP || PROTOCORE_ENABLE_SSH_SFTP
+    // An SSH slot is its own index, bound to a stream slot rather than equal to it, so the SSH
+    // slot this connection carries is the one that answers owns() for it. MAX_SSH_CONNS is the
+    // whole pool, so the walk is bounded by the pool and not by the arrival rate.
+    for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
+    {
+        SshNetwork.ssh_slot = i;
+        SshNetwork.conn_slot = slot;
+        SshNetwork.owns(SshNetwork.internal);
+        if (!SshNetwork.ok)
+        {
+            continue;
+        }
+#if PROTOCORE_ENABLE_SSH_SCP
+        if (scp_conns[i].active)
+        {
+            Fs.io.handle = scp_conns[i].fh; // the destination outlived the transfer writing it
+            Fs.close(protocore_filesystem_span());
+            scp_conns[i].fh = -1;
+            scp_conns[i].active = PROTO_FALSE;
+        }
+#endif
+#if PROTOCORE_ENABLE_SSH_SFTP
+        while (sftp_sess[i].open_mask != 0)
+        {
+            const int h = __builtin_ctz(sftp_sess[i].open_mask);
+            Fs.io.handle = sftp_sess[i].handles[h].fh;
+            Fs.close(protocore_filesystem_span());
+            sftp_sess[i].open_mask &= ~(1u << h);
+        }
+        sftp_sess[i].active = PROTO_FALSE;
+#endif
+    }
+#endif
 }
 
 // Dispatch one drained event to its slot's protocol handler. Shared by the
@@ -132,9 +212,9 @@ static inline void dispatch_event(const TcpEvt *evt)
     // HttpRoute to the slot's protocol handler. PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.
     ConnPool.slot = evt->slot_id;
-    ConnPool.proto_of(ConnPool.internal);
+    ConnPool.proto_of(protocore_conn_pool_span());
     Protocols.proto = ConnPool.proto;
-    proto_get(Protocols.internal);
+    proto_get(protocore_session_span());
     const ProtoHandler *h = Protocols.handler;
     if (!h)
     {
@@ -166,6 +246,7 @@ static inline void dispatch_event(const TcpEvt *evt)
         {
             h->on_close(evt->slot_id);
         }
+        conn_release(evt->slot_id);
         break;
     case EVT_ERROR:
         // RFC 9293 sec 3.6 MUST-12: the application is told whether the connection closed normally
@@ -179,12 +260,14 @@ static inline void dispatch_event(const TcpEvt *evt)
         {
             h->on_close(evt->slot_id);
         }
+        conn_release(evt->slot_id);
         break;
     }
 }
 
-static void server_tick(struct SessionInternal *restrict ctx)
+static void server_tick(uint8_t *restrict work)
 {
+    (void)work;
     /*
      * Check timeouts BEFORE draining events.  This ensures that a slot
      * freed by a timeout is already in the CONN_FREE state if a coincident
@@ -192,24 +275,24 @@ static void server_tick(struct SessionInternal *restrict ctx)
      * http_reset() call for that event is then a clean no-op. Each worker
      * sweeps only the slots it owns.
      */
-    ConnPool.life.worker_id = ctx->ns->worker_id;
-    ConnPool.life.conn_timeout_ms = ctx->ns->conn_timeout_ms;
-    ConnPool.check_timeouts(ConnPool.internal);
+    ConnPool.life.worker_id = Session.worker_id;
+    ConnPool.life.conn_timeout_ms = Session.conn_timeout_ms;
+    ConnPool.check_timeouts(protocore_conn_pool_span());
 
 #if PROTOCORE_NEED_UDP
     // One set of datagram rings serves the whole server rather than one per worker, so worker 0
     // drains them: the receive side runs each bound port's handler, the send side moves queued
     // frames to the wire.
-    if (ctx->ns->worker_id == 0)
+    if (Session.worker_id == 0)
     {
-        UdpListener.poll(UdpListener.internal);
+        UdpListener.poll(protocore_udp_listener_span());
     }
 #endif
 
 #if PROTOCORE_WORKER_COUNT > 1
     // Drain only this worker's queue: it is the sole consumer of its slots.
-    TcpListener.q.worker_id = ctx->ns->worker_id;
-    TcpListener.worker_queue(TcpListener.internal);
+    TcpListener.q.worker_id = Session.worker_id;
+    TcpListener.worker_queue(protocore_tcp_listener_span());
     if (!TcpListener.queue)
     {
         return;
@@ -224,7 +307,7 @@ static void server_tick(struct SessionInternal *restrict ctx)
     for (uint8_t li = 0; li < MAX_LISTENERS; li++)
     {
         TcpListener.idx = li;
-        TcpListener.listener_queue(TcpListener.internal);
+        TcpListener.listener_queue(protocore_tcp_listener_span());
         if (!TcpListener.queue)
         {
             continue;
@@ -240,8 +323,7 @@ static void server_tick(struct SessionInternal *restrict ctx)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-ProtoRegistryNs Protocols = {
-    .register_builtins = proto_builtins, .add = proto_register, .get = proto_get, .internal = &s_registry};
+ProtoRegistryNs Protocols = {.register_builtins = proto_builtins, .add = proto_register, .get = proto_get};
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SessionNs Session = {.tick = server_tick, .proto = &Protocols, .workers = &Workers, .internal = &s_session};
+SessionNs Session = {.tick = server_tick, .proto = &Protocols, .workers = &Workers};

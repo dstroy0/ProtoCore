@@ -19,6 +19,8 @@
 
 #include <unity.h>
 
+static uint8_t grpcweb_work[16]; // the borrow an entry takes; GrpcWeb never reads it
+
 void setUp(void)
 {
 }
@@ -35,7 +37,7 @@ static size_t frame_message(const uint8_t *body, size_t len, proto_bool compress
     GrpcWeb.msg.body = body;
     GrpcWeb.msg.body_len = len;
     GrpcWeb.msg.compressed = compressed;
-    GrpcWeb.frame_message(GrpcWeb.internal);
+    GrpcWeb.frame_message(grpcweb_work);
     return GrpcWeb.n;
 }
 
@@ -45,7 +47,7 @@ static size_t frame_trailers(int32_t status, const char *message)
     GrpcWeb.out.cap = sizeof(g_buf);
     GrpcWeb.trailers.status = status;
     GrpcWeb.trailers.message = message;
-    GrpcWeb.frame_trailers(GrpcWeb.internal);
+    GrpcWeb.frame_trailers(grpcweb_work);
     return GrpcWeb.n;
 }
 
@@ -53,7 +55,7 @@ static proto_bool parse(const uint8_t *data, size_t len)
 {
     GrpcWeb.in.data = data;
     GrpcWeb.in.len = len;
-    GrpcWeb.parse(GrpcWeb.internal);
+    GrpcWeb.parse(grpcweb_work);
     return GrpcWeb.ok;
 }
 
@@ -176,7 +178,7 @@ void test_status_round_trips_the_published_code_values(void)
 
         GrpcWeb.in.data = GrpcWeb.parsed.body;
         GrpcWeb.in.len = GrpcWeb.parsed.body_len;
-        GrpcWeb.trailers_status(GrpcWeb.internal);
+        GrpcWeb.trailers_status(grpcweb_work);
         TEST_ASSERT_TRUE(GrpcWeb.ok);
         TEST_ASSERT_EQUAL_INT32(CODE[i], GrpcWeb.i32);
     }
@@ -192,7 +194,7 @@ void test_message_slice_stays_percent_encoded(void)
     static const char SECTION[] = "grpc-status:2\r\ngrpc-message:not%20found\r\n";
     GrpcWeb.in.data = (const uint8_t *)SECTION;
     GrpcWeb.in.len = sizeof(SECTION) - 1;
-    GrpcWeb.trailers_message(GrpcWeb.internal);
+    GrpcWeb.trailers_message(grpcweb_work);
     TEST_ASSERT_TRUE(GrpcWeb.ok);
     TEST_ASSERT_EQUAL_UINT(11u, GrpcWeb.text_len);
     TEST_ASSERT_EQUAL_MEMORY("not%20found", GrpcWeb.text, 11);
@@ -200,7 +202,7 @@ void test_message_slice_stays_percent_encoded(void)
     // octets and "grpc-message:" is 13, so the field-value starts at offset 28.
     TEST_ASSERT_EQUAL_PTR(SECTION + 28, GrpcWeb.text);
 
-    GrpcWeb.trailers_status(GrpcWeb.internal);
+    GrpcWeb.trailers_status(grpcweb_work);
     TEST_ASSERT_TRUE(GrpcWeb.ok);
     TEST_ASSERT_EQUAL_INT32(2, GrpcWeb.i32);
 }
@@ -212,7 +214,7 @@ void test_a_key_inside_a_value_is_not_a_field_name(void)
     static const char SECTION[] = "grpc-message:see grpc-status:9\r\n";
     GrpcWeb.in.data = (const uint8_t *)SECTION;
     GrpcWeb.in.len = sizeof(SECTION) - 1;
-    GrpcWeb.trailers_status(GrpcWeb.internal);
+    GrpcWeb.trailers_status(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWeb.ok);
     TEST_ASSERT_EQUAL_INT32(0, GrpcWeb.i32);
 
@@ -220,18 +222,18 @@ void test_a_key_inside_a_value_is_not_a_field_name(void)
     static const char NONE[] = "grpc-message:x\r\n";
     GrpcWeb.in.data = (const uint8_t *)NONE;
     GrpcWeb.in.len = sizeof(NONE) - 1;
-    GrpcWeb.trailers_status(GrpcWeb.internal);
+    GrpcWeb.trailers_status(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWeb.ok);
 
     static const char NOT_A_DIGIT[] = "grpc-status:x\r\n";
     GrpcWeb.in.data = (const uint8_t *)NOT_A_DIGIT;
     GrpcWeb.in.len = sizeof(NOT_A_DIGIT) - 1;
-    GrpcWeb.trailers_status(GrpcWeb.internal);
+    GrpcWeb.trailers_status(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWeb.ok);
 
     GrpcWeb.in.data = (const uint8_t *)NOT_A_DIGIT;
     GrpcWeb.in.len = sizeof(NOT_A_DIGIT) - 1;
-    GrpcWeb.trailers_message(GrpcWeb.internal);
+    GrpcWeb.trailers_message(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWeb.ok);
     TEST_ASSERT_NULL(GrpcWeb.text);
     TEST_ASSERT_EQUAL_UINT(0u, GrpcWeb.text_len);
@@ -311,7 +313,7 @@ void test_frame_writes_the_given_frame_byte(void)
     GrpcWeb.msg.body = BODY;
     GrpcWeb.msg.body_len = 1;
     GrpcWeb.msg.flags = 0x81;
-    GrpcWeb.frame(GrpcWeb.internal);
+    GrpcWeb.frame(grpcweb_work);
     TEST_ASSERT_TRUE(GrpcWeb.ok);
     TEST_ASSERT_EQUAL_UINT(6u, GrpcWeb.n);
     TEST_ASSERT_EQUAL_HEX8(0x81, g_buf[0]);
@@ -329,7 +331,7 @@ void test_builders_refuse_a_short_buffer(void)
     GrpcWeb.msg.body = BODY;
     GrpcWeb.msg.body_len = sizeof(BODY);
     GrpcWeb.msg.compressed = PROTO_FALSE;
-    GrpcWeb.frame_message(GrpcWeb.internal);
+    GrpcWeb.frame_message(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWeb.ok);
     TEST_ASSERT_EQUAL_UINT(0u, GrpcWeb.n);
     TEST_ASSERT_EQUAL_HEX8(0xAA, small[0]);
@@ -339,13 +341,13 @@ void test_builders_refuse_a_short_buffer(void)
     GrpcWeb.out.cap = 4;
     GrpcWeb.trailers.status = 0;
     GrpcWeb.trailers.message = NULL;
-    GrpcWeb.frame_trailers(GrpcWeb.internal);
+    GrpcWeb.frame_trailers(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWeb.ok);
     TEST_ASSERT_EQUAL_UINT(0u, GrpcWeb.n);
 
     // Room for the prefix but not the whole grpc-status line.
     GrpcWeb.out.cap = 8;
-    GrpcWeb.frame_trailers(GrpcWeb.internal);
+    GrpcWeb.frame_trailers(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWeb.ok);
     TEST_ASSERT_EQUAL_UINT(0u, GrpcWeb.n);
 
@@ -354,12 +356,12 @@ void test_builders_refuse_a_short_buffer(void)
     GrpcWeb.out.cap = sizeof(g_buf);
     GrpcWeb.msg.body = NULL;
     GrpcWeb.msg.body_len = 4;
-    GrpcWeb.frame_message(GrpcWeb.internal);
+    GrpcWeb.frame_message(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWeb.ok);
 
     GrpcWeb.out.buf = NULL;
     GrpcWeb.msg.body = BODY;
-    GrpcWeb.frame_message(GrpcWeb.internal);
+    GrpcWeb.frame_message(grpcweb_work);
     TEST_ASSERT_FALSE(GrpcWeb.ok);
 }
 

@@ -24,7 +24,7 @@ static size_t statsd_counter_line(char *out, size_t cap)
     Statsd.metric.rate = 0.1f;
     Statsd.value.text = "1";
     Statsd.tags.metric = "env:prod,host:pc-rig";
-    Statsd.format(Statsd.internal);
+    Statsd.format(protocore_statsd_span());
     return Statsd.n;
 }
 

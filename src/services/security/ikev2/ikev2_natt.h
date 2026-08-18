@@ -97,9 +97,6 @@ typedef struct
     size_t len;       ///< its length
 } IkeNattPktArgs;
 
-/** @brief The NAT traversal calls, described only in ikev2_natt.c. */
-struct IkeNattInternal;
-
 /**
  * @brief The IKEv2 NAT traversal handle (RFC 7296 sec 2.23, RFC 3948).
  *
@@ -124,7 +121,6 @@ struct IkeNattInternal;
  * @var IkeNattNs::self_behind_nat  the received destination digest does not match our own address
  * @var IkeNattNs::is_keepalive  the payload is the one octet 0xFF (RFC 3948 sec 2.3)
  * @var IkeNattNs::is_ike        the payload carries the Non-ESP Marker (RFC 3948 sec 2.2)
- * @var IkeNattNs::internal  the calls that read this handle
  */
 typedef struct
 {
@@ -137,16 +133,14 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*hash)(struct IkeNattInternal *ctx);
-    void (*source_build)(struct IkeNattInternal *ctx);
-    void (*dest_build)(struct IkeNattInternal *ctx);
-    void (*match)(struct IkeNattInternal *ctx);
-    void (*peer_behind_nat)(struct IkeNattInternal *ctx);
-    void (*self_behind_nat)(struct IkeNattInternal *ctx);
-    void (*is_keepalive)(struct IkeNattInternal *ctx);
-    void (*is_ike)(struct IkeNattInternal *ctx);
-
-    struct IkeNattInternal *internal;
+    void (*const hash)(uint8_t *restrict work);
+    void (*const source_build)(uint8_t *restrict work);
+    void (*const dest_build)(uint8_t *restrict work);
+    void (*const match)(uint8_t *restrict work);
+    void (*const peer_behind_nat)(uint8_t *restrict work);
+    void (*const self_behind_nat)(uint8_t *restrict work);
+    void (*const is_keepalive)(uint8_t *restrict work);
+    void (*const is_ike)(uint8_t *restrict work);
 } IkeNattNs;
 
 /** @brief The one symbol this module exports. */

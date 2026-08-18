@@ -17,21 +17,6 @@
 
 #include <math.h> // sqrtf: the standard deviation
 
-/**
- * @brief The aggregator's calls - what TelemetryNs points at.
- *
- * No storage member: every accumulator, and the window's sample array, belongs to the caller, so
- * the module holds nothing of its own.
- *
- * @var TelemetryInternal::ns  the handle a caller sets a call's members on
- */
-struct TelemetryInternal
-{
-    TelemetryNs *ns;
-};
-
-static struct TelemetryInternal s_telemetry = {.ns = &Telemetry};
-
 // Population variance from the running sums, clamped at 0 where rounding drives the difference
 // below it. The caller checks count first.
 static double window_variance_of(const TelemetryWindow *w)
@@ -42,29 +27,31 @@ static double window_variance_of(const TelemetryWindow *w)
 }
 
 // Bind the caller's sample array to the window and empty it.
-static void telemetry_window_init(struct TelemetryInternal *restrict ctx)
+static void telemetry_window_init(uint8_t *restrict work)
 {
-    TelemetryWindow *w = ctx->ns->window.w;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    TelemetryWindow *w = Telemetry.window.w;
+    Telemetry.ok = PROTO_FALSE;
     if (!w)
     {
         return;
     }
-    w->buf = ctx->ns->window.buf;
-    w->cap = ctx->ns->window.cap;
+    w->buf = Telemetry.window.buf;
+    w->cap = Telemetry.window.cap;
     w->count = 0;
     w->head = 0;
     w->sum = 0.0;
     w->sum_sq = 0.0;
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // Store the sample at head and move the sums by it, dropping the sample it overwrites once the
 // window is full.
-static void telemetry_window_push(struct TelemetryInternal *restrict ctx)
+static void telemetry_window_push(uint8_t *restrict work)
 {
-    TelemetryWindow *w = ctx->ns->window.w;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    TelemetryWindow *w = Telemetry.window.w;
+    Telemetry.ok = PROTO_FALSE;
     if (!w || !w->buf || w->cap == 0)
     {
         return;
@@ -79,7 +66,7 @@ static void telemetry_window_push(struct TelemetryInternal *restrict ctx)
     {
         w->count++;
     }
-    float sample = ctx->ns->window.sample;
+    float sample = Telemetry.window.sample;
     w->buf[w->head] = sample;
     w->sum += (double)sample;
     w->sum_sq += (double)sample * (double)sample;
@@ -89,71 +76,76 @@ static void telemetry_window_push(struct TelemetryInternal *restrict ctx)
     {
         w->head = 0;
     }
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // The samples the window holds.
-static void telemetry_window_count(struct TelemetryInternal *restrict ctx)
+static void telemetry_window_count(uint8_t *restrict work)
 {
-    const TelemetryWindow *w = ctx->ns->window.w;
-    ctx->ns->u16 = 0;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    const TelemetryWindow *w = Telemetry.window.w;
+    Telemetry.u16 = 0;
+    Telemetry.ok = PROTO_FALSE;
     if (!w)
     {
         return;
     }
-    ctx->ns->u16 = w->count;
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.u16 = w->count;
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // The sum over the count.
-static void telemetry_window_mean(struct TelemetryInternal *restrict ctx)
+static void telemetry_window_mean(uint8_t *restrict work)
 {
-    const TelemetryWindow *w = ctx->ns->window.w;
-    ctx->ns->f32 = 0.0f;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    const TelemetryWindow *w = Telemetry.window.w;
+    Telemetry.f32 = 0.0f;
+    Telemetry.ok = PROTO_FALSE;
     if (!w || w->count == 0)
     {
         return;
     }
-    ctx->ns->f32 = (float)(w->sum / (double)w->count);
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.f32 = (float)(w->sum / (double)w->count);
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // The mean of the squares less the square of the mean.
-static void telemetry_window_variance(struct TelemetryInternal *restrict ctx)
+static void telemetry_window_variance(uint8_t *restrict work)
 {
-    const TelemetryWindow *w = ctx->ns->window.w;
-    ctx->ns->f32 = 0.0f;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    const TelemetryWindow *w = Telemetry.window.w;
+    Telemetry.f32 = 0.0f;
+    Telemetry.ok = PROTO_FALSE;
     if (!w || w->count == 0)
     {
         return;
     }
-    ctx->ns->f32 = (float)window_variance_of(w);
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.f32 = (float)window_variance_of(w);
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // The square root of the variance.
-static void telemetry_window_stddev(struct TelemetryInternal *restrict ctx)
+static void telemetry_window_stddev(uint8_t *restrict work)
 {
-    const TelemetryWindow *w = ctx->ns->window.w;
-    ctx->ns->f32 = 0.0f;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    const TelemetryWindow *w = Telemetry.window.w;
+    Telemetry.f32 = 0.0f;
+    Telemetry.ok = PROTO_FALSE;
     if (!w || w->count == 0)
     {
         return;
     }
-    ctx->ns->f32 = sqrtf((float)window_variance_of(w));
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.f32 = sqrtf((float)window_variance_of(w));
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // The smallest of the samples held.
-static void telemetry_window_min(struct TelemetryInternal *restrict ctx)
+static void telemetry_window_min(uint8_t *restrict work)
 {
-    const TelemetryWindow *w = ctx->ns->window.w;
-    ctx->ns->f32 = 0.0f;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    const TelemetryWindow *w = Telemetry.window.w;
+    Telemetry.f32 = 0.0f;
+    Telemetry.ok = PROTO_FALSE;
     if (!w || w->count == 0 || !w->buf)
     {
         return;
@@ -166,16 +158,17 @@ static void telemetry_window_min(struct TelemetryInternal *restrict ctx)
             m = w->buf[i];
         }
     }
-    ctx->ns->f32 = m;
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.f32 = m;
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // The largest of the samples held.
-static void telemetry_window_max(struct TelemetryInternal *restrict ctx)
+static void telemetry_window_max(uint8_t *restrict work)
 {
-    const TelemetryWindow *w = ctx->ns->window.w;
-    ctx->ns->f32 = 0.0f;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    const TelemetryWindow *w = Telemetry.window.w;
+    Telemetry.f32 = 0.0f;
+    Telemetry.ok = PROTO_FALSE;
     if (!w || w->count == 0 || !w->buf)
     {
         return;
@@ -188,15 +181,16 @@ static void telemetry_window_max(struct TelemetryInternal *restrict ctx)
             m = w->buf[i];
         }
     }
-    ctx->ns->f32 = m;
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.f32 = m;
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // Drop the prior sample, so the next update primes the tracker.
-static void telemetry_rate_init(struct TelemetryInternal *restrict ctx)
+static void telemetry_rate_init(uint8_t *restrict work)
 {
-    TelemetryRate *r = ctx->ns->rate.r;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    TelemetryRate *r = Telemetry.rate.r;
+    Telemetry.ok = PROTO_FALSE;
     if (!r)
     {
         return;
@@ -204,23 +198,24 @@ static void telemetry_rate_init(struct TelemetryInternal *restrict ctx)
     r->last_value = 0.0f;
     r->last_ms = 0;
     r->primed = PROTO_FALSE;
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // The change in value over the elapsed seconds since the previous sample. The first sample and a
 // zero elapsed time both report 0.
-static void telemetry_rate_update(struct TelemetryInternal *restrict ctx)
+static void telemetry_rate_update(uint8_t *restrict work)
 {
-    TelemetryRate *r = ctx->ns->rate.r;
-    ctx->ns->f32 = 0.0f;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    TelemetryRate *r = Telemetry.rate.r;
+    Telemetry.f32 = 0.0f;
+    Telemetry.ok = PROTO_FALSE;
     if (!r)
     {
         return;
     }
-    ctx->ns->ok = PROTO_TRUE;
-    float value = ctx->ns->rate.value;
-    uint32_t now_ms = ctx->ns->rate.now_ms;
+    Telemetry.ok = PROTO_TRUE;
+    float value = Telemetry.rate.value;
+    uint32_t now_ms = Telemetry.rate.now_ms;
     if (!r->primed)
     {
         r->last_value = value;
@@ -231,17 +226,18 @@ static void telemetry_rate_update(struct TelemetryInternal *restrict ctx)
     uint32_t dt_ms = (uint32_t)(now_ms - r->last_ms); // wraps correctly
     if (dt_ms != 0)
     {
-        ctx->ns->f32 = (value - r->last_value) * 1000.0f / (float)dt_ms;
+        Telemetry.f32 = (value - r->last_value) * 1000.0f / (float)dt_ms;
     }
     r->last_value = value;
     r->last_ms = now_ms;
 }
 
 // Zero the total and drop the prior rate sample.
-static void telemetry_totalizer_init(struct TelemetryInternal *restrict ctx)
+static void telemetry_totalizer_init(uint8_t *restrict work)
 {
-    TelemetryTotalizer *t = ctx->ns->totalizer.t;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    TelemetryTotalizer *t = Telemetry.totalizer.t;
+    Telemetry.ok = PROTO_FALSE;
     if (!t)
     {
         return;
@@ -250,29 +246,30 @@ static void telemetry_totalizer_init(struct TelemetryInternal *restrict ctx)
     t->last_rate = 0.0f;
     t->last_ms = 0;
     t->primed = PROTO_FALSE;
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // Add the mean of the two rate endpoints multiplied by the elapsed seconds. The first sample only
 // seeds the endpoint.
-static void telemetry_totalizer_add(struct TelemetryInternal *restrict ctx)
+static void telemetry_totalizer_add(uint8_t *restrict work)
 {
-    TelemetryTotalizer *t = ctx->ns->totalizer.t;
-    ctx->ns->f64 = 0.0;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    TelemetryTotalizer *t = Telemetry.totalizer.t;
+    Telemetry.f64 = 0.0;
+    Telemetry.ok = PROTO_FALSE;
     if (!t)
     {
         return;
     }
-    ctx->ns->ok = PROTO_TRUE;
-    float rate = ctx->ns->totalizer.rate;
-    uint32_t now_ms = ctx->ns->totalizer.now_ms;
+    Telemetry.ok = PROTO_TRUE;
+    float rate = Telemetry.totalizer.rate;
+    uint32_t now_ms = Telemetry.totalizer.now_ms;
     if (!t->primed)
     {
         t->last_rate = rate;
         t->last_ms = now_ms;
         t->primed = PROTO_TRUE;
-        ctx->ns->f64 = t->total;
+        Telemetry.f64 = t->total;
         return;
     }
     uint32_t dt_ms = (uint32_t)(now_ms - t->last_ms); // wraps correctly
@@ -280,21 +277,22 @@ static void telemetry_totalizer_add(struct TelemetryInternal *restrict ctx)
     t->total += ((double)t->last_rate + (double)rate) * 0.5 * dt_s;
     t->last_rate = rate;
     t->last_ms = now_ms;
-    ctx->ns->f64 = t->total;
+    Telemetry.f64 = t->total;
 }
 
 // The running total, in rate units multiplied by seconds.
-static void telemetry_totalizer_total(struct TelemetryInternal *restrict ctx)
+static void telemetry_totalizer_total(uint8_t *restrict work)
 {
-    const TelemetryTotalizer *t = ctx->ns->totalizer.t;
-    ctx->ns->f64 = 0.0;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    const TelemetryTotalizer *t = Telemetry.totalizer.t;
+    Telemetry.f64 = 0.0;
+    Telemetry.ok = PROTO_FALSE;
     if (!t)
     {
         return;
     }
-    ctx->ns->f64 = t->total;
-    ctx->ns->ok = PROTO_TRUE;
+    Telemetry.f64 = t->total;
+    Telemetry.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to. A reset zeroes
@@ -313,7 +311,6 @@ TelemetryNs Telemetry = {.window_init = telemetry_window_init,
                          .totalizer_init = telemetry_totalizer_init,
                          .totalizer_add = telemetry_totalizer_add,
                          .totalizer_total = telemetry_totalizer_total,
-                         .totalizer_reset = telemetry_totalizer_init,
-                         .internal = &s_telemetry};
+                         .totalizer_reset = telemetry_totalizer_init};
 
 #endif // PROTOCORE_ENABLE_TELEMETRY

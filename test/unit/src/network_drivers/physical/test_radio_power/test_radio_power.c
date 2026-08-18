@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for 802.11 power management on a build with no radio
+// Host tests for 802.11 power management, driven against the radio the host build compiles
 // (network_drivers/physical/radio_power.h).
 //
 // IEEE Std 802.11-2020 governs every call here and no IETF RFC does. 11.2.3.2 names the two modes a
@@ -10,10 +10,10 @@
 // expectations are properties: a mode that is set must read back or the set must report failure, and
 // the name of a mode is fixed text rather than whatever a vendor calls it.
 //
-// test_apply_refuses_without_a_radio is the load-bearing case. With no radio under the handle every
-// apply must report failure rather than succeed silently: a caller that asks for monitor mode or a
-// transmit cap on a part that has no radio has to be able to tell, and active mode is the only
-// truthful answer when nothing can doze.
+// test_busy_hold_forces_active_and_release_restores is the load-bearing case. There is a radio
+// under the handle in every build, so a mode that is applied has to read back and the keep-awake
+// refcount has to put the configured mode back when the last holder releases: a transfer that
+// leaves the radio dozing, or one that leaves it awake, is the failure this catches.
 
 #include "network_drivers/physical/radio_power.h"
 
@@ -30,13 +30,13 @@ void tearDown(void)
 static const char *ps_name(protocore_phy_ps mode)
 {
     Radio.ps.mode = mode;
-    Radio.ps_name(Radio.internal);
+    Radio.ps_name(protocore_radio_power_span());
     return Radio.text;
 }
 
 static protocore_phy_ps ps_mode(void)
 {
-    Radio.ps_mode(Radio.internal);
+    Radio.ps_mode(protocore_radio_power_span());
     return Radio.mode;
 }
 
@@ -57,26 +57,31 @@ void test_ps_name_does_not_apply_the_mode(void)
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 }
 
-// Every apply reports failure with no radio behind it, and the readback stays at active mode.
-void test_apply_refuses_without_a_radio(void)
+// 802.11-2020 6.3.2.2: an applied mode is the mode the radio reports back.
+void test_apply_sets_the_mode_and_reads_it_back(void)
 {
     Radio.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
-    Radio.ps_set(Radio.internal);
-    TEST_ASSERT_FALSE(Radio.ok);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
+    Radio.ps_set(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(Radio.ok);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_MAX_MODEM, ps_mode());
 
     Radio.ps.mode = PROTOCORE_PHY_PS_MIN_MODEM;
-    Radio.ps_set(Radio.internal);
-    TEST_ASSERT_FALSE(Radio.ok);
+    Radio.ps_set(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(Radio.ok);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_MIN_MODEM, ps_mode());
+
+    Radio.ps.mode = PROTOCORE_PHY_PS_NONE;
+    Radio.ps_set(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(Radio.ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 
-    // 802.11-2020 11.7.6 selects a transmit power in dBm; with no radio there is nothing to cap.
+    // 802.11-2020 11.7.6 selects a transmit power in dBm; the backend takes both signs.
     Radio.tx.dbm = 11;
-    Radio.tx_power_set(Radio.internal);
-    TEST_ASSERT_FALSE(Radio.ok);
+    Radio.tx_power_set(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(Radio.ok);
     Radio.tx.dbm = -4;
-    Radio.tx_power_set(Radio.internal);
-    TEST_ASSERT_FALSE(Radio.ok);
+    Radio.tx_power_set(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(Radio.ok);
 }
 
 static void on_frame(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel)
@@ -87,49 +92,61 @@ static void on_frame(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t ch
     (void)channel;
 }
 
-// Monitor capture needs a radio to tune, so beginning one is refused whether or not a sink is given,
-// and the two calls that return nothing must still be safe to make.
-void test_monitor_refuses_without_a_radio(void)
+// Capture with nowhere to deliver is a caller bug, so it is refused; with a sink the radio arms,
+// retunes, and stops.
+void test_monitor_arms_and_refuses_a_null_sink(void)
 {
     Radio.monitor.channel = 6;
     Radio.monitor.on_frame = NULL;
-    Radio.monitor_begin(Radio.internal);
+    Radio.monitor_begin(protocore_radio_power_span());
     TEST_ASSERT_FALSE(Radio.ok);
 
     Radio.monitor.on_frame = on_frame;
-    Radio.monitor_begin(Radio.internal);
-    TEST_ASSERT_FALSE(Radio.ok);
+    Radio.monitor_begin(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(Radio.ok);
 
     Radio.monitor.channel = 11;
-    Radio.monitor_set_channel(Radio.internal);
-    Radio.monitor_end(Radio.internal);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
+    Radio.monitor_set_channel(protocore_radio_power_span());
+    Radio.monitor_end(protocore_radio_power_span());
 }
 
-// Applying the configured mode with no radio changes nothing and must not fault.
-void test_power_is_a_no_op_without_a_radio(void)
+// Applying the configured mode puts it on whatever the radio was left in.
+void test_power_applies_the_configured_mode(void)
 {
-    Radio.power(Radio.internal);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
+    Radio.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
+    Radio.ps_set(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_MAX_MODEM, ps_mode());
+
+    Radio.power(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)PROTOCORE_RADIO_WIFI_PS, ps_mode());
 }
 
-// The keep-awake refcount has no mode to hold with no radio, so hold, release, and an unbalanced
-// release all leave the readback where it was.
-void test_busy_hold_release_is_a_no_op_without_a_radio(void)
+// The keep-awake refcount forces active mode for the length of a transfer and puts the configured
+// mode back when the last holder releases. A release with nothing held changes nothing.
+void test_busy_hold_forces_active_and_release_restores(void)
 {
-    Radio.busy_hold(Radio.internal);
+    Radio.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
+    Radio.ps_set(protocore_radio_power_span());
+
+    Radio.busy_hold(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode()); // active for the transfer
+
+    // Nested: the inner release is not the last one, so the mode stays active.
+    Radio.busy_hold(protocore_radio_power_span());
+    Radio.busy_release(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 
-    Radio.busy_release(Radio.internal);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
+    Radio.busy_release(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)PROTOCORE_RADIO_WIFI_PS, ps_mode()); // last holder: configured back
 
-    Radio.busy_release(Radio.internal);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
+    // Unbalanced: nothing is held, so there is nothing to restore.
+    Radio.busy_release(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_UINT8((uint8_t)PROTOCORE_RADIO_WIFI_PS, ps_mode());
 }
 
-// The handle carries the state its calls reach, so a missing binding faults at the first call rather
-// than at the link.
-void test_handle_is_bound(void)
+// The borrow is where the state lives, so a pool too short to carve it is caught at the first call
+// rather than by a read through a null.
+void test_the_borrow_is_carved(void)
 {
-    TEST_ASSERT_NOT_NULL(Radio.internal);
+    TEST_ASSERT_NOT_NULL(protocore_radio_power_span());
 }

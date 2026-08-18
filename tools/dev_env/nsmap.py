@@ -24,6 +24,10 @@ The map:
       }
     }
 
+An entry may also state `"seed": {"member.path": "<literal>"}`, written before the mapped arguments.
+A flat name that carried a constant its longer sibling took as a parameter - count against
+count_sampled - needs it, because the namespace keeps what the previous call left in that member.
+
 Placement goes through nsconv, so it is literal-aware, hoists to the statement rather than the line,
 and refuses what it cannot rewrite faithfully rather than guessing: a loop condition, a call inside a
 macro that re-evaluates its argument, the right operand of && or ||, and two calls to one namespace
@@ -101,7 +105,10 @@ def convert(path, spec, dry):
             )
             at = m.end()
             continue
-        staging = ["%s.%s = %s;" % (obj, mem, val) for mem, val in zip(members, args)]
+        # Seeds first, so an argument naming the same member overwrites the constant rather than
+        # the other way round.
+        staging = ["%s.%s = %s;" % (obj, mem, val) for mem, val in sorted(e.get("seed", {}).items())]
+        staging += ["%s.%s = %s;" % (obj, mem, val) for mem, val in zip(members, args)]
         staging.append("%s.%s(%s);" % (obj, e["entry"], ctx))
         try:
             s = N.rewrite(s, m.start(), end, staging, "%s.%s" % (obj, e.get("result", "ok")), pat, mask)

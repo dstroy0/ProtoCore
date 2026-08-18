@@ -15,7 +15,10 @@ NM="$TOOLS/xtensa-esp32s3-elf-nm"
 SIZE="$TOOLS/xtensa-esp32s3-elf-size"
 
 for t in "$CC" "$NM" "$SIZE"; do
-    [ -x "$t" ] || { echo "missing: $t" >&2; exit 1; }
+    [ -x "$t" ] || {
+        echo "missing: $t" >&2
+        exit 1
+    }
 done
 
 mkdir -p "$OUT"

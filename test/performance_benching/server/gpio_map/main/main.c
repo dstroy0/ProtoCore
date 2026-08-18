@@ -22,11 +22,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t gpio_map_work[16]; // the borrow an entry takes; GpioMap never reads it
+
 /** @brief The short name for direction @p dir. */
 static const char *gpio_dir_name(protocore_gpio_dir dir)
 {
     GpioMap.args.dir = dir;
-    GpioMap.dir_name(GpioMap.internal);
+    GpioMap.dir_name(gpio_map_work);
     return GpioMap.text;
 }
 
@@ -37,7 +39,7 @@ static int32_t gpio_json(const protocore_gpio_pin *pins, uint8_t count, char *ou
     GpioMap.args.count = count;
     GpioMap.out_args.out = out;
     GpioMap.out_args.cap = cap;
-    GpioMap.json(GpioMap.internal);
+    GpioMap.json(gpio_map_work);
     return GpioMap.n;
 }
 
@@ -48,7 +50,7 @@ static proto_bool gpio_parse_set(const char *body, size_t len, uint8_t *pin, uin
     GpioMap.parse_args.len = len;
     GpioMap.parse_args.pin_out = pin;
     GpioMap.parse_args.level_out = level;
-    GpioMap.parse_set(GpioMap.internal);
+    GpioMap.parse_set(gpio_map_work);
     return GpioMap.ok;
 }
 
@@ -58,7 +60,7 @@ static proto_bool gpio_is_output(const protocore_gpio_pin *pins, uint8_t count, 
     GpioMap.args.pins = pins;
     GpioMap.args.count = count;
     GpioMap.args.pin = pin;
-    GpioMap.is_output(GpioMap.internal);
+    GpioMap.is_output(gpio_map_work);
     return GpioMap.ok;
 }
 

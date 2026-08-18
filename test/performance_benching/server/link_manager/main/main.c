@@ -20,20 +20,22 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t link_manager_work[16]; // the borrow an entry takes; Link never reads it
+
 /** @brief Bind the @p n interfaces at @p ifaces to @p m and seed its active egress. */
 static void link_init(LinkManager *m, LinkIface *ifaces, size_t n)
 {
     Link.args.m = m;
     Link.args.ifaces = ifaces;
     Link.args.n = n;
-    Link.init(Link.internal);
+    Link.init(link_manager_work);
 }
 
 /** @brief The index of the best interface that is up in @p m, or -1 when none is. */
 static int link_select(const LinkManager *m)
 {
     Link.args.m_ro = m;
-    Link.select(Link.internal);
+    Link.select(link_manager_work);
     return Link.i32;
 }
 
@@ -43,7 +45,7 @@ static proto_bool link_set(LinkManager *m, size_t idx, proto_bool up, int *from,
     Link.args.m = m;
     Link.args.idx = idx;
     Link.args.up = up;
-    Link.set(Link.internal);
+    Link.set(link_manager_work);
     *from = Link.from;
     *to = Link.to;
     return Link.changed;

@@ -6,6 +6,8 @@
 #include "services/southbound/southbound.h"
 #include <unity.h>
 
+static uint8_t sb_modbus_work[16]; // the borrow an entry takes; SbModbus never reads it
+
 static int loopback_txn(void *io, const uint8_t *req, size_t req_len, uint8_t *resp, size_t resp_cap)
 {
     (void)io;
@@ -40,7 +42,7 @@ static int32_t sbm_init(protocore_sb_modbus_ctx *ctx, protocore_sb_modbus_txn tx
     SbModbus.io = io;
     SbModbus.fc = fc;
     SbModbus.unit = unit;
-    SbModbus.init(SbModbus.internal);
+    SbModbus.init(sb_modbus_work);
     return SbModbus.i32;
 }
 
@@ -50,14 +52,14 @@ static int32_t sbm_driver(SouthboundDriver *drv_out, const char *name, protocore
     SbModbus.drv_out = drv_out;
     SbModbus.name = name;
     SbModbus.ctx = ctx;
-    SbModbus.driver(SbModbus.internal);
+    SbModbus.driver(sb_modbus_work);
     return SbModbus.i32;
 }
 
 static int32_t sb_add(const SouthboundDriver *drv)
 {
     Southbound.drv = drv;
-    Southbound.add(Southbound.internal);
+    Southbound.add(protocore_southbound_span());
     return Southbound.i32;
 }
 
@@ -66,7 +68,7 @@ static int32_t sb_read(const char *name, uint32_t point, int32_t *value_out)
     Southbound.name = name;
     Southbound.point.point = point;
     Southbound.point.value_out = value_out;
-    Southbound.read(Southbound.internal);
+    Southbound.read(protocore_southbound_span());
     return Southbound.i32;
 }
 
@@ -75,7 +77,7 @@ static int32_t sb_write(const char *name, uint32_t point, int32_t value)
     Southbound.name = name;
     Southbound.point.point = point;
     Southbound.point.value = value;
-    Southbound.write(Southbound.internal);
+    Southbound.write(protocore_southbound_span());
     return Southbound.i32;
 }
 
@@ -85,7 +87,7 @@ static int32_t sb_read_block(const char *name, uint32_t first, int32_t *out, siz
     Southbound.block.first = first;
     Southbound.block.out = out;
     Southbound.block.n = n;
-    Southbound.read_block(Southbound.internal);
+    Southbound.read_block(protocore_southbound_span());
     return Southbound.i32;
 }
 
@@ -95,14 +97,14 @@ static int32_t sb_write_block(const char *name, uint32_t first, const int32_t *i
     Southbound.block.first = first;
     Southbound.block.in = in;
     Southbound.block.n = n;
-    Southbound.write_block(Southbound.internal);
+    Southbound.write_block(protocore_southbound_span());
     return Southbound.i32;
 }
 
 void setUp()
 {
     Modbus.server_init(protocore_modbus_span());
-    Southbound.clear(Southbound.internal);
+    Southbound.clear(protocore_southbound_span());
 }
 void tearDown()
 {

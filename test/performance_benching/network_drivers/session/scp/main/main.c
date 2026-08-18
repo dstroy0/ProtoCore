@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// On-device CCOUNT microbenchmark for the SCP/RCP control-line codec (network_drivers/application/scp): parse and
+// On-device CCOUNT microbenchmark for the SCP/RCP control-line codec (network_drivers/session/scp): parse and
 // build the `C<mode> <size> <name>` transfer control line (octal mode, decimal size, name). Pure
 // string logic - the SSH channel/file plumbing is elsewhere; only the per-file control-line codec
 // is benched.
@@ -9,11 +9,13 @@
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/scp -t upload --upload-port COM7
 #include "device_bench.h"
-#include "network_drivers/application/scp/scp.h"
+#include "network_drivers/session/scp/scp.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+static uint8_t scp_work[16]; // the borrow an entry takes; Scp never reads it
 
 void dbench_run(void)
 {

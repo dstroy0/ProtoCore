@@ -76,9 +76,6 @@ typedef struct
     size_t cap;               ///< how much room it has
 } FailsafeOutArgs;
 
-/** @brief The lifelines' own state and the calls that reach them, described only in failsafe.c. */
-struct FailsafeInternal;
-
 /**
  * @brief The lifeline watchdog.
  *
@@ -97,7 +94,6 @@ struct FailsafeInternal;
  * @var FailsafeNs::on_breach  install what a breach fires
  * @var FailsafeNs::check      judge every armed lifeline against args.now
  * @var FailsafeNs::json       report every armed lifeline
- * @var FailsafeNs::internal   the lifeline table and the calls that reach it
  *
  * Every call takes the clock as @c args.now rather than reading one, so the whole module runs
  * against a synthetic clock on the host. A feed clears the breach so the lifeline can fire again.
@@ -112,18 +108,27 @@ typedef struct
     uint32_t breached;
     int n;
 
-    void (*reset)(struct FailsafeInternal *ctx);
-    void (*add)(struct FailsafeInternal *ctx);
-    void (*feed)(struct FailsafeInternal *ctx);
-    void (*on_breach)(struct FailsafeInternal *ctx);
-    void (*check)(struct FailsafeInternal *ctx);
-    void (*json)(struct FailsafeInternal *ctx);
-
-    struct FailsafeInternal *internal;
+    void (*const reset)(uint8_t *restrict work);
+    void (*const add)(uint8_t *restrict work);
+    void (*const feed)(uint8_t *restrict work);
+    void (*const on_breach)(uint8_t *restrict work);
+    void (*const check)(uint8_t *restrict work);
+    void (*const json)(uint8_t *restrict work);
 } FailsafeNs;
 
 /** @brief The one symbol this module exports. */
 extern FailsafeNs Failsafe;
+
+/**
+ * @brief The PROTOCORE_FAILSAFE_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_failsafe_span(void);
 
 PROTOCORE_END_DECLS
 

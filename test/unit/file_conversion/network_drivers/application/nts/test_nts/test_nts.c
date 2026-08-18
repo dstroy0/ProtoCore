@@ -22,6 +22,8 @@
 
 #include <unity.h>
 
+static uint8_t nts_work[16]; // the borrow an entry takes; Nts never reads it
+
 void setUp(void)
 {
 }
@@ -57,11 +59,24 @@ void test_ke_length_counts_body_only_ef_counts_whole_field(void)
     uint8_t rec[16];
     uint8_t ef[16];
 
-    size_t rn = protocore_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, VALUE, 2, rec, sizeof(rec));
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
+    Nts.ke_record_args.body = VALUE;
+    Nts.ke_record_args.body_len = 2;
+    Nts.ke_record_args.out = rec;
+    Nts.ke_record_args.cap = sizeof(rec);
+    Nts.ke_record(nts_work);
+    size_t rn = Nts.n;
     TEST_ASSERT_EQUAL_size_t(6, rn);
     TEST_ASSERT_EQUAL_UINT16(2, be16(rec + 2));
 
-    size_t en = protocore_nts_ef(NTS_EF_COOKIE, VALUE, 2, ef, sizeof(ef));
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = VALUE;
+    Nts.ef_args.value_len = 2;
+    Nts.ef_args.out = ef;
+    Nts.ef_args.cap = sizeof(ef);
+    Nts.ef(nts_work);
+    size_t en = Nts.n;
     TEST_ASSERT_EQUAL_size_t(8, en);
     TEST_ASSERT_EQUAL_UINT16(8, be16(ef + 2));
     TEST_ASSERT_EQUAL_HEX8(0x00, ef[6]);
@@ -76,7 +91,14 @@ void test_ke_record_field_layout(void)
 {
     static const uint8_t NTPV4[2] = {0x00, 0x00};
     uint8_t out[8];
-    size_t n = protocore_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, NTPV4, 2, out, sizeof(out));
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
+    Nts.ke_record_args.body = NTPV4;
+    Nts.ke_record_args.body_len = 2;
+    Nts.ke_record_args.out = out;
+    Nts.ke_record_args.cap = sizeof(out);
+    Nts.ke_record(nts_work);
+    size_t n = Nts.n;
     static const uint8_t WANT[6] = {0x80, 0x01, 0x00, 0x02, 0x00, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, n);
@@ -90,7 +112,14 @@ void test_ke_record_field_layout(void)
 void test_ke_record_critical_bit_is_separable_from_the_type(void)
 {
     uint8_t out[8];
-    size_t n = protocore_nts_ke_record(PROTO_FALSE, NTS_KE_AEAD_ALGORITHM, NULL, 0, out, sizeof(out));
+    Nts.ke_record_args.critical = PROTO_FALSE;
+    Nts.ke_record_args.type = NTS_KE_AEAD_ALGORITHM;
+    Nts.ke_record_args.body = NULL;
+    Nts.ke_record_args.body_len = 0;
+    Nts.ke_record_args.out = out;
+    Nts.ke_record_args.cap = sizeof(out);
+    Nts.ke_record(nts_work);
+    size_t n = Nts.n;
     TEST_ASSERT_EQUAL_size_t(4, n);
     TEST_ASSERT_EQUAL_INT(0, rec_critical(out));
     TEST_ASSERT_EQUAL_UINT16(NTS_KE_AEAD_ALGORITHM, rec_type(out));
@@ -103,11 +132,25 @@ void test_ke_record_critical_bit_is_separable_from_the_type(void)
 void test_ke_record_type_is_fifteen_bits(void)
 {
     uint8_t out[8];
-    TEST_ASSERT_EQUAL_size_t(4, protocore_nts_ke_record(PROTO_FALSE, 0x7FFF, NULL, 0, out, sizeof(out)));
+    Nts.ke_record_args.critical = PROTO_FALSE;
+    Nts.ke_record_args.type = 0x7FFF;
+    Nts.ke_record_args.body = NULL;
+    Nts.ke_record_args.body_len = 0;
+    Nts.ke_record_args.out = out;
+    Nts.ke_record_args.cap = sizeof(out);
+    Nts.ke_record(nts_work);
+    TEST_ASSERT_EQUAL_size_t(4, Nts.n);
     TEST_ASSERT_EQUAL_INT(0, rec_critical(out));
     TEST_ASSERT_EQUAL_UINT16(0x7FFF, rec_type(out));
 
-    TEST_ASSERT_EQUAL_size_t(4, protocore_nts_ke_record(PROTO_TRUE, 0x7FFF, NULL, 0, out, sizeof(out)));
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = 0x7FFF;
+    Nts.ke_record_args.body = NULL;
+    Nts.ke_record_args.body_len = 0;
+    Nts.ke_record_args.out = out;
+    Nts.ke_record_args.cap = sizeof(out);
+    Nts.ke_record(nts_work);
+    TEST_ASSERT_EQUAL_size_t(4, Nts.n);
     TEST_ASSERT_EQUAL_INT(1, rec_critical(out));
     TEST_ASSERT_EQUAL_UINT16(0x7FFF, rec_type(out));
 }
@@ -126,7 +169,10 @@ void test_ke_record_type_is_fifteen_bits(void)
 void test_ke_request_is_the_three_records_the_rfc_requires(void)
 {
     uint8_t out[32];
-    size_t n = protocore_nts_ke_request(out, sizeof(out));
+    Nts.ke_request_args.out = out;
+    Nts.ke_request_args.cap = sizeof(out);
+    Nts.ke_request(nts_work);
+    size_t n = Nts.n;
     static const uint8_t WANT[16] = {0x80, 0x01, 0x00, 0x02, 0x00, 0x00, 0x80, 0x04,
                                      0x00, 0x02, 0x00, 0x0F, 0x80, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);
@@ -159,10 +205,18 @@ static void collect(proto_bool critical, uint16_t type, const uint8_t *body, siz
 void test_ke_parse_recovers_the_request_it_was_built_from(void)
 {
     uint8_t req[32];
-    size_t n = protocore_nts_ke_request(req, sizeof(req));
+    Nts.ke_request_args.out = req;
+    Nts.ke_request_args.cap = sizeof(req);
+    Nts.ke_request(nts_work);
+    size_t n = Nts.n;
     Records r;
     memset(&r, 0, sizeof(r));
-    TEST_ASSERT_TRUE(protocore_nts_ke_parse(req, n, collect, &r));
+    Nts.ke_parse_args.buf = req;
+    Nts.ke_parse_args.len = n;
+    Nts.ke_parse_args.cb = collect;
+    Nts.ke_parse_args.arg = &r;
+    Nts.ke_parse(nts_work);
+    TEST_ASSERT_TRUE(Nts.ok);
     TEST_ASSERT_EQUAL_INT(3, r.count);
     TEST_ASSERT_EQUAL_UINT16(NTS_KE_NEXT_PROTOCOL, r.type[0]);
     TEST_ASSERT_EQUAL_UINT16(NTS_KE_AEAD_ALGORITHM, r.type[1]);
@@ -181,15 +235,35 @@ void test_ke_parse_recovers_the_request_it_was_built_from(void)
 void test_ke_parse_requires_end_of_message(void)
 {
     static const uint8_t NO_END[6] = {0x80, 0x01, 0x00, 0x02, 0x00, 0x00};
-    TEST_ASSERT_FALSE(protocore_nts_ke_parse(NO_END, sizeof(NO_END), NULL, NULL));
+    Nts.ke_parse_args.buf = NO_END;
+    Nts.ke_parse_args.len = sizeof(NO_END);
+    Nts.ke_parse_args.cb = NULL;
+    Nts.ke_parse_args.arg = NULL;
+    Nts.ke_parse(nts_work);
+    TEST_ASSERT_FALSE(Nts.ok);
 
     static const uint8_t TRUNCATED[5] = {0x80, 0x01, 0x00, 0x02, 0x00};
-    TEST_ASSERT_FALSE(protocore_nts_ke_parse(TRUNCATED, sizeof(TRUNCATED), NULL, NULL));
+    Nts.ke_parse_args.buf = TRUNCATED;
+    Nts.ke_parse_args.len = sizeof(TRUNCATED);
+    Nts.ke_parse_args.cb = NULL;
+    Nts.ke_parse_args.arg = NULL;
+    Nts.ke_parse(nts_work);
+    TEST_ASSERT_FALSE(Nts.ok);
 
     static const uint8_t END_ONLY[4] = {0x80, 0x00, 0x00, 0x00};
-    TEST_ASSERT_TRUE(protocore_nts_ke_parse(END_ONLY, sizeof(END_ONLY), NULL, NULL));
+    Nts.ke_parse_args.buf = END_ONLY;
+    Nts.ke_parse_args.len = sizeof(END_ONLY);
+    Nts.ke_parse_args.cb = NULL;
+    Nts.ke_parse_args.arg = NULL;
+    Nts.ke_parse(nts_work);
+    TEST_ASSERT_TRUE(Nts.ok);
 
-    TEST_ASSERT_FALSE(protocore_nts_ke_parse(END_ONLY, 0, NULL, NULL));
+    Nts.ke_parse_args.buf = END_ONLY;
+    Nts.ke_parse_args.len = 0;
+    Nts.ke_parse_args.cb = NULL;
+    Nts.ke_parse_args.arg = NULL;
+    Nts.ke_parse(nts_work);
+    TEST_ASSERT_FALSE(Nts.ok);
 }
 
 // sec 4.1.1: End of Message "MUST occur exactly once as the final record of every NTS-KE request and
@@ -199,13 +273,28 @@ void test_ke_parse_requires_end_of_message(void)
 void test_ke_parse_refuses_a_record_after_end_of_message(void)
 {
     static const uint8_t TRAILING[10] = {0x80, 0x00, 0x00, 0x00, 0x80, 0x05, 0x00, 0x02, 0xDE, 0xAD};
-    TEST_ASSERT_FALSE(protocore_nts_ke_parse(TRAILING, sizeof(TRAILING), NULL, NULL));
+    Nts.ke_parse_args.buf = TRAILING;
+    Nts.ke_parse_args.len = sizeof(TRAILING);
+    Nts.ke_parse_args.cb = NULL;
+    Nts.ke_parse_args.arg = NULL;
+    Nts.ke_parse(nts_work);
+    TEST_ASSERT_FALSE(Nts.ok);
 
     static const uint8_t TWO_ENDS[8] = {0x80, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00};
-    TEST_ASSERT_FALSE(protocore_nts_ke_parse(TWO_ENDS, sizeof(TWO_ENDS), NULL, NULL));
+    Nts.ke_parse_args.buf = TWO_ENDS;
+    Nts.ke_parse_args.len = sizeof(TWO_ENDS);
+    Nts.ke_parse_args.cb = NULL;
+    Nts.ke_parse_args.arg = NULL;
+    Nts.ke_parse(nts_work);
+    TEST_ASSERT_FALSE(Nts.ok);
 
     static const uint8_t STUB[6] = {0x80, 0x00, 0x00, 0x00, 0x80, 0x05};
-    TEST_ASSERT_FALSE(protocore_nts_ke_parse(STUB, sizeof(STUB), NULL, NULL));
+    Nts.ke_parse_args.buf = STUB;
+    Nts.ke_parse_args.len = sizeof(STUB);
+    Nts.ke_parse_args.cb = NULL;
+    Nts.ke_parse_args.arg = NULL;
+    Nts.ke_parse(nts_work);
+    TEST_ASSERT_FALSE(Nts.ok);
 }
 
 // RFC 7822 sec 7.5 as updated: "The Length field is a 16-bit unsigned integer that indicates the
@@ -222,18 +311,35 @@ void test_rfc7822_length_includes_header_and_padding(void)
 
     uint8_t uid[32];
     memset(uid, 0xAB, sizeof(uid));
-    TEST_ASSERT_EQUAL_size_t(36, protocore_nts_ef_unique_id(uid, sizeof(uid), out, sizeof(out)));
+    Nts.ef_unique_id_args.nonce = uid;
+    Nts.ef_unique_id_args.nonce_len = sizeof(uid);
+    Nts.ef_unique_id_args.out = out;
+    Nts.ef_unique_id_args.cap = sizeof(out);
+    Nts.ef_unique_id(nts_work);
+    TEST_ASSERT_EQUAL_size_t(36, Nts.n);
     TEST_ASSERT_EQUAL_UINT16(36, be16(out + 2));
 
     static const uint8_t FIVE[5] = {1, 2, 3, 4, 5};
-    TEST_ASSERT_EQUAL_size_t(12, protocore_nts_ef(NTS_EF_COOKIE, FIVE, sizeof(FIVE), out, sizeof(out)));
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = FIVE;
+    Nts.ef_args.value_len = sizeof(FIVE);
+    Nts.ef_args.out = out;
+    Nts.ef_args.cap = sizeof(out);
+    Nts.ef(nts_work);
+    TEST_ASSERT_EQUAL_size_t(12, Nts.n);
     TEST_ASSERT_EQUAL_UINT16(12, be16(out + 2));
     TEST_ASSERT_EQUAL_HEX8_ARRAY(FIVE, out + 4, sizeof(FIVE));
     TEST_ASSERT_EQUAL_HEX8(0x00, out[9]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[10]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[11]);
 
-    TEST_ASSERT_EQUAL_size_t(4, protocore_nts_ef(NTS_EF_COOKIE, NULL, 0, out, sizeof(out)));
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = NULL;
+    Nts.ef_args.value_len = 0;
+    Nts.ef_args.out = out;
+    Nts.ef_args.cap = sizeof(out);
+    Nts.ef(nts_work);
+    TEST_ASSERT_EQUAL_size_t(4, Nts.n);
     TEST_ASSERT_EQUAL_UINT16(4, be16(out + 2));
 }
 
@@ -245,7 +351,13 @@ void test_every_extension_field_is_word_aligned(void)
     uint8_t out[128];
     for (size_t len = 0; len <= 64; len++)
     {
-        size_t n = protocore_nts_ef(NTS_EF_COOKIE, len ? V : NULL, len, out, sizeof(out));
+        Nts.ef_args.field_type = NTS_EF_COOKIE;
+        Nts.ef_args.value = len ? V : NULL;
+        Nts.ef_args.value_len = len;
+        Nts.ef_args.out = out;
+        Nts.ef_args.cap = sizeof(out);
+        Nts.ef(nts_work);
+        size_t n = Nts.n;
         TEST_ASSERT_EQUAL_size_t(0, n & 3u);
         TEST_ASSERT_TRUE(n >= 4 + len);
         TEST_ASSERT_TRUE(n < 4 + len + 4);
@@ -267,10 +379,20 @@ void test_extension_field_types_match_the_registry(void)
     TEST_ASSERT_EQUAL_UINT16(0x0304, NTS_EF_COOKIE_PLACEHOLDER);
     TEST_ASSERT_EQUAL_UINT16(0x0404, NTS_EF_AUTH_AND_ENCRYPTED);
 
-    TEST_ASSERT_EQUAL_size_t(12, protocore_nts_ef_unique_id(V, sizeof(V), out, sizeof(out)));
+    Nts.ef_unique_id_args.nonce = V;
+    Nts.ef_unique_id_args.nonce_len = sizeof(V);
+    Nts.ef_unique_id_args.out = out;
+    Nts.ef_unique_id_args.cap = sizeof(out);
+    Nts.ef_unique_id(nts_work);
+    TEST_ASSERT_EQUAL_size_t(12, Nts.n);
     TEST_ASSERT_EQUAL_UINT16(NTS_EF_UNIQUE_IDENTIFIER, be16(out));
 
-    TEST_ASSERT_EQUAL_size_t(12, protocore_nts_ef_cookie(V, sizeof(V), out, sizeof(out)));
+    Nts.ef_cookie_args.cookie = V;
+    Nts.ef_cookie_args.cookie_len = sizeof(V);
+    Nts.ef_cookie_args.out = out;
+    Nts.ef_cookie_args.cap = sizeof(out);
+    Nts.ef_cookie(nts_work);
+    TEST_ASSERT_EQUAL_size_t(12, Nts.n);
     TEST_ASSERT_EQUAL_UINT16(NTS_EF_COOKIE, be16(out));
 }
 
@@ -305,13 +427,47 @@ void test_ke_record_fails_closed(void)
 {
     static const uint8_t BODY[2] = {0, 0};
     uint8_t out[8];
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, BODY, 2, NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, NULL, 2, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, BODY, 2, out, 5));
-    TEST_ASSERT_EQUAL_size_t(6, protocore_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, BODY, 2, out, 6));
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
+    Nts.ke_record_args.body = BODY;
+    Nts.ke_record_args.body_len = 2;
+    Nts.ke_record_args.out = NULL;
+    Nts.ke_record_args.cap = sizeof(out);
+    Nts.ke_record(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
+    Nts.ke_record_args.body = NULL;
+    Nts.ke_record_args.body_len = 2;
+    Nts.ke_record_args.out = out;
+    Nts.ke_record_args.cap = sizeof(out);
+    Nts.ke_record(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
+    Nts.ke_record_args.body = BODY;
+    Nts.ke_record_args.body_len = 2;
+    Nts.ke_record_args.out = out;
+    Nts.ke_record_args.cap = 5;
+    Nts.ke_record(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
+    Nts.ke_record_args.body = BODY;
+    Nts.ke_record_args.body_len = 2;
+    Nts.ke_record_args.out = out;
+    Nts.ke_record_args.cap = 6;
+    Nts.ke_record(nts_work);
+    TEST_ASSERT_EQUAL_size_t(6, Nts.n);
 
-    TEST_ASSERT_EQUAL_size_t(
-        0, protocore_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, BODY, 0x10000, out, sizeof(out)));
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
+    Nts.ke_record_args.body = BODY;
+    Nts.ke_record_args.body_len = 0x10000;
+    Nts.ke_record_args.out = out;
+    Nts.ke_record_args.cap = sizeof(out);
+    Nts.ke_record(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
 }
 
 // A partial request is not a request: the three records of sec 4 total 16 octets, so anything less
@@ -319,10 +475,22 @@ void test_ke_record_fails_closed(void)
 void test_ke_request_needs_all_sixteen_octets(void)
 {
     uint8_t out[32];
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ke_request(out, 5));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ke_request(out, 11));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ke_request(out, 15));
-    TEST_ASSERT_EQUAL_size_t(16, protocore_nts_ke_request(out, 16));
+    Nts.ke_request_args.out = out;
+    Nts.ke_request_args.cap = 5;
+    Nts.ke_request(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
+    Nts.ke_request_args.out = out;
+    Nts.ke_request_args.cap = 11;
+    Nts.ke_request(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
+    Nts.ke_request_args.out = out;
+    Nts.ke_request_args.cap = 15;
+    Nts.ke_request(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
+    Nts.ke_request_args.out = out;
+    Nts.ke_request_args.cap = 16;
+    Nts.ke_request(nts_work);
+    TEST_ASSERT_EQUAL_size_t(16, Nts.n);
 }
 
 // RFC 7822 sec 7.5 as updated: "the maximum field length cannot be longer than 65532 octets, due to
@@ -337,9 +505,21 @@ void test_extension_field_length_bound(void)
     static uint8_t out[65536];
     memset(big, 0x5A, sizeof(big));
 
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ef(NTS_EF_COOKIE, big, 65529, out, sizeof(out)));
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = big;
+    Nts.ef_args.value_len = 65529;
+    Nts.ef_args.out = out;
+    Nts.ef_args.cap = sizeof(out);
+    Nts.ef(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
 
-    TEST_ASSERT_EQUAL_size_t(65532, protocore_nts_ef(NTS_EF_COOKIE, big, 65528, out, sizeof(out)));
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = big;
+    Nts.ef_args.value_len = 65528;
+    Nts.ef_args.out = out;
+    Nts.ef_args.cap = sizeof(out);
+    Nts.ef(nts_work);
+    TEST_ASSERT_EQUAL_size_t(65532, Nts.n);
     TEST_ASSERT_EQUAL_UINT16(65532, be16(out + 2));
 }
 
@@ -349,8 +529,32 @@ void test_extension_field_fails_closed(void)
 {
     uint8_t out[64];
     static const uint8_t V[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ef(NTS_EF_COOKIE, V, sizeof(V), NULL, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ef(NTS_EF_COOKIE, NULL, 8, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, protocore_nts_ef(NTS_EF_COOKIE, V, sizeof(V), out, 11));
-    TEST_ASSERT_EQUAL_size_t(12, protocore_nts_ef(NTS_EF_COOKIE, V, sizeof(V), out, 12));
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = V;
+    Nts.ef_args.value_len = sizeof(V);
+    Nts.ef_args.out = NULL;
+    Nts.ef_args.cap = sizeof(out);
+    Nts.ef(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = NULL;
+    Nts.ef_args.value_len = 8;
+    Nts.ef_args.out = out;
+    Nts.ef_args.cap = sizeof(out);
+    Nts.ef(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = V;
+    Nts.ef_args.value_len = sizeof(V);
+    Nts.ef_args.out = out;
+    Nts.ef_args.cap = 11;
+    Nts.ef(nts_work);
+    TEST_ASSERT_EQUAL_size_t(0, Nts.n);
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = V;
+    Nts.ef_args.value_len = sizeof(V);
+    Nts.ef_args.out = out;
+    Nts.ef_args.cap = 12;
+    Nts.ef(nts_work);
+    TEST_ASSERT_EQUAL_size_t(12, Nts.n);
 }

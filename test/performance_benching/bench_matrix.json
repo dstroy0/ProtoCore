@@ -88,9 +88,9 @@
         "src/shared/hex/hex.c"
       ]
     },
-    "network_drivers_application_scp": {
-      "desc": "On-device CCOUNT microbenchmark for the SCP/RCP control-line codec (network_drivers/application/scp): parse and\nbuild the `C<mode> <size> <name>` transfer control line (octal mode, decimal size, name). Pure\nstring logic - the SSH channel/file plumbing is elsewhere; only the per-file control-line codec\nis benched.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/scp -t upload --upload-port COM7",
-      "path": "network_drivers/application/scp",
+    "network_drivers_session_scp": {
+      "desc": "On-device CCOUNT microbenchmark for the SCP/RCP control-line codec (network_drivers/session/scp): parse and\nbuild the `C<mode> <size> <name>` transfer control line (octal mode, decimal size, name). Pure\nstring logic - the SSH channel/file plumbing is elsewhere; only the per-file control-line codec\nis benched.\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/scp -t upload --upload-port COM7",
+      "path": "network_drivers/session/scp",
       "flags": [
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_ENABLE_FILE_SERVING=1",
@@ -131,8 +131,8 @@
         "src/mmgr/span.c",
         "src/mmgr/swar.c",
         "src/network_drivers/application/file_serving/file_serving.c",
-        "src/network_drivers/application/scp/scp.c",
-        "src/network_drivers/application/scp/ssh_scp.c",
+        "src/network_drivers/session/scp/scp.c",
+        "src/network_drivers/session/scp/ssh_scp.c",
         "src/network_drivers/presentation/http/http.c",
         "src/network_drivers/presentation/http/http_parser/http_parser.c",
         "src/network_drivers/presentation/http/route/http_route.c",

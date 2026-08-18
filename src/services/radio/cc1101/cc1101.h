@@ -24,11 +24,15 @@
 #ifndef PROTOCORE_CC1101_H
 #define PROTOCORE_CC1101_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_CC1101
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief Full-duplex SPI transfer of @p len bytes (chip-select toggled by the callback). */
 typedef void (*protocore_cc1101_spi_fn)(const uint8_t *tx, uint8_t *rx, uint8_t len, void *ctx);
@@ -55,33 +59,102 @@ typedef struct
     uint8_t channel; ///< CHANNR (0x0A): channel number on top of the base frequency.
 } protocore_cc1101_config;
 
-/**
- * @brief Reset the CC1101, apply @p cfg, set the channel, and confirm it is present.
- * @return true; false if the VERSION status register reads 0x00 / 0xFF (the bus is not talking).
- */
-proto_bool protocore_cc1101_init(const protocore_cc1101_bus *bus, const protocore_cc1101_config *cfg);
+/** @brief What init takes: bus, cfg. */
+typedef struct
+{
+    const protocore_cc1101_bus *bus;
+    const protocore_cc1101_config *cfg;
+} Cc1101InitArgs;
+
+/** @brief What send takes: bus, data, len. */
+typedef struct
+{
+    const protocore_cc1101_bus *bus;
+    const uint8_t *data;
+    uint8_t len;
+} Cc1101SendArgs;
+
+/** @brief What tx_done takes: bus. */
+typedef struct
+{
+    const protocore_cc1101_bus *bus;
+} Cc1101TxDoneArgs;
+
+/** @brief What set_rx takes: bus. */
+typedef struct
+{
+    const protocore_cc1101_bus *bus;
+} Cc1101SetRxArgs;
+
+/** @brief What recv takes: bus, buf, cap, rssi_dbm. */
+typedef struct
+{
+    const protocore_cc1101_bus *bus;
+    uint8_t *buf;
+    uint8_t cap;
+    int16_t *rssi_dbm;
+} Cc1101RecvArgs;
+
+/** @brief What rssi_dbm takes: raw. */
+typedef struct
+{
+    uint8_t raw;
+} Cc1101RssiDbmArgs;
 
 /**
- * @brief Transmit @p len bytes as a variable-length packet (leading length byte), then strobe TX.
- * @return true; false if @p len is 0 or exceeds 63 (one FIFO fill).
+ * @brief CC1101 sub-GHz radio driver (PROTOCORE_ENABLE_CC1101) - TI 300-928 MHz over SPI.
+ *
+ * A caller sets the members a call takes, invokes it through ::Cc1101 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Cc1101.init_args.bus = ...;
+ *   Cc1101.init_args.cfg = ...;
+ *   Cc1101.init(work);
+ *   // Cc1101.ok is what the call reports
+ *
+ * @var Cc1101Ns::init_args  what init takes: bus, cfg
+ * @var Cc1101Ns::send_args  what send takes: bus, data, len
+ * @var Cc1101Ns::tx_done_args  what tx_done takes: bus
+ * @var Cc1101Ns::set_rx_args  what set_rx takes: bus
+ * @var Cc1101Ns::recv_args  what recv takes: bus, buf, cap, rssi_dbm
+ * @var Cc1101Ns::rssi_dbm_args  what rssi_dbm takes: raw
+ * @var Cc1101Ns::ok  true; false if the VERSION status register reads 0x00 / 0xFF (the ...
+ * @var Cc1101Ns::n  the payload length (capped at cap), or -1 if the RX FIFO is empty
+ * @var Cc1101Ns::value  the value a call reports
+ * @var Cc1101Ns::init  reset the CC1101, apply cfg, set the channel, and confirm it is ...
+ * @var Cc1101Ns::send  transmit len bytes as a variable-length packet (leading length ...
+ * @var Cc1101Ns::tx_done  true once the state machine has returned to IDLE after a transmit
+ * @var Cc1101Ns::set_rx  flush RX and enter receive mode (strobe RX). Then poll ...
+ * @var Cc1101Ns::recv  if a packet is waiting, read it (length byte + payload + appended ...
+ * @var Cc1101Ns::rssi_dbm  convert a raw CC1101 RSSI register value to dBm (TI datasheet ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_cc1101_send(const protocore_cc1101_bus *bus, const uint8_t *data, uint8_t len);
+typedef struct
+{
+    Cc1101InitArgs init_args;
+    Cc1101SendArgs send_args;
+    Cc1101TxDoneArgs tx_done_args;
+    Cc1101SetRxArgs set_rx_args;
+    Cc1101RecvArgs recv_args;
+    Cc1101RssiDbmArgs rssi_dbm_args;
 
-/** @brief True once the state machine has returned to IDLE after a transmit. */
-proto_bool protocore_cc1101_tx_done(const protocore_cc1101_bus *bus);
+    proto_bool ok;
+    int n;
+    int16_t value;
 
-/** @brief Flush RX and enter receive mode (strobe RX). Then poll protocore_cc1101_recv(). */
-void protocore_cc1101_set_rx(const protocore_cc1101_bus *bus);
+    void (*const init)(uint8_t *restrict work);
+    void (*const send)(uint8_t *restrict work);
+    void (*const tx_done)(uint8_t *restrict work);
+    void (*const set_rx)(uint8_t *restrict work);
+    void (*const recv)(uint8_t *restrict work);
+    void (*const rssi_dbm)(uint8_t *restrict work);
+} Cc1101Ns;
 
-/**
- * @brief If a packet is waiting, read it (length byte + payload + appended RSSI/LQI status).
- * @param[out] rssi_dbm set to the decoded RSSI in dBm (may be null).
- * @return the payload length (capped at @p cap), or -1 if the RX FIFO is empty.
- */
-int protocore_cc1101_recv(const protocore_cc1101_bus *bus, uint8_t *buf, uint8_t cap, int16_t *rssi_dbm);
-
-/** @brief Convert a raw CC1101 RSSI register value to dBm (TI datasheet formula). Pure. */
-int16_t protocore_cc1101_rssi_dbm(uint8_t raw);
+/** @brief The one symbol this module exports. */
+extern Cc1101Ns Cc1101;
 
 PROTOCORE_END_DECLS
 

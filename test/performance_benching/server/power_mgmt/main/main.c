@@ -34,7 +34,7 @@ static PowerPlan power_decide(const PowerCfg *cfg, uint8_t load_pct, int16_t tem
     Power.plan_args.brownout_boot = brownout_boot;
     Power.plan_args.since_boot_ms = since_boot_ms;
     Power.plan_args.was_throttled = was_throttled;
-    Power.decide(Power.internal);
+    Power.decide(protocore_power_mgmt_span());
     return Power.plan;
 }
 
@@ -45,7 +45,7 @@ static size_t power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_
     Power.out_args.temp_c = temp_c;
     Power.out_args.out = out;
     Power.out_args.cap = cap;
-    Power.json(Power.internal);
+    Power.json(protocore_power_mgmt_span());
     return Power.n;
 }
 
@@ -55,7 +55,7 @@ void dbench_run(void)
     // the shipped PROTOCORE_POWER_* defaults), so these numbers describe the real decision.
     PowerCfg cfg;
     Power.cfg_out = &cfg;
-    Power.defaults(Power.internal);
+    Power.defaults(protocore_power_mgmt_span());
     cfg.mhz_max = 240;
     cfg.mhz_min = 80;
     cfg.busy_pct = 40;

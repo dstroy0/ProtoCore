@@ -67,9 +67,6 @@ typedef struct
     const char *b; ///< the right dotted name
 } DnsWireCmpArgs;
 
-/** @brief The codec's calls, described only in dns_wire.c. */
-struct DnsWireInternal;
-
 /**
  * @brief The DNS name codec: labels to a dotted string, a dotted string to labels, and the compare.
  *
@@ -85,7 +82,6 @@ struct DnsWireInternal;
  * @var DnsWireNs::decode    read the name at @c msg.off into @c msg.out as a dotted string
  * @var DnsWireNs::encode    write @c text.dotted into @c text.out as labels plus the root octet
  * @var DnsWireNs::eq        compare two dotted names ignoring ASCII case (RFC 1035 sec 2.3.3)
- * @var DnsWireNs::internal  the calls that read this handle
  *
  * decode follows pointers only with @c msg.allow_ptr, at most ::PROTOCORE_DNS_PTR_HOPS of them, so a
  * message that points at itself terminates. The first name in a message has nothing earlier to point
@@ -115,11 +111,9 @@ typedef struct
     size_t next;
     size_t n;
 
-    void (*decode)(struct DnsWireInternal *ctx);
-    void (*encode)(struct DnsWireInternal *ctx);
-    void (*eq)(struct DnsWireInternal *ctx);
-
-    struct DnsWireInternal *internal;
+    void (*const decode)(uint8_t *restrict work);
+    void (*const encode)(uint8_t *restrict work);
+    void (*const eq)(uint8_t *restrict work);
 } DnsWireNs;
 
 /** @brief The one symbol this module exports. */

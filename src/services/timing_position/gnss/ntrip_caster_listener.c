@@ -116,17 +116,17 @@ static size_t mounts_on_listener(uint8_t listener_id, NtripMount *out, size_t ca
 static void reply_and_close(CasterRover *r, const char *resp, size_t len)
 {
     ConnPool.slot = r->conn_slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (len && ConnPool.ok)
     {
         ConnPool.slot = r->conn_slot;
         ConnPool.io.data = resp;
         ConnPool.io.len = (proto_u16)len;
-        ConnPool.send(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
     }
     r->active = PROTO_FALSE;
     ConnPool.slot = r->conn_slot;
-    ConnPool.close(ConnPool.internal);
+    ConnPool.close(protocore_conn_pool_span());
 }
 
 // Constant-length credential compare (auth strings are short and app-configured).
@@ -152,7 +152,7 @@ static void serve_sourcetable(CasterRover *r, NtripVersion version)
 {
     NtripMount list[PROTOCORE_NTRIP_MAX_MOUNTS];
     ConnPool.slot = r->conn_slot;
-    ConnPool.listener_id(ConnPool.internal);
+    ConnPool.listener_id(protocore_conn_pool_span());
     size_t nm = mounts_on_listener(ConnPool.u8, list, PROTOCORE_NTRIP_MAX_MOUNTS);
     char buf[PROTOCORE_NTRIP_REQ_MAX + 256];
     size_t n = protocore_ntrip_build_sourcetable(buf, sizeof(buf), version, list, nm);
@@ -175,7 +175,7 @@ static void dispatch(CasterRover *r, const NtripRequest *req)
         return;
     }
     ConnPool.slot = r->conn_slot;
-    ConnPool.listener_id(ConnPool.internal);
+    ConnPool.listener_id(protocore_conn_pool_span());
     int mi = mount_index(req->mountpoint, (int)ConnPool.u8);
     if (mi < 0)
     {
@@ -190,17 +190,17 @@ static void dispatch(CasterRover *r, const NtripRequest *req)
     }
     size_t n = protocore_ntrip_build_stream_response(buf, sizeof(buf), req->version);
     ConnPool.slot = r->conn_slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     const proto_bool up = ConnPool.ok;
     ConnPool.slot = r->conn_slot;
     ConnPool.io.data = buf;
     ConnPool.io.len = (proto_u16)n;
-    ConnPool.send(ConnPool.internal);
+    ConnPool.send(protocore_conn_pool_span());
     if (n == 0 || !up || !ConnPool.ok)
     {
         r->active = PROTO_FALSE;
         ConnPool.slot = r->conn_slot;
-        ConnPool.close(ConnPool.internal);
+        ConnPool.close(protocore_conn_pool_span());
         return;
     }
     r->streaming = PROTO_TRUE;
@@ -213,7 +213,7 @@ static void caster_on_accept(uint8_t slot)
     if (idx < 0)
     {
         ConnPool.slot = slot;
-        ConnPool.close(ConnPool.internal); // rover table full
+        ConnPool.close(protocore_conn_pool_span()); // rover table full
         return;
     }
     CasterRover *r = &s_ctx.rovers[idx];
@@ -230,7 +230,7 @@ static void caster_on_data(uint8_t slot)
     if (!r)
     {
         ConnPool.slot = slot;
-        ConnPool.close(ConnPool.internal);
+        ConnPool.close(protocore_conn_pool_span());
         return;
     }
     if (r->streaming)
@@ -240,7 +240,7 @@ static void caster_on_data(uint8_t slot)
         for (;;)
         {
             ConnPool.slot = slot;
-            ConnPool.available(ConnPool.internal);
+            ConnPool.available(protocore_conn_pool_span());
             if (ConnPool.n == 0)
             {
                 break;
@@ -248,7 +248,7 @@ static void caster_on_data(uint8_t slot)
             ConnPool.slot = slot;
             ConnPool.io.buf = sink;
             ConnPool.io.cap = sizeof(sink);
-            ConnPool.read(ConnPool.internal);
+            ConnPool.read(protocore_conn_pool_span());
             if (ConnPool.n == 0)
             {
                 break;
@@ -260,7 +260,7 @@ static void caster_on_data(uint8_t slot)
     for (;;)
     {
         ConnPool.slot = slot;
-        ConnPool.available(ConnPool.internal);
+        ConnPool.available(protocore_conn_pool_span());
         if (ConnPool.n == 0 || r->req_len >= sizeof(r->req) - 1)
         {
             break;
@@ -268,7 +268,7 @@ static void caster_on_data(uint8_t slot)
         ConnPool.slot = slot;
         ConnPool.io.buf = (uint8_t *)r->req + r->req_len;
         ConnPool.io.cap = sizeof(r->req) - 1 - r->req_len;
-        ConnPool.read(ConnPool.internal);
+        ConnPool.read(protocore_conn_pool_span());
         if (ConnPool.n == 0)
         {
             break;
@@ -338,7 +338,7 @@ proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMoun
     {
         Session.proto->proto = PROTO_NTRIP_CASTER;
         Session.proto->h = &s_caster_handler;
-        Session.proto->add(Session.proto->internal);
+        Session.proto->add(protocore_session_span());
         s_ctx.registered = PROTO_TRUE;
     }
     return PROTO_TRUE;
@@ -364,7 +364,7 @@ int protocore_ntrip_caster_broadcast(const char *mountpoint, const uint8_t *data
             continue;
         }
         ConnPool.slot = r->conn_slot;
-        ConnPool.active(ConnPool.internal);
+        ConnPool.active(protocore_conn_pool_span());
         if (!ConnPool.ok)
         {
             continue;
@@ -372,7 +372,7 @@ int protocore_ntrip_caster_broadcast(const char *mountpoint, const uint8_t *data
         ConnPool.slot = r->conn_slot;
         ConnPool.io.data = data;
         ConnPool.io.len = (proto_u16)len;
-        ConnPool.send(ConnPool.internal);
+        ConnPool.send(protocore_conn_pool_span());
         if (ConnPool.ok)
         {
             sent++;

@@ -25,7 +25,8 @@ body_of() {
 }
 
 run_one() {
-    local label="$1" cc="$2" opt="$3" lto="$4"; shift 4
+    local label="$1" cc="$2" opt="$3" lto="$4"
+    shift 4
     local flags="$STD $opt $*"
     [ "$lto" = flto ] && flags="$flags -flto"
     local exe="out_${label}_${opt#-}_${lto}.exe"
@@ -34,7 +35,8 @@ run_one() {
         return
     fi
     local ob pb oc pc oi pi
-    ob=$(body_of "$exe" hot_opq); pb=$(body_of "$exe" hot_pub)
+    ob=$(body_of "$exe" hot_opq)
+    pb=$(body_of "$exe" hot_pub)
     oc=$(printf '%s\n' "$ob" | grep -cE 'call.*<(rt_available|rt_read_byte)' || true)
     pc=$(printf '%s\n' "$pb" | grep -cE 'call.*<(pub_available|pub_read_byte)' || true)
     oi=$(printf '%s\n' "$ob" | grep -c . || true)
@@ -45,7 +47,8 @@ run_one() {
 
 printf '%-7s %-4s %-5s | %-13s %-11s | %-13s %-11s\n' \
     CC OPT LTO "opaque calls" "opaque insn" "inline calls" "inline insn"
-printf '%.0s-' {1..81}; echo
+printf '%.0s-' {1..81}
+echo
 
 for OPT in -O0 -O1 -O2 -O3 -Os; do
     for LTO in none flto; do

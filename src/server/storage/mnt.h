@@ -132,9 +132,6 @@ typedef struct
     uint8_t id;                           ///< the point a lookup names
 } MntArgs;
 
-/** @brief The mount table's own state and the calls that reach it, described only in mnt.c. */
-struct MntInternal;
-
 /**
  * @brief The mount table and the active filesystem.
  *
@@ -153,7 +150,6 @@ struct MntInternal;
  * @var MntNs::active      the active filesystem
  * @var MntNs::ram         the in-memory filesystem, always present
  * @var MntNs::ram_format  empty the in-memory filesystem
- * @var MntNs::internal    the mount table and the calls that reach it
  */
 typedef struct
 {
@@ -163,20 +159,18 @@ typedef struct
     const protocore_mnt_backend *backend;
     const char *text;
 
-    void (*point_add)(struct MntInternal *ctx);
-    void (*point_of)(struct MntInternal *ctx);
-    void (*root_of)(struct MntInternal *ctx);
-    void (*reset)(struct MntInternal *ctx);
-    void (*mount)(struct MntInternal *ctx);
-    void (*active)(struct MntInternal *ctx);
+    void (*const point_add)(uint8_t *restrict work);
+    void (*const point_of)(uint8_t *restrict work);
+    void (*const root_of)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *restrict work);
+    void (*const mount)(uint8_t *restrict work);
+    void (*const active)(uint8_t *restrict work);
     // The RAM backend is the only part with a footprint (PROTOCORE_MNT_RAM_FILES x
     // PROTOCORE_MNT_RAM_FILE_SIZE of BSS), so it is the only part the flag gates.
 #if PROTOCORE_ENABLE_MNT
-    void (*ram)(struct MntInternal *ctx);
-    void (*ram_format)(struct MntInternal *ctx);
+    void (*const ram)(uint8_t *restrict work);
+    void (*const ram_format)(uint8_t *restrict work);
 #endif
-
-    struct MntInternal *internal;
 } MntNs;
 
 /** @brief The one symbol this module exports. */

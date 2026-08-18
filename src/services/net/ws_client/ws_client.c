@@ -96,27 +96,46 @@ struct WsClientStorage
 
 #endif // PROTOCORE_HAS_NET_STACK
 
-/**
- * @brief The connection's state and the calls that reach it - what WsClientNs points at.
- *
- * @var WsClientInternal::store  the transport slot, the receive ring and the frame buffers
- * @var WsClientInternal::ns     the handle a caller sets a call's members on
- */
-struct WsClientInternal
-{
 #if PROTOCORE_HAS_NET_STACK
-    struct WsClientStorage *store;
-#endif
-    WsClientNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define WS_CLIENT_OFF_CTX 0u
+static_assert(WS_CLIENT_OFF_CTX + sizeof(struct WsClientStorage) <= PROTOCORE_WS_CLIENT_BORROW,
+              "PROTOCORE_WS_CLIENT_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-#if PROTOCORE_HAS_NET_STACK
-static struct WsClientStorage s_store = {.cid = -1};
-static struct WsClientInternal s_ws = {.store = &s_store, .ns = &WsClient};
+// The region, at its offset in the caller's borrow.
+#define WS_CLIENT_CTX(w) ((struct WsClientStorage *)(void *)((w) + WS_CLIENT_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_WS_CLIENT_BORROW persistent bytes, or null while the pool was short
+} WsClientOwnCtx;
+static WsClientOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_ws_client_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_WS_CLIENT_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // A borrow arrives zeroed, and these do not start at zero.
+            WS_CLIENT_CTX(s_own.span)->cid = -1;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 #else
 // No storage member: without a network stack there is no connection to own, and the codec below
 // works entirely in the caller's buffers.
-static struct WsClientInternal s_ws = {.ns = &WsClient};
 #endif
 
 // ---------------------------------------------------------------------------
@@ -125,11 +144,12 @@ static struct WsClientInternal s_ws = {.ns = &WsClient};
 
 // accept = base64(SHA-1(key || GUID)), the value the server's |Sec-WebSocket-Accept| must carry
 // (RFC 6455 sec 1.3, sec 4.2.2 step 5).
-static void ws_accept_for_key(struct WsClientInternal *restrict ctx)
+static void ws_accept_for_key(uint8_t *restrict work)
 {
-    char *accept = ctx->ns->handshake.accept;
-    const size_t cap = ctx->ns->handshake.accept_cap;
-    const char *key = ctx->ns->handshake.key;
+    (void)work;
+    char *accept = WsClient.handshake.accept;
+    const size_t cap = WsClient.handshake.accept_cap;
+    const char *key = WsClient.handshake.key;
     if (!accept || cap == 0)
     {
         return;
@@ -167,15 +187,16 @@ static void ws_accept_for_key(struct WsClientInternal *restrict ctx)
 // The client's opening handshake: a GET request-line (RFC 9112 sec 3) and the field lines RFC 6455
 // sec 4.1 requires. A |Sec-WebSocket-Protocol| offer is emitted only when a subprotocol is named,
 // and the server echoes the one it selected; null or empty omits the field line.
-static void ws_build_opening_handshake(struct WsClientInternal *restrict ctx)
+static void ws_build_opening_handshake(uint8_t *restrict work)
 {
-    uint8_t *out = ctx->ns->buf.out;
-    const size_t cap = ctx->ns->buf.cap;
-    const char *host = ctx->ns->handshake.host;
-    const char *resource_name = ctx->ns->handshake.resource_name;
-    const char *key = ctx->ns->handshake.key;
-    const char *subprotocol = ctx->ns->handshake.subprotocol;
-    ctx->ns->n = 0;
+    (void)work;
+    uint8_t *out = WsClient.buf.out;
+    const size_t cap = WsClient.buf.cap;
+    const char *host = WsClient.handshake.host;
+    const char *resource_name = WsClient.handshake.resource_name;
+    const char *key = WsClient.handshake.key;
+    const char *subprotocol = WsClient.handshake.subprotocol;
+    WsClient.n = 0;
     if (!out || !host || !resource_name || !key)
     {
         return;
@@ -196,7 +217,7 @@ static void ws_build_opening_handshake(struct WsClientInternal *restrict ctx)
     const size_t n = Sb.finish(&sb);
     if (sb.ok)
     {
-        ctx->ns->n = n;
+        WsClient.n = n;
     }
 }
 
@@ -241,12 +262,13 @@ static const char *field_value(const uint8_t *buf, size_t len, const char *name,
 // The server's opening handshake: a 101 Switching Protocols status-line (RFC 9110 sec 15.2.2)
 // carrying a |Sec-WebSocket-Accept| equal to the value the accept computation produced
 // (RFC 6455 sec 4.1).
-static void ws_check_server_handshake(struct WsClientInternal *restrict ctx)
+static void ws_check_server_handshake(uint8_t *restrict work)
 {
-    const uint8_t *buf = ctx->ns->buf.in;
-    const size_t len = ctx->ns->buf.avail;
-    const char *accept = ctx->ns->handshake.accept;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    const uint8_t *buf = WsClient.buf.in;
+    const size_t len = WsClient.buf.avail;
+    const char *accept = WsClient.handshake.accept;
+    WsClient.ok = PROTO_FALSE;
     if (!buf || len < WSC_STATUS_MIN || !accept)
     {
         return;
@@ -275,7 +297,7 @@ static void ws_check_server_handshake(struct WsClientInternal *restrict ctx)
     {
         return;
     }
-    ctx->ns->ok = (vlen == str.len(accept, vlen + 1)) && mem.cmp(got, accept, vlen) == 0;
+    WsClient.ok = (vlen == str.len(accept, vlen + 1)) && mem.cmp(got, accept, vlen) == 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -284,15 +306,16 @@ static void ws_check_server_handshake(struct WsClientInternal *restrict ctx)
 
 // One FIN frame: FIN and the 4-bit opcode, the Payload len in its short, 16-bit or 64-bit form, the
 // 4-octet Masking-key, then Payload data XORed with octet i modulo 4 of that key (sec 5.2, sec 5.3).
-static void ws_build_frame(struct WsClientInternal *restrict ctx)
+static void ws_build_frame(uint8_t *restrict work)
 {
-    uint8_t *out = ctx->ns->buf.out;
-    const size_t cap = ctx->ns->buf.cap;
-    const uint8_t opcode = ctx->ns->frame.opcode;
-    const uint8_t *payload = ctx->ns->frame.payload;
-    const size_t len = ctx->ns->frame.payload_len;
-    const uint8_t *mask = ctx->ns->frame.masking_key;
-    ctx->ns->n = 0;
+    (void)work;
+    uint8_t *out = WsClient.buf.out;
+    const size_t cap = WsClient.buf.cap;
+    const uint8_t opcode = WsClient.frame.opcode;
+    const uint8_t *payload = WsClient.frame.payload;
+    const size_t len = WsClient.frame.payload_len;
+    const uint8_t *mask = WsClient.frame.masking_key;
+    WsClient.n = 0;
     if (!out || !mask)
     {
         return;
@@ -337,16 +360,17 @@ static void ws_build_frame(struct WsClientInternal *restrict ctx)
     {
         out[i + j] = (uint8_t)(payload[j] ^ mask[j & 3]);
     }
-    ctx->ns->n = i + len;
+    WsClient.n = i + len;
 }
 
 // One inbound frame's header, read back into the frame members. False while fewer octets than the
 // whole frame are present (RFC 6455 sec 5.2).
-static void ws_parse_frame(struct WsClientInternal *restrict ctx)
+static void ws_parse_frame(uint8_t *restrict work)
 {
-    const uint8_t *buf = ctx->ns->buf.in;
-    const size_t avail = ctx->ns->buf.avail;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    const uint8_t *buf = WsClient.buf.in;
+    const size_t avail = WsClient.buf.avail;
+    WsClient.ok = PROTO_FALSE;
     if (!buf || avail < 2)
     {
         return;
@@ -391,12 +415,12 @@ static void ws_parse_frame(struct WsClientInternal *restrict ctx)
     {
         return;
     }
-    ctx->ns->frame.opcode = (uint8_t)(b0 & 0x0F);
-    ctx->ns->frame.fin = (b0 & 0x80) != 0;
-    ctx->ns->frame.payload_off = off;
-    ctx->ns->frame.payload_len = (size_t)len;
-    ctx->ns->frame.consumed = off + (size_t)len;
-    ctx->ns->ok = PROTO_TRUE;
+    WsClient.frame.opcode = (uint8_t)(b0 & 0x0F);
+    WsClient.frame.fin = (b0 & 0x80) != 0;
+    WsClient.frame.payload_off = off;
+    WsClient.frame.payload_len = (size_t)len;
+    WsClient.frame.consumed = off + (size_t)len;
+    WsClient.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -404,74 +428,78 @@ static void ws_parse_frame(struct WsClientInternal *restrict ctx)
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HAS_NET_STACK
 
-static size_t ring_avail(struct WsClientInternal *restrict ctx)
+static size_t ring_avail(uint8_t *restrict work)
 {
-    return (ctx->store->rx_head + WSC_RING_SIZE - ctx->store->rx_tail) & WSC_RING_MASK;
+    return (WS_CLIENT_CTX(work)->rx_head + WSC_RING_SIZE - WS_CLIENT_CTX(work)->rx_tail) & WSC_RING_MASK;
 }
 
-static uint8_t ring_peek(struct WsClientInternal *restrict ctx, size_t i)
+static uint8_t ring_peek(uint8_t *restrict work, size_t i)
 {
-    return ctx->store->rx[(ctx->store->rx_tail + i) & WSC_RING_MASK];
+    return WS_CLIENT_CTX(work)->rx[(WS_CLIENT_CTX(work)->rx_tail + i) & WSC_RING_MASK];
 }
 
-static void ring_advance(struct WsClientInternal *restrict ctx, size_t n)
+static void ring_advance(uint8_t *restrict work, size_t n)
 {
-    ctx->store->rx_tail = (ctx->store->rx_tail + n) & WSC_RING_MASK;
+    WS_CLIENT_CTX(work)->rx_tail = (WS_CLIENT_CTX(work)->rx_tail + n) & WSC_RING_MASK;
 }
 
-static void ring_copy(struct WsClientInternal *restrict ctx, uint8_t *dst, size_t n)
+static void ring_copy(uint8_t *restrict work, uint8_t *dst, size_t n)
 {
     for (size_t i = 0; i < n; i++)
     {
-        dst[i] = ctx->store->rx[(ctx->store->rx_tail + i) & WSC_RING_MASK];
+        dst[i] = WS_CLIENT_CTX(work)->rx[(WS_CLIENT_CTX(work)->rx_tail + i) & WSC_RING_MASK];
     }
 }
 
-static void ring_write(struct WsClientInternal *restrict ctx, const uint8_t *src, size_t n)
+static void ring_write(uint8_t *restrict work, const uint8_t *src, size_t n)
 {
     for (size_t i = 0; i < n; i++)
     {
-        ctx->store->rx[ctx->store->rx_head] = src[i];
-        ctx->store->rx_head = (ctx->store->rx_head + 1) & WSC_RING_MASK;
+        WS_CLIENT_CTX(work)->rx[WS_CLIENT_CTX(work)->rx_head] = src[i];
+        WS_CLIENT_CTX(work)->rx_head = (WS_CLIENT_CTX(work)->rx_head + 1) & WSC_RING_MASK;
     }
 }
 
-static proto_bool ws_tx_plain(struct WsClientInternal *restrict ctx, const uint8_t *data, size_t len)
+static proto_bool ws_tx_plain(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
-    TcpClient.cid = ctx->store->cid;
+    TcpClient.cid = WS_CLIENT_CTX(work)->cid;
     TcpClient.io.data = data;
     TcpClient.io.len = len;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     return TcpClient.ok;
 }
 
 // Drain plaintext octets from the transport slot into the receive ring.
-static void ws_pump_plain(struct WsClientInternal *restrict ctx)
+static void ws_pump_plain(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     uint8_t tmp[WSC_PUMP_CHUNK];
     for (;;)
     {
-        const size_t room = (WSC_RING_SIZE - 1) - ring_avail(ctx);
+        const size_t room = (WSC_RING_SIZE - 1) - ring_avail(work);
         if (room == 0)
         {
             break;
         }
-        TcpClient.cid = ctx->store->cid;
+        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
         TcpClient.io.buf = tmp;
         TcpClient.io.cap = room < sizeof(tmp) ? room : sizeof(tmp);
-        TcpClient.read(TcpClient.internal);
+        TcpClient.read(protocore_tcp_client_span());
         const size_t n = TcpClient.n;
         if (n == 0)
         {
-            TcpClient.cid = ctx->store->cid;
-            TcpClient.is_closed(TcpClient.internal);
+            TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+            TcpClient.is_closed(protocore_tcp_client_span());
             if (TcpClient.ok)
             {
-                ctx->store->closed = PROTO_TRUE;
+                WS_CLIENT_CTX(work)->closed = PROTO_TRUE;
             }
             break;
         }
-        ring_write(ctx, tmp, n);
+        ring_write(work, tmp, n);
     }
 }
 
@@ -482,7 +510,7 @@ static int ws_tls_send(void *bio, const unsigned char *buf, size_t len)
 {
     (void)bio;
     const size_t cap = len > 0xFFFF ? 0xFFFF : len;
-    return ws_tx_plain(&s_ws, buf, cap) ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
+    return ws_tx_plain(protocore_ws_client_span(), buf, cap) ? (int)cap : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
 }
 
 static int ws_tls_recv(void *bio, unsigned char *buf, size_t len)
@@ -491,24 +519,28 @@ static int ws_tls_recv(void *bio, unsigned char *buf, size_t len)
     TcpClient.cid = s_ws.store->cid;
     TcpClient.io.buf = buf;
     TcpClient.io.cap = len;
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     const size_t n = TcpClient.n;
     if (n == 0)
     {
         TcpClient.cid = s_ws.store->cid;
-        TcpClient.is_closed(TcpClient.internal);
+        TcpClient.is_closed(protocore_tcp_client_span());
         return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
     }
     return (int)n;
 }
 
 // Drain plaintext out of the TLS session into the receive ring.
-static void ws_pump_tls(struct WsClientInternal *restrict ctx)
+static void ws_pump_tls(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     uint8_t tmp[WSC_PUMP_CHUNK];
     for (;;)
     {
-        const size_t room = (WSC_RING_SIZE - 1) - ring_avail(ctx);
+        const size_t room = (WSC_RING_SIZE - 1) - ring_avail(work);
         if (room == 0)
         {
             break;
@@ -519,45 +551,48 @@ static void ws_pump_tls(struct WsClientInternal *restrict ctx)
         {
             if (n < 0)
             {
-                ctx->store->closed = PROTO_TRUE;
+                WS_CLIENT_CTX(work)->closed = PROTO_TRUE;
             }
             break;
         }
-        ring_write(ctx, tmp, (size_t)n);
+        ring_write(work, tmp, (size_t)n);
     }
 }
 #endif // PROTOCORE_ENABLE_WS_CLIENT_TLS
 
-static void ws_pump(struct WsClientInternal *restrict ctx)
+static void ws_pump(uint8_t *restrict work)
 {
-#if PROTOCORE_ENABLE_WS_CLIENT_TLS
-    if (ctx->store->secure)
+    if (!work)
     {
-        ws_pump_tls(ctx);
+        return; // the pool was short of this module's borrow
+    }
+#if PROTOCORE_ENABLE_WS_CLIENT_TLS
+    if (WS_CLIENT_CTX(work)->secure)
+    {
+        ws_pump_tls(work);
         return;
     }
 #endif
-    ws_pump_plain(ctx);
+    ws_pump_plain(work);
 }
 
 // Send framed octets, through the TLS session when /secure/ is set.
-static proto_bool ws_tx(struct WsClientInternal *restrict ctx, const uint8_t *data, size_t len)
+static proto_bool ws_tx(uint8_t *restrict work, const uint8_t *data, size_t len)
 {
 #if PROTOCORE_ENABLE_WS_CLIENT_TLS
-    if (ctx->store->secure)
+    if (WS_CLIENT_CTX(work)->secure)
     {
         return protocore_tls_client_session_write(data, len) == (int)len;
     }
 #endif
-    return ws_tx_plain(ctx, data, len);
+    return ws_tx_plain(work, data, len);
 }
 
 // Frame and send with a Masking-key drawn fresh per frame from the CSPRNG (RFC 6455 sec 5.3,
 // sec 10.3).
-static proto_bool ws_emit_frame(struct WsClientInternal *restrict ctx, uint8_t opcode, const uint8_t *payload,
-                                size_t len)
+static proto_bool ws_emit_frame(uint8_t *restrict work, uint8_t opcode, const uint8_t *payload, size_t len)
 {
-    if (!ctx->store->established)
+    if (!WS_CLIENT_CTX(work)->established)
     {
         return PROTO_FALSE;
     }
@@ -565,47 +600,50 @@ static proto_bool ws_emit_frame(struct WsClientInternal *restrict ctx, uint8_t o
     Rng.fill_args.out = mask;
     Rng.fill_args.len = sizeof(mask);
     Rng.fill(protocore_rng_span());
-    ctx->ns->frame.opcode = opcode;
-    ctx->ns->frame.payload = payload;
-    ctx->ns->frame.payload_len = len;
-    ctx->ns->frame.masking_key = mask;
-    ctx->ns->buf.out = ctx->store->tx;
-    ctx->ns->buf.cap = sizeof(ctx->store->tx);
-    ws_build_frame(ctx);
-    const size_t n = ctx->ns->n;
-    return n != 0 && ws_tx(ctx, ctx->store->tx, n);
+    WsClient.frame.opcode = opcode;
+    WsClient.frame.payload = payload;
+    WsClient.frame.payload_len = len;
+    WsClient.frame.masking_key = mask;
+    WsClient.buf.out = WS_CLIENT_CTX(work)->tx;
+    WsClient.buf.cap = sizeof(WS_CLIENT_CTX(work)->tx);
+    ws_build_frame(work);
+    const size_t n = WsClient.n;
+    return n != 0 && ws_tx(work, WS_CLIENT_CTX(work)->tx, n);
 }
 
 // RFC 6455 sec 7.1.1: close the WebSocket connection - end the TLS session, then the transport slot.
-static void ws_close_transport(struct WsClientInternal *restrict ctx)
+static void ws_close_transport(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
 #if PROTOCORE_ENABLE_WS_CLIENT_TLS
-    if (ctx->store->secure)
+    if (WS_CLIENT_CTX(work)->secure)
     {
         protocore_tls_client_session_end();
     }
 #endif
-    if (ctx->store->cid >= 0)
+    if (WS_CLIENT_CTX(work)->cid >= 0)
     {
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.close(TcpClient.internal);
+        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClient.close(protocore_tcp_client_span());
     }
-    ctx->store->cid = -1;
-    ctx->store->established = PROTO_FALSE;
+    WS_CLIENT_CTX(work)->cid = -1;
+    WS_CLIENT_CTX(work)->established = PROTO_FALSE;
 }
 
-static void ws_deliver(struct WsClientInternal *restrict ctx, uint8_t opcode, const uint8_t *payload, size_t len)
+static void ws_deliver(uint8_t *restrict work, uint8_t opcode, const uint8_t *payload, size_t len)
 {
-    if (ctx->store->on_message && (opcode == (uint8_t)WSC_OP_TEXT || opcode == (uint8_t)WSC_OP_BINARY))
+    if (WS_CLIENT_CTX(work)->on_message && (opcode == (uint8_t)WSC_OP_TEXT || opcode == (uint8_t)WSC_OP_BINARY))
     {
-        ctx->store->on_message(opcode, payload, len);
+        WS_CLIENT_CTX(work)->on_message(opcode, payload, len);
     }
 }
 
 // One parsed frame: join fragments (sec 5.4), answer Ping with Pong carrying the same Application
 // data (sec 5.5.2, sec 5.5.3), and echo a Close (sec 5.5.1).
-static void ws_handle_frame(struct WsClientInternal *restrict ctx, uint8_t opcode, proto_bool fin,
-                            const uint8_t *payload, size_t len)
+static void ws_handle_frame(uint8_t *restrict work, uint8_t opcode, proto_bool fin, const uint8_t *payload, size_t len)
 {
     switch ((WsClientOpcode)opcode)
     {
@@ -613,33 +651,34 @@ static void ws_handle_frame(struct WsClientInternal *restrict ctx, uint8_t opcod
     case WSC_OP_BINARY:
         if (fin)
         {
-            ws_deliver(ctx, opcode, payload, len); // an unfragmented message is one frame
+            ws_deliver(work, opcode, payload, len); // an unfragmented message is one frame
         }
         else
         {
-            ctx->store->msg_op = opcode; // the first fragment
-            ctx->store->msg_len = len < sizeof(ctx->store->msg) ? len : sizeof(ctx->store->msg);
-            mem.cpy(ctx->store->msg, payload, ctx->store->msg_len);
+            WS_CLIENT_CTX(work)->msg_op = opcode; // the first fragment
+            WS_CLIENT_CTX(work)->msg_len =
+                len < sizeof(WS_CLIENT_CTX(work)->msg) ? len : sizeof(WS_CLIENT_CTX(work)->msg);
+            mem.cpy(WS_CLIENT_CTX(work)->msg, payload, WS_CLIENT_CTX(work)->msg_len);
         }
         break;
     case WSC_OP_CONT:
-        if (ctx->store->msg_len + len <= sizeof(ctx->store->msg))
+        if (WS_CLIENT_CTX(work)->msg_len + len <= sizeof(WS_CLIENT_CTX(work)->msg))
         {
-            mem.cpy(ctx->store->msg + ctx->store->msg_len, payload, len);
-            ctx->store->msg_len += len;
+            mem.cpy(WS_CLIENT_CTX(work)->msg + WS_CLIENT_CTX(work)->msg_len, payload, len);
+            WS_CLIENT_CTX(work)->msg_len += len;
         }
         if (fin)
         {
-            ws_deliver(ctx, ctx->store->msg_op, ctx->store->msg, ctx->store->msg_len);
-            ctx->store->msg_len = 0;
+            ws_deliver(work, WS_CLIENT_CTX(work)->msg_op, WS_CLIENT_CTX(work)->msg, WS_CLIENT_CTX(work)->msg_len);
+            WS_CLIENT_CTX(work)->msg_len = 0;
         }
         break;
     case WSC_OP_PING:
-        ws_emit_frame(ctx, (uint8_t)WSC_OP_PONG, payload, len);
+        ws_emit_frame(work, (uint8_t)WSC_OP_PONG, payload, len);
         break;
     case WSC_OP_CLOSE:
-        ws_emit_frame(ctx, (uint8_t)WSC_OP_CLOSE, NULL, 0);
-        ctx->store->closed = PROTO_TRUE;
+        ws_emit_frame(work, (uint8_t)WSC_OP_CLOSE, NULL, 0);
+        WS_CLIENT_CTX(work)->closed = PROTO_TRUE;
         break;
     case WSC_OP_PONG:
     default:
@@ -648,12 +687,16 @@ static void ws_handle_frame(struct WsClientInternal *restrict ctx, uint8_t opcod
 }
 
 // RFC 6455 sec 6.2: read what arrived and process each complete frame in it.
-static void ws_process_rx(struct WsClientInternal *restrict ctx)
+static void ws_process_rx(uint8_t *restrict work)
 {
-    ws_pump(ctx);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    ws_pump(work);
     for (;;)
     {
-        const size_t avail = ring_avail(ctx);
+        const size_t avail = ring_avail(work);
         if (avail < 2)
         {
             return;
@@ -664,45 +707,53 @@ static void ws_process_rx(struct WsClientInternal *restrict ctx)
         const size_t hn = avail < sizeof(hdr) ? avail : sizeof(hdr);
         for (size_t i = 0; i < hn; i++)
         {
-            hdr[i] = ring_peek(ctx, i);
+            hdr[i] = ring_peek(work, i);
         }
-        ctx->ns->buf.in = hdr;
-        ctx->ns->buf.avail = avail;
-        ws_parse_frame(ctx);
-        if (!ctx->ns->ok)
+        WsClient.buf.in = hdr;
+        WsClient.buf.avail = avail;
+        ws_parse_frame(work);
+        if (!WsClient.ok)
         {
             return; // the header or the frame it names has not fully arrived
         }
-        const uint8_t opcode = ctx->ns->frame.opcode;
-        const proto_bool fin = ctx->ns->frame.fin;
-        const size_t off = ctx->ns->frame.payload_off;
-        const size_t plen = ctx->ns->frame.payload_len;
-        const size_t consumed = ctx->ns->frame.consumed;
-        if (consumed > sizeof(ctx->store->pkt))
+        const uint8_t opcode = WsClient.frame.opcode;
+        const proto_bool fin = WsClient.frame.fin;
+        const size_t off = WsClient.frame.payload_off;
+        const size_t plen = WsClient.frame.payload_len;
+        const size_t consumed = WsClient.frame.consumed;
+        if (consumed > sizeof(WS_CLIENT_CTX(work)->pkt))
         {
-            ring_advance(ctx, consumed); // a frame no buffer holds: drop it
+            ring_advance(work, consumed); // a frame no buffer holds: drop it
             continue;
         }
-        ring_copy(ctx, ctx->store->pkt, consumed);
-        ring_advance(ctx, consumed);
-        ws_handle_frame(ctx, opcode, fin, ctx->store->pkt + off, plen);
+        ring_copy(work, WS_CLIENT_CTX(work)->pkt, consumed);
+        ring_advance(work, consumed);
+        ws_handle_frame(work, opcode, fin, WS_CLIENT_CTX(work)->pkt + off, plen);
     }
 }
 
-static void ws_on_message(struct WsClientInternal *restrict ctx)
+static void ws_on_message(uint8_t *restrict work)
 {
-    ctx->store->on_message = ctx->ns->msg.on_message;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    WS_CLIENT_CTX(work)->on_message = WsClient.msg.on_message;
 }
 
 // RFC 6455 sec 4.1: dial /host/ and /port/, raise TLS when /secure/ is set, send the client's
 // opening handshake and verify the server's. The connection is established when that verifies.
-static void ws_connect(struct WsClientInternal *restrict ctx)
+static void ws_connect(uint8_t *restrict work)
 {
-    const char *host = ctx->ns->handshake.host;
-    const char *resource_name = ctx->ns->handshake.resource_name;
-    const uint16_t port = ctx->ns->handshake.port;
-    const proto_bool secure = ctx->ns->handshake.secure;
-    ctx->ns->ok = PROTO_FALSE;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const char *host = WsClient.handshake.host;
+    const char *resource_name = WsClient.handshake.resource_name;
+    const uint16_t port = WsClient.handshake.port;
+    const proto_bool secure = WsClient.handshake.secure;
+    WsClient.ok = PROTO_FALSE;
     if (!host || !resource_name)
     {
         return;
@@ -713,23 +764,23 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
         return;
     }
 #endif
-    ctx->store->rx_head = 0;
-    ctx->store->rx_tail = 0;
-    ctx->store->closed = PROTO_FALSE;
-    ctx->store->established = PROTO_FALSE;
-    ctx->store->msg_len = 0;
-    ctx->store->secure = secure;
+    WS_CLIENT_CTX(work)->rx_head = 0;
+    WS_CLIENT_CTX(work)->rx_tail = 0;
+    WS_CLIENT_CTX(work)->closed = PROTO_FALSE;
+    WS_CLIENT_CTX(work)->established = PROTO_FALSE;
+    WS_CLIENT_CTX(work)->msg_len = 0;
+    WS_CLIENT_CTX(work)->secure = secure;
 
     const uint32_t deadline = Clock.ms + WSC_CONNECT_TIMEOUT_MS;
 
     TcpClient.dial.host = host;
     TcpClient.dial.port = port;
     TcpClient.dial.timeout_ms = WSC_CONNECT_TIMEOUT_MS;
-    TcpClient.open(TcpClient.internal);
-    ctx->store->cid = TcpClient.i32;
-    if (ctx->store->cid < 0)
+    TcpClient.open(protocore_tcp_client_span());
+    WS_CLIENT_CTX(work)->cid = TcpClient.i32;
+    if (WS_CLIENT_CTX(work)->cid < 0)
     {
-        WSC_DBG("[wsc] open failed (%d)\n", ctx->store->cid);
+        WSC_DBG("[wsc] open failed (%d)\n", WS_CLIENT_CTX(work)->cid);
         return;
     }
 
@@ -738,15 +789,15 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
     proto_bool up = PROTO_FALSE;
     while ((int32_t)(deadline - Clock.ms) > 0)
     {
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.connected(TcpClient.internal);
+        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClient.connected(protocore_tcp_client_span());
         up = TcpClient.ok;
         if (up)
         {
             break;
         }
-        TcpClient.cid = ctx->store->cid;
-        TcpClient.is_closed(TcpClient.internal);
+        TcpClient.cid = WS_CLIENT_CTX(work)->cid;
+        TcpClient.is_closed(protocore_tcp_client_span());
         if (TcpClient.ok)
         {
             break;
@@ -756,29 +807,29 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
     if (!up)
     {
         WSC_DBG("[wsc] transport never came up\n");
-        ws_close_transport(ctx);
+        ws_close_transport(work);
         return;
     }
 
 #if PROTOCORE_ENABLE_WS_CLIENT_TLS
-    if (ctx->store->secure)
+    if (WS_CLIENT_CTX(work)->secure)
     {
         if (!protocore_tls_client_session_begin(host, ws_tls_send, ws_tls_recv))
         {
             WSC_DBG("[wsc] TLS session begin failed\n");
-            ws_close_transport(ctx);
+            ws_close_transport(work);
             return;
         }
         protocore_tls_state h = PROTOCORE_TLS_BUSY;
-        while ((h = protocore_tls_client_session_handshake()) == PROTOCORE_TLS_BUSY && !ctx->store->closed &&
+        while ((h = protocore_tls_client_session_handshake()) == PROTOCORE_TLS_BUSY && !WS_CLIENT_CTX(work)->closed &&
                (int32_t)(deadline - Clock.ms) > 0)
         {
             pcdelay(WSC_POLL_MS);
         }
         if (h != PROTOCORE_TLS_READY)
         {
-            WSC_DBG("[wsc] TLS handshake h=%d closed=%d\n", (int)h, (int)ctx->store->closed);
-            ws_close_transport(ctx);
+            WSC_DBG("[wsc] TLS handshake h=%d closed=%d\n", (int)h, (int)WS_CLIENT_CTX(work)->closed);
+            ws_close_transport(work);
             return;
         }
         WSC_DBG("[wsc] TLS handshake ok\n");
@@ -794,18 +845,18 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
     char key_b64[PROTOCORE_WS_KEY_CAP];
     Base64.encode(key_raw, sizeof(key_raw), key_b64);
     char accept[PROTOCORE_WS_ACCEPT_CAP];
-    ctx->ns->handshake.key = key_b64;
-    ctx->ns->handshake.accept = accept;
-    ctx->ns->handshake.accept_cap = sizeof(accept);
-    ws_accept_for_key(ctx);
+    WsClient.handshake.key = key_b64;
+    WsClient.handshake.accept = accept;
+    WsClient.handshake.accept_cap = sizeof(accept);
+    ws_accept_for_key(work);
 
-    ctx->ns->buf.out = ctx->store->tx;
-    ctx->ns->buf.cap = sizeof(ctx->store->tx);
-    ws_build_opening_handshake(ctx);
-    const size_t n = ctx->ns->n;
-    if (n == 0 || !ws_tx(ctx, ctx->store->tx, n))
+    WsClient.buf.out = WS_CLIENT_CTX(work)->tx;
+    WsClient.buf.cap = sizeof(WS_CLIENT_CTX(work)->tx);
+    ws_build_opening_handshake(work);
+    const size_t n = WsClient.n;
+    if (n == 0 || !ws_tx(work, WS_CLIENT_CTX(work)->tx, n))
     {
-        ws_close_transport(ctx);
+        ws_close_transport(work);
         return;
     }
 
@@ -814,13 +865,13 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
     uint8_t resp[WSC_RESP_CAP];
     size_t rlen = 0;
     proto_bool done = PROTO_FALSE;
-    while (!done && !ctx->store->closed && (int32_t)(deadline - Clock.ms) > 0)
+    while (!done && !WS_CLIENT_CTX(work)->closed && (int32_t)(deadline - Clock.ms) > 0)
     {
-        ws_pump(ctx);
-        while (ring_avail(ctx) > 0 && rlen < sizeof(resp))
+        ws_pump(work);
+        while (ring_avail(work) > 0 && rlen < sizeof(resp))
         {
-            resp[rlen++] = ring_peek(ctx, 0);
-            ring_advance(ctx, 1);
+            resp[rlen++] = ring_peek(work, 0);
+            ring_advance(work, 1);
             if (rlen >= 4 && resp[rlen - 4] == '\r' && resp[rlen - 3] == '\n' && resp[rlen - 2] == '\r' &&
                 resp[rlen - 1] == '\n')
             {
@@ -833,102 +884,119 @@ static void ws_connect(struct WsClientInternal *restrict ctx)
             pcdelay(WSC_POLL_MS);
         }
     }
-    ctx->ns->ok = PROTO_FALSE;
+    WsClient.ok = PROTO_FALSE;
     if (done)
     {
-        ctx->ns->buf.in = resp;
-        ctx->ns->buf.avail = rlen;
-        ws_check_server_handshake(ctx);
+        WsClient.buf.in = resp;
+        WsClient.buf.avail = rlen;
+        ws_check_server_handshake(work);
     }
-    if (!ctx->ns->ok)
+    if (!WsClient.ok)
     {
         WSC_DBG("[wsc] handshake fail done=%d rlen=%u resp:\n%.*s\n", (int)done, (unsigned)rlen, (int)rlen,
                 (const char *)resp);
-        ws_close_transport(ctx);
+        ws_close_transport(work);
         return;
     }
-    ctx->store->established = PROTO_TRUE;
-    ctx->ns->ok = PROTO_TRUE;
+    WS_CLIENT_CTX(work)->established = PROTO_TRUE;
+    WsClient.ok = PROTO_TRUE;
 }
 
-static void ws_send_text(struct WsClientInternal *restrict ctx)
+static void ws_send_text(uint8_t *restrict work)
 {
-    const char *text = ctx->ns->msg.text;
+    const char *text = WsClient.msg.text;
     const size_t len = text ? str.len(text, PROTOCORE_WS_CLIENT_BUF_SIZE) : 0;
-    ctx->ns->ok = ws_emit_frame(ctx, (uint8_t)WSC_OP_TEXT, (const uint8_t *)text, len);
+    WsClient.ok = ws_emit_frame(work, (uint8_t)WSC_OP_TEXT, (const uint8_t *)text, len);
 }
 
-static void ws_send_binary(struct WsClientInternal *restrict ctx)
+static void ws_send_binary(uint8_t *restrict work)
 {
-    ctx->ns->ok = ws_emit_frame(ctx, (uint8_t)WSC_OP_BINARY, ctx->ns->msg.data, ctx->ns->msg.len);
+    WsClient.ok = ws_emit_frame(work, (uint8_t)WSC_OP_BINARY, WsClient.msg.data, WsClient.msg.len);
 }
 
-static void ws_loop(struct WsClientInternal *restrict ctx)
+static void ws_loop(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->store->established)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    WsClient.ok = PROTO_FALSE;
+    if (!WS_CLIENT_CTX(work)->established)
     {
         return;
     }
-    ws_process_rx(ctx);
-    if (ctx->store->closed)
+    ws_process_rx(work);
+    if (WS_CLIENT_CTX(work)->closed)
     {
-        ws_close_transport(ctx);
+        ws_close_transport(work);
         return;
     }
-    ctx->ns->ok = PROTO_TRUE;
+    WsClient.ok = PROTO_TRUE;
 }
 
-static void ws_connected(struct WsClientInternal *restrict ctx)
+static void ws_connected(uint8_t *restrict work)
 {
-    ctx->ns->ok = ctx->store->established;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    WsClient.ok = WS_CLIENT_CTX(work)->established;
 }
 
 // RFC 6455 sec 5.5.1 then sec 7.1.1: send a Close frame, then close the WebSocket connection.
-static void ws_close(struct WsClientInternal *restrict ctx)
+static void ws_close(uint8_t *restrict work)
 {
-    if (ctx->store->established)
+    if (!work)
     {
-        ws_emit_frame(ctx, (uint8_t)WSC_OP_CLOSE, NULL, 0);
+        return; // the pool was short of this module's borrow
     }
-    ws_close_transport(ctx);
+    if (WS_CLIENT_CTX(work)->established)
+    {
+        ws_emit_frame(work, (uint8_t)WSC_OP_CLOSE, NULL, 0);
+    }
+    ws_close_transport(work);
 }
 
 #else // no network stack: the codec stands alone and the connection calls answer no
 
-static void ws_on_message(struct WsClientInternal *restrict ctx)
+static void ws_on_message(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
 }
 
-static void ws_connect(struct WsClientInternal *restrict ctx)
+static void ws_connect(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    WsClient.ok = PROTO_FALSE;
 }
 
-static void ws_send_text(struct WsClientInternal *restrict ctx)
+static void ws_send_text(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    WsClient.ok = PROTO_FALSE;
 }
 
-static void ws_send_binary(struct WsClientInternal *restrict ctx)
+static void ws_send_binary(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    WsClient.ok = PROTO_FALSE;
 }
 
-static void ws_loop(struct WsClientInternal *restrict ctx)
+static void ws_loop(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    WsClient.ok = PROTO_FALSE;
 }
 
-static void ws_connected(struct WsClientInternal *restrict ctx)
+static void ws_connected(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    WsClient.ok = PROTO_FALSE;
 }
 
-static void ws_close(struct WsClientInternal *restrict ctx)
+static void ws_close(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
 }
 
 #endif // PROTOCORE_HAS_NET_STACK
@@ -945,7 +1013,6 @@ WsClientNs WsClient = {.accept_for_key = ws_accept_for_key,
                        .send_binary = ws_send_binary,
                        .loop = ws_loop,
                        .connected = ws_connected,
-                       .close = ws_close,
-                       .internal = &s_ws};
+                       .close = ws_close};
 
 #endif // PROTOCORE_ENABLE_WS_CLIENT

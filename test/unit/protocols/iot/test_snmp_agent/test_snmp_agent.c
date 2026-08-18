@@ -9,6 +9,8 @@
 
 #include <unity.h>
 
+static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
+
 // The PDU dispatcher, reached through the agent's namespace.
 static size_t snmp_dispatch_pdu(const uint8_t *req, size_t req_len, proto_bool allow_write, proto_bool v2c,
                                 uint8_t *out, size_t out_cap)
@@ -19,7 +21,7 @@ static size_t snmp_dispatch_pdu(const uint8_t *req, size_t req_len, proto_bool a
     SnmpAgent.pdu.v2c = v2c;
     SnmpAgent.pdu.out = out;
     SnmpAgent.pdu.out_cap = out_cap;
-    SnmpAgent.dispatch_pdu(SnmpAgent.internal);
+    SnmpAgent.dispatch_pdu(protocore_snmp_agent_span());
     return SnmpAgent.n;
 }
 
@@ -30,7 +32,7 @@ static void ber_enc_init(BerEnc *e, uint8_t *buf, size_t cap)
     SnmpBer.enc = e;
     SnmpBer.buf.out = buf;
     SnmpBer.buf.cap = cap;
-    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.enc_init(snmp_ber_work);
 }
 
 static void ber_dec_init(BerDec *d, const uint8_t *buf, size_t len)
@@ -38,14 +40,14 @@ static void ber_dec_init(BerDec *d, const uint8_t *buf, size_t len)
     SnmpBer.dec = d;
     SnmpBer.buf.in = buf;
     SnmpBer.buf.cap = len;
-    SnmpBer.dec_init(SnmpBer.internal);
+    SnmpBer.dec_init(snmp_ber_work);
 }
 
 static size_t ber_seq_begin(BerEnc *e, uint8_t tag)
 {
     SnmpBer.enc = e;
     SnmpBer.tlv.tag = tag;
-    SnmpBer.seq_begin(SnmpBer.internal);
+    SnmpBer.seq_begin(snmp_ber_work);
     return SnmpBer.tlv.token;
 }
 
@@ -53,7 +55,7 @@ static void ber_seq_end(BerEnc *e, size_t token)
 {
     SnmpBer.enc = e;
     SnmpBer.tlv.token = token;
-    SnmpBer.seq_end(SnmpBer.internal);
+    SnmpBer.seq_end(snmp_ber_work);
 }
 
 static void ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *bytes, size_t len)
@@ -62,13 +64,13 @@ static void ber_put_octet_string(BerEnc *e, uint8_t tag, const uint8_t *bytes, s
     SnmpBer.tlv.tag = tag;
     SnmpBer.tlv.bytes = bytes;
     SnmpBer.tlv.len = len;
-    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.put_octet_string(snmp_ber_work);
 }
 
 static void ber_put_null(BerEnc *e)
 {
     SnmpBer.enc = e;
-    SnmpBer.put_null(SnmpBer.internal);
+    SnmpBer.put_null(snmp_ber_work);
 }
 
 static void ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t arc_count)
@@ -76,7 +78,7 @@ static void ber_put_oid(BerEnc *e, const uint32_t *arcs, size_t arc_count)
     SnmpBer.enc = e;
     SnmpBer.tlv.arcs = arcs;
     SnmpBer.tlv.arc_count = arc_count;
-    SnmpBer.put_oid(SnmpBer.internal);
+    SnmpBer.put_oid(snmp_ber_work);
 }
 
 static void ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t len)
@@ -84,7 +86,7 @@ static void ber_put_raw(BerEnc *e, const uint8_t *bytes, size_t len)
     SnmpBer.enc = e;
     SnmpBer.tlv.bytes = bytes;
     SnmpBer.tlv.len = len;
-    SnmpBer.put_raw(SnmpBer.internal);
+    SnmpBer.put_raw(snmp_ber_work);
 }
 
 static void ber_put_uint(BerEnc *e, uint8_t tag, uint32_t uval)
@@ -92,20 +94,20 @@ static void ber_put_uint(BerEnc *e, uint8_t tag, uint32_t uval)
     SnmpBer.enc = e;
     SnmpBer.tlv.tag = tag;
     SnmpBer.tlv.uval = uval;
-    SnmpBer.put_uint(SnmpBer.internal);
+    SnmpBer.put_uint(snmp_ber_work);
 }
 
 static void ber_put_integer(BerEnc *e, long ival)
 {
     SnmpBer.enc = e;
     SnmpBer.tlv.ival = ival;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
 }
 
 static proto_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
 {
     SnmpBer.dec = d;
-    SnmpBer.read_header(SnmpBer.internal);
+    SnmpBer.read_header(snmp_ber_work);
     if (tag)
     {
         *tag = SnmpBer.tag;
@@ -120,7 +122,7 @@ static proto_bool ber_read_header(BerDec *d, uint8_t *tag, size_t *vlen)
 static proto_bool ber_read_integer(BerDec *d, long *out)
 {
     SnmpBer.dec = d;
-    SnmpBer.read_integer(SnmpBer.internal);
+    SnmpBer.read_integer(snmp_ber_work);
     if (out)
     {
         *out = SnmpBer.ival;
@@ -133,7 +135,7 @@ static proto_bool ber_read_oid(BerDec *d, uint32_t *arc_out, size_t arc_cap, siz
     SnmpBer.dec = d;
     SnmpBer.read_args.arc_out = arc_out;
     SnmpBer.read_args.arc_cap = arc_cap;
-    SnmpBer.read_oid(SnmpBer.internal);
+    SnmpBer.read_oid(snmp_ber_work);
     if (count)
     {
         *count = SnmpBer.n;
@@ -145,7 +147,7 @@ static proto_bool ber_skip(BerDec *d, size_t len)
 {
     SnmpBer.dec = d;
     SnmpBer.read_args.skip = len;
-    SnmpBer.skip(SnmpBer.internal);
+    SnmpBer.skip(snmp_ber_work);
     return SnmpBer.ok;
 }
 
@@ -154,13 +156,13 @@ static proto_bool ber_skip(BerDec *d, size_t len)
 static void snmp_init(const char *ro)
 {
     SnmpAgent.community.ro = ro;
-    SnmpAgent.init(SnmpAgent.internal);
+    SnmpAgent.init(protocore_snmp_agent_span());
 }
 
 static void snmp_set_rw_community(const char *rw)
 {
     SnmpAgent.community.rw = rw;
-    SnmpAgent.set_rw_community(SnmpAgent.internal);
+    SnmpAgent.set_rw_community(protocore_snmp_agent_span());
 }
 
 static void snmp_set_system(const char *descr, const char *contact, const char *name, const char *location,
@@ -171,7 +173,7 @@ static void snmp_set_system(const char *descr, const char *contact, const char *
     SnmpAgent.system.name = name;
     SnmpAgent.system.location = location;
     SnmpAgent.system.services = services;
-    SnmpAgent.set_system(SnmpAgent.internal);
+    SnmpAgent.set_system(protocore_snmp_agent_span());
 }
 
 static proto_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long ival, SnmpSetFn setter)
@@ -180,7 +182,7 @@ static proto_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long iva
     SnmpAgent.object.oid_len = oid_len;
     SnmpAgent.object.ival = ival;
     SnmpAgent.object.setter = setter;
-    SnmpAgent.add_integer(SnmpAgent.internal);
+    SnmpAgent.add_integer(protocore_snmp_agent_span());
     return SnmpAgent.ok;
 }
 
@@ -190,7 +192,7 @@ static proto_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const cha
     SnmpAgent.object.oid_len = oid_len;
     SnmpAgent.object.text = text;
     SnmpAgent.object.setter = setter;
-    SnmpAgent.add_string(SnmpAgent.internal);
+    SnmpAgent.add_string(protocore_snmp_agent_span());
     return SnmpAgent.ok;
 }
 
@@ -201,14 +203,14 @@ static proto_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t 
     SnmpAgent.object.type = type;
     SnmpAgent.object.getter = getter;
     SnmpAgent.object.setter = NULL;
-    SnmpAgent.add_dynamic(SnmpAgent.internal);
+    SnmpAgent.add_dynamic(protocore_snmp_agent_span());
     return SnmpAgent.ok;
 }
 
 static proto_bool snmp_listen(uint16_t port)
 {
     SnmpAgent.port = port;
-    SnmpAgent.listen(SnmpAgent.internal);
+    SnmpAgent.listen(protocore_snmp_agent_span());
     return SnmpAgent.ok;
 }
 
@@ -218,7 +220,7 @@ static size_t snmp_process(const uint8_t *req, size_t req_len, uint8_t *resp, si
     SnmpAgent.msg.req_len = req_len;
     SnmpAgent.msg.resp = resp;
     SnmpAgent.msg.resp_cap = resp_cap;
-    SnmpAgent.process(SnmpAgent.internal);
+    SnmpAgent.process(protocore_snmp_agent_span());
     return SnmpAgent.n;
 }
 
@@ -280,18 +282,18 @@ static size_t build_req(uint8_t *buf, size_t cap, long version, const char *comm
     size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = version;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)comm, strlen(comm));
     size_t pdus = ber_seq_begin(&e, pdu);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = reqid;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = f2;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = f3;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     size_t vb = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     ber_put_oid(&e, oid, oidn);
@@ -299,7 +301,7 @@ static size_t build_req(uint8_t *buf, size_t cap, long version, const char *comm
     {
         SnmpBer.enc = &e;
         SnmpBer.tlv.ival = setval->ival;
-        SnmpBer.put_integer(SnmpBer.internal);
+        SnmpBer.put_integer(snmp_ber_work);
     }
     else if (setval && setval->type == (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
@@ -334,13 +336,13 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
     size_t pdus = ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_GET);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 42;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 0;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 0;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     if (knob == VB_BAD_VBL_TAG)
     {
         ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"x", 1);
@@ -367,7 +369,7 @@ static size_t build_pdu(uint8_t *buf, size_t cap, int knob)
             size_t vb = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
             SnmpBer.enc = &e;
             SnmpBer.tlv.ival = 5;
-            SnmpBer.put_integer(SnmpBer.internal);
+            SnmpBer.put_integer(snmp_ber_work);
             ber_put_null(&e);
             ber_seq_end(&e, vb);
         }
@@ -704,7 +706,7 @@ void test_v3_message_dropped()
     size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = (int)SNMP_V3;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     ber_seq_end(&e, msg);
     uint8_t resp[64];
     size_t n = snmp_process(req, e.len, resp, sizeof(resp));
@@ -812,13 +814,13 @@ static size_t build_pdu_with_value(uint8_t *buf, size_t cap, uint8_t pdu_tag, in
     size_t p = ber_seq_begin(&e, pdu_tag);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 1;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 0;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 0;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     size_t vb = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     ber_put_oid(&e, OID_SYSDESCR, 9);
@@ -934,13 +936,13 @@ void test_dispatch_malformed_pdu()
 static void inject(uint16_t port, const char *src_ip, uint16_t src_port, const uint8_t *data, size_t len)
 {
     protocore_net_host_udp_deliver(port, src_ip, src_port, (void *)(uintptr_t)data, (uint16_t)len);
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
 }
 
 static void reset_udp(void)
 {
     UdpListener.port = 161;
-    UdpListener.close(UdpListener.internal);
+    UdpListener.close(protocore_udp_listener_span());
     (void)UdpListener.ok;
     protocore_net_host_udp_reset();
 }
@@ -1170,18 +1172,18 @@ static size_t build_getbulk_multi(uint8_t *buf, size_t cap, long reqid, long non
     size_t msg = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = (int)SNMP_V2C;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
     size_t pdus = ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_GETBULK);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = reqid;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = non_rep;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = max_rep;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     for (size_t i = 0; i < nvb; i++)
     {
@@ -1233,13 +1235,13 @@ void test_dispatch_empty_varbind_list_tiny_buffer()
     size_t p = ber_seq_begin(&e, (uint8_t)SNMP_TAG_SNMP_PDU_GET);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 1;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 0;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 0;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     ber_seq_end(&e, vbl);
     ber_seq_end(&e, p);

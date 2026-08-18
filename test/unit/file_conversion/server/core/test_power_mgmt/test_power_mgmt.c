@@ -55,7 +55,7 @@ static PowerPlan decide_cfg(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_
     Power.plan_args.brownout_boot = brownout;
     Power.plan_args.since_boot_ms = since_boot_ms;
     Power.plan_args.was_throttled = was_throttled;
-    Power.decide(Power.internal);
+    Power.decide(protocore_power_mgmt_span());
     return Power.plan;
 }
 
@@ -254,7 +254,7 @@ void test_the_defaults_carry_each_build_flag(void)
     PowerCfg cfg;
     memset(&cfg, 0xA5, sizeof(cfg));
     Power.cfg_out = &cfg;
-    Power.defaults(Power.internal);
+    Power.defaults(protocore_power_mgmt_span());
 
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_POWER_MHZ_MAX, cfg.mhz_max);
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_POWER_MHZ_MIN, cfg.mhz_min);
@@ -273,11 +273,11 @@ void test_defaults_refuse_a_null_destination(void)
 {
     PowerCfg cfg;
     Power.cfg_out = NULL;
-    Power.defaults(Power.internal);
+    Power.defaults(protocore_power_mgmt_span());
 
     memset(&cfg, 0xA5, sizeof(cfg));
     Power.cfg_out = &cfg;
-    Power.defaults(Power.internal);
+    Power.defaults(protocore_power_mgmt_span());
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_POWER_MHZ_MAX, cfg.mhz_max);
 }
 
@@ -293,7 +293,7 @@ static const char *report(const PowerPlan *plan, int16_t temp_c, size_t cap)
     Power.out_args.temp_c = temp_c;
     Power.out_args.out = g_json;
     Power.out_args.cap = cap;
-    Power.json(Power.internal);
+    Power.json(protocore_power_mgmt_span());
     return g_json;
 }
 
@@ -730,18 +730,18 @@ void test_the_report_refuses_what_it_cannot_write(void)
     Power.out_args.temp_c = 25;
     Power.out_args.out = g_json;
     Power.out_args.cap = sizeof(g_json);
-    Power.json(Power.internal);
+    Power.json(protocore_power_mgmt_span());
     TEST_ASSERT_EQUAL_UINT(0u, (unsigned)Power.n);
 
     Power.out_args.plan = &p;
     Power.out_args.out = NULL;
-    Power.json(Power.internal);
+    Power.json(protocore_power_mgmt_span());
     TEST_ASSERT_EQUAL_UINT(0u, (unsigned)Power.n);
 
     Power.out_args.out = g_json;
     Power.out_args.cap = 0;
     g_json[0] = 'x';
-    Power.json(Power.internal);
+    Power.json(protocore_power_mgmt_span());
     TEST_ASSERT_EQUAL_UINT(0u, (unsigned)Power.n);
     TEST_ASSERT_EQUAL_CHAR('x', g_json[0]);
 }

@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t esp_work[16]; // the borrow an entry takes; Esp never reads it
+
 void setUp(void)
 {
 }
@@ -65,8 +67,18 @@ void test_rfc4303_packet_layout(void)
         }
 
         uint8_t packet[192];
-        size_t n = protocore_esp_gcm_encapsulate(0x11223344u, 0x00000001u, KEY, SALT, IV, 4, plen ? payload : NULL,
-                                                 plen, packet, sizeof(packet));
+        Esp.gcm_encapsulate_args.spi = 0x11223344u;
+        Esp.gcm_encapsulate_args.seq = 0x00000001u;
+        Esp.gcm_encapsulate_args.key = KEY;
+        Esp.gcm_encapsulate_args.salt = SALT;
+        Esp.gcm_encapsulate_args.iv = IV;
+        Esp.gcm_encapsulate_args.next_header = 4;
+        Esp.gcm_encapsulate_args.payload = plen ? payload : NULL;
+        Esp.gcm_encapsulate_args.payload_len = plen;
+        Esp.gcm_encapsulate_args.out = packet;
+        Esp.gcm_encapsulate_args.out_cap = sizeof(packet);
+        Esp.gcm_encapsulate(esp_work);
+        size_t n = Esp.n;
         TEST_ASSERT_EQUAL_UINT32((uint32_t)packet_len_for(plen), (uint32_t)n);
 
         // sec 2.1 SPI and sec 2.2 Sequence Number are on the wire in network byte order.
@@ -82,7 +94,17 @@ void test_rfc4303_packet_layout(void)
         uint8_t next_header = 0;
         const uint8_t *out = NULL;
         size_t out_len = 0;
-        TEST_ASSERT_TRUE(protocore_esp_gcm_decapsulate(KEY, SALT, packet, n, &spi, &seq, &next_header, &out, &out_len));
+        Esp.gcm_decapsulate_args.key = KEY;
+        Esp.gcm_decapsulate_args.salt = SALT;
+        Esp.gcm_decapsulate_args.packet = packet;
+        Esp.gcm_decapsulate_args.len = n;
+        Esp.gcm_decapsulate_args.spi_out = &spi;
+        Esp.gcm_decapsulate_args.seq_out = &seq;
+        Esp.gcm_decapsulate_args.next_header_out = &next_header;
+        Esp.gcm_decapsulate_args.payload_out = &out;
+        Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+        Esp.gcm_decapsulate(esp_work);
+        TEST_ASSERT_TRUE(Esp.ok);
         TEST_ASSERT_EQUAL_HEX32(0x11223344u, spi);
         TEST_ASSERT_EQUAL_HEX32(0x00000001u, seq);
         TEST_ASSERT_EQUAL_UINT8(4, next_header);
@@ -118,8 +140,18 @@ void test_header_fields_round_trip(void)
     for (unsigned i = 0; i < 4; i++)
     {
         uint8_t packet[128];
-        size_t n = protocore_esp_gcm_encapsulate(SPIS[i], SEQS[i], KEY, SALT, IV, NEXT[i], PAYLOAD, sizeof(PAYLOAD),
-                                                 packet, sizeof(packet));
+        Esp.gcm_encapsulate_args.spi = SPIS[i];
+        Esp.gcm_encapsulate_args.seq = SEQS[i];
+        Esp.gcm_encapsulate_args.key = KEY;
+        Esp.gcm_encapsulate_args.salt = SALT;
+        Esp.gcm_encapsulate_args.iv = IV;
+        Esp.gcm_encapsulate_args.next_header = NEXT[i];
+        Esp.gcm_encapsulate_args.payload = PAYLOAD;
+        Esp.gcm_encapsulate_args.payload_len = sizeof(PAYLOAD);
+        Esp.gcm_encapsulate_args.out = packet;
+        Esp.gcm_encapsulate_args.out_cap = sizeof(packet);
+        Esp.gcm_encapsulate(esp_work);
+        size_t n = Esp.n;
         TEST_ASSERT_EQUAL_UINT32((uint32_t)packet_len_for(sizeof(PAYLOAD)), (uint32_t)n);
         TEST_ASSERT_EQUAL_HEX32(SPIS[i], be32(packet));
         TEST_ASSERT_EQUAL_HEX32(SEQS[i], be32(packet + 4));
@@ -129,7 +161,17 @@ void test_header_fields_round_trip(void)
         uint8_t nh = 0;
         const uint8_t *out = NULL;
         size_t out_len = 0;
-        TEST_ASSERT_TRUE(protocore_esp_gcm_decapsulate(KEY, SALT, packet, n, &spi, &seq, &nh, &out, &out_len));
+        Esp.gcm_decapsulate_args.key = KEY;
+        Esp.gcm_decapsulate_args.salt = SALT;
+        Esp.gcm_decapsulate_args.packet = packet;
+        Esp.gcm_decapsulate_args.len = n;
+        Esp.gcm_decapsulate_args.spi_out = &spi;
+        Esp.gcm_decapsulate_args.seq_out = &seq;
+        Esp.gcm_decapsulate_args.next_header_out = &nh;
+        Esp.gcm_decapsulate_args.payload_out = &out;
+        Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+        Esp.gcm_decapsulate(esp_work);
+        TEST_ASSERT_TRUE(Esp.ok);
         TEST_ASSERT_EQUAL_HEX32(SPIS[i], spi);
         TEST_ASSERT_EQUAL_HEX32(SEQS[i], seq);
         TEST_ASSERT_EQUAL_UINT8(NEXT[i], nh);
@@ -144,8 +186,18 @@ void test_every_bit_is_authenticated(void)
 {
     static const uint8_t PAYLOAD[8] = {0xde, 0xad, 0xbe, 0xef, 0xfe, 0xed, 0xfa, 0xce};
     uint8_t good[128];
-    size_t n =
-        protocore_esp_gcm_encapsulate(0x0a0b0c0du, 7u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD), good, sizeof(good));
+    Esp.gcm_encapsulate_args.spi = 0x0a0b0c0du;
+    Esp.gcm_encapsulate_args.seq = 7u;
+    Esp.gcm_encapsulate_args.key = KEY;
+    Esp.gcm_encapsulate_args.salt = SALT;
+    Esp.gcm_encapsulate_args.iv = IV;
+    Esp.gcm_encapsulate_args.next_header = 4;
+    Esp.gcm_encapsulate_args.payload = PAYLOAD;
+    Esp.gcm_encapsulate_args.payload_len = sizeof(PAYLOAD);
+    Esp.gcm_encapsulate_args.out = good;
+    Esp.gcm_encapsulate_args.out_cap = sizeof(good);
+    Esp.gcm_encapsulate(esp_work);
+    size_t n = Esp.n;
     TEST_ASSERT_GREATER_THAN_UINT32(0, (uint32_t)n);
 
     for (size_t byte = 0; byte < n; byte++)
@@ -161,7 +213,17 @@ void test_every_bit_is_authenticated(void)
             uint8_t nh = 0;
             const uint8_t *out = (const uint8_t *)1;
             size_t out_len = 99;
-            TEST_ASSERT_FALSE(protocore_esp_gcm_decapsulate(KEY, SALT, packet, n, &spi, &seq, &nh, &out, &out_len));
+            Esp.gcm_decapsulate_args.key = KEY;
+            Esp.gcm_decapsulate_args.salt = SALT;
+            Esp.gcm_decapsulate_args.packet = packet;
+            Esp.gcm_decapsulate_args.len = n;
+            Esp.gcm_decapsulate_args.spi_out = &spi;
+            Esp.gcm_decapsulate_args.seq_out = &seq;
+            Esp.gcm_decapsulate_args.next_header_out = &nh;
+            Esp.gcm_decapsulate_args.payload_out = &out;
+            Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+            Esp.gcm_decapsulate(esp_work);
+            TEST_ASSERT_FALSE(Esp.ok);
         }
     }
 }
@@ -172,8 +234,18 @@ void test_a_different_key_or_salt_cannot_open_the_packet(void)
     static const uint8_t PAYLOAD[4] = {1, 2, 3, 4};
     uint8_t packet[128];
     uint8_t scratch[128];
-    size_t n =
-        protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD), packet, sizeof(packet));
+    Esp.gcm_encapsulate_args.spi = 1u;
+    Esp.gcm_encapsulate_args.seq = 1u;
+    Esp.gcm_encapsulate_args.key = KEY;
+    Esp.gcm_encapsulate_args.salt = SALT;
+    Esp.gcm_encapsulate_args.iv = IV;
+    Esp.gcm_encapsulate_args.next_header = 4;
+    Esp.gcm_encapsulate_args.payload = PAYLOAD;
+    Esp.gcm_encapsulate_args.payload_len = sizeof(PAYLOAD);
+    Esp.gcm_encapsulate_args.out = packet;
+    Esp.gcm_encapsulate_args.out_cap = sizeof(packet);
+    Esp.gcm_encapsulate(esp_work);
+    size_t n = Esp.n;
 
     uint8_t other_key[PROTOCORE_ESP_KEY_LEN];
     memcpy(other_key, KEY, sizeof(other_key));
@@ -189,11 +261,41 @@ void test_a_different_key_or_salt_cannot_open_the_packet(void)
     size_t out_len = 0;
 
     memcpy(scratch, packet, n);
-    TEST_ASSERT_FALSE(protocore_esp_gcm_decapsulate(other_key, SALT, scratch, n, &spi, &seq, &nh, &out, &out_len));
+    Esp.gcm_decapsulate_args.key = other_key;
+    Esp.gcm_decapsulate_args.salt = SALT;
+    Esp.gcm_decapsulate_args.packet = scratch;
+    Esp.gcm_decapsulate_args.len = n;
+    Esp.gcm_decapsulate_args.spi_out = &spi;
+    Esp.gcm_decapsulate_args.seq_out = &seq;
+    Esp.gcm_decapsulate_args.next_header_out = &nh;
+    Esp.gcm_decapsulate_args.payload_out = &out;
+    Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+    Esp.gcm_decapsulate(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
     memcpy(scratch, packet, n);
-    TEST_ASSERT_FALSE(protocore_esp_gcm_decapsulate(KEY, other_salt, scratch, n, &spi, &seq, &nh, &out, &out_len));
+    Esp.gcm_decapsulate_args.key = KEY;
+    Esp.gcm_decapsulate_args.salt = other_salt;
+    Esp.gcm_decapsulate_args.packet = scratch;
+    Esp.gcm_decapsulate_args.len = n;
+    Esp.gcm_decapsulate_args.spi_out = &spi;
+    Esp.gcm_decapsulate_args.seq_out = &seq;
+    Esp.gcm_decapsulate_args.next_header_out = &nh;
+    Esp.gcm_decapsulate_args.payload_out = &out;
+    Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+    Esp.gcm_decapsulate(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
     memcpy(scratch, packet, n);
-    TEST_ASSERT_TRUE(protocore_esp_gcm_decapsulate(KEY, SALT, scratch, n, &spi, &seq, &nh, &out, &out_len));
+    Esp.gcm_decapsulate_args.key = KEY;
+    Esp.gcm_decapsulate_args.salt = SALT;
+    Esp.gcm_decapsulate_args.packet = scratch;
+    Esp.gcm_decapsulate_args.len = n;
+    Esp.gcm_decapsulate_args.spi_out = &spi;
+    Esp.gcm_decapsulate_args.seq_out = &seq;
+    Esp.gcm_decapsulate_args.next_header_out = &nh;
+    Esp.gcm_decapsulate_args.payload_out = &out;
+    Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+    Esp.gcm_decapsulate(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
 }
 
 // The nonce is the salt concatenated with the explicit IV (RFC 4106 sec 4), so two packets built
@@ -207,17 +309,48 @@ void test_the_iv_selects_the_nonce(void)
 
     uint8_t a[128];
     uint8_t b[128];
-    size_t na = protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD), a, sizeof(a));
-    size_t nb = protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, iv2, 4, PAYLOAD, sizeof(PAYLOAD), b, sizeof(b));
+    Esp.gcm_encapsulate_args.spi = 1u;
+    Esp.gcm_encapsulate_args.seq = 1u;
+    Esp.gcm_encapsulate_args.key = KEY;
+    Esp.gcm_encapsulate_args.salt = SALT;
+    Esp.gcm_encapsulate_args.iv = IV;
+    Esp.gcm_encapsulate_args.next_header = 4;
+    Esp.gcm_encapsulate_args.payload = PAYLOAD;
+    Esp.gcm_encapsulate_args.payload_len = sizeof(PAYLOAD);
+    Esp.gcm_encapsulate_args.out = a;
+    Esp.gcm_encapsulate_args.out_cap = sizeof(a);
+    Esp.gcm_encapsulate(esp_work);
+    size_t na = Esp.n;
+    Esp.gcm_encapsulate_args.spi = 1u;
+    Esp.gcm_encapsulate_args.seq = 1u;
+    Esp.gcm_encapsulate_args.key = KEY;
+    Esp.gcm_encapsulate_args.salt = SALT;
+    Esp.gcm_encapsulate_args.iv = iv2;
+    Esp.gcm_encapsulate_args.next_header = 4;
+    Esp.gcm_encapsulate_args.payload = PAYLOAD;
+    Esp.gcm_encapsulate_args.payload_len = sizeof(PAYLOAD);
+    Esp.gcm_encapsulate_args.out = b;
+    Esp.gcm_encapsulate_args.out_cap = sizeof(b);
+    Esp.gcm_encapsulate(esp_work);
+    size_t nb = Esp.n;
     TEST_ASSERT_EQUAL_UINT32((uint32_t)na, (uint32_t)nb);
     const size_t ct = PROTOCORE_ESP_HDR_LEN + PROTOCORE_ESP_IV_LEN;
     TEST_ASSERT_TRUE(memcmp(a + ct, b + ct, na - ct) != 0);
 
     // The same IV under the same key and sequence number is deterministic.
     uint8_t again[128];
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)na,
-                             (uint32_t)protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD),
-                                                                     again, sizeof(again)));
+    Esp.gcm_encapsulate_args.spi = 1u;
+    Esp.gcm_encapsulate_args.seq = 1u;
+    Esp.gcm_encapsulate_args.key = KEY;
+    Esp.gcm_encapsulate_args.salt = SALT;
+    Esp.gcm_encapsulate_args.iv = IV;
+    Esp.gcm_encapsulate_args.next_header = 4;
+    Esp.gcm_encapsulate_args.payload = PAYLOAD;
+    Esp.gcm_encapsulate_args.payload_len = sizeof(PAYLOAD);
+    Esp.gcm_encapsulate_args.out = again;
+    Esp.gcm_encapsulate_args.out_cap = sizeof(again);
+    Esp.gcm_encapsulate(esp_work);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)na, (uint32_t)Esp.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(a, again, na);
 }
 
@@ -227,8 +360,18 @@ void test_header_is_additional_authenticated_data(void)
 {
     static const uint8_t PAYLOAD[4] = {9, 9, 9, 9};
     uint8_t packet[128];
-    size_t n = protocore_esp_gcm_encapsulate(0x01020304u, 5u, KEY, SALT, IV, 4, PAYLOAD, sizeof(PAYLOAD), packet,
-                                             sizeof(packet));
+    Esp.gcm_encapsulate_args.spi = 0x01020304u;
+    Esp.gcm_encapsulate_args.seq = 5u;
+    Esp.gcm_encapsulate_args.key = KEY;
+    Esp.gcm_encapsulate_args.salt = SALT;
+    Esp.gcm_encapsulate_args.iv = IV;
+    Esp.gcm_encapsulate_args.next_header = 4;
+    Esp.gcm_encapsulate_args.payload = PAYLOAD;
+    Esp.gcm_encapsulate_args.payload_len = sizeof(PAYLOAD);
+    Esp.gcm_encapsulate_args.out = packet;
+    Esp.gcm_encapsulate_args.out_cap = sizeof(packet);
+    Esp.gcm_encapsulate(esp_work);
+    size_t n = Esp.n;
     packet[3] ^= 0xFF; // rewrite the low SPI octet only
 
     uint32_t spi = 0;
@@ -236,7 +379,17 @@ void test_header_is_additional_authenticated_data(void)
     uint8_t nh = 0;
     const uint8_t *out = NULL;
     size_t out_len = 0;
-    TEST_ASSERT_FALSE(protocore_esp_gcm_decapsulate(KEY, SALT, packet, n, &spi, &seq, &nh, &out, &out_len));
+    Esp.gcm_decapsulate_args.key = KEY;
+    Esp.gcm_decapsulate_args.salt = SALT;
+    Esp.gcm_decapsulate_args.packet = packet;
+    Esp.gcm_decapsulate_args.len = n;
+    Esp.gcm_decapsulate_args.spi_out = &spi;
+    Esp.gcm_decapsulate_args.seq_out = &seq;
+    Esp.gcm_decapsulate_args.next_header_out = &nh;
+    Esp.gcm_decapsulate_args.payload_out = &out;
+    Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+    Esp.gcm_decapsulate(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
 }
 
 // A packet shorter than the fields RFC 4303 sec 2 requires cannot be one, and an output buffer
@@ -246,10 +399,30 @@ void test_bounds_are_refused(void)
     static const uint8_t PAYLOAD[4] = {1, 2, 3, 4};
     uint8_t packet[128];
     const size_t want = packet_len_for(sizeof(PAYLOAD));
-    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, IV, 4, PAYLOAD,
-                                                                        sizeof(PAYLOAD), packet, want - 1));
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)want, (uint32_t)protocore_esp_gcm_encapsulate(1u, 1u, KEY, SALT, IV, 4, PAYLOAD,
-                                                                                     sizeof(PAYLOAD), packet, want));
+    Esp.gcm_encapsulate_args.spi = 1u;
+    Esp.gcm_encapsulate_args.seq = 1u;
+    Esp.gcm_encapsulate_args.key = KEY;
+    Esp.gcm_encapsulate_args.salt = SALT;
+    Esp.gcm_encapsulate_args.iv = IV;
+    Esp.gcm_encapsulate_args.next_header = 4;
+    Esp.gcm_encapsulate_args.payload = PAYLOAD;
+    Esp.gcm_encapsulate_args.payload_len = sizeof(PAYLOAD);
+    Esp.gcm_encapsulate_args.out = packet;
+    Esp.gcm_encapsulate_args.out_cap = want - 1;
+    Esp.gcm_encapsulate(esp_work);
+    TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)Esp.n);
+    Esp.gcm_encapsulate_args.spi = 1u;
+    Esp.gcm_encapsulate_args.seq = 1u;
+    Esp.gcm_encapsulate_args.key = KEY;
+    Esp.gcm_encapsulate_args.salt = SALT;
+    Esp.gcm_encapsulate_args.iv = IV;
+    Esp.gcm_encapsulate_args.next_header = 4;
+    Esp.gcm_encapsulate_args.payload = PAYLOAD;
+    Esp.gcm_encapsulate_args.payload_len = sizeof(PAYLOAD);
+    Esp.gcm_encapsulate_args.out = packet;
+    Esp.gcm_encapsulate_args.out_cap = want;
+    Esp.gcm_encapsulate(esp_work);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)want, (uint32_t)Esp.n);
 
     uint32_t spi = 0;
     uint32_t seq = 0;
@@ -258,10 +431,40 @@ void test_bounds_are_refused(void)
     size_t out_len = 0;
     // Header + IV + ICV with no room for even the Pad Length and Next Header.
     uint8_t tiny[PROTOCORE_ESP_HDR_LEN + PROTOCORE_ESP_IV_LEN + PROTOCORE_ESP_ICV_LEN] = {0};
-    TEST_ASSERT_FALSE(protocore_esp_gcm_decapsulate(KEY, SALT, tiny, sizeof(tiny), &spi, &seq, &nh, &out, &out_len));
-    TEST_ASSERT_FALSE(protocore_esp_gcm_decapsulate(KEY, SALT, tiny, 0, &spi, &seq, &nh, &out, &out_len));
+    Esp.gcm_decapsulate_args.key = KEY;
+    Esp.gcm_decapsulate_args.salt = SALT;
+    Esp.gcm_decapsulate_args.packet = tiny;
+    Esp.gcm_decapsulate_args.len = sizeof(tiny);
+    Esp.gcm_decapsulate_args.spi_out = &spi;
+    Esp.gcm_decapsulate_args.seq_out = &seq;
+    Esp.gcm_decapsulate_args.next_header_out = &nh;
+    Esp.gcm_decapsulate_args.payload_out = &out;
+    Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+    Esp.gcm_decapsulate(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
+    Esp.gcm_decapsulate_args.key = KEY;
+    Esp.gcm_decapsulate_args.salt = SALT;
+    Esp.gcm_decapsulate_args.packet = tiny;
+    Esp.gcm_decapsulate_args.len = 0;
+    Esp.gcm_decapsulate_args.spi_out = &spi;
+    Esp.gcm_decapsulate_args.seq_out = &seq;
+    Esp.gcm_decapsulate_args.next_header_out = &nh;
+    Esp.gcm_decapsulate_args.payload_out = &out;
+    Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+    Esp.gcm_decapsulate(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
     // A truncated but otherwise valid packet fails too.
-    TEST_ASSERT_FALSE(protocore_esp_gcm_decapsulate(KEY, SALT, packet, want - 1, &spi, &seq, &nh, &out, &out_len));
+    Esp.gcm_decapsulate_args.key = KEY;
+    Esp.gcm_decapsulate_args.salt = SALT;
+    Esp.gcm_decapsulate_args.packet = packet;
+    Esp.gcm_decapsulate_args.len = want - 1;
+    Esp.gcm_decapsulate_args.spi_out = &spi;
+    Esp.gcm_decapsulate_args.seq_out = &seq;
+    Esp.gcm_decapsulate_args.next_header_out = &nh;
+    Esp.gcm_decapsulate_args.payload_out = &out;
+    Esp.gcm_decapsulate_args.payload_len_out = &out_len;
+    Esp.gcm_decapsulate(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
 }
 
 // --- RFC 4303 sec 3.4.3 anti-replay ------------------------------------------------------------
@@ -271,10 +474,20 @@ void test_bounds_are_refused(void)
 void test_replay_rejects_sequence_zero(void)
 {
     EspReplay r;
-    protocore_esp_replay_init(&r);
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, 0u));
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 1u));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, 0u));
+    Esp.replay_init_args.r = &r;
+    Esp.replay_init(esp_work);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 0u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 1u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 0u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
 }
 
 // sec 3.4.3: the receiver "MUST verify that the packet contains a Sequence Number that does not
@@ -282,26 +495,64 @@ void test_replay_rejects_sequence_zero(void)
 void test_replay_rejects_a_duplicate(void)
 {
     EspReplay r;
-    protocore_esp_replay_init(&r);
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 1u));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, 1u));
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 2u));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, 2u));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, 1u));
+    Esp.replay_init_args.r = &r;
+    Esp.replay_init(esp_work);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 1u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 1u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 2u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 2u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 1u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
 }
 
 // A packet that arrives out of order but still inside the window is accepted once, and only once.
 void test_replay_accepts_reordering_inside_the_window(void)
 {
     EspReplay r;
-    protocore_esp_replay_init(&r);
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 10u));
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 7u));
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 9u));
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 8u));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, 9u));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, 10u));
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 11u));
+    Esp.replay_init_args.r = &r;
+    Esp.replay_init(esp_work);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 10u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 7u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 9u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 8u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 9u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 10u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 11u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
 }
 
 // The window is exactly PROTOCORE_ESP_REPLAY_WINDOW packets wide: with the highest at N, N-63 is
@@ -309,13 +560,29 @@ void test_replay_accepts_reordering_inside_the_window(void)
 void test_replay_window_width(void)
 {
     EspReplay r;
-    protocore_esp_replay_init(&r);
+    Esp.replay_init_args.r = &r;
+    Esp.replay_init(esp_work);
     const uint32_t top = 1000u;
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, top));
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, top - (PROTOCORE_ESP_REPLAY_WINDOW - 1)));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, top - PROTOCORE_ESP_REPLAY_WINDOW));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, top - PROTOCORE_ESP_REPLAY_WINDOW - 1));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, 1u));
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = top;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = top - (PROTOCORE_ESP_REPLAY_WINDOW - 1);
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = top - PROTOCORE_ESP_REPLAY_WINDOW;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = top - PROTOCORE_ESP_REPLAY_WINDOW - 1;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 1u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
 }
 
 // Advancing the window past its own width discards the old bitmap rather than leaving stale bits: a
@@ -323,19 +590,32 @@ void test_replay_window_width(void)
 void test_replay_window_advances_cleanly(void)
 {
     EspReplay r;
-    protocore_esp_replay_init(&r);
+    Esp.replay_init_args.r = &r;
+    Esp.replay_init(esp_work);
     for (uint32_t s = 1; s <= 20; s++)
     {
-        TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, s));
+        Esp.replay_check_args.r = &r;
+        Esp.replay_check_args.seq = s;
+        Esp.replay_check(esp_work);
+        TEST_ASSERT_TRUE(Esp.ok);
     }
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 5000u)); // a large jump forward
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 5000u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok); // a large jump forward
     for (uint32_t s = 5000u - (PROTOCORE_ESP_REPLAY_WINDOW - 1); s < 5000u; s++)
     {
-        TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, s)); // none of these was ever seen
+        Esp.replay_check_args.r = &r;
+        Esp.replay_check_args.seq = s;
+        Esp.replay_check(esp_work);
+        TEST_ASSERT_TRUE(Esp.ok); // none of these was ever seen
     }
     for (uint32_t s = 5000u - (PROTOCORE_ESP_REPLAY_WINDOW - 1); s <= 5000u; s++)
     {
-        TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, s)); // now every one is a duplicate
+        Esp.replay_check_args.r = &r;
+        Esp.replay_check_args.seq = s;
+        Esp.replay_check(esp_work);
+        TEST_ASSERT_FALSE(Esp.ok); // now every one is a duplicate
     }
 }
 
@@ -343,14 +623,21 @@ void test_replay_window_advances_cleanly(void)
 void test_replay_accepts_a_monotone_stream(void)
 {
     EspReplay r;
-    protocore_esp_replay_init(&r);
+    Esp.replay_init_args.r = &r;
+    Esp.replay_init(esp_work);
     for (uint32_t s = 1; s <= 500u; s++)
     {
-        TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, s));
+        Esp.replay_check_args.r = &r;
+        Esp.replay_check_args.seq = s;
+        Esp.replay_check(esp_work);
+        TEST_ASSERT_TRUE(Esp.ok);
     }
     for (uint32_t s = 500u; s > 500u - PROTOCORE_ESP_REPLAY_WINDOW; s--)
     {
-        TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, s));
+        Esp.replay_check_args.r = &r;
+        Esp.replay_check_args.seq = s;
+        Esp.replay_check(esp_work);
+        TEST_ASSERT_FALSE(Esp.ok);
     }
 }
 
@@ -359,10 +646,17 @@ void test_replay_accepts_a_monotone_stream(void)
 void test_replay_first_packet_may_be_any_sequence(void)
 {
     EspReplay r;
-    protocore_esp_replay_init(&r);
+    Esp.replay_init_args.r = &r;
+    Esp.replay_init(esp_work);
     TEST_ASSERT_FALSE(r.seen_any);
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&r, 0xFFFFFFFFu));
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 0xFFFFFFFFu;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
     TEST_ASSERT_TRUE(r.seen_any);
     TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, r.highest);
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&r, 0xFFFFFFFFu));
+    Esp.replay_check_args.r = &r;
+    Esp.replay_check_args.seq = 0xFFFFFFFFu;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
 }

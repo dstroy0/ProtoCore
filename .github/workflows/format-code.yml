@@ -76,6 +76,21 @@ jobs:
           python3 -m pip install --quiet black
           git ls-files '*.py' | xargs python3 -m black --check --diff
 
+      # Shell was the last unformatted language in the tree: 28 scripts plus the two git hooks,
+      # which are shell with no extension so no glob finds them. -i 4 -ci is what the scripts
+      # already use; -d prints the diff and exits 1. The version is pinned because a different
+      # shfmt formats differently, and CI has to agree with `tools/harness.py ci fmt` locally.
+      - name: Install shfmt
+        run: |
+          curl -fsSL -o /tmp/shfmt \
+            https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_linux_amd64
+          sudo install -m 755 /tmp/shfmt /usr/local/bin/shfmt
+
+      - name: Shell formatting (shfmt)
+        run: |
+          shfmt -i 4 -ci -d $(git ls-files '*.sh') \
+            tools/git-hooks/pre-commit tools/git-hooks/post-commit
+
       # Every src/ guard, through the one CI entry point. `ci.py check` runs the default set and
       # prints ok/FAIL per guard, so a failure still names itself; `ci.py list` shows the rest.
       #

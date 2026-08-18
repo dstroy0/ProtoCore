@@ -141,8 +141,6 @@ typedef struct WebServerConfig
 #include "network_drivers/application/ntp_service/ntp_service.h"
 #include "network_drivers/application/nts/nts.h"
 #include "network_drivers/application/ptp/ptp.h"
-#include "network_drivers/application/scp/scp.h"
-#include "network_drivers/application/scp/ssh_scp.h"
 #include "network_drivers/application/sftp/sftp.h"
 #include "network_drivers/application/sftp/ssh_sftp.h"
 #include "network_drivers/application/smb/ntlm.h"
@@ -160,6 +158,8 @@ typedef struct WebServerConfig
 #include "network_drivers/physical/radio_power.h"
 #include "network_drivers/presentation/http/httpcache/httpcache.h"
 #include "network_drivers/presentation/http/route/http_route.h"
+#include "network_drivers/session/scp/scp.h"
+#include "network_drivers/session/scp/ssh_scp.h"
 #include "network_drivers/transport/happy_eyeballs/happy_eyeballs.h"
 #include "network_drivers/transport/proxy_protocol/proxy_protocol.h"
 #include "server/clock/clock.h"
@@ -259,8 +259,6 @@ typedef struct WebServerConfig
 #include "services/fieldbus/melsec/melsec.h"
 #include "services/fieldbus/modbus/modbus.h"
 #include "services/fieldbus/modbus/modbus_master.h"
-#include "services/opcua/opcua.h"
-#include "services/opcua/opcua_client/opcua_client.h"
 #include "services/fieldbus/powerlink/powerlink.h"
 #include "services/fieldbus/profibus/profibus.h"
 #include "services/fieldbus/profinet/profinet.h"
@@ -301,16 +299,13 @@ typedef struct WebServerConfig
 #include "services/machine_tool/atc/atc.h"
 #include "services/machine_tool/dnc/dnc.h"
 #include "services/machine_tool/dnc/dnc_stream.h"
-#include "services/opcua/models/euromap77/euromap77.h"
 #include "services/machine_tool/fanuc_j519/fanuc_j519.h"
 #include "services/machine_tool/focas/focas.h"
 #include "services/machine_tool/haas_mdc/haas_mdc.h"
 #include "services/machine_tool/lsv2/lsv2.h"
 #include "services/machine_tool/mtconnect/mtconnect.h"
 #include "services/machine_tool/packml/packml.h"
-#include "services/opcua/models/robotics/robotics.h"
 #include "services/machine_tool/safety_scl/safety_scl.h"
-#include "services/opcua/models/umati/umati.h"
 #include "services/net/flow_export/flow_export.h"
 #include "services/net/http_client/http_client.h"
 #include "services/net/smtp/smtp.h"
@@ -322,6 +317,11 @@ typedef struct WebServerConfig
 #include "services/net/syslog/syslog.h"
 #include "services/net/webhook/webhook.h"
 #include "services/net/ws_client/ws_client.h"
+#include "services/opcua/models/euromap77/euromap77.h"
+#include "services/opcua/models/robotics/robotics.h"
+#include "services/opcua/models/umati/umati.h"
+#include "services/opcua/opcua.h"
+#include "services/opcua/opcua_client/opcua_client.h"
 #include "services/radio/ble_gatt/ble_gatt.h"
 #include "services/radio/cc1101/cc1101.h"
 #include "services/radio/enocean/enocean.h"
@@ -515,7 +515,7 @@ typedef size_t (*ChunkSource)(uint8_t *buf, size_t cap, void *ctx);
 // Usage:
 //   void handle_api(uint8_t slot_id, HttpReq *req) { send_text(slot_id, 200, "application/json", "{}"); }
 //   void setup()  { Physical.wifi.ssid = "SSID"; Physical.wifi.password = "PW";
-//                   Physical.wifi_init(Physical.internal);
+//                   Physical.wifi_init(protocore_physical_span());
 //                   on("/api", HTTP_GET, handle_api); begin(80); }
 //   void loop()   { handle(); }
 
@@ -861,7 +861,7 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback);
  *
  * Each accepted connection is tagged protocore_if_kind::PROTOCORE_IF_WIFI_AP when its local IP equals
  * @p ap_ip, else protocore_if_kind::PROTOCORE_IF_WIFI_STA. Call once after starting the softAP, e.g.
- * `Physical.wifi_ap_ip(Physical.internal); set_ap_ip(Physical.u32);` (already network byte order).
+ * `Physical.wifi_ap_ip(protocore_physical_span()); set_ap_ip(Physical.u32);` (already network byte order).
  * Without it, every connection is treated as protocore_if_kind::PROTOCORE_IF_WIFI_STA.
  *
  * @param ap_ip softAP IPv4 address in network byte order (0 to clear).

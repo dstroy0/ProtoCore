@@ -12,6 +12,10 @@
 
 #include "mdns_service.h"
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
+static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never reads it
+
 #if PROTOCORE_ENABLE_MDNS
 
 // Both backends' includes, ahead of either backend's code: what a translation unit reaches for is
@@ -219,7 +223,7 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
     DnsWire.text.dotted = owner;
     DnsWire.text.out = out + p;
     DnsWire.text.out_cap = cap - p;
-    DnsWire.encode(DnsWire.internal);
+    DnsWire.encode(dns_wire_work);
     size_t w = DnsWire.n;
     if (w == 0)
     {
@@ -263,7 +267,7 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
 // address says nothing rather than claiming 0.0.0.0.
 static uint16_t put_a(size_t *n)
 {
-    Physical.egress_ip(Physical.internal);
+    Physical.egress_ip(protocore_physical_span());
     uint32_t ip = Physical.u32;
     if (ip == 0)
     {
@@ -291,7 +295,7 @@ static uint16_t put_srv(const MdnsSvc *s, size_t *n)
     DnsWire.text.dotted = mdns_str(s_mdns.fqdn);
     DnsWire.text.out = rd + 6;
     DnsWire.text.out_cap = s_mdns.rd.cap - 6;
-    DnsWire.encode(DnsWire.internal);
+    DnsWire.encode(dns_wire_work);
     size_t w = DnsWire.n;
     if (w == 0)
     {
@@ -331,7 +335,7 @@ static uint16_t put_ptr(const char *owner, const char *target, size_t *n)
     DnsWire.text.dotted = target;
     DnsWire.text.out = s_mdns.rd.buf;
     DnsWire.text.out_cap = s_mdns.rd.cap;
-    DnsWire.encode(DnsWire.internal);
+    DnsWire.encode(dns_wire_work);
     size_t w = DnsWire.n;
     if (w == 0)
     {
@@ -358,7 +362,7 @@ static uint16_t answer_for(const char *qname, uint16_t qtype, size_t *n)
 
     DnsWire.cmp.a = qname;
     DnsWire.cmp.b = mdns_str(s_mdns.fqdn);
-    DnsWire.eq(DnsWire.internal);
+    DnsWire.eq(dns_wire_work);
     if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_A))
     {
         added += put_a(n);
@@ -379,21 +383,21 @@ static uint16_t answer_for(const char *qname, uint16_t qtype, size_t *n)
         // The enumeration name lists the types on offer, not the instances.
         DnsWire.cmp.a = qname;
         DnsWire.cmp.b = PROTOCORE_MDNS_ENUM_NAME;
-        DnsWire.eq(DnsWire.internal);
+        DnsWire.eq(dns_wire_work);
         if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
             added += put_ptr(PROTOCORE_MDNS_ENUM_NAME, mdns_str(s_mdns.svc_name), n);
         }
         DnsWire.cmp.a = qname;
         DnsWire.cmp.b = mdns_str(s_mdns.svc_name);
-        DnsWire.eq(DnsWire.internal);
+        DnsWire.eq(dns_wire_work);
         if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
             added += put_ptr(mdns_str(s_mdns.svc_name), mdns_str(s_mdns.inst_name), n);
         }
         DnsWire.cmp.a = qname;
         DnsWire.cmp.b = mdns_str(s_mdns.inst_name);
-        DnsWire.eq(DnsWire.internal);
+        DnsWire.eq(dns_wire_work);
         if (DnsWire.ok)
         {
             if (wants(qtype, PROTOCORE_MDNS_T_SRV))
@@ -448,7 +452,7 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
         DnsWire.msg.out = mdns_str(s_mdns.qname);
         DnsWire.msg.out_cap = s_mdns.qname.cap;
         DnsWire.msg.allow_ptr = PROTO_TRUE;
-        DnsWire.decode(DnsWire.internal);
+        DnsWire.decode(dns_wire_work);
         if (!DnsWire.ok)
         {
             return; // a malformed question: the rest of the message cannot be located
@@ -472,7 +476,7 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
     Ip.args.text = PROTOCORE_MDNS_GROUP;
     Ip.args.out = &group;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     if (Ip.ok)
     {
         UdpListener.port = PROTOCORE_MDNS_PORT;
@@ -480,7 +484,7 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
         UdpListener.send_args.dst_port = PROTOCORE_MDNS_PORT;
         UdpListener.send_args.data = tx;
         UdpListener.send_args.len = n;
-        UdpListener.sendto(UdpListener.internal);
+        UdpListener.sendto(protocore_udp_listener_span());
     }
 }
 
@@ -576,7 +580,7 @@ proto_bool protocore_mdns_begin(const char *hostname, uint16_t http_port)
     UdpListener.bind.handler = mdns_udp_handler;
     UdpListener.bind.handler_ctx = NULL;
     UdpListener.bind.group_ip = PROTOCORE_MDNS_GROUP;
-    UdpListener.listen_multicast(UdpListener.internal);
+    UdpListener.listen_multicast(protocore_udp_listener_span());
     s_mdns.running = UdpListener.ok;
     return s_mdns.running;
 }

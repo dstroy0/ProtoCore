@@ -1,0 +1,1038 @@
+#!/usr/bin/env python3
+# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""harness.py - the one entry point for tools/.
+
+Everything under tools/ is reachable from here, so `harness.py help` is the whole surface and
+`harness.py list` is the whole inventory:
+
+  list          every script under tools/, grouped, with its flags and what it writes
+  help          every command's help in one call, or one command's
+
+  ci            hand off to tools/ci_tooling/ci.py: gen, check, baseline, cov, fmt, sonar
+  convert       the module conversion family: scan, gen, shape, pimpl, funnel, nsmap
+  edit          mechanical source edits: move, comments
+  view          read-only readers: png, nodeset, tree, conform
+  measure       includes, pid, and the three standing probes
+  crypto        test vectors and keys
+  assets        diagrams, theme previews, favicons, svg tooltips
+  hooks         git hooks: install, status, cspell, dependabot
+  build         build environments: envs, ccache, psram
+  selftest      run the tools' own self-tests
+  doc gen       regenerate the derived tables in tools/TOOLS.md
+
+The point is discovery. Half these scripts have names that do not say what they do, which is how
+the same tool gets written twice - and a tool nobody can find gets written a second time. One entry
+point means what a session learns about driving the tooling does not have to be re-derived.
+
+THE TWO THINGS THAT COST THE MOST TIME
+
+  1. `--dry` FIRST, ALWAYS, on every writing subcommand. `convert gen`, `convert pimpl`,
+     `convert funnel` and `convert nsmap` all take it, and it prints the diff it WOULD apply while
+     writing nothing. The dry run is what catches a wrong result-member name, a mangled include,
+     and a benchmark that would silently stop measuring anything. Read it before it lands, not
+     after.
+  2. NEVER hand-edit a generated region. Every generator under ci_tooling/generate/ takes
+     `--check`, which is what CI gates on, so a hand edit inside a region is reverted by the next
+     `harness.py ci gen` and reported as drift in between. Change the generator.
+
+WHERE A TOOL GOES
+
+  ci_tooling/check/       fails CI on a violation, writes nothing
+  ci_tooling/generate/    writes into a tracked file, always through lib/doc_region.py
+  ci_tooling/lib/         imported, never run
+  ci_tooling/coverage/    coverage planning, running, report merging
+  crypto/                 test DATA: vectors and keys
+  dev_env/                the conversion tools and the readers, for a session, not for CI
+  git-hooks/              the hooks themselves
+
+  Read tools/ci_tooling/README.md before adding anything to ci_tooling: three generators had
+  already solved the prettier collision with `prettier-ignore` fences when a fourth was written,
+  did not know, and invented a second mechanism that silently disabled the drift detection it was
+  meant to provide.
+
+ADDING A TOOL IS THREE STEPS
+
+  1. write it in the directory above that matches what it does
+  2. add one line to the table in this file, with a usage and a hint that says the thing a first
+     run gets wrong - the hint is the whole reason this file is worth reading
+  3. `harness.py doc gen` - tools/TOOLS.md's tables are derived from the code, so the flags, the
+     write primitives and the external commands come out of the file itself, not out of a
+     docstring. A docstring is a claim; treat one that disagrees with the table as the thing that
+     is wrong. Forgetting this step is caught rather than silent: CI runs the same generator as
+     `ci gen --check tools_inventory` on every pull request, and regenerates it on push to main.
+
+THIS IS NOT THE TEST HARNESS. test/harness.py owns the test matrix, the native runs, bare metal
+and the benchmarks, and it is the one entry point for all of those. Nothing here writes
+test/test_matrix.json, and nothing here should: a whole-file re-render is valid JSON and reformats
+all 400 envs, so the diff stops naming what changed.
+"""
+
+import argparse
+import ast
+import os
+import re
+import runpy
+import shutil
+import subprocess
+import sys
+import textwrap
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from tools import findroot  # noqa: E402
+
+ROOT = findroot.root()
+DOC = findroot.at("tools", "TOOLS.md")
+
+
+# ---------------------------------------------------------------------------
+# the tables: one line per runnable tool, with the hint a first run needs
+# ---------------------------------------------------------------------------
+
+
+class Tool(object):
+    """One runnable entry: where it lives, how it is called, and what a first run gets wrong."""
+
+    __slots__ = ("path", "usage", "hint", "argv", "fn")
+
+    def __init__(self, path, usage, hint, argv=()):
+        self.path = path
+        self.usage = usage
+        self.hint = " ".join(hint.split())
+        self.argv = tuple(argv)
+        self.fn = None
+
+
+def T(path, usage, hint, argv=()):
+    return Tool(path, usage, hint, argv)
+
+
+GOLDENIZE = "tools/dev_env/goldenize.py"
+
+CONVERT = {
+    "scan": T(
+        GOLDENIZE,
+        "scan <module.h>",
+        "Prints the spec it infers, as JSON, and writes nothing. Check three fields before "
+        'gen: "pool" (the scanner always writes "secure" because it cannot read what a module '
+        "holds - key material takes the secure end, everything else the plaintext one), each "
+        'entry\'s "result" member (two entries whose returns map to the same width share one '
+        'declaration and the wider one is truncated), and "entry" (the flat prefix does not '
+        "always match the module name). A module that is ALREADY golden has no flat declarations "
+        "to read, so scanning it returns an empty spec - rebuild from the converted header "
+        "instead.",
+        ["scan"],
+    ),
+    "gen": T(
+        GOLDENIZE,
+        "gen <spec.json> [--dry]",
+        "Writes the header, restructures the .c, rewrites the call sites, runs the shape pass and "
+        "clang-format, and generates the suite's Unity runner through the test harness. Edit the "
+        "spec between scan and gen - that is the intended seam. After it lands, state "
+        "PROTOCORE_<MOD>_BORROW in protocore_config.h AND add it to the arena sum: defining it "
+        "without summing it is the defect five converted modules carried.",
+        ["gen"],
+    ),
+    "shape": T(
+        GOLDENIZE,
+        "shape <file.c|file.h> ... [--dry]",
+        "The golden's file shape only: the config include above the enable gate, everything else "
+        "below it, so nothing outside the capability compiles. Takes the gate from the spec, not "
+        "from the first #if it sees.",
+        ["shape"],
+    ),
+    "pimpl": T(
+        GOLDENIZE,
+        "pimpl <module.h> [--dry]",
+        "For a module that is already a namespace but reaches its state through a "
+        "struct <X>Internal *ctx. Collapses the storage and the internal into one <X>Ctx at a "
+        "compile-time offset in the borrow. Prints the borrow name to state next.",
+        ["pimpl"],
+    ),
+    "funnel": T(
+        GOLDENIZE,
+        "funnel <module.c> [PROTOCORE_<MOD>_BORROW] [--dry]",
+        "Moves a file-static context into the borrow, for a module converted before the funnel "
+        "existed - it has the names and not the point. A module keeping its state in a file-static "
+        "still passes its tests; it just carries per-module BSS and proves nothing.",
+        ["funnel"],
+    ),
+    "nsmap": T(
+        "tools/dev_env/nsmap.py",
+        "nsmap <map.json> [--dry] [path ...]",
+        "Rewrites the leftover FLAT call sites of an already-golden module onto its namespace, "
+        'from a stated map. Paths default to the map\'s "files". It refuses rather than guesses: '
+        "a loop condition (hoisting evaluates it once and the loop spins), a call inside a macro "
+        "that re-evaluates its argument, two calls to one namespace in one statement (one result "
+        "member, so the first value is overwritten), and an argument count the map does not "
+        "state. Each refusal is reported with its line; convert those by hand into the comma form "
+        "(Ns.entry(work), read).",
+    ),
+}
+
+EDIT = {
+    "move": T(
+        "tools/dev_env/move_code.py",
+        "move --src A --dst B --range N-M [--anchor-before RE|--anchor-after RE|--append] [--dry-run]",
+        "Ranges are 1-indexed, inclusive, and read from the ORIGINAL numbering, so several "
+        "--range flags at once do not shift each other. --expect-start / --expect-end are regexes "
+        "checked against the first and last line before anything is written, and a failed guard "
+        "aborts with no change. Use them.",
+    ),
+    "comments": T(
+        "tools/dev_env/strip_comments.py",
+        "comments PATH [PATH ...] [--ext .c,.h] [--exclude PAT] [--no-header] [--go]",
+        "Dry run by default; --go rewrites in place. The licence header and every string literal "
+        "survive, and a block comment leaves its newlines so a compiler error still points at the "
+        "right line. This is what makes a line-anchored conversion mechanical: prose is what a "
+        "pattern over source lines trips over.",
+    ),
+}
+
+VIEW = {
+    "png": T(
+        "tools/dev_env/src2png.py",
+        "png <file> <out_stem> [lines_per_page] [pt] [start] [end]   |   png <dir> <dest> [kb_per_page] [pt]",
+        "Renders source to numbered PNG pages, for reading a whole file at image density. Pages "
+        "break on whole lines, so a line never splits across two.",
+    ),
+    "nodeset": T(
+        "tools/dev_env/nodeset.py",
+        "nodeset <NodeSet2.xml> [BrowseName ...]",
+        "What one NodeSet2 file publishes for each node. Flat read of the file - it does NOT "
+        "follow instance-of or subtype-of, so use `conform` to compare a module against a model.",
+    ),
+    "tree": T(
+        "tools/dev_env/uatree.py",
+        "tree <root BrowseName> <depth> <NodeSet2.xml> [more.xml ...]",
+        "The address space as a tree, with instance-of and subtype-of followed. A NodeSet declares "
+        "a container's children on its TYPE and a type inherits its base type's children, so "
+        "reading a file without following those two links makes almost every real edge look "
+        "missing.",
+    ),
+    "conform": T(
+        "tools/dev_env/opcua_conform.py",
+        "conform <module.c> <NodeSet2.xml> [more.xml ...]",
+        "Checks a hand-built companion-model address space against the NodeSets that publish it. "
+        "Pass EVERY NodeSet the model depends on: a node resolves to the model that owns it by "
+        "(namespace uri, numeric id), and a missing file reads as a missing node.",
+    ),
+}
+
+MEASURE = {
+    "includes": T(
+        "tools/include_footprint.py",
+        "includes [--check] [--issues] [--json] [--per-file] [--src PATH]",
+        "The std/Arduino header dependency surface of src/. --check is the CI form.",
+    ),
+    "pid": T(
+        "tools/pid_tune.py",
+        "pid [--autotune] [--sweep] [--kp K --ki K --kd K] [--out-min N --out-max N] [--png PATH]",
+        "Offline tuner and plotter for services/control, fitted from a run log. Nothing is on the "
+        "target here - it produces gains to state, not gains it installed.",
+    ),
+    "queue-probe": T(
+        "tools/dev_env/listener_queue/run.sh",
+        "queue-probe",
+        "Standing probe: is the TCP listener queue unguarded, or guarded to WORKER_COUNT == 1. "
+        "A static count of the sites that reach it, plus a runtime probe. Does not build the "
+        "library.",
+    ),
+    "pimpl-sweep": T(
+        "tools/dev_env/pimpl_bench/sweep.sh",
+        "pimpl-sweep",
+        "Does an opaque cross-TU accessor get inlined, and at what setting. Builds the whole "
+        "program per (compiler, -O level, lto), disassembles the consumer's hot loop and counts "
+        "call instructions against total instructions. Answers whether the call survives.",
+    ),
+    "pimpl-bench": T(
+        "tools/dev_env/pimpl_bench/bench.sh",
+        "pimpl-bench",
+        "What that accessor costs in time, across the same flag matrix. Minimum over trials, so "
+        "the number is the run least disturbed by scheduling. sweep says whether the call "
+        "survives; this says what it is worth.",
+    ),
+}
+
+CRYPTO = {
+    "kat": T(
+        "tools/crypto/gen_crypto_vectors.py",
+        "kat",
+        "Rewrites the MAC/AEAD known-answer data the crypto KAT suite compiles in "
+        "(test/unit/src/crypto/mac/test_crypto_kat/kat_data.inc).",
+    ),
+    "curate": T(
+        "tools/crypto/curate_crypto_vectors.py",
+        "curate [checkout]",
+        "Pulls vectors out of a pinned upstream checkout into test/vectors/. With no argument it "
+        "clones the pin itself, so the set is reproducible rather than whatever was on disk.",
+    ),
+    "ed25519": T(
+        "tools/crypto/gen_ed25519_comb.py",
+        "ed25519",
+        "Generates AND verifies the fixed-base comb table for the Ed25519 fe layer against an "
+        "affine reference. Python is the oracle before any C is written.",
+    ),
+    "mlkem": T(
+        "tools/crypto/gen_mlkem_kat.py",
+        "mlkem",
+        "A deterministic ML-KEM-768 Encaps known-answer vector, as a C header for test_pqc_mlkem.",
+    ),
+    "tls": T(
+        "tools/crypto/gen_tls_record_kat.py",
+        "tls",
+        "A TLS 1.3 record-layer known-answer vector, as C arrays for test_tls_record.",
+    ),
+    "sshkeys": T(
+        "tools/crypto/gen_ssh_test_keys.py",
+        "sshkeys [--if-absent]",
+        "Mints the SSH test keys into the fixture header. --if-absent is the form a build hook "
+        "wants: it leaves an existing header alone rather than churning the tree on every run. "
+        "Needs openssl on PATH.",
+    ),
+    "sshhost": T(
+        "tools/crypto/gen_ssh_host_key.py",
+        "sshhost [--type ed25519] [--name N] [--symbol S] [--out-dir D] [--header H]",
+        "One SSH host key as a C header. Needs openssl and ssh on PATH.",
+    ),
+    "sshinflate": T(
+        "tools/crypto/gen_ssh_inflate_vectors.py",
+        "sshinflate",
+        "SSH c2s compression golden vectors, produced the way OpenSSH does it: one zlib stream "
+        "with context takeover, Z_PARTIAL_FLUSH per packet. The cross-packet back-references are "
+        "the point - a per-packet stream would pass a test that proves nothing.",
+    ),
+    "x509": T(
+        "tools/dev_env/gen_x509_fixture.sh",
+        "x509",
+        "Makes real certificates with OpenSSL and turns them into the X.509 suite's fixture "
+        "header, reading the EXPECTED values back out of OpenSSL too. A suite whose author "
+        "supplies both the input and the answer only proves the author is consistent with "
+        "themselves. gen_x509_fixture.py is the second half and is not run directly.",
+    ),
+}
+
+ASSETS = {
+    "diagrams": T(
+        "tools/ci_tooling/assets/render_diagrams.sh",
+        "diagrams",
+        "Renders each docs/diagrams/ source to a light AND a dark PNG, which the docs embed "
+        "through <picture>. A live mermaid fence is not an option: the GitHub mobile app and "
+        "Doxygen do not render mermaid. Needs mmdc.",
+    ),
+    "themes": T(
+        "tools/ci_tooling/assets/render_theme_previews.cjs",
+        "themes",
+        "Screenshots every theme in src/web_assets/themes/ onto one sample page, into "
+        "docs/theme_preview/. Needs node with puppeteer-core and a Chromium.",
+    ),
+    "favicons": T(
+        "tools/ci_tooling/assets/pack_favicons.sh",
+        "favicons <name>",
+        "Packs one generated favicon SVG into a drop-in tarball under docs/favicons/dist/. Needs "
+        "ImageMagick's convert.",
+    ),
+    "tooltips": T(
+        "tools/ci_tooling/assets/svg_tooltips.py",
+        "tooltips <file.svg> ...",
+        "Turns mermaid's click tooltips into real SVG tooltips, which is the only form that "
+        "survives being embedded as an image.",
+    ),
+}
+
+BUILD = {
+    "envs": T(
+        "tools/dev_env/build_envs.sh",
+        "envs <env> [env ...]",
+        "Builds each named pio env in the WSL clone and prints one verdict per env. WSL sshd does "
+        "not survive a cold start - `sudo systemctl start ssh` first if this is reaching WSL over "
+        "ssh.",
+    ),
+    "ccache": T(
+        "tools/ci_tooling/build/ccache_wrap.sh",
+        "ccache",
+        "Replaces the cross-toolchain's gcc/g++ with a ccache wrapper in place. PlatformIO and "
+        "arduino-cli invoke the ESP32 compiler by ABSOLUTE path, so a PATH masquerade is bypassed "
+        "and only replacing the tool works.",
+    ),
+    "psram": T(
+        "tools/psram/rebuild_arduino_core_psram.sh",
+        "psram",
+        "Rebuilds the arduino-esp32 core for ESP32-S3 with "
+        "CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y, which is what lets a static "
+        "EXT_RAM_BSS_ATTR array land in PSRAM. Long; needs arduino-cli, cmake and git.",
+    ),
+}
+
+HOOKS = {
+    "install": T(
+        None,
+        "install",
+        "Points git at tools/git-hooks by setting core.hooksPath, so the hooks are the tracked "
+        "ones rather than copies that drift. Idempotent.",
+    ),
+    "status": T(
+        None,
+        "status",
+        "What core.hooksPath is set to now, and which hook files that path actually holds.",
+    ),
+    "cspell": T(
+        "tools/git-hooks/add_cspell_words.py",
+        "cspell <word> [word ...]",
+        "Adds words to cspell.json with case-insensitive dedup, keeping the list sorted and the "
+        "file's 2-space indentation. The pre-commit hook calls this so an unknown technical term "
+        "in committed docs never fails the CI spellcheck.",
+    ),
+    "dependabot": T(
+        "tools/git-hooks/merge_dependabot.sh",
+        "dependabot",
+        "Merges open, mergeable Dependabot PRs into the current branch. Best-effort and strictly "
+        "non-blocking: it does nothing, and never fails its caller, when gh is missing or "
+        "unauthenticated, when HEAD is detached, or mid-rebase.",
+    ),
+}
+
+SELFTESTS = {
+    "goldenize": "tools/dev_env/goldenize_test.py",
+    "nsconv": "tools/dev_env/nsconv_test.py",
+    "nsmap": "tools/dev_env/nsmap_test.py",
+    "pimpl": "tools/dev_env/pimpl_test.py",
+    "funnel": "tools/dev_env/funnel_test.py",
+}
+
+# The dispatch groups, in the order `list` and `help` print them.
+GROUPS = [
+    ("convert", CONVERT, "flat C module -> the sha256 golden shape, and the call sites with it"),
+    ("edit", EDIT, "mechanical source edits that a pattern-driven conversion needs first"),
+    ("view", VIEW, "read-only readers; none of these writes into the tree"),
+    ("measure", MEASURE, "what something costs, and the three standing probes"),
+    ("crypto", CRYPTO, "test vectors and keys - test DATA, which is why it is not under ci_tooling"),
+    ("assets", ASSETS, "renders images and packs web assets"),
+    ("hooks", HOOKS, "the git hooks, and pointing git at them"),
+    ("build", BUILD, "build environments and toolchain wrappers"),
+]
+
+TABLES = dict((name, table) for name, table, _blurb in GROUPS)
+
+
+# ---------------------------------------------------------------------------
+# running one tool
+# ---------------------------------------------------------------------------
+
+
+def run_py(path, argv):
+    """Run one Python tool in-process, as if it had been invoked directly.
+
+    `python x.py` puts the script's own directory on sys.path and runpy does not, so a tool that
+    imports a sibling (uatree -> uaspace, goldenize -> pimpl) fails under run_path without this.
+    """
+    here = os.path.dirname(path)
+    saved_argv, saved_path = sys.argv, list(sys.path)
+    sys.argv = [os.path.basename(path)] + list(argv)
+    for entry in (ROOT, here):
+        if entry not in sys.path:
+            sys.path.insert(0, entry)
+    try:
+        runpy.run_path(path, run_name="__main__")
+        return 0
+    except SystemExit as e:
+        if e.code is None:
+            return 0
+        if isinstance(e.code, int):
+            return e.code
+        print(e.code, file=sys.stderr)
+        return 1
+    finally:
+        sys.argv = saved_argv
+        sys.path[:] = saved_path
+
+
+GIT_BASH = r"C:\Program Files\Git\bin\bash.exe"
+
+
+def find_bash():
+    """Git Bash before WSL's bash.
+
+    On Windows `bash` resolves to System32\\bash.exe, which is WSL: it takes Linux paths, so a
+    Windows path handed to it is a file that does not exist and the script dies on its first line.
+    """
+    found = shutil.which("bash")
+    if found and "system32" not in found.replace("/", "\\").lower():
+        return found
+    if os.path.exists(GIT_BASH):
+        return GIT_BASH
+    return found
+
+
+def run_exe(exe, install, path, argv):
+    """Run a tool that is not Python, through the interpreter it needs."""
+    found = find_bash() if exe == "bash" else shutil.which(exe)
+    if not found:
+        print("%s is not on PATH, and %s needs it: %s" % (exe, findroot.rel(path), install), file=sys.stderr)
+        return 127
+    return subprocess.run([found, path] + list(argv), cwd=ROOT).returncode
+
+
+def run_tool(tool, rest):
+    """Dispatch one table entry by what it is."""
+    if tool.path is None:
+        return tool.fn(rest)
+    path = findroot.at(*tool.path.split("/"))
+    if not os.path.exists(path):
+        print("missing: %s (the table names it, the tree does not have it)" % tool.path, file=sys.stderr)
+        return 2
+    argv = list(tool.argv) + list(rest)
+    ext = os.path.splitext(path)[1]
+    if ext == ".py":
+        return run_py(path, argv)
+    if ext == ".cjs" or ext == ".js":
+        return run_exe("node", "install Node, then `npm i puppeteer-core`", path, argv)
+    return run_exe("bash", "install Git for Windows, or run this from WSL", path, argv)
+
+
+def group_runner(table):
+    def run(a):
+        return run_tool(table[a.name], a.rest)
+
+    return run
+
+
+# ---------------------------------------------------------------------------
+# hooks: the two entries that are this file rather than a script
+# ---------------------------------------------------------------------------
+
+HOOKS_PATH = "tools/git-hooks"
+
+
+def git(*args):
+    return subprocess.run(["git"] + list(args), cwd=ROOT, capture_output=True, text=True)
+
+
+def cmd_hooks_install(rest):
+    """Point git at the tracked hooks."""
+    now = git("config", "core.hooksPath").stdout.strip()
+    if now == HOOKS_PATH:
+        print("core.hooksPath is already %s" % HOOKS_PATH)
+        return 0
+    r = git("config", "core.hooksPath", HOOKS_PATH)
+    if r.returncode:
+        print(r.stderr.strip(), file=sys.stderr)
+        return r.returncode
+    print("core.hooksPath: %s -> %s" % (now or "(unset)", HOOKS_PATH))
+    return 0
+
+
+def cmd_hooks_status(rest):
+    """What git is pointed at, and what is there."""
+    now = git("config", "core.hooksPath").stdout.strip()
+    print("core.hooksPath = %s" % (now or "(unset - git uses .git/hooks)"))
+    d = findroot.at(*HOOKS_PATH.split("/"))
+    for name in sorted(os.listdir(d)):
+        p = os.path.join(d, name)
+        if os.path.isfile(p):
+            print("  %-22s %s" % (name, "executable" if os.access(p, os.X_OK) else "not executable"))
+    if now != HOOKS_PATH:
+        print("\nnot installed: harness.py hooks install")
+    return 0
+
+
+HOOKS["install"].fn = cmd_hooks_install
+HOOKS["status"].fn = cmd_hooks_status
+
+
+# ---------------------------------------------------------------------------
+# what the tree holds: derived from the code, not from the docstrings
+# ---------------------------------------------------------------------------
+
+# A write primitive: the file can change the tree. Deleting a build artifact is not one - a tool
+# that only unlinks its own .gcda is read-only as far as the tree is concerned.
+PY_WRITE = re.compile(
+    r"""open\s*\([^)]*?["'][wax]b?\+?["']|\.write_text\(|\.write_bytes\(|json\.dump\s*\(|"""
+    r"""shutil\.(?:copy|copy2|copyfile|copytree|move)\s*\(|os\.(?:replace|rename)\s*\("""
+)
+SH_WRITE = re.compile(r"(?m)(?:^|[^0-9<>&])>>?\s*[^&\s]|(?:^|[|;&(]\s*|\s)(?:cp|mv|tee|install|mkdir)\s")
+
+# Flags the file itself READS. A flag it merely hands to something else is that tool's flag, so
+# only a declaration or a comparison counts: argparse declares one, and `!=` / `in argv` reads one.
+PY_FLAG = re.compile(
+    r"""add_argument\(\s*["'](--[a-z0-9][a-z0-9-]*)["']"""
+    r"""|["'](--[a-z0-9][a-z0-9-]*)["']\s*(?:not\s+in|in|==|!=)"""
+    r"""|(?:not\s+in|in|==|!=)\s*["'](--[a-z0-9][a-z0-9-]*)["']"""
+    r"""|argv\.(?:remove|count|index)\(\s*["'](--[a-z0-9][a-z0-9-]*)["']"""
+)
+SH_FLAG = re.compile(r"(?m)^\s*(--[a-z0-9][a-z0-9-]*)\)|\[\s*\"\$\w+\"\s*=\s*\"?(--[a-z0-9][a-z0-9-]*)")
+
+# Commands a Python file hands to the OS.
+PY_EXEC = re.compile(
+    r"""subprocess\.(?:run|call|check_call|check_output|Popen)\(\s*\[?\s*["']([^"']+)["']"""
+    r"""|shutil\.which\(\s*["']([^"']+)["']"""
+    r"""|\brun\(\s*\[\s*["']([^"']+)["']"""
+)
+
+# A shell script names its commands bare, so the column is filtered to what is actually external.
+EXTERNALS = {
+    "arduino-cli",
+    "awk",
+    "bash",
+    "black",
+    "cc",
+    "ccache",
+    "clang",
+    "clang++",
+    "clang-format",
+    "cmake",
+    "convert",
+    "cspell",
+    "curl",
+    "doxygen",
+    "g++",
+    "gcc",
+    "gcovr",
+    "gh",
+    "git",
+    "gpg",
+    "idf.py",
+    "lcov",
+    "make",
+    "mmdc",
+    "node",
+    "npm",
+    "npx",
+    "objdump",
+    "openssl",
+    "pio",
+    "platformio",
+    "prettier",
+    "python",
+    "python3",
+    "qemu-system-riscv32",
+    "qemu-system-xtensa",
+    "rsync",
+    "ruby",
+    "scp",
+    "sed",
+    "shfmt",
+    "ssh",
+    "tar",
+    "wsl.exe",
+    "xxd",
+    "zip",
+}
+SH_WORD = re.compile(r"(?m)(?:^|[|;&(]|\$\(|`|\bthen\b|\bdo\b|&&|\|\|)\s*([A-Za-z][\w.+-]*)")
+# A shell script names the tool three ways: at a command position, held in a variable, and listed
+# in a for. pimpl_bench loops `for CC in gcc cc`, build_envs holds pio in PIO="$HOME/.../pio", and
+# compile_examples holds the whole ssh command line in one local.
+SH_ASSIGN = re.compile(r"(?m)^\s*(?:local\s+|export\s+|declare\s+)?[A-Za-z_]\w*=[\"']?([^\"'\n]*)")
+SH_FOR = re.compile(r"(?m)\bfor\s+\w+\s+in\s+([^;\n]+)")
+
+
+def sh_commands(src):
+    """Every external command a shell script names, however it names it."""
+    words = list(SH_WORD.findall(src))
+    for value in SH_ASSIGN.findall(src):
+        head = value.split()[0] if value.split() else ""
+        words.append(head.rsplit("/", 1)[-1])
+    for group in SH_FOR.findall(src):
+        words += group.split()
+    return [w for w in words if w in EXTERNALS]
+
+
+def read(path):
+    with open(path, "r", encoding="utf-8", errors="replace") as fh:
+        return fh.read()
+
+
+def header_comment(src):
+    """The leading comment block, minus the shebang, the copyright and the SPDX line."""
+    lines = []
+    for line in src.split("\n")[:16]:
+        s = line.strip()
+        if not s.startswith("#") and not s.startswith("//"):
+            if lines:
+                break
+            continue
+        s = s.lstrip("#/ ").strip()
+        if not s or s.startswith("!") or "Copyright (C)" in s or s.startswith("SPDX"):
+            continue
+        lines.append(s)
+    return " ".join(lines)
+
+
+def first_line(path, src):
+    """The file's own one-line summary: its docstring's first sentence, or its header comment.
+
+    A file with neither says nothing about itself, and prints blank rather than borrowing a
+    sentence from somewhere else.
+    """
+    text = ""
+    if path.endswith(".py"):
+        try:
+            text = ast.get_docstring(ast.parse(src)) or ""
+        except SyntaxError:
+            text = ""
+        text = text.strip().split("\n\n")[0]
+    if not text.strip():
+        text = header_comment(src)
+    text = " ".join(text.split())
+    # A doxygen-style docstring opens with the tags, and the tags are not the summary.
+    text = re.sub(r"^@file\s+\S+\s*", "", text)
+    text = re.sub(r"^@brief\s*", "", text)
+    # A summary that names the file first says nothing the path did not.
+    text = re.sub(r"^[\w.]+\.(?:py|sh|cjs)\s*-\s*", "", text)
+    return text
+
+
+def scan_file(path):
+    """What one file is, read out of the file: does it write, what flags does it take, what does
+    it shell out to."""
+    src = read(path)
+    rel = findroot.rel(path)
+    py = path.endswith(".py")
+    if py:
+        writes = bool(PY_WRITE.search(src))
+        flags = [g for m in PY_FLAG.finditer(src) for g in m.groups() if g]
+        shells = [g for m in PY_EXEC.finditer(src) for g in m.groups() if g]
+        if re.search(r"sys\.executable", src):
+            shells.append("python")
+    else:
+        writes = bool(SH_WRITE.search(src))
+        flags = [g for m in SH_FLAG.finditer(src) for g in m.groups() if g]
+        shells = sh_commands(src)
+    shells = [os.path.basename(s) for s in shells if "/" not in s and "\\" not in s]
+    shells = [s for s in shells if s in EXTERNALS or s.endswith("-cli")]
+    return {
+        "rel": rel,
+        "name": os.path.basename(path),
+        "writes": writes,
+        "flags": sorted(set(flags)),
+        "shells": sorted(set(shells)),
+        "runnable": py and "__main__" in src or not py,
+        "doc": first_line(path, src),
+    }
+
+
+# The directory sections `list --all` and `doc gen` print, in order, each with what the directory
+# is for and the one note a reader needs about it.
+DIRS = [
+    (
+        "tools",
+        "Top level",
+        "The entry point, the root finder, and the two measurements that " "belong to no family.",
+        "",
+    ),
+    (
+        "tools/ci_tooling",
+        "ci_tooling",
+        "One entry point for CI: `harness.py ci` hands off to it "
+        "unread, so `harness.py ci help` is its whole surface.",
+        "",
+    ),
+    (
+        "tools/ci_tooling/check",
+        "check/ - fails CI, writes nothing",
+        "",
+        "`check_frame_specs.py` writes only under `--fix`. `compile_examples.sh` builds on a remote "
+        "host. Every guard here is reachable as `harness.py ci check <name>`.",
+    ),
+    (
+        "tools/ci_tooling/generate",
+        "generate/ - writes into tracked files",
+        "",
+        "Every one takes `--check` to assert the tracked file already matches, which is how CI "
+        "detects drift. Reachable as `harness.py ci gen <name>`.",
+    ),
+    (
+        "tools/ci_tooling/coverage",
+        "coverage/",
+        "",
+        "`covrun.py` is the inner loop over a few envs; `covbase.py` is the full-matrix rebuild. "
+        "Reachable as `harness.py ci cov <name>`.",
+    ),
+    ("tools/ci_tooling/lib", "lib/ - imported, never run", "", ""),
+    ("tools/ci_tooling/sonar", "sonar/", "", ""),
+    ("tools/ci_tooling/assets", "assets/", "", ""),
+    ("tools/ci_tooling/build", "build/", "", ""),
+    ("tools/crypto", "crypto/ - generates test vectors and keys", "", ""),
+    (
+        "tools/dev_env",
+        "dev_env/ - the conversion tools and the readers",
+        "",
+        "`nsconv.py`, `codemask.py`, `uaspace.py`, `pimpl.py` and `funnel.py` are libraries: "
+        "`goldenize.py` is the entry point for the last two. `gen_x509_fixture.py` is the second "
+        "half of `gen_x509_fixture.sh`.",
+    ),
+    ("tools/dev_env/listener_queue", "dev_env/listener_queue/", "", ""),
+    ("tools/dev_env/pimpl_bench", "dev_env/pimpl_bench/", "", ""),
+    (
+        "tools/git-hooks",
+        "git-hooks/",
+        "",
+        "Installed by pointing git at the directory (`harness.py hooks install`), never by copying "
+        "into .git/hooks, so what runs is what is tracked.",
+    ),
+    ("tools/psram", "psram/", "", ""),
+]
+
+SKIP_FILES = {"__init__.py"}
+SCAN_EXTS = (".py", ".sh", ".cjs")
+
+
+def inventory():
+    """Every script under tools/, grouped by directory, in DIRS order."""
+    out = []
+    for rel, title, blurb, note in DIRS:
+        d = findroot.at(*rel.split("/"))
+        if not os.path.isdir(d):
+            continue
+        files = []
+        for name in sorted(os.listdir(d)):
+            p = os.path.join(d, name)
+            if not os.path.isfile(p) or name in SKIP_FILES:
+                continue
+            if not name.endswith(SCAN_EXTS) and name not in ("pre-commit", "post-commit"):
+                continue
+            files.append(scan_file(p))
+        if files:
+            out.append((rel, title, blurb, note, files))
+    return out
+
+
+def md_table(rows, headers):
+    """A markdown table padded so the source is readable without a renderer."""
+    cols = list(zip(*([headers] + rows))) if rows else [(h,) for h in headers]
+    width = [max(len(str(c)) for c in col) for col in cols]
+
+    def line(cells):
+        return "| " + " | ".join(str(c).ljust(w) for c, w in zip(cells, width)) + " |"
+
+    out = [line(headers), "| " + " | ".join("-" * w for w in width) + " |"]
+    out += [line(r) for r in rows]
+    return "\n".join(out)
+
+
+def render_inventory():
+    """The derived half of TOOLS.md."""
+    out = []
+    for _rel, title, blurb, note, files in inventory():
+        out.append("## %s" % title)
+        if blurb:
+            out.append("")
+            out.append(blurb)
+        rows = [
+            [
+                "`%s`" % f["name"],
+                "W" if f["writes"] else "",
+                "`%s`" % " ".join(f["flags"]) if f["flags"] else "",
+                ", ".join(f["shells"]),
+            ]
+            for f in files
+        ]
+        out.append("")
+        out.append(md_table(rows, ["Script", "W", "Flags", "Shells out to"]))
+        if note:
+            out.append("")
+            out.append(note)
+        out.append("")
+    return "\n".join(out).strip()
+
+
+# ---------------------------------------------------------------------------
+# commands
+# ---------------------------------------------------------------------------
+
+
+def wrap(text, indent, width=98):
+    return textwrap.fill(text, width=width, initial_indent=" " * indent, subsequent_indent=" " * indent)
+
+
+def table_help(table):
+    """One tool per entry: how it is called, then the hint."""
+    out = []
+    for name, tool in table.items():
+        out.append("  %s" % tool.usage)
+        out.append(wrap(tool.hint, 6))
+        out.append("")
+    return "\n".join(out)
+
+
+def cmd_list(a):
+    """Every runnable tool, grouped by what it does; --all adds the whole tree by directory."""
+    if a.group:
+        if a.group not in TABLES:
+            print("no such group: %s (groups: %s)" % (a.group, " ".join(TABLES)), file=sys.stderr)
+            return 2
+        print(table_help(TABLES[a.group]).rstrip())
+        return 0
+    for name, table, blurb in GROUPS:
+        print("\nharness.py %s - %s" % (name, blurb))
+        for tool, entry in table.items():
+            print("  %-12s %-42s %s" % (tool, entry.path or "(this file)", entry.usage))
+    print("\nharness.py ci <...>  - tools/ci_tooling/ci.py: gen, check, baseline, cov, fmt, sonar")
+    print("harness.py selftest  - %s" % " ".join(SELFTESTS))
+    if not a.all:
+        print("\n`harness.py list --all` prints every file under tools/, derived from the code.")
+        return 0
+    for _rel, title, _blurb, _note, files in inventory():
+        print("\n%s" % title)
+        wide = max(len(f["name"]) for f in files)
+        for f in files:
+            mark = "W" if f["writes"] else " "
+            print("  %s %-*s  %s" % (mark, wide, f["name"], f["doc"][: 96 - wide]))
+    return 0
+
+
+def cmd_ci(a):
+    """Hand off to tools/ci_tooling/ci.py with whatever followed `ci`.
+
+    Same reason test/harness.py hands `bare` and `bench` off to their own files: CI operations are
+    their own matrix with their own surface, and nothing should have to know that to run them. Its
+    own help is the authority - `harness.py ci help`.
+    """
+    return run_py(findroot.at("tools", "ci_tooling", "ci.py"), a.rest or ["help"])
+
+
+def cmd_selftest(a):
+    """Run the tools' own self-tests. Each is a defect the tool shipped once."""
+    names = a.names or list(SELFTESTS)
+    unknown = [n for n in names if n not in SELFTESTS]
+    if unknown:
+        print("unknown self-test: %s (have: %s)" % (" ".join(unknown), " ".join(SELFTESTS)), file=sys.stderr)
+        return 2
+    rc_all = 0
+    for name in names:
+        path = findroot.at(*SELFTESTS[name].split("/"))
+        print("\n=== %s" % findroot.rel(path))
+        rc = run_py(path, [])
+        print("%s %s" % ("ok  " if rc == 0 else "FAIL", name))
+        rc_all = rc_all or rc
+    return rc_all
+
+
+def doc_gen(check=False):
+    """Rewrite the derived tables in tools/TOOLS.md from the code.
+
+    The "I need to..." table and the prose above the region are hand-written and stay that way;
+    everything below it is what the files actually are. `check` is the CI form.
+
+    ci_tooling/generate/gen_tools_inventory.py is the same call under the name CI knows it by, so
+    the region is gated the way every other generated region is.
+    """
+    sys.path.insert(0, findroot.at("tools", "ci_tooling", "lib"))
+    import doc_region as dr  # noqa: E402  (path set above)
+
+    region = dr.Region(DOC, "TOOLS INVENTORY", findroot.here(__file__))
+    return dr.apply(DOC, {region: render_inventory()}, check=check)
+
+
+def cmd_doc_gen(a):
+    return doc_gen(check=a.check)
+
+
+def _subcommands(parser):
+    """{name: subparser} for a parser's one subparser group."""
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            return action.choices
+    return {}
+
+
+def cmd_help(a):
+    """Every command's own help in one call, or one command's.
+
+    `-h` prints usage one level at a time, so reading the whole surface means invoking it once per
+    subcommand. This prints all of it, and the inventory after it, so one call is the whole tool.
+    """
+    subs = _subcommands(build_parser())
+    if a.command:
+        if a.command not in subs:
+            print("no such command: %s (try `harness.py help`)" % a.command, file=sys.stderr)
+            return 2
+        subs[a.command].print_help()
+        for name, nested in sorted(_subcommands(subs[a.command]).items()):
+            print("\n### harness.py %s %s" % (a.command, name))
+            print(nested.format_help().strip())
+        return 0
+    print(__doc__.strip())
+    for name in sorted(subs):
+        print("\n" + "-" * 78)
+        print("### harness.py %s" % name)
+        print(subs[name].format_help().strip())
+        for nested_name, nested in sorted(_subcommands(subs[name]).items()):
+            print("\n  ### harness.py %s %s" % (name, nested_name))
+            print(nested.format_help().strip())
+    return 0
+
+
+def build_parser():
+    ap = argparse.ArgumentParser(
+        prog="harness.py",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sub = ap.add_subparsers(dest="group", required=True)
+
+    p = sub.add_parser("help", help="every command's help in one call, or one command's")
+    p.add_argument("command", nargs="?")
+    p.set_defaults(fn=cmd_help)
+
+    p = sub.add_parser("list", help="every tool, grouped by what it does")
+    p.add_argument("group", nargs="?", help="one group's tools, with the full hint for each")
+    p.add_argument("--all", action="store_true", help="every file under tools/, by directory")
+    p.set_defaults(fn=cmd_list)
+
+    p = sub.add_parser(
+        "ci",
+        help="hand off to tools/ci_tooling/ci.py: gen, check, baseline, cov, fmt, sonar",
+        description="Everything after `ci` is passed to tools/ci_tooling/ci.py unread, so its own "
+        "surface is the authority: `harness.py ci help`. The two that matter most: "
+        "`ci gen --check` is what CI gates a generated region on, and `ci baseline <guard>` "
+        "records a ratcheted guard's current violations as its new floor - a deliberate act, "
+        "which is why it is its own command rather than a flag.",
+        add_help=False,
+    )
+    p.add_argument("rest", nargs=argparse.REMAINDER, metavar="...")
+    p.set_defaults(fn=cmd_ci)
+
+    for name, table, blurb in GROUPS:
+        p = sub.add_parser(
+            name,
+            help=blurb,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog=table_help(table),
+            add_help=True,
+        )
+        p.add_argument("name", choices=list(table))
+        p.add_argument("rest", nargs=argparse.REMAINDER, metavar="...")
+        p.set_defaults(fn=group_runner(table))
+
+    p = sub.add_parser(
+        "selftest",
+        help="run the tools' own self-tests",
+        description="Each case in these is a defect the tool shipped once - a module brief cut "
+        "mid-clause, a hoist that crossed a #if, a dotted key that met its own output on the next "
+        "pass. Run them after touching a converter, before running it over the tree.",
+    )
+    p.add_argument("names", nargs="*", metavar="NAME", help=" ".join(SELFTESTS))
+    p.set_defaults(fn=cmd_selftest)
+
+    doc = sub.add_parser("doc", help="tools/TOOLS.md generated tables").add_subparsers(dest="cmd", required=True)
+    p = doc.add_parser(
+        "gen",
+        help="regenerate the derived tables in tools/TOOLS.md",
+        description="The tables come from each file's flag surface, the write primitives it "
+        "contains and the external commands it invokes - from the code, not from a docstring. "
+        "Run it after adding a tool or changing a flag.",
+    )
+    p.add_argument("--check", action="store_true", help="exit 1 if the tables are stale (no write)")
+    p.set_defaults(fn=cmd_doc_gen)
+    return ap
+
+
+def main():
+    a = build_parser().parse_args()
+    return a.fn(a)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

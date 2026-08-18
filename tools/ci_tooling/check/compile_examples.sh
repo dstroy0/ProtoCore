@@ -37,9 +37,13 @@ WORK="${PROTOCORE_WORK:-/tmp/protocore_examples}"
 run_local() {
     local acli="$HOME/bin/arduino-cli"
     command -v arduino-cli >/dev/null 2>&1 && acli=$(command -v arduino-cli)
-    [ -x "$acli" ] || { echo "arduino-cli not found (expected ~/bin/arduino-cli)"; exit 2; }
+    [ -x "$acli" ] || {
+        echo "arduino-cli not found (expected ~/bin/arduino-cli)"
+        exit 2
+    }
 
-    rm -rf "$WORK"; mkdir -p "$WORK/logs" "$HOME/Arduino/libraries"
+    rm -rf "$WORK"
+    mkdir -p "$WORK/logs" "$HOME/Arduino/libraries"
     rm -f "$HOME/Arduino/libraries/ProtoCore"
     ln -s "$ROOT" "$HOME/Arduino/libraries/ProtoCore"
     # a pre-rename copy here would satisfy includes with the wrong headers
@@ -52,26 +56,28 @@ run_local() {
 
     compile_one() {
         local ino="$1" work="$2" fqbn="$3" acli="$4" ssid="$5" pass="$6"
-        local name; name=$(basename "$(dirname "$ino")")
-        local src; src=$(dirname "$ino")
+        local name
+        name=$(basename "$(dirname "$ino")")
+        local src
+        src=$(dirname "$ino")
         local dir="$work/$name"
         mkdir -p "$dir"
         cp "$ino" "$dir/$name.ino"
         for extra in "$src"/*.h "$src"/*.cpp; do [ -f "$extra" ] && cp "$extra" "$dir/" 2>/dev/null; done
         sed -i "s/\"YOUR_SSID\"/\"$ssid\"/; s/\"YOUR_PASSWORD\"/\"$pass\"/" "$dir/$name.ino"
         if "$acli" compile --fqbn "$fqbn" --libraries "$HOME/Arduino/libraries" \
-                --build-path "$work/bp_$name" "$dir" >"$work/logs/$name.log" 2>&1; then
+            --build-path "$work/bp_$name" "$dir" >"$work/logs/$name.log" 2>&1; then
             echo "PASS $name"
         else
             echo "FAIL $name"
         fi
-        rm -rf "$work/bp_$name"   # each build tree is ~100 MB; 152 of them is not survivable
+        rm -rf "$work/bp_$name" # each build tree is ~100 MB; 152 of them is not survivable
     }
     export -f compile_one
 
-    printf '%s\n' "${INOS[@]}" \
-        | xargs -P "$JOBS" -I{} bash -c 'compile_one "$@"' _ {} "$WORK" "$FQBN" "$acli" "$SSID" "$PASS" \
-        > "$WORK/results.txt" 2>&1
+    printf '%s\n' "${INOS[@]}" |
+        xargs -P "$JOBS" -I{} bash -c 'compile_one "$@"' _ {} "$WORK" "$FQBN" "$acli" "$SSID" "$PASS" \
+            >"$WORK/results.txt" 2>&1
 
     local pass fail
     pass=$(grep -c '^PASS' "$WORK/results.txt" || true)
@@ -88,7 +94,7 @@ run_local() {
 
 run_remote() {
     local rsh="ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10"
-    command -v sshpass >/dev/null 2>&1 && [ -n "${PROTOCORE_RPI_PASS:-}" ] && \
+    command -v sshpass >/dev/null 2>&1 && [ -n "${PROTOCORE_RPI_PASS:-}" ] &&
         rsh="sshpass -p $PROTOCORE_RPI_PASS $rsh"
 
     echo ">> syncing to $REMOTE_USER@$REMOTE_HOST"
@@ -103,5 +109,5 @@ run_remote() {
 
 case "${1:-}" in
     --remote) run_remote ;;
-    *)        run_local ;;
+    *) run_local ;;
 esac

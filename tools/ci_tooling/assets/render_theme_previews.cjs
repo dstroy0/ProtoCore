@@ -7,12 +7,17 @@
 // puppeteer-core + a Chromium; run on a host that has both (CHROME overrides the browser path).
 //
 //   node tools/ci_tooling/assets/render_theme_previews.cjs
-const puppeteer = require(process.env.PUPPETEER || "/usr/local/lib/node_modules/puppeteer-core");
+const puppeteer = require(
+    process.env.PUPPETEER || "/usr/local/lib/node_modules/puppeteer-core",
+);
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "../../..");
-const DIRS = [path.join(ROOT, "src/web_assets/themes"), path.join(ROOT, "src/web_assets/themes/generated")];
+const DIRS = [
+    path.join(ROOT, "src/web_assets/themes"),
+    path.join(ROOT, "src/web_assets/themes/generated"),
+];
 const OUT = path.join(ROOT, "docs/theme_preview");
 
 // A compact showcase touching the elements the template themes: heading, link, cards, buttons, an input,
@@ -38,29 +43,35 @@ const SAMPLE = `<main class="wrap">
 </main>`;
 
 (async () => {
-  fs.mkdirSync(OUT, { recursive: true });
-  const browser = await puppeteer.launch({
-    executablePath: process.env.CHROME || "/usr/bin/chromium",
-    args: ["--no-sandbox", "--disable-gpu", "--hide-scrollbars"],
-  });
-  const page = await browser.newPage();
-  await page.setViewport({ width: 460, height: 380, deviceScaleFactor: 2 });
-  let n = 0;
-  for (const dir of DIRS) {
-    if (!fs.existsSync(dir)) continue;
-    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".css")).sort()) {
-      const name = file.replace(/\.css$/, "");
-      const css = fs.readFileSync(path.join(dir, file), "utf8");
-      const html = `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${SAMPLE}</body></html>`;
-      await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 60000 }); // inline CSS, no network
-      await new Promise((r) => setTimeout(r, 150)); // let layout + web-safe fonts settle
-      await page.screenshot({ path: path.join(OUT, name + ".png") });
-      n++;
+    fs.mkdirSync(OUT, { recursive: true });
+    const browser = await puppeteer.launch({
+        executablePath: process.env.CHROME || "/usr/bin/chromium",
+        args: ["--no-sandbox", "--disable-gpu", "--hide-scrollbars"],
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 460, height: 380, deviceScaleFactor: 2 });
+    let n = 0;
+    for (const dir of DIRS) {
+        if (!fs.existsSync(dir)) continue;
+        for (const file of fs
+            .readdirSync(dir)
+            .filter((f) => f.endsWith(".css"))
+            .sort()) {
+            const name = file.replace(/\.css$/, "");
+            const css = fs.readFileSync(path.join(dir, file), "utf8");
+            const html = `<!doctype html><html><head><meta charset="utf-8"><style>${css}</style></head><body>${SAMPLE}</body></html>`;
+            await page.setContent(html, {
+                waitUntil: "domcontentloaded",
+                timeout: 60000,
+            }); // inline CSS, no network
+            await new Promise((r) => setTimeout(r, 150)); // let layout + web-safe fonts settle
+            await page.screenshot({ path: path.join(OUT, name + ".png") });
+            n++;
+        }
     }
-  }
-  await browser.close();
-  console.log(`rendered ${n} theme previews -> docs/theme_preview/`);
+    await browser.close();
+    console.log(`rendered ${n} theme previews -> docs/theme_preview/`);
 })().catch((e) => {
-  console.error(e.message);
-  process.exit(1);
+    console.error(e.message);
+    process.exit(1);
 });

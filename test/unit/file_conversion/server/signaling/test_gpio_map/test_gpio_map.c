@@ -33,6 +33,8 @@
 
 #include <unity.h>
 
+static uint8_t gpio_map_work[16]; // the borrow an entry takes; GpioMap never reads it
+
 void setUp(void)
 {
 }
@@ -473,14 +475,14 @@ static const char *render(const protocore_gpio_pin *pins, uint8_t count, uint32_
     GpioMap.args.count = count;
     GpioMap.out_args.out = g_out;
     GpioMap.out_args.cap = cap;
-    GpioMap.json(GpioMap.internal);
+    GpioMap.json(gpio_map_work);
     return g_out;
 }
 
 static const char *dir_name(protocore_gpio_dir dir)
 {
     GpioMap.args.dir = dir;
-    GpioMap.dir_name(GpioMap.internal);
+    GpioMap.dir_name(gpio_map_work);
     return GpioMap.text;
 }
 
@@ -489,7 +491,7 @@ static proto_bool is_output(const protocore_gpio_pin *pins, uint8_t count, uint8
     GpioMap.args.pins = pins;
     GpioMap.args.count = count;
     GpioMap.args.pin = pin;
-    GpioMap.is_output(GpioMap.internal);
+    GpioMap.is_output(gpio_map_work);
     return GpioMap.ok;
 }
 
@@ -499,7 +501,7 @@ static proto_bool parse_set(const char *body, size_t len, uint8_t *pin, uint8_t 
     GpioMap.parse_args.len = len;
     GpioMap.parse_args.pin_out = pin;
     GpioMap.parse_args.level_out = level;
-    GpioMap.parse_set(GpioMap.internal);
+    GpioMap.parse_set(gpio_map_work);
     return GpioMap.ok;
 }
 
@@ -726,19 +728,19 @@ void test_the_serializer_refuses_missing_arguments(void)
     GpioMap.args.count = 3;
     GpioMap.out_args.out = NULL;
     GpioMap.out_args.cap = (uint32_t)sizeof(g_out);
-    GpioMap.json(GpioMap.internal);
+    GpioMap.json(gpio_map_work);
     TEST_ASSERT_TRUE(GpioMap.n <= 0);
 
     g_out[0] = 'x';
     GpioMap.out_args.out = g_out;
     GpioMap.out_args.cap = 0;
-    GpioMap.json(GpioMap.internal);
+    GpioMap.json(gpio_map_work);
     TEST_ASSERT_TRUE(GpioMap.n <= 0);
     TEST_ASSERT_EQUAL_CHAR('x', g_out[0]);
 
     GpioMap.args.pins = NULL;
     GpioMap.out_args.cap = (uint32_t)sizeof(g_out);
-    GpioMap.json(GpioMap.internal);
+    GpioMap.json(gpio_map_work);
     TEST_ASSERT_TRUE(GpioMap.n <= 0);
     TEST_ASSERT_EQUAL_STRING("", g_out);
 }
@@ -879,7 +881,7 @@ void test_each_pin_is_armed_in_its_declared_direction(void)
     };
     GpioMap.args.pins = PINS;
     GpioMap.args.count = 4;
-    GpioMap.begin_pins(GpioMap.internal);
+    GpioMap.begin_pins(gpio_map_work);
 
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_GPIO_OUT, protocore_gpio_host_mode(20));
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_GPIO_IN_PULLUP, protocore_gpio_host_mode(21));
@@ -897,30 +899,30 @@ void test_a_sample_reads_the_seam_back_into_the_table(void)
     };
     GpioMap.args.pins = pins;
     GpioMap.args.count = 2;
-    GpioMap.begin_pins(GpioMap.internal);
+    GpioMap.begin_pins(gpio_map_work);
 
     GpioMap.args.pin = 24;
     GpioMap.args.level = 1;
-    GpioMap.write(GpioMap.internal);
+    GpioMap.write(gpio_map_work);
     protocore_gpio_host_set(25, 1);
     GpioMap.args.pins_rw = pins;
     GpioMap.args.count = 2;
-    GpioMap.sample(GpioMap.internal);
+    GpioMap.sample(gpio_map_work);
     TEST_ASSERT_EQUAL_UINT8(1u, pins[0].level);
     TEST_ASSERT_EQUAL_UINT8(1u, pins[1].level);
 
     GpioMap.args.pin = 24;
     GpioMap.args.level = 0;
-    GpioMap.write(GpioMap.internal);
+    GpioMap.write(gpio_map_work);
     protocore_gpio_host_set(25, 0);
     GpioMap.args.pins_rw = pins;
-    GpioMap.sample(GpioMap.internal);
+    GpioMap.sample(gpio_map_work);
     TEST_ASSERT_EQUAL_UINT8(0u, pins[0].level);
     TEST_ASSERT_EQUAL_UINT8(0u, pins[1].level);
 
     GpioMap.args.pin = 24;
     GpioMap.args.level = 200;
-    GpioMap.write(GpioMap.internal);
+    GpioMap.write(gpio_map_work);
     TEST_ASSERT_EQUAL_UINT8(1u, protocore_gpio_host_level(24));
 }
 
@@ -929,9 +931,9 @@ void test_a_missing_table_is_walked_zero_times(void)
 {
     GpioMap.args.pins = NULL;
     GpioMap.args.count = 3;
-    GpioMap.begin_pins(GpioMap.internal);
+    GpioMap.begin_pins(gpio_map_work);
 
     GpioMap.args.pins_rw = NULL;
     GpioMap.args.count = 3;
-    GpioMap.sample(GpioMap.internal);
+    GpioMap.sample(gpio_map_work);
 }

@@ -124,9 +124,6 @@ typedef struct
     void *ctx;               ///< the transport's own handle, passed back to all three
 } SmtpTransportArgs;
 
-/** @brief The session's own state and the calls that reach it, described only in smtp.c. */
-struct SmtpInternal;
-
 /**
  * @brief The SMTP client.
  *
@@ -144,7 +141,6 @@ struct SmtpInternal;
  * @var SmtpNs::code      the reply code of the last reply read (RFC 5321 sec 4.2)
  * @var SmtpNs::run       walk the whole session over the seam in @c transport
  * @var SmtpNs::send      open the outbound client transport, walk the session, close
- * @var SmtpNs::internal  the session's state and the calls that reach it
  */
 typedef struct
 {
@@ -158,14 +154,23 @@ typedef struct
     SmtpResult result;
     int16_t code;
 
-    void (*run)(struct SmtpInternal *ctx);
-    void (*send)(struct SmtpInternal *ctx);
-
-    struct SmtpInternal *internal;
+    void (*const run)(uint8_t *restrict work);
+    void (*const send)(uint8_t *restrict work);
 } SmtpNs;
 
 /** @brief The one symbol this module exports. */
 extern SmtpNs Smtp;
+
+/**
+ * @brief The PROTOCORE_SMTP_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_smtp_span(void);
 
 PROTOCORE_END_DECLS
 

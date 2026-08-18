@@ -594,7 +594,7 @@ static void cli_send(struct SshClientInternal *restrict ctx)
     TcpClient.cid = s_store.cid;
     TcpClient.io.data = wire;
     TcpClient.io.len = wlen;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     ctx->ns->ok = TcpClient.ok;
     return;
 }
@@ -923,7 +923,7 @@ void protocore_ssh_client_begin(struct SshClientInternal *restrict ctx)
     TcpClient.dial.host = cfg->host;
     TcpClient.dial.port = port;
     TcpClient.dial.timeout_ms = 8000;
-    TcpClient.open(TcpClient.internal);
+    TcpClient.open(protocore_tcp_client_span());
     s_store.cid = TcpClient.i32;
     if (s_store.cid < 0)
     {
@@ -939,7 +939,7 @@ void protocore_ssh_client_begin(struct SshClientInternal *restrict ctx)
     if (SshNetwork.i32 != 0)
     {
         TcpClient.cid = s_store.cid;
-        TcpClient.close(TcpClient.internal);
+        TcpClient.close(protocore_tcp_client_span());
         s_store.cid = -1;
         s_store.state = PROTOCORE_SSH_CLIENT_FAILED;
         ctx->ns->ok = PROTO_FALSE;
@@ -958,7 +958,7 @@ void protocore_ssh_client_begin(struct SshClientInternal *restrict ctx)
     TcpClient.cid = s_store.cid;
     TcpClient.io.data = banner;
     TcpClient.io.len = n;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     if (ident != 0 || !TcpClient.ok)
     {
         cli_fail("banner send failed");
@@ -979,10 +979,10 @@ void protocore_ssh_client_poll(struct SshClientInternal *restrict ctx)
     }
 
     TcpClient.cid = s_store.cid;
-    TcpClient.is_closed(TcpClient.internal);
+    TcpClient.is_closed(protocore_tcp_client_span());
     const proto_bool peer_closed = TcpClient.ok;
     TcpClient.cid = s_store.cid;
-    TcpClient.available(TcpClient.internal);
+    TcpClient.available(protocore_tcp_client_span());
     if (peer_closed && TcpClient.n == 0)
     {
         cli_fail("relay closed the connection");
@@ -998,7 +998,7 @@ void protocore_ssh_client_poll(struct SshClientInternal *restrict ctx)
     TcpClient.cid = s_store.cid;
     TcpClient.io.buf = buf;
     TcpClient.io.cap = sizeof(buf);
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     size_t got = TcpClient.n;
     if (got)
     {
@@ -1042,7 +1042,7 @@ void protocore_ssh_client_end(struct SshClientInternal *restrict ctx)
     if (s_store.cid >= 0)
     {
         TcpClient.cid = s_store.cid;
-        TcpClient.close(TcpClient.internal);
+        TcpClient.close(protocore_tcp_client_span());
     }
     SshNetwork.ssh_slot = SSH_CLI_SLOT;
     SshNetwork.release(SshNetwork.internal);
@@ -1062,7 +1062,7 @@ static void cli_fail(const char *why)
     if (s_store.cid >= 0)
     {
         TcpClient.cid = s_store.cid;
-        TcpClient.close(TcpClient.internal);
+        TcpClient.close(protocore_tcp_client_span());
     }
     s_store.cid = -1;
     SshNetwork.ssh_slot = SSH_CLI_SLOT;

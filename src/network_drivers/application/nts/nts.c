@@ -6,10 +6,14 @@
  * @brief Network Time Security wire codec (see nts.h).
  */
 
-#include "network_drivers/application/nts/nts.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_NTS
+
+#include "mmgr/protomem.h"
+#include "network_drivers/application/nts/nts.h"
+
+PROTOCORE_BEGIN_DECLS
 
 const char NTS_EXPORTER_LABEL[] = "EXPORTER-network-time-security";
 
@@ -23,17 +27,35 @@ static uint16_t get_u16(const uint8_t *p)
     return (uint16_t)((p[0] << 8) | p[1]);
 }
 
-size_t protocore_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, uint8_t *out,
-                               size_t cap)
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void nts_ef(uint8_t *restrict work);
+static void nts_ke_record(uint8_t *restrict work);
+
+static void nts_ke_record(uint8_t *restrict work)
 {
+    (void)work;
+    proto_bool critical = Nts.ke_record_args.critical;
+    uint16_t type = Nts.ke_record_args.type;
+    const uint8_t *body = Nts.ke_record_args.body;
+    size_t body_len = Nts.ke_record_args.body_len;
+    uint8_t *out = Nts.ke_record_args.out;
+    size_t cap = Nts.ke_record_args.cap;
+
     if (!out || (body_len && !body) || body_len > 0xFFFF)
     {
-        return 0;
+        Nts.n = 0;
+        return;
     }
     size_t n = 4 + body_len;
     if (n > cap)
     {
-        return 0;
+        Nts.n = 0;
+        return;
     }
     put_u16(out, (uint16_t)((type & 0x7FFF) | (critical ? NTS_KE_CRITICAL : 0)));
     put_u16(out + 2, (uint16_t)body_len);
@@ -41,11 +63,14 @@ size_t protocore_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t
     {
         mem.cpy(out + 4, body, body_len);
     }
-    return n;
+    Nts.n = n;
 }
 
-size_t protocore_nts_ke_request(uint8_t *out, size_t cap)
+static void nts_ke_request(uint8_t *restrict work)
 {
+    uint8_t *out = Nts.ke_request_args.out;
+    size_t cap = Nts.ke_request_args.cap;
+
     uint8_t proto[2];
     put_u16(proto, NTS_NEXT_PROTO_NTPV4);
     uint8_t aead[2];
@@ -53,29 +78,59 @@ size_t protocore_nts_ke_request(uint8_t *out, size_t cap)
 
     size_t n = 0;
     size_t r;
-    r = protocore_nts_ke_record(PROTO_TRUE, NTS_KE_NEXT_PROTOCOL, proto, 2, out + n, cap - n);
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
+    Nts.ke_record_args.body = proto;
+    Nts.ke_record_args.body_len = 2;
+    Nts.ke_record_args.out = out + n;
+    Nts.ke_record_args.cap = cap - n;
+    nts_ke_record(work);
+    r = Nts.n;
     if (!r)
     {
-        return 0;
+        Nts.n = 0;
+        return;
     }
     n += r;
-    r = protocore_nts_ke_record(PROTO_TRUE, NTS_KE_AEAD_ALGORITHM, aead, 2, out + n, cap - n);
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_AEAD_ALGORITHM;
+    Nts.ke_record_args.body = aead;
+    Nts.ke_record_args.body_len = 2;
+    Nts.ke_record_args.out = out + n;
+    Nts.ke_record_args.cap = cap - n;
+    nts_ke_record(work);
+    r = Nts.n;
     if (!r)
     {
-        return 0;
+        Nts.n = 0;
+        return;
     }
     n += r;
-    r = protocore_nts_ke_record(PROTO_TRUE, NTS_KE_END_OF_MESSAGE, NULL, 0, out + n, cap - n);
+    Nts.ke_record_args.critical = PROTO_TRUE;
+    Nts.ke_record_args.type = NTS_KE_END_OF_MESSAGE;
+    Nts.ke_record_args.body = NULL;
+    Nts.ke_record_args.body_len = 0;
+    Nts.ke_record_args.out = out + n;
+    Nts.ke_record_args.cap = cap - n;
+    nts_ke_record(work);
+    r = Nts.n;
     if (!r)
     {
-        return 0;
+        Nts.n = 0;
+        return;
     }
     n += r;
-    return n;
+    Nts.n = n;
 }
 
-proto_bool protocore_nts_ke_parse(const uint8_t *buf, size_t len, protocore_nts_ke_cb cb, void *arg)
+static void nts_ke_parse(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = Nts.ke_parse_args.buf;
+    size_t len = Nts.ke_parse_args.len;
+    protocore_nts_ke_cb cb = Nts.ke_parse_args.cb;
+    void *arg = Nts.ke_parse_args.arg;
+
     size_t off = 0;
     while (off + 4 <= len)
     {
@@ -85,7 +140,8 @@ proto_bool protocore_nts_ke_parse(const uint8_t *buf, size_t len, protocore_nts_
         uint16_t type = (uint16_t)(tf & 0x7FFF);
         if (off + 4 + blen > len)
         {
-            return PROTO_FALSE; // truncated body
+            Nts.ok = PROTO_FALSE; // truncated body
+            return;
         }
         if (cb)
         {
@@ -95,24 +151,34 @@ proto_bool protocore_nts_ke_parse(const uint8_t *buf, size_t len, protocore_nts_
         if (type == NTS_KE_END_OF_MESSAGE)
         {
             // RFC 8915 sec 4.1.1: End of Message is the final record, so octets past it are malformed.
-            return off == len ? PROTO_TRUE : PROTO_FALSE;
+            Nts.ok = off == len ? PROTO_TRUE : PROTO_FALSE;
+            return;
         }
     }
-    return PROTO_FALSE; // no End-of-Message record
+    Nts.ok = PROTO_FALSE; // no End-of-Message record
 }
 
-size_t protocore_nts_ef(uint16_t field_type, const uint8_t *value, size_t value_len, uint8_t *out, size_t cap)
+static void nts_ef(uint8_t *restrict work)
 {
+    (void)work;
+    uint16_t field_type = Nts.ef_args.field_type;
+    const uint8_t *value = Nts.ef_args.value;
+    size_t value_len = Nts.ef_args.value_len;
+    uint8_t *out = Nts.ef_args.out;
+    size_t cap = Nts.ef_args.cap;
+
     if (!out || (value_len && !value))
     {
-        return 0;
+        Nts.n = 0;
+        return;
     }
     // RFC 7822: Length = type + length + value + padding, a multiple of 4 (min 4).
     size_t total = 4 + value_len;
     size_t padded = (total + 3) & ~(size_t)3;
     if (padded > 0xFFFF || padded > cap)
     {
-        return 0;
+        Nts.n = 0;
+        return;
     }
     put_u16(out, field_type);
     put_u16(out + 2, (uint16_t)padded);
@@ -124,17 +190,48 @@ size_t protocore_nts_ef(uint16_t field_type, const uint8_t *value, size_t value_
     {
         out[i] = 0; // zero padding
     }
-    return padded;
+    Nts.n = padded;
 }
 
-size_t protocore_nts_ef_unique_id(const uint8_t *nonce, size_t nonce_len, uint8_t *out, size_t cap)
+static void nts_ef_unique_id(uint8_t *restrict work)
 {
-    return protocore_nts_ef(NTS_EF_UNIQUE_IDENTIFIER, nonce, nonce_len, out, cap);
+    const uint8_t *nonce = Nts.ef_unique_id_args.nonce;
+    size_t nonce_len = Nts.ef_unique_id_args.nonce_len;
+    uint8_t *out = Nts.ef_unique_id_args.out;
+    size_t cap = Nts.ef_unique_id_args.cap;
+
+    Nts.ef_args.field_type = NTS_EF_UNIQUE_IDENTIFIER;
+    Nts.ef_args.value = nonce;
+    Nts.ef_args.value_len = nonce_len;
+    Nts.ef_args.out = out;
+    Nts.ef_args.cap = cap;
+    nts_ef(work);
 }
 
-size_t protocore_nts_ef_cookie(const uint8_t *cookie, size_t cookie_len, uint8_t *out, size_t cap)
+static void nts_ef_cookie(uint8_t *restrict work)
 {
-    return protocore_nts_ef(NTS_EF_COOKIE, cookie, cookie_len, out, cap);
+    const uint8_t *cookie = Nts.ef_cookie_args.cookie;
+    size_t cookie_len = Nts.ef_cookie_args.cookie_len;
+    uint8_t *out = Nts.ef_cookie_args.out;
+    size_t cap = Nts.ef_cookie_args.cap;
+
+    Nts.ef_args.field_type = NTS_EF_COOKIE;
+    Nts.ef_args.value = cookie;
+    Nts.ef_args.value_len = cookie_len;
+    Nts.ef_args.out = out;
+    Nts.ef_args.cap = cap;
+    nts_ef(work);
 }
+
+NtsNs Nts = {
+    .ke_record = nts_ke_record,
+    .ke_request = nts_ke_request,
+    .ke_parse = nts_ke_parse,
+    .ef = nts_ef,
+    .ef_unique_id = nts_ef_unique_id,
+    .ef_cookie = nts_ef_cookie,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_NTS

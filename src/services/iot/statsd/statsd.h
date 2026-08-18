@@ -99,9 +99,6 @@ typedef struct
     size_t cap; ///< how much room it has, the NUL included
 } StatsdLineArgs;
 
-/** @brief The client's own state and the calls that reach it, described only in statsd.c. */
-struct StatsdInternal;
-
 /**
  * @brief The StatsD metrics client.
  *
@@ -124,7 +121,6 @@ struct StatsdInternal;
  * @var StatsdNs::gauge_delta  adjust the bucket by @c value.i64 as a signed `|g`
  * @var StatsdNs::timing       record @c value.ms as `|ms`
  * @var StatsdNs::set          count @c value.member as one unique occurrence, `|s`
- * @var StatsdNs::internal     the client's state and the calls that reach it
  *
  * @c format touches no socket. Every other metric call renders its value into the client's scratch,
  * stamps its own @c metric.type and the stored @c tags.global onto @c tags.metric, formats into the
@@ -142,19 +138,28 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*init)(struct StatsdInternal *ctx);
-    void (*format)(struct StatsdInternal *ctx);
-    void (*count)(struct StatsdInternal *ctx);
-    void (*gauge)(struct StatsdInternal *ctx);
-    void (*gauge_delta)(struct StatsdInternal *ctx);
-    void (*timing)(struct StatsdInternal *ctx);
-    void (*set)(struct StatsdInternal *ctx);
-
-    struct StatsdInternal *internal;
+    void (*const init)(uint8_t *restrict work);
+    void (*const format)(uint8_t *restrict work);
+    void (*const count)(uint8_t *restrict work);
+    void (*const gauge)(uint8_t *restrict work);
+    void (*const gauge_delta)(uint8_t *restrict work);
+    void (*const timing)(uint8_t *restrict work);
+    void (*const set)(uint8_t *restrict work);
 } StatsdNs;
 
 /** @brief The one symbol this module exports. */
 extern StatsdNs Statsd;
+
+/**
+ * @brief The PROTOCORE_STATSD_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_statsd_span(void);
 
 PROTOCORE_END_DECLS
 

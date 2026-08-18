@@ -19,11 +19,15 @@
 #ifndef PROTOCORE_NTLMSSP_H
 #define PROTOCORE_NTLMSSP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SMB
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief NTLMSSP NegotiateFlags (MS-NLMP §2.2.2.5), the subset a basic NTLMv2 client uses. */
 #define NTLMSSP_NEGOTIATE_UNICODE 0x00000001
@@ -41,29 +45,6 @@ PROTOCORE_BEGIN_DECLS
     (NTLMSSP_NEGOTIATE_UNICODE | NTLMSSP_REQUEST_TARGET | NTLMSSP_NEGOTIATE_NTLM | NTLMSSP_NEGOTIATE_ALWAYS_SIGN |     \
      NTLMSSP_NEGOTIATE_EXTENDED_SESSIONSECURITY)
 
-/** @brief Parsed CHALLENGE_MESSAGE (type 2). @ref target_info points INTO the source message. */
-typedef struct
-{
-    uint32_t flags;
-    uint8_t server_challenge[8];
-    const uint8_t *target_info; ///< the AV_PAIR blob, or nullptr if absent
-    uint16_t target_info_len;
-} NtlmChallenge;
-
-/**
- * @brief Build a NEGOTIATE_MESSAGE (type 1) with @p flags and empty domain/workstation.
- * @return message length (32), or 0 if @p cap < 32.
- */
-size_t protocore_ntlmssp_build_negotiate(uint8_t *buf, size_t cap, uint32_t flags);
-
-/**
- * @brief Parse a CHALLENGE_MESSAGE (type 2): extract the flags, the 8-byte server challenge, and
- *        the target-info AV_PAIRs (bounds-checked into @p msg).
- * @return true on a valid CHALLENGE; false on a bad signature / type / truncation / out-of-bounds
- *         target info.
- */
-proto_bool protocore_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, NtlmChallenge *out);
-
 /**
  * @brief Offset of the 16-byte MIC field within an AUTHENTICATE_MESSAGE built @p with_mic (MS-NLMP
  *        §2.2.1.3): the 64-byte fixed header + the 8-byte Version field. The caller writes the computed
@@ -74,22 +55,90 @@ proto_bool protocore_ntlmssp_parse_challenge(const uint8_t *msg, size_t len, Ntl
 /** @brief Length of the AUTHENTICATE MIC field (an HMAC-MD5 digest). */
 #define PROTOCORE_NTLMSSP_MIC_LEN 16
 
+/** @brief Parsed CHALLENGE_MESSAGE (type 2). @ref target_info points INTO the source message. */
+typedef struct
+{
+    uint32_t flags;
+    uint8_t server_challenge[8];
+    const uint8_t *target_info; ///< the AV_PAIR blob, or nullptr if absent
+    uint16_t target_info_len;
+} NtlmChallenge;
+
+/** @brief What build_negotiate takes: buf, cap, flags. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    uint32_t flags;
+} NtlmsspBuildNegotiateArgs;
+
+/** @brief What parse_challenge takes: msg, len, out. */
+typedef struct
+{
+    const uint8_t *msg;
+    size_t len;
+    NtlmChallenge *out;
+} NtlmsspParseChallengeArgs;
+
+/** @brief What build_authenticate takes: buf, cap, lm_resp, lm_len, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const uint8_t *lm_resp; ///< / lm_len the LM(v2) response (may be null/0)
+    size_t lm_len;
+    const uint8_t *nt_resp; ///< / nt_len the NtChallengeResponse from protocore_ntlm_v2_response
+    size_t nt_len;
+    const char
+        *domain; ///< / user / workstation ASCII/UTF-8 identity strings (encoded UTF-16LE); user and domain are ...
+    const char *user;
+    const char *workstation;
+    uint32_t flags; ///< the NegotiateFlags to echo (usually the server's from the CHALLENGE)
+    proto_bool
+        with_mic; ///< when true, reserve the 8-byte Version + 16-byte MIC fields between the fixed header and the ...
+} NtlmsspBuildAuthenticateArgs;
+
 /**
- * @brief Build an AUTHENTICATE_MESSAGE (type 3) carrying the LM + NT responses and the identity.
+ * @brief NTLMSSP message codec (MS-NLMP §2.2.1) for the SMB2 client (PROTOCORE_ENABLE_SMB).
  *
- * @param lm_resp / lm_len  the LM(v2) response (may be null/0).
- * @param nt_resp / nt_len  the NtChallengeResponse from protocore_ntlm_v2_response.
- * @param domain / user / workstation  ASCII/UTF-8 identity strings (encoded UTF-16LE); user
- *        and domain are typically required, workstation is optional (may be null).
- * @param flags  the NegotiateFlags to echo (usually the server's from the CHALLENGE).
- * @param with_mic  when true, reserve the 8-byte Version + 16-byte MIC fields between the fixed header
- *        and the payload (set NTLMSSP_NEGOTIATE_VERSION, MIC zeroed at ::PROTOCORE_NTLMSSP_MIC_OFFSET); the
- *        caller then computes the MIC and writes it there. When false the message has no Version/MIC.
- * @return total message length, or 0 on overflow. No session-key exchange (EncryptedRandomSessionKey empty).
+ * A caller sets the members a call takes, invokes it through ::Ntlmssp with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Ntlmssp.build_negotiate_args.buf = ...;
+ *   Ntlmssp.build_negotiate_args.cap = ...;
+ *   Ntlmssp.build_negotiate_args.flags = ...;
+ *   Ntlmssp.build_negotiate(work);
+ *   // Ntlmssp.n is what the call reports
+ *
+ * @var NtlmsspNs::build_negotiate_args  what build_negotiate takes: buf, cap, flags
+ * @var NtlmsspNs::parse_challenge_args  what parse_challenge takes: msg, len, out
+ * @var NtlmsspNs::build_authenticate_args  what build_authenticate takes: buf, cap, lm_resp, lm_len,
+ * @var NtlmsspNs::ok  true on a valid CHALLENGE; false on a bad signature / type / ...
+ * @var NtlmsspNs::n  message length (32), or 0 if cap < 32
+ * @var NtlmsspNs::build_negotiate  build a NEGOTIATE_MESSAGE (type 1) with flags and empty ...
+ * @var NtlmsspNs::parse_challenge  parse a CHALLENGE_MESSAGE (type 2): extract the flags, the 8-byte ...
+ * @var NtlmsspNs::build_authenticate  build an AUTHENTICATE_MESSAGE (type 3) carrying the LM + NT ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_ntlmssp_build_authenticate(uint8_t *buf, size_t cap, const uint8_t *lm_resp, size_t lm_len,
-                                            const uint8_t *nt_resp, size_t nt_len, const char *domain, const char *user,
-                                            const char *workstation, uint32_t flags, proto_bool with_mic);
+typedef struct
+{
+    NtlmsspBuildNegotiateArgs build_negotiate_args;
+    NtlmsspParseChallengeArgs parse_challenge_args;
+    NtlmsspBuildAuthenticateArgs build_authenticate_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const build_negotiate)(uint8_t *restrict work);
+    void (*const parse_challenge)(uint8_t *restrict work);
+    void (*const build_authenticate)(uint8_t *restrict work);
+} NtlmsspNs;
+
+/** @brief The one symbol this module exports. */
+extern NtlmsspNs Ntlmssp;
 
 PROTOCORE_END_DECLS
 

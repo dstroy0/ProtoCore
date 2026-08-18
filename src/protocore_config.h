@@ -175,11 +175,12 @@ from halves and is slower than the width it decomposes into"
  * IPv6 Traffic-Class byte) of every outbound TCP connection and UDP datagram, so a QoS-aware network - and
  * the Wi-Fi driver's 802.11e WMM access-category mapping - can prioritize safety / real-time packets (e.g.
  * the Expedited-Forwarding class, DSCP 46) over best-effort. `network_drivers/transport/diffserv/diffserv.h` exposes a
- * server-wide default (`protocore_set_default_dscp`), a UDP default (`protocore_udp_set_dscp`), a per-listener override
- * (`protocore_listen_set_dscp`), and a per-connection setter (`protocore_conn_set_dscp`) so an individual flow can
- * carry any DSCP - useful both for real QoS and for arbitrarily tagging traffic in network testing. The DSCP is applied
- * on tcpip_thread (accept / connect / udp create), so no extra marshalling is added to the hot path. Default off (zero
- * cost: the marking code and the DSCP state are compiled out).
+ * server-wide default (`DiffServ.set_default`) and a UDP default (`DiffServ.set_udp`);
+ * `network_drivers/transport/tcp/server/server.h` exposes the per-listener override (`TcpListener.set_dscp`), which is
+ * the finest granularity there is: RFC 9293 sec 3.9.2 SHLD-23 says an application should not change the Diffserv field
+ * during a connection, so a live connection has no setter. The DSCP is applied on tcpip_thread (accept / connect / udp
+ * create), so no extra marshalling is added to the hot path. Default off (zero cost: the marking code and the DSCP
+ * state are compiled out).
  */
 #ifndef PROTOCORE_ENABLE_DIFFSERV
 #define PROTOCORE_ENABLE_DIFFSERV 0
@@ -2346,9 +2347,9 @@ from halves and is slower than the width it decomposes into"
  *
  * Default off. A zero-heap parser + builder for the PROXY protocol header a load balancer /
  * reverse proxy prepends, so the server recovers the real client IPv4 behind one.
- * `proxy_parse` detects + decodes a v1 (text `PROXY TCP4 ...`) or v2 (binary signature +
- * ver_cmd / fam / address block) header and reports the bytes to skip; `proxy_v1_build` /
- * `proxy_v2_build` emit a TCP/IPv4 header. Pure codec, host-tested; the application feeds it
+ * `ProxyProtocol.parse` detects + decodes a v1 (text `PROXY TCP4 ...`) or v2 (binary signature +
+ * ver_cmd / fam / address block) header and reports the bytes to skip; `ProxyProtocol.v1_build` /
+ * `ProxyProtocol.v2_build` emit a TCP/IPv4 header. Pure codec, host-tested; the application feeds it
  * the first bytes of an accepted connection.
  */
 #ifndef PROTOCORE_ENABLE_PROXY_PROTOCOL
@@ -4225,8 +4226,7 @@ from halves and is slower than the width it decomposes into"
 // are only defined where an engine exists - the values are taken from it rather than restated. Named
 // here rather than left to surface as an undeclared identifier inside the fetch path.
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS && !PROTOCORE_HAS_VENDOR_TLS
-#error                                                                                                                 \
-    "ProtoCore: PROTOCORE_ENABLE_EDGE_ORIGIN_TLS needs a TLS engine (PROTOCORE_HAS_VENDOR_TLS). Provide one in\
+#error "ProtoCore: PROTOCORE_ENABLE_EDGE_ORIGIN_TLS needs a TLS engine (PROTOCORE_HAS_VENDOR_TLS). Provide one in\
  core_setup/hal/<vendor>, or map plaintext http origins only."
 #endif
 /* Derived sizing for the edge cache. Macros, not constexpr: PROTOCORE_EDGE_FETCH_BUF's default is
@@ -4750,10 +4750,10 @@ from halves and is slower than the width it decomposes into"
 /**
  * @brief Opt-in dual-stack Happy Eyeballs destination selection (PROTOCORE_ENABLE_HAPPY_EYEBALLS).
  *
- * The client-side IPv6/IPv4 fallback decision on top of the shipped protocore_ip: protocore_he_pref scores a
- * destination (RFC 6724 scope + family), protocore_he_order sorts a candidate list and interleaves the
+ * The client-side IPv6/IPv4 fallback decision on top of the shipped protocore_ip: HappyEyeballs.pref scores a
+ * destination (RFC 6724 scope + family), HappyEyeballs.order sorts a candidate list and interleaves the
  * address families (RFC 8305) so successive connection attempts alternate v6/v4, and
- * protocore_he_attempt_due gates the next attempt by the Connection Attempt Delay. Fast IPv6 when it works,
+ * HappyEyeballs.attempt_due gates the next attempt by the Connection Attempt Delay. Fast IPv6 when it works,
  * quick fallback to IPv4 when it does not. Needs PROTOCORE_ENABLE_IPV6 to matter. No heap/stdlib. Default off.
  */
 #ifndef PROTOCORE_ENABLE_HAPPY_EYEBALLS
@@ -5963,6 +5963,27 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_ENABLE_TLS_RPK 0
 #endif
 
+/**
+ * @brief Read and verify X.509 certificates in the portable TLS engine (RFC 5280). Default off.
+ *
+ * The RawPublicKey credential above is a smaller handshake with no certificate parsing, and is what
+ * a provisioned, key-pinned fleet wants. It is not what a browser will connect to: a browser sends
+ * an X.509 chain and expects one back, validated to a trust anchor with the name it dialled matched
+ * against the subjectAltName (RFC 6125 sec 6.4).
+ *
+ * When set, crypto/x509 parses a certificate and crypto/x509/x509_verify checks one link of a path -
+ * the signature over the TBSCertificate under the issuer's key, the validity window, and the
+ * conditions RFC 5280 sec 6.1.4 puts on an issuer before it may have signed anything. The signature
+ * algorithms are the ones the crypto tree already implements: Ed25519, ECDSA P-256, and RSA
+ * PKCS#1 v1.5 with SHA-256 or SHA-512.
+ *
+ * Costs the parser, the verifier, and PROTOCORE_X509_VERIFY_BORROW from the secure end. Zero when
+ * off: none of it is compiled and the borrow sums to nothing.
+ */
+#ifndef PROTOCORE_ENABLE_X509
+#define PROTOCORE_ENABLE_X509 0
+#endif
+
 // Internal request-dispatch slots appended to the connection pool for non-TCP transports.
 // HTTP/3 runs over QUIC/UDP and has no accept-time TCP slot, but it reuses the same request
 // pipeline (match_and_execute + send), which is indexed by a connection-pool slot. One reserved
@@ -6623,11 +6644,15 @@ from halves and is slower than the width it decomposes into"
 #ifndef PROTOCORE_H3_CONN_CTX
 #define PROTOCORE_H3_CONN_CTX 672
 #endif
+// After the per-stream regions come four a dispatch reads one at a time and no stream owns: the
+// body it hands the handler, the QPACK scratch and the encoded block a header set decodes through,
+// and the buffer a response is built in. H3_OFF_BODY through H3_OFF_OUT in h3_conn.c.
 #ifndef PROTOCORE_H3_CONN_BORROW
 #define PROTOCORE_H3_CONN_BORROW                                                                                       \
     ((size_t)PROTOCORE_H3_CONN_CTX +                                                                                   \
      (size_t)PROTOCORE_H3_MAX_STREAMS * ((size_t)PROTOCORE_H3_STREAM_BUF + PROTOCORE_H3_PATH_LEN +                     \
-                                         PROTOCORE_H3_AUTHORITY_LEN + PROTOCORE_H3_METHOD_LEN))
+                                         PROTOCORE_H3_AUTHORITY_LEN + PROTOCORE_H3_METHOD_LEN) +                       \
+     2u * (size_t)PROTOCORE_H3_STREAM_BUF + (size_t)PROTOCORE_H3_QPACK_SCRATCH + (size_t)PROTOCORE_H3_QPACK_BLOCK)
 #endif
 #ifndef PROTOCORE_WORK_H3_CONN
 #define PROTOCORE_WORK_H3_CONN ((size_t)PROTOCORE_QUIC_MAX_CONNS * PROTOCORE_H3_CONN_BORROW)
@@ -6743,7 +6768,7 @@ from halves and is slower than the width it decomposes into"
 // static_assert in modbus.c.
 #ifndef PROTOCORE_MODBUS_BORROW
 #define PROTOCORE_MODBUS_BORROW                                                                                        \
-    ((size_t)((PROTOCORE_MODBUS_COILS + 7) / 8) + (size_t)((PROTOCORE_MODBUS_DISCRETE_INPUTS + 7) / 8) +                \
+    ((size_t)((PROTOCORE_MODBUS_COILS + 7) / 8) + (size_t)((PROTOCORE_MODBUS_DISCRETE_INPUTS + 7) / 8) +               \
      (size_t)PROTOCORE_MODBUS_HOLDING_REGS * 2u + (size_t)PROTOCORE_MODBUS_INPUT_REGS * 2u + 32u)
 #endif
 
@@ -6753,8 +6778,605 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_PLAINTEXT_WORK_MODBUS 0
 #endif
 
+// The ESP-NOW peer registry: a MAC and a used flag per peer, and on the vendor arm the receive
+// callback plus the channel it was bound on. No key material, so the plaintext end. Proved against
+// sizeof(EspnowCtx) by a static_assert in espnow.c.
+#ifndef PROTOCORE_ESPNOW_BORROW
+#define PROTOCORE_ESPNOW_BORROW ((size_t)PROTOCORE_ESPNOW_MAX_PEERS * 8u + 32u)
+#endif
+
+// The promiscuous-capture state: the frame sink the radio binding calls. No key material, so the
+// plaintext end. Proved against sizeof(PromiscCtx) by a static_assert in promisc.c.
+#ifndef PROTOCORE_PROMISC_BORROW
+#define PROTOCORE_PROMISC_BORROW 16
+#endif
+
+// The live sniff state: the packet-type tallies, the per-channel survey and the scan cursor, plus
+// the running flag. No key material, so the plaintext end. Proved against sizeof(WifiSnifferCtx)
+// by a static_assert in wifi_sniffer.c.
+#ifndef PROTOCORE_WIFI_SNIFFER_BORROW
+#define PROTOCORE_WIFI_SNIFFER_BORROW 256
+#endif
+
+#if PROTOCORE_ENABLE_ESPNOW
+#define PROTOCORE_PLAINTEXT_WORK_ESPNOW PROTOCORE_ESPNOW_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_ESPNOW 0
+#endif
+
+#if PROTOCORE_ENABLE_PROMISC
+#define PROTOCORE_PLAINTEXT_WORK_PROMISC PROTOCORE_PROMISC_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_PROMISC 0
+#endif
+
+#if PROTOCORE_ENABLE_WIFI_SNIFFER
+#define PROTOCORE_PLAINTEXT_WORK_WIFISNIFF PROTOCORE_WIFI_SNIFFER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_WIFISNIFF 0
+#endif
+
+// The radio keep-awake refcount: how many transfers are holding active mode. No key material, so
+// the plaintext end. Proved against sizeof(struct RadioStorage) by a static_assert in radio_power.c.
+#ifndef PROTOCORE_RADIO_POWER_BORROW
+#define PROTOCORE_RADIO_POWER_BORROW 16
+#endif
+
+#if PROTOCORE_ENABLE_RADIO_POWER
+#define PROTOCORE_PLAINTEXT_WORK_RADIOPOWER PROTOCORE_RADIO_POWER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_RADIOPOWER 0
+#endif
+
+// The authoritative A records this server answers from - the owner names, their addresses and the
+// count - plus the response staged for the last query. Scales with the record table. No key
+// material, so the plaintext end. Proved against sizeof(struct DnsServerStorage) by a static_assert
+// in dns_server.c.
+#ifndef PROTOCORE_DNS_SERVER_BORROW
+#define PROTOCORE_DNS_SERVER_BORROW                                                                                    \
+    ((size_t)PROTOCORE_DNS_SERVER_MAX_RECORDS * ((size_t)PROTOCORE_DNS_NAME_MAX + 4u) +                                \
+     (size_t)PROTOCORE_DNS_NAME_MAX + 96u)
+#endif
+
+#if PROTOCORE_ENABLE_DNS_SERVER
+#define PROTOCORE_PLAINTEXT_WORK_DNSSERVER PROTOCORE_DNS_SERVER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_DNSSERVER 0
+#endif
+
+// The forwarding plane's tables: the (src, dst) controls, the access list, the policy routes, the
+// default verdict, the counters and the inspection hook. Scales with the three table caps. No key
+// material, so the plaintext end. Proved against sizeof(struct ForwardStorage) by a static_assert
+// in forward.c.
+#ifndef PROTOCORE_FORWARD_BORROW
+#define PROTOCORE_FORWARD_BORROW                                                                                       \
+    ((size_t)PROTOCORE_FWD_MAX_RULES * 24u +                                                                           \
+     (size_t)PROTOCORE_FWD_MAX_ACL * ((size_t)PROTOCORE_FWD_ACL_PATLEN * 2u + 24u) +                                   \
+     (size_t)PROTOCORE_FWD_MAX_ROUTES * ((size_t)PROTOCORE_FWD_ACL_PATLEN * 2u + 32u) + 128u)
+#endif
+
+#if PROTOCORE_ENABLE_FORWARD
+#define PROTOCORE_PLAINTEXT_WORK_FORWARD PROTOCORE_FORWARD_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_FORWARD 0
+#endif
+
+// The session layer's per-protocol handler table, one pointer per registered ProtoHandler. Measured
+// at 96 bytes for the default PROTO_MAX_HANDLERS of 12, and scales with it. ProtoRegistryNs reads
+// the same table through the same borrow: the registry holds nothing of its own. No key material,
+// so the plaintext end.
+#ifndef PROTOCORE_SESSION_BORROW
+#define PROTOCORE_SESSION_BORROW ((size_t)PROTO_MAX_HANDLERS * 8u + 32u)
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_SESSION PROTOCORE_SESSION_BORROW
+
+// The signalling layer's link state and the counters around it. Measured at 28 bytes. No key
+// material, so the plaintext end.
+#ifndef PROTOCORE_SIGNALING_BORROW
+#define PROTOCORE_SIGNALING_BORROW 64u
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_SIGNALING PROTOCORE_SIGNALING_BORROW
+
+// The trace ring one capture fills. Measured at 176 bytes. No key material, so the plaintext end.
+#ifndef PROTOCORE_TRACE_CAPTURE_BORROW
+#define PROTOCORE_TRACE_CAPTURE_BORROW 256u
+#endif
+
+#if PROTOCORE_ENABLE_TRACE_CAPTURE
+#define PROTOCORE_PLAINTEXT_WORK_TRACECAPTURE PROTOCORE_TRACE_CAPTURE_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_TRACECAPTURE 0
+#endif
+
+// The power manager's current mode and the two flags around it. Measured at 3 bytes. No key material, so the plaintext
+// end.
+#ifndef PROTOCORE_POWER_MGMT_BORROW
+#define PROTOCORE_POWER_MGMT_BORROW 8u
+#endif
+
+#if PROTOCORE_ENABLE_POWER_MGMT
+#define PROTOCORE_PLAINTEXT_WORK_POWERMGMT PROTOCORE_POWER_MGMT_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_POWERMGMT 0
+#endif
+
+// The guardrail counters one pass trips against. Measured at 8 bytes. No key material, so the plaintext end.
+#ifndef PROTOCORE_GUARDRAILS_BORROW
+#define PROTOCORE_GUARDRAILS_BORROW 16u
+#endif
+
+#if PROTOCORE_ENABLE_GUARDRAILS
+#define PROTOCORE_PLAINTEXT_WORK_GUARDRAILS PROTOCORE_GUARDRAILS_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_GUARDRAILS 0
+#endif
+
+// The failsafe's armed state and what it reverts to. Measured at 208 bytes. No key material, so the plaintext end.
+#ifndef PROTOCORE_FAILSAFE_BORROW
+#define PROTOCORE_FAILSAFE_BORROW 256u
+#endif
+
+#if PROTOCORE_ENABLE_FAILSAFE
+#define PROTOCORE_PLAINTEXT_WORK_FAILSAFE PROTOCORE_FAILSAFE_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_FAILSAFE 0
+#endif
+
+// Every worker's task handle, its deferred-callback queue and that queue's storage, plus the pump
+// each runs and the flag that stops them. Scales with both maxima: measured at 160 bytes for one
+// worker and 1136 for eight, at the default queue depth of 8. No key material, so the plaintext end.
+#ifndef PROTOCORE_WORKER_BORROW
+#define PROTOCORE_WORKER_BORROW                                                                                        \
+    ((size_t)PROTOCORE_WORKER_COUNT * ((size_t)PROTOCORE_DEFER_QUEUE_DEPTH * 16u + 64u) + 64u)
+#endif
+
+#if PROTOCORE_ENABLE_PREEMPT_QUEUE
+#define PROTOCORE_PLAINTEXT_WORK_WORKER PROTOCORE_WORKER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_WORKER 0
+#endif
+
+// The preemption queue's entries and its head and tail. Measured at 408 bytes. No key material, so the plaintext end.
+#ifndef PROTOCORE_PREEMPT_QUEUE_BORROW
+#define PROTOCORE_PREEMPT_QUEUE_BORROW 512u
+#endif
+
+#if PROTOCORE_ENABLE_PREEMPT_QUEUE
+#define PROTOCORE_PLAINTEXT_WORK_PREEMPTQUEUE PROTOCORE_PREEMPT_QUEUE_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_PREEMPTQUEUE 0
+#endif
+
+// The log ring: PROTOCORE_LOG_LINES lines of PROTOCORE_LOG_LINE_LEN, their severities, and the
+// trap. Measured at 3120 bytes. No key material, so the plaintext end.
+#ifndef PROTOCORE_LOGBUF_BORROW
+#define PROTOCORE_LOGBUF_BORROW 3584u
+#endif
+
+#if PROTOCORE_ENABLE_LOGBUF
+#define PROTOCORE_PLAINTEXT_WORK_LOGBUF PROTOCORE_LOGBUF_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_LOGBUF 0
+#endif
+
+// The flow exporter's cursor into the datagram it is filling. Measured at 40 bytes. Flow records
+// carry no key material, so the plaintext end.
+#ifndef PROTOCORE_FLOW_EXPORT_BORROW
+#define PROTOCORE_FLOW_EXPORT_BORROW 64u
+#endif
+
+#if PROTOCORE_ENABLE_FLOW_EXPORT
+#define PROTOCORE_PLAINTEXT_WORK_FLOWEXPORT PROTOCORE_FLOW_EXPORT_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_FLOWEXPORT 0
+#endif
+
+// The syslog sender's collector address, facility and the one line it formats. Measured at 342
+// bytes. No key material, so the plaintext end.
+#ifndef PROTOCORE_SYSLOG_BORROW
+#define PROTOCORE_SYSLOG_BORROW 512u
+#endif
+
+#if PROTOCORE_ENABLE_SYSLOG
+#define PROTOCORE_PLAINTEXT_WORK_SYSLOG PROTOCORE_SYSLOG_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SYSLOG 0
+#endif
+
+// The trap sender's request id and the PDU it builds. Measured at 1028 bytes. A v3 trap is signed
+// and may be encrypted with the USM keys, so the secure end.
+#ifndef PROTOCORE_SNMP_NOTIFY_BORROW
+#define PROTOCORE_SNMP_NOTIFY_BORROW 1536u
+#endif
+
+#if PROTOCORE_ENABLE_SNMP_TRAP
+#define PROTOCORE_SECURE_WORK_SNMPNOTIFY PROTOCORE_SNMP_NOTIFY_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SNMPNOTIFY 0
+#endif
+
+// The HTTP client's receive buffer, target and built request. Measured at 3060 bytes. A request
+// line carries Authorization headers and a response its bodies, so the secure end.
+#ifndef PROTOCORE_HTTP_CLIENT_BORROW
+#define PROTOCORE_HTTP_CLIENT_BORROW 3584u
+#endif
+
+#if PROTOCORE_ENABLE_HTTP_CLIENT
+#define PROTOCORE_SECURE_WORK_HTTPCLIENT PROTOCORE_HTTP_CLIENT_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_HTTPCLIENT 0
+#endif
+
+// The SMTP session's command and reply lines, with the base64 AUTH client response (RFC 4954 sec
+// 4). Measured at 3104 bytes. That response is a credential, so the secure end.
+#ifndef PROTOCORE_SMTP_BORROW
+#define PROTOCORE_SMTP_BORROW 3584u
+#endif
+
+#if PROTOCORE_ENABLE_SMTP
+#define PROTOCORE_SECURE_WORK_SMTP PROTOCORE_SMTP_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SMTP 0
+#endif
+
+// The WebSocket client's three rings: received octets, the assembled packet and what is queued to
+// send. Measured at 4144 bytes. Over wss those rings hold the cleartext, so the secure end.
+#ifndef PROTOCORE_WS_CLIENT_BORROW
+#define PROTOCORE_WS_CLIENT_BORROW 4608u
+#endif
+
+#if PROTOCORE_ENABLE_WS_CLIENT
+#define PROTOCORE_SECURE_WORK_WSCLIENT PROTOCORE_WS_CLIENT_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_WSCLIENT 0
+#endif
+
+// The USM engine: its engine id and boots, the user, and the auth and privacy keys derived for it
+// (RFC 3414). Measured at 8680 bytes. Key material, so the secure end.
+#ifndef PROTOCORE_SNMP_V3_BORROW
+#define PROTOCORE_SNMP_V3_BORROW 9216u
+#endif
+
+#if PROTOCORE_ENABLE_SNMP_V3
+#define PROTOCORE_SECURE_WORK_SNMPV3 PROTOCORE_SNMP_V3_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SNMPV3 0
+#endif
+
+// The agent's MIB table, its read and write community strings, and the varbinds one request walks.
+// Measured at 12512 bytes. A community string is a credential, so the secure end.
+#ifndef PROTOCORE_SNMP_AGENT_BORROW
+#define PROTOCORE_SNMP_AGENT_BORROW 13312u
+#endif
+
+#if PROTOCORE_ENABLE_SNMP
+#define PROTOCORE_SECURE_WORK_SNMPAGENT PROTOCORE_SNMP_AGENT_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SNMPAGENT 0
+#endif
+
+// The OAuth 2.0 request body and the token-endpoint reply. Measured at 3072 bytes. The body carries
+// the RFC 6749 sec 2.3.1 client password and the reply the issued tokens, so the secure end. Only
+// the transport calls own it, and those need PROTOCORE_ENABLE_HTTP_CLIENT.
+#ifndef PROTOCORE_OAUTH2_BORROW
+#define PROTOCORE_OAUTH2_BORROW 3072u
+#endif
+
+#if PROTOCORE_ENABLE_OAUTH2 && PROTOCORE_ENABLE_HTTP_CLIENT
+#define PROTOCORE_SECURE_WORK_OAUTH2 PROTOCORE_OAUTH2_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_OAUTH2 0
+#endif
+
+// The filesystem's bound roots and the two buffers a path is resolved into. Measured at 2684
+// bytes. Paths and mount names, so the plaintext end.
+#ifndef PROTOCORE_FILESYSTEM_BORROW
+#define PROTOCORE_FILESYSTEM_BORROW 3072u
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_FILESYSTEM PROTOCORE_FILESYSTEM_BORROW
+
+// The southbound driver table: each driver's name, its point range and the callbacks that reach
+// it. Measured at 72 bytes. Field device addresses, so the plaintext end.
+#ifndef PROTOCORE_SOUTHBOUND_BORROW
+#define PROTOCORE_SOUTHBOUND_BORROW 128u
+#endif
+
+#if PROTOCORE_ENABLE_SOUTHBOUND
+#define PROTOCORE_PLAINTEXT_WORK_SOUTHBOUND PROTOCORE_SOUTHBOUND_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SOUTHBOUND 0
+#endif
+
+// The SCP server's bound root, its registration flag and one control line's filename. Upload
+// paths, so the plaintext end.
+#ifndef PROTOCORE_SSH_SCP_BORROW
+#define PROTOCORE_SSH_SCP_BORROW ((size_t)PROTOCORE_FILESYSTEM_PATH_MAX + 16u)
+#endif
+
+#if PROTOCORE_ENABLE_SSH_SCP
+#define PROTOCORE_PLAINTEXT_WORK_SSHSCP PROTOCORE_SSH_SCP_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SSHSCP 0
+#endif
+
+// The RCWL-0516's debounce and hold state and the GPIO pin it samples. Measured at 28 bytes. A pin
+// level, so the plaintext end.
+#ifndef PROTOCORE_RCWL0516_BORROW
+#define PROTOCORE_RCWL0516_BORROW 32u
+#endif
+
+#if PROTOCORE_ENABLE_RCWL0516
+#define PROTOCORE_PLAINTEXT_WORK_RCWL0516 PROTOCORE_RCWL0516_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_RCWL0516 0
+#endif
+
+// The SEN0192's motion state: the debounced level, its event count and when it last went active.
+// Measured at 24 bytes. A pin level and a counter, so the plaintext end.
+#ifndef PROTOCORE_SEN0192_BORROW
+#define PROTOCORE_SEN0192_BORROW 32u
+#endif
+
+#if PROTOCORE_ENABLE_SEN0192
+#define PROTOCORE_PLAINTEXT_WORK_SEN0192 PROTOCORE_SEN0192_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SEN0192 0
+#endif
+
+// The FTP client session: its two socket handles, the step it is on and the reply buffer it reads
+// control lines into. Measured at 1320 bytes. A path and a reply line, so the plaintext end.
+#ifndef PROTOCORE_FTP_SESSION_BORROW
+#define PROTOCORE_FTP_SESSION_BORROW 1536u
+#endif
+
+#if PROTOCORE_ENABLE_FTP_SESSION
+#define PROTOCORE_PLAINTEXT_WORK_FTPSESSION PROTOCORE_FTP_SESSION_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_FTPSESSION 0
+#endif
+
+// The StatsD client's collector address, its tag string, and the one line it formats at a time.
+// Measured at 398 bytes. No key material, so the plaintext end.
+#ifndef PROTOCORE_STATSD_BORROW
+#define PROTOCORE_STATSD_BORROW 512u
+#endif
+
+#if PROTOCORE_ENABLE_STATSD
+#define PROTOCORE_PLAINTEXT_WORK_STATSD PROTOCORE_STATSD_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_STATSD 0
+#endif
+
+// One parsed GraphQL document and the execution walking it. Measured at 4520 bytes. No key
+// material, so the plaintext end.
+#ifndef PROTOCORE_GRAPHQL_BORROW
+#define PROTOCORE_GRAPHQL_BORROW 5120u
+#endif
+
+#if PROTOCORE_ENABLE_GRAPHQL
+#define PROTOCORE_PLAINTEXT_WORK_GRAPHQL PROTOCORE_GRAPHQL_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_GRAPHQL 0
+#endif
+
+// The LwM2M TLV codec's two cursors, one per direction. Measured at 64 bytes. No key material,
+// so the plaintext end.
+#ifndef PROTOCORE_LWM2M_TLV_BORROW
+#define PROTOCORE_LWM2M_TLV_BORROW 128u
+#endif
+
+#if PROTOCORE_ENABLE_LWM2M
+#define PROTOCORE_PLAINTEXT_WORK_LWM2MTLV PROTOCORE_LWM2M_TLV_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_LWM2MTLV 0
+#endif
+
+// The CoAP server's resource table, the path and query it splits out, and its message buffers.
+// Measured at 3032 bytes. No key material - DTLS keys live in coaps_server - so the plaintext end.
+#ifndef PROTOCORE_COAP_BORROW
+#define PROTOCORE_COAP_BORROW 3584u
+#endif
+
+#if PROTOCORE_ENABLE_COAP
+#define PROTOCORE_PLAINTEXT_WORK_COAP PROTOCORE_COAP_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_COAP 0
+#endif
+
+// The DTLS CoAP server's connection pool and ingest ring, with its Ed25519 seed and cookie key.
+// Measured at 31760 bytes. Key material, so the secure end.
+#ifndef PROTOCORE_COAPS_SERVER_BORROW
+#define PROTOCORE_COAPS_SERVER_BORROW 32768u
+#endif
+
+#if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP
+#define PROTOCORE_SECURE_WORK_COAPSSERVER PROTOCORE_COAPS_SERVER_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_COAPSSERVER 0
+#endif
+
+// The MQTT session: its transport slot, keep-alive timers, inflight table and topic. Measured at
+// 304 bytes. Beside the wire buffers this module already takes from the secure end, and on the
+// same end because a retained topic and packet ids describe secured traffic.
+#ifndef PROTOCORE_MQTT_BORROW
+#define PROTOCORE_MQTT_BORROW 512u
+#endif
+
+#if PROTOCORE_ENABLE_MQTT && PROTOCORE_HAS_NET_STACK
+#define PROTOCORE_SECURE_WORK_MQTT PROTOCORE_MQTT_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_MQTT 0
+#endif
+
+// The protobuf codec's writer and reader rows, one pair per slot. Measured at 224 bytes. No key
+// material, so the plaintext end.
+#ifndef PROTOCORE_PROTOBUF_BORROW
+#define PROTOCORE_PROTOBUF_BORROW 512u
+#endif
+
+#if PROTOCORE_NEED_PROTOBUF
+#define PROTOCORE_PLAINTEXT_WORK_PROTOBUF PROTOCORE_PROTOBUF_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_PROTOBUF 0
+#endif
+
+// The one Sparkplug metric being encoded or decoded. Measured at 256 bytes. No key material, so
+// the plaintext end.
+#ifndef PROTOCORE_SPARKPLUG_BORROW
+#define PROTOCORE_SPARKPLUG_BORROW 512u
+#endif
+
+#if PROTOCORE_ENABLE_SPARKPLUG
+#define PROTOCORE_PLAINTEXT_WORK_SPARKPLUG PROTOCORE_SPARKPLUG_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SPARKPLUG 0
+#endif
+
+// The UDP telemetry sender's collector address and the line it is building. Measured at 56 bytes.
+// No key material, so the plaintext end.
+#ifndef PROTOCORE_UDP_TELEMETRY_BORROW
+#define PROTOCORE_UDP_TELEMETRY_BORROW 128u
+#endif
+
+#if PROTOCORE_ENABLE_UDP_TELEMETRY
+#define PROTOCORE_PLAINTEXT_WORK_UDPTELEMETRY PROTOCORE_UDP_TELEMETRY_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_UDPTELEMETRY 0
+#endif
+
+// The one installed log sink, the function every emitted line is handed to. A single pointer. No
+// key material, so the plaintext end. Proved against sizeof(struct LogStorage) by a static_assert
+// in log.c.
+#ifndef PROTOCORE_LOG_BORROW
+#define PROTOCORE_LOG_BORROW 16u
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_LOG PROTOCORE_LOG_BORROW
+
+// The two server-wide DSCP defaults: the mark outbound TCP connections start from and the mark
+// outbound UDP datagrams take. Two bytes, fixed. No key material, so the plaintext end. Proved
+// against sizeof(struct DiffServStorage) by a static_assert in diffserv.c.
+#ifndef PROTOCORE_DIFFSERV_BORROW
+#define PROTOCORE_DIFFSERV_BORROW 8u
+#endif
+
+#if PROTOCORE_ENABLE_DIFFSERV
+#define PROTOCORE_PLAINTEXT_WORK_DIFFSERV PROTOCORE_DIFFSERV_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_DIFFSERV 0
+#endif
+
+// The UDP sending side's one outbound control block, opened on first send. A single pointer. No key
+// material, so the plaintext end. Proved against sizeof(struct UdpClientStorage) by a static_assert
+// in udp/client/client.c.
+#ifndef PROTOCORE_UDP_CLIENT_BORROW
+#define PROTOCORE_UDP_CLIENT_BORROW 16u
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_UDPCLIENT PROTOCORE_UDP_CLIENT_BORROW
+
+// The UDP receiving side: one slot per bound port, each carrying its own receive ring, plus the
+// payload stage one delivery is handed out of, the two header stages at the ends of that ring, the
+// bitmap of bound slots, the reentrancy latch and the text a joined group is formatted into. Scales
+// with the listener count and the ring. No key material, so the plaintext end. Proved against
+// sizeof(struct UdpListenerStorage) by a static_assert in udp/server/server.c.
+#ifndef PROTOCORE_UDP_LISTENER_BORROW
+#define PROTOCORE_UDP_LISTENER_BORROW                                                                                  \
+    ((size_t)PROTOCORE_MAX_UDP_LISTENERS * ((size_t)PROTOCORE_UDP_RX_RING + 96u) + (size_t)PROTOCORE_UDP_RX_BUF_SIZE + \
+     256u)
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_UDPLISTENER PROTOCORE_UDP_LISTENER_BORROW
+
+// The TCP/lower-level seam: one marshal record per connection slot, plus the stack thread it
+// captured on its first op and the TTL it stamps outbound segments with. No key material - the
+// record carries a pointer to the caller's bytes, never a copy - so the plaintext end. Proved
+// against sizeof(struct TcpLowerStorage) by a static_assert in tcp/lower/lower.c.
+#ifndef PROTOCORE_TCP_LOWER_BORROW
+#define PROTOCORE_TCP_LOWER_BORROW ((size_t)CONN_POOL_SLOTS * 96u + 64u)
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_TCPLOWER PROTOCORE_TCP_LOWER_BORROW
+
+// The connection pool's own state: the zeroed slot template init resets a slot from (one whole
+// TcpConn, receive ring included), the nine close-reason counters, the idle deadline and the
+// installed observer. No key material - the slot payloads live in conn_pool, not here - so the
+// plaintext end. Proved against sizeof(struct ConnPoolStorage) by a static_assert in
+// tcp/protocol/protocol.c.
+#ifndef PROTOCORE_CONN_POOL_BORROW
+#define PROTOCORE_CONN_POOL_BORROW ((size_t)RX_BUF_SIZE + 512u)
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_CONNPOOL PROTOCORE_CONN_POOL_BORROW
+
+// The accepting side's accept-time state: the global fixed-window throttle, the per-source-address
+// bucket table, the CIDR allowlist, and above one worker the per-worker event queues. Scales with
+// the two table caps and the worker count. No key material - a source address is not a secret - so
+// the plaintext end. Proved against sizeof(struct TcpListenerStorage) by a static_assert in
+// tcp/server/server.c.
+#ifndef PROTOCORE_TCP_LISTENER_BORROW
+#define PROTOCORE_TCP_LISTENER_BORROW                                                                                  \
+    ((size_t)PROTOCORE_PER_IP_THROTTLE_SLOTS * 32u + (size_t)PROTOCORE_IP_ALLOWLIST_SLOTS * 32u +                      \
+     (size_t)PROTOCORE_WORKER_COUNT * ((size_t)EVT_QUEUE_DEPTH * 24u + 128u) + 256u)
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_TCPLISTENER PROTOCORE_TCP_LISTENER_BORROW
+
+// The dialing side: one record per outbound connection, each carrying its own receive ring, plus
+// the record the private step every call runs first is pointing at. Scales with the connection
+// count and that ring. No key material - a TLS client's secrets live in the TLS context, not here -
+// so the plaintext end. Proved against sizeof(struct TcpClientStorage) by a static_assert in
+// tcp/client/client.c.
+#ifndef PROTOCORE_TCP_CLIENT_BORROW
+#define PROTOCORE_TCP_CLIENT_BORROW ((size_t)PROTOCORE_CLIENT_CONNS * ((size_t)PROTOCORE_CLIENT_RX_BUF + 96u) + 64u)
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_TCPCLIENT PROTOCORE_TCP_CLIENT_BORROW
+
+// The one address a Happy Eyeballs preference step scores. The sort compares a key it holds against
+// the element beside it, so the operand differs per call and rides the context rather than a
+// parameter. One pointer. No key material, so the plaintext end. Proved against
+// sizeof(HappyEyeballsCtx) by a static_assert in happy_eyeballs.c.
+#ifndef PROTOCORE_HAPPY_EYEBALLS_BORROW
+#define PROTOCORE_HAPPY_EYEBALLS_BORROW 16u
+#endif
+
+#if PROTOCORE_ENABLE_HAPPY_EYEBALLS
+#define PROTOCORE_PLAINTEXT_WORK_HAPPYEYEBALLS PROTOCORE_HAPPY_EYEBALLS_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_HAPPYEYEBALLS 0
+#endif
+
+// The Layer 1 interface registry: one row per interface the application registered, each carrying
+// the callback that puts octets on it and the context that callback is handed back. Scales with
+// PROTOCORE_PHY_MAX_IFACES. No key material - a send callback is not a secret - so the plaintext
+// end. Proved against sizeof(struct PhysicalStorage) by a static_assert in physical.c.
+#ifndef PROTOCORE_PHYSICAL_BORROW
+#define PROTOCORE_PHYSICAL_BORROW ((size_t)PROTOCORE_PHY_MAX_IFACES * 32u + 32u)
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_PHYSICAL PROTOCORE_PHYSICAL_BORROW
+
 #ifndef PROTOCORE_PLAINTEXT_ARENA_SIZE
-#define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                     (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + PROTOCORE_PLAINTEXT_WORK_EDGEPROXY + PROTOCORE_PLAINTEXT_WORK_EUROMAP77 + PROTOCORE_PLAINTEXT_WORK_UMATI + PROTOCORE_PLAINTEXT_WORK_ROBOTICS + PROTOCORE_PLAINTEXT_WORK_J1939 + PROTOCORE_PLAINTEXT_WORK_SIMATIC + PROTOCORE_PLAINTEXT_WORK_MODBUS + 256)
+#define PROTOCORE_PLAINTEXT_ARENA_SIZE                                                                                 \
+    (PROTOCORE_PLAINTEXT_SCRATCH + PROTOCORE_PLAINTEXT_WORK_H3CONN + PROTOCORE_PLAINTEXT_WORK_EDGEPROXY +              \
+     PROTOCORE_PLAINTEXT_WORK_EUROMAP77 + PROTOCORE_PLAINTEXT_WORK_UMATI + PROTOCORE_PLAINTEXT_WORK_ROBOTICS +         \
+     PROTOCORE_PLAINTEXT_WORK_J1939 + PROTOCORE_PLAINTEXT_WORK_SIMATIC + PROTOCORE_PLAINTEXT_WORK_MODBUS +             \
+     PROTOCORE_PLAINTEXT_WORK_FTPSESSION + PROTOCORE_PLAINTEXT_WORK_ESPNOW + PROTOCORE_PLAINTEXT_WORK_PROMISC + PROTOCORE_PLAINTEXT_WORK_WIFISNIFF +         \
+     PROTOCORE_PLAINTEXT_WORK_RADIOPOWER + PROTOCORE_PLAINTEXT_WORK_DNSSERVER + PROTOCORE_PLAINTEXT_WORK_FORWARD +     \
+     PROTOCORE_PLAINTEXT_WORK_DIFFSERV + PROTOCORE_PLAINTEXT_WORK_UDPCLIENT + PROTOCORE_PLAINTEXT_WORK_UDPLISTENER +   \
+     PROTOCORE_PLAINTEXT_WORK_TCPLOWER + PROTOCORE_PLAINTEXT_WORK_CONNPOOL + PROTOCORE_PLAINTEXT_WORK_TCPLISTENER +    \
+     PROTOCORE_PLAINTEXT_WORK_TCPCLIENT + PROTOCORE_PLAINTEXT_WORK_HAPPYEYEBALLS + PROTOCORE_PLAINTEXT_WORK_PHYSICAL + \
+     PROTOCORE_PLAINTEXT_WORK_LOG + PROTOCORE_PLAINTEXT_WORK_STATSD + PROTOCORE_PLAINTEXT_WORK_FILESYSTEM + PROTOCORE_PLAINTEXT_WORK_SOUTHBOUND + PROTOCORE_PLAINTEXT_WORK_SSHSCP + PROTOCORE_PLAINTEXT_WORK_RCWL0516 + PROTOCORE_PLAINTEXT_WORK_SEN0192 + PROTOCORE_PLAINTEXT_WORK_GRAPHQL +               \
+     PROTOCORE_PLAINTEXT_WORK_LWM2MTLV + PROTOCORE_PLAINTEXT_WORK_COAP + PROTOCORE_PLAINTEXT_WORK_PROTOBUF +           \
+     PROTOCORE_PLAINTEXT_WORK_SPARKPLUG + PROTOCORE_PLAINTEXT_WORK_UDPTELEMETRY +                                      \
+     PROTOCORE_PLAINTEXT_WORK_FLOWEXPORT + PROTOCORE_PLAINTEXT_WORK_SYSLOG + PROTOCORE_PLAINTEXT_WORK_POWERMGMT +      \
+     PROTOCORE_PLAINTEXT_WORK_GUARDRAILS + PROTOCORE_PLAINTEXT_WORK_FAILSAFE + PROTOCORE_PLAINTEXT_WORK_WORKER +       \
+     PROTOCORE_PLAINTEXT_WORK_PREEMPTQUEUE + PROTOCORE_PLAINTEXT_WORK_LOGBUF + PROTOCORE_PLAINTEXT_WORK_SESSION +      \
+     PROTOCORE_PLAINTEXT_WORK_SIGNALING + PROTOCORE_PLAINTEXT_WORK_TRACECAPTURE + 256)
 #endif
 
 /**
@@ -7216,11 +7838,12 @@ from halves and is slower than the width it decomposes into"
 #ifndef PROTOCORE_TLS_CONN_TERMS_CAP
 #define PROTOCORE_TLS_CONN_TERMS_CAP ((size_t)PROTOCORE_TLS_CONN_TERMS * PROTOCORE_TLS13_SECRET_LEN)
 #endif
-// The transcript's working bytes, the parsed ClientHello and the key schedule, which the driver
-// reaches by pointer. Stated in bytes here and proved against their real sizes by a static_assert in
-// tls_conn.c: 160 + 120 + 1634 = 1914 today.
+// The transcript's working bytes, the parsed ClientHello, the key schedule, and the SHA-512 an
+// Ed25519 signature runs through, which the driver reaches by pointer. Stated in bytes here and
+// proved against their real sizes by a static_assert in handshake.c:
+// 256 (SHA256_BORROW) + sizeof(Tls13ClientHello) + 1826 (TLS13_KS_BORROW) + 448 (SHA512_BORROW).
 #ifndef PROTOCORE_TLS_CONN_STATE_CAP
-#define PROTOCORE_TLS_CONN_STATE_CAP 2304
+#define PROTOCORE_TLS_CONN_STATE_CAP 2816
 #endif
 // The terms of one TLS 1.3 key schedule: early, handshake and master secrets; the four traffic
 // secrets; the empty hash, the derived salt, the finished key, the zero IKM, and the Finished
@@ -7516,7 +8139,6 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_AUTH 0
 #endif
 
-
 #if PROTOCORE_ENABLE_SSE
 #define PROTOCORE_SECURE_WORK_SSE PROTOCORE_SSE_BORROW
 #else
@@ -7533,7 +8155,6 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_H2_CONN_RECORD 32768
 #endif
 
-
 // HTTP/2 runs over TLS, so a connection's bytes are secure. The slot table holds the pointers;
 // the connections hold the bytes.
 #if PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS
@@ -7544,13 +8165,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_H2_SERVER 0
 #endif
 
-
 #if PROTOCORE_ENABLE_WEBSOCKET
 #define PROTOCORE_SECURE_WORK_WS PROTOCORE_WS_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_WS 0
 #endif
-
 
 #if PROTOCORE_ENABLE_CSRF
 #define PROTOCORE_SECURE_WORK_CSRF PROTOCORE_CSRF_BORROW
@@ -7558,13 +8177,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_CSRF 0
 #endif
 
-
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 #define PROTOCORE_SECURE_WORK_LOCKOUT PROTOCORE_AUTH_LOCKOUT_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_LOCKOUT 0
 #endif
-
 
 #if PROTOCORE_ENABLE_FORWARDED_TRUST
 #define PROTOCORE_SECURE_WORK_FWDTRUST PROTOCORE_FORWARDED_TRUST_BORROW
@@ -7572,13 +8189,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_FWDTRUST 0
 #endif
 
-
 #if PROTOCORE_ENABLE_AUDIT_LOG
 #define PROTOCORE_SECURE_WORK_AUDIT PROTOCORE_AUDIT_LOG_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_AUDIT 0
 #endif
-
 
 #if PROTOCORE_ENABLE_WEB_TERMINAL
 #define PROTOCORE_SECURE_WORK_WEBTERM PROTOCORE_WEB_TERMINAL_BORROW
@@ -7586,13 +8201,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_WEBTERM 0
 #endif
 
-
 #if PROTOCORE_ENABLE_CONFIG_STORE
 #define PROTOCORE_SECURE_WORK_CFGSTORE PROTOCORE_CONFIG_STORE_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_CFGSTORE 0
 #endif
-
 
 #if PROTOCORE_ENABLE_RELAY
 #define PROTOCORE_SECURE_WORK_RELAYLISTEN PROTOCORE_RELAY_LISTENER_BORROW
@@ -7600,13 +8213,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_RELAYLISTEN 0
 #endif
 
-
 #if PROTOCORE_ENABLE_GATEWAY
 #define PROTOCORE_SECURE_WORK_GATEWAY PROTOCORE_GATEWAY_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_GATEWAY 0
 #endif
-
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 #define PROTOCORE_SECURE_WORK_IFACEBRIDGE PROTOCORE_IFACE_BRIDGE_BORROW
@@ -7614,13 +8225,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_IFACEBRIDGE 0
 #endif
 
-
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 #define PROTOCORE_SECURE_WORK_IFACEBRIDGEHW PROTOCORE_IFACE_BRIDGE_HW_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_IFACEBRIDGEHW 0
 #endif
-
 
 #if PROTOCORE_ENABLE_EDGE_CACHE && PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
 #define PROTOCORE_SECURE_WORK_EDGEPROXYTLS PROTOCORE_EDGE_PROXY_TLS_BORROW
@@ -7628,13 +8237,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_EDGEPROXYTLS 0
 #endif
 
-
 #if PROTOCORE_ENABLE_WEBDAV
 #define PROTOCORE_SECURE_WORK_WEBDAV PROTOCORE_WEBDAV_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_WEBDAV 0
 #endif
-
 
 #if PROTOCORE_ENABLE_PROVISIONING
 #define PROTOCORE_SECURE_WORK_PROVISIONING PROTOCORE_PROVISIONING_BORROW
@@ -7642,13 +8249,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_PROVISIONING 0
 #endif
 
-
 #if PROTOCORE_ENABLE_HOTSWAP
 #define PROTOCORE_SECURE_WORK_HOTSWAP PROTOCORE_HOTSWAP_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_HOTSWAP 0
 #endif
-
 
 #if PROTOCORE_ENABLE_SMBUS
 #define PROTOCORE_SECURE_WORK_SMBUS PROTOCORE_SMBUS_BORROW
@@ -7656,13 +8261,11 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_SMBUS 0
 #endif
 
-
 #if PROTOCORE_ENABLE_MPR121
 #define PROTOCORE_SECURE_WORK_MPR121 PROTOCORE_MPR121_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_MPR121 0
 #endif
-
 
 #if PROTOCORE_ENABLE_HMMD
 #define PROTOCORE_SECURE_WORK_HMMD PROTOCORE_HMMD_BORROW
@@ -7670,20 +8273,17 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_HMMD 0
 #endif
 
-
 #if PROTOCORE_ENABLE_LD2410
 #define PROTOCORE_SECURE_WORK_LD2410 PROTOCORE_LD2410_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_LD2410 0
 #endif
 
-
 #if PROTOCORE_ENABLE_DASHBOARD
 #define PROTOCORE_SECURE_WORK_DASHBOARD PROTOCORE_DASHBOARD_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_DASHBOARD 0
 #endif
-
 
 #if PROTOCORE_ENABLE_ADS1115
 #define PROTOCORE_SECURE_WORK_ADS1115 PROTOCORE_I2C_DEVICE_BORROW
@@ -7733,7 +8333,6 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_SHT3X 0
 #endif
 
-
 #if PROTOCORE_ENABLE_BUS_CAPTURE
 #define PROTOCORE_SECURE_WORK_BUSCAPTURE PROTOCORE_BUS_CAPTURE_BORROW
 #else
@@ -7745,7 +8344,6 @@ from halves and is slower than the width it decomposes into"
 #else
 #define PROTOCORE_SECURE_WORK_TLSCONN 0
 #endif
-
 
 // The HTTP/3 connection above it carries no key material, so its context sits in the plaintext
 // borrow with the stream bytes and takes nothing from here.
@@ -7824,6 +8422,59 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SECURE_WORK_RNG 0
 #endif
 
+// The resolver's own state: the span a record's owner name is walked into, the query in flight and
+// the nameserver being asked, the query ID (RFC 1035 sec 4.1.1), the deadline it waits to, and the
+// busy flag a second host waits on. The vendor arm holds the stack's reported address instead of
+// the query. The spans it hands out are already taken from the secure end and its release wipes, so
+// the handles to them are kept beside their bytes. Proved against sizeof(struct ResolverStorage) by
+// a static_assert in dns_resolver.c.
+#ifndef PROTOCORE_DNS_RESOLVER_BORROW
+#define PROTOCORE_DNS_RESOLVER_BORROW 192u
+#endif
+
+#if PROTOCORE_NEED_DNS_RESOLVER
+#define PROTOCORE_SECURE_WORK_DNSRESOLVER PROTOCORE_DNS_RESOLVER_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_DNSRESOLVER 0
+#endif
+
+// What one pump of a handshake owes the wire: the server's whole flight fits in one build, and the
+// seam sends it in one raw write. Sized by the largest flight this engine produces.
+#ifndef PROTOCORE_TLS_SEAM_OUT_CAP
+#define PROTOCORE_TLS_SEAM_OUT_CAP 2048
+#endif
+
+// The slot-indexed TLS surface: one TlsConn per connection slot, the per-connection configuration
+// carrying its own ephemeral key and Hello random, the pcb each writes through, the credential this
+// end presents, and the flight buffer above. A TlsConn holds its four traffic key generations
+// inline and the credential is a signing seed, so these are key material and take the end whose
+// release wipes. Proved against sizeof(struct TlsStorage) by a static_assert in tls.c.
+// Per slot: sizeof(TlsConn) 3312 + sizeof(TlsConnConfig) 64 + the pcb 8 + the ephemeral key and
+// Hello random 64, measured on the host at the default widths; 3584 rounds that up.
+#ifndef PROTOCORE_TLS_BORROW
+#define PROTOCORE_TLS_BORROW ((size_t)MAX_CONNS * 3584u + (size_t)PROTOCORE_TLS_SEAM_OUT_CAP + 128u)
+#endif
+
+#if PROTOCORE_TLS_SOFTWARE
+#define PROTOCORE_SECURE_WORK_TLSSEAM PROTOCORE_TLS_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_TLSSEAM 0
+#endif
+
+// One certificate signature check: the RSA modulus and exponent left-padded into the fields the
+// verifier takes, then the region the algorithm itself works in. RSA sizes the second - a
+// verification runs over the modulus - and the ECDSA and Ed25519 paths use a fraction of it.
+// Proved against sizeof(X509VerifyCtx) + PROTOCORE_RSA_BORROW by a static_assert in x509_verify.c.
+#ifndef PROTOCORE_X509_VERIFY_BORROW
+#define PROTOCORE_X509_VERIFY_BORROW ((size_t)PROTOCORE_RSA_KEY_BYTES + 8u + PROTOCORE_RSA_BORROW)
+#endif
+
+#if PROTOCORE_ENABLE_X509
+#define PROTOCORE_SECURE_WORK_X509VERIFY PROTOCORE_X509_VERIFY_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_X509VERIFY 0
+#endif
+
 #define PROTOCORE_SECURE_ARENA_SIZE                                                                                    \
     (PROTOCORE_SECURE_WORK_BIGNUM + PROTOCORE_SECURE_WORK_AEAD + PROTOCORE_SECURE_WORK_SMB +                           \
      PROTOCORE_SECURE_WORK_SSHCIPHER + PROTOCORE_SECURE_WORK_SSHCONN + PROTOCORE_SECURE_WORK_TLSCONN +                 \
@@ -7835,16 +8486,17 @@ from halves and is slower than the width it decomposes into"
      PROTOCORE_SECURE_WORK_SSE + PROTOCORE_SECURE_WORK_H2_SERVER + PROTOCORE_SECURE_WORK_CSRF +                        \
      PROTOCORE_SECURE_WORK_LOCKOUT + PROTOCORE_SECURE_WORK_FWDTRUST + PROTOCORE_SECURE_WORK_AUDIT +                    \
      PROTOCORE_SECURE_WORK_WEBTERM + PROTOCORE_SECURE_WORK_CFGSTORE + PROTOCORE_SECURE_WORK_RELAYLISTEN +              \
-     PROTOCORE_SECURE_WORK_GATEWAY + PROTOCORE_SECURE_WORK_IFACEBRIDGE +                                               \
-     PROTOCORE_SECURE_WORK_IFACEBRIDGEHW + PROTOCORE_SECURE_WORK_BUSCAPTURE + PROTOCORE_SECURE_WORK_HMMD +             \
-     PROTOCORE_SECURE_WORK_LD2410 + PROTOCORE_SECURE_WORK_DASHBOARD + PROTOCORE_SECURE_WORK_ADS1115 +                  \
-     PROTOCORE_SECURE_WORK_RTC + PROTOCORE_SECURE_WORK_SHT3X + PROTOCORE_SECURE_WORK_INA219 +                          \
-     PROTOCORE_SECURE_WORK_PCA9685 + PROTOCORE_SECURE_WORK_MPR121 +                                                    \
-     PROTOCORE_SECURE_WORK_FDC2214 +                                                                                   \
-     PROTOCORE_SECURE_WORK_LDC1614 +                                                                                   \
+     PROTOCORE_SECURE_WORK_GATEWAY + PROTOCORE_SECURE_WORK_IFACEBRIDGE + PROTOCORE_SECURE_WORK_IFACEBRIDGEHW +         \
+     PROTOCORE_SECURE_WORK_BUSCAPTURE + PROTOCORE_SECURE_WORK_HMMD + PROTOCORE_SECURE_WORK_LD2410 +                    \
+     PROTOCORE_SECURE_WORK_DASHBOARD + PROTOCORE_SECURE_WORK_ADS1115 + PROTOCORE_SECURE_WORK_RTC +                     \
+     PROTOCORE_SECURE_WORK_SHT3X + PROTOCORE_SECURE_WORK_INA219 + PROTOCORE_SECURE_WORK_PCA9685 +                      \
+     PROTOCORE_SECURE_WORK_MPR121 + PROTOCORE_SECURE_WORK_FDC2214 + PROTOCORE_SECURE_WORK_LDC1614 +                    \
      PROTOCORE_SECURE_WORK_VL53L0X + PROTOCORE_SECURE_WORK_SMBUS + PROTOCORE_SECURE_WORK_HOTSWAP +                     \
-     PROTOCORE_SECURE_WORK_PROVISIONING + PROTOCORE_SECURE_WORK_WEBDAV +                                               \
-     PROTOCORE_SECURE_WORK_EDGEPROXYTLS +                                                                              \
+     PROTOCORE_SECURE_WORK_PROVISIONING + PROTOCORE_SECURE_WORK_WEBDAV + PROTOCORE_SECURE_WORK_EDGEPROXYTLS +          \
+     PROTOCORE_SECURE_WORK_DNSRESOLVER + PROTOCORE_SECURE_WORK_TLSSEAM + PROTOCORE_SECURE_WORK_X509VERIFY +            \
+     PROTOCORE_SECURE_WORK_COAPSSERVER + PROTOCORE_SECURE_WORK_MQTT + PROTOCORE_SECURE_WORK_SNMPNOTIFY +               \
+     PROTOCORE_SECURE_WORK_HTTPCLIENT + PROTOCORE_SECURE_WORK_SMTP + PROTOCORE_SECURE_WORK_WSCLIENT +                  \
+     PROTOCORE_SECURE_WORK_SNMPV3 + PROTOCORE_SECURE_WORK_SNMPAGENT + PROTOCORE_SECURE_WORK_OAUTH2 +                   \
      256) // + 256: alignment round-up across the individual borrows
 #endif
 

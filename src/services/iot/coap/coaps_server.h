@@ -96,9 +96,6 @@ typedef struct
 } CoapsServerIngestArgs;
 #endif
 
-/** @brief The server's own state and the calls that reach it, described only in coaps_server.c. */
-struct CoapsServerInternal;
-
 /**
  * @brief The CoAP-over-DTLS server.
  *
@@ -121,7 +118,6 @@ struct CoapsServerInternal;
  * @var CoapsServerNs::stop          stop polling, release every slot, and empty the ingest ring
  * @var CoapsServerNs::set_out_sink  install @c sink
  * @var CoapsServerNs::ingest        queue @c dgram as though it had been received
- * @var CoapsServerNs::internal      the server's state and the calls that reach it
  */
 typedef struct
 {
@@ -135,20 +131,29 @@ typedef struct
     proto_bool ok;
     uint8_t u8;
 
-    void (*begin)(struct CoapsServerInternal *ctx);
-    void (*poll)(struct CoapsServerInternal *ctx);
-    void (*active_conns)(struct CoapsServerInternal *ctx);
-    void (*stop)(struct CoapsServerInternal *ctx);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const poll)(uint8_t *restrict work);
+    void (*const active_conns)(uint8_t *restrict work);
+    void (*const stop)(uint8_t *restrict work);
 #if !PROTOCORE_HAS_NET_STACK
-    void (*set_out_sink)(struct CoapsServerInternal *ctx);
-    void (*ingest)(struct CoapsServerInternal *ctx);
+    void (*const set_out_sink)(uint8_t *restrict work);
+    void (*const ingest)(uint8_t *restrict work);
 #endif
-
-    struct CoapsServerInternal *internal;
 } CoapsServerNs;
 
 /** @brief The one symbol this module exports. */
 extern CoapsServerNs CoapsServer;
+
+/**
+ * @brief The PROTOCORE_COAPS_SERVER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_coaps_server_span(void);
 
 PROTOCORE_END_DECLS
 

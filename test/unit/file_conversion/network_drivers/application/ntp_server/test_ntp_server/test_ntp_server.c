@@ -43,7 +43,7 @@ void setUp(void)
 void tearDown(void)
 {
     UdpListener.port = PROTOCORE_NTP_PORT;
-    UdpListener.close(UdpListener.internal);
+    UdpListener.close(protocore_udp_listener_span());
 }
 
 static uint32_t rd_be32(const uint8_t *p)
@@ -309,7 +309,7 @@ static uint32_t fake_clock(void)
 
 static void poll_once(void)
 {
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
 }
 
 static void serve(const void *req, uint16_t len, const char *from_ip, uint16_t from_port)

@@ -19,34 +19,87 @@
 #ifndef PROTOCORE_RADIO_SNIFF_H
 #define PROTOCORE_RADIO_SNIFF_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_RADIO_SNIFF
 
 PROTOCORE_BEGIN_DECLS
 
-#include "shared/pcap/pcap.h"
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
 /** @brief The TAP pseudo-header length this codec emits: 4 header + RSSI TLV(8) + channel TLV(8). */
 #define RADIO_SNIFF_TAP_LEN 20
 
-/** @brief Write the pcap global header for a TAP-framed 802.15.4 sniff. @return 24, or 0 on overflow. */
-size_t protocore_radiosniff_global(uint8_t *out, size_t cap);
+/** @brief What global_header takes: out, cap. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+} RadioSniffGlobalHeaderArgs;
+
+/** @brief What i2f32 takes: dbm. */
+typedef struct
+{
+    int32_t dbm;
+} RadioSniffI2f32Args;
+
+/** @brief What tap_record takes: out, cap, frame, flen, rssi_dbm, ... */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    const uint8_t *frame;
+    size_t flen;
+    int32_t rssi_dbm;
+    uint16_t channel;
+    uint32_t ts_sec;
+    uint32_t ts_usec;
+} RadioSniffTapRecordArgs;
 
 /**
- * @brief Encode a signed integer dBm value as an IEEE-754 float32 (little-endian bit pattern).
+ * @brief Receive-only radio channel sniffer -> pcap capture records (PROTOCORE_ENABLE_RADIO_SNIFF).
  *
- * The 802.15.4 TAP RSSI TLV carries a float; RSSI here is an integer dBm, so this builds the exact
- * float bits by hand (e.g. -40 -> 0xC2200000). Exposed for testing.
+ * A caller sets the members a call takes, invokes it through ::RadioSniff with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   RadioSniff.global_header_args.out = ...;
+ *   RadioSniff.global_header_args.cap = ...;
+ *   RadioSniff.global_header(work);
+ *   // RadioSniff.n is what the call reports
+ *
+ * @var RadioSniffNs::global_header_args  what global_header takes: out, cap
+ * @var RadioSniffNs::i2f32_args  what i2f32 takes: dbm
+ * @var RadioSniffNs::tap_record_args  what tap_record takes: out, cap, frame, flen, rssi_dbm,
+ * @var RadioSniffNs::ok  a call's true/false outcome
+ * @var RadioSniffNs::n  total bytes written, or 0 on overflow / bad args
+ * @var RadioSniffNs::u32  what a call reports
+ * @var RadioSniffNs::global_header  write the pcap global header for a TAP-framed 802.15.4 sniff. 24, ...
+ * @var RadioSniffNs::i2f32  encode a signed integer dBm value as an IEEE-754 float32 ...
+ * @var RadioSniffNs::tap_record  write one capture record: a pcap record header, the 802.15.4 TAP ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-uint32_t protocore_radiosniff_i2f32(int32_t dbm);
+typedef struct
+{
+    RadioSniffGlobalHeaderArgs global_header_args;
+    RadioSniffI2f32Args i2f32_args;
+    RadioSniffTapRecordArgs tap_record_args;
 
-/**
- * @brief Write one capture record: a pcap record header, the 802.15.4 TAP pseudo-header carrying @p
- *        rssi_dbm and @p channel, then the raw MAC @p frame.
- * @return total bytes written, or 0 on overflow / bad args.
- */
-size_t protocore_radiosniff_tap_record(uint8_t *out, size_t cap, const uint8_t *frame, size_t flen, int32_t rssi_dbm,
-                                       uint16_t channel, uint32_t ts_sec, uint32_t ts_usec);
+    proto_bool ok;
+    size_t n;
+    uint32_t u32;
+
+    void (*const global_header)(uint8_t *restrict work);
+    void (*const i2f32)(uint8_t *restrict work);
+    void (*const tap_record)(uint8_t *restrict work);
+} RadioSniffNs;
+
+/** @brief The one symbol this module exports. */
+extern RadioSniffNs RadioSniff;
 
 PROTOCORE_END_DECLS
 

@@ -27,15 +27,23 @@ from codemask import code_mask
 # The module's context, with or without an initializer. Matching only the bare `static T s_x;`
 # form reported a module with an initialized context as holding no state at all, which produced a
 # conversion that left the context in BSS and carved no borrow.
-STATIC_CTX = re.compile(r"^static\s+(?P<type>\w+)\s+(?P<name>s_\w+)\s*(?P<init>=[^;]*)?;\s*$", re.M | re.S)
+# `static SimaticCtx s_ctx;` and `static struct TlsStorage s_store;` are the same thing: the
+# module's own context. The Ns path already read both spellings, and the flat path reading only the
+# typedef'd one made a module with the struct spelling scan as holding no state at all.
+STATIC_CTX = re.compile(
+    r"^static\s+(?P<type>(?:struct\s+)?\w+)\s+(?P<name>s_\w+)\s*(?P<init>=[^;]*)?;\s*$", re.M | re.S
+)
 FUNC = re.compile(r"^(?P<head>(?:static\s+)?[A-Za-z_][\w \t\*]*?\b(?P<name>\w+)\s*\((?P<params>[^;{]*)\))\s*\{", re.M)
 
 
 def find_context(src):
-    """The module's own context: the file-static whose type is not the span holder."""
+    """The module's own context: the file-static that is neither the span holder nor the handle."""
     for m in STATIC_CTX.finditer(src):
-        if m.group("type").endswith("OwnCtx"):
+        t = m.group("type")
+        if t.endswith("OwnCtx"):
             continue  # the span holder this tool generates
+        if t.endswith("Internal"):
+            continue  # the handle the conversion deletes, not state the module keeps
         return m
     return None
 
@@ -97,6 +105,24 @@ def _thread(src, name, mask):
     return src
 
 
+def _shared_body_start(src, f, name):
+    """Where the body a callback's arms SHARE begins.
+
+    A vendor callback whose signature changed between SDK versions is written as two heads in
+    `#if` / `#else` arms over one body: each arm opens a brace, the `#endif` closes the choice, and
+    the statements after it are compiled either way. espnow's `on_recv` is that shape. A
+    declaration put after one arm's brace is invisible to the other and duplicated in the first, so
+    the borrow goes after the `#endif`. Returns f.end() for the ordinary one-head function.
+    """
+    m = re.compile(r"^[ \t]*#\s*(else|elif)\b[^\n]*\n", re.M).search(src, f.end())
+    if not m or "}" in src[f.end() : m.start()]:
+        return f.end()
+    e = re.compile(r"^[ \t]*#\s*endif\b[^\n]*\n", re.M).search(src, m.end())
+    if not e or not re.search(r"(?<![\w])%s\s*\(" % re.escape(name), src[m.end() : e.start()]):
+        return f.end()
+    return e.end() - 1
+
+
 def _take_span(src, name, module, mask, notes):
     """A callback keeps its signature and takes the span from the accessor."""
     f = None
@@ -116,7 +142,8 @@ def _take_span(src, name, module, mask, notes):
         lead += "    if (work == NULL)\n    {\n        return;\n    }\n"
     else:
         notes.append("%s returns %s: give its null-span refusal a value" % (name, ret))
-    return src[: f.end()] + lead + src[f.end() :]
+    at = _shared_body_start(src, f, name)
+    return src[:at] + lead + src[at:]
 
 
 def _drop_void_work(src, PRE, mask):
@@ -135,7 +162,7 @@ def _drop_void_work(src, PRE, mask):
     return out
 
 
-def funnel(src, module, borrow, notes):
+def funnel(src, module, borrow, notes, stated=()):
     m = find_context(src)
     if not m:
         notes.append("no file-static context to funnel")
@@ -144,11 +171,18 @@ def funnel(src, module, borrow, notes):
     # drop. Where that default belongs - an init entry, a first-use path, a constant the entries
     # read - is the module's call, not this tool's, so it refuses and says what it saw.
     if m.group("init"):
-        notes.append(
-            "REFUSED: %s carries an initializer (%s). A borrow arrives zeroed, so move the default "
-            "into an entry first, then re-run." % (m.group("name"), " ".join(m.group("init").split())[:80])
-        )
-        return src
+        # A designated initializer names its members, so what the caller already seats can be
+        # subtracted and only the rest refused. A positional one names nothing, so all of it is
+        # unstated and the whole initializer is reported.
+        seeded = set(re.findall(r"\.(\w+)\s*=", m.group("init")))
+        missing = sorted(seeded - set(stated)) if seeded else [m.group("name")]
+        if missing:
+            notes.append(
+                "REFUSED: %s carries an initializer (%s) and a borrow arrives zeroed. State the "
+                'defaults in the spec as "defaults": {"%s": "<value>"} so the carve seats them, then '
+                "re-run." % (m.group("name"), " ".join(m.group("init").split())[:80], missing[0])
+            )
+            return src
     ctype, cname = m.group("type"), m.group("name")
     PRE = module.upper()
 
@@ -186,6 +220,9 @@ def funnel(src, module, borrow, notes):
                 touched.append((f.group("name"), _address_taken(src, f.group("name"), mask, f.start("name"))))
         if not touched:
             break
+        # A function written as two heads in `#if` / `#else` arms is yielded once per arm, and
+        # threading it twice declares the borrow twice in one body.
+        touched = list(dict.fromkeys(touched))
         for name, is_cb in touched:
             mask = code_mask(src)
             if is_cb:

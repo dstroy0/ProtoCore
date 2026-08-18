@@ -28,13 +28,15 @@
 #ifndef PROTOCORE_PROMISC_H
 #define PROTOCORE_PROMISC_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_PROMISC
 
 PROTOCORE_BEGIN_DECLS
 
-#include "shared/pcap/pcap.h" // protocore_pcap_* framing + PROTOCORE_DLT_IEEE802_11
+// PROTOCORE_PROMISC_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /** @brief 802.11 frame type (frame-control bits 2-3). */
 typedef enum PROTO_ENUM_PACKED
@@ -62,15 +64,6 @@ typedef struct
 } WifiFrameInfo;
 
 /**
- * @brief Parse an 802.11 MAC header (IEEE 802.11 §9.2 / §9.3.2, the to/from-DS address rules).
- * @return true on success; false if @p frame is shorter than the header its bits imply.
- */
-proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *out);
-
-// libpcap framing lives in shared/pcap/pcap.h: Pcap.global_header with PROTOCORE_DLT_IEEE802_11 and
-// Pcap.record_header wrap a captured 802.11 frame as a valid PCAP.
-
-/**
  * @brief Sink for one captured frame: the raw 802.11 bytes plus radio metadata.
  * @param frame   the 802.11 MAC frame (points into the driver buffer; copy if retained).
  * @param len     frame length in bytes.
@@ -79,20 +72,79 @@ proto_bool wifi_frame_parse(const uint8_t *frame, uint16_t len, WifiFrameInfo *o
  */
 typedef void (*protocore_promisc_sink_fn)(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel);
 
+/** @brief What wifi_frame_parse takes: frame, len, out. */
+typedef struct
+{
+    const uint8_t *frame;
+    uint16_t len;
+    WifiFrameInfo *out;
+} PromiscWifiFrameParseArgs;
+
+/** @brief What begin takes: channel, sink. */
+typedef struct
+{
+    uint8_t channel;
+    protocore_promisc_sink_fn sink;
+} PromiscBeginArgs;
+
+/** @brief What set_channel takes: channel. */
+typedef struct
+{
+    uint8_t channel;
+} PromiscSetChannelArgs;
+
 /**
- * @brief Start promiscuous capture on @p channel; every frame is delivered to @p sink.
+ * @brief Wi-Fi promiscuous (monitor) capture (PROTOCORE_ENABLE_PROMISC) - passive 802.11 sniffing.
  *
- * Requires the radio to be up (Physical.wifi_init or Physical.wifi_radio_init).
- * Returns immediately.
- * @return true if capture started; false if @p sink is null or on host builds.
+ * A caller sets the members a call takes, invokes it through ::Promisc with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Promisc.wifi_frame_parse_args.frame = ...;
+ *   Promisc.wifi_frame_parse_args.len = ...;
+ *   Promisc.wifi_frame_parse_args.out = ...;
+ *   Promisc.wifi_frame_parse(work);
+ *   // Promisc.ok is what the call reports
+ *
+ * @var PromiscNs::wifi_frame_parse_args  what wifi_frame_parse takes: frame, len, out
+ * @var PromiscNs::begin_args  what begin takes: channel, sink
+ * @var PromiscNs::set_channel_args  what set_channel takes: channel
+ * @var PromiscNs::ok  true on success; false if frame is shorter than the header its bits ...
+ * @var PromiscNs::wifi_frame_parse  parse an 802.11 MAC header (IEEE 802.11 §9.2 / §9.3.2, the ...
+ * @var PromiscNs::begin  start promiscuous capture on channel; every frame is delivered to ...
+ * @var PromiscNs::set_channel  retune the capture to a different channel (1..14)
+ * @var PromiscNs::end  stop promiscuous capture
+ *
+ * @c work is PROTOCORE_PROMISC_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_promisc_begin(uint8_t channel, protocore_promisc_sink_fn sink);
+typedef struct
+{
+    PromiscWifiFrameParseArgs wifi_frame_parse_args;
+    PromiscBeginArgs begin_args;
+    PromiscSetChannelArgs set_channel_args;
 
-/** @brief Retune the capture to a different channel (1..14). */
-void protocore_promisc_set_channel(uint8_t channel);
+    proto_bool ok;
 
-/** @brief Stop promiscuous capture. */
-void protocore_promisc_end(void);
+    void (*const wifi_frame_parse)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const set_channel)(uint8_t *restrict work);
+    void (*const end)(uint8_t *restrict work);
+} PromiscNs;
+
+/** @brief The one symbol this module exports. */
+extern PromiscNs Promisc;
+
+/**
+ * @brief The PROTOCORE_PROMISC_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_promisc_span(void);
 
 PROTOCORE_END_DECLS
 

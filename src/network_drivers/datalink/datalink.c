@@ -14,23 +14,12 @@
 
 #include "network_drivers/datalink/datalink.h"
 
-/**
- * @brief The calls that reach the layer - what DatalinkNs points at.
- *
- * @var DatalinkInternal::ns  the handle a caller reads a call's outcome off
- */
-struct DatalinkInternal
-{
-    DatalinkNs *ns;
-};
-
-static struct DatalinkInternal s_datalink = {.ns = &Datalink};
-
 // Reports the layer up. The driver below performs every RFC 1122 sec 2.3.3 encapsulation step.
-static void datalink_init(struct DatalinkInternal *restrict ctx)
+static void datalink_init(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_TRUE;
+    (void)work;
+    Datalink.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-DatalinkNs Datalink = {.init = datalink_init, .internal = &s_datalink};
+DatalinkNs Datalink = {.init = datalink_init};

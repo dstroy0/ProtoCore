@@ -90,9 +90,6 @@ typedef struct
     size_t len;       ///< how many
 } UdpTelemetryPayloadArgs;
 
-/** @brief The caster's own state and the calls that reach it, described only in udp_telemetry.c. */
-struct UdpTelemetryInternal;
-
 /**
  * @brief The line protocol caster.
  *
@@ -122,7 +119,6 @@ struct UdpTelemetryInternal;
  * @var UdpTelemetryNs::send         send @c payload to the collector as one datagram
  * @var UdpTelemetryNs::write        send the built line as one datagram; an incomplete line sends
  *                                   nothing
- * @var UdpTelemetryNs::internal     the caster's state and the calls that reach it
  */
 typedef struct
 {
@@ -137,21 +133,30 @@ typedef struct
     proto_bool overflow;
     size_t n;
 
-    void (*begin)(struct UdpTelemetryInternal *ctx);
-    void (*measurement)(struct UdpTelemetryInternal *ctx);
-    void (*tag)(struct UdpTelemetryInternal *ctx);
-    void (*field_int)(struct UdpTelemetryInternal *ctx);
-    void (*field_uint)(struct UdpTelemetryInternal *ctx);
-    void (*field_float)(struct UdpTelemetryInternal *ctx);
-    void (*timestamp)(struct UdpTelemetryInternal *ctx);
-    void (*send)(struct UdpTelemetryInternal *ctx);
-    void (*write)(struct UdpTelemetryInternal *ctx);
-
-    struct UdpTelemetryInternal *internal;
+    void (*const begin)(uint8_t *restrict work);
+    void (*const measurement)(uint8_t *restrict work);
+    void (*const tag)(uint8_t *restrict work);
+    void (*const field_int)(uint8_t *restrict work);
+    void (*const field_uint)(uint8_t *restrict work);
+    void (*const field_float)(uint8_t *restrict work);
+    void (*const timestamp)(uint8_t *restrict work);
+    void (*const send)(uint8_t *restrict work);
+    void (*const write)(uint8_t *restrict work);
 } UdpTelemetryNs;
 
 /** @brief The one symbol this module exports. */
 extern UdpTelemetryNs UdpTelemetry;
+
+/**
+ * @brief The PROTOCORE_UDP_TELEMETRY_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_udp_telemetry_span(void);
 
 PROTOCORE_END_DECLS
 

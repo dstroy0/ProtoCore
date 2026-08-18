@@ -10,7 +10,7 @@
   ci.py check [name...]       run guards (default: the workflow's set)
   ci.py baseline [name...]    record a ratcheted guard's violations as its new floor
   ci.py cov <sub>             coverage tooling: run / base / map / plan / dedupe
-  ci.py fmt [--check]         clang-format, Prettier and black over the tree
+  ci.py fmt [--check]         clang-format, Prettier, black and shfmt over the whole tree
   ci.py sonar <sub>           compile database: merge / accept-style
 
 Each name is dispatched to the module that already implements it, with argv set the way the
@@ -41,6 +41,7 @@ GEN_DEFAULT = [
     "build_opt",
     "examples",
     "nav_groups",
+    "tools_inventory",
 ]
 
 GEN = {
@@ -53,6 +54,7 @@ GEN = {
     "build_opt": "generate.gen_build_opt",
     "examples": "generate.gen_examples",
     "nav_groups": "generate.gen_nav_groups",
+    "tools_inventory": "generate.gen_tools_inventory",
     "features_page": "generate.gen_features_page",
     "features_tree": "generate.gen_features_tree",
     "hardware_ref": "generate.gen_hardware_ref",
@@ -123,6 +125,28 @@ SONAR = {
     "merge": "sonar.merge_compiledb",
     "accept-style": "sonar.accept_style_conflicts",
 }
+
+# Everything Prettier owns. The exclusions live in .prettierignore, which Prettier applies itself,
+# so this glob states the file types and nothing else.
+PRETTIER_GLOB = "**/*.{md,json,yml,yaml,css,html,js,cjs,mjs}"
+
+# The git hooks are shell scripts with no extension, so no glob finds them.
+HOOKS = ["tools/git-hooks/pre-commit", "tools/git-hooks/post-commit"]
+
+FMT_HELP = """Every formatter the tree has, over every file type it owns.
+
+  clang-format  .c .cpp .h .ino
+  Prettier      .md .json .yml .yaml .css .html .js .cjs .mjs, minus .prettierignore
+  black         .py
+  shfmt         .sh and the git hooks, which are shell with no extension
+
+.prettierignore carries the exclusions and states why each one is there: the two matrices are
+spliced rather than re-rendered, the ratchet baselines are written by json.dump, and the web assets
+are embedded into a C blob byte for byte, so reformatting one changes the blob and its size.
+
+shfmt is not in any package the repo installs. `winget install mvdan.shfmt` on Windows,
+`go install mvdan.cc/sh/v3/cmd/shfmt@latest` anywhere; without it that step reports skip and the
+shell scripts go unformatted."""
 
 
 def run_module(suffix, argv):
@@ -246,8 +270,26 @@ def source_files():
     return out
 
 
+def tracked(*globs):
+    """Files git tracks matching any glob, repo-relative."""
+    out = subprocess.run(["git", "ls-files"] + list(globs), cwd=ROOT, capture_output=True, text=True).stdout
+    return [os.path.relpath(f, ROOT) if os.path.isabs(f) else f for f in out.split()]
+
+
 def cmd_fmt(a):
-    """clang-format, Prettier and black, in check or write mode."""
+    """Every formatter the tree has, over every file type it owns, in check or write mode.
+
+    Four languages, four tools, one call:
+
+      clang-format  .c .cpp .h .ino
+      Prettier      .md .json .yml .yaml .css .html .js .cjs .mjs, minus .prettierignore
+      black         .py
+      shfmt         .sh and the git hooks, which are shell with no extension
+
+    .prettierignore carries the exclusions and states why each one is there: the two matrices are
+    spliced rather than re-rendered, the ratchet baselines are written by json.dump, and the web
+    assets are embedded into a C blob byte for byte.
+    """
     rc_all = 0
     cf = shutil.which("clang-format")
     if not cf:
@@ -269,7 +311,7 @@ def cmd_fmt(a):
         print("skip Prettier (npx not on PATH)")
     else:
         p = subprocess.run(
-            [npx, "prettier@3.9.6", "--check" if a.check else "--write", "**/*.md"],
+            [npx, "prettier@3.9.6", "--check" if a.check else "--write", PRETTIER_GLOB],
             cwd=ROOT,
             capture_output=True,
             text=True,
@@ -279,10 +321,7 @@ def cmd_fmt(a):
             print(p.stdout.strip()[-2000:])
         rc_all = rc_all or p.returncode
 
-    py = [
-        os.path.relpath(f, ROOT)
-        for f in subprocess.run(["git", "ls-files", "*.py"], cwd=ROOT, capture_output=True, text=True).stdout.split()
-    ]
+    py = tracked("*.py")
     if py:
         p = subprocess.run(
             [sys.executable, "-m", "black"] + (["--check", "--diff"] if a.check else []) + py,
@@ -291,6 +330,21 @@ def cmd_fmt(a):
             text=True,
         )
         print("%s black (%d files)" % ("ok  " if p.returncode == 0 else "FAIL", len(py)))
+        if p.returncode != 0:
+            print((p.stdout + p.stderr).strip()[-2000:])
+        rc_all = rc_all or p.returncode
+
+    sh = tracked("*.sh") + [h for h in HOOKS if os.path.exists(os.path.join(ROOT, h))]
+    fmt = shutil.which("shfmt")
+    if not fmt:
+        print("skip shfmt (not on PATH: winget install mvdan.shfmt, or go install mvdan.cc/sh/v3/cmd/shfmt@latest)")
+    elif sh:
+        # -i 4 is what 17 of the 24 scripts already use; -ci indents case arms, which every case
+        # block in the tree already does. shfmt has no line limit, so nothing rewraps.
+        args = ["-i", "4", "-ci"] + (["-d"] if a.check else ["-w"])
+        p = subprocess.run([fmt] + args + sh, cwd=ROOT, capture_output=True, text=True)
+        # -d prints the diff and exits 1 on any difference, so the code is the verdict.
+        print("%s shfmt (%d files)" % ("ok  " if p.returncode == 0 else "FAIL", len(sh)))
         if p.returncode != 0:
             print((p.stdout + p.stderr).strip()[-2000:])
         rc_all = rc_all or p.returncode
@@ -332,7 +386,12 @@ def build_parser():
     p.add_argument("rest", nargs=argparse.REMAINDER)
     p.set_defaults(fn=cmd_sonar)
 
-    p = sub.add_parser("fmt", help="clang-format, Prettier and black")
+    p = sub.add_parser(
+        "fmt",
+        help="clang-format, Prettier, black and shfmt over the whole tree",
+        description=FMT_HELP,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p.add_argument("--check", action="store_true", help="report violations instead of rewriting")
     p.set_defaults(fn=cmd_fmt)
     return ap

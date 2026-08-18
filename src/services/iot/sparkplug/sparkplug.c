@@ -12,6 +12,7 @@
  */
 
 #include "services/iot/sparkplug/sparkplug.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_SPARKPLUG
 
@@ -56,21 +57,16 @@ struct SparkplugStorage
     uint8_t metric[PROTOCORE_SPB_METRIC_MAX]; ///< one encoded Metric, before it becomes a metrics(2) field
 };
 
-/**
- * @brief The codec's state and the calls that reach it - what SparkplugNs points at.
- *
- * @var SparkplugInternal::store  the scratch a Payload build serializes each Metric into
- * @var SparkplugInternal::ns     the handle a caller sets a call's members on
- */
-struct SparkplugInternal
-{
-    struct SparkplugStorage *store;
-    SparkplugNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SPARKPLUG_OFF_CTX 0u
+static_assert(SPARKPLUG_OFF_CTX + sizeof(struct SparkplugStorage) <= PROTOCORE_SPARKPLUG_BORROW,
+              "PROTOCORE_SPARKPLUG_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct SparkplugStorage s_store;
-
-static struct SparkplugInternal s_sparkplug = {.store = &s_store, .ns = &Sparkplug};
+// The region, at its offset in the caller's borrow.
+#define SPARKPLUG_CTX(w) ((struct SparkplugStorage *)(void *)((w) + SPARKPLUG_OFF_CTX))
 
 // Append a VARINT record carrying v under field, on the encoder row slot names.
 static void pb_varint(uint8_t slot, uint32_t field, uint64_t v)
@@ -78,7 +74,7 @@ static void pb_varint(uint8_t slot, uint32_t field, uint64_t v)
     Protobuf.slot = slot;
     Protobuf.tag.field_number = field;
     Protobuf.value.u64 = v;
-    Protobuf.write_uint64(Protobuf.internal);
+    Protobuf.write_uint64(protocore_protobuf_span());
 }
 
 // Append a LEN record carrying the NUL-terminated s under field.
@@ -87,7 +83,7 @@ static void pb_text(uint8_t slot, uint32_t field, const char *s)
     Protobuf.slot = slot;
     Protobuf.tag.field_number = field;
     Protobuf.value.text = s;
-    Protobuf.write_string(Protobuf.internal);
+    Protobuf.write_string(protocore_protobuf_span());
 }
 
 // Append a LEN record carrying len octets of data under field.
@@ -97,7 +93,7 @@ static void pb_span(uint8_t slot, uint32_t field, const uint8_t *data, size_t le
     Protobuf.tag.field_number = field;
     Protobuf.value.data = data;
     Protobuf.value.len = len;
-    Protobuf.write_bytes(Protobuf.internal);
+    Protobuf.write_bytes(protocore_protobuf_span());
 }
 
 // Serialize one Metric (Sparkplug 3.0.0 sec 6.4.6) into buf over the encoder row slot names,
@@ -107,7 +103,7 @@ static size_t metric_encode(uint8_t slot, uint8_t *buf, size_t cap, const SpbMet
     Protobuf.slot = slot;
     Protobuf.writer.buf = buf;
     Protobuf.writer.cap = cap;
-    Protobuf.writer_open(Protobuf.internal);
+    Protobuf.writer_open(protocore_protobuf_span());
     if (m->name)
     {
         pb_text(slot, SPB_METRIC_NAME, m->name);
@@ -133,19 +129,19 @@ static size_t metric_encode(uint8_t slot, uint8_t *buf, size_t cap, const SpbMet
         Protobuf.slot = slot;
         Protobuf.tag.field_number = SPB_METRIC_FLOAT_VALUE;
         Protobuf.value.f32 = m->float_value;
-        Protobuf.write_float(Protobuf.internal);
+        Protobuf.write_float(protocore_protobuf_span());
         break;
     case SPB_M_DOUBLE:
         Protobuf.slot = slot;
         Protobuf.tag.field_number = SPB_METRIC_DOUBLE_VALUE;
         Protobuf.value.f64 = m->double_value;
-        Protobuf.write_double(Protobuf.internal);
+        Protobuf.write_double(protocore_protobuf_span());
         break;
     case SPB_M_BOOL:
         Protobuf.slot = slot;
         Protobuf.tag.field_number = SPB_METRIC_BOOLEAN_VALUE;
         Protobuf.value.flag = m->bool_value;
-        Protobuf.write_bool(Protobuf.internal);
+        Protobuf.write_bool(protocore_protobuf_span());
         break;
     case SPB_M_STRING:
         if (m->string_value)
@@ -155,22 +151,47 @@ static size_t metric_encode(uint8_t slot, uint8_t *buf, size_t cap, const SpbMet
         break;
     }
     Protobuf.slot = slot;
-    Protobuf.writer_finish(Protobuf.internal);
+    Protobuf.writer_finish(protocore_protobuf_span());
     return Protobuf.n;
+}
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_SPARKPLUG_BORROW persistent bytes, or null while the pool was short
+} SparkplugOwnCtx;
+static SparkplugOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_sparkplug_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SPARKPLUG_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
 }
 
 // Join `spBv1.0/group_id/message_type/edge_node_id[/device_id]` (Sparkplug 3.0.0 sec 4.1) into
 // ns->topic_out, and report its length in ns->n. A topic that does not fit writes nothing.
-static void spb_build_topic(struct SparkplugInternal *restrict ctx)
+static void spb_build_topic(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    char *out = ctx->ns->topic_out.out;
-    const size_t cap = ctx->ns->topic_out.cap;
-    const char *group = ctx->ns->topic.group_id;
-    const char *type = ctx->ns->topic.message_type;
-    const char *node = ctx->ns->topic.edge_node_id;
-    const char *device = ctx->ns->topic.device_id;
+    (void)work;
+    Sparkplug.n = 0;
+    Sparkplug.ok = PROTO_FALSE;
+    char *out = Sparkplug.topic_out.out;
+    const size_t cap = Sparkplug.topic_out.cap;
+    const char *group = Sparkplug.topic.group_id;
+    const char *type = Sparkplug.topic.message_type;
+    const char *node = Sparkplug.topic.edge_node_id;
+    const char *device = Sparkplug.topic.device_id;
     if (!out || !group || !type || !node)
     {
         return;
@@ -206,78 +227,84 @@ static void spb_build_topic(struct SparkplugInternal *restrict ctx)
         p += n;
     }
     out[p] = '\0';
-    ctx->ns->n = p;
-    ctx->ns->ok = PROTO_TRUE;
+    Sparkplug.n = p;
+    Sparkplug.ok = PROTO_TRUE;
 }
 
 // Serialize ns->metrics.list[0] as one Metric message into ns->out, reporting its length in ns->n.
-static void spb_build_metric(struct SparkplugInternal *restrict ctx)
+static void spb_build_metric(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->out.buf || !ctx->ns->metrics.list)
+    (void)work;
+    Sparkplug.n = 0;
+    Sparkplug.ok = PROTO_FALSE;
+    if (!Sparkplug.out.buf || !Sparkplug.metrics.list)
     {
         return;
     }
-    ctx->ns->n = metric_encode(SPB_SLOT_MSG, ctx->ns->out.buf, ctx->ns->out.cap, &ctx->ns->metrics.list[0]);
-    ctx->ns->ok = ctx->ns->n != 0;
+    Sparkplug.n = metric_encode(SPB_SLOT_MSG, Sparkplug.out.buf, Sparkplug.out.cap, &Sparkplug.metrics.list[0]);
+    Sparkplug.ok = Sparkplug.n != 0;
 }
 
 // Serialize a Payload (Sparkplug 3.0.0 sec 6.4.5): timestamp(1), then metrics(2) once per Metric,
 // then seq(3). Each Metric goes into the codec's scratch first; one that overflows it fails the
 // whole build closed.
-static void spb_build_payload(struct SparkplugInternal *restrict ctx)
+static void spb_build_payload(uint8_t *restrict work)
 {
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
-    const size_t count = ctx->ns->metrics.count;
-    if (!ctx->ns->out.buf || (count && !ctx->ns->metrics.list))
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Sparkplug.n = 0;
+    Sparkplug.ok = PROTO_FALSE;
+    const size_t count = Sparkplug.metrics.count;
+    if (!Sparkplug.out.buf || (count && !Sparkplug.metrics.list))
     {
         return;
     }
     Protobuf.slot = SPB_SLOT_MSG;
-    Protobuf.writer.buf = ctx->ns->out.buf;
-    Protobuf.writer.cap = ctx->ns->out.cap;
-    Protobuf.writer_open(Protobuf.internal);
-    pb_varint(SPB_SLOT_MSG, SPB_PAYLOAD_TIMESTAMP, ctx->ns->payload.timestamp);
+    Protobuf.writer.buf = Sparkplug.out.buf;
+    Protobuf.writer.cap = Sparkplug.out.cap;
+    Protobuf.writer_open(protocore_protobuf_span());
+    pb_varint(SPB_SLOT_MSG, SPB_PAYLOAD_TIMESTAMP, Sparkplug.payload.timestamp);
     for (size_t i = 0; i < count; i++)
     {
-        size_t mlen =
-            metric_encode(SPB_SLOT_METRIC, ctx->store->metric, sizeof(ctx->store->metric), &ctx->ns->metrics.list[i]);
+        size_t mlen = metric_encode(SPB_SLOT_METRIC, SPARKPLUG_CTX(work)->metric, sizeof(SPARKPLUG_CTX(work)->metric),
+                                    &Sparkplug.metrics.list[i]);
         if (!mlen)
         {
             return;
         }
-        pb_span(SPB_SLOT_MSG, SPB_PAYLOAD_METRICS, ctx->store->metric, mlen);
+        pb_span(SPB_SLOT_MSG, SPB_PAYLOAD_METRICS, SPARKPLUG_CTX(work)->metric, mlen);
     }
-    pb_varint(SPB_SLOT_MSG, SPB_PAYLOAD_SEQ, ctx->ns->payload.seq);
+    pb_varint(SPB_SLOT_MSG, SPB_PAYLOAD_SEQ, Sparkplug.payload.seq);
     Protobuf.slot = SPB_SLOT_MSG;
-    Protobuf.writer_finish(Protobuf.internal);
-    ctx->ns->n = Protobuf.n;
-    ctx->ns->ok = ctx->ns->n != 0;
+    Protobuf.writer_finish(protocore_protobuf_span());
+    Sparkplug.n = Protobuf.n;
+    Sparkplug.ok = Sparkplug.n != 0;
 }
 
 // Read a Payload's timestamp(1) and seq(3) from ns->source into ns->header. metrics(2), uuid(4) and
 // body(5) are stepped over.
-static void spb_parse_payload(struct SparkplugInternal *restrict ctx)
+static void spb_parse_payload(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    mem.set(&ctx->ns->header, 0, sizeof(ctx->ns->header));
-    if (!ctx->ns->source.buf)
+    (void)work;
+    Sparkplug.ok = PROTO_FALSE;
+    mem.set(&Sparkplug.header, 0, sizeof(Sparkplug.header));
+    if (!Sparkplug.source.buf)
     {
         return;
     }
-    const size_t len = ctx->ns->source.len;
+    const size_t len = Sparkplug.source.len;
     Protobuf.slot = SPB_SLOT_MSG;
-    Protobuf.source.buf = ctx->ns->source.buf;
+    Protobuf.source.buf = Sparkplug.source.buf;
     Protobuf.source.len = len;
     Protobuf.source.pos = 0;
-    Protobuf.reader_open(Protobuf.internal);
+    Protobuf.reader_open(protocore_protobuf_span());
     size_t pos = 0;
     while (pos < len)
     {
         Protobuf.slot = SPB_SLOT_MSG;
-        Protobuf.read_record(Protobuf.internal);
+        Protobuf.read_record(protocore_protobuf_span());
         if (!Protobuf.ok)
         {
             return;
@@ -286,51 +313,52 @@ static void spb_parse_payload(struct SparkplugInternal *restrict ctx)
         if (Protobuf.record.field_number == SPB_PAYLOAD_TIMESTAMP &&
             Protobuf.record.wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            ctx->ns->header.has_timestamp = PROTO_TRUE;
-            ctx->ns->header.timestamp = Protobuf.record.value;
+            Sparkplug.header.has_timestamp = PROTO_TRUE;
+            Sparkplug.header.timestamp = Protobuf.record.value;
         }
         else if (Protobuf.record.field_number == SPB_PAYLOAD_SEQ &&
                  Protobuf.record.wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            ctx->ns->header.has_seq = PROTO_TRUE;
-            ctx->ns->header.seq = Protobuf.record.value;
+            Sparkplug.header.has_seq = PROTO_TRUE;
+            Sparkplug.header.seq = Protobuf.record.value;
         }
     }
-    ctx->ns->ok = PROTO_TRUE;
+    Sparkplug.ok = PROTO_TRUE;
 }
 
 // Report the next metrics(2) sub-message of a Payload in ns->metric_bytes / ns->metric_len and
 // advance ns->source.cursor past it. False at the end of the Payload or on a malformed field.
-static void spb_next_metric(struct SparkplugInternal *restrict ctx)
+static void spb_next_metric(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->metric_bytes = NULL;
-    ctx->ns->metric_len = 0;
-    if (!ctx->ns->source.buf)
+    (void)work;
+    Sparkplug.ok = PROTO_FALSE;
+    Sparkplug.metric_bytes = NULL;
+    Sparkplug.metric_len = 0;
+    if (!Sparkplug.source.buf)
     {
         return;
     }
-    const size_t len = ctx->ns->source.len;
+    const size_t len = Sparkplug.source.len;
     Protobuf.slot = SPB_SLOT_MSG;
-    Protobuf.source.buf = ctx->ns->source.buf;
+    Protobuf.source.buf = Sparkplug.source.buf;
     Protobuf.source.len = len;
-    Protobuf.source.pos = ctx->ns->source.cursor;
-    Protobuf.reader_open(Protobuf.internal);
-    while (ctx->ns->source.cursor < len)
+    Protobuf.source.pos = Sparkplug.source.cursor;
+    Protobuf.reader_open(protocore_protobuf_span());
+    while (Sparkplug.source.cursor < len)
     {
         Protobuf.slot = SPB_SLOT_MSG;
-        Protobuf.read_record(Protobuf.internal);
+        Protobuf.read_record(protocore_protobuf_span());
         if (!Protobuf.ok)
         {
             return;
         }
-        ctx->ns->source.cursor = Protobuf.n;
+        Sparkplug.source.cursor = Protobuf.n;
         if (Protobuf.record.field_number == SPB_PAYLOAD_METRICS &&
             Protobuf.record.wire_type == PROTOCORE_PROTOBUF_WT_LEN)
         {
-            ctx->ns->metric_bytes = Protobuf.record.data;
-            ctx->ns->metric_len = Protobuf.record.len;
-            ctx->ns->ok = PROTO_TRUE;
+            Sparkplug.metric_bytes = Protobuf.record.data;
+            Sparkplug.metric_len = Protobuf.record.len;
+            Sparkplug.ok = PROTO_TRUE;
             return;
         }
     }
@@ -400,7 +428,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
             out->has_value = PROTO_TRUE;
             out->kind = SPB_M_FLOAT;
             Protobuf.value.u32 = (uint32_t)f->value;
-            Protobuf.float_bits(Protobuf.internal);
+            Protobuf.float_bits(protocore_protobuf_span());
             out->float_value = Protobuf.f32;
         }
         break;
@@ -410,7 +438,7 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
             out->has_value = PROTO_TRUE;
             out->kind = SPB_M_DOUBLE;
             Protobuf.value.u64 = f->value;
-            Protobuf.double_bits(Protobuf.internal);
+            Protobuf.double_bits(protocore_protobuf_span());
             out->double_value = Protobuf.f64;
         }
         break;
@@ -437,35 +465,36 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
 }
 
 // Decode the Metric in ns->source into ns->metric: the metadata fields and the value oneof member.
-static void spb_parse_metric(struct SparkplugInternal *restrict ctx)
+static void spb_parse_metric(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    mem.set(&ctx->ns->metric, 0, sizeof(ctx->ns->metric));
-    if (!ctx->ns->source.buf)
+    (void)work;
+    Sparkplug.ok = PROTO_FALSE;
+    mem.set(&Sparkplug.metric, 0, sizeof(Sparkplug.metric));
+    if (!Sparkplug.source.buf)
     {
         return;
     }
-    const size_t len = ctx->ns->source.len;
+    const size_t len = Sparkplug.source.len;
     Protobuf.slot = SPB_SLOT_MSG;
-    Protobuf.source.buf = ctx->ns->source.buf;
+    Protobuf.source.buf = Sparkplug.source.buf;
     Protobuf.source.len = len;
     Protobuf.source.pos = 0;
-    Protobuf.reader_open(Protobuf.internal);
+    Protobuf.reader_open(protocore_protobuf_span());
     size_t pos = 0;
     while (pos < len)
     {
         Protobuf.slot = SPB_SLOT_MSG;
-        Protobuf.read_record(Protobuf.internal);
+        Protobuf.read_record(protocore_protobuf_span());
         if (!Protobuf.ok)
         {
             return;
         }
         pos = Protobuf.n;
         const ProtobufRecord rec = Protobuf.record;
-        spb_apply_meta_field(&ctx->ns->metric, &rec);  // name / alias / timestamp / datatype
-        spb_apply_value_field(&ctx->ns->metric, &rec); // the value oneof member
+        spb_apply_meta_field(&Sparkplug.metric, &rec);  // name / alias / timestamp / datatype
+        spb_apply_value_field(&Sparkplug.metric, &rec); // the value oneof member
     }
-    ctx->ns->ok = PROTO_TRUE;
+    Sparkplug.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -474,7 +503,6 @@ SparkplugNs Sparkplug = {.build_topic = spb_build_topic,
                          .build_payload = spb_build_payload,
                          .parse_payload = spb_parse_payload,
                          .next_metric = spb_next_metric,
-                         .parse_metric = spb_parse_metric,
-                         .internal = &s_sparkplug};
+                         .parse_metric = spb_parse_metric};
 
 #endif // PROTOCORE_ENABLE_SPARKPLUG

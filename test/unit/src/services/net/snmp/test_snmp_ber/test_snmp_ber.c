@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
+
 void setUp(void)
 {
 }
@@ -33,7 +35,7 @@ static void enc_open(uint8_t *buf, size_t cap)
     SnmpBer.enc = &g_enc;
     SnmpBer.buf.out = buf;
     SnmpBer.buf.cap = cap;
-    SnmpBer.enc_init(SnmpBer.internal);
+    SnmpBer.enc_init(snmp_ber_work);
 }
 
 static void dec_open(const uint8_t *buf, size_t len)
@@ -41,20 +43,20 @@ static void dec_open(const uint8_t *buf, size_t len)
     SnmpBer.dec = &g_dec;
     SnmpBer.buf.in = buf;
     SnmpBer.buf.cap = len;
-    SnmpBer.dec_init(SnmpBer.internal);
+    SnmpBer.dec_init(snmp_ber_work);
 }
 
 static void put_integer(long v)
 {
     SnmpBer.tlv.ival = v;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
 }
 
 static void put_uint(uint8_t tag, uint32_t v)
 {
     SnmpBer.tlv.tag = tag;
     SnmpBer.tlv.uval = v;
-    SnmpBer.put_uint(SnmpBer.internal);
+    SnmpBer.put_uint(snmp_ber_work);
 }
 
 static void put_octet_string(uint8_t tag, const void *p, size_t n)
@@ -62,38 +64,38 @@ static void put_octet_string(uint8_t tag, const void *p, size_t n)
     SnmpBer.tlv.tag = tag;
     SnmpBer.tlv.bytes = (const uint8_t *)p;
     SnmpBer.tlv.len = n;
-    SnmpBer.put_octet_string(SnmpBer.internal);
+    SnmpBer.put_octet_string(snmp_ber_work);
 }
 
 static void put_oid(const uint32_t *arcs, size_t n)
 {
     SnmpBer.tlv.arcs = arcs;
     SnmpBer.tlv.arc_count = n;
-    SnmpBer.put_oid(SnmpBer.internal);
+    SnmpBer.put_oid(snmp_ber_work);
 }
 
 static size_t seq_begin(uint8_t tag)
 {
     SnmpBer.tlv.tag = tag;
-    SnmpBer.seq_begin(SnmpBer.internal);
+    SnmpBer.seq_begin(snmp_ber_work);
     return SnmpBer.tlv.token;
 }
 
 static void seq_end(size_t token)
 {
     SnmpBer.tlv.token = token;
-    SnmpBer.seq_end(SnmpBer.internal);
+    SnmpBer.seq_end(snmp_ber_work);
 }
 
 static proto_bool read_header(void)
 {
-    SnmpBer.read_header(SnmpBer.internal);
+    SnmpBer.read_header(snmp_ber_work);
     return SnmpBer.ok;
 }
 
 static proto_bool read_integer(void)
 {
-    SnmpBer.read_integer(SnmpBer.internal);
+    SnmpBer.read_integer(snmp_ber_work);
     return SnmpBer.ok;
 }
 
@@ -101,14 +103,14 @@ static proto_bool read_oid(uint32_t *out, size_t cap)
 {
     SnmpBer.read_args.arc_out = out;
     SnmpBer.read_args.arc_cap = cap;
-    SnmpBer.read_oid(SnmpBer.internal);
+    SnmpBer.read_oid(snmp_ber_work);
     return SnmpBer.ok;
 }
 
 static proto_bool skip(size_t n)
 {
     SnmpBer.read_args.skip = n;
-    SnmpBer.skip(SnmpBer.internal);
+    SnmpBer.skip(snmp_ber_work);
     return SnmpBer.ok;
 }
 
@@ -272,7 +274,7 @@ void test_x690_octet_string_and_null(void)
 
     static const uint8_t NUL[] = {0x05, 0x00};
     enc_open(buf, sizeof(buf));
-    SnmpBer.put_null(SnmpBer.internal);
+    SnmpBer.put_null(snmp_ber_work);
     TEST_ASSERT_EQUAL_size_t(sizeof(NUL), g_enc.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(NUL, buf, sizeof(NUL));
 }
@@ -340,7 +342,7 @@ void test_put_raw_appends_verbatim(void)
     enc_open(buf, sizeof(buf));
     SnmpBer.tlv.bytes = PRE;
     SnmpBer.tlv.len = sizeof(PRE);
-    SnmpBer.put_raw(SnmpBer.internal);
+    SnmpBer.put_raw(snmp_ber_work);
     TEST_ASSERT_TRUE(g_enc.ok);
     TEST_ASSERT_EQUAL_size_t(sizeof(PRE), g_enc.len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PRE, buf, sizeof(PRE));
@@ -439,7 +441,7 @@ void test_encoder_fails_closed(void)
     uint8_t buf[8];
     enc_open(NULL, sizeof(buf));
     TEST_ASSERT_FALSE(g_enc.ok);
-    SnmpBer.put_null(SnmpBer.internal);
+    SnmpBer.put_null(snmp_ber_work);
     TEST_ASSERT_FALSE(g_enc.ok);
     TEST_ASSERT_EQUAL_size_t(0, g_enc.len);
 
@@ -528,7 +530,7 @@ void test_seq_end_refuses_over_65535_octets(void)
     const size_t seq = seq_begin((uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.tlv.bytes = g_filler;
     SnmpBer.tlv.len = sizeof(g_filler);
-    SnmpBer.put_raw(SnmpBer.internal);
+    SnmpBer.put_raw(snmp_ber_work);
     TEST_ASSERT_TRUE(g_enc.ok);
     seq_end(seq);
     TEST_ASSERT_FALSE(g_enc.ok);

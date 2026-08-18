@@ -12,6 +12,7 @@
 //   idf.py -C test/performance_benching/promisc -t upload --upload-port COM7
 #include "device_bench.h"
 #include "services/radio/promisc/promisc.h"
+#include "shared/pcap/pcap.h"
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -72,9 +72,6 @@ typedef struct
 } ConnObsArgs;
 #endif
 
-/** @brief The pool's own state and the calls that reach it, described only in protocol.c. */
-struct ConnPoolInternal;
-
 /**
  * @brief The pool of accepted connections: the user/TCP interface for one connection.
  *
@@ -146,7 +143,6 @@ struct ConnPoolInternal;
  * @var ConnPoolNs::owner             the worker that owns the slot
  * @var ConnPoolNs::proto_of          the application protocol it carries
  * @var ConnPoolNs::pcb_of            its control block
- * @var ConnPoolNs::internal   the pool's state and the calls that reach it
  */
 typedef struct
 {
@@ -171,57 +167,66 @@ typedef struct
     ProtoConn proto;
     protocore_ip *out; ///< where a peer address is written
 
-    void (*set_state)(struct ConnPoolInternal *ctx);
-    void (*alloc_free)(struct ConnPoolInternal *ctx);
-    void (*timeout_ms)(struct ConnPoolInternal *ctx);
-    void (*send)(struct ConnPoolInternal *ctx);
-    void (*send_flush)(struct ConnPoolInternal *ctx);
-    void (*sndbuf)(struct ConnPoolInternal *ctx);
-    void (*flush)(struct ConnPoolInternal *ctx);
-    void (*ack_consumed)(struct ConnPoolInternal *ctx);
-    void (*raw_send)(struct ConnPoolInternal *ctx);
-    void (*close)(struct ConnPoolInternal *ctx);
-    void (*abort_slot)(struct ConnPoolInternal *ctx);
-    void (*closing_finalize)(struct ConnPoolInternal *ctx);
-    void (*closing_check)(struct ConnPoolInternal *ctx);
-    void (*begin_close)(struct ConnPoolInternal *ctx);
-    void (*enqueue)(struct ConnPoolInternal *ctx);
-    void (*init)(struct ConnPoolInternal *ctx);
-    void (*stop)(struct ConnPoolInternal *ctx);
-    void (*active_count)(struct ConnPoolInternal *ctx);
-    void (*remote_ip)(struct ConnPoolInternal *ctx);
-    void (*remote_addr)(struct ConnPoolInternal *ctx);
-    void (*touch_active)(struct ConnPoolInternal *ctx);
-    void (*check_timeouts)(struct ConnPoolInternal *ctx);
+    void (*const set_state)(uint8_t *restrict work);
+    void (*const alloc_free)(uint8_t *restrict work);
+    void (*const timeout_ms)(uint8_t *restrict work);
+    void (*const send)(uint8_t *restrict work);
+    void (*const send_flush)(uint8_t *restrict work);
+    void (*const sndbuf)(uint8_t *restrict work);
+    void (*const flush)(uint8_t *restrict work);
+    void (*const ack_consumed)(uint8_t *restrict work);
+    void (*const raw_send)(uint8_t *restrict work);
+    void (*const close)(uint8_t *restrict work);
+    void (*const abort_slot)(uint8_t *restrict work);
+    void (*const closing_finalize)(uint8_t *restrict work);
+    void (*const closing_check)(uint8_t *restrict work);
+    void (*const begin_close)(uint8_t *restrict work);
+    void (*const enqueue)(uint8_t *restrict work);
+    void (*const init)(uint8_t *restrict work);
+    void (*const stop)(uint8_t *restrict work);
+    void (*const active_count)(uint8_t *restrict work);
+    void (*const remote_ip)(uint8_t *restrict work);
+    void (*const remote_addr)(uint8_t *restrict work);
+    void (*const touch_active)(uint8_t *restrict work);
+    void (*const check_timeouts)(uint8_t *restrict work);
 #if PROTOCORE_ENABLE_OBSERVABILITY
-    void (*on_event)(struct ConnPoolInternal *ctx);
-    void (*counters_get)(struct ConnPoolInternal *ctx);
-    void (*counters_reset)(struct ConnPoolInternal *ctx);
-    void (*obs_bump)(struct ConnPoolInternal *ctx);
-    void (*obs_transition)(struct ConnPoolInternal *ctx);
-    void (*obs_notice)(struct ConnPoolInternal *ctx);
+    void (*const on_event)(uint8_t *restrict work);
+    void (*const counters_get)(uint8_t *restrict work);
+    void (*const counters_reset)(uint8_t *restrict work);
+    void (*const obs_bump)(uint8_t *restrict work);
+    void (*const obs_transition)(uint8_t *restrict work);
+    void (*const obs_notice)(uint8_t *restrict work);
 #endif
 
     // The receive ring, and what a slot is. Transport owns the ring: a layer above drains it only
     // through these, and never indexes the buffer or advances the tail itself.
-    void (*available)(struct ConnPoolInternal *ctx);
-    void (*read_byte)(struct ConnPoolInternal *ctx);
-    void (*peek)(struct ConnPoolInternal *ctx);
-    void (*consume)(struct ConnPoolInternal *ctx);
-    void (*read)(struct ConnPoolInternal *ctx);
-    void (*active)(struct ConnPoolInternal *ctx);
-    void (*iface)(struct ConnPoolInternal *ctx);
-    void (*listener_id)(struct ConnPoolInternal *ctx);
-    void (*tls)(struct ConnPoolInternal *ctx);
-    void (*owner)(struct ConnPoolInternal *ctx);
-    void (*proto_of)(struct ConnPoolInternal *ctx);
-    void (*pcb_of)(struct ConnPoolInternal *ctx);
-
-    struct ConnPoolInternal *internal;
+    void (*const available)(uint8_t *restrict work);
+    void (*const read_byte)(uint8_t *restrict work);
+    void (*const peek)(uint8_t *restrict work);
+    void (*const consume)(uint8_t *restrict work);
+    void (*const read)(uint8_t *restrict work);
+    void (*const active)(uint8_t *restrict work);
+    void (*const iface)(uint8_t *restrict work);
+    void (*const listener_id)(uint8_t *restrict work);
+    void (*const tls)(uint8_t *restrict work);
+    void (*const owner)(uint8_t *restrict work);
+    void (*const proto_of)(uint8_t *restrict work);
+    void (*const pcb_of)(uint8_t *restrict work);
 } ConnPoolNs;
 
 /** @brief The one symbol this module exports. */
 extern ConnPoolNs ConnPool;
+
+/**
+ * @brief The PROTOCORE_CONN_POOL_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_conn_pool_span(void);
 
 PROTOCORE_END_DECLS
 

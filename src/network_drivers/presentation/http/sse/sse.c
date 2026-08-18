@@ -10,12 +10,12 @@
 
 #if PROTOCORE_ENABLE_SSE
 
-#include "sse.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h"
 #include "mmgr/secure.h"                                     // the persistent end this module's state is taken from
 #include "mmgr/span.h"                                       // span.ok: whether the pool had the bytes
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a stream sends on
+#include "sse.h"
 
 SseConn protocore_sse_pool[MAX_SSE_CONNS];
 
@@ -183,7 +183,7 @@ static void write_event(uint8_t *restrict work)
 {
     Sse.ok = PROTO_FALSE;
     ConnPool.slot = Sse.stream->slot_id;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         return;
@@ -199,7 +199,7 @@ static void write_event(uint8_t *restrict work)
 
     ConnPool.io.data = SSE_CTX(work)->buf;
     ConnPool.io.len = (proto_u16)Sse.n;
-    ConnPool.send(ConnPool.internal);
+    ConnPool.send(protocore_conn_pool_span());
     Sse.ok = PROTO_TRUE;
 }
 

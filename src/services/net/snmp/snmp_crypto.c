@@ -23,30 +23,17 @@
 // The password-to-key input length: RFC 7860 sec 9.3 repeats the password to 1,048,576 octets.
 #define PROTOCORE_SNMP_USM_EXPAND_LEN 1048576u
 
-/**
- * @brief The transforms - what SnmpCryptoNs points at.
- *
- * No storage member: each call reads its inputs and writes the caller's destination.
- *
- * @var SnmpCryptoInternal::ns  the handle a caller sets a call's members on
- */
-struct SnmpCryptoInternal
-{
-    SnmpCryptoNs *ns;
-};
-
-static struct SnmpCryptoInternal s_crypto = {.ns = &SnmpCrypto};
-
 // ---------------------------------------------------------------------------
 // Key localization (RFC 3414 sec 2.6, derivation per RFC 7860 sec 9.3)
 // ---------------------------------------------------------------------------
 
 // Ku = H( password repeated to 1,048,576 octets ), then Kul = H( Ku || snmpEngineID || Ku ), with
 // H = SHA-256. An empty password yields an all-zero key and reports false.
-static void localize_key(struct SnmpCryptoInternal *restrict ctx)
+static void localize_key(uint8_t *restrict work)
 {
-    const char *password = ctx->ns->key.password;
-    uint8_t *key_out = ctx->ns->key.out;
+    (void)work;
+    const char *password = SnmpCrypto.key.password;
+    uint8_t *key_out = SnmpCrypto.key.out;
     size_t pwlen = password ? str.len(password, PROTOCORE_SNMP_USM_PASS_MAX) : 0;
     if (pwlen == 0 || key_out == NULL)
     {
@@ -54,12 +41,12 @@ static void localize_key(struct SnmpCryptoInternal *restrict ctx)
         {
             mem.set(key_out, 0, SNMP_USM_KEY_LEN);
         }
-        ctx->ns->ok = PROTO_FALSE;
+        SnmpCrypto.ok = PROTO_FALSE;
         return;
     }
 
     uint8_t *sha;
-    sha = ctx->ns->work;
+    sha = SnmpCrypto.work;
     Sha256.init(sha);
     uint8_t block[64];
     size_t pw_index = 0;
@@ -80,13 +67,13 @@ static void localize_key(struct SnmpCryptoInternal *restrict ctx)
     Sha256.final_args.out = ku;
     Sha256.final(sha);
 
-    sha = ctx->ns->work;
+    sha = SnmpCrypto.work;
     Sha256.init(sha);
     Sha256.update_args.data = ku;
     Sha256.update_args.len = SNMP_USM_KEY_LEN;
     Sha256.update(sha);
-    Sha256.update_args.data = ctx->ns->key.engine_id;
-    Sha256.update_args.len = ctx->ns->key.engine_id_len;
+    Sha256.update_args.data = SnmpCrypto.key.engine_id;
+    Sha256.update_args.len = SnmpCrypto.key.engine_id_len;
     Sha256.update(sha);
     Sha256.update_args.data = ku;
     Sha256.update_args.len = SNMP_USM_KEY_LEN;
@@ -96,7 +83,7 @@ static void localize_key(struct SnmpCryptoInternal *restrict ctx)
 
     protocore_secure_wipe(ku, sizeof(ku));
     protocore_secure_wipe(block, sizeof(block));
-    ctx->ns->ok = PROTO_TRUE;
+    SnmpCrypto.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -193,22 +180,23 @@ static void aes128_encrypt_block(const uint8_t rk[176], const uint8_t in[16], ui
 // CFB128: each block of input is XORed with the cipher applied to the feedback register, and the
 // ciphertext block becomes the next feedback. A trailing partial block takes as many keystream
 // octets as it has and ends the walk.
-static void aes_cfb128(struct SnmpCryptoInternal *restrict ctx)
+static void aes_cfb128(uint8_t *restrict work)
 {
-    const uint8_t *in = ctx->ns->priv.in;
-    uint8_t *out = ctx->ns->priv.out;
-    const size_t len = ctx->ns->priv.len;
-    const proto_bool encrypt = ctx->ns->priv.encrypt;
-    if (ctx->ns->priv.key == NULL || ctx->ns->priv.iv == NULL || in == NULL || out == NULL)
+    (void)work;
+    const uint8_t *in = SnmpCrypto.priv.in;
+    uint8_t *out = SnmpCrypto.priv.out;
+    const size_t len = SnmpCrypto.priv.len;
+    const proto_bool encrypt = SnmpCrypto.priv.encrypt;
+    if (SnmpCrypto.priv.key == NULL || SnmpCrypto.priv.iv == NULL || in == NULL || out == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        SnmpCrypto.ok = PROTO_FALSE;
         return;
     }
 
     uint8_t rk[176];
-    aes128_key_schedule(ctx->ns->priv.key, rk);
+    aes128_key_schedule(SnmpCrypto.priv.key, rk);
     uint8_t fb[16];
-    mem.cpy(fb, ctx->ns->priv.iv, 16);
+    mem.cpy(fb, SnmpCrypto.priv.iv, 16);
     uint8_t ks[16];
 
     size_t off = 0;
@@ -248,10 +236,10 @@ static void aes_cfb128(struct SnmpCryptoInternal *restrict ctx)
     protocore_secure_wipe(rk, sizeof(rk));
     protocore_secure_wipe(ks, sizeof(ks));
     protocore_secure_wipe(fb, sizeof(fb));
-    ctx->ns->ok = PROTO_TRUE;
+    SnmpCrypto.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SnmpCryptoNs SnmpCrypto = {.localize_key = localize_key, .aes_cfb128 = aes_cfb128, .internal = &s_crypto};
+SnmpCryptoNs SnmpCrypto = {.localize_key = localize_key, .aes_cfb128 = aes_cfb128};
 
 #endif // PROTOCORE_ENABLE_SNMP_V3

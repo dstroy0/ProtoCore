@@ -52,6 +52,10 @@
 #include "server/core/worker.h"
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
+static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
+
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
 #if PROTOCORE_ENABLE_HTTP2
 #include "network_drivers/presentation/http/http2/h2_server.h"
 #endif
@@ -131,7 +135,7 @@ void protocore_server_reset(void)
     // together: routes left behind rows the table has no way to reach, and the table is bounded.
     Auth.reset(Auth.internal);
 #endif
-    Mnt.reset(Mnt.internal); // the same, for the mount id a static or DAV route holds
+    Mnt.reset(mnt_work); // the same, for the mount id a static or DAV route holds
 #if PROTOCORE_ENABLE_WEBSOCKET
     // And again for the ws / sse handler sets: a route holds the id route_add returned, so the
     // tables empty with the routes. Left behind, each re-registration appends a set no route can
@@ -142,9 +146,12 @@ void protocore_server_reset(void)
 #if PROTOCORE_ENABLE_SSE
     Sse.route_reset(protocore_sse_span());
 #endif
+    // The tasks the pipeline runs on. While they are up handle() hands the work to them and does
+    // nothing itself, so a reset that leaves them running leaves the server serving.
+    Session.workers->stop(protocore_worker_span());
     protocore_resp_reset();
     protocore_middleware_reset();
-    Signal.reset(Signal.internal);
+    Signal.reset(protocore_signaling_span());
 }
 
 void on_request_log(RequestLogCb cb)
@@ -161,7 +168,7 @@ void note_response(uint8_t slot_id, int code, int body_len)
     // signaling is where a reader finds it; counting it here as well would be a second tally beside
     // the one every reader already consults.
     Signal.put.code = code;
-    Signal.put_response(Signal.internal);
+    Signal.put_response(protocore_signaling_span());
     if (s_inst.log_cb)
     {
         const HttpReq *r = &http_pool[slot_id];
@@ -222,7 +229,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
     // number rather than handed the config to read it out of.
     Session.conn_timeout_ms = (cfg != NULL) ? cfg->conn_timeout_ms : CONN_TIMEOUT_MS;
     ConnPool.life.conn_timeout_ms = Session.conn_timeout_ms;
-    ConnPool.init(ConnPool.internal);
+    ConnPool.init(protocore_conn_pool_span());
 #if PROTOCORE_ENABLE_AUTH
     {
         // Fresh server keying secret per begin(): one borrow for the hash behind it, returned here.
@@ -266,7 +273,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
         TcpListener.bind.port = s_inst.listen_ports[i];
         TcpListener.bind.proto = s_inst.listen_protos[i];
         TcpListener.bind.tls = s_inst.listen_tls[i];
-        TcpListener.add(TcpListener.internal);
+        TcpListener.add(protocore_tcp_listener_span());
         if (TcpListener.i32 < 0)
         {
             return (int32_t)PROTOCORE_ERR_LISTEN_FAILED;
@@ -295,7 +302,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
     // Routes/listeners are now fixed; start the worker task(s) that drive the
     // pipeline off the user's loop(). On host the pipeline runs inline via handle().
     Session.workers->pump = protocore_pump_trampoline;
-    Session.workers->start(Session.workers->internal);
+    Session.workers->start(protocore_worker_span());
 #endif
     return (int32_t)PROTOCORE_OK;
 }
@@ -388,10 +395,10 @@ void stop(void)
 {
 #if PROTOCORE_HAS_SCHEDULER
     // Stop the worker task(s) before tearing down the slots they service.
-    Session.workers->stop(Session.workers->internal);
+    Session.workers->stop(protocore_worker_span());
 #endif
-    TcpListener.stop_all(TcpListener.internal);
-    ConnPool.stop(ConnPool.internal);
+    TcpListener.stop_all(protocore_tcp_listener_span());
+    ConnPool.stop(protocore_conn_pool_span());
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
         HttpConn.slot = i;
@@ -568,7 +575,12 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
     // Build the directive with the RFC 5861 core so the header and the protocore_delivery_swr decision
     // can never drift apart.
     char directive[64];
-    if (protocore_delivery_cache_control(max_age_s, swr_s, directive, sizeof(directive)) == 0)
+    HttpDelivery.cache_control_args.max_age_s = max_age_s;
+    HttpDelivery.cache_control_args.swr_s = swr_s;
+    HttpDelivery.cache_control_args.out = directive;
+    HttpDelivery.cache_control_args.cap = sizeof(directive);
+    HttpDelivery.cache_control(http_delivery_work);
+    if (HttpDelivery.n == 0)
     {
         return PROTO_FALSE;
     }
@@ -630,7 +642,7 @@ void ws_dispatch_close(const WsConn *ws)
 void handle(void)
 {
 #if PROTOCORE_HAS_SCHEDULER
-    Session.workers->running(Session.workers->internal);
+    Session.workers->running(protocore_worker_span());
     if (Session.workers->ok)
     {
         return;
@@ -654,7 +666,7 @@ void service_once(int worker_id)
     HttpConn.set_poll(HttpConn.internal);
 
     Session.worker_id = worker_id;
-    Session.tick(Session.internal);
+    Session.tick(protocore_session_span());
 
 #if PROTOCORE_ENABLE_HTTP3
     // Drive the QUIC/HTTP-3 server: ingest queued datagrams, run the engines (which dispatch requests
@@ -678,14 +690,14 @@ void service_once(int worker_id)
         // (HTTP/WS/TLS/service) drained from this slot's ring on the previous pass.
         // Transport owns the window math; we just nudge it once per slot per loop.
         ConnPool.slot = i;
-        ConnPool.ack_consumed(ConnPool.internal);
+        ConnPool.ack_consumed(protocore_conn_pool_span());
 
         // Every protocol - HTTP included - is pumped through the one uniform ProtoHandler.on_poll
         // seam, so there is no per-protocol branch here. HTTP reaches it via http_protocore_set_poll()
         // -> http_poll_slot(); the singleton pollers (SSH etc.) gate on CONN_ACTIVE
         // inside their own on_poll.
         Session.proto->proto = conn_pool[i].proto;
-        Session.proto->get(Session.proto->internal);
+        Session.proto->get(protocore_session_span());
         const ProtoHandler *ph = Session.proto->handler;
         if (ph && ph->on_poll)
         {
@@ -695,7 +707,7 @@ void service_once(int worker_id)
 
     // Run any callbacks app code deferred to this worker (race-free push path).
     Session.workers->worker_id = worker_id;
-    Session.workers->run_deferred(Session.workers->internal);
+    Session.workers->run_deferred(protocore_worker_span());
 }
 
 proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
@@ -709,7 +721,7 @@ proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
     Session.workers->worker_id = conn_pool[slot].owner;
     Session.workers->defer_args.fn = fn;
     Session.workers->defer_args.arg = arg;
-    Session.workers->defer(Session.workers->internal);
+    Session.workers->defer(protocore_worker_span());
     return Session.workers->ok;
 }
 

@@ -27,30 +27,26 @@
 #ifndef PROTOCORE_DIFFSERV_H
 #define PROTOCORE_DIFFSERV_H
 
-#include "protocore_config.h"
-
-PROTOCORE_BEGIN_DECLS
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DIFFSERV
 
+PROTOCORE_BEGIN_DECLS
+
 // Common RFC 2474 / RFC 4594 code points for convenience; any 0-63 value is accepted.
-#define PROTOCORE_DSCP_CS0 0      ///< default / best effort
-#define PROTOCORE_DSCP_CS6 48     ///< network control
-#define PROTOCORE_DSCP_EF 46      ///< expedited forwarding (low-latency real-time)
-#define PROTOCORE_DSCP_AF41 34    ///< assured forwarding, class 4 low drop (interactive)
-#define PROTOCORE_DSCP_AF31 26    ///< assured forwarding, class 3 low drop (multimedia streaming)
-#define PROTOCORE_DSCP_UNSET 0xFF ///< per-listener sentinel: fall back to the server-wide default
+#define PROTOCORE_DSCP_CS0 0   ///< default / best effort
+#define PROTOCORE_DSCP_CS6 48  ///< network control
+#define PROTOCORE_DSCP_EF 46   ///< expedited forwarding (low-latency real-time)
+#define PROTOCORE_DSCP_AF41 34 ///< assured forwarding, class 4 low drop (interactive)
+#define PROTOCORE_DSCP_AF31 26 ///< assured forwarding, class 3 low drop (multimedia streaming)
+// PROTOCORE_DSCP_UNSET, the per-listener "no code point" sentinel, is a value of Listener::dscp and
+// is stated with that field in network_drivers/transport/tcp/common.h.
 
 /** @brief DSCP (0-63) -> the 8-bit DS field. The low 2 bits are ECN (left 0); TOS = DSCP << 2. */
 static inline uint8_t protocore_dscp_to_tos(uint8_t dscp)
 {
     return (uint8_t)((dscp & 0x3F) << 2);
 }
-
-#endif // PROTOCORE_ENABLE_DIFFSERV
-
-/** @brief The two marks and the calls that reach them, described only in diffserv.c. */
-struct DiffServInternal;
 
 /**
  * @brief The DSCP marks this server sets on what it sends.
@@ -64,7 +60,6 @@ struct DiffServInternal;
  * @var DiffServNs::default_dscp  that mark
  * @var DiffServNs::set_udp       the mark UDP sends take
  * @var DiffServNs::udp_dscp      that mark
- * @var DiffServNs::internal      the two marks and the calls that reach them
  *
  * Per-connection and per-listener marks are set through the connection and the listener, which own
  * those objects; this table holds only the defaults they start from.
@@ -75,25 +70,34 @@ typedef struct
 
     uint8_t u8;
 
-    void (*set_default)(struct DiffServInternal *ctx);
-    void (*default_dscp)(struct DiffServInternal *ctx);
-    void (*set_udp)(struct DiffServInternal *ctx);
-    void (*udp_dscp)(struct DiffServInternal *ctx);
-
-    struct DiffServInternal *internal;
+    void (*const set_default)(uint8_t *restrict work);
+    void (*const default_dscp)(uint8_t *restrict work);
+    void (*const set_udp)(uint8_t *restrict work);
+    void (*const udp_dscp)(uint8_t *restrict work);
 } DiffServNs;
 
 /** @brief The one symbol this module exports. */
 extern DiffServNs DiffServ;
 
-#if PROTOCORE_ENABLE_DIFFSERV
+/**
+ * @brief The PROTOCORE_DIFFSERV_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_diffserv_span(void);
+
 /** @brief The server-wide default DSCP outbound TCP connections start from. */
 uint8_t protocore_diffserv_default_dscp(void);
 
 /** @brief The default DSCP outbound UDP datagrams are stamped with. */
 uint8_t protocore_diffserv_udp_dscp(void);
-#endif
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DIFFSERV
 
 #endif // PROTOCORE_DIFFSERV_H

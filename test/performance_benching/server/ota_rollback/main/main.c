@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t ota_rollback_work[16]; // the borrow an entry takes; OtaRollback never reads it
+
 /** @brief WAIT / COMMIT / ROLLBACK for an image in @p img_state at @p ms_since_boot. */
 static protocore_ota_action ota_decide(uint8_t img_state, proto_bool self_test_ok, uint32_t ms_since_boot,
                                        uint32_t window_ms)
@@ -30,7 +32,7 @@ static protocore_ota_action ota_decide(uint8_t img_state, proto_bool self_test_o
     OtaRollback.decide_args.self_test_ok = self_test_ok;
     OtaRollback.decide_args.ms_since_boot = ms_since_boot;
     OtaRollback.decide_args.window_ms = window_ms;
-    OtaRollback.decide(OtaRollback.internal);
+    OtaRollback.decide(ota_rollback_work);
     return OtaRollback.action;
 }
 

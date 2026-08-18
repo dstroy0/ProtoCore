@@ -22,6 +22,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t grpcweb_work[16]; // the borrow an entry takes; GrpcWeb never reads it
+
 /** @brief Frame @p body as a Length-Prefixed-Message into @p out; the octets written. */
 static size_t gw_frame_message(uint8_t *out, size_t cap, const uint8_t *body, size_t len, proto_bool compressed)
 {
@@ -30,7 +32,7 @@ static size_t gw_frame_message(uint8_t *out, size_t cap, const uint8_t *body, si
     GrpcWeb.msg.body = body;
     GrpcWeb.msg.body_len = len;
     GrpcWeb.msg.compressed = compressed;
-    GrpcWeb.frame_message(GrpcWeb.internal);
+    GrpcWeb.frame_message(grpcweb_work);
     return GrpcWeb.n;
 }
 
@@ -41,7 +43,7 @@ static size_t gw_frame_trailers(uint8_t *out, size_t cap, int32_t status, const 
     GrpcWeb.out.cap = cap;
     GrpcWeb.trailers.status = status;
     GrpcWeb.trailers.message = message;
-    GrpcWeb.frame_trailers(GrpcWeb.internal);
+    GrpcWeb.frame_trailers(grpcweb_work);
     return GrpcWeb.n;
 }
 
@@ -50,7 +52,7 @@ static proto_bool gw_parse(GrpcWebFrame *f, const uint8_t *data, size_t len)
 {
     GrpcWeb.in.data = data;
     GrpcWeb.in.len = len;
-    GrpcWeb.parse(GrpcWeb.internal);
+    GrpcWeb.parse(grpcweb_work);
     *f = GrpcWeb.parsed;
     return GrpcWeb.ok;
 }
@@ -60,7 +62,7 @@ static proto_bool gw_trailers_status(const uint8_t *data, size_t len, int32_t *s
 {
     GrpcWeb.in.data = data;
     GrpcWeb.in.len = len;
-    GrpcWeb.trailers_status(GrpcWeb.internal);
+    GrpcWeb.trailers_status(grpcweb_work);
     *status = GrpcWeb.i32;
     return GrpcWeb.ok;
 }

@@ -104,9 +104,6 @@ typedef struct
     size_t cap; ///< how much room it has, the NUL included
 } SyslogLineArgs;
 
-/** @brief The client's own state and the calls that reach it, described only in syslog.c. */
-struct SyslogInternal;
-
 /**
  * @brief The syslog originator.
  *
@@ -125,7 +122,6 @@ struct SyslogInternal;
  * @var SyslogNs::format     build one SYSLOG-MSG from @c header and @c record into @c line
  * @var SyslogNs::log        stamp the stored HEADER fields onto @c header, format into the client's
  *                           scratch, and send that one message as one datagram (RFC 5426 sec 3.1)
- * @var SyslogNs::internal   the client's state and the calls that reach it
  */
 typedef struct
 {
@@ -137,15 +133,24 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*init)(struct SyslogInternal *ctx);
-    void (*format)(struct SyslogInternal *ctx);
-    void (*log)(struct SyslogInternal *ctx);
-
-    struct SyslogInternal *internal;
+    void (*const init)(uint8_t *restrict work);
+    void (*const format)(uint8_t *restrict work);
+    void (*const log)(uint8_t *restrict work);
 } SyslogNs;
 
 /** @brief The one symbol this module exports. */
 extern SyslogNs Syslog;
+
+/**
+ * @brief The PROTOCORE_SYSLOG_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_syslog_span(void);
 
 PROTOCORE_END_DECLS
 

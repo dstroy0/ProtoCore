@@ -25,14 +25,17 @@
 #ifndef PROTOCORE_HTTP_DELIVERY_H
 #define PROTOCORE_HTTP_DELIVERY_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief Freshness verdict for a cached response. */
-/** @brief Cache-freshness verdict (the sole return of protocore_delivery_swr). */
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
+/** @brief Cache-freshness verdict (the sole return of swr). */
 typedef enum PROTO_ENUM_PACKED
 {
     DELIVERY_FRESH = 0,            ///< age <= max-age: serve from cache, no revalidation.
@@ -40,55 +43,90 @@ typedef enum PROTO_ENUM_PACKED
     DELIVERY_EXPIRED = 2           ///< past both windows: must revalidate before serving.
 } DeliveryVerdict;
 
-/**
- * @brief RFC 5861 freshness decision.
- * @param age_s     seconds since the response was generated.
- * @param max_age_s the `max-age` window.
- * @param swr_s     the `stale-while-revalidate` window past max-age.
- * @return DELIVERY_FRESH / DELIVERY_STALE_REVALIDATE / DELIVERY_EXPIRED.
- */
-DeliveryVerdict protocore_delivery_swr(uint32_t age_s, uint32_t max_age_s, uint32_t swr_s);
+/** @brief What swr takes: age_s, max_age_s, swr_s. */
+typedef struct
+{
+    uint32_t age_s;     ///< seconds since the response was generated
+    uint32_t max_age_s; ///< the `max-age` window
+    uint32_t swr_s;     ///< the `stale-while-revalidate` window past max-age
+} HttpDeliverySwrArgs;
+
+/** @brief What cache_control takes: max_age_s, ... */
+typedef struct
+{
+    uint32_t max_age_s;
+    uint32_t swr_s;
+    char *out;
+    size_t cap;
+} HttpDeliveryCacheControlArgs;
+
+/** @brief What sw_manifest takes: paths, n, ... */
+typedef struct
+{
+    const char *const *paths; ///< asset paths to precache (borrowed)
+    size_t n;                 ///< number of paths
+    const char *version;      ///< cache version tag (busts the SW cache on change)
+    char *out;
+    size_t cap;
+} HttpDeliverySwManifestArgs;
+
+/** @brief What serve_sw takes: paths, n, version. */
+typedef struct
+{
+    const char *const *paths; ///< asset paths to precache (borrowed; must outlive the server)
+    size_t n;                 ///< number of paths (<= PROTOCORE_DELIVERY_PRECACHE_MAX)
+    const char *version;      ///< cache version tag, e.g. a firmware version string
+} HttpDeliveryServeSwArgs;
 
 /**
- * @brief Build a `Cache-Control` value: `public, max-age=N[, stale-while-revalidate=M]`.
- *        The swr directive is omitted when @p swr_s is 0.
- * @return length written (excl NUL), or 0 on overflow / bad args.
- */
-size_t protocore_delivery_cache_control(uint32_t max_age_s, uint32_t swr_s, char *out, size_t cap);
-
-// Byte-range serving is NOT here. `network_drivers/application/http_range.h` (`http_parse_byte_range`,
-// PROTOCORE_ENABLE_RANGE) owns the RFC 7233 range math and is already wired into static file serving and the edge cache
-// - it emits `Accept-Ranges`, the 206 `Content-Range`, and a 416 with `bytes */<size>`, which this header's earlier
-// duplicate could not signal. Two parsers for one concern is how a request ends up answered by the wrong one, so the
-// duplicate was removed rather than given a second call site.
-
-/**
- * @brief Emit the service-worker precache manifest: `{"version":"..","precache":["/a","/b",...]}`.
- * @param paths   asset paths to precache (borrowed).
- * @param n       number of paths.
- * @param version cache version tag (busts the SW cache on change).
- * @return length written (excl NUL), or 0 on overflow / bad args. Strings are JSON-escaped.
- */
-size_t protocore_delivery_sw_manifest(const char *const *paths, size_t n, const char *version, char *out, size_t cap);
-
-/**
- * @brief Serve the service worker and its precache manifest.
+ * @brief HTTP delivery optimizations: stale-while-revalidate, Range/206 delta fetch, SW precache
+ * (PROTOCORE_ENABLE_HTTP_DELIVERY).
  *
- * Registers two GET routes on @p srv, which together are the client half of the delivery story:
- *   - `/sw.js`         the worker (a flash-resident asset; registers with `navigator.serviceWorker`)
- *   - `/precache.json` the versioned manifest built by protocore_delivery_sw_manifest()
+ * A caller sets the members a call takes, invokes it through ::HttpDelivery with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * The worker precaches @p paths and then serves them stale-while-revalidate, so the browser gets the
- * shell instantly and the device is only asked for a refresh in the background. Bump @p version
- * whenever the shell changes: the worker names its cache after it, so a new version invalidates the
- * old shell exactly once.
+ *   HttpDelivery.swr_args.age_s = ...;
+ *   HttpDelivery.swr_args.max_age_s = ...;
+ *   HttpDelivery.swr_args.swr_s = ...;
+ *   HttpDelivery.swr(work);
+ *   // HttpDelivery.value is what the call reports
  *
- * @param paths   asset paths to precache (borrowed; must outlive the server).
- * @param n       number of paths (<= PROTOCORE_DELIVERY_PRECACHE_MAX).
- * @param version cache version tag, e.g. a firmware version string.
- * @return true if both routes were registered.
+ * @var HttpDeliveryNs::swr_args  what swr takes: age_s, max_age_s, swr_s
+ * @var HttpDeliveryNs::cache_control_args  what cache_control takes: max_age_s,
+ * @var HttpDeliveryNs::sw_manifest_args  what sw_manifest takes: paths, n,
+ * @var HttpDeliveryNs::serve_sw_args  what serve_sw takes: paths, n, version
+ * @var HttpDeliveryNs::ok  true if both routes were registered
+ * @var HttpDeliveryNs::value  DELIVERY_FRESH / DELIVERY_STALE_REVALIDATE / DELIVERY_EXPIRED
+ * @var HttpDeliveryNs::n  length written (excl NUL), or 0 on overflow / bad args
+ * @var HttpDeliveryNs::swr  RFC 5861 freshness decision
+ * @var HttpDeliveryNs::cache_control  build a `Cache-Control` value: `public, max-age=N[, ...
+ * @var HttpDeliveryNs::sw_manifest  emit the service-worker precache manifest: ...
+ * @var HttpDeliveryNs::serve_sw  serve the service worker and its precache manifest. Registers two
+ * ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_delivery_serve_sw(const char *const *paths, size_t n, const char *version);
+typedef struct
+{
+    HttpDeliverySwrArgs swr_args;
+    HttpDeliveryCacheControlArgs cache_control_args;
+    HttpDeliverySwManifestArgs sw_manifest_args;
+    HttpDeliveryServeSwArgs serve_sw_args;
+
+    proto_bool ok;
+    DeliveryVerdict value;
+    size_t n;
+
+    void (*const swr)(uint8_t *restrict work);
+    void (*const cache_control)(uint8_t *restrict work);
+    void (*const sw_manifest)(uint8_t *restrict work);
+    void (*const serve_sw)(uint8_t *restrict work);
+} HttpDeliveryNs;
+
+/** @brief The one symbol this module exports. */
+extern HttpDeliveryNs HttpDelivery;
 
 PROTOCORE_END_DECLS
 

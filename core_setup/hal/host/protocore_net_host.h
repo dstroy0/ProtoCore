@@ -617,22 +617,89 @@ static inline uint32_t protocore_platform_micros(void)
 }
 // The cycle counter is the one time seam that must track real elapsed time: it is what the
 // microbenchmarks measure with, and millis() above is a virtual clock that only set_millis() moves.
-// A monotonic read scaled to PROTOCORE_HOST_CYCLE_MHZ gives a count in the same units the benches
-// divide by, so a host figure is wall time expressed at the nominal clock, not a silicon cycle
-// count. It wraps at 2^32 like the hardware counter, so only short deltas are meaningful.
-#ifndef PROTOCORE_HOST_CYCLE_MHZ
-#define PROTOCORE_HOST_CYCLE_MHZ 240u
+// The count is the host CPU's own, at the host CPU's own rate, and protocore_platform_cycle_mhz()
+// below reports that rate so a caller converts with the clock the count was taken on. It wraps at
+// 2^32 like the hardware counter, so only short deltas are meaningful.
+//
+// On x86 the source is the timestamp counter, which ticks once per cycle. Elsewhere it is
+// CLOCK_MONOTONIC counted in nanoseconds, so the rate is 1000 MHz and a "cycle" is a nanosecond.
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+#define PROTOCORE_HOST_CYCLE_TSC 1
+#else
+#define PROTOCORE_HOST_CYCLE_TSC 0
 #endif
 
-static inline uint32_t protocore_platform_cycles(void)
+static inline uint64_t protocore_host_ns_now(void);
+
+// Unpinned, the count is the CPU's own timestamp counter and the rate below is measured, so the
+// host runs all the way. Pinned with -DPROTOCORE_HOST_CYCLE_MHZ, the count is instead the elapsed
+// time expressed in cycles AT that rate, so the derived times stay real and only the cycle column
+// answers "what would this cost a part clocked that way".
+static inline uint64_t protocore_host_cycle_raw(void)
+{
+#if defined(PROTOCORE_HOST_CYCLE_MHZ) || !PROTOCORE_HOST_CYCLE_TSC
+#ifdef PROTOCORE_HOST_CYCLE_MHZ
+    return (protocore_host_ns_now() * (uint64_t)PROTOCORE_HOST_CYCLE_MHZ) / 1000ull;
+#else
+    return protocore_host_ns_now(); // one tick is one nanosecond: the rate below reports 1000 MHz
+#endif
+#else
+    return (uint64_t)__builtin_ia32_rdtsc();
+#endif
+}
+
+static inline uint64_t protocore_host_ns_now(void)
 {
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
     {
-        return protocore_platform_micros() * PROTOCORE_HOST_CYCLE_MHZ;
+        return (uint64_t)protocore_platform_micros() * 1000ull;
     }
-    uint64_t ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
-    return (uint32_t)((ns * PROTOCORE_HOST_CYCLE_MHZ) / 1000ull);
+    return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
+
+/**
+ * @brief The rate protocore_platform_cycles() ticks at, in MHz.
+ *
+ * Measured once against CLOCK_MONOTONIC by busy-waiting a short window, because the host's clock
+ * is not a compile-time fact the way a pinned rig clock is. Override with
+ * -DPROTOCORE_HOST_CYCLE_MHZ=<n> to report against a fixed rate instead.
+ */
+static inline uint32_t protocore_platform_cycle_mhz(void)
+{
+#ifdef PROTOCORE_HOST_CYCLE_MHZ
+    return (uint32_t)PROTOCORE_HOST_CYCLE_MHZ;
+#else
+#if !PROTOCORE_HOST_CYCLE_TSC
+    return 1000u; // one tick is one nanosecond
+#else
+    static uint32_t mhz = 0u;
+    if (mhz != 0u)
+    {
+        return mhz;
+    }
+    uint64_t ns0 = protocore_host_ns_now();
+    uint64_t c0 = protocore_host_cycle_raw();
+    uint64_t ns1 = ns0;
+    while (ns1 - ns0 < 20000000ull) // 20 ms is long enough for a stable ratio, short enough to pay once
+    {
+        ns1 = protocore_host_ns_now();
+    }
+    uint64_t c1 = protocore_host_cycle_raw();
+    uint64_t dns = ns1 - ns0;
+    mhz = (dns != 0ull) ? (uint32_t)(((c1 - c0) * 1000ull) / dns) : 1000u;
+    if (mhz == 0u)
+    {
+        mhz = 1000u;
+    }
+    return mhz;
+#endif
+#endif
+}
+
+static inline uint32_t protocore_platform_cycles(void)
+{
+    return (uint32_t)protocore_host_cycle_raw();
 }
 
 // ---------------------------------------------------------------------------
@@ -1112,11 +1179,21 @@ static inline uint32_t protocore_platform_task_wait(int clear, uint32_t ticks)
 // off here is what moves time forward; leaving this inert made any driver's pcdelay spin on a
 // millisecond count that never changed. A test that drives the clock itself with set_millis is
 // unaffected, since nothing calls this unless code under test is waiting.
+// What runs while the code under test waits. The pcb table is declared below this point, so the
+// peer that answers a send is reached through a pointer rather than named here. Null unless a test
+// armed a reply.
+typedef void (*protocore_net_host_wait_fn)(void);
+PROTOCORE_HOST_SHARED protocore_net_host_wait_fn protocore_net_host_on_wait;
+
 static inline void protocore_platform_task_delay(uint32_t ticks)
 {
     if (ticks)
     {
         set_millis(millis() + ticks);
+    }
+    if (protocore_net_host_on_wait)
+    {
+        protocore_net_host_on_wait();
     }
 }
 static inline void protocore_platform_task_yield_from_isr(int woke)
@@ -1989,6 +2066,72 @@ static inline protocore_net_err protocore_net_host_close_peer(protocore_pcb *p)
         return PROTOCORE_NET_ERR_ARG;
     }
     return p->on_recv(p->arg, p, NULL, PROTOCORE_NET_OK);
+}
+
+// ---------------------------------------------------------------------------
+// The peer that answers
+// ---------------------------------------------------------------------------
+//
+// An exchange that sends and then reads to a deadline runs straight through, so a test has no turn
+// in which to deliver the answer. Arming one here hands it over where the exchange waits: the
+// octets go to the connected pcb's recv callback, then a FIN, which is what ends a close-delimited
+// body.
+
+#ifndef PROTOCORE_NET_HOST_REPLYCAP
+#define PROTOCORE_NET_HOST_REPLYCAP 8192
+#endif
+PROTOCORE_HOST_SHARED uint8_t protocore_net_host_reply[PROTOCORE_NET_HOST_REPLYCAP];
+PROTOCORE_HOST_SHARED size_t protocore_net_host_reply_len;
+
+/** @brief The connected pcb: the one the pool handed out that carries a recv callback. */
+static inline protocore_pcb *protocore_net_host_wired(void)
+{
+    for (int i = 0; i < PROTOCORE_NET_HOST_PCBS; i++)
+    {
+        if (protocore_net_host_pcbs[i].in_use && protocore_net_host_pcbs[i].on_recv != NULL)
+        {
+            return &protocore_net_host_pcbs[i];
+        }
+    }
+    return NULL;
+}
+
+/** @brief Hand the armed reply over, once, after something was written to the peer. */
+static inline void protocore_net_host_pump_reply(void)
+{
+    if (protocore_net_host_reply_len == 0 || protocore_net_host_tx_len == 0)
+    {
+        return;
+    }
+    protocore_pcb *p = protocore_net_host_wired();
+    if (!p)
+    {
+        return;
+    }
+    const uint16_t n = (uint16_t)protocore_net_host_reply_len;
+    protocore_net_host_reply_len = 0;
+    protocore_net_host_on_wait = NULL;
+    protocore_net_host_deliver(p, protocore_net_host_reply, n);
+    protocore_net_host_close_peer(p);
+}
+
+/** @brief Arm what the peer answers with; delivered at the next wait, after the request went out. */
+static inline void protocore_net_host_arm_reply(const void *data, size_t len)
+{
+    if (len > sizeof(protocore_net_host_reply))
+    {
+        len = sizeof(protocore_net_host_reply);
+    }
+    memcpy(protocore_net_host_reply, data, len);
+    protocore_net_host_reply_len = len;
+    protocore_net_host_on_wait = protocore_net_host_pump_reply;
+}
+
+/** @brief Disarm, so a case that expects no answer does not inherit one. */
+static inline void protocore_net_host_reply_reset(void)
+{
+    protocore_net_host_reply_len = 0;
+    protocore_net_host_on_wait = NULL;
 }
 
 /** @brief The UDP pcb bound to @p port, or NULL when nothing bound it. */

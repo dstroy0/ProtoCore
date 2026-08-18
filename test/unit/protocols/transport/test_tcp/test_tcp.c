@@ -17,17 +17,17 @@ void setUp()
 {
     protocore_net_host_reset();
     ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
-    ConnPool.init(ConnPool.internal);
+    ConnPool.init(protocore_conn_pool_span());
     TcpListener.idx = 0;
     TcpListener.bind.port = PORT;
     TcpListener.bind.proto = PROTO_HTTP;
     TcpListener.bind.tls = PROTO_FALSE;
-    TcpListener.add(TcpListener.internal);
+    TcpListener.add(protocore_tcp_listener_span());
 }
 
 void tearDown()
 {
-    TcpListener.stop_all(TcpListener.internal);
+    TcpListener.stop_all(protocore_tcp_listener_span());
 }
 
 void test_accept_wires_every_callback_on_the_pcb()
@@ -75,7 +75,7 @@ void test_marshaled_send_reaches_the_capture()
     ConnPool.slot = 0;
     ConnPool.io.data = "PONG";
     ConnPool.io.len = 4;
-    ConnPool.send_flush(ConnPool.internal);
+    ConnPool.send_flush(protocore_conn_pool_span());
     TEST_ASSERT_TRUE(ConnPool.ok);
 
     TEST_ASSERT_EQUAL_UINT32(4, (uint32_t)tcp_captured_len());
@@ -88,7 +88,7 @@ void test_marshaled_close_releases_the_slot()
     TEST_ASSERT_EQUAL_INT(PROTOCORE_NET_OK, listener_accept_cb((void *)(uintptr_t)0, peer, PROTOCORE_NET_OK));
 
     ConnPool.slot = 0;
-    ConnPool.close(ConnPool.internal);
+    ConnPool.close(protocore_conn_pool_span());
 
     TEST_ASSERT_NOT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
     TEST_ASSERT_NULL(conn_pool[0].pcb);

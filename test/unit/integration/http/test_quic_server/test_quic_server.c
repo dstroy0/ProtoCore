@@ -84,10 +84,10 @@ static void deliver(const uint8_t *dg, size_t len, const char *ip, uint16_t port
 
 static void run(uint32_t now_ms)
 {
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
     QuicServer.now_ms = now_ms;
     QuicServer.poll(QuicServer.internal);
-    UdpListener.poll(UdpListener.internal);
+    UdpListener.poll(protocore_udp_listener_span());
     harvest();
 }
 

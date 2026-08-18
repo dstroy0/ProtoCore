@@ -71,7 +71,7 @@ static bool gql_resolver(const char *path, const struct protocore_gql_args *args
     {
         GraphQL.argument.values = args;
         GraphQL.argument.name = "id";
-        GraphQL.arg_int(GraphQL.internal);
+        GraphQL.arg_int(protocore_graphql_span());
         out->type = PROTOCORE_GQL_INT;
         out->i = GraphQL.ok ? GraphQL.i64 * 10 : -1;
         return true;
@@ -80,7 +80,7 @@ static bool gql_resolver(const char *path, const struct protocore_gql_args *args
     {
         GraphQL.argument.values = args;
         GraphQL.argument.name = "name";
-        GraphQL.arg_str(GraphQL.internal);
+        GraphQL.arg_str(protocore_graphql_span());
         const char *who = GraphQL.ok ? GraphQL.text : "?";
         static char b[64];
         snprintf(b, sizeof(b), "hi %s", who);
@@ -99,7 +99,7 @@ static protocore_gql_result gql_execute(const char *doc, size_t len, char *out, 
     GraphQL.request.resolver = gql_resolver;
     GraphQL.response.out = out;
     GraphQL.response.cap = cap;
-    GraphQL.execute(GraphQL.internal);
+    GraphQL.execute(protocore_graphql_span());
     return GraphQL.result;
 }
 

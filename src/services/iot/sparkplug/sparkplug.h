@@ -206,9 +206,6 @@ typedef struct
     size_t cursor;      ///< the metrics iteration position; set 0 to start, advanced by each call
 } SpbSourceArgs;
 
-/** @brief The codec's own state and the calls that reach it, described only in sparkplug.c. */
-struct SparkplugInternal;
-
 /**
  * @brief The Sparkplug B codec: the sec 4.1 topic namespace and the sec 6.4.1 payload schema.
  *
@@ -235,7 +232,6 @@ struct SparkplugInternal;
  * @var SparkplugNs::parse_payload read a Payload's timestamp and seq from @c source into @c header
  * @var SparkplugNs::next_metric   report the next metrics(2) sub-message of a Payload and advance @c source.cursor
  * @var SparkplugNs::parse_metric  decode the Metric in @c source into @c metric
- * @var SparkplugNs::internal      the codec's state and the calls that reach it
  */
 typedef struct
 {
@@ -253,18 +249,27 @@ typedef struct
     const uint8_t *metric_bytes;
     size_t metric_len;
 
-    void (*build_topic)(struct SparkplugInternal *ctx);
-    void (*build_metric)(struct SparkplugInternal *ctx);
-    void (*build_payload)(struct SparkplugInternal *ctx);
-    void (*parse_payload)(struct SparkplugInternal *ctx);
-    void (*next_metric)(struct SparkplugInternal *ctx);
-    void (*parse_metric)(struct SparkplugInternal *ctx);
-
-    struct SparkplugInternal *internal;
+    void (*const build_topic)(uint8_t *restrict work);
+    void (*const build_metric)(uint8_t *restrict work);
+    void (*const build_payload)(uint8_t *restrict work);
+    void (*const parse_payload)(uint8_t *restrict work);
+    void (*const next_metric)(uint8_t *restrict work);
+    void (*const parse_metric)(uint8_t *restrict work);
 } SparkplugNs;
 
 /** @brief The one symbol this module exports. */
 extern SparkplugNs Sparkplug;
+
+/**
+ * @brief The PROTOCORE_SPARKPLUG_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_sparkplug_span(void);
 
 PROTOCORE_END_DECLS
 

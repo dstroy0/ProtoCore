@@ -10,6 +10,12 @@
 #include "smb_client.h"
 #include "mmgr/protomem.h"
 
+static uint8_t ntlm_work[16]; // the borrow an entry takes; Ntlm never reads it
+
+static uint8_t spnego_work[16]; // the borrow an entry takes; Spnego never reads it
+
+static uint8_t ntlmssp_work[16]; // the borrow an entry takes; Ntlmssp never reads it
+
 #if PROTOCORE_ENABLE_SMB
 
 #include "crypto/rng/rng.h" // protocore_rand_fill: the client GUID, salt and challenge
@@ -336,8 +342,17 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     // 2. SESSION_SETUP round 1: NTLMSSP NEGOTIATE wrapped in SPNEGO
     uint8_t ntneg[64];
     uint8_t sp1[128];
-    size_t ntneg_n = protocore_ntlmssp_build_negotiate(ntneg, sizeof(ntneg), NTLMSSP_CLIENT_DEFAULT_FLAGS);
-    size_t sp1_n = protocore_spnego_wrap_negotiate(ntneg, ntneg_n, sp1, sizeof(sp1));
+    Ntlmssp.build_negotiate_args.buf = ntneg;
+    Ntlmssp.build_negotiate_args.cap = sizeof(ntneg);
+    Ntlmssp.build_negotiate_args.flags = NTLMSSP_CLIENT_DEFAULT_FLAGS;
+    Ntlmssp.build_negotiate(ntlmssp_work);
+    size_t ntneg_n = Ntlmssp.n;
+    Spnego.wrap_negotiate_args.ntlm = ntneg;
+    Spnego.wrap_negotiate_args.protocore_ntlm_len = ntneg_n;
+    Spnego.wrap_negotiate_args.out = sp1;
+    Spnego.wrap_negotiate_args.cap = sizeof(sp1);
+    Spnego.wrap_negotiate(spnego_work);
+    size_t sp1_n = Spnego.n;
     size_t mlen = protocore_smb2_build_session_setup(s_smb.tx + 4, sizeof(s_smb.tx) - 4, 1, 0,
                                                      SMB2_NEGOTIATE_SIGNING_ENABLED, sp1, sp1_n);
     if (!mlen)
@@ -367,12 +382,21 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     }
     const uint8_t *chal_tok = NULL;
     size_t chal_len = 0;
-    if (!protocore_spnego_parse_response(ss1.sec_buf, ss1.sec_buf_len, &chal_tok, &chal_len))
+    Spnego.parse_response_args.blob = ss1.sec_buf;
+    Spnego.parse_response_args.len = ss1.sec_buf_len;
+    Spnego.parse_response_args.protocore_resp_token = &chal_tok;
+    Spnego.parse_response_args.protocore_resp_len = &chal_len;
+    Spnego.parse_response(spnego_work);
+    if (!Spnego.ok)
     {
         return SMB_ERR_PROTOCOL;
     }
     NtlmChallenge ch;
-    if (!protocore_ntlmssp_parse_challenge(chal_tok, chal_len, &ch))
+    Ntlmssp.parse_challenge_args.msg = chal_tok;
+    Ntlmssp.parse_challenge_args.len = chal_len;
+    Ntlmssp.parse_challenge_args.out = &ch;
+    Ntlmssp.parse_challenge(ntlmssp_work);
+    if (!Ntlmssp.ok)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -380,8 +404,15 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     // 3. Compute the NTLMv2 response and build the AUTHENTICATE with a MIC (MS-NLMP §3.1.5.1.2).
     uint8_t nt_hash[16];
     uint8_t owf[16];
-    protocore_ntlm_nt_hash(cfg->pass, nt_hash);
-    if (!protocore_ntlm_ntowfv2(nt_hash, cfg->user, domain, owf))
+    Ntlm.nt_hash_args.password = cfg->pass;
+    Ntlm.nt_hash_args.nt_hash = nt_hash;
+    Ntlm.nt_hash(ntlm_work);
+    Ntlm.ntowfv2_args.nt_hash = nt_hash;
+    Ntlm.ntowfv2_args.user = cfg->user;
+    Ntlm.ntowfv2_args.domain = domain;
+    Ntlm.ntowfv2_args.owf = owf;
+    Ntlm.ntowfv2(ntlm_work);
+    if (!Ntlm.ok)
     {
         return SMB_ERR_OVERFLOW;
     }
@@ -394,29 +425,66 @@ static SmbResult smb_session_setup(const SmbConfig *cfg, const char *domain, pro
     find_av_timestamp(ch.target_info, ch.target_info_len, ts);
     // Set the MsvAvFlags "MIC provided" bit in the target-info the NTLMv2 response is computed over, so a
     // server that enforces the MIC accepts it and verifies the digest attached below.
-    size_t ti_len = protocore_ntlm_set_mic_flag(ch.target_info, ch.target_info_len, s_smb.ti, sizeof(s_smb.ti));
+    Ntlm.set_mic_flag_args.target_info = ch.target_info;
+    Ntlm.set_mic_flag_args.ti_len = ch.target_info_len;
+    Ntlm.set_mic_flag_args.out = s_smb.ti;
+    Ntlm.set_mic_flag_args.out_cap = sizeof(s_smb.ti);
+    Ntlm.set_mic_flag(ntlm_work);
+    size_t ti_len = Ntlm.n;
     if (!ti_len)
     {
         return SMB_ERR_OVERFLOW;
     }
-    size_t nt_len = protocore_ntlm_v2_response(owf, ch.server_challenge, cli_chal, ts, s_smb.ti, ti_len, s_smb.nt_resp,
-                                               sizeof(s_smb.nt_resp), skey);
+    Ntlm.v2_response_args.owf = owf;
+    Ntlm.v2_response_args.server_challenge = ch.server_challenge;
+    Ntlm.v2_response_args.client_challenge = cli_chal;
+    Ntlm.v2_response_args.timestamp = ts;
+    Ntlm.v2_response_args.target_info = s_smb.ti;
+    Ntlm.v2_response_args.ti_len = ti_len;
+    Ntlm.v2_response_args.out = s_smb.nt_resp;
+    Ntlm.v2_response_args.out_cap = sizeof(s_smb.nt_resp);
+    Ntlm.v2_response_args.session_key = skey;
+    Ntlm.v2_response(ntlm_work);
+    size_t nt_len = Ntlm.n;
     if (!nt_len)
     {
         return SMB_ERR_OVERFLOW;
     }
-    size_t ntauth_n =
-        protocore_ntlmssp_build_authenticate(s_smb.ntauth, sizeof(s_smb.ntauth), NULL, 0, s_smb.nt_resp, nt_len, domain,
-                                             cfg->user, cfg->workstation, ch.flags, PROTO_TRUE);
+    Ntlmssp.build_authenticate_args.buf = s_smb.ntauth;
+    Ntlmssp.build_authenticate_args.cap = sizeof(s_smb.ntauth);
+    Ntlmssp.build_authenticate_args.lm_resp = NULL;
+    Ntlmssp.build_authenticate_args.lm_len = 0;
+    Ntlmssp.build_authenticate_args.nt_resp = s_smb.nt_resp;
+    Ntlmssp.build_authenticate_args.nt_len = nt_len;
+    Ntlmssp.build_authenticate_args.domain = domain;
+    Ntlmssp.build_authenticate_args.user = cfg->user;
+    Ntlmssp.build_authenticate_args.workstation = cfg->workstation;
+    Ntlmssp.build_authenticate_args.flags = ch.flags;
+    Ntlmssp.build_authenticate_args.with_mic = PROTO_TRUE;
+    Ntlmssp.build_authenticate(ntlmssp_work);
+    size_t ntauth_n = Ntlmssp.n;
     if (!ntauth_n)
     {
         return SMB_ERR_OVERFLOW;
     }
     // MIC = HMAC-MD5(session key, NEGOTIATE || CHALLENGE || AUTHENTICATE); write it into the zeroed field.
     uint8_t mic[PROTOCORE_NTLMSSP_MIC_LEN];
-    protocore_ntlm_mic(skey, ntneg, ntneg_n, chal_tok, chal_len, s_smb.ntauth, ntauth_n, mic);
+    Ntlm.mic_args.session_key = skey;
+    Ntlm.mic_args.neg = ntneg;
+    Ntlm.mic_args.neg_len = ntneg_n;
+    Ntlm.mic_args.chal = chal_tok;
+    Ntlm.mic_args.chal_len = chal_len;
+    Ntlm.mic_args.auth = s_smb.ntauth;
+    Ntlm.mic_args.auth_len = ntauth_n;
+    Ntlm.mic_args.out = mic;
+    Ntlm.mic(ntlm_work);
     mem.cpy(s_smb.ntauth + PROTOCORE_NTLMSSP_MIC_OFFSET, mic, PROTOCORE_NTLMSSP_MIC_LEN);
-    size_t sp2_n = protocore_spnego_wrap_authenticate(s_smb.ntauth, ntauth_n, s_smb.sp2, sizeof(s_smb.sp2));
+    Spnego.wrap_authenticate_args.ntlm = s_smb.ntauth;
+    Spnego.wrap_authenticate_args.protocore_ntlm_len = ntauth_n;
+    Spnego.wrap_authenticate_args.out = s_smb.sp2;
+    Spnego.wrap_authenticate_args.cap = sizeof(s_smb.sp2);
+    Spnego.wrap_authenticate(spnego_work);
+    size_t sp2_n = Spnego.n;
     if (!sp2_n)
     {
         return SMB_ERR_OVERFLOW;

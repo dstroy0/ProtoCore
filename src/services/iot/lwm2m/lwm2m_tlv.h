@@ -102,9 +102,6 @@ typedef struct
     const char *string_value; ///< String: UTF-8, measured to its NUL within the sink's capacity
 } Lwm2mTlvValueArgs;
 
-/** @brief The codec's own cursors and the calls that reach them, described only in lwm2m_tlv.c. */
-struct Lwm2mTlvInternal;
-
 /**
  * @brief The OMA LwM2M TLV codec.
  *
@@ -128,7 +125,6 @@ struct Lwm2mTlvInternal;
  * @var Lwm2mTlvNs::parse          bind @c source and clear the reader cursor
  * @var Lwm2mTlvNs::next           decode the entry at the cursor into @c hdr and @c val, and advance past it
  * @var Lwm2mTlvNs::value_integer  decode @c val.opaque for @c val.len octets into @c val.integer_value
- * @var Lwm2mTlvNs::internal       the codec's cursors and the calls that reach them
  */
 typedef struct
 {
@@ -140,22 +136,31 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*open)(struct Lwm2mTlvInternal *ctx);
-    void (*write)(struct Lwm2mTlvInternal *ctx);
-    void (*write_integer)(struct Lwm2mTlvInternal *ctx);
-    void (*write_boolean)(struct Lwm2mTlvInternal *ctx);
-    void (*write_string)(struct Lwm2mTlvInternal *ctx);
-    void (*write_float)(struct Lwm2mTlvInternal *ctx);
-    void (*finish)(struct Lwm2mTlvInternal *ctx);
-    void (*parse)(struct Lwm2mTlvInternal *ctx);
-    void (*next)(struct Lwm2mTlvInternal *ctx);
-    void (*value_integer)(struct Lwm2mTlvInternal *ctx);
-
-    struct Lwm2mTlvInternal *internal;
+    void (*const open)(uint8_t *restrict work);
+    void (*const write)(uint8_t *restrict work);
+    void (*const write_integer)(uint8_t *restrict work);
+    void (*const write_boolean)(uint8_t *restrict work);
+    void (*const write_string)(uint8_t *restrict work);
+    void (*const write_float)(uint8_t *restrict work);
+    void (*const finish)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+    void (*const next)(uint8_t *restrict work);
+    void (*const value_integer)(uint8_t *restrict work);
 } Lwm2mTlvNs;
 
 /** @brief The one symbol this module exports. */
 extern Lwm2mTlvNs Lwm2mTlv;
+
+/**
+ * @brief The PROTOCORE_LWM2M_TLV_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_lwm2m_tlv_span(void);
 
 PROTOCORE_END_DECLS
 

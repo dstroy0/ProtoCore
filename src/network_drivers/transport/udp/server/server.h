@@ -76,9 +76,6 @@ typedef struct
     uint16_t *port_out;                    ///< where its port is written
 } UdpPeerArgs;
 
-/** @brief The bound ports' own state and the calls that reach them, described only in server.c. */
-struct UdpListenerInternal;
-
 /**
  * @brief The receiving side of UDP.
  *
@@ -101,7 +98,6 @@ struct UdpListenerInternal;
  * @var UdpListenerNs::sendto            send from a bound port to an arbitrary destination
  * @var UdpListenerNs::close             unbind a port and free its slot, leaving any group first
  * @var UdpListenerNs::joined_group      the group a port joined, formatted, or NULL
- * @var UdpListenerNs::internal          the ports' state and the calls that reach them
  *
  * reply() and sendto() send the caller's bytes from where they already are, and report whether the
  * stack took them. There is nothing between the caller and the wire: a refusal means the datagram
@@ -119,21 +115,30 @@ typedef struct
     proto_bool ok;
     const char *text;
 
-    void (*listen)(struct UdpListenerInternal *ctx);
-    void (*listen_multicast)(struct UdpListenerInternal *ctx);
-    void (*leave_multicast)(struct UdpListenerInternal *ctx);
-    void (*poll)(struct UdpListenerInternal *ctx);
-    void (*reply)(struct UdpListenerInternal *ctx);
-    void (*peer_addr)(struct UdpListenerInternal *ctx);
-    void (*sendto)(struct UdpListenerInternal *ctx);
-    void (*close)(struct UdpListenerInternal *ctx);
-    void (*joined_group)(struct UdpListenerInternal *ctx);
-
-    struct UdpListenerInternal *internal;
+    void (*const listen)(uint8_t *restrict work);
+    void (*const listen_multicast)(uint8_t *restrict work);
+    void (*const leave_multicast)(uint8_t *restrict work);
+    void (*const poll)(uint8_t *restrict work);
+    void (*const reply)(uint8_t *restrict work);
+    void (*const peer_addr)(uint8_t *restrict work);
+    void (*const sendto)(uint8_t *restrict work);
+    void (*const close)(uint8_t *restrict work);
+    void (*const joined_group)(uint8_t *restrict work);
 } UdpListenerNs;
 
 /** @brief The one symbol this module exports. */
 extern UdpListenerNs UdpListener;
+
+/**
+ * @brief The PROTOCORE_UDP_LISTENER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_udp_listener_span(void);
 
 PROTOCORE_END_DECLS
 

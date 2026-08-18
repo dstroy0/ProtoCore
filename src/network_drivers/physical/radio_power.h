@@ -54,7 +54,6 @@ typedef struct
 } RadioMonitorArgs;
 
 /** @brief The radio's own state and the calls that reach it, described only in radio_power.c. */
-struct RadioInternal;
 
 /**
  * @brief The radio: its power management mode, its transmit power cap, and monitor capture.
@@ -78,7 +77,6 @@ struct RadioInternal;
  * @var RadioNs::monitor_begin        start capture on @ref RadioMonitorArgs::channel
  * @var RadioNs::monitor_set_channel  retune capture to @ref RadioMonitorArgs::channel
  * @var RadioNs::monitor_end          stop capture
- * @var RadioNs::internal     the keep-awake count and the calls that reach it
  *
  * The first @ref RadioNs::busy_hold puts the radio in active mode so a long transfer crosses no
  * doze interval; the matching release, once the count returns to zero, applies the configured
@@ -97,23 +95,32 @@ typedef struct RadioNs
     const char *text;
 
 #if PROTOCORE_ENABLE_RADIO_POWER
-    void (*power)(struct RadioInternal *ctx);
-    void (*ps_name)(struct RadioInternal *ctx);
-    void (*busy_hold)(struct RadioInternal *ctx);
-    void (*busy_release)(struct RadioInternal *ctx);
+    void (*const power)(uint8_t *restrict work);
+    void (*const ps_name)(uint8_t *restrict work);
+    void (*const busy_hold)(uint8_t *restrict work);
+    void (*const busy_release)(uint8_t *restrict work);
 #endif
-    void (*ps_set)(struct RadioInternal *ctx);
-    void (*ps_mode)(struct RadioInternal *ctx);
-    void (*tx_power_set)(struct RadioInternal *ctx);
-    void (*monitor_begin)(struct RadioInternal *ctx);
-    void (*monitor_set_channel)(struct RadioInternal *ctx);
-    void (*monitor_end)(struct RadioInternal *ctx);
+    void (*const ps_set)(uint8_t *restrict work);
+    void (*const ps_mode)(uint8_t *restrict work);
+    void (*const tx_power_set)(uint8_t *restrict work);
+    void (*const monitor_begin)(uint8_t *restrict work);
+    void (*const monitor_set_channel)(uint8_t *restrict work);
+    void (*const monitor_end)(uint8_t *restrict work);
 
-    struct RadioInternal *internal;
 } RadioNs;
 
 /** @brief The one symbol this module exports. */
 extern RadioNs Radio;
+
+/**
+ * @brief The PROTOCORE_RADIO_POWER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where that
+ * borrow comes from. Taken once from the end of the pool, so it lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_radio_power_span(void);
 
 PROTOCORE_END_DECLS
 

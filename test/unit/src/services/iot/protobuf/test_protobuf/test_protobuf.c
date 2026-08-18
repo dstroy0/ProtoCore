@@ -33,13 +33,13 @@ static void writer_open(uint8_t slot, uint8_t *buf, size_t cap)
     Protobuf.slot = slot;
     Protobuf.writer.buf = buf;
     Protobuf.writer.cap = cap;
-    Protobuf.writer_open(Protobuf.internal);
+    Protobuf.writer_open(protocore_protobuf_span());
 }
 
 static size_t writer_finish(uint8_t slot)
 {
     Protobuf.slot = slot;
-    Protobuf.writer_finish(Protobuf.internal);
+    Protobuf.writer_finish(protocore_protobuf_span());
     return Protobuf.n;
 }
 
@@ -49,13 +49,13 @@ static void reader_open(uint8_t slot, const uint8_t *buf, size_t len, size_t pos
     Protobuf.source.buf = buf;
     Protobuf.source.len = len;
     Protobuf.source.pos = pos;
-    Protobuf.reader_open(Protobuf.internal);
+    Protobuf.reader_open(protocore_protobuf_span());
 }
 
 static proto_bool read_record(uint8_t slot)
 {
     Protobuf.slot = slot;
-    Protobuf.read_record(Protobuf.internal);
+    Protobuf.read_record(protocore_protobuf_span());
     return Protobuf.ok;
 }
 
@@ -67,7 +67,7 @@ void test_encoding_document_worked_examples(void)
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.tag.field_number = 1;
     Protobuf.value.u64 = 150;
-    Protobuf.write_uint64(Protobuf.internal);
+    Protobuf.write_uint64(protocore_protobuf_span());
     TEST_ASSERT_TRUE(Protobuf.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(TEST1), writer_finish(0));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(TEST1, g_buf, sizeof(TEST1));
@@ -86,7 +86,7 @@ void test_encoding_document_worked_examples(void)
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.tag.field_number = 2;
     Protobuf.value.text = "testing";
-    Protobuf.write_string(Protobuf.internal);
+    Protobuf.write_string(protocore_protobuf_span());
     TEST_ASSERT_TRUE(Protobuf.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(TEST2), writer_finish(0));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(TEST2, g_buf, sizeof(TEST2));
@@ -107,7 +107,7 @@ void test_encoding_document_worked_examples(void)
     Protobuf.slot = 1;
     Protobuf.tag.field_number = 1;
     Protobuf.value.u64 = 150;
-    Protobuf.write_uint64(Protobuf.internal);
+    Protobuf.write_uint64(protocore_protobuf_span());
     const size_t inner_len = writer_finish(1);
     TEST_ASSERT_EQUAL_UINT(3u, inner_len);
 
@@ -116,7 +116,7 @@ void test_encoding_document_worked_examples(void)
     Protobuf.tag.field_number = 3;
     Protobuf.value.data = g_inner;
     Protobuf.value.len = inner_len;
-    Protobuf.write_bytes(Protobuf.internal);
+    Protobuf.write_bytes(protocore_protobuf_span());
     TEST_ASSERT_TRUE(Protobuf.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(TEST3), writer_finish(0));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(TEST3, g_buf, sizeof(TEST3));
@@ -157,14 +157,14 @@ void test_base_128_varint(void)
     {
         writer_open(0, g_buf, sizeof(g_buf));
         Protobuf.value.u64 = CASES[i].v;
-        Protobuf.write_varint(Protobuf.internal);
+        Protobuf.write_varint(protocore_protobuf_span());
         TEST_ASSERT_TRUE(Protobuf.ok);
         TEST_ASSERT_EQUAL_UINT(CASES[i].len, writer_finish(0));
         TEST_ASSERT_EQUAL_UINT8_ARRAY(CASES[i].octets, g_buf, CASES[i].len);
 
         reader_open(0, g_buf, CASES[i].len, 0);
         Protobuf.slot = 0;
-        Protobuf.read_varint(Protobuf.internal);
+        Protobuf.read_varint(protocore_protobuf_span());
         TEST_ASSERT_TRUE(Protobuf.ok);
         TEST_ASSERT_EQUAL_UINT64(CASES[i].v, Protobuf.u64);
         TEST_ASSERT_EQUAL_UINT(CASES[i].len, Protobuf.n);
@@ -204,7 +204,7 @@ void test_tag_formula_and_wire_type_ids(void)
         writer_open(0, g_buf, sizeof(g_buf));
         Protobuf.tag.field_number = CASES[i].field;
         Protobuf.tag.wire_type = CASES[i].wt;
-        Protobuf.write_tag(Protobuf.internal);
+        Protobuf.write_tag(protocore_protobuf_span());
         TEST_ASSERT_TRUE(Protobuf.ok);
         TEST_ASSERT_EQUAL_UINT(CASES[i].len, writer_finish(0));
         TEST_ASSERT_EQUAL_UINT8_ARRAY(CASES[i].octets, g_buf, CASES[i].len);
@@ -234,13 +234,13 @@ void test_zigzag_table(void)
         // The encoder writes the ZigZag varint behind a tag; the bare varint is what the table names.
         writer_open(0, g_buf, sizeof(g_buf));
         Protobuf.value.u64 = TABLE[i].encoded;
-        Protobuf.write_varint(Protobuf.internal);
+        Protobuf.write_varint(protocore_protobuf_span());
         const size_t bare = writer_finish(0);
 
         writer_open(0, g_inner, sizeof(g_inner));
         Protobuf.tag.field_number = 1;
         Protobuf.value.i64 = TABLE[i].signed_value;
-        Protobuf.write_sint64(Protobuf.internal);
+        Protobuf.write_sint64(protocore_protobuf_span());
         TEST_ASSERT_TRUE(Protobuf.ok);
         TEST_ASSERT_EQUAL_UINT(1u + bare, writer_finish(0));
         TEST_ASSERT_EQUAL_HEX8(0x08, g_inner[0]);
@@ -248,7 +248,7 @@ void test_zigzag_table(void)
 
         // And the decode maps it back.
         Protobuf.value.u64 = TABLE[i].encoded;
-        Protobuf.zigzag64(Protobuf.internal);
+        Protobuf.zigzag64(protocore_protobuf_span());
         TEST_ASSERT_TRUE(Protobuf.ok);
         TEST_ASSERT_EQUAL_INT64(TABLE[i].signed_value, Protobuf.i64);
     }
@@ -264,7 +264,7 @@ void test_zigzag_table(void)
     for (size_t i = 0; i < sizeof(TABLE32) / sizeof(TABLE32[0]); i++)
     {
         Protobuf.value.u32 = TABLE32[i].encoded;
-        Protobuf.zigzag32(Protobuf.internal);
+        Protobuf.zigzag32(protocore_protobuf_span());
         TEST_ASSERT_TRUE(Protobuf.ok);
         TEST_ASSERT_EQUAL_INT32(TABLE32[i].signed_value, Protobuf.i32);
     }
@@ -277,7 +277,7 @@ void test_int64_is_two_s_complement_and_sint64_is_zigzag(void)
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.tag.field_number = 1;
     Protobuf.value.i64 = -1;
-    Protobuf.write_int64(Protobuf.internal);
+    Protobuf.write_int64(protocore_protobuf_span());
     // -1 as a uint64 is 0xFFFFFFFFFFFFFFFF, ten varint octets behind a one-octet tag.
     TEST_ASSERT_EQUAL_UINT(11u, writer_finish(0));
     TEST_ASSERT_EQUAL_HEX8(0x08, g_buf[0]);
@@ -287,7 +287,7 @@ void test_int64_is_two_s_complement_and_sint64_is_zigzag(void)
     // The same -1 as sint64 is the ZigZag 1, so two octets whole.
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.value.i64 = -1;
-    Protobuf.write_sint64(Protobuf.internal);
+    Protobuf.write_sint64(protocore_protobuf_span());
     TEST_ASSERT_EQUAL_UINT(2u, writer_finish(0));
     TEST_ASSERT_EQUAL_HEX8(0x08, g_buf[0]);
     TEST_ASSERT_EQUAL_HEX8(0x01, g_buf[1]);
@@ -299,9 +299,9 @@ void test_fixed_width_and_bool_payloads(void)
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.tag.field_number = 1;
     Protobuf.value.flag = PROTO_TRUE;
-    Protobuf.write_bool(Protobuf.internal);
+    Protobuf.write_bool(protocore_protobuf_span());
     Protobuf.value.flag = PROTO_FALSE;
-    Protobuf.write_bool(Protobuf.internal);
+    Protobuf.write_bool(protocore_protobuf_span());
     TEST_ASSERT_EQUAL_UINT(4u, writer_finish(0));
     static const uint8_t BOOLS[4] = {0x08, 0x01, 0x08, 0x00};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(BOOLS, g_buf, 4);
@@ -309,7 +309,7 @@ void test_fixed_width_and_bool_payloads(void)
     // fixed32 of 0x01020304 is `0d 04 03 02 01`: tag (1<<3)|5, then four little-endian octets.
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.value.u32 = 0x01020304u;
-    Protobuf.write_fixed32(Protobuf.internal);
+    Protobuf.write_fixed32(protocore_protobuf_span());
     TEST_ASSERT_EQUAL_UINT(5u, writer_finish(0));
     static const uint8_t F32[5] = {0x0d, 0x04, 0x03, 0x02, 0x01};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(F32, g_buf, 5);
@@ -321,7 +321,7 @@ void test_fixed_width_and_bool_payloads(void)
     // fixed64 of 0x0102030405060708 is `09` then eight little-endian octets.
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.value.u64 = 0x0102030405060708ull;
-    Protobuf.write_fixed64(Protobuf.internal);
+    Protobuf.write_fixed64(protocore_protobuf_span());
     TEST_ASSERT_EQUAL_UINT(9u, writer_finish(0));
     static const uint8_t F64[9] = {0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(F64, g_buf, 9);
@@ -338,21 +338,21 @@ void test_float_and_double_bit_patterns(void)
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.tag.field_number = 1;
     Protobuf.value.f32 = 1.0f;
-    Protobuf.write_float(Protobuf.internal);
+    Protobuf.write_float(protocore_protobuf_span());
     TEST_ASSERT_EQUAL_UINT(5u, writer_finish(0));
     static const uint8_t ONE_F[5] = {0x0d, 0x00, 0x00, 0x80, 0x3F};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(ONE_F, g_buf, 5);
 
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.value.f64 = 1.0;
-    Protobuf.write_double(Protobuf.internal);
+    Protobuf.write_double(protocore_protobuf_span());
     TEST_ASSERT_EQUAL_UINT(9u, writer_finish(0));
     static const uint8_t ONE_D[9] = {0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(ONE_D, g_buf, 9);
 
     // The two bit readers name the same values back, compared as bit patterns so the check is exact.
     Protobuf.value.u32 = 0x3F800000u;
-    Protobuf.float_bits(Protobuf.internal);
+    Protobuf.float_bits(protocore_protobuf_span());
     TEST_ASSERT_TRUE(Protobuf.ok);
     uint32_t f32_bits = 0;
     const float got_f = Protobuf.f32;
@@ -360,7 +360,7 @@ void test_float_and_double_bit_patterns(void)
     TEST_ASSERT_EQUAL_HEX32(0x3F800000u, f32_bits);
 
     Protobuf.value.u64 = 0x3FF0000000000000ull;
-    Protobuf.double_bits(Protobuf.internal);
+    Protobuf.double_bits(protocore_protobuf_span());
     TEST_ASSERT_TRUE(Protobuf.ok);
     uint64_t f64_bits = 0;
     const double got_d = Protobuf.f64;
@@ -380,11 +380,11 @@ void test_packed_repeated_field(void)
     writer_open(1, g_inner, sizeof(g_inner));
     Protobuf.slot = 1;
     Protobuf.value.u64 = 3;
-    Protobuf.write_varint(Protobuf.internal);
+    Protobuf.write_varint(protocore_protobuf_span());
     Protobuf.value.u64 = 270;
-    Protobuf.write_varint(Protobuf.internal);
+    Protobuf.write_varint(protocore_protobuf_span());
     Protobuf.value.u64 = 86942;
-    Protobuf.write_varint(Protobuf.internal);
+    Protobuf.write_varint(protocore_protobuf_span());
     const size_t packed = writer_finish(1);
     TEST_ASSERT_EQUAL_UINT(6u, packed);
     static const uint8_t ELEMENTS[6] = {0x03, 0x8E, 0x02, 0x9E, 0xA7, 0x05};
@@ -395,7 +395,7 @@ void test_packed_repeated_field(void)
     Protobuf.tag.field_number = 4;
     Protobuf.value.data = g_inner;
     Protobuf.value.len = packed;
-    Protobuf.write_bytes(Protobuf.internal);
+    Protobuf.write_bytes(protocore_protobuf_span());
     TEST_ASSERT_EQUAL_UINT(8u, writer_finish(0));
     static const uint8_t PACKED[8] = {0x22, 0x06, 0x03, 0x8E, 0x02, 0x9E, 0xA7, 0x05};
     TEST_ASSERT_EQUAL_UINT8_ARRAY(PACKED, g_buf, 8);
@@ -410,7 +410,7 @@ void test_packed_repeated_field(void)
     for (size_t i = 0; i < 3; i++)
     {
         Protobuf.slot = 1;
-        Protobuf.read_varint(Protobuf.internal);
+        Protobuf.read_varint(protocore_protobuf_span());
         TEST_ASSERT_TRUE(Protobuf.ok);
         TEST_ASSERT_EQUAL_UINT64(WANT[i], Protobuf.u64);
     }
@@ -456,7 +456,7 @@ void test_truncated_records_are_refused(void)
     static const uint8_t ELEVEN[11] = {0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01};
     reader_open(0, ELEVEN, sizeof(ELEVEN), 0);
     Protobuf.slot = 0;
-    Protobuf.read_varint(Protobuf.internal);
+    Protobuf.read_varint(protocore_protobuf_span());
     TEST_ASSERT_FALSE(Protobuf.ok);
 
     // A source with no octets behind it.
@@ -474,12 +474,12 @@ void test_writer_fails_closed(void)
     TEST_ASSERT_TRUE(Protobuf.ok);
     Protobuf.tag.field_number = 1;
     Protobuf.value.u64 = 150;
-    Protobuf.write_uint64(Protobuf.internal); // 3 octets, fits
+    Protobuf.write_uint64(protocore_protobuf_span()); // 3 octets, fits
     TEST_ASSERT_TRUE(Protobuf.ok);
-    Protobuf.write_uint64(Protobuf.internal); // another 3, does not
+    Protobuf.write_uint64(protocore_protobuf_span()); // another 3, does not
     TEST_ASSERT_FALSE(Protobuf.ok);
     Protobuf.value.u64 = 0;
-    Protobuf.write_varint(Protobuf.internal); // one octet would fit, but the row is poisoned
+    Protobuf.write_varint(protocore_protobuf_span()); // one octet would fit, but the row is poisoned
     TEST_ASSERT_FALSE(Protobuf.ok);
     TEST_ASSERT_EQUAL_UINT(0u, writer_finish(0));
 
@@ -492,11 +492,11 @@ void test_writer_fails_closed(void)
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.value.data = NULL;
     Protobuf.value.len = 4;
-    Protobuf.write_bytes(Protobuf.internal);
+    Protobuf.write_bytes(protocore_protobuf_span());
     TEST_ASSERT_FALSE(Protobuf.ok);
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.value.text = NULL;
-    Protobuf.write_string(Protobuf.internal);
+    Protobuf.write_string(protocore_protobuf_span());
     TEST_ASSERT_FALSE(Protobuf.ok);
     TEST_ASSERT_EQUAL_UINT(0u, writer_finish(0));
 
@@ -504,9 +504,9 @@ void test_writer_fails_closed(void)
     Protobuf.slot = PROTOCORE_PROTOBUF_SLOTS;
     Protobuf.writer.buf = g_buf;
     Protobuf.writer.cap = sizeof(g_buf);
-    Protobuf.writer_open(Protobuf.internal);
+    Protobuf.writer_open(protocore_protobuf_span());
     TEST_ASSERT_FALSE(Protobuf.ok);
-    Protobuf.reader_open(Protobuf.internal);
+    Protobuf.reader_open(protocore_protobuf_span());
     TEST_ASSERT_FALSE(Protobuf.ok);
     Protobuf.slot = 0;
 }
@@ -517,13 +517,13 @@ void test_a_message_walks_record_by_record(void)
     writer_open(0, g_buf, sizeof(g_buf));
     Protobuf.tag.field_number = 1;
     Protobuf.value.u64 = 150;
-    Protobuf.write_uint64(Protobuf.internal);
+    Protobuf.write_uint64(protocore_protobuf_span());
     Protobuf.tag.field_number = 2;
     Protobuf.value.text = "testing";
-    Protobuf.write_string(Protobuf.internal);
+    Protobuf.write_string(protocore_protobuf_span());
     Protobuf.tag.field_number = 3;
     Protobuf.value.flag = PROTO_TRUE;
-    Protobuf.write_bool(Protobuf.internal);
+    Protobuf.write_bool(protocore_protobuf_span());
     const size_t total = writer_finish(0);
     TEST_ASSERT_EQUAL_UINT(3u + 9u + 2u, total);
 

@@ -43,11 +43,15 @@
 #ifndef PROTOCORE_RCWL0516_H
 #define PROTOCORE_RCWL0516_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_RCWL0516
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_RCWL0516_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /**
  * @brief Default hold time (ms) for the RCWL-0516.
@@ -64,10 +68,6 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_RCWL0516_DEBOUNCE_MS 50
 #endif
 
-// ---------------------------------------------------------------------------
-// Host-testable core (sensor-agnostic: any active-high presence pin)
-// ---------------------------------------------------------------------------
-
 /** @brief Debounced, hold-extended state of one active-high presence pin. Pure: it decides. */
 typedef struct
 {
@@ -81,56 +81,115 @@ typedef struct
     uint8_t changed;       ///< set when @ref present flipped; cleared by @ref protocore_presence_take_event.
 } PresenceCore;
 
-/**
- * @brief Initialize to *absent* at @p now, with the pin treated as idle (LOW).
- *
- * If the pin is in fact already HIGH, the first update starts its debounce and presence asserts once
- * that elapses - the sensor is never assumed to be reporting something that has not been sampled.
- *
- * @param debounce_ms 0 disables debouncing (every sample is believed immediately).
- * @param hold_ms     0 disables the hold (presence follows the debounced level exactly).
- */
-void protocore_presence_core_init(PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms, uint32_t now);
+/** @brief What presence_init takes: c, debounce_ms, hold_ms, now. */
+typedef struct
+{
+    PresenceCore *c;
+    uint32_t debounce_ms; ///< 0 disables debouncing (every sample is believed immediately)
+    uint32_t hold_ms;     ///< 0 disables the hold (presence follows the debounced level exactly)
+    uint32_t now;
+} Rcwl0516PresenceInitArgs;
+
+/** @brief What presence_update takes: c, pin_high, now. */
+typedef struct
+{
+    PresenceCore *c;
+    proto_bool pin_high;
+    uint32_t now;
+} Rcwl0516PresenceUpdateArgs;
+
+/** @brief What presence_get takes: c. */
+typedef struct
+{
+    const PresenceCore *c;
+} Rcwl0516PresenceGetArgs;
+
+/** @brief What presence_take_event takes: c. */
+typedef struct
+{
+    PresenceCore *c;
+} Rcwl0516PresenceTakeEventArgs;
+
+/** @brief What core_init takes: c, now. */
+typedef struct
+{
+    PresenceCore *c;
+    uint32_t now;
+} Rcwl0516CoreInitArgs;
+
+/** @brief What begin takes: out_pin. */
+typedef struct
+{
+    int out_pin;
+} Rcwl0516BeginArgs;
 
 /**
- * @brief Feed one sample of the presence pin.
+ * @brief RCWL-0516 microwave Doppler presence sensor, and the shared one-GPIO presence facade
+ * (PROTOCORE_ENABLE_RCWL0516).
  *
- * Call it as often as convenient; it is level-driven, not edge-driven, so a missed poll only delays
- * a transition rather than losing it. Sampling with a non-monotonic or repeated @p now is harmless.
+ * A caller sets the members a call takes, invokes it through ::Rcwl0516 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * @return the presence state after this sample (also in @ref PresenceCore::present).
+ *   Rcwl0516.presence_init_args.c = ...;
+ *   Rcwl0516.presence_init_args.debounce_ms = ...;
+ *   Rcwl0516.presence_init_args.hold_ms = ...;
+ *   Rcwl0516.presence_init_args.now = ...;
+ *   Rcwl0516.presence_init(work);
+ *
+ * @var Rcwl0516Ns::presence_init_args  what presence_init takes: c, debounce_ms, hold_ms, now
+ * @var Rcwl0516Ns::presence_update_args  what presence_update takes: c, pin_high, now
+ * @var Rcwl0516Ns::presence_get_args  what presence_get takes: c
+ * @var Rcwl0516Ns::presence_take_event_args  what presence_take_event takes: c
+ * @var Rcwl0516Ns::core_init_args  what core_init takes: c, now
+ * @var Rcwl0516Ns::begin_args  what begin takes: out_pin
+ * @var Rcwl0516Ns::ok  the presence state after this sample (also in PresenceCore::present)
+ * @var Rcwl0516Ns::presence_init  initialize to *absent* at now, with the pin treated as idle (LOW). ...
+ * @var Rcwl0516Ns::presence_update  feed one sample of the presence pin. Call it as often as ...
+ * @var Rcwl0516Ns::presence_get  current presence, without sampling
+ * @var Rcwl0516Ns::presence_take_event  consume the presence-changed event
+ * @var Rcwl0516Ns::core_init  initialize c with the RCWL-0516 defaults ...
+ * @var Rcwl0516Ns::begin  configure out_pin as an input and start the core. true where the ...
+ * @var Rcwl0516Ns::poll  sample the pin at the current time. true if presence changed on ...
+ * @var Rcwl0516Ns::present  latest debounced, hold-extended presence
+ *
+ * @c work is PROTOCORE_RCWL0516_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_presence_core_update(PresenceCore *c, proto_bool pin_high, uint32_t now);
+typedef struct
+{
+    Rcwl0516PresenceInitArgs presence_init_args;
+    Rcwl0516PresenceUpdateArgs presence_update_args;
+    Rcwl0516PresenceGetArgs presence_get_args;
+    Rcwl0516PresenceTakeEventArgs presence_take_event_args;
+    Rcwl0516CoreInitArgs core_init_args;
+    Rcwl0516BeginArgs begin_args;
 
-/** @brief Current presence, without sampling. */
-proto_bool protocore_presence_core_get(const PresenceCore *c);
+    proto_bool ok;
+
+    void (*const presence_init)(uint8_t *restrict work);
+    void (*const presence_update)(uint8_t *restrict work);
+    void (*const presence_get)(uint8_t *restrict work);
+    void (*const presence_take_event)(uint8_t *restrict work);
+    void (*const core_init)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const poll)(uint8_t *restrict work);
+    void (*const present)(uint8_t *restrict work);
+} Rcwl0516Ns;
+
+/** @brief The one symbol this module exports. */
+extern Rcwl0516Ns Rcwl0516;
 
 /**
- * @brief Consume the presence-changed event.
- * @return true exactly once per transition, so a caller can publish an event per edge rather than
- *         re-publishing a level every poll. Clears the flag.
+ * @brief The PROTOCORE_RCWL0516_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-proto_bool protocore_presence_take_event(PresenceCore *c);
-
-// ---------------------------------------------------------------------------
-// RCWL-0516 convenience
-// ---------------------------------------------------------------------------
-
-/** @brief Initialize @p c with the RCWL-0516 defaults (@ref PROTOCORE_RCWL0516_DEBOUNCE_MS / _HOLD_MS). */
-void protocore_rcwl0516_core_init(PresenceCore *c, uint32_t now);
-
-// ---------------------------------------------------------------------------
-// Binding (no-ops with no pin seam)
-// ---------------------------------------------------------------------------
-
-/** @brief Configure @p out_pin as an input and start the core. @return true where the pin was configured. */
-proto_bool protocore_rcwl0516_begin(int out_pin);
-
-/** @brief Sample the pin at the current time. @return true if presence changed on this poll. */
-proto_bool protocore_rcwl0516_poll();
-
-/** @brief Latest debounced, hold-extended presence. */
-proto_bool protocore_rcwl0516_present();
+uint8_t *protocore_rcwl0516_span(void);
 
 PROTOCORE_END_DECLS
 

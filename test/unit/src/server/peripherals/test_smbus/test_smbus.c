@@ -25,6 +25,8 @@
 
 #include <unity.h>
 
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
 // The command codes this slave answers, as a real one's datasheet would fix them. The wire-shape
 // cases above use 0x40 for a byte and 0x50 for a process call, so the block sits clear of both.
 #define TEST_SMBUS_ADDR 0x2Au
@@ -65,7 +67,7 @@ static uint8_t crc8_smbus(const uint8_t *data, size_t len)
     Crc.args.params = &PROTOCORE_CRC8_SMBUS;
     Crc.args.data = data;
     Crc.args.len = len;
-    Crc.compute(Crc.internal);
+    Crc.compute(crc_work);
     return (uint8_t)Crc.value;
 }
 

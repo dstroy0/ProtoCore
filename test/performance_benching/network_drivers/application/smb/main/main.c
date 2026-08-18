@@ -15,6 +15,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t ntlm_work[16]; // the borrow an entry takes; Ntlm never reads it
+
+static uint8_t ntlmssp_work[16]; // the borrow an entry takes; Ntlmssp never reads it
+
 void dbench_run(void)
 {
     static const uint8_t server_chal[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
@@ -24,8 +28,14 @@ void dbench_run(void)
     static const uint8_t file_id[16] = {0xAA, 0xBB, 0xCC, 0xDD, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     uint8_t nt_hash[16], owf[16];
-    protocore_ntlm_nt_hash("Passw0rd!", nt_hash);
-    protocore_ntlm_ntowfv2(nt_hash, "user", "DOMAIN", owf);
+    Ntlm.nt_hash_args.password = "Passw0rd!";
+    Ntlm.nt_hash_args.nt_hash = nt_hash;
+    Ntlm.nt_hash(ntlm_work);
+    Ntlm.ntowfv2_args.nt_hash = nt_hash;
+    Ntlm.ntowfv2_args.user = "user";
+    Ntlm.ntowfv2_args.domain = "DOMAIN";
+    Ntlm.ntowfv2_args.owf = owf;
+    Ntlm.ntowfv2(ntlm_work);
 
     for (;;)
     {
@@ -33,11 +43,17 @@ void dbench_run(void)
         volatile size_t sink = 0;
         uint8_t h[16];
         DBENCH_OP("protocore_ntlm_nt_hash (MD4)", 100000, {
-            protocore_ntlm_nt_hash("Passw0rd!", h);
+            Ntlm.nt_hash_args.password = "Passw0rd!";
+            Ntlm.nt_hash_args.nt_hash = h;
+            Ntlm.nt_hash(ntlm_work);
             sink += h[0];
         });
         DBENCH_OP("protocore_ntlm_ntowfv2 (HMAC-MD5)", 100000, {
-            protocore_ntlm_ntowfv2(nt_hash, "user", "DOMAIN", h);
+            Ntlm.ntowfv2_args.nt_hash = nt_hash;
+            Ntlm.ntowfv2_args.user = "user";
+            Ntlm.ntowfv2_args.domain = "DOMAIN";
+            Ntlm.ntowfv2_args.owf = h;
+            Ntlm.ntowfv2(ntlm_work);
             sink += h[0];
         });
         static uint8_t resp[256];

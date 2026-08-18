@@ -103,9 +103,6 @@ typedef struct
     Oauth2Tokens *tokens; ///< where the parsed parameters are written
 } Oauth2ResponseArgs;
 
-/** @brief The exchange buffers and the calls that reach them, described only in oauth2.c. */
-struct Oauth2Internal;
-
 /**
  * @brief The token-endpoint client: two grants out, one token response back.
  *
@@ -125,7 +122,6 @@ struct Oauth2Internal;
  * @var Oauth2Ns::parse_token_response   read the sec 5.1 parameters out of @c response.json
  * @var Oauth2Ns::exchange_code  post the sec 4.1.3 body to the endpoint and parse the sec 4.1.4 reply
  * @var Oauth2Ns::refresh        post the sec 6 body to the endpoint and parse the reply
- * @var Oauth2Ns::internal       the exchange buffers and the calls that reach them
  *
  * A transport call points @c request.out and @c request.cap at the module's own body buffer and
  * @c response.json at its own response buffer, so a caller sets only @c request.token_endpoint and
@@ -145,19 +141,30 @@ typedef struct
     proto_bool ok;
     int32_t i32;
 
-    void (*build_code_request)(struct Oauth2Internal *ctx);
-    void (*build_refresh_request)(struct Oauth2Internal *ctx);
-    void (*parse_token_response)(struct Oauth2Internal *ctx);
+    void (*const build_code_request)(uint8_t *restrict work);
+    void (*const build_refresh_request)(uint8_t *restrict work);
+    void (*const parse_token_response)(uint8_t *restrict work);
 #if PROTOCORE_ENABLE_HTTP_CLIENT
-    void (*exchange_code)(struct Oauth2Internal *ctx);
-    void (*refresh)(struct Oauth2Internal *ctx);
+    void (*const exchange_code)(uint8_t *restrict work);
+    void (*const refresh)(uint8_t *restrict work);
 #endif
-
-    struct Oauth2Internal *internal;
 } Oauth2Ns;
 
 /** @brief The one symbol this module exports. */
 extern Oauth2Ns Oauth2;
+
+/**
+ * @brief The PROTOCORE_OAUTH2_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+#if PROTOCORE_ENABLE_HTTP_CLIENT
+uint8_t *protocore_oauth2_span(void);
+#endif // PROTOCORE_ENABLE_HTTP_CLIENT
 
 PROTOCORE_END_DECLS
 

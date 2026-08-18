@@ -66,9 +66,6 @@ typedef struct
     size_t cap;      ///< how many bytes that buffer holds
 } TotpSecretArgs;
 
-/** @brief The module's handle onto its own calls, described only in totp.c. */
-struct TotpInternal;
-
 /**
  * @brief One-time passwords: HOTP over a counter, TOTP over a time step, and the base32 secret.
  *
@@ -93,7 +90,6 @@ struct TotpInternal;
  * @var TotpNs::totp           HOTP(K,T) for the time step T names (RFC 6238 sec 4.2)
  * @var TotpNs::verify         match @c check.otp against T and the steps around it (RFC 6238 sec 6)
  * @var TotpNs::base32_decode  base32 text to the K bytes it stands for (RFC 4648 sec 6)
- * @var TotpNs::internal       the module's handle onto the calls above
  */
 typedef struct
 {
@@ -109,12 +105,10 @@ typedef struct
     uint32_t u32;
     int32_t i32;
 
-    void (*hotp)(struct TotpInternal *ctx);
-    void (*totp)(struct TotpInternal *ctx);
-    void (*verify)(struct TotpInternal *ctx);
-    void (*base32_decode)(struct TotpInternal *ctx);
-
-    struct TotpInternal *internal;
+    void (*const hotp)(uint8_t *restrict work);
+    void (*const totp)(uint8_t *restrict work);
+    void (*const verify)(uint8_t *restrict work);
+    void (*const base32_decode)(uint8_t *restrict work);
 } TotpNs;
 
 /** @brief The one symbol this module exports. */

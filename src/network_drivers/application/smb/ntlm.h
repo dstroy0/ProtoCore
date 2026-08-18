@@ -25,66 +25,115 @@
 #ifndef PROTOCORE_NTLM_H
 #define PROTOCORE_NTLM_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SMB
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief The NT hash: MD4 of the UTF-16LE password (@p password is ASCII/UTF-8, NUL-terminated). */
-void protocore_ntlm_nt_hash(const char *password, uint8_t nt_hash[16]);
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
+/** @brief What nt_hash takes: password, nt_hash. */
+typedef struct
+{
+    const char *password;
+    uint8_t *nt_hash; ///< 16 bytes.
+} NtlmNtHashArgs;
+
+/** @brief What ntowfv2 takes: nt_hash, user, domain, owf. */
+typedef struct
+{
+    const uint8_t *nt_hash; ///< 16 bytes.
+    const char *user;
+    const char *domain;
+    uint8_t *owf; ///< 16 bytes.
+} NtlmNtowfv2Args;
+
+/** @brief What v2_response takes: owf, server_challenge, ... */
+typedef struct
+{
+    const uint8_t *owf;              ///< NTOWFv2 (from protocore_ntlm_ntowfv2) 16 bytes.
+    const uint8_t *server_challenge; ///< the 8-byte challenge from the server's CHALLENGE_MESSAGE 8 bytes.
+    const uint8_t *client_challenge; ///< the 8-byte client-generated challenge 8 bytes.
+    const uint8_t *timestamp;        ///< the 8-byte little-endian FILETIME (may be zero) 8 bytes.
+    const uint8_t *target_info;      ///< the AV_PAIR blob from the CHALLENGE_MESSAGE
+    size_t ti_len;
+    uint8_t *out;
+    size_t out_cap;
+    uint8_t *session_key; ///< receives the 16-byte SessionBaseKey (may be null) 16 bytes.
+} NtlmV2ResponseArgs;
+
+/** @brief What set_mic_flag takes: target_info, ti_len, out, out_cap. */
+typedef struct
+{
+    const uint8_t *target_info;
+    size_t ti_len;
+    uint8_t *out;
+    size_t out_cap;
+} NtlmSetMicFlagArgs;
+
+/** @brief What mic takes: session_key, neg, neg_len, chal, chal_len, ... */
+typedef struct
+{
+    const uint8_t *session_key; ///< 16 bytes.
+    const uint8_t *neg;
+    size_t neg_len;
+    const uint8_t *chal;
+    size_t chal_len;
+    const uint8_t *auth;
+    size_t auth_len;
+    uint8_t *out; ///< 16 bytes.
+} NtlmMicArgs;
 
 /**
- * @brief NTOWFv2 = HMAC-MD5(NThash, UTF-16LE(Uppercase(user) + domain)).
+ * @brief NTLMv2 response computation (MS-NLMP §3.3.2) for the SMB2 client (PROTOCORE_ENABLE_SMB).
  *
- * Only the @p user is uppercased (ASCII), not the @p domain (MS-NLMP). Both are NUL-terminated.
- * @return true; false if user + domain exceed the internal 256-char scratch.
+ * A caller sets the members a call takes, invokes it through ::Ntlm with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Ntlm.nt_hash_args.password = ...;
+ *   Ntlm.nt_hash_args.nt_hash = ...;
+ *   Ntlm.nt_hash(work);
+ *
+ * @var NtlmNs::nt_hash_args  what nt_hash takes: password, nt_hash
+ * @var NtlmNs::ntowfv2_args  what ntowfv2 takes: nt_hash, user, domain, owf
+ * @var NtlmNs::v2_response_args  what v2_response takes: owf, server_challenge,
+ * @var NtlmNs::set_mic_flag_args  what set_mic_flag takes: target_info, ti_len, out, out_cap
+ * @var NtlmNs::mic_args  what mic takes: session_key, neg, neg_len, chal, chal_len,
+ * @var NtlmNs::ok  true; false if user + domain exceed the internal 256-char scratch
+ * @var NtlmNs::n  the NtChallengeResponse length written to out (48 + ti_len), or 0 ...
+ * @var NtlmNs::nt_hash  the NT hash: MD4 of the UTF-16LE password (password is ASCII/UTF-8, ...
+ * @var NtlmNs::ntowfv2  NTOWFv2 = HMAC-MD5(NThash, UTF-16LE(Uppercase(user) + domain)). ...
+ * @var NtlmNs::v2_response  compute the NTLMv2 NtChallengeResponse (NTProofStr + temp) and the ...
+ * @var NtlmNs::set_mic_flag  copy the CHALLENGE target-info AV_PAIR list into out, setting the ...
+ * @var NtlmNs::mic  the NTLMSSP AUTHENTICATE MIC (MS-NLMP §3.1.5.1.2): HMAC-MD5 over ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const char *domain, uint8_t owf[16]);
+typedef struct
+{
+    NtlmNtHashArgs nt_hash_args;
+    NtlmNtowfv2Args ntowfv2_args;
+    NtlmV2ResponseArgs v2_response_args;
+    NtlmSetMicFlagArgs set_mic_flag_args;
+    NtlmMicArgs mic_args;
 
-/**
- * @brief Compute the NTLMv2 NtChallengeResponse (NTProofStr + temp) and the session base key.
- *
- * @param owf              NTOWFv2 (from protocore_ntlm_ntowfv2).
- * @param server_challenge the 8-byte challenge from the server's CHALLENGE_MESSAGE.
- * @param client_challenge the 8-byte client-generated challenge.
- * @param timestamp        the 8-byte little-endian FILETIME (may be zero).
- * @param target_info      the AV_PAIR blob from the CHALLENGE_MESSAGE.
- * @param session_key      receives the 16-byte SessionBaseKey (may be null).
- * @return the NtChallengeResponse length written to @p out (48 + @p ti_len), or 0 on overflow.
- */
-size_t protocore_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge[8],
-                                  const uint8_t client_challenge[8], const uint8_t timestamp[8],
-                                  const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap,
-                                  uint8_t session_key[16]);
+    proto_bool ok;
+    size_t n;
 
-/**
- * @brief Copy the CHALLENGE target-info AV_PAIR list into @p out, setting the MsvAvFlags (AvId 6)
- *        bit 0x00000002 ("the client provides a MIC in the AUTHENTICATE", MS-NLMP §2.2.2.10 / §3.1.5.1.2).
- *
- * If an MsvAvFlags pair is already present its value is OR'd with 0x2; otherwise a new
- * `AvId=6, AvLen=4, value=0x00000002` pair is inserted immediately before the MsvAvEOL (AvId 0)
- * terminator. The resulting blob is what the NTLMv2 response is computed over, so the server sees the
- * flag and verifies the MIC. Call before ::protocore_ntlm_v2_response and feed it the returned blob.
- *
- * @return the new target-info length in @p out (@p ti_len, or @p ti_len + 8 when a pair was inserted),
- *         or 0 on a null pointer / overflow / a malformed (unterminated) list.
- */
-size_t protocore_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap);
+    void (*const nt_hash)(uint8_t *restrict work);
+    void (*const ntowfv2)(uint8_t *restrict work);
+    void (*const v2_response)(uint8_t *restrict work);
+    void (*const set_mic_flag)(uint8_t *restrict work);
+    void (*const mic)(uint8_t *restrict work);
+} NtlmNs;
 
-/**
- * @brief The NTLMSSP AUTHENTICATE MIC (MS-NLMP §3.1.5.1.2): HMAC-MD5 over the concatenation of the
- *        three NTLM messages, keyed by the ExportedSessionKey (= the NTLMv2 SessionBaseKey when no key
- *        exchange is negotiated).
- *
- *   MIC = HMAC-MD5(session_key, NEGOTIATE_MESSAGE || CHALLENGE_MESSAGE || AUTHENTICATE_MESSAGE)
- *
- * The three are the raw NTLMSSP token bytes (not SPNEGO-wrapped); @p auth must already have its 16-byte
- * MIC field zeroed (as ::protocore_ntlmssp_build_authenticate leaves it). Streams the parts, so no scratch
- * concatenation buffer is needed.
- */
-void protocore_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_len, const uint8_t *chal,
-                        size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t out[16]);
+/** @brief The one symbol this module exports. */
+extern NtlmNs Ntlm;
 
 PROTOCORE_END_DECLS
 

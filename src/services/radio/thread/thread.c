@@ -10,10 +10,16 @@
  * bytes 0x7E / 0x7D / 0x11 / 0x13 are escaped as 0x7D, (byte XOR 0x20).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
+#if PROTOCORE_ENABLE_THREAD
+
 #include "services/radio/thread/thread.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_X25
 
-#if PROTOCORE_ENABLE_THREAD
+PROTOCORE_BEGIN_DECLS
 
 static proto_bool is_reserved(uint8_t b)
 {
@@ -43,18 +49,42 @@ static proto_bool put_stuffed(uint8_t *out, uint16_t *p, uint16_t cap, uint8_t b
     return PROTO_TRUE;
 }
 
-uint8_t protocore_spinel_pack_uint(uint32_t value, uint8_t *out, uint8_t cap)
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void thread_spinel_fcs(uint8_t *restrict work);
+static void thread_spinel_get_u16(uint8_t *restrict work);
+static void thread_spinel_get_u32(uint8_t *restrict work);
+static void thread_spinel_pack_uint(uint8_t *restrict work);
+static void thread_spinel_prop_lookup(uint8_t *restrict work);
+static void thread_spinel_put_data(uint8_t *restrict work);
+static void thread_spinel_put_u16(uint8_t *restrict work);
+static void thread_spinel_put_u32(uint8_t *restrict work);
+static void thread_spinel_put_u8(uint8_t *restrict work);
+static void thread_spinel_unpack_uint(uint8_t *restrict work);
+
+static void thread_spinel_pack_uint(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t value = Thread.spinel_pack_uint_args.value;
+    uint8_t *out = Thread.spinel_pack_uint_args.out;
+    uint8_t cap = Thread.spinel_pack_uint_args.cap;
+
     if (!out)
     {
-        return 0;
+        Thread.u8 = 0;
+        return;
     }
     uint8_t n = 0;
     do
     {
         if (n >= cap)
         {
-            return 0;
+            Thread.u8 = 0;
+            return;
         }
         uint8_t byte = (uint8_t)(value & 0x7F);
         value >>= 7;
@@ -64,14 +94,20 @@ uint8_t protocore_spinel_pack_uint(uint32_t value, uint8_t *out, uint8_t cap)
         }
         out[n++] = byte;
     } while (value);
-    return n;
+    Thread.u8 = n;
 }
 
-int protocore_spinel_unpack_uint(const uint8_t *raw, uint8_t len, uint32_t *value)
+static void thread_spinel_unpack_uint(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *raw = Thread.spinel_unpack_uint_args.raw;
+    uint8_t len = Thread.spinel_unpack_uint_args.len;
+    uint32_t *value = Thread.spinel_unpack_uint_args.value;
+
     if (!raw)
     {
-        return 0;
+        Thread.n = 0;
+        return;
     }
     uint32_t v = 0;
     uint8_t shift = 0;
@@ -85,70 +121,109 @@ int protocore_spinel_unpack_uint(const uint8_t *raw, uint8_t len, uint32_t *valu
             {
                 *value = v;
             }
-            return n + 1;
+            Thread.n = n + 1;
+            return;
         }
         shift += 7;
         if (shift >= 32)
         {
-            return -1; // does not fit a uint32
+            Thread.n = -1; // does not fit a uint32
+            return;
         }
     }
-    return 0; // truncated - need more bytes
+    Thread.n = 0; // truncated - need more bytes
 }
 
-uint16_t protocore_spinel_command_build(uint8_t header, uint32_t cmd, uint32_t prop, const uint8_t *value,
-                                        uint16_t value_len, uint8_t *out, uint16_t cap)
+static void thread_spinel_command_build(uint8_t *restrict work)
 {
+    uint8_t header = Thread.spinel_command_build_args.header;
+    uint32_t cmd = Thread.spinel_command_build_args.cmd;
+    uint32_t prop = Thread.spinel_command_build_args.prop;
+    const uint8_t *value = Thread.spinel_command_build_args.value;
+    uint16_t value_len = Thread.spinel_command_build_args.value_len;
+    uint8_t *out = Thread.spinel_command_build_args.out;
+    uint16_t cap = Thread.spinel_command_build_args.cap;
+
     if (!out || cap < 1 || (value == NULL && value_len > 0))
     {
-        return 0;
+        Thread.value = 0;
+        return;
     }
     uint16_t p = 0;
     out[p++] = header;
-    uint8_t n = protocore_spinel_pack_uint(cmd, out + p, (uint8_t)(cap - p));
+    Thread.spinel_pack_uint_args.value = cmd;
+    Thread.spinel_pack_uint_args.out = out + p;
+    Thread.spinel_pack_uint_args.cap = (uint8_t)(cap - p);
+    thread_spinel_pack_uint(work);
+    uint8_t n = Thread.u8;
     if (n == 0)
     {
-        return 0;
+        Thread.value = 0;
+        return;
     }
     p += n;
-    n = protocore_spinel_pack_uint(prop, out + p, (uint8_t)(cap > p ? cap - p : 0));
+    Thread.spinel_pack_uint_args.value = prop;
+    Thread.spinel_pack_uint_args.out = out + p;
+    Thread.spinel_pack_uint_args.cap = (uint8_t)(cap > p ? cap - p : 0);
+    thread_spinel_pack_uint(work);
+    n = Thread.u8;
     if (n == 0)
     {
-        return 0;
+        Thread.value = 0;
+        return;
     }
     p += n;
     if ((uint32_t)p + value_len > cap)
     {
-        return 0;
+        Thread.value = 0;
+        return;
     }
     for (uint16_t i = 0; i < value_len; i++)
     {
         out[p + i] = value[i];
     }
-    return (uint16_t)(p + value_len);
+    Thread.value = (uint16_t)(p + value_len);
 }
 
-int protocore_spinel_command_parse(const uint8_t *payload, uint16_t len, uint8_t *header, uint32_t *cmd, uint32_t *prop,
-                                   const uint8_t **value, uint16_t *value_len)
+static void thread_spinel_command_parse(uint8_t *restrict work)
 {
+    const uint8_t *payload = Thread.spinel_command_parse_args.payload;
+    uint16_t len = Thread.spinel_command_parse_args.len;
+    uint8_t *header = Thread.spinel_command_parse_args.header;
+    uint32_t *cmd = Thread.spinel_command_parse_args.cmd;
+    uint32_t *prop = Thread.spinel_command_parse_args.prop;
+    const uint8_t **value = Thread.spinel_command_parse_args.value;
+    uint16_t *value_len = Thread.spinel_command_parse_args.value_len;
+
     if (!payload || len < 1)
     {
-        return -1;
+        Thread.n = -1;
+        return;
     }
     uint16_t p = 0;
     uint8_t h = payload[p++];
     uint32_t c = 0;
     uint32_t pr = 0;
-    int n = protocore_spinel_unpack_uint(payload + p, (uint8_t)((len - p) > 255 ? 255 : (len - p)), &c);
+    Thread.spinel_unpack_uint_args.raw = payload + p;
+    Thread.spinel_unpack_uint_args.len = (uint8_t)((len - p) > 255 ? 255 : (len - p));
+    Thread.spinel_unpack_uint_args.value = &c;
+    thread_spinel_unpack_uint(work);
+    int n = Thread.n;
     if (n <= 0)
     {
-        return -1;
+        Thread.n = -1;
+        return;
     }
     p += (uint16_t)n;
-    n = protocore_spinel_unpack_uint(payload + p, (uint8_t)((len - p) > 255 ? 255 : (len - p)), &pr);
+    Thread.spinel_unpack_uint_args.raw = payload + p;
+    Thread.spinel_unpack_uint_args.len = (uint8_t)((len - p) > 255 ? 255 : (len - p));
+    Thread.spinel_unpack_uint_args.value = &pr;
+    thread_spinel_unpack_uint(work);
+    n = Thread.n;
     if (n <= 0)
     {
-        return -1;
+        Thread.n = -1;
+        return;
     }
     p += (uint16_t)n;
     if (header)
@@ -171,13 +246,18 @@ int protocore_spinel_command_parse(const uint8_t *payload, uint16_t len, uint8_t
     {
         *value_len = (uint16_t)(len - p);
     }
-    return (int)p;
+    Thread.n = (int)p;
 }
 
 // --- Spinel value semantics -------------------------------------------------------------
 
-void protocore_spinel_reader_init(SpinelReader *r, const uint8_t *value, uint16_t len)
+static void thread_spinel_reader_init(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_reader_init_args.r;
+    const uint8_t *value = Thread.spinel_reader_init_args.value;
+    uint16_t len = Thread.spinel_reader_init_args.len;
+
     if (!r)
     {
         return;
@@ -204,159 +284,222 @@ static const uint8_t *take(SpinelReader *r, uint16_t n)
     return at;
 }
 
-proto_bool protocore_spinel_get_bool(SpinelReader *r, proto_bool *out)
+static void thread_spinel_get_bool(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_get_bool_args.r;
+    proto_bool *out = Thread.spinel_get_bool_args.out;
+
     const uint8_t *b = take(r, 1);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
         *out = (*b != 0);
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_u8(SpinelReader *r, uint8_t *out)
+static void thread_spinel_get_u8(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_get_u8_args.r;
+    uint8_t *out = Thread.spinel_get_u8_args.out;
+
     const uint8_t *b = take(r, 1);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
         *out = b[0];
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_i8(SpinelReader *r, int8_t *out)
+static void thread_spinel_get_i8(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_get_i8_args.r;
+    int8_t *out = Thread.spinel_get_i8_args.out;
+
     const uint8_t *b = take(r, 1);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
         *out = (int8_t)b[0];
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_u16(SpinelReader *r, uint16_t *out)
+static void thread_spinel_get_u16(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_get_u16_args.r;
+    uint16_t *out = Thread.spinel_get_u16_args.out;
+
     const uint8_t *b = take(r, 2);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
         *out = (uint16_t)(b[0] | (b[1] << 8));
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_i16(SpinelReader *r, int16_t *out)
+static void thread_spinel_get_i16(uint8_t *restrict work)
 {
+    SpinelReader *r = Thread.spinel_get_i16_args.r;
+    int16_t *out = Thread.spinel_get_i16_args.out;
+
     uint16_t v = 0;
-    if (!protocore_spinel_get_u16(r, &v))
+    Thread.spinel_get_u16_args.r = r;
+    Thread.spinel_get_u16_args.out = &v;
+    thread_spinel_get_u16(work);
+    if (!Thread.ok)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
         *out = (int16_t)v;
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_u32(SpinelReader *r, uint32_t *out)
+static void thread_spinel_get_u32(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_get_u32_args.r;
+    uint32_t *out = Thread.spinel_get_u32_args.out;
+
     const uint8_t *b = take(r, 4);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
         *out = (uint32_t)b[0] | ((uint32_t)b[1] << 8) | ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24);
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_i32(SpinelReader *r, int32_t *out)
+static void thread_spinel_get_i32(uint8_t *restrict work)
 {
+    SpinelReader *r = Thread.spinel_get_i32_args.r;
+    int32_t *out = Thread.spinel_get_i32_args.out;
+
     uint32_t v = 0;
-    if (!protocore_spinel_get_u32(r, &v))
+    Thread.spinel_get_u32_args.r = r;
+    Thread.spinel_get_u32_args.out = &v;
+    thread_spinel_get_u32(work);
+    if (!Thread.ok)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
         *out = (int32_t)v;
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_uint(SpinelReader *r, uint32_t *out)
+static void thread_spinel_get_uint(uint8_t *restrict work)
 {
+    SpinelReader *r = Thread.spinel_get_uint_args.r;
+    uint32_t *out = Thread.spinel_get_uint_args.out;
+
     if (!r || r->err)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     uint32_t v = 0;
-    int n =
-        protocore_spinel_unpack_uint(r->buf + r->off, (uint8_t)((r->len - r->off) > 255 ? 255 : (r->len - r->off)), &v);
+    Thread.spinel_unpack_uint_args.raw = r->buf + r->off;
+    Thread.spinel_unpack_uint_args.len = (uint8_t)((r->len - r->off) > 255 ? 255 : (r->len - r->off));
+    Thread.spinel_unpack_uint_args.value = &v;
+    thread_spinel_unpack_uint(work);
+    int n = Thread.n;
     if (n <= 0)
     {
         r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     r->off = (uint16_t)(r->off + n);
     if (out)
     {
         *out = v;
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_eui64(SpinelReader *r, const uint8_t **out8)
+static void thread_spinel_get_eui64(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_get_eui64_args.r;
+    const uint8_t **out8 = Thread.spinel_get_eui64_args.out8;
+
     const uint8_t *b = take(r, 8);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out8)
     {
         *out8 = b;
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_ipv6(SpinelReader *r, const uint8_t **out16)
+static void thread_spinel_get_ipv6(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_get_ipv6_args.r;
+    const uint8_t **out16 = Thread.spinel_get_ipv6_args.out16;
+
     const uint8_t *b = take(r, 16);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out16)
     {
         *out16 = b;
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_utf8(SpinelReader *r, const char **out, uint16_t *out_len)
+static void thread_spinel_get_utf8(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_get_utf8_args.r;
+    const char **out = Thread.spinel_get_utf8_args.out;
+    uint16_t *out_len = Thread.spinel_get_utf8_args.out_len;
+
     if (!r || r->err)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     uint16_t i = r->off;
     while (i < r->len && r->buf[i] != 0)
@@ -366,7 +509,8 @@ proto_bool protocore_spinel_get_utf8(SpinelReader *r, const char **out, uint16_t
     if (i >= r->len) // no NUL terminator in the value
     {
         r->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
@@ -377,14 +521,20 @@ proto_bool protocore_spinel_get_utf8(SpinelReader *r, const char **out, uint16_t
         *out_len = (uint16_t)(i - r->off);
     }
     r->off = (uint16_t)(i + 1); // consume the string and its NUL
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_data(SpinelReader *r, const uint8_t **out, uint16_t *out_len)
+static void thread_spinel_get_data(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelReader *r = Thread.spinel_get_data_args.r;
+    const uint8_t **out = Thread.spinel_get_data_args.out;
+    uint16_t *out_len = Thread.spinel_get_data_args.out_len;
+
     if (!r || r->err)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
@@ -395,20 +545,29 @@ proto_bool protocore_spinel_get_data(SpinelReader *r, const uint8_t **out, uint1
         *out_len = (uint16_t)(r->len - r->off);
     }
     r->off = r->len;
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_get_data_wlen(SpinelReader *r, const uint8_t **out, uint16_t *out_len)
+static void thread_spinel_get_data_wlen(uint8_t *restrict work)
 {
+    SpinelReader *r = Thread.spinel_get_data_wlen_args.r;
+    const uint8_t **out = Thread.spinel_get_data_wlen_args.out;
+    uint16_t *out_len = Thread.spinel_get_data_wlen_args.out_len;
+
     uint16_t n = 0;
-    if (!protocore_spinel_get_u16(r, &n))
+    Thread.spinel_get_u16_args.r = r;
+    Thread.spinel_get_u16_args.out = &n;
+    thread_spinel_get_u16(work);
+    if (!Thread.ok)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     const uint8_t *b = take(r, n);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     if (out)
     {
@@ -418,16 +577,24 @@ proto_bool protocore_spinel_get_data_wlen(SpinelReader *r, const uint8_t **out, 
     {
         *out_len = n;
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_reader_ok(const SpinelReader *r)
+static void thread_spinel_reader_ok(uint8_t *restrict work)
 {
-    return r && !r->err;
+    (void)work;
+    const SpinelReader *r = Thread.spinel_reader_ok_args.r;
+
+    Thread.ok = r && !r->err;
 }
 
-void protocore_spinel_writer_init(SpinelWriter *w, uint8_t *out, uint16_t cap)
+static void thread_spinel_writer_init(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelWriter *w = Thread.spinel_writer_init_args.w;
+    uint8_t *out = Thread.spinel_writer_init_args.out;
+    uint16_t cap = Thread.spinel_writer_init_args.cap;
+
     if (!w)
     {
         return;
@@ -454,147 +621,209 @@ static uint8_t *room(SpinelWriter *w, uint16_t n)
     return at;
 }
 
-proto_bool protocore_spinel_put_bool(SpinelWriter *w, proto_bool v)
+static void thread_spinel_put_bool(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelWriter *w = Thread.spinel_put_bool_args.w;
+    proto_bool v = Thread.spinel_put_bool_args.v;
+
     uint8_t *b = room(w, 1);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     b[0] = v ? 1 : 0;
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_put_u8(SpinelWriter *w, uint8_t v)
+static void thread_spinel_put_u8(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelWriter *w = Thread.spinel_put_u8_args.w;
+    uint8_t v = Thread.spinel_put_u8_args.v;
+
     uint8_t *b = room(w, 1);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     b[0] = v;
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_put_i8(SpinelWriter *w, int8_t v)
+static void thread_spinel_put_i8(uint8_t *restrict work)
 {
-    return protocore_spinel_put_u8(w, (uint8_t)v);
+    SpinelWriter *w = Thread.spinel_put_i8_args.w;
+    int8_t v = Thread.spinel_put_i8_args.v;
+
+    Thread.spinel_put_u8_args.w = w;
+    Thread.spinel_put_u8_args.v = (uint8_t)v;
+    thread_spinel_put_u8(work);
 }
 
-proto_bool protocore_spinel_put_u16(SpinelWriter *w, uint16_t v)
+static void thread_spinel_put_u16(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelWriter *w = Thread.spinel_put_u16_args.w;
+    uint16_t v = Thread.spinel_put_u16_args.v;
+
     uint8_t *b = room(w, 2);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     b[0] = (uint8_t)(v & 0xFF);
     b[1] = (uint8_t)(v >> 8);
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_put_i16(SpinelWriter *w, int16_t v)
+static void thread_spinel_put_i16(uint8_t *restrict work)
 {
-    return protocore_spinel_put_u16(w, (uint16_t)v);
+    SpinelWriter *w = Thread.spinel_put_i16_args.w;
+    int16_t v = Thread.spinel_put_i16_args.v;
+
+    Thread.spinel_put_u16_args.w = w;
+    Thread.spinel_put_u16_args.v = (uint16_t)v;
+    thread_spinel_put_u16(work);
 }
 
-proto_bool protocore_spinel_put_u32(SpinelWriter *w, uint32_t v)
+static void thread_spinel_put_u32(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelWriter *w = Thread.spinel_put_u32_args.w;
+    uint32_t v = Thread.spinel_put_u32_args.v;
+
     uint8_t *b = room(w, 4);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     b[0] = (uint8_t)(v & 0xFF);
     b[1] = (uint8_t)((v >> 8) & 0xFF);
     b[2] = (uint8_t)((v >> 16) & 0xFF);
     b[3] = (uint8_t)((v >> 24) & 0xFF);
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_put_i32(SpinelWriter *w, int32_t v)
+static void thread_spinel_put_i32(uint8_t *restrict work)
 {
-    return protocore_spinel_put_u32(w, (uint32_t)v);
+    SpinelWriter *w = Thread.spinel_put_i32_args.w;
+    int32_t v = Thread.spinel_put_i32_args.v;
+
+    Thread.spinel_put_u32_args.w = w;
+    Thread.spinel_put_u32_args.v = (uint32_t)v;
+    thread_spinel_put_u32(work);
 }
 
-proto_bool protocore_spinel_put_uint(SpinelWriter *w, uint32_t v)
+static void thread_spinel_put_uint(uint8_t *restrict work)
 {
+    SpinelWriter *w = Thread.spinel_put_uint_args.w;
+    uint32_t v = Thread.spinel_put_uint_args.v;
+
     if (!w || w->err)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     uint8_t tmp[5];
-    uint8_t n = protocore_spinel_pack_uint(v, tmp, sizeof(tmp));
+    Thread.spinel_pack_uint_args.value = v;
+    Thread.spinel_pack_uint_args.out = tmp;
+    Thread.spinel_pack_uint_args.cap = sizeof(tmp);
+    thread_spinel_pack_uint(work);
+    uint8_t n = Thread.u8;
     if (n == 0)
     {
         w->err = PROTO_TRUE;
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     uint8_t *b = room(w, n);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     for (uint8_t i = 0; i < n; i++)
     {
         b[i] = tmp[i];
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_put_eui64(SpinelWriter *w, const uint8_t *v8)
+static void thread_spinel_put_eui64(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelWriter *w = Thread.spinel_put_eui64_args.w;
+    const uint8_t *v8 = Thread.spinel_put_eui64_args.v8;
+
     if (!v8)
     {
         if (w)
         {
             w->err = PROTO_TRUE;
         }
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     uint8_t *b = room(w, 8);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     for (uint8_t i = 0; i < 8; i++)
     {
         b[i] = v8[i];
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_put_ipv6(SpinelWriter *w, const uint8_t *v16)
+static void thread_spinel_put_ipv6(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelWriter *w = Thread.spinel_put_ipv6_args.w;
+    const uint8_t *v16 = Thread.spinel_put_ipv6_args.v16;
+
     if (!v16)
     {
         if (w)
         {
             w->err = PROTO_TRUE;
         }
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     uint8_t *b = room(w, 16);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     for (uint8_t i = 0; i < 16; i++)
     {
         b[i] = v16[i];
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_put_utf8(SpinelWriter *w, const char *s)
+static void thread_spinel_put_utf8(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelWriter *w = Thread.spinel_put_utf8_args.w;
+    const char *s = Thread.spinel_put_utf8_args.s;
+
     if (!s)
     {
         if (w)
         {
             w->err = PROTO_TRUE;
         }
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     uint16_t n = 0;
     while (s[n] != 0)
@@ -604,53 +833,76 @@ proto_bool protocore_spinel_put_utf8(SpinelWriter *w, const char *s)
     uint8_t *b = room(w, (uint16_t)(n + 1)); // include the NUL
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     for (uint16_t i = 0; i <= n; i++)
     {
         b[i] = (uint8_t)s[i];
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_put_data(SpinelWriter *w, const uint8_t *d, uint16_t n)
+static void thread_spinel_put_data(uint8_t *restrict work)
 {
+    (void)work;
+    SpinelWriter *w = Thread.spinel_put_data_args.w;
+    const uint8_t *d = Thread.spinel_put_data_args.d;
+    uint16_t n = Thread.spinel_put_data_args.n;
+
     if (d == NULL && n > 0)
     {
         if (w)
         {
             w->err = PROTO_TRUE;
         }
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     uint8_t *b = room(w, n);
     if (!b)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
     for (uint16_t i = 0; i < n; i++)
     {
         b[i] = d[i];
     }
-    return PROTO_TRUE;
+    Thread.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_spinel_put_data_wlen(SpinelWriter *w, const uint8_t *d, uint16_t n)
+static void thread_spinel_put_data_wlen(uint8_t *restrict work)
 {
-    if (!protocore_spinel_put_u16(w, n))
+    SpinelWriter *w = Thread.spinel_put_data_wlen_args.w;
+    const uint8_t *d = Thread.spinel_put_data_wlen_args.d;
+    uint16_t n = Thread.spinel_put_data_wlen_args.n;
+
+    Thread.spinel_put_u16_args.w = w;
+    Thread.spinel_put_u16_args.v = n;
+    thread_spinel_put_u16(work);
+    if (!Thread.ok)
     {
-        return PROTO_FALSE;
+        Thread.ok = PROTO_FALSE;
+        return;
     }
-    return protocore_spinel_put_data(w, d, n);
+    Thread.spinel_put_data_args.w = w;
+    Thread.spinel_put_data_args.d = d;
+    Thread.spinel_put_data_args.n = n;
+    thread_spinel_put_data(work);
 }
 
-uint16_t protocore_spinel_writer_len(const SpinelWriter *w)
+static void thread_spinel_writer_len(uint8_t *restrict work)
 {
+    (void)work;
+    const SpinelWriter *w = Thread.spinel_writer_len_args.w;
+
     if (!w || w->err)
     {
-        return 0;
+        Thread.value = 0;
+        return;
     }
-    return w->off;
+    Thread.value = w->off;
 }
 
 // --- Property registry ------------------------------------------------------------------
@@ -715,84 +967,119 @@ static const StatusName k_status[] = {
     {SPINEL_STATUS_EMPTY, "EMPTY"},
 };
 
-const SpinelPropInfo *protocore_spinel_prop_lookup(uint32_t id)
+static void thread_spinel_prop_lookup(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t id = Thread.spinel_prop_lookup_args.id;
+
     for (uint16_t i = 0; i < sizeof(k_props) / sizeof(k_props[0]); i++)
     {
         if (k_props[i].id == id)
         {
-            return &k_props[i];
+            Thread.ptr = &k_props[i];
+            return;
         }
     }
-    return NULL;
+    Thread.ptr = NULL;
 }
 
-const char *protocore_spinel_prop_name(uint32_t id)
+static void thread_spinel_prop_name(uint8_t *restrict work)
 {
-    const SpinelPropInfo *e = protocore_spinel_prop_lookup(id);
-    return e ? e->name : "UNKNOWN";
+    uint32_t id = Thread.spinel_prop_name_args.id;
+
+    Thread.spinel_prop_lookup_args.id = id;
+    thread_spinel_prop_lookup(work);
+    const SpinelPropInfo *e = Thread.ptr;
+    Thread.text = e ? e->name : "UNKNOWN";
 }
 
-const char *protocore_spinel_status_name(uint32_t status)
+static void thread_spinel_status_name(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t status = Thread.spinel_status_name_args.status;
+
     for (uint16_t i = 0; i < sizeof(k_status) / sizeof(k_status[0]); i++)
     {
         if (k_status[i].code == status)
         {
-            return k_status[i].name;
+            Thread.text = k_status[i].name;
+            return;
         }
     }
     if (status >= SPINEL_STATUS_RESET_POWER_ON && status < SPINEL_STATUS_RESET_END)
     {
-        return "RESET";
+        Thread.text = "RESET";
+        return;
     }
-    return "UNKNOWN";
+    Thread.text = "UNKNOWN";
 }
 
-uint16_t protocore_spinel_fcs(const uint8_t *buf, uint16_t len)
+static void thread_spinel_fcs(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = Thread.spinel_fcs_args.buf;
+    uint16_t len = Thread.spinel_fcs_args.len;
+
     // The HDLC-lite FCS is CRC-16/X-25 (reflected poly 0x8408, init 0xFFFF, xorout 0xFFFF).
     Crc.args.params = &PROTOCORE_CRC16_X25;
     Crc.args.data = buf;
     Crc.args.len = len;
-    Crc.compute(Crc.internal);
-    return (uint16_t)Crc.value;
+    Crc.compute(crc_work);
+    Thread.value = (uint16_t)Crc.value;
 }
 
-uint16_t protocore_spinel_frame_encode(const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap)
+static void thread_spinel_frame_encode(uint8_t *restrict work)
 {
+    const uint8_t *payload = Thread.spinel_frame_encode_args.payload;
+    uint16_t len = Thread.spinel_frame_encode_args.len;
+    uint8_t *out = Thread.spinel_frame_encode_args.out;
+    uint16_t cap = Thread.spinel_frame_encode_args.cap;
+
     if (!out || len > PROTOCORE_THREAD_MAX_DATA || (payload == NULL && len > 0))
     {
-        return 0;
+        Thread.value = 0;
+        return;
     }
-    uint16_t fcs = protocore_spinel_fcs(payload, len);
+    Thread.spinel_fcs_args.buf = payload;
+    Thread.spinel_fcs_args.len = len;
+    thread_spinel_fcs(work);
+    uint16_t fcs = Thread.value;
     uint16_t p = 0;
     for (uint16_t i = 0; i < len; i++)
     {
         if (!put_stuffed(out, &p, cap, payload[i]))
         {
-            return 0;
+            Thread.value = 0;
+            return;
         }
     }
     if (!put_stuffed(out, &p, cap, (uint8_t)(fcs & 0xFF)) || // FCS low byte first
         !put_stuffed(out, &p, cap, (uint8_t)(fcs >> 8)))
     {
-        return 0;
+        Thread.value = 0;
+        return;
     }
     if (p + 1 > cap)
     {
-        return 0;
+        Thread.value = 0;
+        return;
     }
     out[p++] = HDLC_FLAG;
-    return p;
+    Thread.value = p;
 }
 
-int protocore_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *payload, uint16_t pay_cap,
-                                  uint16_t *pay_len)
+static void thread_spinel_frame_decode(uint8_t *restrict work)
 {
+    const uint8_t *raw = Thread.spinel_frame_decode_args.raw;
+    uint16_t len = Thread.spinel_frame_decode_args.len;
+    uint8_t *payload = Thread.spinel_frame_decode_args.payload;
+    uint16_t pay_cap = Thread.spinel_frame_decode_args.pay_cap;
+    uint16_t *pay_len = Thread.spinel_frame_decode_args.pay_len;
+
     if (!raw)
     {
-        return 0;
+        Thread.n = 0;
+        return;
     }
     uint16_t flag = 0;
     while (flag < len && raw[flag] != HDLC_FLAG)
@@ -801,7 +1088,8 @@ int protocore_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *pay
     }
     if (flag >= len)
     {
-        return 0; // no complete frame yet
+        Thread.n = 0; // no complete frame yet
+        return;
     }
 
     // Remove the byte-stuffing from raw[0, flag) into a scratch: payload + FCS(2).
@@ -814,29 +1102,37 @@ int protocore_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *pay
         {
             if (++i >= flag)
             {
-                return -1; // dangling escape
+                Thread.n = -1; // dangling escape
+                return;
             }
             b = (uint8_t)(raw[i] ^ 0x20);
         }
         if (n >= sizeof(un))
         {
-            return -1;
+            Thread.n = -1;
+            return;
         }
         un[n++] = b;
     }
     if (n < 2)
     {
-        return -1; // need at least the FCS
+        Thread.n = -1; // need at least the FCS
+        return;
     }
     uint16_t plen = (uint16_t)(n - 2);
-    uint16_t fcs = protocore_spinel_fcs(un, plen);
+    Thread.spinel_fcs_args.buf = un;
+    Thread.spinel_fcs_args.len = plen;
+    thread_spinel_fcs(work);
+    uint16_t fcs = Thread.value;
     if ((uint16_t)(un[plen] | (un[plen + 1] << 8)) != fcs)
     {
-        return -1; // FCS mismatch (transmitted low byte first)
+        Thread.n = -1; // FCS mismatch (transmitted low byte first)
+        return;
     }
     if (plen > pay_cap)
     {
-        return -1;
+        Thread.n = -1;
+        return;
     }
     for (uint16_t i = 0; i < plen; i++)
     {
@@ -846,7 +1142,50 @@ int protocore_spinel_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *pay
     {
         *pay_len = plen;
     }
-    return (int)(flag + 1);
+    Thread.n = (int)(flag + 1);
 }
+
+ThreadNs Thread = {.spinel_fcs = thread_spinel_fcs,
+                   .spinel_pack_uint = thread_spinel_pack_uint,
+                   .spinel_unpack_uint = thread_spinel_unpack_uint,
+                   .spinel_command_build = thread_spinel_command_build,
+                   .spinel_command_parse = thread_spinel_command_parse,
+                   .spinel_reader_init = thread_spinel_reader_init,
+                   .spinel_get_bool = thread_spinel_get_bool,
+                   .spinel_get_u8 = thread_spinel_get_u8,
+                   .spinel_get_i8 = thread_spinel_get_i8,
+                   .spinel_get_u16 = thread_spinel_get_u16,
+                   .spinel_get_i16 = thread_spinel_get_i16,
+                   .spinel_get_u32 = thread_spinel_get_u32,
+                   .spinel_get_i32 = thread_spinel_get_i32,
+                   .spinel_get_uint = thread_spinel_get_uint,
+                   .spinel_get_eui64 = thread_spinel_get_eui64,
+                   .spinel_get_ipv6 = thread_spinel_get_ipv6,
+                   .spinel_get_utf8 = thread_spinel_get_utf8,
+                   .spinel_get_data = thread_spinel_get_data,
+                   .spinel_get_data_wlen = thread_spinel_get_data_wlen,
+                   .spinel_reader_ok = thread_spinel_reader_ok,
+                   .spinel_writer_init = thread_spinel_writer_init,
+                   .spinel_put_bool = thread_spinel_put_bool,
+                   .spinel_put_u8 = thread_spinel_put_u8,
+                   .spinel_put_i8 = thread_spinel_put_i8,
+                   .spinel_put_u16 = thread_spinel_put_u16,
+                   .spinel_put_i16 = thread_spinel_put_i16,
+                   .spinel_put_u32 = thread_spinel_put_u32,
+                   .spinel_put_i32 = thread_spinel_put_i32,
+                   .spinel_put_uint = thread_spinel_put_uint,
+                   .spinel_put_eui64 = thread_spinel_put_eui64,
+                   .spinel_put_ipv6 = thread_spinel_put_ipv6,
+                   .spinel_put_utf8 = thread_spinel_put_utf8,
+                   .spinel_put_data = thread_spinel_put_data,
+                   .spinel_put_data_wlen = thread_spinel_put_data_wlen,
+                   .spinel_writer_len = thread_spinel_writer_len,
+                   .spinel_prop_lookup = thread_spinel_prop_lookup,
+                   .spinel_prop_name = thread_spinel_prop_name,
+                   .spinel_status_name = thread_spinel_status_name,
+                   .spinel_frame_encode = thread_spinel_frame_encode,
+                   .spinel_frame_decode = thread_spinel_frame_decode};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_THREAD

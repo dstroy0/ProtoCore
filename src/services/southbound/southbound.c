@@ -8,6 +8,7 @@
 
 #include "services/southbound/southbound.h"
 #include "mmgr/protostr.h" // str.eq: the driver registry name lookup
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_SOUTHBOUND
 
@@ -26,21 +27,40 @@ struct SouthboundStorage
     size_t count;                                                      ///< how many entries of @c drivers are live
 };
 
-/**
- * @brief The registry and the calls that reach it - what SouthboundNs points at.
- *
- * @var SouthboundInternal::store  the driver table and its count
- * @var SouthboundInternal::ns     the handle a caller sets a call's members on
- */
-struct SouthboundInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SOUTHBOUND_OFF_CTX 0u
+static_assert(SOUTHBOUND_OFF_CTX + sizeof(struct SouthboundStorage) <= PROTOCORE_SOUTHBOUND_BORROW,
+              "PROTOCORE_SOUTHBOUND_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define SOUTHBOUND_CTX(w) ((struct SouthboundStorage *)(void *)((w) + SOUTHBOUND_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct SouthboundStorage *store;
-    SouthboundNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_SOUTHBOUND_BORROW persistent bytes, or null while the pool was short
+} SouthboundOwnCtx;
+static SouthboundOwnCtx s_own;
 
-static struct SouthboundStorage s_store;
-
-static struct SouthboundInternal s_sb = {.store = &s_store, .ns = &Southbound};
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_southbound_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SOUTHBOUND_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // The registered driver of that name, or null.
 //
@@ -70,129 +90,161 @@ static const SouthboundDriver *lookup(const struct SouthboundStorage *store, con
 }
 
 // Append a borrowed driver to the table.
-static void add(struct SouthboundInternal *restrict ctx)
+static void add(uint8_t *restrict work)
 {
-    const SouthboundDriver *drv = ctx->ns->drv;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const SouthboundDriver *drv = Southbound.drv;
     if (!drv || !drv->name)
     {
-        ctx->ns->i32 = SB_ERR_ARG;
+        Southbound.i32 = SB_ERR_ARG;
         return;
     }
-    if (lookup(ctx->store, drv->name))
+    if (lookup(SOUTHBOUND_CTX(work), drv->name))
     {
-        ctx->ns->i32 = SB_ERR_DUP;
+        Southbound.i32 = SB_ERR_DUP;
         return;
     }
-    if (ctx->store->count >= PROTOCORE_SOUTHBOUND_MAX_DRIVERS)
+    if (SOUTHBOUND_CTX(work)->count >= PROTOCORE_SOUTHBOUND_MAX_DRIVERS)
     {
-        ctx->ns->i32 = SB_ERR_FULL;
+        Southbound.i32 = SB_ERR_FULL;
         return;
     }
-    ctx->store->drivers[ctx->store->count++] = drv;
-    ctx->ns->i32 = SB_OK;
+    SOUTHBOUND_CTX(work)->drivers[SOUTHBOUND_CTX(work)->count++] = drv;
+    Southbound.i32 = SB_OK;
 }
 
 // Empty the table and its count together.
-static void clear(struct SouthboundInternal *restrict ctx)
+static void clear(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     for (size_t i = 0; i < PROTOCORE_SOUTHBOUND_MAX_DRIVERS; i++)
     {
-        ctx->store->drivers[i] = NULL;
+        SOUTHBOUND_CTX(work)->drivers[i] = NULL;
     }
-    ctx->store->count = 0;
+    SOUTHBOUND_CTX(work)->count = 0;
 }
 
-static void count(struct SouthboundInternal *restrict ctx)
+static void count(uint8_t *restrict work)
 {
-    ctx->ns->n = ctx->store->count;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Southbound.n = SOUTHBOUND_CTX(work)->count;
 }
 
-static void find(struct SouthboundInternal *restrict ctx)
+static void find(uint8_t *restrict work)
 {
-    ctx->ns->driver = lookup(ctx->store, ctx->ns->name);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Southbound.driver = lookup(SOUTHBOUND_CTX(work), Southbound.name);
 }
 
 // Read one point through the named driver's read callback.
-static void read(struct SouthboundInternal *restrict ctx)
+static void read(uint8_t *restrict work)
 {
-    if (!ctx->ns->point.value_out)
+    if (!work)
     {
-        ctx->ns->i32 = SB_ERR_ARG;
+        return; // the pool was short of this module's borrow
+    }
+    if (!Southbound.point.value_out)
+    {
+        Southbound.i32 = SB_ERR_ARG;
         return;
     }
-    const SouthboundDriver *d = lookup(ctx->store, ctx->ns->name);
+    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), Southbound.name);
     if (!d)
     {
-        ctx->ns->i32 = SB_ERR_NOT_FOUND;
+        Southbound.i32 = SB_ERR_NOT_FOUND;
         return;
     }
     if (!d->read)
     {
-        ctx->ns->i32 = SB_ERR_UNSUPPORTED;
+        Southbound.i32 = SB_ERR_UNSUPPORTED;
         return;
     }
-    ctx->ns->i32 = d->read(d->ctx, ctx->ns->point.point, ctx->ns->point.value_out);
+    Southbound.i32 = d->read(d->ctx, Southbound.point.point, Southbound.point.value_out);
 }
 
 // Write one point through the named driver's write callback.
-static void write(struct SouthboundInternal *restrict ctx)
+static void write(uint8_t *restrict work)
 {
-    const SouthboundDriver *d = lookup(ctx->store, ctx->ns->name);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), Southbound.name);
     if (!d)
     {
-        ctx->ns->i32 = SB_ERR_NOT_FOUND;
+        Southbound.i32 = SB_ERR_NOT_FOUND;
         return;
     }
     if (!d->write)
     {
-        ctx->ns->i32 = SB_ERR_UNSUPPORTED;
+        Southbound.i32 = SB_ERR_UNSUPPORTED;
         return;
     }
-    ctx->ns->i32 = d->write(d->ctx, ctx->ns->point.point, ctx->ns->point.value);
+    Southbound.i32 = d->write(d->ctx, Southbound.point.point, Southbound.point.value);
 }
 
 // Read a contiguous span of points in one driver call.
-static void read_block(struct SouthboundInternal *restrict ctx)
+static void read_block(uint8_t *restrict work)
 {
-    if (!ctx->ns->block.out || ctx->ns->block.n == 0)
+    if (!work)
     {
-        ctx->ns->i32 = SB_ERR_ARG;
+        return; // the pool was short of this module's borrow
+    }
+    if (!Southbound.block.out || Southbound.block.n == 0)
+    {
+        Southbound.i32 = SB_ERR_ARG;
         return;
     }
-    const SouthboundDriver *d = lookup(ctx->store, ctx->ns->name);
+    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), Southbound.name);
     if (!d)
     {
-        ctx->ns->i32 = SB_ERR_NOT_FOUND;
+        Southbound.i32 = SB_ERR_NOT_FOUND;
         return;
     }
     if (!d->read_block)
     {
-        ctx->ns->i32 = SB_ERR_UNSUPPORTED;
+        Southbound.i32 = SB_ERR_UNSUPPORTED;
         return;
     }
-    ctx->ns->i32 = d->read_block(d->ctx, ctx->ns->block.first, ctx->ns->block.out, ctx->ns->block.n);
+    Southbound.i32 = d->read_block(d->ctx, Southbound.block.first, Southbound.block.out, Southbound.block.n);
 }
 
 // Write a contiguous span of points in one driver call.
-static void write_block(struct SouthboundInternal *restrict ctx)
+static void write_block(uint8_t *restrict work)
 {
-    if (!ctx->ns->block.in || ctx->ns->block.n == 0)
+    if (!work)
     {
-        ctx->ns->i32 = SB_ERR_ARG;
+        return; // the pool was short of this module's borrow
+    }
+    if (!Southbound.block.in || Southbound.block.n == 0)
+    {
+        Southbound.i32 = SB_ERR_ARG;
         return;
     }
-    const SouthboundDriver *d = lookup(ctx->store, ctx->ns->name);
+    const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), Southbound.name);
     if (!d)
     {
-        ctx->ns->i32 = SB_ERR_NOT_FOUND;
+        Southbound.i32 = SB_ERR_NOT_FOUND;
         return;
     }
     if (!d->write_block)
     {
-        ctx->ns->i32 = SB_ERR_UNSUPPORTED;
+        Southbound.i32 = SB_ERR_UNSUPPORTED;
         return;
     }
-    ctx->ns->i32 = d->write_block(d->ctx, ctx->ns->block.first, ctx->ns->block.in, ctx->ns->block.n);
+    Southbound.i32 = d->write_block(d->ctx, Southbound.block.first, Southbound.block.in, Southbound.block.n);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -203,7 +255,6 @@ SouthboundNs Southbound = {.add = add,
                            .read = read,
                            .write = write,
                            .read_block = read_block,
-                           .write_block = write_block,
-                           .internal = &s_sb};
+                           .write_block = write_block};
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND

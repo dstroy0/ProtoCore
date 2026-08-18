@@ -15,6 +15,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
+
 // Build a v2c request datagram (mirrors the SNMP agent test's builder + the host bench).
 static size_t build_req(uint8_t *buf, size_t cap, uint8_t pdu, long reqid, const uint32_t *oid, size_t oidn)
 {
@@ -23,18 +25,18 @@ static size_t build_req(uint8_t *buf, size_t cap, uint8_t pdu, long reqid, const
     size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 1;
-    SnmpBer.put_integer(SnmpBer.internal); // v2c
+    SnmpBer.put_integer(snmp_ber_work); // v2c
     protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
     size_t pdus = protocore_ber_seq_begin(&e, pdu);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = reqid;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 0;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     SnmpBer.enc = &e;
     SnmpBer.tlv.ival = 0;
-    SnmpBer.put_integer(SnmpBer.internal);
+    SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     protocore_ber_put_oid(&e, oid, oidn);

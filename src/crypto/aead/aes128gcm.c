@@ -17,6 +17,7 @@
  * touches the stack or BSS.
  */
 
+#include "mmgr/secure.h" // protocore_secure_wipe: a schedule that is done is zeroed
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_AES128GCM
@@ -59,7 +60,10 @@ static inline void blk_enc(Aes128Blk *b, const uint8_t in[16], uint8_t out[16])
 }
 static inline void blk_free(Aes128Blk *b)
 {
-    (void)b; // the key bytes are the caller's borrow, released and wiped with it
+    // The accelerator's key bank is reloaded per block and holds nothing between them, but this
+    // copy of the key does. It outlives the caller whenever the context is not a scratch borrow -
+    // a TLS connection's keys live as long as the connection - so the bytes go here.
+    protocore_secure_wipe(b->key, sizeof(b->key));
 }
 
 #endif
@@ -80,7 +84,10 @@ static inline void blk_enc(Aes128Blk *b, const uint8_t in[16], uint8_t out[16])
 }
 static inline void blk_free(Aes128Blk *b)
 {
-    (void)b; // the software path holds no vendor allocation to release
+    // No vendor allocation to release, but the expanded schedule IS the key: every round key is
+    // derived from it and the original is recoverable from the last one. It outlives the caller
+    // whenever the context is not a scratch borrow, so the bytes go here.
+    protocore_secure_wipe(b->rk, sizeof(b->rk));
 }
 
 #endif // !PROTOCORE_HAS_HW_AESGCM (SW path)
@@ -241,7 +248,12 @@ static proto_bool aes128gcm_key_load(uint8_t *restrict work)
 
 static void aes128gcm_key_release(uint8_t *restrict work)
 {
-    blk_free(&AES128GCM_GCM(work)->blk);
+    Aes128GcmWork *w = AES128GCM_GCM(work);
+    blk_free(&w->blk);
+    // H = E(K, 0^128) is derived from the key and forges a tag on its own, so it goes with it. The
+    // rest of the context is per-record scratch over bytes the caller already holds.
+    protocore_secure_wipe(w->h, sizeof(w->h));
+    protocore_secure_wipe(w->ej0, sizeof(w->ej0));
 }
 
 static proto_bool aes128gcm_seal_record(uint8_t *restrict work)

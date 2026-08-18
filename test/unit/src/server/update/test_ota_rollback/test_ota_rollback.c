@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t ota_rollback_work[16]; // the borrow an entry takes; OtaRollback never reads it
+
 void setUp(void)
 {
     protocore_host_platform_reset();
@@ -34,7 +36,7 @@ static protocore_ota_action decide(uint8_t img_state, proto_bool self_test_ok, u
     OtaRollback.decide_args.self_test_ok = self_test_ok;
     OtaRollback.decide_args.ms_since_boot = ms_since_boot;
     OtaRollback.decide_args.window_ms = window_ms;
-    OtaRollback.decide(OtaRollback.internal);
+    OtaRollback.decide(ota_rollback_work);
     return OtaRollback.action;
 }
 
@@ -117,16 +119,16 @@ void test_the_image_states_are_distinct(void)
 void test_the_seam_reports_the_state_the_part_holds(void)
 {
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
-    OtaRollback.state(OtaRollback.internal);
+    OtaRollback.state(ota_rollback_work);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_PENDING_VERIFY, OtaRollback.img_state);
 
-    OtaRollback.commit(OtaRollback.internal);
-    OtaRollback.state(OtaRollback.internal);
+    OtaRollback.commit(ota_rollback_work);
+    OtaRollback.state(ota_rollback_work);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_VALID, OtaRollback.img_state);
 
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
-    OtaRollback.rollback(OtaRollback.internal);
-    OtaRollback.state(OtaRollback.internal);
+    OtaRollback.rollback(ota_rollback_work);
+    OtaRollback.state(ota_rollback_work);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_INVALID, OtaRollback.img_state);
 }
 
@@ -139,7 +141,7 @@ void test_a_tick_commits_a_confirmed_image_through_the_seam(void)
     OtaRollback.self_test_ok = PROTO_TRUE;
     OtaRollback.action = PROTOCORE_OTA_ROLLBACK; // a value the tick has to overwrite
 
-    OtaRollback.tick(OtaRollback.internal);
+    OtaRollback.tick(ota_rollback_work);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, OtaRollback.action);
     TEST_ASSERT_TRUE(protocore_host_img_committed());
@@ -153,7 +155,7 @@ void test_a_tick_rolls_back_an_unconfirmed_image_through_the_seam(void)
     Clock.ms = PROTOCORE_OTA_CONFIRM_WINDOW_MS;
     OtaRollback.self_test_ok = PROTO_FALSE;
 
-    OtaRollback.tick(OtaRollback.internal);
+    OtaRollback.tick(ota_rollback_work);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK, OtaRollback.action);
     TEST_ASSERT_TRUE(protocore_host_img_rolled_back());
@@ -168,7 +170,7 @@ void test_a_tick_leaves_a_settled_image_alone_at_the_seam(void)
     OtaRollback.self_test_ok = PROTO_FALSE;
     OtaRollback.action = PROTOCORE_OTA_ROLLBACK;
 
-    OtaRollback.tick(OtaRollback.internal);
+    OtaRollback.tick(ota_rollback_work);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, OtaRollback.action);
     TEST_ASSERT_FALSE(protocore_host_img_committed());

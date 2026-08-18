@@ -32,11 +32,15 @@
 #ifndef PROTOCORE_CONTROL_H
 #define PROTOCORE_CONTROL_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_CONTROL
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 #define CONTROL_UNBOUNDED 1e30f ///< sentinel for "no clamp" (well outside any real actuator range)
 
@@ -44,6 +48,7 @@ PROTOCORE_BEGIN_DECLS
 //
 //  1. CSV (human / serial friendly) - one row per control step, these columns:
 #define CONTROL_LOG_HEADER "t_s,setpoint,measurement,output,dt_s"
+
 //
 //  2. Dense binary (little-endian) for high-rate loops - self-describing (the header carries the
 //     gains, limits, and sample period the run used, so the tuner needs no flags) and 16 B/sample:
@@ -85,8 +90,6 @@ typedef struct
     proto_bool primed; ///< false until the first update supplies prev_meas (no derivative on step 1)
 } Pid;
 
-// --- inline control-law primitives (dedup of the arithmetic every loop reaches for) ---
-
 /// Clamp @p v to [lo, hi].
 static inline float control_clamp(float v, float lo, float hi)
 {
@@ -127,29 +130,6 @@ static inline float control_lpf(float prev, float sample, float alpha)
 {
     return prev + alpha * (sample - prev);
 }
-
-/// Initialize with the three gains; feed-forward 0, no derivative filter, output/integral
-/// unbounded (CONTROL_UNBOUNDED). Clears the runtime state.
-void pid_init(Pid *p, float kp, float ki, float kd);
-
-/// Clamp the controller output to [lo, hi] (the actuator's range).
-void pid_set_output_limits(Pid *p, float lo, float hi);
-
-/// Hard clamp the integral accumulator to [lo, hi] (a secondary anti-windup bound).
-void pid_set_integral_limits(Pid *p, float lo, float hi);
-
-/// Set the derivative low-pass smoothing factor in [0,1); 0 disables the filter.
-void pid_set_derivative_filter(Pid *p, float alpha);
-
-/// Set the feed-forward gain (the command output includes kff * setpoint).
-void pid_set_feedforward(Pid *p, float kff);
-
-/// Cache the sample period @p dt (and 1/dt) for the zero-divide pid_update_fixed() fast path. Call
-/// once at setup for a fixed-rate loop; the single reciprocal is computed here, not per tick.
-void pid_set_rate(Pid *p, float dt);
-
-/// Clear the integrator, derivative memory, and prime flag (e.g. when re-enabling the loop).
-void pid_reset(Pid *p);
 
 /// Internal shared step, used by pid_update() and pid_update_fixed(): the whole control law with
 /// @p dt and its reciprocal @p inv_dt supplied, so there is no divide inside. Call an entry point
@@ -219,18 +199,159 @@ static inline float pid_update_fixed(Pid *p, float setpoint, float measurement)
     return pid_step_(p, setpoint, measurement, p->dt, p->inv_dt);
 }
 
-/// Batched multi-axis update: run @p n loops from contiguous arrays in one tight, FPU-bound,
-/// SIMD-friendly pass (motion masters run several drives off one control tick). Each
-/// out[i] = pid_update(&p[i], setpoint[i], measurement[i], dt).
-void pid_update_n(Pid *p, const float *setpoint, const float *measurement, float dt, float *out, uint8_t n);
+/** @brief What pid_init takes: p, kp, ki, kd. */
+typedef struct
+{
+    Pid *p;
+    float kp;
+    float ki;
+    float kd;
+} ControlPidInitArgs;
 
-/// Write the self-describing 36-octet dense-binary log header from @p p's gains + limits and the
-/// sample period @p dt (see the PID_LOG_* format above). Returns PID_LOG_HEADER_LEN, or 0 if cap
-/// is too small. Emit once, then a pid_log_record() per control step.
-size_t pid_log_header(uint8_t *buf, size_t cap, const Pid *p, float dt);
+/** @brief What pid_set_output_limits takes: p, lo, hi. */
+typedef struct
+{
+    Pid *p;
+    float lo;
+    float hi;
+} ControlPidSetOutputLimitsArgs;
 
-/// Write one 16-octet dense-binary log record. Returns PID_LOG_RECORD_LEN, or 0 if cap too small.
-size_t pid_log_record(uint8_t *buf, size_t cap, float setpoint, float measurement, float output, proto_bool saturated);
+/** @brief What pid_set_integral_limits takes: p, lo, hi. */
+typedef struct
+{
+    Pid *p;
+    float lo;
+    float hi;
+} ControlPidSetIntegralLimitsArgs;
+
+/** @brief What pid_set_derivative_filter takes: p, alpha. */
+typedef struct
+{
+    Pid *p;
+    float alpha;
+} ControlPidSetDerivativeFilterArgs;
+
+/** @brief What pid_set_feedforward takes: p, kff. */
+typedef struct
+{
+    Pid *p;
+    float kff;
+} ControlPidSetFeedforwardArgs;
+
+/** @brief What pid_set_rate takes: p, dt. */
+typedef struct
+{
+    Pid *p;
+    float dt;
+} ControlPidSetRateArgs;
+
+/** @brief What pid_reset takes: p. */
+typedef struct
+{
+    Pid *p;
+} ControlPidResetArgs;
+
+/** @brief What pid_update_n takes: p, setpoint, measurement, dt, out, ... */
+typedef struct
+{
+    Pid *p;
+    const float *setpoint;
+    const float *measurement;
+    float dt;
+    float *out;
+    uint8_t n;
+} ControlPidUpdateNArgs;
+
+/** @brief What pid_log_header takes: buf, cap, p, dt. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const Pid *p;
+    float dt;
+} ControlPidLogHeaderArgs;
+
+/** @brief What pid_log_record takes: buf, cap, setpoint, measurement, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    float setpoint;
+    float measurement;
+    float output;
+    proto_bool saturated;
+} ControlPidLogRecordArgs;
+
+/**
+ * @brief Closed-loop control law (PROTOCORE_ENABLE_CONTROL) - a zero-heap PID controller plus a handful of inline
+ * control-law primitives, for driving an actuator toward a setpoint.
+ *
+ * A caller sets the members a call takes, invokes it through ::Control with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Control.pid_init_args.p = ...;
+ *   Control.pid_init_args.kp = ...;
+ *   Control.pid_init_args.ki = ...;
+ *   Control.pid_init_args.kd = ...;
+ *   Control.pid_init(work);
+ *
+ * @var ControlNs::pid_init_args  what pid_init takes: p, kp, ki, kd
+ * @var ControlNs::pid_set_output_limits_args  what pid_set_output_limits takes: p, lo, hi
+ * @var ControlNs::pid_set_integral_limits_args  what pid_set_integral_limits takes: p, lo, hi
+ * @var ControlNs::pid_set_derivative_filter_args  what pid_set_derivative_filter takes: p, alpha
+ * @var ControlNs::pid_set_feedforward_args  what pid_set_feedforward takes: p, kff
+ * @var ControlNs::pid_set_rate_args  what pid_set_rate takes: p, dt
+ * @var ControlNs::pid_reset_args  what pid_reset takes: p
+ * @var ControlNs::pid_update_n_args  what pid_update_n takes: p, setpoint, measurement, dt, out,
+ * @var ControlNs::pid_log_header_args  what pid_log_header takes: buf, cap, p, dt
+ * @var ControlNs::pid_log_record_args  what pid_log_record takes: buf, cap, setpoint, measurement,
+ * @var ControlNs::ok  a call's true/false outcome
+ * @var ControlNs::n  the count a call reports
+ * @var ControlNs::pid_init  pid_init
+ * @var ControlNs::pid_set_output_limits  pid_set_output_limits
+ * @var ControlNs::pid_set_integral_limits  pid_set_integral_limits
+ * @var ControlNs::pid_set_derivative_filter  pid_set_derivative_filter
+ * @var ControlNs::pid_set_feedforward  pid_set_feedforward
+ * @var ControlNs::pid_set_rate  pid_set_rate
+ * @var ControlNs::pid_reset  pid_reset
+ * @var ControlNs::pid_update_n  pid_update_n
+ * @var ControlNs::pid_log_header  pid_log_header
+ * @var ControlNs::pid_log_record  pid_log_record
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
+ */
+typedef struct
+{
+    ControlPidInitArgs pid_init_args;
+    ControlPidSetOutputLimitsArgs pid_set_output_limits_args;
+    ControlPidSetIntegralLimitsArgs pid_set_integral_limits_args;
+    ControlPidSetDerivativeFilterArgs pid_set_derivative_filter_args;
+    ControlPidSetFeedforwardArgs pid_set_feedforward_args;
+    ControlPidSetRateArgs pid_set_rate_args;
+    ControlPidResetArgs pid_reset_args;
+    ControlPidUpdateNArgs pid_update_n_args;
+    ControlPidLogHeaderArgs pid_log_header_args;
+    ControlPidLogRecordArgs pid_log_record_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const pid_init)(uint8_t *restrict work);
+    void (*const pid_set_output_limits)(uint8_t *restrict work);
+    void (*const pid_set_integral_limits)(uint8_t *restrict work);
+    void (*const pid_set_derivative_filter)(uint8_t *restrict work);
+    void (*const pid_set_feedforward)(uint8_t *restrict work);
+    void (*const pid_set_rate)(uint8_t *restrict work);
+    void (*const pid_reset)(uint8_t *restrict work);
+    void (*const pid_update_n)(uint8_t *restrict work);
+    void (*const pid_log_header)(uint8_t *restrict work);
+    void (*const pid_log_record)(uint8_t *restrict work);
+} ControlNs;
+
+/** @brief The one symbol this module exports. */
+extern ControlNs Control;
 
 PROTOCORE_END_DECLS
 

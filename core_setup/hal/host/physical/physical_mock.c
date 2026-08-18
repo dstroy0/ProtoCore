@@ -340,4 +340,14 @@ void protocore_phy_monitor_end(void)
     s_mock.on_frame = NULL;
 }
 
+proto_bool protocore_phy_mock_deliver(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel)
+{
+    if (!s_mock.monitor_on || s_mock.on_frame == NULL || frame == NULL || len == 0)
+    {
+        return PROTO_FALSE;
+    }
+    s_mock.on_frame(frame, len, rssi, channel ? channel : s_mock.channel);
+    return PROTO_TRUE;
+}
+
 #endif // PROTOCORE_PHYSICAL_HAS_BACKEND && !PROTOCORE_VENDOR_ESP

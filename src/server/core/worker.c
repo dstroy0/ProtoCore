@@ -11,6 +11,7 @@
  */
 
 #include "server/core/worker.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #include "core_setup/board_profiles/protocore_platform.h" // the target's queues and tasks, under our names
 #include "mmgr/arena.h" // protocore_worker_set_self: identity lives with the pools it indexes
@@ -21,7 +22,7 @@
 // ---------------------------------------------------------------------------
 
 // Called by defer above its definition.
-static void wake(struct WorkerInternal *restrict ctx);
+static void wake(uint8_t *restrict work);
 
 // Per-worker deferred-callback queues: app code on any task hands a {fn, arg} to
 // the owning worker, which runs it in its own context (race-free push path).
@@ -42,27 +43,44 @@ struct WorkerStorage
     protocore_platform_queue dq[PROTOCORE_WORKER_COUNT];             ///< the deferred-callback queue handles
     protocore_platform_queue_ctrl dq_struct[PROTOCORE_WORKER_COUNT]; ///< their descriptors
     uint8_t dq_storage[PROTOCORE_WORKER_COUNT][PROTOCORE_DEFER_QUEUE_DEPTH * sizeof(DeferCmd)]; ///< their backing store
+    protocore_worker_pump_fn pump; ///< what each worker runs every iteration
+    _Atomic proto_bool run;        ///< cleared from another task to stop the loops
 };
 
-/**
- * @brief The workers' state and the calls that reach it - what WorkerNs points at.
- *
- * @var WorkerInternal::store  the task handles and the queues
- * @var WorkerInternal::ns     the handle a caller sets a call's members on
- * @var WorkerInternal::pump   what each task runs each iteration
- * @var WorkerInternal::run    release on start publishes pump; acquire in the task
- */
-struct WorkerInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define WORKER_OFF_CTX 0u
+static_assert(WORKER_OFF_CTX + sizeof(struct WorkerStorage) <= PROTOCORE_WORKER_BORROW,
+              "PROTOCORE_WORKER_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define WORKER_CTX(w) ((struct WorkerStorage *)(void *)((w) + WORKER_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct WorkerStorage *store;
-    WorkerNs *ns;
-    protocore_worker_pump_fn pump;
-    _Atomic proto_bool run;
-};
+    uint8_t *span; ///< PROTOCORE_WORKER_BORROW persistent bytes, or null while the pool was short
+} WorkersOwnCtx;
+static WorkersOwnCtx s_own;
 
-static struct WorkerStorage s_store;
-
-static struct WorkerInternal s_worker = {.store = &s_store, .ns = &Workers};
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_worker_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_WORKER_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // Each worker binds its id, then pumps until asked to stop. Between iterations it
 // blocks on its task notification instead of free-running the poll: a producer
@@ -76,84 +94,103 @@ static void worker_task(void *arg)
 {
     int id = (int)(intptr_t)arg;
     protocore_worker_set_self(id);
-    while (PROTO_ATOMIC_LOAD(&s_worker.run))
+    while (PROTO_ATOMIC_LOAD(&WORKER_CTX(protocore_worker_span())->run))
     {
-        if (s_worker.pump)
+        if (WORKER_CTX(protocore_worker_span())->pump)
         {
-            s_worker.pump(id);
+            WORKER_CTX(protocore_worker_span())->pump(id);
         }
         protocore_platform_task_wait(PROTOCORE_PLATFORM_OK,
                                      PROTOCORE_WORKER_POLL_TICKS); // wake on event, else idle-sweep timeout
     }
-    s_worker.store->tasks[id] = NULL;
+    WORKER_CTX(protocore_worker_span())->tasks[id] = NULL;
     protocore_platform_task_stop(NULL);
 }
 
-static void start(struct WorkerInternal *restrict ctx)
+static void start(uint8_t *restrict work)
 {
-    if (PROTO_ATOMIC_LOAD(&ctx->run))
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    if (PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
         return; // already running
     }
-    ctx->pump = ctx->ns->pump;
+    WORKER_CTX(work)->pump = Workers.pump;
     for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
-        if (!ctx->store->dq[i])
+        if (!WORKER_CTX(work)->dq[i])
         {
-            ctx->store->dq[i] = protocore_platform_queue_create(PROTOCORE_DEFER_QUEUE_DEPTH, sizeof(DeferCmd),
-                                                                ctx->store->dq_storage[i], &ctx->store->dq_struct[i]);
+            WORKER_CTX(work)->dq[i] =
+                protocore_platform_queue_create(PROTOCORE_DEFER_QUEUE_DEPTH, sizeof(DeferCmd),
+                                                WORKER_CTX(work)->dq_storage[i], &WORKER_CTX(work)->dq_struct[i]);
         }
     }
-    PROTO_ATOMIC_STORE(&ctx->run, PROTO_TRUE);
+    PROTO_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_TRUE);
     for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
         int core = (PROTOCORE_WORKER_CORE + i) % PROTOCORE_PLATFORM_CORES;
         protocore_platform_task_start(worker_task, "protocore_worker", PROTOCORE_WORKER_TASK_STACK, (void *)(intptr_t)i,
-                                      PROTOCORE_WORKER_TASK_PRIORITY, &ctx->store->tasks[i], core);
+                                      PROTOCORE_WORKER_TASK_PRIORITY, &WORKER_CTX(work)->tasks[i], core);
     }
 }
 
-static void defer(struct WorkerInternal *restrict ctx)
+static void defer(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    if (!ctx->ns->defer_args.fn)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Workers.ok = PROTO_FALSE;
+    if (!Workers.defer_args.fn)
     {
         return;
     }
-    if (ctx->ns->worker_id < 0 || ctx->ns->worker_id >= PROTOCORE_WORKER_COUNT || !ctx->store->dq[ctx->ns->worker_id])
+    if (Workers.worker_id < 0 || Workers.worker_id >= PROTOCORE_WORKER_COUNT ||
+        !WORKER_CTX(work)->dq[Workers.worker_id])
     {
         return;
     }
-    DeferCmd cmd = {ctx->ns->defer_args.fn, ctx->ns->defer_args.arg};
-    if (protocore_platform_queue_send(ctx->store->dq[ctx->ns->worker_id], &cmd, 0) != PROTOCORE_PLATFORM_OK)
+    DeferCmd cmd = {Workers.defer_args.fn, Workers.defer_args.arg};
+    if (protocore_platform_queue_send(WORKER_CTX(work)->dq[Workers.worker_id], &cmd, 0) != PROTOCORE_PLATFORM_OK)
     {
         return;
     }
-    wake(ctx); // run the callback now, not on the next idle sweep
-    ctx->ns->ok = PROTO_TRUE;
+    wake(work); // run the callback now, not on the next idle sweep
+    Workers.ok = PROTO_TRUE;
 }
 
-static void wake(struct WorkerInternal *restrict ctx)
+static void wake(uint8_t *restrict work)
 {
-    if (ctx->ns->worker_id < 0 || ctx->ns->worker_id >= PROTOCORE_WORKER_COUNT)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    if (Workers.worker_id < 0 || Workers.worker_id >= PROTOCORE_WORKER_COUNT)
     {
         return;
     }
-    protocore_platform_task t = ctx->store->tasks[ctx->ns->worker_id];
+    protocore_platform_task t = WORKER_CTX(work)->tasks[Workers.worker_id];
     if (t)
     {
         protocore_platform_task_notify(t);
     }
 }
 
-static void run_deferred(struct WorkerInternal *restrict ctx)
+static void run_deferred(uint8_t *restrict work)
 {
-    if (ctx->ns->worker_id < 0 || ctx->ns->worker_id >= PROTOCORE_WORKER_COUNT || !ctx->store->dq[ctx->ns->worker_id])
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    if (Workers.worker_id < 0 || Workers.worker_id >= PROTOCORE_WORKER_COUNT ||
+        !WORKER_CTX(work)->dq[Workers.worker_id])
     {
         return;
     }
     DeferCmd cmd;
-    while (protocore_platform_queue_recv(ctx->store->dq[ctx->ns->worker_id], &cmd, 0) == PROTOCORE_PLATFORM_OK)
+    while (protocore_platform_queue_recv(WORKER_CTX(work)->dq[Workers.worker_id], &cmd, 0) == PROTOCORE_PLATFORM_OK)
     {
         if (cmd.fn)
         {
@@ -162,21 +199,29 @@ static void run_deferred(struct WorkerInternal *restrict ctx)
     }
 }
 
-static void stop(struct WorkerInternal *restrict ctx)
+static void stop(uint8_t *restrict work)
 {
-    if (!PROTO_ATOMIC_LOAD(&ctx->run))
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    if (!PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
         return;
     }
-    PROTO_ATOMIC_STORE(&ctx->run, PROTO_FALSE);
+    PROTO_ATOMIC_STORE(&WORKER_CTX(work)->run, PROTO_FALSE);
     // Tasks self-delete on their next iteration; give them a few ticks to exit
     // before the caller tears down the slots they were servicing.
     protocore_platform_task_delay(3);
 }
 
-static void running(struct WorkerInternal *restrict ctx)
+static void running(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_ATOMIC_LOAD(&ctx->run);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Workers.ok = PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -190,5 +235,4 @@ WorkerNs Workers = {
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
     .queue = &PreemptQueue,
 #endif
-    .internal = &s_worker,
 };

@@ -12,10 +12,15 @@
  * true elapsed interval.
  */
 
-#include "server/peripherals/rcwl0516/rcwl0516.h"
-#include "server/clock/clock.h" // Clock.millis
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_RCWL0516
+
+#include "mmgr/plaintext.h"     // the persistent end this module's state is taken from
+#include "server/clock/clock.h" // Clock.millis
+#include "server/peripherals/rcwl0516/rcwl0516.h"
+
+PROTOCORE_BEGIN_DECLS
 
 #if !PROTOCORE_HAS_GPIO
 #error                                                                                                                 \
@@ -30,8 +35,46 @@ static inline proto_bool elapsed(uint32_t now, uint32_t since, uint32_t limit)
     return (now - since) >= limit;
 }
 
-void protocore_presence_core_init(PresenceCore *c, uint32_t debounce_ms, uint32_t hold_ms, uint32_t now)
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_RCWL0516_BORROW persistent bytes, or null while the pool was short
+} Rcwl0516OwnCtx;
+static Rcwl0516OwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_rcwl0516_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_RCWL0516_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void rcwl0516_core_init(uint8_t *restrict work);
+static void rcwl0516_presence_get(uint8_t *restrict work);
+static void rcwl0516_presence_init(uint8_t *restrict work);
+static void rcwl0516_presence_take_event(uint8_t *restrict work);
+static void rcwl0516_presence_update(uint8_t *restrict work);
+
+static void rcwl0516_presence_init(uint8_t *restrict work)
+{
+    (void)work;
+    PresenceCore *c = Rcwl0516.presence_init_args.c;
+    uint32_t debounce_ms = Rcwl0516.presence_init_args.debounce_ms;
+    uint32_t hold_ms = Rcwl0516.presence_init_args.hold_ms;
+    uint32_t now = Rcwl0516.presence_init_args.now;
+
     if (!c)
     {
         return;
@@ -46,11 +89,17 @@ void protocore_presence_core_init(PresenceCore *c, uint32_t debounce_ms, uint32_
     c->changed = 0;
 }
 
-proto_bool protocore_presence_core_update(PresenceCore *c, proto_bool pin_high, uint32_t now)
+static void rcwl0516_presence_update(uint8_t *restrict work)
 {
+    (void)work;
+    PresenceCore *c = Rcwl0516.presence_update_args.c;
+    proto_bool pin_high = Rcwl0516.presence_update_args.pin_high;
+    uint32_t now = Rcwl0516.presence_update_args.now;
+
     if (!c)
     {
-        return PROTO_FALSE;
+        Rcwl0516.ok = PROTO_FALSE;
+        return;
     }
     const uint8_t lvl = pin_high ? 1u : 0u;
 
@@ -83,27 +132,45 @@ proto_bool protocore_presence_core_update(PresenceCore *c, proto_bool pin_high, 
     {
         c->changed = 1;
     }
-    return c->present != 0;
+    Rcwl0516.ok = c->present != 0;
 }
 
-proto_bool protocore_presence_core_get(const PresenceCore *c)
+static void rcwl0516_presence_get(uint8_t *restrict work)
 {
-    return c && c->present != 0;
+    (void)work;
+    const PresenceCore *c = Rcwl0516.presence_get_args.c;
+
+    Rcwl0516.ok = c && c->present != 0;
 }
 
-proto_bool protocore_presence_take_event(PresenceCore *c)
+static void rcwl0516_presence_take_event(uint8_t *restrict work)
 {
+    (void)work;
+    PresenceCore *c = Rcwl0516.presence_take_event_args.c;
+
     if (!c || !c->changed)
     {
-        return PROTO_FALSE;
+        Rcwl0516.ok = PROTO_FALSE;
+        return;
     }
     c->changed = 0;
-    return PROTO_TRUE;
+    Rcwl0516.ok = PROTO_TRUE;
 }
 
-void protocore_rcwl0516_core_init(PresenceCore *c, uint32_t now)
+static void rcwl0516_core_init(uint8_t *restrict work)
 {
-    protocore_presence_core_init(c, PROTOCORE_RCWL0516_DEBOUNCE_MS, PROTOCORE_RCWL0516_HOLD_MS, now);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    PresenceCore *c = Rcwl0516.core_init_args.c;
+    uint32_t now = Rcwl0516.core_init_args.now;
+
+    Rcwl0516.presence_init_args.c = c;
+    Rcwl0516.presence_init_args.debounce_ms = PROTOCORE_RCWL0516_DEBOUNCE_MS;
+    Rcwl0516.presence_init_args.hold_ms = PROTOCORE_RCWL0516_HOLD_MS;
+    Rcwl0516.presence_init_args.now = now;
+    rcwl0516_presence_init(work);
 }
 
 // ---------------------------------------------------------------------------
@@ -118,43 +185,88 @@ typedef struct
     int pin;
     proto_bool begun; ///< begin() ran; until it has, the pin reports -1
 } Rcwl0516Ctx;
-static Rcwl0516Ctx s_rcwl;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define RCWL0516_OFF_CTX 0u
+static_assert(RCWL0516_OFF_CTX + sizeof(Rcwl0516Ctx) <= PROTOCORE_RCWL0516_BORROW,
+              "PROTOCORE_RCWL0516_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define RCWL0516_CTX(w) ((Rcwl0516Ctx *)(void *)((w) + RCWL0516_OFF_CTX))
 
 // The pin, or -1 for "there is none" - which is what a failed or absent begin() reports, the way a
 // main() reports failure. Stated here rather than as an initializer on the declaration so the
 // context carries none and can live in a borrow that arrives zeroed. It takes a flag rather than a
 // sentinel value because pin 0 is a real pin, so zero cannot mean "unset". A caller that hands
 // begin() a negative pin still lands on -1 here, and the poll below still refuses.
-static int dev_pin(void)
+static int dev_pin(uint8_t *restrict work)
 {
-    return s_rcwl.begun ? s_rcwl.pin : -1;
+    return RCWL0516_CTX(work)->begun ? RCWL0516_CTX(work)->pin : -1;
 }
 
-proto_bool protocore_rcwl0516_begin(int out_pin)
+static void rcwl0516_begin(uint8_t *restrict work)
 {
-    s_rcwl.pin = out_pin;
-    s_rcwl.begun = PROTO_TRUE;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    int out_pin = Rcwl0516.begin_args.out_pin;
+
+    RCWL0516_CTX(work)->pin = out_pin;
+    RCWL0516_CTX(work)->begun = PROTO_TRUE;
     protocore_platform_gpio_mode((uint8_t)(out_pin),
                                  PROTOCORE_GPIO_IN); // the module drives OUT actively; no pull needed
-    protocore_rcwl0516_core_init(&s_rcwl.core, Clock.ms);
-    return PROTO_TRUE;
+    Rcwl0516.core_init_args.c = &RCWL0516_CTX(work)->core;
+    Rcwl0516.core_init_args.now = Clock.ms;
+    rcwl0516_core_init(work);
+    Rcwl0516.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_rcwl0516_poll()
+static void rcwl0516_poll(uint8_t *restrict work)
 {
-    const int pin = dev_pin();
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    const int pin = dev_pin(work);
     if (pin < 0)
     {
-        return PROTO_FALSE;
+        Rcwl0516.ok = PROTO_FALSE;
+        return;
     }
-    protocore_presence_core_update(&s_rcwl.core, protocore_platform_gpio_read((uint8_t)(pin)) == PROTOCORE_GPIO_HIGH,
-                                   Clock.ms);
-    return protocore_presence_take_event(&s_rcwl.core);
+    Rcwl0516.presence_update_args.c = &RCWL0516_CTX(work)->core;
+    Rcwl0516.presence_update_args.pin_high = protocore_platform_gpio_read((uint8_t)(pin)) == PROTOCORE_GPIO_HIGH;
+    Rcwl0516.presence_update_args.now = Clock.ms;
+    rcwl0516_presence_update(work);
+    Rcwl0516.presence_take_event_args.c = &RCWL0516_CTX(work)->core;
+    rcwl0516_presence_take_event(work);
 }
 
-proto_bool protocore_rcwl0516_present()
+static void rcwl0516_present(uint8_t *restrict work)
 {
-    return protocore_presence_core_get(&s_rcwl.core);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    Rcwl0516.presence_get_args.c = &RCWL0516_CTX(work)->core;
+    rcwl0516_presence_get(work);
 }
+
+Rcwl0516Ns Rcwl0516 = {
+    .presence_init = rcwl0516_presence_init,
+    .presence_update = rcwl0516_presence_update,
+    .presence_get = rcwl0516_presence_get,
+    .presence_take_event = rcwl0516_presence_take_event,
+    .core_init = rcwl0516_core_init,
+    .begin = rcwl0516_begin,
+    .poll = rcwl0516_poll,
+    .present = rcwl0516_present,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_RCWL0516

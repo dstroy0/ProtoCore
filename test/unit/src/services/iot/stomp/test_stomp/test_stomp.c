@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t stomp_work[16]; // the borrow an entry takes; Stomp never reads it
+
 void setUp(void)
 {
 }
@@ -31,7 +33,7 @@ static proto_bool parse(const char *in, size_t len)
     Stomp.frame = &g_frame;
     Stomp.buf.in = in;
     Stomp.buf.len = len;
-    Stomp.parse(Stomp.internal);
+    Stomp.parse(stomp_work);
     return Stomp.ok;
 }
 
@@ -40,7 +42,7 @@ static const char *header(const char *name, size_t *out_len)
 {
     Stomp.frame = &g_frame;
     Stomp.lookup.name = name;
-    Stomp.header(Stomp.internal);
+    Stomp.header(stomp_work);
     *out_len = Stomp.value_len;
     return Stomp.ok ? Stomp.value : NULL;
 }
@@ -164,7 +166,7 @@ void test_build_emits_the_published_send_frame(void)
     Stomp.build_args.header_count = 2;
     Stomp.build_args.body = "hello queue a";
     Stomp.build_args.body_len = 13;
-    Stomp.build(Stomp.internal);
+    Stomp.build(stomp_work);
 
     TEST_ASSERT_TRUE(Stomp.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Stomp.n); // the NULL octet is counted
@@ -183,7 +185,7 @@ void test_build_minimal_frame(void)
     Stomp.build_args.header_count = 0;
     Stomp.build_args.body = NULL;
     Stomp.build_args.body_len = 0;
-    Stomp.build(Stomp.internal);
+    Stomp.build(stomp_work);
 
     TEST_ASSERT_TRUE(Stomp.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Stomp.n);
@@ -209,7 +211,7 @@ void test_build_escapes_a_header(void)
     Stomp.build_args.header_count = 1;
     Stomp.build_args.body = NULL;
     Stomp.build_args.body_len = 0;
-    Stomp.build(Stomp.internal);
+    Stomp.build(stomp_work);
 
     TEST_ASSERT_TRUE(Stomp.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Stomp.n);
@@ -226,7 +228,7 @@ void test_unescape_the_four_transformations(void)
     Stomp.buf.len = sizeof(IN) - 1;
     Stomp.buf.out = g_out;
     Stomp.buf.cap = sizeof(g_out);
-    Stomp.unescape(Stomp.internal);
+    Stomp.unescape(stomp_work);
 
     TEST_ASSERT_TRUE(Stomp.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Stomp.n);
@@ -242,7 +244,7 @@ void test_unescape_rejects_an_undefined_escape(void)
     Stomp.buf.len = sizeof(BAD) - 1;
     Stomp.buf.out = g_out;
     Stomp.buf.cap = sizeof(g_out);
-    Stomp.unescape(Stomp.internal);
+    Stomp.unescape(stomp_work);
     TEST_ASSERT_FALSE(Stomp.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Stomp.n);
 
@@ -251,7 +253,7 @@ void test_unescape_rejects_an_undefined_escape(void)
     Stomp.buf.len = sizeof(TRAILING) - 1;
     Stomp.buf.out = g_out;
     Stomp.buf.cap = sizeof(g_out);
-    Stomp.unescape(Stomp.internal);
+    Stomp.unescape(stomp_work);
     TEST_ASSERT_FALSE(Stomp.ok);
 }
 
@@ -376,7 +378,7 @@ void test_build_refuses_a_short_buffer(void)
     Stomp.build_args.header_count = 1;
     Stomp.build_args.body = NULL;
     Stomp.build_args.body_len = 0;
-    Stomp.build(Stomp.internal);
+    Stomp.build(stomp_work);
     TEST_ASSERT_FALSE(Stomp.ok);
     TEST_ASSERT_EQUAL_UINT(0u, Stomp.n);
 }
@@ -391,19 +393,19 @@ void test_build_refuses_missing_arguments(void)
     Stomp.build_args.header_count = 0;
     Stomp.build_args.body = NULL;
     Stomp.build_args.body_len = 0;
-    Stomp.build(Stomp.internal);
+    Stomp.build(stomp_work);
     TEST_ASSERT_FALSE(Stomp.ok);
 
     Stomp.build_args.command = "SEND";
     Stomp.buf.out = NULL;
-    Stomp.build(Stomp.internal);
+    Stomp.build(stomp_work);
     TEST_ASSERT_FALSE(Stomp.ok);
 
     Stomp.buf.out = g_out;
     Stomp.build_args.header_names = NULL;
     Stomp.build_args.header_values = NULL;
     Stomp.build_args.header_count = 1;
-    Stomp.build(Stomp.internal);
+    Stomp.build(stomp_work);
     TEST_ASSERT_FALSE(Stomp.ok);
 }
 
@@ -435,7 +437,7 @@ void test_build_parse_round_trip(void)
     Stomp.build_args.header_count = 3;
     Stomp.build_args.body = NULL;
     Stomp.build_args.body_len = 0;
-    Stomp.build(Stomp.internal);
+    Stomp.build(stomp_work);
     TEST_ASSERT_TRUE(Stomp.ok);
     const size_t n = Stomp.n;
 

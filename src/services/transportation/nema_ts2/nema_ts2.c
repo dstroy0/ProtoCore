@@ -10,6 +10,8 @@
 #include "mmgr/protomem.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_X25
 
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
 #if PROTOCORE_ENABLE_NEMA_TS2
 
 uint16_t protocore_nema_ts2_crc(const uint8_t *bytes, size_t len)
@@ -18,7 +20,7 @@ uint16_t protocore_nema_ts2_crc(const uint8_t *bytes, size_t len)
     Crc.args.params = &PROTOCORE_CRC16_X25;
     Crc.args.data = bytes;
     Crc.args.len = len;
-    Crc.compute(Crc.internal);
+    Crc.compute(crc_work);
     return (uint16_t)Crc.value;
 }
 

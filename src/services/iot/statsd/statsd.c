@@ -14,6 +14,9 @@
  */
 
 #include "services/iot/statsd/statsd.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_STATSD
 
@@ -50,21 +53,16 @@ struct StatsdStorage
     char buf[PROTOCORE_STATSD_LINE_MAX];  ///< the line a metric call builds
 };
 
-/**
- * @brief The client's state and the calls that reach it - what StatsdNs points at.
- *
- * @var StatsdInternal::store  the daemon, the stored tags, and the value and line scratches
- * @var StatsdInternal::ns     the handle a caller sets a call's members on
- */
-struct StatsdInternal
-{
-    struct StatsdStorage *store;
-    StatsdNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define STATSD_OFF_CTX 0u
+static_assert(STATSD_OFF_CTX + sizeof(struct StatsdStorage) <= PROTOCORE_STATSD_BORROW,
+              "PROTOCORE_STATSD_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct StatsdStorage s_store = {.port = PROTOCORE_STATSD_PORT};
-
-static struct StatsdInternal s_statsd = {.store = &s_store, .ns = &Statsd};
+// The region, at its offset in the caller's borrow.
+#define STATSD_CTX(w) ((struct StatsdStorage *)(void *)((w) + STATSD_OFF_CTX))
 
 // Unsigned to decimal, most significant digit first, no terminator. Returns the digit count.
 static size_t u64_str(char *b, uint64_t v)
@@ -152,42 +150,73 @@ static inline proto_bool line_append(char *out, size_t cap, size_t *pos, const c
     return PROTO_TRUE;
 }
 
-// Parse the daemon address and store the port and the tag list every later line carries.
-static void statsd_init(struct StatsdInternal *restrict ctx)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    ctx->store->ready = PROTO_FALSE;
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->store->port = ctx->ns->server.port ? ctx->ns->server.port : PROTOCORE_STATSD_PORT;
-    if (ctx->ns->tags.global && ctx->ns->tags.global[0])
+    uint8_t *span; ///< PROTOCORE_STATSD_BORROW persistent bytes, or null while the pool was short
+} StatsdOwnCtx;
+static StatsdOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_statsd_span(void)
+{
+    if (s_own.span == NULL)
     {
-        (void)str.copy(ctx->store->tags, ctx->ns->tags.global, sizeof(ctx->store->tags));
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_STATSD_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // A borrow arrives zeroed, and these do not start at zero.
+            STATSD_CTX(s_own.span)->port = PROTOCORE_STATSD_PORT;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+// Parse the daemon address and store the port and the tag list every later line carries.
+static void statsd_init(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    STATSD_CTX(work)->ready = PROTO_FALSE;
+    Statsd.ok = PROTO_FALSE;
+    STATSD_CTX(work)->port = Statsd.server.port ? Statsd.server.port : PROTOCORE_STATSD_PORT;
+    if (Statsd.tags.global && Statsd.tags.global[0])
+    {
+        (void)str.copy(STATSD_CTX(work)->tags, Statsd.tags.global, sizeof(STATSD_CTX(work)->tags));
     }
     else
     {
-        ctx->store->tags[0] = '\0';
+        STATSD_CTX(work)->tags[0] = '\0';
     }
-    if (!ctx->ns->server.addr)
+    if (!Statsd.server.addr)
     {
         return;
     }
-    Ip.args.text = ctx->ns->server.addr;
-    Ip.args.out = &ctx->store->server;
-    Ip.parse(Ip.internal);
-    ctx->store->ready = Ip.ok;
-    ctx->ns->ok = Ip.ok;
+    Ip.args.text = Statsd.server.addr;
+    Ip.args.out = &STATSD_CTX(work)->server;
+    Ip.parse(ip_work);
+    STATSD_CTX(work)->ready = Ip.ok;
+    Statsd.ok = Ip.ok;
 }
 
 // Build one metric line into ns->line, and report its length in ns->n.
-static void statsd_format(struct StatsdInternal *restrict ctx)
+static void statsd_format(uint8_t *restrict work)
 {
-    char *out = ctx->ns->line.out;
-    const size_t cap = ctx->ns->line.cap;
-    const char *name = ctx->ns->metric.name;
-    const char *value = ctx->ns->value.text;
-    const StatsdType type = ctx->ns->metric.type;
-    const char *tags = ctx->ns->tags.metric;
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
+    (void)work;
+    char *out = Statsd.line.out;
+    const size_t cap = Statsd.line.cap;
+    const char *name = Statsd.metric.name;
+    const char *value = Statsd.value.text;
+    const StatsdType type = Statsd.metric.type;
+    const char *tags = Statsd.tags.metric;
+    Statsd.n = 0;
+    Statsd.ok = PROTO_FALSE;
     if (!out || cap == 0 || !name || !name[0] || !value)
     {
         return;
@@ -220,7 +249,7 @@ static void statsd_format(struct StatsdInternal *restrict ctx)
 
     // `|@<rate>` then `|#<tags>`, each written only when it renders to something.
     char rbuf[PROTOCORE_STATSD_RATE_MAX];
-    const size_t rn = rate_str(rbuf, ctx->ns->metric.rate);
+    const size_t rn = rate_str(rbuf, Statsd.metric.rate);
     if (rn && (!line_append(out, cap, &pos, "|@", 2) || !line_append(out, cap, &pos, rbuf, rn)))
     {
         return;
@@ -232,82 +261,102 @@ static void statsd_format(struct StatsdInternal *restrict ctx)
     }
 
     out[pos] = '\0'; // pos <= cap-1 by construction
-    ctx->ns->n = pos;
-    ctx->ns->ok = PROTO_TRUE;
+    Statsd.n = pos;
+    Statsd.ok = PROTO_TRUE;
 }
 
 // Stamp the stored tag list, format into the client's line storage, and send it as one datagram.
-static void statsd_emit(struct StatsdInternal *restrict ctx)
+static void statsd_emit(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
-    if (!ctx->store->ready)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Statsd.ok = PROTO_FALSE;
+    Statsd.n = 0;
+    if (!STATSD_CTX(work)->ready)
     {
         return;
     }
-    ctx->ns->tags.metric = ctx->store->tags[0] ? ctx->store->tags : NULL;
-    ctx->ns->line.out = ctx->store->buf;
-    ctx->ns->line.cap = sizeof(ctx->store->buf);
-    statsd_format(ctx);
-    if (ctx->ns->n == 0)
+    Statsd.tags.metric = STATSD_CTX(work)->tags[0] ? STATSD_CTX(work)->tags : NULL;
+    Statsd.line.out = STATSD_CTX(work)->buf;
+    Statsd.line.cap = sizeof(STATSD_CTX(work)->buf);
+    statsd_format(work);
+    if (Statsd.n == 0)
     {
         return;
     }
     // Nothing acknowledges a datagram, so ok reports only that the stack took the octets.
-    UdpClient.dst = &ctx->store->server;
-    UdpClient.dst_port = ctx->store->port;
-    UdpClient.data = (const uint8_t *)ctx->store->buf;
-    UdpClient.len = ctx->ns->n;
-    UdpClient.sendto(UdpClient.internal);
-    ctx->ns->ok = UdpClient.ok;
+    UdpClient.dst = &STATSD_CTX(work)->server;
+    UdpClient.dst_port = STATSD_CTX(work)->port;
+    UdpClient.data = (const uint8_t *)STATSD_CTX(work)->buf;
+    UdpClient.len = Statsd.n;
+    UdpClient.sendto(protocore_udp_client_span());
+    Statsd.ok = UdpClient.ok;
 }
 
 // Add value.i64 to the bucket, annotated with metric.rate.
-static void statsd_count(struct StatsdInternal *restrict ctx)
+static void statsd_count(uint8_t *restrict work)
 {
-    ctx->store->val[i64_str(ctx->store->val, ctx->ns->value.i64)] = '\0';
-    ctx->ns->value.text = ctx->store->val;
-    ctx->ns->metric.type = STATSD_COUNTER;
-    statsd_emit(ctx);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, Statsd.value.i64)] = '\0';
+    Statsd.value.text = STATSD_CTX(work)->val;
+    Statsd.metric.type = STATSD_COUNTER;
+    statsd_emit(work);
 }
 
 // Assign value.i64 to the bucket.
-static void statsd_gauge(struct StatsdInternal *restrict ctx)
+static void statsd_gauge(uint8_t *restrict work)
 {
-    ctx->store->val[i64_str(ctx->store->val, ctx->ns->value.i64)] = '\0';
-    ctx->ns->value.text = ctx->store->val;
-    ctx->ns->metric.type = STATSD_GAUGE;
-    ctx->ns->metric.rate = 1.0f;
-    statsd_emit(ctx);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, Statsd.value.i64)] = '\0';
+    Statsd.value.text = STATSD_CTX(work)->val;
+    Statsd.metric.type = STATSD_GAUGE;
+    Statsd.metric.rate = 1.0f;
+    statsd_emit(work);
 }
 
 // Adjust the bucket by value.i64, the sign written so the daemon adds rather than assigns.
-static void statsd_gauge_delta(struct StatsdInternal *restrict ctx)
+static void statsd_gauge_delta(uint8_t *restrict work)
 {
-    ctx->store->val[i64_delta_str(ctx->store->val, ctx->ns->value.i64)] = '\0';
-    ctx->ns->value.text = ctx->store->val;
-    ctx->ns->metric.type = STATSD_GAUGE;
-    ctx->ns->metric.rate = 1.0f;
-    statsd_emit(ctx);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    STATSD_CTX(work)->val[i64_delta_str(STATSD_CTX(work)->val, Statsd.value.i64)] = '\0';
+    Statsd.value.text = STATSD_CTX(work)->val;
+    Statsd.metric.type = STATSD_GAUGE;
+    Statsd.metric.rate = 1.0f;
+    statsd_emit(work);
 }
 
 // Record value.ms milliseconds.
-static void statsd_timing(struct StatsdInternal *restrict ctx)
+static void statsd_timing(uint8_t *restrict work)
 {
-    ctx->store->val[u64_str(ctx->store->val, ctx->ns->value.ms)] = '\0';
-    ctx->ns->value.text = ctx->store->val;
-    ctx->ns->metric.type = STATSD_TIMING;
-    ctx->ns->metric.rate = 1.0f;
-    statsd_emit(ctx);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    STATSD_CTX(work)->val[u64_str(STATSD_CTX(work)->val, Statsd.value.ms)] = '\0';
+    Statsd.value.text = STATSD_CTX(work)->val;
+    Statsd.metric.type = STATSD_TIMING;
+    Statsd.metric.rate = 1.0f;
+    statsd_emit(work);
 }
 
 // Count value.member as one unique occurrence. The member is sent where it lies, not copied.
-static void statsd_set(struct StatsdInternal *restrict ctx)
+static void statsd_set(uint8_t *restrict work)
 {
-    ctx->ns->value.text = ctx->ns->value.member ? ctx->ns->value.member : "";
-    ctx->ns->metric.type = STATSD_SET;
-    ctx->ns->metric.rate = 1.0f;
-    statsd_emit(ctx);
+    Statsd.value.text = Statsd.value.member ? Statsd.value.member : "";
+    Statsd.metric.type = STATSD_SET;
+    Statsd.metric.rate = 1.0f;
+    statsd_emit(work);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -317,7 +366,6 @@ StatsdNs Statsd = {.init = statsd_init,
                    .gauge = statsd_gauge,
                    .gauge_delta = statsd_gauge_delta,
                    .timing = statsd_timing,
-                   .set = statsd_set,
-                   .internal = &s_statsd};
+                   .set = statsd_set};
 
 #endif // PROTOCORE_ENABLE_STATSD

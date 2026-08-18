@@ -40,7 +40,7 @@ static int failsafe_add(const char *name, uint32_t deadline_ms, uint32_t now)
     Failsafe.args.name = name;
     Failsafe.args.deadline_ms = deadline_ms;
     Failsafe.args.now = now;
-    Failsafe.add(Failsafe.internal);
+    Failsafe.add(protocore_failsafe_span());
     return Failsafe.i32;
 }
 
@@ -49,7 +49,7 @@ static proto_bool failsafe_feed(int id, uint32_t now)
 {
     Failsafe.args.id = id;
     Failsafe.args.now = now;
-    Failsafe.feed(Failsafe.internal);
+    Failsafe.feed(protocore_failsafe_span());
     return Failsafe.ok;
 }
 
@@ -57,7 +57,7 @@ static proto_bool failsafe_feed(int id, uint32_t now)
 static uint32_t failsafe_check(uint32_t now)
 {
     Failsafe.args.now = now;
-    Failsafe.check(Failsafe.internal);
+    Failsafe.check(protocore_failsafe_span());
     return Failsafe.breached;
 }
 
@@ -67,16 +67,16 @@ static int failsafe_json(uint32_t now, char *out, size_t cap)
     Failsafe.args.now = now;
     Failsafe.out_args.out = out;
     Failsafe.out_args.cap = cap;
-    Failsafe.json(Failsafe.internal);
+    Failsafe.json(protocore_failsafe_span());
     return Failsafe.n;
 }
 
 void dbench_run(void)
 {
-    Failsafe.reset(Failsafe.internal);
+    Failsafe.reset(protocore_failsafe_span());
     Failsafe.out_args.cb = on_breach;
     Failsafe.out_args.arg = NULL;
-    Failsafe.on_breach(Failsafe.internal);
+    Failsafe.on_breach(protocore_failsafe_span());
 
     // Fill the registry (PROTOCORE_FAILSAFE_MAX_LIFELINES lifelines), mirroring test_failsafe.cpp's
     // test_registry_full: each starts fed at t=1000 with a 500 ms deadline.

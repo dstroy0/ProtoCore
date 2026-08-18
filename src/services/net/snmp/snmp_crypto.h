@@ -64,9 +64,6 @@ typedef struct
     proto_bool encrypt; ///< encrypt, otherwise decrypt with the feedback taken from the ciphertext
 } SnmpUsmPrivArgs;
 
-/** @brief The transforms, described only in snmp_crypto.c. */
-struct SnmpCryptoInternal;
-
 /**
  * @brief The USM transforms (RFC 3414 sec 2.6, RFC 7860 sec 9.3, RFC 3826 sec 3.1.2.1).
  *
@@ -82,7 +79,6 @@ struct SnmpCryptoInternal;
  * @var SnmpCryptoNs::ok            a call's true/false outcome
  * @var SnmpCryptoNs::localize_key  derive the engine-localized key from a password
  * @var SnmpCryptoNs::aes_cfb128    run CFB128-AES-128 over @c priv.in into @c priv.out
- * @var SnmpCryptoNs::internal      the calls that reach the transforms
  */
 typedef struct
 {
@@ -93,10 +89,8 @@ typedef struct
 
     proto_bool ok;
 
-    void (*localize_key)(struct SnmpCryptoInternal *ctx);
-    void (*aes_cfb128)(struct SnmpCryptoInternal *ctx);
-
-    struct SnmpCryptoInternal *internal;
+    void (*const localize_key)(uint8_t *restrict work);
+    void (*const aes_cfb128)(uint8_t *restrict work);
 } SnmpCryptoNs;
 
 /** @brief The one symbol this module exports. */

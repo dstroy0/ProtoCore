@@ -16,22 +16,10 @@
 
 #include "network.h"
 
-static void network_init(struct NetworkInternal *restrict ctx)
+static void network_init(uint8_t *restrict work)
 {
-    (void)ctx; // no work: the platform stack holds the route table and selects the path
+    (void)work; // no work: the platform stack holds the route table and selects the path
 }
-
-/**
- * @brief The layer's calls - what NetworkNs points at.
- *
- * @var NetworkInternal::ns  the handle the layer is reached through
- */
-struct NetworkInternal
-{
-    NetworkNs *ns;
-};
-
-static struct NetworkInternal s_network = {.ns = &network};
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 NetworkNs network = {.dns = &Dns,
@@ -39,5 +27,4 @@ NetworkNs network = {.dns = &Dns,
                      .forward = &Forward,
 #endif
                      .ip = &Ip,
-                     .init = network_init,
-                     .internal = &s_network};
+                     .init = network_init};

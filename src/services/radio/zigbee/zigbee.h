@@ -28,11 +28,15 @@
 #ifndef PROTOCORE_ZIGBEE_H
 #define PROTOCORE_ZIGBEE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_ZIGBEE
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief ASH markers / reset control bytes. */
 #define ASH_FLAG 0x7E   ///< frame delimiter
@@ -41,27 +45,76 @@ PROTOCORE_BEGIN_DECLS
 #define ASH_RSTACK 0xC1 ///< reset acknowledge
 #define ASH_ERROR 0xC2  ///< error
 
-/** @brief CRC-16/CCITT (polynomial 0x1021, MSB-first, init 0xFFFF) over @p buf. */
-uint16_t protocore_ash_crc16(const uint8_t *buf, uint16_t len);
+/** @brief What ash_crc16 takes: buf, len. */
+typedef struct
+{
+    const uint8_t *buf;
+    uint16_t len;
+} ZigbeeAshCrc16Args;
+
+/** @brief What ash_frame_encode takes: control, payload, len, out, cap. */
+typedef struct
+{
+    uint8_t control;
+    const uint8_t *payload;
+    uint16_t len;
+    uint8_t *out;
+    uint16_t cap;
+} ZigbeeAshFrameEncodeArgs;
+
+/** @brief What ash_frame_decode takes: raw, len, control, payload, ... */
+typedef struct
+{
+    const uint8_t *raw;
+    uint16_t len;
+    uint8_t *control;
+    uint8_t *payload;
+    uint16_t pay_cap;
+    uint16_t *pay_len;
+} ZigbeeAshFrameDecodeArgs;
 
 /**
- * @brief Encode an ASH frame: [control | payload] + CRC-16, byte-stuffed, flag-terminated.
- * @return the encoded frame length, or 0 if @p len exceeds PROTOCORE_ZIGBEE_MAX_DATA or the
- *         stuffed frame would not fit @p cap.
+ * @brief Zigbee EZSP / ASH framing codec (PROTOCORE_ENABLE_ZIGBEE) - Silicon Labs NCP.
+ *
+ * A caller sets the members a call takes, invokes it through ::Zigbee with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Zigbee.ash_crc16_args.buf = ...;
+ *   Zigbee.ash_crc16_args.len = ...;
+ *   Zigbee.ash_crc16(work);
+ *   // Zigbee.value is what the call reports
+ *
+ * @var ZigbeeNs::ash_crc16_args  what ash_crc16 takes: buf, len
+ * @var ZigbeeNs::ash_frame_encode_args  what ash_frame_encode takes: control, payload, len, out, cap
+ * @var ZigbeeNs::ash_frame_decode_args  what ash_frame_decode takes: raw, len, control, payload,
+ * @var ZigbeeNs::ok  a call's true/false outcome
+ * @var ZigbeeNs::value  the encoded frame length, or 0 if len exceeds ...
+ * @var ZigbeeNs::n  the bytes consumed up to and including the flag (> 0), 0 if no flag ...
+ * @var ZigbeeNs::ash_crc16  CRC-16/CCITT (polynomial 0x1021, MSB-first, init 0xFFFF) over buf
+ * @var ZigbeeNs::ash_frame_encode  encode an ASH frame: [control | payload] + CRC-16, byte-stuffed, ...
+ * @var ZigbeeNs::ash_frame_decode  decode one ASH frame from the front of raw: find the flag, remove ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-uint16_t protocore_ash_frame_encode(uint8_t control, const uint8_t *payload, uint16_t len, uint8_t *out, uint16_t cap);
+typedef struct
+{
+    ZigbeeAshCrc16Args ash_crc16_args;
+    ZigbeeAshFrameEncodeArgs ash_frame_encode_args;
+    ZigbeeAshFrameDecodeArgs ash_frame_decode_args;
 
-/**
- * @brief Decode one ASH frame from the front of @p raw: find the flag, remove the stuffing,
- *        verify the CRC, and copy the payload to @p payload (up to @p pay_cap).
- * @param[out] control  set to the frame's control byte.
- * @param[out] pay_len  set to the payload length.
- * @return the bytes consumed up to and including the flag (> 0), 0 if no flag is present yet
- *         (need more), or -1 if the framed content is malformed (too short, bad CRC, or the
- *         payload overflows @p pay_cap) - the caller drops one byte and retries.
- */
-int protocore_ash_frame_decode(const uint8_t *raw, uint16_t len, uint8_t *control, uint8_t *payload, uint16_t pay_cap,
-                               uint16_t *pay_len);
+    proto_bool ok;
+    uint16_t value;
+    int n;
+
+    void (*const ash_crc16)(uint8_t *restrict work);
+    void (*const ash_frame_encode)(uint8_t *restrict work);
+    void (*const ash_frame_decode)(uint8_t *restrict work);
+} ZigbeeNs;
+
+/** @brief The one symbol this module exports. */
+extern ZigbeeNs Zigbee;
 
 PROTOCORE_END_DECLS
 

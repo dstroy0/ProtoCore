@@ -23,13 +23,18 @@
 
 void dbench_run(void)
 {
-    protocore_espnow_peers_reset();
+    Espnow.peers_reset(protocore_espnow_span());
 
     // Small envelope, mirrors test_espnow.cpp's roundtrip fixture.
     static const uint8_t payload_small[] = {1, 2, 3, 4, 5};
     static uint8_t frame_small[PROTOCORE_ESPNOW_HDR + sizeof(payload_small)];
-    size_t n_small =
-        protocore_espnow_encode(42, payload_small, sizeof(payload_small), frame_small, sizeof(frame_small));
+    Espnow.encode_args.type = 42;
+    Espnow.encode_args.payload = payload_small;
+    Espnow.encode_args.len = sizeof(payload_small);
+    Espnow.encode_args.out = frame_small;
+    Espnow.encode_args.cap = sizeof(frame_small);
+    Espnow.encode(protocore_espnow_span());
+    size_t n_small = Espnow.n;
 
     // Max-size envelope (radio MTU minus header) for the bulk/throughput numbers.
     static uint8_t payload_max[PROTOCORE_ESPNOW_MAX_PAYLOAD];
@@ -38,11 +43,18 @@ void dbench_run(void)
         payload_max[i] = (uint8_t)i;
     }
     static uint8_t frame_max[PROTOCORE_ESPNOW_HDR + PROTOCORE_ESPNOW_MAX_PAYLOAD];
-    size_t n_max = protocore_espnow_encode(7, payload_max, sizeof(payload_max), frame_max, sizeof(frame_max));
+    Espnow.encode_args.type = 7;
+    Espnow.encode_args.payload = payload_max;
+    Espnow.encode_args.len = sizeof(payload_max);
+    Espnow.encode_args.out = frame_max;
+    Espnow.encode_args.cap = sizeof(frame_max);
+    Espnow.encode(protocore_espnow_span());
+    size_t n_max = Espnow.n;
 
     // One registered peer to exercise the registry's lookup/add-idempotent paths.
     static const uint8_t mac_a[6] = {0x01, 0x00, 0x00, 0x00, 0x00, 0xAA};
-    protocore_espnow_peer_add(mac_a);
+    Espnow.peer_add_args.mac = mac_a;
+    Espnow.peer_add(protocore_espnow_span());
 
     static uint8_t g_type_out = 0;
     static const uint8_t *g_payload_out = NULL;

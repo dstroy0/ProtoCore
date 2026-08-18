@@ -16,6 +16,10 @@
 
 #include <unity.h>
 
+static uint8_t ipsec_db_work[16]; // the borrow an entry takes; IpsecDb never reads it
+
+static uint8_t esp_work[16]; // the borrow an entry takes; Esp never reads it
+
 void setUp(void)
 {
 }
@@ -68,7 +72,8 @@ void test_rfc4301_spd_is_ordered_first_match(void)
     v4(net_hi, 10, 0, 0, 255);
 
     IpsecSpd spd;
-    protocore_ipsec_spd_init(&spd);
+    IpsecDb.protocore_ipsec_spd_init_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_init(ipsec_db_work);
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)spd.count);
 
     IpsecSelector host;
@@ -78,9 +83,24 @@ void test_rfc4301_spd_is_ordered_first_match(void)
     sel_v4(&net, net_lo, net_hi, any_lo, any_hi, 0);
     sel_v4(&any, any_lo, any_hi, any_lo, any_hi, 0);
 
-    TEST_ASSERT_TRUE(protocore_ipsec_spd_add(&spd, &host, IPSEC_ACTION_PROTECT, 0xAAAA1111u));
-    TEST_ASSERT_TRUE(protocore_ipsec_spd_add(&spd, &net, IPSEC_ACTION_BYPASS, 0));
-    TEST_ASSERT_TRUE(protocore_ipsec_spd_add(&spd, &any, IPSEC_ACTION_DISCARD, 0));
+    IpsecDb.protocore_ipsec_spd_add_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_add_args.sel = &host;
+    IpsecDb.protocore_ipsec_spd_add_args.action = IPSEC_ACTION_PROTECT;
+    IpsecDb.protocore_ipsec_spd_add_args.sa_spi = 0xAAAA1111u;
+    IpsecDb.protocore_ipsec_spd_add(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
+    IpsecDb.protocore_ipsec_spd_add_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_add_args.sel = &net;
+    IpsecDb.protocore_ipsec_spd_add_args.action = IPSEC_ACTION_BYPASS;
+    IpsecDb.protocore_ipsec_spd_add_args.sa_spi = 0;
+    IpsecDb.protocore_ipsec_spd_add(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
+    IpsecDb.protocore_ipsec_spd_add_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_add_args.sel = &any;
+    IpsecDb.protocore_ipsec_spd_add_args.action = IPSEC_ACTION_DISCARD;
+    IpsecDb.protocore_ipsec_spd_add_args.sa_spi = 0;
+    IpsecDb.protocore_ipsec_spd_add(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     TEST_ASSERT_EQUAL_UINT32(3, (uint32_t)spd.count);
 
     uint8_t src[4];
@@ -89,18 +109,27 @@ void test_rfc4301_spd_is_ordered_first_match(void)
     IpsecFlow flow = {4, 6, src, dst, 1024, 443};
 
     v4(src, 10, 0, 0, 5); // matches all three: the first wins
-    const IpsecPolicy *p = protocore_ipsec_spd_lookup(&spd, &flow);
+    IpsecDb.protocore_ipsec_spd_lookup_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_lookup_args.flow = &flow;
+    IpsecDb.protocore_ipsec_spd_lookup(ipsec_db_work);
+    const IpsecPolicy *p = IpsecDb.ptr;
     TEST_ASSERT_NOT_NULL(p);
     TEST_ASSERT_EQUAL_INT(IPSEC_ACTION_PROTECT, (int)p->action);
     TEST_ASSERT_EQUAL_HEX32(0xAAAA1111u, p->sa_spi);
 
     v4(src, 10, 0, 0, 6); // matches the /24 and the catch-all
-    p = protocore_ipsec_spd_lookup(&spd, &flow);
+    IpsecDb.protocore_ipsec_spd_lookup_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_lookup_args.flow = &flow;
+    IpsecDb.protocore_ipsec_spd_lookup(ipsec_db_work);
+    p = IpsecDb.ptr;
     TEST_ASSERT_NOT_NULL(p);
     TEST_ASSERT_EQUAL_INT(IPSEC_ACTION_BYPASS, (int)p->action);
 
     v4(src, 172, 16, 0, 1); // only the catch-all
-    p = protocore_ipsec_spd_lookup(&spd, &flow);
+    IpsecDb.protocore_ipsec_spd_lookup_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_lookup_args.flow = &flow;
+    IpsecDb.protocore_ipsec_spd_lookup(ipsec_db_work);
+    p = IpsecDb.ptr;
     TEST_ASSERT_NOT_NULL(p);
     TEST_ASSERT_EQUAL_INT(IPSEC_ACTION_DISCARD, (int)p->action);
 }
@@ -114,23 +143,36 @@ void test_spd_lookup_reports_no_match(void)
     v4(hi, 10, 0, 0, 255);
 
     IpsecSpd spd;
-    protocore_ipsec_spd_init(&spd);
+    IpsecDb.protocore_ipsec_spd_init_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_init(ipsec_db_work);
     IpsecSelector s;
     sel_v4(&s, lo, hi, lo, hi, 0);
-    TEST_ASSERT_TRUE(protocore_ipsec_spd_add(&spd, &s, IPSEC_ACTION_PROTECT, 1));
+    IpsecDb.protocore_ipsec_spd_add_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_add_args.sel = &s;
+    IpsecDb.protocore_ipsec_spd_add_args.action = IPSEC_ACTION_PROTECT;
+    IpsecDb.protocore_ipsec_spd_add_args.sa_spi = 1;
+    IpsecDb.protocore_ipsec_spd_add(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
 
     uint8_t src[4];
     uint8_t dst[4];
     v4(src, 10, 0, 1, 1); // outside the /24
     v4(dst, 10, 0, 0, 1);
     IpsecFlow flow = {4, 6, src, dst, 1, 1};
-    TEST_ASSERT_NULL(protocore_ipsec_spd_lookup(&spd, &flow));
+    IpsecDb.protocore_ipsec_spd_lookup_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_lookup_args.flow = &flow;
+    IpsecDb.protocore_ipsec_spd_lookup(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
 
     // An empty SPD matches nothing at all.
     IpsecSpd empty;
-    protocore_ipsec_spd_init(&empty);
+    IpsecDb.protocore_ipsec_spd_init_args.spd = &empty;
+    IpsecDb.protocore_ipsec_spd_init(ipsec_db_work);
     v4(src, 10, 0, 0, 1);
-    TEST_ASSERT_NULL(protocore_ipsec_spd_lookup(&empty, &flow));
+    IpsecDb.protocore_ipsec_spd_lookup_args.spd = &empty;
+    IpsecDb.protocore_ipsec_spd_lookup_args.flow = &flow;
+    IpsecDb.protocore_ipsec_spd_lookup(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
 }
 
 // sec 4.4.1.1: a selector's address and port fields are inclusive ranges, so both endpoints match
@@ -158,36 +200,72 @@ void test_selector_ranges_are_inclusive(void)
     v4(src, 10, 0, 0, 15);
     v4(dst, 192, 168, 0, 7);
     IpsecFlow f = {4, 6, src, dst, 1500, 443};
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
 
     v4(src, 10, 0, 0, 10); // the low endpoint
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     v4(src, 10, 0, 0, 20); // the high endpoint
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     v4(src, 10, 0, 0, 9); // one below
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     v4(src, 10, 0, 0, 21); // one above
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 
     v4(src, 10, 0, 0, 15);
     f.src_port = 1000;
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     f.src_port = 2000;
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     f.src_port = 999;
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     f.src_port = 2001;
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 
     f.src_port = 1500;
     f.dst_port = 444;
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     f.dst_port = 443;
 
     f.ip_protocol = 17; // UDP against a TCP-only selector
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     s.ip_protocol = 0; // "any" matches every protocol
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
 }
 
 // An address range compares whole addresses, not octets: 10.0.1.255 is above 10.0.2.0 in no
@@ -212,24 +290,39 @@ void test_selector_compares_whole_addresses_and_families(void)
     IpsecFlow f = {4, 6, src, dst, 1, 1};
 
     v4(src, 10, 0, 1, 255); // inside: below 10.0.2.0 as a whole address
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     v4(src, 10, 0, 2, 1); // outside: above the high endpoint
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     v4(src, 10, 0, 0, 255); // outside: below the low endpoint
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 
     // An IPv6-length flow cannot match an IPv4 selector.
     v4(src, 10, 0, 1, 1);
     uint8_t src6[16] = {0};
     uint8_t dst6[16] = {0};
     IpsecFlow f6 = {16, 6, src6, dst6, 1, 1};
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f6));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f6;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 
     // A selector whose address length is neither 4 nor 16 names no family.
     IpsecSelector bad = s;
     bad.addr_len = 8;
     IpsecFlow f8 = {8, 6, src, dst, 1, 1};
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&bad, &f8));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &bad;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f8;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 }
 
 // An IPv6 selector compares all sixteen octets.
@@ -257,15 +350,27 @@ void test_selector_matches_ipv6_ranges(void)
     IpsecFlow f = {16, 6, src, dst, 0, 0};
 
     memcpy(src, LO, 16);
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     memcpy(src, HI, 16);
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     memcpy(src, HI, 16);
     src[13] = 0x01; // 2001:db8::1:ffff, past the high endpoint
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     memcpy(src, LO, 16);
     src[3] = 0xb7; // 2001:db7::, below the low endpoint
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 }
 
 // The SPD is bounded storage: it takes exactly PROTOCORE_IPSEC_SPD_MAX policies and refuses the
@@ -280,13 +385,24 @@ void test_spd_is_bounded(void)
     sel_v4(&s, lo, hi, lo, hi, 0);
 
     IpsecSpd spd;
-    protocore_ipsec_spd_init(&spd);
+    IpsecDb.protocore_ipsec_spd_init_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_init(ipsec_db_work);
     for (unsigned i = 0; i < PROTOCORE_IPSEC_SPD_MAX; i++)
     {
-        TEST_ASSERT_TRUE(protocore_ipsec_spd_add(&spd, &s, IPSEC_ACTION_BYPASS, 0));
+        IpsecDb.protocore_ipsec_spd_add_args.spd = &spd;
+        IpsecDb.protocore_ipsec_spd_add_args.sel = &s;
+        IpsecDb.protocore_ipsec_spd_add_args.action = IPSEC_ACTION_BYPASS;
+        IpsecDb.protocore_ipsec_spd_add_args.sa_spi = 0;
+        IpsecDb.protocore_ipsec_spd_add(ipsec_db_work);
+        TEST_ASSERT_TRUE(IpsecDb.ok);
     }
     TEST_ASSERT_EQUAL_UINT32(PROTOCORE_IPSEC_SPD_MAX, (uint32_t)spd.count);
-    TEST_ASSERT_FALSE(protocore_ipsec_spd_add(&spd, &s, IPSEC_ACTION_BYPASS, 0));
+    IpsecDb.protocore_ipsec_spd_add_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_add_args.sel = &s;
+    IpsecDb.protocore_ipsec_spd_add_args.action = IPSEC_ACTION_BYPASS;
+    IpsecDb.protocore_ipsec_spd_add_args.sa_spi = 0;
+    IpsecDb.protocore_ipsec_spd_add(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     TEST_ASSERT_EQUAL_UINT32(PROTOCORE_IPSEC_SPD_MAX, (uint32_t)spd.count);
 }
 
@@ -317,7 +433,11 @@ void test_selector_from_ikev2_traffic_selectors(void)
     tsr.addr_len = 4;
 
     IpsecSelector s;
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_from_ts(&s, &tsi, &tsr));
+    IpsecDb.protocore_ipsec_selector_from_ts_args.out = &s;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_src = &tsi;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_dst = &tsr;
+    IpsecDb.protocore_ipsec_selector_from_ts(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     TEST_ASSERT_EQUAL_UINT8(4, s.addr_len);
     TEST_ASSERT_EQUAL_UINT8(6, s.ip_protocol);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SRC_LO, s.src_lo, 4);
@@ -335,17 +455,39 @@ void test_selector_from_ikev2_traffic_selectors(void)
     v4(src, 10, 0, 0, 7);
     v4(dst, 192, 168, 1, 9);
     IpsecFlow f = {4, 6, src, dst, 5000, 443};
-    TEST_ASSERT_TRUE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     f.dst_port = 80;
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 
     // Both selectors must name the same address family.
     tsr.addr_len = 16;
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_from_ts(&s, &tsi, &tsr));
+    IpsecDb.protocore_ipsec_selector_from_ts_args.out = &s;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_src = &tsi;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_dst = &tsr;
+    IpsecDb.protocore_ipsec_selector_from_ts(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     tsr.addr_len = 4;
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_from_ts(NULL, &tsi, &tsr));
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_from_ts(&s, NULL, &tsr));
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_from_ts(&s, &tsi, NULL));
+    IpsecDb.protocore_ipsec_selector_from_ts_args.out = NULL;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_src = &tsi;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_dst = &tsr;
+    IpsecDb.protocore_ipsec_selector_from_ts(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
+    IpsecDb.protocore_ipsec_selector_from_ts_args.out = &s;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_src = NULL;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_dst = &tsr;
+    IpsecDb.protocore_ipsec_selector_from_ts(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
+    IpsecDb.protocore_ipsec_selector_from_ts_args.out = &s;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_src = &tsi;
+    IpsecDb.protocore_ipsec_selector_from_ts_args.ts_dst = NULL;
+    IpsecDb.protocore_ipsec_selector_from_ts(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 }
 
 static const uint8_t SA_KEY[PROTOCORE_ESP_KEY_LEN] = {1};
@@ -359,11 +501,23 @@ void test_rfc4301_sad_is_keyed_by_spi(void)
     v4(dst, 192, 168, 1, 1);
 
     IpsecSad sad;
-    protocore_ipsec_sad_init(&sad);
+    IpsecDb.protocore_ipsec_sad_init_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_init(ipsec_db_work);
     TEST_ASSERT_EQUAL_UINT32(0, (uint32_t)sad.count);
-    TEST_ASSERT_NULL(protocore_ipsec_sad_find(&sad, 0x1000u));
+    IpsecDb.protocore_ipsec_sad_find_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_find_args.spi = 0x1000u;
+    IpsecDb.protocore_ipsec_sad_find(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
 
-    IpsecSaEntry *out = protocore_ipsec_sad_add(&sad, 0x1000u, dst, 4, SA_KEY, SA_SALT, PROTO_FALSE);
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 0x1000u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    IpsecSaEntry *out = IpsecDb.ptr;
     TEST_ASSERT_NOT_NULL(out);
     TEST_ASSERT_EQUAL_HEX32(0x1000u, out->spi);
     TEST_ASSERT_FALSE(out->inbound);
@@ -373,17 +527,42 @@ void test_rfc4301_sad_is_keyed_by_spi(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SA_SALT, out->salt, PROTOCORE_ESP_SALT_LEN);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(dst, out->dst, 4);
 
-    IpsecSaEntry *in = protocore_ipsec_sad_add(&sad, 0x2000u, dst, 4, SA_KEY, SA_SALT, PROTO_TRUE);
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 0x2000u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    IpsecSaEntry *in = IpsecDb.ptr;
     TEST_ASSERT_NOT_NULL(in);
     TEST_ASSERT_TRUE(in->inbound);
     TEST_ASSERT_FALSE(in->replay.seen_any); // the anti-replay window starts empty
 
-    TEST_ASSERT_EQUAL_PTR(out, protocore_ipsec_sad_find(&sad, 0x1000u));
-    TEST_ASSERT_EQUAL_PTR(in, protocore_ipsec_sad_find(&sad, 0x2000u));
-    TEST_ASSERT_NULL(protocore_ipsec_sad_find(&sad, 0x3000u));
+    IpsecDb.protocore_ipsec_sad_find_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_find_args.spi = 0x1000u;
+    IpsecDb.protocore_ipsec_sad_find(ipsec_db_work);
+    TEST_ASSERT_EQUAL_PTR(out, IpsecDb.ptr);
+    IpsecDb.protocore_ipsec_sad_find_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_find_args.spi = 0x2000u;
+    IpsecDb.protocore_ipsec_sad_find(ipsec_db_work);
+    TEST_ASSERT_EQUAL_PTR(in, IpsecDb.ptr);
+    IpsecDb.protocore_ipsec_sad_find_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_find_args.spi = 0x3000u;
+    IpsecDb.protocore_ipsec_sad_find(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
 
     // A duplicate SPI is refused: two SAs answering one demux key would be ambiguous.
-    TEST_ASSERT_NULL(protocore_ipsec_sad_add(&sad, 0x1000u, dst, 4, SA_KEY, SA_SALT, PROTO_TRUE));
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 0x1000u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
     TEST_ASSERT_EQUAL_UINT32(2, (uint32_t)sad.count);
 }
 
@@ -393,19 +572,62 @@ void test_sad_remove(void)
     uint8_t dst[4];
     v4(dst, 10, 0, 0, 1);
     IpsecSad sad;
-    protocore_ipsec_sad_init(&sad);
-    TEST_ASSERT_NOT_NULL(protocore_ipsec_sad_add(&sad, 1u, dst, 4, SA_KEY, SA_SALT, PROTO_FALSE));
-    TEST_ASSERT_NOT_NULL(protocore_ipsec_sad_add(&sad, 2u, dst, 4, SA_KEY, SA_SALT, PROTO_TRUE));
+    IpsecDb.protocore_ipsec_sad_init_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_init(ipsec_db_work);
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    TEST_ASSERT_NOT_NULL(IpsecDb.ptr);
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 2u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    TEST_ASSERT_NOT_NULL(IpsecDb.ptr);
 
-    TEST_ASSERT_TRUE(protocore_ipsec_sad_remove(&sad, 1u));
-    TEST_ASSERT_NULL(protocore_ipsec_sad_find(&sad, 1u));
-    TEST_ASSERT_NOT_NULL(protocore_ipsec_sad_find(&sad, 2u));
-    TEST_ASSERT_FALSE(protocore_ipsec_sad_remove(&sad, 1u)); // already gone
-    TEST_ASSERT_FALSE(protocore_ipsec_sad_remove(&sad, 99u));
+    IpsecDb.protocore_ipsec_sad_remove_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_remove_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_remove(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
+    IpsecDb.protocore_ipsec_sad_find_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_find_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_find(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
+    IpsecDb.protocore_ipsec_sad_find_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_find_args.spi = 2u;
+    IpsecDb.protocore_ipsec_sad_find(ipsec_db_work);
+    TEST_ASSERT_NOT_NULL(IpsecDb.ptr);
+    IpsecDb.protocore_ipsec_sad_remove_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_remove_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_remove(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok); // already gone
+    IpsecDb.protocore_ipsec_sad_remove_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_remove_args.spi = 99u;
+    IpsecDb.protocore_ipsec_sad_remove(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 
     // The SPI is free again after the delete.
-    TEST_ASSERT_NOT_NULL(protocore_ipsec_sad_add(&sad, 1u, dst, 4, SA_KEY, SA_SALT, PROTO_TRUE));
-    TEST_ASSERT_NOT_NULL(protocore_ipsec_sad_find(&sad, 1u));
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    TEST_ASSERT_NOT_NULL(IpsecDb.ptr);
+    IpsecDb.protocore_ipsec_sad_find_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_find_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_find(ipsec_db_work);
+    TEST_ASSERT_NOT_NULL(IpsecDb.ptr);
 }
 
 // The SAD is bounded storage and refuses the entry past its capacity.
@@ -414,16 +636,36 @@ void test_sad_is_bounded(void)
     uint8_t dst[4];
     v4(dst, 10, 0, 0, 1);
     IpsecSad sad;
-    protocore_ipsec_sad_init(&sad);
+    IpsecDb.protocore_ipsec_sad_init_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_init(ipsec_db_work);
     for (unsigned i = 0; i < PROTOCORE_IPSEC_SAD_MAX; i++)
     {
-        TEST_ASSERT_NOT_NULL(protocore_ipsec_sad_add(&sad, (uint32_t)(i + 1), dst, 4, SA_KEY, SA_SALT, PROTO_FALSE));
+        IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+        IpsecDb.protocore_ipsec_sad_add_args.spi = (uint32_t)(i + 1);
+        IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+        IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+        IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+        IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+        IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+        IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+        TEST_ASSERT_NOT_NULL(IpsecDb.ptr);
     }
-    TEST_ASSERT_NULL(protocore_ipsec_sad_add(&sad, 0xFFFFu, dst, 4, SA_KEY, SA_SALT, PROTO_FALSE));
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 0xFFFFu;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
     // Every SPI installed is still reachable.
     for (unsigned i = 0; i < PROTOCORE_IPSEC_SAD_MAX; i++)
     {
-        TEST_ASSERT_NOT_NULL(protocore_ipsec_sad_find(&sad, (uint32_t)(i + 1)));
+        IpsecDb.protocore_ipsec_sad_find_args.sad = &sad;
+        IpsecDb.protocore_ipsec_sad_find_args.spi = (uint32_t)(i + 1);
+        IpsecDb.protocore_ipsec_sad_find(ipsec_db_work);
+        TEST_ASSERT_NOT_NULL(IpsecDb.ptr);
     }
 }
 
@@ -435,29 +677,53 @@ void test_rfc4303_outbound_sequence_starts_at_one_and_never_cycles(void)
     uint8_t dst[4];
     v4(dst, 10, 0, 0, 1);
     IpsecSad sad;
-    protocore_ipsec_sad_init(&sad);
-    IpsecSaEntry *sa = protocore_ipsec_sad_add(&sad, 7u, dst, 4, SA_KEY, SA_SALT, PROTO_FALSE);
+    IpsecDb.protocore_ipsec_sad_init_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_init(ipsec_db_work);
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 7u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    IpsecSaEntry *sa = IpsecDb.ptr;
     TEST_ASSERT_NOT_NULL(sa);
 
     uint32_t seq = 0xFFFFFFFFu;
-    TEST_ASSERT_TRUE(protocore_ipsec_sad_next_seq(sa, &seq));
+    IpsecDb.protocore_ipsec_sad_next_seq_args.sa = sa;
+    IpsecDb.protocore_ipsec_sad_next_seq_args.seq_out = &seq;
+    IpsecDb.protocore_ipsec_sad_next_seq(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     TEST_ASSERT_EQUAL_HEX32(1u, seq);
     for (uint32_t expect = 2; expect <= 100; expect++)
     {
-        TEST_ASSERT_TRUE(protocore_ipsec_sad_next_seq(sa, &seq));
+        IpsecDb.protocore_ipsec_sad_next_seq_args.sa = sa;
+        IpsecDb.protocore_ipsec_sad_next_seq_args.seq_out = &seq;
+        IpsecDb.protocore_ipsec_sad_next_seq(ipsec_db_work);
+        TEST_ASSERT_TRUE(IpsecDb.ok);
         TEST_ASSERT_EQUAL_HEX32(expect, seq);
     }
 
     // One short of the wrap issues the last legal number; the next call refuses and the counter is
     // left where it was, so a repeated sequence number can never reach the wire.
     sa->seq = 0xFFFFFFFEu;
-    TEST_ASSERT_TRUE(protocore_ipsec_sad_next_seq(sa, &seq));
+    IpsecDb.protocore_ipsec_sad_next_seq_args.sa = sa;
+    IpsecDb.protocore_ipsec_sad_next_seq_args.seq_out = &seq;
+    IpsecDb.protocore_ipsec_sad_next_seq(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, seq);
     seq = 0x5A5A5A5Au;
-    TEST_ASSERT_FALSE(protocore_ipsec_sad_next_seq(sa, &seq));
+    IpsecDb.protocore_ipsec_sad_next_seq_args.sa = sa;
+    IpsecDb.protocore_ipsec_sad_next_seq_args.seq_out = &seq;
+    IpsecDb.protocore_ipsec_sad_next_seq(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     TEST_ASSERT_EQUAL_HEX32(0x5A5A5A5Au, seq); // untouched
     TEST_ASSERT_EQUAL_HEX32(0xFFFFFFFFu, sa->seq);
-    TEST_ASSERT_FALSE(protocore_ipsec_sad_next_seq(sa, &seq)); // still refused
+    IpsecDb.protocore_ipsec_sad_next_seq_args.sa = sa;
+    IpsecDb.protocore_ipsec_sad_next_seq_args.seq_out = &seq;
+    IpsecDb.protocore_ipsec_sad_next_seq(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok); // still refused
 }
 
 // Two SAs count independently: the sequence number belongs to the SA, not the database.
@@ -466,18 +732,41 @@ void test_sequence_numbers_are_per_sa(void)
     uint8_t dst[4];
     v4(dst, 10, 0, 0, 1);
     IpsecSad sad;
-    protocore_ipsec_sad_init(&sad);
-    IpsecSaEntry *a = protocore_ipsec_sad_add(&sad, 1u, dst, 4, SA_KEY, SA_SALT, PROTO_FALSE);
-    IpsecSaEntry *b = protocore_ipsec_sad_add(&sad, 2u, dst, 4, SA_KEY, SA_SALT, PROTO_FALSE);
+    IpsecDb.protocore_ipsec_sad_init_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_init(ipsec_db_work);
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    IpsecSaEntry *a = IpsecDb.ptr;
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 2u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    IpsecSaEntry *b = IpsecDb.ptr;
 
     uint32_t sa_seq = 0;
     uint32_t sb_seq = 0;
     for (uint32_t i = 1; i <= 5; i++)
     {
-        TEST_ASSERT_TRUE(protocore_ipsec_sad_next_seq(a, &sa_seq));
+        IpsecDb.protocore_ipsec_sad_next_seq_args.sa = a;
+        IpsecDb.protocore_ipsec_sad_next_seq_args.seq_out = &sa_seq;
+        IpsecDb.protocore_ipsec_sad_next_seq(ipsec_db_work);
+        TEST_ASSERT_TRUE(IpsecDb.ok);
         TEST_ASSERT_EQUAL_HEX32(i, sa_seq);
     }
-    TEST_ASSERT_TRUE(protocore_ipsec_sad_next_seq(b, &sb_seq));
+    IpsecDb.protocore_ipsec_sad_next_seq_args.sa = b;
+    IpsecDb.protocore_ipsec_sad_next_seq_args.seq_out = &sb_seq;
+    IpsecDb.protocore_ipsec_sad_next_seq(ipsec_db_work);
+    TEST_ASSERT_TRUE(IpsecDb.ok);
     TEST_ASSERT_EQUAL_HEX32(1u, sb_seq);
     TEST_ASSERT_EQUAL_HEX32(5u, a->seq);
 }
@@ -488,18 +777,47 @@ void test_inbound_sa_carries_its_replay_window(void)
     uint8_t dst[4];
     v4(dst, 10, 0, 0, 1);
     IpsecSad sad;
-    protocore_ipsec_sad_init(&sad);
-    IpsecSaEntry *sa = protocore_ipsec_sad_add(&sad, 3u, dst, 4, SA_KEY, SA_SALT, PROTO_TRUE);
+    IpsecDb.protocore_ipsec_sad_init_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_init(ipsec_db_work);
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 3u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    IpsecSaEntry *sa = IpsecDb.ptr;
     TEST_ASSERT_NOT_NULL(sa);
 
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&sa->replay, 1u));
-    TEST_ASSERT_FALSE(protocore_esp_replay_check(&sa->replay, 1u));
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&sa->replay, 2u));
+    Esp.replay_check_args.r = &sa->replay;
+    Esp.replay_check_args.seq = 1u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
+    Esp.replay_check_args.r = &sa->replay;
+    Esp.replay_check_args.seq = 1u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_FALSE(Esp.ok);
+    Esp.replay_check_args.r = &sa->replay;
+    Esp.replay_check_args.seq = 2u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
 
     // A second inbound SA's window is independent of the first's.
-    IpsecSaEntry *other = protocore_ipsec_sad_add(&sad, 4u, dst, 4, SA_KEY, SA_SALT, PROTO_TRUE);
+    IpsecDb.protocore_ipsec_sad_add_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 4u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_TRUE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    IpsecSaEntry *other = IpsecDb.ptr;
     TEST_ASSERT_NOT_NULL(other);
-    TEST_ASSERT_TRUE(protocore_esp_replay_check(&other->replay, 1u));
+    Esp.replay_check_args.r = &other->replay;
+    Esp.replay_check_args.seq = 1u;
+    Esp.replay_check(esp_work);
+    TEST_ASSERT_TRUE(Esp.ok);
 }
 
 // Null arguments are reported rather than followed.
@@ -510,25 +828,66 @@ void test_null_arguments_are_refused(void)
     IpsecSelector s;
     sel_v4(&s, lo, lo, lo, lo, 0);
     IpsecSpd spd;
-    protocore_ipsec_spd_init(&spd);
+    IpsecDb.protocore_ipsec_spd_init_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_init(ipsec_db_work);
     IpsecSad sad;
-    protocore_ipsec_sad_init(&sad);
+    IpsecDb.protocore_ipsec_sad_init_args.sad = &sad;
+    IpsecDb.protocore_ipsec_sad_init(ipsec_db_work);
 
-    TEST_ASSERT_FALSE(protocore_ipsec_spd_add(NULL, &s, IPSEC_ACTION_BYPASS, 0));
-    TEST_ASSERT_FALSE(protocore_ipsec_spd_add(&spd, NULL, IPSEC_ACTION_BYPASS, 0));
-    TEST_ASSERT_NULL(protocore_ipsec_spd_lookup(NULL, NULL));
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(NULL, NULL));
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, NULL));
+    IpsecDb.protocore_ipsec_spd_add_args.spd = NULL;
+    IpsecDb.protocore_ipsec_spd_add_args.sel = &s;
+    IpsecDb.protocore_ipsec_spd_add_args.action = IPSEC_ACTION_BYPASS;
+    IpsecDb.protocore_ipsec_spd_add_args.sa_spi = 0;
+    IpsecDb.protocore_ipsec_spd_add(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
+    IpsecDb.protocore_ipsec_spd_add_args.spd = &spd;
+    IpsecDb.protocore_ipsec_spd_add_args.sel = NULL;
+    IpsecDb.protocore_ipsec_spd_add_args.action = IPSEC_ACTION_BYPASS;
+    IpsecDb.protocore_ipsec_spd_add_args.sa_spi = 0;
+    IpsecDb.protocore_ipsec_spd_add(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
+    IpsecDb.protocore_ipsec_spd_lookup_args.spd = NULL;
+    IpsecDb.protocore_ipsec_spd_lookup_args.flow = NULL;
+    IpsecDb.protocore_ipsec_spd_lookup(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
+    IpsecDb.protocore_ipsec_selector_match_args.sel = NULL;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = NULL;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = NULL;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 
     uint8_t dst[4];
     v4(dst, 10, 0, 0, 1);
-    TEST_ASSERT_NULL(protocore_ipsec_sad_add(NULL, 1u, dst, 4, SA_KEY, SA_SALT, PROTO_FALSE));
-    TEST_ASSERT_NULL(protocore_ipsec_sad_find(NULL, 1u));
-    TEST_ASSERT_FALSE(protocore_ipsec_sad_remove(NULL, 1u));
+    IpsecDb.protocore_ipsec_sad_add_args.sad = NULL;
+    IpsecDb.protocore_ipsec_sad_add_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_add_args.dst = dst;
+    IpsecDb.protocore_ipsec_sad_add_args.addr_len = 4;
+    IpsecDb.protocore_ipsec_sad_add_args.key = SA_KEY;
+    IpsecDb.protocore_ipsec_sad_add_args.salt = SA_SALT;
+    IpsecDb.protocore_ipsec_sad_add_args.inbound = PROTO_FALSE;
+    IpsecDb.protocore_ipsec_sad_add(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
+    IpsecDb.protocore_ipsec_sad_find_args.sad = NULL;
+    IpsecDb.protocore_ipsec_sad_find_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_find(ipsec_db_work);
+    TEST_ASSERT_NULL(IpsecDb.ptr);
+    IpsecDb.protocore_ipsec_sad_remove_args.sad = NULL;
+    IpsecDb.protocore_ipsec_sad_remove_args.spi = 1u;
+    IpsecDb.protocore_ipsec_sad_remove(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
     uint32_t seq = 0;
-    TEST_ASSERT_FALSE(protocore_ipsec_sad_next_seq(NULL, &seq));
+    IpsecDb.protocore_ipsec_sad_next_seq_args.sa = NULL;
+    IpsecDb.protocore_ipsec_sad_next_seq_args.seq_out = &seq;
+    IpsecDb.protocore_ipsec_sad_next_seq(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 
     // A flow with no address octets cannot be matched against anything.
     IpsecFlow f = {4, 6, NULL, NULL, 0, 0};
-    TEST_ASSERT_FALSE(protocore_ipsec_selector_match(&s, &f));
+    IpsecDb.protocore_ipsec_selector_match_args.sel = &s;
+    IpsecDb.protocore_ipsec_selector_match_args.flow = &f;
+    IpsecDb.protocore_ipsec_selector_match(ipsec_db_work);
+    TEST_ASSERT_FALSE(IpsecDb.ok);
 }

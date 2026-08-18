@@ -24,6 +24,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t lora_work[16]; // the borrow an entry takes; Lora never reads it
+
 // --- Mock SX127x (the driver's register bus, memory-only - copied from test/test_lora) -------------
 // A register file plus a FIFO whose pointer auto-increments on RegFifo (0x00) access, mirroring the
 // chip. No SPI, no radio: every "bus" access is a plain array read/write, so only the driver's own

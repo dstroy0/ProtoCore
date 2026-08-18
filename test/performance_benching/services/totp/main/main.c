@@ -13,6 +13,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t totp_work[16]; // the borrow an entry takes; Totp never reads it
+
 /** @brief HOTP(K,C) over @p k for counter @p c, @p digit digits wide. */
 static uint32_t hotp_of(const uint8_t *k, size_t keylen, uint64_t c, uint8_t digit)
 {
@@ -20,7 +22,7 @@ static uint32_t hotp_of(const uint8_t *k, size_t keylen, uint64_t c, uint8_t dig
     Totp.keylen = keylen;
     Totp.digit = digit;
     Totp.step.counter = c;
-    Totp.hotp(Totp.internal);
+    Totp.hotp(totp_work);
     return Totp.u32;
 }
 
@@ -33,7 +35,7 @@ static uint32_t totp_of(const uint8_t *k, size_t keylen, uint64_t t, uint32_t x,
     Totp.step.unix_time = t;
     Totp.step.t0 = 0;
     Totp.step.x = x;
-    Totp.totp(Totp.internal);
+    Totp.totp(totp_work);
     return Totp.u32;
 }
 
@@ -43,7 +45,7 @@ static int32_t base32_of(const char *b32, uint8_t *out, size_t cap)
     Totp.secret.b32 = b32;
     Totp.secret.out = out;
     Totp.secret.cap = cap;
-    Totp.base32_decode(Totp.internal);
+    Totp.base32_decode(totp_work);
     return Totp.i32;
 }
 

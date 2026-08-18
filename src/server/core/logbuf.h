@@ -57,9 +57,6 @@ typedef struct
     protocore_log_trap_fn cb; ///< what fires; NULL leaves the trap off
 } LogTrapArgs;
 
-/** @brief The ring's own state and the calls that reach it, described only in logbuf.c. */
-struct LogbufInternal;
-
 /**
  * @brief The in-memory log ring.
  *
@@ -78,7 +75,6 @@ struct LogbufInternal;
  * @var LogbufNs::at        one held line by index
  * @var LogbufNs::dump      every held line, oldest-first, newline-separated
  * @var LogbufNs::set_trap  install the severity trap
- * @var LogbufNs::internal  the ring and the calls that reach it
  *
  * dump fails closed: a buffer that cannot hold every line writes nothing and reports 0.
  */
@@ -92,18 +88,27 @@ typedef struct
     const char *text;
     int n;
 
-    void (*reset)(struct LogbufInternal *ctx);
-    void (*put)(struct LogbufInternal *ctx);
-    void (*held)(struct LogbufInternal *ctx);
-    void (*at)(struct LogbufInternal *ctx);
-    void (*dump)(struct LogbufInternal *ctx);
-    void (*set_trap)(struct LogbufInternal *ctx);
-
-    struct LogbufInternal *internal;
+    void (*const reset)(uint8_t *restrict work);
+    void (*const put)(uint8_t *restrict work);
+    void (*const held)(uint8_t *restrict work);
+    void (*const at)(uint8_t *restrict work);
+    void (*const dump)(uint8_t *restrict work);
+    void (*const set_trap)(uint8_t *restrict work);
 } LogbufNs;
 
 /** @brief The one symbol this module exports. */
 extern LogbufNs Logbuf;
+
+/**
+ * @brief The PROTOCORE_LOGBUF_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_logbuf_span(void);
 
 PROTOCORE_END_DECLS
 

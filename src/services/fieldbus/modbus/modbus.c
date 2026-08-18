@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
 #if PROTOCORE_NEED_MODBUS
 
 #include "mmgr/plaintext.h" // the persistent end this module's state is taken from
@@ -537,7 +539,7 @@ static uint16_t protocore_modbus_crc16(const uint8_t *data, size_t len)
     Crc.args.params = &PROTOCORE_CRC16_MODBUS;
     Crc.args.data = data;
     Crc.args.len = len;
-    Crc.compute(Crc.internal);
+    Crc.compute(crc_work);
     return (uint16_t)Crc.value;
 }
 
@@ -608,7 +610,7 @@ static void modbus_rtu_process_adu(uint8_t *restrict work)
 static size_t ring_avail(const TcpConn *c)
 {
     ConnPool.slot = c->id;
-    ConnPool.available(ConnPool.internal);
+    ConnPool.available(protocore_conn_pool_span());
     return ConnPool.n;
 }
 static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
@@ -617,19 +619,19 @@ static void ring_peek(const TcpConn *c, size_t off, uint8_t *dst, size_t n)
     ConnPool.io.off = off;
     ConnPool.io.buf = dst;
     ConnPool.io.count = n;
-    ConnPool.peek(ConnPool.internal);
+    ConnPool.peek(protocore_conn_pool_span());
 }
 static void ring_consume(TcpConn *c, size_t n)
 {
     ConnPool.slot = c->id;
     ConnPool.io.count = n;
-    ConnPool.consume(ConnPool.internal);
+    ConnPool.consume(protocore_conn_pool_span());
 }
 
 static void raw_send(uint8_t slot, const void *data, size_t n)
 {
     ConnPool.slot = slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok || n == 0)
     {
         return;
@@ -637,15 +639,15 @@ static void raw_send(uint8_t slot, const void *data, size_t n)
     ConnPool.slot = slot;
     ConnPool.io.data = data;
     ConnPool.io.len = (proto_u16)n;
-    ConnPool.send(ConnPool.internal);
+    ConnPool.send(protocore_conn_pool_span());
     ConnPool.slot = slot;
-    ConnPool.flush(ConnPool.internal);
+    ConnPool.flush(protocore_conn_pool_span());
 }
 
 static void close_conn(uint8_t slot)
 {
     ConnPool.slot = slot;
-    ConnPool.close(ConnPool.internal); // transport owns detach + slot reset + close
+    ConnPool.close(protocore_conn_pool_span()); // transport owns detach + slot reset + close
 }
 
 static void modbus_rx(uint8_t *restrict work)
@@ -721,18 +723,6 @@ static void modbus_handler(uint8_t *restrict work)
 
 #endif // PROTOCORE_HAS_NET_STACK
 
-#if !PROTOCORE_HAS_NET_STACK
-
-// Host builds test the pure ADU codec; there is no TCP transport handler.
-static void modbus_handler(uint8_t *restrict work)
-{
-    (void)work;
-
-    Modbus.ptr = NULL;
-}
-
-#endif // !PROTOCORE_HAS_NET_STACK
-
 ModbusNs Modbus = {.server_init = modbus_server_init,
                    .on_write = modbus_on_write,
                    .get_coil = modbus_get_coil,
@@ -744,12 +734,8 @@ ModbusNs Modbus = {.server_init = modbus_server_init,
                    .get_input_reg = modbus_get_input_reg,
                    .set_input_reg = modbus_set_input_reg,
                    .process_adu = modbus_process_adu,
-#if PROTOCORE_ENABLE_MODBUS_RTU
                    .rtu_process_adu = modbus_rtu_process_adu,
-#endif
-#if PROTOCORE_HAS_NET_STACK
                    .rx = modbus_rx,
-#endif
                    .handler = modbus_handler};
 
 PROTOCORE_END_DECLS

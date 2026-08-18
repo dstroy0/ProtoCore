@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t oidc_work[16]; // the borrow an entry takes; Oidc never reads it
+
 void setUp(void)
 {
 }
@@ -53,7 +55,7 @@ static protocore_oidc_result verify_a2(const char *token, const char *iss, const
 {
     Oidc.key.jwks = JWKS;
     Oidc.key.kid = NULL;
-    Oidc.jwks_find(Oidc.internal);
+    Oidc.jwks_find(oidc_work);
     TEST_ASSERT_TRUE(Oidc.ok);
 
     Oidc.token = token;
@@ -61,7 +63,7 @@ static protocore_oidc_result verify_a2(const char *token, const char *iss, const
     Oidc.expect.iss = iss;
     Oidc.expect.aud = aud;
     Oidc.expect.now_unix = now;
-    Oidc.verify_with_key(Oidc.internal);
+    Oidc.verify_with_key(oidc_work);
     return Oidc.result;
 }
 
@@ -78,7 +80,7 @@ void test_jwks_find_loads_the_rsa_key(void)
 {
     Oidc.key.jwks = JWKS;
     Oidc.key.kid = "rfc7515-a2";
-    Oidc.jwks_find(Oidc.internal);
+    Oidc.jwks_find(oidc_work);
     TEST_ASSERT_TRUE(Oidc.ok);
     TEST_ASSERT_TRUE(Oidc.key.rsa.loaded);
     static const uint8_t E[4] = {0x00, 0x01, 0x00, 0x01};
@@ -88,22 +90,22 @@ void test_jwks_find_loads_the_rsa_key(void)
 
     // A `kid` that is in no JWK selects nothing, and the key is left unloaded.
     Oidc.key.kid = "not-this-one";
-    Oidc.jwks_find(Oidc.internal);
+    Oidc.jwks_find(oidc_work);
     TEST_ASSERT_FALSE(Oidc.ok);
     TEST_ASSERT_FALSE(Oidc.key.rsa.loaded);
 
     // An empty `kid` takes the first RSA JWK, which is what a token with no `kid` header falls to.
     Oidc.key.kid = "";
-    Oidc.jwks_find(Oidc.internal);
+    Oidc.jwks_find(oidc_work);
     TEST_ASSERT_TRUE(Oidc.ok);
 
     Oidc.key.jwks = NULL;
-    Oidc.jwks_find(Oidc.internal);
+    Oidc.jwks_find(oidc_work);
     TEST_ASSERT_FALSE(Oidc.ok);
 
     Oidc.key.jwks = "{\"keys\":[]}";
     Oidc.key.kid = NULL;
-    Oidc.jwks_find(Oidc.internal);
+    Oidc.jwks_find(oidc_work);
     TEST_ASSERT_FALSE(Oidc.ok);
 }
 
@@ -113,7 +115,7 @@ void test_token_kid(void)
 {
     Oidc.token = RFC7515_A2;
     Oidc.token_len = strlen(RFC7515_A2);
-    Oidc.token_kid(Oidc.internal);
+    Oidc.token_kid(oidc_work);
     TEST_ASSERT_FALSE(Oidc.ok);
     TEST_ASSERT_EQUAL_STRING("", Oidc.text);
 
@@ -121,13 +123,13 @@ void test_token_kid(void)
     static const char WITH_KID[] = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjIwMTEtMDQtMjkifQ.eyJpc3MiOiJqb2UifQ.AAAA";
     Oidc.token = WITH_KID;
     Oidc.token_len = strlen(WITH_KID);
-    Oidc.token_kid(Oidc.internal);
+    Oidc.token_kid(oidc_work);
     TEST_ASSERT_TRUE(Oidc.ok);
     TEST_ASSERT_EQUAL_STRING("2011-04-29", Oidc.text);
 
     Oidc.token = NULL;
     Oidc.token_len = 0;
-    Oidc.token_kid(Oidc.internal);
+    Oidc.token_kid(oidc_work);
     TEST_ASSERT_FALSE(Oidc.ok);
 }
 
@@ -141,12 +143,12 @@ void test_verify_resolves_the_key_itself(void)
     Oidc.expect.iss = "joe";
     Oidc.expect.aud = NULL;
     Oidc.expect.now_unix = BEFORE_EXP;
-    Oidc.verify(Oidc.internal);
+    Oidc.verify(oidc_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_OK, Oidc.result);
 
     // A JWK Set that does not carry the key is a key failure, not a signature failure.
     Oidc.key.jwks = "{\"keys\":[]}";
-    Oidc.verify(Oidc.internal);
+    Oidc.verify(oidc_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_KEY, Oidc.result);
 }
 
@@ -170,7 +172,7 @@ void test_tampered_token_fails_the_signature(void)
     // modulus is enough, and the key is restored by the next find.
     Oidc.key.jwks = JWKS;
     Oidc.key.kid = NULL;
-    Oidc.jwks_find(Oidc.internal);
+    Oidc.jwks_find(oidc_work);
     TEST_ASSERT_TRUE(Oidc.ok);
     Oidc.key.rsa.n[255] = (uint8_t)(Oidc.key.rsa.n[255] ^ 0x01);
     Oidc.token = RFC7515_A2;
@@ -178,7 +180,7 @@ void test_tampered_token_fails_the_signature(void)
     Oidc.expect.iss = "joe";
     Oidc.expect.aud = NULL;
     Oidc.expect.now_unix = BEFORE_EXP;
-    Oidc.verify_with_key(Oidc.internal);
+    Oidc.verify_with_key(oidc_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_SIGNATURE, Oidc.result);
 }
 
@@ -222,14 +224,14 @@ void test_malformed_tokens(void)
     // A token longer than the module accepts is refused on its length alone.
     Oidc.token = RFC7515_A2;
     Oidc.token_len = PROTOCORE_OIDC_MAX_LEN + 1;
-    Oidc.verify_with_key(Oidc.internal);
+    Oidc.verify_with_key(oidc_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_FORMAT, Oidc.result);
 
     // No key loaded is a format refusal before anything is read.
     Oidc.key.rsa.loaded = PROTO_FALSE;
     Oidc.token = RFC7515_A2;
     Oidc.token_len = strlen(RFC7515_A2);
-    Oidc.verify_with_key(Oidc.internal);
+    Oidc.verify_with_key(oidc_work);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_FORMAT, Oidc.result);
 }
 

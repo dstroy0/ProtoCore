@@ -6,10 +6,15 @@
  * @brief ESP-NOW envelope codec + peer registry (pure) and esp_now binding (ESP32).
  */
 
-#include "services/radio/espnow/espnow.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_ESPNOW
+
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem.h"
+#include "services/radio/espnow/espnow.h"
+
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_VENDOR_WIFI
 #include <esp_idf_version.h> // ESP_IDF_VERSION / ESP_IDF_VERSION_VAL for the recv-cb ABI guard
@@ -21,11 +26,50 @@ const uint8_t PROTOCORE_ESPNOW_BROADCAST[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xF
 // ---------------------------------------------------------------------------
 // Envelope codec
 // ---------------------------------------------------------------------------
-size_t protocore_espnow_encode(uint8_t type, const uint8_t *payload, size_t len, uint8_t *out, size_t cap)
+// The entries this file calls before reaching their definitions.
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_ESPNOW_BORROW persistent bytes, or null while the pool was short
+} EspnowOwnCtx;
+static EspnowOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_espnow_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_ESPNOW_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void espnow_encode(uint8_t *restrict work);
+static void espnow_peer_add(uint8_t *restrict work);
+static void espnow_peers_reset(uint8_t *restrict work);
+static void espnow_send(uint8_t *restrict work);
+
+static void espnow_encode(uint8_t *restrict work)
+{
+    (void)work;
+    uint8_t type = Espnow.encode_args.type;
+    const uint8_t *payload = Espnow.encode_args.payload;
+    size_t len = Espnow.encode_args.len;
+    uint8_t *out = Espnow.encode_args.out;
+    size_t cap = Espnow.encode_args.cap;
+
     if (!out || len > PROTOCORE_ESPNOW_MAX_PAYLOAD || cap < len + PROTOCORE_ESPNOW_HDR)
     {
-        return 0;
+        Espnow.n = 0;
+        return;
     }
     out[0] = PROTOCORE_ESPNOW_MAGIC;
     out[1] = type;
@@ -34,19 +78,28 @@ size_t protocore_espnow_encode(uint8_t type, const uint8_t *payload, size_t len,
     {
         mem.cpy(out + PROTOCORE_ESPNOW_HDR, payload, len);
     }
-    return len + PROTOCORE_ESPNOW_HDR;
+    Espnow.n = len + PROTOCORE_ESPNOW_HDR;
 }
 
-proto_bool protocore_espnow_decode(const uint8_t *buf, size_t len, uint8_t *type, const uint8_t **payload, size_t *plen)
+static void espnow_decode(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *buf = Espnow.decode_args.buf;
+    size_t len = Espnow.decode_args.len;
+    uint8_t *type = Espnow.decode_args.type;
+    const uint8_t **payload = Espnow.decode_args.payload;
+    size_t *plen = Espnow.decode_args.plen;
+
     if (!buf || len < PROTOCORE_ESPNOW_HDR || buf[0] != PROTOCORE_ESPNOW_MAGIC)
     {
-        return PROTO_FALSE;
+        Espnow.ok = PROTO_FALSE;
+        return;
     }
     size_t declared = buf[2];
     if (declared + PROTOCORE_ESPNOW_HDR != len) // length must match exactly (no trailing/short)
     {
-        return PROTO_FALSE;
+        Espnow.ok = PROTO_FALSE;
+        return;
     }
     if (type)
     {
@@ -60,7 +113,7 @@ proto_bool protocore_espnow_decode(const uint8_t *buf, size_t len, uint8_t *type
     {
         *plen = declared;
     }
-    return PROTO_TRUE;
+    Espnow.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -83,7 +136,16 @@ typedef struct
     uint8_t channel;
 #endif
 } EspnowCtx;
-static EspnowCtx s_espnow;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define ESPNOW_OFF_CTX 0u
+static_assert(ESPNOW_OFF_CTX + sizeof(EspnowCtx) <= PROTOCORE_ESPNOW_BORROW,
+              "PROTOCORE_ESPNOW_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define ESPNOW_CTX(w) ((EspnowCtx *)(void *)((w) + ESPNOW_OFF_CTX))
 
 static int peer_find(const EspnowCtx *c, const uint8_t mac[6])
 {
@@ -97,63 +159,95 @@ static int peer_find(const EspnowCtx *c, const uint8_t mac[6])
     return -1;
 }
 
-void protocore_espnow_peers_reset(void)
+static void espnow_peers_reset(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
     {
-        s_espnow.peers[i].used = PROTO_FALSE;
+        ESPNOW_CTX(work)->peers[i].used = PROTO_FALSE;
     }
 }
 
-proto_bool protocore_espnow_peer_add(const uint8_t mac[6])
+static void espnow_peer_add(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t *mac = Espnow.peer_add_args.mac;
+
     if (!mac)
     {
-        return PROTO_FALSE;
+        Espnow.ok = PROTO_FALSE;
+        return;
     }
-    if (peer_find(&s_espnow, mac) >= 0)
+    if (peer_find(ESPNOW_CTX(work), mac) >= 0)
     {
-        return PROTO_TRUE; // idempotent
+        Espnow.ok = PROTO_TRUE; // idempotent
+        return;
     }
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
     {
-        if (!s_espnow.peers[i].used)
+        if (!ESPNOW_CTX(work)->peers[i].used)
         {
-            mem.cpy(s_espnow.peers[i].mac, mac, 6);
-            s_espnow.peers[i].used = PROTO_TRUE;
-            return PROTO_TRUE;
+            mem.cpy(ESPNOW_CTX(work)->peers[i].mac, mac, 6);
+            ESPNOW_CTX(work)->peers[i].used = PROTO_TRUE;
+            Espnow.ok = PROTO_TRUE;
+            return;
         }
     }
-    return PROTO_FALSE; // table full
+    Espnow.ok = PROTO_FALSE; // table full
 }
 
-proto_bool protocore_espnow_peer_has(const uint8_t mac[6])
+static void espnow_peer_has(uint8_t *restrict work)
 {
-    return mac && peer_find(&s_espnow, mac) >= 0;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t *mac = Espnow.peer_has_args.mac;
+
+    Espnow.ok = mac && peer_find(ESPNOW_CTX(work), mac) >= 0;
 }
 
-proto_bool protocore_espnow_peer_remove(const uint8_t mac[6])
+static void espnow_peer_remove(uint8_t *restrict work)
 {
-    int i = mac ? peer_find(&s_espnow, mac) : -1;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t *mac = Espnow.peer_remove_args.mac;
+
+    int i = mac ? peer_find(ESPNOW_CTX(work), mac) : -1;
     if (i < 0)
     {
-        return PROTO_FALSE;
+        Espnow.ok = PROTO_FALSE;
+        return;
     }
-    s_espnow.peers[i].used = PROTO_FALSE;
-    return PROTO_TRUE;
+    ESPNOW_CTX(work)->peers[i].used = PROTO_FALSE;
+    Espnow.ok = PROTO_TRUE;
 }
 
-int protocore_espnow_peer_count(void)
+static void espnow_peer_count(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
     int n = 0;
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
     {
-        if (s_espnow.peers[i].used)
+        if (ESPNOW_CTX(work)->peers[i].used)
         {
             n++;
         }
     }
-    return n;
+    Espnow.n = n;
 }
 
 // ---------------------------------------------------------------------------
@@ -171,16 +265,30 @@ static void on_recv(const esp_now_recv_info_t *info, const uint8_t *data, int le
 static void on_recv(const uint8_t *mac, const uint8_t *data, int len)
 {
 #endif
-    if (!s_espnow.recv || len < 0 || !mac)
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_espnow_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
+    if (!ESPNOW_CTX(work)->recv || len < 0 || !mac)
     {
         return;
     }
     uint8_t type;
     const uint8_t *payload;
     size_t plen;
-    if (protocore_espnow_decode(data, (size_t)len, &type, &payload, &plen))
+    Espnow.decode_args.buf = data;
+    Espnow.decode_args.len = (size_t)len;
+    Espnow.decode_args.type = &type;
+    Espnow.decode_args.payload = &payload;
+    Espnow.decode_args.plen = &plen;
+    Espnow.decode(work);
+    if (Espnow.ok)
     {
-        s_espnow.recv(mac, type, payload, plen);
+        ESPNOW_CTX(work)->recv(mac, type, payload, plen);
     }
 }
 
@@ -198,72 +306,155 @@ static proto_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
     return esp_now_add_peer(&p) == ESP_OK;
 }
 
-proto_bool protocore_espnow_begin(uint8_t channel, protocore_espnow_recv_fn cb)
+static void espnow_begin(uint8_t *restrict work)
 {
-    s_espnow.channel = channel;
-    s_espnow.recv = cb;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    nel = Espnow.begin_args.channel;
+    protocore_espnow_recv_fn cb = Espnow.begin_args.cb;
+
+    ESPNOW_CTX(work)->channel = channel;
+    ESPNOW_CTX(work)->recv = cb;
     if (esp_now_init() != ESP_OK)
     {
-        return PROTO_FALSE;
+        Espnow.ok = PROTO_FALSE;
+        return;
     }
     esp_now_register_recv_cb(on_recv);
-    protocore_espnow_peers_reset();
-    return radio_add_peer(PROTOCORE_ESPNOW_BROADCAST, channel); // broadcast is always a peer
+    espnow_peers_reset(work);
+    Espnow.ok = radio_add_peer(PROTOCORE_ESPNOW_BROADCAST, channel); // broadcast is always a peer
 }
 
-proto_bool protocore_espnow_add_peer(const uint8_t mac[6])
+static void espnow_add_peer(uint8_t *restrict work)
 {
-    if (!protocore_espnow_peer_add(mac))
+    if (!work)
     {
-        return PROTO_FALSE;
+        return; // the pool was short of this module's borrow
     }
-    return radio_add_peer(mac, s_espnow.channel);
+    const uint8_t *mac = Espnow.add_peer_args.mac;
+
+    Espnow.peer_add_args.mac = mac;
+    espnow_peer_add(work);
+    if (!Espnow.ok)
+    {
+        Espnow.ok = PROTO_FALSE;
+        return;
+    }
+    Espnow.ok = radio_add_peer(mac, ESPNOW_CTX(work)->channel);
 }
 
-proto_bool protocore_espnow_send(const uint8_t mac[6], uint8_t type, const uint8_t *payload, size_t len)
+static void espnow_send(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t *mac = Espnow.send_args.mac;
+    uint8_t type = Espnow.send_args.type;
+    const uint8_t *payload = Espnow.send_args.payload;
+    size_t len = Espnow.send_args.len;
+
     uint8_t frame[PROTOCORE_ESPNOW_HDR + PROTOCORE_ESPNOW_MAX_PAYLOAD];
-    size_t n = protocore_espnow_encode(type, payload, len, frame, sizeof(frame));
+    Espnow.encode_args.type = type;
+    Espnow.encode_args.payload = payload;
+    Espnow.encode_args.len = len;
+    Espnow.encode_args.out = frame;
+    Espnow.encode_args.cap = sizeof(frame);
+    espnow_encode(work);
+    size_t n = Espnow.n;
     if (n == 0)
     {
-        return PROTO_FALSE;
+        Espnow.ok = PROTO_FALSE;
+        return;
     }
-    return esp_now_send(mac, frame, n) == ESP_OK;
+    Espnow.ok = esp_now_send(mac, frame, n) == ESP_OK;
 }
 
-proto_bool protocore_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len)
+static void espnow_broadcast(uint8_t *restrict work)
 {
-    return protocore_espnow_send(PROTOCORE_ESPNOW_BROADCAST, type, payload, len);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    uint8_t type = Espnow.broadcast_args.type;
+    const uint8_t *payload = Espnow.broadcast_args.payload;
+    size_t len = Espnow.broadcast_args.len;
+
+    Espnow.send_args.mac = PROTOCORE_ESPNOW_BROADCAST;
+    Espnow.send_args.type = type;
+    Espnow.send_args.payload = payload;
+    Espnow.send_args.len = len;
+    espnow_send(work);
 }
 
 #else // host build - no radio
 
-proto_bool protocore_espnow_begin(uint8_t channel, protocore_espnow_recv_fn cb)
+static void espnow_begin(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t channel = Espnow.begin_args.channel;
+    protocore_espnow_recv_fn cb = Espnow.begin_args.cb;
+
     (void)channel;
     (void)cb;
-    return PROTO_FALSE;
+    Espnow.ok = PROTO_FALSE;
 }
-proto_bool protocore_espnow_add_peer(const uint8_t mac[6])
+static void espnow_add_peer(uint8_t *restrict work)
 {
-    return protocore_espnow_peer_add(mac);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t *mac = Espnow.add_peer_args.mac;
+
+    Espnow.peer_add_args.mac = mac;
+    espnow_peer_add(work);
 }
-proto_bool protocore_espnow_send(const uint8_t *mac, uint8_t type, const uint8_t *payload, size_t len)
+static void espnow_send(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *mac = Espnow.send_args.mac;
+    uint8_t type = Espnow.send_args.type;
+    const uint8_t *payload = Espnow.send_args.payload;
+    size_t len = Espnow.send_args.len;
+
     (void)mac;
     (void)type;
     (void)payload;
     (void)len;
-    return PROTO_FALSE;
+    Espnow.ok = PROTO_FALSE;
 }
-proto_bool protocore_espnow_broadcast(uint8_t type, const uint8_t *payload, size_t len)
+static void espnow_broadcast(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t type = Espnow.broadcast_args.type;
+    const uint8_t *payload = Espnow.broadcast_args.payload;
+    size_t len = Espnow.broadcast_args.len;
+
     (void)type;
     (void)payload;
     (void)len;
-    return PROTO_FALSE;
+    Espnow.ok = PROTO_FALSE;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_WIFI
+
+EspnowNs Espnow = {
+    .encode = espnow_encode,
+    .decode = espnow_decode,
+    .peers_reset = espnow_peers_reset,
+    .peer_add = espnow_peer_add,
+    .peer_has = espnow_peer_has,
+    .peer_remove = espnow_peer_remove,
+    .peer_count = espnow_peer_count,
+    .begin = espnow_begin,
+    .add_peer = espnow_add_peer,
+    .send = espnow_send,
+    .broadcast = espnow_broadcast,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_ESPNOW

@@ -12,6 +12,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t http_range_work[16]; // the borrow an entry takes; HttpRange never reads it
+
 void dbench_run(void)
 {
     for (;;)

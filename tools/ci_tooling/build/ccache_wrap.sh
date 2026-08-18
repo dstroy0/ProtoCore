@@ -31,7 +31,7 @@ for name in "$@"; do
     while IFS= read -r real; do
         [ -n "$real" ] || continue
         case "$real" in *.real) continue ;; esac # already the saved original
-        [ -e "$real.real" ] && continue           # already wrapped
+        [ -e "$real.real" ] && continue          # already wrapped
         # Copy-then-replace (never mv): the saved original exists before we touch the live
         # binary, and the shim is staged and atomically moved into place. A failure at any
         # step restores the original, so this can never leave a shim whose .real is missing

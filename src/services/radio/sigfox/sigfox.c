@@ -9,9 +9,13 @@
  * is hex-encoded (uppercase, two nibbles per byte) into the command.
  */
 
-#include "services/radio/sigfox/sigfox.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SIGFOX
+
+#include "services/radio/sigfox/sigfox.h"
+
+PROTOCORE_BEGIN_DECLS
 
 static char hex_nibble(uint8_t v)
 {
@@ -45,17 +49,30 @@ static proto_bool contains(const char *hay, uint16_t len, const char *needle)
     return PROTO_FALSE;
 }
 
-uint16_t protocore_sigfox_build_uplink(const uint8_t *payload, uint8_t len, char *out, uint16_t cap)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void sigfox_build_uplink(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *payload = Sigfox.build_uplink_args.payload;
+    uint8_t len = Sigfox.build_uplink_args.len;
+    char *out = Sigfox.build_uplink_args.out;
+    uint16_t cap = Sigfox.build_uplink_args.cap;
+
     if (!out || !payload || len == 0 || len > PROTOCORE_SIGFOX_MAX_PAYLOAD)
     {
-        return 0;
+        Sigfox.value = 0;
+        return;
     }
     // "AT$SF=" (6) + 2*len hex + "\r\n" (2) + NUL (1)
     uint16_t need = (uint16_t)(6 + 2 * len + 2 + 1);
     if (need > cap)
     {
-        return 0;
+        Sigfox.value = 0;
+        return;
     }
     const char *pfx = "AT$SF=";
     uint16_t p = 0;
@@ -71,24 +88,35 @@ uint16_t protocore_sigfox_build_uplink(const uint8_t *payload, uint8_t len, char
     out[p++] = '\r';
     out[p++] = '\n';
     out[p] = '\0';
-    return p;
+    Sigfox.value = p;
 }
 
-protocore_sigfox_result protocore_sigfox_parse_response(const char *buf, uint16_t len)
+static void sigfox_parse_response(uint8_t *restrict work)
 {
+    (void)work;
+    const char *buf = Sigfox.parse_response_args.buf;
+    uint16_t len = Sigfox.parse_response_args.len;
+
     if (!buf || len == 0)
     {
-        return SIGFOX_PENDING;
+        Sigfox.status = SIGFOX_PENDING;
+        return;
     }
     if (contains(buf, len, "ERROR"))
     {
-        return SIGFOX_ERROR;
+        Sigfox.status = SIGFOX_ERROR;
+        return;
     }
     if (contains(buf, len, "OK"))
     {
-        return SIGFOX_OK;
+        Sigfox.status = SIGFOX_OK;
+        return;
     }
-    return SIGFOX_PENDING;
+    Sigfox.status = SIGFOX_PENDING;
 }
+
+SigfoxNs Sigfox = {.build_uplink = sigfox_build_uplink, .parse_response = sigfox_parse_response};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SIGFOX

@@ -11,6 +11,8 @@
 #include "mmgr/protomem.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_DNP
 
+static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
+
 #if PROTOCORE_ENABLE_DNP3
 
 uint16_t protocore_dnp3_crc(const uint8_t *data, size_t len)
@@ -20,7 +22,7 @@ uint16_t protocore_dnp3_crc(const uint8_t *data, size_t len)
     Crc.args.params = &PROTOCORE_CRC16_DNP;
     Crc.args.data = data;
     Crc.args.len = len;
-    Crc.compute(Crc.internal);
+    Crc.compute(crc_work);
     return (uint16_t)Crc.value;
 }
 

@@ -9,6 +9,8 @@
 #include "device_id.h"
 #include "shared/hex/hex.h"
 
+static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
+
 #if PROTOCORE_ENABLE_DEVICE_ID
 
 #include "crypto/hash/sha1.h"
@@ -19,31 +21,20 @@
 static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
                                    0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8};
 
-/**
- * @brief The identity's calls - what DeviceIdNs points at.
- *
- * @var DeviceIdInternal::ns  the handle a caller sets a call's members on
- */
-struct DeviceIdInternal
-{
-    DeviceIdNs *ns;
-};
-
-static struct DeviceIdInternal s_devid = {.ns = &DeviceId};
-
 // The lowercase hex character for one nibble.
 static char hex_digit(uint8_t nibble)
 {
     Hex.args.nibble = nibble;
     Hex.args.upper = PROTO_FALSE;
-    Hex.digit(Hex.internal);
+    Hex.digit(hex_work);
     return Hex.ch;
 }
 
-static void devid_from_mac(struct DeviceIdInternal *restrict ctx)
+static void devid_from_mac(uint8_t *restrict work)
 {
-    const uint8_t *mac = ctx->ns->args.mac;
-    char *out = ctx->ns->args.out;
+    (void)work;
+    const uint8_t *mac = DeviceId.args.mac;
+    char *out = DeviceId.args.out;
 
     // UUIDv5 name = lowercase MAC hex (12 chars, no separators).
     uint8_t input[16 + 12];
@@ -95,19 +86,20 @@ static void devid_from_mac(struct DeviceIdInternal *restrict ctx)
 }
 
 #if PROTOCORE_HAS_VENDOR_MAC
-static void devid_uuid(struct DeviceIdInternal *restrict ctx)
+static void devid_uuid(uint8_t *restrict work)
 {
     uint8_t mac[6] = {0};
     (void)protocore_platform_mac_read(mac); // the stable factory address; leaves zeros when it has none
-    ctx->ns->args.mac = mac;
-    devid_from_mac(ctx);
+    DeviceId.args.mac = mac;
+    devid_from_mac(work);
 }
 #endif
 
-DeviceIdNs DeviceId = {.from_mac = devid_from_mac,
+DeviceIdNs DeviceId = {
+    .from_mac = devid_from_mac,
 #if PROTOCORE_HAS_VENDOR_MAC
-                       .uuid = devid_uuid,
+    .uuid = devid_uuid,
 #endif
-                       .internal = &s_devid};
+};
 
 #endif // PROTOCORE_ENABLE_DEVICE_ID

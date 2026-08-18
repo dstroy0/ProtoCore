@@ -47,9 +47,6 @@ PROTOCORE_BEGIN_DECLS
 #define FLOW_V5_HEADER_SIZE 24 ///< octets in the vendor Version 5 packet header
 #define FLOW_V5_RECORD_SIZE 48 ///< octets in one vendor Version 5 flow record
 
-/** @brief The message under construction and the calls that reach it, described only in flow_export.c. */
-struct FlowExportInternal;
-
 /** @brief Vendor NetFlow Version 5 packet header. The builder writes Version 5 itself. */
 typedef struct
 {
@@ -159,7 +156,6 @@ typedef struct
  * @var FlowExportNs::data_record    append one Data Record to the open Set
  * @var FlowExportNs::data_set_end   patch the Set Length and, for v9, pad to a 4-octet boundary
  * @var FlowExportNs::message_finish close any open Set, patch the IPFIX Length or the v9 Count
- * @var FlowExportNs::internal       the message under construction and the calls that reach it
  */
 typedef struct
 {
@@ -174,21 +170,30 @@ typedef struct
     proto_bool ok;
     size_t n;
 
-    void (*v5_header)(struct FlowExportInternal *ctx);
-    void (*v5_record)(struct FlowExportInternal *ctx);
-    void (*ipfix_begin)(struct FlowExportInternal *ctx);
-    void (*v9_begin)(struct FlowExportInternal *ctx);
-    void (*template_set)(struct FlowExportInternal *ctx);
-    void (*data_set_begin)(struct FlowExportInternal *ctx);
-    void (*data_record)(struct FlowExportInternal *ctx);
-    void (*data_set_end)(struct FlowExportInternal *ctx);
-    void (*message_finish)(struct FlowExportInternal *ctx);
-
-    struct FlowExportInternal *internal;
+    void (*const v5_header)(uint8_t *restrict work);
+    void (*const v5_record)(uint8_t *restrict work);
+    void (*const ipfix_begin)(uint8_t *restrict work);
+    void (*const v9_begin)(uint8_t *restrict work);
+    void (*const template_set)(uint8_t *restrict work);
+    void (*const data_set_begin)(uint8_t *restrict work);
+    void (*const data_record)(uint8_t *restrict work);
+    void (*const data_set_end)(uint8_t *restrict work);
+    void (*const message_finish)(uint8_t *restrict work);
 } FlowExportNs;
 
 /** @brief The one symbol this module exports. */
 extern FlowExportNs FlowExport;
+
+/**
+ * @brief The PROTOCORE_FLOW_EXPORT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_flow_export_span(void);
 
 PROTOCORE_END_DECLS
 

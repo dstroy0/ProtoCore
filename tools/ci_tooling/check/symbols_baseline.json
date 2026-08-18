@@ -1,6 +1,6 @@
 [
-  "enum-name|src/network_drivers/application/scp/scp.h|enum type ScpMode is not protocore_snake_case",
-  "enum-name|src/network_drivers/application/scp/ssh_scp.c|enum type ScpSt is not protocore_snake_case",
+  "enum-name|src/network_drivers/session/scp/scp.h|enum type ScpMode is not protocore_snake_case",
+  "enum-name|src/network_drivers/session/scp/ssh_scp.c|enum type ScpSt is not protocore_snake_case",
   "enum-name|src/network_drivers/application/smb/smb2.h|enum type Smb2Command is not protocore_snake_case",
   "enum-name|src/network_drivers/application/smb/smb2.h|enum type Smb2Dialect is not protocore_snake_case",
   "enum-name|src/network_drivers/application/smb/smb2.h|enum type Smb2SignAlgo is not protocore_snake_case",

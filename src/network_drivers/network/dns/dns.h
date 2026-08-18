@@ -26,10 +26,14 @@
 
 #include "protocore_config.h"
 
-PROTOCORE_BEGIN_DECLS
+#if PROTOCORE_NEED_DNS_RESOLVER
+#include "network_drivers/network/dns/dns_resolver.h" // ResolverNs: the RESOLVER (RFC 1034 sec 5)
+#endif
+#if PROTOCORE_ENABLE_DNS_SERVER
+#include "network_drivers/network/dns/dns_server.h" // DnsServerNs: the NAME SERVER (RFC 1034 sec 4)
+#endif
 
-/** @brief The two components, held where only dns.c describes them. */
-struct DnsInternal;
+PROTOCORE_BEGIN_DECLS
 
 /**
  * @brief Name resolution (RFC 1034 sec 2.4).
@@ -40,11 +44,26 @@ struct DnsInternal;
  * No storage member: the RESOLVER's timer and in-flight query belong to dns_resolver.c and the NAME
  * SERVER's record table to dns_server.c, so this module owns no pool.
  *
- * @var DnsNs::internal  the RESOLVER (RFC 1034 sec 5) and the NAME SERVER (RFC 1034 sec 4)
+ * @var DnsNs::resolver  extracts information from name servers in response to client requests
+ *                       (RFC 1034 sec 5)
+ * @var DnsNs::server    holds the domain tree's structure and set information (RFC 1034 sec 4)
+ * @var DnsNs::present   what the table holds when both components are gated out: nothing
+ *
+ * Pointers rather than values because a table in one translation unit is not a constant expression
+ * in another, so a by-value member could not be initialized from dns.c. A struct with no members is
+ * not valid C, so @ref DnsNs::present stands in when both flags are off.
  */
 typedef struct
 {
-    struct DnsInternal *internal;
+#if PROTOCORE_NEED_DNS_RESOLVER
+    ResolverNs *const resolver;
+#endif
+#if PROTOCORE_ENABLE_DNS_SERVER
+    DnsServerNs *const server;
+#endif
+#if !PROTOCORE_NEED_DNS_RESOLVER && !PROTOCORE_ENABLE_DNS_SERVER
+    proto_bool present;
+#endif
 } DnsNs;
 
 /** @brief The one symbol this module exports. */

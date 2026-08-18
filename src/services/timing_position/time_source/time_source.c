@@ -11,6 +11,8 @@
 #include "time_source.h"
 #include "shared/http_date/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
 
+static uint8_t http_date_work[16]; // the borrow an entry takes; HttpDate never reads it
+
 #if PROTOCORE_ENABLE_TIME_SOURCE
 
 typedef struct
@@ -135,6 +137,6 @@ size_t protocore_time_http_date(char *out, size_t out_cap)
     HttpDate.args.epoch = (time_t)protocore_time_now();
     HttpDate.args.out = out;
     HttpDate.args.out_cap = out_cap;
-    HttpDate.format(HttpDate.internal);
+    HttpDate.format(http_date_work);
     return HttpDate.n;
 }

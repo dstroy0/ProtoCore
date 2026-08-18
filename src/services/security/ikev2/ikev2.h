@@ -711,9 +711,6 @@ typedef struct
     size_t our_nonce_len;
 } IkeSessionArgs;
 
-/** @brief The codec's calls, described only in ikev2.c. */
-struct IkeInternal;
-
 /**
  * @brief The IKEv2 handle (RFC 7296).
  *
@@ -828,7 +825,6 @@ struct IkeInternal;
  * @var IkeNs::informational_build  build an SK-protected INFORMATIONAL message (sec 1.4)
  * @var IkeNs::informational_open   verify and decrypt a received SK-protected message (sec 1.4)
  * @var IkeNs::create_child_sa_build  build an SK-protected CREATE_CHILD_SA message (sec 1.3)
- * @var IkeNs::internal   the calls that read this handle
  */
 typedef struct
 {
@@ -870,86 +866,84 @@ typedef struct
     IkeInnerRef opened;
     IkeSaInitMsg sa_init;
 
-    void (*hdr_build)(struct IkeInternal *ctx);
-    void (*hdr_parse)(struct IkeInternal *ctx);
-    void (*set_length)(struct IkeInternal *ctx);
-    void (*payload_iter_init)(struct IkeInternal *ctx);
-    void (*payload_next)(struct IkeInternal *ctx);
-    void (*payload_build)(struct IkeInternal *ctx);
+    void (*const hdr_build)(uint8_t *restrict work);
+    void (*const hdr_parse)(uint8_t *restrict work);
+    void (*const set_length)(uint8_t *restrict work);
+    void (*const payload_iter_init)(uint8_t *restrict work);
+    void (*const payload_next)(uint8_t *restrict work);
+    void (*const payload_build)(uint8_t *restrict work);
 
-    void (*sa_build)(struct IkeInternal *ctx);
-    void (*ke_build)(struct IkeInternal *ctx);
-    void (*nonce_build)(struct IkeInternal *ctx);
-    void (*id_build)(struct IkeInternal *ctx);
-    void (*auth_build)(struct IkeInternal *ctx);
-    void (*cert_build)(struct IkeInternal *ctx);
-    void (*notify_build)(struct IkeInternal *ctx);
-    void (*delete_build)(struct IkeInternal *ctx);
-    void (*ts_build)(struct IkeInternal *ctx);
-    void (*cp_build)(struct IkeInternal *ctx);
-    void (*sk_build)(struct IkeInternal *ctx);
+    void (*const sa_build)(uint8_t *restrict work);
+    void (*const ke_build)(uint8_t *restrict work);
+    void (*const nonce_build)(uint8_t *restrict work);
+    void (*const id_build)(uint8_t *restrict work);
+    void (*const auth_build)(uint8_t *restrict work);
+    void (*const cert_build)(uint8_t *restrict work);
+    void (*const notify_build)(uint8_t *restrict work);
+    void (*const delete_build)(uint8_t *restrict work);
+    void (*const ts_build)(uint8_t *restrict work);
+    void (*const cp_build)(uint8_t *restrict work);
+    void (*const sk_build)(uint8_t *restrict work);
 
-    void (*skf_build)(struct IkeInternal *ctx);
-    void (*skf_parse)(struct IkeInternal *ctx);
-    void (*frag_reasm_init)(struct IkeInternal *ctx);
-    void (*frag_reasm_add)(struct IkeInternal *ctx);
-    void (*frag_reasm_complete)(struct IkeInternal *ctx);
-    void (*frag_reasm_assemble)(struct IkeInternal *ctx);
+    void (*const skf_build)(uint8_t *restrict work);
+    void (*const skf_parse)(uint8_t *restrict work);
+    void (*const frag_reasm_init)(uint8_t *restrict work);
+    void (*const frag_reasm_add)(uint8_t *restrict work);
+    void (*const frag_reasm_complete)(uint8_t *restrict work);
+    void (*const frag_reasm_assemble)(uint8_t *restrict work);
 
-    void (*cookie_compute)(struct IkeInternal *ctx);
-    void (*cookie_verify)(struct IkeInternal *ctx);
-    void (*cookie_notify_build)(struct IkeInternal *ctx);
+    void (*const cookie_compute)(uint8_t *restrict work);
+    void (*const cookie_verify)(uint8_t *restrict work);
+    void (*const cookie_notify_build)(uint8_t *restrict work);
 
-    void (*ke_parse)(struct IkeInternal *ctx);
-    void (*id_parse)(struct IkeInternal *ctx);
-    void (*auth_parse)(struct IkeInternal *ctx);
-    void (*notify_parse)(struct IkeInternal *ctx);
-    void (*delete_parse)(struct IkeInternal *ctx);
-    void (*sk_parse)(struct IkeInternal *ctx);
-    void (*sa_first_proposal)(struct IkeInternal *ctx);
-    void (*transform_iter_init)(struct IkeInternal *ctx);
-    void (*transform_next)(struct IkeInternal *ctx);
-    void (*ts_count)(struct IkeInternal *ctx);
-    void (*ts_get)(struct IkeInternal *ctx);
-    void (*cp_parse)(struct IkeInternal *ctx);
-    void (*cp_attr_iter_init)(struct IkeInternal *ctx);
-    void (*cp_attr_next)(struct IkeInternal *ctx);
+    void (*const ke_parse)(uint8_t *restrict work);
+    void (*const id_parse)(uint8_t *restrict work);
+    void (*const auth_parse)(uint8_t *restrict work);
+    void (*const notify_parse)(uint8_t *restrict work);
+    void (*const delete_parse)(uint8_t *restrict work);
+    void (*const sk_parse)(uint8_t *restrict work);
+    void (*const sa_first_proposal)(uint8_t *restrict work);
+    void (*const transform_iter_init)(uint8_t *restrict work);
+    void (*const transform_next)(uint8_t *restrict work);
+    void (*const ts_count)(uint8_t *restrict work);
+    void (*const ts_get)(uint8_t *restrict work);
+    void (*const cp_parse)(uint8_t *restrict work);
+    void (*const cp_attr_iter_init)(uint8_t *restrict work);
+    void (*const cp_attr_next)(uint8_t *restrict work);
 
-    void (*prf_plus)(struct IkeInternal *ctx);
-    void (*derive_keys)(struct IkeInternal *ctx);
-    void (*rekey_derive_keys)(struct IkeInternal *ctx);
-    void (*child_keymat)(struct IkeInternal *ctx);
-    void (*suite_keylengths)(struct IkeInternal *ctx);
-    void (*sa_keys_from_init)(struct IkeInternal *ctx);
+    void (*const prf_plus)(uint8_t *restrict work);
+    void (*const derive_keys)(uint8_t *restrict work);
+    void (*const rekey_derive_keys)(uint8_t *restrict work);
+    void (*const child_keymat)(uint8_t *restrict work);
+    void (*const suite_keylengths)(uint8_t *restrict work);
+    void (*const sa_keys_from_init)(uint8_t *restrict work);
 
-    void (*sk_aead_seal)(struct IkeInternal *ctx);
-    void (*sk_aead_open)(struct IkeInternal *ctx);
-    void (*dh_public)(struct IkeInternal *ctx);
-    void (*dh_compute)(struct IkeInternal *ctx);
+    void (*const sk_aead_seal)(uint8_t *restrict work);
+    void (*const sk_aead_open)(uint8_t *restrict work);
+    void (*const dh_public)(uint8_t *restrict work);
+    void (*const dh_compute)(uint8_t *restrict work);
 
-    void (*auth_psk)(struct IkeInternal *ctx);
-    void (*signed_octets)(struct IkeInternal *ctx);
-    void (*auth_sign_ecdsa_p256)(struct IkeInternal *ctx);
-    void (*auth_verify_ecdsa_p256)(struct IkeInternal *ctx);
-    void (*auth_verify_rsa_sha256)(struct IkeInternal *ctx);
+    void (*const auth_psk)(uint8_t *restrict work);
+    void (*const signed_octets)(uint8_t *restrict work);
+    void (*const auth_sign_ecdsa_p256)(uint8_t *restrict work);
+    void (*const auth_verify_ecdsa_p256)(uint8_t *restrict work);
+    void (*const auth_verify_rsa_sha256)(uint8_t *restrict work);
 
-    void (*sa_init_build)(struct IkeInternal *ctx);
-    void (*sa_init_parse)(struct IkeInternal *ctx);
-    void (*auth_msg_build)(struct IkeInternal *ctx);
-    void (*auth_msg_open)(struct IkeInternal *ctx);
+    void (*const sa_init_build)(uint8_t *restrict work);
+    void (*const sa_init_parse)(uint8_t *restrict work);
+    void (*const auth_msg_build)(uint8_t *restrict work);
+    void (*const auth_msg_open)(uint8_t *restrict work);
 
-    void (*initiator_start)(struct IkeInternal *ctx);
-    void (*initiator_on_sa_init)(struct IkeInternal *ctx);
-    void (*initiator_build_auth_psk)(struct IkeInternal *ctx);
-    void (*initiator_on_auth_psk)(struct IkeInternal *ctx);
-    void (*responder_on_sa_init)(struct IkeInternal *ctx);
-    void (*responder_on_auth_psk)(struct IkeInternal *ctx);
+    void (*const initiator_start)(uint8_t *restrict work);
+    void (*const initiator_on_sa_init)(uint8_t *restrict work);
+    void (*const initiator_build_auth_psk)(uint8_t *restrict work);
+    void (*const initiator_on_auth_psk)(uint8_t *restrict work);
+    void (*const responder_on_sa_init)(uint8_t *restrict work);
+    void (*const responder_on_auth_psk)(uint8_t *restrict work);
 
-    void (*informational_build)(struct IkeInternal *ctx);
-    void (*informational_open)(struct IkeInternal *ctx);
-    void (*create_child_sa_build)(struct IkeInternal *ctx);
-
-    struct IkeInternal *internal;
+    void (*const informational_build)(uint8_t *restrict work);
+    void (*const informational_open)(uint8_t *restrict work);
+    void (*const create_child_sa_build)(uint8_t *restrict work);
 } IkeNs;
 
 /** @brief The one symbol this module exports. */

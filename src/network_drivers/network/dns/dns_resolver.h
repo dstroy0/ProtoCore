@@ -102,9 +102,6 @@ typedef struct
     const char *ip; ///< its address as a dotted quad
 } DnsServerArgs;
 
-/** @brief The resolver's own state and the calls that reach it, described only in dns_resolver.c. */
-struct ResolverInternal;
-
 /**
  * @brief The DNS resolver.
  *
@@ -128,7 +125,6 @@ struct ResolverInternal;
  * @var ResolverNs::resolve_verified  as resolve, and require the answer to pass @ref verify
  * @var ResolverNs::busy      a query is out
  * @var ResolverNs::set_server  point the portable backend at a nameserver, as a literal address
- * @var ResolverNs::internal  the in-flight query, its timer, and the calls that reach them
  *
  * resolve answers a dotted quad from the name itself and reports ::PROTOCORE_DNS_READY. Any other
  * name starts a query, marks the module busy and reports ::PROTOCORE_DNS_BUSY; the caller asks again
@@ -162,20 +158,29 @@ typedef struct
     protocore_ip_class cls;
     protocore_dns_state state;
 
-    void (*classify)(struct ResolverInternal *ctx);
-    void (*verify)(struct ResolverInternal *ctx);
-    void (*query_build)(struct ResolverInternal *ctx);
-    void (*answer_parse)(struct ResolverInternal *ctx);
-    void (*resolve)(struct ResolverInternal *ctx);
-    void (*resolve_verified)(struct ResolverInternal *ctx);
-    void (*busy)(struct ResolverInternal *ctx);
-    void (*set_server)(struct ResolverInternal *ctx);
-
-    struct ResolverInternal *internal;
+    void (*const classify)(uint8_t *restrict work);
+    void (*const verify)(uint8_t *restrict work);
+    void (*const query_build)(uint8_t *restrict work);
+    void (*const answer_parse)(uint8_t *restrict work);
+    void (*const resolve)(uint8_t *restrict work);
+    void (*const resolve_verified)(uint8_t *restrict work);
+    void (*const busy)(uint8_t *restrict work);
+    void (*const set_server)(uint8_t *restrict work);
 } ResolverNs;
 
 /** @brief The one symbol this module exports. */
 extern ResolverNs Resolver;
+
+/**
+ * @brief The PROTOCORE_DNS_RESOLVER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_dns_resolver_span(void);
 
 PROTOCORE_END_DECLS
 

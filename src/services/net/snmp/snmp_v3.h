@@ -92,9 +92,6 @@ typedef struct
 } SnmpV3NotifyArgs;
 #endif
 
-/** @brief The engine's own state and the calls that reach it, described only in snmp_v3.c. */
-struct SnmpV3Internal;
-
 /**
  * @brief The SNMPv3 engine (RFC 3412 sec 6, RFC 3414).
  *
@@ -115,7 +112,6 @@ struct SnmpV3Internal;
  * @var SnmpV3Ns::process    answer one SNMPv3Message: discovery, timeliness, auth, privacy, dispatch
  * @var SnmpV3Ns::trap       send an authenticated SNMPv2-Trap-PDU in a v3 message
  * @var SnmpV3Ns::inform     send an authenticated InformRequest-PDU in a v3 message
- * @var SnmpV3Ns::internal   the engine state and the calls that reach it
  */
 typedef struct
 {
@@ -130,21 +126,30 @@ typedef struct
     size_t n;
     uint32_t u32;
 
-    void (*init)(struct SnmpV3Internal *ctx);
-    void (*set_user)(struct SnmpV3Internal *ctx);
-    void (*set_boots)(struct SnmpV3Internal *ctx);
-    void (*get_boots)(struct SnmpV3Internal *ctx);
-    void (*process)(struct SnmpV3Internal *ctx);
+    void (*const init)(uint8_t *restrict work);
+    void (*const set_user)(uint8_t *restrict work);
+    void (*const set_boots)(uint8_t *restrict work);
+    void (*const get_boots)(uint8_t *restrict work);
+    void (*const process)(uint8_t *restrict work);
 #if PROTOCORE_ENABLE_SNMP_TRAP
-    void (*trap)(struct SnmpV3Internal *ctx);
-    void (*inform)(struct SnmpV3Internal *ctx);
+    void (*const trap)(uint8_t *restrict work);
+    void (*const inform)(uint8_t *restrict work);
 #endif
-
-    struct SnmpV3Internal *internal;
 } SnmpV3Ns;
 
 /** @brief The one symbol this module exports. */
 extern SnmpV3Ns SnmpV3;
+
+/**
+ * @brief The PROTOCORE_SNMP_V3_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_snmp_v3_span(void);
 
 PROTOCORE_END_DECLS
 

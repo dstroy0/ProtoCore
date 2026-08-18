@@ -28,7 +28,15 @@ void tearDown()
 void test_pri_local0_info()
 {
     char buf[256];
-    size_t n = protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "esp32", "app", "hello");
+    Syslog.line.out = buf;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.record.severity = SYSLOG_INFO;
+    Syslog.header.hostname = "esp32";
+    Syslog.header.app_name = "app";
+    Syslog.record.msg = "hello";
+    Syslog.format(protocore_syslog_span());
+    size_t n = Syslog.n;
     TEST_ASSERT_GREATER_THAN_UINT(0, n);
 
     TEST_ASSERT_EQUAL_STRING("<134>1 - esp32 app - - - hello", buf);
@@ -38,17 +46,38 @@ void test_pri_computation_varies()
 {
     char buf[256];
 
-    protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_DAEMON, SYSLOG_ERR, "h", "a", "m");
+    Syslog.line.out = buf;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = SYSLOG_FAC_DAEMON;
+    Syslog.record.severity = SYSLOG_ERR;
+    Syslog.header.hostname = "h";
+    Syslog.header.app_name = "a";
+    Syslog.record.msg = "m";
+    Syslog.format(protocore_syslog_span());
     TEST_ASSERT_EQUAL_STRING("<27>1 - h a - - - m", buf);
 
-    protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL7, SYSLOG_EMERG, "h", "a", "m");
+    Syslog.line.out = buf;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = SYSLOG_FAC_LOCAL7;
+    Syslog.record.severity = SYSLOG_EMERG;
+    Syslog.header.hostname = "h";
+    Syslog.header.app_name = "a";
+    Syslog.record.msg = "m";
+    Syslog.format(protocore_syslog_span());
     TEST_ASSERT_EQUAL_STRING("<184>1 - h a - - - m", buf);
 }
 
 void test_nilvalue_for_empty_fields()
 {
     char buf[256];
-    protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_USER, SYSLOG_DEBUG, NULL, "", "msg");
+    Syslog.line.out = buf;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = SYSLOG_FAC_USER;
+    Syslog.record.severity = SYSLOG_DEBUG;
+    Syslog.header.hostname = NULL;
+    Syslog.header.app_name = "";
+    Syslog.record.msg = "msg";
+    Syslog.format(protocore_syslog_span());
 
     TEST_ASSERT_EQUAL_STRING("<15>1 - - - - - - msg", buf);
 }
@@ -56,7 +85,15 @@ void test_nilvalue_for_empty_fields()
 void test_empty_message_ok()
 {
     char buf[256];
-    size_t n = protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_NOTICE, "h", "a", NULL);
+    Syslog.line.out = buf;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.record.severity = SYSLOG_NOTICE;
+    Syslog.header.hostname = "h";
+    Syslog.header.app_name = "a";
+    Syslog.record.msg = NULL;
+    Syslog.format(protocore_syslog_span());
+    size_t n = Syslog.n;
     TEST_ASSERT_GREATER_THAN_UINT(0, n);
 
     TEST_ASSERT_EQUAL_STRING("<133>1 - h a - - - ", buf);
@@ -65,23 +102,47 @@ void test_empty_message_ok()
 void test_overflow_returns_zero()
 {
     char buf[16];
+    Syslog.line.out = buf;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.record.severity = SYSLOG_INFO;
+    Syslog.header.hostname = "esp32";
+    Syslog.header.app_name = "app";
+    Syslog.record.msg = "a long message";
+    Syslog.format(protocore_syslog_span());
     size_t n =
-        protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "esp32", "app", "a long message");
+        Syslog.n;
     TEST_ASSERT_EQUAL_UINT(0, n);
 }
 
 void test_length_matches_strlen()
 {
     char buf[256];
-    size_t n = protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_LOCAL0, SYSLOG_INFO, "host", "app", "payload");
+    Syslog.line.out = buf;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.record.severity = SYSLOG_INFO;
+    Syslog.header.hostname = "host";
+    Syslog.header.app_name = "app";
+    Syslog.record.msg = "payload";
+    Syslog.format(protocore_syslog_span());
+    size_t n = Syslog.n;
     TEST_ASSERT_EQUAL_UINT(strlen(buf), n);
 }
 
 void test_init_and_log_captured()
 {
     protocore_net_host_udp_reset();
-    protocore_syslog_init("192.168.1.1", 514, "host1", "myapp", SYSLOG_FAC_LOCAL0);
-    TEST_ASSERT_TRUE(protocore_syslog_log(SYSLOG_INFO, "hello"));
+    Syslog.collector.addr = "192.168.1.1";
+    Syslog.collector.port = 514;
+    Syslog.header.hostname = "host1";
+    Syslog.header.app_name = "myapp";
+    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.init(protocore_syslog_span());
+    Syslog.record.severity = SYSLOG_INFO;
+    Syslog.record.msg = "hello";
+    Syslog.log(protocore_syslog_span());
+    TEST_ASSERT_TRUE(Syslog.ok);
     const char *expect = "<134>1 - host1 myapp - - - hello";
     TEST_ASSERT_EQUAL_UINT(strlen(expect), udp_cap_len());
     TEST_ASSERT_EQUAL_MEMORY(expect, udp_cap(), udp_cap_len());
@@ -90,8 +151,16 @@ void test_init_and_log_captured()
 void test_log_not_ready_when_no_server()
 {
     protocore_net_host_udp_reset();
-    protocore_syslog_init(NULL, 514, "h", "a", SYSLOG_FAC_USER);
-    TEST_ASSERT_FALSE(protocore_syslog_log(SYSLOG_INFO, "x"));
+    Syslog.collector.addr = NULL;
+    Syslog.collector.port = 514;
+    Syslog.header.hostname = "h";
+    Syslog.header.app_name = "a";
+    Syslog.header.facility = SYSLOG_FAC_USER;
+    Syslog.init(protocore_syslog_span());
+    Syslog.record.severity = SYSLOG_INFO;
+    Syslog.record.msg = "x";
+    Syslog.log(protocore_syslog_span());
+    TEST_ASSERT_FALSE(Syslog.ok);
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 
@@ -99,11 +168,34 @@ void test_format_null_and_pri_clamp()
 {
     char buf[64];
 
+    Syslog.line.out = NULL;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = (SyslogFacility)0;
+    Syslog.record.severity = (SyslogSeverity)0;
+    Syslog.header.hostname = "h";
+    Syslog.header.app_name = "a";
+    Syslog.record.msg = "m";
+    Syslog.format(protocore_syslog_span());
     TEST_ASSERT_EQUAL_UINT(
-        0, protocore_syslog_format(NULL, sizeof(buf), (SyslogFacility)0, (SyslogSeverity)0, "h", "a", "m"));
-    TEST_ASSERT_EQUAL_UINT(0, protocore_syslog_format(buf, 0, (SyslogFacility)0, (SyslogSeverity)0, "h", "a", "m"));
+        0, Syslog.n);
+    Syslog.line.out = buf;
+    Syslog.line.cap = 0;
+    Syslog.header.facility = (SyslogFacility)0;
+    Syslog.record.severity = (SyslogSeverity)0;
+    Syslog.header.hostname = "h";
+    Syslog.header.app_name = "a";
+    Syslog.record.msg = "m";
+    Syslog.format(protocore_syslog_span());
+    TEST_ASSERT_EQUAL_UINT(0, Syslog.n);
 
-    protocore_syslog_format(buf, sizeof(buf), (SyslogFacility)25, (SyslogSeverity)0, "h", "a", "m");
+    Syslog.line.out = buf;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = (SyslogFacility)25;
+    Syslog.record.severity = (SyslogSeverity)0;
+    Syslog.header.hostname = "h";
+    Syslog.header.app_name = "a";
+    Syslog.record.msg = "m";
+    Syslog.format(protocore_syslog_span());
     TEST_ASSERT_EQUAL_STRING("<191>1 - h a - - - m", buf);
 }
 
@@ -113,8 +205,16 @@ void test_init_truncates_long_fields()
     char longname[PROTOCORE_SYSLOG_FIELD_MAX + 16];
     memset(longname, 'H', sizeof(longname) - 1);
     longname[sizeof(longname) - 1] = '\0';
-    protocore_syslog_init("10.0.0.1", 514, longname, "a", SYSLOG_FAC_LOCAL0);
-    TEST_ASSERT_TRUE(protocore_syslog_log(SYSLOG_INFO, "m"));
+    Syslog.collector.addr = "10.0.0.1";
+    Syslog.collector.port = 514;
+    Syslog.header.hostname = longname;
+    Syslog.header.app_name = "a";
+    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.init(protocore_syslog_span());
+    Syslog.record.severity = SYSLOG_INFO;
+    Syslog.record.msg = "m";
+    Syslog.log(protocore_syslog_span());
+    TEST_ASSERT_TRUE(Syslog.ok);
     const char *sent = (const char *)udp_cap();
     const char *host = strstr(sent, "1 - ") + 4;
     size_t hcount = 0;
@@ -128,15 +228,31 @@ void test_init_truncates_long_fields()
 void test_init_empty_server_ip_not_ready()
 {
     protocore_net_host_udp_reset();
-    protocore_syslog_init("", 514, "host", "app", SYSLOG_FAC_LOCAL0);
-    TEST_ASSERT_FALSE(protocore_syslog_log(SYSLOG_INFO, "x"));
+    Syslog.collector.addr = "";
+    Syslog.collector.port = 514;
+    Syslog.header.hostname = "host";
+    Syslog.header.app_name = "app";
+    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.init(protocore_syslog_span());
+    Syslog.record.severity = SYSLOG_INFO;
+    Syslog.record.msg = "x";
+    Syslog.log(protocore_syslog_span());
+    TEST_ASSERT_FALSE(Syslog.ok);
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 
 void test_format_hostname_empty_appname_null()
 {
     char buf[64];
-    size_t n = protocore_syslog_format(buf, sizeof(buf), SYSLOG_FAC_USER, SYSLOG_WARNING, "", NULL, "msg2");
+    Syslog.line.out = buf;
+    Syslog.line.cap = sizeof(buf);
+    Syslog.header.facility = SYSLOG_FAC_USER;
+    Syslog.record.severity = SYSLOG_WARNING;
+    Syslog.header.hostname = "";
+    Syslog.header.app_name = NULL;
+    Syslog.record.msg = "msg2";
+    Syslog.format(protocore_syslog_span());
+    size_t n = Syslog.n;
     TEST_ASSERT_GREATER_THAN_UINT(0, n);
 
     TEST_ASSERT_EQUAL_STRING("<12>1 - - - - - - msg2", buf);
@@ -148,11 +264,27 @@ void test_format_append_boundaries()
     static const size_t fail_caps[] = {1, 2, 7, 8, 9, 10, 17, 18};
     for (size_t i = 0; i < sizeof(fail_caps) / sizeof(fail_caps[0]); i++)
     {
-        size_t n = protocore_syslog_format(buf, fail_caps[i], SYSLOG_FAC_USER, SYSLOG_EMERG, "h", "a", "m");
+        Syslog.line.out = buf;
+        Syslog.line.cap = fail_caps[i];
+        Syslog.header.facility = SYSLOG_FAC_USER;
+        Syslog.record.severity = SYSLOG_EMERG;
+        Syslog.header.hostname = "h";
+        Syslog.header.app_name = "a";
+        Syslog.record.msg = "m";
+        Syslog.format(protocore_syslog_span());
+        size_t n = Syslog.n;
         TEST_ASSERT_EQUAL_UINT(0, n);
     }
 
-    size_t n = protocore_syslog_format(buf, 19, SYSLOG_FAC_USER, SYSLOG_EMERG, "h", "a", "m");
+    Syslog.line.out = buf;
+    Syslog.line.cap = 19;
+    Syslog.header.facility = SYSLOG_FAC_USER;
+    Syslog.record.severity = SYSLOG_EMERG;
+    Syslog.header.hostname = "h";
+    Syslog.header.app_name = "a";
+    Syslog.record.msg = "m";
+    Syslog.format(protocore_syslog_span());
+    size_t n = Syslog.n;
     TEST_ASSERT_GREATER_THAN_UINT(0, n);
     TEST_ASSERT_EQUAL_STRING("<8>1 - h a - - - m", buf);
 }
@@ -163,12 +295,20 @@ void test_log_overflow_when_ready()
     char longname[PROTOCORE_SYSLOG_FIELD_MAX + 16];
     memset(longname, 'H', sizeof(longname) - 1);
     longname[sizeof(longname) - 1] = '\0';
-    protocore_syslog_init("10.0.0.1", 514, longname, longname, SYSLOG_FAC_LOCAL0);
+    Syslog.collector.addr = "10.0.0.1";
+    Syslog.collector.port = 514;
+    Syslog.header.hostname = longname;
+    Syslog.header.app_name = longname;
+    Syslog.header.facility = SYSLOG_FAC_LOCAL0;
+    Syslog.init(protocore_syslog_span());
     char longmsg[240];
     memset(longmsg, 'M', sizeof(longmsg) - 1);
     longmsg[sizeof(longmsg) - 1] = '\0';
 
-    TEST_ASSERT_FALSE(protocore_syslog_log(SYSLOG_INFO, longmsg));
+    Syslog.record.severity = SYSLOG_INFO;
+    Syslog.record.msg = longmsg;
+    Syslog.log(protocore_syslog_span());
+    TEST_ASSERT_FALSE(Syslog.ok);
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 

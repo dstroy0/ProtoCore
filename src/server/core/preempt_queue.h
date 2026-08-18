@@ -88,9 +88,6 @@ typedef struct
     uint32_t timeout_ticks; ///< how long a post may block; 0 returns at once when the lane is full
 } PqPostArgs;
 
-/** @brief The lanes' own state and the calls that reach them, described only in preempt_queue.c. */
-struct PreemptQueueInternal;
-
 /**
  * @brief The preempting work queues.
  *
@@ -112,7 +109,6 @@ struct PreemptQueueInternal;
  * @var PreemptQueueNs::post           post to the back of the lane
  * @var PreemptQueueNs::drain          run the handler over what is queued, where no task does it
  * @var PreemptQueueNs::stop           stop the lane's task
- * @var PreemptQueueNs::internal       the lanes' state and the calls that reach them
  */
 typedef struct
 {
@@ -125,21 +121,30 @@ typedef struct
     size_t n;
     uint8_t u8;
 
-    void (*post_from_isr)(struct PreemptQueueInternal *ctx);
-    void (*post_urgent)(struct PreemptQueueInternal *ctx);
-    void (*high_water)(struct PreemptQueueInternal *ctx);
-    void (*priority)(struct PreemptQueueInternal *ctx);
-    void (*running)(struct PreemptQueueInternal *ctx);
-    void (*start)(struct PreemptQueueInternal *ctx);
-    void (*post)(struct PreemptQueueInternal *ctx);
-    void (*drain)(struct PreemptQueueInternal *ctx);
-    void (*stop)(struct PreemptQueueInternal *ctx);
-
-    struct PreemptQueueInternal *internal;
+    void (*const post_from_isr)(uint8_t *restrict work);
+    void (*const post_urgent)(uint8_t *restrict work);
+    void (*const high_water)(uint8_t *restrict work);
+    void (*const priority)(uint8_t *restrict work);
+    void (*const running)(uint8_t *restrict work);
+    void (*const start)(uint8_t *restrict work);
+    void (*const post)(uint8_t *restrict work);
+    void (*const drain)(uint8_t *restrict work);
+    void (*const stop)(uint8_t *restrict work);
 } PreemptQueueNs;
 
 /** @brief The one symbol this module exports. */
 extern PreemptQueueNs PreemptQueue;
+
+/**
+ * @brief The PROTOCORE_PREEMPT_QUEUE_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_preempt_queue_span(void);
 
 // --- User-lane API (drives PROTOCORE_PQ_LANE_USER) --------------------------------------------
 
@@ -148,7 +153,7 @@ PROTOCORE_INLINE proto_bool protocore_pq_start(const protocore_pq_config *cfg)
 {
     PreemptQueue.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueue.cfg = cfg;
-    PreemptQueue.start(PreemptQueue.internal);
+    PreemptQueue.start(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 /** @brief Post to the back of the USER lane. */
@@ -157,7 +162,7 @@ PROTOCORE_INLINE proto_bool protocore_pq_post(const void *item, uint32_t timeout
     PreemptQueue.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueue.post_args.item = item;
     PreemptQueue.post_args.timeout_ticks = timeout_ticks;
-    PreemptQueue.post(PreemptQueue.internal);
+    PreemptQueue.post(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 /** @brief Post to the front of the USER lane (urgent). */
@@ -166,7 +171,7 @@ PROTOCORE_INLINE proto_bool protocore_pq_post_urgent(const void *item, uint32_t 
     PreemptQueue.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueue.post_args.item = item;
     PreemptQueue.post_args.timeout_ticks = timeout_ticks;
-    PreemptQueue.post_urgent(PreemptQueue.internal);
+    PreemptQueue.post_urgent(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 /** @brief Post to the USER lane from an ISR. */
@@ -174,33 +179,33 @@ PROTOCORE_INLINE proto_bool protocore_pq_post_from_isr(const void *item)
 {
     PreemptQueue.lane = PROTOCORE_PQ_LANE_USER;
     PreemptQueue.post_args.item = item;
-    PreemptQueue.post_from_isr(PreemptQueue.internal);
+    PreemptQueue.post_from_isr(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 /** @brief Drain the USER lane (host / inline drive). */
 PROTOCORE_INLINE void protocore_pq_drain(void)
 {
     PreemptQueue.lane = PROTOCORE_PQ_LANE_USER;
-    PreemptQueue.drain(PreemptQueue.internal);
+    PreemptQueue.drain(protocore_preempt_queue_span());
 }
 /** @brief Stop the USER lane's task. */
 PROTOCORE_INLINE void protocore_pq_stop(void)
 {
     PreemptQueue.lane = PROTOCORE_PQ_LANE_USER;
-    PreemptQueue.stop(PreemptQueue.internal);
+    PreemptQueue.stop(protocore_preempt_queue_span());
 }
 /** @brief True while the USER lane's task is running. */
 PROTOCORE_INLINE proto_bool protocore_pq_running(void)
 {
     PreemptQueue.lane = PROTOCORE_PQ_LANE_USER;
-    PreemptQueue.running(PreemptQueue.internal);
+    PreemptQueue.running(protocore_preempt_queue_span());
     return PreemptQueue.ok;
 }
 /** @brief Peak items ever queued on the USER lane. */
 PROTOCORE_INLINE size_t protocore_pq_high_water(void)
 {
     PreemptQueue.lane = PROTOCORE_PQ_LANE_USER;
-    PreemptQueue.high_water(PreemptQueue.internal);
+    PreemptQueue.high_water(protocore_preempt_queue_span());
     return PreemptQueue.n;
 }
 

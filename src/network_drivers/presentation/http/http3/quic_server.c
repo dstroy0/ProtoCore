@@ -8,10 +8,12 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "network_drivers/presentation/http/http3/quic_server.h"
 #include "mmgr/protomem.h"
+#include "network_drivers/presentation/http/http3/quic_server.h"
 
 #include "mmgr/plaintext.h" // the two engines' byte spans
 #include "mmgr/ring.h"      // protocore_atomic
@@ -139,7 +141,7 @@ static void server_send(const char *ip, uint16_t port, const uint8_t *data, size
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     Ip.args.text = ip;
     Ip.args.out = &dst;
-    Ip.parse(Ip.internal);
+    Ip.parse(ip_work);
     if (Ip.ok)
     {
         UdpListener.port = s_quic.port;
@@ -147,7 +149,7 @@ static void server_send(const char *ip, uint16_t port, const uint8_t *data, size
         UdpListener.send_args.dst_port = port;
         UdpListener.send_args.data = data;
         UdpListener.send_args.len = len;
-        UdpListener.sendto(UdpListener.internal);
+        UdpListener.sendto(protocore_udp_listener_span());
     }
 }
 
@@ -424,7 +426,7 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
     UdpListener.peer_args.ip_out = ip;
     UdpListener.peer_args.ip_cap = sizeof ip;
     UdpListener.peer_args.port_out = &port;
-    UdpListener.peer_addr(UdpListener.internal);
+    UdpListener.peer_addr(protocore_udp_listener_span());
     if (!UdpListener.ok)
     {
         return;
@@ -455,7 +457,7 @@ static void begin(struct QuicServerInternal *restrict ctx)
     UdpListener.port = ctx->port;
     UdpListener.bind.handler = udp_ingest_cb;
     UdpListener.bind.handler_ctx = NULL;
-    UdpListener.listen(UdpListener.internal);
+    UdpListener.listen(protocore_udp_listener_span());
     ctx->ns->ok = UdpListener.ok;
 }
 
@@ -525,7 +527,7 @@ static void active_conns(struct QuicServerInternal *restrict ctx)
 static void stop(struct QuicServerInternal *restrict ctx)
 {
     UdpListener.port = ctx->port;
-    UdpListener.close(UdpListener.internal); // drop the bind first: nothing more reaches the ring
+    UdpListener.close(protocore_udp_listener_span()); // drop the bind first: nothing more reaches the ring
     ctx->running = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {

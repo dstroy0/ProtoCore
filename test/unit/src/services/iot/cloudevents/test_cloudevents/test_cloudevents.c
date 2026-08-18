@@ -21,6 +21,8 @@
 
 #include <unity.h>
 
+static uint8_t cloudevents_work[16]; // the borrow an entry takes; CloudEvents never reads it
+
 static HttpReq g_req;
 static char g_out[512];
 
@@ -72,7 +74,7 @@ void test_binary_mode_published_request(void)
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, g_req.parse_state);
 
     CloudEvents.msg.req = &g_req;
-    CloudEvents.read_binary(CloudEvents.internal);
+    CloudEvents.read_binary(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok); // all three REQUIRED attributes arrived
 
     TEST_ASSERT_EQUAL_STRING("1234-1234-1234", CloudEvents.attr.id);
@@ -102,7 +104,7 @@ void test_binary_mode_optional_subject(void)
     feed(WITH);
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, g_req.parse_state);
     CloudEvents.msg.req = &g_req;
-    CloudEvents.read_binary(CloudEvents.internal);
+    CloudEvents.read_binary(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_STRING("mynewfile.jpg", CloudEvents.attr.subject);
 
@@ -115,7 +117,7 @@ void test_binary_mode_optional_subject(void)
                                   "\r\n";
     feed(WITHOUT);
     CloudEvents.msg.req = &g_req;
-    CloudEvents.read_binary(CloudEvents.internal);
+    CloudEvents.read_binary(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_NULL(CloudEvents.attr.subject);
     TEST_ASSERT_NULL(CloudEvents.attr.datacontenttype); // no Content-Type on this one either
@@ -138,14 +140,14 @@ void test_binary_mode_requires_id_source_and_type(void)
         feed(MISSING[i]);
         TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, g_req.parse_state);
         CloudEvents.msg.req = &g_req;
-        CloudEvents.read_binary(CloudEvents.internal);
+        CloudEvents.read_binary(cloudevents_work);
         TEST_ASSERT_FALSE_MESSAGE(CloudEvents.ok, MISSING[i]);
     }
 
     // no message at all clears every attribute rather than leaving the last read's values behind
     CloudEvents.attr.id = "stale";
     CloudEvents.msg.req = NULL;
-    CloudEvents.read_binary(CloudEvents.internal);
+    CloudEvents.read_binary(cloudevents_work);
     TEST_ASSERT_FALSE(CloudEvents.ok);
     TEST_ASSERT_NULL(CloudEvents.attr.id);
     TEST_ASSERT_NULL(CloudEvents.attr.source);
@@ -160,7 +162,7 @@ void test_structured_mode_required_attributes(void)
     CloudEvents.attr.id = "A234-1234-1234";
     CloudEvents.attr.source = "/mycontext";
     CloudEvents.attr.type = "com.example.someevent";
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"A234-1234-1234\","
@@ -186,7 +188,7 @@ void test_structured_mode_json_data(void)
     CloudEvents.attr.source = "/mycontext";
     CloudEvents.attr.type = "com.example.someevent";
     CloudEvents.data.json = "{\"appinfoA\":\"abc\",\"appinfoB\":123,\"appinfoC\":true}";
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"C234-1234-1234\","
@@ -205,7 +207,7 @@ void test_structured_mode_string_data(void)
     CloudEvents.attr.source = "/mycontext";
     CloudEvents.attr.type = "com.example.someevent";
     CloudEvents.data.str = "I'm just a string";
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"D234-1234-1234\","
@@ -224,7 +226,7 @@ void test_structured_mode_stated_datacontenttype(void)
     CloudEvents.attr.type = "com.example.someevent";
     CloudEvents.attr.datacontenttype = "application/xml";
     CloudEvents.data.str = "<much wow=\"xml\"/>";
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"B234-1234-1234\","
@@ -243,7 +245,7 @@ void test_structured_mode_optional_attributes(void)
     CloudEvents.attr.source = "/mycontext";
     CloudEvents.attr.type = "com.example.someevent";
     CloudEvents.attr.subject = "mynewfile.jpg";
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"A234-1234-1234\","
@@ -253,14 +255,14 @@ void test_structured_mode_optional_attributes(void)
                              g_out);
 
     CloudEvents.attr.subject = "";
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_NULL(strstr(g_out, "subject"));
 
     // a datacontenttype with no data at all still describes the (absent) payload
     CloudEvents.attr.subject = NULL;
     CloudEvents.attr.datacontenttype = "text/plain";
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_NOT_NULL(strstr(g_out, "\"datacontenttype\":\"text/plain\""));
     TEST_ASSERT_NULL(strstr(g_out, "\"data\":"));
@@ -282,7 +284,7 @@ void test_structured_mode_refuses_missing_required(void)
                 CloudEvents.attr.id = ID[a];
                 CloudEvents.attr.source = SOURCE[b];
                 CloudEvents.attr.type = TYPE[c];
-                CloudEvents.build_structured(CloudEvents.internal);
+                CloudEvents.build_structured(cloudevents_work);
                 if (a == 2 && b == 2 && c == 2)
                 {
                     TEST_ASSERT_TRUE(CloudEvents.ok);
@@ -304,27 +306,27 @@ void test_structured_mode_refuses_a_short_buffer(void)
     CloudEvents.attr.id = "A234-1234-1234";
     CloudEvents.attr.source = "/mycontext";
     CloudEvents.attr.type = "com.example.someevent";
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     size_t need = CloudEvents.n;
 
     CloudEvents.envelope.cap = need + 1;
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_UINT(need, CloudEvents.n);
 
     CloudEvents.envelope.cap = need;
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_FALSE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_UINT(0u, CloudEvents.n);
 
     CloudEvents.envelope.cap = 0;
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_FALSE(CloudEvents.ok);
 
     CloudEvents.envelope.out = NULL;
     CloudEvents.envelope.cap = sizeof(g_out);
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_FALSE(CloudEvents.ok);
 }
 
@@ -336,7 +338,7 @@ void test_attribute_values_are_json_escaped(void)
     CloudEvents.attr.id = "a\"b\\c";
     CloudEvents.attr.source = "/my\tcontext";
     CloudEvents.attr.type = "com.example\nsomeevent";
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"a\\\"b\\\\c\","
@@ -360,10 +362,10 @@ void test_binary_read_feeds_a_structured_build(void)
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, g_req.parse_state);
 
     CloudEvents.msg.req = &g_req;
-    CloudEvents.read_binary(CloudEvents.internal);
+    CloudEvents.read_binary(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
 
-    CloudEvents.build_structured(CloudEvents.internal);
+    CloudEvents.build_structured(cloudevents_work);
     TEST_ASSERT_TRUE(CloudEvents.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"1234-1234-1234\","

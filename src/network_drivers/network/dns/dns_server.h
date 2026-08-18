@@ -67,7 +67,6 @@ typedef struct
 } DnsRecordArgs;
 
 /** @brief The name table's own state and the calls that reach it, described only in dns_server.c. */
-struct DnsServerInternal;
 
 /**
  * @brief The answering side of DNS.
@@ -88,7 +87,6 @@ struct DnsServerInternal;
  * @var DnsServerNs::clear           forget every recorded name
  * @var DnsServerNs::begin           start answering on UDP port 53 (RFC 1035 sec 4.2.1)
  * @var DnsServerNs::lookup          the ADDRESS recorded for a name, or 0
- * @var DnsServerNs::internal        the name table and the calls that reach it
  */
 typedef struct
 {
@@ -100,17 +98,27 @@ typedef struct
     size_t n;
     uint32_t ip;
 
-    void (*build_response)(struct DnsServerInternal *ctx);
-    void (*add)(struct DnsServerInternal *ctx);
-    void (*clear)(struct DnsServerInternal *ctx);
-    void (*begin)(struct DnsServerInternal *ctx);
-    void (*lookup)(struct DnsServerInternal *ctx);
+    void (*const build_response)(uint8_t *restrict work);
+    void (*const add)(uint8_t *restrict work);
+    void (*const clear)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const lookup)(uint8_t *restrict work);
 
-    struct DnsServerInternal *internal;
 } DnsServerNs;
 
 /** @brief The one symbol this module exports. */
 extern DnsServerNs DnsServer;
+
+/**
+ * @brief The PROTOCORE_DNS_SERVER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_dns_server_span(void);
 
 /**
  * @brief The built-in table as a ::DnsResolveFn, for @ref DnsServerNs::ans.resolve.

@@ -7,6 +7,7 @@
  */
 
 #include "server/core/logbuf.h"
+#include "mmgr/plaintext.h"  // the persistent end this module's state is taken from
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h"
@@ -29,21 +30,40 @@ struct LogbufStorage
     protocore_log_trap_fn trap;                              // NULL until set; the null check gates trap_threshold
 };
 
-/**
- * @brief The ring and the calls that reach it - what LogbufNs points at.
- *
- * @var LogbufInternal::store  the lines, their severities, and the cursors over them
- * @var LogbufInternal::ns     the handle a caller sets a call's members on
- */
-struct LogbufInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define LOGBUF_OFF_CTX 0u
+static_assert(LOGBUF_OFF_CTX + sizeof(struct LogbufStorage) <= PROTOCORE_LOGBUF_BORROW,
+              "PROTOCORE_LOGBUF_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define LOGBUF_CTX(w) ((struct LogbufStorage *)(void *)((w) + LOGBUF_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct LogbufStorage *store;
-    LogbufNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_LOGBUF_BORROW persistent bytes, or null while the pool was short
+} LogbufOwnCtx;
+static LogbufOwnCtx s_own;
 
-static struct LogbufStorage s_store;
-
-static struct LogbufInternal s_log = {.store = &s_store, .ns = &Logbuf};
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_logbuf_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_LOGBUF_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 static char level_letter(uint8_t level)
 {
@@ -60,92 +80,116 @@ static char level_letter(uint8_t level)
     }
 }
 
-static void logbuf_reset(struct LogbufInternal *restrict ctx)
+static void logbuf_reset(uint8_t *restrict work)
 {
-    ctx->store->head = 0;
-    ctx->store->count = 0;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    LOGBUF_CTX(work)->head = 0;
+    LOGBUF_CTX(work)->count = 0;
 }
 
-static void logbuf_put(struct LogbufInternal *restrict ctx)
+static void logbuf_put(uint8_t *restrict work)
 {
-    const uint8_t level = ctx->ns->line.level;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t level = Logbuf.line.level;
     uint16_t slot;
 
-    if (ctx->store->count < PROTOCORE_LOG_LINES)
+    if (LOGBUF_CTX(work)->count < PROTOCORE_LOG_LINES)
     {
-        slot = (uint16_t)((ctx->store->head + ctx->store->count) % PROTOCORE_LOG_LINES);
-        ctx->store->count++;
+        slot = (uint16_t)((LOGBUF_CTX(work)->head + LOGBUF_CTX(work)->count) % PROTOCORE_LOG_LINES);
+        LOGBUF_CTX(work)->count++;
     }
     else // full: overwrite the oldest and advance head
     {
-        slot = ctx->store->head;
-        ctx->store->head = (uint16_t)((ctx->store->head + 1) % PROTOCORE_LOG_LINES);
+        slot = LOGBUF_CTX(work)->head;
+        LOGBUF_CTX(work)->head = (uint16_t)((LOGBUF_CTX(work)->head + 1) % PROTOCORE_LOG_LINES);
     }
     // A NULL msg renders empty and an over-long line empties the slot, both from the frame contract.
-    frame.build(ctx->store->lines[slot], PROTOCORE_LOG_LINE_LEN, LOG_LINE,
-                (const protocore_fval[]){PROTOCORE_VCH(level_letter(level)), PROTOCORE_VSTR(ctx->ns->line.msg)}, 2);
-    ctx->store->level[slot] = level;
+    frame.build(LOGBUF_CTX(work)->lines[slot], PROTOCORE_LOG_LINE_LEN, LOG_LINE,
+                (const protocore_fval[]){PROTOCORE_VCH(level_letter(level)), PROTOCORE_VSTR(Logbuf.line.msg)}, 2);
+    LOGBUF_CTX(work)->level[slot] = level;
 
-    if (ctx->store->trap && level >= ctx->store->trap_threshold)
+    if (LOGBUF_CTX(work)->trap && level >= LOGBUF_CTX(work)->trap_threshold)
     {
-        ctx->store->trap(level, ctx->store->lines[slot]);
+        LOGBUF_CTX(work)->trap(level, LOGBUF_CTX(work)->lines[slot]);
     }
 }
 
-static void logbuf_held(struct LogbufInternal *restrict ctx)
+static void logbuf_held(uint8_t *restrict work)
 {
-    ctx->ns->count = ctx->store->count;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    Logbuf.count = LOGBUF_CTX(work)->count;
 }
 
-static void logbuf_at(struct LogbufInternal *restrict ctx)
+static void logbuf_at(uint8_t *restrict work)
 {
-    const uint16_t i = ctx->ns->read.i;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint16_t i = Logbuf.read.i;
 
-    ctx->ns->text = NULL;
-    if (i >= ctx->store->count)
+    Logbuf.text = NULL;
+    if (i >= LOGBUF_CTX(work)->count)
     {
         return;
     }
-    ctx->ns->text = ctx->store->lines[(ctx->store->head + i) % PROTOCORE_LOG_LINES];
+    Logbuf.text = LOGBUF_CTX(work)->lines[(LOGBUF_CTX(work)->head + i) % PROTOCORE_LOG_LINES];
 }
 
-static void logbuf_dump(struct LogbufInternal *restrict ctx)
+static void logbuf_dump(uint8_t *restrict work)
 {
-    char *out = ctx->ns->read.out;
-    const size_t cap = ctx->ns->read.cap;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    char *out = Logbuf.read.out;
+    const size_t cap = Logbuf.read.cap;
 
-    ctx->ns->n = 0;
+    Logbuf.n = 0;
     if (!out || cap == 0)
     {
         return;
     }
     out[0] = '\0';
     size_t pos = 0;
-    for (uint16_t i = 0; i < ctx->store->count; i++)
+    for (uint16_t i = 0; i < LOGBUF_CTX(work)->count; i++)
     {
-        const char *line = ctx->store->lines[(ctx->store->head + i) % PROTOCORE_LOG_LINES];
+        const char *line = LOGBUF_CTX(work)->lines[(LOGBUF_CTX(work)->head + i) % PROTOCORE_LOG_LINES];
         size_t n = str.len(line, cap);
-        size_t need = n + (i + 1 < ctx->store->count ? 1 : 0); // +1 for the '\n' separator
-        if (pos + need >= cap)                                 // keep room for the null terminator
+        size_t need = n + (i + 1 < LOGBUF_CTX(work)->count ? 1 : 0); // +1 for the '\n' separator
+        if (pos + need >= cap)                                       // keep room for the null terminator
         {
             out[0] = '\0';
             return;
         }
         mem.cpy(out + pos, line, n);
         pos += n;
-        if (i + 1 < ctx->store->count)
+        if (i + 1 < LOGBUF_CTX(work)->count)
         {
             out[pos++] = '\n';
         }
     }
     out[pos] = '\0';
-    ctx->ns->n = (int)pos;
+    Logbuf.n = (int)pos;
 }
 
-static void logbuf_set_trap(struct LogbufInternal *restrict ctx)
+static void logbuf_set_trap(uint8_t *restrict work)
 {
-    ctx->store->trap_threshold = ctx->ns->trap.threshold;
-    ctx->store->trap = ctx->ns->trap.cb;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    LOGBUF_CTX(work)->trap_threshold = Logbuf.trap.threshold;
+    LOGBUF_CTX(work)->trap = Logbuf.trap.cb;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -154,7 +198,6 @@ LogbufNs Logbuf = {.reset = logbuf_reset,
                    .held = logbuf_held,
                    .at = logbuf_at,
                    .dump = logbuf_dump,
-                   .set_trap = logbuf_set_trap,
-                   .internal = &s_log};
+                   .set_trap = logbuf_set_trap};
 
 #endif // PROTOCORE_ENABLE_LOGBUF

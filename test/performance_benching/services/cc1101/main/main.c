@@ -20,6 +20,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t cc1101_work[16]; // the borrow an entry takes; Cc1101 never reads it
+
 // Canned-response SPI stub (same shape as test/test_cc1101's mock_spi): returns just enough fixed
 // data for init to detect the chip and recv to find one waiting packet. Never a real bus transaction
 // - this rig has no CC1101 module attached, so every other address is a plain no-op.

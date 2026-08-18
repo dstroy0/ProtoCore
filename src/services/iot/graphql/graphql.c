@@ -16,6 +16,7 @@
  */
 
 #include "services/iot/graphql/graphql.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_GRAPHQL
 
@@ -102,21 +103,16 @@ struct GraphQLStorage
     GqlExecution exec; ///< the operation being executed (spec sec 6.2.1)
 };
 
-/**
- * @brief The executor's state and the calls that reach it - what GraphQLNs points at.
- *
- * @var GraphQLInternal::store  the parse pools and the executing operation's state
- * @var GraphQLInternal::ns     the handle a caller sets a call's members on
- */
-struct GraphQLInternal
-{
-    struct GraphQLStorage *store;
-    GraphQLNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define GRAPHQL_OFF_CTX 0u
+static_assert(GRAPHQL_OFF_CTX + sizeof(struct GraphQLStorage) <= PROTOCORE_GRAPHQL_BORROW,
+              "PROTOCORE_GRAPHQL_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct GraphQLStorage s_store;
-
-static struct GraphQLInternal s_graphql = {.store = &s_store, .ns = &GraphQL};
+// The region, at its offset in the caller's borrow.
+#define GRAPHQL_CTX(w) ((struct GraphQLStorage *)(void *)((w) + GRAPHQL_OFF_CTX))
 
 // ---- lexer ----------------------------------------------------------------
 
@@ -165,18 +161,22 @@ static proto_bool is_name_continue(char c)
 }
 
 // Raise a request error (spec sec 7.1.2), keeping any more specific error already raised.
-static void flag_request_error(struct GraphQLInternal *restrict ctx)
+static void flag_request_error(uint8_t *restrict work)
 {
-    if (ctx->store->doc.err == PROTOCORE_GQL_OK)
+    if (!work)
     {
-        ctx->store->doc.err = PROTOCORE_GQL_ERR_PARSE;
+        return; // the pool was short of this module's borrow
+    }
+    if (GRAPHQL_CTX(work)->doc.err == PROTOCORE_GQL_OK)
+    {
+        GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_PARSE;
     }
 }
 
 // Claim the next field slot, cleared; -1 when the pool is full.
-static int new_field(struct GraphQLInternal *restrict ctx)
+static int new_field(uint8_t *restrict work)
 {
-    GqlDocument *doc = &ctx->store->doc;
+    GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     if (doc->n_fields >= PROTOCORE_GQL_MAX_NODES)
     {
         doc->err = PROTOCORE_GQL_ERR_LIMIT;
@@ -199,7 +199,7 @@ static int new_field(struct GraphQLInternal *restrict ctx)
 // argument position - an EnumValue (sec 2.9.6) such as `{ f(a: LONGENUMVALUE) }`, straight from
 // untrusted document text - write past the end of it. Names still cannot exceed
 // PROTOCORE_GQL_NAME_MAX; whichever limit is tighter wins.
-static proto_bool parse_name(struct GraphQLInternal *restrict ctx, GqlLexer *lx, char *out, size_t cap)
+static proto_bool parse_name(uint8_t *restrict work, GqlLexer *lx, char *out, size_t cap)
 {
     skip_ignored(lx);
     if (lx->p >= lx->e || !is_name_start(*lx->p))
@@ -215,7 +215,7 @@ static proto_bool parse_name(struct GraphQLInternal *restrict ctx, GqlLexer *lx,
         // and defeat the bound entirely. No separate cap==0 guard needed (and none to leave dead).
         if (i + 1 >= limit)
         {
-            ctx->store->doc.err = PROTOCORE_GQL_ERR_LIMIT;
+            GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_LIMIT;
             return PROTO_FALSE;
         }
         out[i++] = *lx->p++;
@@ -225,9 +225,9 @@ static proto_bool parse_name(struct GraphQLInternal *restrict ctx, GqlLexer *lx,
 }
 
 // Copy a decoded String (spec sec 2.9.4) into the document's string pool; NULL when it is full.
-static const char *intern(struct GraphQLInternal *restrict ctx, const char *s, int len)
+static const char *intern(uint8_t *restrict work, const char *s, int len)
 {
-    GqlDocument *doc = &ctx->store->doc;
+    GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     if (doc->str_len + len + 1 > PROTOCORE_GQL_STRBUF)
     {
         doc->err = PROTOCORE_GQL_ERR_LIMIT;
@@ -241,7 +241,7 @@ static const char *intern(struct GraphQLInternal *restrict ctx, const char *s, i
 }
 
 // Read one Value (spec sec 2.9): StringValue, IntValue, FloatValue, BooleanValue or NullValue.
-static proto_bool parse_value(struct GraphQLInternal *restrict ctx, GqlLexer *lx, protocore_gql_value *v)
+static proto_bool parse_value(uint8_t *restrict work, GqlLexer *lx, protocore_gql_value *v)
 {
     char c = peek(lx);
     if (c == '"')
@@ -291,18 +291,18 @@ static proto_bool parse_value(struct GraphQLInternal *restrict ctx, GqlLexer *lx
             }
             if (n >= (int)sizeof(tmp) - 1)
             {
-                ctx->store->doc.err = PROTOCORE_GQL_ERR_LIMIT;
+                GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_LIMIT;
                 return PROTO_FALSE;
             }
             tmp[n++] = ch;
         }
         if (lx->p >= lx->e)
         {
-            ctx->store->doc.err = PROTOCORE_GQL_ERR_PARSE;
+            GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_PARSE;
             return PROTO_FALSE;
         }
         lx->p++; // closing quote
-        const char *s = intern(ctx, tmp, n);
+        const char *s = intern(work, tmp, n);
         if (!s)
         {
             return PROTO_FALSE;
@@ -371,7 +371,7 @@ static proto_bool parse_value(struct GraphQLInternal *restrict ctx, GqlLexer *lx
         }
         if (!any)
         {
-            ctx->store->doc.err = PROTOCORE_GQL_ERR_PARSE;
+            GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_PARSE;
             return PROTO_FALSE;
         }
         if (is_float)
@@ -390,7 +390,7 @@ static proto_bool parse_value(struct GraphQLInternal *restrict ctx, GqlLexer *lx
     }
     // BooleanValue (sec 2.9.3) and NullValue (sec 2.9.5): the keywords true, false and null.
     char kw[8];
-    if (parse_name(ctx, lx, kw, sizeof(kw)))
+    if (parse_name(work, lx, kw, sizeof(kw)))
     {
         if (str.eq(kw, "true", sizeof("true"), PROTO_FALSE))
         {
@@ -410,24 +410,24 @@ static proto_bool parse_value(struct GraphQLInternal *restrict ctx, GqlLexer *lx
             return PROTO_TRUE;
         }
     }
-    ctx->store->doc.err = PROTOCORE_GQL_ERR_PARSE;
+    GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_PARSE;
     return PROTO_FALSE;
 }
 
-static int parse_selection_set(struct GraphQLInternal *ctx, GqlLexer *lx, int depth);
+static int parse_selection_set(uint8_t *work, GqlLexer *lx, int depth);
 
 // Read one Field (spec sec 2.5): `Name Arguments? SelectionSet?`.
-static int parse_field(struct GraphQLInternal *restrict ctx, GqlLexer *lx, int depth)
+static int parse_field(uint8_t *restrict work, GqlLexer *lx, int depth)
 {
-    GqlDocument *doc = &ctx->store->doc;
-    int idx = new_field(ctx);
+    GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
+    int idx = new_field(work);
     if (idx < 0)
     {
         return -1;
     }
-    if (!parse_name(ctx, lx, doc->fields[idx].name, sizeof(doc->fields[idx].name)))
+    if (!parse_name(work, lx, doc->fields[idx].name, sizeof(doc->fields[idx].name)))
     {
-        flag_request_error(ctx);
+        flag_request_error(work);
         return -1;
     }
     // Arguments (sec 2.6): `( Name : Value list )`.
@@ -444,9 +444,9 @@ static int parse_field(struct GraphQLInternal *restrict ctx, GqlLexer *lx, int d
                 return -1;
             }
             GqlArgument *a = &doc->args[doc->n_args];
-            if (!parse_name(ctx, lx, a->name, sizeof(a->name)))
+            if (!parse_name(work, lx, a->name, sizeof(a->name)))
             {
-                flag_request_error(ctx);
+                flag_request_error(work);
                 return -1;
             }
             if (peek(lx) != ':')
@@ -455,7 +455,7 @@ static int parse_field(struct GraphQLInternal *restrict ctx, GqlLexer *lx, int d
                 return -1;
             }
             lx->p++; // ':'
-            if (!parse_value(ctx, lx, &a->val))
+            if (!parse_value(work, lx, &a->val))
             {
                 return -1;
             }
@@ -473,16 +473,16 @@ static int parse_field(struct GraphQLInternal *restrict ctx, GqlLexer *lx, int d
     // A sub-SelectionSet makes the field composite; without one it is a scalar leaf.
     if (peek(lx) == '{')
     {
-        doc->fields[idx].first_child = parse_selection_set(ctx, lx, depth + 1);
+        doc->fields[idx].first_child = parse_selection_set(work, lx, depth + 1);
     }
     return doc->err != PROTOCORE_GQL_OK ? -1 : idx;
 }
 
 // Read one SelectionSet (spec sec 2.4): `{ Selection list }`. Returns the first field, the rest
 // chained through next_sib in document order.
-static int parse_selection_set(struct GraphQLInternal *restrict ctx, GqlLexer *lx, int depth)
+static int parse_selection_set(uint8_t *restrict work, GqlLexer *lx, int depth)
 {
-    GqlDocument *doc = &ctx->store->doc;
+    GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     if (depth > PROTOCORE_GQL_MAX_DEPTH)
     {
         doc->err = PROTOCORE_GQL_ERR_LIMIT;
@@ -503,7 +503,7 @@ static int parse_selection_set(struct GraphQLInternal *restrict ctx, GqlLexer *l
             doc->err = PROTOCORE_GQL_ERR_PARSE;
             return -1;
         }
-        int f = parse_field(ctx, lx, depth);
+        int f = parse_field(work, lx, depth);
         if (f < 0)
         {
             return -1;
@@ -524,14 +524,14 @@ static int parse_selection_set(struct GraphQLInternal *restrict ctx, GqlLexer *l
 
 // Read the Document (spec sec 2.2): one OperationDefinition, either the sec 2.3 query shorthand
 // `{...}` or `query Name? {...}`. A mutation or subscription keyword raises a request error.
-static proto_bool parse_document(struct GraphQLInternal *restrict ctx, GqlLexer *lx)
+static proto_bool parse_document(uint8_t *restrict work, GqlLexer *lx)
 {
-    GqlDocument *doc = &ctx->store->doc;
+    GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     char c = peek(lx);
     if (c != '{')
     {
         char kw[PROTOCORE_GQL_NAME_MAX];
-        if (!parse_name(ctx, lx, kw, sizeof(kw)) || !str.eq(kw, "query", sizeof("query"), PROTO_FALSE))
+        if (!parse_name(work, lx, kw, sizeof(kw)) || !str.eq(kw, "query", sizeof("query"), PROTO_FALSE))
         {
             doc->err = PROTOCORE_GQL_ERR_PARSE; // only the query OperationType
             return PROTO_FALSE;
@@ -539,14 +539,14 @@ static proto_bool parse_document(struct GraphQLInternal *restrict ctx, GqlLexer 
         if (peek(lx) != '{') // the operation Name is optional (sec 2.3)
         {
             char opname[PROTOCORE_GQL_NAME_MAX];
-            if (!parse_name(ctx, lx, opname, sizeof(opname)))
+            if (!parse_name(work, lx, opname, sizeof(opname)))
             {
-                flag_request_error(ctx);
+                flag_request_error(work);
                 return PROTO_FALSE;
             }
         }
     }
-    doc->root = parse_selection_set(ctx, lx, 1);
+    doc->root = parse_selection_set(work, lx, 1);
     if (doc->err != PROTOCORE_GQL_OK)
     {
         return PROTO_FALSE;
@@ -670,15 +670,15 @@ static void w_scalar(GqlWriter *w, const protocore_gql_value *v)
 
 // ---- execution (spec sec 6) -----------------------------------------------
 
-static void execute_selection_set(struct GraphQLInternal *ctx, GqlWriter *w, int first, int path_len);
+static void execute_selection_set(uint8_t *work, GqlWriter *w, int first, int path_len);
 
 // ExecuteField (spec sec 6.4): write the field's response key, then complete its value (sec 6.4.3)
 // by executing its sub-selection set or by resolving the leaf (sec 6.4.2). The dotted path and the
 // arguments in scope are extended for the duration of the field and unwound on the way out.
-static void execute_field(struct GraphQLInternal *restrict ctx, GqlWriter *w, int idx, int path_len)
+static void execute_field(uint8_t *restrict work, GqlWriter *w, int idx, int path_len)
 {
-    GqlExecution *ex = &ctx->store->exec;
-    GqlField *field = &ctx->store->doc.fields[idx];
+    GqlExecution *ex = &GRAPHQL_CTX(work)->exec;
+    GqlField *field = &GRAPHQL_CTX(work)->doc.fields[idx];
 
     // extend the dotted path: [parent].name
     int plen = path_len;
@@ -721,7 +721,7 @@ static void execute_field(struct GraphQLInternal *restrict ctx, GqlWriter *w, in
 
     if (field->first_child >= 0)
     {
-        execute_selection_set(ctx, w, field->first_child, plen);
+        execute_selection_set(work, w, field->first_child, plen);
     }
     else
     {
@@ -744,18 +744,18 @@ static void execute_field(struct GraphQLInternal *restrict ctx, GqlWriter *w, in
 
 // ExecuteSelectionSet (spec sec 6.3): every field of the set becomes one entry of a response map,
 // in the order the document lists them.
-static void execute_selection_set(struct GraphQLInternal *restrict ctx, GqlWriter *w, int first, int path_len)
+static void execute_selection_set(uint8_t *restrict work, GqlWriter *w, int first, int path_len)
 {
     w_raw(w, "{", 1);
     proto_bool leading = PROTO_TRUE;
-    for (int c = first; c >= 0; c = ctx->store->doc.fields[c].next_sib)
+    for (int c = first; c >= 0; c = GRAPHQL_CTX(work)->doc.fields[c].next_sib)
     {
         if (!leading)
         {
             w_raw(w, ",", 1);
         }
         leading = PROTO_FALSE;
-        execute_field(ctx, w, c, path_len);
+        execute_field(work, w, c, path_len);
     }
     w_raw(w, "}", 1);
 }
@@ -764,17 +764,17 @@ static void execute_selection_set(struct GraphQLInternal *restrict ctx, GqlWrite
 
 // The argument named ns->argument.name among the values in scope, or NULL. Names are compared
 // case-sensitively (spec sec 2.1.9).
-static const GqlArgument *arg_lookup(struct GraphQLInternal *restrict ctx)
+static const GqlArgument *arg_lookup(uint8_t *restrict work)
 {
-    const protocore_gql_args *view = ctx->ns->argument.values;
-    if (!view || !ctx->ns->argument.name)
+    const protocore_gql_args *view = GraphQL.argument.values;
+    if (!view || !GraphQL.argument.name)
     {
         return NULL;
     }
     for (int k = 0; k < view->count; k++)
     {
-        const GqlArgument *a = &ctx->store->doc.args[view->idx[k]];
-        if (str.eq(a->name, ctx->ns->argument.name, sizeof(a->name), PROTO_FALSE))
+        const GqlArgument *a = &GRAPHQL_CTX(work)->doc.args[view->idx[k]];
+        if (str.eq(a->name, GraphQL.argument.name, sizeof(a->name), PROTO_FALSE))
         {
             return a;
         }
@@ -782,51 +782,79 @@ static const GqlArgument *arg_lookup(struct GraphQLInternal *restrict ctx)
     return NULL;
 }
 
-// Read the named argument as an Int (spec sec 3.5.1).
-static void graphql_arg_int(struct GraphQLInternal *restrict ctx)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    const GqlArgument *a = arg_lookup(ctx);
-    ctx->ns->i64 = 0;
-    ctx->ns->ok = PROTO_FALSE;
+    uint8_t *span; ///< PROTOCORE_GRAPHQL_BORROW persistent bytes, or null while the pool was short
+} GraphQLOwnCtx;
+static GraphQLOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_graphql_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_GRAPHQL_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+// Read the named argument as an Int (spec sec 3.5.1).
+static void graphql_arg_int(uint8_t *restrict work)
+{
+    const GqlArgument *a = arg_lookup(work);
+    GraphQL.i64 = 0;
+    GraphQL.ok = PROTO_FALSE;
     if (a && a->val.type == PROTOCORE_GQL_INT)
     {
-        ctx->ns->i64 = a->val.i;
-        ctx->ns->ok = PROTO_TRUE;
+        GraphQL.i64 = a->val.i;
+        GraphQL.ok = PROTO_TRUE;
     }
 }
 
 // Read the named argument as a String (spec sec 3.5.3).
-static void graphql_arg_str(struct GraphQLInternal *restrict ctx)
+static void graphql_arg_str(uint8_t *restrict work)
 {
-    const GqlArgument *a = arg_lookup(ctx);
-    ctx->ns->text = NULL;
-    ctx->ns->ok = PROTO_FALSE;
+    const GqlArgument *a = arg_lookup(work);
+    GraphQL.text = NULL;
+    GraphQL.ok = PROTO_FALSE;
     if (a && a->val.type == PROTOCORE_GQL_STR)
     {
-        ctx->ns->text = a->val.s;
-        ctx->ns->ok = PROTO_TRUE;
+        GraphQL.text = a->val.s;
+        GraphQL.ok = PROTO_TRUE;
     }
 }
 
 // Read the named argument as a Boolean (spec sec 3.5.4).
-static void graphql_arg_bool(struct GraphQLInternal *restrict ctx)
+static void graphql_arg_bool(uint8_t *restrict work)
 {
-    const GqlArgument *a = arg_lookup(ctx);
-    ctx->ns->b = PROTO_FALSE;
-    ctx->ns->ok = PROTO_FALSE;
+    const GqlArgument *a = arg_lookup(work);
+    GraphQL.b = PROTO_FALSE;
+    GraphQL.ok = PROTO_FALSE;
     if (a && a->val.type == PROTOCORE_GQL_BOOL)
     {
-        ctx->ns->b = a->val.b;
-        ctx->ns->ok = PROTO_TRUE;
+        GraphQL.b = a->val.b;
+        GraphQL.ok = PROTO_TRUE;
     }
 }
 
 // ExecuteRequest (spec sec 6.1): parse the document, execute its query operation (sec 6.2.1), and
 // serialize the response map (sec 7.1) into ns->response.
-static void graphql_execute(struct GraphQLInternal *restrict ctx)
+static void graphql_execute(uint8_t *restrict work)
 {
-    GqlDocument *doc = &ctx->store->doc;
-    GqlExecution *ex = &ctx->store->exec;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
+    GqlExecution *ex = &GRAPHQL_CTX(work)->exec;
 
     doc->n_fields = 0;
     doc->n_args = 0;
@@ -835,24 +863,24 @@ static void graphql_execute(struct GraphQLInternal *restrict ctx)
     doc->err = PROTOCORE_GQL_OK;
     ex->scope_n = 0;
     // Latched here, so a resolver may set the argument members mid-walk without disturbing the walk.
-    ex->resolver = ctx->ns->request.resolver;
+    ex->resolver = GraphQL.request.resolver;
     ex->path[0] = '\0';
 
-    const char *query = ctx->ns->request.document;
-    char *out = ctx->ns->response.out;
-    const size_t cap = ctx->ns->response.cap;
-    ctx->ns->n = 0;
-    ctx->ns->ok = PROTO_FALSE;
+    const char *query = GraphQL.request.document;
+    char *out = GraphQL.response.out;
+    const size_t cap = GraphQL.response.cap;
+    GraphQL.n = 0;
+    GraphQL.ok = PROTO_FALSE;
 
     if (!query || !out || cap == 0)
     {
-        ctx->ns->result = PROTOCORE_GQL_ERR_PARSE;
+        GraphQL.result = PROTOCORE_GQL_ERR_PARSE;
         return;
     }
 
-    GqlLexer lx = {query, query + ctx->ns->request.len};
+    GqlLexer lx = {query, query + GraphQL.request.len};
 
-    if (!parse_document(ctx, &lx))
+    if (!parse_document(work, &lx))
     {
         // A request error is raised before execution begins, so the response map carries a non-empty
         // errors list and no data entry (spec sec 7.1, sec 7.1.2). Every error is a map with a
@@ -865,37 +893,34 @@ static void graphql_execute(struct GraphQLInternal *restrict ctx)
         if (!w.ovf && w.n < cap)
         {
             out[w.n] = '\0';
-            ctx->ns->n = w.n;
+            GraphQL.n = w.n;
         }
         // every path that makes parse_document() return false has already set doc->err, so the
         // PROTOCORE_GQL_OK side of this test is unreachable
-        ctx->ns->result = doc->err != PROTOCORE_GQL_OK ? doc->err : PROTOCORE_GQL_ERR_PARSE;
+        GraphQL.result = doc->err != PROTOCORE_GQL_OK ? doc->err : PROTOCORE_GQL_ERR_PARSE;
         return;
     }
 
     GqlWriter w = {out, cap, 0, PROTO_FALSE};
     w_str(&w, "{\"data\":");
-    execute_selection_set(ctx, &w, doc->root, 0);
+    execute_selection_set(work, &w, doc->root, 0);
     w_str(&w, "}");
     if (w.ovf || w.n >= cap)
     {
         // A resolver reads its arguments through this same handle, so ok carries the last accessor's
         // verdict by the time the walk ends. The execute states its own here.
-        ctx->ns->ok = PROTO_FALSE;
-        ctx->ns->result = PROTOCORE_GQL_ERR_OVERFLOW;
+        GraphQL.ok = PROTO_FALSE;
+        GraphQL.result = PROTOCORE_GQL_ERR_OVERFLOW;
         return;
     }
     out[w.n] = '\0';
-    ctx->ns->n = w.n;
-    ctx->ns->result = PROTOCORE_GQL_OK;
-    ctx->ns->ok = PROTO_TRUE;
+    GraphQL.n = w.n;
+    GraphQL.result = PROTOCORE_GQL_OK;
+    GraphQL.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-GraphQLNs GraphQL = {.execute = graphql_execute,
-                     .arg_int = graphql_arg_int,
-                     .arg_str = graphql_arg_str,
-                     .arg_bool = graphql_arg_bool,
-                     .internal = &s_graphql};
+GraphQLNs GraphQL = {
+    .execute = graphql_execute, .arg_int = graphql_arg_int, .arg_str = graphql_arg_str, .arg_bool = graphql_arg_bool};
 
 #endif // PROTOCORE_ENABLE_GRAPHQL

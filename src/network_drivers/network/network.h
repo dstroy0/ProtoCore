@@ -29,9 +29,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief The layer's calls, described only in network.c. */
-struct NetworkInternal;
-
 /**
  * @brief The internet layer (RFC 1122 sec 3), and the modules it carries.
  *
@@ -46,7 +43,6 @@ struct NetworkInternal;
  *                           (RFC 791 sec 1.4 addressing, RFC 8200 for v6)
  * @var NetworkNs::init      bring the layer up. It runs no work: the platform stack holds the route
  *                           table and selects the path (RFC 791 sec 1.4 "Operation")
- * @var NetworkNs::internal  the layer's calls
  *
  * Each carried module is named by pointer; one behind a feature flag is declared under that flag,
  * so the layer names only what the image already contains.
@@ -62,9 +58,7 @@ typedef struct
 #endif
     IpNs *ip; ///< an internet address as a value (RFC 791, RFC 8200)
 
-    void (*init)(struct NetworkInternal *ctx);
-
-    struct NetworkInternal *internal;
+    void (*const init)(uint8_t *restrict work);
 } NetworkNs;
 
 /** @brief The one symbol this module exports. */

@@ -10,6 +10,8 @@
 #include "mmgr/protoframe.h" // the one frame engine
 #include "mmgr/protostr.h"
 
+static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
+
 #if PROTOCORE_ENABLE_UPLOAD
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
@@ -57,7 +59,7 @@ static proto_bool upload_stream_begin(HttpReq *req)
     s_upl.handle = -1;
     // The seam fails closed when nothing is mounted, so a cold mount answers "upload failed"
     // rather than faulting.
-    Mnt.active(Mnt.internal);
+    Mnt.active(mnt_work);
     const protocore_mnt_backend *mnt = Mnt.backend;
     if (mnt && s_upl.dest)
     {
@@ -85,7 +87,7 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     (void)req; // a single upload streams at a time
     if (s_upl.active && !s_upl.error)
     {
-        Mnt.active(Mnt.internal);
+        Mnt.active(mnt_work);
         const protocore_mnt_backend *mnt = Mnt.backend;
         if (!mnt || mnt->write(s_upl.handle, data, len) != (int)len)
         {
@@ -108,7 +110,7 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     }
     if (s_upl.active)
     {
-        Mnt.active(Mnt.internal);
+        Mnt.active(mnt_work);
         const protocore_mnt_backend *mnt = Mnt.backend;
         if (mnt)
         {

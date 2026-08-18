@@ -6,17 +6,30 @@
  * @brief NTLMv2 response computation (see ntlm.h).
  */
 
-#include "ntlm.h"
-#include "mmgr/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SMB
+
+#include "mmgr/protomem.h"
+#include "ntlm.h"
 
 #include "crypto/hash/md.h" // Md: MD4, MD5 and HMAC-MD5
 #include "mmgr/secure.h"    // the pool the digest borrow comes from
 #include "mmgr/span.h"      // protocore_span, span.ok
 
-void protocore_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])
+PROTOCORE_BEGIN_DECLS
+
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void ntlm_nt_hash(uint8_t *restrict work)
 {
+    (void)work;
+    const char *password = Ntlm.nt_hash_args.password;
+    uint8_t *nt_hash = Ntlm.nt_hash_args.nt_hash;
+
     size_t mark = protocore_secure_mark();
     protocore_span w = protocore_secure_span(PROTOCORE_MD_BORROW, 0);
     if (!span.ok(w))
@@ -37,8 +50,14 @@ void protocore_ntlm_nt_hash(const char *password, uint8_t nt_hash[16])
     protocore_secure_release(mark);
 }
 
-proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, const char *domain, uint8_t owf[16])
+static void ntlm_ntowfv2(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *nt_hash = Ntlm.ntowfv2_args.nt_hash;
+    const char *user = Ntlm.ntowfv2_args.user;
+    const char *domain = Ntlm.ntowfv2_args.domain;
+    uint8_t *owf = Ntlm.ntowfv2_args.owf;
+
     uint8_t buf[512]; // UTF-16LE of Uppercase(user) + domain; 256 chars max
     size_t n = 0;
     for (const char *p = user; *p; p++)
@@ -50,7 +69,8 @@ proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, c
         }
         if (n + 2 > sizeof(buf))
         {
-            return PROTO_FALSE;
+            Ntlm.ok = PROTO_FALSE;
+            return;
         }
         buf[n++] = (uint8_t)up;
         buf[n++] = 0;
@@ -59,7 +79,8 @@ proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, c
     {
         if (n + 2 > sizeof(buf))
         {
-            return PROTO_FALSE;
+            Ntlm.ok = PROTO_FALSE;
+            return;
         }
         buf[n++] = (uint8_t)*p;
         buf[n++] = 0;
@@ -69,7 +90,8 @@ proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, c
     if (!span.ok(w))
     {
         protocore_secure_release(mark);
-        return PROTO_FALSE;
+        Ntlm.ok = PROTO_FALSE;
+        return;
     }
     Md.hmac_args.key = nt_hash;
     Md.hmac_args.key_len = 16;
@@ -78,7 +100,7 @@ proto_bool protocore_ntlm_ntowfv2(const uint8_t nt_hash[16], const char *user, c
     Md.hmac_args.out = owf;
     Md.hmac_md5(w.buf);
     protocore_secure_release(mark);
-    return PROTO_TRUE;
+    Ntlm.ok = PROTO_TRUE;
 }
 
 // HMAC-MD5 over a two-part message (the key here is always the 16-byte NTOWFv2, < 64 bytes,
@@ -129,16 +151,25 @@ static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_
     protocore_secure_release(mark);
 }
 
-size_t protocore_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_challenge[8],
-                                  const uint8_t client_challenge[8], const uint8_t timestamp[8],
-                                  const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap,
-                                  uint8_t session_key[16])
+static void ntlm_v2_response(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *owf = Ntlm.v2_response_args.owf;
+    const uint8_t *server_challenge = Ntlm.v2_response_args.server_challenge;
+    const uint8_t *client_challenge = Ntlm.v2_response_args.client_challenge;
+    const uint8_t *timestamp = Ntlm.v2_response_args.timestamp;
+    const uint8_t *target_info = Ntlm.v2_response_args.target_info;
+    size_t ti_len = Ntlm.v2_response_args.ti_len;
+    uint8_t *out = Ntlm.v2_response_args.out;
+    size_t out_cap = Ntlm.v2_response_args.out_cap;
+    uint8_t *session_key = Ntlm.v2_response_args.session_key;
+
     const size_t temp_len = 2 + 6 + 8 + 8 + 4 + ti_len + 4; // MS-NLMP temp layout
     const size_t protocore_resp_len = 16 + temp_len;        // NTProofStr(16) + temp
     if (!out || protocore_resp_len > out_cap)
     {
-        return 0;
+        Ntlm.n = 0;
+        return;
     }
 
     // Build temp in place at out+16, so the result is NTProofStr(16) || temp contiguously.
@@ -176,21 +207,29 @@ size_t protocore_ntlm_v2_response(const uint8_t owf[16], const uint8_t server_ch
         }
         protocore_secure_release(mark);
     }
-    return protocore_resp_len;
+    Ntlm.n = protocore_resp_len;
 }
 
-size_t protocore_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, uint8_t *out, size_t out_cap)
+static void ntlm_set_mic_flag(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *target_info = Ntlm.set_mic_flag_args.target_info;
+    size_t ti_len = Ntlm.set_mic_flag_args.ti_len;
+    uint8_t *out = Ntlm.set_mic_flag_args.out;
+    size_t out_cap = Ntlm.set_mic_flag_args.out_cap;
+
     if (!target_info || !out)
     {
-        return 0;
+        Ntlm.n = 0;
+        return;
     }
     // Walk the AV_PAIR list (AvId u16, AvLen u16, Value[AvLen]), copying it and, if an MsvAvFlags pair
     // (AvId 6) is present, OR-ing bit 0x2 into its 32-bit LE value in place. Track the EOL position so a
     // missing pair can be inserted there.
     if (ti_len > out_cap)
     {
-        return 0;
+        Ntlm.n = 0;
+        return;
     }
     mem.cpy(out, target_info, ti_len);
     size_t p = 0;
@@ -212,20 +251,23 @@ size_t protocore_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, ui
         }
         if (p + 4 + len < p + 4) // overflow guard
         {
-            return 0;
+            Ntlm.n = 0;
+            return;
         }
         p += 4 + len;
     }
     if (found)
     {
-        return ti_len;
+        Ntlm.n = ti_len;
+        return;
     }
     // Insert a fresh MsvAvFlags pair (AvId 6, AvLen 4, value 0x00000002). A well-formed list has an EOL
     // (AvId 0) terminator - splice the pair in just before it; a fixture without one (or that ran off the
     // end) gets the pair appended at the tail, matching the pre-MIC pass-through leniency (never fail here).
     if (ti_len + 8 > out_cap)
     {
-        return 0;
+        Ntlm.n = 0;
+        return;
     }
     const size_t at = eol != ti_len ? eol : ti_len;
     if (at < ti_len)
@@ -240,12 +282,21 @@ size_t protocore_ntlm_set_mic_flag(const uint8_t *target_info, size_t ti_len, ui
     out[at + 5] = 0x00;
     out[at + 6] = 0x00;
     out[at + 7] = 0x00;
-    return ti_len + 8;
+    Ntlm.n = ti_len + 8;
 }
 
-void protocore_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_t neg_len, const uint8_t *chal,
-                        size_t chal_len, const uint8_t *auth, size_t auth_len, uint8_t out[16])
+static void ntlm_mic(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *session_key = Ntlm.mic_args.session_key;
+    const uint8_t *neg = Ntlm.mic_args.neg;
+    size_t neg_len = Ntlm.mic_args.neg_len;
+    const uint8_t *chal = Ntlm.mic_args.chal;
+    size_t chal_len = Ntlm.mic_args.chal_len;
+    const uint8_t *auth = Ntlm.mic_args.auth;
+    size_t auth_len = Ntlm.mic_args.auth_len;
+    uint8_t *out = Ntlm.mic_args.out;
+
     // HMAC-MD5(session_key, neg || chal || auth), streamed. The key is 16 bytes (< 64), no shortening.
     uint8_t ipad[64];
     uint8_t opad[64];
@@ -289,5 +340,15 @@ void protocore_ntlm_mic(const uint8_t session_key[16], const uint8_t *neg, size_
     Md.final(w.buf);
     protocore_secure_release(mark);
 }
+
+NtlmNs Ntlm = {
+    .nt_hash = ntlm_nt_hash,
+    .ntowfv2 = ntlm_ntowfv2,
+    .v2_response = ntlm_v2_response,
+    .set_mic_flag = ntlm_set_mic_flag,
+    .mic = ntlm_mic,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SMB

@@ -109,13 +109,13 @@ static int a_recv(void *c, uint8_t *buf, size_t cap)
 {
     RelayBridge *br = (RelayBridge *)c;
     ConnPool.slot = br->conn_slot;
-    ConnPool.available(ConnPool.internal);
+    ConnPool.available(protocore_conn_pool_span());
     if (ConnPool.n)
     {
         ConnPool.slot = br->conn_slot;
         ConnPool.io.buf = buf;
         ConnPool.io.cap = cap;
-        ConnPool.read(ConnPool.internal);
+        ConnPool.read(protocore_conn_pool_span());
         return (int)ConnPool.n;
     }
     return 0;
@@ -127,7 +127,7 @@ static int a_send(void *c, const uint8_t *buf, size_t len)
     // whole PROTOCORE_RELAY_BUF chunk rarely fits tcp_sndbuf in one shot, and a failed all-or-nothing send
     // forwards zero bytes and stalls the transfer. room==0 is real backpressure - the pump retries.
     ConnPool.slot = br->conn_slot;
-    ConnPool.sndbuf(ConnPool.internal);
+    ConnPool.sndbuf(protocore_conn_pool_span());
     proto_u16 room = ConnPool.u16;
     if (room == 0)
     {
@@ -137,7 +137,7 @@ static int a_send(void *c, const uint8_t *buf, size_t len)
     ConnPool.slot = br->conn_slot;
     ConnPool.io.data = buf;
     ConnPool.io.len = n;
-    ConnPool.send(ConnPool.internal);
+    ConnPool.send(protocore_conn_pool_span());
     return ConnPool.ok ? (int)n : 0;
 }
 // Origin (b) = the outbound protocore_client; it reports EOF through the recv seam.
@@ -147,14 +147,14 @@ static int b_recv(void *c, uint8_t *buf, size_t cap)
     TcpClient.cid = br->origin_cid;
     TcpClient.io.buf = buf;
     TcpClient.io.cap = cap;
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     size_t n = TcpClient.n;
     if (n)
     {
         return (int)n;
     }
     TcpClient.cid = br->origin_cid;
-    TcpClient.is_closed(TcpClient.internal);
+    TcpClient.is_closed(protocore_tcp_client_span());
     return TcpClient.ok ? -1 : 0;
 }
 static int b_send(void *c, const uint8_t *buf, size_t len)
@@ -163,7 +163,7 @@ static int b_send(void *c, const uint8_t *buf, size_t len)
     TcpClient.cid = br->origin_cid;
     TcpClient.io.data = buf;
     TcpClient.io.len = len;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     return TcpClient.ok ? (int)len : 0;
 }
 
@@ -173,14 +173,14 @@ static void teardown(RelayBridge *br, proto_bool close_inbound)
 {
     br->active = PROTO_FALSE;
 #if PROTOCORE_ENABLE_RADIO_POWER
-    Radio.busy_release(Radio.internal); // this bridge is done relaying
+    Radio.busy_release(protocore_radio_power_span()); // this bridge is done relaying
 #endif
     TcpClient.cid = br->origin_cid;
-    TcpClient.close(TcpClient.internal);
+    TcpClient.close(protocore_tcp_client_span());
     if (close_inbound)
     {
         ConnPool.slot = br->conn_slot;
-        ConnPool.close(ConnPool.internal);
+        ConnPool.close(protocore_conn_pool_span());
     }
 }
 
@@ -213,10 +213,10 @@ static void service(uint8_t *restrict work, uint8_t slot)
     }
     // origin closed and everything it sent has been forwarded -> nothing more to do
     TcpClient.cid = br->origin_cid;
-    TcpClient.is_closed(TcpClient.internal);
+    TcpClient.is_closed(protocore_tcp_client_span());
     const proto_bool origin_closed = TcpClient.ok;
     TcpClient.cid = br->origin_cid;
-    TcpClient.available(TcpClient.internal);
+    TcpClient.available(protocore_tcp_client_span());
     if (origin_closed && TcpClient.n == 0 && br->relay.b2a_off >= br->relay.b2a_len)
     {
         teardown(br, PROTO_TRUE);
@@ -234,19 +234,19 @@ static void relay_on_accept(uint8_t slot)
     }
 
     ConnPool.slot = slot;
-    ConnPool.listener_id(ConnPool.internal);
+    ConnPool.listener_id(protocore_conn_pool_span());
     RelayBind *bd = bind_by_listener(work, ConnPool.u8);
     if (!bd)
     {
         ConnPool.slot = slot;
-        ConnPool.close(ConnPool.internal); // no origin published for this listener
+        ConnPool.close(protocore_conn_pool_span()); // no origin published for this listener
         return;
     }
     int idx = bridge_find_free(work);
     if (idx < 0)
     {
         ConnPool.slot = slot;
-        ConnPool.close(ConnPool.internal); // bridge table full
+        ConnPool.close(protocore_conn_pool_span()); // bridge table full
         return;
     }
     // open() takes a slot and returns; the origin is not up yet. The bridge arms anyway: the pump
@@ -255,12 +255,12 @@ static void relay_on_accept(uint8_t slot)
     TcpClient.dial.host = bd->host;
     TcpClient.dial.port = bd->port;
     TcpClient.dial.timeout_ms = PROTOCORE_RELAY_CONNECT_MS;
-    TcpClient.open(TcpClient.internal);
+    TcpClient.open(protocore_tcp_client_span());
     int cid = TcpClient.i32;
     if (cid < 0)
     {
         ConnPool.slot = slot;
-        ConnPool.close(ConnPool.internal); // no free client slot
+        ConnPool.close(protocore_conn_pool_span()); // no free client slot
         return;
     }
     RelayBridge *br = &RELAY_LISTENER_CTX(work)->bridges[idx];
@@ -274,7 +274,7 @@ static void relay_on_accept(uint8_t slot)
     Relay.init_args.origin = &b;
     Relay.init(relay_work);
 #if PROTOCORE_ENABLE_RADIO_POWER
-    Radio.busy_hold(Radio.internal); // hold the radio awake for the life of this bridge
+    Radio.busy_hold(protocore_radio_power_span()); // hold the radio awake for the life of this bridge
 #endif
 }
 
@@ -302,7 +302,7 @@ static void relay_on_poll(uint8_t slot)
     }
 
     ConnPool.slot = slot;
-    ConnPool.active(ConnPool.internal);
+    ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
         return;
@@ -395,7 +395,7 @@ static void relay_listener_publish(uint8_t *restrict work)
     {
         Session.proto->proto = PROTO_RELAY;
         Session.proto->h = &s_relay_handler;
-        Session.proto->add(Session.proto->internal);
+        Session.proto->add(protocore_session_span());
         RELAY_LISTENER_CTX(work)->registered = PROTO_TRUE;
     }
     RelayListener.ok = PROTO_TRUE;
@@ -414,7 +414,7 @@ static void relay_listener_reset(uint8_t *restrict work)
         {
             RELAY_LISTENER_CTX(work)->bridges[i].active = PROTO_FALSE;
 #if PROTOCORE_ENABLE_RADIO_POWER
-            Radio.busy_release(Radio.internal); // balance the hold taken when the bridge was opened
+            Radio.busy_release(protocore_radio_power_span()); // balance the hold taken when the bridge was opened
 #endif
         }
     }

@@ -11,6 +11,9 @@
  */
 
 #include "services/iot/udp_telemetry/udp_telemetry.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_UDP_TELEMETRY
 
@@ -51,27 +54,22 @@ struct UdpTelemetryStorage
     proto_bool have_field;
 };
 
-/**
- * @brief The caster's state and the calls that reach it - what UdpTelemetryNs points at.
- *
- * @var UdpTelemetryInternal::store  the collector and the line being built
- * @var UdpTelemetryInternal::ns     the handle a caller sets a call's members on
- */
-struct UdpTelemetryInternal
-{
-    struct UdpTelemetryStorage *store;
-    UdpTelemetryNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define UDP_TELEMETRY_OFF_CTX 0u
+static_assert(UDP_TELEMETRY_OFF_CTX + sizeof(struct UdpTelemetryStorage) <= PROTOCORE_UDP_TELEMETRY_BORROW,
+              "PROTOCORE_UDP_TELEMETRY_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct UdpTelemetryStorage s_store;
-
-static struct UdpTelemetryInternal s_udp_telemetry = {.store = &s_store, .ns = &UdpTelemetry};
+// The region, at its offset in the caller's borrow.
+#define UDP_TELEMETRY_CTX(w) ((struct UdpTelemetryStorage *)(void *)((w) + UDP_TELEMETRY_OFF_CTX))
 
 // Append s while the line still leaves room for a trailing NUL, latching overflow the first time it
 // does not, so every later append is a no-op.
-static void line_append(struct UdpTelemetryInternal *restrict ctx, const char *s)
+static void line_append(uint8_t *restrict work, const char *s)
 {
-    struct UdpTelemetryStorage *store = ctx->store;
+    struct UdpTelemetryStorage *store = UDP_TELEMETRY_CTX(work);
     if (store->overflow)
     {
         return;
@@ -89,7 +87,7 @@ static void line_append(struct UdpTelemetryInternal *restrict ctx, const char *s
 
 // Append s with the tag set escaping ("Special characters"): comma, equals and space each take a
 // leading backslash. A NULL s appends nothing.
-static void line_append_escaped(struct UdpTelemetryInternal *restrict ctx, const char *s)
+static void line_append_escaped(uint8_t *restrict work, const char *s)
 {
     if (!s)
     {
@@ -100,30 +98,38 @@ static void line_append_escaped(struct UdpTelemetryInternal *restrict ctx, const
         if (*p == ',' || *p == '=' || *p == ' ')
         {
             char esc[3] = {'\\', *p, '\0'};
-            line_append(ctx, esc);
+            line_append(work, esc);
         }
         else
         {
             char one[2] = {*p, '\0'};
-            line_append(ctx, one);
+            line_append(work, one);
         }
     }
 }
 
 // The separator before a field set entry: a space before the first, a comma before the rest.
-static void line_sep(struct UdpTelemetryInternal *restrict ctx)
+static void line_sep(uint8_t *restrict work)
 {
-    line_append(ctx, ctx->store->have_field ? "," : " ");
-    ctx->store->have_field = PROTO_TRUE;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    line_append(work, UDP_TELEMETRY_CTX(work)->have_field ? "," : " ");
+    UDP_TELEMETRY_CTX(work)->have_field = PROTO_TRUE;
 }
 
 // Publish the line's state on the handle: its octet count, its overflow latch, and whether it is a
 // complete point - nothing overflowed and the field set holds at least one entry.
-static void line_result(struct UdpTelemetryInternal *restrict ctx)
+static void line_result(uint8_t *restrict work)
 {
-    ctx->ns->n = ctx->store->pos;
-    ctx->ns->overflow = ctx->store->overflow;
-    ctx->ns->ok = !ctx->store->overflow && ctx->store->have_field;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    UdpTelemetry.n = UDP_TELEMETRY_CTX(work)->pos;
+    UdpTelemetry.overflow = UDP_TELEMETRY_CTX(work)->overflow;
+    UdpTelemetry.ok = !UDP_TELEMETRY_CTX(work)->overflow && UDP_TELEMETRY_CTX(work)->have_field;
 }
 
 // Terminate the number built in b, and empty num when that build overflowed.
@@ -135,28 +141,56 @@ static void num_finish(protocore_sb *b, char *num)
     }
 }
 
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_UDP_TELEMETRY_BORROW persistent bytes, or null while the pool was short
+} UdpTelemetryOwnCtx;
+static UdpTelemetryOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_udp_telemetry_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_UDP_TELEMETRY_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
 // Parse the collector address and store it with its port. Without a network stack nothing parses and
 // every send refuses.
-static void udp_telemetry_begin(struct UdpTelemetryInternal *restrict ctx)
+static void udp_telemetry_begin(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
 #if PROTOCORE_HAS_NET_STACK
-    Ip.args.text = ctx->ns->collector.addr;
-    Ip.args.out = &ctx->store->collector;
-    Ip.parse(Ip.internal);
-    ctx->store->ready = Ip.ok;
-    ctx->store->port = ctx->ns->collector.port;
-    ctx->ns->ok = ctx->store->ready;
+    Ip.args.text = UdpTelemetry.collector.addr;
+    Ip.args.out = &UDP_TELEMETRY_CTX(work)->collector;
+    Ip.parse(ip_work);
+    UDP_TELEMETRY_CTX(work)->ready = Ip.ok;
+    UDP_TELEMETRY_CTX(work)->port = UdpTelemetry.collector.port;
+    UdpTelemetry.ok = UDP_TELEMETRY_CTX(work)->ready;
 #else
-    ctx->ns->ok = PROTO_FALSE;
+    UdpTelemetry.ok = PROTO_FALSE;
 #endif
 }
 
 // Bind the caller's buffer and open the line with the measurement (line protocol element 1).
-static void udp_telemetry_measurement(struct UdpTelemetryInternal *restrict ctx)
+static void udp_telemetry_measurement(uint8_t *restrict work)
 {
-    struct UdpTelemetryStorage *store = ctx->store;
-    store->buf = ctx->ns->line.buf;
-    store->cap = ctx->ns->line.cap;
+    struct UdpTelemetryStorage *store = UDP_TELEMETRY_CTX(work);
+    store->buf = UdpTelemetry.line.buf;
+    store->cap = UdpTelemetry.line.cap;
     store->pos = 0;
     store->have_field = PROTO_FALSE;
     store->overflow = (store->buf == NULL);
@@ -164,127 +198,143 @@ static void udp_telemetry_measurement(struct UdpTelemetryInternal *restrict ctx)
     {
         store->buf[0] = '\0';
     }
-    line_append(ctx, ctx->ns->line.measurement ? ctx->ns->line.measurement : "");
-    line_result(ctx);
+    line_append(work, UdpTelemetry.line.measurement ? UdpTelemetry.line.measurement : "");
+    line_result(work);
 }
 
 // Append `,tag_key=tag_value` (line protocol element 2).
-static void udp_telemetry_tag(struct UdpTelemetryInternal *restrict ctx)
+static void udp_telemetry_tag(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     // The tag set is comma separated and sits between the measurement and the space that opens the
     // field set, so an entry appended after a field would read as a field. The line latches
     // overflow instead.
-    if (ctx->store->have_field)
+    if (UDP_TELEMETRY_CTX(work)->have_field)
     {
-        ctx->store->overflow = PROTO_TRUE;
+        UDP_TELEMETRY_CTX(work)->overflow = PROTO_TRUE;
     }
     else
     {
-        line_append(ctx, ",");
-        line_append_escaped(ctx, ctx->ns->tags.key);
-        line_append(ctx, "=");
-        line_append_escaped(ctx, ctx->ns->tags.value);
+        line_append(work, ",");
+        line_append_escaped(work, UdpTelemetry.tags.key);
+        line_append(work, "=");
+        line_append_escaped(work, UdpTelemetry.tags.value);
     }
-    line_result(ctx);
+    line_result(work);
 }
 
 // Append `field_key=<i64>i`, the signed integer field value (line protocol element 3).
-static void udp_telemetry_field_int(struct UdpTelemetryInternal *restrict ctx)
+static void udp_telemetry_field_int(uint8_t *restrict work)
 {
     char num[24];
     protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
-    Sb.i64(&b, ctx->ns->fields.i64);
+    Sb.i64(&b, UdpTelemetry.fields.i64);
     Sb.put(&b, "i");
     num_finish(&b, num);
-    line_sep(ctx);
-    line_append(ctx, ctx->ns->fields.key ? ctx->ns->fields.key : "");
-    line_append(ctx, "=");
-    line_append(ctx, num);
-    line_result(ctx);
+    line_sep(work);
+    line_append(work, UdpTelemetry.fields.key ? UdpTelemetry.fields.key : "");
+    line_append(work, "=");
+    line_append(work, num);
+    line_result(work);
 }
 
 // Append `field_key=<u64>u`, the unsigned integer field value.
-static void udp_telemetry_field_uint(struct UdpTelemetryInternal *restrict ctx)
+static void udp_telemetry_field_uint(uint8_t *restrict work)
 {
     char num[24];
     protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
-    Sb.u64(&b, ctx->ns->fields.u64);
+    Sb.u64(&b, UdpTelemetry.fields.u64);
     Sb.put(&b, "u");
     num_finish(&b, num);
-    line_sep(ctx);
-    line_append(ctx, ctx->ns->fields.key ? ctx->ns->fields.key : "");
-    line_append(ctx, "=");
-    line_append(ctx, num);
-    line_result(ctx);
+    line_sep(work);
+    line_append(work, UdpTelemetry.fields.key ? UdpTelemetry.fields.key : "");
+    line_append(work, "=");
+    line_append(work, num);
+    line_result(work);
 }
 
 // Append `field_key=<f32>` to decimals places, the unsuffixed float field value.
-static void udp_telemetry_field_float(struct UdpTelemetryInternal *restrict ctx)
+static void udp_telemetry_field_float(uint8_t *restrict work)
 {
     char num[32];
     protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
-    Sb.fixed(&b, (double)ctx->ns->fields.f32, (unsigned)ctx->ns->fields.decimals);
+    Sb.fixed(&b, (double)UdpTelemetry.fields.f32, (unsigned)UdpTelemetry.fields.decimals);
     num_finish(&b, num);
-    line_sep(ctx);
-    line_append(ctx, ctx->ns->fields.key ? ctx->ns->fields.key : "");
-    line_append(ctx, "=");
-    line_append(ctx, num);
-    line_result(ctx);
+    line_sep(work);
+    line_append(work, UdpTelemetry.fields.key ? UdpTelemetry.fields.key : "");
+    line_append(work, "=");
+    line_append(work, num);
+    line_result(work);
 }
 
 // Append ` <timestamp>` (line protocol element 4), Unix nanoseconds.
-static void udp_telemetry_timestamp(struct UdpTelemetryInternal *restrict ctx)
+static void udp_telemetry_timestamp(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     // The timestamp trails the field set, one space between them, so a line with no field has no
     // point to stamp. The line latches overflow instead.
-    if (!ctx->store->have_field)
+    if (!UDP_TELEMETRY_CTX(work)->have_field)
     {
-        ctx->store->overflow = PROTO_TRUE;
+        UDP_TELEMETRY_CTX(work)->overflow = PROTO_TRUE;
     }
     else
     {
         char num[24];
         protocore_sb b = {num, sizeof(num), 0, PROTO_TRUE};
         Sb.put(&b, " ");
-        Sb.i64(&b, ctx->ns->time.unix_ns);
+        Sb.i64(&b, UdpTelemetry.time.unix_ns);
         num_finish(&b, num);
-        line_append(ctx, num);
+        line_append(work, num);
     }
-    line_result(ctx);
+    line_result(work);
 }
 
 // Send the payload to the collector as one datagram (RFC 768 "User Interface": the data, and the
 // destination port and address). Nothing is acknowledged (RFC 768 "Introduction": delivery and
 // duplicate protection are not guaranteed), so ok reports only that the stack took the octets.
-static void udp_telemetry_send(struct UdpTelemetryInternal *restrict ctx)
+static void udp_telemetry_send(uint8_t *restrict work)
 {
-    ctx->ns->ok = PROTO_FALSE;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    UdpTelemetry.ok = PROTO_FALSE;
 #if PROTOCORE_HAS_NET_STACK
-    if (!ctx->store->ready || !ctx->ns->payload.data)
+    if (!UDP_TELEMETRY_CTX(work)->ready || !UdpTelemetry.payload.data)
     {
         return;
     }
-    UdpClient.dst = &ctx->store->collector;
-    UdpClient.dst_port = ctx->store->port;
-    UdpClient.data = (const uint8_t *)ctx->ns->payload.data;
-    UdpClient.len = ctx->ns->payload.len;
-    UdpClient.sendto(UdpClient.internal);
-    ctx->ns->ok = UdpClient.ok;
+    UdpClient.dst = &UDP_TELEMETRY_CTX(work)->collector;
+    UdpClient.dst_port = UDP_TELEMETRY_CTX(work)->port;
+    UdpClient.data = (const uint8_t *)UdpTelemetry.payload.data;
+    UdpClient.len = UdpTelemetry.payload.len;
+    UdpClient.sendto(protocore_udp_client_span());
+    UdpTelemetry.ok = UdpClient.ok;
 #endif
 }
 
 // Send the built line as one datagram. A line that overflowed, or whose field set is empty, is not a
 // point, and nothing leaves.
-static void udp_telemetry_write(struct UdpTelemetryInternal *restrict ctx)
+static void udp_telemetry_write(uint8_t *restrict work)
 {
-    if (ctx->store->overflow || !ctx->store->have_field)
+    if (!work)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    if (UDP_TELEMETRY_CTX(work)->overflow || !UDP_TELEMETRY_CTX(work)->have_field)
+    {
+        UdpTelemetry.ok = PROTO_FALSE;
         return;
     }
-    ctx->ns->payload.data = ctx->store->buf;
-    ctx->ns->payload.len = ctx->store->pos;
-    udp_telemetry_send(ctx);
+    UdpTelemetry.payload.data = UDP_TELEMETRY_CTX(work)->buf;
+    UdpTelemetry.payload.len = UDP_TELEMETRY_CTX(work)->pos;
+    udp_telemetry_send(work);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -296,7 +346,6 @@ UdpTelemetryNs UdpTelemetry = {.begin = udp_telemetry_begin,
                                .field_float = udp_telemetry_field_float,
                                .timestamp = udp_telemetry_timestamp,
                                .send = udp_telemetry_send,
-                               .write = udp_telemetry_write,
-                               .internal = &s_udp_telemetry};
+                               .write = udp_telemetry_write};
 
 #endif // PROTOCORE_ENABLE_UDP_TELEMETRY

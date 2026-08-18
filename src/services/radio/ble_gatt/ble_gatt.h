@@ -19,11 +19,15 @@
 #ifndef PROTOCORE_BLE_GATT_H
 #define PROTOCORE_BLE_GATT_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_BLE_GATT
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief ATT opcodes (subset). */
 #define ATT_OP_ERROR_RSP 0x01        ///< [op][req-op][handle:2][error]
@@ -40,21 +44,6 @@ PROTOCORE_BEGIN_DECLS
 #define GATT_PROP_NOTIFY 0x10
 #define GATT_PROP_INDICATE 0x20
 
-/** @brief Build a Read Request: [0x0A][handle:2 LE]. @return 3, or 0 on overflow. */
-size_t att_read_req(uint16_t handle, uint8_t *out, size_t cap);
-
-/** @brief Build a Read Response: [0x0B][value...]. @return 1+vlen, or 0 on overflow. */
-size_t att_read_rsp(const uint8_t *val, size_t vlen, uint8_t *out, size_t cap);
-
-/** @brief Build a Write Request: [0x12][handle:2 LE][value...]. @return 3+vlen, or 0 on overflow. */
-size_t att_write_req(uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out, size_t cap);
-
-/** @brief Build a Handle Value Notification: [0x1B][handle:2 LE][value...]. @return 3+vlen, or 0. */
-size_t att_notify(uint16_t handle, const uint8_t *val, size_t vlen, uint8_t *out, size_t cap);
-
-/** @brief Build an Error Response: [0x01][req-op][handle:2 LE][error]. @return 5, or 0 on overflow. */
-size_t att_error_rsp(uint8_t req_op, uint16_t handle, uint8_t error, uint8_t *out, size_t cap);
-
 /** @brief A parsed ATT PDU (value points into the input). */
 typedef struct
 {
@@ -66,9 +55,6 @@ typedef struct
     size_t value_len;
 } AttPdu;
 
-/** @brief Parse an ATT PDU into @p out. @return true if @p len >= 1 and the fixed fields fit. */
-proto_bool att_parse(const uint8_t *pdu, size_t len, AttPdu *out);
-
 /** @brief One GATT characteristic for the northbound bridge. */
 typedef struct
 {
@@ -77,11 +63,127 @@ typedef struct
     uint8_t props; ///< GATT_PROP_* bits.
 } GattChar;
 
+/** @brief What att_read_req takes: handle, out, cap. */
+typedef struct
+{
+    uint16_t handle;
+    uint8_t *out;
+    size_t cap;
+} BleGattAttReadReqArgs;
+
+/** @brief What att_read_rsp takes: val, vlen, out, cap. */
+typedef struct
+{
+    const uint8_t *val;
+    size_t vlen;
+    uint8_t *out;
+    size_t cap;
+} BleGattAttReadRspArgs;
+
+/** @brief What att_write_req takes: handle, val, vlen, out, cap. */
+typedef struct
+{
+    uint16_t handle;
+    const uint8_t *val;
+    size_t vlen;
+    uint8_t *out;
+    size_t cap;
+} BleGattAttWriteReqArgs;
+
+/** @brief What att_notify takes: handle, val, vlen, out, cap. */
+typedef struct
+{
+    uint16_t handle;
+    const uint8_t *val;
+    size_t vlen;
+    uint8_t *out;
+    size_t cap;
+} BleGattAttNotifyArgs;
+
+/** @brief What att_error_rsp takes: req_op, handle, error, out, cap. */
+typedef struct
+{
+    uint8_t req_op;
+    uint16_t handle;
+    uint8_t error;
+    uint8_t *out;
+    size_t cap;
+} BleGattAttErrorRspArgs;
+
+/** @brief What att_parse takes: pdu, len, out. */
+typedef struct
+{
+    const uint8_t *pdu;
+    size_t len;
+    AttPdu *out;
+} BleGattAttParseArgs;
+
+/** @brief What char_json takes: chars, n, out, cap. */
+typedef struct
+{
+    const GattChar *chars;
+    size_t n;
+    char *out;
+    size_t cap;
+} BleGattCharJsonArgs;
+
 /**
- * @brief Serialize a characteristic table as `[{"handle":H,"uuid":"0xXXXX","props":P},...]` for the web.
- * @return length written (excl NUL), or 0 on overflow / bad args.
+ * @brief Bluetooth ATT protocol codec + GATT characteristic bridge (PROTOCORE_ENABLE_BLE_GATT).
+ *
+ * A caller sets the members a call takes, invokes it through ::BleGatt with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   BleGatt.att_read_req_args.handle = ...;
+ *   BleGatt.att_read_req_args.out = ...;
+ *   BleGatt.att_read_req_args.cap = ...;
+ *   BleGatt.att_read_req(work);
+ *   // BleGatt.n is what the call reports
+ *
+ * @var BleGattNs::att_read_req_args  what att_read_req takes: handle, out, cap
+ * @var BleGattNs::att_read_rsp_args  what att_read_rsp takes: val, vlen, out, cap
+ * @var BleGattNs::att_write_req_args  what att_write_req takes: handle, val, vlen, out, cap
+ * @var BleGattNs::att_notify_args  what att_notify takes: handle, val, vlen, out, cap
+ * @var BleGattNs::att_error_rsp_args  what att_error_rsp takes: req_op, handle, error, out, cap
+ * @var BleGattNs::att_parse_args  what att_parse takes: pdu, len, out
+ * @var BleGattNs::char_json_args  what char_json takes: chars, n, out, cap
+ * @var BleGattNs::ok  a call's true/false outcome
+ * @var BleGattNs::n  length written (excl NUL), or 0 on overflow / bad args
+ * @var BleGattNs::att_read_req  build a Read Request: [0x0A][handle:2 LE]. 3, or 0 on overflow
+ * @var BleGattNs::att_read_rsp  build a Read Response: [0x0B][value...]. 1+vlen, or 0 on overflow
+ * @var BleGattNs::att_write_req  build a Write Request: [0x12][handle:2 LE][value...]. 3+vlen, or 0 ...
+ * @var BleGattNs::att_notify  build a Handle Value Notification: [0x1B][handle:2 LE][value...]. ...
+ * @var BleGattNs::att_error_rsp  build an Error Response: [0x01][req-op][handle:2 LE][error]. 5, or ...
+ * @var BleGattNs::att_parse  parse an ATT PDU into out. true if len >= 1 and the fixed fields fit
+ * @var BleGattNs::char_json  serialize a characteristic table as ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_gatt_char_json(const GattChar *chars, size_t n, char *out, size_t cap);
+typedef struct
+{
+    BleGattAttReadReqArgs att_read_req_args;
+    BleGattAttReadRspArgs att_read_rsp_args;
+    BleGattAttWriteReqArgs att_write_req_args;
+    BleGattAttNotifyArgs att_notify_args;
+    BleGattAttErrorRspArgs att_error_rsp_args;
+    BleGattAttParseArgs att_parse_args;
+    BleGattCharJsonArgs char_json_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const att_read_req)(uint8_t *restrict work);
+    void (*const att_read_rsp)(uint8_t *restrict work);
+    void (*const att_write_req)(uint8_t *restrict work);
+    void (*const att_notify)(uint8_t *restrict work);
+    void (*const att_error_rsp)(uint8_t *restrict work);
+    void (*const att_parse)(uint8_t *restrict work);
+    void (*const char_json)(uint8_t *restrict work);
+} BleGattNs;
+
+/** @brief The one symbol this module exports. */
+extern BleGattNs BleGatt;
 
 PROTOCORE_END_DECLS
 

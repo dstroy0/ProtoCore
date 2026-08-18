@@ -13,6 +13,7 @@
 #include "services/net/smtp/smtp.h"
 #include "mmgr/membuild.h" // protocore_sb frame builder
 #include "mmgr/protostr.h" // str.len: the bounded length this library uses
+#include "mmgr/secure.h"   // the persistent end this module's key material is taken from
 #include "protocore_config.h"
 #include "server/clock/clock.h" // protocore_millis, pcdelay
 
@@ -81,21 +82,16 @@ struct SmtpStorage
     proto_bool keyword_seen;              ///< the last EHLO reply advertised the keyword that was probed for
 };
 
-/**
- * @brief The session's state and the calls that reach it - what SmtpNs points at.
- *
- * @var SmtpInternal::store  the live channel and every fixed buffer
- * @var SmtpInternal::ns     the handle a caller sets a call's members on
- */
-struct SmtpInternal
-{
-    struct SmtpStorage *store;
-    SmtpNs *ns;
-};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SMTP_OFF_CTX 0u
+static_assert(SMTP_OFF_CTX + sizeof(struct SmtpStorage) <= PROTOCORE_SMTP_BORROW,
+              "PROTOCORE_SMTP_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-static struct SmtpStorage s_store;
-
-static struct SmtpInternal s_smtp = {.store = &s_store, .ns = &Smtp};
+// The region, at its offset in the caller's borrow.
+#define SMTP_CTX(w) ((struct SmtpStorage *)(void *)((w) + SMTP_OFF_CTX))
 
 // ---------------------------------------------------------------------------
 // Reply parsing (RFC 5321 sec 4.2)
@@ -188,41 +184,41 @@ static proto_bool ehlo_has_keyword(const char *buf, size_t len, const char *keyw
 // ---------------------------------------------------------------------------
 
 // Publish one session's outcome on the handle.
-static void finish(struct SmtpInternal *restrict ctx, SmtpResult r)
+static void finish(uint8_t *restrict work, SmtpResult r)
 {
-    ctx->ns->result = r;
-    ctx->ns->ok = (r == SMTP_OK);
-    ctx->ns->code = (int16_t)ctx->store->code;
+    Smtp.result = r;
+    Smtp.ok = (r == SMTP_OK);
+    Smtp.code = (int16_t)SMTP_CTX(work)->code;
 }
 
 // Write a whole command line; true only when every octet went out.
-static proto_bool send_line(struct SmtpInternal *restrict ctx, const char *line)
+static proto_bool send_line(uint8_t *restrict work, const char *line)
 {
     size_t n = str.len(line, PROTOCORE_SMTP_LINE_MAX + 1);
-    return n == 0 || ctx->ns->transport.send(ctx->ns->transport.ctx, (const uint8_t *)line, n) == (int)n;
+    return n == 0 || Smtp.transport.send(Smtp.transport.ctx, (const uint8_t *)line, n) == (int)n;
 }
 
 // Read one reply, continuation lines included, into store->reply and record its code. With
 // @p keyword given, store->keyword_seen reports whether that ehlo-keyword appeared.
-static SmtpResult read_reply(struct SmtpInternal *restrict ctx, const char *keyword)
+static SmtpResult read_reply(uint8_t *restrict work, const char *keyword)
 {
     size_t len = 0;
     for (;;)
     {
-        if (reply_complete(ctx->store->reply, len, &ctx->store->code))
+        if (reply_complete(SMTP_CTX(work)->reply, len, &SMTP_CTX(work)->code))
         {
             if (keyword)
             {
-                ctx->store->keyword_seen = ehlo_has_keyword(ctx->store->reply, len, keyword);
+                SMTP_CTX(work)->keyword_seen = ehlo_has_keyword(SMTP_CTX(work)->reply, len, keyword);
             }
             return SMTP_OK;
         }
-        if (len >= sizeof(ctx->store->reply))
+        if (len >= sizeof(SMTP_CTX(work)->reply))
         {
             return SMTP_ERR_OVERFLOW;
         }
-        int n = ctx->ns->transport.recv(ctx->ns->transport.ctx, (uint8_t *)ctx->store->reply + len,
-                                        sizeof(ctx->store->reply) - len);
+        int n = Smtp.transport.recv(Smtp.transport.ctx, (uint8_t *)SMTP_CTX(work)->reply + len,
+                                    sizeof(SMTP_CTX(work)->reply) - len);
         if (n <= 0)
         {
             return SMTP_ERR_IO;
@@ -233,43 +229,43 @@ static SmtpResult read_reply(struct SmtpInternal *restrict ctx, const char *keyw
 
 // Send one CRLF-terminated command and read its reply. RFC 5321 sec 4.2: every command generates
 // exactly one reply. The code lands in store->code.
-static SmtpResult command(struct SmtpInternal *restrict ctx, const char *line)
+static SmtpResult command(uint8_t *restrict work, const char *line)
 {
-    if (!send_line(ctx, line))
+    if (!send_line(work, line))
     {
         return SMTP_ERR_IO;
     }
-    return read_reply(ctx, NULL);
+    return read_reply(work, NULL);
 }
 
 // Send @p line and require reply code @p want; report @p bad for any other code.
-static SmtpResult command_expect(struct SmtpInternal *restrict ctx, const char *line, int want, SmtpResult bad)
+static SmtpResult command_expect(uint8_t *restrict work, const char *line, int want, SmtpResult bad)
 {
-    SmtpResult r = command(ctx, line);
+    SmtpResult r = command(work, line);
     if (r != SMTP_OK)
     {
         return r;
     }
-    return (ctx->store->code == want) ? SMTP_OK : bad;
+    return (SMTP_CTX(work)->code == want) ? SMTP_OK : bad;
 }
 
 // The 220 Greeting, then EHLO. RFC 5321 sec 3.1 and sec 3.2: the server opens with a greeting and
 // the client answers with EHLO, which requests the list of extensions the server supports. The
 // command stays in store->line, which the STARTTLS path reissues verbatim.
-static SmtpResult initiate_session(struct SmtpInternal *restrict ctx)
+static SmtpResult initiate_session(uint8_t *restrict work)
 {
-    SmtpResult r = read_reply(ctx, NULL);
+    SmtpResult r = read_reply(work, NULL);
     if (r != SMTP_OK)
     {
         return SMTP_ERR_IO;
     }
-    if (ctx->store->code != SMTP_REPLY_SERVICE_READY)
+    if (SMTP_CTX(work)->code != SMTP_REPLY_SERVICE_READY)
     {
         return SMTP_ERR_PROTOCOL;
     }
 
-    const char *client_name = ctx->ns->session.client_name;
-    protocore_sb sb = {ctx->store->line, sizeof(ctx->store->line), 0, PROTO_TRUE};
+    const char *client_name = Smtp.session.client_name;
+    protocore_sb sb = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
     Sb.put(&sb, "EHLO ");
     Sb.put(&sb, (client_name && client_name[0]) ? client_name : SMTP_DEFAULT_CLIENT_NAME);
     Sb.put(&sb, "\r\n");
@@ -278,86 +274,86 @@ static SmtpResult initiate_session(struct SmtpInternal *restrict ctx)
     {
         return SMTP_ERR_OVERFLOW;
     }
-    if (!send_line(ctx, ctx->store->line))
+    if (!send_line(work, SMTP_CTX(work)->line))
     {
         return SMTP_ERR_IO;
     }
-    if (read_reply(ctx, SMTP_KEYWORD_STARTTLS) != SMTP_OK)
+    if (read_reply(work, SMTP_KEYWORD_STARTTLS) != SMTP_OK)
     {
         return SMTP_ERR_IO;
     }
-    return (ctx->store->code == SMTP_REPLY_OK) ? SMTP_OK : SMTP_ERR_PROTOCOL;
+    return (SMTP_CTX(work)->code == SMTP_REPLY_OK) ? SMTP_OK : SMTP_ERR_PROTOCOL;
 }
 
 // STARTTLS (RFC 3207 sec 4): the 220, the handshake, then the session starts over.
-static SmtpResult upgrade_starttls(struct SmtpInternal *restrict ctx)
+static SmtpResult upgrade_starttls(uint8_t *restrict work)
 {
     // RFC 3207 sec 3: the keyword is how a server states it can negotiate TLS. Absent it, the
     // exchange stops here rather than carrying AUTH credentials over a cleartext channel.
-    if (!ctx->store->keyword_seen)
+    if (!SMTP_CTX(work)->keyword_seen)
     {
         return SMTP_ERR_NO_STARTTLS;
     }
-    if (!ctx->ns->transport.starttls)
+    if (!Smtp.transport.starttls)
     {
         return SMTP_ERR_ARG; // asked to upgrade with no way to do it
     }
-    SmtpResult r = command_expect(ctx, "STARTTLS\r\n", SMTP_REPLY_SERVICE_READY, SMTP_ERR_TLS);
+    SmtpResult r = command_expect(work, "STARTTLS\r\n", SMTP_REPLY_SERVICE_READY, SMTP_ERR_TLS);
     if (r != SMTP_OK)
     {
         return r;
     }
-    if (!ctx->ns->transport.starttls(ctx->ns->transport.ctx))
+    if (!Smtp.transport.starttls(Smtp.transport.ctx))
     {
         return SMTP_ERR_TLS;
     }
     // RFC 3207 sec 4.2: the protocol is reset to its initial state and the client MUST discard any
     // knowledge obtained from the server that did not come from the TLS negotiation, so EHLO goes
     // out again and the encrypted reply is the extension list that counts.
-    return command_expect(ctx, ctx->store->line, SMTP_REPLY_OK, SMTP_ERR_PROTOCOL);
+    return command_expect(work, SMTP_CTX(work)->line, SMTP_REPLY_OK, SMTP_ERR_PROTOCOL);
 }
 
 // One client response of the AUTH exchange: base64 of @p secret on a line of its own
 // (RFC 4954 sec 4; RFC 4648 sec 4 is the encoding). The reply code lands in store->code.
-static SmtpResult auth_response(struct SmtpInternal *restrict ctx, const char *secret)
+static SmtpResult auth_response(uint8_t *restrict work, const char *secret)
 {
-    size_t slen = str.len(secret, sizeof(ctx->store->b64));
+    size_t slen = str.len(secret, sizeof(SMTP_CTX(work)->b64));
     size_t elen = ((slen + 2) / 3) * 4; // base64 encodes three octets into four characters
-    if (elen + 3 > sizeof(ctx->store->b64))
+    if (elen + 3 > sizeof(SMTP_CTX(work)->b64))
     {
         return SMTP_ERR_OVERFLOW; // the encoding plus CRLF plus NUL must fit
     }
-    Base64.encode((const uint8_t *)secret, slen, ctx->store->b64);
-    ctx->store->b64[elen] = '\r';
-    ctx->store->b64[elen + 1] = '\n';
-    ctx->store->b64[elen + 2] = '\0';
-    return command(ctx, ctx->store->b64);
+    Base64.encode((const uint8_t *)secret, slen, SMTP_CTX(work)->b64);
+    SMTP_CTX(work)->b64[elen] = '\r';
+    SMTP_CTX(work)->b64[elen + 1] = '\n';
+    SMTP_CTX(work)->b64[elen + 2] = '\0';
+    return command(work, SMTP_CTX(work)->b64);
 }
 
 // AUTH LOGIN: the username, then the password, each answering a 334 challenge, and 235 on success
 // (RFC 4954 sec 4 and sec 6). LOGIN itself is not RFC-defined; see the SmtpAuthArgs doc.
-static SmtpResult authenticate(struct SmtpInternal *restrict ctx)
+static SmtpResult authenticate(uint8_t *restrict work)
 {
-    SmtpResult r = command_expect(ctx, "AUTH LOGIN\r\n", SMTP_REPLY_AUTH_CONTINUE, SMTP_ERR_AUTH);
+    SmtpResult r = command_expect(work, "AUTH LOGIN\r\n", SMTP_REPLY_AUTH_CONTINUE, SMTP_ERR_AUTH);
     if (r != SMTP_OK)
     {
         return r;
     }
-    r = auth_response(ctx, ctx->ns->auth.user);
+    r = auth_response(work, Smtp.auth.user);
     if (r != SMTP_OK)
     {
         return r;
     }
-    if (ctx->store->code != SMTP_REPLY_AUTH_CONTINUE)
+    if (SMTP_CTX(work)->code != SMTP_REPLY_AUTH_CONTINUE)
     {
         return SMTP_ERR_AUTH;
     }
-    r = auth_response(ctx, ctx->ns->auth.pass ? ctx->ns->auth.pass : "");
+    r = auth_response(work, Smtp.auth.pass ? Smtp.auth.pass : "");
     if (r != SMTP_OK)
     {
         return r;
     }
-    return (ctx->store->code == SMTP_REPLY_AUTH_OK) ? SMTP_OK : SMTP_ERR_AUTH;
+    return (SMTP_CTX(work)->code == SMTP_REPLY_AUTH_OK) ? SMTP_OK : SMTP_ERR_AUTH;
 }
 
 // Assemble what DATA carries into store->content: the RFC 5322 header fields, the empty line that
@@ -365,18 +361,18 @@ static SmtpResult authenticate(struct SmtpInternal *restrict ctx)
 // "<CRLF>.<CRLF>" end of mail data indication (RFC 5321 sec 4.1.1.4). RFC 5321 sec 4.5.2: before
 // sending a line of mail text the client checks its first character, and a leading period gets one
 // more period inserted ahead of it. Returns the length, or a negative ::SmtpResult.
-static int build_content(struct SmtpInternal *restrict ctx)
+static int build_content(uint8_t *restrict work)
 {
-    char *out = ctx->store->content;
-    const size_t cap = sizeof(ctx->store->content);
+    char *out = SMTP_CTX(work)->content;
+    const size_t cap = sizeof(SMTP_CTX(work)->content);
 
     protocore_sb sb = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb, "From: <");
-    Sb.put(&sb, ctx->ns->envelope.reverse_path);
+    Sb.put(&sb, Smtp.envelope.reverse_path);
     Sb.put(&sb, ">\r\nTo: <");
-    Sb.put(&sb, ctx->ns->envelope.forward_path);
+    Sb.put(&sb, Smtp.envelope.forward_path);
     Sb.put(&sb, ">\r\nSubject: ");
-    Sb.put(&sb, ctx->ns->content.subject ? ctx->ns->content.subject : "");
+    Sb.put(&sb, Smtp.content.subject ? Smtp.content.subject : "");
     Sb.put(&sb, "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n");
     size_t n = Sb.finish(&sb);
     if (!sb.ok)
@@ -384,7 +380,7 @@ static int build_content(struct SmtpInternal *restrict ctx)
         return (int)SMTP_ERR_OVERFLOW;
     }
 
-    const char *b = ctx->ns->content.body ? ctx->ns->content.body : "";
+    const char *b = Smtp.content.body ? Smtp.content.body : "";
     proto_bool at_line_start = PROTO_TRUE;
     for (size_t i = 0; b[i]; i++)
     {
@@ -445,38 +441,38 @@ static int build_content(struct SmtpInternal *restrict ctx)
 // MAIL then RCPT, both built into store->line. RFC 5321 sec 4.1.1.2 gives MAIL the reverse-path and
 // sec 4.1.1.3 gives RCPT the forward-path; sec 4.2.3 lists 251 as "User not local; will forward to
 // <forward-path>", which accepts the recipient as surely as 250 does.
-static SmtpResult mail_transaction(struct SmtpInternal *restrict ctx)
+static SmtpResult mail_transaction(uint8_t *restrict work)
 {
-    protocore_sb sb_mail = {ctx->store->line, sizeof(ctx->store->line), 0, PROTO_TRUE};
+    protocore_sb sb_mail = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
     Sb.put(&sb_mail, "MAIL FROM:<");
-    Sb.put(&sb_mail, ctx->ns->envelope.reverse_path);
+    Sb.put(&sb_mail, Smtp.envelope.reverse_path);
     Sb.put(&sb_mail, ">\r\n");
     (void)Sb.finish(&sb_mail);
     if (!sb_mail.ok)
     {
         return SMTP_ERR_OVERFLOW;
     }
-    SmtpResult r = command_expect(ctx, ctx->store->line, SMTP_REPLY_OK, SMTP_ERR_PROTOCOL);
+    SmtpResult r = command_expect(work, SMTP_CTX(work)->line, SMTP_REPLY_OK, SMTP_ERR_PROTOCOL);
     if (r != SMTP_OK)
     {
         return r;
     }
 
-    protocore_sb sb_rcpt = {ctx->store->line, sizeof(ctx->store->line), 0, PROTO_TRUE};
+    protocore_sb sb_rcpt = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
     Sb.put(&sb_rcpt, "RCPT TO:<");
-    Sb.put(&sb_rcpt, ctx->ns->envelope.forward_path);
+    Sb.put(&sb_rcpt, Smtp.envelope.forward_path);
     Sb.put(&sb_rcpt, ">\r\n");
     (void)Sb.finish(&sb_rcpt);
     if (!sb_rcpt.ok)
     {
         return SMTP_ERR_OVERFLOW;
     }
-    r = command(ctx, ctx->store->line);
+    r = command(work, SMTP_CTX(work)->line);
     if (r != SMTP_OK)
     {
         return r;
     }
-    if (ctx->store->code != SMTP_REPLY_OK && ctx->store->code != SMTP_REPLY_WILL_FORWARD)
+    if (SMTP_CTX(work)->code != SMTP_REPLY_OK && SMTP_CTX(work)->code != SMTP_REPLY_WILL_FORWARD)
     {
         return SMTP_ERR_PROTOCOL;
     }
@@ -486,87 +482,114 @@ static SmtpResult mail_transaction(struct SmtpInternal *restrict ctx)
 // DATA, the assembled content, then the reply that accepts or refuses the message. RFC 5321
 // sec 4.1.1.4: the receiver normally sends 354 to DATA and then treats the lines that follow as
 // mail data; on the end of mail data indication it MUST send an OK reply or a failure reply.
-static SmtpResult data_transfer(struct SmtpInternal *restrict ctx)
+static SmtpResult data_transfer(uint8_t *restrict work)
 {
-    SmtpResult r = command_expect(ctx, "DATA\r\n", SMTP_REPLY_START_INPUT, SMTP_ERR_PROTOCOL);
+    SmtpResult r = command_expect(work, "DATA\r\n", SMTP_REPLY_START_INPUT, SMTP_ERR_PROTOCOL);
     if (r != SMTP_OK)
     {
         return r;
     }
-    int mlen = build_content(ctx);
+    int mlen = build_content(work);
     if (mlen < 0)
     {
         return (SmtpResult)mlen;
     }
-    if (ctx->ns->transport.send(ctx->ns->transport.ctx, (const uint8_t *)ctx->store->content, (size_t)mlen) != mlen)
+    if (Smtp.transport.send(Smtp.transport.ctx, (const uint8_t *)SMTP_CTX(work)->content, (size_t)mlen) != mlen)
     {
         return SMTP_ERR_IO;
     }
-    if (read_reply(ctx, NULL) != SMTP_OK)
+    if (read_reply(work, NULL) != SMTP_OK)
     {
         return SMTP_ERR_IO;
     }
-    return (ctx->store->code == SMTP_REPLY_OK) ? SMTP_OK : SMTP_ERR_PROTOCOL;
+    return (SMTP_CTX(work)->code == SMTP_REPLY_OK) ? SMTP_OK : SMTP_ERR_PROTOCOL;
 }
 
-static void run_session(struct SmtpInternal *restrict ctx)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    ctx->store->code = 0;
-    ctx->store->keyword_seen = PROTO_FALSE;
+    uint8_t *span; ///< PROTOCORE_SMTP_BORROW persistent bytes, or null while the pool was short
+} SmtpOwnCtx;
+static SmtpOwnCtx s_own;
 
-    if (!ctx->ns->transport.send || !ctx->ns->transport.recv || !ctx->ns->session.host ||
-        !ctx->ns->envelope.reverse_path || !ctx->ns->envelope.reverse_path[0] || !ctx->ns->envelope.forward_path ||
-        !ctx->ns->envelope.forward_path[0])
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_smtp_span(void)
+{
+    if (s_own.span == NULL)
     {
-        finish(ctx, SMTP_ERR_ARG);
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SMTP_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void run_session(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    SMTP_CTX(work)->code = 0;
+    SMTP_CTX(work)->keyword_seen = PROTO_FALSE;
+
+    if (!Smtp.transport.send || !Smtp.transport.recv || !Smtp.session.host || !Smtp.envelope.reverse_path ||
+        !Smtp.envelope.reverse_path[0] || !Smtp.envelope.forward_path || !Smtp.envelope.forward_path[0])
+    {
+        finish(work, SMTP_ERR_ARG);
         return;
     }
 
-    SmtpResult r = initiate_session(ctx);
+    SmtpResult r = initiate_session(work);
     if (r != SMTP_OK)
     {
-        finish(ctx, r);
+        finish(work, r);
         return;
     }
 
-    if (ctx->ns->session.security == SMTP_STARTTLS)
+    if (Smtp.session.security == SMTP_STARTTLS)
     {
-        r = upgrade_starttls(ctx);
+        r = upgrade_starttls(work);
         if (r != SMTP_OK)
         {
-            finish(ctx, r);
+            finish(work, r);
             return;
         }
     }
 
-    if (ctx->ns->auth.user && ctx->ns->auth.user[0]) // RFC 4954 sec 4: AUTH runs only when named
+    if (Smtp.auth.user && Smtp.auth.user[0]) // RFC 4954 sec 4: AUTH runs only when named
     {
-        r = authenticate(ctx);
+        r = authenticate(work);
         if (r != SMTP_OK)
         {
-            finish(ctx, r);
+            finish(work, r);
             return;
         }
     }
 
-    r = mail_transaction(ctx);
+    r = mail_transaction(work);
     if (r != SMTP_OK)
     {
-        finish(ctx, r);
+        finish(work, r);
         return;
     }
 
-    r = data_transfer(ctx);
+    r = data_transfer(work);
     if (r != SMTP_OK)
     {
-        finish(ctx, r);
+        finish(work, r);
         return;
     }
 
     // RFC 5321 sec 4.1.1.10: the sender MUST NOT close the channel until it sends QUIT and SHOULD
     // wait for the 221 reply. The message is already accepted, so that reply changes no outcome.
-    (void)command(ctx, "QUIT\r\n");
-    finish(ctx, SMTP_OK);
+    (void)command(work, "QUIT\r\n");
+    finish(work, SMTP_OK);
 }
 
 // ---------------------------------------------------------------------------
@@ -591,7 +614,7 @@ static int plain_send(void *ctx, const uint8_t *data, size_t len)
         TcpClient.cid = chan->cid;
         TcpClient.io.data = data + sent;
         TcpClient.io.len = chunk;
-        TcpClient.send(TcpClient.internal);
+        TcpClient.send(protocore_tcp_client_span());
         if (!TcpClient.ok)
         {
             return -1;
@@ -612,17 +635,17 @@ static int plain_recv(void *ctx, uint8_t *buf, size_t cap)
         TcpClient.cid = chan->cid;
         TcpClient.io.buf = buf;
         TcpClient.io.cap = cap;
-        TcpClient.read(TcpClient.internal);
+        TcpClient.read(protocore_tcp_client_span());
         if (TcpClient.n > 0)
         {
             return (int)TcpClient.n;
         }
         TcpClient.cid = chan->cid;
-        TcpClient.is_closed(TcpClient.internal);
+        TcpClient.is_closed(protocore_tcp_client_span());
         if (TcpClient.ok)
         {
             TcpClient.cid = chan->cid;
-            TcpClient.available(TcpClient.internal);
+            TcpClient.available(protocore_tcp_client_span());
             if (TcpClient.n == 0)
             {
                 return -1; // closed, and nothing left buffered to drain
@@ -639,34 +662,31 @@ static int plain_recv(void *ctx, uint8_t *buf, size_t cap)
 // not ours, so the channel is read from the one owned storage.
 static int ciphertext_send(void *ctx, const unsigned char *buf, size_t len)
 {
-    (void)ctx;
     TcpClient.cid = s_store.chan.cid;
     TcpClient.io.data = buf;
     TcpClient.io.len = len;
-    TcpClient.send(TcpClient.internal);
+    TcpClient.send(protocore_tcp_client_span());
     return TcpClient.ok ? (int)len : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
 }
 
 static int ciphertext_recv(void *ctx, unsigned char *buf, size_t len)
 {
-    (void)ctx;
     TcpClient.cid = s_store.chan.cid;
     TcpClient.io.buf = buf;
     TcpClient.io.cap = len;
-    TcpClient.read(TcpClient.internal);
+    TcpClient.read(protocore_tcp_client_span());
     if (TcpClient.n > 0)
     {
         return (int)TcpClient.n;
     }
     TcpClient.cid = s_store.chan.cid;
-    TcpClient.is_closed(TcpClient.internal);
+    TcpClient.is_closed(protocore_tcp_client_span());
     return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
 }
 
 // Application write and read over the established session.
 static int secure_send(void *ctx, const uint8_t *data, size_t len)
 {
-    (void)ctx;
     return protocore_tls_client_session_write(data, len) == (int)len ? (int)len : -1;
 }
 
@@ -692,11 +712,11 @@ static int secure_recv(void *ctx, uint8_t *buf, size_t cap)
 
 // Step the handshake to its end on a budget of its own. A handshake that inherited whatever was
 // left of a read deadline could be abandoned before its first flight went out.
-static proto_bool tls_handshake(struct SmtpInternal *restrict ctx)
+static proto_bool tls_handshake(uint8_t *restrict work)
 {
-    ctx->store->chan.deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
+    SMTP_CTX(work)->chan.deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
     protocore_tls_state st = protocore_tls_client_session_handshake();
-    while (st == PROTOCORE_TLS_BUSY && (int32_t)(ctx->store->chan.deadline - Clock.ms) > 0)
+    while (st == PROTOCORE_TLS_BUSY && (int32_t)(SMTP_CTX(work)->chan.deadline - Clock.ms) > 0)
     {
         pcdelay(5);
         st = protocore_tls_client_session_handshake();
@@ -713,10 +733,10 @@ static int wire_send(void *ctx, const uint8_t *data, size_t len)
 #if PROTOCORE_ENABLE_SMTP_TLS
     if (((SmtpChannel *)ctx)->tls_active)
     {
-        return secure_send(ctx, data, len);
+        return secure_send(work, data, len);
     }
 #endif
-    return plain_send(ctx, data, len);
+    return plain_send(work, data, len);
 }
 
 static int wire_recv(void *ctx, uint8_t *buf, size_t cap)
@@ -724,10 +744,10 @@ static int wire_recv(void *ctx, uint8_t *buf, size_t cap)
 #if PROTOCORE_ENABLE_SMTP_TLS
     if (((SmtpChannel *)ctx)->tls_active)
     {
-        return secure_recv(ctx, buf, cap);
+        return secure_recv(work, buf, cap);
     }
 #endif
-    return plain_recv(ctx, buf, cap);
+    return plain_recv(work, buf, cap);
 }
 
 // The in-place upgrade RFC 3207 sec 4 asks for, run after the server's 220.
@@ -739,7 +759,7 @@ static proto_bool wire_starttls(void *ctx)
     {
         return PROTO_FALSE;
     }
-    if (!tls_handshake(&s_smtp))
+    if (!tls_handshake(protocore_smtp_span()))
     {
         protocore_tls_client_session_end();
         return PROTO_FALSE;
@@ -753,27 +773,31 @@ static proto_bool wire_starttls(void *ctx)
 }
 
 // Dial the server, step the open to a connection, walk the session, close.
-static void send_message(struct SmtpInternal *restrict ctx)
+static void send_message(uint8_t *restrict work)
 {
-    ctx->store->code = 0;
-    if (!ctx->ns->session.host)
+    if (!work)
     {
-        finish(ctx, SMTP_ERR_ARG);
+        return; // the pool was short of this module's borrow
+    }
+    SMTP_CTX(work)->code = 0;
+    if (!Smtp.session.host)
+    {
+        finish(work, SMTP_ERR_ARG);
         return;
     }
 
-    SmtpChannel *chan = &ctx->store->chan;
-    TcpClient.dial.host = ctx->ns->session.host;
-    TcpClient.dial.port = ctx->ns->session.port;
+    SmtpChannel *chan = &SMTP_CTX(work)->chan;
+    TcpClient.dial.host = Smtp.session.host;
+    TcpClient.dial.port = Smtp.session.port;
     TcpClient.dial.timeout_ms = PROTOCORE_SMTP_TIMEOUT_MS;
-    TcpClient.open(TcpClient.internal);
+    TcpClient.open(protocore_tcp_client_span());
     if (TcpClient.i32 < 0)
     {
-        finish(ctx, SMTP_ERR_CONNECT);
+        finish(work, SMTP_ERR_CONNECT);
         return;
     }
     chan->cid = TcpClient.i32;
-    chan->host = ctx->ns->session.host;
+    chan->host = Smtp.session.host;
     chan->tls_active = PROTO_FALSE;
     chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
 
@@ -782,58 +806,58 @@ static void send_message(struct SmtpInternal *restrict ctx)
     for (;;)
     {
         TcpClient.cid = chan->cid;
-        TcpClient.connected(TcpClient.internal);
+        TcpClient.connected(protocore_tcp_client_span());
         if (TcpClient.ok)
         {
             break;
         }
         TcpClient.cid = chan->cid;
-        TcpClient.is_closed(TcpClient.internal);
+        TcpClient.is_closed(protocore_tcp_client_span());
         if (TcpClient.ok || (int32_t)(chan->deadline - Clock.ms) <= 0)
         {
             TcpClient.cid = chan->cid;
-            TcpClient.close(TcpClient.internal);
-            finish(ctx, SMTP_ERR_CONNECT);
+            TcpClient.close(protocore_tcp_client_span());
+            finish(work, SMTP_ERR_CONNECT);
             return;
         }
         pcdelay(5);
     }
 
-    ctx->ns->transport.ctx = chan;
+    Smtp.transport.ctx = chan;
 
-    if (ctx->ns->session.security == SMTP_TLS)
+    if (Smtp.session.security == SMTP_TLS)
     {
 #if PROTOCORE_ENABLE_SMTP_TLS
         // RFC 8314 sec 3.3: on the submissions service the TLS handshake begins immediately, so
         // there is no cleartext leg and no STARTTLS to offer the engine.
-        if (!protocore_tls_client_session_begin(ctx->ns->session.host, ciphertext_send, ciphertext_recv) ||
-            !tls_handshake(ctx))
+        if (!protocore_tls_client_session_begin(Smtp.session.host, ciphertext_send, ciphertext_recv) ||
+            !tls_handshake(work))
         {
             protocore_tls_client_session_end();
             TcpClient.cid = chan->cid;
-            TcpClient.close(TcpClient.internal);
-            finish(ctx, SMTP_ERR_TLS);
+            TcpClient.close(protocore_tcp_client_span());
+            finish(work, SMTP_ERR_TLS);
             return;
         }
         chan->tls_active = PROTO_TRUE;
-        ctx->ns->transport.send = secure_send;
-        ctx->ns->transport.recv = secure_recv;
-        ctx->ns->transport.starttls = NULL;
-        run_session(ctx);
+        Smtp.transport.send = secure_send;
+        Smtp.transport.recv = secure_recv;
+        Smtp.transport.starttls = NULL;
+        run_session(work);
         protocore_tls_client_session_end();
 #else
         TcpClient.cid = chan->cid;
-        TcpClient.close(TcpClient.internal);
-        finish(ctx, SMTP_ERR_TLS); // implicit TLS asked for in a build without TLS
+        TcpClient.close(protocore_tcp_client_span());
+        finish(work, SMTP_ERR_TLS); // implicit TLS asked for in a build without TLS
         return;
 #endif
     }
     else
     {
-        ctx->ns->transport.send = wire_send;
-        ctx->ns->transport.recv = wire_recv;
-        ctx->ns->transport.starttls = wire_starttls;
-        run_session(ctx);
+        Smtp.transport.send = wire_send;
+        Smtp.transport.recv = wire_recv;
+        Smtp.transport.starttls = wire_starttls;
+        run_session(work);
 #if PROTOCORE_ENABLE_SMTP_TLS
         if (chan->tls_active)
         {
@@ -843,20 +867,20 @@ static void send_message(struct SmtpInternal *restrict ctx)
     }
 
     TcpClient.cid = chan->cid;
-    TcpClient.close(TcpClient.internal);
+    TcpClient.close(protocore_tcp_client_span());
     chan->cid = -1;
 }
 
 #else // no outbound transport is built: run() over a caller's seam still works, send() cannot dial.
 
-static void send_message(struct SmtpInternal *restrict ctx)
+static void send_message(uint8_t *restrict work)
 {
-    finish(ctx, SMTP_ERR_CONNECT);
+    finish(work, SMTP_ERR_CONNECT);
 }
 
 #endif // PROTOCORE_HAS_NET_STACK
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SmtpNs Smtp = {.run = run_session, .send = send_message, .internal = &s_smtp};
+SmtpNs Smtp = {.run = run_session, .send = send_message};
 
 #endif // PROTOCORE_ENABLE_SMTP

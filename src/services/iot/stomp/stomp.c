@@ -29,18 +29,6 @@
 /** @brief Its octet count. */
 #define PROTOCORE_STOMP_CONTENT_LENGTH_LEN 14
 
-/**
- * @brief The codec's call state - what StompNs points at.
- *
- * @var StompInternal::ns  the handle a caller sets a call's members on
- */
-struct StompInternal
-{
-    StompNs *ns;
-};
-
-static struct StompInternal s_stomp = {.ns = &Stomp};
-
 // Append one octet's sec 4.1 form to buf[pos..cap) and advance pos. False on overflow.
 static proto_bool emit_escaped(char *buf, size_t cap, size_t *pos, char c)
 {
@@ -128,14 +116,15 @@ static size_t line_len(const char *buf, size_t start, size_t nl)
 }
 
 // Write one frame (sec 9) into ns->buf.out and report its octet count in ns->n.
-static void stomp_build(struct StompInternal *restrict ctx)
+static void stomp_build(uint8_t *restrict work)
 {
-    char *out = ctx->ns->buf.out;
-    const size_t cap = ctx->ns->buf.cap;
-    const StompBuildArgs *a = &ctx->ns->build_args;
+    (void)work;
+    char *out = Stomp.buf.out;
+    const size_t cap = Stomp.buf.cap;
+    const StompBuildArgs *a = &Stomp.build_args;
 
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
+    Stomp.ok = PROTO_FALSE;
+    Stomp.n = 0;
     if (!out || cap == 0 || !a->command || (a->header_count && (!a->header_names || !a->header_values)))
     {
         return;
@@ -202,20 +191,21 @@ static void stomp_build(struct StompInternal *restrict ctx)
         return;
     }
     out[pos++] = '\0';
-    ctx->ns->n = pos;
-    ctx->ns->ok = PROTO_TRUE;
+    Stomp.n = pos;
+    Stomp.ok = PROTO_TRUE;
 }
 
 // Take one frame from the head of ns->buf.in into *ns->frame (sec 9), reporting the octets it
 // occupied in ns->consumed.
-static void stomp_parse(struct StompInternal *restrict ctx)
+static void stomp_parse(uint8_t *restrict work)
 {
-    const char *buf = ctx->ns->buf.in;
-    const size_t len = ctx->ns->buf.len;
-    StompFrame *f = ctx->ns->frame;
+    (void)work;
+    const char *buf = Stomp.buf.in;
+    const size_t len = Stomp.buf.len;
+    StompFrame *f = Stomp.frame;
 
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->consumed = 0;
+    Stomp.ok = PROTO_FALSE;
+    Stomp.consumed = 0;
     if (!buf || !f)
     {
         return;
@@ -324,8 +314,8 @@ static void stomp_parse(struct StompInternal *restrict ctx)
         }
         f->body = buf + cur;
         f->body_len = content_length;
-        ctx->ns->consumed = cur + content_length + 1;
-        ctx->ns->ok = PROTO_TRUE;
+        Stomp.consumed = cur + content_length + 1;
+        Stomp.ok = PROTO_TRUE;
         return;
     }
     // No content-length: the body runs to the first NULL.
@@ -340,20 +330,21 @@ static void stomp_parse(struct StompInternal *restrict ctx)
     }
     f->body = buf + cur;
     f->body_len = b - cur;
-    ctx->ns->consumed = b + 1;
-    ctx->ns->ok = PROTO_TRUE;
+    Stomp.consumed = b + 1;
+    Stomp.ok = PROTO_TRUE;
 }
 
 // Find ns->lookup.name among the frame's header entries and report its raw header-value. The walk
 // runs in wire order and stops at the first match (sec 4.4).
-static void stomp_header(struct StompInternal *restrict ctx)
+static void stomp_header(uint8_t *restrict work)
 {
-    const StompFrame *f = ctx->ns->frame;
-    const char *name = ctx->ns->lookup.name;
+    (void)work;
+    const StompFrame *f = Stomp.frame;
+    const char *name = Stomp.lookup.name;
 
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->value = NULL;
-    ctx->ns->value_len = 0;
+    Stomp.ok = PROTO_FALSE;
+    Stomp.value = NULL;
+    Stomp.value_len = 0;
     if (!f || !name)
     {
         return;
@@ -363,9 +354,9 @@ static void stomp_header(struct StompInternal *restrict ctx)
     {
         if (f->headers[i].name_len == nlen && mem.cmp(f->headers[i].name, name, nlen) == 0)
         {
-            ctx->ns->value = f->headers[i].value;
-            ctx->ns->value_len = f->headers[i].value_len;
-            ctx->ns->ok = PROTO_TRUE;
+            Stomp.value = f->headers[i].value;
+            Stomp.value_len = f->headers[i].value_len;
+            Stomp.ok = PROTO_TRUE;
             return;
         }
     }
@@ -373,15 +364,16 @@ static void stomp_header(struct StompInternal *restrict ctx)
 
 // Decode the sec 4.1 escapes in ns->buf.in into ns->buf.out and report the decoded octet count in
 // ns->n.
-static void stomp_unescape(struct StompInternal *restrict ctx)
+static void stomp_unescape(uint8_t *restrict work)
 {
-    char *dst = ctx->ns->buf.out;
-    const size_t cap = ctx->ns->buf.cap;
-    const char *src = ctx->ns->buf.in;
-    const size_t src_len = ctx->ns->buf.len;
+    (void)work;
+    char *dst = Stomp.buf.out;
+    const size_t cap = Stomp.buf.cap;
+    const char *src = Stomp.buf.in;
+    const size_t src_len = Stomp.buf.len;
 
-    ctx->ns->ok = PROTO_FALSE;
-    ctx->ns->n = 0;
+    Stomp.ok = PROTO_FALSE;
+    Stomp.n = 0;
     if (!dst || !src)
     {
         return;
@@ -421,15 +413,11 @@ static void stomp_unescape(struct StompInternal *restrict ctx)
         }
         dst[pos++] = c;
     }
-    ctx->ns->n = pos;
-    ctx->ns->ok = PROTO_TRUE;
+    Stomp.n = pos;
+    Stomp.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-StompNs Stomp = {.build = stomp_build,
-                 .parse = stomp_parse,
-                 .header = stomp_header,
-                 .unescape = stomp_unescape,
-                 .internal = &s_stomp};
+StompNs Stomp = {.build = stomp_build, .parse = stomp_parse, .header = stomp_header, .unescape = stomp_unescape};
 
 #endif // PROTOCORE_ENABLE_STOMP

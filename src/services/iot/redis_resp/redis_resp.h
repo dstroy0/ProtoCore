@@ -99,9 +99,6 @@ typedef struct
     size_t len;         ///< how many of them are buffered
 } RespWireArgs;
 
-/** @brief The codec's own state and the calls that reach it, described only in redis_resp.c. */
-struct RespInternal;
-
 /**
  * @brief The RESP codec: one command out, one value in.
  *
@@ -118,7 +115,6 @@ struct RespInternal;
  * @var RespNs::reply    the value a parse decoded
  * @var RespNs::encode_command  build `*<argc>\r\n$<len>\r\n<arg>\r\n...` from @c command into @c out
  * @var RespNs::parse_reply     decode the one value at the head of @c wire into @c reply
- * @var RespNs::internal        the codec's state and the calls that reach it
  */
 typedef struct
 {
@@ -130,10 +126,8 @@ typedef struct
     size_t n;
     RespReply reply;
 
-    void (*encode_command)(struct RespInternal *ctx);
-    void (*parse_reply)(struct RespInternal *ctx);
-
-    struct RespInternal *internal;
+    void (*const encode_command)(uint8_t *restrict work);
+    void (*const parse_reply)(uint8_t *restrict work);
 } RespNs;
 
 /** @brief The one symbol this module exports. */

@@ -30,11 +30,17 @@ void dbench_run(void)
         volatile uint32_t sink = 0;
         WifiFrame wf;
         WifiStats st;
-        protocore_wifi_stats_reset(&st);
+        WifiSniffer.stats_reset_args.s = &st;
+        WifiSniffer.stats_reset(protocore_wifi_sniffer_span());
         DBENCH_OP("protocore_wifi_parse", 200000, sink += protocore_wifi_parse(frame, sizeof(frame), &wf));
-        protocore_wifi_parse(frame, sizeof(frame), &wf);
+        WifiSniffer.parse_args.frame = frame;
+        WifiSniffer.parse_args.len = sizeof(frame);
+        WifiSniffer.parse_args.out = &wf;
+        WifiSniffer.parse(protocore_wifi_sniffer_span());
         DBENCH_OP("protocore_wifi_stats_add", 200000, {
-            protocore_wifi_stats_add(&st, &wf);
+            WifiSniffer.stats_add_args.s = &st;
+            WifiSniffer.stats_add_args.f = &wf;
+            WifiSniffer.stats_add(protocore_wifi_sniffer_span());
             sink += 1;
         });
         DBENCH_OP("protocore_wifi_should_roam", 200000, sink += protocore_wifi_should_roam(-72, -58, 8));

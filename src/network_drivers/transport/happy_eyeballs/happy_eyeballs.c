@@ -6,20 +6,52 @@
  * @brief Dual-stack destination selection + Happy Eyeballs fallback (see happy_eyeballs.h).
  */
 
-#include "network_drivers/transport/happy_eyeballs/happy_eyeballs.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
-// Effective family for interleave: an IPv4-mapped IPv6 address is treated as IPv4.
-static proto_bool eff_is_v6(const protocore_ip *ip)
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "network_drivers/transport/happy_eyeballs/happy_eyeballs.h"
+#include "shared/ip/ip.h"
+
+PROTOCORE_BEGIN_DECLS
+
+/**
+ * @brief The one address a preference step reads.
+ *
+ * The sort asks for the preference of a key it holds and of the element it is comparing against, so
+ * the operand differs per call and cannot be read off the namespace's own args. It rides here
+ * instead, which is the one parameter every private step takes.
+ */
+typedef struct
 {
-    return ip->family == PROTOCORE_IP_V6 && !protocore_ip_is_v4_mapped(ip);
+    const protocore_ip *ip; ///< the address a preference step scores
+} HappyEyeballsCtx;
+
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define HAPPY_EYEBALLS_OFF_CTX 0u
+static_assert(HAPPY_EYEBALLS_OFF_CTX + sizeof(HappyEyeballsCtx) <= PROTOCORE_HAPPY_EYEBALLS_BORROW,
+              "PROTOCORE_HAPPY_EYEBALLS_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define HAPPY_EYEBALLS_CTX(w) ((HappyEyeballsCtx *)(void *)((w) + HAPPY_EYEBALLS_OFF_CTX))
+
+// Effective family for interleave: an IPv4-mapped IPv6 address is treated as IPv4.
+static proto_bool eff_is_v6(uint8_t *restrict work)
+{
+    return HAPPY_EYEBALLS_CTX(work)->ip->family == PROTOCORE_IP_V6 &&
+           !protocore_ip_is_v4_mapped(HAPPY_EYEBALLS_CTX(work)->ip);
 }
 
-static int scope_rank(const protocore_ip *ip)
+static int scope_rank(uint8_t *restrict work)
 {
-    Ip.args.ip = ip;
-    Ip.classify(Ip.internal);
+    Ip.args.ip = HAPPY_EYEBALLS_CTX(work)->ip;
+    Ip.classify(ip_work);
     switch (Ip.scope)
     {
     case PROTOCORE_IP_SCOPE_GLOBAL:
@@ -37,31 +69,82 @@ static int scope_rank(const protocore_ip *ip)
     }
 }
 
-int protocore_he_pref(const protocore_ip *ip)
+// The score of the address staged on the context. Scope dominates; within a scope a native IPv6
+// outranks IPv4 (RFC 6724 default policy).
+static int pref_of(uint8_t *restrict work)
 {
-    if (!ip || ip->family == PROTOCORE_IP_NONE)
+    if (!HAPPY_EYEBALLS_CTX(work)->ip || HAPPY_EYEBALLS_CTX(work)->ip->family == PROTOCORE_IP_NONE)
     {
         return -1;
     }
-    // Scope dominates; within a scope a native IPv6 outranks IPv4 (RFC 6724 default policy).
-    return scope_rank(ip) * 2 + (eff_is_v6(ip) ? 1 : 0);
+    return scope_rank(work) * 2 + (eff_is_v6(work) ? 1 : 0);
 }
 
-void protocore_he_order(protocore_ip *list, size_t n)
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_HAPPY_EYEBALLS_BORROW persistent bytes, or null while the pool was short
+} HappyEyeballsOwnCtx;
+static HappyEyeballsOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_happy_eyeballs_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_HAPPY_EYEBALLS_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void happy_eyeballs_pref(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const protocore_ip *ip = HappyEyeballs.pref_args.ip;
+
+    HAPPY_EYEBALLS_CTX(work)->ip = ip;
+    HappyEyeballs.n = pref_of(work);
+}
+
+static void happy_eyeballs_order(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    protocore_ip *list = HappyEyeballs.order_args.list;
+    size_t n = HappyEyeballs.order_args.n;
+
     if (!list || n < 2)
     {
         return;
     }
 
-    // Stable insertion sort by preference (descending).
+    // Stable insertion sort by preference (descending). The comparison stages its operand and then
+    // scores it, so neither score sits in the loop's own condition.
     for (size_t i = 1; i < n; i++)
     {
         protocore_ip key = list[i];
-        int kp = protocore_he_pref(&key);
+        HAPPY_EYEBALLS_CTX(work)->ip = &key;
+        int kp = pref_of(work);
         size_t j = i;
-        while (j > 0 && protocore_he_pref(&list[j - 1]) < kp)
+        while (j > 0)
         {
+            HAPPY_EYEBALLS_CTX(work)->ip = &list[j - 1];
+            if (pref_of(work) >= kp)
+            {
+                break;
+            }
             list[j] = list[j - 1];
             j--;
         }
@@ -86,7 +169,8 @@ void protocore_he_order(protocore_ip *list, size_t n)
     size_t nv4 = 0;
     for (size_t i = 0; i < n; i++)
     {
-        if (eff_is_v6(&list[i]))
+        HAPPY_EYEBALLS_CTX(work)->ip = &list[i];
+        if (eff_is_v6(work))
         {
             v6[nv6++] = i;
         }
@@ -95,7 +179,8 @@ void protocore_he_order(protocore_ip *list, size_t n)
             v4[nv4++] = i;
         }
     }
-    proto_bool take_v6 = eff_is_v6(&list[0]); // whichever family the best address belongs to goes first
+    HAPPY_EYEBALLS_CTX(work)->ip = &list[0];
+    proto_bool take_v6 = eff_is_v6(work); // whichever family the best address belongs to goes first
     while (iv6 < nv6 || iv4 < nv4)
     {
         if (take_v6 && iv6 < nv6)
@@ -122,10 +207,23 @@ void protocore_he_order(protocore_ip *list, size_t n)
     }
 }
 
-proto_bool protocore_he_attempt_due(uint32_t last_start_ms, uint32_t now_ms, uint32_t attempt_delay_ms)
+static void happy_eyeballs_attempt_due(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t last_start_ms = HappyEyeballs.attempt_due_args.last_start_ms;
+    uint32_t now_ms = HappyEyeballs.attempt_due_args.now_ms;
+    uint32_t attempt_delay_ms = HappyEyeballs.attempt_due_args.attempt_delay_ms;
+
     uint32_t elapsed = now_ms - last_start_ms; // wrap-safe modular subtraction
-    return elapsed >= attempt_delay_ms;
+    HappyEyeballs.ok = elapsed >= attempt_delay_ms;
 }
+
+HappyEyeballsNs HappyEyeballs = {
+    .pref = happy_eyeballs_pref,
+    .order = happy_eyeballs_order,
+    .attempt_due = happy_eyeballs_attempt_due,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HAPPY_EYEBALLS

@@ -26,11 +26,15 @@
 #ifndef PROTOCORE_NTS_H
 #define PROTOCORE_NTS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_NTS
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief NTS-KE record types (RFC 8915 sec 4). The critical bit is 0x8000. */
 #define NTS_KE_CRITICAL 0x8000
@@ -51,44 +55,124 @@ PROTOCORE_BEGIN_DECLS
 #define NTS_EF_COOKIE_PLACEHOLDER 0x0304
 #define NTS_EF_AUTH_AND_ENCRYPTED 0x0404
 
-/** @brief RFC 8915 sec 5.1 TLS exporter label + per-direction context (C2S = 0x0000_0001_00, S2C = ..01). */
-extern const char NTS_EXPORTER_LABEL[]; ///< "EXPORTER-network-time-security".
-
-/** @brief Build one NTS-KE record `[critical|type][len][body]`. @return bytes written, or 0 if it won't fit. */
-size_t protocore_nts_ke_record(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len, uint8_t *out,
-                               size_t cap);
-
-/**
- * @brief Build the standard NTS-KE client request: Next Protocol (NTPv4), AEAD (AES-SIV-CMAC-256), End
- *        of Message - all critical. @return bytes written, or 0 if @p cap is too small.
- */
-size_t protocore_nts_ke_request(uint8_t *out, size_t cap);
-
 /** @brief One record surfaced by protocore_nts_ke_parse. */
 typedef void (*protocore_nts_ke_cb)(proto_bool critical, uint16_t type, const uint8_t *body, size_t body_len,
                                     void *arg);
 
-/**
- * @brief Walk an NTS-KE record stream, invoking @p cb for each record.
- * @return true if the stream is well-formed and ends with an End-of-Message record.
- */
-proto_bool protocore_nts_ke_parse(const uint8_t *buf, size_t len, protocore_nts_ke_cb cb, void *arg);
+/** @brief What ke_record takes: critical, type, body, body_len, out, ... */
+typedef struct
+{
+    proto_bool critical;
+    uint16_t type;
+    const uint8_t *body;
+    size_t body_len;
+    uint8_t *out;
+    size_t cap;
+} NtsKeRecordArgs;
+
+/** @brief What ke_request takes: out, cap. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+} NtsKeRequestArgs;
+
+/** @brief What ke_parse takes: buf, len, cb, arg. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    protocore_nts_ke_cb cb;
+    void *arg;
+} NtsKeParseArgs;
+
+/** @brief What ef takes: field_type, value, value_len, out, cap. */
+typedef struct
+{
+    uint16_t field_type;  ///< the NTS_EF_* type
+    const uint8_t *value; ///< the field value (may be null when value_len == 0)
+    size_t value_len;     ///< value length
+    uint8_t *out;
+    size_t cap;
+} NtsEfArgs;
+
+/** @brief What ef_unique_id takes: nonce, nonce_len, out, cap. */
+typedef struct
+{
+    const uint8_t *nonce;
+    size_t nonce_len;
+    uint8_t *out;
+    size_t cap;
+} NtsEfUniqueIdArgs;
+
+/** @brief What ef_cookie takes: cookie, cookie_len, out, cap. */
+typedef struct
+{
+    const uint8_t *cookie;
+    size_t cookie_len;
+    uint8_t *out;
+    size_t cap;
+} NtsEfCookieArgs;
+
+/** @brief RFC 8915 sec 5.1 TLS exporter label + per-direction context (C2S = 0x0000_0001_00, S2C = ..01). */
+extern const char NTS_EXPORTER_LABEL[]; ///< "EXPORTER-network-time-security".
 
 /**
- * @brief Build an RFC 7822 extension field `[type][length][value][padding-to-4]`.
- * @param field_type the NTS_EF_* type.
- * @param value      the field value (may be null when value_len == 0).
- * @param value_len  value length.
- * @return the total field length written (a multiple of 4), or 0 if it won't fit. The Length field
- *         counts the type + length + value + padding, per RFC 7822.
+ * @brief Network Time Security (NTS, RFC 8915) wire codec (PROTOCORE_ENABLE_NTS).
+ *
+ * A caller sets the members a call takes, invokes it through ::Nts with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Nts.ke_record_args.critical = ...;
+ *   Nts.ke_record_args.type = ...;
+ *   Nts.ke_record_args.body = ...;
+ *   Nts.ke_record_args.body_len = ...;
+ *   Nts.ke_record_args.out = ...;
+ *   Nts.ke_record_args.cap = ...;
+ *   Nts.ke_record(work);
+ *   // Nts.n is what the call reports
+ *
+ * @var NtsNs::ke_record_args  what ke_record takes: critical, type, body, body_len, out,
+ * @var NtsNs::ke_request_args  what ke_request takes: out, cap
+ * @var NtsNs::ke_parse_args  what ke_parse takes: buf, len, cb, arg
+ * @var NtsNs::ef_args  what ef takes: field_type, value, value_len, out, cap
+ * @var NtsNs::ef_unique_id_args  what ef_unique_id takes: nonce, nonce_len, out, cap
+ * @var NtsNs::ef_cookie_args  what ef_cookie takes: cookie, cookie_len, out, cap
+ * @var NtsNs::ok  true if the stream is well-formed and ends with an End-of-Message ...
+ * @var NtsNs::n  the total field length written (a multiple of 4), or 0 if it won't ...
+ * @var NtsNs::ke_record  build one NTS-KE record `[critical|type][len][body]`. bytes ...
+ * @var NtsNs::ke_request  build the standard NTS-KE client request: Next Protocol (NTPv4), ...
+ * @var NtsNs::ke_parse  walk an NTS-KE record stream, invoking cb for each record
+ * @var NtsNs::ef  build an RFC 7822 extension field ...
+ * @var NtsNs::ef_unique_id  build a Unique Identifier EF (>= 32 bytes of the caller's random, ...
+ * @var NtsNs::ef_cookie  build an NTS Cookie EF carrying cookie
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_nts_ef(uint16_t field_type, const uint8_t *value, size_t value_len, uint8_t *out, size_t cap);
+typedef struct
+{
+    NtsKeRecordArgs ke_record_args;
+    NtsKeRequestArgs ke_request_args;
+    NtsKeParseArgs ke_parse_args;
+    NtsEfArgs ef_args;
+    NtsEfUniqueIdArgs ef_unique_id_args;
+    NtsEfCookieArgs ef_cookie_args;
 
-/** @brief Build a Unique Identifier EF (>= 32 bytes of the caller's random, RFC 8915 sec 5.3). */
-size_t protocore_nts_ef_unique_id(const uint8_t *nonce, size_t nonce_len, uint8_t *out, size_t cap);
+    proto_bool ok;
+    size_t n;
 
-/** @brief Build an NTS Cookie EF carrying @p cookie. */
-size_t protocore_nts_ef_cookie(const uint8_t *cookie, size_t cookie_len, uint8_t *out, size_t cap);
+    void (*const ke_record)(uint8_t *restrict work);
+    void (*const ke_request)(uint8_t *restrict work);
+    void (*const ke_parse)(uint8_t *restrict work);
+    void (*const ef)(uint8_t *restrict work);
+    void (*const ef_unique_id)(uint8_t *restrict work);
+    void (*const ef_cookie)(uint8_t *restrict work);
+} NtsNs;
+
+/** @brief The one symbol this module exports. */
+extern NtsNs Nts;
 
 PROTOCORE_END_DECLS
 

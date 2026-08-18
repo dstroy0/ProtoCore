@@ -10,8 +10,33 @@
  */
 
 #include "shared/log/log.h"
+#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 
 #include "mmgr/protoframe.h" // frame.build: the line is a spec, not a format string
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_LOG_BORROW persistent bytes, or null while the pool was short
+} LogOwnCtx;
+static LogOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_log_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_LOG_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 #if PROTOCORE_LOG_LEVEL < PROTOCORE_LOG_LEVEL_NONE
 
@@ -29,31 +54,34 @@ struct LogStorage
     protocore_log_sink_fn sink;
 };
 
-/**
- * @brief The sink and the calls that reach it - what LogNs points at.
- *
- * @var LogInternal::store  the installed sink
- * @var LogInternal::ns     the handle a caller sets a call's members on
- */
-struct LogInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define LOG_OFF_CTX 0u
+static_assert(LOG_OFF_CTX + sizeof(struct LogStorage) <= PROTOCORE_LOG_BORROW,
+              "PROTOCORE_LOG_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define LOG_CTX(w) ((struct LogStorage *)(void *)((w) + LOG_OFF_CTX))
+
+static void log_set_sink(uint8_t *restrict work)
 {
-    struct LogStorage *store;
-    LogNs *ns;
-};
-
-static struct LogStorage s_store = {NULL};
-
-static struct LogInternal s_log = {.store = &s_store, .ns = &Log};
-
-static void log_set_sink(struct LogInternal *restrict ctx)
-{
-    ctx->store->sink = ctx->ns->sink;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    LOG_CTX(work)->sink = Log.sink;
 }
 
-static void log_emit(struct LogInternal *restrict ctx)
+static void log_emit(uint8_t *restrict work)
 {
-    const uint8_t level = ctx->ns->frame.level;
-    const struct protocore_field *spec = ctx->ns->frame.spec;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t level = Log.frame.level;
+    const struct protocore_field *spec = Log.frame.spec;
 
     if (!spec)
     {
@@ -65,42 +93,34 @@ static void log_emit(struct LogInternal *restrict ctx)
     // states its literals' lengths and bounds its string fields, so whether a message fits is
     // settled when the frame is declared. Nothing here decides it from the data.
     char line[PROTOCORE_LOG_LINE_LEN];
-    (void)frame.build(line, sizeof(line), spec, ctx->ns->frame.v, ctx->ns->frame.nv);
+    (void)frame.build(line, sizeof(line), spec, Log.frame.v, Log.frame.nv);
 
 #if PROTOCORE_ENABLE_LOGBUF
     Logbuf.line.level = level;
     Logbuf.line.msg = line;
-    Logbuf.put(Logbuf.internal);
+    Logbuf.put(protocore_logbuf_span());
 #endif
-    if (ctx->store->sink)
+    if (LOG_CTX(work)->sink)
     {
-        ctx->store->sink(level, line);
+        LOG_CTX(work)->sink(level, line);
     }
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-LogNs Log = {.emit = log_emit, .set_sink = log_set_sink, .internal = &s_log};
+LogNs Log = {.emit = log_emit, .set_sink = log_set_sink};
 
 #else // every level compiled out: the handle stays so a caller still compiles
 
-/** @brief Nothing to sink and nothing to build, so the handle carries no storage. */
-struct LogInternal
+static void log_emit(uint8_t *restrict work)
 {
-    LogNs *ns;
-};
-
-static struct LogInternal s_log = {.ns = &Log};
-
-static void log_emit(struct LogInternal *restrict ctx)
-{
-    (void)ctx;
+    (void)work;
 }
 
-static void log_set_sink(struct LogInternal *restrict ctx)
+static void log_set_sink(uint8_t *restrict work)
 {
-    (void)ctx;
+    (void)work;
 }
 
-LogNs Log = {.emit = log_emit, .set_sink = log_set_sink, .internal = &s_log};
+LogNs Log = {.emit = log_emit, .set_sink = log_set_sink};
 
 #endif // PROTOCORE_LOG_LEVEL < PROTOCORE_LOG_LEVEL_NONE

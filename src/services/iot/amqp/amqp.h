@@ -115,9 +115,6 @@ typedef struct
     uint16_t property_flags;      ///< bit 15 marks the first property, bit 0 marks a further flags field
 } AmqpContentArgs;
 
-/** @brief The codec's calls and the handle they read, described only in amqp.c. */
-struct AmqpInternal;
-
 /**
  * @brief The AMQP 0-9-1 frame codec.
  *
@@ -145,7 +142,6 @@ struct AmqpInternal;
  * @var AmqpNs::build_heartbeat      frame a heartbeat, channel 0, empty payload (sec 4.2.7)
  * @var AmqpNs::parse_frame          split one frame off @c in, the %xCE frame-end checked first
  * @var AmqpNs::parse_method         split @c payload into class-id, method-id and arguments
- * @var AmqpNs::internal             the calls and the handle they read
  */
 typedef struct
 {
@@ -160,15 +156,13 @@ typedef struct
     size_t n;
     size_t consumed;
 
-    void (*protocol_header)(struct AmqpInternal *ctx);
-    void (*build_frame)(struct AmqpInternal *ctx);
-    void (*build_method)(struct AmqpInternal *ctx);
-    void (*build_content_header)(struct AmqpInternal *ctx);
-    void (*build_heartbeat)(struct AmqpInternal *ctx);
-    void (*parse_frame)(struct AmqpInternal *ctx);
-    void (*parse_method)(struct AmqpInternal *ctx);
-
-    struct AmqpInternal *internal;
+    void (*const protocol_header)(uint8_t *restrict work);
+    void (*const build_frame)(uint8_t *restrict work);
+    void (*const build_method)(uint8_t *restrict work);
+    void (*const build_content_header)(uint8_t *restrict work);
+    void (*const build_heartbeat)(uint8_t *restrict work);
+    void (*const parse_frame)(uint8_t *restrict work);
+    void (*const parse_method)(uint8_t *restrict work);
 } AmqpNs;
 
 /** @brief The one symbol this module exports. */
