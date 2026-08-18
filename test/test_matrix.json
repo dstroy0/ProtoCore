@@ -623,7 +623,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_DTLS=1",
         "-DPROTOCORE_ENABLE_COAP=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
       ],
       "src": [
         "+<services/iot/coap/coaps.c>",
@@ -670,7 +671,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_DTLS=1",
         "-DPROTOCORE_ENABLE_COAP=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
       ],
       "src": [
         "+<services/iot/coap/coaps_server.c>",
@@ -709,14 +711,17 @@
         "+<crypto/mac/ghash.c>",
         "+<crypto/aead/aes128gcm.c>"
       ],
-      "tests": ["unit/integration/iot/test_coaps_server"]
+      "tests": [
+        "unit/integration/iot/test_coaps_server"
+      ]
     },
     
     "native_coaps_server_nostack": {
       "desc": "CoAP-over-DTLS server front-end (services/iot/coap/coaps_server), the arm with no network stack: the\nsame suite, driven through the injection seam that arm has instead of a receive path.\ncoaps_server_ingest queues a datagram and an installed out-sink takes every reply, so ring_push's own\nrefusals - a zero-length datagram, an over-long one, an ingest ring already full, an address that will\nnot render - are read off the answer ingest reports, which udp_ingest_cb discards on the other arm.\nPROTOCORE_HAS_NET_STACK is absent here because this env IS the other arm of it; native_coaps_server\nbuilds the one where it is set. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_DTLS=1",
-        "-DPROTOCORE_ENABLE_COAP=1"
+        "-DPROTOCORE_ENABLE_COAP=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
       ],
       "src": [
         "+<services/iot/coap/coaps_server.c>",
@@ -1124,6 +1129,40 @@
       ],
       "tests": [
         "unit/src/crypto/x509/test_x509"
+      ]
+    },
+    
+    "native_x509_verify": {
+      "desc": "RFC 5280 sec 6.1 path validation (crypto/x509_verify): one link checked four ways - the signature over the TBS under the issuer's key, the validity window, whether the issuer may sign at that depth, and the issuer-name match. Driven with the same OpenSSL-made certificates test_x509 parses, one CA per algorithm so the Ed25519, P-256 and RSA verification paths are each reached by a certificate an independent implementation signed.",
+      "flags": [
+        "-Itest/unit/src/crypto/x509/test_x509"
+      ],
+      "src": [
+        "+<src/crypto/x509/x509_verify.c>",
+        "+<src/crypto/x509/x509.c>",
+        "+<src/shared/der/der.c>",
+        "+<src/crypto/asymmetric/ecdsa.c>",
+        "+<src/crypto/asymmetric/rsa.c>",
+        "+<src/crypto/asymmetric/ed25519.c>",
+        "+<src/crypto/asymmetric/curve25519.c>",
+        "+<src/crypto/asymmetric/bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>",
+        "+<src/crypto/hash/sha256.c>",
+        "+<src/crypto/hash/sha512.c>",
+        "+<src/mmgr/protomem.c>",
+        "+<src/mmgr/rawmemcpy.c>",
+        "+<src/mmgr/swar.c>",
+        "+<src/mmgr/secure.c>",
+        "+<src/mmgr/arena.c>",
+        "+<src/mmgr/plaintext.c>",
+        "+<src/mmgr/span.c>",
+        "+<src/mmgr/bytes.c>",
+        "+<src/mmgr/endian.c>",
+        "+<core_setup/hal/portable/portable_platform.c>",
+        "+<src/crypto/mac/hmac_sha256.c>"
+      ],
+      "tests": [
+        "unit/src/crypto/x509/test_x509_verify"
       ]
     },
 
@@ -2658,7 +2697,10 @@
     },
     "native_h3_conn": {
       "desc": "HTTP/3 application engine (network_drivers/presentation/http/http3/h3_conn, RFC 9114): drives\nh3_conn through the quic_conn callback seam - a QPACK-encoded request on a request stream dispatches\nthe right method/path (+ a POST body), the control stream sends SETTINGS on handshake completion,\nand a response (HEADERS + DATA) round-trips through the QUIC stream send buffer.",
-      "flags": ["-DPROTOCORE_ENABLE_HTTP3=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP3=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+      ],
       "src": [
         "+<network_drivers/presentation/http/http3/h3_frame.c>",
         "+<network_drivers/presentation/http/http3/qpack.c>",
@@ -2691,11 +2733,16 @@
         "+<crypto/mac/ghash.c>",
         "+<crypto/aead/aes128gcm.c>"
       ],
-      "tests": ["unit/protocols/http/test_h3_conn"]
+      "tests": [
+        "unit/protocols/http/test_h3_conn"
+      ]
     },
     "native_h3_e2e": {
       "desc": "End-to-end HTTP/3 capstone (network_drivers/presentation/http/http3): a QUIC client in the\ntest completes the TLS 1.3 handshake against a quic_conn + h3_conn server, sends a real HTTP/3 GET\n(QPACK HEADERS in a STREAM frame), and verifies the app-served response (HEADERS :status 200 + DATA\nbody) - the whole stack composed: QUIC crypto/framing, TLS 1.3, streams, HTTP/3 framing, QPACK.",
-      "flags": ["-DPROTOCORE_ENABLE_HTTP3=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP3=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+      ],
       "src": [
         "+<network_drivers/presentation/http/http3/h3_conn.c>",
         "+<network_drivers/presentation/http/http3/h3_frame.c>",
@@ -2730,14 +2777,17 @@
         "+<crypto/mac/ghash.c>",
         "+<crypto/aead/aes128gcm.c>"
       ],
-      "tests": ["unit/integration/http/test_h3_e2e"]
+      "tests": [
+        "unit/integration/http/test_h3_e2e"
+      ]
     },
     "native_h3_server": {
       "desc": "HTTP/3 dispatch bridge end-to-end through PC (the full Layer-7 app built with\nPROTOCORE_ENABLE_HTTP3=1): a QUIC client completes the handshake and sends an HTTP/3 GET, quic_server\nroutes it to the reserved dispatch slot, match_and_execute runs the registered route, and the\nhandler's send() is routed back onto the request stream via protocore_quic_server_respond. Verifies the whole\nwire: a real route handler answers an HTTP/3 request. Reuses the native_stack_http full-app base.",
       "base": "env:native_stack_http",
       "flags": [
         "-DPROTOCORE_ENABLE_HTTP3=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
       ],
       "src": [
         "${env:native_stack_http.build_src_filter}",
@@ -5550,7 +5600,10 @@
     },
     "native_quic_conn": {
       "desc": "QUIC v1 server connection engine (network_drivers/presentation/http/http3/quic_conn, RFC 9000\n/ RFC 9001): the test acts as a QUIC client - builds real Initial / Handshake / 1-RTT packets and\ndrives a server QuicConn through a full handshake (per-level AEAD, CRYPTO reassembly, ACKs,\ncoalescing, HANDSHAKE_DONE) and a 1-RTT request/response stream exchange.",
-      "flags": ["-DPROTOCORE_ENABLE_HTTP3=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP3=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+      ],
       "src": [
         "+<network_drivers/presentation/http/http3/quic_tls.c>",
         "+<network_drivers/tls/key_schedule/key_schedule.c>",
@@ -5580,7 +5633,9 @@
         "+<crypto/mac/ghash.c>",
         "+<crypto/aead/aes128gcm.c>"
       ],
-      "tests": ["unit/protocols/http/test_quic_conn"]
+      "tests": [
+        "unit/protocols/http/test_quic_conn"
+      ]
     },
     "native_quic_crypto_rfc": {
       "desc": "QUIC packet protection (network_drivers/presentation/http/http3/quic_crypto, RFC 9001 sec 5): the FIPS 197 Appendix C.1 AES-128 block, GCM Test Case 4, the sec 5.2 Initial salt and every secret RFC 9001 Appendix A.1 publishes, the A.3 server Initial protected and unprotected octet for octet, the A.2 client Initial protected header and header-protection sample, the A.4 Retry integrity tag, tamper rejection over header / ciphertext / tag, the parameter bounds, and a 1-RTT short-header round trip whose first-octet mask is five bits rather than four.",
@@ -5641,7 +5696,11 @@
     },
     "native_quic_server": {
       "desc": "HTTP/3 server glue (network_drivers/presentation/http/http3/quic_server): the UDP-facing pool\nthat routes datagrams by Destination Connection ID to a pool of QuicConn + H3Conn engines. A QUIC\nclient in the test hands datagrams to the pcb the server bound and reads its replies back out of the\nhost stack's send log, driving a full handshake + HTTP/3 GET and verifying the 200 + body - the same\nend-to-end flow as test_h3_e2e but through protocore_quic_server_begin / poll / respond over the real UDP\nlistener, exercising the connection-ID routing, the ingest ring, and new-connection creation from a\nclient Initial. The HTTP/3 dispatch bridge (h3_server.c) belongs to native_h3_server: it reaches the\nroute table and the TCP slot pools, which this env does not build.",
-      "flags": ["-DPROTOCORE_ENABLE_HTTP3=1", "-DPROTOCORE_HAS_NET_STACK=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP3=1",
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+      ],
       "src": [
         "+<network_drivers/presentation/http/http3/quic_server.c>",
         "+<network_drivers/transport/udp/udp.c>",
@@ -5685,11 +5744,16 @@
         "+<crypto/mac/ghash.c>",
         "+<crypto/aead/aes128gcm.c>"
       ],
-      "tests": ["unit/integration/http/test_quic_server"]
+      "tests": [
+        "unit/integration/http/test_quic_server"
+      ]
     },
     "native_quic_tls_rfc": {
       "desc": "The TLS 1.3 server handshake state machine QUIC runs (network_drivers/presentation/http/http3/quic_tls, RFC 9001 / RFC 8446): a full interop round trip in which the test runs the client half - its own X25519, transcript hash and RFC 8446 sec 7.1 key schedule - and requires the Handshake and 1-RTT packet keys to equal the server's, verifies the server Finished, and makes the server accept a client Finished the test computed; the sec 4.4 server flight ordering and the sec 4.1.3 ServerHello fields; the RFC 9001 sec 8.2 transport-parameter extension; and the negotiation refusals with the sec 6.2 alert each one carries.",
-      "flags": ["-DPROTOCORE_ENABLE_HTTP3=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP3=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+      ],
       "src": [
         "+<network_drivers/presentation/http/http3/quic_tls.c>",
         "+<network_drivers/tls/key_schedule/key_schedule.c>",
@@ -5721,14 +5785,17 @@
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_quic_tls"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_quic_tls_pqc": {
       "desc": "TLS 1.3 QUIC handshake with the X25519MLKEM768 post-quantum hybrid group (IANA 0x11ec,\nPROTOCORE_ENABLE_PQC_KEX=1): drives the server with a hybrid ClientHello, then verifies it as a conforming\nclient - ML-KEM Decaps (an independent reference) + X25519, the 64-byte ML-KEM||X25519 secret, and\nboth Finished MACs. Reuses the classical test_quic_tls suite plus the added hybrid round-trip.",
       "flags": [
         "-DPROTOCORE_ENABLE_HTTP3=1",
         "-DPROTOCORE_ENABLE_PQC_KEX=1",
-        "-DPROTOCORE_WORKER_TASK_STACK=16384"
+        "-DPROTOCORE_WORKER_TASK_STACK=16384",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
       ],
       "src": [
         "+<network_drivers/presentation/http/http3/quic_tls.c>",
@@ -5763,7 +5830,9 @@
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_quic_tls"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_quic_tp": {
       "desc": "QUIC transport parameters codec (network_drivers/presentation/http/http3/quic_tp, RFC 9000\nsec 18): the sec 18.2 defaults, an encode/parse round-trip over the connection IDs + every varint\nparameter + the migration flag, parsing a hand-built byte string, skipping unknown/GREASE ids, and\nrejecting a duplicate parameter, an oversized connection ID, and out-of-range values.",
@@ -8771,7 +8840,10 @@
     },
     "native_tls13_msg": {
       "desc": "TLS 1.3 handshake messages for the QUIC handshake (network_drivers/presentation/http/http3/\ntls13_msg, RFC 8446 sec 4): ClientHello parse (X25519 key_share + capability flags), and the server\nflight. Byte-exact vs RFC 8448 sec 3 for ServerHello / Certificate / Finished, plus the ALPN + QUIC\ntransport-params EncryptedExtensions and an Ed25519 CertificateVerify sign/verify round-trip.",
-      "flags": ["-DPROTOCORE_ENABLE_HTTP3=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP3=1",
+        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+      ],
       "src": [
         "+<network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<crypto/hash/sha512.c>",
@@ -8790,13 +8862,17 @@
       "tests": [
         "unit/src/network_drivers/presentation/http/http3/test_tls13_msg"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_tls_conn": {
       "desc": "TLS 1.3 handshake driver over the stream record layer (network_drivers/tls/tls_conn,\nRFC 8446 sec 4): the module drives both ends, so the test stands a client and a server up against\neach other and runs the full handshake - ClientHello, the server flight, both Finished messages -\nthen checks the two installed the same application-traffic keys by sealing on one end and opening\non the other. Around that: the profile refusals (a ClientHello without TLS 1.3, without X25519,\nwithout a key_share, without Ed25519, or offering no cipher suite this stack implements) and the\nalert each ends on. The message bytes are pinned against RFC 8448 in test_tls13_msg and the key\nschedule in test_tls13_kdf; what this adds is the state machine and the one secure-pool borrow it\nruns out of.",
       "flags": [
         "-DPROTOCORE_ENABLE_TLS=1",
-        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+        "-DPROTOCORE_ENABLE_TLS_RPK=1",
+        "-DMAX_TLS_CONNS=2",
+        "-Itest/unit/src/crypto/x509/test_x509"
       ],
       "src": [
         "+<network_drivers/tls/handshake/handshake.c>",
@@ -8822,7 +8898,15 @@
         "+<mmgr/swar.c>",
         "+<mmgr/protostr.c>",
         "+<crypto/mac/ghash.c>",
-        "+<crypto/aead/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm.c>",
+        "+<src/crypto/x509/x509.c>",
+        "+<src/crypto/x509/x509_verify.c>",
+        "+<src/shared/der/der.c>",
+        "+<src/crypto/asymmetric/ecdsa.c>",
+        "+<src/crypto/asymmetric/rsa.c>",
+        "+<src/crypto/mac/hmac_sha256.c>",
+        "+<src/crypto/asymmetric/bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>"
       ],
       "tests": [
         "unit/file_conversion/network_drivers/tls/handshake/test_tls_conn"
@@ -8916,7 +9000,14 @@
         "+<src/crypto/mac/ghash.c>",
         "+<mmgr/plaintext.c>",
         "+<mmgr/arena.c>",
-        "+<mmgr/span.c>"
+        "+<mmgr/span.c>",
+        "+<src/crypto/x509/x509.c>",
+        "+<src/crypto/x509/x509_verify.c>",
+        "+<src/shared/der/der.c>",
+        "+<src/crypto/asymmetric/ecdsa.c>",
+        "+<src/crypto/asymmetric/rsa.c>",
+        "+<src/crypto/asymmetric/bignum.c>",
+        "+<core_setup/hal/portable/portable_bignum.c>"
       ],
       "tests": [
         "unit/src/network_drivers/tls/test_tls_seam"

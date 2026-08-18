@@ -14,10 +14,12 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
-#include "network_drivers/presentation/http/http3/qpack.h"
 #include "mmgr/protomem.h"
 #include "mmgr/protostr.h"
+#include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
+#include "network_drivers/presentation/http/http3/qpack.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // QPACK static table (RFC 9204 Appendix A, 0-indexed). {name, value}. Generated from the RFC.
 static const char *const QPACK_STATIC[99][2] = {
@@ -122,20 +124,37 @@ static const char *const QPACK_STATIC[99][2] = {
     {"x-frame-options", "sameorigin"},
 };
 
-size_t protocore_qpack_encode_prefix(uint8_t *out, size_t cap)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void qpack_encode_prefix(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *out = Qpack.encode_prefix_args.out;
+    size_t cap = Qpack.encode_prefix_args.cap;
+
     if (cap < 2)
     {
-        return 0;
+        Qpack.n = 0;
+        return;
     }
     out[0] = 0x00; // Required Insert Count = 0
     out[1] = 0x00; // S = 0, Delta Base = 0
-    return 2;
+    Qpack.n = 2;
 }
 
-size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name, size_t name_len, const char *value,
-                                     size_t value_len)
+static void qpack_encode_header(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t *out = Qpack.encode_header_args.out;
+    size_t cap = Qpack.encode_header_args.cap;
+    const char *name = Qpack.encode_header_args.name;
+    size_t name_len = Qpack.encode_header_args.name_len;
+    const char *value = Qpack.encode_header_args.value;
+    size_t value_len = Qpack.encode_header_args.value_len;
+
     int name_idx = -1, full_idx = -1;
     for (int i = 0; i < 99; i++)
     {
@@ -155,7 +174,8 @@ size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name,
     }
     if (full_idx >= 0) // Indexed Field Line, static: 1 T=1 i(6)
     {
-        return HpackPrim.encode_int(out, cap, 6, 0xC0, (uint32_t)full_idx);
+        Qpack.n = HpackPrim.encode_int(out, cap, 6, 0xC0, (uint32_t)full_idx);
+        return;
     }
 
     if (name_idx >= 0)
@@ -163,14 +183,17 @@ size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name,
         size_t o = HpackPrim.encode_int(out, cap, 4, 0x50, (uint32_t)name_idx);
         if (!o)
         {
-            return 0;
+            Qpack.n = 0;
+            return;
         }
         size_t vs = HpackPrim.encode_str(out + o, cap - o, value, value_len);
         if (!vs)
         {
-            return 0;
+            Qpack.n = 0;
+            return;
         }
-        return o + vs;
+        Qpack.n = o + vs;
+        return;
     }
 
     // Literal Field Line with Literal Name: 001 N=0 H NameLen(3), name string, value string.
@@ -180,14 +203,16 @@ size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name,
     size_t o = HpackPrim.encode_int(out, cap, 3, (uint8_t)(0x20 | (huff ? 0x08 : 0x00)), (uint32_t)nbytes);
     if (!o)
     {
-        return 0;
+        Qpack.n = 0;
+        return;
     }
     if (huff)
     {
         size_t body = HpackPrim.huff_encode(out + o, cap - o, name, name_len);
         if (body != hl)
         {
-            return 0;
+            Qpack.n = 0;
+            return;
         }
         o += body;
     }
@@ -195,7 +220,8 @@ size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name,
     {
         if (o + name_len > cap)
         {
-            return 0;
+            Qpack.n = 0;
+            return;
         }
         mem.cpy(out + o, name, name_len);
         o += name_len;
@@ -203,31 +229,42 @@ size_t protocore_qpack_encode_header(uint8_t *out, size_t cap, const char *name,
     size_t vs = HpackPrim.encode_str(out + o, cap - o, value, value_len);
     if (!vs)
     {
-        return 0;
+        Qpack.n = 0;
+        return;
     }
-    return o + vs;
+    Qpack.n = o + vs;
 }
 
-proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratch, size_t scratch_cap, QpackEmitFn emit,
-                                  void *ctx)
+static void qpack_decode(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *block = Qpack.decode_args.block;
+    size_t len = Qpack.decode_args.len;
+    char *scratch = Qpack.decode_args.scratch;
+    size_t scratch_cap = Qpack.decode_args.scratch_cap;
+    QpackEmitFn emit = Qpack.decode_args.emit;
+    void *ctx = Qpack.decode_args.ctx;
+
     size_t pos = 0;
     // Encoded Field Section Prefix (RFC 9204 sec 4.5.1): Required Insert Count, then S + Delta Base.
     size_t c = 0;
     uint32_t ric = 0;
     if (!HpackPrim.decode_int(block + pos, len - pos, 8, &c, &ric))
     {
-        return PROTO_FALSE;
+        Qpack.ok = PROTO_FALSE;
+        return;
     }
     pos += c;
     if (ric != 0) // a non-zero Required Insert Count references the dynamic table (capacity 0)
     {
-        return PROTO_FALSE;
+        Qpack.ok = PROTO_FALSE;
+        return;
     }
     uint32_t base = 0;
     if (!HpackPrim.decode_int(block + pos, len - pos, 7, &c, &base)) // S bit + Delta Base; ignored when RIC = 0
     {
-        return PROTO_FALSE;
+        Qpack.ok = PROTO_FALSE;
+        return;
     }
     pos += c;
 
@@ -238,19 +275,22 @@ proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratc
         {                    // Indexed Field Line (sec 4.5.2): 1 T i(6)
             if (!(b & 0x40)) // T = 0 -> dynamic table
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
             uint32_t idx = 0;
             if (!HpackPrim.decode_int(block + pos, len - pos, 6, &c, &idx) || idx >= 99)
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
             pos += c;
             const char *nm = QPACK_STATIC[idx][0];
             const char *vl = QPACK_STATIC[idx][1];
             if (!emit(ctx, nm, str.len(nm, scratch_cap + 1), vl, str.len(vl, scratch_cap + 1)))
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
         }
         else if ((b & 0xC0) == 0x40)
@@ -259,28 +299,33 @@ proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratc
             uint32_t idx = 0;
             if (!HpackPrim.decode_int(block + pos, len - pos, 4, &c, &idx))
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
             pos += c;
             if (!is_static || idx >= 99) // dynamic name reference
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
             const char *nm = QPACK_STATIC[idx][0];
             size_t nlen = str.len(nm, scratch_cap + 1);
             if (nlen > scratch_cap)
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
             mem.cpy(scratch, nm, nlen);
             size_t vlen = 0;
             if (!HpackPrim.decode_str(block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen))
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
             if (!emit(ctx, scratch, nlen, scratch + nlen, vlen))
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
         }
         else if ((b & 0xE0) == 0x20)
@@ -289,26 +334,30 @@ proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratc
             uint32_t nlen32 = 0;
             if (!HpackPrim.decode_int(block + pos, len - pos, 3, &c, &nlen32))
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
             pos += c;
             if (pos + nlen32 > len)
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
             size_t nlen = 0;
             if (huff)
             {
                 if (!HpackPrim.huff_decode(block + pos, nlen32, scratch, scratch_cap, &nlen))
                 {
-                    return PROTO_FALSE;
+                    Qpack.ok = PROTO_FALSE;
+                    return;
                 }
             }
             else
             {
                 if (nlen32 > scratch_cap)
                 {
-                    return PROTO_FALSE;
+                    Qpack.ok = PROTO_FALSE;
+                    return;
                 }
                 mem.cpy(scratch, block + pos, nlen32);
                 nlen = nlen32;
@@ -317,19 +366,30 @@ proto_bool protocore_qpack_decode(const uint8_t *block, size_t len, char *scratc
             size_t vlen = 0;
             if (!HpackPrim.decode_str(block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen))
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
             if (!emit(ctx, scratch, nlen, scratch + nlen, vlen))
             {
-                return PROTO_FALSE;
+                Qpack.ok = PROTO_FALSE;
+                return;
             }
         }
         else
         { // 0001 xxxx Indexed Post-Base / 0000 xxxx Literal Post-Base Name Ref: both dynamic
-            return PROTO_FALSE;
+            Qpack.ok = PROTO_FALSE;
+            return;
         }
     }
-    return PROTO_TRUE;
+    Qpack.ok = PROTO_TRUE;
 }
+
+QpackNs Qpack = {
+    .encode_prefix = qpack_encode_prefix,
+    .encode_header = qpack_encode_header,
+    .decode = qpack_decode,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3

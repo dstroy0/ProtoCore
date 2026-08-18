@@ -8,12 +8,20 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t quic_crypto_work[16]; // the borrow an entry takes; QuicCrypto never reads it
+
+static uint8_t quic_packet_work[16]; // the borrow an entry takes; QuicPacket never reads it
+
+static uint8_t quic_frame_work[16]; // the borrow an entry takes; QuicFrame never reads it
+
+static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
+
 #if PROTOCORE_ENABLE_HTTP3
 
-#include "network_drivers/presentation/http/http3/quic_conn.h"
-#include "mmgr/protomem.h"
 #include "crypto/aead/aes128gcm.h" // PROTOCORE_AES128GCM_TAG_LEN
-#include "mmgr/secure.h"           // the context span is key material
+#include "mmgr/protomem.h"
+#include "mmgr/secure.h" // the context span is key material
+#include "network_drivers/presentation/http/http3/quic_conn.h"
 #include "network_drivers/presentation/http/http3/quic_crypto.h"
 #include "network_drivers/presentation/http/http3/quic_frame.h"
 #include "network_drivers/presentation/http/http3/quic_packet.h"
@@ -244,7 +252,11 @@ static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint
         qc->cb = *cb;
     }
 
-    protocore_quic_derive_initial_secrets(qc->tls.keys_work, odcid, odcid_len, &qc->initial);
+    QuicCrypto.derive_initial_secrets_args.keys_work = qc->tls.keys_work;
+    QuicCrypto.derive_initial_secrets_args.dcid = odcid;
+    QuicCrypto.derive_initial_secrets_args.dcid_len = odcid_len;
+    QuicCrypto.derive_initial_secrets_args.out = &qc->initial;
+    QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     for (int i = 0; i < 3; i++)
     {
@@ -283,7 +295,7 @@ static void queue_close(QuicConnCtx *qc, uint64_t error_code, uint64_t frame_typ
     qc->close_level = (uint8_t)level;
 }
 
-static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrame *f)
+static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrameHeader *f)
 {
     QuicPnSpace *s = &qc->space[level];
     uint64_t want = s->crypto_rx_off;
@@ -333,7 +345,7 @@ static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrame *f)
     }
 }
 
-static void handle_stream(QuicConnCtx *qc, const QuicFrame *f)
+static void handle_stream(QuicConnCtx *qc, const QuicFrameHeader *f)
 {
     QuicStream *st = stream_get(qc, f->stream.id, PROTO_TRUE);
     if (!st)
@@ -387,8 +399,12 @@ static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, s
             off++;
             continue;
         }
-        QuicFrame f;
-        size_t n = protocore_quic_frame_parse(p + off, len - off, &f);
+        QuicFrameHeader f;
+        QuicFrame.parse_args.buf = p + off;
+        QuicFrame.parse_args.len = len - off;
+        QuicFrame.parse_args.out = &f;
+        QuicFrame.parse(quic_frame_work);
+        size_t n = QuicFrame.n;
         if (!n)
         {
             // Undecodable frame: a transport FRAME_ENCODING_ERROR (RFC 9000 sec 20.1). Report it.
@@ -444,7 +460,12 @@ static proto_bool skip_initial_token(const uint8_t *dg, size_t len, size_t *off)
 {
     uint64_t tok_len = 0;
     size_t c = 0;
-    if (!protocore_quic_varint_decode(dg + *off, len - *off, &tok_len, &c))
+    QuicVarint.decode_args.in = dg + *off;
+    QuicVarint.decode_args.len = len - *off;
+    QuicVarint.decode_args.value = &tok_len;
+    QuicVarint.decode_args.consumed = &c;
+    QuicVarint.decode(quic_varint_work);
+    if (!QuicVarint.ok)
     {
         return PROTO_FALSE;
     }
@@ -472,7 +493,11 @@ static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, 
     }
 
     QuicLongHeader h;
-    if (!protocore_quic_parse_long_header(dg, len, &h))
+    QuicPacket.parse_long_header_args.buf = dg;
+    QuicPacket.parse_long_header_args.len = len;
+    QuicPacket.parse_long_header_args.out = &h;
+    QuicPacket.parse_long_header(quic_packet_work);
+    if (!QuicPacket.ok)
     {
         return PROTO_FALSE;
     }
@@ -499,7 +524,12 @@ static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, 
         return PROTO_FALSE;
     }
     size_t c = 0;
-    if (!protocore_quic_varint_decode(dg + off, len - off, payload_length, &c))
+    QuicVarint.decode_args.in = dg + off;
+    QuicVarint.decode_args.len = len - off;
+    QuicVarint.decode_args.value = payload_length;
+    QuicVarint.decode_args.consumed = &c;
+    QuicVarint.decode(quic_varint_work);
+    if (!QuicVarint.ok)
     {
         return PROTO_FALSE;
     }
@@ -516,7 +546,9 @@ static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
     {
         return 0;
     }
-    proto_bool is_long = protocore_quic_is_long_header(dg[0]);
+    QuicPacket.is_long_header_args.first = dg[0];
+    QuicPacket.is_long_header(quic_packet_work);
+    proto_bool is_long = QuicPacket.ok;
 
     int level = 0;
     size_t pn_offset = 0;
@@ -543,8 +575,16 @@ static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
     }
     mem.cpy(work, dg, pkt_len);
     uint64_t pn = 0;
-    size_t pt = protocore_quic_packet_unprotect(work, pn_offset, (size_t)payload_length, qc->space[level].largest_rx,
-                                                keys, is_long, plain, &pn);
+    QuicCrypto.packet_unprotect_args.pkt = work;
+    QuicCrypto.packet_unprotect_args.pn_offset = pn_offset;
+    QuicCrypto.packet_unprotect_args.length = (size_t)payload_length;
+    QuicCrypto.packet_unprotect_args.largest_pn = qc->space[level].largest_rx;
+    QuicCrypto.packet_unprotect_args.keys = keys;
+    QuicCrypto.packet_unprotect_args.is_long = is_long;
+    QuicCrypto.packet_unprotect_args.out = plain;
+    QuicCrypto.packet_unprotect_args.out_pn = &pn;
+    QuicCrypto.packet_unprotect(quic_crypto_work);
+    size_t pt = QuicCrypto.n;
     if (pt == (size_t)-1)
     {
         return is_long ? pkt_len : 0; // drop this packet, keep parsing later coalesced ones
@@ -617,7 +657,13 @@ static size_t build_ack_frame(QuicPnSpace *s, uint8_t *buf, size_t cap)
     {
         return 0;
     }
-    size_t n = protocore_quic_build_ack(buf, cap, s->largest_rx, 0, s->largest_rx);
+    QuicFrame.build_ack_args.out = buf;
+    QuicFrame.build_ack_args.cap = cap;
+    QuicFrame.build_ack_args.largest = s->largest_rx;
+    QuicFrame.build_ack_args.delay = 0;
+    QuicFrame.build_ack_args.first_range = s->largest_rx;
+    QuicFrame.build_ack(quic_frame_work);
+    size_t n = QuicFrame.n;
     if (n)
     {
         s->ack_eliciting_rx =
@@ -649,7 +695,13 @@ static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *
     {
         return 0;
     }
-    size_t n = protocore_quic_build_crypto(buf, cap, s->crypto_tx_off, flight + s->crypto_tx_off, take);
+    QuicFrame.build_crypto_args.out = buf;
+    QuicFrame.build_crypto_args.cap = cap;
+    QuicFrame.build_crypto_args.offset = s->crypto_tx_off;
+    QuicFrame.build_crypto_args.data = flight + s->crypto_tx_off;
+    QuicFrame.build_crypto_args.len = take;
+    QuicFrame.build_crypto(quic_frame_work);
+    size_t n = QuicFrame.n;
     if (n)
     {
         s->crypto_tx_off += take;
@@ -668,7 +720,10 @@ static size_t build_app_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t 
     size_t p = 0;
     if (qc->handshake_done_queued)
     {
-        size_t n = protocore_quic_build_handshake_done(buf + p, cap - p);
+        QuicFrame.build_handshake_done_args.out = buf + p;
+        QuicFrame.build_handshake_done_args.cap = cap - p;
+        QuicFrame.build_handshake_done(quic_frame_work);
+        size_t n = QuicFrame.n;
         if (n)
         { // ACK/CRYPTO, so the datagram-sized scratch always has room for it
 
@@ -695,7 +750,15 @@ static size_t build_app_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t 
         size_t remain = st->tx_have - st->tx_sent;
         size_t take = remain < room ? remain : room;
         proto_bool fin = st->tx_fin && (st->tx_sent + take == st->tx_have);
-        size_t n = protocore_quic_build_stream(buf + p, cap - p, st->id, st->tx_off, st->tx + st->tx_sent, take, fin);
+        QuicFrame.build_stream_args.out = buf + p;
+        QuicFrame.build_stream_args.cap = cap - p;
+        QuicFrame.build_stream_args.id = st->id;
+        QuicFrame.build_stream_args.offset = st->tx_off;
+        QuicFrame.build_stream_args.data = st->tx + st->tx_sent;
+        QuicFrame.build_stream_args.len = take;
+        QuicFrame.build_stream_args.fin = fin;
+        QuicFrame.build_stream(quic_frame_work);
+        size_t n = QuicFrame.n;
         if (n)
         {
             p += n;
@@ -722,8 +785,15 @@ static size_t build_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t cap,
     // this for a single level when a close is queued, so it is emitted exactly once.
     if (qc->close_queued && !qc->close_sent)
     {
-        return protocore_quic_build_connection_close(buf, cap, qc->close_is_app, qc->close_error, qc->close_frame_type,
-                                                     NULL, 0);
+        QuicFrame.build_connection_close_args.out = buf;
+        QuicFrame.build_connection_close_args.cap = cap;
+        QuicFrame.build_connection_close_args.app = qc->close_is_app;
+        QuicFrame.build_connection_close_args.error_code = qc->close_error;
+        QuicFrame.build_connection_close_args.frame_type = qc->close_frame_type;
+        QuicFrame.build_connection_close_args.reason = NULL;
+        QuicFrame.build_connection_close_args.reason_len = 0;
+        QuicFrame.build_connection_close(quic_frame_work);
+        return QuicFrame.n;
     }
 
     p += build_ack_frame(s, buf + p, cap - p); // ACK first, if we owe one
@@ -770,7 +840,10 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
     }
 
     uint64_t pn = s->next_pn;
-    uint8_t pn_len = protocore_quic_pn_length(pn, s->largest_acked);
+    QuicPacket.pn_length_args.full_pn = pn;
+    QuicPacket.pn_length_args.largest_acked = s->largest_acked;
+    QuicPacket.pn_length(quic_packet_work);
+    uint8_t pn_len = QuicPacket.u8;
     proto_bool is_long = (level != QUIC_ENC_APP);
 
     // Reserve the framing BEFORE filling the payload. build_frames() advances the connection's send
@@ -823,8 +896,17 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
     if (is_long)
     {
         // Invariant header fields, then the type-specific token (Initial only) + Length + PN.
-        size_t hn = protocore_quic_build_long_header(out, cap, level_lp_type(level), QUIC_VERSION_1, qc->dcid,
-                                                     qc->dcid_len, qc->scid, qc->scid_len, pn_len);
+        QuicPacket.build_long_header_args.out = out;
+        QuicPacket.build_long_header_args.cap = cap;
+        QuicPacket.build_long_header_args.type = level_lp_type(level);
+        QuicPacket.build_long_header_args.version = QUIC_VERSION_1;
+        QuicPacket.build_long_header_args.dcid = qc->dcid;
+        QuicPacket.build_long_header_args.dcid_len = qc->dcid_len;
+        QuicPacket.build_long_header_args.scid = qc->scid;
+        QuicPacket.build_long_header_args.scid_len = qc->scid_len;
+        QuicPacket.build_long_header_args.pn_len = pn_len;
+        QuicPacket.build_long_header(quic_packet_work);
+        size_t hn = QuicPacket.n;
         if (!hn)
         {
             return 0;
@@ -832,7 +914,11 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
         p = hn;
         if (level == QUIC_ENC_INITIAL)
         {
-            size_t n = protocore_quic_varint_encode(out + p, cap - p, 0); // empty token
+            QuicVarint.encode_args.out = out + p;
+            QuicVarint.encode_args.cap = cap - p;
+            QuicVarint.encode_args.value = 0;
+            QuicVarint.encode(quic_varint_work);
+            size_t n = QuicVarint.n; // empty token
             if (!n)
             {
                 return 0;
@@ -840,7 +926,11 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
             p += n;
         }
         uint64_t length = (uint64_t)pn_len + frame_len + PROTOCORE_AES128GCM_TAG_LEN;
-        size_t n = protocore_quic_varint_encode(out + p, cap - p, length);
+        QuicVarint.encode_args.out = out + p;
+        QuicVarint.encode_args.cap = cap - p;
+        QuicVarint.encode_args.value = length;
+        QuicVarint.encode(quic_varint_work);
+        size_t n = QuicVarint.n;
         if (!n)
         {
             return 0;
@@ -878,7 +968,16 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
 
     mem.cpy(out + p, frames, frame_len);
 
-    size_t total = protocore_quic_packet_protect(out, cap, pn_offset, pn_len, pn, frame_len, keys, is_long);
+    QuicCrypto.packet_protect_args.pkt = out;
+    QuicCrypto.packet_protect_args.cap = cap;
+    QuicCrypto.packet_protect_args.pn_offset = pn_offset;
+    QuicCrypto.packet_protect_args.pn_len = pn_len;
+    QuicCrypto.packet_protect_args.full_pn = pn;
+    QuicCrypto.packet_protect_args.payload_len = frame_len;
+    QuicCrypto.packet_protect_args.keys = keys;
+    QuicCrypto.packet_protect_args.is_long = is_long;
+    QuicCrypto.packet_protect(quic_crypto_work);
+    size_t total = QuicCrypto.n;
     if (!total)
     {
         return 0;

@@ -66,7 +66,18 @@ typedef struct
     const uint8_t *peer_pub;       ///< 32-byte raw public key the peer must present, or NULL to skip verification
     const uint8_t *ephemeral_priv; ///< 32-byte X25519 ephemeral private key (fresh per handshake)
     const uint8_t *random;         ///< 32-byte Hello random (fresh per handshake)
-    const char *hostname;          ///< client: the SNI to offer, or NULL
+    const char *hostname;          ///< client: the SNI to offer, and the name a certificate must speak for
+    // Client: the trust anchor a presented X.509 chain is validated to (RFC 5280 sec 6.1). When it
+    // is set the peer is authenticated by certificate - the chain to this anchor, and @c hostname
+    // matched by RFC 6125 - and @c peer_pub is not consulted. When it is null the peer is
+    // authenticated by raw public key against @c peer_pub, which is what this arm does by default.
+    const uint8_t *ca_der; ///< one DER trust anchor, or NULL
+    size_t ca_len;         ///< its length
+    uint64_t now;          ///< seconds since the POSIX epoch, for the validity window (sec 6.1.3 (a)(2))
+    // Server: the DER certificate to present instead of a raw public key. @c ed25519_seed still
+    // signs the CertificateVerify, so it must be the key this certificate carries.
+    const uint8_t *cert_der; ///< one DER certificate, or NULL to present the raw public key
+    size_t cert_len;         ///< its length
     // Server: the protocols this listener answers, in descending preference (RFC 7301 sec 3.1). A
     // null list leaves ALPN unanswered; a client that offered it then gets no extension back.
     const char *const *alpn; ///< NUL-terminated protocol names, or NULL

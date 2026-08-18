@@ -14,6 +14,12 @@
 
 #include <unity.h>
 
+static uint8_t qpack_work[16]; // the borrow an entry takes; Qpack never reads it
+
+static uint8_t h3_frame_work[16]; // the borrow an entry takes; H3Frame never reads it
+
+static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
+
 void setUp()
 {
 }
@@ -128,12 +134,41 @@ void test_request_dispatch_and_response()
     TEST_ASSERT_NOT_NULL(g_qc.cb.on_stream_data);
 
     uint8_t block[128];
-    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/index.html", 11);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":authority", 10, "example.org", 11);
+    Qpack.encode_prefix_args.out = block;
+    Qpack.encode_prefix_args.cap = sizeof(block);
+    Qpack.encode_prefix(qpack_work);
+    size_t bp = Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":method";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = "GET";
+    Qpack.encode_header_args.value_len = 3;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":path";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "/index.html";
+    Qpack.encode_header_args.value_len = 11;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":authority";
+    Qpack.encode_header_args.name_len = 10;
+    Qpack.encode_header_args.value = "example.org";
+    Qpack.encode_header_args.value_len = 11;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
     uint8_t req[256];
-    size_t rp = protocore_h3_build_headers(req, sizeof(req), block, bp);
+    H3Frame.build_headers_args.out = req;
+    H3Frame.build_headers_args.cap = sizeof(req);
+    H3Frame.build_headers_args.block = block;
+    H3Frame.build_headers_args.len = bp;
+    H3Frame.build_headers(h3_frame_work);
+    size_t rp = H3Frame.n;
 
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
@@ -159,12 +194,22 @@ void test_request_dispatch_and_response()
     e_status[0] = e_ctype[0] = '\0';
     while (off < st->tx_have)
     {
-        H3Frame fr;
-        TEST_ASSERT_TRUE(protocore_h3_frame_parse(st->tx + off, st->tx_have - off, &fr));
+        H3FrameHeader fr;
+        H3Frame.parse_header_args.buf = st->tx + off;
+        H3Frame.parse_header_args.len = st->tx_have - off;
+        H3Frame.parse_header_args.out = &fr;
+        H3Frame.parse_header(h3_frame_work);
+        TEST_ASSERT_TRUE(H3Frame.ok);
         const uint8_t *fp = st->tx + off + fr.header_len;
         if (fr.type == H3_HEADERS)
         {
-            protocore_qpack_decode(fp, (size_t)fr.length, scratch, sizeof(scratch), protocore_resp_emit, NULL);
+            Qpack.decode_args.block = fp;
+            Qpack.decode_args.len = (size_t)fr.length;
+            Qpack.decode_args.scratch = scratch;
+            Qpack.decode_args.scratch_cap = sizeof(scratch);
+            Qpack.decode_args.emit = protocore_resp_emit;
+            Qpack.decode_args.ctx = NULL;
+            Qpack.decode(qpack_work);
             saw_headers = PROTO_TRUE;
         }
         else if (fr.type == H3_DATA)
@@ -193,12 +238,39 @@ void test_post_with_body()
     H3Conn.init(H3Conn.internal);
 
     uint8_t block[128];
-    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "POST", 4);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/submit", 7);
+    Qpack.encode_prefix_args.out = block;
+    Qpack.encode_prefix_args.cap = sizeof(block);
+    Qpack.encode_prefix(qpack_work);
+    size_t bp = Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":method";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = "POST";
+    Qpack.encode_header_args.value_len = 4;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":path";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "/submit";
+    Qpack.encode_header_args.value_len = 7;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
     uint8_t req[256];
-    size_t rp = protocore_h3_build_headers(req, sizeof(req), block, bp);
-    rp += protocore_h3_build_data(req + rp, sizeof(req) - rp, (const uint8_t *)"name=x", 6);
+    H3Frame.build_headers_args.out = req;
+    H3Frame.build_headers_args.cap = sizeof(req);
+    H3Frame.build_headers_args.block = block;
+    H3Frame.build_headers_args.len = bp;
+    H3Frame.build_headers(h3_frame_work);
+    size_t rp = H3Frame.n;
+    H3Frame.build_data_args.out = req + rp;
+    H3Frame.build_data_args.cap = sizeof(req) - rp;
+    H3Frame.build_data_args.data = (const uint8_t *)"name=x";
+    H3Frame.build_data_args.len = 6;
+    H3Frame.build_data(h3_frame_work);
+    rp += H3Frame.n;
 
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 4, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
@@ -224,10 +296,19 @@ void test_control_stream_settings_sent()
 
     uint64_t type = 0;
     size_t c = 0;
-    TEST_ASSERT_TRUE(protocore_quic_varint_decode(ctrl->tx, ctrl->tx_have, &type, &c));
+    QuicVarint.decode_args.in = ctrl->tx;
+    QuicVarint.decode_args.len = ctrl->tx_have;
+    QuicVarint.decode_args.value = &type;
+    QuicVarint.decode_args.consumed = &c;
+    QuicVarint.decode(quic_varint_work);
+    TEST_ASSERT_TRUE(QuicVarint.ok);
     TEST_ASSERT_EQUAL_UINT64(0x00, type);
-    H3Frame fr;
-    TEST_ASSERT_TRUE(protocore_h3_frame_parse(ctrl->tx + c, ctrl->tx_have - c, &fr));
+    H3FrameHeader fr;
+    H3Frame.parse_header_args.buf = ctrl->tx + c;
+    H3Frame.parse_header_args.len = ctrl->tx_have - c;
+    H3Frame.parse_header_args.out = &fr;
+    H3Frame.parse_header(h3_frame_work);
+    TEST_ASSERT_TRUE(H3Frame.ok);
     TEST_ASSERT_EQUAL_UINT64(H3_SETTINGS, fr.type);
 
     TEST_ASSERT_NOT_NULL(find_stream(&g_qc, 7));
@@ -245,10 +326,20 @@ void test_client_control_stream_settings()
     H3Conn.init(H3Conn.internal);
 
     uint8_t s[64];
-    size_t sp = protocore_quic_varint_encode(s, sizeof(s), 0x00);
+    QuicVarint.encode_args.out = s;
+    QuicVarint.encode_args.cap = sizeof(s);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t sp = QuicVarint.n;
     const uint64_t ids[] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
     const uint64_t vals[] = {12345};
-    sp += protocore_h3_build_settings(s + sp, sizeof(s) - sp, ids, vals, 1);
+    H3Frame.build_settings_args.out = s + sp;
+    H3Frame.build_settings_args.cap = sizeof(s) - sp;
+    H3Frame.build_settings_args.ids = ids;
+    H3Frame.build_settings_args.vals = vals;
+    H3Frame.build_settings_args.n = 1;
+    H3Frame.build_settings(h3_frame_work);
+    sp += H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, sp, PROTO_FALSE);
 
     H3Stream *st = find_h3(&g_h3, 2);
@@ -268,11 +359,23 @@ void test_client_uni_stream_types()
     H3Conn.init(H3Conn.internal);
 
     uint8_t t;
-    size_t n = protocore_quic_varint_encode(&t, 1, 0x02);
+    QuicVarint.encode_args.out = &t;
+    QuicVarint.encode_args.cap = 1;
+    QuicVarint.encode_args.value = 0x02;
+    QuicVarint.encode(quic_varint_work);
+    size_t n = QuicVarint.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 6, &t, n, PROTO_FALSE);
-    n = protocore_quic_varint_encode(&t, 1, 0x03);
+    QuicVarint.encode_args.out = &t;
+    QuicVarint.encode_args.cap = 1;
+    QuicVarint.encode_args.value = 0x03;
+    QuicVarint.encode(quic_varint_work);
+    n = QuicVarint.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 10, &t, n, PROTO_FALSE);
-    n = protocore_quic_varint_encode(&t, 1, 0x1f);
+    QuicVarint.encode_args.out = &t;
+    QuicVarint.encode_args.cap = 1;
+    QuicVarint.encode_args.value = 0x1f;
+    QuicVarint.encode(quic_varint_work);
+    n = QuicVarint.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 14, &t, n, PROTO_FALSE);
 
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_QPACK_ENC, find_h3(&g_h3, 6)->role);
@@ -310,7 +413,12 @@ void test_malformed_request_frame()
     H3Conn.init(H3Conn.internal);
 
     uint8_t hdr[8];
-    size_t hp = protocore_h3_frame_write_header(hdr, sizeof(hdr), H3_HEADERS, 9999);
+    H3Frame.write_header_args.out = hdr;
+    H3Frame.write_header_args.cap = sizeof(hdr);
+    H3Frame.write_header_args.type = H3_HEADERS;
+    H3Frame.write_header_args.length = 9999;
+    H3Frame.write_header(h3_frame_work);
+    size_t hp = H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, hdr, hp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 
@@ -358,11 +466,33 @@ void test_stream_pool_full()
     }
 
     uint8_t block[64];
-    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/x", 2);
+    Qpack.encode_prefix_args.out = block;
+    Qpack.encode_prefix_args.cap = sizeof(block);
+    Qpack.encode_prefix(qpack_work);
+    size_t bp = Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":method";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = "GET";
+    Qpack.encode_header_args.value_len = 3;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":path";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "/x";
+    Qpack.encode_header_args.value_len = 2;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
     uint8_t req[128];
-    size_t rp = protocore_h3_build_headers(req, sizeof(req), block, bp);
+    H3Frame.build_headers_args.out = req;
+    H3Frame.build_headers_args.cap = sizeof(req);
+    H3Frame.build_headers_args.block = block;
+    H3Frame.build_headers_args.len = bp;
+    H3Frame.build_headers(h3_frame_work);
+    size_t rp = H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, (uint64_t)PROTOCORE_H3_MAX_STREAMS * 4, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 }
@@ -398,12 +528,34 @@ void test_overlong_field_truncated()
     H3Conn.init(H3Conn.internal);
 
     uint8_t block[128];
-    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
+    Qpack.encode_prefix_args.out = block;
+    Qpack.encode_prefix_args.cap = sizeof(block);
+    Qpack.encode_prefix(qpack_work);
+    size_t bp = Qpack.n;
     const char *m = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, m, 26);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/", 1);
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":method";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = m;
+    Qpack.encode_header_args.value_len = 26;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":path";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "/";
+    Qpack.encode_header_args.value_len = 1;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
     uint8_t req[256];
-    size_t rp = protocore_h3_build_headers(req, sizeof(req), block, bp);
+    H3Frame.build_headers_args.out = req;
+    H3Frame.build_headers_args.cap = sizeof(req);
+    H3Frame.build_headers_args.block = block;
+    H3Frame.build_headers_args.len = bp;
+    H3Frame.build_headers(h3_frame_work);
+    size_t rp = H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
 
     TEST_ASSERT_EQUAL_INT(1, g_requests);
@@ -422,15 +574,65 @@ void test_h3_pseudo_header_name_variants()
     H3Conn.init(H3Conn.internal);
 
     uint8_t block[256];
-    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":scheme", 7, "https", 5);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, "hello", 5, "world", 5);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, "user-agent", 10, "curl", 4);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, "abc", 3, "z", 1);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/ok", 3);
+    Qpack.encode_prefix_args.out = block;
+    Qpack.encode_prefix_args.cap = sizeof(block);
+    Qpack.encode_prefix(qpack_work);
+    size_t bp = Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":scheme";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = "https";
+    Qpack.encode_header_args.value_len = 5;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = "hello";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "world";
+    Qpack.encode_header_args.value_len = 5;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = "user-agent";
+    Qpack.encode_header_args.name_len = 10;
+    Qpack.encode_header_args.value = "curl";
+    Qpack.encode_header_args.value_len = 4;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = "abc";
+    Qpack.encode_header_args.name_len = 3;
+    Qpack.encode_header_args.value = "z";
+    Qpack.encode_header_args.value_len = 1;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":method";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = "GET";
+    Qpack.encode_header_args.value_len = 3;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":path";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "/ok";
+    Qpack.encode_header_args.value_len = 3;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
     uint8_t req[512];
-    size_t rp = protocore_h3_build_headers(req, sizeof(req), block, bp);
+    H3Frame.build_headers_args.out = req;
+    H3Frame.build_headers_args.cap = sizeof(req);
+    H3Frame.build_headers_args.block = block;
+    H3Frame.build_headers_args.len = bp;
+    H3Frame.build_headers(h3_frame_work);
+    size_t rp = H3Frame.n;
 
     strcpy(g_auth, "unset");
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
@@ -452,14 +654,46 @@ void test_h3_request_unknown_frame_and_empty_data()
     H3Conn.init(H3Conn.internal);
 
     uint8_t block[128];
-    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "POST", 4);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/u", 2);
+    Qpack.encode_prefix_args.out = block;
+    Qpack.encode_prefix_args.cap = sizeof(block);
+    Qpack.encode_prefix(qpack_work);
+    size_t bp = Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":method";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = "POST";
+    Qpack.encode_header_args.value_len = 4;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":path";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "/u";
+    Qpack.encode_header_args.value_len = 2;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
 
     uint8_t req[512];
-    size_t rp = protocore_h3_build_headers(req, sizeof(req), block, bp);
-    rp += protocore_h3_build_data(req + rp, sizeof(req) - rp, NULL, 0);
-    rp += protocore_h3_build_data(req + rp, sizeof(req) - rp, (const uint8_t *)"body", 4);
+    H3Frame.build_headers_args.out = req;
+    H3Frame.build_headers_args.cap = sizeof(req);
+    H3Frame.build_headers_args.block = block;
+    H3Frame.build_headers_args.len = bp;
+    H3Frame.build_headers(h3_frame_work);
+    size_t rp = H3Frame.n;
+    H3Frame.build_data_args.out = req + rp;
+    H3Frame.build_data_args.cap = sizeof(req) - rp;
+    H3Frame.build_data_args.data = NULL;
+    H3Frame.build_data_args.len = 0;
+    H3Frame.build_data(h3_frame_work);
+    rp += H3Frame.n;
+    H3Frame.build_data_args.out = req + rp;
+    H3Frame.build_data_args.cap = sizeof(req) - rp;
+    H3Frame.build_data_args.data = (const uint8_t *)"body";
+    H3Frame.build_data_args.len = 4;
+    H3Frame.build_data(h3_frame_work);
+    rp += H3Frame.n;
 
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
@@ -483,13 +717,40 @@ void test_h3_control_only_frames_on_a_request_stream()
         H3Conn.init(H3Conn.internal);
 
         uint8_t block[128];
-        size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
-        bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
-        bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/", 1);
+        Qpack.encode_prefix_args.out = block;
+        Qpack.encode_prefix_args.cap = sizeof(block);
+        Qpack.encode_prefix(qpack_work);
+        size_t bp = Qpack.n;
+        Qpack.encode_header_args.out = block + bp;
+        Qpack.encode_header_args.cap = sizeof(block) - bp;
+        Qpack.encode_header_args.name = ":method";
+        Qpack.encode_header_args.name_len = 7;
+        Qpack.encode_header_args.value = "GET";
+        Qpack.encode_header_args.value_len = 3;
+        Qpack.encode_header(qpack_work);
+        bp += Qpack.n;
+        Qpack.encode_header_args.out = block + bp;
+        Qpack.encode_header_args.cap = sizeof(block) - bp;
+        Qpack.encode_header_args.name = ":path";
+        Qpack.encode_header_args.name_len = 5;
+        Qpack.encode_header_args.value = "/";
+        Qpack.encode_header_args.value_len = 1;
+        Qpack.encode_header(qpack_work);
+        bp += Qpack.n;
 
         uint8_t req[512];
-        size_t rp = protocore_h3_build_headers(req, sizeof(req), block, bp);
-        rp += protocore_h3_frame_write_header(req + rp, sizeof(req) - rp, only_control[i], 0);
+        H3Frame.build_headers_args.out = req;
+        H3Frame.build_headers_args.cap = sizeof(req);
+        H3Frame.build_headers_args.block = block;
+        H3Frame.build_headers_args.len = bp;
+        H3Frame.build_headers(h3_frame_work);
+        size_t rp = H3Frame.n;
+        H3Frame.write_header_args.out = req + rp;
+        H3Frame.write_header_args.cap = sizeof(req) - rp;
+        H3Frame.write_header_args.type = only_control[i];
+        H3Frame.write_header_args.length = 0;
+        H3Frame.write_header(h3_frame_work);
+        rp += H3Frame.n;
 
         g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
         TEST_ASSERT_EQUAL_INT(0, g_requests);
@@ -510,7 +771,12 @@ void test_h3_error_before_app_keys_falls_back_to_transport()
     H3Conn.init(H3Conn.internal);
 
     uint8_t req[128];
-    size_t rp = protocore_h3_build_data(req, sizeof(req), (const uint8_t *)"body", 4);
+    H3Frame.build_data_args.out = req;
+    H3Frame.build_data_args.cap = sizeof(req);
+    H3Frame.build_data_args.data = (const uint8_t *)"body";
+    H3Frame.build_data_args.len = 4;
+    H3Frame.build_data(h3_frame_work);
+    size_t rp = H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
 
     TEST_ASSERT_TRUE(g_qc.close_queued);
@@ -530,7 +796,12 @@ void test_h3_data_before_headers()
     H3Conn.init(H3Conn.internal);
 
     uint8_t req[128];
-    size_t rp = protocore_h3_build_data(req, sizeof(req), (const uint8_t *)"body", 4);
+    H3Frame.build_data_args.out = req;
+    H3Frame.build_data_args.cap = sizeof(req);
+    H3Frame.build_data_args.data = (const uint8_t *)"body";
+    H3Frame.build_data_args.len = 4;
+    H3Frame.build_data(h3_frame_work);
+    size_t rp = H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
 
     TEST_ASSERT_EQUAL_INT(0, g_requests);
@@ -550,13 +821,27 @@ void test_h3_second_control_stream()
     H3Conn.init(H3Conn.internal);
 
     uint8_t s1[64];
-    size_t p1 = protocore_quic_varint_encode(s1, sizeof(s1), 0x00);
-    p1 += protocore_h3_build_settings(s1 + p1, sizeof(s1) - p1, NULL, NULL, 0);
+    QuicVarint.encode_args.out = s1;
+    QuicVarint.encode_args.cap = sizeof(s1);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t p1 = QuicVarint.n;
+    H3Frame.build_settings_args.out = s1 + p1;
+    H3Frame.build_settings_args.cap = sizeof(s1) - p1;
+    H3Frame.build_settings_args.ids = NULL;
+    H3Frame.build_settings_args.vals = NULL;
+    H3Frame.build_settings_args.n = 0;
+    H3Frame.build_settings(h3_frame_work);
+    p1 += H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s1, p1, PROTO_FALSE);
     TEST_ASSERT_FALSE(g_qc.close_queued);
 
     uint8_t s2[64];
-    size_t p2 = protocore_quic_varint_encode(s2, sizeof(s2), 0x00);
+    QuicVarint.encode_args.out = s2;
+    QuicVarint.encode_args.cap = sizeof(s2);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t p2 = QuicVarint.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 6, s2, p2, PROTO_FALSE);
     TEST_ASSERT_TRUE(g_qc.close_queued);
     TEST_ASSERT_TRUE(g_qc.close_is_app);
@@ -574,13 +859,29 @@ void test_h3_second_settings_frame()
     H3Conn.init(H3Conn.internal);
 
     uint8_t s[128];
-    size_t p = protocore_quic_varint_encode(s, sizeof(s), 0x00);
-    p += protocore_h3_build_settings(s + p, sizeof(s) - p, NULL, NULL, 0);
+    QuicVarint.encode_args.out = s;
+    QuicVarint.encode_args.cap = sizeof(s);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t p = QuicVarint.n;
+    H3Frame.build_settings_args.out = s + p;
+    H3Frame.build_settings_args.cap = sizeof(s) - p;
+    H3Frame.build_settings_args.ids = NULL;
+    H3Frame.build_settings_args.vals = NULL;
+    H3Frame.build_settings_args.n = 0;
+    H3Frame.build_settings(h3_frame_work);
+    p += H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, p, PROTO_FALSE);
     TEST_ASSERT_FALSE(g_qc.close_queued);
 
     uint8_t s2[128];
-    size_t p2 = protocore_h3_build_settings(s2, sizeof(s2), NULL, NULL, 0);
+    H3Frame.build_settings_args.out = s2;
+    H3Frame.build_settings_args.cap = sizeof(s2);
+    H3Frame.build_settings_args.ids = NULL;
+    H3Frame.build_settings_args.vals = NULL;
+    H3Frame.build_settings_args.n = 0;
+    H3Frame.build_settings(h3_frame_work);
+    size_t p2 = H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s2, p2, PROTO_FALSE);
     TEST_ASSERT_TRUE(g_qc.close_queued);
     TEST_ASSERT_TRUE(g_qc.close_is_app);
@@ -599,11 +900,33 @@ void test_h3_no_request_callback()
     H3Conn.init(H3Conn.internal);
 
     uint8_t block[128];
-    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/x", 2);
+    Qpack.encode_prefix_args.out = block;
+    Qpack.encode_prefix_args.cap = sizeof(block);
+    Qpack.encode_prefix(qpack_work);
+    size_t bp = Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":method";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = "GET";
+    Qpack.encode_header_args.value_len = 3;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":path";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "/x";
+    Qpack.encode_header_args.value_len = 2;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
     uint8_t req[256];
-    size_t rp = protocore_h3_build_headers(req, sizeof(req), block, bp);
+    H3Frame.build_headers_args.out = req;
+    H3Frame.build_headers_args.cap = sizeof(req);
+    H3Frame.build_headers_args.block = block;
+    H3Frame.build_headers_args.len = bp;
+    H3Frame.build_headers(h3_frame_work);
+    size_t rp = H3Frame.n;
 
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
@@ -642,10 +965,15 @@ void test_h3_control_stream_frame_guards()
     H3Conn.app_args.app = NULL;
     H3Conn.init(H3Conn.internal);
     H3Settings defaults;
-    protocore_h3_settings_defaults(&defaults);
+    H3Frame.settings_defaults_args.s = &defaults;
+    H3Frame.settings_defaults(h3_frame_work);
 
     uint8_t s[64];
-    size_t sp = protocore_quic_varint_encode(s, sizeof(s), 0x00);
+    QuicVarint.encode_args.out = s;
+    QuicVarint.encode_args.cap = sizeof(s);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t sp = QuicVarint.n;
     s[sp++] = 0xC0;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, sp, PROTO_FALSE);
     H3Stream *st = find_h3(&g_h3, 2);
@@ -661,8 +989,17 @@ void test_h3_control_stream_frame_guards()
     H3Conn.app_args.app = NULL;
     H3Conn.init(H3Conn.internal);
     uint8_t s2[64];
-    size_t sp2 = protocore_quic_varint_encode(s2, sizeof(s2), 0x00);
-    sp2 += protocore_h3_frame_write_header(s2 + sp2, sizeof(s2) - sp2, H3_SETTINGS, 40);
+    QuicVarint.encode_args.out = s2;
+    QuicVarint.encode_args.cap = sizeof(s2);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t sp2 = QuicVarint.n;
+    H3Frame.write_header_args.out = s2 + sp2;
+    H3Frame.write_header_args.cap = sizeof(s2) - sp2;
+    H3Frame.write_header_args.type = H3_SETTINGS;
+    H3Frame.write_header_args.length = 40;
+    H3Frame.write_header(h3_frame_work);
+    sp2 += H3Frame.n;
     g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s2, sp2, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT64(defaults.max_field_section_size, g_h3b.peer_settings.max_field_section_size);
 
@@ -674,8 +1011,17 @@ void test_h3_control_stream_frame_guards()
     H3Conn.app_args.app = NULL;
     H3Conn.init(H3Conn.internal);
     uint8_t s3[64];
-    size_t sp3 = protocore_quic_varint_encode(s3, sizeof(s3), 0x00);
-    sp3 += protocore_h3_frame_write_header(s3 + sp3, sizeof(s3) - sp3, 0x07, 1);
+    QuicVarint.encode_args.out = s3;
+    QuicVarint.encode_args.cap = sizeof(s3);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t sp3 = QuicVarint.n;
+    H3Frame.write_header_args.out = s3 + sp3;
+    H3Frame.write_header_args.cap = sizeof(s3) - sp3;
+    H3Frame.write_header_args.type = 0x07;
+    H3Frame.write_header_args.length = 1;
+    H3Frame.write_header(h3_frame_work);
+    sp3 += H3Frame.n;
     s3[sp3++] = 0x00;
     g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s3, sp3, PROTO_FALSE);
     TEST_ASSERT_TRUE(g_qc2.close_queued);
@@ -690,9 +1036,24 @@ void test_h3_control_stream_frame_guards()
     H3Conn.app_args.app = NULL;
     H3Conn.init(H3Conn.internal);
     uint8_t s4[64];
-    size_t sp4 = protocore_quic_varint_encode(s4, sizeof(s4), 0x00);
-    sp4 += protocore_h3_build_settings(s4 + sp4, sizeof(s4) - sp4, NULL, NULL, 0);
-    sp4 += protocore_h3_frame_write_header(s4 + sp4, sizeof(s4) - sp4, 0x07, 1);
+    QuicVarint.encode_args.out = s4;
+    QuicVarint.encode_args.cap = sizeof(s4);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t sp4 = QuicVarint.n;
+    H3Frame.build_settings_args.out = s4 + sp4;
+    H3Frame.build_settings_args.cap = sizeof(s4) - sp4;
+    H3Frame.build_settings_args.ids = NULL;
+    H3Frame.build_settings_args.vals = NULL;
+    H3Frame.build_settings_args.n = 0;
+    H3Frame.build_settings(h3_frame_work);
+    sp4 += H3Frame.n;
+    H3Frame.write_header_args.out = s4 + sp4;
+    H3Frame.write_header_args.cap = sizeof(s4) - sp4;
+    H3Frame.write_header_args.type = 0x07;
+    H3Frame.write_header_args.length = 1;
+    H3Frame.write_header(h3_frame_work);
+    sp4 += H3Frame.n;
     s4[sp4++] = 0x00;
     g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s4, sp4, PROTO_FALSE);
     TEST_ASSERT_FALSE(g_qc2.close_queued);
@@ -719,7 +1080,11 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     TEST_ASSERT_EQUAL_UINT(0, st->buf_len);
 
     uint8_t t[16];
-    size_t tn = protocore_quic_varint_encode(t, sizeof(t), 0x00);
+    QuicVarint.encode_args.out = t;
+    QuicVarint.encode_args.cap = sizeof(t);
+    QuicVarint.encode_args.value = 0x00;
+    QuicVarint.encode(quic_varint_work);
+    size_t tn = QuicVarint.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, t, tn, PROTO_FALSE);
     TEST_ASSERT_TRUE(st->type_read);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, st->role);
@@ -727,7 +1092,13 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     uint8_t s[64];
     const uint64_t ids[] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
     const uint64_t vals[] = {4321};
-    size_t sp = protocore_h3_build_settings(s, sizeof(s), ids, vals, 1);
+    H3Frame.build_settings_args.out = s;
+    H3Frame.build_settings_args.cap = sizeof(s);
+    H3Frame.build_settings_args.ids = ids;
+    H3Frame.build_settings_args.vals = vals;
+    H3Frame.build_settings_args.n = 1;
+    H3Frame.build_settings(h3_frame_work);
+    size_t sp = H3Frame.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, sp, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT64(4321, g_h3.peer_settings.max_field_section_size);
 }
@@ -759,11 +1130,20 @@ void test_h3_respond_no_content_type_empty_body()
     e_status[0] = e_ctype[0] = '\0';
     while (off < st->tx_have)
     {
-        H3Frame fr;
-        TEST_ASSERT_TRUE(protocore_h3_frame_parse(st->tx + off, st->tx_have - off, &fr));
+        H3FrameHeader fr;
+        H3Frame.parse_header_args.buf = st->tx + off;
+        H3Frame.parse_header_args.len = st->tx_have - off;
+        H3Frame.parse_header_args.out = &fr;
+        H3Frame.parse_header(h3_frame_work);
+        TEST_ASSERT_TRUE(H3Frame.ok);
         TEST_ASSERT_EQUAL_UINT64(H3_HEADERS, fr.type);
-        protocore_qpack_decode(st->tx + off + fr.header_len, (size_t)fr.length, scratch, sizeof(scratch),
-                               protocore_resp_emit, NULL);
+        Qpack.decode_args.block = st->tx + off + fr.header_len;
+        Qpack.decode_args.len = (size_t)fr.length;
+        Qpack.decode_args.scratch = scratch;
+        Qpack.decode_args.scratch_cap = sizeof(scratch);
+        Qpack.decode_args.emit = protocore_resp_emit;
+        Qpack.decode_args.ctx = NULL;
+        Qpack.decode(qpack_work);
         off += fr.header_len + (size_t)fr.length;
         frames++;
     }

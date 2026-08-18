@@ -138,7 +138,13 @@ void test_a_flipped_body_bit_fails(void)
         {
             continue;
         }
-        TEST_ASSERT_EQUAL_MESSAGE(PROTOCORE_X509_ERR_BAD_SIGNATURE, link_of(&g_leaf, &g_ca, inside()),
+        // The signature alone, not the whole link: these offsets fall inside the issuer Name, so a
+        // link would refuse on the name match (sec 6.1.3 (a)(4)) before reaching the signature, and
+        // the half this case is for is the one that hashes the TBSCertificate's own octets.
+        X509Verify.link_args.cert = &g_leaf;
+        X509Verify.link_args.issuer = &g_ca;
+        X509Verify.signature(protocore_x509_verify_span());
+        TEST_ASSERT_EQUAL_MESSAGE(PROTOCORE_X509_ERR_BAD_SIGNATURE, X509Verify.status,
                                   "a modified certificate body verified");
     }
 }

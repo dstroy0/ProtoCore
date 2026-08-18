@@ -91,6 +91,12 @@ RSA_SPECS = [
         "KatRsaSign",
         [("hash", "str"), ("n", "hex"), ("e", "hex"), ("d", "hex"), ("msg", "hex"), ("sig", "hex")],
     ),
+    (
+        "openssl_rsa_2048_pss.json",
+        "KAT_RSA_PSS",
+        "KatRsaVerify",
+        [("n", "hex"), ("e", "hex"), ("msg", "hex"), ("sig", "hex"), (None, "valid")],
+    ),
 ]
 
 # The group-14 modexp is its own table for the same reason: three 256-octet operands a row.

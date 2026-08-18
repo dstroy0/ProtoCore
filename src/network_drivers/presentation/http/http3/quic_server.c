@@ -8,6 +8,10 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t quic_packet_work[16]; // the borrow an entry takes; QuicPacket never reads it
+
+static uint8_t quic_tp_work[16]; // the borrow an entry takes; QuicTp never reads it
+
 static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_HTTP3
@@ -257,7 +261,8 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
     tc.cert_der = s_quic.cfg.cert_der;
     tc.cert_len = s_quic.cfg.cert_len;
     mem.cpy(tc.ed25519_seed, s_quic.cfg.ed25519_seed, sizeof tc.ed25519_seed);
-    protocore_quic_tp_defaults(&tc.params);
+    QuicTp.defaults_args.tp = &tc.params;
+    QuicTp.defaults(quic_tp_work);
     // A real HTTP/3 endpoint must advertise flow-control room, or every request stream (and the
     // client's control / QPACK streams) is blocked - the RFC 9000 sec 18.2 defaults are all zero.
     tc.params.initial_max_data = 1048576;
@@ -328,9 +333,15 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
     {
         return NULL;
     }
-    if (protocore_quic_is_long_header(dg[0]))
+    QuicPacket.is_long_header_args.first = dg[0];
+    QuicPacket.is_long_header(quic_packet_work);
+    if (QuicPacket.ok)
     {
-        if (!protocore_quic_parse_long_header(dg, len, lh_out))
+        QuicPacket.parse_long_header_args.buf = dg;
+        QuicPacket.parse_long_header_args.len = len;
+        QuicPacket.parse_long_header_args.out = lh_out;
+        QuicPacket.parse_long_header(quic_packet_work);
+        if (!QuicPacket.ok)
         {
             return NULL;
         }

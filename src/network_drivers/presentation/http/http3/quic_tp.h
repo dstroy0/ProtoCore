@@ -3,7 +3,7 @@
 
 /**
  * @file protocore_quic_tp.h
- * @brief QUIC transport parameters (RFC 9000 sec 18) carried in the TLS protocore_quic_transport_parameters
+ * @brief QUIC transport parameters (RFC 9000 sec 18) carried in the TLS quic_transport_parameters
  *        extension (RFC 9001 sec 8.2).
  *
  * Each endpoint states its transport limits (flow-control windows, stream limits, idle timeout, and
@@ -22,13 +22,16 @@
 #ifndef PROTOCORE_QUIC_TP_H
 #define PROTOCORE_QUIC_TP_H
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "network_drivers/presentation/http/http3/quic_packet.h" // the complete type a public struct below holds by value
+#include "protocore_config.h"                                    // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
 
-#include "network_drivers/presentation/http/http3/quic_packet.h" // QUIC_MAX_CID_LEN
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief Transport parameter identifiers (RFC 9000 sec 18.2 / Table 7). */
 #define QUIC_TP_ORIGINAL_DCID 0x00              ///< server: DCID of the client's first Initial
@@ -75,29 +78,67 @@ typedef struct
     proto_bool disable_active_migration; ///< default false
 } QuicTransportParams;
 
-/** @brief Fill @p tp with the RFC 9000 sec 18.2 default values (all connection IDs absent). */
-void protocore_quic_tp_defaults(QuicTransportParams *tp);
+/** @brief What defaults takes: tp. */
+typedef struct
+{
+    QuicTransportParams *tp;
+} QuicTpDefaultsArgs;
+
+/** @brief What encode takes: tp, out, cap. */
+typedef struct
+{
+    const QuicTransportParams *tp;
+    uint8_t *out;
+    size_t cap;
+} QuicTpEncodeArgs;
+
+/** @brief What parse takes: buf, len, tp. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    QuicTransportParams *tp;
+} QuicTpParseArgs;
 
 /**
- * @brief Encode the server's transport parameters into @p out.
+ * @brief QUIC transport parameters (RFC 9000 sec 18) carried in the TLS quic_transport_parameters extension
+ * (RFC 9001 sec 8.2).
  *
- * Emits, in ascending ID order: original_destination_connection_id and initial_source_connection_id
- * (only if present), initial_max_data, the three initial_max_stream_data_* windows, the two
- * initial_max_streams_* limits, max_idle_timeout, max_udp_payload_size, active_connection_id_limit,
- * and disable_active_migration (only if set). @return bytes written, or 0 on overflow.
+ * A caller sets the members a call takes, invokes it through ::QuicTp with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   QuicTp.defaults_args.tp = ...;
+ *   QuicTp.defaults(work);
+ *
+ * @var QuicTpNs::defaults_args  what defaults takes: tp
+ * @var QuicTpNs::encode_args  what encode takes: tp, out, cap
+ * @var QuicTpNs::parse_args  what parse takes: buf, len, tp
+ * @var QuicTpNs::ok  a call's true/false outcome
+ * @var QuicTpNs::n  the count a call reports
+ * @var QuicTpNs::defaults  fill tp with the RFC 9000 sec 18.2 default values (all connection ...
+ * @var QuicTpNs::encode  encode the server's transport parameters into out. Emits, in ...
+ * @var QuicTpNs::parse  parse a peer's transport parameters (starting from the spec ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_quic_tp_encode(const QuicTransportParams *tp, uint8_t *out, size_t cap);
+typedef struct
+{
+    QuicTpDefaultsArgs defaults_args;
+    QuicTpEncodeArgs encode_args;
+    QuicTpParseArgs parse_args;
 
-/**
- * @brief Parse a peer's transport parameters (starting from the spec defaults).
- *
- * Walks ID/Length/Value triples, stores the parameters this module knows, and skips unknown IDs
- * (forward compatibility / GREASE). @return false on a malformed encoding, an oversized connection
- * ID, a duplicated known parameter, or an out-of-range value (RFC 9000 sec 18.2 limits):
- * ack_delay_exponent > 20, max_ack_delay >= 2^14, max_udp_payload_size < 1200,
- * active_connection_id_limit < 2, or a non-zero-length disable_active_migration.
- */
-proto_bool protocore_quic_tp_parse(const uint8_t *buf, size_t len, QuicTransportParams *tp);
+    proto_bool ok;
+    size_t n;
+
+    void (*const defaults)(uint8_t *restrict work);
+    void (*const encode)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
+} QuicTpNs;
+
+/** @brief The one symbol this module exports. */
+extern QuicTpNs QuicTp;
 
 PROTOCORE_END_DECLS
 

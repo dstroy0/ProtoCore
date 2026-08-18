@@ -7,7 +7,7 @@
  *
  * The payload of a QUIC packet is a sequence of frames, each `Frame Type (i)` followed by
  * type-specific fields coded with QUIC varints. This module reads one frame at a time into a
- * tagged QuicFrame and builds the frames a server sends. It covers the frames a minimal HTTP/3
+ * tagged QuicFrameHeader and builds the frames a server sends. It covers the frames a minimal HTTP/3
  * server needs - PADDING, PING, ACK, CRYPTO, STREAM, MAX_DATA, CONNECTION_CLOSE, HANDSHAKE_DONE -
  * and reports the frame type for anything else so the caller can decide.
  *
@@ -21,15 +21,16 @@
 #ifndef PROTOCORE_QUIC_FRAME_H
 #define PROTOCORE_QUIC_FRAME_H
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief Frame types (RFC 9000 sec 19 / Table 3). STREAM is the range 0x08..0x0f. */
-typedef struct
-{
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
 #define QUIC_FT_PADDING 0x00
 #define QUIC_FT_PING 0x01
 #define QUIC_FT_ACK 0x02 ///< 0x02 (no ECN) .. 0x03 (with ECN counts)
@@ -40,11 +41,12 @@ typedef struct
 #define QUIC_FT_CONNECTION_CLOSE 0x1c     ///< transport-level close (carries the triggering frame type)
 #define QUIC_FT_CONNECTION_CLOSE_APP 0x1d ///< application-level close
 #define QUIC_FT_HANDSHAKE_DONE 0x1e
-    // Frames the minimal server does not act on but MUST still parse (skip) so a well-formed frame from
-    // a real client is not rejected as a FRAME_ENCODING_ERROR (RFC 9000 sec 12.4). Grouped by wire shape
-    // in protocore_quic_frame_parse(): 3 varints (RESET_STREAM), 2 varints (STOP_SENDING / MAX_STREAM_DATA /
-    // STREAM_DATA_BLOCKED), 1 varint (MAX_STREAMS / DATA_BLOCKED / STREAMS_BLOCKED / RETIRE_CONNECTION_ID),
-    // and the length-prefixed / fixed-width shapes (NEW_TOKEN, NEW_CONNECTION_ID, PATH_CHALLENGE/RESPONSE).
+
+// Frames the minimal server does not act on but MUST still parse (skip) so a well-formed frame from
+// a real client is not rejected as a FRAME_ENCODING_ERROR (RFC 9000 sec 12.4). Grouped by wire shape
+// in ::QuicFrameNs::parse: 3 varints (RESET_STREAM), 2 varints (STOP_SENDING / MAX_STREAM_DATA /
+// STREAM_DATA_BLOCKED), 1 varint (MAX_STREAMS / DATA_BLOCKED / STREAMS_BLOCKED / RETIRE_CONNECTION_ID),
+// and the length-prefixed / fixed-width shapes (NEW_TOKEN, NEW_CONNECTION_ID, PATH_CHALLENGE/RESPONSE).
 #define QUIC_FT_RESET_STREAM 0x04
 #define QUIC_FT_STOP_SENDING 0x05
 #define QUIC_FT_NEW_TOKEN 0x07
@@ -59,7 +61,6 @@ typedef struct
 #define QUIC_FT_RETIRE_CONNECTION_ID 0x19
 #define QUIC_FT_PATH_CHALLENGE 0x1a
 #define QUIC_FT_PATH_RESPONSE 0x1b
-} QuicFrameType;
 
 /** @brief STREAM frame type bits. */
 #define QUIC_STREAM_FIN 0x01
@@ -76,74 +77,210 @@ typedef struct
 #define QUIC_ERR_APPLICATION 0x0c        ///< the application abandoned the connection (sec 20.1)
 #define QUIC_ERR_CRYPTO_BASE 0x0100      ///< 0x0100 + the TLS alert code (RFC 9001 sec 4.8)
 
+
+/** @brief ACK payload (RFC 9000 sec 19.3). */
+typedef struct
+{
+    uint64_t largest;     ///< Largest Acknowledged
+    uint64_t delay;       ///< ACK Delay (encoded units)
+    uint64_t range_count; ///< number of additional ACK Ranges (skipped, but counted)
+    uint64_t first_range; ///< First ACK Range
+} QuicAckFrame;
+
+/** @brief CRYPTO payload (RFC 9000 sec 19.6). @c data aliases the input buffer. */
+typedef struct
+{
+    uint64_t offset;
+    uint64_t length;
+    const uint8_t *data;
+} QuicCryptoFrame;
+
+/** @brief STREAM payload (RFC 9000 sec 19.8). @c data aliases the input buffer. */
+typedef struct
+{
+    uint64_t id;
+    uint64_t offset; ///< 0 when the OFF bit is clear
+    uint64_t length;
+    const uint8_t *data;
+    uint8_t fin;
+} QuicStreamFrame;
+
+/** @brief MAX_DATA payload (RFC 9000 sec 19.9). */
+typedef struct
+{
+    uint64_t max;
+} QuicMaxDataFrame;
+
+/** @brief CONNECTION_CLOSE payload (RFC 9000 sec 19.19). @c reason aliases the input buffer. */
+typedef struct
+{
+    uint64_t error_code;
+    uint64_t frame_type; ///< 0 for the application-level variant (0x1d)
+    uint64_t reason_len;
+    const uint8_t *reason;
+    uint8_t app; ///< 1 if this was the application-level close (0x1d)
+} QuicCloseFrame;
+
 /** @brief One parsed frame. Pointer fields alias the input buffer (not copied). */
 typedef struct
 {
     uint64_t type; ///< the frame type (STREAM reported as its exact 0x08..0x0f value)
     union {
-        struct
-        {
-            uint64_t largest;     ///< Largest Acknowledged
-            uint64_t delay;       ///< ACK Delay (encoded units)
-            uint64_t range_count; ///< number of additional ACK Ranges (skipped, but counted)
-            uint64_t first_range; ///< First ACK Range
-        } ack;
-        struct
-        {
-            uint64_t offset;
-            uint64_t length;
-            const uint8_t *data;
-        } crypto;
-        struct
-        {
-            uint64_t id;
-            uint64_t offset; ///< 0 when the OFF bit is clear
-            uint64_t length;
-            const uint8_t *data;
-            uint8_t fin;
-        } stream;
-        struct
-        {
-            uint64_t max;
-        } max_data;
-        struct
-        {
-            uint64_t error_code;
-            uint64_t frame_type; ///< 0 for the application-level variant (0x1d)
-            uint64_t reason_len;
-            const uint8_t *reason;
-            uint8_t app; ///< 1 if this was the application-level close (0x1d)
-        } close;
+        QuicAckFrame ack;
+        QuicCryptoFrame crypto;
+        QuicStreamFrame stream;
+        QuicMaxDataFrame max_data;
+        QuicCloseFrame close;
     };
-} QuicFrame;
+} QuicFrameHeader;
 
-/** @brief Parse one frame at @p buf. @return bytes consumed, or 0 on malformed / truncated input. */
-size_t protocore_quic_frame_parse(const uint8_t *buf, size_t len, QuicFrame *out);
+/** @brief What parse takes: buf, len, out. */
+typedef struct
+{
+    const uint8_t *buf;
+    size_t len;
+    QuicFrameHeader *out;
+} QuicFrameParseArgs;
 
-// --- Builders (server side) ------------------------------------------------------------------
+/** @brief What build_padding takes: out, cap, n. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    size_t n;
+} QuicFrameBuildPaddingArgs;
 
-/** @brief @p n PADDING frames (n zero bytes). @return n, or 0 if it does not fit. */
-size_t protocore_quic_build_padding(uint8_t *out, size_t cap, size_t n);
-/** @brief A PING frame. */
-size_t protocore_quic_build_ping(uint8_t *out, size_t cap);
-/** @brief A HANDSHAKE_DONE frame. */
-size_t protocore_quic_build_handshake_done(uint8_t *out, size_t cap);
-/** @brief A single-range ACK frame (ACK Range Count 0): Largest, ACK Delay, First ACK Range. */
-size_t protocore_quic_build_ack(uint8_t *out, size_t cap, uint64_t largest, uint64_t delay, uint64_t first_range);
-/** @brief A CRYPTO frame carrying @p len bytes at stream @p offset. */
-size_t protocore_quic_build_crypto(uint8_t *out, size_t cap, uint64_t offset, const uint8_t *data, size_t len);
-/** @brief A STREAM frame (LEN always set; OFF set when @p offset > 0; FIN per @p fin). */
-size_t protocore_quic_build_stream(uint8_t *out, size_t cap, uint64_t id, uint64_t offset, const uint8_t *data,
-                                   size_t len, proto_bool fin);
-/** @brief A MAX_DATA frame. */
-size_t protocore_quic_build_max_data(uint8_t *out, size_t cap, uint64_t max);
+/** @brief What build_ping takes: out, cap. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+} QuicFrameBuildPingArgs;
+
+/** @brief What build_handshake_done takes: out, cap. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+} QuicFrameBuildHandshakeDoneArgs;
+
+/** @brief What build_ack takes: out, cap, largest, delay, first_range. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    uint64_t largest;
+    uint64_t delay;
+    uint64_t first_range;
+} QuicFrameBuildAckArgs;
+
+/** @brief What build_crypto takes: out, cap, offset, data, len. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    uint64_t offset;
+    const uint8_t *data;
+    size_t len;
+} QuicFrameBuildCryptoArgs;
+
+/** @brief What build_stream takes: out, cap, id, offset, data, len, ... */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    uint64_t id;
+    uint64_t offset;
+    const uint8_t *data;
+    size_t len;
+    proto_bool fin;
+} QuicFrameBuildStreamArgs;
+
+/** @brief What build_max_data takes: out, cap, max. */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    uint64_t max;
+} QuicFrameBuildMaxDataArgs;
+
+/** @brief What build_connection_close takes: out, cap, app, ... */
+typedef struct
+{
+    uint8_t *out;
+    size_t cap;
+    proto_bool app;
+    uint64_t error_code;
+    uint64_t frame_type;
+    const char *reason;
+    size_t reason_len;
+} QuicFrameBuildConnectionCloseArgs;
+
 /**
- * @brief A CONNECTION_CLOSE with a reason phrase. @p app selects the application variant (0x1d),
- * whose error code comes from the application protocol's space and which carries no @p frame_type;
- * otherwise the transport variant (0x1c) reports @p frame_type as the frame that triggered it.
+ * @brief QUIC frame parsing and building (RFC 9000 sec 19).
+ *
+ * A caller sets the members a call takes, invokes it through ::QuicFrame with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   QuicFrame.parse_args.buf = ...;
+ *   QuicFrame.parse_args.len = ...;
+ *   QuicFrame.parse_args.out = ...;
+ *   QuicFrame.parse(work);
+ *   // QuicFrame.n is what the call reports
+ *
+ * @var QuicFrameNs::parse_args  what parse takes: buf, len, out
+ * @var QuicFrameNs::build_padding_args  what build_padding takes: out, cap, n
+ * @var QuicFrameNs::build_ping_args  what build_ping takes: out, cap
+ * @var QuicFrameNs::build_handshake_done_args  what build_handshake_done takes: out, cap
+ * @var QuicFrameNs::build_ack_args  what build_ack takes: out, cap, largest, delay, first_range
+ * @var QuicFrameNs::build_crypto_args  what build_crypto takes: out, cap, offset, data, len
+ * @var QuicFrameNs::build_stream_args  what build_stream takes: out, cap, id, offset, data, len,
+ * @var QuicFrameNs::build_max_data_args  what build_max_data takes: out, cap, max
+ * @var QuicFrameNs::build_connection_close_args  what build_connection_close takes: out, cap, app,
+ * @var QuicFrameNs::ok  a call's true/false outcome
+ * @var QuicFrameNs::n  the count a call reports
+ * @var QuicFrameNs::parse  parse one frame at buf. bytes consumed, or 0 on malformed / ...
+ * @var QuicFrameNs::build_padding  n PADDING frames (n zero bytes). n, or 0 if it does not fit
+ * @var QuicFrameNs::build_ping  A PING frame
+ * @var QuicFrameNs::build_handshake_done  A HANDSHAKE_DONE frame
+ * @var QuicFrameNs::build_ack  A single-range ACK frame (ACK Range Count 0): Largest, ACK Delay, ...
+ * @var QuicFrameNs::build_crypto  A CRYPTO frame carrying len bytes at stream offset
+ * @var QuicFrameNs::build_stream  A STREAM frame (LEN always set; OFF set when offset > 0; FIN per ...
+ * @var QuicFrameNs::build_max_data  A MAX_DATA frame
+ * @var QuicFrameNs::build_connection_close  A CONNECTION_CLOSE with a reason phrase. app selects the ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_quic_build_connection_close(uint8_t *out, size_t cap, proto_bool app, uint64_t error_code,
-                                             uint64_t frame_type, const char *reason, size_t reason_len);
+typedef struct
+{
+    QuicFrameParseArgs parse_args;
+    QuicFrameBuildPaddingArgs build_padding_args;
+    QuicFrameBuildPingArgs build_ping_args;
+    QuicFrameBuildHandshakeDoneArgs build_handshake_done_args;
+    QuicFrameBuildAckArgs build_ack_args;
+    QuicFrameBuildCryptoArgs build_crypto_args;
+    QuicFrameBuildStreamArgs build_stream_args;
+    QuicFrameBuildMaxDataArgs build_max_data_args;
+    QuicFrameBuildConnectionCloseArgs build_connection_close_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const parse)(uint8_t *restrict work);
+    void (*const build_padding)(uint8_t *restrict work);
+    void (*const build_ping)(uint8_t *restrict work);
+    void (*const build_handshake_done)(uint8_t *restrict work);
+    void (*const build_ack)(uint8_t *restrict work);
+    void (*const build_crypto)(uint8_t *restrict work);
+    void (*const build_stream)(uint8_t *restrict work);
+    void (*const build_max_data)(uint8_t *restrict work);
+    void (*const build_connection_close)(uint8_t *restrict work);
+} QuicFrameNs;
+
+/** @brief The one symbol this module exports. */
+extern QuicFrameNs QuicFrame;
 
 PROTOCORE_END_DECLS
 

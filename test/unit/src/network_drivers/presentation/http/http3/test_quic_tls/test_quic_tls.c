@@ -22,6 +22,10 @@
 
 #include <unity.h>
 
+static uint8_t quic_crypto_work[16]; // the borrow an entry takes; QuicCrypto never reads it
+
+static uint8_t quic_tp_work[16]; // the borrow an entry takes; QuicTp never reads it
+
 static uint8_t tw[4096]; // the borrow every namespace call in this suite runs out of
 
 void setUp(void)
@@ -84,10 +88,15 @@ static size_t build_client_hello(uint8_t *out, const ChOpts *o)
 {
     uint8_t tp[256];
     QuicTransportParams params;
-    protocore_quic_tp_defaults(&params);
+    QuicTp.defaults_args.tp = &params;
+    QuicTp.defaults(quic_tp_work);
     params.initial_max_data = 1048576;
     params.initial_max_streams_bidi = 8;
-    size_t tp_len = protocore_quic_tp_encode(&params, tp, sizeof(tp));
+    QuicTp.encode_args.tp = &params;
+    QuicTp.encode_args.out = tp;
+    QuicTp.encode_args.cap = sizeof(tp);
+    QuicTp.encode(quic_tp_work);
+    size_t tp_len = QuicTp.n;
 
     W w = {out, 0};
     w8(&w, TLS_HS_CLIENT_HELLO);
@@ -168,7 +177,8 @@ static void server_start(void)
     memset(g_cfg.ed25519_seed, 0x42, sizeof(g_cfg.ed25519_seed));
     memset(g_cfg.ephemeral_priv, 0x77, sizeof(g_cfg.ephemeral_priv));
     memset(g_cfg.random, 0x5A, sizeof(g_cfg.random));
-    protocore_quic_tp_defaults(&g_cfg.params);
+    QuicTp.defaults_args.tp = &g_cfg.params;
+    QuicTp.defaults(quic_tp_work);
     g_cfg.params.initial_max_data = 65536;
     protocore_quic_tls_server_init(&g_qt, &g_cfg);
 
@@ -317,9 +327,15 @@ void test_handshake_interop_round_trip(void)
 
     // the Handshake-level packet keys both ends derive from those secrets must agree
     QuicPacketKeys mine;
-    protocore_quic_keys_from_secret(keys_work, ks.s + TLS13_KS_CLIENT_HS, &mine);
+    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
+    QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_HS;
+    QuicCrypto.keys_from_secret_args.out = &mine;
+    QuicCrypto.keys_from_secret(quic_crypto_work);
     TEST_ASSERT_EQUAL_MEMORY(protocore_quic_tls_keys(&g_qt, QUIC_ENC_HANDSHAKE, PROTO_FALSE)->iv, mine.iv, 12);
-    protocore_quic_keys_from_secret(keys_work, ks.s + TLS13_KS_SERVER_HS, &mine);
+    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
+    QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_HS;
+    QuicCrypto.keys_from_secret_args.out = &mine;
+    QuicCrypto.keys_from_secret(quic_crypto_work);
     TEST_ASSERT_EQUAL_MEMORY(protocore_quic_tls_keys(&g_qt, QUIC_ENC_HANDSHAKE, PROTO_TRUE)->iv, mine.iv, 12);
 
     // the server's Finished, checked against a verify_data computed here over
@@ -355,9 +371,15 @@ void test_handshake_interop_round_trip(void)
     Tls13Ks.bind.s = ks_store;
     Tls13Ks.step.ch_sfin_hash = hash;
     Tls13Ks.master(NULL);
-    protocore_quic_keys_from_secret(keys_work, ks.s + TLS13_KS_CLIENT_AP, &mine);
+    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
+    QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_AP;
+    QuicCrypto.keys_from_secret_args.out = &mine;
+    QuicCrypto.keys_from_secret(quic_crypto_work);
     TEST_ASSERT_EQUAL_MEMORY(protocore_quic_tls_keys(&g_qt, QUIC_ENC_APP, PROTO_FALSE)->iv, mine.iv, 12);
-    protocore_quic_keys_from_secret(keys_work, ks.s + TLS13_KS_SERVER_AP, &mine);
+    QuicCrypto.keys_from_secret_args.keys_work = keys_work;
+    QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_AP;
+    QuicCrypto.keys_from_secret_args.out = &mine;
+    QuicCrypto.keys_from_secret(quic_crypto_work);
     TEST_ASSERT_EQUAL_MEMORY(protocore_quic_tls_keys(&g_qt, QUIC_ENC_APP, PROTO_TRUE)->iv, mine.iv, 12);
 
     // the client Finished is taken over the same transcript under the client's handshake secret

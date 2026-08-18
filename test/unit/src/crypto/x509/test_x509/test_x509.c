@@ -80,7 +80,7 @@ void test_a_p256_leaf_reports_its_curve(void)
 {
     TEST_ASSERT_TRUE(parse(X509_P256_DER, sizeof(X509_P256_DER)));
     TEST_ASSERT_EQUAL(PROTOCORE_X509_KEY_EC_P256, X509.cert.key_alg);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_SIG_ED25519, X509.cert.sig_alg); // signed BY the Ed25519 CA
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_SIG_ECDSA_SHA256, X509.cert.sig_alg); // signed BY the P-256 CA
     // RFC 5480 sec 2.2: an uncompressed P-256 point is 0x04 then two 32-octet coordinates.
     TEST_ASSERT_EQUAL_UINT(65, X509.cert.key.len);
     TEST_ASSERT_EQUAL_HEX8(0x04, X509.cert.key.p[0]);

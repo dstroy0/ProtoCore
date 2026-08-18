@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t qpack_work[16]; // the borrow an entry takes; Qpack never reads it
+
 void setUp(void)
 {
 }
@@ -72,14 +74,31 @@ static proto_bool refuse(void *ctx, const char *name, size_t name_len, const cha
 static proto_bool decode(const uint8_t *block, size_t len)
 {
     g_sink.n = 0;
-    return protocore_qpack_decode(block, len, g_scratch, sizeof(g_scratch), collect, &g_sink);
+    Qpack.decode_args.block = block;
+    Qpack.decode_args.len = len;
+    Qpack.decode_args.scratch = g_scratch;
+    Qpack.decode_args.scratch_cap = sizeof(g_scratch);
+    Qpack.decode_args.emit = collect;
+    Qpack.decode_args.ctx = &g_sink;
+    Qpack.decode(qpack_work);
+    return Qpack.ok;
 }
 
 // Encode a prefix plus one field into g_out and return the total length.
 static size_t encode_one(const char *name, const char *value)
 {
-    size_t p = protocore_qpack_encode_prefix(g_out, sizeof(g_out));
-    size_t h = protocore_qpack_encode_header(g_out + p, sizeof(g_out) - p, name, strlen(name), value, strlen(value));
+    Qpack.encode_prefix_args.out = g_out;
+    Qpack.encode_prefix_args.cap = sizeof(g_out);
+    Qpack.encode_prefix(qpack_work);
+    size_t p = Qpack.n;
+    Qpack.encode_header_args.out = g_out + p;
+    Qpack.encode_header_args.cap = sizeof(g_out) - p;
+    Qpack.encode_header_args.name = name;
+    Qpack.encode_header_args.name_len = strlen(name);
+    Qpack.encode_header_args.value = value;
+    Qpack.encode_header_args.value_len = strlen(value);
+    Qpack.encode_header(qpack_work);
+    size_t h = Qpack.n;
     return (p && h) ? p + h : 0;
 }
 
@@ -102,9 +121,15 @@ void test_rfc9204_b1_worked_example(void)
 void test_rfc9204_field_section_prefix(void)
 {
     static const uint8_t EMPTY_SECTION[2] = {0x00, 0x00};
-    TEST_ASSERT_EQUAL_UINT(2u, protocore_qpack_encode_prefix(g_out, sizeof(g_out)));
+    Qpack.encode_prefix_args.out = g_out;
+    Qpack.encode_prefix_args.cap = sizeof(g_out);
+    Qpack.encode_prefix(qpack_work);
+    TEST_ASSERT_EQUAL_UINT(2u, Qpack.n);
     TEST_ASSERT_EQUAL_MEMORY(EMPTY_SECTION, g_out, 2);
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_qpack_encode_prefix(g_out, 1));
+    Qpack.encode_prefix_args.out = g_out;
+    Qpack.encode_prefix_args.cap = 1;
+    Qpack.encode_prefix(qpack_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Qpack.n);
 
     TEST_ASSERT_TRUE(decode(EMPTY_SECTION, sizeof(EMPTY_SECTION)));
     TEST_ASSERT_EQUAL_UINT(0u, g_sink.n);
@@ -232,12 +257,21 @@ void test_field_section_round_trip(void)
         {"server", "ProtoCore"},
         {"x-protocore-trace", "7f3a"},
     };
-    size_t o = protocore_qpack_encode_prefix(g_out, sizeof(g_out));
+    Qpack.encode_prefix_args.out = g_out;
+    Qpack.encode_prefix_args.cap = sizeof(g_out);
+    Qpack.encode_prefix(qpack_work);
+    size_t o = Qpack.n;
     TEST_ASSERT_EQUAL_UINT(2u, o);
     for (size_t i = 0; i < 4; i++)
     {
-        size_t h = protocore_qpack_encode_header(g_out + o, sizeof(g_out) - o, FIELDS[i].name, strlen(FIELDS[i].name),
-                                                 FIELDS[i].value, strlen(FIELDS[i].value));
+        Qpack.encode_header_args.out = g_out + o;
+        Qpack.encode_header_args.cap = sizeof(g_out) - o;
+        Qpack.encode_header_args.name = FIELDS[i].name;
+        Qpack.encode_header_args.name_len = strlen(FIELDS[i].name);
+        Qpack.encode_header_args.value = FIELDS[i].value;
+        Qpack.encode_header_args.value_len = strlen(FIELDS[i].value);
+        Qpack.encode_header(qpack_work);
+        size_t h = Qpack.n;
         TEST_ASSERT_TRUE(h > 0);
         o += h;
     }
@@ -293,7 +327,14 @@ void test_scratch_bound_is_respected(void)
     static const uint8_t B1[15] = {0x00, 0x00, 0x51, 0x0b, '/', 'i', 'n', 'd', 'e', 'x', '.', 'h', 't', 'm', 'l'};
     char tiny[4];
     g_sink.n = 0;
-    TEST_ASSERT_FALSE(protocore_qpack_decode(B1, sizeof(B1), tiny, sizeof(tiny), collect, &g_sink));
+    Qpack.decode_args.block = B1;
+    Qpack.decode_args.len = sizeof(B1);
+    Qpack.decode_args.scratch = tiny;
+    Qpack.decode_args.scratch_cap = sizeof(tiny);
+    Qpack.decode_args.emit = collect;
+    Qpack.decode_args.ctx = &g_sink;
+    Qpack.decode(qpack_work);
+    TEST_ASSERT_FALSE(Qpack.ok);
 }
 
 // An emit callback that returns false stops the decode and is reported as a failure, so a caller
@@ -301,14 +342,42 @@ void test_scratch_bound_is_respected(void)
 void test_emit_refusal_aborts_the_decode(void)
 {
     static const uint8_t B1[15] = {0x00, 0x00, 0x51, 0x0b, '/', 'i', 'n', 'd', 'e', 'x', '.', 'h', 't', 'm', 'l'};
-    TEST_ASSERT_FALSE(protocore_qpack_decode(B1, sizeof(B1), g_scratch, sizeof(g_scratch), refuse, NULL));
+    Qpack.decode_args.block = B1;
+    Qpack.decode_args.len = sizeof(B1);
+    Qpack.decode_args.scratch = g_scratch;
+    Qpack.decode_args.scratch_cap = sizeof(g_scratch);
+    Qpack.decode_args.emit = refuse;
+    Qpack.decode_args.ctx = NULL;
+    Qpack.decode(qpack_work);
+    TEST_ASSERT_FALSE(Qpack.ok);
 }
 
 // A destination that cannot hold the whole representation yields 0, so a caller never ships a field
 // line that stops in the middle of a string.
 void test_encoder_refuses_a_short_destination(void)
 {
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_qpack_encode_header(g_out, 0, ":method", 7, "GET", 3));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_qpack_encode_header(g_out, 1, ":path", 5, "/index.html", 11));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_qpack_encode_header(g_out, 2, "x-protocore-trace", 17, "abc123", 6));
+    Qpack.encode_header_args.out = g_out;
+    Qpack.encode_header_args.cap = 0;
+    Qpack.encode_header_args.name = ":method";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = "GET";
+    Qpack.encode_header_args.value_len = 3;
+    Qpack.encode_header(qpack_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Qpack.n);
+    Qpack.encode_header_args.out = g_out;
+    Qpack.encode_header_args.cap = 1;
+    Qpack.encode_header_args.name = ":path";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "/index.html";
+    Qpack.encode_header_args.value_len = 11;
+    Qpack.encode_header(qpack_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Qpack.n);
+    Qpack.encode_header_args.out = g_out;
+    Qpack.encode_header_args.cap = 2;
+    Qpack.encode_header_args.name = "x-protocore-trace";
+    Qpack.encode_header_args.name_len = 17;
+    Qpack.encode_header_args.value = "abc123";
+    Qpack.encode_header_args.value_len = 6;
+    Qpack.encode_header(qpack_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Qpack.n);
 }

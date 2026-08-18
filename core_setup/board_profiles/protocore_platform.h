@@ -212,11 +212,17 @@
 // validation, name matching, RSA and ECDSA certificates, so a browser will connect. The portable
 // one authenticates by raw public key and is what makes TLS exist at all on a part with no vendor
 // stack. Take the vendor's wherever there is one.
+// Whether a vendor engine exists to call. Silicon has one; a host build has one when an env states
+// this, so the vendor BIO path is driven off silicon instead of resolving to the portable arm.
+#ifndef PROTOCORE_PLATFORM_HAS_VENDOR_TLS
+#define PROTOCORE_PLATFORM_HAS_VENDOR_TLS 0
+#endif
+
 #ifndef PROTOCORE_HAS_VENDOR_TLS
 #if PROTOCORE_VENDOR_ESP
 #define PROTOCORE_HAS_VENDOR_TLS 1
 #elif PROTOCORE_HOST
-#define PROTOCORE_HAS_VENDOR_TLS 0 // a unit-test build has no SDK stack to drive
+#define PROTOCORE_HAS_VENDOR_TLS PROTOCORE_PLATFORM_HAS_VENDOR_TLS
 #else
 #error                                                                                                                 \
     "ProtoCore: this vendor must state PROTOCORE_HAS_VENDOR_TLS (1 = the SDK's own TLS stack with X.509, 0 = the portable TLS 1.3 over the TCP record layer, raw public key only). Choosing the portable one is fine; defaulting into it is not."

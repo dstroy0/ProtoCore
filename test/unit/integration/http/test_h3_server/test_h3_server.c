@@ -25,6 +25,20 @@
 #include "protocore_net_host.h"
 #include <unity.h>
 
+static uint8_t qpack_work[16]; // the borrow an entry takes; Qpack never reads it
+
+static uint8_t quic_crypto_work[16]; // the borrow an entry takes; QuicCrypto never reads it
+
+static uint8_t quic_packet_work[16]; // the borrow an entry takes; QuicPacket never reads it
+
+static uint8_t quic_frame_work[16]; // the borrow an entry takes; QuicFrame never reads it
+
+static uint8_t quic_tp_work[16]; // the borrow an entry takes; QuicTp never reads it
+
+static uint8_t h3_frame_work[16]; // the borrow an entry takes; H3Frame never reads it
+
+static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
+
 static uint8_t tw[4096];
 static uint8_t tw_t[4096];
 
@@ -114,60 +128,132 @@ static void wr_pn(uint8_t *o, uint64_t pn, uint8_t pn_len)
 static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *dcid, uint8_t dcl, const uint8_t *scid,
                          uint8_t scl, uint64_t pn, const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
-    uint8_t pn_len = protocore_quic_pn_length(pn, -1);
-    size_t p = protocore_quic_build_long_header(out, cap, type, QUIC_VERSION_1, dcid, dcl, scid, scl, pn_len);
+    QuicPacket.pn_length_args.full_pn = pn;
+    QuicPacket.pn_length_args.largest_acked = -1;
+    QuicPacket.pn_length(quic_packet_work);
+    uint8_t pn_len = QuicPacket.u8;
+    QuicPacket.build_long_header_args.out = out;
+    QuicPacket.build_long_header_args.cap = cap;
+    QuicPacket.build_long_header_args.type = type;
+    QuicPacket.build_long_header_args.version = QUIC_VERSION_1;
+    QuicPacket.build_long_header_args.dcid = dcid;
+    QuicPacket.build_long_header_args.dcid_len = dcl;
+    QuicPacket.build_long_header_args.scid = scid;
+    QuicPacket.build_long_header_args.scid_len = scl;
+    QuicPacket.build_long_header_args.pn_len = pn_len;
+    QuicPacket.build_long_header(quic_packet_work);
+    size_t p = QuicPacket.n;
     if (type == QUIC_LP_INITIAL)
     {
-        p += protocore_quic_varint_encode(out + p, cap - p, 0);
+        QuicVarint.encode_args.out = out + p;
+        QuicVarint.encode_args.cap = cap - p;
+        QuicVarint.encode_args.value = 0;
+        QuicVarint.encode(quic_varint_work);
+        p += QuicVarint.n;
     }
-    p += protocore_quic_varint_encode(out + p, cap - p, (uint64_t)pn_len + frame_len + 16);
+    QuicVarint.encode_args.out = out + p;
+    QuicVarint.encode_args.cap = cap - p;
+    QuicVarint.encode_args.value = (uint64_t)pn_len + frame_len + 16;
+    QuicVarint.encode(quic_varint_work);
+    p += QuicVarint.n;
     size_t pn_off = p;
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    return protocore_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_TRUE);
+    QuicCrypto.packet_protect_args.pkt = out;
+    QuicCrypto.packet_protect_args.cap = cap;
+    QuicCrypto.packet_protect_args.pn_offset = pn_off;
+    QuicCrypto.packet_protect_args.pn_len = pn_len;
+    QuicCrypto.packet_protect_args.full_pn = pn;
+    QuicCrypto.packet_protect_args.payload_len = frame_len;
+    QuicCrypto.packet_protect_args.keys = keys;
+    QuicCrypto.packet_protect_args.is_long = PROTO_TRUE;
+    QuicCrypto.packet_protect(quic_crypto_work);
+    return QuicCrypto.n;
 }
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn,
                           const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
-    uint8_t pn_len = protocore_quic_pn_length(pn, -1);
+    QuicPacket.pn_length_args.full_pn = pn;
+    QuicPacket.pn_length_args.largest_acked = -1;
+    QuicPacket.pn_length(quic_packet_work);
+    uint8_t pn_len = QuicPacket.u8;
     out[0] = (uint8_t)(0x40 | (pn_len - 1));
     memcpy(out + 1, dcid, dcl);
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    return protocore_quic_packet_protect(out, cap, pn_off, pn_len, pn, frame_len, keys, PROTO_FALSE);
+    QuicCrypto.packet_protect_args.pkt = out;
+    QuicCrypto.packet_protect_args.cap = cap;
+    QuicCrypto.packet_protect_args.pn_offset = pn_off;
+    QuicCrypto.packet_protect_args.pn_len = pn_len;
+    QuicCrypto.packet_protect_args.full_pn = pn;
+    QuicCrypto.packet_protect_args.payload_len = frame_len;
+    QuicCrypto.packet_protect_args.keys = keys;
+    QuicCrypto.packet_protect_args.is_long = PROTO_FALSE;
+    QuicCrypto.packet_protect(quic_crypto_work);
+    return QuicCrypto.n;
 }
 static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
                         uint8_t *type)
 {
     QuicLongHeader h;
-    TEST_ASSERT_TRUE(protocore_quic_parse_long_header(dg, len, &h));
+    QuicPacket.parse_long_header_args.buf = dg;
+    QuicPacket.parse_long_header_args.len = len;
+    QuicPacket.parse_long_header_args.out = &h;
+    QuicPacket.parse_long_header(quic_packet_work);
+    TEST_ASSERT_TRUE(QuicPacket.ok);
     *type = h.type;
     size_t off = h.hdr_len;
     if (h.type == QUIC_LP_INITIAL)
     {
         uint64_t tl = 0;
         size_t c = 0;
-        protocore_quic_varint_decode(dg + off, len - off, &tl, &c);
+        QuicVarint.decode_args.in = dg + off;
+        QuicVarint.decode_args.len = len - off;
+        QuicVarint.decode_args.value = &tl;
+        QuicVarint.decode_args.consumed = &c;
+        QuicVarint.decode(quic_varint_work);
         off += c + (size_t)tl;
     }
     uint64_t length = 0;
     size_t c = 0;
-    protocore_quic_varint_decode(dg + off, len - off, &length, &c);
+    QuicVarint.decode_args.in = dg + off;
+    QuicVarint.decode_args.len = len - off;
+    QuicVarint.decode_args.value = &length;
+    QuicVarint.decode_args.consumed = &c;
+    QuicVarint.decode(quic_varint_work);
     off += c;
     *wire = off + (size_t)length;
     static uint8_t work[2048];
     memcpy(work, dg, *wire);
     uint64_t pn = 0;
-    return protocore_quic_packet_unprotect(work, off, (size_t)length, 0, keys, PROTO_TRUE, plain, &pn);
+    QuicCrypto.packet_unprotect_args.pkt = work;
+    QuicCrypto.packet_unprotect_args.pn_offset = off;
+    QuicCrypto.packet_unprotect_args.length = (size_t)length;
+    QuicCrypto.packet_unprotect_args.largest_pn = 0;
+    QuicCrypto.packet_unprotect_args.keys = keys;
+    QuicCrypto.packet_unprotect_args.is_long = PROTO_TRUE;
+    QuicCrypto.packet_unprotect_args.out = plain;
+    QuicCrypto.packet_unprotect_args.out_pn = &pn;
+    QuicCrypto.packet_unprotect(quic_crypto_work);
+    return QuicCrypto.n;
 }
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, const QuicPacketKeys *keys, uint8_t *plain)
 {
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    return protocore_quic_packet_unprotect(work, 1 + dcl, len - (1 + dcl), 0, keys, PROTO_FALSE, plain, &pn);
+    QuicCrypto.packet_unprotect_args.pkt = work;
+    QuicCrypto.packet_unprotect_args.pn_offset = 1 + dcl;
+    QuicCrypto.packet_unprotect_args.length = len - (1 + dcl);
+    QuicCrypto.packet_unprotect_args.largest_pn = 0;
+    QuicCrypto.packet_unprotect_args.keys = keys;
+    QuicCrypto.packet_unprotect_args.is_long = PROTO_FALSE;
+    QuicCrypto.packet_unprotect_args.out = plain;
+    QuicCrypto.packet_unprotect_args.out_pn = &pn;
+    QuicCrypto.packet_unprotect(quic_crypto_work);
+    return QuicCrypto.n;
 }
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
 {
@@ -179,8 +265,12 @@ static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
             off++;
             continue;
         }
-        QuicFrame f;
-        size_t n = protocore_quic_frame_parse(p + off, len - off, &f);
+        QuicFrameHeader f;
+        QuicFrame.parse_args.buf = p + off;
+        QuicFrame.parse_args.len = len - off;
+        QuicFrame.parse_args.out = &f;
+        QuicFrame.parse(quic_frame_work);
+        size_t n = QuicFrame.n;
         if (!n)
         {
             break;
@@ -266,7 +356,9 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
     uint8_t plain[2048];
     for (int d = 0; d < g_out_n; d++)
     {
-        if (protocore_quic_is_long_header(g_out[d][0]))
+        QuicPacket.is_long_header_args.first = g_out[d][0];
+        QuicPacket.is_long_header(quic_packet_work);
+        if (QuicPacket.ok)
         {
             continue;
         }
@@ -283,8 +375,12 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
                 fo++;
                 continue;
             }
-            QuicFrame f;
-            size_t n = protocore_quic_frame_parse(plain + fo, p2 - fo, &f);
+            QuicFrameHeader f;
+            QuicFrame.parse_args.buf = plain + fo;
+            QuicFrame.parse_args.len = p2 - fo;
+            QuicFrame.parse_args.out = &f;
+            QuicFrame.parse(quic_frame_work);
+            size_t n = QuicFrame.n;
             if (!n)
             {
                 break;
@@ -300,8 +396,12 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
             proto_bool data_ok = PROTO_FALSE;
             while (so < sn)
             {
-                H3Frame hf;
-                if (!protocore_h3_frame_parse(sp + so, sn - so, &hf))
+                H3FrameHeader hf;
+                H3Frame.parse_header_args.buf = sp + so;
+                H3Frame.parse_header_args.len = sn - so;
+                H3Frame.parse_header_args.out = &hf;
+                H3Frame.parse_header(h3_frame_work);
+                if (!H3Frame.ok)
                 {
                     break;
                 }
@@ -310,7 +410,13 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
                 {
                     char sc[128];
                     H3StatusCtx e = {status};
-                    protocore_qpack_decode(hp, (size_t)hf.length, sc, sizeof(sc), h3_take_status, &e);
+                    Qpack.decode_args.block = hp;
+                    Qpack.decode_args.len = (size_t)hf.length;
+                    Qpack.decode_args.scratch = sc;
+                    Qpack.decode_args.scratch_cap = sizeof(sc);
+                    Qpack.decode_args.emit = h3_take_status;
+                    Qpack.decode_args.ctx = &e;
+                    Qpack.decode(qpack_work);
                 }
                 else if (hf.type == H3_DATA)
                 {
@@ -339,14 +445,23 @@ void test_h3_request_served_by_route()
     TEST_ASSERT_EQUAL_INT32(PROTOCORE_OK, proto_begin(NULL));
 
     QuicInitialSecrets init;
-    protocore_quic_derive_initial_secrets(tw, ODCID, sizeof(ODCID), &init);
+    QuicCrypto.derive_initial_secrets_args.keys_work = tw;
+    QuicCrypto.derive_initial_secrets_args.dcid = ODCID;
+    QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
+    QuicCrypto.derive_initial_secrets_args.out = &init;
+    QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     QuicTransportParams ctp;
-    protocore_quic_tp_defaults(&ctp);
+    QuicTp.defaults_args.tp = &ctp;
+    QuicTp.defaults(quic_tp_work);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctpe[128];
-    size_t ctpl = protocore_quic_tp_encode(&ctp, ctpe, sizeof(ctpe));
+    QuicTp.encode_args.tp = &ctp;
+    QuicTp.encode_args.out = ctpe;
+    QuicTp.encode_args.cap = sizeof(ctpe);
+    QuicTp.encode(quic_tp_work);
+    size_t ctpl = QuicTp.n;
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
     Curve25519.x25519_base_args.scalar = CLIENT_PRIV;
@@ -354,7 +469,13 @@ void test_h3_request_served_by_route()
     uint8_t ch[512];
     size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
     uint8_t frames[1200];
-    size_t fl = protocore_quic_build_crypto(frames, sizeof(frames), 0, ch, chl);
+    QuicFrame.build_crypto_args.out = frames;
+    QuicFrame.build_crypto_args.cap = sizeof(frames);
+    QuicFrame.build_crypto_args.offset = 0;
+    QuicFrame.build_crypto_args.data = ch;
+    QuicFrame.build_crypto_args.len = chl;
+    QuicFrame.build_crypto(quic_frame_work);
+    size_t fl = QuicFrame.n;
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
@@ -364,7 +485,11 @@ void test_h3_request_served_by_route()
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
     QuicLongHeader sh_hdr;
-    TEST_ASSERT_TRUE(protocore_quic_parse_long_header(g_out[0], g_out_len[0], &sh_hdr));
+    QuicPacket.parse_long_header_args.buf = g_out[0];
+    QuicPacket.parse_long_header_args.len = g_out_len[0];
+    QuicPacket.parse_long_header_args.out = &sh_hdr;
+    QuicPacket.parse_long_header(quic_packet_work);
+    TEST_ASSERT_TRUE(QuicPacket.ok);
     uint8_t server_scid[QUIC_MAX_CID_LEN];
     uint8_t server_scid_len = sh_hdr.scid_len;
     memcpy(server_scid, sh_hdr.scid, server_scid_len);
@@ -406,8 +531,14 @@ void test_h3_request_served_by_route()
     Tls13Ks.step.ch_sh_hash = chsh;
     Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
-    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_HS, &hs_s);
-    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_HS, &hs_c);
+    QuicCrypto.keys_from_secret_args.keys_work = tw;
+    QuicCrypto.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_HS;
+    QuicCrypto.keys_from_secret_args.out = &hs_s;
+    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret_args.keys_work = tw;
+    QuicCrypto.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_HS;
+    QuicCrypto.keys_from_secret_args.out = &hs_c;
+    QuicCrypto.keys_from_secret(quic_crypto_work);
     size_t hw = 0;
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
@@ -420,11 +551,23 @@ void test_h3_request_served_by_route()
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ch_sfin_hash = chsf;
     Tls13Ks.master(NULL);
-    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_SERVER_AP, &ap_s);
-    protocore_quic_keys_from_secret(tw, cks.s + TLS13_KS_CLIENT_AP, &ap_c);
+    QuicCrypto.keys_from_secret_args.keys_work = tw;
+    QuicCrypto.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_AP;
+    QuicCrypto.keys_from_secret_args.out = &ap_s;
+    QuicCrypto.keys_from_secret(quic_crypto_work);
+    QuicCrypto.keys_from_secret_args.keys_work = tw;
+    QuicCrypto.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_AP;
+    QuicCrypto.keys_from_secret_args.out = &ap_c;
+    QuicCrypto.keys_from_secret(quic_crypto_work);
 
     uint8_t ifr[64];
-    size_t ifl = protocore_quic_build_ack(ifr, sizeof(ifr), 0, 0, 0);
+    QuicFrame.build_ack_args.out = ifr;
+    QuicFrame.build_ack_args.cap = sizeof(ifr);
+    QuicFrame.build_ack_args.largest = 0;
+    QuicFrame.build_ack_args.delay = 0;
+    QuicFrame.build_ack_args.first_range = 0;
+    QuicFrame.build_ack(quic_frame_work);
+    size_t ifl = QuicFrame.n;
     uint8_t idg[256];
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, ifr, ifl);
@@ -435,21 +578,70 @@ void test_h3_request_served_by_route()
     Tls13Ks.finished_args.out = cfin + 4;
     Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
-    size_t hfl = protocore_quic_build_ack(hfr, sizeof(hfr), 0, 0, 0);
-    hfl += protocore_quic_build_crypto(hfr + hfl, sizeof(hfr) - hfl, 0, cfin, sizeof(cfin));
+    QuicFrame.build_ack_args.out = hfr;
+    QuicFrame.build_ack_args.cap = sizeof(hfr);
+    QuicFrame.build_ack_args.largest = 0;
+    QuicFrame.build_ack_args.delay = 0;
+    QuicFrame.build_ack_args.first_range = 0;
+    QuicFrame.build_ack(quic_frame_work);
+    size_t hfl = QuicFrame.n;
+    QuicFrame.build_crypto_args.out = hfr + hfl;
+    QuicFrame.build_crypto_args.cap = sizeof(hfr) - hfl;
+    QuicFrame.build_crypto_args.offset = 0;
+    QuicFrame.build_crypto_args.data = cfin;
+    QuicFrame.build_crypto_args.len = sizeof(cfin);
+    QuicFrame.build_crypto(quic_frame_work);
+    hfl += QuicFrame.n;
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     feed(idg, idl + hdl, "192.0.2.10", 40000);
 
     uint8_t block[128];
-    size_t bp = protocore_qpack_encode_prefix(block, sizeof(block));
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":method", 7, "GET", 3);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":path", 5, "/hello", 6);
-    bp += protocore_qpack_encode_header(block + bp, sizeof(block) - bp, ":authority", 10, "h3.test", 7);
+    Qpack.encode_prefix_args.out = block;
+    Qpack.encode_prefix_args.cap = sizeof(block);
+    Qpack.encode_prefix(qpack_work);
+    size_t bp = Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":method";
+    Qpack.encode_header_args.name_len = 7;
+    Qpack.encode_header_args.value = "GET";
+    Qpack.encode_header_args.value_len = 3;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":path";
+    Qpack.encode_header_args.name_len = 5;
+    Qpack.encode_header_args.value = "/hello";
+    Qpack.encode_header_args.value_len = 6;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
+    Qpack.encode_header_args.out = block + bp;
+    Qpack.encode_header_args.cap = sizeof(block) - bp;
+    Qpack.encode_header_args.name = ":authority";
+    Qpack.encode_header_args.name_len = 10;
+    Qpack.encode_header_args.value = "h3.test";
+    Qpack.encode_header_args.value_len = 7;
+    Qpack.encode_header(qpack_work);
+    bp += Qpack.n;
     uint8_t h3req[256];
-    size_t h3l = protocore_h3_build_headers(h3req, sizeof(h3req), block, bp);
+    H3Frame.build_headers_args.out = h3req;
+    H3Frame.build_headers_args.cap = sizeof(h3req);
+    H3Frame.build_headers_args.block = block;
+    H3Frame.build_headers_args.len = bp;
+    H3Frame.build_headers(h3_frame_work);
+    size_t h3l = H3Frame.n;
     uint8_t sfr[300];
-    size_t sfrl = protocore_quic_build_stream(sfr, sizeof(sfr), 0, 0, h3req, h3l, PROTO_TRUE);
+    QuicFrame.build_stream_args.out = sfr;
+    QuicFrame.build_stream_args.cap = sizeof(sfr);
+    QuicFrame.build_stream_args.id = 0;
+    QuicFrame.build_stream_args.offset = 0;
+    QuicFrame.build_stream_args.data = h3req;
+    QuicFrame.build_stream_args.len = h3l;
+    QuicFrame.build_stream_args.fin = PROTO_TRUE;
+    QuicFrame.build_stream(quic_frame_work);
+    size_t sfrl = QuicFrame.n;
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), server_scid, server_scid_len, 0, &ap_c, sfr, sfrl);
 

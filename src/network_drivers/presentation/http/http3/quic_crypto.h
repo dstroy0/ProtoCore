@@ -9,14 +9,14 @@
  * This ties the HKDF key schedule (protocore_hkdf) and AEAD_AES_128_GCM (aes128gcm) into the two QUIC
  * packet-protection operations of RFC 9001 sec 5:
  *
- *  - protocore_quic_derive_initial_secrets() runs the sec 5.2 Initial key derivation: a fixed salt and the
+ *  - QuicCrypto.derive_initial_secrets runs the sec 5.2 Initial key derivation: a fixed salt and the
  *    client's Destination Connection ID produce the client and server {key, iv, hp} triples that
  *    protect Initial packets (the only keys available before the TLS handshake yields more).
- *  - protocore_quic_packet_protect() / protocore_quic_packet_unprotect() perform sec 5.3 AEAD payload protection and
+ *  - QuicCrypto.packet_protect / QuicCrypto.packet_unprotect perform sec 5.3 AEAD payload protection and
  *    sec 5.4 header protection together, on a whole packet in a buffer. They take a {key, iv, hp}
  *    triple and a header form, so the same code protects Initial, Handshake, and 1-RTT packets -
  *    only the secrets differ. AES-128-GCM header protection samples a 16-byte AES-ECB block.
- *  - protocore_quic_retry_integrity_tag() computes the sec 5.8 Retry Integrity Tag (a fixed-key AEAD over the
+ *  - QuicCrypto.retry_integrity_tag computes the sec 5.8 Retry Integrity Tag (a fixed-key AEAD over the
  *    Retry Pseudo-Packet).
  *
  * Pure, zero heap, host-tested against RFC 9001 Appendix A (client Initial A.2, server Initial A.3,
@@ -29,13 +29,16 @@
 #ifndef PROTOCORE_QUIC_CRYPTO_H
 #define PROTOCORE_QUIC_CRYPTO_H
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "crypto/kdf/hkdf.h"  // the complete type a public struct below holds by value
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
 
-#include "crypto/kdf/hkdf.h"       // PROTOCORE_HKDF_HASH_LEN
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief The client/server packet-protection secrets for one QUIC encryption level. */
 typedef struct
@@ -54,84 +57,109 @@ typedef struct
     QuicPacketKeys server; ///< Protects server-sent Initial packets (server seals with this).
 } QuicInitialSecrets;
 
-/**
- * @brief Derive the Initial packet-protection secrets (RFC 9001 sec 5.2).
- *
- * initial_secret = HKDF-Extract(initial_salt, dcid); each direction's traffic secret is an
- * HKDF-Expand-Label ("client in" / "server in") of that, and key/iv/hp are expanded from the
- * traffic secret. @p dcid is the Destination Connection ID from the client's first Initial packet.
- */
-void protocore_quic_derive_initial_secrets(uint8_t *work, const uint8_t *dcid, size_t dcid_len,
-                                           QuicInitialSecrets *out);
+/** @brief What derive_initial_secrets takes: keys_work, dcid, ... */
+typedef struct
+{
+    uint8_t *keys_work;
+    const uint8_t *dcid;
+    size_t dcid_len;
+    QuicInitialSecrets *out;
+} QuicCryptoDeriveInitialSecretsArgs;
+
+/** @brief What keys_from_secret takes: keys_work, secret, out. */
+typedef struct
+{
+    uint8_t *keys_work;
+    const uint8_t *secret; ///< PROTOCORE_HKDF_HASH_LEN bytes.
+    QuicPacketKeys *out;
+} QuicCryptoKeysFromSecretArgs;
+
+/** @brief What packet_protect takes: pkt, cap, pn_offset, pn_len, ... */
+typedef struct
+{
+    uint8_t *pkt;         ///< Buffer holding header || plaintext payload; rewritten to header || ciphertext
+    size_t cap;           ///< Capacity of pkt; must be >= pn_offset + pn_len + payload_len + 16
+    size_t pn_offset;     ///< Offset of the packet number within the header
+    uint8_t pn_len;       ///< Packet-number length in bytes (1..4)
+    uint64_t full_pn;     ///< Full (untruncated) packet number, for the AEAD nonce
+    size_t payload_len;   ///< Plaintext payload length in bytes
+    QuicPacketKeys *keys; ///< The {key, iv, hp} triple for this encryption level
+    proto_bool is_long;   ///< True for a long header (Initial/Handshake), false for a 1-RTT short header
+} QuicCryptoPacketProtectArgs;
+
+/** @brief What packet_unprotect takes: pkt, pn_offset, length, ... */
+typedef struct
+{
+    uint8_t *pkt;         ///< Buffer holding the protected packet (mutated: header unprotected in place)
+    size_t pn_offset;     ///< Offset of the protected packet number
+    size_t length;        ///< QUIC Length field (packet-number + payload + tag bytes)
+    uint64_t largest_pn;  ///< Largest packet number already received at this level (0 if none yet)
+    QuicPacketKeys *keys; ///< The {key, iv, hp} triple for this encryption level
+    proto_bool is_long;   ///< True for a long header, false for a 1-RTT short header
+    uint8_t *out;         ///< Output plaintext frames (>= length - pn_len - 16 bytes); may alias pkt payload
+    uint64_t *out_pn;     ///< Receives the reconstructed full packet number (may be NULL)
+} QuicCryptoPacketUnprotectArgs;
+
+/** @brief What retry_integrity_tag takes: odcid, odcid_len, retry, ... */
+typedef struct
+{
+    const uint8_t *odcid; ///< Original Destination Connection ID (from the client's first Initial)
+    size_t odcid_len;     ///< ODCID length in bytes
+    const uint8_t *retry; ///< Retry packet bytes from the first byte up to (not including) the tag
+    size_t retry_len;     ///< Length of retry
+    uint8_t *tag;         ///< Output 16-byte integrity tag 16 bytes.
+} QuicCryptoRetryIntegrityTagArgs;
 
 /**
- * @brief Expand one traffic secret into a {key, iv, hp} triple (RFC 9001 sec 5.1 labels).
+ * @brief QUIC packet protection: Initial secrets, AEAD payload protection, header protection, and the Retry integrity
+ * tag (RFC 9001).
  *
- * key = HKDF-Expand-Label(secret, "quic key", 16), iv = "quic iv" (12), hp = "quic hp" (16). The
- * Initial derivation uses this internally; the Handshake and 1-RTT levels call it directly on the
- * TLS-derived handshake / application traffic secrets so every level shares one code path.
+ * A caller sets the members a call takes, invokes it through ::QuicCrypto with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   QuicCrypto.derive_initial_secrets_args.keys_work = ...;
+ *   QuicCrypto.derive_initial_secrets_args.dcid = ...;
+ *   QuicCrypto.derive_initial_secrets_args.dcid_len = ...;
+ *   QuicCrypto.derive_initial_secrets_args.out = ...;
+ *   QuicCrypto.derive_initial_secrets(work);
+ *
+ * @var QuicCryptoNs::derive_initial_secrets_args  what derive_initial_secrets takes: keys_work, dcid,
+ * @var QuicCryptoNs::keys_from_secret_args  what keys_from_secret takes: keys_work, secret, out
+ * @var QuicCryptoNs::packet_protect_args  what packet_protect takes: pkt, cap, pn_offset, pn_len,
+ * @var QuicCryptoNs::packet_unprotect_args  what packet_unprotect takes: pkt, pn_offset, length,
+ * @var QuicCryptoNs::retry_integrity_tag_args  what retry_integrity_tag takes: odcid, odcid_len, retry,
+ * @var QuicCryptoNs::ok  a call's true/false outcome
+ * @var QuicCryptoNs::n  total protected packet length, or 0 on a capacity/parameter error
+ * @var QuicCryptoNs::derive_initial_secrets  derive the Initial packet-protection secrets (RFC 9001 sec 5.2). ...
+ * @var QuicCryptoNs::keys_from_secret  expand one traffic secret into a {key, iv, hp} triple (RFC 9001 sec ...
+ * @var QuicCryptoNs::packet_protect  protect one QUIC packet in place: AEAD-seal the payload, then apply ...
+ * @var QuicCryptoNs::packet_unprotect  remove header protection and AEAD-open one QUIC packet in place ...
+ * @var QuicCryptoNs::retry_integrity_tag  compute the Retry Integrity Tag (RFC 9001 sec 5.8). ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-void protocore_quic_keys_from_secret(uint8_t *work, const uint8_t secret[PROTOCORE_HKDF_HASH_LEN], QuicPacketKeys *out);
+typedef struct
+{
+    QuicCryptoDeriveInitialSecretsArgs derive_initial_secrets_args;
+    QuicCryptoKeysFromSecretArgs keys_from_secret_args;
+    QuicCryptoPacketProtectArgs packet_protect_args;
+    QuicCryptoPacketUnprotectArgs packet_unprotect_args;
+    QuicCryptoRetryIntegrityTagArgs retry_integrity_tag_args;
 
-/**
- * @brief Protect one QUIC packet in place: AEAD-seal the payload, then apply header protection.
- *
- * On entry @p pkt holds the unprotected header (flags with reserved bits 0, the packet number in
- * the clear) in bytes [0, pn_offset + pn_len), immediately followed by @p payload_len plaintext
- * frame bytes. On return @p pkt holds the header (now protected) followed by the ciphertext and
- * 16-byte tag. The header in [0, pn_offset + pn_len) is used as the AEAD associated data before
- * protection is applied.
- *
- * @param pkt          Buffer holding header || plaintext payload; rewritten to header || ciphertext.
- * @param cap          Capacity of @p pkt; must be >= pn_offset + pn_len + payload_len + 16.
- * @param pn_offset    Offset of the packet number within the header.
- * @param pn_len       Packet-number length in bytes (1..4).
- * @param full_pn      Full (untruncated) packet number, for the AEAD nonce.
- * @param payload_len  Plaintext payload length in bytes.
- * @param keys         The {key, iv, hp} triple for this encryption level.
- * @param is_long      True for a long header (Initial/Handshake), false for a 1-RTT short header.
- * @return total protected packet length, or 0 on a capacity/parameter error.
- */
-size_t protocore_quic_packet_protect(uint8_t *pkt, size_t cap, size_t pn_offset, uint8_t pn_len, uint64_t full_pn,
-                                     size_t payload_len, QuicPacketKeys *keys, proto_bool is_long);
+    proto_bool ok;
+    size_t n;
 
-/**
- * @brief Remove header protection and AEAD-open one QUIC packet in place (RFC 9001 sec 5.3/5.4).
- *
- * @p pkt holds the received packet on the wire. @p pn_offset is the offset of the (protected)
- * packet number, found by parsing the header up to the Length field. @p length is the QUIC Length
- * field value (packet-number bytes + protected payload + 16-byte tag). Header protection is removed
- * first (recovering the true packet-number length and value), the packet number is reconstructed
- * against @p largest_pn (RFC 9000 sec 17.1), and the payload is verified and decrypted.
- *
- * @param pkt          Buffer holding the protected packet (mutated: header unprotected in place).
- * @param pn_offset    Offset of the protected packet number.
- * @param length       QUIC Length field (packet-number + payload + tag bytes).
- * @param largest_pn   Largest packet number already received at this level (0 if none yet).
- * @param keys         The {key, iv, hp} triple for this encryption level.
- * @param is_long      True for a long header, false for a 1-RTT short header.
- * @param out          Output plaintext frames (>= length - pn_len - 16 bytes); may alias @p pkt payload.
- * @param out_pn       Receives the reconstructed full packet number (may be NULL).
- * @return plaintext length, or (size_t)-1 on parameter error or AEAD authentication failure.
- */
-size_t protocore_quic_packet_unprotect(uint8_t *pkt, size_t pn_offset, size_t length, uint64_t largest_pn,
-                                       QuicPacketKeys *keys, proto_bool is_long, uint8_t *out, uint64_t *out_pn);
+    void (*const derive_initial_secrets)(uint8_t *restrict work);
+    void (*const keys_from_secret)(uint8_t *restrict work);
+    void (*const packet_protect)(uint8_t *restrict work);
+    void (*const packet_unprotect)(uint8_t *restrict work);
+    void (*const retry_integrity_tag)(uint8_t *restrict work);
+} QuicCryptoNs;
 
-/**
- * @brief Compute the Retry Integrity Tag (RFC 9001 sec 5.8).
- *
- * AEAD_AES_128_GCM with the version-1 fixed key and nonce over the Retry Pseudo-Packet, whose AAD
- * is the original Destination Connection ID (length-prefixed) followed by the Retry packet up to
- * but excluding the tag. Plaintext is empty, so the whole 16-byte output is the tag.
- *
- * @param odcid          Original Destination Connection ID (from the client's first Initial).
- * @param odcid_len      ODCID length in bytes.
- * @param retry          Retry packet bytes from the first byte up to (not including) the tag.
- * @param retry_len      Length of @p retry.
- * @param tag            Output 16-byte integrity tag.
- */
-void protocore_quic_retry_integrity_tag(const uint8_t *odcid, size_t odcid_len, const uint8_t *retry, size_t retry_len,
-                                        uint8_t tag[16]);
+/** @brief The one symbol this module exports. */
+extern QuicCryptoNs QuicCrypto;
 
 PROTOCORE_END_DECLS
 

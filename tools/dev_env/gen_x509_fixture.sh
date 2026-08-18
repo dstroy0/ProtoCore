@@ -74,4 +74,8 @@ done
 cp ca_ed25519.der ca.der
 cp ca_ed25519.pem ca.pem
 
+# The Ed25519 leaf's own key, so a TLS suite can present that certificate and sign the
+# CertificateVerify a peer checks under it. PKCS#8, whose last 32 octets are the RFC 8032 seed.
+openssl pkey -in ed25519.key -outform DER -out ed25519_key.der
+
 python "$ROOT/tools/dev_env/gen_x509_fixture.py" "$TMP" "$OUT"
