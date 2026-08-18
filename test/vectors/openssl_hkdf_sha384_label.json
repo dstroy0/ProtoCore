@@ -1,0 +1,95 @@
+{
+ "source": "openssl kdf (OpenSSL 3.5.6 7 Apr 2026 (Library: OpenSSL 3.5.6 7 Apr 2026)) - TLS13-KDF HKDF-Expand-Label at SHA-384 (RFC 8446 sec 7.1)",
+ "commit": "",
+ "file": "openssl",
+ "vectors": [
+  {
+   "tcId": 1,
+   "comment": "HKDF-Expand-Label \"derived\" at SHA-384",
+   "result": "valid",
+   "flags": [],
+   "secret": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c",
+   "label": "derived",
+   "context": "05101b26313c47525d68737e89949faab5c0cbd6e1ecf7020d18232e39444f5a65707b86919ca7b2bdc8d3dee9f4ff0a",
+   "l": 48,
+   "out": "0d727ecf425e75087876c44a9eddbe696c1fe7d8ad49c1e7d7abae146cd4239b41ccaa2f2faaeb3a862dd0b687dd7b5a"
+  },
+  {
+   "tcId": 2,
+   "comment": "HKDF-Expand-Label \"c hs traffic\" at SHA-384",
+   "result": "valid",
+   "flags": [],
+   "secret": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c",
+   "label": "c hs traffic",
+   "context": "05101b26313c47525d68737e89949faab5c0cbd6e1ecf7020d18232e39444f5a65707b86919ca7b2bdc8d3dee9f4ff0a",
+   "l": 48,
+   "out": "86c84883563931c0d7f3f59e7c364aba39a6e4b6ae4ec55df1896c787afd64d7319a7bed6ab03d4da05436ee8abf892c"
+  },
+  {
+   "tcId": 3,
+   "comment": "HKDF-Expand-Label \"s hs traffic\" at SHA-384",
+   "result": "valid",
+   "flags": [],
+   "secret": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c",
+   "label": "s hs traffic",
+   "context": "05101b26313c47525d68737e89949faab5c0cbd6e1ecf7020d18232e39444f5a65707b86919ca7b2bdc8d3dee9f4ff0a",
+   "l": 48,
+   "out": "21591c525b0d5c61cd69a9185c5a4e72d75b3f4ac1400ad9bdd18e4321ba6738e2b2329c8d687e36d4afc7ebcef9bacd"
+  },
+  {
+   "tcId": 4,
+   "comment": "HKDF-Expand-Label \"c ap traffic\" at SHA-384",
+   "result": "valid",
+   "flags": [],
+   "secret": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c",
+   "label": "c ap traffic",
+   "context": "05101b26313c47525d68737e89949faab5c0cbd6e1ecf7020d18232e39444f5a65707b86919ca7b2bdc8d3dee9f4ff0a",
+   "l": 48,
+   "out": "25bb57b8e5af34bb456e509a81faa2313228f249d419c964630160199b337e65ae56ce08a7775a481fdad98f7360ec73"
+  },
+  {
+   "tcId": 5,
+   "comment": "HKDF-Expand-Label \"s ap traffic\" at SHA-384",
+   "result": "valid",
+   "flags": [],
+   "secret": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c",
+   "label": "s ap traffic",
+   "context": "05101b26313c47525d68737e89949faab5c0cbd6e1ecf7020d18232e39444f5a65707b86919ca7b2bdc8d3dee9f4ff0a",
+   "l": 48,
+   "out": "b87c37bd1895c9c038685def503a8e1c1f3fe4d905a35b1ecbca114666e22de4cc4f78ae9c9ec0676bb9cca641a13421"
+  },
+  {
+   "tcId": 6,
+   "comment": "HKDF-Expand-Label \"finished\" at SHA-384",
+   "result": "valid",
+   "flags": [],
+   "secret": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c",
+   "label": "finished",
+   "context": "",
+   "l": 48,
+   "out": "25c6f77d218a94c9d0afaf1dc9822877930b60cc89831e6feb4d18b9385c401047801c1bace87a3a9128516fb698fb6c"
+  },
+  {
+   "tcId": 7,
+   "comment": "HKDF-Expand-Label \"key\" at SHA-384",
+   "result": "valid",
+   "flags": [],
+   "secret": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c",
+   "label": "key",
+   "context": "",
+   "l": 32,
+   "out": "93e6e59ef9595a628df7aa164ccfe91dd735e9960fb065f7ef8ace064fec8110"
+  },
+  {
+   "tcId": 8,
+   "comment": "HKDF-Expand-Label \"iv\" at SHA-384",
+   "result": "valid",
+   "flags": [],
+   "secret": "030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c",
+   "label": "iv",
+   "context": "",
+   "l": 12,
+   "out": "56cb24b5cf79fcc221ef63fc"
+  }
+ ]
+}

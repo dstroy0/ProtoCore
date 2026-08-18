@@ -1516,6 +1516,125 @@
       ],
       "tests": ["unit/src/crypto/hash/test_digest_vectors"]
     },
+    
+    "native_sha384_kat": {
+      "desc": "SHA-384 (crypto/hash/sha384.h) against the RFC 6234 sec 8.5 SHA384 known-answer vectors: the whole-octet rows 1, 2, 3, 4, 6, 8 and 10 - 'abc', the 112-octet message whose padding overflows into a second block, one million 'a' fed as a stream, a 640-octet message that is an exact multiple of the 1024-bit block, a single octet, 16 octets and 195. SHA-384 differs from SHA-512 only in its seed and in cutting the digest to six state words (RFC 6234 sec 6.3 and 6.4), so the suite also builds sha512.c and asserts the two digests are not a prefix of one another. Software compression arm.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_SHA384=1"
+      ],
+      "src": [
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/hash/sha512.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/swar.c>"
+      ],
+      "tests": [
+        "unit/src/crypto/hash/test_sha384"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
+    "native_sha384_kat_hw": {
+      "desc": "The same SHA-384 vectors over the accelerator arm: PROTOCORE_HAS_HW_SHA=1 routes the block compression through protocore_sha_hw_block, which the host SHA HAL answers. SHA-384's rounds are SHA-512's, so the accelerator runs in its 512 mode over the SHA-384 seed; the seed, the padding and the six-word digest stay this module's either way.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_SHA384=1",
+        "-DPROTOCORE_HAS_HW_SHA=1"
+      ],
+      "src": [
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/hash/sha512.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/host/host_sha_hal.c>"
+      ],
+      "tests": [
+        "unit/src/crypto/hash/test_sha384"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
+    "native_hmac_sha384_kat": {
+      "desc": "HMAC-SHA-384 (crypto/mac/hmac_sha384.h) against all seven HMAC-SHA-384 rows of RFC 4231 sec 4.2 through 4.8, which that RFC states were cross-verified by three independent implementations. They cover a key shorter than the digest, keys shorter than the block, and a 131-octet key over the 128-octet block that has to be pre-hashed, plus a message longer than the block. The block is SHA-512's 128 octets and not the 48-octet digest, so the suite also pins that width and builds hmac_sha512.c to assert the two MACs are not a prefix of one another.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_SHA384=1",
+        "-DPROTOCORE_ENABLE_HMAC_SHA384=1"
+      ],
+      "src": [
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/mac/hmac_sha512.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/hash/sha512.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/swar.c>"
+      ],
+      "tests": [
+        "unit/src/crypto/mac/test_hmac_sha384"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
+    "native_hmac_sha384_kat_hw": {
+      "desc": "The same RFC 4231 HMAC-SHA-384 vectors with the inner and outer digests compressing on the accelerator: PROTOCORE_HAS_HW_SHA=1 routes sha384.c's block through protocore_sha_hw_block, which the host SHA HAL answers. The MAC construction itself has one arm; this proves the pads, the pre-hash and the two hashes are the same over either compression.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_SHA384=1",
+        "-DPROTOCORE_ENABLE_HMAC_SHA384=1",
+        "-DPROTOCORE_HAS_HW_SHA=1"
+      ],
+      "src": [
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/mac/hmac_sha512.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<crypto/hash/sha512.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/swar.c>",
+        "+<core_setup/hal/host/host_sha_hal.c>"
+      ],
+      "tests": [
+        "unit/src/crypto/mac/test_hmac_sha384"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
+    
+    "native_hkdf_sha384_kat": {
+      "desc": "HKDF-SHA384 and TLS 1.3 HKDF-Expand-Label (crypto/kdf/hkdf_sha384.h) against openssl. RFC 5869 tabulates HKDF only for SHA-256 and SHA-1 and RFC 8448's worked trace is SHA-256 throughout, so there is no published SHA-384 answer to read: the inputs are the RFC 5869 Appendix A triples re-run at SHA-384 and the answers come from openssl, whose invocation the generator calibrates against RFC 5869 A.1 and the RFC 8448 sec 3 'derived' secret before it writes a row. Covers extract, the T(i) chain at A.2's 82 octets, and the eight TLS 1.3 labels in both the empty-context and explicit-context forms, plus the 255*48 expand cap.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_SHA384=1",
+        "-DPROTOCORE_ENABLE_HMAC_SHA384=1",
+        "-DPROTOCORE_ENABLE_HKDF_SHA384=1"
+      ],
+      "src": [
+        "+<crypto/kdf/hkdf_sha384.c>",
+        "+<crypto/mac/hmac_sha384.c>",
+        "+<crypto/hash/sha384.c>",
+        "+<mmgr/protomem.c>",
+        "+<mmgr/protostr.c>",
+        "+<mmgr/endian.c>",
+        "+<mmgr/rawmemcpy.c>",
+        "+<mmgr/swar.c>"
+      ],
+      "tests": [
+        "unit/src/crypto/kdf/test_hkdf_sha384"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
+    },
     "native_directnet": {
       "desc": "AutomationDirect DirectNET serial frame codec (services/fieldbus/directnet): the header (SOH +\nASCII-hex slave/type/addr/blocks + ETB + LRC) and data (STX + data + ETX + LRC) frames build/parse.\nPure host tests.",
       "flags": ["-DPROTOCORE_ENABLE_DIRECTNET=1"],
@@ -8992,7 +9111,6 @@
         "+<src/crypto/asymmetric/curve25519.c>",
         "+<src/crypto/asymmetric/ed25519.c>",
         "+<src/crypto/aead/aes128gcm.c>",
-        "+<src/crypto/cipher/aes.c>",
         "+<src/crypto/cipher/chacha20.c>",
         "+<src/network_drivers/presentation/http/http3/tls13_msg.c>",
         "+<src/crypto/ct_eq.c>",

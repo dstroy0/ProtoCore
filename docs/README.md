@@ -134,11 +134,15 @@ src/
 │   │   ├── sha256.h
 │   │   ├── sha3.c
 │   │   ├── sha3.h
+│   │   ├── sha384.c
+│   │   ├── sha384.h
 │   │   ├── sha512.c
 │   │   └── sha512.h
 │   ├── kdf/
 │   │   ├── hkdf.c
 │   │   ├── hkdf.h
+│   │   ├── hkdf_sha384.c
+│   │   ├── hkdf_sha384.h
 │   │   ├── kdf.c
 │   │   └── kdf.h
 │   ├── mac/
@@ -148,6 +152,8 @@ src/
 │   │   ├── ghash.h
 │   │   ├── hmac_sha256.c
 │   │   ├── hmac_sha256.h
+│   │   ├── hmac_sha384.c
+│   │   ├── hmac_sha384.h
 │   │   ├── hmac_sha512.c
 │   │   ├── hmac_sha512.h
 │   │   ├── poly1305.c
@@ -158,6 +164,11 @@ src/
 │   │   ├── sntrup761.c
 │   │   └── sntrup761.h
 │   ├── rng/  (rng.h, rng.c)
+│   ├── x509/
+│   │   ├── x509.c
+│   │   ├── x509.h
+│   │   ├── x509_verify.c
+│   │   └── x509_verify.h
 │   ├── crypto_opt.h
 │   ├── ct_eq.c
 │   └── ct_eq.h
@@ -206,11 +217,6 @@ src/
 │   │   ├── ntp_service/  (ntp_service.h, ntp_service.c)
 │   │   ├── nts/  (nts.h, nts.c)
 │   │   ├── ptp/  (ptp.h, ptp.c)
-│   │   ├── scp/
-│   │   │   ├── scp.c
-│   │   │   ├── scp.h
-│   │   │   ├── ssh_scp.c
-│   │   │   └── ssh_scp.h
 │   │   ├── sftp/
 │   │   │   ├── sftp.c
 │   │   │   ├── sftp.h
@@ -361,6 +367,11 @@ src/
 │   │   ├── presentation.c
 │   │   └── presentation.h
 │   ├── session/
+│   │   ├── scp/
+│   │   │   ├── scp.c
+│   │   │   ├── scp.h
+│   │   │   ├── ssh_scp.c
+│   │   │   └── ssh_scp.h
 │   │   ├── sse/  (sse.h, sse.c)
 │   │   ├── ws/  (ws.h, ws.c)
 │   │   ├── session.c
@@ -723,6 +734,7 @@ src/
 │   ├── can/
 │   │   └── can.h
 │   ├── crc/  (crc.h, crc.c)
+│   ├── der/  (der.h, der.c)
 │   ├── hex/  (hex.h, hex.c)
 │   ├── http_date/  (http_date.h, http_date.c)
 │   ├── ip/  (ip.h, ip.c)
@@ -1108,7 +1120,9 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_HART` | `0` | Opt-in HART / HART-IP process-instrument protocol codec. |
 | `PROTOCORE_ENABLE_HISLIP` | `0` | HiSLIP (High-Speed LAN Instrument Protocol) message codec (`services/hislip`). |
 | `PROTOCORE_ENABLE_HKDF` | `(PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)` |  |
+| `PROTOCORE_ENABLE_HKDF_SHA384` | `(PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)` |  |
 | `PROTOCORE_ENABLE_HMAC_SHA256` | `1` |  |
+| `PROTOCORE_ENABLE_HMAC_SHA384` | `(PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)` |  |
 | `PROTOCORE_ENABLE_HMAC_SHA512` | `1` |  |
 | `PROTOCORE_ENABLE_HMMD` | `0` | Waveshare HMMD 24 GHz mmWave micro-motion radar codec (`services/hmmd`). |
 | `PROTOCORE_ENABLE_HOSTLINK` | `0` | Omron Host Link (C-mode) frame codec (`services/hostlink`). |
@@ -1225,6 +1239,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_SHA1` | `1` |  |
 | `PROTOCORE_ENABLE_SHA256` | `1` |  |
 | `PROTOCORE_ENABLE_SHA3` | `PROTOCORE_ENABLE_PQC_KEX` |  |
+| `PROTOCORE_ENABLE_SHA384` | `(PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)` |  |
 | `PROTOCORE_ENABLE_SHA512` | `1` |  |
 | `PROTOCORE_ENABLE_SHT3X` | `0` | Sensirion SHT3x temperature / humidity sensor (I2C). |
 | `PROTOCORE_ENABLE_SIGFOX` | `0` | Enable the Sigfox AT-command codec (default off). |
@@ -1288,6 +1303,7 @@ The complete set of `PROTOCORE_ENABLE_*` flags and their defaults, scraped from
 | `PROTOCORE_ENABLE_WS_CLIENT` | `0` | Outbound WebSocket client (RFC 6455 over raw lwIP, optional wss:// TLS). |
 | `PROTOCORE_ENABLE_WS_CLIENT_TLS` | `0` | wss://: run the WebSocket client over client-side TLS (needs PROTOCORE_ENABLE_TLS). |
 | `PROTOCORE_ENABLE_WS_DEFLATE` | `0` | WebSocket permessage-deflate (RFC 7692) - bidirectional compression. |
+| `PROTOCORE_ENABLE_X509` | `0` | Read and verify X.509 certificates in the portable TLS engine (RFC 5280). |
 | `PROTOCORE_ENABLE_XMPP` | `0` | Opt-in XMPP (RFC 6120) stanza codec. |
 | `PROTOCORE_ENABLE_ZIGBEE` | `0` | Enable the Zigbee EZSP / ASH framing codec (default off). |
 | `PROTOCORE_ENABLE_ZWAVE` | `0` | Enable the Z-Wave Serial API frame codec (default off). |
@@ -1367,8 +1383,10 @@ guards at compile time.
 | `PROTOCORE_CHACHA20_BORROW` | `192` |  |
 | `PROTOCORE_CLIENT_RX_BUF` | `8192` | Per-connection wire receive ring size (bytes). |
 | `PROTOCORE_CLOSING_TIMEOUT_MS` | `2000` | Upper bound (ms) a slot may dwell in CONN_CLOSING after a graceful close before the idle sweep force-aborts it. |
+| `PROTOCORE_COAPS_SERVER_BORROW` | `32768u` |  |
 | `PROTOCORE_COAP_BLOCK1_MAX` | `1024` | Reassembly buffer for a block-wise (Block1) request upload, in bytes. |
 | `PROTOCORE_COAP_BLOCK_SZX_MAX` | `6` | Largest block-size exponent (SZX) the server will use: block size = 2^(SZX+4) bytes, SZX 0..6 (16..1024). |
+| `PROTOCORE_COAP_BORROW` | `3584u` |  |
 | `PROTOCORE_COAP_DEDUP_ENTRIES` | `4` | CoAP message de-duplication cache size (RFC 7252 sec 4.5). |
 | `PROTOCORE_COAP_DEDUP_LIFETIME_MS` | `247000u` | How long (ms) a dedup entry stays fresh - RFC 7252 EXCHANGE_LIFETIME (~247 s) by default, past which a repeat Message-ID is treated as a new exchange. |
 | `PROTOCORE_COAP_DEDUP_RESP_MAX` | `256` | Largest cached response the dedup cache retains per entry; a bigger response is not cached (a retransmission re-processes it, fine for the idempotent GET whose block-wise reply exceeds this). |
@@ -1389,6 +1407,7 @@ guards at compile time.
 | `PROTOCORE_DEFER_QUEUE_DEPTH` | `8` | Depth of each worker's deferred-callback queue. |
 | `PROTOCORE_DELIVERY_MANIFEST_BUF` | `512` | Buffer the precache manifest JSON is built into. |
 | `PROTOCORE_DELIVERY_PRECACHE_MAX` | `16` | Most asset paths a service-worker precache manifest may list. |
+| `PROTOCORE_DIFFSERV_BORROW` | `8u` |  |
 | `PROTOCORE_DMA_BUF_SIZE` | `256` | Bytes per DMA transfer buffer (RX is double-buffered at this size). |
 | `PROTOCORE_DMA_CHANNELS` | `2` | Number of DMA channels (static-allocated; each is one peripheral link). |
 | `PROTOCORE_DNC_LEADER_LEN` | `32` | Default leader/trailer runout length for the DNC encoder. |
@@ -1396,6 +1415,7 @@ guards at compile time.
 | `PROTOCORE_DNC_XOFF_MAX_POLLS` | `200000` | Safety cap on how many times the DNC stream engine polls the reverse channel while paused by an XOFF, before giving up with an I/O error. |
 | `PROTOCORE_DNS_CLIENT_PORT` | `1153` | Local UDP port the portable resolver asks from and hears the answer on. |
 | `PROTOCORE_DNS_NAME_MAX` | `128` | Max length of a queried/stored DNS name (bytes, incl NUL). |
+| `PROTOCORE_DNS_RESOLVER_BORROW` | `192u` |  |
 | `PROTOCORE_DNS_SERVER_MAX_RECORDS` | `8` | Max A records in the DNS server's fixed table. |
 | `PROTOCORE_DNS_SERVER_TTL` | `60` | TTL (seconds) the DNS server puts on its answers. |
 | `PROTOCORE_DNS_TIMEOUT_MS` | `5000` |  |
@@ -1412,12 +1432,16 @@ guards at compile time.
 | `PROTOCORE_ETH_W5500` | `0` |  |
 | `PROTOCORE_EUROMAP77_BORROW` | `16` |  |
 | `PROTOCORE_EXC_COREDUMP_CHUNK` | `512` | Chunk the core-dump image is streamed out of flash in. |
+| `PROTOCORE_FAILSAFE_BORROW` | `256u` |  |
 | `PROTOCORE_FAILSAFE_MAX_LIFELINES` | `8` | Max monitored lifelines in the fail-safe registry (static, zero-heap). |
 | `PROTOCORE_FDC2214_I2C_ADDR` | `0x2A` | I2C address of the FDC2214, set by the ADDR pin: 0x2A when it is low, 0x2B when it is high. |
+| `PROTOCORE_FILESYSTEM_BORROW` | `3072u` |  |
 | `PROTOCORE_FILESYSTEM_PATH_MAX` | `256` | Largest absolute path the SFTP/SCP server resolves (mount root + request path). |
+| `PROTOCORE_FLOW_EXPORT_BORROW` | `64u` |  |
 | `PROTOCORE_FTP_CHUNK` | `512` | Bytes staged per data-channel write when the session driver streams a payload. |
 | `PROTOCORE_FTP_CMD_MAX` | `256` | Suggested FTP control-command buffer size. |
 | `PROTOCORE_FTP_REPLY_BUF` | `512` | Control-reply accumulator for the FTP session driver. |
+| `PROTOCORE_FTP_SESSION_BORROW` | `1536u` |  |
 | `PROTOCORE_FTP_TIMEOUT_MS` | `8000` | Per-step timeout for the FTP session driver: connect, and each control reply. |
 | `PROTOCORE_FWD_ACL_PATLEN` | `4` | Bytes an ACL entry can match (its pattern / mask length). |
 | `PROTOCORE_FWD_INSPECT` | `0` | Build-time toggle for the forwarding-path inspection hook (default off, for cost + privacy). |
@@ -1427,6 +1451,8 @@ guards at compile time.
 | `PROTOCORE_GHASH_BORROW` | `256` |  |
 | `PROTOCORE_GPIO_JSON_BUF` | `1024` | Stack buffer for the GPIO-map JSON (bytes). |
 | `PROTOCORE_GPIO_MAX` | `40` | Maximum GPIO pins the mapper reports (BSS table). |
+| `PROTOCORE_GRAPHQL_BORROW` | `5120u` |  |
+| `PROTOCORE_GUARDRAILS_BORROW` | `16u` |  |
 | `PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK` | `4096` | Largest-free-block floor (bytes); below this trips the fragmentation guardrail. |
 | `PROTOCORE_GUARDRAIL_HEAP_MIN` | `8192` | Free-heap floor (bytes); below this trips the heap guardrail. |
 | `PROTOCORE_GUARDRAIL_STACK_MIN` | `512` | Task remaining-stack floor (bytes); below this trips the stack guardrail. |
@@ -1442,6 +1468,7 @@ guards at compile time.
 | `PROTOCORE_H3_MAX_STREAMS` | `8` | Maximum concurrent request streams per HTTP/3 connection. |
 | `PROTOCORE_H3_QPACK_BLOCK` | `256` |  |
 | `PROTOCORE_H3_QPACK_SCRATCH` | `512` |  |
+| `PROTOCORE_HAPPY_EYEBALLS_BORROW` | `16u` |  |
 | `PROTOCORE_HMMD_BAUD` | `115200` | HMMD UART baud rate (the module's factory default is 115200). |
 | `PROTOCORE_HMMD_BORROW` | `256` |  |
 | `PROTOCORE_HMMD_UART` | `2` | UART unit the HMMD is wired to. |
@@ -1451,6 +1478,7 @@ guards at compile time.
 | `PROTOCORE_HPACK_MAX_ENTRIES` | `128` | Max HPACK dynamic-table entries (>= PROTOCORE_HPACK_TABLE_BYTES / 32, the min entry size). |
 | `PROTOCORE_HPACK_TABLE_BYTES` | `4096` | Per-connection HPACK dynamic-table size in bytes (our decoder; advertised to the peer as SETTINGS_HEADER_TABLE_SIZE). |
 | `PROTOCORE_HTTP3_PORT` | `443` | UDP port the HTTP/3 (QUIC) server binds by default (used by protocore_h3_cert). |
+| `PROTOCORE_HTTP_CLIENT_BORROW` | `3584u` |  |
 | `PROTOCORE_HTTP_CLIENT_BUF_SIZE` | `2048` | Receive buffer (and max response size) for the outbound HTTP client, bytes. |
 | `PROTOCORE_HTTP_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for the https:// client, bytes. |
 | `PROTOCORE_HTTP_CLIENT_TIMEOUT_MS` | `8000` | Outbound HTTP client connect/response timeout in milliseconds. |
@@ -1467,9 +1495,12 @@ guards at compile time.
 | `PROTOCORE_LD2410_BORROW` | `320` |  |
 | `PROTOCORE_LD2410_UART` | `2` | UART unit the LD2410 is wired to. |
 | `PROTOCORE_LDC1614_I2C_ADDR` | `0x2A` | I2C address of the LDC1614, set by the ADDR pin: 0x2A when it is low, 0x2B when it is high. |
+| `PROTOCORE_LOGBUF_BORROW` | `3584u` |  |
+| `PROTOCORE_LOG_BORROW` | `16u` |  |
 | `PROTOCORE_LOG_LINES` | `32` | Number of log lines retained in the ring. |
 | `PROTOCORE_LOG_LINE_LEN` | `96` | Maximum length of one stored log line (bytes, including null). |
 | `PROTOCORE_LORA_MAX_PAYLOAD` | `251` | Max LoRa payload bytes (SX127x FIFO is 256; RadioHead uses 251 + 4 header). |
+| `PROTOCORE_LWM2M_TLV_BORROW` | `128u` |  |
 | `PROTOCORE_MAX_UDP_LISTENERS` | `2` | Maximum simultaneously bound UDP ports (transport-layer UDP service). |
 | `PROTOCORE_MDNS_LABEL_MAX` | `32` | Longest host label, service type or proto label the responder holds, NUL included. |
 | `PROTOCORE_MDNS_MAX_SERVICES` | `4` | Services the responder advertises at once, `_http._tcp` included. |
@@ -1484,6 +1515,7 @@ guards at compile time.
 | `PROTOCORE_MPR121_I2C_ADDR` | `0x5A` | I2C address of the MPR121 (0x5A default; 0x5B/0x5C/0x5D via the ADDR pin). |
 | `PROTOCORE_MPR121_RELEASE_THRESHOLD` | `6` | MPR121 per-electrode release threshold (delta counts; should be below the touch threshold). |
 | `PROTOCORE_MPR121_TOUCH_THRESHOLD` | `12` | MPR121 per-electrode touch threshold (delta counts from baseline; NXP AN3944 suggests ~4..12). |
+| `PROTOCORE_MQTT_BORROW` | `512u` |  |
 | `PROTOCORE_MQTT_BUF_SIZE` | `1024` | MQTT packet buffer size in bytes (bounds one outgoing/incoming packet). |
 | `PROTOCORE_MQTT_CONNECT_MS` | `8000` | What the whole MQTT connect is given, in milliseconds. |
 | `PROTOCORE_MQTT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for MQTTS (draining ring; must exceed one TCP_MSS). |
@@ -1502,6 +1534,7 @@ guards at compile time.
 | `PROTOCORE_NTRIP_MAX_ROVERS` | `4` | Max concurrent rover connections a caster serves corrections to (services/timing_position/gnss). |
 | `PROTOCORE_NTRIP_MOUNT_MAX` | `32` | Max length (incl. |
 | `PROTOCORE_NTRIP_REQ_MAX` | `512` | Max NTRIP client request size (bytes) the caster buffers while reading the request headers. |
+| `PROTOCORE_OAUTH2_BORROW` | `3072u` |  |
 | `PROTOCORE_OIDC_MAX_LEN` | `1600` | Max accepted OIDC ID-token length (also sizes the Authorization buffer). |
 | `PROTOCORE_OTA_CONFIRM_WINDOW_MS` | `30000` | Confirm window (ms): a pending image not confirmed within this rolls back. |
 | `PROTOCORE_PARTITION_JSON_BUF` | `1024` | Stack buffer for the partition-map JSON (bytes). |
@@ -1516,6 +1549,7 @@ guards at compile time.
 | `PROTOCORE_PN532_MAX_DATA` | `254` | Reject a PN532 normal frame whose declared length exceeds this (framing sanity). |
 | `PROTOCORE_POLY1305_BORROW` | `96` |  |
 | `PROTOCORE_POWER_BUSY_PCT` | `40` | Load percentage at/above which the ceiling clock is used. |
+| `PROTOCORE_POWER_MGMT_BORROW` | `8u` |  |
 | `PROTOCORE_POWER_MHZ_MAX` | `240` | CPU clock (MHz) when there is work to do. |
 | `PROTOCORE_POWER_MHZ_MIN` | `80` | CPU clock (MHz) when idle, thermally throttled, or recovering from a brownout. |
 | `PROTOCORE_POWER_RECOVER_MS` | `10000` | How long (ms) to hold the floor clock after a brownout reset before ramping back up. |
@@ -1525,11 +1559,16 @@ guards at compile time.
 | `PROTOCORE_PQ_INTERNAL_PRIORITY` | `8` | Base FreeRTOS priority for the internal preempting lanes (DMA / forwarding / device access). |
 | `PROTOCORE_PQ_ITEM_SIZE` | `32` | Bytes per preempting-queue item (the posted item must fit). |
 | `PROTOCORE_PQ_STACK` | `4096` | Stack (bytes) for each preempting-queue processing task (ESP32). |
+| `PROTOCORE_PREEMPT_QUEUE_BORROW` | `512u` |  |
+| `PROTOCORE_PROMISC_BORROW` | `16` |  |
+| `PROTOCORE_PROTOBUF_BORROW` | `512u` |  |
 | `PROTOCORE_PROVISIONING_BORROW` | `32` |  |
 | `PROTOCORE_QUIC_CONN_CTX_BORROW` | `12544` |  |
 | `PROTOCORE_QUIC_MAX_CONNS` | `2` | Simultaneous HTTP/3 connections. |
 | `PROTOCORE_RADIO_MAX_TX_DBM` | `0` | Max TX power cap in dBm (2..20); 0 = leave the platform default. |
+| `PROTOCORE_RADIO_POWER_BORROW` | `16` |  |
 | `PROTOCORE_RADIO_WIFI_PS` | `0` | WiFi modem-sleep mode: 0 = none (max perf), 1 = min modem, 2 = max modem. |
+| `PROTOCORE_RCWL0516_BORROW` | `32u` |  |
 | `PROTOCORE_RELAY_BUF` | `2048` | Per-direction relay buffer size (bytes) for server/net/relay. |
 | `PROTOCORE_RELAY_CONNECT_MS` | `5000` | Blocking connect timeout (ms) when the relay listener dials the origin on a new inbound. |
 | `PROTOCORE_RELAY_DRAIN_MAX` | `8` | Max protocore_relay_step passes per poll for the relay listener. |
@@ -1543,6 +1582,7 @@ guards at compile time.
 | `PROTOCORE_RTC_I2C_ADDR` | `0x68` | I2C address of the RTC (DS1307/DS3231 are fixed at 0x68). |
 | `PROTOCORE_SCPI_ERR_QUEUE` | `8` | SCPI error/event queue depth (entries). |
 | `PROTOCORE_SEN0192_ACTIVE_HIGH` | `1` | SEN0192 OUT polarity: 1 = the OUT line reads HIGH on motion, 0 = active-LOW. |
+| `PROTOCORE_SEN0192_BORROW` | `32u` |  |
 | `PROTOCORE_SEN0192_HOLD_MS` | `2000` | Presence is held this many ms after the last active (motion) sample before it clears. |
 | `PROTOCORE_SEN0192_PIN` | `4` | GPIO the SEN0192 OUT line is wired to. |
 | `PROTOCORE_SFTP_MAX_HANDLES` | `4` | Max concurrent open SFTP handles (files + dirs) per SSH connection. |
@@ -1550,23 +1590,31 @@ guards at compile time.
 | `PROTOCORE_SFTP_PKT_BUF` | `2048` | SFTP packet-assembly buffer per SFTP channel (bytes); bounds one non-streamed request/response. |
 | `PROTOCORE_SHA1_BORROW` | `160` |  |
 | `PROTOCORE_SHA256_BORROW` | `256` |  |
+| `PROTOCORE_SHA384_BORROW` | `448` |  |
 | `PROTOCORE_SHA3_BORROW` | `224` |  |
 | `PROTOCORE_SHA512_BORROW` | `448` |  |
 | `PROTOCORE_SHT3X_I2C_ADDR` | `0x44` | I2C address of the SHT3x (0x44 with ADDR low; 0x45 with ADDR high). |
 | `PROTOCORE_SIGFOX_MAX_PAYLOAD` | `12` | Maximum Sigfox uplink payload (the network caps a message at 12 bytes). |
+| `PROTOCORE_SIGNALING_BORROW` | `64u` |  |
 | `PROTOCORE_SIMATIC_BLOCK_MAX` | `256` | 3964R block-body buffer size (built/received bytes: DLE-stuffed payload + DLE ETX + BCC). |
 | `PROTOCORE_SIMATIC_BORROW` | `48` |  |
 | `PROTOCORE_SIMATIC_QVZ_MS` | `2000` | 3964R QVZ (Quittungsverzugszeit): handshake acknowledge-delay timeout, ms. |
 | `PROTOCORE_SIMATIC_ZVZ_MS` | `220` | 3964R ZVZ (Zeichenverzugszeit): inter-character timeout while receiving a block, ms. |
 | `PROTOCORE_SMBUS_BORROW` | `64` |  |
 | `PROTOCORE_SMB_BUF` | `1024` | SMB2 client work-buffer size (bytes) for smb_client's request/response framing. |
+| `PROTOCORE_SMTP_BORROW` | `3584u` |  |
 | `PROTOCORE_SMTP_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for SMTPS, bytes (only used when the message is TLS). |
 | `PROTOCORE_SMTP_LINE_MAX` | `256` | Max length of one SMTP command / address line (bytes, incl. |
 | `PROTOCORE_SMTP_MSG_MAX` | `2048` | Max size of the assembled DATA payload (headers + dot-stuffed body), bytes. |
 | `PROTOCORE_SMTP_REPLY_MAX` | `512` | Max size of one (possibly multi-line) server reply held while parsing, bytes. |
 | `PROTOCORE_SMTP_TIMEOUT_MS` | `10000` | SMTP connect / per-reply timeout in milliseconds. |
+| `PROTOCORE_SNMP_AGENT_BORROW` | `13312u` |  |
+| `PROTOCORE_SNMP_NOTIFY_BORROW` | `1536u` |  |
 | `PROTOCORE_SNMP_TRAP_BUF_SIZE` | `1024` | Static datagram buffer for an outbound SNMP notification, bytes. |
 | `PROTOCORE_SNMP_TRAP_MAX_VARBINDS` | `8` | Maximum extra variable-bindings (beyond sysUpTime/snmpTrapOID) in one notification. |
+| `PROTOCORE_SNMP_V3_BORROW` | `9216u` |  |
+| `PROTOCORE_SOUTHBOUND_BORROW` | `128u` |  |
+| `PROTOCORE_SPARKPLUG_BORROW` | `512u` |  |
 | `PROTOCORE_SPB_METRIC_MAX` | `256` | Max serialized size of one Sparkplug B metric submessage (stack temp, bytes). |
 | `PROTOCORE_SSH_ALLOW_PASSWORD` | `1` | Allow SSH password authentication (default on). |
 | `PROTOCORE_SSH_CLIENT_MAX_CHANNELS` | `4` |  |
@@ -1584,9 +1632,11 @@ guards at compile time.
 | `PROTOCORE_SSH_ZLIB_IN_PSRAM` | `0` | Place the per-connection SSH compression state in external PSRAM (ESP32). |
 | `PROTOCORE_SSH_ZLIB_MAX_IN` | `2048` | Largest uncompressed payload the s2c compressor accepts in one call (bytes). |
 | `PROTOCORE_SSH_ZLIB_WINDOW` | `8192` | SSH s2c DEFLATE sliding-window size in bytes (max back-reference distance). |
+| `PROTOCORE_STATSD_BORROW` | `512u` |  |
 | `PROTOCORE_STATSD_LINE_MAX` | `256` | Stack buffer for one StatsD line (bytes; caps metric name + value + tags). |
 | `PROTOCORE_STATSD_PORT` | `8125` | Default StatsD collector UDP port (StatsD/Graphite standard). |
 | `PROTOCORE_STOMP_MAX_HEADERS` | `16` | Max header lines parsed per STOMP frame (extras beyond this are ignored). |
+| `PROTOCORE_SYSLOG_BORROW` | `512u` |  |
 | `PROTOCORE_SYSLOG_DEFAULT_PORT` | `514` | Default syslog collector UDP port (RFC 5426 well-known 514; overridable at runtime via Syslog.collector.port + Syslog.init and here for a non-standard collector). |
 | `PROTOCORE_SYSLOG_FIELD_MAX` | `32` | Maximum syslog HOSTNAME / APP-NAME field length (including NUL). |
 | `PROTOCORE_SYSLOG_MSG_MAX` | `256` | Maximum formatted syslog datagram length in bytes (RFC 5424 line). |
@@ -1600,14 +1650,19 @@ guards at compile time.
 | `PROTOCORE_TLS_ACK_MULTI_CONN_DRAM` | `0` | Acknowledge that a MAX_TLS_CONNS > 1 build has been sized to fit. |
 | `PROTOCORE_TLS_ARENA_IN_PSRAM` | `0` | Place the TLS arena in external PSRAM instead of internal DRAM (ESP32). |
 | `PROTOCORE_TLS_CONN_MSG_CAP` | `1024` |  |
+| `PROTOCORE_TLS_CONN_PEERKEY_CAP` | `320` |  |
 | `PROTOCORE_TLS_CONN_REC_CAP` | `1024` |  |
-| `PROTOCORE_TLS_CONN_STATE_CAP` | `2304` |  |
+| `PROTOCORE_TLS_CONN_STATE_CAP` | `2816` |  |
 | `PROTOCORE_TLS_CONN_TERMS` | `5` |  |
 | `PROTOCORE_TLS_MAX_FRAG_LEN` | `0` | Cap TLS records via the Maximum Fragment Length extension (RFC 6066). |
+| `PROTOCORE_TLS_SEAM_OUT_CAP` | `2048` |  |
 | `PROTOCORE_TLS_TICKET_LIFETIME_S` | `86400` | Session-ticket lifetime / key-rotation period in seconds (see PROTOCORE_ENABLE_TLS_RESUMPTION). |
+| `PROTOCORE_TRACE_CAPTURE_BORROW` | `256u` |  |
 | `PROTOCORE_TRUSTED_PROXY_MAX` | `2` | Number of trusted-upstream CIDR rules the forwarded-client resolver holds (BSS table). |
+| `PROTOCORE_UDP_CLIENT_BORROW` | `16u` |  |
 | `PROTOCORE_UDP_RX_BUF_SIZE` | `1472` | Largest UDP datagram a bound port accepts, in bytes. |
 | `PROTOCORE_UDP_RX_RING` | `2048` | Per-slot UDP receive ring, in bytes. |
+| `PROTOCORE_UDP_TELEMETRY_BORROW` | `128u` |  |
 | `PROTOCORE_UDP_TELEMETRY_BUF` | `256` | Stack buffer for one telemetry line (bytes). |
 | `PROTOCORE_UMATI_BORROW` | `16` |  |
 | `PROTOCORE_UMATI_NS` | `1` | NamespaceIndex the umati MachineTool nodes live at (default 1). |
@@ -1616,6 +1671,7 @@ guards at compile time.
 | `PROTOCORE_WEBDAV_BUF_SIZE` | `2048` | Buffer (BSS) for a WebDAV 207 Multi-Status response, in bytes (see PROTOCORE_ENABLE_WEBDAV). |
 | `PROTOCORE_WEBDAV_MAX_ENTRIES` | `32` | Maximum children listed in a WebDAV Depth-1 PROPFIND (bounds the response). |
 | `PROTOCORE_WEBDAV_MAX_PROPS` | `16` | Maximum properties echoed in a WebDAV PROPPATCH 207 response (bounds the response). |
+| `PROTOCORE_WIFI_SNIFFER_BORROW` | `256` |  |
 | `PROTOCORE_WIFI_SNIFFER_MAX_CHANNELS` | `14` | Channels tracked by the WiFi sniffer's per-channel survey. |
 | `PROTOCORE_WORKER_CORE` | `1` | Core that worker 0 pins to (ESP32). |
 | `PROTOCORE_WORKER_COUNT` | `1` | Number of server worker tasks (slots partitioned i % N). |
@@ -1627,6 +1683,7 @@ guards at compile time.
 | `PROTOCORE_WORK_AESCCM` | `448` |  |
 | `PROTOCORE_WORK_BIGNUM_HW` | `1328` |  |
 | `PROTOCORE_WORK_BIGNUM_SW` | `1408` |  |
+| `PROTOCORE_WS_CLIENT_BORROW` | `4608u` |  |
 | `PROTOCORE_WS_CLIENT_BUF_SIZE` | `1024` | WebSocket client send/receive buffer size in bytes (bounds one frame). |
 | `PROTOCORE_WS_CLIENT_CT_BUF_SIZE` | `4096` | Ciphertext receive-ring size for wss:// (draining ring; must exceed one TCP_MSS). |
 | `PROTOCORE_WS_FRAG_SIZE` | `0` | WebSocket outbound fragmentation size (RFC 6455 sec 5.4), in payload bytes. |

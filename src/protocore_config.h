@@ -7437,6 +7437,15 @@ from halves and is slower than the width it decomposes into"
 #ifndef PROTOCORE_ENABLE_HKDF
 #define PROTOCORE_ENABLE_HKDF (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 #endif
+#ifndef PROTOCORE_ENABLE_SHA384
+#define PROTOCORE_ENABLE_SHA384 (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
+#endif
+#ifndef PROTOCORE_ENABLE_HMAC_SHA384
+#define PROTOCORE_ENABLE_HMAC_SHA384 (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
+#endif
+#ifndef PROTOCORE_ENABLE_HKDF_SHA384
+#define PROTOCORE_ENABLE_HKDF_SHA384 (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
+#endif
 #ifndef PROTOCORE_ENABLE_SHA3
 #define PROTOCORE_ENABLE_SHA3 PROTOCORE_ENABLE_PQC_KEX
 #endif
@@ -7584,6 +7593,12 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_ECDSA_BORROW (PROTOCORE_SHA256_BORROW + PROTOCORE_HMAC_SHA256_BORROW)
 #endif
 
+// The same at SHA-384's width: one HMAC-SHA384, a 48-byte T(i) block, and the same 514-byte HkdfLabel
+// region, whose cap is the RFC 8446 sec 7.1 field widths and not the hash.
+#ifndef PROTOCORE_HKDF_SHA384_BORROW
+#define PROTOCORE_HKDF_SHA384_BORROW (PROTOCORE_HMAC_SHA384_BORROW + 48 + 514)
+#endif
+
 // HKDF drives one HMAC-SHA256 and holds the T(i) block and the HkdfLabel it builds.
 #ifndef PROTOCORE_HKDF_BORROW
 #define PROTOCORE_HKDF_BORROW (PROTOCORE_HMAC_SHA256_BORROW + 32 + 514)
@@ -7610,11 +7625,23 @@ from halves and is slower than the width it decomposes into"
 #define PROTOCORE_SHA512_BORROW 448
 #endif
 
+// A SHA-384 context is a SHA-512 one: same block width, same state, same regions, and only the seed
+// and the digest length differ, so the figure is SHA-512's. Proved by a static_assert in sha384.c.
+#ifndef PROTOCORE_SHA384_BORROW
+#define PROTOCORE_SHA384_BORROW 448
+#endif
+
 // An HMAC-SHA512 context works out of two SHA-512 borrows - the inner hash it keeps across updates and
 // the outer one final runs - plus the two key blocks and the inner digest between them. Proved against
 // the real split by a static_assert in hmac_sha512.c.
 #ifndef PROTOCORE_HMAC_SHA512_BORROW
 #define PROTOCORE_HMAC_SHA512_BORROW (2 * PROTOCORE_SHA512_BORROW + 768)
+#endif
+
+// An HMAC-SHA384 context is the same split at the same widths: the block is SHA-512's 128 octets and
+// only the inner digest is shorter. Proved against the real split by a static_assert in hmac_sha384.c.
+#ifndef PROTOCORE_HMAC_SHA384_BORROW
+#define PROTOCORE_HMAC_SHA384_BORROW (2 * PROTOCORE_SHA384_BORROW + 768)
 #endif
 
 // An HMAC-SHA256 context works out of two SHA-256 borrows - the inner hash it keeps across updates and

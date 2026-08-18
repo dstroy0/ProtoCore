@@ -19,6 +19,7 @@ VEC_DIR = os.path.join(ROOT, "test", "vectors")
 OUT = os.path.join(ROOT, "test", "unit", "src", "crypto", "mac", "test_crypto_kat", "kat_data.inc")
 RSA_OUT = os.path.join(ROOT, "test", "unit", "src", "crypto", "asymmetric", "test_rsa_kat", "rsa_kat_data.inc")
 BN_OUT = os.path.join(ROOT, "test", "unit", "src", "crypto", "asymmetric", "test_bignum_group14", "bignum_kat_data.inc")
+HKDF384_OUT = os.path.join(ROOT, "test", "unit", "src", "crypto", "kdf", "test_hkdf_sha384", "hkdf_sha384_kat_data.inc")
 
 # json file -> (C array name, C struct type, ordered emit fields). Each field is
 # (json_key, kind); kind "hex"/"int" pull that key, "valid" derives 1/0 from the
@@ -99,6 +100,29 @@ RSA_SPECS = [
     ),
 ]
 
+# HKDF-SHA384 is its own table because it is its own suite: RFC 5869 publishes HKDF only for SHA-256
+# and SHA-1, so these answers come from openssl over the RFC's inputs (tools/crypto/gen_hkdf_sha384_vectors.py).
+HKDF384_SPECS = [
+    (
+        "openssl_hkdf_sha384_extract.json",
+        "KAT_HKDF384_EXTRACT",
+        "KatHkdf384Extract",
+        [("salt", "hex"), ("ikm", "hex"), ("prk", "hex")],
+    ),
+    (
+        "openssl_hkdf_sha384_expand.json",
+        "KAT_HKDF384_EXPAND",
+        "KatHkdf384Expand",
+        [("prk", "hex"), ("info", "hex"), ("l", "int"), ("okm", "hex")],
+    ),
+    (
+        "openssl_hkdf_sha384_label.json",
+        "KAT_HKDF384_LABEL",
+        "KatHkdf384Label",
+        [("secret", "hex"), ("label", "str"), ("context", "hex"), ("l", "int"), ("out", "hex")],
+    ),
+]
+
 # The group-14 modexp is its own table for the same reason: three 256-octet operands a row.
 BN_SPECS = [
     (
@@ -151,6 +175,8 @@ def main():
     emit(OUT, "External crypto known-answer vectors (Project Wycheproof + RFC appendices).", SPECS)
     emit(RSA_OUT, "RSASSA-PKCS1-v1.5 over RSA-2048 (Project Wycheproof verify + openssl sign).", RSA_SPECS)
     emit(BN_OUT, "RFC 3526 group-14 modular exponentiation (residues from CPython pow()).", BN_SPECS)
+    emit(HKDF384_OUT, "HKDF-SHA384 and TLS 1.3 HKDF-Expand-Label at SHA-384 (openssl over RFC 5869 inputs).",
+         HKDF384_SPECS)
 
 
 if __name__ == "__main__":
