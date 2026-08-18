@@ -37,6 +37,7 @@
 
 #include "mmgr/protomem.h"
 #include "mmgr/span.h"
+
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS

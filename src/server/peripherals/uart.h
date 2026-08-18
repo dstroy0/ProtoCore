@@ -23,11 +23,12 @@
 #ifndef PROTOCORE_UART_H
 #define PROTOCORE_UART_H
 
+#include "config/platform/platform.h"
+
 #include "protocore_config.h"
 
 #if PROTOCORE_HAS_BUS
 
-#include "core_setup/board_profiles/protocore_platform.h"
 
 /** @brief Read timeout in milliseconds, for a driver that takes whatever has arrived. */
 #ifndef PROTOCORE_UART_TIMEOUT_MS

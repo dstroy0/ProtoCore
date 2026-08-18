@@ -15,6 +15,7 @@
 
 #include "network_drivers/presentation/ssh/client/client.h"
 
+
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_SSH_CLIENT

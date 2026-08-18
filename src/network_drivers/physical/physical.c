@@ -10,7 +10,7 @@
  * sec 3.3.1.2). Neither touches hardware.
  *
  * The L1 seam is defined by the backend, always: the vendor's driver on silicon, chosen by the
- * PROTOCORE_VENDOR_* selector, and the software backend in core_setup/hal/host/physical/ on
+ * PROTOCORE_VENDOR_* selector, and the software backend in test/core_setup/hal/host/physical/ on
  * everything else. There is no third arm - a seam that answers nothing makes a mishandled link
  * indistinguishable from a working one.
  */
@@ -331,7 +331,7 @@ static void phy_iface_send(uint8_t *restrict work)
 
 // Designated, so a member's position in the struct does not decide what it binds to. The calls name
 // the seam, so the handle reaches whichever backend the PROTOCORE_VENDOR_* selector compiled: the
-// no-op definitions above, a part's backend under core_setup/physical/, or a suite's mock.
+// no-op definitions above, a part's backend under test/core_setup/physical/, or a suite's mock.
 PhysicalNs Physical = {.wifi_init = phy_wifi_init,
                        .wifi_ready = phy_wifi_ready,
                        .wifi_radio_init = phy_wifi_radio_init,

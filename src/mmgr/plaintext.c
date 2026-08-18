@@ -19,7 +19,7 @@
  */
 
 #include "plaintext.h"
-#include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_context_id()
+#include "config/platform/platform.h" // protocore_platform_context_id()
 #include "mmgr/arena.h"
 #include <assert.h>
 
@@ -53,7 +53,7 @@ struct PlainInternal
     struct PlainStorage *store;
     protocore_arena pool[PROTOCORE_REG_POOL_SLOTS];
 #if PROTOCORE_DEBUG_CHECKS
-    // Off by default; see PROTOCORE_DEBUG_CHECKS. The identity comes from core_setup/ - the core does
+    // Off by default; see PROTOCORE_DEBUG_CHECKS. The identity comes from test/core_setup/ - the core does
     // not name an RTOS.
     uintptr_t owner[PROTOCORE_REG_POOL_SLOTS];
 #endif

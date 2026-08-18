@@ -19,8 +19,9 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq
 #include "network_drivers/presentation/http/route/http_route.h"        // HttpRoute (by pointer)
-#include "protocore_config.h"
 #include "server/storage/mnt.h" // protocore_mnt_backend
+
+#include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
 

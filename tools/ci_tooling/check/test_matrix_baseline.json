@@ -1,5 +1,5 @@
 [
- "redundant|native_codeql|+<core_setup/hal/portable/portable_platform.c>",
+ "redundant|native_codeql|+<test/core_setup/hal/portable/portable_platform.c>",
  "redundant|native_codeql|+<crypto/hash/sha256.c>",
  "redundant|native_codeql|+<mmgr/arena.c>",
  "redundant|native_codeql|+<mmgr/bytes.c>",
@@ -28,7 +28,7 @@
  "redundant|native_diag|+<mmgr/protomem.c>",
  "redundant|native_diag|+<mmgr/rawmemcpy.c>",
  "redundant|native_diag|+<mmgr/swar.c>",
- "redundant|native_h3_server|+<core_setup/hal/portable/portable_platform.c>",
+ "redundant|native_h3_server|+<test/core_setup/hal/portable/portable_platform.c>",
  "redundant|native_h3_server|+<crypto/hash/sha256.c>",
  "redundant|native_h3_server|+<mmgr/arena.c>",
  "redundant|native_h3_server|+<mmgr/bytes.c>",

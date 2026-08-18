@@ -41,8 +41,9 @@
 #ifndef PROTOCORE_NTP_H
 #define PROTOCORE_NTP_H
 
-#include "protocore_config.h"
 #include <stdint.h>
+
+#include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS
 

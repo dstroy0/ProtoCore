@@ -16,8 +16,8 @@
 
 #ifndef PROTOCORE_TLS_H
 #define PROTOCORE_TLS_H
-
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 
 #if PROTOCORE_TLS_SOFTWARE
 
@@ -82,6 +82,10 @@ typedef struct
     // null list leaves ALPN unanswered; a client that offered it then gets no extension back.
     const char *const *alpn; ///< NUL-terminated protocol names, or NULL
     uint8_t alpn_count;      ///< how many
+    // The suite this end runs: a client offers it, a server answers with it, and it fixes the AEAD,
+    // the key schedule's hash and the Transcript-Hash together (RFC 8446 sec 7.1). Zero-initialising
+    // the config leaves TLS_CIPHER_AES_128_GCM_SHA256, the sec 9.1 mandatory-to-implement suite.
+    TlsCipher cipher;
 } TlsConnConfig;
 
 /**
@@ -90,7 +94,7 @@ typedef struct
  * The borrow is taken once by @ref TlsConnNs::init from the pool's persistent end and split by
  * offset - TX at 0, RX at PROTOCORE_TLS_CONN_MSG_CAP, TERMS after it. No storage is declared here: a
  * message is built in TX and handed to the record layer, a record is opened into RX, and the four
- * 32-byte handshake terms sit in TERMS. No heap.
+ * TLS13_SECRET_MAX-strided handshake terms sit in TERMS. No heap.
  */
 typedef struct
 {
@@ -109,15 +113,99 @@ typedef struct
     proto_bool hs_keys_ready; ///< the handshake traffic keys are installed
     proto_bool ap_keys_ready; ///< the application traffic keys are installed
 
-    uint8_t *tx;        ///< PROTOCORE_TLS_CONN_MSG_CAP: a message built to send, or a received record opened into it
-    uint8_t *rx;        ///< PROTOCORE_TLS_CONN_REC_CAP: the record the worker filled
-    uint8_t *terms;     ///< PROTOCORE_TLS_CONN_TERMS_CAP: the five 32-byte terms, at TLS_TERM_* offsets
-    uint8_t *hash_work; ///< PROTOCORE_SHA256_BORROW: the bytes @ref transcript works out of
-    uint8_t *sign_work; ///< PROTOCORE_SHA512_BORROW: the bytes the CertificateVerify signature works out of
-    uint8_t *ks_work;   ///< PROTOCORE_TLS13_KS_BORROW: the bytes the key schedule works out of
+    uint8_t *tx; ///< PROTOCORE_TLS_CONN_MSG_CAP: a message built to send, or a received record opened into it
+    uint8_t *rx; ///< PROTOCORE_TLS_CONN_REC_CAP: the record the worker filled
+    uint8_t
+        *terms; ///< PROTOCORE_TLS_CONN_TERMS_CAP: the five terms, one TLS13_SECRET_MAX slot each, at TLS_TERM_* offsets
+    uint8_t *hash_work;      ///< PROTOCORE_TLS13_TRANSCRIPT_BORROW: the bytes @ref transcript works out of
+    uint8_t *sign_work;      ///< PROTOCORE_SHA512_BORROW: the bytes the CertificateVerify signature works out of
+    uint8_t *ks_work;        ///< PROTOCORE_TLS13_KS_BORROW: the bytes the key schedule works out of
     Tls13ClientHello *hello; ///< the peer's parsed ClientHello
     const char *alpn;        ///< the protocol selected from TlsConnConfig::alpn, or NULL when none was
 } TlsConn;
+
+// The handle that drives one connection (network_drivers/tls/handshake). Declared here because
+// this file owns ::TlsConn: the driver acts on the resource, so the resource publishes the seam
+// and the driver defines it. A separate header would have to include this one, and this one
+// would have to reach back for the handle.
+/** @brief RFC 8446 sec 4: which end this connection drives, and what it presents. */
+typedef struct
+{
+    TlsRole role;             ///< which end of the handshake this connection drives
+    const TlsConnConfig *cfg; ///< the credential and this handshake's randomness
+} TlsInitArgs;
+
+/** @brief The bytes one call moves: a received record in, application data out. */
+typedef struct
+{
+    size_t rx_len;       ///< how much of TlsConn::rx the worker filled
+    const uint8_t *data; ///< application bytes a seal takes
+    size_t len;          ///< how many
+    const uint8_t *rec;  ///< the received application record an open takes
+    size_t rec_len;      ///< how many bytes of it there are
+} TlsConnIoArgs;
+
+/** @brief Where a call writes, and what it wrote. */
+typedef struct
+{
+    uint8_t *out;    ///< where the records this end owes are written
+    size_t out_cap;  ///< how much room it has
+    size_t *out_len; ///< where an open reports the plaintext length, or NULL
+} TlsConnOut;
+
+/**
+ * @brief One TLS 1.3 handshake over a stream. ::TlsConn is the resource; this drives it.
+ *
+ * A caller sets the members a call takes, invokes it through ::TlsConnection, and reads the outcome
+ * off the same handle. The connection itself is the caller's, named in @ref TlsConnNs::conn.
+ *
+ * @var TlsConnNs::conn         the connection every call acts on
+ * @var TlsConnNs::init_args    which end this connection drives, and what it presents
+ * @var TlsConnNs::io           the bytes one call moves
+ * @var TlsConnNs::out_args     where a call writes, and what it wrote
+ * @var TlsConnNs::ok           a call's true/false outcome
+ * @var TlsConnNs::n            bytes written to @c out_args.out
+ * @var TlsConnNs::i32          bytes written, or a negative alert-bearing failure
+ * @var TlsConnNs::u8           the alert a lookup reports
+ * @var TlsConnNs::init         bind a connection to its role and configuration. The borrow is taken
+ *                              on first use and kept, so a connection initialised again reuses the
+ *                              bytes it already holds
+ * @var TlsConnNs::start        client only: write the ClientHello; bytes written, or 0
+ * @var TlsConnNs::process      the worker filled @ref TlsConn::rx with one record of @c io.rx_len
+ *                              bytes; consume it, writing whatever it owes into @c out_args.out
+ * @var TlsConnNs::established  whether the handshake has completed
+ * @var TlsConnNs::alert        the alert that ended the connection, or 0
+ * @var TlsConnNs::seal_app     seal application data into one record; bytes written, or 0
+ * @var TlsConnNs::open_app     open one received application record; false on an AEAD failure
+ *
+ * No storage member: one secure-pool borrow per connection lives in ::TlsConn, taken by
+ * @ref TlsConnNs::init and split by offset.
+ */
+typedef struct
+{
+    TlsConn *conn;
+
+    TlsInitArgs init_args;
+    TlsConnIoArgs io;
+    TlsConnOut out_args;
+
+    proto_bool ok;
+    size_t n;
+    int i32;
+    uint8_t u8;
+
+    void (*const init)(uint8_t *restrict work);
+    void (*const start)(uint8_t *restrict work);
+    void (*const process)(uint8_t *restrict work);
+    void (*const established)(uint8_t *restrict work);
+    void (*const alert)(uint8_t *restrict work);
+    void (*const seal_app)(uint8_t *restrict work);
+    void (*const open_app)(uint8_t *restrict work);
+
+} TlsConnNs;
+
+/** @brief The one symbol this module exports. */
+extern TlsConnNs TlsConnection;
 
 /** @brief The connection standing on @p slot, or NULL when the index is out of range. */
 TlsConn *protocore_tls_conn_at(uint8_t slot);

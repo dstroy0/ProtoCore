@@ -5,7 +5,7 @@
  * @file aes_cmac.c
  * @brief AES-128-CMAC implementation (see aes_cmac.h).
  *
- * HW path: the AES-128 block runs on the part's AES accelerator (core_setup/hal/esp/esp_aes_hal.h).
+ * HW path: the AES-128 block runs on the part's AES accelerator (test/core_setup/hal/esp/esp_aes_hal.h).
  * SW path: the shared table-free software AES-128 (crypto/cipher/aes_block.h). The CMAC
  * construction (subkey derivation + CBC-MAC + last-block handling) is identical on both.
  *

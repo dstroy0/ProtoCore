@@ -5279,7 +5279,7 @@
  ".pio/libdeps/native_zwave/littlefs/src/lfs_util.c": [
   "native_zwave"
  ],
- "core_setup/board_profiles/board_profile.h": [
+ "vendor/board_profiles/board_profile.h": [
   "native_accept_gate",
   "native_ad9238",
   "native_ads",
@@ -5720,7 +5720,7 @@
   "native_zigbee",
   "native_zwave"
  ],
- "core_setup/board_profiles/classic_defaults.h": [
+ "vendor/board_profiles/classic_defaults.h": [
   "native_accept_gate",
   "native_ad9238",
   "native_ads",
@@ -6161,7 +6161,7 @@
   "native_zigbee",
   "native_zwave"
  ],
- "core_setup/board_profiles/derived_sizing.h": [
+ "derived_sizing.h": [
   "native_accept_gate",
   "native_ad9238",
   "native_ads",
@@ -6602,7 +6602,7 @@
   "native_zigbee",
   "native_zwave"
  ],
- "core_setup/board_profiles/protocore_platform.h": [
+ "protocore_platform.h": [
   "native_accept_gate",
   "native_ad9238",
   "native_ads",
@@ -7043,13 +7043,13 @@
   "native_zigbee",
   "native_zwave"
  ],
- "core_setup/boot/protocore_boot.c": [
+ "test/core_setup/boot/protocore_boot.c": [
   "native_boot"
  ],
- "core_setup/boot/protocore_boot.h": [
+ "test/core_setup/boot/protocore_boot.h": [
   "native_boot"
  ],
- "core_setup/hal/esp/esp_crypto_hal.h": [
+ "test/core_setup/hal/esp/esp_crypto_hal.h": [
   "native_coaps",
   "native_coaps_server",
   "native_crypto_kat",
@@ -7078,7 +7078,7 @@
   "native_tls_conn",
   "native_wycheproof_kat"
  ],
- "core_setup/hal/host/Arduino.h": [
+ "test/core_setup/hal/host/Arduino.h": [
   "native_accept_gate",
   "native_ad9238",
   "native_ads",
@@ -7519,7 +7519,7 @@
   "native_zigbee",
   "native_zwave"
  ],
- "core_setup/hal/host/host_nvs.c": [
+ "test/core_setup/hal/host/host_nvs.c": [
   "native_config_io",
   "native_config_store",
   "native_ikev2",
@@ -7532,7 +7532,7 @@
   "native_ssh_forward",
   "native_ssh_kbdint"
  ],
- "core_setup/hal/host/host_platform.c": [
+ "test/core_setup/hal/host/host_platform.c": [
   "native_application",
   "native_auth",
   "native_chunked",
@@ -7555,7 +7555,7 @@
   "native_template",
   "native_web_terminal"
  ],
- "core_setup/hal/host/host_platform.h": [
+ "test/core_setup/hal/host/host_platform.h": [
   "native_application",
   "native_auth",
   "native_chunked",
@@ -7578,11 +7578,11 @@
   "native_template",
   "native_web_terminal"
  ],
- "core_setup/hal/host/physical/physical_mock.c": [
+ "test/core_setup/hal/host/physical/physical_mock.c": [
   "native_l1_link",
   "native_phy"
  ],
- "core_setup/hal/host/protocore_net_host.h": [
+ "test/core_setup/hal/host/protocore_net_host.h": [
   "native_accept_gate",
   "native_ad9238",
   "native_ads",
@@ -8023,7 +8023,7 @@
   "native_zigbee",
   "native_zwave"
  ],
- "core_setup/hal/nvs.h": [
+ "test/core_setup/hal/nvs.h": [
   "native_config_io",
   "native_config_store",
   "native_ikev2",
@@ -8037,7 +8037,7 @@
   "native_ssh_forward",
   "native_ssh_kbdint"
  ],
- "core_setup/hal/portable/portable_aes128gcm.c": [
+ "test/core_setup/hal/portable/portable_aes128gcm.c": [
   "native_coaps",
   "native_coaps_server",
   "native_crypto_kat",
@@ -8060,7 +8060,7 @@
   "native_tls_record",
   "native_wycheproof_kat"
  ],
- "core_setup/hal/portable/portable_aesgcm.c": [
+ "test/core_setup/hal/portable/portable_aesgcm.c": [
   "native_aesgcm_kat",
   "native_esp",
   "native_ikev2",
@@ -8078,7 +8078,7 @@
   "native_system_esp",
   "native_system_ipsec_db"
  ],
- "core_setup/hal/portable/portable_bignum.c": [
+ "test/core_setup/hal/portable/portable_bignum.c": [
   "native_ikev2",
   "native_ikev2_natt_rfc3948",
   "native_ikev2_rfc7296",
@@ -8089,7 +8089,7 @@
   "native_ssh_forward",
   "native_ssh_kbdint"
  ],
- "core_setup/hal/portable/portable_platform.c": [
+ "test/core_setup/hal/portable/portable_platform.c": [
   "native_accept_gate",
   "native_aesgcm_kat",
   "native_application",
@@ -17378,7 +17378,7 @@
  "src/network_drivers/tls/handshake/handshake.c": [
   "native_tls_conn"
  ],
- "src/network_drivers/tls/handshake/handshake.h": [
+ "src/network_drivers/tls/tls.h": [
   "native_tls_conn"
  ],
  "src/network_drivers/tls/key_schedule/key_schedule.c": [

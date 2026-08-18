@@ -17,11 +17,13 @@
  * does not depend on what it negotiates, and the length actually in force is read back off @ref
  * Tls13KsNs::len rather than assumed.
  *
- * The schedule is transcript-hash-driven: each step takes a Transcript-Hash the caller computed over
- * the handshake messages so far, so this module has no dependency on the message wire formats and is
- * host-testable in isolation against the RFC 8448 sec 3 worked trace (which lists every intermediate
- * secret and the (EC)DHE input directly). The QUIC packet-protection keys ({key, iv, hp}) are then
- * derived from these traffic secrets by QuicCrypto.keys_from_secret (RFC 9001 sec 5.1).
+ * The schedule is transcript-hash-driven: each step takes a Transcript-Hash over the handshake
+ * messages so far, so this module has no dependency on the message wire formats and is host-testable
+ * in isolation against the RFC 8448 sec 3 worked trace (which lists every intermediate secret and the
+ * (EC)DHE input directly). RFC 8446 sec 4.4.1 runs that hash under the same suite hash as the
+ * schedule, so @ref Tls13KsNs::transcript_init and its two companions keep it here, in a borrow the
+ * caller owns, and a driver never names a hash to keep a transcript. The QUIC packet-protection keys ({key, iv, hp})
+ * are then derived from these traffic secrets by QuicCrypto.keys_from_secret (RFC 9001 sec 5.1).
  *
  * Pure, zero heap, host-tested against RFC 8448 sec 3.
  *
@@ -31,8 +33,8 @@
 
 #ifndef PROTOCORE_TLS_KEY_SCHEDULE_H
 #define PROTOCORE_TLS_KEY_SCHEDULE_H
-
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 
 #if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
@@ -138,6 +140,14 @@ typedef struct
     uint8_t *out;                   ///< @ref Tls13KsNs::len bytes of verify_data
 } Tls13FinishedArgs;
 
+/** @brief RFC 8446 sec 4.4.1 Transcript-Hash: the bytes one update absorbs, and where a peek lands. */
+typedef struct
+{
+    const uint8_t *data; ///< the handshake message bytes absorbed, header included
+    size_t len;          ///< how many
+    uint8_t *out;        ///< where a peek writes @ref Tls13KsNs::len octets of digest
+} Tls13TranscriptArgs;
+
 /**
  * @brief The TLS 1.3 key schedule (RFC 8446 sec 7.1).
  *
@@ -156,6 +166,10 @@ typedef struct
  * @var Tls13KsNs::handshake       step 2: handshake_secret and the handshake traffic secrets
  * @var Tls13KsNs::master          step 3: master_secret and the application traffic secrets
  * @var Tls13KsNs::finished_mac    the Finished verify_data (sec 4.4.4)
+ * @var Tls13KsNs::transcript_args  the bytes one update absorbs, and where a peek lands
+ * @var Tls13KsNs::transcript_init  start a Transcript-Hash under the bound hash, in @c work
+ * @var Tls13KsNs::transcript_update  absorb one handshake message into it
+ * @var Tls13KsNs::transcript_peek  the digest so far, without disturbing the running context
  *
  * @ref Tls13KsBind::s is bytes the CONNECTION owns and holds for exactly as long as it lives, so the
  * schedule dies with it. It must arrive zeroed: TLS13_KS_ZEROS is the first extract's IKM and nothing
@@ -169,6 +183,7 @@ typedef struct
     Tls13KsDeriveArgs derive_args;
     Tls13KsStepArgs step;
     Tls13FinishedArgs finished_args;
+    Tls13TranscriptArgs transcript_args;
 
     proto_bool ok;
     size_t len;
@@ -179,6 +194,9 @@ typedef struct
     void (*const handshake)(uint8_t *restrict work);
     void (*const master)(uint8_t *restrict work);
     void (*const finished_mac)(uint8_t *restrict work);
+    void (*const transcript_init)(uint8_t *restrict work);
+    void (*const transcript_update)(uint8_t *restrict work);
+    void (*const transcript_peek)(uint8_t *restrict work);
 
 } Tls13KsNs;
 

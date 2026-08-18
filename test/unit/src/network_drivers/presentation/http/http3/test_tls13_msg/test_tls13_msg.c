@@ -79,9 +79,9 @@ static const uint8_t RFC8448_CLIENT_SHARE[32] = {0x99, 0x38, 0x1d, 0xe5, 0x60, 0
 void test_rfc8448_server_hello_bytes(void)
 {
     uint8_t out[128];
-    size_t n =
-        protocore_tls13_build_server_hello(out, sizeof(out), RFC8448_SERVER_RANDOM, NULL, 0, RFC8448_SERVER_SHARE,
-                                           sizeof(RFC8448_SERVER_SHARE), TLS_GROUP_X25519, PROTO_FALSE, NULL, 0);
+    size_t n = protocore_tls13_build_server_hello(out, sizeof(out), RFC8448_SERVER_RANDOM, NULL, 0,
+                                                  RFC8448_SERVER_SHARE, sizeof(RFC8448_SERVER_SHARE), TLS_GROUP_X25519,
+                                                  PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, PROTO_FALSE, NULL, 0);
     TEST_ASSERT_EQUAL_UINT(sizeof(RFC8448_SERVER_HELLO), n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_SERVER_HELLO, out, sizeof(RFC8448_SERVER_HELLO));
 }
@@ -95,7 +95,8 @@ void test_server_hello_echoes_the_session_id(void)
                                     0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f};
     uint8_t out[160];
     size_t n = protocore_tls13_build_server_hello(out, sizeof(out), RFC8448_SERVER_RANDOM, SID, sizeof(SID),
-                                                  RFC8448_SERVER_SHARE, 32, TLS_GROUP_X25519, PROTO_FALSE, NULL, 0);
+                                                  RFC8448_SERVER_SHARE, 32, TLS_GROUP_X25519,
+                                                  PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, PROTO_FALSE, NULL, 0);
     TEST_ASSERT_EQUAL_UINT(sizeof(RFC8448_SERVER_HELLO) + sizeof(SID), n);
 
     // Handshake header: msg_type then a 24-bit length of everything after it.
@@ -194,21 +195,21 @@ void test_rfc8446_4_4_3_signed_content(void)
         0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
     };
     uint8_t out[160];
-    size_t n = protocore_tls13_cert_verify_content(out, sizeof(out), HASH, PROTO_TRUE);
+    size_t n = protocore_tls13_cert_verify_content(out, sizeof(out), HASH, 32, PROTO_TRUE);
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, out, sizeof(WANT));
 
     // sec 4.4.3: "The context string for a client signature is 'TLS 1.3, client CertificateVerify'",
     // so the two contexts differ in exactly one word and never produce the same signed content.
     uint8_t cli[160];
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), protocore_tls13_cert_verify_content(cli, sizeof(cli), HASH, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), protocore_tls13_cert_verify_content(cli, sizeof(cli), HASH, 32, PROTO_FALSE));
     TEST_ASSERT_NOT_EQUAL(0, memcmp(cli, out, sizeof(WANT)));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, cli, 64);             // the pad is the same
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT + 97, cli + 97, 33);   // separator + hash are the same
     TEST_ASSERT_EQUAL_UINT8_ARRAY("client", cli + 64 + 9, 6); // only the role word differs
 
     // A destination too small writes nothing rather than a partial content.
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_cert_verify_content(out, sizeof(WANT) - 1, HASH, PROTO_TRUE));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_cert_verify_content(out, sizeof(WANT) - 1, HASH, 32, PROTO_TRUE));
 }
 
 // RFC 8446 sec 4.4.3: "algorithm: The signature algorithm used ... signature: The signature". The
@@ -223,7 +224,7 @@ void test_cert_verify_signature_round_trip(void)
                                      0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x01, 0x23,
                                      0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x0f, 0x1e, 0x2d, 0x3c};
     uint8_t msg[128];
-    size_t n = protocore_tls13_build_cert_verify(g_work, msg, sizeof(msg), HASH, SEED);
+    size_t n = protocore_tls13_build_cert_verify(g_work, msg, sizeof(msg), HASH, 32, SEED);
     TEST_ASSERT_EQUAL_UINT(4u + 2u + 2u + (size_t)PROTOCORE_ED25519_SIG_LEN, n);
 
     TEST_ASSERT_EQUAL_HEX8(TLS_HS_CERTIFICATE_VERIFY, msg[0]);
@@ -233,7 +234,7 @@ void test_cert_verify_signature_round_trip(void)
     TEST_ASSERT_EQUAL_HEX16(PROTOCORE_ED25519_SIG_LEN, (uint16_t)((msg[6] << 8) | msg[7]));
 
     uint8_t content[160];
-    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), HASH, PROTO_TRUE);
+    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), HASH, 32, PROTO_TRUE);
     uint8_t pub[PROTOCORE_ED25519_PUBKEY_LEN];
     Ed25519.pubkey_args.pub = pub;
     Ed25519.pubkey_args.seed = SEED;
@@ -250,7 +251,7 @@ void test_cert_verify_signature_round_trip(void)
     uint8_t other[32];
     memcpy(other, HASH, 32);
     other[0] ^= 0x01;
-    size_t olen = protocore_tls13_cert_verify_content(content, sizeof(content), other, PROTO_TRUE);
+    size_t olen = protocore_tls13_cert_verify_content(content, sizeof(content), other, 32, PROTO_TRUE);
     Ed25519.verify_args.pub = pub;
     Ed25519.verify_args.msg = content;
     Ed25519.verify_args.msg_len = olen;
@@ -289,7 +290,7 @@ void test_rfc8446_4_4_4_finished(void)
                                    0xfc, 0xeb, 0xe1, 0x1a, 0x03, 0x9e, 0xc1, 0x76, 0x94, 0xfa, 0xc6,
                                    0xe9, 0x85, 0x27, 0xb6, 0x42, 0xf2, 0xed, 0xd5, 0xce, 0x61};
     uint8_t out[64];
-    size_t n = protocore_tls13_build_finished(out, sizeof(out), VD);
+    size_t n = protocore_tls13_build_finished(out, sizeof(out), VD, 32);
     TEST_ASSERT_EQUAL_UINT(4u + 32u, n);
     TEST_ASSERT_EQUAL_HEX8(TLS_HS_FINISHED, out[0]);
     TEST_ASSERT_EQUAL_UINT32(32u, ((uint32_t)out[1] << 16) | ((uint32_t)out[2] << 8) | out[3]);
@@ -326,8 +327,9 @@ void test_rfc8446_4_1_3_hello_retry_request(void)
 
     static const uint8_t COOKIE[8] = {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7};
     uint8_t out[128];
-    size_t n = protocore_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, COOKIE,
-                                                         sizeof(COOKIE), PROTO_FALSE);
+    size_t n = protocore_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519,
+                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, COOKIE, sizeof(COOKIE),
+                                                         PROTO_FALSE);
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_HEX8(TLS_HS_SERVER_HELLO, out[0]); // sec 4.1.4: it IS a ServerHello on the wire
     TEST_ASSERT_EQUAL_UINT32((uint32_t)(n - 4), ((uint32_t)out[1] << 16) | ((uint32_t)out[2] << 8) | out[3]);
@@ -339,7 +341,8 @@ void test_rfc8446_4_1_3_hello_retry_request(void)
 
     // A cookie wider than a 16-bit extension body can name is refused rather than truncated.
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519,
-                                                                         COOKIE, 0xFFFE, PROTO_FALSE));
+                                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, COOKIE,
+                                                                         0xFFFE, PROTO_FALSE));
 }
 
 // RFC 9001 sec 8.2 gives the transport parameters extension codepoint 0x0039, and RFC 7301 defines
@@ -427,22 +430,23 @@ void test_builders_refuse_a_short_buffer(void)
     memset(vd, 0, sizeof(vd));
     memset(der, 0, sizeof(der));
 
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_server_hello(small, sizeof(small), RFC8448_SERVER_RANDOM, NULL, 0,
-                                                                  RFC8448_SERVER_SHARE, 32, TLS_GROUP_X25519,
-                                                                  PROTO_FALSE, NULL, 0));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_finished(small, sizeof(small), vd));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_server_hello(
+                                   small, sizeof(small), RFC8448_SERVER_RANDOM, NULL, 0, RFC8448_SERVER_SHARE, 32,
+                                   TLS_GROUP_X25519, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, PROTO_FALSE, NULL, 0));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_finished(small, sizeof(small), vd, 32));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_certificate(small, sizeof(small), der, sizeof(der)));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_message_hash(small, sizeof(small), vd));
     TEST_ASSERT_EQUAL_UINT(
         0u, protocore_tls13_build_encrypted_extensions(small, sizeof(small), der, sizeof(der), PROTO_FALSE));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_cert_verify(g_work, small, sizeof(small), vd, vd));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_hello_retry_request(small, sizeof(small), NULL, 0,
-                                                                         TLS_GROUP_X25519, NULL, 0, PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_cert_verify(g_work, small, sizeof(small), vd, 32, vd));
+    TEST_ASSERT_EQUAL_UINT(
+        0u, protocore_tls13_build_hello_retry_request(small, sizeof(small), NULL, 0, TLS_GROUP_X25519,
+                                                      PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, NULL, 0, PROTO_FALSE));
 
     // Exactly the message's own length is enough.
     uint8_t exact[40];
-    TEST_ASSERT_EQUAL_UINT(36u, protocore_tls13_build_finished(exact, 36, vd));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_finished(exact, 35, vd));
+    TEST_ASSERT_EQUAL_UINT(36u, protocore_tls13_build_finished(exact, 36, vd, 32));
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_finished(exact, 35, vd, 32));
 }
 
 // ---------------------------------------------------------------------------
@@ -455,8 +459,8 @@ void test_builders_refuse_a_short_buffer(void)
 void test_rfc8448_server_hello_parse(void)
 {
     Tls13ServerHello sh;
-    TEST_ASSERT_TRUE(protocore_tls13_parse_server_hello(RFC8448_SERVER_HELLO, sizeof(RFC8448_SERVER_HELLO), &sh,
-                                                        PROTO_FALSE));
+    TEST_ASSERT_TRUE(
+        protocore_tls13_parse_server_hello(RFC8448_SERVER_HELLO, sizeof(RFC8448_SERVER_HELLO), &sh, PROTO_FALSE));
     TEST_ASSERT_FALSE(sh.is_hrr);
     TEST_ASSERT_TRUE(sh.selected_tls13);
     TEST_ASSERT_EQUAL_HEX16(PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, sh.cipher_suite);
@@ -485,8 +489,9 @@ void test_hello_retry_request_parses_as_a_server_hello(void)
     static const uint8_t COOKIE[19] = {0xc0, 0x01, 0xc0, 0x02, 0xc0, 0x03, 0xc0, 0x04, 0xc0, 0x05,
                                        0xc0, 0x06, 0xc0, 0x07, 0xc0, 0x08, 0xc0, 0x09, 0xc0};
     uint8_t out[160];
-    size_t n = protocore_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519, COOKIE,
-                                                         sizeof(COOKIE), PROTO_FALSE);
+    size_t n = protocore_tls13_build_hello_retry_request(out, sizeof(out), NULL, 0, TLS_GROUP_X25519,
+                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, COOKIE, sizeof(COOKIE),
+                                                         PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0u, n);
 
     Tls13ServerHello sh;
@@ -512,8 +517,8 @@ void test_client_hello_round_trips_through_the_server_parser(void)
                                       0xae, 0x4d, 0x54, 0x13, 0x69, 0x1e, 0x52, 0x9a, 0xaf, 0x2c};
     uint8_t out[512];
     size_t n = protocore_tls13_build_client_hello(out, sizeof(out), CLIENT_RANDOM, NULL, 0, SHARE, sizeof(SHARE),
-                                                  TLS_GROUP_X25519, "example.com", "h2", NULL, 0, PROTO_TRUE,
-                                                  PROTO_FALSE);
+                                                  TLS_GROUP_X25519, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256,
+                                                  "example.com", "h2", NULL, 0, PROTO_TRUE, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0u, n);
 
     // Handshake header: msg_type then a 24-bit length of everything after it.
@@ -542,7 +547,8 @@ void test_client_hello_offers_the_alpn_it_was_given(void)
     static const uint8_t SHARE[32] = {0};
     uint8_t out[512];
     size_t n = protocore_tls13_build_client_hello(out, sizeof(out), R, NULL, 0, SHARE, sizeof(SHARE), TLS_GROUP_X25519,
-                                                  NULL, "h3", NULL, 0, PROTO_FALSE, PROTO_FALSE);
+                                                  PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, NULL, "h3", NULL, 0,
+                                                  PROTO_FALSE, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0u, n);
 
     Tls13ClientHello ch;
@@ -560,7 +566,8 @@ void test_client_hello_echoes_a_cookie(void)
     static const uint8_t COOKIE[7] = {0xde, 0xad, 0xbe, 0xef, 0x01, 0x02, 0x03};
     uint8_t out[512];
     size_t n = protocore_tls13_build_client_hello(out, sizeof(out), R, NULL, 0, SHARE, sizeof(SHARE), TLS_GROUP_X25519,
-                                                  NULL, NULL, COOKIE, sizeof(COOKIE), PROTO_FALSE, PROTO_FALSE);
+                                                  PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, NULL, NULL, COOKIE,
+                                                  sizeof(COOKIE), PROTO_FALSE, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0u, n);
 
     Tls13ClientHello ch;
@@ -576,12 +583,14 @@ void test_client_hello_refuses_a_short_buffer(void)
     static const uint8_t SHARE[32] = {0};
     uint8_t out[512];
     size_t n = protocore_tls13_build_client_hello(out, sizeof(out), R, NULL, 0, SHARE, sizeof(SHARE), TLS_GROUP_X25519,
-                                                  NULL, NULL, NULL, 0, PROTO_FALSE, PROTO_FALSE);
+                                                  PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, NULL, NULL, NULL, 0,
+                                                  PROTO_FALSE, PROTO_FALSE);
     TEST_ASSERT_NOT_EQUAL(0u, n);
     uint8_t small[512];
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_client_hello(small, n - 1, R, NULL, 0, SHARE, sizeof(SHARE),
-                                                                  TLS_GROUP_X25519, NULL, NULL, NULL, 0, PROTO_FALSE,
-                                                                  PROTO_FALSE));
+    TEST_ASSERT_EQUAL_UINT(0u,
+                           protocore_tls13_build_client_hello(small, n - 1, R, NULL, 0, SHARE, sizeof(SHARE),
+                                                              TLS_GROUP_X25519, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256,
+                                                              NULL, NULL, NULL, 0, PROTO_FALSE, PROTO_FALSE));
 }
 
 // The DTLS ClientHello carries the extra zero-length legacy_cookie (RFC 9147 sec 5.3), which the
@@ -592,7 +601,8 @@ void test_dtls_client_hello_carries_the_legacy_cookie(void)
     static const uint8_t SHARE[32] = {0};
     uint8_t out[512];
     size_t n = protocore_tls13_build_client_hello(out, sizeof(out), R, NULL, 0, SHARE, sizeof(SHARE), TLS_GROUP_X25519,
-                                                  NULL, NULL, NULL, 0, PROTO_FALSE, PROTO_TRUE);
+                                                  PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, NULL, NULL, NULL, 0,
+                                                  PROTO_FALSE, PROTO_TRUE);
     TEST_ASSERT_NOT_EQUAL(0u, n);
 
     Tls13ClientHello ch;
@@ -677,7 +687,7 @@ void test_cert_verify_round_trip(void)
                                      0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
                                      0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00};
     uint8_t msg[128];
-    size_t n = protocore_tls13_build_cert_verify(g_work, msg, sizeof(msg), HASH, RFC8032_SEED);
+    size_t n = protocore_tls13_build_cert_verify(g_work, msg, sizeof(msg), HASH, 32, RFC8032_SEED);
     TEST_ASSERT_NOT_EQUAL(0u, n);
 
     uint16_t scheme = 0;
@@ -694,7 +704,7 @@ void test_cert_verify_round_trip(void)
     Ed25519.pubkey_args.seed = RFC8032_SEED;
     Ed25519.pubkey(g_work);
     uint8_t content[160];
-    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), HASH, PROTO_TRUE);
+    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), HASH, 32, PROTO_TRUE);
     Ed25519.verify_args.pub = pub;
     Ed25519.verify_args.msg = content;
     Ed25519.verify_args.msg_len = clen;
@@ -709,17 +719,17 @@ void test_finished_round_trip(void)
                                    0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5,
                                    0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf};
     uint8_t msg[64];
-    size_t n = protocore_tls13_build_finished(msg, sizeof(msg), VD);
+    size_t n = protocore_tls13_build_finished(msg, sizeof(msg), VD, 32);
     TEST_ASSERT_EQUAL_UINT(36u, n);
 
     const uint8_t *vd = NULL;
-    TEST_ASSERT_TRUE(protocore_tls13_parse_finished(msg, n, &vd));
+    TEST_ASSERT_TRUE(protocore_tls13_parse_finished(msg, n, &vd, 32));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(VD, vd, 32);
 
     // A body that is not exactly Hash.length is refused, and so is the wrong msg_type.
-    TEST_ASSERT_FALSE(protocore_tls13_parse_finished(msg, n - 1, &vd));
+    TEST_ASSERT_FALSE(protocore_tls13_parse_finished(msg, n - 1, &vd, 32));
     msg[0] = TLS_HS_CERTIFICATE;
-    TEST_ASSERT_FALSE(protocore_tls13_parse_finished(msg, n, &vd));
+    TEST_ASSERT_FALSE(protocore_tls13_parse_finished(msg, n, &vd, 32));
 }
 
 // Every flight parser refuses each truncation rather than reading past its own buffer.
@@ -734,7 +744,7 @@ void test_flight_parsers_refuse_truncation(void)
     size_t cn = protocore_tls13_build_certificate_rpk(cert_msg, sizeof(cert_msg), pub);
     static const uint8_t HASH[32] = {0};
     uint8_t cv_msg[128];
-    size_t vn = protocore_tls13_build_cert_verify(g_work, cv_msg, sizeof(cv_msg), HASH, RFC8032_SEED);
+    size_t vn = protocore_tls13_build_cert_verify(g_work, cv_msg, sizeof(cv_msg), HASH, 32, RFC8032_SEED);
 
     const uint8_t *p = NULL;
     size_t plen = 0;

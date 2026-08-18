@@ -6,11 +6,11 @@
  * @brief SSH RSA host-key layer: NVS/fixture host key, host-key signing, "ssh-rsa" blob (see ssh_rsa.h).
  *
  * The RSASSA-PKCS1-v1.5 math lives in crypto/rsa; this file owns the SSH host key and calls into it.
- * The accelerated arm of that math is the RSA/MPI HAL under core_setup/hal, so no arm is named here.
+ * The accelerated arm of that math is the RSA/MPI HAL under test/core_setup/hal, so no arm is named here.
  */
 
 #include "network_drivers/presentation/ssh/transport/ssh_rsa.h"
-#include "core_setup/hal/nvs.h"    // the host key is read from non-volatile storage
+#include "test/core_setup/hal/nvs.h"    // the host key is read from non-volatile storage
 #include "crypto/asymmetric/rsa.h" // Rsa: the signer, and the key widths
 #include "mmgr/protomem.h"
 #include "mmgr/secure.h"

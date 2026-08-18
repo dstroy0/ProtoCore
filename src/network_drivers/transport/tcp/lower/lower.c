@@ -11,7 +11,7 @@
 
 #include "lower.h"
 #include "../protocol/protocol.h" // closing_check: the CLOSE_CHECK op finalizes a drained slot
-#include "core_setup/board_profiles/protocore_platform.h"
+#include "config/platform/platform.h"
 #include "mmgr/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem.h"
 

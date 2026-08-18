@@ -18,6 +18,7 @@
 
 #include "mmgr/bitio.h"    // protocore_bit_writer - what the emitters write through
 #include "mmgr/protomem.h" // mem.set - the byte mover
+
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS

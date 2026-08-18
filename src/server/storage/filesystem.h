@@ -31,10 +31,11 @@
 #ifndef PROTOCORE_FILESYSTEM_H
 #define PROTOCORE_FILESYSTEM_H
 
-#include "protocore_config.h"
-
 #include "mmgr/protoframe.h" // the one frame engine
 #include "server/storage/mnt.h"
+
+#include "protocore_config.h"
+
 
 PROTOCORE_BEGIN_DECLS
 

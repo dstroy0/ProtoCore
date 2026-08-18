@@ -26,6 +26,7 @@
 #define PROTOCORE_PROTOSTR_H
 
 #include "mmgr/swar.h" // protocore_swar_word and PROTOCORE_SWAR_GO/YES/NO: the step members' currency
+
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS

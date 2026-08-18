@@ -19,7 +19,7 @@
 #include "../common.h"               // TcpConn, conn_pool: the slots this engine drives
 #include "../lower/lower.h"          // every call into the stack below goes through the seam
 #include "../server/server.h"        // TcpListener.enqueue: the owning listener posts the event
-#include "core_setup/board_profiles/protocore_platform.h"
+#include "config/platform/platform.h"
 #include "mmgr/plaintext.h"     // the persistent end this module's state is taken from
 #include "mmgr/rawmemcpy.h"     // raw.read: the unaligned v6 address load
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock

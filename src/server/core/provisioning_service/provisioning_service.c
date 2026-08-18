@@ -27,7 +27,7 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 // Form-field parser: the only non-trivial pure logic here, and what the unit tests drive.
 // ---------------------------------------------------------------------------
 
-#include "core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
+#include "test/core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
 #include "network_drivers/application/web_assets.h"
 #include "network_drivers/physical/physical.h"
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the catch-all DNS binds a port

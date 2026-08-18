@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for the SHA accelerator's host arm (core_setup/hal/host/host_sha_hal.h).
+// Host tests for the SHA accelerator's host arm (test/core_setup/hal/host/host_sha_hal.h).
 //
 // This arm stands in for a peripheral, so the only thing worth asserting is that it answers with the
 // bytes the peripheral would: the FIPS 180-4 one-block digests. Padding and block buffering belong to
@@ -12,7 +12,7 @@
 // state is asserting exactly that, so a stand-in that ignored the flag would fail here rather than
 // silently produce a wrong digest inside a module.
 
-#include "core_setup/hal/host/host_sha_hal.h"
+#include "test/core_setup/hal/host/host_sha_hal.h"
 #include <string.h>
 
 #include <unity.h>

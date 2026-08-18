@@ -12,7 +12,7 @@
 
 #if !PROTOCORE_HAS_BUS
 #error                                                                                                                 \
-    "ProtoCore: PROTOCORE_ENABLE_VL53L0X needs a bus master (an I2C master). Provide one in core_setup/hal/<vendor>, or\
+    "ProtoCore: PROTOCORE_ENABLE_VL53L0X needs a bus master (an I2C master). Provide one in test/core_setup/hal/<vendor>, or\
  turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
 

@@ -293,7 +293,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     Tls13Ks.finished_args.out = cfin_verify;
     Tls13Ks.finished_mac(NULL);
     uint8_t cfin[64];
-    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify);
+    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify, 32);
     DtlsRecordKeys cli_write;
     DtlsRecord.keys_derive(&cli_write, DTLS_CIPHER_AES_128_GCM_SHA256, 2, cks.s + TLS13_KS_CLIENT_HS);
     uint8_t cfin_frag[80];

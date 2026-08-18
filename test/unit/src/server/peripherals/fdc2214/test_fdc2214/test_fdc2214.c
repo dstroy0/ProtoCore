@@ -12,7 +12,7 @@
 // the MSB register is status, not data, so a combine that forgot to mask it would read a valid
 // conversion as a wildly out-of-range one exactly when an error flag is set.
 
-// The bus cases at the bottom drive a datasheet model of the part (core_setup/hal/host/devices/
+// The bus cases at the bottom drive a datasheet model of the part (test/core_setup/hal/host/devices/
 // fdc2214_device.h) rather than a primed byte queue: a suite puts a conversion result on channel 0
 // and the driver's own two reads bring it back, in the order section 7.6.3 requires.
 

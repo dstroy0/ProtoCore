@@ -16,6 +16,7 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief The request methods a route binds to. */

@@ -12,7 +12,7 @@
 // D7 and ELEPROX at D4 of register 0x01, with D6 and D5 unused, so a decoder that treats the high
 // register as four more electrodes reports electrode 12 or 15 as touched on a wiring fault.
 
-// The bus cases at the bottom drive a datasheet model of the part (core_setup/hal/host/devices/
+// The bus cases at the bottom drive a datasheet model of the part (test/core_setup/hal/host/devices/
 // mpr121_device.h) rather than asserting the bytes that went out: section 5.1 discards a register
 // write unless the part is in Stop Mode, so a bring-up that emits the right bytes in the wrong
 // order leaves the part unconfigured, and only reading the registers back shows it.

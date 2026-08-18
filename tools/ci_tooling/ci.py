@@ -76,6 +76,7 @@ CHECK_DEFAULT = [
     "version_sites",
     "version_stamps",
     "test_matrix",
+    "module_graph",
 ]
 
 CHECK = {
@@ -93,6 +94,7 @@ CHECK = {
     "comments": "check.check_comments",
     "examples": "check.check_examples",
     "layering": "check.check_layering",
+    "module_graph": "check.check_module_graph",
     "test_matrix": "check.check_test_matrix",
 }
 

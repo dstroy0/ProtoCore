@@ -19,7 +19,7 @@
  *    and target. It is what lets the SFTP/SCP/WebDAV servers run under a native test.
  *
  *  - **Board filesystem** (board layer): wraps the framework's own file object for persistent
- *    storage. It lives in core_setup/ because it speaks a vendor framework, which the core does
+ *    storage. It lives in test/core_setup/ because it speaks a vendor framework, which the core does
  *    not.
  *
  * Handles are small ints the backend assigns, and a directory cursor is one of them - so ::close

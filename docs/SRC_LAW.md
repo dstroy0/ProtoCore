@@ -9,8 +9,8 @@ standards in the bibliography. Two companion documents carry the other halves:
 
 ## 0. The language is C11
 
-**`src/, test/, core_setup/` are C11.** `.c` and `.h` are the only extensions allowed. `.cpp` is only
-allowed in `core_setup/` as vendor supplied headers. `examples/` are split by vendor, `.cpp` is
+**`src/, test/, test/core_setup/` are C11.** `.c` and `.h` are the only extensions allowed. `.cpp` is only
+allowed in `test/core_setup/` as vendor supplied headers. `examples/` are split by vendor, `.cpp` is
 allowed here.
 
 ## Real-time and object allocation

@@ -63,8 +63,9 @@ void test_dtls_hello_retry_request_bytes(void)
         0x00, 0x33, 0x00, 0x02, 0x00, 0x1D,                         // key_share -> selected_group x25519
         0x00, 0x2C, 0x00, 0x06, 0x00, 0x04, 0xAA, 0xBB, 0xCC, 0xDD, // cookie
     };
-    size_t n = protocore_tls13_build_hello_retry_request(g_out, sizeof(g_out), NULL, 0, TLS_GROUP_X25519, COOKIE,
-                                                         sizeof(COOKIE), PROTO_TRUE);
+    size_t n = protocore_tls13_build_hello_retry_request(g_out, sizeof(g_out), NULL, 0, TLS_GROUP_X25519,
+                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, COOKIE, sizeof(COOKIE),
+                                                         PROTO_TRUE);
     TEST_ASSERT_EQUAL_UINT(66u, n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 66);
 }
@@ -74,8 +75,8 @@ void test_dtls_hello_retry_request_bytes(void)
 void test_tls_hello_retry_request_codepoints(void)
 {
     static const uint8_t SID[4] = {0x11, 0x22, 0x33, 0x44};
-    size_t n = protocore_tls13_build_hello_retry_request(g_out, sizeof(g_out), SID, sizeof(SID), TLS_GROUP_X25519, NULL,
-                                                         0, PROTO_FALSE);
+    size_t n = protocore_tls13_build_hello_retry_request(g_out, sizeof(g_out), SID, sizeof(SID), TLS_GROUP_X25519,
+                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, NULL, 0, PROTO_FALSE);
     // no cookie extension this time: 22 - 10 = 12 extension octets, and 4 more of session id
     TEST_ASSERT_EQUAL_UINT(66u - 10u + 4u, n);
     TEST_ASSERT_EQUAL_HEX8(0x03, g_out[4]); // legacy_version 0x0303
@@ -259,7 +260,8 @@ void test_builders_refuse_a_short_destination(void)
     static const uint8_t COOKIE[4] = {0xAA, 0xBB, 0xCC, 0xDD};
     uint8_t ch1[32];
     memset(ch1, 0, sizeof(ch1));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_hello_retry_request(g_out, 65, NULL, 0, TLS_GROUP_X25519, COOKIE,
+    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_hello_retry_request(g_out, 65, NULL, 0, TLS_GROUP_X25519,
+                                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, COOKIE,
                                                                          sizeof(COOKIE), PROTO_TRUE));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_encrypted_extensions_empty(g_out, 5, PROTO_FALSE, NULL));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_message_hash(g_out, 35, ch1));

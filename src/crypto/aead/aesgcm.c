@@ -9,7 +9,7 @@
  * the GCTR counter, the length block and the tag mask - is one body on both arms; only the AES-256
  * block under it changes arm.
  *
- * HW path: the block runs on the part's AES accelerator (core_setup/hal/esp/esp_aes_hal.h).
+ * HW path: the block runs on the part's AES accelerator (test/core_setup/hal/esp/esp_aes_hal.h).
  * SW path: the table-free software AES-256 of crypto/cipher/aes_block.h.
  *
  * The context is this file's. The module's own borrow carries it at the base, so the block context, the

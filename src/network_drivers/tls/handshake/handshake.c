@@ -10,9 +10,8 @@
 
 #if PROTOCORE_TLS_SOFTWARE
 
-#include "network_drivers/tls/handshake/handshake.h"
+#include "network_drivers/tls/tls.h"
 
-#include "crypto/hash/sha256.h"           // Sha256: the running Transcript-Hash
 #include "crypto/asymmetric/curve25519.h" // protocore_x25519, protocore_x25519_base
 #include "crypto/asymmetric/ed25519.h"    // Ed25519: the peer's CertificateVerify
 #include "crypto/ct_eq.h"                 // protocore_ct_eq: the Finished compare
@@ -31,7 +30,7 @@
 static_assert(PROTOCORE_WORK_TLS_CONN >= (size_t)MAX_TLS_CONNS * PROTOCORE_TLS_CONN_BORROW,
               "PROTOCORE_WORK_TLS_CONN must cover one TX + RX + terms + state borrow per TLS connection: raise it in "
               "protocore_config.h");
-static_assert(PROTOCORE_SHA256_BORROW + sizeof(Tls13ClientHello) + PROTOCORE_TLS13_KS_BORROW +
+static_assert(PROTOCORE_TLS13_TRANSCRIPT_BORROW + sizeof(Tls13ClientHello) + PROTOCORE_TLS13_KS_BORROW +
                       PROTOCORE_SHA512_BORROW <=
                   PROTOCORE_TLS_CONN_STATE_CAP,
               "PROTOCORE_TLS_CONN_STATE_CAP must cover the transcript's working bytes, the parsed ClientHello, the "
@@ -42,7 +41,7 @@ static_assert(PROTOCORE_SHA256_BORROW + sizeof(Tls13ClientHello) + PROTOCORE_TLS
 #define TLS_OFF_RX ((size_t)PROTOCORE_TLS_CONN_MSG_CAP)
 #define TLS_OFF_TERMS (TLS_OFF_RX + PROTOCORE_TLS_CONN_REC_CAP)
 #define TLS_OFF_HASH (TLS_OFF_TERMS + PROTOCORE_TLS_CONN_TERMS_CAP)
-#define TLS_OFF_HELLO (TLS_OFF_HASH + PROTOCORE_SHA256_BORROW)
+#define TLS_OFF_HELLO (TLS_OFF_HASH + PROTOCORE_TLS13_TRANSCRIPT_BORROW)
 #define TLS_OFF_KS (TLS_OFF_HELLO + sizeof(Tls13ClientHello))
 #define TLS_OFF_SIGN (TLS_OFF_KS + PROTOCORE_TLS13_KS_BORROW)
 #define TLS_OFF_PEERKEY (TLS_OFF_SIGN + PROTOCORE_SHA512_BORROW)
@@ -88,20 +87,29 @@ static void fail(uint8_t alert)
     TlsConnection.i32 = -1;
 }
 
+// Start the Transcript-Hash, under whichever hash the connection's suite binds.
+static void transcript_start(void)
+{
+    Tls13Ks.bind.ks = &TlsConnection.conn->ks;
+    Tls13Ks.transcript_init(TlsConnection.conn->transcript);
+}
+
 // Fold a whole handshake message (header included) into the running Transcript-Hash.
 static void transcript_add(const uint8_t *msg, size_t len)
 {
-    Sha256.update_args.data = msg;
-    Sha256.update_args.len = len;
-    Sha256.update(TlsConnection.conn->transcript);
+    Tls13Ks.bind.ks = &TlsConnection.conn->ks;
+    Tls13Ks.transcript_args.data = msg;
+    Tls13Ks.transcript_args.len = len;
+    Tls13Ks.transcript_update(TlsConnection.conn->transcript);
 }
 
 // The Transcript-Hash so far into terms[off]. Finalizing compresses the padded blocks into a copy of
 // the state, so the running context is untouched and keeps taking messages.
 static void transcript_peek(size_t off)
 {
-    Sha256.final_args.out = TlsConnection.conn->terms + off;
-    Sha256.final(TlsConnection.conn->transcript);
+    Tls13Ks.bind.ks = &TlsConnection.conn->ks;
+    Tls13Ks.transcript_args.out = TlsConnection.conn->terms + off;
+    Tls13Ks.transcript_peek(TlsConnection.conn->transcript);
 }
 
 // The body length a handshake message header declares.
@@ -114,7 +122,7 @@ static size_t hs_body_len(const uint8_t *msg)
 static void keys_derive(TlsRecordKeys *keys, const uint8_t *secret)
 {
     TlsRecord.key.keys = keys;
-    TlsRecord.key.cipher = TLS_CIPHER_AES_128_GCM_SHA256;
+    TlsRecord.key.cipher = TlsConnection.conn->cfg->cipher;
     TlsRecord.key.secret = secret;
     TlsRecord.keys_derive(NULL);
 }
@@ -200,9 +208,10 @@ static void server_flight(uint8_t *restrict work)
     size_t off = 0;
 
     // ServerHello travels as TLSPlaintext: the keys it establishes do not protect it.
-    size_t n = protocore_tls13_build_server_hello(
-        c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->cfg->random, c->hello->session_id, c->hello->session_id_len,
-        c->terms + TLS_TERM_SHARE, TLS_X25519_SHARE_LEN, TLS_GROUP_X25519, PROTO_FALSE, NULL, 0);
+    size_t n = protocore_tls13_build_server_hello(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->cfg->random,
+                                                  c->hello->session_id, c->hello->session_id_len,
+                                                  c->terms + TLS_TERM_SHARE, TLS_X25519_SHARE_LEN, TLS_GROUP_X25519,
+                                                  protocore_tls_cipher_code(c->cfg->cipher), PROTO_FALSE, NULL, 0);
     if (n == 0)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
@@ -259,7 +268,7 @@ static void server_flight(uint8_t *restrict work)
     // CertificateVerify signs the transcript through the Certificate message.
     transcript_peek(TLS_TERM_HASH);
     n = protocore_tls13_build_cert_verify(c->sign_work, c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_HASH,
-                                          c->cfg->ed25519_seed);
+                                          c->ks.len, c->cfg->ed25519_seed);
     w = emit_encrypted(n, out + off, out_cap - off);
     if (w == 0)
     {
@@ -271,7 +280,7 @@ static void server_flight(uint8_t *restrict work)
     // Finished covers the transcript through CertificateVerify.
     transcript_peek(TLS_TERM_HASH);
     finished_mac(c->ks.s + TLS13_KS_SERVER_HS, TLS_TERM_HASH);
-    n = protocore_tls13_build_finished(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_MAC);
+    n = protocore_tls13_build_finished(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_MAC, c->ks.len);
     w = emit_encrypted(n, out + off, out_cap - off);
     if (w == 0)
     {
@@ -334,7 +343,7 @@ static void server_hello_retry(const uint8_t *msg, size_t len)
 
     transcript_add(msg, len);
     transcript_peek(TLS_TERM_HASH);
-    Sha256.init(c->transcript);
+    transcript_start();
     size_t n = protocore_tls13_build_message_hash(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_HASH);
     if (n == 0)
     {
@@ -346,7 +355,8 @@ static void server_hello_retry(const uint8_t *msg, size_t len)
     // No cookie: the stream side has a connection to bind the retry to, so there is nothing to
     // carry the return-routability check a datagram transport needs.
     n = protocore_tls13_build_hello_retry_request(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->hello->session_id,
-                                                  c->hello->session_id_len, TLS_GROUP_X25519, NULL, 0, PROTO_FALSE);
+                                                  c->hello->session_id_len, TLS_GROUP_X25519,
+                                                  protocore_tls_cipher_code(c->cfg->cipher), NULL, 0, PROTO_FALSE);
     if (n == 0)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
@@ -379,10 +389,13 @@ static void server_on_client_hello(const uint8_t *msg, size_t len)
         fail(TLS_ALERT_DECODE_ERROR);
         return;
     }
-    // One profile: TLS 1.3, X25519, Ed25519. sec 4.1.1: no overlap in the parameters themselves is
-    // a handshake_failure.
-    if (!c->hello->offers_tls13 || !c->hello->offers_x25519 || !c->hello->offers_ed25519 ||
-        !c->hello->offers_aes128gcm_sha256)
+    // One profile: TLS 1.3, X25519, Ed25519, and the suite this listener was configured with. sec
+    // 4.1.1: no overlap in the parameters themselves is a handshake_failure. sec 4.1.3 makes the
+    // selection one of the suites the client listed, so a client that did not offer it is refused
+    // rather than answered with it.
+    const proto_bool offered = protocore_tls_cipher_is384(c->cfg->cipher) ? c->hello->offers_aes256gcm_sha384
+                                                                          : c->hello->offers_aes128gcm_sha256;
+    if (!c->hello->offers_tls13 || !c->hello->offers_x25519 || !c->hello->offers_ed25519 || !offered)
     {
         fail(TLS_ALERT_HANDSHAKE_FAILURE);
         return;
@@ -484,15 +497,16 @@ static void conn_init(uint8_t *restrict work)
     c->role = TlsConnection.init_args.role;
     c->state = TLS_CONN_START;
     c->transcript = c->hash_work;
-    Sha256.init(c->transcript);
 
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &c->ks;
     Tls13Ks.bind.s = c->ks_work;
-    // This driver offers TLS_AES_128_GCM_SHA256 only, so the schedule's hash is SHA-256. It is stated
-    // rather than assumed because the schedule binds either, and c->ks.len is read back from here on.
-    Tls13Ks.bind.is384 = PROTO_FALSE;
+    // The suite the caller stated fixes the schedule's hash, and with it the Transcript-Hash the
+    // messages fold into (RFC 8446 sec 4.4.1, 7.1). Bound before the transcript starts, because the
+    // first message hashed has to go into the right one.
+    Tls13Ks.bind.is384 = protocore_tls_cipher_is384(c->cfg->cipher);
     Tls13Ks.early(NULL);
+    transcript_start();
     TlsConnection.ok = Tls13Ks.ok;
 }
 
@@ -519,7 +533,9 @@ static void client_on_server_hello(const uint8_t *msg, size_t len)
         fail(TLS_ALERT_HANDSHAKE_FAILURE);
         return;
     }
-    if (!sh.selected_tls13 || sh.cipher_suite != PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256 || !sh.has_key_share ||
+    // sec 4.1.3: the selected suite must be the one this end offered; anything else is a parameter
+    // it never proposed.
+    if (!sh.selected_tls13 || sh.cipher_suite != protocore_tls_cipher_code(c->cfg->cipher) || !sh.has_key_share ||
         sh.group != TLS_GROUP_X25519 || sh.share_len != TLS_X25519_SHARE_LEN)
     {
         fail(TLS_ALERT_ILLEGAL_PARAMETER);
@@ -702,7 +718,8 @@ static void client_on_cert_verify(const uint8_t *msg, size_t len)
     }
     transcript_peek(TLS_TERM_HASH);
     uint8_t content[64 + 33 + 1 + TLS13_SECRET_MAX];
-    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), c->terms + TLS_TERM_HASH, PROTO_TRUE);
+    size_t clen =
+        protocore_tls13_cert_verify_content(content, sizeof(content), c->terms + TLS_TERM_HASH, c->ks.len, PROTO_TRUE);
     if (clen == 0)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
@@ -737,7 +754,7 @@ static void client_on_server_finished(const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnection.conn;
     const uint8_t *vd = NULL;
-    if (!protocore_tls13_parse_finished(msg, len, &vd))
+    if (!protocore_tls13_parse_finished(msg, len, &vd, c->ks.len))
     {
         fail(TLS_ALERT_DECODE_ERROR);
         return;
@@ -762,7 +779,7 @@ static void client_on_server_finished(const uint8_t *msg, size_t len)
 
     // This end's Finished covers the same transcript, under the client handshake secret.
     finished_mac(c->ks.s + TLS13_KS_CLIENT_HS, TLS_TERM_HS_FIN);
-    size_t n = protocore_tls13_build_finished(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_MAC);
+    size_t n = protocore_tls13_build_finished(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->terms + TLS_TERM_MAC, c->ks.len);
     size_t w = emit_encrypted(n, TlsConnection.out_args.out, TlsConnection.out_args.out_cap);
     if (w == 0)
     {
@@ -817,7 +834,8 @@ static void conn_start(uint8_t *restrict work)
     const char *alpn = (c->cfg->alpn && c->cfg->alpn_count) ? c->cfg->alpn[0] : NULL;
     size_t n = protocore_tls13_build_client_hello(c->tx, PROTOCORE_TLS_CONN_MSG_CAP, c->cfg->random, NULL, 0,
                                                   c->terms + TLS_TERM_SHARE, TLS_X25519_SHARE_LEN, TLS_GROUP_X25519,
-                                                  c->cfg->hostname, alpn, NULL, 0, PROTO_TRUE, PROTO_FALSE);
+                                                  protocore_tls_cipher_code(c->cfg->cipher), c->cfg->hostname, alpn,
+                                                  NULL, 0, PROTO_TRUE, PROTO_FALSE);
     if (n == 0)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);

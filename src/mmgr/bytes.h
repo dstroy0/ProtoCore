@@ -30,6 +30,7 @@
 #include "mmgr/protostr.h" // str.len - the bounded run length
 #include "mmgr/span.h"     // protocore_span / protocore_cspan - the region these verbs act on
 
+
 PROTOCORE_BEGIN_DECLS
 
 /**

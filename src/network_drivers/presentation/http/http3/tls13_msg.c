@@ -458,6 +458,7 @@ proto_bool protocore_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tl
     // RFC 8446 sec 4.1.3: the server selects its suite "from the list in ClientHello.cipher_suites",
     // so what the client offered has to reach the caller rather than being read past.
     out->offers_aes128gcm_sha256 = list16_contains(cs, cs_len, cs_len, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    out->offers_aes256gcm_sha384 = list16_contains(cs, cs_len, cs_len, PROTOCORE_TLS_SUITE_AES_256_GCM_SHA384);
 
     uint8_t comp_len = 0;
     const uint8_t *comp = NULL;
@@ -502,7 +503,8 @@ proto_bool protocore_tls13_parse_client_hello(const uint8_t *msg, size_t len, Tl
 // ---------------------------------------------------------------------------
 size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t random[32], const uint8_t *session_id,
                                           uint8_t session_id_len, const uint8_t *share, size_t share_len,
-                                          uint16_t group, proto_bool dtls, const uint8_t *conn_id, size_t conn_id_len)
+                                          uint16_t group, uint16_t suite, proto_bool dtls, const uint8_t *conn_id,
+                                          size_t conn_id_len)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_SERVER_HELLO);
@@ -513,7 +515,7 @@ size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_
     w_bytes(&w, random, 32);
     w_u8(&w, session_id_len);
     w_bytes(&w, session_id, session_id_len);
-    w_u16(&w, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    w_u16(&w, suite);
     w_u8(&w, 0x00); // legacy_compression_method
 
     size_t ext_len = w_mark(&w, 2);
@@ -543,9 +545,9 @@ size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_
     return w.ok ? w.pos : 0;
 }
 
-size_t protocore_tls13_build_client_hello(uint8_t *out, size_t cap, const uint8_t random[32],
-                                          const uint8_t *session_id, uint8_t session_id_len, const uint8_t *share,
-                                          size_t share_len, uint16_t group, const char *sni, const char *alpn,
+size_t protocore_tls13_build_client_hello(uint8_t *out, size_t cap, const uint8_t random[32], const uint8_t *session_id,
+                                          uint8_t session_id_len, const uint8_t *share, size_t share_len,
+                                          uint16_t group, uint16_t suite, const char *sni, const char *alpn,
                                           const uint8_t *cookie, size_t cookie_len, proto_bool rpk_server_cert,
                                           proto_bool dtls)
 {
@@ -562,8 +564,8 @@ size_t protocore_tls13_build_client_hello(uint8_t *out, size_t cap, const uint8_
     {
         w_u8(&w, 0); // legacy_cookie: zero length for a DTLS 1.3-only client (RFC 9147 §5.3)
     }
-    w_u16(&w, 2); // cipher_suites: the one suite this stack answers
-    w_u16(&w, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    w_u16(&w, 2); // cipher_suites: the one suite this hello offers
+    w_u16(&w, suite);
     w_u8(&w, 1);    // legacy_compression_methods "MUST contain exactly one byte,
     w_u8(&w, 0x00); // set to zero" (sec 4.1.2)
 
@@ -716,15 +718,15 @@ proto_bool protocore_tls13_parse_cert_verify(const uint8_t *msg, size_t len, uin
     return PROTO_TRUE;
 }
 
-proto_bool protocore_tls13_parse_finished(const uint8_t *msg, size_t len, const uint8_t **vd)
+proto_bool protocore_tls13_parse_finished(const uint8_t *msg, size_t len, const uint8_t **vd, size_t verify_len)
 {
     Reader r;
     if (!hs_body(msg, len, TLS_HS_FINISHED, &r))
     {
         return PROTO_FALSE;
     }
-    // Hash.length for SHA-256, the one suite this stack answers.
-    return r_take(&r, 32, vd) && r.pos == r.len;
+    // sec 4.4.4: verify_data is Hash.length octets, and the body is exactly that.
+    return r_take(&r, verify_len, vd) && r.pos == r.len;
 }
 
 proto_bool protocore_tls13_parse_server_hello(const uint8_t *msg, size_t len, Tls13ServerHello *out, proto_bool dtls)
@@ -854,8 +856,8 @@ const uint8_t protocore_tls13_hrr_random[32] = {0xCF, 0x21, 0xAD, 0x74, 0xE5, 0x
                                                 0x8C, 0x5E, 0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C};
 
 size_t protocore_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_t *session_id,
-                                                 uint8_t session_id_len, uint16_t selected_group, const uint8_t *cookie,
-                                                 size_t cookie_len, proto_bool dtls)
+                                                 uint8_t session_id_len, uint16_t selected_group, uint16_t suite,
+                                                 const uint8_t *cookie, size_t cookie_len, proto_bool dtls)
 {
     if (cookie_len > 0xFFFD)
     {
@@ -872,7 +874,7 @@ size_t protocore_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const
     w_bytes(&w, protocore_tls13_hrr_random, 32);
     w_u8(&w, session_id_len);
     w_bytes(&w, session_id, session_id_len);
-    w_u16(&w, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
+    w_u16(&w, suite);
     w_u8(&w, 0x00); // legacy_compression_method
 
     size_t ext_len = w_mark(&w, 2);
@@ -949,8 +951,8 @@ size_t protocore_tls13_build_message_hash(uint8_t *out, size_t cap, const uint8_
     return w.ok ? w.pos : 0;
 }
 
-size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *quic_tp,
-                                                  size_t quic_tp_len, proto_bool rpk_server_cert)
+size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *quic_tp, size_t quic_tp_len,
+                                                  proto_bool rpk_server_cert)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_ENCRYPTED_EXTENSIONS);
@@ -1025,7 +1027,7 @@ size_t protocore_tls13_build_certificate_rpk(uint8_t *out, size_t cap, const uin
 }
 #endif
 
-size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
+size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t *transcript_hash, size_t hash_len,
                                            proto_bool is_server)
 {
     // RFC 8446 sec 4.4.3: 64 spaces || context string || 0x00 || transcript hash.
@@ -1033,7 +1035,11 @@ size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8
     static const char CLI[] = "TLS 1.3, client CertificateVerify";
     const char *ctx = is_server ? SRV : CLI;
     size_t ctx_len = is_server ? sizeof(SRV) - 1 : sizeof(CLI) - 1;
-    size_t total = 64 + ctx_len + 1 + 32;
+    if (hash_len > PROTOCORE_TLS13_SECRET_MAX)
+    {
+        return 0;
+    }
+    size_t total = 64 + ctx_len + 1 + hash_len;
     if (total > cap)
     {
         return 0;
@@ -1041,15 +1047,15 @@ size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8
     mem.set(out, 0x20, 64);
     mem.cpy(out + 64, ctx, ctx_len);
     out[64 + ctx_len] = 0x00;
-    mem.cpy(out + 64 + ctx_len + 1, transcript_hash, 32);
+    mem.cpy(out + 64 + ctx_len + 1, transcript_hash, hash_len);
     return total;
 }
 
-size_t protocore_tls13_build_cert_verify(uint8_t *sign_work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
-                                         const uint8_t seed[32])
+size_t protocore_tls13_build_cert_verify(uint8_t *sign_work, uint8_t *out, size_t cap, const uint8_t *transcript_hash,
+                                         size_t hash_len, const uint8_t seed[32])
 {
-    uint8_t content[64 + 33 + 1 + 32];
-    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), transcript_hash, PROTO_TRUE);
+    uint8_t content[64 + 33 + 1 + PROTOCORE_TLS13_SECRET_MAX];
+    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), transcript_hash, hash_len, PROTO_TRUE);
     if (!clen)
     {
         return 0;
@@ -1071,12 +1077,12 @@ size_t protocore_tls13_build_cert_verify(uint8_t *sign_work, uint8_t *out, size_
     return w.ok ? w.pos : 0;
 }
 
-size_t protocore_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t verify_data[32])
+size_t protocore_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t *verify_data, size_t verify_len)
 {
     Writer w = {out, cap, 0, PROTO_TRUE};
     w_u8(&w, TLS_HS_FINISHED);
     size_t hs_len = w_mark(&w, 3);
-    w_bytes(&w, verify_data, 32);
+    w_bytes(&w, verify_data, verify_len);
     w_patch24(&w, hs_len);
     return w.ok ? w.pos : 0;
 }

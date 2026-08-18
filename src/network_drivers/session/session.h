@@ -22,10 +22,11 @@
 #define PROTOCORE_SESSION_H
 
 #include "network_drivers/transport/tcp/evt.h" // EvtType, TcpEvt: the events this layer drains
-#include "protocore_config.h"                  // CONN_POOL_SLOTS, proto_bool: the tables below
-
 #include "server/core/proto_handler.h" // ProtoRegistryNs: carried below as Session.proto
 #include "server/core/worker.h"        // WorkerNs: carried below as Session.workers
+
+#include "protocore_config.h"                  // CONN_POOL_SLOTS, proto_bool: the tables below
+
 
 /**
  * @brief Per-connection state, keyed on the transport slot index.

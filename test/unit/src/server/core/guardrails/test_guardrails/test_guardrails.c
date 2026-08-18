@@ -14,7 +14,7 @@
 // reboots, so an off-by-one at the floor either fires an episode early on a healthy device or
 // misses the one byte before exhaustion.
 
-#include "core_setup/hal/host/host_platform.h" // protocore_host_set_heap / _stack: what the seam reports
+#include "test/core_setup/hal/host/host_platform.h" // protocore_host_set_heap / _stack: what the seam reports
 #include "server/core/guardrails/guardrails.h"
 #include <string.h>
 

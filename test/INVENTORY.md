@@ -91,7 +91,7 @@ print the `esptool` flash command.
 | P4     | `cryptobench`, `linktest`, `tls`                                                         |
 
 `hal_verify/verify_regmaps.sh` compiles a `static_assert` harness per die against
-`core_setup/hal/esp/esp_crypto_hal.h`.
+`test/core_setup/hal/esp/esp_crypto_hal.h`.
 
 ## Side channel - `reverse_engineering/`
 

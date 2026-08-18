@@ -37,11 +37,11 @@ spelled `ARDUINO` - naming one vendor's toolchain put every non-Espressif target
 on the software path.
 
 A detected vendor answers for its own silicon in
-[core_setup/board_profiles/protocore_platform.h](../core_setup/board_profiles/protocore_platform.h);
+[protocore_platform.h](../protocore_platform.h);
 a build with no vendor answers 0 and turns a capability on with
 `-DPROTOCORE_HAS_<X>=1`, which is how a test env drives a hardware path on a machine
-that has no hardware. Which vendor a build speaks to is `core_setup/`'s job, the
-backends a suite stands up live in `core_setup/hal/host/`, and no vendor header appears in
+that has no hardware. Which vendor a build speaks to is `test/core_setup/`'s job, the
+backends a suite stands up live in `test/core_setup/hal/host/`, and no vendor header appears in
 the core.
 
 - **Native tests** (fast, no hardware): every feature has a `native_*` test

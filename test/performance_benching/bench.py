@@ -13,7 +13,7 @@ test/performance_benching instead of the native test suite. `bench.py help` is t
   gen     regenerate every bench project's platformio.ini from the matrix
   list    print the benches the matrix defines
   deps    fill each bench's src list from the include closure of its main.c
-  run     build and run benches on the host, through core_setup/hal/host
+  run     build and run benches on the host, through test/core_setup/hal/host
   flash   build and upload one bench to a device, through pio
 
 bench_matrix.json is the single source of truth. It is never hand-edited: every mutation takes the
@@ -232,7 +232,7 @@ def cmd_list(a):
 
 
 # The host branch of the platform seam. These answer the calls src/ makes through
-# core_setup/board_profiles/protocore_platform.h and the crypto, NVS and PHY seams: the arm is
+# protocore_platform.h and the crypto, NVS and PHY seams: the arm is
 # chosen by vendor, so it sits nowhere near the header and no include closure reaches it. The unit
 # envs name the same files in their build_src_filter; a bench's src list is derived, so they are
 # named here.
@@ -242,11 +242,11 @@ def cmd_list(a):
 # and does not have to link what the AES arm itself needs. Built per bench: a body behind a
 # PROTOCORE_ENABLE_* flag is present or empty depending on what that bench defines.
 HOST_ARMS = [
-    "core_setup/hal/portable/portable_platform.c",
-    "core_setup/hal/portable/portable_bignum.c",
-    "core_setup/hal/host/host_platform.c",
-    "core_setup/hal/host/host_nvs.c",
-    "core_setup/hal/host/physical/physical_mock.c",
+    "test/core_setup/hal/portable/portable_platform.c",
+    "test/core_setup/hal/portable/portable_bignum.c",
+    "test/core_setup/hal/host/host_platform.c",
+    "test/core_setup/hal/host/host_nvs.c",
+    "test/core_setup/hal/host/physical/physical_mock.c",
 ]
 
 
@@ -257,7 +257,7 @@ def host_flags(entry):
     # reaches is kept out of the source list by _mm_headers pruning its subtree, not by leaving the
     # path off.
     incs = [
-        "-Icore_setup/hal/host",
+        "-Itest/core_setup/hal/host",
         "-Itest/support",
         "-Isrc",
         "-Iinclude",

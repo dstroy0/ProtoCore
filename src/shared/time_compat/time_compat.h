@@ -19,6 +19,7 @@
 
 #include <time.h> // struct tm and the gmtime_r / gmtime_s the seam picks between
 
+
 #include "protocore_config.h" // the entry point
 
 /** @brief The instant a conversion reads, and the storage it fills. */

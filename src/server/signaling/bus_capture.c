@@ -13,7 +13,7 @@
 
 #if PROTOCORE_ENABLE_BUS_CAPTURE
 
-#include "core_setup/board_profiles/protocore_platform.h"
+#include "config/platform/platform.h"
 #include "mmgr/secure.h" // the persistent end this module's state is taken from
 #include "server/signaling/bus_capture.h"
 #include "shared/pcap/pcap.h"

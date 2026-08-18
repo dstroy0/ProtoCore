@@ -13,7 +13,7 @@
 // sheet and the check value follows from it directly - 0.04096 / (100 uA * 0.1 ohm) = 4096 - so a
 // wrong constant or a wrong unit scaling cannot land on it.
 
-// The bus cases at the bottom drive a datasheet model of the part (core_setup/hal/host/devices/
+// The bus cases at the bottom drive a datasheet model of the part (test/core_setup/hal/host/devices/
 // ina219_device.h) rather than a primed byte queue: a suite applies a shunt drop and a bus
 // voltage, the driver programs its own calibration and composes its own transfers, and the part
 // computes current and power from them by the datasheet's own equations.

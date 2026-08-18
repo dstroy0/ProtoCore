@@ -65,7 +65,7 @@ explanatory comments:
 #define PROTOCORE_ENABLE_MNT 1
 
 #include "protocore.h"
-#include "core_setup/hal/esp/esp_mnt_fs.h" // the Arduino FS backend lives in the board layer
+#include "test/core_setup/hal/esp/esp_mnt_fs.h" // the Arduino FS backend lives in the board layer
 #include "network_drivers/physical/physical.h"
 #include "server/storage/filesystem.h"
 #include <LittleFS.h>

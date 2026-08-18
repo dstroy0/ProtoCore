@@ -542,7 +542,7 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
       seal result on top.
     - `services/system/esp/esp.c:78,113` the same.
 
-    The AEAD backends close the trap: `core_setup/hal/portable/portable_aes128gcm.c:209-213` writes
+    The AEAD backends close the trap: `test/core_setup/hal/portable/portable_aes128gcm.c:209-213` writes
     through `storage` unconditionally, so a NULL arrives as a store rather than as a check.
 
 - **Root cause:** `mmgr/secure.h:99-105` states the contract - "Returns NULL if the request does not
@@ -1514,11 +1514,11 @@ PROTOCORE_SSH_KEXINIT_S_MAX` when `as_client`, then `if (len > peer_cap) return 
 
 - **Status:** OPEN, found 2026-08-08 reconciling SWEEP_NOTES.md against the tree.
 - **Symptom:** the arena size is a `#ifndef` default in `protocore_config.h:6469` (8192) and again in
-  all eleven `core_setup/board_profiles/esp/*_defaults.h`, scaled by die RAM: c2/c61/h2/h21/s2 8192,
+  all eleven `vendor/board_profiles/esp/*_defaults.h`, scaled by die RAM: c2/c61/h2/h21/s2 8192,
   c3/c5/c6/h4 10240, s3/s31 12288, p4 16384.
 - **Root cause:** the scaling axis is wrong. The requirement is set by which features are compiled
   in, not by which chip runs them - a C2 running SSH plus websocket borrows exactly what a P4 running
-  SSH plus websocket borrows. `core_setup/board_profiles/derived_sizing.h` states that principle in
+  SSH plus websocket borrows. `derived_sizing.h` states that principle in
   its own header for `RX_BUF_SIZE` and the plaintext pool never got it.
 - **What is already in place:** the per-TU worst-case terms exist and are proved at their borrow
   sites - `PROTOCORE_PLAINTEXT_WORK_WS_SEND` / `_WS_RECV` (`websocket.h:76,84`), `_SSH_TRANSPORT`
@@ -1578,7 +1578,7 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
   `ssh_packet.c`, plus `bn_expmod_group14`. That is the entry below, and it is why the compile error
   had been sitting there: nothing downstream of it had ever run.
 
-## An env with no source list builds the whole of src/ and links none of core_setup/
+## An env with no source list builds the whole of src/ and links none of test/core_setup/
 
 - **Status:** FIXED for `native_swar`, found 2026-08-08 behind the `Deflate` / `Inflate` gate fix
   above. The general question the last bullet raises is still open.
@@ -1590,7 +1590,7 @@ name 'DeflateNs'` and `'deflate_raw' undeclared here (not in a function)`, and t
   `gen_test_envs.py` emits no `build_src_filter` and PlatformIO falls back to its default of `+<*>`:
   the env compiles every file under `src/`. With no flags, every `PROTOCORE_ENABLE_*` takes its default, so
   SSH is on and `ssh_conn.c` / `ssh_dh.c` / `ssh_packet.c` compile for real. The AEAD and bignum
-  backends they call live under `core_setup/hal/portable`, which sits outside `src/` and so is in no
+  backends they call live under `test/core_setup/hal/portable`, which sits outside `src/` and so is in no
   env's default filter. Same family as the `native_quic_server` entry below: an env whose source set
   does not close over what its sources call.
 - **Scope:** 25 of the 328 envs carry `"src": []` (`native_application`, `native_auth`,
@@ -1821,7 +1821,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   cannot override a value handed to it from outside, and `#undef` is banned (SRC_LAW rule 11), so
   no arrangement inside the header could have recovered.
 - **Blast radius:** every one of the 310 native envs carried the flag, and the whole
-  `PROTOCORE_HOT` half of the tree had no test env at all - `core_setup/*/mock/` exists to stand
+  `PROTOCORE_HOT` half of the tree had no test env at all - `test/core_setup/*/mock/` exists to stand
   in for silicon and nothing was compiling against it. That is how the `protocore_lwip_to_ip` bug above
   survived: its arm was unreachable from the suite.
 - **Fix:** drop `-DPROTOCORE_HOST=1` from `native_base`. It was redundant - nothing on a native
@@ -1953,7 +1953,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   `#if PROTOCORE_HOT` is still C++, and no native env compiles it, so 307 envs of compile sweep
   cannot see any of it. Found: `namespace fs { class FS; }` plus `fs::FS &` parameters in
   `server/core/exc_decoder.h` / `server/core/exc_coredump.c`, `namespace fs` and `fs::FS *` / `fs::File &` in
-  `core_setup/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace protocore_wal_fs_detail` over `fs::File`
+  `test/core_setup/hal/esp/esp_mnt_fs.{h,c}`, and a whole `namespace protocore_wal_fs_detail` over `fs::File`
   in `services/storage/wal/wal_fs.h`. A target build of any of them is a hard C error.
 - **Root cause:** the conversion was driven by the native suites, which are the only thing that
   compiles during it. `PROTOCORE_HOT` is false on the host, so those regions were never parsed.
@@ -1967,7 +1967,7 @@ member named 'auth_id'`, and `'CSRF_TOKEN_BUF' undeclared`.
   backend (RAM disk, the ESP adapter, the lfs mock), so it is an owner decision rather than a
   mechanical fix.
 - **Also open:** `esp_mnt_fs.{h,c}` legitimately names Arduino's `fs::FS` because wrapping it is the
-  adapter's whole job. Resolved by compiling `core_setup/hal/esp/` as C++ (owner decision), which
+  adapter's whole job. Resolved by compiling `test/core_setup/hal/esp/` as C++ (owner decision), which
   needs the build rule and a SYMBOLS.md amendment recording the exemption.
 
 ## A board profile's PROTOCORE_GPIO_OUT macro rewrote the protocore_gpio_dir enum member of the same name

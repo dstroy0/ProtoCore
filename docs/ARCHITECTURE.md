@@ -42,7 +42,7 @@ src/shared/  layer-agnostic primitives shared across the tree so
                 (base64 module, used by JWT + OIDC) and host->IP resolution
                 (network_drivers/network/dns/dns_resolver, used by the
                 server-adjacent code AND the TCP client, so a client has one DNS owner).
-core_setup/     NOT under src/: board profiles (per-die sizing and capability
+test/core_setup/     NOT under src/: board profiles (per-die sizing and capability
                 macros), the crypto HAL, and the protocore_platform selector.
 ```
 
@@ -498,14 +498,14 @@ designed once, correctly, up front.
 silicon-specific:**
 
 ```
-core_setup/board_profiles/
+vendor/board_profiles/
   board_profile.h            # common: derives (vendor, die, sizes) from build macros
   derived_sizing.h           # common (vendor-agnostic)
   esp/ { s3_defaults.h, p4_defaults.h, c6_defaults.h, ... }   # move existing here
   stm/ { stm32h7_defaults.h, ... }
   rp/  { rp2350_defaults.h, ... }
   ti/  { ... }
-core_setup/hal/                     # the accelerator HAL - it is ONLY a HAL, partitioned by vendor
+test/core_setup/hal/                     # the accelerator HAL - it is ONLY a HAL, partitioned by vendor
   esp/ { esp_crypto_hal.h/.c }   # move existing here (RSA/MPI direct-register, 7 dies)
   stm/ { stm_crypto_hal.* }        # STM32 PKA / CRYP / HASH, direct-register
   rp/  { ... }                     # RP2350 SHA-256 block etc, else the crypto/ software path
@@ -521,7 +521,7 @@ src/network_drivers/physical/
   ti/  { ... }
 ```
 
-**Selector (the one new common seam):** a single `core_setup/board_profiles/protocore_platform.h`
+**Selector (the one new common seam):** a single `protocore_platform.h`
 maps the toolchain's target macro onto two axes and nothing else pulls vendor
 detail directly:
 
@@ -534,7 +534,7 @@ A **common selector point** then resolves the backend once per layer:
 else -> the portable software path (this is how `board_profile.h` picks the die
 profile). The crypto layer already does the vendor-agnostic thing without a
 dispatcher: `crypto/` is portable C, and each TU keys off the HAL's capability
-macro (`PROTOCORE_RSA_MODMUL_HW`) that the selected `core_setup/hal/<vendor>/` backend defines - so
+macro (`PROTOCORE_RSA_MODMUL_HW`) that the selected `test/core_setup/hal/<vendor>/` backend defines - so
 `crypto/` never moves and never names a vendor. Common code sees an API/macro, not
 a vendor subdir.
 
@@ -612,7 +612,7 @@ modern KEX is curve25519/ECDH already.
 
 Raised 2026-07-27. lwIP is a fine portable reference stack but it is slow in the
 places that matter for a deterministic single-owner server, and several of its costs
-are structural, not tunable. Mirror what the crypto HAL did (`core_setup/hal/`: direct
+are structural, not tunable. Mirror what the crypto HAL did (`test/core_setup/hal/`: direct
 registers, our own `PROTOCORE_` register map, **zero** `soc/` / vendor symbols, ground-truth
 `static_assert`-verified vs the vendor headers): pull the networking **data path** out
 of lwIP into a direct-register/DMA HAL under `network_drivers/physical/<vendor>/`, and
@@ -679,7 +679,7 @@ instructions. Asserting them in a comment does not make them survive a toolchain
 **The API and the implementation are both C11.** Flat `protocore_` / `PROTOCORE_` names at global scope, no
 namespace, so a C caller can reach everything (see [SYMBOLS.md](SYMBOLS.md) for the full naming law and the
 designs rejected). `src/` carries no `.cpp` at all; the three vendor-wrapper exceptions under
-`core_setup/` are listed in [SYMBOLS.md](SYMBOLS.md).
+`test/core_setup/` are listed in [SYMBOLS.md](SYMBOLS.md).
 
 **One octet abstraction, packed everywhere.**
 
@@ -710,7 +710,7 @@ octet-count expressions must replace it - which is mechanically checkable.
 
 **No vendor language or idioms in the core.** Vendor registers reach the library only through a HAL that
 auto-configures per **variant capability**, never through a chip check. This extends the pattern already
-shipped in `core_setup/hal/` (direct registers, house-owned register map, zero vendor symbols) to every
+shipped in `test/core_setup/hal/` (direct registers, house-owned register map, zero vendor symbols) to every
 subsystem, and it is what has to happen before the build system can stop depending on `arduino-esp32`.
 
 **Guarantees are proven at the binary.** Where the library promises a behavior, the promise is checked

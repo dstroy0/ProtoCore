@@ -17,6 +17,7 @@
 
 #include "network_drivers/presentation/ssh/connection/connection.h"
 
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief RFC 4254 sec 5.4 CHANNEL_REQUEST: the type it names, and the body that follows. */

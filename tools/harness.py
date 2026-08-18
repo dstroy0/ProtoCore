@@ -180,6 +180,15 @@ EDIT = {
         "checked against the first and last line before anything is written, and a failed guard "
         "aborts with no change. Use them.",
     ),
+    "yank": T(
+        "tools/dev_env/yank_includes.py",
+        "yank PATH [PATH ...] [--conditional] [--orphan] [--go]",
+        "Takes the #include lines out of a header and records, per consumer, what that header no "
+        "longer carries. Dry run by default; --go rewrites and writes test/yanked_includes.json, "
+        "which `build cmake` turns into a forced include on exactly the source file that owes it - "
+        "so the dependency moves into the build instead of being handed to every consumer. Skips "
+        "the entry-point chain, conditional includes, and a header nothing reaches.",
+    ),
     "comments": T(
         "tools/dev_env/strip_comments.py",
         "comments PATH [PATH ...] [--ext .c,.h] [--exclude PAT] [--no-header] [--go]",
@@ -360,6 +369,30 @@ ASSETS = {
 }
 
 BUILD = {
+    "cmake": T(
+        "tools/ci_tooling/build/gen_cmake.py",
+        "cmake [--check]",
+        "Writes test/CMakeLists.txt from test/test_matrix.json: one executable target and one ctest "
+        "per env, compiled the way test/harness.py compiles it. The matrix stays the one statement "
+        "of what an env builds; this renders it. --check fails on a stale file and writes nothing.",
+    ),
+    "split": T(
+        "tools/ci_tooling/build/split_modules.py",
+        "split [--list] [--go]",
+        "Gives every .c/.h pair its own directory, so a module is a directory and a per-module "
+        "CMakeLists.txt has somewhere to live. Only directories holding more than one pair are "
+        "touched. Every include spelling that names a moved header - repo-relative, bare from a "
+        "sibling, dotted from a child - and every build_src_filter entry moves with it. Dry run "
+        "by default.",
+    ),
+    "modules": T(
+        "tools/ci_tooling/build/gen_modules.py",
+        "modules [--check|--graph|--unowned]",
+        "Writes src/CMakeLists.txt: one CMake target per module, with the dependencies read out of "
+        "what each module includes rather than maintained by hand. Include paths and transitive deps "
+        "then propagate through the targets, and a module whose PROTOCORE_ENABLE_* gate is off is a "
+        "target that is never added instead of a file that compiles to nothing.",
+    ),
     "envs": T(
         "tools/dev_env/build_envs.sh",
         "envs <env> [env ...]",

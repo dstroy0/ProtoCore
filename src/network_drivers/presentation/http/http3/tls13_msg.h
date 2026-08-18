@@ -33,10 +33,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-
-
-
-
 // Shared by the HTTP/3 (QUIC) handshake and the DTLS 1.3 handshake: both carry the same TLS 1.3
 // messages, so this module compiles for either. The DTLS-specific additions (HelloRetryRequest, the
 // cookie extension, the sec 4.4.1 message_hash) are used by the DTLS handshake but are valid TLS 1.3.
@@ -49,9 +45,12 @@ PROTOCORE_BEGIN_DECLS
 #define TLS_HS_CERTIFICATE_VERIFY 15
 #define TLS_HS_FINISHED 20
 
-#define PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256 0x1301 ///< the one cipher suite we support, as its IANA code point
+// The two RFC 8446 sec B.4 mandatory-to-implement suites, as their IANA code points. These are the
+// numbers on the wire; ::TlsCipher names the same two for the record layer and takes its values here.
+#define PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256 0x1301 ///< AEAD_AES_128_GCM with a SHA-256 schedule
+#define PROTOCORE_TLS_SUITE_AES_256_GCM_SHA384 0x1302 ///< AEAD_AES_256_GCM with a SHA-384 schedule
 #define TLS_GROUP_X25519 0x001d                       ///< the classical key-exchange group we support
-#define TLS_X25519_SHARE_LEN 32 ///< an X25519 key_share, and the shared secret it produces (RFC 7748 sec 6.1)
+#define TLS_X25519_SHARE_LEN 32         ///< an X25519 key_share, and the shared secret it produces (RFC 7748 sec 6.1)
 #define TLS_GROUP_X25519MLKEM768 0x11ec ///< PQ/T hybrid group (ML-KEM-768 + X25519), when PROTOCORE_ENABLE_PQC_KEX
 #define TLS_SIG_ED25519 0x0807          ///< the one signature scheme we produce
 // SignatureScheme code points a CertificateVerify may carry (RFC 8446 sec 4.2.3). The
@@ -59,7 +58,7 @@ PROTOCORE_BEGIN_DECLS
 // which appear in certificates ... and are not defined for use in signed TLS handshake messages".
 #define TLS_SIG_ECDSA_SECP256R1_SHA256 0x0403 ///< ECDSA over P-256 with SHA-256
 #define TLS_SIG_RSA_PSS_RSAE_SHA256 0x0804    ///< RSASSA-PSS with an rsaEncryption key
-#define TLS_CERT_TYPE_X509 0            ///< RFC 7250 CertificateType: X.509 (IANA "TLS Certificate Types" 0)
+#define TLS_CERT_TYPE_X509 0                  ///< RFC 7250 CertificateType: X.509 (IANA "TLS Certificate Types" 0)
 #define TLS_CERT_TYPE_RAW_PUBLIC_KEY                                                                                   \
     2                          ///< RFC 7250 CertificateType: RawPublicKey (IANA 2), when PROTOCORE_ENABLE_TLS_RPK
 #define TLS_VERSION_1_3 0x0304 ///< supported_versions selected value (TLS 1.3)
@@ -80,7 +79,8 @@ typedef struct
     const uint8_t *client_mlkem_ek;   ///< the client's ML-KEM-768 encapsulation key (1184 B, aliases input)
 #endif
     proto_bool offers_tls13;            ///< supported_versions contains 0x0304
-    proto_bool offers_aes128gcm_sha256; ///< cipher_suites contains the one suite this stack answers
+    proto_bool offers_aes128gcm_sha256; ///< cipher_suites contains TLS_AES_128_GCM_SHA256
+    proto_bool offers_aes256gcm_sha384; ///< cipher_suites contains TLS_AES_256_GCM_SHA384
     proto_bool offers_x25519;           ///< supported_groups contains x25519
     proto_bool offers_ed25519;          ///< signature_algorithms contains ed25519
     proto_bool has_server_cert_type;    ///< a server_certificate_type extension (RFC 7250) was present
@@ -88,10 +88,10 @@ typedef struct
 #if PROTOCORE_ENABLE_TLS_RPK
     proto_bool offers_rpk_server_cert; ///< server_certificate_type (RFC 7250) offered RawPublicKey(2)
 #endif
-    proto_bool offers_h3_alpn;        ///< ALPN contains "h3"
-    const uint8_t *alpn_list;         ///< the ProtocolNameList body (aliases input), or NULL when absent
-    size_t alpn_list_len;             ///< how many bytes of it there are
-    const uint8_t *quic_tp; ///< raw quic_transport_parameters extension body (or NULL)
+    proto_bool offers_h3_alpn; ///< ALPN contains "h3"
+    const uint8_t *alpn_list;  ///< the ProtocolNameList body (aliases input), or NULL when absent
+    size_t alpn_list_len;      ///< how many bytes of it there are
+    const uint8_t *quic_tp;    ///< raw quic_transport_parameters extension body (or NULL)
     size_t quic_tp_len;
     const uint8_t *sni; ///< first server_name host_name (or NULL), not NUL-terminated
     size_t sni_len;
@@ -125,7 +125,7 @@ typedef struct
     uint16_t group;            ///< its NamedGroup: the server's share, or a HelloRetryRequest's selected_group
     const uint8_t *share;      ///< the server's key_exchange (aliases input); NULL in a HelloRetryRequest
     size_t share_len;
-    const uint8_t *cookie;     ///< cookie to echo in the retried ClientHello (aliases input), or NULL
+    const uint8_t *cookie; ///< cookie to echo in the retried ClientHello (aliases input), or NULL
     size_t cookie_len;
     proto_bool has_conn_id; ///< a connection_id extension was present (RFC 9146 / RFC 9147 §9)
     const uint8_t *conn_id; ///< the CID to place in records sent to the server (aliases input)
@@ -144,17 +144,18 @@ typedef struct
 proto_bool protocore_tls13_parse_server_hello(const uint8_t *msg, size_t len, Tls13ServerHello *out, proto_bool dtls);
 
 /**
- * @brief Build a ClientHello (RFC 8446 sec 4.1.2) offering TLS 1.3 / AES-128-GCM-SHA256, one
- * @p group with its @p share, and ed25519.
+ * @brief Build a ClientHello (RFC 8446 sec 4.1.2) offering TLS 1.3, @p suite, one @p group with its
+ * @p share, and ed25519.
  *
  * @c legacy_version is 0x0303 and @c legacy_compression_methods is the single zero byte sec 4.1.2
  * requires. @p sni, @p alpn and @p cookie are each emitted only when non-null; @p cookie is what a
  * HelloRetryRequest asked to have echoed. @p rpk_server_cert offers RawPublicKey (RFC 7250 sec 4.2).
+ * @param suite  the one cipher suite offered, as its IANA code point.
  * @return bytes written, or 0 on overflow.
  */
-size_t protocore_tls13_build_client_hello(uint8_t *out, size_t cap, const uint8_t random[32],
-                                          const uint8_t *session_id, uint8_t session_id_len, const uint8_t *share,
-                                          size_t share_len, uint16_t group, const char *sni, const char *alpn,
+size_t protocore_tls13_build_client_hello(uint8_t *out, size_t cap, const uint8_t random[32], const uint8_t *session_id,
+                                          uint8_t session_id_len, const uint8_t *share, size_t share_len,
+                                          uint16_t group, uint16_t suite, const char *sni, const char *alpn,
                                           const uint8_t *cookie, size_t cookie_len, proto_bool rpk_server_cert,
                                           proto_bool dtls);
 
@@ -184,9 +185,10 @@ proto_bool protocore_tls13_parse_cert_verify(const uint8_t *msg, size_t len, uin
 
 /**
  * @brief The verify_data of a Finished (RFC 8446 sec 4.4.4). @p vd points into @p msg.
- * @return false unless the body is exactly the 32 bytes SHA-256 makes it.
+ * @param verify_len  the suite's Hash.length, which sec 4.4.4 makes the body's exact size.
+ * @return false unless the body is exactly @p verify_len bytes.
  */
-proto_bool protocore_tls13_parse_finished(const uint8_t *msg, size_t len, const uint8_t **vd);
+proto_bool protocore_tls13_parse_finished(const uint8_t *msg, size_t len, const uint8_t **vd, size_t verify_len);
 
 /**
  * @brief Build a ServerHello (RFC 8446 sec 4.1.3) selecting TLS 1.3 / AES-128-GCM-SHA256 and a
@@ -199,6 +201,7 @@ proto_bool protocore_tls13_parse_finished(const uint8_t *msg, size_t len, const 
  *                        ciphertext || X25519 concatenation for X25519MLKEM768).
  * @param share_len       length of @p share (32 for X25519, 1120 for the hybrid).
  * @param group           the selected named group (TLS_GROUP_X25519 or TLS_GROUP_X25519MLKEM768).
+ * @param suite           the selected cipher suite, as its IANA code point.
  * @param dtls            true to emit the DTLS 1.3 version codepoints (RFC 9147 §5.3), false for TLS 1.3.
  * @param conn_id          when non-NULL, emit a connection_id extension (RFC 9146 / RFC 9147 §9)
  *                         carrying the server's CID (the id the client must place in records it sends).
@@ -207,7 +210,8 @@ proto_bool protocore_tls13_parse_finished(const uint8_t *msg, size_t len, const 
  */
 size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_t random[32], const uint8_t *session_id,
                                           uint8_t session_id_len, const uint8_t *share, size_t share_len,
-                                          uint16_t group, proto_bool dtls, const uint8_t *conn_id, size_t conn_id_len);
+                                          uint16_t group, uint16_t suite, proto_bool dtls, const uint8_t *conn_id,
+                                          size_t conn_id_len);
 
 /**
  * @brief Build EncryptedExtensions (RFC 8446 sec 4.3.1) carrying ALPN "h3" and the server's
@@ -217,8 +221,8 @@ size_t protocore_tls13_build_server_hello(uint8_t *out, size_t cap, const uint8_
  *                         server_certificate_type = RawPublicKey extension (RFC 7250 sec 4.2).
  * @return bytes written, or 0.
  */
-size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *quic_tp,
-                                                  size_t quic_tp_len, proto_bool rpk_server_cert);
+size_t protocore_tls13_build_encrypted_extensions(uint8_t *out, size_t cap, const uint8_t *quic_tp, size_t quic_tp_len,
+                                                  proto_bool rpk_server_cert);
 
 /**
  * @brief Build a Certificate message (RFC 8446 sec 4.4.2) with an empty request context and one
@@ -251,27 +255,30 @@ size_t protocore_tls13_build_certificate_rpk(uint8_t *out, size_t cap, const uin
  * a 0x00 separator, then @p transcript_hash (Transcript-Hash of ClientHello..Certificate) - with the
  * Ed25519 key @p seed, and emits algorithm=ed25519, the 64-byte signature.
  *
- * @param transcript_hash  32-byte Transcript-Hash through the Certificate message.
+ * @param transcript_hash  Transcript-Hash through the Certificate message.
+ * @param hash_len         its length: the suite's Hash.length, at most PROTOCORE_TLS13_SECRET_MAX.
  * @param seed             32-byte Ed25519 private seed.
  * @return bytes written, or 0 on overflow.
  */
-size_t protocore_tls13_build_cert_verify(uint8_t *sign_work, uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
-                                         const uint8_t seed[32]);
+size_t protocore_tls13_build_cert_verify(uint8_t *sign_work, uint8_t *out, size_t cap, const uint8_t *transcript_hash,
+                                         size_t hash_len, const uint8_t seed[32]);
 
 /**
  * @brief Build a Finished message (RFC 8446 sec 4.4.4) carrying @p verify_data (from
- * protocore_tls13_finished_mac). @return bytes written, or 0 on overflow.
+ * protocore_tls13_finished_mac). sec 4.4.4 makes verify_data Hash.length octets, so @p verify_len is
+ * the suite's, not a constant. @return bytes written, or 0 on overflow.
  */
-size_t protocore_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t verify_data[32]);
+size_t protocore_tls13_build_finished(uint8_t *out, size_t cap, const uint8_t *verify_data, size_t verify_len);
 
 /**
  * @brief Assemble the sec 4.4.3 signed content into @p out (64*0x20 || context || 0x00 || hash).
  *
  * Exposed so the state machine can also verify a client's CertificateVerify if client auth is ever
  * added, and so it is directly unit-testable. @p is_server picks the "server"/"client" context word.
- * @return content length written (always 98 + 32), or 0 on overflow.
+ * @return content length written (98 + @p hash_len), or 0 on overflow or a hash wider than
+ * PROTOCORE_TLS13_SECRET_MAX.
  */
-size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t transcript_hash[32],
+size_t protocore_tls13_cert_verify_content(uint8_t *out, size_t cap, const uint8_t *transcript_hash, size_t hash_len,
                                            proto_bool is_server);
 
 // ---------------------------------------------------------------------------
@@ -284,19 +291,21 @@ extern const uint8_t protocore_tls13_hrr_random[32];
 
 /**
  * @brief Build a HelloRetryRequest (RFC 8446 §4.1.4): a ServerHello whose random is
- * @ref protocore_tls13_hrr_random, selecting TLS 1.3 / AES-128-GCM-SHA256, asking the client to retry with a
+ * @ref protocore_tls13_hrr_random, selecting TLS 1.3 and @p suite, asking the client to retry with a
  * key_share for @p selected_group, and echoing @p cookie in the cookie extension (§4.2.2).
  *
  * @param session_id      legacy_session_id_echo (the client's, echoed verbatim; may be NULL if len 0).
  * @param selected_group  the NamedGroup the server wants the client's key_share for.
+ * @param suite           the selected cipher suite, as its IANA code point; §4.1.4 makes the retried
+ *                        ServerHello carry the same one.
  * @param cookie          the return-routability cookie the client must echo (may be NULL if len 0).
  * @param dtls            true to emit the DTLS 1.3 version codepoints (0xFEFD / 0xFEFC, RFC 9147 §5.3);
  *                        false for the TLS 1.3 ones (0x0303 / 0x0304).
  * @return bytes written, or 0 on overflow.
  */
 size_t protocore_tls13_build_hello_retry_request(uint8_t *out, size_t cap, const uint8_t *session_id,
-                                                 uint8_t session_id_len, uint16_t selected_group, const uint8_t *cookie,
-                                                 size_t cookie_len, proto_bool dtls);
+                                                 uint8_t session_id_len, uint16_t selected_group, uint16_t suite,
+                                                 const uint8_t *cookie, size_t cookie_len, proto_bool dtls);
 
 /**
  * @brief Build an EncryptedExtensions (RFC 8446 §4.3.1) for the DTLS profile, which carries no ALPN or

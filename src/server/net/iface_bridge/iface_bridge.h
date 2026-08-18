@@ -28,8 +28,9 @@
 #ifndef PROTOCORE_IFACE_BRIDGE_H
 #define PROTOCORE_IFACE_BRIDGE_H
 
-#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 #include "shared/ip/ip.h"     // the complete type a public struct below holds by value
+
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_IFACE_BRIDGE
 

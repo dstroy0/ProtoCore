@@ -19,7 +19,7 @@ description is accurate, whether it is too long, or whether prose without one of
 markers is really a justification. Those stay review items.
 
 Exempt: everything outside src/, which is the only tree walked - docs/, test/ (penetration_testing
-and performance_benching with it), examples/, core_setup/; file-header Doxygen blocks;
+and performance_benching with it), examples/, test/core_setup/; file-header Doxygen blocks;
 @param / @return / @brief lines; SPDX and license headers; the PROTOCORE_ALLOW_* and NOSONAR
 justification markers the other checkers require.
 

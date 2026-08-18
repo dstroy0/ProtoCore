@@ -11,7 +11,7 @@
  */
 
 #include "secure.h"
-#include "core_setup/board_profiles/protocore_platform.h" // protocore_platform_context_id()
+#include "config/platform/platform.h" // protocore_platform_context_id()
 #include "mmgr/arena.h"
 #include <assert.h>
 
@@ -79,7 +79,7 @@ static inline int cur_worker(void)
 static inline void assert_single_owner(struct SecureInternal *ctx, int w)
 {
 #if PROTOCORE_DEBUG_CHECKS
-    // Off by default; see PROTOCORE_DEBUG_CHECKS. The identity comes from core_setup/ - the core does
+    // Off by default; see PROTOCORE_DEBUG_CHECKS. The identity comes from test/core_setup/ - the core does
     // not name an RTOS.
     const uintptr_t cur = protocore_platform_context_id();
     if (ctx->owner[w] == 0)

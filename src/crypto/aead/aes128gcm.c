@@ -7,7 +7,7 @@
  *
  * Two keyed concerns and one set of entries.
  *
- * HW path: the AES-128 block runs on the part's AES accelerator (core_setup/hal/esp/esp_aes_hal.h).
+ * HW path: the AES-128 block runs on the part's AES accelerator (test/core_setup/hal/esp/esp_aes_hal.h).
  * SW path: the shared table-free software AES-128 (crypto/cipher/aes_block.h). The GCM construction
  * (GCTR, the 4-bit-table GHASH, the length block and the tag mask) is identical on both.
  *

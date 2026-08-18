@@ -24,10 +24,11 @@
 #ifndef PROTOCORE_TCP_H
 #define PROTOCORE_TCP_H
 
-#include "protocore_config.h"
-
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPoolNs: the accepted connections
 #include "network_drivers/transport/tcp/server/server.h"     // TcpListenerNs: the bound ports
+
+#include "protocore_config.h"
+
 #if PROTOCORE_NEED_CLIENT
 #include "network_drivers/transport/tcp/client/client.h" // TcpClientNs: dialing out
 #endif

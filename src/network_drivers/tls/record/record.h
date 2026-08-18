@@ -37,14 +37,16 @@
 #ifndef PROTOCORE_TLS_RECORD_H
 #define PROTOCORE_TLS_RECORD_H
 
+#include "crypto/aead/aes128gcm.h" // Aes128Gcm, the 0x1301 record AEAD
+#include "crypto/aead/aesgcm.h"    // AesGcm, the 0x1302 record AEAD
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
 
 #if PROTOCORE_TLS_SOFTWARE
 
 PROTOCORE_BEGIN_DECLS
 
-#include "crypto/aead/aes128gcm.h" // Aes128Gcm, the 0x1301 record AEAD
-#include "crypto/aead/aesgcm.h"    // AesGcm, the 0x1302 record AEAD
+#include "network_drivers/presentation/http/http3/tls13_msg.h" // the suite code points TlsCipher takes its values from
 
 /** @name Record content types (RFC 8446 sec 5).
  *  Shared by the TLSPlaintext `type` field and the TLSInnerPlaintext trailing content type. */
@@ -76,12 +78,20 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_TLS_MAX_CIPHERTEXT (PROTOCORE_TLS_MAX_PLAINTEXT + 1 + PROTOCORE_TLS_TAG_LEN)
 
 /** @brief Record-layer AEAD suites, as the two RFC 8446 sec B.4 mandatory-to-implement code points
- *  name them. The suite fixes both the AEAD and the hash the key schedule under it runs. */
+ *  name them. The suite fixes both the AEAD and the hash the key schedule under it runs. Zero is the
+ *  sec 9.1 mandatory-to-implement suite, so a zero-initialised config names it. */
 typedef enum PROTO_ENUM_PACKED
 {
     TLS_CIPHER_AES_128_GCM_SHA256 = 0, ///< 0x1301: AEAD_AES_128_GCM, 16-byte key, SHA-256 schedule
     TLS_CIPHER_AES_256_GCM_SHA384 = 1  ///< 0x1302: AEAD_AES_256_GCM, 32-byte key, SHA-384 schedule
 } TlsCipher;
+
+/** @brief Whether @p c runs its key schedule and Transcript-Hash on SHA-384 (RFC 8446 sec 7.1).
+ *  The one statement of which hash a suite binds, so a driver reads it here instead of restating it. */
+proto_bool protocore_tls_cipher_is384(TlsCipher c);
+
+/** @brief @p c as its IANA CipherSuite code point, the form a ClientHello or ServerHello carries. */
+uint16_t protocore_tls_cipher_code(TlsCipher c);
 
 /** @brief AEAD write-IV length. Both record suites are 12 (RFC 5116); a static_assert in record.c
  *  holds the two primitives to it. */
@@ -95,15 +105,15 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef struct
 {
-    TlsCipher cipher;                                          ///< the AEAD this key is under
+    TlsCipher cipher;                              ///< the AEAD this key is under
     uint8_t gcm[PROTOCORE_TLS_RECORD_AEAD_BORROW]; ///< the AEAD's borrow, keyed once per key.
-                                                               ///< Replaces the raw key: the schedule is what
-                                                               ///< the AEAD needs, so no raw key stays resident.
-                                                               ///< Sized at the wider of the two suites.
-    uint8_t iv[PROTOCORE_TLS_RECORD_IV_LEN];                   ///< AEAD write IV (nonce = iv XOR seq)
-    uint8_t nonce[PROTOCORE_TLS_RECORD_IV_LEN];                ///< this record's nonce, rebuilt from iv and seq
-    uint64_t seq;                                              ///< records sealed/opened under this key, never sent
-    proto_bool ready;                                          ///< the AEAD context holds a key
+                                                   ///< Replaces the raw key: the schedule is what
+                                                   ///< the AEAD needs, so no raw key stays resident.
+                                                   ///< Sized at the wider of the two suites.
+    uint8_t iv[PROTOCORE_TLS_RECORD_IV_LEN];       ///< AEAD write IV (nonce = iv XOR seq)
+    uint8_t nonce[PROTOCORE_TLS_RECORD_IV_LEN];    ///< this record's nonce, rebuilt from iv and seq
+    uint64_t seq;                                  ///< records sealed/opened under this key, never sent
+    proto_bool ready;                              ///< the AEAD context holds a key
 } TlsRecordKeys;
 
 /** @brief Parsed view of a TLSPlaintext record (fields point into the caller's buffer). */

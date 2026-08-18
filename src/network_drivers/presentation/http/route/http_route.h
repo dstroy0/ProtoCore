@@ -16,6 +16,7 @@
 #define PROTOCORE_HTTP_ROUTE_H
 
 #include "network_drivers/presentation/http/http.h" // HttpMethod and Handler: what a row dispatches on
+
 #include "protocore_config.h"                       // the entry point: MAX_ROUTES, and the widths
 
 PROTOCORE_BEGIN_DECLS

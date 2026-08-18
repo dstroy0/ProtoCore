@@ -19,7 +19,7 @@
 
 #if PROTOCORE_ENABLE_CONFIG_STORE
 
-#include "core_setup/hal/nvs.h"
+#include "test/core_setup/hal/nvs.h"
 
 PROTOCORE_BEGIN_DECLS
 

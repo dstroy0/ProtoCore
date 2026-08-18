@@ -8,7 +8,7 @@
 //
 // Two arms. On silicon the counter is CCOUNT (JTAG-observable), the bench runs on its own FreeRTOS
 // task and never returns, and the lines go out over USB-Serial/JTAG. On host the counter is the
-// stand-in in core_setup/hal/host, the bench is a plain main(), and it runs one pass and exits so a
+// stand-in in test/core_setup/hal/host, the bench is a plain main(), and it runs one pass and exits so a
 // runner can collect it.
 
 #ifndef PROTOCORE_PERF_DEVICE_BENCH_H

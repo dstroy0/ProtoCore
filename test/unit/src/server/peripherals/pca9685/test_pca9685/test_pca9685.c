@@ -13,7 +13,7 @@
 // sheet agree on that number, so it pins the rounding of the prescaler without a second
 // implementation to be wrong about.
 
-// The bus cases at the bottom drive a datasheet model of the part (core_setup/hal/host/devices/
+// The bus cases at the bottom drive a datasheet model of the part (test/core_setup/hal/host/devices/
 // pca9685_device.h) rather than asserting the bytes that went out: the driver programs the part
 // and the registers are read back from it, so a sequence that puts the right bytes on the wire in
 // the wrong order - PRE_SCALE before SLEEP, say - fails where a capture assertion would pass.

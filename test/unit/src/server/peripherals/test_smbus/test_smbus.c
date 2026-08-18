@@ -12,7 +12,7 @@
 // order) by checksumming the same sequence through the shared CRC engine, whose CRC-8/SMBUS preset
 // carries the catalogue check value 0xF4 asserted in test_crc.
 
-// The bus cases at the bottom drive a conformant SMBus slave (core_setup/hal/host/devices/
+// The bus cases at the bottom drive a conformant SMBus slave (test/core_setup/hal/host/devices/
 // smbus_device.h) that recomputes the PEC independently over the whole message. A checksum taken
 // over the payload alone still produces an octet, and a hand-computed expectation can agree with a
 // driver that computed the same wrong thing; the slave cannot, because it folds in the address

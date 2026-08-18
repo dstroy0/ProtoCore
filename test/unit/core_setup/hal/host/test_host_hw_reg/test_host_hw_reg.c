@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-// Host tests for the modelled register bus (core_setup/hal/host/host_hw_reg.h).
+// Host tests for the modelled register bus (test/core_setup/hal/host/host_hw_reg.h).
 //
 // A register driver is written against a width and a byte order it never states, and gets both from
 // whatever the part happens to do. That assumption is invisible until the part changes, which is why
@@ -17,7 +17,7 @@
 //     a 16-bit big-endian bus from a 32-bit one;
 //   - addresses do not alias, and an unseen address reads zero.
 
-#include "core_setup/hal/host/host_hw_reg.h"
+#include "test/core_setup/hal/host/host_hw_reg.h"
 
 #include <unity.h>
 

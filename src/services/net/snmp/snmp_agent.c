@@ -7,6 +7,7 @@
  */
 
 #include "services/net/snmp/snmp_agent.h"
+#include "services/net/snmp/snmp_v3.h"
 #include "mmgr/protomem.h" // mem.set / mem.cmp: the fixed-width compares and clears
 #include "mmgr/protostr.h" // str.len / str.copy: the bounded community and string handling
 #include "mmgr/secure.h"   // the persistent end this module's key material is taken from
@@ -16,7 +17,6 @@ static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never re
 #if PROTOCORE_ENABLE_SNMP
 
 #if PROTOCORE_ENABLE_SNMP_V3
-#include "services/net/snmp/snmp_v3.h"
 #endif
 
 #if PROTOCORE_HAS_NET_STACK

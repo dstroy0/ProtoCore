@@ -45,7 +45,7 @@ uint8_t *protocore_tcp_client_span(void)
 #if PROTOCORE_NEED_CLIENT
 
 #include "../../diffserv/diffserv.h" // DiffServ DSCP marking for outbound client connections (compiles out when off)
-#include "core_setup/board_profiles/protocore_platform.h" // the stack's TCP, under our names
+#include "config/platform/platform.h" // the stack's TCP, under our names
 #include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
 #include "network_drivers/network/dns/dns_resolver.h"  // shared host->IP resolve (one DNS owner)
 #include "network_drivers/transport/tcp/lower/lower.h" // TcpLower: the TTL stamp on the outbound pcb

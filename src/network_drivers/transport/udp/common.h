@@ -34,6 +34,7 @@
 #include "mmgr/ring.h"    // the SPSC ring the datagrams sit in
 #include "shared/ip/ip.h" // protocore_ip: the address a datagram carries, network order
 
+
 PROTOCORE_BEGIN_DECLS
 
 /** @brief Bytes a queued datagram spends on its header, ahead of the payload. */

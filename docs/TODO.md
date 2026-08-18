@@ -160,7 +160,7 @@ record: the `[x]` items and the collapsed sections below.
 
 Folded out of `SWEEP_NOTES.md` on 2026-08-08, each item re-measured against the tree that day rather
 than inherited from the note. The sweep's two large tracks are closed: `src/` is C (349 `.c`, 378
-`.h`, **zero** `.cpp`/`.hpp`, with the three documented `core_setup/` vendor wrappers outside it), and
+`.h`, **zero** `.cpp`/`.hpp`, with the three documented `test/core_setup/` vendor wrappers outside it), and
 `class PC` is gone. `check_src_banned` and `check_owned_context` both pass. What follows is what did
 not close. Defects have a [BUGS.md](BUGS.md) entry; the rest are work.
 
@@ -266,7 +266,7 @@ not close. Defects have a [BUGS.md](BUGS.md) entry; the rest are work.
       or they delete.
 - [ ] **Two doc paths are stale.** `docs/SYMBOLS.md:179` and `.github/CONTRIBUTING.md:104,115,123` say
       `performance_benching/`; it is `test/performance_benching/`.
-- [ ] **`u16_t`, the lwIP type, survives at 6 sites** in the core, down from 31. `core_setup/` is where
+- [ ] **`u16_t`, the lwIP type, survives at 6 sites** in the core, down from 31. `test/core_setup/` is where
       a vendor type is contained.
 
 ### Closed by re-measurement on 2026-08-08
@@ -277,7 +277,7 @@ here means measured that day, not believed.
 `src/` is C11 throughout (0 `.cpp`, 0 `.hpp`) - `class PC` is gone - the 11 reserved-identifier
 `_PROTOCORE_*` macros and the compile-time diag JSON literal they stringified into are gone, diag now
 borrows `PROTOCORE_PLAINTEXT_WORK_DIAG` at `protocore.c:757` - the truncated-constant corruption is clean (no single-character `#define` in
-`src/` or `core_setup/`) - `bytes.h`'s 32-bit bounds wrap is fixed and the header states the
+`src/` or `test/core_setup/`) - `bytes.h`'s 32-bit bounds wrap is fixed and the header states the
 subtraction rule - `protocore_br_take_be` no longer carries CBOR's tag byte - `SendCtx` / `extern s_send`
 are gone - bare `inline` in `shared/` headers is gone (all `PROTOCORE_INLINE`) - `crypto_scratch.h`
 is gone - `enum class protocore_mnt_mode` is gone - `regen_digest_secret()` is gone - the unconditional

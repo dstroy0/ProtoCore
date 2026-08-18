@@ -30,6 +30,7 @@
 #define PROTOCORE_QUIC_CRYPTO_H
 
 #include "crypto/kdf/hkdf.h"  // the complete type a public struct below holds by value
+
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3

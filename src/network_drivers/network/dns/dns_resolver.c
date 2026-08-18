@@ -45,7 +45,7 @@ uint8_t *protocore_dns_resolver_span(void)
 }
 
 #if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
-#include "core_setup/board_profiles/protocore_platform.h" // the platform's own resolver, under our names
+#include "config/platform/platform.h" // the platform's own resolver, under our names
 #else
 #include "mmgr/protostr.h"                               // str: the bounded-run walks
 #include "mmgr/rawmemcpy.h"                              // raw.read: the server address moves whole

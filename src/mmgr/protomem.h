@@ -18,6 +18,7 @@
 #define PROTOCORE_PROTOMEM_H
 
 #include "mmgr/rawmemcpy.h" // the loads and stores every walk below steps with
+
 #include "protocore_config.h"
 
 PROTOCORE_BEGIN_DECLS

@@ -11,7 +11,7 @@
 // bit cannot pass. The 16-bit distance at RESULT_RANGE_STATUS + 10 is read high octet first, which
 // ST's own driver spells `readReg16Bit(RESULT_RANGE_STATUS + 10)`.
 
-// The bus cases at the bottom drive a datasheet model of the part (core_setup/hal/host/devices/
+// The bus cases at the bottom drive a datasheet model of the part (test/core_setup/hal/host/devices/
 // vl53l0x_device.h): a suite puts a distance in front of the sensor, the driver polls data-ready,
 // reads the result block and clears the interrupt, and the millimetres come back through its own
 // decode. A driver that never clears the interrupt reads a plausible distance forever, which only

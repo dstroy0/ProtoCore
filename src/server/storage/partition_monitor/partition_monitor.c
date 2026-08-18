@@ -25,7 +25,7 @@ PROTOCORE_BEGIN_DECLS
 // The type/subtype codes the classifier reads are the partition table's own, mirrored here as
 // plain numbers so this file stays pure and host-testable. No vendor header: the table walk is a
 // platform seam (protocore_platform_partition_walk), and the vendor's headers live beside it in
-// core_setup/hal/.
+// test/core_setup/hal/.
 // The entries this file calls before reaching their definitions.
 // --- the entries -----------------------------------------------------------
 
@@ -172,7 +172,7 @@ static void partition_monitor_json(uint8_t *restrict work)
 }
 
 // The table walk is the vendor's, so it is reached through the platform seam rather than through a
-// vendor header: the vendor's headers live beside its implementation in core_setup/hal/.
+// vendor header: the vendor's headers live beside its implementation in test/core_setup/hal/.
 
 #if PROTOCORE_HAS_VENDOR_OTA
 // A part whose SDK owns a partition table: walk it through the seam and translate each entry into
