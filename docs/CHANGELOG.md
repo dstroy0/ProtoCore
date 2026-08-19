@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`c3f187f`](https://github.com/dstroy0/ProtoCore/commit/c3f187fe215b5e2fa9690d765c1beb531837fe57))
 - update CHANGELOG.md [skip ci] ([`af85ea5`](https://github.com/dstroy0/ProtoCore/commit/af85ea55e3a96bf1b8a21bef71fe709f13714d86))
 - update CHANGELOG.md [skip ci] ([`2b4babd`](https://github.com/dstroy0/ProtoCore/commit/2b4babdb5cb27de3a5a5c0dc64a3476f6de8a890))
 - update CHANGELOG.md [skip ci] ([`dd95f04`](https://github.com/dstroy0/ProtoCore/commit/dd95f04b86bb3f09a0ea04086ff008630b78b2bc))
@@ -384,6 +385,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`17825c1`](https://github.com/dstroy0/ProtoCore/commit/17825c1f9da1f1c8be8ee1799072504ca26c6578))
+- (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`f1b948a`](https://github.com/dstroy0/ProtoCore/commit/f1b948a3b5856b5f98ffa52c7835d15280fc0f80))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`a7541c7`](https://github.com/dstroy0/ProtoCore/commit/a7541c79bf68735786a421019121d4a8994acfe8))
 - (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests, per module cmake (start removing ifdef soup) ([`b8c61b8`](https://github.com/dstroy0/ProtoCore/commit/b8c61b8a1911a49e13704bd129359ecd74991250))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`3fa2286`](https://github.com/dstroy0/ProtoCore/commit/3fa228601ffa48edf8be90e6617f46bfaa36d47b))
