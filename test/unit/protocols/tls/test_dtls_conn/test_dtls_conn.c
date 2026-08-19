@@ -16,6 +16,8 @@
 
 #include <unity.h>
 
+static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
+
 static uint8_t dtls_server_work[16]; // the borrow an entry takes; DtlsServer never reads it
 
 static uint8_t dtls_handshake_work[16]; // the borrow an entry takes; DtlsHandshake never reads it
@@ -459,7 +461,13 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
             Sha256.final_args.out = h_ch_cert;
             Sha256.final(tr);
             uint8_t content[160];
-            size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), h_ch_cert, 32, PROTO_TRUE);
+            Tls13Msg.cert_verify_content_args.out = content;
+            Tls13Msg.cert_verify_content_args.cap = sizeof(content);
+            Tls13Msg.cert_verify_content_args.transcript_hash = h_ch_cert;
+            Tls13Msg.cert_verify_content_args.hash_len = 32;
+            Tls13Msg.cert_verify_content_args.is_server = PROTO_TRUE;
+            Tls13Msg.cert_verify_content(tls13_msg_work);
+            size_t clen = Tls13Msg.n;
             TEST_ASSERT_TRUE(clen > 0);
             const uint8_t *sig = msg + 4 + 2 + 2;
             Ed25519.verify_args.pub = cert_pub;
@@ -527,7 +535,12 @@ static void complete_handshake_from_flight(DtlsConn *conn, uint8_t *tr, uint16_t
     Tls13Ks.finished_args.out = cfin_verify;
     Tls13Ks.finished_mac(NULL);
     uint8_t cfin[64];
-    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify, 32);
+    Tls13Msg.build_finished_args.out = cfin;
+    Tls13Msg.build_finished_args.cap = sizeof(cfin);
+    Tls13Msg.build_finished_args.verify_data = cfin_verify;
+    Tls13Msg.build_finished_args.verify_len = 32;
+    Tls13Msg.build_finished(tls13_msg_work);
+    size_t cfin_len = Tls13Msg.n;
 
     DtlsRecordKeys cli_write;
     DtlsRecord.keys_derive_args.out = &cli_write;
@@ -959,7 +972,11 @@ void test_hrr_group_renegotiation(void)
     tr = tw_tr;
     Sha256.init(tr);
     uint8_t mh[36];
-    size_t mhl = protocore_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
+    Tls13Msg.build_message_hash_args.out = mh;
+    Tls13Msg.build_message_hash_args.cap = sizeof(mh);
+    Tls13Msg.build_message_hash_args.ch1_hash = ch1_hash;
+    Tls13Msg.build_message_hash(tls13_msg_work);
+    size_t mhl = Tls13Msg.n;
     TEST_ASSERT_TRUE(mhl > 0);
     Sha256.update_args.data = mh;
     Sha256.update_args.len = mhl;
@@ -1614,7 +1631,12 @@ static proto_bool run_to_finished(DtlsConn *conn, DtlsServerConfig *cfg, ClientS
     Tls13Ks.finished_args.out = verify;
     Tls13Ks.finished_mac(NULL);
     uint8_t cfin[64];
-    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), verify, 32);
+    Tls13Msg.build_finished_args.out = cfin;
+    Tls13Msg.build_finished_args.cap = sizeof(cfin);
+    Tls13Msg.build_finished_args.verify_data = verify;
+    Tls13Msg.build_finished_args.verify_len = 32;
+    Tls13Msg.build_finished(tls13_msg_work);
+    size_t cfin_len = Tls13Msg.n;
     if (cfin_len < 4)
     {
         return PROTO_FALSE;

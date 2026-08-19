@@ -204,7 +204,7 @@ static int do_codes(BitIn *b, OutCtx *o, const Huffman *lc, const Huffman *dc)
         {
             return PROTOCORE_BLK_ERR;
         }
-        int len = RFC1951->len_base[sym] + getbits(b, RFC1951->len_extra[sym]);
+        int len = Rfc1951.len_base[sym] + getbits(b, Rfc1951.len_extra[sym]);
         if (b->underflow)
         {
             return PROTOCORE_BLK_NEED;
@@ -218,7 +218,7 @@ static int do_codes(BitIn *b, OutCtx *o, const Huffman *lc, const Huffman *dc)
         {
             return PROTOCORE_BLK_ERR;
         }
-        size_t dist = (size_t)(RFC1951->dist_base[dsym] + getbits(b, RFC1951->dist_extra[dsym]));
+        size_t dist = (size_t)(Rfc1951.dist_base[dsym] + getbits(b, Rfc1951.dist_extra[dsym]));
         if (b->underflow)
         {
             return PROTOCORE_BLK_NEED;

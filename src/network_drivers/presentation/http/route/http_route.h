@@ -138,6 +138,18 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern HttpRouteNs HttpRoutes;
 
+/**
+ * @brief The bytes every entry here runs out of: the one route table.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where that
+ * borrow comes from. Every registrar and every reader drives the same table, so the bytes belong to
+ * this module rather than to any one caller. Taken once from the end of the secure pool, which no
+ * mark and no release walks, so the table lasts the life of the program.
+ *
+ * @return the span.
+ */
+uint8_t *protocore_http_route_span(void);
+
 PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_ROUTE

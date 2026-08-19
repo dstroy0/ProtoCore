@@ -18,6 +18,8 @@
 
 #include <unity.h>
 
+static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
+
 static uint8_t dtls_server_work[16]; // the borrow an entry takes; DtlsServer never reads it
 
 static uint8_t dtls_handshake_work[16]; // the borrow an entry takes; DtlsHandshake never reads it
@@ -345,7 +347,12 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     Tls13Ks.finished_args.out = cfin_verify;
     Tls13Ks.finished_mac(NULL);
     uint8_t cfin[64];
-    size_t cfin_len = protocore_tls13_build_finished(cfin, sizeof(cfin), cfin_verify, 32);
+    Tls13Msg.build_finished_args.out = cfin;
+    Tls13Msg.build_finished_args.cap = sizeof(cfin);
+    Tls13Msg.build_finished_args.verify_data = cfin_verify;
+    Tls13Msg.build_finished_args.verify_len = 32;
+    Tls13Msg.build_finished(tls13_msg_work);
+    size_t cfin_len = Tls13Msg.n;
     DtlsRecordKeys cli_write;
     DtlsRecord.keys_derive_args.out = &cli_write;
     DtlsRecord.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;

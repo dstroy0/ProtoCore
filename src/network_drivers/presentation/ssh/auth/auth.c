@@ -21,8 +21,6 @@
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"     // Rsa, PROTOCORE_RSA_KEY_BYTES
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_sess[], SshPhase
 #include "server/clock/clock.h" // protocore_millis(): the password-change cooldown clock
-static uint8_t comp_work[16];   // the borrow an entry takes; Comp never reads it
-
 static uint8_t phase_machine_work[16]; // the borrow an entry takes; PhaseMachine never reads it
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
@@ -908,7 +906,7 @@ void ssh_auth_dispatch(uint8_t *restrict work)
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
             Comp.on_auth_success_args.i = i;
-            Comp.on_auth_success(comp_work); // returns 0 has written a reply
+            Comp.on_auth_success(protocore_ssh_comp_span()); // returns 0 has written a reply
         }
 #endif
         // sec 4: bound failed attempts per session. Only an actual USERAUTH_FAILURE counts - a
@@ -969,7 +967,7 @@ void ssh_auth_dispatch(uint8_t *restrict work)
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_SUCCESS)
         {
             Comp.on_auth_success_args.i = i;
-            Comp.on_auth_success(comp_work);
+            Comp.on_auth_success(protocore_ssh_comp_span());
         }
 #endif
         if (n > 0 && reply.buf[0] == SSH_MSG_USERAUTH_FAILURE && auth_failure_over_threshold(i, reply))

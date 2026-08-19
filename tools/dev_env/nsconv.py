@@ -297,6 +297,132 @@ def in_loop_condition(s, pos, mask=None):
     return bool(re.match(r"\s*while\s*\(", head))
 
 
+def unbraced_body_head(s, st, mask=None):
+    """True when the statement at `st` is the whole unbraced body of a control head.
+
+    `if (x) f(a);`, an `else` with no brace, a one-line `for` or `while`: the body is one statement.
+    A rewrite turns that statement into several, and only the first stays in the body while the rest
+    run unconditionally. dtls_conn's `else` around the X.509 Certificate was this - it compiled, and
+    the RawPublicKey branch's result was overwritten by the arm that was supposed to be skipped.
+
+    Reads backwards from `st` over space, comments and directive lines: a `)` that closes an
+    `if` / `for` / `while` head, or the keyword `else` or `do`, is a head with no brace after it.
+    """
+    if mask is None:
+        mask = code_mask(s)
+    i = st
+    while i > 0:
+        if not mask[i - 1]:
+            i -= 1
+            continue
+        c = s[i - 1]
+        if c == "\n" and _line_is_directive(s, i - 1):
+            i = line_start(s, i - 1)
+            continue
+        if c in " \t\r\n":
+            i -= 1
+            continue
+        break
+    if i == 0:
+        return False
+    if s[i - 1] == ")":
+        open_paren = _open_paren(s, i - 1, mask)
+        if open_paren < 0:
+            return False
+        word = re.search(r"(\w+)\s*$", s[:open_paren])
+        return bool(word) and word.group(1) in ("if", "for", "while")
+    word = re.search(r"(\w+)$", s[:i])
+    return bool(word) and word.group(1) in ("else", "do")
+
+
+_HEAD = re.compile(r"(?:if|for|while|switch)\s*\(")
+
+
+def _skip_fluff(s, i):
+    """Forward over space, comments and whole directive lines."""
+    while i < len(s):
+        if s[i] in " \t\r\n":
+            i += 1
+        elif s[i : i + 2] == "//":
+            j = s.find("\n", i)
+            i = len(s) if j == -1 else j
+        elif s[i : i + 2] == "/*":
+            j = s.find("*/", i + 2)
+            i = len(s) if j == -1 else j + 2
+        elif s[i] == "#" and s[line_start(s, i) : i].strip() == "":
+            j = s.find("\n", i)
+            i = len(s) if j == -1 else j
+        else:
+            break
+    return i
+
+
+def body_after_head(s, st, call_start):
+    """When the statement at `st` is a control head, where its unbraced body starts.
+
+    `if (x) n = f(a);` is ONE statement to statement_start, so hoisting the staging above it runs
+    the call whatever the condition said - the same defect `after_short_circuit` refuses for
+    `&&`. Returns None when `st` is not a head, when the call sits in the head's own condition, or
+    when the body already has a brace.
+    """
+    m = _HEAD.match(s, st)
+    if m:
+        close = close_paren(s, m.end())
+        if call_start < close:
+            return None  # the call is the condition, not the body
+        i = close
+    else:
+        m2 = re.match(r"(?:else|do)\b", s[st:])
+        if not m2:
+            return None
+        i = st + m2.end()
+        if s[st : st + 4] == "else":
+            j = _skip_fluff(s, i)
+            m3 = _HEAD.match(s, j)
+            if m3:
+                close = close_paren(s, m3.end())
+                if call_start < close:
+                    return None
+                i = close
+    i = _skip_fluff(s, i)
+    if i >= len(s) or s[i] == "{" or i > call_start:
+        return None
+    return i
+
+
+def statement_end(s, pos, mask=None):
+    """Index just past the `;` that ends the statement containing pos."""
+    if mask is None:
+        mask = code_mask(s)
+    depth, i = 0, pos
+    while i < len(s):
+        if mask[i]:
+            c = s[i]
+            if c in "([":
+                depth += 1
+            elif c in ")]":
+                depth -= 1
+            elif c == ";" and depth <= 0:
+                return i + 1
+        i += 1
+    return len(s)
+
+
+def _open_paren(s, close, mask):
+    """Index of the `(` matching the `)` at `close`, or -1."""
+    depth, i = 0, close
+    while i >= 0:
+        if mask[i]:
+            if s[i] == ")":
+                depth += 1
+            elif s[i] == "(":
+                depth -= 1
+                if depth == 0:
+                    return i
+        i -= 1
+    return -1
+
+
 def line_start(s, pos):
     return s.rfind("\n", 0, pos) + 1
 
@@ -357,14 +483,28 @@ def rewrite(s, call_start, call_end, staging, value, pattern=None, mask=None):
             "into a local and rewrite by hand"
         )
     st = statement_start(s, call_start, mask)
+    # One statement becomes several, so a control head with no brace has to gain one: without it the
+    # call runs whatever the condition said, and only the first staging line stays in the body.
+    brace = unbraced_body_head(s, st, mask)
+    if not brace:
+        inner = body_after_head(s, st, call_start)
+        if inner is not None:
+            st, brace = inner, True
     ls = line_start(s, st)
-    indent = re.match(r"[ \t]*", s[ls:]).group(0)
+    if s[ls:st].strip() != "":
+        ls = st  # the body starts mid-line (`if (x) f(a);`): open the block where it starts
+    indent = re.match(r"[ \t]*", s[line_start(s, st) :]).group(0)
     body = "\n".join(indent + line for line in staging)
+    open_b, close_b = ("{\n", "\n" + indent + "}") if brace else ("", "")
     lead = s[ls:call_start]  # the statement's own text before the call, indentation included
     if lead.strip() == "":
         j = call_end
         while j < len(s) and s[j] in " \t":
             j += 1
         if s[j : j + 1] == ";":
-            return s[:ls] + body + s[j + 1 :]
-    return s[:ls] + body + "\n" + lead + value + s[call_end:]
+            return s[:ls] + open_b + body + close_b + s[j + 1 :]
+    if not brace:
+        return s[:ls] + body + "\n" + lead + value + s[call_end:]
+    # The `;` still sits past the call, so the closing brace goes after the whole statement.
+    end = statement_end(s, call_end, mask)
+    return s[:ls] + open_b + body + "\n" + lead + value + s[call_end:end] + close_b + s[end:]

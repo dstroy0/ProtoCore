@@ -80,7 +80,11 @@ static void deflate_raw(uint8_t *restrict work)
     }
 
     Tables *t = (Tables *)scratch;
-    protocore_rfc1951_build_fixed(t->ll_code, t->ll_len, t->d_code, t->d_len);
+    Rfc1951.build_fixed_args.ll_code = t->ll_code;
+    Rfc1951.build_fixed_args.ll_len = t->ll_len;
+    Rfc1951.build_fixed_args.d_code = t->d_code;
+    Rfc1951.build_fixed_args.d_len = t->d_len;
+    Rfc1951.build_fixed(work);
     for (int i = 0; i < PROTOCORE_HASH_SIZE; i++)
     {
         t->head[i] = PROTOCORE_NONE;
@@ -145,12 +149,23 @@ static void deflate_raw(uint8_t *restrict work)
         size_t advance;
         if (best_len >= PROTOCORE_MIN_MATCH)
         {
-            protocore_rfc1951_emit_match(&w, t->ll_code, t->ll_len, t->d_code, t->d_len, best_len, best_dist);
+            Rfc1951.emit_match_args.w = &w;
+            Rfc1951.emit_match_args.ll_code = t->ll_code;
+            Rfc1951.emit_match_args.ll_len = t->ll_len;
+            Rfc1951.emit_match_args.d_code = t->d_code;
+            Rfc1951.emit_match_args.d_len = t->d_len;
+            Rfc1951.emit_match_args.len = best_len;
+            Rfc1951.emit_match_args.dist = best_dist;
+            Rfc1951.emit_match(work);
             advance = (size_t)best_len;
         }
         else
         {
-            protocore_rfc1951_emit_literal(&w, t->ll_code, t->ll_len, src[i]);
+            Rfc1951.emit_literal_args.w = &w;
+            Rfc1951.emit_literal_args.ll_code = t->ll_code;
+            Rfc1951.emit_literal_args.ll_len = t->ll_len;
+            Rfc1951.emit_literal_args.b = src[i];
+            Rfc1951.emit_literal(work);
             advance = 1;
         }
 

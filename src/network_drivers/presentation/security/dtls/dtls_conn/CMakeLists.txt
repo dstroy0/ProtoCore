@@ -19,6 +19,7 @@ if(PROTOCORE_ENABLE_DTLS)
       pc_mmgr_protomem
       pc_mmgr_secure
       pc_network_drivers_presentation_http_http3_tls13_msg
+      pc_network_drivers_presentation_http_http3_tls13_rpk
       pc_server_clock
   )
 endif()

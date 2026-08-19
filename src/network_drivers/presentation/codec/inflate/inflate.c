@@ -177,7 +177,7 @@ static InflateResult codes(State *s, const Huffman *lencode, const Huffman *dist
             {
                 return INFLATE_ERR_MALFORMED; // invalid length code (286/287)
             }
-            int len = RFC1951->len_base[symbol] + bits(s, RFC1951->len_extra[symbol]);
+            int len = Rfc1951.len_base[symbol] + bits(s, Rfc1951.len_extra[symbol]);
             if (s->err)
             {
                 return INFLATE_ERR_MALFORMED;
@@ -188,7 +188,7 @@ static InflateResult codes(State *s, const Huffman *lencode, const Huffman *dist
             {
                 return INFLATE_ERR_MALFORMED;
             }
-            size_t dist = (size_t)(RFC1951->dist_base[symbol] + bits(s, RFC1951->dist_extra[symbol]));
+            size_t dist = (size_t)(Rfc1951.dist_base[symbol] + bits(s, Rfc1951.dist_extra[symbol]));
             if (s->err)
             {
                 return INFLATE_ERR_MALFORMED;

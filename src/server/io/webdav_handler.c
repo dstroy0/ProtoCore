@@ -34,8 +34,6 @@ static uint8_t webdav_work[16]; // the borrow an entry takes; Webdav never reads
 #include "server/io/webdav_handler.h"
 #include "shared/mime/mime.h"
 
-static uint8_t http_routes_work[16]; // the borrow an entry takes; HttpRoutes never reads it
-
 PROTOCORE_BEGIN_DECLS
 
 // The parser's streaming-body sink is a single global hook (http_parser_set_stream_hooks): the last
@@ -274,11 +272,11 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
         return PROTO_FALSE;
     }
     uint8_t slot = (uint8_t)(req - http_pool);
-    HttpRoutes.count(http_routes_work);
+    HttpRoutes.count(protocore_http_route_span());
     for (uint8_t i = 0; i < HttpRoutes.value; i++)
     {
         HttpRoutes.at_args.i = i;
-        HttpRoutes.at(http_routes_work);
+        HttpRoutes.at(protocore_http_route_span());
         HttpRoute *r = HttpRoutes.ptr;
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
@@ -376,7 +374,7 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     // Public API with a signature protocore.h fixes, so the borrow comes from the accessor rather
     // than a parameter - the same way a callback reaches it.
     uint8_t *restrict work = protocore_webdav_handler_span();
-    HttpRoutes.add(http_routes_work);
+    HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
@@ -489,11 +487,11 @@ static void webdav_handler_try_serve_dav(uint8_t *restrict work)
     uint8_t slot_id = Dav.try_serve_dav_args.slot_id;
     HttpReq *req = Dav.try_serve_dav_args.req;
 
-    HttpRoutes.count(http_routes_work);
+    HttpRoutes.count(protocore_http_route_span());
     for (uint8_t i = 0; i < HttpRoutes.value; i++)
     {
         HttpRoutes.at_args.i = i;
-        HttpRoutes.at(http_routes_work);
+        HttpRoutes.at(protocore_http_route_span());
         HttpRoute *r = HttpRoutes.ptr;
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.

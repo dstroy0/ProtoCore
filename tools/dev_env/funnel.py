@@ -30,8 +30,13 @@ from codemask import code_mask
 # `static SimaticCtx s_ctx;` and `static struct TlsStorage s_store;` are the same thing: the
 # module's own context. The Ns path already read both spellings, and the flat path reading only the
 # typedef'd one made a module with the struct spelling scan as holding no state at all.
+# An ALL_CAPS token between `static` and the type is a placement attribute (PSRAM, a section), not
+# the type. Reading it as one made every context that carries one invisible here - and those are the
+# big ones, which is the whole reason a module gets a placement attribute in the first place.
 STATIC_CTX = re.compile(
-    r"^static\s+(?P<type>(?:struct\s+)?\w+)\s+(?P<name>s_\w+)\s*(?P<init>=[^;]*)?;\s*$", re.M | re.S
+    r"^static\s+(?:(?P<attr>[A-Z_][A-Z0-9_]*)\s+)?(?P<type>(?:struct\s+)?\w+)\s+(?P<name>s_\w+)\s*"
+    r"(?P<init>=[^;]*)?;\s*$",
+    re.M | re.S,
 )
 FUNC = re.compile(r"^(?P<head>(?:static\s+)?[A-Za-z_][\w \t\*]*?\b(?P<name>\w+)\s*\((?P<params>[^;{]*)\))\s*\{", re.M)
 

@@ -20,8 +20,6 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"    // ConnPool: the slot a response writes on
 #include "protocore.h"                                          // http_pool, and the request and route widths
 #include "server/io/webdav_handler.h"                           // Dav: a DAV mount is intercepted before the route loop
-static uint8_t http_routes_work[16];                            // the borrow an entry takes; HttpRoutes never reads it
-
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // protocore_millis() stamps the attempt the lockout counts
 #include "server/security/auth_lockout/auth_lockout.h"
@@ -729,21 +727,19 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
         return PROTO_FALSE;
     }
 #endif
-    // One borrow for this request's auth decision: the digest hashes and the challenge's nonce work
-    // out of it, and it goes back before the handler runs. The pool resolves the slot from the calling
-    // worker, so two workers never share these bytes.
-    size_t auth_mark = protocore_secure_mark();
-    protocore_span auth_ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
-    if (!span.ok(auth_ws))
+    // The auth module's own borrow: the credential table this decision reads and the bytes its
+    // digest hashes run out of are two regions of it, so the caller passes one span rather than
+    // carving a second one for the hash behind a table it cannot see.
+    uint8_t *auth_ws = protocore_http_auth_span();
+    if (auth_ws == NULL)
     {
-        protocore_secure_release(auth_mark);
         return PROTO_FALSE; // pool exhausted: fail closed
     }
     Auth.slot = slot_id;
     Auth.req = req;
     Auth.id = r->auth_id;
     Auth.nonce_args.stale = PROTO_FALSE;
-    Auth.check(auth_ws.buf);
+    Auth.check(auth_ws);
     proto_bool stale = Auth.nonce_args.stale;
     proto_bool ok = Auth.ok;
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
@@ -766,11 +762,9 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
         Auth.slot = slot_id;
         Auth.id = r->auth_id;
         Auth.nonce_args.stale = stale;
-        Auth.challenge(auth_ws.buf);
-        protocore_secure_release(auth_mark);
+        Auth.challenge(auth_ws);
         return PROTO_FALSE;
     }
-    protocore_secure_release(auth_mark);
     return PROTO_TRUE;
 }
 #endif // PROTOCORE_ENABLE_AUTH
@@ -927,11 +921,11 @@ static void match_and_execute(uint8_t *restrict work)
     char allow_buf[64];
     allow_buf[0] = '\0';
 
-    HttpRoutes.count(http_routes_work);
+    HttpRoutes.count(protocore_http_route_span());
     for (uint8_t i = 0; i < HttpRoutes.value; i++)
     {
         HttpRoutes.at_args.i = i;
-        HttpRoutes.at(http_routes_work);
+        HttpRoutes.at(protocore_http_route_span());
         HttpRoute *r = HttpRoutes.ptr;
         if (!route_admits(r, slot_id, req))
         {

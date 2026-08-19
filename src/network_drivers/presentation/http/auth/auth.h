@@ -139,6 +139,18 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern AuthNs Auth;
 
+/**
+ * @brief The bytes every entry here runs out of: the credential table and the SHA-256 behind it.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where that
+ * borrow comes from. One table serves every route and every connection, so the bytes belong to this
+ * module rather than to any one caller, and the hash scratch a Digest nonce needs is a second region
+ * of the same span. Taken once from the end of the secure pool, which no mark and no release walks.
+ *
+ * @return the span.
+ */
+uint8_t *protocore_http_auth_span(void);
+
 PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_AUTH

@@ -12,9 +12,14 @@
 
 #include "crypto/asymmetric/ed25519/ed25519.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
+#include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h"
 #include <string.h>
 
 #include <unity.h>
+
+static uint8_t tls13_rpk_work[16]; // the borrow an entry takes; Tls13Rpk never reads it
+
+static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
 
 void setUp(void)
 {
@@ -63,9 +68,17 @@ void test_dtls_hello_retry_request_bytes(void)
         0x00, 0x33, 0x00, 0x02, 0x00, 0x1D,                         // key_share -> selected_group x25519
         0x00, 0x2C, 0x00, 0x06, 0x00, 0x04, 0xAA, 0xBB, 0xCC, 0xDD, // cookie
     };
-    size_t n = protocore_tls13_build_hello_retry_request(g_out, sizeof(g_out), NULL, 0, TLS_GROUP_X25519,
-                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, COOKIE, sizeof(COOKIE),
-                                                         PROTO_TRUE);
+    Tls13Msg.build_hello_retry_request_args.out = g_out;
+    Tls13Msg.build_hello_retry_request_args.cap = sizeof(g_out);
+    Tls13Msg.build_hello_retry_request_args.session_id = NULL;
+    Tls13Msg.build_hello_retry_request_args.session_id_len = 0;
+    Tls13Msg.build_hello_retry_request_args.selected_group = TLS_GROUP_X25519;
+    Tls13Msg.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
+    Tls13Msg.build_hello_retry_request_args.cookie = COOKIE;
+    Tls13Msg.build_hello_retry_request_args.cookie_len = sizeof(COOKIE);
+    Tls13Msg.build_hello_retry_request_args.dtls = PROTO_TRUE;
+    Tls13Msg.build_hello_retry_request(tls13_msg_work);
+    size_t n = Tls13Msg.n;
     TEST_ASSERT_EQUAL_UINT(66u, n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 66);
 }
@@ -75,8 +88,17 @@ void test_dtls_hello_retry_request_bytes(void)
 void test_tls_hello_retry_request_codepoints(void)
 {
     static const uint8_t SID[4] = {0x11, 0x22, 0x33, 0x44};
-    size_t n = protocore_tls13_build_hello_retry_request(g_out, sizeof(g_out), SID, sizeof(SID), TLS_GROUP_X25519,
-                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, NULL, 0, PROTO_FALSE);
+    Tls13Msg.build_hello_retry_request_args.out = g_out;
+    Tls13Msg.build_hello_retry_request_args.cap = sizeof(g_out);
+    Tls13Msg.build_hello_retry_request_args.session_id = SID;
+    Tls13Msg.build_hello_retry_request_args.session_id_len = sizeof(SID);
+    Tls13Msg.build_hello_retry_request_args.selected_group = TLS_GROUP_X25519;
+    Tls13Msg.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
+    Tls13Msg.build_hello_retry_request_args.cookie = NULL;
+    Tls13Msg.build_hello_retry_request_args.cookie_len = 0;
+    Tls13Msg.build_hello_retry_request_args.dtls = PROTO_FALSE;
+    Tls13Msg.build_hello_retry_request(tls13_msg_work);
+    size_t n = Tls13Msg.n;
     // no cookie extension this time: 22 - 10 = 12 extension octets, and 4 more of session id
     TEST_ASSERT_EQUAL_UINT(66u - 10u + 4u, n);
     TEST_ASSERT_EQUAL_HEX8(0x03, g_out[4]); // legacy_version 0x0303
@@ -98,7 +120,11 @@ void test_rfc8446_message_hash(void)
 {
     uint8_t ch1[32];
     memset(ch1, 0x5A, sizeof(ch1));
-    size_t n = protocore_tls13_build_message_hash(g_out, sizeof(g_out), ch1);
+    Tls13Msg.build_message_hash_args.out = g_out;
+    Tls13Msg.build_message_hash_args.cap = sizeof(g_out);
+    Tls13Msg.build_message_hash_args.ch1_hash = ch1;
+    Tls13Msg.build_message_hash(tls13_msg_work);
+    size_t n = Tls13Msg.n;
     TEST_ASSERT_EQUAL_UINT(36u, n);
     TEST_ASSERT_EQUAL_HEX8(254, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[1]);
@@ -113,7 +139,12 @@ void test_rfc8446_message_hash(void)
 void test_rfc8446_empty_encrypted_extensions(void)
 {
     static const uint8_t WANT[6] = {0x08, 0x00, 0x00, 0x02, 0x00, 0x00};
-    size_t n = protocore_tls13_build_encrypted_extensions_empty(g_out, sizeof(g_out), PROTO_FALSE, NULL);
+    Tls13Msg.build_encrypted_extensions_empty_args.out = g_out;
+    Tls13Msg.build_encrypted_extensions_empty_args.cap = sizeof(g_out);
+    Tls13Msg.build_encrypted_extensions_empty_args.rpk_server_cert = PROTO_FALSE;
+    Tls13Msg.build_encrypted_extensions_empty_args.alpn = NULL;
+    Tls13Msg.build_encrypted_extensions_empty(tls13_msg_work);
+    size_t n = Tls13Msg.n;
     TEST_ASSERT_EQUAL_UINT(6u, n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 6);
 }
@@ -124,29 +155,16 @@ void test_rfc8446_empty_encrypted_extensions(void)
 void test_rfc7250_negotiated_server_certificate_type(void)
 {
     static const uint8_t WANT[11] = {0x08, 0x00, 0x00, 0x07, 0x00, 0x05, 0x00, 0x14, 0x00, 0x01, 0x02};
-    size_t n = protocore_tls13_build_encrypted_extensions_empty(g_out, sizeof(g_out), PROTO_TRUE, NULL);
+    Tls13Msg.build_encrypted_extensions_empty_args.out = g_out;
+    Tls13Msg.build_encrypted_extensions_empty_args.cap = sizeof(g_out);
+    Tls13Msg.build_encrypted_extensions_empty_args.rpk_server_cert = PROTO_TRUE;
+    Tls13Msg.build_encrypted_extensions_empty_args.alpn = NULL;
+    Tls13Msg.build_encrypted_extensions_empty(tls13_msg_work);
+    size_t n = Tls13Msg.n;
     TEST_ASSERT_EQUAL_UINT(11u, n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, 11);
     TEST_ASSERT_EQUAL_INT(2, TLS_CERT_TYPE_RAW_PUBLIC_KEY);
     TEST_ASSERT_EQUAL_INT(0, TLS_CERT_TYPE_X509);
-}
-
-// RFC 8410 sec 10.1 prints an example Ed25519 public key as a base64 SubjectPublicKeyInfo,
-// "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=", which decodes to the 44 octets
-// below: the fixed 12-octet DER header of sec 4 (SEQUENCE, AlgorithmIdentifier with OID 1.3.101.112,
-// BIT STRING of 33 octets with 0 unused bits) followed by the 32-octet key.
-void test_rfc8410_ed25519_spki(void)
-{
-    static const uint8_t RFC8410_SPKI[44] = {0x30, 0x2A, 0x30, 0x05, 0x06, 0x03, 0x2B, 0x65, 0x70, 0x03, 0x21,
-                                             0x00, 0x19, 0xBF, 0x44, 0x09, 0x69, 0x84, 0xCD, 0xFE, 0x85, 0x41,
-                                             0xBA, 0xC1, 0x67, 0xDC, 0x3B, 0x96, 0xC8, 0x50, 0x86, 0xAA, 0x30,
-                                             0xB6, 0xB6, 0xCB, 0x0C, 0x5C, 0x38, 0xAD, 0x70, 0x31, 0x66, 0xE1};
-    TEST_ASSERT_EQUAL_UINT(44u, (unsigned)PROTOCORE_TLS13_ED25519_SPKI_LEN);
-    size_t n = protocore_tls13_ed25519_spki(g_out, sizeof(g_out), RFC8410_SPKI + 12);
-    TEST_ASSERT_EQUAL_UINT(44u, n);
-    TEST_ASSERT_EQUAL_MEMORY(RFC8410_SPKI, g_out, 44);
-
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_ed25519_spki(g_out, 43, RFC8410_SPKI + 12));
 }
 
 // RFC 7250 Figure 1: for certificate_type RawPublicKey the Certificate payload carries
@@ -161,7 +179,11 @@ void test_rfc7250_raw_public_key_certificate(void)
     static const uint8_t RFC8410_KEY[32] = {0x19, 0xBF, 0x44, 0x09, 0x69, 0x84, 0xCD, 0xFE, 0x85, 0x41, 0xBA,
                                             0xC1, 0x67, 0xDC, 0x3B, 0x96, 0xC8, 0x50, 0x86, 0xAA, 0x30, 0xB6,
                                             0xB6, 0xCB, 0x0C, 0x5C, 0x38, 0xAD, 0x70, 0x31, 0x66, 0xE1};
-    size_t n = protocore_tls13_build_certificate_rpk(g_out, sizeof(g_out), RFC8410_KEY);
+    Tls13Rpk.build_certificate_args.out = g_out;
+    Tls13Rpk.build_certificate_args.cap = sizeof(g_out);
+    Tls13Rpk.build_certificate_args.ed25519_pub = RFC8410_KEY;
+    Tls13Rpk.build_certificate(tls13_rpk_work);
+    size_t n = Tls13Rpk.n;
     TEST_ASSERT_EQUAL_UINT(57u, n);
     TEST_ASSERT_EQUAL_HEX8(11, g_out[0]); // handshake type certificate
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[1]);
@@ -206,7 +228,12 @@ void test_rfc8446_cookie_extension_is_parsed(void)
 {
     static const uint8_t COOKIE[4] = {0xAA, 0xBB, 0xCC, 0xDD};
     Tls13ClientHello ch;
-    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(DTLS_CH, sizeof(DTLS_CH), &ch, PROTO_TRUE));
+    Tls13Msg.parse_client_hello_args.msg = DTLS_CH;
+    Tls13Msg.parse_client_hello_args.len = sizeof(DTLS_CH);
+    Tls13Msg.parse_client_hello_args.out = &ch;
+    Tls13Msg.parse_client_hello_args.dtls = PROTO_TRUE;
+    Tls13Msg.parse_client_hello(tls13_msg_work);
+    TEST_ASSERT_TRUE(Tls13Msg.ok);
     TEST_ASSERT_EQUAL_UINT(4u, ch.cookie_len);
     TEST_ASSERT_NOT_NULL(ch.cookie);
     TEST_ASSERT_EQUAL_MEMORY(COOKIE, ch.cookie, 4);
@@ -219,7 +246,12 @@ void test_rfc8446_cookie_extension_is_parsed(void)
 void test_rfc7250_server_certificate_type_is_parsed(void)
 {
     Tls13ClientHello ch;
-    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(DTLS_CH, sizeof(DTLS_CH), &ch, PROTO_TRUE));
+    Tls13Msg.parse_client_hello_args.msg = DTLS_CH;
+    Tls13Msg.parse_client_hello_args.len = sizeof(DTLS_CH);
+    Tls13Msg.parse_client_hello_args.out = &ch;
+    Tls13Msg.parse_client_hello_args.dtls = PROTO_TRUE;
+    Tls13Msg.parse_client_hello(tls13_msg_work);
+    TEST_ASSERT_TRUE(Tls13Msg.ok);
     TEST_ASSERT_TRUE(ch.has_server_cert_type);
     TEST_ASSERT_TRUE(ch.offers_rpk_server_cert);
     TEST_ASSERT_TRUE(ch.offers_x509_server_cert);
@@ -231,7 +263,12 @@ void test_rfc9146_connection_id_is_parsed(void)
 {
     static const uint8_t CID[2] = {0xC1, 0xD5};
     Tls13ClientHello ch;
-    TEST_ASSERT_TRUE(protocore_tls13_parse_client_hello(DTLS_CH, sizeof(DTLS_CH), &ch, PROTO_TRUE));
+    Tls13Msg.parse_client_hello_args.msg = DTLS_CH;
+    Tls13Msg.parse_client_hello_args.len = sizeof(DTLS_CH);
+    Tls13Msg.parse_client_hello_args.out = &ch;
+    Tls13Msg.parse_client_hello_args.dtls = PROTO_TRUE;
+    Tls13Msg.parse_client_hello(tls13_msg_work);
+    TEST_ASSERT_TRUE(Tls13Msg.ok);
     TEST_ASSERT_TRUE(ch.has_conn_id);
     TEST_ASSERT_EQUAL_UINT(2u, ch.conn_id_len);
     TEST_ASSERT_EQUAL_MEMORY(CID, ch.conn_id, 2);
@@ -246,11 +283,21 @@ void test_rfc9147_legacy_cookie_must_be_empty(void)
     Tls13ClientHello ch;
     memcpy(bad, DTLS_CH, sizeof(bad));
     bad[39] = 0x01; // the legacy_cookie length, right after the empty legacy_session_id
-    TEST_ASSERT_FALSE(protocore_tls13_parse_client_hello(bad, sizeof(bad), &ch, PROTO_TRUE));
+    Tls13Msg.parse_client_hello_args.msg = bad;
+    Tls13Msg.parse_client_hello_args.len = sizeof(bad);
+    Tls13Msg.parse_client_hello_args.out = &ch;
+    Tls13Msg.parse_client_hello_args.dtls = PROTO_TRUE;
+    Tls13Msg.parse_client_hello(tls13_msg_work);
+    TEST_ASSERT_FALSE(Tls13Msg.ok);
 
     // read as a TLS ClientHello the same octets are malformed too, since no legacy_cookie belongs
     // there and every field behind it then lands one octet out
-    TEST_ASSERT_FALSE(protocore_tls13_parse_client_hello(DTLS_CH, sizeof(DTLS_CH), &ch, PROTO_FALSE));
+    Tls13Msg.parse_client_hello_args.msg = DTLS_CH;
+    Tls13Msg.parse_client_hello_args.len = sizeof(DTLS_CH);
+    Tls13Msg.parse_client_hello_args.out = &ch;
+    Tls13Msg.parse_client_hello_args.dtls = PROTO_FALSE;
+    Tls13Msg.parse_client_hello(tls13_msg_work);
+    TEST_ASSERT_FALSE(Tls13Msg.ok);
 }
 
 // A destination that cannot hold the whole message yields 0, never a handshake message whose
@@ -260,10 +307,31 @@ void test_builders_refuse_a_short_destination(void)
     static const uint8_t COOKIE[4] = {0xAA, 0xBB, 0xCC, 0xDD};
     uint8_t ch1[32];
     memset(ch1, 0, sizeof(ch1));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_hello_retry_request(g_out, 65, NULL, 0, TLS_GROUP_X25519,
-                                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, COOKIE,
-                                                                         sizeof(COOKIE), PROTO_TRUE));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_encrypted_extensions_empty(g_out, 5, PROTO_FALSE, NULL));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_message_hash(g_out, 35, ch1));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_tls13_build_certificate_rpk(g_out, 56, ch1));
+    Tls13Msg.build_hello_retry_request_args.out = g_out;
+    Tls13Msg.build_hello_retry_request_args.cap = 65;
+    Tls13Msg.build_hello_retry_request_args.session_id = NULL;
+    Tls13Msg.build_hello_retry_request_args.session_id_len = 0;
+    Tls13Msg.build_hello_retry_request_args.selected_group = TLS_GROUP_X25519;
+    Tls13Msg.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
+    Tls13Msg.build_hello_retry_request_args.cookie = COOKIE;
+    Tls13Msg.build_hello_retry_request_args.cookie_len = sizeof(COOKIE);
+    Tls13Msg.build_hello_retry_request_args.dtls = PROTO_TRUE;
+    Tls13Msg.build_hello_retry_request(tls13_msg_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Tls13Msg.n);
+    Tls13Msg.build_encrypted_extensions_empty_args.out = g_out;
+    Tls13Msg.build_encrypted_extensions_empty_args.cap = 5;
+    Tls13Msg.build_encrypted_extensions_empty_args.rpk_server_cert = PROTO_FALSE;
+    Tls13Msg.build_encrypted_extensions_empty_args.alpn = NULL;
+    Tls13Msg.build_encrypted_extensions_empty(tls13_msg_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Tls13Msg.n);
+    Tls13Msg.build_message_hash_args.out = g_out;
+    Tls13Msg.build_message_hash_args.cap = 35;
+    Tls13Msg.build_message_hash_args.ch1_hash = ch1;
+    Tls13Msg.build_message_hash(tls13_msg_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Tls13Msg.n);
+    Tls13Rpk.build_certificate_args.out = g_out;
+    Tls13Rpk.build_certificate_args.cap = 56;
+    Tls13Rpk.build_certificate_args.ed25519_pub = ch1;
+    Tls13Rpk.build_certificate(tls13_rpk_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Tls13Rpk.n);
 }

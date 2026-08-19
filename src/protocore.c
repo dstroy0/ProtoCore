@@ -52,8 +52,6 @@
 #include "server/core/worker/worker.h"
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
-static uint8_t http_routes_work[16]; // the borrow an entry takes; HttpRoutes never reads it
-
 static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
 
 static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
@@ -130,13 +128,13 @@ void protocore_server_reset(void)
     // materializes a sizeof(ServerCtx) temporary on the caller's stack.
     static const ServerCtx blank = {0};
     s_inst = blank;
-    HttpRoutes.reset(http_routes_work);
+    HttpRoutes.reset(protocore_http_route_span());
     Http.reset(
         protocore_http_span()); // the not-found handler, which answers instead of the built-in 404 while it is set
 #if PROTOCORE_ENABLE_AUTH
     // A credential id names a row by index and a route holds that id, so the two tables empty
     // together: routes left behind rows the table has no way to reach, and the table is bounded.
-    Auth.reset(NULL);
+    Auth.reset(protocore_http_auth_span());
 #endif
     Mnt.reset(mnt_work); // the same, for the mount id a static or DAV route holds
 #if PROTOCORE_ENABLE_WEBSOCKET
@@ -234,16 +232,9 @@ int32_t proto_begin(const WebServerConfig *cfg)
     ConnPool.life.conn_timeout_ms = Session.conn_timeout_ms;
     ConnPool.init(protocore_conn_pool_span());
 #if PROTOCORE_ENABLE_AUTH
-    {
-        // Fresh server keying secret per begin(): one borrow for the hash behind it, returned here.
-        size_t mark = protocore_secure_mark();
-        protocore_span ws = protocore_secure_span(PROTOCORE_SHA256_BORROW, _Alignof(uint32_t));
-        if (span.ok(ws))
-        {
-            Auth.rekey(ws.buf);
-        }
-        protocore_secure_release(mark);
-    }
+    // Fresh server keying secret per begin(). The secret it writes lives in the auth module's own
+    // borrow, and the hash that derives it runs out of the region beside it, so one span serves both.
+    Auth.rekey(protocore_http_auth_span());
 #endif
 #if PROTOCORE_ENABLE_CSRF
     {
@@ -456,7 +447,7 @@ void fill_route_base(HttpRoute *r, const char *path)
 
 void on_http(const char *path, HttpMethod method, Handler callback)
 {
-    HttpRoutes.add(http_routes_work);
+    HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
@@ -471,7 +462,7 @@ void on_http(const char *path, HttpMethod method, Handler callback)
 
 void on_http_iface(const char *path, HttpMethod method, Handler callback, protocore_if_kind iface)
 {
-    HttpRoutes.add(http_routes_work);
+    HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
@@ -492,7 +483,7 @@ void set_ap_ip(uint32_t ap_ip)
 
 void on_regex(const char *pattern, HttpMethod method, Handler callback)
 {
-    HttpRoutes.add(http_routes_work);
+    HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
@@ -510,7 +501,7 @@ void on_regex(const char *pattern, HttpMethod method, Handler callback)
 void on_http_auth(const char *path, HttpMethod method, Handler callback, const char *realm, const char *user,
                   const char *pass, proto_bool digest)
 {
-    HttpRoutes.add(http_routes_work);
+    HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
@@ -526,7 +517,7 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
     Auth.cred.user = user;
     Auth.cred.pass = pass;
     Auth.cred.digest = digest;
-    Auth.add(NULL);
+    Auth.add(protocore_http_auth_span());
     r->auth_id = Auth.u8;
 }
 #endif // PROTOCORE_ENABLE_AUTH
@@ -534,7 +525,7 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
 #if PROTOCORE_ENABLE_WEBSOCKET
 void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
 {
-    HttpRoutes.add(http_routes_work);
+    HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
@@ -554,7 +545,7 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
 #if PROTOCORE_ENABLE_SSE
 void on_sse(const char *path, SseConnectHandler on_connect)
 {
-    HttpRoutes.add(http_routes_work);
+    HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
@@ -600,11 +591,11 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
 #if PROTOCORE_ENABLE_WEBSOCKET
 void ws_dispatch_message(const WsConn *ws)
 {
-    HttpRoutes.count(http_routes_work);
+    HttpRoutes.count(protocore_http_route_span());
     for (uint8_t r = 0; r < HttpRoutes.value; r++)
     {
         HttpRoutes.at_args.i = r;
-        HttpRoutes.at(http_routes_work);
+        HttpRoutes.at(protocore_http_route_span());
         const HttpRoute *rt = HttpRoutes.ptr;
         if (rt->type != ROUTE_WS)
         {
@@ -622,11 +613,11 @@ void ws_dispatch_message(const WsConn *ws)
 
 void ws_dispatch_close(const WsConn *ws)
 {
-    HttpRoutes.count(http_routes_work);
+    HttpRoutes.count(protocore_http_route_span());
     for (uint8_t r = 0; r < HttpRoutes.value; r++)
     {
         HttpRoutes.at_args.i = r;
-        HttpRoutes.at(http_routes_work);
+        HttpRoutes.at(protocore_http_route_span());
         const HttpRoute *rt = HttpRoutes.ptr;
         if (rt->type != ROUTE_WS)
         {

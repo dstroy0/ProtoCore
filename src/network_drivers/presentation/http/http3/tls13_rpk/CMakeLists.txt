@@ -5,12 +5,11 @@
 # Regenerate with:  python tools/harness.py build modules
 
 
-if(PROTOCORE_ENABLE_DEFLATE_RFC1951)
-  protocore_module(pc_network_drivers_presentation_codec_deflate_rfc1951
-    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/rfc1951.c"
-    PUBLIC
-      pc_mmgr_bitio
+if(PROTOCORE_ENABLE_TLS_RPK)
+  protocore_module(pc_network_drivers_presentation_http_http3_tls13_rpk
+    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tls13_rpk.c"
     PRIVATE
       pc_mmgr_protomem
+      pc_network_drivers_presentation_http_http3_tls13_msg
   )
 endif()

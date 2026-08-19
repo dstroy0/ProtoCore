@@ -3297,6 +3297,30 @@
 #define PROTOCORE_PLAINTEXT_WORK_SSHSCP 0
 #endif
 
+/**
+ * @brief One SSH connection's zlib@openssh.com compressor: both streams and their windows.
+ *
+ * Stated here as a number because it sums a deflate window, its hash chain, the fixed Huffman
+ * tables and a 32 KB inflate context-takeover window, none of which this file can see - they are
+ * built in ssh/transport/comp/comp.c, which is the translation unit that includes both and is where
+ * this is proved against the real SshCompCtx. Same arrangement as PROTOCORE_SSH_SLOT_BYTES.
+ */
+#ifndef PROTOCORE_SSH_COMP_SLOT_BYTES
+#define PROTOCORE_SSH_COMP_SLOT_BYTES 81000u
+#endif
+
+/** @brief Every connection's compressor together: the bytes comp.c takes from the plaintext pool. */
+#ifndef PROTOCORE_SSH_COMP_BORROW
+#define PROTOCORE_SSH_COMP_BORROW ((size_t)MAX_SSH_CONNS * PROTOCORE_SSH_COMP_SLOT_BYTES)
+#endif
+
+// Compression is a negotiated extra, so the term is the borrow only where the streams are built.
+#if PROTOCORE_ENABLE_SSH_ZLIB
+#define PROTOCORE_PLAINTEXT_WORK_SSHCOMP PROTOCORE_SSH_COMP_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SSHCOMP 0
+#endif
+
 // The SFTP server's bound root and registration flag, its one response-build buffer, the READ
 // scratch, two request paths, one serialized READDIR entry with its longname and the entry's own
 // name, and a handle on its way into a HANDLE response. Measured at 5008 bytes for the default
@@ -3332,7 +3356,13 @@
 #define PROTOCORE_HTTP_PARSER_BORROW 32u
 #endif
 
+// The parser took a gate when every module did, so the term follows it. It defaults on, so this
+// changes no build that exists - it is the arm a build that turns it off would otherwise pay for.
+#if PROTOCORE_ENABLE_HTTP_PARSER
 #define PROTOCORE_PLAINTEXT_WORK_HTTPPARSER PROTOCORE_HTTP_PARSER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_HTTPPARSER 0
+#endif
 
 // The adaptive mDNS announcer's live state: its config, the beacon interval, the contention window,
 // the running frame total the promiscuous sink bumps, and the channel capture is pinned to.
@@ -3656,7 +3686,7 @@
      PROTOCORE_PLAINTEXT_WORK_NTPSERVER + PROTOCORE_PLAINTEXT_WORK_NTPSERVICE +                                        \
      PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE + PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE +                                  \
      PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + PROTOCORE_PLAINTEXT_WORK_SSHSFTP +                                          \
-     PROTOCORE_PLAINTEXT_WORK_FILESERVING + 256)
+     PROTOCORE_PLAINTEXT_WORK_SSHCOMP + PROTOCORE_PLAINTEXT_WORK_FILESERVING + 256)
 #endif
 
 /**
@@ -3754,6 +3784,30 @@
 #ifndef PROTOCORE_WORK_ROUTE_TABLE
 #define PROTOCORE_WORK_ROUTE_TABLE (MAX_ROUTES * 104 + 16) // HttpRoute is 88 with every gated id compiled
 #endif
+
+/** @brief The route table's borrow: every entry plus the count. Proved in http_route.c. */
+#ifndef PROTOCORE_HTTP_ROUTE_BORROW
+#define PROTOCORE_HTTP_ROUTE_BORROW PROTOCORE_WORK_ROUTE_TABLE
+#endif
+
+// The routes are a gated module and it defaults off, so a build without it reserved the whole table
+// for something it never compiled. The term is the borrow only where the table is built.
+#if PROTOCORE_ENABLE_HTTP_ROUTE
+#define PROTOCORE_SECURE_WORK_ROUTETABLE PROTOCORE_HTTP_ROUTE_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_ROUTETABLE 0
+#endif
+/**
+ * @brief The HTTP auth borrow: the credential table, then the SHA-256 bytes behind it.
+ *
+ * Both regions of one span. The table lasts the life of the program and the hash scratch does not,
+ * but the worst case over an entry's whole chain is taken once and never exceeded, so the digest
+ * nonce and the Basic check run out of the same borrow the table sits in. Proved in http/auth.c.
+ */
+#ifndef PROTOCORE_HTTP_AUTH_BORROW
+#define PROTOCORE_HTTP_AUTH_BORROW ((size_t)PROTOCORE_WORK_AUTH_TABLE + PROTOCORE_SHA256_BORROW)
+#endif
+
 #ifndef PROTOCORE_WORK_AUTH_TABLE
 #define PROTOCORE_WORK_AUTH_TABLE (MAX_ROUTES * (3 * MAX_AUTH_LEN + 8) + 32) // AuthCred is 3*MAX_AUTH_LEN + 1
 #endif

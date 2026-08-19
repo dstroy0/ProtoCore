@@ -208,6 +208,7 @@ protocore_env(native_aes_block
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_aes_block/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/cipher/test_aes_block"
 )
 
@@ -265,6 +266,7 @@ protocore_env(native_aesgcm_kat_hw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_aesgcm_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/aead/test_ssh_aesgcm"
 )
 
@@ -692,6 +694,7 @@ protocore_env(native_bignum_group14
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_bignum_group14/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_bignum_group14"
 )
 
@@ -721,6 +724,7 @@ protocore_env(native_bignum_group14_hw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_bignum_group14_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_bignum_group14"
 )
 
@@ -1347,6 +1351,7 @@ protocore_env(native_coaps
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/integration/iot/test_coaps/test_coaps.c"
     "${PROTOCORE_ROOT}/test/unit/integration/iot/test_coaps/unity_runner.c"
   DEFINES
@@ -1406,6 +1411,7 @@ protocore_env(native_coaps_server
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/integration/iot/test_coaps_server/test_coaps_server.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
@@ -1464,6 +1470,7 @@ protocore_env(native_coaps_server_nostack
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/integration/iot/test_coaps_server/test_coaps_server.c"
   DEFINES
     "PROTOCORE_ENABLE_DTLS=1"
@@ -1476,6 +1483,7 @@ protocore_env(native_coaps_server_nostack
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_coaps_server_nostack/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/integration/iot/test_coaps_server"
 )
 
@@ -1930,6 +1938,7 @@ protocore_env(native_codeql
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_codeql/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/integration/fieldbus/test_dispatch"
 )
 
@@ -2199,6 +2208,7 @@ protocore_env(native_curve25519_kat_hw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_curve25519_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ed25519"
 )
 
@@ -2461,6 +2471,7 @@ protocore_env(native_der
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_der/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/shared/der/test_der"
 )
 
@@ -3345,6 +3356,7 @@ protocore_env(native_dtls_conn
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/tls/test_dtls_conn/test_dtls_conn.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/tls/test_dtls_conn/unity_runner.c"
   DEFINES
@@ -3406,6 +3418,7 @@ protocore_env(native_dtls_tls13_rfc
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_dtls_tls13/test_dtls_tls13.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_dtls_tls13/unity_runner.c"
   DEFINES
@@ -3609,6 +3622,7 @@ protocore_env(native_edge_cache_proxy
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_edge_cache_proxy/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/server/web/edge_cache/test_edge_cache_proxy"
 )
 
@@ -4384,6 +4398,7 @@ protocore_env(native_ftp_session
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_ftp_session/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/services/file_transfer/ftp/test_ftp_session"
 )
 
@@ -4810,6 +4825,7 @@ protocore_env(native_h3_conn
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/http/test_h3_conn/test_h3_conn.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/http/test_h3_conn/unity_runner.c"
   DEFINES
@@ -4863,6 +4879,7 @@ protocore_env(native_h3_e2e
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/integration/http/test_h3_e2e/test_h3_e2e.c"
     "${PROTOCORE_ROOT}/test/unit/integration/http/test_h3_e2e/unity_runner.c"
   DEFINES
@@ -4998,6 +5015,7 @@ protocore_env(native_h3_server
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/integration/http/test_h3_server/test_h3_server.c"
     "${PROTOCORE_ROOT}/test/unit/integration/http/test_h3_server/unity_runner.c"
   DEFINES
@@ -5167,6 +5185,7 @@ protocore_env(native_hkdf_sha384_kat
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_hkdf_sha384_kat/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/kdf/test_hkdf_sha384"
 )
 
@@ -5192,6 +5211,7 @@ protocore_env(native_hmac_sha384_kat
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_hmac_sha384_kat/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_hmac_sha384"
 )
 
@@ -5219,6 +5239,7 @@ protocore_env(native_hmac_sha384_kat_hw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_hmac_sha384_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_hmac_sha384"
 )
 
@@ -5724,6 +5745,7 @@ protocore_env(native_iface_bridge_hw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_iface_bridge_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/server/net/iface_bridge/test_iface_bridge_hw"
 )
 
@@ -7576,6 +7598,7 @@ protocore_env(native_net_addr
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_net_addr/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/net_addr/test_net_addr"
 )
 
@@ -7860,6 +7883,7 @@ protocore_env(native_oauth2_exchange
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_oauth2_exchange/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2_exchange"
 )
 
@@ -7941,6 +7965,7 @@ protocore_env(native_oauth2_transport
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_oauth2_transport/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2_transport"
 )
 
@@ -8304,6 +8329,7 @@ protocore_env(native_partition_ota
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_partition_ota/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/server/storage/partition_monitor/test_partition_monitor"
 )
 
@@ -9382,6 +9408,7 @@ protocore_env(native_quic_conn
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/http/test_quic_conn/test_quic_conn.c"
     "${PROTOCORE_ROOT}/test/unit/protocols/http/test_quic_conn/unity_runner.c"
   DEFINES
@@ -9522,6 +9549,7 @@ protocore_env(native_quic_server
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/integration/http/test_quic_server/test_quic_server.c"
     "${PROTOCORE_ROOT}/test/unit/integration/http/test_quic_server/unity_runner.c"
   DEFINES
@@ -9573,6 +9601,7 @@ protocore_env(native_quic_tls_pqc
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls/test_quic_tls.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls/unity_runner.c"
   DEFINES
@@ -9622,6 +9651,7 @@ protocore_env(native_quic_tls_rfc
     "${PROTOCORE_ROOT}/src/crypto/hash/sha384/sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls/test_quic_tls.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_quic_tls/unity_runner.c"
   DEFINES
@@ -10198,6 +10228,7 @@ protocore_env(native_relay_listener
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_relay_listener/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/server/net/relay/test_relay_listener"
 )
 
@@ -10425,6 +10456,7 @@ protocore_env(native_rsa_kat
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_rsa_kat/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_rsa_kat"
 )
 
@@ -10456,6 +10488,7 @@ protocore_env(native_rsa_kat_hw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_rsa_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_rsa_kat"
 )
 
@@ -10689,6 +10722,7 @@ protocore_env(native_scp_server
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_scp_server/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/session/scp/test_ssh_scp"
 )
 
@@ -11063,6 +11097,7 @@ protocore_env(native_sftp_server
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_sftp_server/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp"
 )
 
@@ -11132,6 +11167,7 @@ protocore_env(native_sha256_kat_hw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_sha256_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_digest_vectors"
 )
 
@@ -11154,6 +11190,7 @@ protocore_env(native_sha384_kat
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_sha384_kat/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_sha384"
 )
 
@@ -11178,6 +11215,7 @@ protocore_env(native_sha384_kat_hw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_sha384_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/hash/test_sha384"
 )
 
@@ -13359,6 +13397,7 @@ protocore_env(native_ssh_client
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_client/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/client/test_client"
 )
 
@@ -13508,6 +13547,7 @@ protocore_env(native_ssh_ecdsa_hw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_ecdsa_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/asymmetric/test_ssh_ecdsa"
 )
 
@@ -13645,6 +13685,7 @@ protocore_env(native_ssh_flow_sw
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_ssh_flow_sw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/ssh/connection/test_connection"
 )
 
@@ -14573,7 +14614,7 @@ protocore_env(native_tls13_kdf
 )
 
 # TLS 1.3 handshake messages for the QUIC handshake (network_drivers/presentation/http/http3/
-protocore_env(native_tls13_msg
+protocore_env(native_tls13_msg__test_tls13_msg
   SOURCES
     "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_msg/tls13_msg.c"
     "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
@@ -14588,6 +14629,7 @@ protocore_env(native_tls13_msg
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
     "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_msg/test_tls13_msg.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_msg/unity_runner.c"
   DEFINES
@@ -14601,6 +14643,38 @@ protocore_env(native_tls13_msg
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_tls13_msg/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_msg"
+)
+
+# TLS 1.3 handshake messages for the QUIC handshake (network_drivers/presentation/http/http3/
+protocore_env(native_tls13_msg__test_tls13_rpk
+  SOURCES
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_msg/tls13_msg.c"
+    "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
+    "${PROTOCORE_ROOT}/src/crypto/asymmetric/curve25519/curve25519.c"
+    "${PROTOCORE_ROOT}/src/crypto/asymmetric/ed25519/ed25519.c"
+    "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
+    "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
+    "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
+    "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
+    "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
+    "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
+    "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
+    "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
+    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
+    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_rpk/test_tls13_rpk.c"
+    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_rpk/unity_runner.c"
+  DEFINES
+    "PROTOCORE_ENABLE_HTTP3=1"
+    "PROTOCORE_ENABLE_TLS_RPK=1"
+  INCLUDES
+    "${PROTOCORE_ROOT}/test/core_setup/hal/host"
+    "${PROTOCORE_ROOT}/test/support"
+    "${PROTOCORE_ROOT}/src"
+    "${PROTOCORE_ROOT}/include"
+    "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_tls13_msg/littlefs/include"
+    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/http/http3/test_tls13_rpk"
 )
 
 # TLS 1.3 handshake driver over the stream record layer (network_drivers/tls/tls_conn,
@@ -14641,6 +14715,7 @@ protocore_env(native_tls_conn
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/file_conversion/network_drivers/tls/handshake/test_tls_conn/test_tls_conn.c"
     "${PROTOCORE_ROOT}/test/unit/file_conversion/network_drivers/tls/handshake/test_tls_conn/unity_runner.c"
   DEFINES
@@ -14766,6 +14841,7 @@ protocore_env(native_tls_seam
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha384/hmac_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/kdf/hkdf_sha384/hkdf_sha384.c"
     "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/test_tls_seam/test_tls_seam.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/test_tls_seam/unity_runner.c"
   DEFINES
@@ -14778,6 +14854,7 @@ protocore_env(native_tls_seam
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_tls_seam/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/tls/test_tls_seam"
 )
 
@@ -15649,6 +15726,7 @@ protocore_env(native_wifi_sniffer_promisc
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_wifi_sniffer_promisc/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/services/radio/wifi_sniffer/test_wifi_sniffer"
 )
 
@@ -15901,6 +15979,7 @@ protocore_env(native_wycheproof_kat_hw__test_host_sha_hal
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_wycheproof_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_sha_hal"
 )
 
@@ -15945,6 +16024,7 @@ protocore_env(native_wycheproof_kat_hw__test_host_aes_hal
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_wycheproof_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_aes_hal"
 )
 
@@ -15989,6 +16069,7 @@ protocore_env(native_wycheproof_kat_hw__test_crypto_kat
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_wycheproof_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/mac/test_crypto_kat"
 )
 
@@ -16033,6 +16114,7 @@ protocore_env(native_wycheproof_kat_hw__test_host_hw_reg
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_wycheproof_kat_hw/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/core_setup/hal/host/test_host_hw_reg"
 )
 
@@ -16052,6 +16134,7 @@ protocore_env(native_x509
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_x509/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509"
 )
 
@@ -16089,6 +16172,7 @@ protocore_env(native_x509_verify
     "${PROTOCORE_ROOT}/src"
     "${PROTOCORE_ROOT}/include"
     "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/.pio/libdeps/native_x509_verify/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509_verify"
 )
 

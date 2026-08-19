@@ -26,13 +26,16 @@
 #include "crypto/asymmetric/ed25519/ed25519.h"
 #include "crypto/hash/sha256/sha256.h"
 #include "crypto/hash/sha512/sha512.h"
-#include "network_drivers/tls/tls.h"
+#include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/tls/record/record.h"
+#include "network_drivers/tls/tls.h"
 #include "x509_fixture.h"
 #include <string.h>
 
 #include <unity.h>
+
+static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
 
 // RFC 8448 sec 3, "{client} create an ephemeral x25519 key pair": the private key and the public key
 // the ClientHello of that trace carries in its key_share.
@@ -323,13 +326,25 @@ void test_rfc8446_cert_verify_content_worked_example(void)
     want[97] = 0x00;
     memset(want + 98, 0x01, 32);
 
-    TEST_ASSERT_EQUAL_UINT(130u, protocore_tls13_cert_verify_content(out, sizeof(out), hash, 32, PROTO_TRUE));
+    Tls13Msg.cert_verify_content_args.out = out;
+    Tls13Msg.cert_verify_content_args.cap = sizeof(out);
+    Tls13Msg.cert_verify_content_args.transcript_hash = hash;
+    Tls13Msg.cert_verify_content_args.hash_len = 32;
+    Tls13Msg.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13Msg.cert_verify_content(tls13_msg_work);
+    TEST_ASSERT_EQUAL_UINT(130u, Tls13Msg.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
 
     // Same section: the client's context string differs by one word, so the two contents must not
     // be equal - that separation is the whole point of the string.
     memcpy(want + 64, CLIENT_CTX, 33);
-    TEST_ASSERT_EQUAL_UINT(130u, protocore_tls13_cert_verify_content(out, sizeof(out), hash, 32, PROTO_FALSE));
+    Tls13Msg.cert_verify_content_args.out = out;
+    Tls13Msg.cert_verify_content_args.cap = sizeof(out);
+    Tls13Msg.cert_verify_content_args.transcript_hash = hash;
+    Tls13Msg.cert_verify_content_args.hash_len = 32;
+    Tls13Msg.cert_verify_content_args.is_server = PROTO_FALSE;
+    Tls13Msg.cert_verify_content(tls13_msg_work);
+    TEST_ASSERT_EQUAL_UINT(130u, Tls13Msg.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
 }
 
@@ -533,7 +548,13 @@ void test_full_handshake_on_rfc8448_key_material(void)
     TEST_ASSERT_EQUAL_UINT(sizeof(FLIGHT), seen);
 
     uint8_t content[160];
-    size_t clen = protocore_tls13_cert_verify_content(content, sizeof(content), cert_verify_hash, 32, PROTO_TRUE);
+    Tls13Msg.cert_verify_content_args.out = content;
+    Tls13Msg.cert_verify_content_args.cap = sizeof(content);
+    Tls13Msg.cert_verify_content_args.transcript_hash = cert_verify_hash;
+    Tls13Msg.cert_verify_content_args.hash_len = 32;
+    Tls13Msg.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13Msg.cert_verify_content(tls13_msg_work);
+    size_t clen = Tls13Msg.n;
     TEST_ASSERT_EQUAL_UINT(130u, clen);
     Ed25519.verify_args.pub = peer_pub;
     Ed25519.verify_args.msg = content;
