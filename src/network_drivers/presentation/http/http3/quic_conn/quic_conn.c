@@ -8,6 +8,8 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t quic_tls_work[16]; // the borrow an entry takes; QuicTlsServer never reads it
+
 static uint8_t quic_crypto_work[16]; // the borrow an entry takes; QuicCrypto never reads it
 
 static uint8_t quic_packet_work[16]; // the borrow an entry takes; QuicPacket never reads it
@@ -118,12 +120,6 @@ static_assert(QUIC_OFF_CRYPTO + 3u * (size_t)PROTOCORE_QUIC_CRYPTO_RX <= PROTOCO
               "PROTOCORE_PLAINTEXT_ARENA_SIZE from it");
 
 // The handle a caller sets a call's members on, and the connection the bound span holds.
-struct QuicConnInternal
-{
-    QuicConnCtx *c; ///< the connection, resolved from the bound context span
-    QuicConnNs *ns; ///< the handle a caller sets a call's members on
-};
-
 // The regions, at their offsets in the caller's spans.
 #define QUIC_CTX(w) ((QuicConnCtx *)(void *)((w) + QUIC_OFF_CTX))
 // QUIC_OFF_CTX is 0, so a callback is handed back the span it was bound with.
@@ -157,7 +153,11 @@ static QuicPacketKeys *open_keys(QuicConnCtx *qc, int level)
     {
         return &qc->initial.client;
     }
-    return protocore_quic_tls_keys(&qc->tls, level, /*is_server=*/PROTO_FALSE);
+    QuicTlsServer.keys_args.qt = &qc->tls;
+    QuicTlsServer.keys_args.level = level;
+    QuicTlsServer.keys_args.is_server = /*is_server=*/PROTO_FALSE;
+    QuicTlsServer.keys(quic_tls_work);
+    return QuicTlsServer.pkt_keys;
 }
 static QuicPacketKeys *seal_keys(QuicConnCtx *qc, int level)
 {
@@ -165,7 +165,11 @@ static QuicPacketKeys *seal_keys(QuicConnCtx *qc, int level)
     {
         return &qc->initial.server;
     }
-    return protocore_quic_tls_keys(&qc->tls, level, /*is_server=*/PROTO_TRUE);
+    QuicTlsServer.keys_args.qt = &qc->tls;
+    QuicTlsServer.keys_args.level = level;
+    QuicTlsServer.keys_args.is_server = /*is_server=*/PROTO_TRUE;
+    QuicTlsServer.keys(quic_tls_work);
+    return QuicTlsServer.pkt_keys;
 }
 
 // The engine is one translation unit; these are defined below in dependency order.
@@ -276,7 +280,9 @@ static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint
     c.params.has_initial_scid = PROTO_TRUE;
     mem.cpy(c.params.initial_scid, our_scid, our_scid_len);
     c.params.initial_scid_len = our_scid_len;
-    protocore_quic_tls_server_init(&qc->tls, &c);
+    QuicTlsServer.server_init_args.qt = &qc->tls;
+    QuicTlsServer.server_init_args.cfg = &c;
+    QuicTlsServer.server_init(quic_tls_work);
 }
 
 // --- Frame handling --------------------------------------------------------------------------
@@ -318,7 +324,12 @@ static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrameHeader *f)
     s->crypto_rx_have += nl;
     s->crypto_rx_off += nl;
 
-    size_t used = protocore_quic_tls_recv_crypto(&qc->tls, level, s->crypto_rx, s->crypto_rx_have);
+    QuicTlsServer.recv_crypto_args.qt = &qc->tls;
+    QuicTlsServer.recv_crypto_args.level = level;
+    QuicTlsServer.recv_crypto_args.data = s->crypto_rx;
+    QuicTlsServer.recv_crypto_args.len = s->crypto_rx_have;
+    QuicTlsServer.recv_crypto(quic_tls_work);
+    size_t used = QuicTlsServer.n;
     if (used)
     {
         mem.move(s->crypto_rx, s->crypto_rx + used, s->crypto_rx_have - used);
@@ -682,7 +693,11 @@ static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *
         return 0;
     }
     size_t flen = 0;
-    const uint8_t *flight = protocore_quic_tls_flight(&qc->tls, level, &flen);
+    QuicTlsServer.flight_args.qt = &qc->tls;
+    QuicTlsServer.flight_args.level = level;
+    QuicTlsServer.flight_args.len = &flen;
+    QuicTlsServer.flight(quic_tls_work);
+    const uint8_t *flight = QuicTlsServer.bytes;
     if (!flight || s->crypto_tx_off >= flen)
     {
         return 0; // other than INITIAL/HANDSHAKE, which the guard above already excluded
@@ -1197,19 +1212,14 @@ static proto_bool quic_conn_gone(const QuicConnCtx *qc)
 
 // The bound context span, as this file's connection. Every entry starts here, so no entry reads the
 // bind twice and none of them carries the span as a parameter.
-static QuicConnCtx *qc_bound(struct QuicConnInternal *restrict ctx)
+static QuicConnCtx *qc_bound(uint8_t *restrict work)
 {
-    if (!ctx || !ctx->ns->bind.ctx)
-    {
-        return NULL;
-    }
-    ctx->c = QUIC_CTX(ctx->ns->bind.ctx);
-    return ctx->c;
+    return work ? QUIC_CTX(work) : NULL;
 }
 
-static void quic_conn_init(struct QuicConnInternal *restrict ctx)
+static void quic_conn_init(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.ok = PROTO_FALSE;
     if (!qc || !QuicConn.bind.b || !QuicConn.init_args.cfg)
     {
@@ -1222,9 +1232,9 @@ static void quic_conn_init(struct QuicConnInternal *restrict ctx)
     QuicConn.ok = !qc->closed;
 }
 
-static void quic_conn_callbacks(struct QuicConnInternal *restrict ctx)
+static void quic_conn_callbacks(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.ok = PROTO_FALSE;
     if (!qc)
     {
@@ -1234,9 +1244,9 @@ static void quic_conn_callbacks(struct QuicConnInternal *restrict ctx)
     QuicConn.ok = PROTO_TRUE;
 }
 
-static void quic_conn_recv(struct QuicConnInternal *restrict ctx)
+static void quic_conn_recv(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.ok = PROTO_FALSE;
     if (!qc || !QuicConn.recv_args.datagram)
     {
@@ -1245,9 +1255,9 @@ static void quic_conn_recv(struct QuicConnInternal *restrict ctx)
     QuicConn.ok = quic_conn_take(qc, QuicConn.recv_args.datagram, QuicConn.recv_args.len);
 }
 
-static void quic_conn_send(struct QuicConnInternal *restrict ctx)
+static void quic_conn_send(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.ok = PROTO_FALSE;
     QuicConn.n = 0;
     if (!qc || !QuicConn.send_args.out)
@@ -1258,9 +1268,9 @@ static void quic_conn_send(struct QuicConnInternal *restrict ctx)
     QuicConn.ok = PROTO_TRUE;
 }
 
-static void quic_conn_on_timeout(struct QuicConnInternal *restrict ctx)
+static void quic_conn_on_timeout(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.ok = PROTO_FALSE;
     if (!qc)
     {
@@ -1270,9 +1280,9 @@ static void quic_conn_on_timeout(struct QuicConnInternal *restrict ctx)
     QuicConn.ok = PROTO_TRUE;
 }
 
-static void quic_conn_stream_send(struct QuicConnInternal *restrict ctx)
+static void quic_conn_stream_send(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.ok = PROTO_FALSE;
     QuicConn.n = 0;
     if (!qc)
@@ -1287,9 +1297,9 @@ static void quic_conn_stream_send(struct QuicConnInternal *restrict ctx)
 // A datagram names its connection by DCID: a long header carries the id we chose (scid) or the one
 // the client first used (odcid); a short header carries the former alone. The ids are the context's,
 // so the match is asked here rather than read off it.
-static void quic_conn_owns(struct QuicConnInternal *restrict ctx)
+static void quic_conn_owns(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.ok = PROTO_FALSE;
     const uint8_t *dcid = QuicConn.owns_args.dcid;
     const uint8_t len = QuicConn.owns_args.dcid_len;
@@ -1308,9 +1318,9 @@ static void quic_conn_owns(struct QuicConnInternal *restrict ctx)
     }
 }
 
-static void quic_conn_close(struct QuicConnInternal *restrict ctx)
+static void quic_conn_close(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.ok = PROTO_FALSE;
     if (!qc)
     {
@@ -1320,9 +1330,9 @@ static void quic_conn_close(struct QuicConnInternal *restrict ctx)
     QuicConn.ok = PROTO_TRUE;
 }
 
-static void quic_conn_close_app(struct QuicConnInternal *restrict ctx)
+static void quic_conn_close_app(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.ok = PROTO_FALSE;
     if (!qc)
     {
@@ -1332,9 +1342,9 @@ static void quic_conn_close_app(struct QuicConnInternal *restrict ctx)
     QuicConn.ok = PROTO_TRUE;
 }
 
-static void quic_conn_is_established(struct QuicConnInternal *restrict ctx)
+static void quic_conn_is_established(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.established = PROTO_FALSE;
     QuicConn.ok = (qc != NULL);
     if (qc)
@@ -1343,9 +1353,9 @@ static void quic_conn_is_established(struct QuicConnInternal *restrict ctx)
     }
 }
 
-static void quic_conn_is_closed(struct QuicConnInternal *restrict ctx)
+static void quic_conn_is_closed(uint8_t *restrict work)
 {
-    QuicConnCtx *qc = qc_bound(ctx);
+    QuicConnCtx *qc = qc_bound(work);
     QuicConn.closed = PROTO_TRUE; // an unbound connection answers nothing, which is closed
     QuicConn.ok = (qc != NULL);
     if (qc)
@@ -1353,8 +1363,6 @@ static void quic_conn_is_closed(struct QuicConnInternal *restrict ctx)
         QuicConn.closed = quic_conn_gone(qc);
     }
 }
-
-static struct QuicConnInternal s_qc = {.ns = &QuicConn};
 
 QuicConnNs QuicConn = {.init = quic_conn_init,
                        .callbacks = quic_conn_callbacks,
@@ -1366,8 +1374,7 @@ QuicConnNs QuicConn = {.init = quic_conn_init,
                        .close = quic_conn_close,
                        .close_app = quic_conn_close_app,
                        .is_established = quic_conn_is_established,
-                       .is_closed = quic_conn_is_closed,
-                       .internal = &s_qc};
+                       .is_closed = quic_conn_is_closed};
 
 PROTOCORE_END_DECLS
 

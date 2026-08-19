@@ -23,11 +23,15 @@
 #ifndef PROTOCORE_PTP_H
 #define PROTOCORE_PTP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_PTP
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief PTPv2 messageType values (low nibble of octet 0). */
 enum protocore_ptp_msg_type
@@ -111,101 +115,318 @@ typedef struct
     int64_t delay_ns;  ///< meanPathDelay
 } protocore_ptp_sync;
 
-// -- timestamp helpers --
+/** @brief What ts_write takes: p, ts. */
+typedef struct
+{
+    uint8_t *p;
+    const protocore_ptp_timestamp *ts;
+} PtpTsWriteArgs;
 
-/** @brief Write @p ts to @p p as the 10-octet on-wire form (big-endian). */
-void protocore_ptp_ts_write(uint8_t *p, const protocore_ptp_timestamp *ts);
-/** @brief Read a 10-octet on-wire timestamp from @p p into @p ts. */
-void protocore_ptp_ts_read(const uint8_t *p, protocore_ptp_timestamp *ts);
-/** @brief Convert @p ts to signed nanoseconds since its epoch (fits current epochs in int64). */
-int64_t protocore_ptp_ts_to_ns(const protocore_ptp_timestamp *ts);
-/** @brief Convert signed-nanoseconds @p ns to a timestamp. */
-void protocore_ptp_ts_from_ns(int64_t ns, protocore_ptp_timestamp *ts);
+/** @brief What ts_read takes: p, ts. */
+typedef struct
+{
+    const uint8_t *p;
+    protocore_ptp_timestamp *ts;
+} PtpTsReadArgs;
 
-// -- header --
+/** @brief What ts_to_ns takes: ts. */
+typedef struct
+{
+    const protocore_ptp_timestamp *ts;
+} PtpTsToNsArgs;
+
+/** @brief What ts_from_ns takes: ns, ts. */
+typedef struct
+{
+    int64_t ns;
+    protocore_ptp_timestamp *ts;
+} PtpTsFromNsArgs;
+
+/** @brief What build_header takes: buf, cap, h, body_len. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const protocore_ptp_header *h;
+    uint16_t body_len;
+} PtpBuildHeaderArgs;
+
+/** @brief What parse_header takes: s, len, h. */
+typedef struct
+{
+    const uint8_t *s;
+    size_t len;
+    protocore_ptp_header *h;
+} PtpParseHeaderArgs;
+
+/** @brief What build_sync takes: buf, cap, h, origin. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const protocore_ptp_header *h;
+    const protocore_ptp_timestamp *origin;
+} PtpBuildSyncArgs;
+
+/** @brief What build_delay_req takes: buf, cap, h, origin. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const protocore_ptp_header *h;
+    const protocore_ptp_timestamp *origin;
+} PtpBuildDelayReqArgs;
+
+/** @brief What build_follow_up takes: buf, cap, h, precise. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const protocore_ptp_header *h;
+    const protocore_ptp_timestamp *precise;
+} PtpBuildFollowUpArgs;
+
+/** @brief What build_delay_resp takes: buf, cap, h, recv, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const protocore_ptp_header *h;
+    const protocore_ptp_timestamp *recv;
+    const uint8_t *req_clock_id;
+    uint16_t req_port;
+} PtpBuildDelayRespArgs;
+
+/** @brief What build_announce takes: buf, cap, h, a. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const protocore_ptp_header *h;
+    const protocore_ptp_announce *a;
+} PtpBuildAnnounceArgs;
+
+/** @brief What build_pdelay_req takes: buf, cap, h, origin. */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const protocore_ptp_header *h;
+    const protocore_ptp_timestamp *origin;
+} PtpBuildPdelayReqArgs;
+
+/** @brief What build_pdelay_resp takes: buf, cap, h, recv, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const protocore_ptp_header *h;
+    const protocore_ptp_timestamp *recv;
+    const uint8_t *req_clock_id;
+    uint16_t req_port;
+} PtpBuildPdelayRespArgs;
+
+/** @brief What build_pdelay_resp_follow_up takes: buf, cap, h, ... */
+typedef struct
+{
+    uint8_t *buf;
+    size_t cap;
+    const protocore_ptp_header *h;
+    const protocore_ptp_timestamp *origin;
+    const uint8_t *req_clock_id;
+    uint16_t req_port;
+} PtpBuildPdelayRespFollowUpArgs;
+
+/** @brief What parse_timestamp_msg takes: s, len, h, ts. */
+typedef struct
+{
+    const uint8_t *s;
+    size_t len;
+    protocore_ptp_header *h;
+    protocore_ptp_timestamp *ts;
+} PtpParseTimestampMsgArgs;
+
+/** @brief What parse_delay_resp takes: s, len, h, out. */
+typedef struct
+{
+    const uint8_t *s;
+    size_t len;
+    protocore_ptp_header *h;
+    protocore_ptp_delay_resp *out;
+} PtpParseDelayRespArgs;
+
+/** @brief What parse_announce takes: s, len, h, out. */
+typedef struct
+{
+    const uint8_t *s;
+    size_t len;
+    protocore_ptp_header *h;
+    protocore_ptp_announce *out;
+} PtpParseAnnounceArgs;
+
+/** @brief What parse_pdelay_req takes: s, len, h, ts. */
+typedef struct
+{
+    const uint8_t *s;
+    size_t len;
+    protocore_ptp_header *h;
+    protocore_ptp_timestamp *ts;
+} PtpParsePdelayReqArgs;
+
+/** @brief What parse_pdelay_resp takes: s, len, h, out. */
+typedef struct
+{
+    const uint8_t *s;
+    size_t len;
+    protocore_ptp_header *h;
+    protocore_ptp_pdelay_resp *out;
+} PtpParsePdelayRespArgs;
+
+/** @brief What parse_pdelay_resp_follow_up takes: s, len, h, out. */
+typedef struct
+{
+    const uint8_t *s;
+    size_t len;
+    protocore_ptp_header *h;
+    protocore_ptp_pdelay_resp *out;
+} PtpParsePdelayRespFollowUpArgs;
+
+/** @brief What compute takes: t1, t2, t3, t4, out. */
+typedef struct
+{
+    int64_t t1;
+    int64_t t2;
+    int64_t t3;
+    int64_t t4;
+    protocore_ptp_sync *out;
+} PtpComputeArgs;
+
+/** @brief What compute_link_delay takes: t1, t2, t3, t4. */
+typedef struct
+{
+    int64_t t1;
+    int64_t t2;
+    int64_t t3;
+    int64_t t4;
+} PtpComputeLinkDelayArgs;
 
 /**
- * @brief Build the 34-octet common header into @p buf, stamping messageLength = 34 + @p body_len.
- * @return PROTOCORE_PTP_HEADER_LEN or 0 on overflow / bad args.
+ * @brief PTP / IEEE 1588-2008 (PTPv2) message codec + slave clock math (PROTOCORE_ENABLE_PTP).
+ *
+ * A caller sets the members a call takes, invokes it through ::Ptp with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Ptp.ts_write_args.p = ...;
+ *   Ptp.ts_write_args.ts = ...;
+ *   Ptp.ts_write(work);
+ *
+ * @var PtpNs::ts_write_args  what ts_write takes: p, ts
+ * @var PtpNs::ts_read_args  what ts_read takes: p, ts
+ * @var PtpNs::ts_to_ns_args  what ts_to_ns takes: ts
+ * @var PtpNs::ts_from_ns_args  what ts_from_ns takes: ns, ts
+ * @var PtpNs::build_header_args  what build_header takes: buf, cap, h, body_len
+ * @var PtpNs::parse_header_args  what parse_header takes: s, len, h
+ * @var PtpNs::build_sync_args  what build_sync takes: buf, cap, h, origin
+ * @var PtpNs::build_delay_req_args  what build_delay_req takes: buf, cap, h, origin
+ * @var PtpNs::build_follow_up_args  what build_follow_up takes: buf, cap, h, precise
+ * @var PtpNs::build_delay_resp_args  what build_delay_resp takes: buf, cap, h, recv,
+ * @var PtpNs::build_announce_args  what build_announce takes: buf, cap, h, a
+ * @var PtpNs::build_pdelay_req_args  what build_pdelay_req takes: buf, cap, h, origin
+ * @var PtpNs::build_pdelay_resp_args  what build_pdelay_resp takes: buf, cap, h, recv,
+ * @var PtpNs::build_pdelay_resp_follow_up_args  what build_pdelay_resp_follow_up takes: buf, cap, h,
+ * @var PtpNs::parse_timestamp_msg_args  what parse_timestamp_msg takes: s, len, h, ts
+ * @var PtpNs::parse_delay_resp_args  what parse_delay_resp takes: s, len, h, out
+ * @var PtpNs::parse_announce_args  what parse_announce takes: s, len, h, out
+ * @var PtpNs::parse_pdelay_req_args  what parse_pdelay_req takes: s, len, h, ts
+ * @var PtpNs::parse_pdelay_resp_args  what parse_pdelay_resp takes: s, len, h, out
+ * @var PtpNs::parse_pdelay_resp_follow_up_args  what parse_pdelay_resp_follow_up takes: s, len, h, out
+ * @var PtpNs::compute_args  what compute takes: t1, t2, t3, t4, out
+ * @var PtpNs::compute_link_delay_args  what compute_link_delay takes: t1, t2, t3, t4
+ * @var PtpNs::ok  a call's true/false outcome
+ * @var PtpNs::value  the value a call reports
+ * @var PtpNs::n  PROTOCORE_PTP_HEADER_LEN or 0 on overflow / bad args
+ * @var PtpNs::ts_write  write ts to p as the 10-octet on-wire form (big-endian)
+ * @var PtpNs::ts_read  read a 10-octet on-wire timestamp from p into ts
+ * @var PtpNs::ts_to_ns  convert ts to signed nanoseconds since its epoch (fits current ...
+ * @var PtpNs::ts_from_ns  convert signed-nanoseconds ns to a timestamp
+ * @var PtpNs::build_header  build the 34-octet common header into buf, stamping messageLength = ...
+ * @var PtpNs::parse_header  parse the common header from s (len octets). Returns false if too ...
+ * @var PtpNs::build_sync  build a Sync (origin is the originTimestamp; 0 for a two-step Sync)
+ * @var PtpNs::build_delay_req  build a Delay_Req (origin is the originTimestamp; usually 0)
+ * @var PtpNs::build_follow_up  build a Follow_Up carrying the precise Sync egress time precise (t1)
+ * @var PtpNs::build_delay_resp  build a Delay_Resp carrying t4 recv and the requester's port ...
+ * @var PtpNs::build_announce  build an Announce from a - master mode: advertise this clock's ...
+ * @var PtpNs::build_pdelay_req  build a Pdelay_Req (origin is the originTimestamp, usually 0; the ...
+ * @var PtpNs::build_pdelay_resp  build a Pdelay_Resp carrying t2 recv (requestReceiptTimestamp) + ...
+ * @var PtpNs::build_pdelay_resp_follow_up  build a Pdelay_Resp_Follow_Up carrying t3 origin ...
+ * @var PtpNs::parse_timestamp_msg  parse a Sync / Delay_Req / Follow_Up message: fills h and its ...
+ * @var PtpNs::parse_delay_resp  parse a Delay_Resp into h + out. Returns false on a short / ...
+ * @var PtpNs::parse_announce  parse an Announce into h + out. Returns false on a short / ...
+ * @var PtpNs::parse_pdelay_req  parse a Pdelay_Req into h + its originTimestamp ts. False on a ...
+ * @var PtpNs::parse_pdelay_resp  parse a Pdelay_Resp into h + out (timestamp is t2). False on a ...
+ * @var PtpNs::parse_pdelay_resp_follow_up  parse a Pdelay_Resp_Follow_Up into h + out (timestamp is t3). False ...
+ * @var PtpNs::compute  compute offsetFromMaster and meanPathDelay from the four PTP ...
+ * @var PtpNs::compute_link_delay  compute the meanLinkDelay for the P2P mechanism (IEEE 1588-2008 ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_ptp_build_header(uint8_t *buf, size_t cap, const protocore_ptp_header *h, uint16_t body_len);
-/** @brief Parse the common header from @p s (@p len octets). Returns false if too short. */
-proto_bool protocore_ptp_parse_header(const uint8_t *s, size_t len, protocore_ptp_header *h);
+typedef struct
+{
+    PtpTsWriteArgs ts_write_args;
+    PtpTsReadArgs ts_read_args;
+    PtpTsToNsArgs ts_to_ns_args;
+    PtpTsFromNsArgs ts_from_ns_args;
+    PtpBuildHeaderArgs build_header_args;
+    PtpParseHeaderArgs parse_header_args;
+    PtpBuildSyncArgs build_sync_args;
+    PtpBuildDelayReqArgs build_delay_req_args;
+    PtpBuildFollowUpArgs build_follow_up_args;
+    PtpBuildDelayRespArgs build_delay_resp_args;
+    PtpBuildAnnounceArgs build_announce_args;
+    PtpBuildPdelayReqArgs build_pdelay_req_args;
+    PtpBuildPdelayRespArgs build_pdelay_resp_args;
+    PtpBuildPdelayRespFollowUpArgs build_pdelay_resp_follow_up_args;
+    PtpParseTimestampMsgArgs parse_timestamp_msg_args;
+    PtpParseDelayRespArgs parse_delay_resp_args;
+    PtpParseAnnounceArgs parse_announce_args;
+    PtpParsePdelayReqArgs parse_pdelay_req_args;
+    PtpParsePdelayRespArgs parse_pdelay_resp_args;
+    PtpParsePdelayRespFollowUpArgs parse_pdelay_resp_follow_up_args;
+    PtpComputeArgs compute_args;
+    PtpComputeLinkDelayArgs compute_link_delay_args;
 
-// -- messages (build stamps the type-specific messageType / control / length for you) --
+    proto_bool ok;
+    int64_t value;
+    size_t n;
 
-/** @brief Build a Sync (@p origin is the originTimestamp; 0 for a two-step Sync). */
-size_t protocore_ptp_build_sync(uint8_t *buf, size_t cap, const protocore_ptp_header *h,
-                                const protocore_ptp_timestamp *origin);
-/** @brief Build a Delay_Req (@p origin is the originTimestamp; usually 0). */
-size_t protocore_ptp_build_delay_req(uint8_t *buf, size_t cap, const protocore_ptp_header *h,
-                                     const protocore_ptp_timestamp *origin);
-/** @brief Build a Follow_Up carrying the precise Sync egress time @p precise (t1). */
-size_t protocore_ptp_build_follow_up(uint8_t *buf, size_t cap, const protocore_ptp_header *h,
-                                     const protocore_ptp_timestamp *precise);
-/** @brief Build a Delay_Resp carrying t4 @p recv and the requester's port identity. */
-size_t protocore_ptp_build_delay_resp(uint8_t *buf, size_t cap, const protocore_ptp_header *h,
-                                      const protocore_ptp_timestamp *recv, const uint8_t *req_clock_id,
-                                      uint16_t req_port);
-/** @brief Build an Announce from @p a - master mode: advertise this clock's quality + origin time. */
-size_t protocore_ptp_build_announce(uint8_t *buf, size_t cap, const protocore_ptp_header *h,
-                                    const protocore_ptp_announce *a);
+    void (*const ts_write)(uint8_t *restrict work);
+    void (*const ts_read)(uint8_t *restrict work);
+    void (*const ts_to_ns)(uint8_t *restrict work);
+    void (*const ts_from_ns)(uint8_t *restrict work);
+    void (*const build_header)(uint8_t *restrict work);
+    void (*const parse_header)(uint8_t *restrict work);
+    void (*const build_sync)(uint8_t *restrict work);
+    void (*const build_delay_req)(uint8_t *restrict work);
+    void (*const build_follow_up)(uint8_t *restrict work);
+    void (*const build_delay_resp)(uint8_t *restrict work);
+    void (*const build_announce)(uint8_t *restrict work);
+    void (*const build_pdelay_req)(uint8_t *restrict work);
+    void (*const build_pdelay_resp)(uint8_t *restrict work);
+    void (*const build_pdelay_resp_follow_up)(uint8_t *restrict work);
+    void (*const parse_timestamp_msg)(uint8_t *restrict work);
+    void (*const parse_delay_resp)(uint8_t *restrict work);
+    void (*const parse_announce)(uint8_t *restrict work);
+    void (*const parse_pdelay_req)(uint8_t *restrict work);
+    void (*const parse_pdelay_resp)(uint8_t *restrict work);
+    void (*const parse_pdelay_resp_follow_up)(uint8_t *restrict work);
+    void (*const compute)(uint8_t *restrict work);
+    void (*const compute_link_delay)(uint8_t *restrict work);
+} PtpNs;
 
-// -- P2P peer-delay mechanism (IEEE 1588-2008 §11.4 / clause 13.9-13.11) --
-
-/** @brief Build a Pdelay_Req (@p origin is the originTimestamp, usually 0; the 10-octet reserved tail that
- *  pads it to the Pdelay_Resp length is zeroed). */
-size_t protocore_ptp_build_pdelay_req(uint8_t *buf, size_t cap, const protocore_ptp_header *h,
-                                      const protocore_ptp_timestamp *origin);
-/** @brief Build a Pdelay_Resp carrying t2 @p recv (requestReceiptTimestamp) + the requester's port identity. */
-size_t protocore_ptp_build_pdelay_resp(uint8_t *buf, size_t cap, const protocore_ptp_header *h,
-                                       const protocore_ptp_timestamp *recv, const uint8_t *req_clock_id,
-                                       uint16_t req_port);
-/** @brief Build a Pdelay_Resp_Follow_Up carrying t3 @p origin (responseOriginTimestamp) + the requester's
- *  port identity (two-step P2P). */
-size_t protocore_ptp_build_pdelay_resp_follow_up(uint8_t *buf, size_t cap, const protocore_ptp_header *h,
-                                                 const protocore_ptp_timestamp *origin, const uint8_t *req_clock_id,
-                                                 uint16_t req_port);
-
-/**
- * @brief Parse a Sync / Delay_Req / Follow_Up message: fills @p h and its single timestamp @p ts.
- * Returns false on a short frame or a non-timestamp message type.
- */
-proto_bool protocore_ptp_parse_timestamp_msg(const uint8_t *s, size_t len, protocore_ptp_header *h,
-                                             protocore_ptp_timestamp *ts);
-/** @brief Parse a Delay_Resp into @p h + @p out. Returns false on a short / wrong-type frame. */
-proto_bool protocore_ptp_parse_delay_resp(const uint8_t *s, size_t len, protocore_ptp_header *h,
-                                          protocore_ptp_delay_resp *out);
-/** @brief Parse an Announce into @p h + @p out. Returns false on a short / wrong-type frame. */
-proto_bool protocore_ptp_parse_announce(const uint8_t *s, size_t len, protocore_ptp_header *h,
-                                        protocore_ptp_announce *out);
-/** @brief Parse a Pdelay_Req into @p h + its originTimestamp @p ts. False on a short / wrong-type frame. */
-proto_bool protocore_ptp_parse_pdelay_req(const uint8_t *s, size_t len, protocore_ptp_header *h,
-                                          protocore_ptp_timestamp *ts);
-/** @brief Parse a Pdelay_Resp into @p h + @p out (@c timestamp is t2). False on a short / wrong-type frame. */
-proto_bool protocore_ptp_parse_pdelay_resp(const uint8_t *s, size_t len, protocore_ptp_header *h,
-                                           protocore_ptp_pdelay_resp *out);
-/** @brief Parse a Pdelay_Resp_Follow_Up into @p h + @p out (@c timestamp is t3). False on short / wrong type. */
-proto_bool protocore_ptp_parse_pdelay_resp_follow_up(const uint8_t *s, size_t len, protocore_ptp_header *h,
-                                                     protocore_ptp_pdelay_resp *out);
-
-// -- slave clock math --
-
-/**
- * @brief Compute offsetFromMaster and meanPathDelay from the four PTP transfer timestamps, in
- * nanoseconds: t1 = Sync egress (master), t2 = Sync ingress (slave), t3 = Delay_Req egress (slave),
- * t4 = Delay_Req ingress (master). offset = ((t2-t1) - (t4-t3)) / 2, delay = ((t2-t1) + (t4-t3)) / 2.
- * Fold any correctionField into t1..t4 before calling.
- */
-void protocore_ptp_compute(int64_t t1, int64_t t2, int64_t t3, int64_t t4, protocore_ptp_sync *out);
-
-/**
- * @brief Compute the meanLinkDelay for the P2P mechanism (IEEE 1588-2008 §11.4.3), in nanoseconds:
- * D = ((t4 - t1) - (t3 - t2)) / 2, where t1 = Pdelay_Req egress, t2 = Pdelay_Req ingress at the peer,
- * t3 = Pdelay_Resp egress at the peer, t4 = Pdelay_Resp ingress. Fold the correctionFields into t1..t4
- * before calling. Unlike the E2E delay this is a per-link measurement, independent of master/slave offset.
- */
-int64_t protocore_ptp_compute_link_delay(int64_t t1, int64_t t2, int64_t t3, int64_t t4);
+/** @brief The one symbol this module exports. */
+extern PtpNs Ptp;
 
 PROTOCORE_END_DECLS
 

@@ -92,10 +92,6 @@ static const SouthboundDriver *lookup(const struct SouthboundStorage *store, con
 // Append a borrowed driver to the table.
 static void add(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const SouthboundDriver *drv = Southbound.drv;
     if (!drv || !drv->name)
     {
@@ -119,10 +115,6 @@ static void add(uint8_t *restrict work)
 // Empty the table and its count together.
 static void clear(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     for (size_t i = 0; i < PROTOCORE_SOUTHBOUND_MAX_DRIVERS; i++)
     {
         SOUTHBOUND_CTX(work)->drivers[i] = NULL;
@@ -132,29 +124,17 @@ static void clear(uint8_t *restrict work)
 
 static void count(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Southbound.n = SOUTHBOUND_CTX(work)->count;
 }
 
 static void find(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Southbound.driver = lookup(SOUTHBOUND_CTX(work), Southbound.name);
 }
 
 // Read one point through the named driver's read callback.
 static void read(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (!Southbound.point.value_out)
     {
         Southbound.i32 = SB_ERR_ARG;
@@ -177,10 +157,6 @@ static void read(uint8_t *restrict work)
 // Write one point through the named driver's write callback.
 static void write(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const SouthboundDriver *d = lookup(SOUTHBOUND_CTX(work), Southbound.name);
     if (!d)
     {
@@ -198,10 +174,6 @@ static void write(uint8_t *restrict work)
 // Read a contiguous span of points in one driver call.
 static void read_block(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (!Southbound.block.out || Southbound.block.n == 0)
     {
         Southbound.i32 = SB_ERR_ARG;
@@ -224,10 +196,6 @@ static void read_block(uint8_t *restrict work)
 // Write a contiguous span of points in one driver call.
 static void write_block(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (!Southbound.block.in || Southbound.block.n == 0)
     {
         Southbound.i32 = SB_ERR_ARG;

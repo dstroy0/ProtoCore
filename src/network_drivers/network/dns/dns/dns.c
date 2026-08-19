@@ -10,6 +10,10 @@
  * the other exists.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_DNS
+
 #include "network_drivers/network/dns/dns/dns.h"
 
 // The two components RFC 1034 sec 2.4 defines as programs. Designated, so a member's position in
@@ -25,3 +29,5 @@ DnsNs Dns = {
     .present = PROTO_FALSE,
 #endif
 };
+
+#endif // PROTOCORE_ENABLE_DNS

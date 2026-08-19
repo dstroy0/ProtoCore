@@ -21,6 +21,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+static uint8_t dtls_server_work[16]; // the borrow an entry takes; DtlsServer never reads it
+
 static size_t read_file(const char *path, uint8_t *buf, size_t cap)
 {
     FILE *f = fopen(path, "rb");
@@ -106,25 +108,44 @@ int main(int argc, char **argv)
             uint8_t paddr[6];
             memcpy(paddr, &peer.sin_addr.s_addr, 4);
             memcpy(paddr + 4, &peer.sin_port, 2);
-            DtlsServer.init(&conn, &cfg, paddr, sizeof paddr);
+            DtlsServer.init_args.c = &conn;
+            DtlsServer.init_args.cfg = &cfg;
+            DtlsServer.init_args.peer_addr = paddr;
+            DtlsServer.init_args.peer_addr_len = sizeof paddr;
+            DtlsServer.init(dtls_server_work);
             inited = PROTO_TRUE;
         }
-        if (!DtlsServer.established(&conn))
+        DtlsServer.established_args.c = &conn;
+        DtlsServer.established(dtls_server_work);
+        if (!DtlsServer.ok)
         {
-            int r = DtlsServer.process(&conn, dgram, (size_t)n, out, sizeof out);
+            DtlsServer.process_args.c = &conn;
+            DtlsServer.process_args.dgram = dgram;
+            DtlsServer.process_args.len = (size_t)n;
+            DtlsServer.process_args.out = out;
+            DtlsServer.process_args.out_cap = sizeof out;
+            DtlsServer.process(dtls_server_work);
+            int r = DtlsServer.n;
             if (r < 0)
             {
-                fprintf(stderr, "HANDSHAKE FAIL alert=%u\n", DtlsServer.alert(&conn));
+                DtlsServer.alert_args.c = &conn;
+                DtlsServer.alert(dtls_server_work);
+                fprintf(stderr, "HANDSHAKE FAIL alert=%u\n", DtlsServer.value);
                 return 1;
             }
             if (r > 0)
             {
                 sendto(fd, out, (size_t)r, 0, (sockaddr *)&peer, plen);
             }
-            if (DtlsServer.established(&conn))
+            DtlsServer.established_args.c = &conn;
+            DtlsServer.established(dtls_server_work);
+            if (DtlsServer.ok)
             {
                 uint8_t cid[PROTOCORE_DTLS_CID_MAX];
-                size_t cidlen = DtlsServer.local_cid(&conn, cid);
+                DtlsServer.local_cid_args.c = &conn;
+                DtlsServer.local_cid_args.out = cid;
+                DtlsServer.local_cid(dtls_server_work);
+                size_t cidlen = DtlsServer.n;
                 fprintf(stderr, "HANDSHAKE OK%s%s", pre_flights >= 2 ? " (via HelloRetryRequest)" : "",
                         cidlen ? " (with connection ID, " : "\n");
                 if (cidlen)
@@ -144,11 +165,24 @@ int main(int argc, char **argv)
             // send sequence, so the echo never collides with the handshake-completion ACK).
             uint8_t inner[8192];
             size_t plen_in = 0;
-            if (DtlsServer.open_app(&conn, dgram, (size_t)n, inner, sizeof inner, &plen_in))
+            DtlsServer.open_app_args.c = &conn;
+            DtlsServer.open_app_args.rec = dgram;
+            DtlsServer.open_app_args.rec_len = (size_t)n;
+            DtlsServer.open_app_args.out = inner;
+            DtlsServer.open_app_args.out_cap = sizeof inner;
+            DtlsServer.open_app_args.out_len = &plen_in;
+            DtlsServer.open_app(dtls_server_work);
+            if (DtlsServer.ok)
             {
                 fprintf(stderr, "APPDATA RX %zu bytes: %.*s\n", plen_in, (int)plen_in, inner);
                 uint8_t rec[8192];
-                size_t rn = DtlsServer.seal_app(&conn, inner, plen_in, rec, sizeof rec);
+                DtlsServer.seal_app_args.c = &conn;
+                DtlsServer.seal_app_args.data = inner;
+                DtlsServer.seal_app_args.len = plen_in;
+                DtlsServer.seal_app_args.out = rec;
+                DtlsServer.seal_app_args.out_cap = sizeof rec;
+                DtlsServer.seal_app(dtls_server_work);
+                size_t rn = DtlsServer.n;
                 if (rn)
                 {
                     sendto(fd, rec, rn, 0, (sockaddr *)&peer, plen);

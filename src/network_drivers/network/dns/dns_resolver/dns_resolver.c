@@ -348,10 +348,6 @@ static void dns_found(const char *name, const protocore_net_ip *addr, void *arg)
     (void)name;
     // The stack fixes this signature, so the borrow rides across as the callback's argument.
     uint8_t *work = (uint8_t *)arg;
-    if (work == NULL)
-    {
-        return;
-    }
     if (addr != NULL)
     {
         DNS_RESOLVER_CTX(work)->addr = *addr;
@@ -379,10 +375,6 @@ static protocore_net_err dns_ask(protocore_net_call *c)
 
 static void resolver_resolve(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Resolver.u32 = 0;
     Resolver.state = PROTOCORE_DNS_FAILED;
     const char *host = Resolver.query.host;
@@ -491,10 +483,6 @@ static void dns_reply(const uint8_t *data, size_t len, const struct protocore_ud
     // UdpListener fixes this signature and hands back whatever listen was given, which is the
     // borrow the query in flight lives in.
     uint8_t *work = (uint8_t *)arg;
-    if (work == NULL)
-    {
-        return;
-    }
     uint32_t ip = 0;
     if (answer_read(work, data, len, DNS_RESOLVER_CTX(work)->id, &ip))
     {
@@ -505,10 +493,6 @@ static void dns_reply(const uint8_t *data, size_t len, const struct protocore_ud
 
 static void resolver_set_server(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Resolver.ok = PROTO_FALSE;
     const char *ip = Resolver.server.ip;
     if (ip == NULL || !client_bind(work))
@@ -535,10 +519,6 @@ static void resolver_set_server(uint8_t *restrict work)
 
 static void resolver_resolve(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Resolver.u32 = 0;
     Resolver.state = PROTOCORE_DNS_FAILED;
     const char *host = Resolver.query.host;
@@ -673,10 +653,6 @@ static void resolver_resolve_verified(uint8_t *restrict work)
 
 static void resolver_busy(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Resolver.ok = DNS_RESOLVER_CTX(work)->busy;
 }
 

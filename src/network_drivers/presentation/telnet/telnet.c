@@ -101,10 +101,6 @@ uint8_t *protocore_telnet_span(void)
 // Point TELNET_CTX(work)->conn at the row bound to ns->slot, or NULL.
 static void find_conn(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TELNET_CTX(work)->conn = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
     {
@@ -179,10 +175,6 @@ static void data_send(uint8_t slot, const void *data, size_t n)
 
 static void accept_conn(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Nvt *t = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
     {
@@ -214,10 +206,6 @@ static void accept_conn(uint8_t *restrict work)
 
 static void close_conn(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     find_conn(work);
     if (TELNET_CTX(work)->conn)
     {
@@ -286,10 +274,6 @@ static void nvt_data(uint8_t slot, Nvt *t, uint8_t b)
 // The worker fills this slot's scratch once, then the IAC state machine walks it.
 static void rx(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     find_conn(work);
     if (!TELNET_CTX(work)->conn)
     {
@@ -386,10 +370,6 @@ static void rx(uint8_t *restrict work)
 
 static void on_command(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TELNET_CTX(work)->cmd_cb = Telnet.cb;
 }
 
@@ -407,10 +387,6 @@ static void broadcast(uint8_t *restrict work, const char *s, size_t n)
 
 static void print(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (Telnet.out.text)
     {
         broadcast(work, Telnet.out.text, str.len(Telnet.out.text, TELNET_BUF_SIZE)); // line-oriented console
@@ -419,10 +395,6 @@ static void print(uint8_t *restrict work)
 
 static void println(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (Telnet.out.text)
     {
         broadcast(work, Telnet.out.text, str.len(Telnet.out.text, TELNET_BUF_SIZE));
@@ -432,10 +404,6 @@ static void println(uint8_t *restrict work)
 
 static void frame_out(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     char buf[TELNET_BUF_SIZE];
     size_t n = frame.build(buf, sizeof(buf), Telnet.out.spec, Telnet.out.val, Telnet.out.nv);
     if (n > 0)
@@ -446,10 +414,6 @@ static void frame_out(uint8_t *restrict work)
 
 static void client_count(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t c = 0;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
     {

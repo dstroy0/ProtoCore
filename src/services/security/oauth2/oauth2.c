@@ -12,16 +12,18 @@
  */
 
 #include "services/security/oauth2/oauth2.h"
-#include "mmgr/membuild/membuild.h"  // Sb: the bounded builder the body is written with
-#include "mmgr/protomem/protomem.h"  // mem.cpy: the reply into the module's own buffer
-#include "mmgr/secure/secure.h"    // the persistent end this module's key material is taken from
-#include "shared/hex/hex.h" // Hex.digit: the two digits of a percent-encoded octet
+#include "mmgr/membuild/membuild.h" // Sb: the bounded builder the body is written with
+#include "mmgr/protomem/protomem.h" // mem.cpy: the reply into the module's own buffer
+#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
+#include "shared/hex/hex.h"         // Hex.digit: the two digits of a percent-encoded octet
 
 static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
 #if PROTOCORE_ENABLE_OAUTH2
 
 #include "network_drivers/presentation/codec/json/json.h"
+
+static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
@@ -185,15 +187,36 @@ static void parse_token_response(uint8_t *restrict work)
     t->token_type[0] = '\0';
     t->expires_in = 0;
 
-    if (!Json.get_str(json, "access_token", t->access_token, sizeof(t->access_token)))
+    Json.get_str_args.json = json;
+    Json.get_str_args.key = "access_token";
+    Json.get_str_args.out = t->access_token;
+    Json.get_str_args.out_cap = sizeof(t->access_token);
+    Json.get_str(json_work);
+    if (!Json.ok)
     {
         return;
     }
-    Json.get_str(json, "id_token", t->id_token, sizeof(t->id_token));
-    Json.get_str(json, "refresh_token", t->refresh_token, sizeof(t->refresh_token));
-    Json.get_str(json, "token_type", t->token_type, sizeof(t->token_type));
+    Json.get_str_args.json = json;
+    Json.get_str_args.key = "id_token";
+    Json.get_str_args.out = t->id_token;
+    Json.get_str_args.out_cap = sizeof(t->id_token);
+    Json.get_str(json_work);
+    Json.get_str_args.json = json;
+    Json.get_str_args.key = "refresh_token";
+    Json.get_str_args.out = t->refresh_token;
+    Json.get_str_args.out_cap = sizeof(t->refresh_token);
+    Json.get_str(json_work);
+    Json.get_str_args.json = json;
+    Json.get_str_args.key = "token_type";
+    Json.get_str_args.out = t->token_type;
+    Json.get_str_args.out_cap = sizeof(t->token_type);
+    Json.get_str(json_work);
     long e = 0;
-    if (Json.get_int(json, "expires_in", &e))
+    Json.get_int_args.json = json;
+    Json.get_int_args.key = "expires_in";
+    Json.get_int_args.out = &e;
+    Json.get_int(json_work);
+    if (Json.ok)
     {
         t->expires_in = e;
     }
@@ -244,10 +267,6 @@ static void post_and_parse(uint8_t *restrict work, int body_len)
 // the caller sets only the endpoint, the grant members and response.tokens.
 static void exchange_code(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Oauth2.request.out = OAUTH2_CTX(work)->body;
     Oauth2.request.cap = sizeof(OAUTH2_CTX(work)->body);
     build_code_request(work);
@@ -257,10 +276,6 @@ static void exchange_code(uint8_t *restrict work)
 // RFC 6749 sec 6: the same exchange presenting refresh_grant.refresh_token.
 static void refresh(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Oauth2.request.out = OAUTH2_CTX(work)->body;
     Oauth2.request.cap = sizeof(OAUTH2_CTX(work)->body);
     build_refresh_request(work);

@@ -251,10 +251,6 @@ static void ftp_pasv_host(const uint8_t ip[4], char *host, size_t cap)
 /** @brief Drop both connections and reset the accumulator for the next transfer. */
 static void ftp_teardown(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (FTP_SESSION_CTX(work)->data >= 0)
     {
         TcpClient.cid = FTP_SESSION_CTX(work)->data;
@@ -306,10 +302,6 @@ uint8_t *protocore_ftp_session_span(void)
 
 static void ftp_session_store(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const FtpTarget *target = FtpSession.store_args.target;
     const char *remote_path = FtpSession.store_args.remote_path;
     size_t total = FtpSession.store_args.total;

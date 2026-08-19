@@ -58,10 +58,6 @@ uint8_t *protocore_ssh_span(void)
 
 static void ssh_conn_slot(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t i = Ssh.conn_slot_args.i;
 
     if (i >= MAX_SSH_CONNS)

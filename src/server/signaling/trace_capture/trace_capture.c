@@ -95,10 +95,6 @@ static void ring_push(uint8_t *restrict work, uint16_t sample)
 
 static void tc_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const protocore_tc_config *cfg = TraceCapture.cfg;
 
     TraceCapture.ok = PROTO_FALSE;
@@ -127,10 +123,6 @@ static void tc_begin(uint8_t *restrict work)
 
 static void tc_feed(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint16_t *samples = TraceCapture.feed.samples;
     const uint16_t n = TraceCapture.feed.n;
 
@@ -171,10 +163,6 @@ static void tc_feed(uint8_t *restrict work)
 
 static void tc_trigger(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TraceCapture.ok = PROTO_FALSE;
     if (!TRACE_CAPTURE_CTX(work)->configured)
     {
@@ -200,10 +188,6 @@ static void tc_trigger(uint8_t *restrict work)
 
 static void tc_get_stats(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TraceCapture.feed.stats)
     {
         *TraceCapture.feed.stats = TRACE_CAPTURE_CTX(work)->stats;
@@ -212,19 +196,11 @@ static void tc_get_stats(uint8_t *restrict work)
 
 static void tc_capturing(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TraceCapture.ok = TRACE_CAPTURE_CTX(work)->configured && TRACE_CAPTURE_CTX(work)->capturing;
 }
 
 static void tc_end(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TRACE_CAPTURE_CTX(work)->configured = PROTO_FALSE;
     TRACE_CAPTURE_CTX(work)->capturing = PROTO_FALSE;
 }

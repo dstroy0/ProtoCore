@@ -52,10 +52,6 @@ static void kexhash_init(uint8_t *restrict work)
 {
     SshKexHash.ok = PROTO_FALSE;
     SshKexHash.len = 0;
-    if (!work)
-    {
-        return;
-    }
     SshKexHashCtx *ctx = KEXHASH_CTX(work);
     ctx->is512 = SshKexHash.init_args.is512;
     if (ctx->is512)
@@ -74,10 +70,6 @@ static void kexhash_init(uint8_t *restrict work)
 static void kexhash_update(uint8_t *restrict work)
 {
     SshKexHash.ok = PROTO_FALSE;
-    if (!work)
-    {
-        return;
-    }
     SshKexHashCtx *ctx = KEXHASH_CTX(work);
     if (ctx->is512)
     {

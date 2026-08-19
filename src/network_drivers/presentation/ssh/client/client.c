@@ -365,10 +365,6 @@ static proto_bool build_kexinit(void)
 static proto_bool build_kex_public(void)
 {
     uint8_t *work = (cli_crypto_work(protocore_ssh_client_span()), SshClient.work);
-    if (work == NULL)
-    {
-        return PROTO_FALSE;
-    }
     switch (SSH_CLIENT_CTX(protocore_ssh_client_span())->kex)
     {
     case SSH_KEX_CURVE25519:
@@ -694,10 +690,6 @@ static proto_bool send_userauth_publickey(void)
 {
     const char *user = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.user;
     uint8_t *work = (SshClient.crypto_work(protocore_ssh_client_span()), SshClient.work);
-    if (work == NULL)
-    {
-        return PROTO_FALSE;
-    }
     uint8_t pub[32];
     Ed25519.pubkey_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
     Ed25519.pubkey_args.pub = pub;

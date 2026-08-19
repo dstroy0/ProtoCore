@@ -112,10 +112,6 @@ uint8_t *protocore_csrf_span(void)
 static void csrf_set_secret(uint8_t *restrict work)
 {
     Csrf.ok = PROTO_FALSE;
-    if (!work)
-    {
-        return;
-    }
     CsrfCtx *c = CSRF_CTX(work);
     const uint8_t *secret = Csrf.secret_args.secret;
     if (!secret)
@@ -215,10 +211,6 @@ static void csrf_verify(uint8_t *restrict work)
 static void csrf_reset(uint8_t *restrict work)
 {
     Csrf.ok = PROTO_FALSE;
-    if (!work)
-    {
-        return;
-    }
     CsrfCtx *c = CSRF_CTX(work);
     mem.set(c->secret, 0, sizeof(c->secret));
     c->secret_len = 0;

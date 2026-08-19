@@ -6,6 +6,10 @@
  * @brief The one definition of the RFC 1951 sec 3.2.5 tables, and the namespace over them.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_DEFLATE_RFC1951
+
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h"
 
 // Length code base values and extra bits (RFC 1951 sec 3.2.5), codes 257..285.
@@ -28,3 +32,5 @@ const Rfc1951Ns *protocore_rfc1951(void)
 {
     return &instance;
 }
+
+#endif // PROTOCORE_ENABLE_DEFLATE_RFC1951

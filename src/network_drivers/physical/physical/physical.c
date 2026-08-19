@@ -233,10 +233,6 @@ static IfaceRow *row_of(uint8_t *restrict work)
 
 static void phy_iface_add(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Physical.ok = PROTO_FALSE;
     if (Physical.iface.send == NULL || row_of(work) != NULL)
     {
@@ -260,10 +256,6 @@ static void phy_iface_add(uint8_t *restrict work)
 
 static void phy_iface_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // The used flag is the row: add writes every other field before setting it.
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
@@ -285,10 +277,6 @@ static void phy_iface_kind(uint8_t *restrict work)
 
 static void phy_iface_at(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t i = Physical.iface.i;
 
     Physical.i16 = PROTOCORE_IF_NONE;
@@ -301,10 +289,6 @@ static void phy_iface_at(uint8_t *restrict work)
 
 static void phy_iface_count(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t n = 0;
 
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)

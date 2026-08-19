@@ -6,14 +6,18 @@
  * @brief DTLS 1.3 record layer (RFC 9147 §4). See protocore_dtls_record.h.
  */
 
-#include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DTLS
+
+#include "mmgr/protomem/protomem.h"
+#include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 
 #include "crypto/aead/aes128gcm/aes128gcm.h"
 #include "mmgr/secure/secure.h" // the secure pool: header-protection key schedule
 #include "network_drivers/tls/key_schedule/key_schedule.h"
+
+PROTOCORE_BEGIN_DECLS
 
 // Unified-header first-byte fixed pattern and flag bits (RFC 9147 §4, Figure 3): 0 0 1 C S L E E.
 static const uint8_t DTLS_UH_FIXED = 0x20; // 001x xxxx
@@ -70,9 +74,19 @@ static void expand_label(uint8_t *work, const uint8_t *secret, const char *label
     Tls13Ks.expand_label(NULL);
 }
 
-static void protocore_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher cipher, uint16_t epoch,
-                                              const uint8_t secret[32])
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void dtls_record_keys_derive(uint8_t *restrict work)
 {
+    (void)work;
+    DtlsRecordKeys *out = DtlsRecord.keys_derive_args.out;
+    DtlsCipher cipher = DtlsRecord.keys_derive_args.cipher;
+    uint16_t epoch = DtlsRecord.keys_derive_args.epoch;
+    const uint8_t *secret = DtlsRecord.keys_derive_args.secret;
+
     out->cipher = cipher;
     out->epoch = epoch;
     // AEAD_AES_128_GCM: 16-byte key, 12-byte IV, 16-byte sequence-number key. The DTLS 1.3 variant
@@ -103,13 +117,22 @@ static void protocore_dtls_record_keys_derive(DtlsRecordKeys *out, DtlsCipher ci
 // DTLSPlaintext
 // ---------------------------------------------------------------------------
 
-static size_t protocore_dtls_plaintext_build(uint8_t content_type, uint16_t epoch, uint64_t seq,
-                                             const uint8_t *fragment, size_t frag_len, uint8_t *out, size_t out_cap)
+static void dtls_record_plaintext_build(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t content_type = DtlsRecord.plaintext_build_args.content_type;
+    uint16_t epoch = DtlsRecord.plaintext_build_args.epoch;
+    uint64_t seq = DtlsRecord.plaintext_build_args.seq;
+    const uint8_t *fragment = DtlsRecord.plaintext_build_args.fragment;
+    size_t frag_len = DtlsRecord.plaintext_build_args.frag_len;
+    uint8_t *out = DtlsRecord.plaintext_build_args.out;
+    size_t out_cap = DtlsRecord.plaintext_build_args.out_cap;
+
     size_t total = PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + frag_len;
     if (total > out_cap || frag_len > 0xFFFF)
     {
-        return 0;
+        DtlsRecord.n = 0;
+        return;
     }
     out[0] = content_type;
     out[1] = (uint8_t)(PROTOCORE_DTLS_LEGACY_VERSION >> 8);
@@ -128,14 +151,20 @@ static size_t protocore_dtls_plaintext_build(uint8_t content_type, uint16_t epoc
     {
         mem.cpy(out + PROTOCORE_DTLS_PLAINTEXT_HDR_LEN, fragment, frag_len);
     }
-    return total;
+    DtlsRecord.n = total;
 }
 
-static size_t protocore_dtls_plaintext_parse(const uint8_t *rec, size_t rec_len, DtlsPlaintext *out)
+static void dtls_record_plaintext_parse(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *rec = DtlsRecord.plaintext_parse_args.rec;
+    size_t rec_len = DtlsRecord.plaintext_parse_args.rec_len;
+    DtlsPlaintext *out = DtlsRecord.plaintext_parse_args.out;
+
     if (rec_len < PROTOCORE_DTLS_PLAINTEXT_HDR_LEN)
     {
-        return 0;
+        DtlsRecord.n = 0;
+        return;
     }
     // sec 4: legacy_record_version is {254,253} on every record but an initial ClientHello, where
     // {254,255} is also allowed for compatibility, and it "MUST be ignored for all purposes". A
@@ -147,28 +176,40 @@ static size_t protocore_dtls_plaintext_parse(const uint8_t *rec, size_t rec_len,
     size_t length = ((size_t)rec[11] << 8) | rec[12];
     if (PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + length > rec_len)
     {
-        return 0;
+        DtlsRecord.n = 0;
+        return;
     }
     out->fragment = rec + PROTOCORE_DTLS_PLAINTEXT_HDR_LEN;
     out->frag_len = length;
-    return PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + length;
+    DtlsRecord.n = PROTOCORE_DTLS_PLAINTEXT_HDR_LEN + length;
 }
 
 // ---------------------------------------------------------------------------
 // DTLSCiphertext
 // ---------------------------------------------------------------------------
 
-static size_t protocore_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t seq, uint8_t content_type,
-                                                const uint8_t *plaintext, size_t pt_len, uint8_t *out, size_t out_cap,
-                                                const uint8_t *cid, size_t cid_len)
+static void dtls_record_protect(uint8_t *restrict work)
 {
+    (void)work;
+    DtlsRecordKeys *keys = DtlsRecord.protect_args.keys;
+    uint64_t seq = DtlsRecord.protect_args.seq;
+    uint8_t content_type = DtlsRecord.protect_args.content_type;
+    const uint8_t *plaintext = DtlsRecord.protect_args.plaintext;
+    size_t pt_len = DtlsRecord.protect_args.pt_len;
+    uint8_t *out = DtlsRecord.protect_args.out;
+    size_t out_cap = DtlsRecord.protect_args.out_cap;
+    const uint8_t *cid = DtlsRecord.protect_args.cid;
+    size_t cid_len = DtlsRecord.protect_args.cid_len;
+
     if (keys->cipher != DTLS_CIPHER_AES_128_GCM_SHA256)
     {
-        return 0;
+        DtlsRecord.n = 0;
+        return;
     }
     if (cid_len > PROTOCORE_DTLS_CID_MAX || (cid_len && !cid))
     {
-        return 0;
+        DtlsRecord.n = 0;
+        return;
     }
     // Unified header: [C] connection id, S=1 (16-bit seq), L=1 (length). hdr = byte0 || [cid] || seq16 ||
     // length16. The CID (RFC 9146 / RFC 9147 §9) sits between the first byte and the sequence number.
@@ -178,7 +219,8 @@ static size_t protocore_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t s
     size_t total = hdr_len + enc_len;
     if (total > out_cap)
     {
-        return 0;
+        DtlsRecord.n = 0;
+        return;
     }
 
     uint8_t flags = (uint8_t)(DTLS_UH_FIXED | DTLS_UH_SEQ16 | DTLS_UH_LENGTH | (keys->epoch & DTLS_UH_EPOCH_MASK));
@@ -224,30 +266,42 @@ static size_t protocore_dtls_ciphertext_protect(DtlsRecordKeys *keys, uint64_t s
     Aes128Gcm.block_encrypt(keys->gcm);
     out[seq_off] ^= mask[0];
     out[seq_off + 1] ^= mask[1];
-    return total;
+    DtlsRecord.n = total;
 }
 
-static proto_bool protocore_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint64_t next_seq, const uint8_t *rec,
-                                                      size_t rec_len, uint8_t *out, size_t out_cap,
-                                                      DtlsCiphertext *info, const uint8_t *expected_cid,
-                                                      size_t expected_cid_len)
+static void dtls_record_unprotect(uint8_t *restrict work)
 {
+    (void)work;
+    DtlsRecordKeys *keys = DtlsRecord.unprotect_args.keys;
+    uint64_t next_seq = DtlsRecord.unprotect_args.next_seq;
+    const uint8_t *rec = DtlsRecord.unprotect_args.rec;
+    size_t rec_len = DtlsRecord.unprotect_args.rec_len;
+    uint8_t *out = DtlsRecord.unprotect_args.out;
+    size_t out_cap = DtlsRecord.unprotect_args.out_cap;
+    DtlsCiphertext *info = DtlsRecord.unprotect_args.info;
+    const uint8_t *expected_cid = DtlsRecord.unprotect_args.expected_cid;
+    size_t expected_cid_len = DtlsRecord.unprotect_args.expected_cid_len;
+
     if (keys->cipher != DTLS_CIPHER_AES_128_GCM_SHA256 || rec_len < 1)
     {
-        return PROTO_FALSE;
+        DtlsRecord.ok = PROTO_FALSE;
+        return;
     }
     if (expected_cid_len > PROTOCORE_DTLS_CID_MAX)
     {
-        return PROTO_FALSE;
+        DtlsRecord.ok = PROTO_FALSE;
+        return;
     }
     uint8_t b0 = rec[0];
     if ((b0 & DTLS_UH_FIXED_MASK) != DTLS_UH_FIXED)
     {
-        return PROTO_FALSE; // top 3 bits must be 001
+        DtlsRecord.ok = PROTO_FALSE; // top 3 bits must be 001
+        return;
     }
     if ((b0 & DTLS_UH_EPOCH_MASK) != (keys->epoch & DTLS_UH_EPOCH_MASK))
     {
-        return PROTO_FALSE; // wrong epoch keys for this record
+        DtlsRecord.ok = PROTO_FALSE; // wrong epoch keys for this record
+        return;
     }
 
     size_t off = 1;
@@ -258,19 +312,22 @@ static proto_bool protocore_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint
         if (expected_cid_len == 0 || off + expected_cid_len > rec_len ||
             mem.cmp(rec + off, expected_cid, expected_cid_len) != 0)
         {
-            return PROTO_FALSE;
+            DtlsRecord.ok = PROTO_FALSE;
+            return;
         }
         off += expected_cid_len;
     }
     else if (expected_cid_len != 0)
     {
-        return PROTO_FALSE; // a CID was negotiated for this direction but the record carries none
+        DtlsRecord.ok = PROTO_FALSE; // a CID was negotiated for this direction but the record carries none
+        return;
     }
 
     size_t seq_len = (b0 & DTLS_UH_SEQ16) ? 2 : 1;
     if (off + seq_len > rec_len)
     {
-        return PROTO_FALSE;
+        DtlsRecord.ok = PROTO_FALSE;
+        return;
     }
     size_t seq_off = off;
     off += seq_len;
@@ -280,7 +337,8 @@ static proto_bool protocore_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint
     {
         if (off + 2 > rec_len)
         {
-            return PROTO_FALSE;
+            DtlsRecord.ok = PROTO_FALSE;
+            return;
         }
         enc_len = ((size_t)rec[off] << 8) | rec[off + 1];
         off += 2;
@@ -291,7 +349,8 @@ static proto_bool protocore_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint
     }
     if (off + enc_len > rec_len || enc_len < 16 || enc_len < PROTOCORE_DTLS_TAG_LEN + 1)
     {
-        return PROTO_FALSE; // need >= 16 bytes for the SN sample and >= tag + one inner byte
+        DtlsRecord.ok = PROTO_FALSE; // need >= 16 bytes for the SN sample and >= tag + one inner byte
+        return;
     }
 
     const uint8_t *enc = rec + off;
@@ -322,12 +381,14 @@ static proto_bool protocore_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint
     // but that is an accident of a downstream comparison, not a check.
     if (enc_len < PROTOCORE_DTLS_TAG_LEN)
     {
-        return PROTO_FALSE;
+        DtlsRecord.ok = PROTO_FALSE;
+        return;
     }
     size_t inner_len = enc_len - PROTOCORE_DTLS_TAG_LEN; // == the ciphertext length the AEAD wants
     if (inner_len > out_cap)
     {
-        return PROTO_FALSE;
+        DtlsRecord.ok = PROTO_FALSE;
+        return;
     }
 
     uint8_t nonce[12];
@@ -343,7 +404,8 @@ static proto_bool protocore_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint
     Aes128Gcm.open(keys->gcm);
     if (!Aes128Gcm.ok)
     {
-        return PROTO_FALSE;
+        DtlsRecord.ok = PROTO_FALSE;
+        return;
     }
 
     // Strip zero padding: the last non-zero byte of the inner plaintext is the content type (RFC 8446 §5.2).
@@ -354,42 +416,56 @@ static proto_bool protocore_dtls_ciphertext_unprotect(DtlsRecordKeys *keys, uint
     }
     if (n == 0)
     {
-        return PROTO_FALSE; // no content type -> invalid record
+        DtlsRecord.ok = PROTO_FALSE; // no content type -> invalid record
+        return;
     }
     info->content_type = out[n - 1];
     info->pt_len = n - 1;
     info->seq = full_seq;
     info->epoch = keys->epoch;
-    return PROTO_TRUE;
+    DtlsRecord.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // Anti-replay sliding window (RFC 9147 §4.5.1)
 // ---------------------------------------------------------------------------
 
-static void protocore_dtls_replay_init(DtlsReplayWindow *w)
+static void dtls_record_replay_init(uint8_t *restrict work)
 {
+    (void)work;
+    DtlsReplayWindow *w = DtlsRecord.replay_init_args.w;
+
     w->highest = 0;
     w->bitmap = 0;
     w->seeded = PROTO_FALSE;
 }
 
-static proto_bool protocore_dtls_replay_check(const DtlsReplayWindow *w, uint64_t seq)
+static void dtls_record_replay_check(uint8_t *restrict work)
 {
+    (void)work;
+    const DtlsReplayWindow *w = DtlsRecord.replay_check_args.w;
+    uint64_t seq = DtlsRecord.replay_check_args.seq;
+
     if (!w->seeded || seq > w->highest)
     {
-        return PROTO_TRUE; // first record, or ahead of the window
+        DtlsRecord.ok = PROTO_TRUE; // first record, or ahead of the window
+        return;
     }
     uint64_t diff = w->highest - seq;
     if (diff >= 64)
     {
-        return PROTO_FALSE; // older than the window
+        DtlsRecord.ok = PROTO_FALSE; // older than the window
+        return;
     }
-    return ((w->bitmap >> diff) & 1u) == 0; // set bit => already seen (replay)
+    DtlsRecord.ok = ((w->bitmap >> diff) & 1u) == 0; // set bit => already seen (replay)
 }
 
-static void protocore_dtls_replay_mark(DtlsReplayWindow *w, uint64_t seq)
+static void dtls_record_replay_mark(uint8_t *restrict work)
 {
+    (void)work;
+    DtlsReplayWindow *w = DtlsRecord.replay_mark_args.w;
+    uint64_t seq = DtlsRecord.replay_mark_args.seq;
+
     if (!w->seeded)
     {
         w->seeded = PROTO_TRUE;
@@ -411,8 +487,17 @@ static void protocore_dtls_replay_mark(DtlsReplayWindow *w, uint64_t seq)
     }
 }
 
-const DtlsRecordNs DtlsRecord = {protocore_dtls_record_keys_derive,   protocore_dtls_plaintext_build,
-                                 protocore_dtls_plaintext_parse,      protocore_dtls_ciphertext_protect,
-                                 protocore_dtls_ciphertext_unprotect, protocore_dtls_replay_init,
-                                 protocore_dtls_replay_check,         protocore_dtls_replay_mark};
+DtlsRecordNs DtlsRecord = {
+    .keys_derive = dtls_record_keys_derive,
+    .plaintext_build = dtls_record_plaintext_build,
+    .plaintext_parse = dtls_record_plaintext_parse,
+    .protect = dtls_record_protect,
+    .unprotect = dtls_record_unprotect,
+    .replay_init = dtls_record_replay_init,
+    .replay_check = dtls_record_replay_check,
+    .replay_mark = dtls_record_replay_mark,
+};
+
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_DTLS

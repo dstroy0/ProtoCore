@@ -316,10 +316,6 @@ static void bridge_on_accept(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_iface_bridge_hw_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     if (!rule_for_slot(work, slot))
     {
@@ -333,10 +329,6 @@ static void bridge_on_data(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_iface_bridge_hw_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     const BridgeRule *r = rule_for_slot(work, slot);
     if (!r)
@@ -360,10 +352,6 @@ static void bridge_on_poll(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_iface_bridge_hw_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     ConnPool.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
@@ -476,7 +464,6 @@ static void iface_bridge_hw_publish(uint8_t *restrict work)
 
 static void iface_bridge_hw_reset(uint8_t *restrict work)
 {
-
     for (int i = 0; i < PROTOCORE_BRIDGE_MAX_RULES; i++)
     {
         IFACE_BRIDGE_HW_CTX(work)->binds[i].active = PROTO_FALSE;

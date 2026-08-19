@@ -5,10 +5,21 @@ import sys
 sys.path.insert(0, __file__.rsplit("pimpl_test.py", 1)[0])
 import pimpl  # noqa: E402
 
-HDR = """#ifndef X_H
+HDR = """/**
+ * @file foo.h
+ * @brief What this module is.
+ */
+
+#ifndef X_H
 #define X_H
 #include "protocore_config.h"
 #if PROTOCORE_ENABLE_FOO
+
+/** @brief What find takes. */
+typedef struct
+{
+    const char *key;
+} FooFindArgs;
 
 /** @brief The state and the calls that reach it. */
 struct FooInternal;
@@ -95,6 +106,13 @@ print(s)
 check("header entries take the borrow", "void (*const init)(uint8_t *restrict work);" in h)
 check("header drops the handle member", "struct FooInternal *internal;" not in h)
 check("header drops the forward declaration", "struct FooInternal;" not in h)
+# The optional doc block ahead of that declaration was unanchored, so it started at the file's own
+# @file comment and took the include guard, the gate and every args struct with it: auth.h went
+# from 107 lines to 5.
+check("the file's own doc block stays", "@file foo.h" in h)
+check("the include guard and the gate stay", "#ifndef X_H" in h and "#if PROTOCORE_ENABLE_FOO" in h)
+check("the args struct between them stays", "} FooFindArgs;" in h)
+check("the declaration's own doc block goes with it", "the calls that reach it. */" not in h)
 check("header declares the span accessor", "uint8_t *protocore_foo_span(void);" in h)
 
 check("context merges storage and carried state", "uint8_t table[4];" in s and "uint16_t frag_size;" in s)

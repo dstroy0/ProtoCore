@@ -373,22 +373,12 @@ static void sha512_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA51
 
 static void sha512_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Sha512.ok = PROTO_FALSE;
-        return;
-    }
     sha512_state_init(work);
     Sha512.ok = PROTO_TRUE;
 }
 
 static void sha512_update(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Sha512.ok = PROTO_FALSE;
-        return;
-    }
     sha512_absorb(work, Sha512.update_args.data, Sha512.update_args.len);
 }
 

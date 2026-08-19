@@ -38,7 +38,6 @@
 PROTOCORE_BEGIN_DECLS
 
 #ifndef PROTOCORE_QUIC_MAX_DATAGRAM
-#define PROTOCORE_QUIC_MAX_DATAGRAM 1350 ///< largest UDP payload we send/accept (conservative < 1500 MTU)
 #endif
 #ifndef PROTOCORE_QUIC_STREAM_RX
 #define PROTOCORE_QUIC_STREAM_RX 2048 ///< largest run of new in-order stream bytes delivered in one call
@@ -59,8 +58,7 @@ struct QuicTlsConfig;
 /** @brief The two spans one connection runs out of. */
 typedef struct
 {
-    uint8_t *ctx; ///< PROTOCORE_QUIC_CONN_CTX_BORROW secure bytes; the connection's identity
-    uint8_t *b;   ///< PROTOCORE_QUIC_CONN_BORROW plaintext bytes; stream TX and CRYPTO RX
+    uint8_t *b; ///< PROTOCORE_QUIC_CONN_BORROW plaintext bytes; stream TX and CRYPTO RX
 } QuicConnBind;
 
 /** @brief HTTP/3 (or test) hooks the engine drives. All nullable. */
@@ -127,16 +125,13 @@ typedef struct
     uint64_t error_code; ///< RFC 9000 sec 20.1, or the application's own space for close_app
 } QuicConnCloseArgs;
 
-/** @brief The connection's own calls, described only in quic_conn.c. */
-struct QuicConnInternal;
-
 /**
  * @brief QUIC v1 server connection (RFC 9000 / RFC 9001).
  *
  * A caller binds the two spans once, sets the members a call takes, invokes it through ::QuicConn,
  * and reads the outcome off the same handle.
  *
- *   QuicConn.bind.ctx = ctx_span;
+ *   QuicConn.init(ctx_span;
  *   QuicConn.bind.b = byte_span;
  *   QuicConn.init_args.cfg = cfg;
  *   QuicConn.init(QuicConn.internal);
@@ -196,19 +191,18 @@ typedef struct
     proto_bool established;
     proto_bool closed;
 
-    void (*const init)(struct QuicConnInternal *ctx);
-    void (*const callbacks)(struct QuicConnInternal *ctx);
-    void (*const recv)(struct QuicConnInternal *ctx);
-    void (*const send)(struct QuicConnInternal *ctx);
-    void (*const on_timeout)(struct QuicConnInternal *ctx);
-    void (*const stream_send)(struct QuicConnInternal *ctx);
-    void (*const owns)(struct QuicConnInternal *ctx);
-    void (*const close)(struct QuicConnInternal *ctx);
-    void (*const close_app)(struct QuicConnInternal *ctx);
-    void (*const is_established)(struct QuicConnInternal *ctx);
-    void (*const is_closed)(struct QuicConnInternal *ctx);
+    void (*const init)(uint8_t *restrict work);
+    void (*const callbacks)(uint8_t *restrict work);
+    void (*const recv)(uint8_t *restrict work);
+    void (*const send)(uint8_t *restrict work);
+    void (*const on_timeout)(uint8_t *restrict work);
+    void (*const stream_send)(uint8_t *restrict work);
+    void (*const owns)(uint8_t *restrict work);
+    void (*const close)(uint8_t *restrict work);
+    void (*const close_app)(uint8_t *restrict work);
+    void (*const is_established)(uint8_t *restrict work);
+    void (*const is_closed)(uint8_t *restrict work);
 
-    struct QuicConnInternal *internal;
 } QuicConnNs;
 
 /** @brief The one symbol this module exports. */

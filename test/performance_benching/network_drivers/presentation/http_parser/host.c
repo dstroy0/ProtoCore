@@ -20,6 +20,8 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
+
 // A realistic browser GET (request line + 6 headers, no body).
 static const char *GET_REQ = "GET /api/v1/status?verbose=1 HTTP/1.1\r\n"
                              "Host: device.local\r\n"
@@ -87,20 +89,50 @@ int main(void)
             500000,
             {
                 protocore_json_writer w;
-                Json.init(&w, buf, sizeof(buf));
-                Json.begin_object(&w);
-                Json.kv_str(&w, "status", "ok");
-                Json.kv_int(&w, "uptime", 123456);
-                Json.kv_int(&w, "heap", 204800);
-                Json.kv_bool(&w, "wifi", PROTO_TRUE);
-                Json.kv_str(&w, "ip", "192.168.1.42");
-                Json.key(&w, "temps");
-                Json.begin_array(&w);
-                Json.put_int(&w, 21);
-                Json.put_int(&w, 22);
-                Json.put_int(&w, 23);
-                Json.end_array(&w);
-                Json.end_object(&w);
+                Json.init_args.w = &w;
+                Json.init_args.buf = buf;
+                Json.init_args.cap = sizeof(buf);
+                Json.init(json_work);
+                Json.begin_object_args.w = &w;
+                Json.begin_object(json_work);
+                Json.kv_str_args.w = &w;
+                Json.kv_str_args.k = "status";
+                Json.kv_str_args.v = "ok";
+                Json.kv_str(json_work);
+                Json.kv_int_args.w = &w;
+                Json.kv_int_args.k = "uptime";
+                Json.kv_int_args.v = 123456;
+                Json.kv_int(json_work);
+                Json.kv_int_args.w = &w;
+                Json.kv_int_args.k = "heap";
+                Json.kv_int_args.v = 204800;
+                Json.kv_int(json_work);
+                Json.kv_bool_args.w = &w;
+                Json.kv_bool_args.k = "wifi";
+                Json.kv_bool_args.v = PROTO_TRUE;
+                Json.kv_bool(json_work);
+                Json.kv_str_args.w = &w;
+                Json.kv_str_args.k = "ip";
+                Json.kv_str_args.v = "192.168.1.42";
+                Json.kv_str(json_work);
+                Json.key_args.w = &w;
+                Json.key_args.k = "temps";
+                Json.key(json_work);
+                Json.begin_array_args.w = &w;
+                Json.begin_array(json_work);
+                Json.put_int_args.w = &w;
+                Json.put_int_args.v = 21;
+                Json.put_int(json_work);
+                Json.put_int_args.w = &w;
+                Json.put_int_args.v = 22;
+                Json.put_int(json_work);
+                Json.put_int_args.w = &w;
+                Json.put_int_args.v = 23;
+                Json.put_int(json_work);
+                Json.end_array_args.w = &w;
+                Json.end_array(json_work);
+                Json.end_object_args.w = &w;
+                Json.end_object(json_work);
                 sink += protocore_json_length(&w);
             },
             ns);
@@ -121,10 +153,23 @@ int main(void)
         HBENCH_NS(
             500000,
             {
-                Json.get_str(body, "ssid", ssid, sizeof(ssid));
-                Json.get_int(body, "port", &port);
-                Json.get_bool(body, "tls", &tls);
-                Json.get_int(body, "chan", &chan);
+                Json.get_str_args.json = body;
+                Json.get_str_args.key = "ssid";
+                Json.get_str_args.out = ssid;
+                Json.get_str_args.out_cap = sizeof(ssid);
+                Json.get_str(json_work);
+                Json.get_int_args.json = body;
+                Json.get_int_args.key = "port";
+                Json.get_int_args.out = &port;
+                Json.get_int(json_work);
+                Json.get_bool_args.json = body;
+                Json.get_bool_args.key = "tls";
+                Json.get_bool_args.out = &tls;
+                Json.get_bool(json_work);
+                Json.get_int_args.json = body;
+                Json.get_int_args.key = "chan";
+                Json.get_int_args.out = &chan;
+                Json.get_int(json_work);
                 sink += (size_t)ssid[0] + (size_t)port + (size_t)tls + (size_t)chan;
             },
             ns);

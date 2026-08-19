@@ -106,10 +106,6 @@ uint8_t *protocore_happy_eyeballs_span(void)
 
 static void happy_eyeballs_pref(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const protocore_ip *ip = HappyEyeballs.pref_args.ip;
 
     HAPPY_EYEBALLS_CTX(work)->ip = ip;
@@ -118,10 +114,6 @@ static void happy_eyeballs_pref(uint8_t *restrict work)
 
 static void happy_eyeballs_order(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     protocore_ip *list = HappyEyeballs.order_args.list;
     size_t n = HappyEyeballs.order_args.n;
 

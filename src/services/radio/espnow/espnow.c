@@ -161,11 +161,6 @@ static int peer_find(const EspnowCtx *c, const uint8_t mac[6])
 
 static void espnow_peers_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
     {
         ESPNOW_CTX(work)->peers[i].used = PROTO_FALSE;
@@ -174,10 +169,6 @@ static void espnow_peers_reset(uint8_t *restrict work)
 
 static void espnow_peer_add(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *mac = Espnow.peer_add_args.mac;
 
     if (!mac)
@@ -205,10 +196,6 @@ static void espnow_peer_add(uint8_t *restrict work)
 
 static void espnow_peer_has(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *mac = Espnow.peer_has_args.mac;
 
     Espnow.ok = mac && peer_find(ESPNOW_CTX(work), mac) >= 0;
@@ -216,10 +203,6 @@ static void espnow_peer_has(uint8_t *restrict work)
 
 static void espnow_peer_remove(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *mac = Espnow.peer_remove_args.mac;
 
     int i = mac ? peer_find(ESPNOW_CTX(work), mac) : -1;
@@ -234,11 +217,6 @@ static void espnow_peer_remove(uint8_t *restrict work)
 
 static void espnow_peer_count(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     int n = 0;
     for (int i = 0; i < PROTOCORE_ESPNOW_MAX_PEERS; i++)
     {
@@ -268,10 +246,6 @@ static void on_recv(const uint8_t *mac, const uint8_t *data, int len)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_espnow_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     if (!ESPNOW_CTX(work)->recv || len < 0 || !mac)
     {
@@ -308,10 +282,6 @@ static proto_bool radio_add_peer(const uint8_t mac[6], uint8_t channel)
 
 static void espnow_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     nel = Espnow.begin_args.channel;
     protocore_espnow_recv_fn cb = Espnow.begin_args.cb;
 
@@ -329,10 +299,6 @@ static void espnow_begin(uint8_t *restrict work)
 
 static void espnow_add_peer(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *mac = Espnow.add_peer_args.mac;
 
     Espnow.peer_add_args.mac = mac;
@@ -347,10 +313,6 @@ static void espnow_add_peer(uint8_t *restrict work)
 
 static void espnow_send(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *mac = Espnow.send_args.mac;
     uint8_t type = Espnow.send_args.type;
     const uint8_t *payload = Espnow.send_args.payload;
@@ -374,10 +336,6 @@ static void espnow_send(uint8_t *restrict work)
 
 static void espnow_broadcast(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t type = Espnow.broadcast_args.type;
     const uint8_t *payload = Espnow.broadcast_args.payload;
     size_t len = Espnow.broadcast_args.len;
@@ -403,10 +361,6 @@ static void espnow_begin(uint8_t *restrict work)
 }
 static void espnow_add_peer(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *mac = Espnow.add_peer_args.mac;
 
     Espnow.peer_add_args.mac = mac;

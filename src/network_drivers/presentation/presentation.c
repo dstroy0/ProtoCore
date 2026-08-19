@@ -121,10 +121,6 @@ static inline void http_release_upgrade_bindings(uint8_t slot_id)
 
 static void conn_open(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (HttpConn.slot >= MAX_CONNS)
     {
         return;
@@ -141,10 +137,6 @@ static void conn_open(uint8_t *restrict work)
 // the worker's ack_consumed.
 static void parse(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (HttpConn.slot >= MAX_CONNS)
     {
         return;
@@ -344,10 +336,6 @@ static void http_evt_poll(uint8_t slot)
 
 static void set_poll(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     HTTP_CONN_CTX(work)->poll = HttpConn.poll;
 }
 
@@ -412,10 +400,6 @@ static void has_token(uint8_t *restrict work)
 #if PROTOCORE_ENABLE_KEEPALIVE
 static void keepalive_eval(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     HttpConn.ok = PROTO_FALSE;
     HttpReq *req = &http_pool[HttpConn.slot];
     // Only a cleanly-parsed request has a known message boundary; errors close.

@@ -24,7 +24,9 @@
 #ifndef PROTOCORE_DNS_H
 #define PROTOCORE_DNS_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_DNS
 
 #if PROTOCORE_NEED_DNS_RESOLVER
 #include "network_drivers/network/dns/dns_resolver/dns_resolver.h" // ResolverNs: the RESOLVER (RFC 1034 sec 5)
@@ -32,7 +34,6 @@
 #if PROTOCORE_ENABLE_DNS_SERVER
 #include "network_drivers/network/dns/dns_server/dns_server.h" // DnsServerNs: the NAME SERVER (RFC 1034 sec 4)
 #endif
-
 PROTOCORE_BEGIN_DECLS
 
 /**
@@ -70,5 +71,7 @@ typedef struct
 extern DnsNs Dns;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DNS
 
 #endif // PROTOCORE_DNS_H

@@ -248,10 +248,6 @@ uint8_t *protocore_tcp_lower_span(void)
 
 static void marshal(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // In stack context already (a raw callback's teardown reaching a send or a close): run the op
     // inline. Re-marshaling would call into the mailbox from the very thread that services it and
     // block forever. Off-thread: marshal. Either way the op leaves its answer in ns->result.
@@ -284,10 +280,6 @@ static void conn_abort(uint8_t *restrict work)
 // stored and stamped onto every later connection. The candidate arrives in len.
 static void set_ttl(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TcpLower.ok = PROTO_FALSE;
     if (TcpLower.len == 0 || TcpLower.len > 0xFFu)
     {
@@ -300,10 +292,6 @@ static void set_ttl(uint8_t *restrict work)
 // Stamp the control block the handle carries with the configured TTL.
 static void apply_ttl(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TcpLower.op = PROTOCORE_OP_SET_TTL;
     TcpLower.len = TCP_LOWER_CTX(work)->ttl;
     marshal(work);

@@ -10,6 +10,10 @@
  * exist.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_TCP
+
 #include "network_drivers/transport/tcp/tcp.h"
 
 #include "network_drivers/transport/tcp/client/client.h"
@@ -24,3 +28,5 @@ TcpNs Tcp = {
     .client = &TcpClient,
 #endif
 };
+
+#endif // PROTOCORE_ENABLE_TCP

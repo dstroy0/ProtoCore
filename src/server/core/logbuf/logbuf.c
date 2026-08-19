@@ -82,20 +82,12 @@ static char level_letter(uint8_t level)
 
 static void logbuf_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     LOGBUF_CTX(work)->head = 0;
     LOGBUF_CTX(work)->count = 0;
 }
 
 static void logbuf_put(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t level = Logbuf.line.level;
     uint16_t slot;
 
@@ -122,19 +114,11 @@ static void logbuf_put(uint8_t *restrict work)
 
 static void logbuf_held(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Logbuf.count = LOGBUF_CTX(work)->count;
 }
 
 static void logbuf_at(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint16_t i = Logbuf.read.i;
 
     Logbuf.text = NULL;
@@ -147,10 +131,6 @@ static void logbuf_at(uint8_t *restrict work)
 
 static void logbuf_dump(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     char *out = Logbuf.read.out;
     const size_t cap = Logbuf.read.cap;
 
@@ -184,10 +164,6 @@ static void logbuf_dump(uint8_t *restrict work)
 
 static void logbuf_set_trap(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     LOGBUF_CTX(work)->trap_threshold = Logbuf.trap.threshold;
     LOGBUF_CTX(work)->trap = Logbuf.trap.cb;
 }

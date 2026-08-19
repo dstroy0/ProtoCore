@@ -37,10 +37,6 @@ void dbench_run(void)
     static const uint32_t frac = 0x80000000u;
     static uint8_t out[PROTOCORE_NTP_PACKET_LEN];
     uint8_t *work = protocore_ntp_server_span();
-    if (work == NULL)
-    {
-        return; // the pool was short of this module's borrow
-    }
 
     for (;;)
     {

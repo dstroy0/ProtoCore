@@ -43,10 +43,6 @@ void dbench_run(void)
     uint16_t c = 0;
 
     uint8_t *work = protocore_mdns_adaptive_span();
-    if (work == NULL)
-    {
-        return; // the pool was short of this module's borrow
-    }
 
     for (;;)
     {

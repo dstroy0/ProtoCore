@@ -14,6 +14,7 @@ if(PROTOCORE_ENABLE_FILE_SERVING)
       pc_server_storage_mnt
     PRIVATE
       pc_mmgr_membuild
+      pc_mmgr_plaintext
       pc_mmgr_protostr
       pc_network_drivers_application_http_range
       pc_network_drivers_presentation_http

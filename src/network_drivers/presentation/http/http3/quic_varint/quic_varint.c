@@ -52,10 +52,6 @@ static void quic_varint_len(uint8_t *restrict work)
 
 static void quic_varint_encode(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t *out = QuicVarint.encode_args.out;
     size_t cap = QuicVarint.encode_args.cap;
     uint64_t value = QuicVarint.encode_args.value;

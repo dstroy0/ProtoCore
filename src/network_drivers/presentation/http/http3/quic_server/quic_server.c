@@ -20,8 +20,8 @@ static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 #include "network_drivers/presentation/http/http3/quic_server/quic_server.h"
 
 #include "mmgr/plaintext/plaintext.h" // the two engines' byte spans
-#include "mmgr/ring.h"      // protocore_atomic
-#include "mmgr/secure/secure.h"    // the QUIC context span is key material
+#include "mmgr/ring.h"                // protocore_atomic
+#include "mmgr/secure/secure.h"       // the QUIC context span is key material
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h" // QuicTlsConfig
 #include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
@@ -79,38 +79,20 @@ typedef struct
     uint32_t last_ms; ///< protocore_millis() of the last datagram received (idle-reaping clock)
 } QuicSlot;
 
-// HTTP/3 QUIC connection + ingest buffers, owned by one instance (internal linkage). Placed in
-// PSRAM (PROTOCORE_QUIC_POOL_ATTR) when configured; kept separate from the DRAM control state below
-// so only the large buffers move off internal RAM. One named owner, unreachable cross-TU.
-struct QuicServerStorage
-{
-    QuicSlot pool[PROTOCORE_QUIC_MAX_CONNS];
-    QuicIngest ring[PROTOCORE_QUIC_INGEST_RING];
-};
-static PROTOCORE_QUIC_POOL_ATTR struct QuicServerStorage s_store;
-
 /**
- * @brief The server's state and the calls that reach it - what QuicServerNs points at.
+ * @brief The server's control state: what the ingest ring, the config and the identity counter need.
  *
- * The ingest ring cursors, the config + request callback + app pointer, the bound port, the running
- * flag and the next connection id. Kept in DRAM, separate from the large buffers above, so only
- * those move off internal RAM.
- *
- * @var QuicServerInternal::store       the connection pool and the ingest ring
- * @var QuicServerInternal::ns          the handle a caller sets a call's members on
- * @var QuicServerInternal::ring_head   producer (udp / ingest) advances
- * @var QuicServerInternal::ring_tail   consumer (poll) advances
- * @var QuicServerInternal::cfg         the installed certificate, key and randomness source
- * @var QuicServerInternal::on_request  what a completed request is delivered to
- * @var QuicServerInternal::app         the opaque pointer that callback is given back
- * @var QuicServerInternal::port        the bound UDP port
- * @var QuicServerInternal::running     the server is up
- * @var QuicServerInternal::next_id     set to 1 by begin; never handed out as 0
+ * @var QuicServerCtx::ring_head   producer (udp / ingest) advances
+ * @var QuicServerCtx::ring_tail   consumer (poll) advances
+ * @var QuicServerCtx::cfg         the installed certificate, key and randomness source
+ * @var QuicServerCtx::on_request  what a completed request is delivered to
+ * @var QuicServerCtx::app         the opaque pointer that callback is given back
+ * @var QuicServerCtx::port        the bound UDP port
+ * @var QuicServerCtx::running     the server is up
+ * @var QuicServerCtx::next_id     set to 1 by begin; never handed out as 0
  */
-struct QuicServerInternal
+typedef struct
 {
-    struct QuicServerStorage *store;
-    QuicServerNs *ns;
     _Atomic size_t ring_head;
     _Atomic size_t ring_tail;
     QuicServerConfig cfg;
@@ -119,9 +101,40 @@ struct QuicServerInternal
     uint16_t port;
     proto_bool running;
     uint32_t next_id;
-};
+} QuicServerCtx;
 
-static struct QuicServerInternal s_quic = {.store = &s_store, .ns = &QuicServer};
+// The caller's borrow, split: the control state, then the connection pool, then the ingest ring.
+// One pointer arrives and every region is that pointer plus a compile-time offset, so the assert
+// below proves the span covers them before anything runs.
+#define QSRV_OFF_CTX 0u
+#define QSRV_OFF_POOL (QSRV_OFF_CTX + sizeof(QuicServerCtx))
+#define QSRV_OFF_RING (QSRV_OFF_POOL + (size_t)PROTOCORE_QUIC_MAX_CONNS * sizeof(QuicSlot))
+static_assert(QSRV_OFF_RING + (size_t)PROTOCORE_QUIC_INGEST_RING * sizeof(QuicIngest) <= PROTOCORE_QUIC_SERVER_BORROW,
+              "PROTOCORE_QUIC_SERVER_BORROW is short of the server - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The regions, at their offsets in the caller's borrow.
+#define QSRV_CTX(w) ((QuicServerCtx *)(void *)((w) + QSRV_OFF_CTX))
+#define QSRV_POOL(w) ((QuicSlot *)(void *)((w) + QSRV_OFF_POOL))
+#define QSRV_RING(w) ((QuicIngest *)(void *)((w) + QSRV_OFF_RING))
+
+// The one owned instance, private to this TU: the pointer to the bytes this server took for
+// itself. The two callbacks below carry the transport's signature and reach it through here.
+static uint8_t *s_span;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_quic_server_span(void)
+{
+    if (s_span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_QUIC_SERVER_BORROW);
+        if (span.ok(sp))
+        {
+            s_span = sp.buf;
+        }
+    }
+    return s_span; // null while the pool was short, which every entry refuses
+}
 
 // Copy @p src into @p dst, stopping at the NUL or one short of @p cap, and terminate.
 static void copy_str(char *dst, size_t cap, const char *src)
@@ -140,7 +153,7 @@ static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8
     return alen == blen && mem.cmp(a, b, alen) == 0;
 }
 
-static void server_send(const char *ip, uint16_t port, const uint8_t *data, size_t len)
+static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     Ip.args.text = ip;
@@ -148,7 +161,7 @@ static void server_send(const char *ip, uint16_t port, const uint8_t *data, size
     Ip.parse(ip_work);
     if (Ip.ok)
     {
-        UdpListener.port = s_quic.port;
+        UdpListener.port = QSRV_CTX(work)->port;
         UdpListener.send_args.dst = &dst;
         UdpListener.send_args.dst_port = port;
         UdpListener.send_args.data = data;
@@ -158,59 +171,59 @@ static void server_send(const char *ip, uint16_t port, const uint8_t *data, size
 }
 
 // --- ingest ring (SPSC: one producer fills, protocore_quic_server_poll consumes) ------------------------
-static proto_bool ring_push(const uint8_t *dg, size_t len, const char *ip, uint16_t port)
+static proto_bool ring_push(uint8_t *restrict work, const uint8_t *dg, size_t len, const char *ip, uint16_t port)
 {
     if (len == 0 || len > PROTOCORE_QUIC_MAX_DATAGRAM)
     {
         return PROTO_FALSE;
     }
-    size_t head = s_quic.ring_head;
+    size_t head = QSRV_CTX(work)->ring_head;
     size_t next = (head + 1) % PROTOCORE_QUIC_INGEST_RING;
-    if (next == (size_t)s_quic.ring_tail)
+    if (next == (size_t)QSRV_CTX(work)->ring_tail)
     {
         return PROTO_FALSE; // ring full: drop (QUIC recovers via retransmission)
     }
-    QuicIngest *e = &s_store.ring[head];
+    QuicIngest *e = &QSRV_RING(work)[head];
     mem.cpy(e->data, dg, len);
     e->len = (uint16_t)len;
     copy_str(e->ip, sizeof e->ip, ip);
     e->port = port;
-    s_quic.ring_head = next; // publish after the record is fully written
+    QSRV_CTX(work)->ring_head = next; // publish after the record is fully written
     return PROTO_TRUE;
 }
 
-static proto_bool ring_pop(QuicIngest *out)
+static proto_bool ring_pop(uint8_t *restrict work, QuicIngest *out)
 {
-    size_t tail = s_quic.ring_tail;
-    if (tail == (size_t)s_quic.ring_head)
+    size_t tail = QSRV_CTX(work)->ring_tail;
+    if (tail == (size_t)QSRV_CTX(work)->ring_head)
     {
         return PROTO_FALSE;
     }
-    *out = s_store.ring[tail];
-    s_quic.ring_tail = (tail + 1) % PROTOCORE_QUIC_INGEST_RING;
+    *out = QSRV_RING(work)[tail];
+    QSRV_CTX(work)->ring_tail = (tail + 1) % PROTOCORE_QUIC_INGEST_RING;
     return PROTO_TRUE;
 }
 
 // --- slot pool --------------------------------------------------------------------------------
-static QuicSlot *slot_by_id(uint32_t id)
+static QuicSlot *slot_by_id(uint8_t *restrict work, uint32_t id)
 {
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
-        if (s_store.pool[i].used && s_store.pool[i].id == id)
+        if (QSRV_POOL(work)[i].used && QSRV_POOL(work)[i].id == id)
         {
-            return &s_store.pool[i];
+            return &QSRV_POOL(work)[i];
         }
     }
     return NULL;
 }
 
-static QuicSlot *alloc_slot()
+static QuicSlot *alloc_slot(uint8_t *restrict work)
 {
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
-        if (!s_store.pool[i].used)
+        if (!QSRV_POOL(work)[i].used)
         {
-            QuicSlot *s = &s_store.pool[i];
+            QuicSlot *s = &QSRV_POOL(work)[i];
             // Both engines' borrows are bound to the slot, not to the connection on it: they are
             // carried across the zero, or every claim would draw a fresh one from an end that is
             // never given back. Each init wipes the bytes it just re-reached.
@@ -222,13 +235,13 @@ static QuicSlot *alloc_slot()
             s->qcb = qc_bytes;
             s->h3 = h3_bytes;
             s->used = PROTO_TRUE;
-            s->id = s_quic.next_id++;
-            if (s_quic.next_id == 0)
+            s->id = QSRV_CTX(work)->next_id++;
+            if (QSRV_CTX(work)->next_id == 0)
             // true branch (wrap) is unreachable - it needs 2^32 allocations in
             // one process lifetime (next_id is never reset except by begin()),
             // which no host test can drive
             {
-                s_quic.next_id = 1;
+                QSRV_CTX(work)->next_id = 1;
             }
             return s;
         }
@@ -240,17 +253,18 @@ static QuicSlot *alloc_slot()
 static void protocore_h3_on_request(void *app, uint8_t * /*h3*/, uint64_t stream_id, const char *method,
                                     const char *path, const char *authority, const uint8_t *body, size_t body_len)
 {
+    uint8_t *restrict work = protocore_quic_server_span();
     QuicSlot *s = (QuicSlot *)app;
-    if (s_quic.on_request)
+    if (QSRV_CTX(work)->on_request)
     {
-        s_quic.on_request(s_quic.app, s->id, stream_id, method, path, authority, body, body_len);
+        QSRV_CTX(work)->on_request(QSRV_CTX(work)->app, s->id, stream_id, method, path, authority, body, body_len);
     }
 }
 
 // Open a connection for a client's first Initial packet.
-static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t port)
+static QuicSlot *open_conn(uint8_t *restrict work, const QuicLongHeader *lh, const char *ip, uint16_t port)
 {
-    QuicSlot *s = alloc_slot();
+    QuicSlot *s = alloc_slot(work);
     if (!s)
     {
         return NULL;
@@ -258,9 +272,9 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
 
     QuicTlsConfig tc;
     mem.set(&tc, 0, sizeof tc);
-    tc.cert_der = s_quic.cfg.cert_der;
-    tc.cert_len = s_quic.cfg.cert_len;
-    mem.cpy(tc.ed25519_seed, s_quic.cfg.ed25519_seed, sizeof tc.ed25519_seed);
+    tc.cert_der = QSRV_CTX(work)->cfg.cert_der;
+    tc.cert_len = QSRV_CTX(work)->cfg.cert_len;
+    mem.cpy(tc.ed25519_seed, QSRV_CTX(work)->cfg.ed25519_seed, sizeof tc.ed25519_seed);
     QuicTp.defaults_args.tp = &tc.params;
     QuicTp.defaults(quic_tp_work);
     // A real HTTP/3 endpoint must advertise flow-control room, or every request stream (and the
@@ -271,14 +285,14 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
     tc.params.initial_max_streams_bidi = PROTOCORE_H3_MAX_STREAMS;
     tc.params.initial_max_streams_uni = PROTOCORE_H3_MAX_STREAMS;
     tc.params.max_idle_timeout = PROTOCORE_QUIC_IDLE_MS; // both ends reclaim the connection after this idle
-    s_quic.cfg.rng(tc.ephemeral_priv, sizeof tc.ephemeral_priv);
-    s_quic.cfg.rng(tc.random, sizeof tc.random);
+    QSRV_CTX(work)->cfg.rng(tc.ephemeral_priv, sizeof tc.ephemeral_priv);
+    QSRV_CTX(work)->cfg.rng(tc.random, sizeof tc.random);
 #if PROTOCORE_ENABLE_PQC_KEX
-    s_quic.cfg.rng(tc.mlkem_m, sizeof tc.mlkem_m); // fresh ML-KEM Encaps randomness per handshake
+    QSRV_CTX(work)->cfg.rng(tc.mlkem_m, sizeof tc.mlkem_m); // fresh ML-KEM Encaps randomness per handshake
 #endif
 
     uint8_t our_scid[PROTOCORE_QUIC_SCID_LEN];
-    s_quic.cfg.rng(our_scid, sizeof our_scid);
+    QSRV_CTX(work)->cfg.rng(our_scid, sizeof our_scid);
 
     // The slot's spans, taken once from each pool's persistent end and reused by every connection
     // this slot carries. The context span is secure because the TLS handshake in it is key material.
@@ -298,7 +312,6 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
 
     QuicConnCallbacks cb;
     mem.set(&cb, 0, sizeof cb); // H3Conn.init installs the real callbacks
-    QuicConn.bind.ctx = s->qc;
     QuicConn.bind.b = s->qcb;
     QuicConn.cb = cb;
     QuicConn.init_args.cfg = &tc;
@@ -308,13 +321,12 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
     QuicConn.init_args.peer_scid_len = lh->scid_len;
     QuicConn.init_args.our_scid = our_scid;
     QuicConn.init_args.our_scid_len = PROTOCORE_QUIC_SCID_LEN;
-    QuicConn.init(QuicConn.internal);
+    QuicConn.init(s->qc);
 
-    H3Conn.bind.b = s->h3;
     H3Conn.bind.qc = s->qc;
     H3Conn.app_args.on_request = protocore_h3_on_request;
     H3Conn.app_args.app = s;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(s->h3);
 
     copy_str(s->peer_ip, sizeof s->peer_ip, ip);
     s->peer_port = port;
@@ -323,12 +335,12 @@ static QuicSlot *open_conn(const QuicLongHeader *lh, const char *ip, uint16_t po
 
 // HttpRoute a datagram to its connection by Destination Connection ID. Sets *is_initial when it is an
 // unmatched Initial (the caller opens a new connection) and copies the parsed long header out.
-static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, QuicLongHeader *lh_out)
+static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, proto_bool *is_initial, QuicLongHeader *lh_out)
 {
     *is_initial = PROTO_FALSE;
     if (len < 1)
-    // only the true branch is unreachable - route()'s sole call site is
-    // protocore_quic_server_poll, fed by ring_pop() from a ring that ring_push() (both
+    // only the true branch is unreachable - route(work)'s sole call site is
+    // protocore_quic_server_poll, fed by ring_pop(work) from a ring that ring_push(work) (both
     // ingest paths) already refuses to fill with len==0, so len>=1 always holds here
     {
         return NULL;
@@ -347,15 +359,14 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
         }
         for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
         {
-            QuicSlot *s = &s_store.pool[i];
+            QuicSlot *s = &QSRV_POOL(work)[i];
             if (!s->used)
             {
                 continue;
             }
-            QuicConn.bind.ctx = s->qc;
             QuicConn.owns_args.dcid = lh_out->dcid;
             QuicConn.owns_args.dcid_len = lh_out->dcid_len;
-            QuicConn.owns(QuicConn.internal);
+            QuicConn.owns(s->qc);
             if (QuicConn.ok)
             {
                 return s;
@@ -374,16 +385,15 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
     }
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
-        QuicSlot *s = &s_store.pool[i];
+        QuicSlot *s = &QSRV_POOL(work)[i];
         if (!s->used)
         {
             continue;
         }
         // A short header carries no length, so the id is read at the one length this server chooses.
-        QuicConn.bind.ctx = s->qc;
         QuicConn.owns_args.dcid = dg + 1;
         QuicConn.owns_args.dcid_len = PROTOCORE_QUIC_SCID_LEN;
-        QuicConn.owns(QuicConn.internal);
+        QuicConn.owns(s->qc);
         if (QuicConn.ok)
         {
             return s;
@@ -392,35 +402,34 @@ static QuicSlot *route(const uint8_t *dg, size_t len, proto_bool *is_initial, Qu
     return NULL;
 }
 
-static void flush_and_reap(uint32_t now_ms)
+static void flush_and_reap(uint8_t *restrict work, uint32_t now_ms)
 {
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
-        QuicSlot *s = &s_store.pool[i];
+        QuicSlot *s = &QSRV_POOL(work)[i];
         if (!s->used)
         {
             continue;
         }
-        QuicConn.bind.ctx = s->qc;
         QuicConn.bind.b = s->qcb;
         QuicConn.timeout_args.now_ms = now_ms;
-        QuicConn.on_timeout(QuicConn.internal); // retransmit a lost handshake flight (PTO)
+        QuicConn.on_timeout(s->qc); // retransmit a lost handshake flight (PTO)
         // Drained: send is called until it reports nothing left, so the call is the condition.
         for (;;)
         {
             QuicConn.send_args.out = out;
             QuicConn.send_args.cap = sizeof out;
-            QuicConn.send(QuicConn.internal);
+            QuicConn.send(s->qc);
             if (QuicConn.n == 0)
             {
                 break;
             }
-            server_send(s->peer_ip, s->peer_port, out, QuicConn.n);
+            server_send(work, s->peer_ip, s->peer_port, out, QuicConn.n);
         }
         // Reap a closed connection, or one idle past the timeout (wrap-safe delta) so a client that
         // never closes cannot leak the fixed pool.
-        QuicConn.is_closed(QuicConn.internal);
+        QuicConn.is_closed(s->qc);
         if (QuicConn.closed || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
         {
             s->used = PROTO_FALSE;
@@ -442,110 +451,108 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
     {
         return;
     }
-    (void)ring_push(data, len, ip, port);
+    (void)ring_push(protocore_quic_server_span(), data, len, ip, port);
 }
 
-static void begin(struct QuicServerInternal *restrict ctx)
+static void begin(uint8_t *restrict work)
 {
-    const QuicServerConfig *cfg = ctx->ns->begin_args.cfg;
-    ctx->ns->ok = PROTO_FALSE;
+    const QuicServerConfig *cfg = QuicServer.begin_args.cfg;
+    QuicServer.ok = PROTO_FALSE;
     if (!cfg || !cfg->rng)
     {
         return;
     }
-    ctx->cfg = *cfg;
-    ctx->on_request = ctx->ns->begin_args.on_request;
-    ctx->app = ctx->ns->begin_args.app;
-    ctx->port = ctx->ns->begin_args.port ? ctx->ns->begin_args.port : PROTOCORE_HTTP3_PORT;
+    QSRV_CTX(work)->cfg = *cfg;
+    QSRV_CTX(work)->on_request = QuicServer.begin_args.on_request;
+    QSRV_CTX(work)->app = QuicServer.begin_args.app;
+    QSRV_CTX(work)->port = QuicServer.begin_args.port ? QuicServer.begin_args.port : PROTOCORE_HTTP3_PORT;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
-        s_store.pool[i].used = PROTO_FALSE;
+        QSRV_POOL(work)[i].used = PROTO_FALSE;
     }
-    ctx->ring_head = 0;
-    ctx->ring_tail = 0;
-    ctx->next_id = 1;
-    ctx->running = PROTO_TRUE;
-    UdpListener.port = ctx->port;
+    QSRV_CTX(work)->ring_head = 0;
+    QSRV_CTX(work)->ring_tail = 0;
+    QSRV_CTX(work)->next_id = 1;
+    QSRV_CTX(work)->running = PROTO_TRUE;
+    UdpListener.port = QSRV_CTX(work)->port;
     UdpListener.bind.handler = udp_ingest_cb;
     UdpListener.bind.handler_ctx = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    ctx->ns->ok = UdpListener.ok;
+    QuicServer.ok = UdpListener.ok;
 }
 
-static void poll(struct QuicServerInternal *restrict ctx)
+static void poll(uint8_t *restrict work)
 {
-    const uint32_t now_ms = ctx->ns->now_ms;
-    if (!ctx->running)
+    const uint32_t now_ms = QuicServer.now_ms;
+    if (!QSRV_CTX(work)->running)
     {
         return;
     }
     QuicIngest ig;
-    while (ring_pop(&ig))
+    while (ring_pop(work, &ig))
     {
         proto_bool is_initial = PROTO_FALSE;
         QuicLongHeader lh;
-        QuicSlot *s = route(ig.data, ig.len, &is_initial, &lh);
+        QuicSlot *s = route(work, ig.data, ig.len, &is_initial, &lh);
         if (!s && is_initial)
         {
-            s = open_conn(&lh, ig.ip, ig.port);
+            s = open_conn(work, &lh, ig.ip, ig.port);
         }
         if (!s)
         {
             continue;
         }
         s->last_ms = now_ms; // liveness for idle reaping
-        QuicConn.bind.ctx = s->qc;
         QuicConn.bind.b = s->qcb;
         QuicConn.recv_args.datagram = ig.data;
         QuicConn.recv_args.len = ig.len;
-        QuicConn.recv(QuicConn.internal);
+        QuicConn.recv(s->qc);
     }
-    flush_and_reap(now_ms);
+    flush_and_reap(work, now_ms);
 }
 
-static void respond(struct QuicServerInternal *restrict ctx)
+static void respond(uint8_t *restrict work)
 {
-    QuicSlot *s = slot_by_id(ctx->ns->stream.conn_id);
+    QuicSlot *s = slot_by_id(work, QuicServer.stream.conn_id);
     if (!s)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        QuicServer.ok = PROTO_FALSE;
         return;
     }
-    H3Conn.bind.b = s->h3;
     H3Conn.bind.qc = s->qc;
-    H3Conn.respond_args.stream_id = ctx->ns->stream.stream_id;
-    H3Conn.respond_args.status = ctx->ns->resp.status;
-    H3Conn.respond_args.content_type = ctx->ns->resp.content_type;
-    H3Conn.respond_args.body = ctx->ns->resp.body;
-    H3Conn.respond_args.body_len = ctx->ns->resp.body_len;
-    H3Conn.respond(H3Conn.internal);
-    ctx->ns->ok = H3Conn.ok;
+    H3Conn.respond_args.stream_id = QuicServer.stream.stream_id;
+    H3Conn.respond_args.status = QuicServer.resp.status;
+    H3Conn.respond_args.content_type = QuicServer.resp.content_type;
+    H3Conn.respond_args.body = QuicServer.resp.body;
+    H3Conn.respond_args.body_len = QuicServer.resp.body_len;
+    H3Conn.respond(s->h3);
+    QuicServer.ok = H3Conn.ok;
 }
 
-static void active_conns(struct QuicServerInternal *restrict ctx)
+static void active_conns(uint8_t *restrict work)
 {
     uint8_t n = 0;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
-        if (ctx->store->pool[i].used)
+        if (QSRV_POOL(work)[i].used)
         {
             n++;
         }
     }
-    ctx->ns->u8 = n;
+    QuicServer.u8 = n;
 }
 
-static void stop(struct QuicServerInternal *restrict ctx)
+static void stop(uint8_t *restrict work)
 {
-    UdpListener.port = ctx->port;
+    UdpListener.port = QSRV_CTX(work)->port;
     UdpListener.close(protocore_udp_listener_span()); // drop the bind first: nothing more reaches the ring
-    ctx->running = PROTO_FALSE;
+    QSRV_CTX(work)->running = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
-        ctx->store->pool[i].used = PROTO_FALSE;
+        QSRV_POOL(work)[i].used = PROTO_FALSE;
     }
-    ctx->ring_head = 0;
-    ctx->ring_tail = 0;
+    QSRV_CTX(work)->ring_head = 0;
+    QSRV_CTX(work)->ring_tail = 0;
 }
 
 // The HTTP/3 bridge installs this; its shape is the seam's, not this module's.
@@ -558,12 +565,12 @@ proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, i
     QuicServer.resp.content_type = content_type;
     QuicServer.resp.body = body;
     QuicServer.resp.body_len = body_len;
-    respond(&s_quic);
+    respond(protocore_quic_server_span());
     return QuicServer.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
 QuicServerNs QuicServer = {
-    .begin = begin, .poll = poll, .respond = respond, .active_conns = active_conns, .stop = stop, .internal = &s_quic};
+    .begin = begin, .poll = poll, .respond = respond, .active_conns = active_conns, .stop = stop};
 
 #endif // PROTOCORE_ENABLE_HTTP3

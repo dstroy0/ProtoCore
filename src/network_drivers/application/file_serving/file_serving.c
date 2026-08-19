@@ -12,6 +12,11 @@
  * always-present home.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_FILE_SERVING
+
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/application/file_serving/file_serving.h"
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/session/session.h"                 // file_send: the transfer the connection carries
@@ -29,6 +34,8 @@
 #include <stdio.h>                                // snprintf, sscanf
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
 
+static uint8_t http_routes_work[16]; // the borrow an entry takes; HttpRoutes never reads it
+
 static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 
 static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
@@ -39,7 +46,7 @@ static uint8_t http_range_work[16]; // the borrow an entry takes; HttpRange neve
 // File serving
 // ---------------------------------------------------------------------------
 
-#if PROTOCORE_ENABLE_FILE_SERVING
+PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
 // File-send state - owned here
@@ -59,7 +66,42 @@ typedef struct
 
 // Unbound is -1, not the zero static storage would give: root 0 is a valid root, so a zeroed field
 // would resolve every path against somebody else's storage before file_root() ever ran.
-static FileCtx s_file = {.root = -1};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define FILE_SERVING_OFF_CTX 0u
+static_assert(FILE_SERVING_OFF_CTX + sizeof(FileCtx) <= PROTOCORE_FILE_SERVING_BORROW,
+              "PROTOCORE_FILE_SERVING_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define FILE_SERVING_CTX(w) ((FileCtx *)(void *)((w) + FILE_SERVING_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_FILE_SERVING_BORROW persistent bytes, or null while the pool was short
+} FileServingOwnCtx;
+static FileServingOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_file_serving_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_FILE_SERVING_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // A borrow arrives zeroed, and these do not start at zero.
+            FILE_SERVING_CTX(s_own.span)->root = -1;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // The root file serving resolves against: the whole mount. A static route carries its own subtree as
 // a request-path piece (the mount point mnt_id names), so the subtree is part of the request rather than part
@@ -69,28 +111,41 @@ static FileCtx s_file = {.root = -1};
 // Bound on first use because file serving has no begin(): a route can be registered before or after
 // the mount is set up, and serve_file() is reachable without any serve_static() at all. Re-binding a
 // name already bound hands back the same handle, so this settles after the first call.
-static int file_root(void)
+static int file_root(uint8_t *restrict work)
 {
-    if (s_file.root < 0)
+    if (FILE_SERVING_CTX(work)->root < 0)
     {
         Fs.mount = "/";
         Fs.begin(protocore_filesystem_span());
-        s_file.root = Fs.i32;
+        FILE_SERVING_CTX(work)->root = Fs.i32;
     }
-    return s_file.root;
+    return FILE_SERVING_CTX(work)->root;
 }
 
-proto_bool protocore_file_holds_slot(uint8_t slot)
+// The entries this file calls before reaching their definitions.
+static void file_serving_file_send_pump(uint8_t *restrict work);
+static void file_serving_http_rfc1123(uint8_t *restrict work);
+static void file_serving_serve_file_internal(uint8_t *restrict work);
+
+static void file_serving_holds_slot(uint8_t *restrict work)
 {
-    return file_send[slot].active;
+    (void)work;
+    uint8_t slot = FileServing.holds_slot_args.slot;
+
+    FileServing.ok = file_send[slot].active;
 }
 
 // HTTP-date helpers (shared by file serving's Last-Modified / If-Modified-Since and
 // WebDAV's getlastmodified / creationdate). WEBDAV requires FILE_SERVING, so this is
 // the single home for both. Format a time_t as an RFC 1123 GMT date; leaves @p out
 // empty when the timestamp is zero/unavailable.
-void http_rfc1123(int64_t epoch, char *out, size_t cap)
+static void file_serving_http_rfc1123(uint8_t *restrict work)
 {
+    (void)work;
+    int64_t epoch = FileServing.http_rfc1123_args.epoch;
+    char *out = FileServing.http_rfc1123_args.out;
+    size_t cap = FileServing.http_rfc1123_args.cap;
+
     out[0] = '\0';
     if (epoch <= 0)
     {
@@ -226,10 +281,16 @@ static proto_bool inm_matches(const char *inm, const char *etag)
     return PROTO_FALSE;
 }
 
-void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_backend *file_sys, const char *fs_path,
-                         const char *content_type, const char *content_encoding)
+static void file_serving_serve_file_internal(uint8_t *restrict work)
 {
-    Fs.path.root = file_root();
+    uint8_t slot_id = FileServing.serve_file_internal_args.slot_id;
+    proto_bool head = FileServing.serve_file_internal_args.head;
+    const protocore_mnt_backend *file_sys = FileServing.serve_file_internal_args.file_sys;
+    const char *fs_path = FileServing.serve_file_internal_args.fs_path;
+    const char *content_type = FileServing.serve_file_internal_args.content_type;
+    const char *content_encoding = FileServing.serve_file_internal_args.content_encoding;
+
+    Fs.path.root = file_root(work);
     Fs.path.dir = fs_path;
     Fs.path.name = "";
     Fs.io.mode = PROTOCORE_MNT_READ;
@@ -255,7 +316,7 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     // Size and mtime come from one stat, not two calls on the handle: they are two fields of the same
     // directory record, and asking separately is two lookups of what one read already had.
     protocore_mnt_stat st;
-    Fs.path.root = file_root();
+    Fs.path.root = file_root(work);
     Fs.path.dir = fs_path;
     Fs.path.name = "";
     Fs.io.stat = &st;
@@ -308,7 +369,10 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     char lm_date[40];
     char lastmod_line[17 + sizeof(lm_date)]; // "Last-Modified: " + date + "\r\n" + NUL
     lastmod_line[0] = '\0';
-    http_rfc1123(mtime, lm_date, sizeof(lm_date));
+    FileServing.http_rfc1123_args.epoch = mtime;
+    FileServing.http_rfc1123_args.out = lm_date;
+    FileServing.http_rfc1123_args.cap = sizeof(lm_date);
+    file_serving_http_rfc1123(work);
     if (lm_date[0])
     {
         protocore_sb sb_lastmod_line = {lastmod_line, sizeof(lastmod_line), 0, PROTO_TRUE};
@@ -334,179 +398,183 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     proto_bool not_modified = inm ? inm_matches(inm, etag) : http_not_modified_since(mtime, ims);
     if (not_modified)
     {
-                Fs.io.handle = fh;
-                Fs.close(protocore_filesystem_span());
-                char h304[RESP_HDR_BUF_SIZE];
-                protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
-                Sb.put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
-                Sb.put(&sb_h304, etag);
-                Sb.put(&sb_h304, "\r\n");
-                Sb.put(&sb_h304, lastmod_line);
-                Sb.put(&sb_h304, protocore_resp_cache_control());
-                Sb.put(&sb_h304, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-                Sb.put(&sb_h304, cl);
-                Sb.put(&sb_h304, "\r\n");
-                int n304 = (int)Sb.finish(&sb_h304);
-                ConnPool.slot = slot_id;
-                ConnPool.io.data = h304;
-                ConnPool.io.len = (proto_u16)n304;
-                ConnPool.send_flush(protocore_conn_pool_span()); // header-only reply: write and flush in one marshal
-                protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
-                return;
-            }
-            char etag_line[48];
-            protocore_sb sb_etag_line = {etag_line, sizeof(etag_line), 0, PROTO_TRUE};
-            Sb.put(&sb_etag_line, "ETag: ");
-            Sb.put(&sb_etag_line, etag);
-            Sb.put(&sb_etag_line, "\r\n");
-            if (Sb.finish(&sb_etag_line) == 0)
-            {
-                etag_line[0] = '\0';
-            }
+        Fs.io.handle = fh;
+        Fs.close(protocore_filesystem_span());
+        char h304[RESP_HDR_BUF_SIZE];
+        protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
+        Sb.put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
+        Sb.put(&sb_h304, etag);
+        Sb.put(&sb_h304, "\r\n");
+        Sb.put(&sb_h304, lastmod_line);
+        Sb.put(&sb_h304, protocore_resp_cache_control());
+        Sb.put(&sb_h304, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+        Sb.put(&sb_h304, cl);
+        Sb.put(&sb_h304, "\r\n");
+        int n304 = (int)Sb.finish(&sb_h304);
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = h304;
+        ConnPool.io.len = (proto_u16)n304;
+        ConnPool.send_flush(protocore_conn_pool_span()); // header-only reply: write and flush in one marshal
+        protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+        return;
+    }
+    char etag_line[48];
+    protocore_sb sb_etag_line = {etag_line, sizeof(etag_line), 0, PROTO_TRUE};
+    Sb.put(&sb_etag_line, "ETag: ");
+    Sb.put(&sb_etag_line, etag);
+    Sb.put(&sb_etag_line, "\r\n");
+    if (Sb.finish(&sb_etag_line) == 0)
+    {
+        etag_line[0] = '\0';
+    }
 #else
     const char *etag_line = "";
     const char *lastmod_line = "";
 #endif
 
-            // Default: full 200 response covering the whole file.
-            int status = 200;
-            size_t body_len = file_size;
-            size_t body_off = 0; // file offset the body starts at (nonzero for a Range)
-            const char *accept_ranges = "";
-            char range_line[64];
-            range_line[0] = '\0';
+    // Default: full 200 response covering the whole file.
+    int status = 200;
+    size_t body_len = file_size;
+    size_t body_off = 0; // file offset the body starts at (nonzero for a Range)
+    const char *accept_ranges = "";
+    char range_line[64];
+    range_line[0] = '\0';
 
 #if PROTOCORE_ENABLE_RANGE
-            accept_ranges = "Accept-Ranges: bytes\r\n"; // advertise range support on every file response
-            size_t r_start = 0;
-            size_t r_end = 0;
-            HttpParser.get_header_args.req = &http_pool[slot_id];
-            HttpParser.get_header_args.key = "Range";
-            HttpParser.get_header(protocore_http_parser_span());
-            HttpRange.http_parse_byte_range_args.hdr = HttpParser.text;
-            HttpRange.http_parse_byte_range_args.size = file_size;
-            HttpRange.http_parse_byte_range_args.out_start = &r_start;
-            HttpRange.http_parse_byte_range_args.out_end = &r_end;
-            HttpRange.http_parse_byte_range(http_range_work);
-            int rr = HttpRange.n;
-            if (rr < 0)
-            {
-                // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
-                Fs.io.handle = fh;
-                Fs.close(protocore_filesystem_span());
-                char h416[RESP_HDR_BUF_SIZE];
-                protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
-                Sb.put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
-                Sb.u32(&sb_h416, (uint32_t)((unsigned)file_size));
-                Sb.put(&sb_h416, "\r\nContent-Length: 0\r\n");
-                Sb.put(&sb_h416, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-                Sb.put(&sb_h416, cl);
-                Sb.put(&sb_h416, "\r\n");
-                int n416 = (int)Sb.finish(&sb_h416);
-                ConnPool.slot = slot_id;
-                ConnPool.io.data = h416;
-                ConnPool.io.len = (proto_u16)n416;
-                ConnPool.send_flush(protocore_conn_pool_span());
-                protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
-                return;
-            }
-            if (rr > 0)
-            {
-                status = 206;
-                body_len = r_end - r_start + 1;
-                protocore_sb sb_range_line = {range_line, sizeof(range_line), 0, PROTO_TRUE};
-                Sb.put(&sb_range_line, "Content-Range: bytes ");
-                Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_start));
-                Sb.put(&sb_range_line, "-");
-                Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_end));
-                Sb.put(&sb_range_line, "/");
-                Sb.u32(&sb_range_line, (uint32_t)((unsigned)file_size));
-                Sb.put(&sb_range_line, "\r\n");
-                if (Sb.finish(&sb_range_line) == 0)
-                {
-                    range_line[0] = '\0';
-                }
-                // A backend that cannot seek serves the whole representation instead, which keeps the body
-                // matching the headers. RFC 9110 14.2 permits a server to ignore Range.
-                Fs.io.handle = fh;
-                Fs.io.off = (uint64_t)r_start;
-                Fs.seek(protocore_filesystem_span());
-                if (Fs.ok)
-                {
-                    body_off = r_start;
-                }
-                else
-                {
-                    status = 200;
-                    body_len = file_size;
-                    range_line[0] = '\0';
-                }
-            }
+    accept_ranges = "Accept-Ranges: bytes\r\n"; // advertise range support on every file response
+    size_t r_start = 0;
+    size_t r_end = 0;
+    HttpParser.get_header_args.req = &http_pool[slot_id];
+    HttpParser.get_header_args.key = "Range";
+    HttpParser.get_header(protocore_http_parser_span());
+    HttpRange.http_parse_byte_range_args.hdr = HttpParser.text;
+    HttpRange.http_parse_byte_range_args.size = file_size;
+    HttpRange.http_parse_byte_range_args.out_start = &r_start;
+    HttpRange.http_parse_byte_range_args.out_end = &r_end;
+    HttpRange.http_parse_byte_range(http_range_work);
+    int rr = HttpRange.n;
+    if (rr < 0)
+    {
+        // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
+        Fs.io.handle = fh;
+        Fs.close(protocore_filesystem_span());
+        char h416[RESP_HDR_BUF_SIZE];
+        protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
+        Sb.put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
+        Sb.u32(&sb_h416, (uint32_t)((unsigned)file_size));
+        Sb.put(&sb_h416, "\r\nContent-Length: 0\r\n");
+        Sb.put(&sb_h416, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+        Sb.put(&sb_h416, cl);
+        Sb.put(&sb_h416, "\r\n");
+        int n416 = (int)Sb.finish(&sb_h416);
+        ConnPool.slot = slot_id;
+        ConnPool.io.data = h416;
+        ConnPool.io.len = (proto_u16)n416;
+        ConnPool.send_flush(protocore_conn_pool_span());
+        protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+        return;
+    }
+    if (rr > 0)
+    {
+        status = 206;
+        body_len = r_end - r_start + 1;
+        protocore_sb sb_range_line = {range_line, sizeof(range_line), 0, PROTO_TRUE};
+        Sb.put(&sb_range_line, "Content-Range: bytes ");
+        Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_start));
+        Sb.put(&sb_range_line, "-");
+        Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_end));
+        Sb.put(&sb_range_line, "/");
+        Sb.u32(&sb_range_line, (uint32_t)((unsigned)file_size));
+        Sb.put(&sb_range_line, "\r\n");
+        if (Sb.finish(&sb_range_line) == 0)
+        {
+            range_line[0] = '\0';
+        }
+        // A backend that cannot seek serves the whole representation instead, which keeps the body
+        // matching the headers. RFC 9110 14.2 permits a server to ignore Range.
+        Fs.io.handle = fh;
+        Fs.io.off = (uint64_t)r_start;
+        Fs.seek(protocore_filesystem_span());
+        if (Fs.ok)
+        {
+            body_off = r_start;
+        }
+        else
+        {
+            status = 200;
+            body_len = file_size;
+            range_line[0] = '\0';
+        }
+    }
 #endif
 
-            char header[RESP_HDR_BUF_SIZE];
-            protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-            Sb.put(&sb_header, "HTTP/1.1 ");
-            Sb.i64(&sb_header, (int64_t)(status));
-            Sb.put(&sb_header, " ");
-            Http.code = status;
-            Http.status_text(protocore_http_span());
-            Sb.put(&sb_header, Http.text);
-            Sb.put(&sb_header, "\r\nContent-Type: ");
-            Sb.put(&sb_header, content_type);
-            Sb.put(&sb_header, "\r\nContent-Length: ");
-            Sb.u32(&sb_header, (uint32_t)((unsigned)body_len));
-            Sb.put(&sb_header, "\r\n");
-            Sb.put(&sb_header, accept_ranges);
-            Sb.put(&sb_header, range_line);
-            Sb.put(&sb_header, enc_line);
-            Sb.put(&sb_header, etag_line);
-            Sb.put(&sb_header, lastmod_line);
-            Sb.put(&sb_header, protocore_resp_cache_control());
-            Sb.put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-            Sb.put(&sb_header, cl);
-            Sb.put(&sb_header, "\r\n");
-            int hlen = (int)Sb.finish(&sb_header);
-            if (hlen == 0)
-            {
-                header[0] = '\0';
-            }
+    char header[RESP_HDR_BUF_SIZE];
+    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
+    Sb.put(&sb_header, "HTTP/1.1 ");
+    Sb.i64(&sb_header, (int64_t)(status));
+    Sb.put(&sb_header, " ");
+    Http.code = status;
+    Http.status_text(protocore_http_span());
+    Sb.put(&sb_header, Http.text);
+    Sb.put(&sb_header, "\r\nContent-Type: ");
+    Sb.put(&sb_header, content_type);
+    Sb.put(&sb_header, "\r\nContent-Length: ");
+    Sb.u32(&sb_header, (uint32_t)((unsigned)body_len));
+    Sb.put(&sb_header, "\r\n");
+    Sb.put(&sb_header, accept_ranges);
+    Sb.put(&sb_header, range_line);
+    Sb.put(&sb_header, enc_line);
+    Sb.put(&sb_header, etag_line);
+    Sb.put(&sb_header, lastmod_line);
+    Sb.put(&sb_header, protocore_resp_cache_control());
+    Sb.put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+    Sb.put(&sb_header, cl);
+    Sb.put(&sb_header, "\r\n");
+    int hlen = (int)Sb.finish(&sb_header);
+    if (hlen == 0)
+    {
+        header[0] = '\0';
+    }
 
-            ConnPool.slot = slot_id;
-            ConnPool.io.data = header;
-            ConnPool.io.len = (proto_u16)hlen;
-            ConnPool.send(protocore_conn_pool_span());
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = header;
+    ConnPool.io.len = (proto_u16)hlen;
+    ConnPool.send(protocore_conn_pool_span());
 
-            // HEAD or empty body: headers only, finish now.
-            if (head || body_len == 0)
-            {
-                Fs.io.handle = fh;
-                Fs.close(protocore_filesystem_span());
-                protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
-                return;
-            }
+    // HEAD or empty body: headers only, finish now.
+    if (head || body_len == 0)
+    {
+        Fs.io.handle = fh;
+        Fs.close(protocore_filesystem_span());
+        protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
+        return;
+    }
 
-            // Hand the body to the cross-loop pump: it pages out at most one send-buffer
-            // window now and resumes on later loops as the window drains, so a file larger
-            // than TCP_SND_BUF is never truncated. The pump owns the file and calls
-            // protocore_resp_end() at completion - do not close f or end the response here.
-            FileSend *s = &file_send[slot_id];
-            s->fh = fh;
-            s->off = body_off;
-            s->remaining = body_len;
-            s->status = status;
-            s->total = (int)body_len;
-            s->keep = keep;
-            s->active = PROTO_TRUE;
-            file_send_pump(slot_id);
+    // Hand the body to the cross-loop pump: it pages out at most one send-buffer
+    // window now and resumes on later loops as the window drains, so a file larger
+    // than TCP_SND_BUF is never truncated. The pump owns the file and calls
+    // protocore_resp_end() at completion - do not close f or end the response here.
+    FileSend *s = &file_send[slot_id];
+    s->fh = fh;
+    s->off = body_off;
+    s->remaining = body_len;
+    s->status = status;
+    s->total = (int)body_len;
+    s->keep = keep;
+    s->active = PROTO_TRUE;
+    FileServing.file_send_pump_args.slot_id = slot_id;
+    file_serving_file_send_pump(work);
 }
 
 // Page out a pending file response across worker loops: send up to ConnPool.sndbuf()
 // bytes now and return; the next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
-void file_send_pump(uint8_t slot_id)
+static void file_serving_file_send_pump(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t slot_id = FileServing.file_send_pump_args.slot_id;
+
     FileSend *s = &file_send[slot_id];
     if (!s->active)
     {
@@ -593,16 +661,33 @@ void file_send_pump(uint8_t slot_id)
     protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
-void serve_file(uint8_t slot_id, const protocore_mnt_backend *file_sys, const char *fs_path, const char *content_type)
+static void file_serving_serve_file(uint8_t *restrict work)
 {
+    uint8_t slot_id = FileServing.serve_file_args.slot_id;
+    const protocore_mnt_backend *file_sys = FileServing.serve_file_args.file_sys;
+    const char *fs_path = FileServing.serve_file_args.fs_path;
+    const char *content_type = FileServing.serve_file_args.content_type;
+
     Http.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    serve_file_internal(slot_id, Http.ok, file_sys, fs_path, content_type, NULL);
+    FileServing.serve_file_internal_args.slot_id = slot_id;
+    FileServing.serve_file_internal_args.head = Http.ok;
+    FileServing.serve_file_internal_args.file_sys = file_sys;
+    FileServing.serve_file_internal_args.fs_path = fs_path;
+    FileServing.serve_file_internal_args.content_type = content_type;
+    FileServing.serve_file_internal_args.content_encoding = NULL;
+    file_serving_serve_file_internal(work);
 }
 
-void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys, const char *fs_root)
+static void file_serving_serve_static(uint8_t *restrict work)
 {
-    HttpRoute *r = HttpRoutes.add();
+    (void)work;
+    const char *url_prefix = FileServing.serve_static_args.url_prefix;
+    const protocore_mnt_backend *file_sys = FileServing.serve_static_args.file_sys;
+    const char *fs_root = FileServing.serve_static_args.fs_root;
+
+    HttpRoutes.add(http_routes_work);
+    HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
         return;
@@ -636,8 +721,12 @@ void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys,
     r->mnt_id = Mnt.u8;
 }
 
-void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
+static void file_serving_serve_static_request(uint8_t *restrict work)
 {
+    uint8_t slot_id = FileServing.serve_static_request_args.slot_id;
+    HttpReq *req = FileServing.serve_static_request_args.req;
+    const HttpRoute *r = FileServing.serve_static_request_args.r;
+
     // No null-check on the backend: storage is reached by layer, through the accessor, so a null
     // names a preference and never the path. A null one is what serve_static() documents as legal
     // and means "whatever is mounted"; 404-ing on it refused every request a caller made without
@@ -715,7 +804,7 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         // always under gz's 260. Both are kept because the two buffer sizes are independent
         // constants. The exclusion is per-line, so it also drops the exists() halves - those ARE
         // exercised both ways (see the gzip tests).
-        Fs.path.root = file_root();
+        Fs.path.root = file_root(work);
         Fs.path.dir = gz;
         Fs.path.name = "";
         Fs.exists(protocore_filesystem_span());
@@ -723,13 +812,37 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
         {
             Mnt.args.id = r->mnt_id;
             Mnt.point_of(mnt_work);
-            serve_file_internal(slot_id, head, Mnt.backend, gz, ctype, "gzip");
+            FileServing.serve_file_internal_args.slot_id = slot_id;
+            FileServing.serve_file_internal_args.head = head;
+            FileServing.serve_file_internal_args.file_sys = Mnt.backend;
+            FileServing.serve_file_internal_args.fs_path = gz;
+            FileServing.serve_file_internal_args.content_type = ctype;
+            FileServing.serve_file_internal_args.content_encoding = "gzip";
+            file_serving_serve_file_internal(work);
             return;
         }
     }
 
     Mnt.args.id = r->mnt_id;
     Mnt.point_of(mnt_work);
-    serve_file_internal(slot_id, head, Mnt.backend, fs_path, ctype, NULL);
+    FileServing.serve_file_internal_args.slot_id = slot_id;
+    FileServing.serve_file_internal_args.head = head;
+    FileServing.serve_file_internal_args.file_sys = Mnt.backend;
+    FileServing.serve_file_internal_args.fs_path = fs_path;
+    FileServing.serve_file_internal_args.content_type = ctype;
+    FileServing.serve_file_internal_args.content_encoding = NULL;
+    file_serving_serve_file_internal(work);
 }
+FileServingNs FileServing = {
+    .http_rfc1123 = file_serving_http_rfc1123,
+    .serve_static_request = file_serving_serve_static_request,
+    .serve_file_internal = file_serving_serve_file_internal,
+    .file_send_pump = file_serving_file_send_pump,
+    .holds_slot = file_serving_holds_slot,
+    .serve_file = file_serving_serve_file,
+    .serve_static = file_serving_serve_static,
+};
+
+PROTOCORE_END_DECLS
+
 #endif // PROTOCORE_ENABLE_FILE_SERVING

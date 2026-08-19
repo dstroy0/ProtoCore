@@ -143,10 +143,6 @@ uint8_t *protocore_udp_listener_span(void)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the bound slot for ns->port, or NULL. */
 static void find_bind(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint32_t m = PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
     while (m != 0u)
     {
@@ -164,10 +160,6 @@ static void find_bind(uint8_t *restrict work)
 /** @brief Point UDP_LISTENER_CTX(work)->slot at the first free slot, or NULL when the pool is full. */
 static void free_bind(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint32_t free_slots =
         ~PROTO_ATOMIC_LOAD(&UDP_LISTENER_CTX(work)->bound) & protocore_slot_all(PROTOCORE_MAX_UDP_LISTENERS);
     int32_t i = protocore_slot_next(free_slots);
@@ -177,10 +169,6 @@ static void free_bind(uint8_t *restrict work)
 /** @brief Reset UDP_LISTENER_CTX(work)->slot's ring and handler state, leaving it free. */
 static void bind_clear(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     protocore_ip empty = {PROTOCORE_IP_NONE, {0}};
     UDP_LISTENER_CTX(work)->slot->port = 0;
     UDP_LISTENER_CTX(work)->slot->handler = NULL;
@@ -288,11 +276,6 @@ static void udp_trampoline(void *arg, protocore_udp_pcb *pcb, protocore_pbuf *p,
     // The stack fixes this signature, so there is no borrow to take and the module's own span is
     // what the producer's header stage lives in.
     uint8_t *work = protocore_udp_listener_span();
-    if (work == NULL)
-    {
-        protocore_net_pbuf_free(p); // the pool was short: drop, which is what UDP already means
-        return;
-    }
     uint8_t *whdr = UDP_LISTENER_CTX(work)->rx_whdr;
     protocore_span w = span.from(whdr, PROTOCORE_UDP_DGRAM_HDR);
     protocore_udp_dgram_encode(&w, &d);
@@ -421,10 +404,6 @@ static proto_bool marshal_op(uint8_t *restrict work, protocore_udp_op op, uint16
 // Drop the stack's control block for UDP_LISTENER_CTX(work)->slot, leaving its group first when it joined one.
 static void unbind_port(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (UDP_LISTENER_CTX(work)->slot->mcast)
     {
         (void)marshal_op(work, UDP_OP_LEAVE_MCAST, 0, NULL);
@@ -481,10 +460,6 @@ static proto_bool send_now(uint8_t *restrict work, const protocore_ip *a, uint16
 
 static void listen_on(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // A port already bound rebinds its own slot: a second slot on one port is one find_bind() can
     // never reach, and it spends a slot the pool has two of.
     find_bind(work);
@@ -518,10 +493,6 @@ static void listen_on(uint8_t *restrict work)
 
 static void listen_group(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
     UdpListener.ok = PROTO_FALSE;
     Ip.args.text = UdpListener.bind.group_ip;
@@ -555,10 +526,6 @@ static void listen_group(uint8_t *restrict work)
 
 static void leave_group(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL || !UDP_LISTENER_CTX(work)->slot->mcast)
     {
@@ -572,10 +539,6 @@ static void leave_group(uint8_t *restrict work)
 
 static void poll_all(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (UDP_LISTENER_CTX(work)->polling)
     {
         return; // a handler called back into poll(); the stage is already in use
@@ -604,10 +567,6 @@ static void poll_all(uint8_t *restrict work)
 
 static void reply_to(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (UdpListener.peer_args.peer == NULL)
     {
         UdpListener.ok = PROTO_FALSE;
@@ -642,10 +601,6 @@ static void peer_addr_of(uint8_t *restrict work)
 
 static void send_from(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL || UdpListener.send_args.dst == NULL ||
         UdpListener.send_args.dst->family == PROTOCORE_IP_NONE)
@@ -659,10 +614,6 @@ static void send_from(uint8_t *restrict work)
 // Close ns->port: leave its group when it joined one, drop the control block, free the slot.
 static void close_port(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL)
     {
@@ -677,10 +628,6 @@ static void close_port(uint8_t *restrict work)
 // The group ns->port joined, formatted, or NULL when the port is unbound or joined none.
 static void group_on(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     UdpListener.text = NULL;
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL || !UDP_LISTENER_CTX(work)->slot->mcast)

@@ -113,9 +113,9 @@ They say "GENERATED ... Do not edit" and mean it - change the generator.
 
     cmake -S test -B build/native && cmake --build build/native -j && ctest --test-dir build/native
 
-`run` below is the direct compile, unchanged and still the fastest way to check one env: it reads
-test_matrix.json and invokes gcc itself, so it does not go through the CMake and does not prove it.
-Adding an env means editing test_matrix.json AND running `tools/harness.py build cmake` after it.
+`run` regenerates that CMake first, so adding an env is `env add` and then `run` - nothing else.
+`run --direct` is the old compile-it-here path: it reads test_matrix.json and invokes gcc itself,
+so it never goes through the CMake and never proves it builds.
 """
 
 import argparse

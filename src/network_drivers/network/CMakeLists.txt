@@ -8,7 +8,7 @@ add_subdirectory(dns)
 add_subdirectory(forward)
 
 
-if(PROTOCORE_ENABLE_FORWARD)
+if(PROTOCORE_ENABLE_DNS)
   protocore_module(pc_network_drivers_network
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/network.c"
     PUBLIC

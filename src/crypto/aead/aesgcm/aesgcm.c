@@ -292,10 +292,6 @@ static void aesgcm_key_init(uint8_t *restrict work)
 static void aesgcm_key_wipe(uint8_t *restrict work)
 {
     AesGcm.ok = PROTO_FALSE;
-    if (!work)
-    {
-        return;
-    }
     aesgcm_key_release(work);
     AesGcm.ok = PROTO_TRUE;
 }

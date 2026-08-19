@@ -10,6 +10,7 @@ if(PROTOCORE_ENABLE_SSH_SFTP)
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ssh_sftp.c"
     PRIVATE
       pc_mmgr_endian
+      pc_mmgr_plaintext
       pc_mmgr_protomem
       pc_mmgr_protostr
       pc_network_drivers_application_sftp_sftp

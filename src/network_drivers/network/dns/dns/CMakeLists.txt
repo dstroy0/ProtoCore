@@ -5,7 +5,7 @@
 # Regenerate with:  python tools/harness.py build modules
 
 
-if(PROTOCORE_ENABLE_DNS_SERVER)
+if(PROTOCORE_ENABLE_DNS)
   protocore_module(pc_network_drivers_network_dns_dns
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/dns.c"
     PUBLIC

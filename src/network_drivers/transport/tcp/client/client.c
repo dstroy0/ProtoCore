@@ -284,10 +284,6 @@ static uint32_t cc_now(void)
 
 static void cc_pump(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     ClientConn *c = TCP_CLIENT_CTX(work)->conn;
     if (!c->in_use || c->connected || c->closed)
     {
@@ -333,10 +329,6 @@ static void cc_pump(uint8_t *restrict work)
 
 static void protocore_client_open(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TcpClient.dial.host == NULL)
     {
         TcpClient.i32 = -2;
@@ -374,10 +366,6 @@ static void protocore_client_open(uint8_t *restrict work)
 
 static void protocore_client_connected(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS || !TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use)
     {
         TcpClient.ok = PROTO_FALSE;
@@ -390,10 +378,6 @@ static void protocore_client_connected(uint8_t *restrict work)
 
 static void protocore_client_is_closed(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS)
     {
         TcpClient.ok = PROTO_TRUE;
@@ -406,10 +390,6 @@ static void protocore_client_is_closed(uint8_t *restrict work)
 
 static void protocore_client_send(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS || !TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use)
     {
         TcpClient.ok = PROTO_FALSE;
@@ -426,10 +406,6 @@ static void protocore_client_send(uint8_t *restrict work)
 
 static void protocore_client_available(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS)
     {
         TcpClient.n = 0;
@@ -446,10 +422,6 @@ static void protocore_client_available(uint8_t *restrict work)
 
 static void protocore_client_read(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS)
     {
         TcpClient.n = 0;
@@ -473,10 +445,6 @@ static void protocore_client_read(uint8_t *restrict work)
 
 static void protocore_client_close(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS || !TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use)
     {
         return;

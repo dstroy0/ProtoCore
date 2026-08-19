@@ -597,10 +597,6 @@ static void net_chan_close(uint8_t *restrict work)
 
 static void net_chan_close_all(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t ssh_slot = SshNetwork.ssh_slot;
     if (ssh_slot >= MAX_SSH_CONNS)
     {

@@ -9,6 +9,8 @@
 #include "services/iot/coap/coaps_server/coaps_server.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
 
+static uint8_t dtls_server_work[16]; // the borrow an entry takes; DtlsServer never reads it
+
 static uint8_t coaps_work[16]; // the borrow an entry takes; Coaps never reads it
 
 static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
@@ -41,9 +43,9 @@ uint8_t *protocore_coaps_server_span(void)
 
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.set / mem.cmp: the spans a slot and the ring move
 #include "mmgr/protostr/protostr.h" // str.copy / str.eq: the peer address text
-#include "mmgr/ring.h"     // the atomics the single-producer ingest ring's cursors are
+#include "mmgr/ring.h"              // the atomics the single-producer ingest ring's cursors are
 #include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
-#include "server/clock/clock.h"      // Clock.millis: the reclaim clock
+#include "server/clock/clock.h"            // Clock.millis: the reclaim clock
 #include "services/iot/coap/coaps/coaps.h" // Coaps.process: the handshake and the CoAP exchange
 
 #if PROTOCORE_HAS_NET_STACK
@@ -255,7 +257,10 @@ static CoapsSlot *slot_by_cid(uint8_t *restrict work, const uint8_t *cid, size_t
         {
             continue;
         }
-        size_t sl = DtlsServer.local_cid(&s->conn, sc);
+        DtlsServer.local_cid_args.c = &s->conn;
+        DtlsServer.local_cid_args.out = sc;
+        DtlsServer.local_cid(dtls_server_work);
+        size_t sl = DtlsServer.n;
         if (sl && sl <= avail && mem.cmp(cid, sc, sl) == 0)
         {
             return s;
@@ -298,7 +303,11 @@ static CoapsSlot *open_conn(uint8_t *restrict work, const char *ip, uint16_t por
     s->cfg.cookie_key = COAPS_SERVER_CTX(work)->cookie_key;
     uint8_t paddr[PROTOCORE_COAPS_PEER_SER];
     proto_bool bound = serialize_peer(ip, port, paddr);
-    DtlsServer.init(&s->conn, &s->cfg, bound ? paddr : NULL, bound ? sizeof(paddr) : 0);
+    DtlsServer.init_args.c = &s->conn;
+    DtlsServer.init_args.cfg = &s->cfg;
+    DtlsServer.init_args.peer_addr = bound ? paddr : NULL;
+    DtlsServer.init_args.peer_addr_len = bound ? sizeof(paddr) : 0;
+    DtlsServer.init(dtls_server_work);
     (void)str.copy(s->peer_ip, ip, sizeof(s->peer_ip));
     s->peer_port = port;
     return s;
@@ -387,9 +396,15 @@ static void service_slot(uint8_t *restrict work, CoapsSlot *s, uint32_t now, uin
     {
         return;
     }
-    if (DtlsServer.timeout_ms(&s->conn) == 0) // 0 is due now, -1 is no timer, above 0 is still pending
+    DtlsServer.timeout_ms_args.c = &s->conn;
+    DtlsServer.timeout_ms(dtls_server_work);
+    if (DtlsServer.n == 0) // 0 is due now, -1 is no timer, above 0 is still pending
     {
-        int n = DtlsServer.on_timeout(&s->conn, out, out_cap);
+        DtlsServer.on_timeout_args.c = &s->conn;
+        DtlsServer.on_timeout_args.out = out;
+        DtlsServer.on_timeout_args.out_cap = out_cap;
+        DtlsServer.on_timeout(dtls_server_work);
+        int n = DtlsServer.n;
         if (n > 0)
         {
             server_send(work, s->peer_ip, s->peer_port, out, (size_t)n);
@@ -432,10 +447,6 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
 // Install ns->identity, bind ns->bind.port, and route its datagrams into the pool.
 static void coaps_server_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     CoapsServer.ok = PROTO_FALSE;
     if (!CoapsServer.identity.rng || !CoapsServer.identity.cert_der || CoapsServer.identity.cert_len == 0)
     {
@@ -470,10 +481,6 @@ static void coaps_server_begin(uint8_t *restrict work)
 // Drain the queued datagrams, then service every slot.
 static void coaps_server_poll(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     CoapsServer.ok = PROTO_FALSE;
     if (!COAPS_SERVER_CTX(work)->running)
     {
@@ -498,10 +505,6 @@ static void coaps_server_poll(uint8_t *restrict work)
 // The pool slots in use.
 static void coaps_server_active_conns(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t n = 0;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
@@ -517,10 +520,6 @@ static void coaps_server_active_conns(uint8_t *restrict work)
 // Stop polling, release every slot, and empty the ingest ring. The port stays bound.
 static void coaps_server_stop(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     COAPS_SERVER_CTX(work)->running = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
@@ -535,10 +534,6 @@ static void coaps_server_stop(uint8_t *restrict work)
 // Install ns->sink as where every outbound datagram goes.
 static void coaps_server_set_out_sink(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     COAPS_SERVER_CTX(work)->out_sink = CoapsServer.sink.fn;
     COAPS_SERVER_CTX(work)->out_ctx = CoapsServer.sink.ctx;
     CoapsServer.ok = PROTO_TRUE;

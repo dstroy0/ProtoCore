@@ -35,10 +35,16 @@ REPO_ROOT = findroot.root()
 
 INPUT_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "input"))
 THEMES_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "themes"))
-OUT_DIR = os.path.join(REPO_ROOT, "src", "network_drivers", "application")
+# A module is a directory: web_assets.h and .c live in src/network_drivers/application/web_assets/,
+# where `build split` put them. Writing to the layer directory left two stray files nothing built.
+OUT_DIR = os.path.join(REPO_ROOT, "src", "network_drivers", "application", "web_assets")
 
 # Extension -> output type (header/source base name).
 EXT_TYPE = {".html": "html", ".css": "css", ".json": "json", ".xml": "xml", ".svg": "svg", ".js": "js", ".txt": "text"}
+
+# The module gate: web_assets.h and .c are both wrapped in it, so a build that does not serve the
+# built-in pages does not carry them in flash.
+GATE = "PROTOCORE_ENABLE_WEB_ASSETS"
 
 BANNER = (
     copyright_line() + "\n"
@@ -363,6 +369,10 @@ def render_header(assets):
         "#ifndef " + guard,
         "#define " + guard,
         "",
+        '#include "protocore_config.h" // the entry point: the enable gate below, and the widths',
+        "",
+        "#if " + GATE,
+        "",
     ]
     last_type = None
     for a in assets:
@@ -373,12 +383,23 @@ def render_header(assets):
             lines.append("/** @brief %s */" % a.brief)
         lines.append("extern const char %s[];" % a.symbol)
         lines.append("")
+    lines.append("#endif // " + GATE)
+    lines.append("")
     lines.append("#endif // " + guard)
     return "\n".join(lines).rstrip("\n") + "\n"
 
 
 def render_source(assets):
-    lines = [BANNER, "", '#include "network_drivers/application/web_assets/web_assets.h"', ""]
+    lines = [
+        BANNER,
+        "",
+        '#include "protocore_config.h" // the entry point: the enable gate below, and the widths',
+        "",
+        "#if " + GATE,
+        "",
+        '#include "network_drivers/application/web_assets/web_assets.h"',
+        "",
+    ]
     last_type = None
     for a in assets:
         if a.type != last_type:
@@ -393,6 +414,7 @@ def render_source(assets):
             lines.append(decl.rstrip())
             lines.append('    "' + '"\n    "'.join(segs) + '";')
         lines.append("")
+    lines.append("#endif // " + GATE)
     return "\n".join(lines).rstrip("\n") + "\n"
 
 

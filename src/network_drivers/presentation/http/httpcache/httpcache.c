@@ -378,10 +378,6 @@ static proto_bool cache_parse_one_directive(const char *s, size_t len, size_t *i
 
 static void httpcache_control_parse(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *s = Httpcache.control_parse_args.s;
     size_t len = Httpcache.control_parse_args.len;
     protocore_cache_control *cc = Httpcache.control_parse_args.cc;
@@ -409,10 +405,6 @@ static void httpcache_control_parse(uint8_t *restrict work)
 
 static void httpcache_immutable_asset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     protocore_cache_control *cc = Httpcache.immutable_asset_args.cc;
     uint32_t max_age = Httpcache.immutable_asset_args.max_age;
 
@@ -425,10 +417,6 @@ static void httpcache_immutable_asset(uint8_t *restrict work)
 
 static void httpcache_revalidatable(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     protocore_cache_control *cc = Httpcache.revalidatable_args.cc;
     uint32_t max_age = Httpcache.revalidatable_args.max_age;
     int32_t stale_while_revalidate = Httpcache.revalidatable_args.stale_while_revalidate;
@@ -445,10 +433,6 @@ static void httpcache_revalidatable(uint8_t *restrict work)
 
 static void httpcache_no_store(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     protocore_cache_control *cc = Httpcache.no_store_args.cc;
 
     Httpcache.control_init_args.cc = cc;
@@ -458,10 +442,6 @@ static void httpcache_no_store(uint8_t *restrict work)
 
 static void httpcache_shared(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     protocore_cache_control *cc = Httpcache.shared_args.cc;
     uint32_t max_age = Httpcache.shared_args.max_age;
     uint32_t s_maxage = Httpcache.shared_args.s_maxage;

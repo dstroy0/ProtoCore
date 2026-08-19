@@ -216,10 +216,6 @@ static void edge_on_evict(void *ctx, const EdgeEntry *victim)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_edge_cache_proxy_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     (void)ctx;
     EdgeCacheSd.put_args.db = EDGE_CACHE_PROXY_CTX(work)->l2;
@@ -447,10 +443,6 @@ static size_t edge_chunk_source(uint8_t *buf, size_t cap, void *ctx)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_edge_cache_proxy_span();
-    if (work == NULL)
-    {
-        return 0; // no borrow, so no bytes: the chunked body ends here
-    }
 
     EdgeServeCursor *c = (EdgeServeCursor *)ctx;
     if (!c->active || !c->entry)
@@ -1144,10 +1136,6 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_edge_cache_proxy_span();
-    if (work == NULL)
-    {
-        return MW_NEXT; // no borrow, so no caching: the request goes on to the route it asked for
-    }
 
     // `registered` is the whole test now: it was always the real question, and the stored server
     // pointer it was AND-ed with was set by the same call that set it.
@@ -1249,10 +1237,6 @@ static proto_bool edge_cache_poll(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_edge_cache_proxy_span();
-    if (work == NULL)
-    {
-        return PROTO_FALSE; // no borrow, so no fetch is in flight on this slot
-    }
 
     if (slot >= MAX_CONNS || !EDGE_CACHE_PROXY_CTX(work)->pending[slot].active)
     {
@@ -1389,10 +1373,6 @@ static const char *mesh_hdr_lookup(void *ctx, const char *name)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_edge_cache_proxy_span();
-    if (work == NULL)
-    {
-        return NULL; // no borrow, so no header is found
-    }
 
     MeshLookupCtx *lc = (MeshLookupCtx *)ctx;
     size_t nl = str.len(name, MAX_KEY_LEN);
@@ -1595,10 +1575,6 @@ static void mesh_on_accept(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_edge_cache_proxy_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     for (int i = 0; i < PROTOCORE_MESH_MAX_CONNS; i++)
     {
@@ -1623,10 +1599,6 @@ static void mesh_on_data(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_edge_cache_proxy_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     MeshConn *mc = mesh_conn_by_slot(work, slot);
     if (mc)
@@ -1640,10 +1612,6 @@ static void mesh_on_poll(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_edge_cache_proxy_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     ConnPool.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
@@ -1663,10 +1631,6 @@ static void mesh_on_close(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_edge_cache_proxy_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     MeshConn *mc = mesh_conn_by_slot(work, slot);
     if (mc)
@@ -1709,7 +1673,6 @@ uint8_t *protocore_edge_cache_proxy_span(void)
 
 static void edge_cache_proxy_enable(uint8_t *restrict work)
 {
-
     EdgeCache.store_init_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
     EdgeCache.store_init(edge_cache_work);
     for (int i = 0; i < PROTOCORE_EDGE_FETCH_SLOTS; i++)
@@ -1885,7 +1848,6 @@ static void edge_cache_proxy_add_peer(uint8_t *restrict work)
 
 static void edge_cache_proxy_mesh_serve(uint8_t *restrict work)
 {
-
     if (!EDGE_CACHE_PROXY_CTX(work)->mesh_registered)
     {
         Session.proto->proto = PROTO_MESH;
@@ -1898,7 +1860,6 @@ static void edge_cache_proxy_mesh_serve(uint8_t *restrict work)
 
 static void edge_cache_proxy_reset(uint8_t *restrict work)
 {
-
     EdgeCache.store_init_args.s = &EDGE_CACHE_PROXY_CTX(work)->store;
     EdgeCache.store_init(edge_cache_work);
 #if PROTOCORE_ENABLE_DBM

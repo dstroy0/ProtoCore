@@ -68,37 +68,21 @@ uint8_t *protocore_diffserv_span(void)
 // Masked to six bits on write, so a caller cannot spill into the two currently-unused bits.
 static void set_default(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     DIFFSERV_CTX(work)->tcp_dscp = (uint8_t)(DiffServ.dscp & 0x3F);
 }
 
 static void default_dscp(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     DiffServ.u8 = DIFFSERV_CTX(work)->tcp_dscp;
 }
 
 static void set_udp(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     DIFFSERV_CTX(work)->udp_dscp = (uint8_t)(DiffServ.dscp & 0x3F);
 }
 
 static void udp_dscp(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     DiffServ.u8 = DIFFSERV_CTX(work)->udp_dscp;
 }
 

@@ -318,10 +318,6 @@ static void aes128gcm_key_init(uint8_t *restrict work)
 static void aes128gcm_key_wipe(uint8_t *restrict work)
 {
     Aes128Gcm.ok = PROTO_FALSE;
-    if (!work)
-    {
-        return;
-    }
     aes128gcm_key_release(work);
     Aes128Gcm.ok = PROTO_TRUE;
 }
@@ -371,10 +367,6 @@ static void aes128gcm_block_encrypt(uint8_t *restrict work)
 static void aes128gcm_block_wipe(uint8_t *restrict work)
 {
     Aes128Gcm.ok = PROTO_FALSE;
-    if (!work)
-    {
-        return;
-    }
     aes128gcm_blk_release(work);
     Aes128Gcm.ok = PROTO_TRUE;
 }

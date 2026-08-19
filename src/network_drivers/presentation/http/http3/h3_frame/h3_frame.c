@@ -175,10 +175,6 @@ static void h3_frame_parse_settings(uint8_t *restrict work)
 
 static void h3_frame_build_data(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t *out = H3Frame.build_data_args.out;
     size_t cap = H3Frame.build_data_args.cap;
     const uint8_t *data = H3Frame.build_data_args.data;
@@ -204,10 +200,6 @@ static void h3_frame_build_data(uint8_t *restrict work)
 
 static void h3_frame_build_headers(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t *out = H3Frame.build_headers_args.out;
     size_t cap = H3Frame.build_headers_args.cap;
     const uint8_t *block = H3Frame.build_headers_args.block;
@@ -233,10 +225,6 @@ static void h3_frame_build_headers(uint8_t *restrict work)
 
 static void h3_frame_build_settings(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t *out = H3Frame.build_settings_args.out;
     size_t cap = H3Frame.build_settings_args.cap;
     const uint64_t *ids = H3Frame.build_settings_args.ids;
@@ -294,10 +282,6 @@ static void h3_frame_build_settings(uint8_t *restrict work)
 
 static void h3_frame_build_goaway(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t *out = H3Frame.build_goaway_args.out;
     size_t cap = H3Frame.build_goaway_args.cap;
     uint64_t stream_id = H3Frame.build_goaway_args.stream_id;

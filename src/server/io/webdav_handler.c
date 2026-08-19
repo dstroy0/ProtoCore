@@ -34,6 +34,8 @@ static uint8_t webdav_work[16]; // the borrow an entry takes; Webdav never reads
 #include "server/io/webdav_handler.h"
 #include "shared/mime/mime.h"
 
+static uint8_t http_routes_work[16]; // the borrow an entry takes; HttpRoutes never reads it
+
 PROTOCORE_BEGIN_DECLS
 
 // The parser's streaming-body sink is a single global hook (http_parser_set_stream_hooks): the last
@@ -246,10 +248,6 @@ static void dav_put_abort_tramp(HttpReq *req)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_webdav_handler_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     // The PUT was torn down before the handler ran: close the half-written file so
     // the handle is not leaked (a leak eventually exhausts the filesystem's open slots).
@@ -276,9 +274,12 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
         return PROTO_FALSE;
     }
     uint8_t slot = (uint8_t)(req - http_pool);
-    for (uint8_t i = 0; i < HttpRoutes.count(); i++)
+    HttpRoutes.count(http_routes_work);
+    for (uint8_t i = 0; i < HttpRoutes.value; i++)
     {
-        HttpRoute *r = HttpRoutes.at(i);
+        HttpRoutes.at_args.i = i;
+        HttpRoutes.at(http_routes_work);
+        HttpRoute *r = HttpRoutes.ptr;
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
@@ -345,10 +346,6 @@ static void dav_stream_put_data(HttpReq *req, const uint8_t *data, size_t len)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_webdav_handler_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     uint8_t slot = (uint8_t)(req - http_pool);
     if (slot >= MAX_CONNS)
@@ -379,11 +376,8 @@ void dav(const char *url_prefix, const protocore_mnt_backend *file_sys, const ch
     // Public API with a signature protocore.h fixes, so the borrow comes from the accessor rather
     // than a parameter - the same way a callback reaches it.
     uint8_t *restrict work = protocore_webdav_handler_span();
-    if (work == NULL)
-    {
-        return;
-    }
-    HttpRoute *r = HttpRoutes.add();
+    HttpRoutes.add(http_routes_work);
+    HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {
         return;
@@ -499,9 +493,12 @@ static void webdav_handler_try_serve_dav(uint8_t *restrict work)
     uint8_t slot_id = Dav.try_serve_dav_args.slot_id;
     HttpReq *req = Dav.try_serve_dav_args.req;
 
-    for (uint8_t i = 0; i < HttpRoutes.count(); i++)
+    HttpRoutes.count(http_routes_work);
+    for (uint8_t i = 0; i < HttpRoutes.value; i++)
     {
-        HttpRoute *r = HttpRoutes.at(i);
+        HttpRoutes.at_args.i = i;
+        HttpRoutes.at(http_routes_work);
+        HttpRoute *r = HttpRoutes.ptr;
         // The !is_active half cannot fire: every entry below route_count was filled by
         // fill_route_base, which sets is_active, and nothing ever clears it again.
         if (!r->is_active || r->type != ROUTE_DAV)
@@ -592,7 +589,13 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         Mnt.point_of(mnt_work);
         Webdav.method_args.m = req->method;
         Webdav.method(webdav_work);
-        serve_file_internal(slot_id, Webdav.value == DAV_M_HEAD, Mnt.backend, fs_path, mime_type(fs_path), NULL);
+        FileServing.serve_file_internal_args.slot_id = slot_id;
+        FileServing.serve_file_internal_args.head = Webdav.value == DAV_M_HEAD;
+        FileServing.serve_file_internal_args.file_sys = Mnt.backend;
+        FileServing.serve_file_internal_args.fs_path = fs_path;
+        FileServing.serve_file_internal_args.content_type = mime_type(fs_path);
+        FileServing.serve_file_internal_args.content_encoding = NULL;
+        FileServing.serve_file_internal(protocore_file_serving_span());
         return;
     }
 
@@ -1056,7 +1059,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         Webdav.ms_begin(webdav_work);
         len = Webdav.n;
         char mt[40];
-        http_rfc1123(mtime, mt, sizeof(mt));
+        FileServing.http_rfc1123_args.epoch = mtime;
+        FileServing.http_rfc1123_args.out = mt;
+        FileServing.http_rfc1123_args.cap = sizeof(mt);
+        FileServing.http_rfc1123(protocore_file_serving_span());
         Webdav.ms_entry_args.buf = WEBDAV_HANDLER_CTX(work)->buf;
         Webdav.ms_entry_args.cap = cap;
         Webdav.ms_entry_args.len = len;
@@ -1109,7 +1115,10 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
                     chref[0] = '\0';
                 }
                 char cmtbuf[40];
-                http_rfc1123((time_t)cst.mtime, cmtbuf, sizeof(cmtbuf));
+                FileServing.http_rfc1123_args.epoch = (time_t)cst.mtime;
+                FileServing.http_rfc1123_args.out = cmtbuf;
+                FileServing.http_rfc1123_args.cap = sizeof(cmtbuf);
+                FileServing.http_rfc1123(protocore_file_serving_span());
                 size_t before = len;
                 Webdav.ms_entry_args.buf = WEBDAV_HANDLER_CTX(work)->buf;
                 Webdav.ms_entry_args.cap = cap;

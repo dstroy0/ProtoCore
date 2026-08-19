@@ -141,19 +141,11 @@ static void guardrails_sample(uint8_t *restrict work)
 
 static void guardrails_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     GUARDRAILS_CTX(work)->cb = Guardrails.cb;
 }
 
 static void guardrails_check(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     protocore_health h;
     Guardrails.health = &h;
     guardrails_sample(work);

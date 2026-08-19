@@ -114,7 +114,12 @@ def convert_header(h, spec):
     # the handle member and its forward declaration go with it
     h = re.sub(r"[ \t]*struct\s+%s\s*\*\s*internal\s*;[^\n]*\n" % internal, "", h)
     h = re.sub(r"[^\n]*@var\s+%s::internal[^\n]*\n" % ns, "", h)
-    h = re.sub(r"(/\*\*[^\n]*\n(?:[^\n]*\n)*?)?[ \t]*struct\s+%s\s*;[^\n]*\n" % internal, "", h, count=1)
+    # The doc block that goes with it is the one DIRECTLY above: `(?!\*/)` stops the optional
+    # prefix crossing a `*/`, so it cannot start at the file's own @file block and swallow the
+    # include guard, the gate and every args struct between there and this declaration.
+    h = re.sub(
+        r"(?:/\*\*(?:(?!\*/)[\s\S])*?\*/[ \t]*\n)?[ \t]*struct\s+%s\s*;[^\n]*\n" % internal, "", h, count=1
+    )
 
     # the borrow comes from beside the namespace, as it does for rng
     span = (
@@ -135,6 +140,20 @@ def convert_source(s, spec):
     ifields, ia, ib = _struct_fields(s, internal)
     if sfields is None or ifields is None:
         raise SystemExit("could not read struct %s / struct %s" % (storage, internal))
+
+    # This pass folds a file-static instance into the borrow. A module that already carves its
+    # storage FROM a pool has no instance to fold: auth.c's bind_auth() takes
+    # protocore_secure_persist_span(sizeof(struct AuthStorage)) and the handle only caches the
+    # pointer. Collapsing that emitted a context with the fields merged in AND a bind_auth still
+    # returning `struct AuthStorage *` from a `->store` member that no longer existed - it did not
+    # compile, and the diff read as if it had worked.
+    if not re.search(r"^static\s+(?:PROTOCORE_\w+\s+)?struct\s+%s\s+\w+\s*[;=]" % re.escape(storage), s, re.M):
+        raise SystemExit(
+            "REFUSED: struct %s has no file-static instance to fold into the borrow.\n"
+            "  This module already takes its storage from a pool, so there is nothing here to move.\n"
+            "  What is left is the handle: entries take `uint8_t *restrict work` and read the state\n"
+            "  through it directly, with no cached pointer. Convert that by hand." % storage
+        )
 
     # The handle carried two indirections and, sometimes, real state. The indirections go; the
     # state joins the record it should always have been in.
@@ -206,9 +225,19 @@ def convert_source(s, spec):
     return s
 
 
-def convert_calls(spec, roots):
-    """`X.entry(X.internal)` -> `X.entry(protocore_x_span())`, tree-wide."""
+def convert_calls(spec, roots, emit=None):
+    """`X.entry(X.internal)` -> `X.entry(protocore_x_span())`, tree-wide.
+
+    @p emit is the caller's write primitive. Writing with io.open here bypassed it, so `--dry`
+    printed the header and source diffs it would apply and then rewrote every CALL SITE for real:
+    a refused conversion left protocore.c and http.c calling an accessor no header declared.
+    """
     obj = spec["object"]
+    if emit is None:
+
+        def emit(p, text):
+            io.open(p, "w", encoding="utf-8", newline="").write(text)
+
     pat = re.compile(r"(?<![\w.>])%s\s*\.\s*internal(?![\w])" % re.escape(obj))
     repl = "protocore_%s_span()" % spec["module"]
     total, files = 0, []
@@ -232,7 +261,7 @@ def convert_calls(spec, roots):
                     cnt += 1
                 if cnt:
                     out.append(src[last:])
-                    io.open(p, "w", encoding="utf-8", newline="").write("".join(out))
+                    emit(p, "".join(out))
                     total += cnt
                     files.append((os.path.relpath(p, R), cnt))
     return total, files

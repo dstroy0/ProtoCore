@@ -134,10 +134,6 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_ntp_server_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     (void)ctx;
     uint32_t unix_secs = protocore_time_now();
@@ -171,10 +167,6 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
 
 static void ntp_server_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t stratum = NtpServer.begin_args.stratum;
     uint32_t refid = NtpServer.begin_args.refid;
 

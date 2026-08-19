@@ -337,10 +337,6 @@ static int32_t find_resource_index(const uint8_t *work, const char *path)
 // Empty the table and every cache.
 static void coap_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     COAP_CTX(work)->res_count = 0;
     mem.set(COAP_CTX(work)->res, 0, sizeof(COAP_CTX(work)->res));
 #if PROTOCORE_ENABLE_COAP_BLOCK
@@ -359,10 +355,6 @@ static void coap_reset(uint8_t *restrict work)
 // Take one more row of the table for ns->resource.
 static void coap_add_resource(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (COAP_CTX(work)->res_count >= PROTOCORE_COAP_MAX_RESOURCES || !Coap.resource.path || !Coap.resource.handler)
     {
         Coap.ok = PROTO_FALSE;
@@ -383,10 +375,6 @@ static void coap_add_resource(uint8_t *restrict work)
 // carries the Observe option when ns->observe.seq is at or above 0 (RFC 7641 sec 4.2).
 static void coap_process_observe(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *req = Coap.msg.req;
     const size_t req_len = Coap.msg.req_len;
     uint8_t *resp = Coap.msg.resp;
@@ -852,10 +840,6 @@ static void coap_process(uint8_t *restrict work)
 // The response already sent for ns->exchange, when its row is still fresh.
 static void coap_dedup_lookup(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Coap.ok = PROTO_FALSE;
     Coap.bytes = NULL;
     Coap.n = 0;
@@ -882,10 +866,6 @@ static void coap_dedup_lookup(uint8_t *restrict work)
 // Keep the response sent for ns->exchange so its repeat is answered without the handler.
 static void coap_dedup_store(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Coap.ok = PROTO_FALSE;
     if (!Coap.exchange.src_ip || !Coap.exchange.resp || Coap.exchange.resp_len == 0 ||
         Coap.exchange.resp_len > PROTOCORE_COAP_DEDUP_RESP_MAX)
@@ -1024,10 +1004,6 @@ static int32_t obs_register(uint8_t *restrict work, int32_t res_idx)
 // Remove the endpoint's entry carrying the request's Token (sec 4.1, a deregister GET).
 static void obs_drop_token(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
         CoapObserver *o = &COAP_CTX(work)->obs[i];
@@ -1041,10 +1017,6 @@ static void obs_drop_token(uint8_t *restrict work)
 // Remove every entry of an endpoint (sec 4.5: a Reset rejecting a notification ends the observation).
 static void obs_drop_endpoint(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {
         CoapObserver *o = &COAP_CTX(work)->obs[i];
@@ -1058,10 +1030,6 @@ static void obs_drop_endpoint(uint8_t *restrict work)
 // Send the current representation of ns->observe.path to every observer of it (RFC 7641 sec 4.2).
 static void coap_notify(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Coap.ok = PROTO_FALSE;
     int32_t ridx = find_resource_index(work, Coap.observe.path);
     if (ridx < 0)
@@ -1218,10 +1186,6 @@ static void coap_udp_handler(const uint8_t *data, size_t len, const struct proto
 // Bind ns->bind.port and route its datagrams into the server, emptying the list of observers first.
 static void coap_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     COAP_CTX(work)->port = Coap.bind.port;
     for (int32_t i = 0; i < PROTOCORE_COAP_MAX_OBSERVERS; i++)
     {

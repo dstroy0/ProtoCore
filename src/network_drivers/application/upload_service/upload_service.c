@@ -131,10 +131,6 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_upload_service_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     (void)req; // a single upload streams at a time
     if (UPLOAD_SERVICE_CTX(work)->active && !UPLOAD_SERVICE_CTX(work)->error)
@@ -158,10 +154,6 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_upload_service_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     if (!req->body_streaming)
     {
@@ -191,20 +183,11 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
 
 static void upload_service_last_size(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     UploadService.n = UPLOAD_SERVICE_CTX(work)->written;
 }
 
 static void upload_service_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *path = UploadService.begin_args.path;
     const char *dest_path = UploadService.begin_args.dest_path;
 

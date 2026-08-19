@@ -76,10 +76,6 @@ static void sen0192_motion_init(uint8_t *restrict work)
 
 static void sen0192_motion_update(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Sen0192Motion *m = Sen0192.motion_update_args.m;
     proto_bool level_high = Sen0192.motion_update_args.level_high;
     uint32_t now_ms = Sen0192.motion_update_args.now_ms;
@@ -176,11 +172,6 @@ static int dev_pin(uint8_t *restrict work)
 
 static void sen0192_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     SEN0192_CTX(work)->pin = PROTOCORE_SEN0192_PIN;
     SEN0192_CTX(work)->begun = PROTO_TRUE;
     protocore_platform_gpio_mode((uint8_t)(SEN0192_CTX(work)->pin), PROTOCORE_GPIO_IN);
@@ -193,11 +184,6 @@ static void sen0192_begin(uint8_t *restrict work)
 
 static void sen0192_poll(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     const int pin = dev_pin(work);
     if (pin < 0)
     {
@@ -213,11 +199,6 @@ static void sen0192_poll(uint8_t *restrict work)
 
 static void sen0192_present(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     Sen0192.motion_tick_args.m = &SEN0192_CTX(work)->motion;
     Sen0192.motion_tick_args.now_ms = Clock.ms;
     sen0192_motion_tick(work); // age presence out even between poll()s
@@ -227,11 +208,6 @@ static void sen0192_present(uint8_t *restrict work)
 
 static void sen0192_motion_count(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     Sen0192.motion_events_args.m = &SEN0192_CTX(work)->motion;
     sen0192_motion_events(work);
 }

@@ -232,10 +232,6 @@ static void adaptive_sink(const uint8_t *frame, uint16_t len, int8_t rssi, uint8
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_mdns_adaptive_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     (void)frame;
     (void)len;
@@ -246,10 +242,6 @@ static void adaptive_sink(const uint8_t *frame, uint16_t len, int8_t rssi, uint8
 
 static void mdns_adaptive_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const MdnsAdaptiveCfg *cfg = MdnsAdaptive.begin_args.cfg;
 
     if (!cfg || MDNS_ADAPTIVE_CTX(work)->running)
@@ -304,11 +296,6 @@ static void mdns_adaptive_begin(uint8_t *restrict work)
 
 static void mdns_adaptive_tick(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     if (!MDNS_ADAPTIVE_CTX(work)->running)
     {
         return;
@@ -358,11 +345,6 @@ static void mdns_adaptive_tick(uint8_t *restrict work)
 
 static void mdns_adaptive_end(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     if (!MDNS_ADAPTIVE_CTX(work)->running)
     {
         return;
@@ -373,31 +355,16 @@ static void mdns_adaptive_end(uint8_t *restrict work)
 
 static void mdns_adaptive_interval_ms(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     MdnsAdaptive.ms = MDNS_ADAPTIVE_CTX(work)->beacon.cur_ms;
 }
 
 static void mdns_adaptive_contention(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     MdnsAdaptive.value = MDNS_ADAPTIVE_CTX(work)->last_contention;
 }
 
 static void mdns_adaptive_announces(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     MdnsAdaptive.ms = MDNS_ADAPTIVE_CTX(work)->announces;
 }
 

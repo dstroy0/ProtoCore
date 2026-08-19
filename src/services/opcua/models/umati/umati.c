@@ -234,10 +234,6 @@ static proto_bool umati_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUa
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
     uint8_t *restrict work = protocore_umati_span();
-    if (work == NULL)
-    {
-        return PROTO_FALSE; // the pool was short, so there is no bound model to answer from
-    }
     const UmatiMachineTool *mt = UMATI_CTX(work)->mt;
     if (!mt || ns != UMATI_CTX(work)->ns || attribute != OPCUA_ATTR_VALUE)
     {
@@ -331,10 +327,6 @@ static int32_t umati_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint3
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
     uint8_t *restrict work = protocore_umati_span();
-    if (work == NULL)
-    {
-        return -1; // the pool was short, so there is no bound model to answer from
-    }
     const UmatiCtx *c = UMATI_CTX(work);
     const UmatiMachineTool *mt = c->mt;
     if (!mt)

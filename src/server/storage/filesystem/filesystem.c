@@ -159,21 +159,11 @@ static const char *resolve_into(uint8_t *restrict work, int slot, int root, cons
 
 static void fs_status(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     Fs.bits = FILESYSTEM_CTX(work)->status;
 }
 
 static void fs_clear(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     FILESYSTEM_CTX(work)->status = PROTOCORE_FS_OK;
 }
 
@@ -189,10 +179,6 @@ static void fs_present(uint8_t *restrict work)
 
 static void fs_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *name = Fs.mount;
 
     const char *want = (name == NULL || name[0] == '\0') ? "/" : name;
@@ -243,10 +229,6 @@ static void fs_begin(uint8_t *restrict work)
 
 static void fs_resolve(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -256,10 +238,6 @@ static void fs_resolve(uint8_t *restrict work)
 
 static void fs_open(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -278,10 +256,6 @@ static void fs_open(uint8_t *restrict work)
 
 static void fs_read(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int handle = Fs.io.handle;
     void *buf = Fs.io.buf;
     const size_t n = Fs.io.n;
@@ -292,10 +266,6 @@ static void fs_read(uint8_t *restrict work)
 
 static void fs_write(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int handle = Fs.io.handle;
     const void *buf = Fs.io.wbuf;
     const size_t n = Fs.io.n;
@@ -306,10 +276,6 @@ static void fs_write(uint8_t *restrict work)
 
 static void fs_close(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int handle = Fs.io.handle;
 
     const protocore_mnt_backend *b = store(work);
@@ -321,10 +287,6 @@ static void fs_close(uint8_t *restrict work)
 
 static void fs_seek(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int handle = Fs.io.handle;
     const uint64_t off = Fs.io.off;
 
@@ -334,10 +296,6 @@ static void fs_seek(uint8_t *restrict work)
 
 static void fs_size(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -354,10 +312,6 @@ static void fs_size(uint8_t *restrict work)
 
 static void fs_exists(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -374,10 +328,6 @@ static void fs_exists(uint8_t *restrict work)
 
 static void fs_stat(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -395,10 +345,6 @@ static void fs_stat(uint8_t *restrict work)
 
 static void fs_remove(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -525,10 +471,6 @@ static void fs_remove(uint8_t *restrict work)
 
 static void fs_rename(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *from_dir = Fs.path.dir;
     const char *from_name = Fs.path.name;
@@ -582,10 +524,6 @@ static proto_bool copy_one(uint8_t *restrict work, const protocore_mnt_backend *
 
 static void fs_copy(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *from_dir = Fs.path.dir;
     const char *from_name = Fs.path.name;
@@ -720,10 +658,6 @@ static void fs_copy(uint8_t *restrict work)
 
 static void fs_mkdir(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -740,10 +674,6 @@ static void fs_mkdir(uint8_t *restrict work)
 
 static void fs_rmdir(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -760,10 +690,6 @@ static void fs_rmdir(uint8_t *restrict work)
 
 static void fs_opendir(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -780,10 +706,6 @@ static void fs_opendir(uint8_t *restrict work)
 
 static void fs_readdir(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int handle = Fs.io.handle;
     protocore_mnt_stat *out = Fs.io.stat;
     char *name = Fs.io.name_out;
@@ -795,10 +717,6 @@ static void fs_readdir(uint8_t *restrict work)
 
 static void fs_read_file(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;
@@ -841,10 +759,6 @@ static void fs_read_file(uint8_t *restrict work)
 
 static void fs_write_file(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int root = Fs.path.root;
     const char *dir = Fs.path.dir;
     const char *name = Fs.path.name;

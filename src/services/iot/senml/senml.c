@@ -17,8 +17,10 @@
 #if PROTOCORE_ENABLE_SENML
 
 #include "mmgr/membuild/membuild.h" // Sb: the Number rendering, and the resolved-Name concatenation
-#include "mmgr/span/span.h"     // protocore_span: the region a binary build writes into
+#include "mmgr/span/span.h"         // protocore_span: the region a binary build writes into
 #include "network_drivers/presentation/codec/json/json.h"
+
+static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
 
 // RFC 8428 sec 6 Table 4: the integer map keys the binary representation uses for the labels. Base
 // fields take negative labels, the rest non-negative.
@@ -61,7 +63,9 @@ static void json_number(protocore_json_writer *w, double d)
     {
         tmp[0] = '\0';
     }
-    Json.put_raw(w, tmp);
+    Json.put_raw_args.w = w;
+    Json.put_raw_args.literal = tmp;
+    Json.put_raw(json_work);
 }
 
 // Encode a Number through the codec: an integer when integral, else a floating-point item.
@@ -122,57 +126,85 @@ static void senml_json_build(uint8_t *restrict work)
         return;
     }
     protocore_json_writer w = {0};
-    Json.init(&w, Senml.json.buf, Senml.json.cap);
-    Json.begin_array(&w);
+    Json.init_args.w = &w;
+    Json.init_args.buf = Senml.json.buf;
+    Json.init_args.cap = Senml.json.cap;
+    Json.init(json_work);
+    Json.begin_array_args.w = &w;
+    Json.begin_array(json_work);
     for (size_t i = 0; i < count; i++)
     {
         const SenmlRecord *r = &records[i];
-        Json.begin_object(&w);
+        Json.begin_object_args.w = &w;
+        Json.begin_object(json_work);
         if (r->base_name)
         {
-            Json.kv_str(&w, "bn", r->base_name);
+            Json.kv_str_args.w = &w;
+            Json.kv_str_args.k = "bn";
+            Json.kv_str_args.v = r->base_name;
+            Json.kv_str(json_work);
         }
         if (r->has_base_time)
         {
-            Json.key(&w, "bt");
+            Json.key_args.w = &w;
+            Json.key_args.k = "bt";
+            Json.key(json_work);
             json_number(&w, r->base_time);
         }
         if (r->name)
         {
-            Json.kv_str(&w, "n", r->name);
+            Json.kv_str_args.w = &w;
+            Json.kv_str_args.k = "n";
+            Json.kv_str_args.v = r->name;
+            Json.kv_str(json_work);
         }
         if (r->unit)
         {
-            Json.kv_str(&w, "u", r->unit);
+            Json.kv_str_args.w = &w;
+            Json.kv_str_args.k = "u";
+            Json.kv_str_args.v = r->unit;
+            Json.kv_str(json_work);
         }
         // Every SenmlValueKind enumerator has a case below, so the default edge the compiler emits
         // for the uint8_t-backed enum is unreachable for any value the API admits.
         switch (r->value_kind)
         {
         case SENML_VALUE_NUMBER:
-            Json.key(&w, "v");
+            Json.key_args.w = &w;
+            Json.key_args.k = "v";
+            Json.key(json_work);
             json_number(&w, r->value);
             break;
         case SENML_VALUE_STRING:
             if (r->string_value)
             {
-                Json.kv_str(&w, "vs", r->string_value);
+                Json.kv_str_args.w = &w;
+                Json.kv_str_args.k = "vs";
+                Json.kv_str_args.v = r->string_value;
+                Json.kv_str(json_work);
             }
             break;
         case SENML_VALUE_BOOLEAN:
-            Json.kv_bool(&w, "vb", r->boolean_value);
+            Json.kv_bool_args.w = &w;
+            Json.kv_bool_args.k = "vb";
+            Json.kv_bool_args.v = r->boolean_value;
+            Json.kv_bool(json_work);
             break;
         case SENML_VALUE_NONE:
             break;
         }
         if (r->has_time)
         {
-            Json.key(&w, "t");
+            Json.key_args.w = &w;
+            Json.key_args.k = "t";
+            Json.key(json_work);
             json_number(&w, r->time);
         }
-        Json.end_object(&w);
+        Json.end_object_args.w = &w;
+        Json.end_object(json_work);
     }
-    Json.end_array(&w);
+    Json.end_array_args.w = &w;
+    Json.end_array(json_work);
     if (!protocore_json_ok(&w))
     {
         return;

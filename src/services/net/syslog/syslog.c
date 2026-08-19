@@ -101,10 +101,6 @@ uint8_t *protocore_syslog_span(void)
 // Parse the collector address and store the HEADER fields every later line carries.
 static void syslog_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Ip.args.text = Syslog.collector.addr;
     Ip.args.out = &SYSLOG_CTX(work)->collector;
     Ip.parse(ip_work);
@@ -170,10 +166,6 @@ static void syslog_format(uint8_t *restrict work)
 // Format one record with the stored HEADER fields and send it as one datagram (RFC 5426 sec 3.1).
 static void syslog_log(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Syslog.ok = PROTO_FALSE;
     Syslog.n = 0;
     if (!SYSLOG_CTX(work)->ready)

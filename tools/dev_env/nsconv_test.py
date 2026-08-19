@@ -143,6 +143,32 @@ eq(
     "void t(void)\n{\n    Ns.entry(w);\n    if (Ns.ok || fallback())\n    {\n        return;\n    }\n}\n",
 )
 
+# 11a4. a conditional operator gates its branches too, and missing it is worse than missing `&&`:
+# the staging for the second branch was hoisted INTO the middle of the expression. smb_client's
+# `return algo == CMAC ? verify_cmac(...) : verify(...)` came out a syntax error, and the half that
+# parsed ran verify_cmac unconditionally.
+for label, src6e in (
+    ("ternary true branch refused", "void t(void)\n{\n    return c ? old_call(a) : other(a);\n}\n"),
+    ("ternary false branch refused", "void t(void)\n{\n    return c ? other(a) : old_call(a);\n}\n"),
+):
+    pos6e = src6e.index("old_call")
+    end6e = N.close_paren(src6e, pos6e + len("old_call("))
+    try:
+        N.rewrite(src6e, pos6e, end6e, ["Ns.entry(w);"], "Ns.ok")
+        eq(label, "converted", "refused")
+    except ValueError:
+        eq(label, "refused", "refused")
+
+# 11a5. a label's colon is not a conditional's, so a call after one still converts
+src6f = "void t(void)\n{\n    goto done;\ndone:\n    old_call(a);\n}\n"
+pos6f = src6f.index("old_call")
+end6f = N.close_paren(src6f, pos6f + len("old_call("))
+eq(
+    "a label colon does not refuse the call under it",
+    N.rewrite(src6f, pos6f, end6f, ["Ns.entry(w);"], "Ns.ok"),
+    "void t(void)\n{\n    goto done;\ndone:\n    Ns.entry(w);\n}\n",
+)
+
 # 11b. DBENCH_BULK hands its expr to the same DBENCH_CYCLES loop, and was missed once: a bench came
 # out with the entry hoisted above it, timing `sink += Ns.n`
 src6b = 'void t(void)\n{\n    DBENCH_BULK("x", 50000, 21, sink += old_call(a));\n}\n'

@@ -13,6 +13,7 @@ if(PROTOCORE_ENABLE_SMB)
     PRIVATE
       pc_crypto_rng
       pc_mmgr_protomem
+      pc_mmgr_secure
       pc_network_drivers_application_smb_ntlm
       pc_network_drivers_application_smb_ntlmssp
       pc_network_drivers_application_smb_spnego

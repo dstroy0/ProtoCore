@@ -16,10 +16,12 @@
 #ifndef PROTOCORE_RFC1951_H
 #define PROTOCORE_RFC1951_H
 
-#include "mmgr/bitio/bitio.h"    // protocore_bit_writer - what the emitters write through
-#include "mmgr/protomem/protomem.h" // mem.set - the byte mover
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#include "protocore_config.h"
+#if PROTOCORE_ENABLE_DEFLATE_RFC1951
+
+#include "mmgr/bitio/bitio.h" // protocore_bit_writer - what the emitters write through
+#include "mmgr/protomem/protomem.h" // mem.set - what build_fixed zeroes its bit-length counts with
 
 PROTOCORE_BEGIN_DECLS
 
@@ -154,5 +156,7 @@ PROTOCORE_INLINE void protocore_rfc1951_emit_match(protocore_bit_writer *w, cons
 }
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_DEFLATE_RFC1951
 
 #endif // PROTOCORE_RFC1951_H

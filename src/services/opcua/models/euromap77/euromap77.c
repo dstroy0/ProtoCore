@@ -237,10 +237,6 @@ static proto_bool em77_read(uint16_t ns, uint32_t id, uint32_t attribute, OpcUaV
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_euromap77_span();
-    if (work == NULL)
-    {
-        return PROTO_FALSE; // the pool was short, so there is no bound model to read
-    }
 
     const EuroMap77Ctx *c = EUROMAP77_CTX(work);
     const EmImm *imm = c->imm;
@@ -344,10 +340,6 @@ static int32_t em77_browse(uint16_t ns, uint32_t id, OpcUaReference *out, uint32
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_euromap77_span();
-    if (work == NULL)
-    {
-        return -1; // the pool was short, so there is no bound model to browse
-    }
 
     const EuroMap77Ctx *c = EUROMAP77_CTX(work);
     const EmImm *imm = c->imm;

@@ -16,6 +16,8 @@
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer a build emits through
 
+static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
+
 // Emit a uint64 as a JSON number: digits generated low end first, then reversed into the writer.
 static void emit_uint(protocore_json_writer *w, uint64_t v)
 {
@@ -25,7 +27,9 @@ static void emit_uint(protocore_json_writer *w, uint64_t v)
     size_t n = 0;
     if (v == 0)
     {
-        Json.put_raw(w, "0");
+        Json.put_raw_args.w = w;
+        Json.put_raw_args.literal = "0";
+        Json.put_raw(json_work);
         return;
     }
     while (v)
@@ -38,21 +42,30 @@ static void emit_uint(protocore_json_writer *w, uint64_t v)
         tmp[n++] = rev[--r];
     }
     tmp[n] = '\0';
-    Json.put_raw(w, tmp);
+    Json.put_raw_args.w = w;
+    Json.put_raw_args.literal = tmp;
+    Json.put_raw(json_work);
 }
 
 // Bind the writer to ns->out and open the list with its message type code (WAMP sec 3.3).
 static void begin_msg(uint8_t *restrict work, protocore_json_writer *w, int code)
 {
-    Json.init(w, Wamp.out.buf, Wamp.out.cap);
-    Json.begin_array(w);
-    Json.put_int(w, code);
+    Json.init_args.w = w;
+    Json.init_args.buf = Wamp.out.buf;
+    Json.init_args.cap = Wamp.out.cap;
+    Json.init(json_work);
+    Json.begin_array_args.w = w;
+    Json.begin_array(json_work);
+    Json.put_int_args.w = w;
+    Json.put_int_args.v = code;
+    Json.put_int(json_work);
 }
 
 // Close out a build: the byte count in ns->n, 0 unless the writer stayed inside the buffer.
 static void finish(uint8_t *restrict work, protocore_json_writer *w)
 {
-    Json.end_array(w);
+    Json.end_array_args.w = w;
+    Json.end_array(json_work);
     Wamp.ok = protocore_json_ok(w);
     Wamp.n = Wamp.ok ? protocore_json_length(w) : 0;
 }
@@ -67,10 +80,14 @@ static void emit_args(uint8_t *restrict work, protocore_json_writer *w)
     {
         return;
     }
-    Json.put_raw(w, args ? args : "[]");
+    Json.put_raw_args.w = w;
+    Json.put_raw_args.literal = args ? args : "[]";
+    Json.put_raw(json_work);
     if (kwargs)
     {
-        Json.put_raw(w, kwargs);
+        Json.put_raw_args.w = w;
+        Json.put_raw_args.literal = kwargs;
+        Json.put_raw(json_work);
     }
 }
 
@@ -87,8 +104,12 @@ static void wamp_build_hello(uint8_t *restrict work)
     }
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_HELLO);
-    Json.put_str(&w, Wamp.uri.realm);
-    Json.put_raw(&w, Wamp.payload.details ? Wamp.payload.details : "{}");
+    Json.put_str_args.w = &w;
+    Json.put_str_args.v = Wamp.uri.realm;
+    Json.put_str(json_work);
+    Json.put_raw_args.w = &w;
+    Json.put_raw_args.literal = Wamp.payload.details ? Wamp.payload.details : "{}";
+    Json.put_raw(json_work);
     finish(work, &w);
 }
 
@@ -103,8 +124,12 @@ static void wamp_build_goodbye(uint8_t *restrict work)
     }
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_GOODBYE);
-    Json.put_raw(&w, Wamp.payload.details ? Wamp.payload.details : "{}");
-    Json.put_str(&w, Wamp.uri.reason);
+    Json.put_raw_args.w = &w;
+    Json.put_raw_args.literal = Wamp.payload.details ? Wamp.payload.details : "{}";
+    Json.put_raw(json_work);
+    Json.put_str_args.w = &w;
+    Json.put_str_args.v = Wamp.uri.reason;
+    Json.put_str(json_work);
     finish(work, &w);
 }
 
@@ -120,8 +145,12 @@ static void wamp_build_subscribe(uint8_t *restrict work)
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_SUBSCRIBE);
     emit_uint(&w, Wamp.id.request);
-    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
-    Json.put_str(&w, Wamp.uri.topic);
+    Json.put_raw_args.w = &w;
+    Json.put_raw_args.literal = Wamp.payload.options ? Wamp.payload.options : "{}";
+    Json.put_raw(json_work);
+    Json.put_str_args.w = &w;
+    Json.put_str_args.v = Wamp.uri.topic;
+    Json.put_str(json_work);
     finish(work, &w);
 }
 
@@ -153,8 +182,12 @@ static void wamp_build_publish(uint8_t *restrict work)
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_PUBLISH);
     emit_uint(&w, Wamp.id.request);
-    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
-    Json.put_str(&w, Wamp.uri.topic);
+    Json.put_raw_args.w = &w;
+    Json.put_raw_args.literal = Wamp.payload.options ? Wamp.payload.options : "{}";
+    Json.put_raw(json_work);
+    Json.put_str_args.w = &w;
+    Json.put_str_args.v = Wamp.uri.topic;
+    Json.put_str(json_work);
     emit_args(work, &w);
     finish(work, &w);
 }
@@ -171,8 +204,12 @@ static void wamp_build_call(uint8_t *restrict work)
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_CALL);
     emit_uint(&w, Wamp.id.request);
-    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
-    Json.put_str(&w, Wamp.uri.procedure);
+    Json.put_raw_args.w = &w;
+    Json.put_raw_args.literal = Wamp.payload.options ? Wamp.payload.options : "{}";
+    Json.put_raw(json_work);
+    Json.put_str_args.w = &w;
+    Json.put_str_args.v = Wamp.uri.procedure;
+    Json.put_str(json_work);
     emit_args(work, &w);
     finish(work, &w);
 }
@@ -189,8 +226,12 @@ static void wamp_build_register(uint8_t *restrict work)
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_REGISTER);
     emit_uint(&w, Wamp.id.request);
-    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
-    Json.put_str(&w, Wamp.uri.procedure);
+    Json.put_raw_args.w = &w;
+    Json.put_raw_args.literal = Wamp.payload.options ? Wamp.payload.options : "{}";
+    Json.put_raw(json_work);
+    Json.put_str_args.w = &w;
+    Json.put_str_args.v = Wamp.uri.procedure;
+    Json.put_str(json_work);
     finish(work, &w);
 }
 
@@ -222,7 +263,9 @@ static void wamp_build_yield(uint8_t *restrict work)
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_YIELD);
     emit_uint(&w, Wamp.id.request);
-    Json.put_raw(&w, Wamp.payload.options ? Wamp.payload.options : "{}");
+    Json.put_raw_args.w = &w;
+    Json.put_raw_args.literal = Wamp.payload.options ? Wamp.payload.options : "{}";
+    Json.put_raw(json_work);
     emit_args(work, &w);
     finish(work, &w);
 }

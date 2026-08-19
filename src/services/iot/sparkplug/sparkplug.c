@@ -250,10 +250,6 @@ static void spb_build_metric(uint8_t *restrict work)
 // whole build closed.
 static void spb_build_payload(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Sparkplug.n = 0;
     Sparkplug.ok = PROTO_FALSE;
     const size_t count = Sparkplug.metrics.count;

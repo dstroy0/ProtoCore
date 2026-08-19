@@ -95,10 +95,6 @@ static protocore_net_err send_do(protocore_net_call *c)
 {
     protocore_udp_send_call *k = (protocore_udp_send_call *)c;
     uint8_t *work = protocore_udp_client_span();
-    if (work == NULL)
-    {
-        return PROTOCORE_NET_OK; // the pool was short: k->ok stays false and the caller still holds its bytes
-    }
     struct UdpClientStorage *st = UDP_CLIENT_CTX(work);
     if (st->out == NULL)
     {

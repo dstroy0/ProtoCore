@@ -109,10 +109,6 @@ static void worker_task(void *arg)
 
 static void start(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
         return; // already running
@@ -138,10 +134,6 @@ static void start(uint8_t *restrict work)
 
 static void defer(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Workers.ok = PROTO_FALSE;
     if (!Workers.defer_args.fn)
     {
@@ -163,10 +155,6 @@ static void defer(uint8_t *restrict work)
 
 static void wake(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (Workers.worker_id < 0 || Workers.worker_id >= PROTOCORE_WORKER_COUNT)
     {
         return;
@@ -180,10 +168,6 @@ static void wake(uint8_t *restrict work)
 
 static void run_deferred(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (Workers.worker_id < 0 || Workers.worker_id >= PROTOCORE_WORKER_COUNT ||
         !WORKER_CTX(work)->dq[Workers.worker_id])
     {
@@ -201,10 +185,6 @@ static void run_deferred(uint8_t *restrict work)
 
 static void stop(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (!PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run))
     {
         return;
@@ -217,10 +197,6 @@ static void stop(uint8_t *restrict work)
 
 static void running(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Workers.ok = PROTO_ATOMIC_LOAD(&WORKER_CTX(work)->run);
 }
 

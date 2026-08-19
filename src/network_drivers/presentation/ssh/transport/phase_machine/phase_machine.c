@@ -160,10 +160,6 @@ static void phase_machine_rekey_begin(uint8_t *restrict work)
 
 static void phase_machine_admits_ident(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t i = PhaseMachine.admits_ident_args.i;
 
     PhaseMachine.is_args.i = i;
@@ -179,10 +175,6 @@ static void phase_machine_admits_ident(uint8_t *restrict work)
 // has already sent its own, which kexinit_sent records; the phase alone cannot tell the two apart.
 static void phase_machine_admits_kexinit(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t i = PhaseMachine.admits_kexinit_args.i;
 
     PhaseMachine.get_args.i = i;
@@ -201,10 +193,6 @@ static void phase_machine_kexinit_needs_reply(uint8_t *restrict work)
 
 static void phase_machine_admits_kexdh_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t i = PhaseMachine.admits_kexdh_init_args.i;
 
     PhaseMachine.is_args.i = i;
@@ -214,10 +202,6 @@ static void phase_machine_admits_kexdh_init(uint8_t *restrict work)
 
 static void phase_machine_admits_newkeys(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t i = PhaseMachine.admits_newkeys_args.i;
 
     PhaseMachine.is_args.i = i;
@@ -227,10 +211,6 @@ static void phase_machine_admits_newkeys(uint8_t *restrict work)
 
 static void phase_machine_admits_service_request(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t i = PhaseMachine.admits_service_request_args.i;
 
     PhaseMachine.is_args.i = i;
@@ -240,10 +220,6 @@ static void phase_machine_admits_service_request(uint8_t *restrict work)
 
 static void phase_machine_admits_userauth(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t i = PhaseMachine.admits_userauth_args.i;
 
     PhaseMachine.is_args.i = i;
@@ -272,10 +248,6 @@ static void phase_machine_admits_rekey(uint8_t *restrict work)
 
 static void phase_machine_is_open(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t i = PhaseMachine.is_open_args.i;
 
     PhaseMachine.is_args.i = i;

@@ -17,14 +17,22 @@ static const char FILE_DATA[] = "0123456789ABCDEFGHIJ";
 static void serve_data(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    serve_file(slot_id, lfsm(), "/data.bin", "application/octet-stream");
+    FileServing.serve_file_args.slot_id = slot_id;
+    FileServing.serve_file_args.file_sys = lfsm();
+    FileServing.serve_file_args.fs_path = "/data.bin";
+    FileServing.serve_file_args.content_type = "application/octet-stream";
+    FileServing.serve_file(protocore_file_serving_span());
 }
 
 static void serve_data_conn_gone(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     conn_pool[slot_id].pcb = NULL;
-    serve_file(slot_id, lfsm(), "/data.bin", "application/octet-stream");
+    FileServing.serve_file_args.slot_id = slot_id;
+    FileServing.serve_file_args.file_sys = lfsm();
+    FileServing.serve_file_args.fs_path = "/data.bin";
+    FileServing.serve_file_args.content_type = "application/octet-stream";
+    FileServing.serve_file(protocore_file_serving_span());
 }
 
 void setUp()
@@ -311,4 +319,3 @@ void test_unsatisfiable_range_416_carries_cors()
     TEST_ASSERT_NOT_NULL(strstr(out, "Access-Control-Allow-Origin: *\r\n"));
     set_cors("");
 }
-
