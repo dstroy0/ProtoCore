@@ -33,8 +33,8 @@
 #define PROTOCORE_ENABLE_EDGE_MESH 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "server/web/edge_cache/edge_cache_proxy.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "server/web/edge_cache/edge_cache_proxy/edge_cache_proxy.h"
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";

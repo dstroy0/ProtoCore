@@ -11,15 +11,15 @@
  */
 
 #include "services/iot/udp_telemetry/udp_telemetry.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_UDP_TELEMETRY
 
-#include "mmgr/membuild.h" // Sb: the field set's numeric renderings
-#include "mmgr/protomem.h" // mem.cpy: the spans a line is assembled from
-#include "mmgr/protostr.h" // str.len: the bounded measure of an appended span
+#include "mmgr/membuild/membuild.h" // Sb: the field set's numeric renderings
+#include "mmgr/protomem/protomem.h" // mem.cpy: the spans a line is assembled from
+#include "mmgr/protostr/protostr.h" // str.len: the bounded measure of an appended span
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one line, one datagram

@@ -57,17 +57,17 @@ def plan():
 
 
 def rewrites(pairs):
-    """Every include spelling that has to change, old -> new, longest first."""
+    """Moving files, keyed by their absolute path, to the repo-relative spelling of the new one.
+
+    Keyed by resolved path rather than by basename on purpose: `client.h`, `dns.h`, `endian.h`,
+    `inflate.h` and `server.h` each name several different headers in this tree, so a bare
+    `#include "server.h"` cannot be rewritten by name. It is resolved the way the compiler resolves
+    it - against the directory of the file doing the including - and only then matched.
+    """
     subs = {}
     for old_stem, new_stem in pairs.items():
         for ext in (".h", ".c"):
-            old_rel = rel(old_stem + ext, SRC)
-            new_rel = rel(new_stem + ext, SRC)
-            base = os.path.basename(old_stem) + ext
-            subs[old_rel] = new_rel  # "mmgr/protomem.h"
-            subs[base] = new_rel  # "protomem.h" from a sibling
-            subs["../" + base] = new_rel  # "../protomem.h" from a child
-            subs["../" + old_rel] = new_rel
+            subs[os.path.normpath(old_stem + ext)] = rel(new_stem + ext, SRC)
     return subs
 
 
@@ -75,29 +75,36 @@ INC = re.compile(r'(#\s*include\s+")([^"]+)(")')
 FILT = re.compile(r"([+-]<)([^>]+)(>)")
 
 
-def apply_text(text, subs, in_filter):
+def resolve_named(named, from_dir):
+    """The file an include or a filter entry names, resolved the way the build resolves it.
+
+    Relative to the including file's own directory first, which is what a quoted include means, then
+    from src/ and from the repo root, which is what -Isrc and -I. make possible.
+    """
+    for base in (from_dir, SRC, ROOT):
+        if base is None:
+            continue
+        cand = os.path.normpath(os.path.join(base, named))
+        if os.path.isfile(cand):
+            return cand
+    return None
+
+
+def apply_text(text, subs, in_filter, from_dir):
     """Rewrite include directives and build_src_filter entries, and nothing else."""
     changed = [0]
 
-    def inc(m):
-        target = subs.get(m.group(2))
-        if target and target != m.group(2):
+    def one(prefix, named, suffix, base_dir):
+        target = subs.get(resolve_named(named, base_dir) or "")
+        if target and target != named:
             changed[0] += 1
-            return m.group(1) + target + m.group(3)
-        return m.group(0)
+            return prefix + target + suffix
+        return prefix + named + suffix
 
-    def filt(m):
-        body = m.group(2)
-        stem = body[3:] if body.startswith("../") else body
-        target = subs.get(stem)
-        if target and target != stem:
-            changed[0] += 1
-            return m.group(1) + target + m.group(3)
-        return m.group(0)
-
-    text = INC.sub(inc, text)
+    text = INC.sub(lambda m: one(m.group(1), m.group(2), m.group(3), from_dir), text)
     if in_filter:
-        text = FILT.sub(filt, text)
+        # a filter entry is read from src/, and a `../` one from the repo root
+        text = FILT.sub(lambda m: one(m.group(1), m.group(2), m.group(3), None), text)
     return text, changed[0]
 
 
@@ -133,7 +140,7 @@ def main():
                 text = open(p, encoding="utf-8").read()
             except (OSError, UnicodeDecodeError):
                 continue
-            new, n = apply_text(text, subs, f.endswith((".json", ".ini")))
+            new, n = apply_text(text, subs, f.endswith((".json", ".ini")), dirpath)
             if n:
                 edits += n
                 touched += 1

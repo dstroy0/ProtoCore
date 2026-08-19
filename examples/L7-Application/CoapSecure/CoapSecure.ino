@@ -41,9 +41,9 @@
 #define PROTOCORE_ENABLE_DTLS 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "services/iot/coap/coap.h"
-#include "services/iot/coap/coaps_server.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "services/iot/coap/coap/coap.h"
+#include "services/iot/coap/coaps_server/coaps_server.h"
 #include <esp_random.h> // esp_fill_random() - the ESP32 hardware CSPRNG
 
 static const char *SSID = "YOUR_SSID";

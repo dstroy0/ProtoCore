@@ -90,25 +90,27 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
     tcp_capture_reset();
-    protocore_ntp_set_test_epoch(0);
+    NtpService.set_test_epoch_args.epoch = 0;
+    NtpService.set_test_epoch(protocore_ntp_service_span());
 }
 
 void tearDown()
 {
     tcp_capture_disable();
-    protocore_ntp_set_test_epoch(0);
+    NtpService.set_test_epoch_args.epoch = 0;
+    NtpService.set_test_epoch(protocore_ntp_service_span());
 }
 
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
 }
 
@@ -172,7 +174,7 @@ void test_headers_do_not_leak_across_requests()
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 
     feed_and_handle(0, "GET /p HTTP/1.1\r\n\r\n");
@@ -200,7 +202,8 @@ void test_oversized_header_dropped_whole()
 
 void test_date_header_emitted_when_time_set()
 {
-    protocore_ntp_set_test_epoch(784111777);
+    NtpService.set_test_epoch_args.epoch = 784111777;
+    NtpService.set_test_epoch(protocore_ntp_service_span());
     on_http("/h", HTTP_GET, h_plain);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Date: Sun, 06 Nov 1994 08:49:37 GMT\r\n"));
@@ -208,7 +211,8 @@ void test_date_header_emitted_when_time_set()
 
 void test_date_header_omitted_when_clockless()
 {
-    protocore_ntp_set_test_epoch(0);
+    NtpService.set_test_epoch_args.epoch = 0;
+    NtpService.set_test_epoch(protocore_ntp_service_span());
     on_http("/h", HTTP_GET, h_plain);
     feed_and_handle(0, "GET /h HTTP/1.1\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -218,15 +222,27 @@ void test_date_header_omitted_when_clockless()
 void test_ntp_host_seam_accessors()
 {
 
-    TEST_ASSERT_FALSE(protocore_ntp_begin("UTC0", "a.pool.ntp.org", "b.pool.ntp.org"));
-    protocore_ntp_set_test_epoch(0);
-    TEST_ASSERT_FALSE(protocore_ntp_synced());
-    TEST_ASSERT_EQUAL_INT(0, (long)protocore_ntp_epoch());
-    TEST_ASSERT_EQUAL_UINT32(0, protocore_ntp_time_source());
-    protocore_ntp_set_test_epoch(784111777);
-    TEST_ASSERT_TRUE(protocore_ntp_synced());
-    TEST_ASSERT_EQUAL_INT(784111777, (long)protocore_ntp_epoch());
-    TEST_ASSERT_EQUAL_UINT32(784111777, protocore_ntp_time_source());
+    NtpService.begin_args.tz = "UTC0";
+    NtpService.begin_args.server1 = "a.pool.ntp.org";
+    NtpService.begin_args.server2 = "b.pool.ntp.org";
+    NtpService.begin(protocore_ntp_service_span());
+    TEST_ASSERT_FALSE(NtpService.ok);
+    NtpService.set_test_epoch_args.epoch = 0;
+    NtpService.set_test_epoch(protocore_ntp_service_span());
+    NtpService.synced(protocore_ntp_service_span());
+    TEST_ASSERT_FALSE(NtpService.ok);
+    NtpService.epoch(protocore_ntp_service_span());
+    TEST_ASSERT_EQUAL_INT(0, (long)NtpService.value);
+    NtpService.time_source(protocore_ntp_service_span());
+    TEST_ASSERT_EQUAL_UINT32(0, NtpService.ms);
+    NtpService.set_test_epoch_args.epoch = 784111777;
+    NtpService.set_test_epoch(protocore_ntp_service_span());
+    NtpService.synced(protocore_ntp_service_span());
+    TEST_ASSERT_TRUE(NtpService.ok);
+    NtpService.epoch(protocore_ntp_service_span());
+    TEST_ASSERT_EQUAL_INT(784111777, (long)NtpService.value);
+    NtpService.time_source(protocore_ntp_service_span());
+    TEST_ASSERT_EQUAL_UINT32(784111777, NtpService.ms);
 
     char buf[40];
     TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_http_date(NULL, sizeof(buf)));
@@ -235,27 +251,12 @@ void test_ntp_host_seam_accessors()
     TEST_ASSERT_TRUE(protocore_ntp_http_date(buf, sizeof(buf)) > 0);
     TEST_ASSERT_EQUAL_STRING("Sun, 06 Nov 1994 08:49:37 GMT", buf);
 
-    protocore_ntp_set_test_epoch((time_t)100000000000000000LL);
+    NtpService.set_test_epoch_args.epoch = (time_t)100000000000000000LL;
+    NtpService.set_test_epoch(protocore_ntp_service_span());
     buf[0] = 'x';
     TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_http_date(buf, sizeof(buf)));
     TEST_ASSERT_EQUAL_CHAR('\0', buf[0]);
-    protocore_ntp_set_test_epoch(0);
+    NtpService.set_test_epoch_args.epoch = 0;
+    NtpService.set_test_epoch(protocore_ntp_service_span());
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_ntp_host_seam_accessors);
-    RUN_TEST(test_date_header_emitted_when_time_set);
-    RUN_TEST(test_date_header_omitted_when_clockless);
-    RUN_TEST(test_single_custom_header_present);
-    RUN_TEST(test_multiple_custom_headers_present);
-    RUN_TEST(test_set_cookie_basic);
-    RUN_TEST(test_set_cookie_with_attrs);
-    RUN_TEST(test_custom_header_on_send_empty);
-    RUN_TEST(test_custom_header_on_redirect);
-    RUN_TEST(test_headers_do_not_leak_across_requests);
-    RUN_TEST(test_clear_response_headers);
-    RUN_TEST(test_oversized_header_dropped_whole);
-    return UNITY_END();
-}

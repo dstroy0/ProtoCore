@@ -15,8 +15,8 @@
 
 #if PROTOCORE_ENABLE_NATS
 
-#include "mmgr/protomem.h" // mem.cpy / mem.cmp: the spans an operation is laid from and matched against
-#include "mmgr/protostr.h" // str.len: the bounded length of a caller's NUL-terminated field
+#include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans an operation is laid from and matched against
+#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a caller's NUL-terminated field
 
 // The terminator every protocol message ends with (NATS Protocol, Protocol conventions: Newlines).
 #define NATS_CRLF "\r\n"

@@ -11,7 +11,7 @@
 // arithmetic derived from the closed form or a property (round trip, mean, spread) that must hold
 // whatever the implementation.
 
-#include "services/timing_position/gnss/gnss_survey.h"
+#include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
 #include <string.h>
 
 #include <unity.h>

@@ -5,7 +5,7 @@
 // disassembled, it shows whether str.eq() is a direct call under LTO and an indirect one without it,
 // and whether the ci literal folds back through the struct.
 
-#include "mmgr/protostr.h"
+#include "mmgr/protostr/protostr.h"
 
 volatile unsigned char str_sink = 0;
 

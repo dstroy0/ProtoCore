@@ -106,7 +106,7 @@ with added explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h" // init_wifi_physical / wifi_ready
+#include "network_drivers/physical/physical/physical.h" // init_wifi_physical / wifi_ready
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

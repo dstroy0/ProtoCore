@@ -11,7 +11,7 @@
 // test_only_a_pending_image_is_ever_acted_on: rolling back an image that was already committed
 // would undo a good update.
 
-#include "server/update/ota_rollback.h"
+#include "server/update/ota_rollback/ota_rollback.h"
 
 #include "test/core_setup/hal/host/host_platform.h"
 #include "server/clock/clock.h"

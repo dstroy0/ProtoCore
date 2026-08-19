@@ -14,7 +14,7 @@
 
 #if PROTOCORE_ENABLE_DDS
 
-#include "mmgr/protomem.h" // mem.cpy: the guidPrefix and the Submessage contents
+#include "mmgr/protomem/protomem.h" // mem.cpy: the guidPrefix and the Submessage contents
 
 // SubmessageHeader: submessageId 1 + flags 1 + octetsToNextHeader 2 (sec 9.4.5.1).
 #define RTPS_SUBMESSAGE_HEADER_LEN 4

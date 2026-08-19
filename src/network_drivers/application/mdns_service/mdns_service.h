@@ -22,44 +22,87 @@
 #ifndef PROTOCORE_MDNS_SERVICE_H
 #define PROTOCORE_MDNS_SERVICE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_MDNS
 
 PROTOCORE_BEGIN_DECLS
 
-/**
- * @brief Start mDNS responder and advertise an HTTP service.
- *
- * Call once after the 802.11 link is up (Physical.wifi_ready reports true) and after begin(). The
- * device becomes reachable at `<hostname>.local` and advertises
- * `_http._tcp` on @p http_port.
- *
- * @param hostname   Host label without the `.local` suffix (e.g. "mydevice").
- * @param http_port  TCP port the HTTP server listens on (default 80).
- * @return true if the responder started; false if disabled at compile time,
- *         not on Arduino, or the mdns component failed to start.
- */
-proto_bool protocore_mdns_begin(const char *hostname, uint16_t http_port);
+// PROTOCORE_MDNS_SERVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
+
+/** @brief What begin takes: hostname, http_port. */
+typedef struct
+{
+    const char *hostname; ///< Host label without the `.local` suffix (e.g. "mydevice")
+    uint16_t http_port;   ///< TCP port the HTTP server listens on (default 80)
+} MdnsServiceBeginArgs;
+
+/** @brief What txt takes: key, value. */
+typedef struct
+{
+    const char *key;
+    const char *value;
+} MdnsServiceTxtArgs;
+
+/** @brief What add_service takes: service_type, proto, port. */
+typedef struct
+{
+    const char *service_type; ///< DNS-SD service type, e.g. `"_https"`
+    const char *proto;        ///< `"_tcp"` or `"_udp"`
+    uint16_t port;            ///< TCP/UDP port the service listens on
+} MdnsServiceAddServiceArgs;
 
 /**
- * @brief Add a TXT key/value record to the advertised `_http._tcp` service.
+ * @brief Optional mDNS / DNS-SD advertisement (PROTOCORE_ENABLE_MDNS).
  *
- * Call after protocore_mdns_begin(). Example: `"path"`=`"/"`, `"fw"`=`"1.2.3"`.
+ * A caller sets the members a call takes, invokes it through ::MdnsService with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * @return true on success; false if mDNS is disabled or not running.
+ *   MdnsService.begin_args.hostname = ...;
+ *   MdnsService.begin_args.http_port = ...;
+ *   MdnsService.begin(work);
+ *   // MdnsService.ok is what the call reports
+ *
+ * @var MdnsServiceNs::begin_args  what begin takes: hostname, http_port
+ * @var MdnsServiceNs::txt_args  what txt takes: key, value
+ * @var MdnsServiceNs::add_service_args  what add_service takes: service_type, proto, port
+ * @var MdnsServiceNs::ok  true if the responder started; false if disabled at compile time, ...
+ * @var MdnsServiceNs::begin  start mDNS responder and advertise an HTTP service. Call once after ...
+ * @var MdnsServiceNs::txt  add a TXT key/value record to the advertised `_http._tcp` service. ...
+ * @var MdnsServiceNs::add_service  advertise an additional service, e.g. `("_https", "_tcp", 443)`
+ *
+ * @c work is PROTOCORE_MDNS_SERVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_mdns_txt(const char *key, const char *value);
+typedef struct
+{
+    MdnsServiceBeginArgs begin_args;
+    MdnsServiceTxtArgs txt_args;
+    MdnsServiceAddServiceArgs add_service_args;
+
+    proto_bool ok;
+
+    void (*const begin)(uint8_t *restrict work);
+    void (*const txt)(uint8_t *restrict work);
+    void (*const add_service)(uint8_t *restrict work);
+} MdnsServiceNs;
+
+/** @brief The one symbol this module exports. */
+extern MdnsServiceNs MdnsService;
 
 /**
- * @brief Advertise an additional service, e.g. `("_https", "_tcp", 443)`.
+ * @brief The PROTOCORE_MDNS_SERVICE_BORROW bytes this module's state lives in.
  *
- * @param service_type DNS-SD service type, e.g. `"_https"`.
- * @param proto        `"_tcp"` or `"_udp"`.
- * @param port         TCP/UDP port the service listens on.
- * @return true on success; false if mDNS is disabled or not running.
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-proto_bool protocore_mdns_add_service(const char *service_type, const char *proto, uint16_t port);
+uint8_t *protocore_mdns_service_span(void);
 
 PROTOCORE_END_DECLS
 

@@ -15,7 +15,7 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
 #if PROTOCORE_ENABLE_ENOCEAN
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/radio/enocean/enocean.h"
 
 #include "shared/crc/crc.h" // PROTOCORE_CRC8_SMBUS

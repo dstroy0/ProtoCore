@@ -107,10 +107,3 @@ void test_state_handoff_no_race(void)
     TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)g_slot.state);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_spsc_ring_no_race);
-    RUN_TEST(test_state_handoff_no_race);
-    return UNITY_END();
-}

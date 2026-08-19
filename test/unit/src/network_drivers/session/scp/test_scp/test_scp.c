@@ -14,7 +14,7 @@
 // hand and is the load-bearing case, because a mode that survives the round trip but decodes to the
 // wrong number silently changes a file's permissions on the receiving side.
 
-#include "network_drivers/session/scp/scp.h"
+#include "network_drivers/session/scp/scp/scp.h"
 #include <string.h>
 
 #include <unity.h>

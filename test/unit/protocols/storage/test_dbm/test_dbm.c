@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "services/storage/dbm/dbm.h"
-#include "services/storage/wal/wal_store.h"
+#include "services/storage/wal/wal_store/wal_store.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -611,31 +611,3 @@ void test_compact_carries_empty_values(void)
     TEST_ASSERT_TRUE(protocore_dbm_contains(&g_db, "empty", 5));
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_put_get_overwrite);
-    RUN_TEST(test_delete_and_contains);
-    RUN_TEST(test_persist_across_reboot_with_checkpoint);
-    RUN_TEST(test_persist_across_reboot_without_checkpoint);
-    RUN_TEST(test_delete_persists_across_reboot);
-    RUN_TEST(test_many_keys_and_collisions);
-    RUN_TEST(test_index_full_fails_closed);
-    RUN_TEST(test_bounds_and_empty_value);
-    RUN_TEST(test_max_value_roundtrip);
-    RUN_TEST(test_compact_reclaims_space);
-    RUN_TEST(test_compact_dest_too_small_fails_closed);
-    RUN_TEST(test_compact_source_read_failure);
-    RUN_TEST(test_compact_checkpoint_failure);
-    RUN_TEST(test_replay_skips_malformed_records);
-    RUN_TEST(test_reopen_rejects_a_log_with_more_keys_than_slots);
-    RUN_TEST(test_probe_walks_a_saturated_table_for_an_absent_key);
-    RUN_TEST(test_insert_reuses_a_tombstone_in_a_saturated_table);
-    RUN_TEST(test_hash_collision_slots_are_walked_past);
-    RUN_TEST(test_put_rejects_an_empty_key);
-    RUN_TEST(test_put_fails_closed_when_the_log_is_full);
-    RUN_TEST(test_get_fails_when_the_value_cannot_be_read_back);
-    RUN_TEST(test_iterate_visits_live_keys_and_honours_an_early_stop);
-    RUN_TEST(test_compact_carries_empty_values);
-    return UNITY_END();
-}

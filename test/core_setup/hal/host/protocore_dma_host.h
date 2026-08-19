@@ -21,7 +21,7 @@
 #ifndef PROTOCORE_PROTOCORE_DMA_HOST_H
 #define PROTOCORE_PROTOCORE_DMA_HOST_H
 
-#include "mmgr/dma.h"
+#include "mmgr/dma/dma.h"
 #include "mmgr/ring.h"
 #include <stdint.h>
 #include <string.h>

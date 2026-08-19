@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "network_drivers/presentation/http/httpcache/httpcache.h"
-#include "server/web/edge_cache/edge_cache.h"
-#include "server/web/edge_cache/edge_cache_sd.h"
+#include "server/web/edge_cache/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache_sd/edge_cache_sd.h"
 #include "services/storage/dbm/dbm.h"
-#include "services/storage/wal/wal_store.h"
+#include "services/storage/wal/wal_store/wal_store.h"
 #include "shared/http_date/http_date.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -1007,31 +1007,3 @@ void test_purge_counts_only_the_deletes_that_were_logged(void)
     TEST_ASSERT_TRUE(has_path("/cdn/f0") != has_path("/cdn/f1"));
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_serialize_roundtrip_all_fields);
-    RUN_TEST(test_serialize_max_body);
-    RUN_TEST(test_serialize_too_small_scratch_fails);
-    RUN_TEST(test_deserialize_corrupt_fails_closed);
-    RUN_TEST(test_put_get_roundtrip);
-    RUN_TEST(test_no_validator_not_spilled);
-    RUN_TEST(test_oversize_body_stays_l1_only);
-    RUN_TEST(test_spill_on_evict_and_promote);
-    RUN_TEST(test_transient_entry_not_spilled);
-    RUN_TEST(test_survives_reboot);
-    RUN_TEST(test_del);
-    RUN_TEST(test_purge_prefix);
-    RUN_TEST(test_purge_prefix_multipass);
-    RUN_TEST(test_purge_all);
-    RUN_TEST(test_shared_dbm_foreign_value_untouched);
-    RUN_TEST(test_serialize_null_guards_and_every_overflow_point);
-    RUN_TEST(test_deserialize_null_guards_and_every_truncation);
-    RUN_TEST(test_deserialize_rejects_field_longer_than_its_slot);
-    RUN_TEST(test_deserialize_rejects_oversize_body_length);
-    RUN_TEST(test_dbm_api_null_guards);
-    RUN_TEST(test_purge_skips_foreign_and_unreadable_records);
-    RUN_TEST(test_purge_prefix_skips_key_without_a_path);
-    RUN_TEST(test_purge_counts_only_the_deletes_that_were_logged);
-    return UNITY_END();
-}

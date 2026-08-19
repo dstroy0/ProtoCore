@@ -12,13 +12,13 @@
  */
 
 #include "services/net/http_client/http_client.h"
-#include "mmgr/secure.h" // the persistent end this module's key material is taken from
+#include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
-#include "mmgr/membuild.h"    // protocore_sb: the message builder
-#include "mmgr/protomem.h"    // mem.cpy / mem.move / mem.cmp / mem.chr
-#include "mmgr/protostr.h"    // str.len / diff / starts / digit / to_long
+#include "mmgr/membuild/membuild.h"    // protocore_sb: the message builder
+#include "mmgr/protomem/protomem.h"    // mem.cpy / mem.move / mem.cmp / mem.chr
+#include "mmgr/protostr/protostr.h"    // str.len / diff / starts / digit / to_long
 #include "shared/mime/mime.h" // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
 
 #if PROTOCORE_HAS_NET_STACK

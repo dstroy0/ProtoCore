@@ -34,7 +34,7 @@
 // both rest on [N1] sec 6 / Table 1 and [N2], which publish the field order, the delimiter, the
 // Content-Length meaning and the terminator.
 
-#include "services/timing_position/gnss/ntrip_caster.h"
+#include "services/timing_position/gnss/ntrip_caster/ntrip_caster.h"
 #include <string.h>
 
 #include <unity.h>

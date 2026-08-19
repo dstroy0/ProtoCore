@@ -12,7 +12,7 @@ static uint8_t pcap_work[16]; // the borrow an entry takes; Pcap never reads it
 
 #if PROTOCORE_ENABLE_RADIO_SNIFF
 
-#include "mmgr/endian.h"
+#include "mmgr/endian/endian.h"
 #include "services/radio/radio_sniff/radio_sniff.h"
 #include "shared/pcap/pcap.h"
 

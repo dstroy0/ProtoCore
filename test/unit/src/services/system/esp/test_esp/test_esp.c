@@ -12,7 +12,7 @@
 // The ciphertext itself is checked by the property an AEAD must have - any single flipped bit
 // anywhere in the packet must fail the ICV.
 
-#include "services/system/esp/esp.h"
+#include "services/system/esp/esp/esp.h"
 #include <string.h>
 
 #include <unity.h>

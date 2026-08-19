@@ -13,7 +13,7 @@
 // whole first SESSION_SETUP security buffer octet for octet, including both OIDs encoded by X.690
 // clause 8.19's rules, which are derived by hand in the comment rather than copied from anywhere.
 
-#include "network_drivers/application/smb/spnego.h"
+#include "network_drivers/application/smb/spnego/spnego.h"
 #include <string.h>
 
 #include <unity.h>

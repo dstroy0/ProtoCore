@@ -24,10 +24,13 @@ void dbench_run(void)
         DBENCH_BANNER("http_parser");
         volatile int sink = 0;
         DBENCH_BULK("http_parser feed GET (6 hdrs)", 50000, n, {
-            http_parser_reset(&req);
+            HttpParser.reset_args.req = &req;
+            HttpParser.reset(protocore_http_parser_span());
             for (size_t i = 0; i < n; i++)
             {
-                http_parser_feed(&req, (uint8_t)GET_REQ[i]);
+                HttpParser.feed_args.req = &req;
+                HttpParser.feed_args.byte = (uint8_t)GET_REQ[i];
+                HttpParser.feed(protocore_http_parser_span());
             }
             sink += (int)req.parse_state;
         });

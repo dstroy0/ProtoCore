@@ -11,7 +11,7 @@
  */
 
 #include "network_drivers/transport/udp/server/server.h"
-#include "mmgr/plaintext.h"                       // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h"                       // the persistent end this module's state is taken from
 #include "network_drivers/transport/udp/common.h" // the wire layout the receive ring carries
 
 #include "config/platform/platform.h" // the stack's UDP, under our names

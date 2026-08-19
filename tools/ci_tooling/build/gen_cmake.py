@@ -5,7 +5,7 @@
 
 The matrix is the one statement of what an env compiles: its flags, its `+<glob>` source filter, the
 base it extends, and the suite directories it runs. This renders that into a CMake project with one
-executable target and one `add_test` per env, so `ctest` runs what `test/harness.py run` runs.
+executable target and one `add_test` per SUITE, so `ctest` runs what `test/harness.py run` runs.
 
 The matrix stays the source of truth. Nothing is hand-written into the generated file, and running
 this again after editing the matrix is how the build follows it.
@@ -24,6 +24,7 @@ import argparse
 import glob as _glob
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -130,29 +131,106 @@ def resolve_src(globs):
     return out, missing
 
 
-def suite_sources(env):
-    """Every .c a suite contributes, and whether it brings its own main()."""
+def suite_sources(test):
+    """Every .c one suite contributes, and whether it brings its own main()."""
     srcs, has_main = [], False
-    for t in env.get("tests", []):
-        sd = os.path.join(ROOT, "test", *t.split("/"))
-        if not os.path.isdir(sd):
+    sd = os.path.join(ROOT, "test", *test.split("/"))
+    if not os.path.isdir(sd):
+        return srcs, has_main
+    for f in sorted(os.listdir(sd)):
+        if not f.endswith(".c"):
             continue
-        for f in sorted(os.listdir(sd)):
-            if not f.endswith(".c"):
-                continue
-            if f == GENERATED_RUNNER:
-                srcs.append(rel(os.path.join(sd, f)))
-                continue
-            p = os.path.join(sd, f)
-            srcs.append(rel(p))
-            with open(p, encoding="utf-8", errors="replace") as fh:
-                if "int main(" in fh.read():
-                    has_main = True
+        if f == GENERATED_RUNNER:
+            srcs.append(rel(os.path.join(sd, f)))
+            continue
+        p = os.path.join(sd, f)
+        srcs.append(rel(p))
+        with open(p, encoding="utf-8", errors="replace") as fh:
+            if "int main(" in fh.read():
+                has_main = True
     return srcs, has_main
 
 
-def suite_dirs(env):
-    return [rel(os.path.join(ROOT, "test", *t.split("/"))) for t in env.get("tests", [])]
+def suite_dir(test):
+    return rel(os.path.join(ROOT, "test", *test.split("/")))
+
+
+def reached_headers(test):
+    """Header names one suite includes, one level on from the host mocks it names.
+
+    A suite reaches littlefs through test/core_setup/hal/host/lfs_mock.h rather than by naming
+    lfs.h, so the includes of the headers it does name are read too. Same rule as
+    test/harness.py's _reached_headers, so both build paths pull in the same packages.
+    """
+    sd = os.path.join(ROOT, "test", *test.split("/"))
+    names, text = set(), []
+    try:
+        for f in os.listdir(sd):
+            if f.endswith((".c", ".h")):
+                with open(os.path.join(sd, f), encoding="utf-8", errors="replace") as fh:
+                    text.append(fh.read())
+    except OSError:
+        return names
+    hal = os.path.join(ROOT, "test", "core_setup", "hal", "host")
+    seen, i = set(), 0
+    while i < len(text):
+        t = text[i]
+        i += 1
+        for inc in re.findall(r'#\s*include\s*[<"]([^">]+)[">]', t):
+            base = os.path.basename(inc)
+            names.add(base)
+            cand = os.path.join(hal, base)
+            if base not in seen and os.path.isfile(cand):
+                seen.add(base)
+                with open(cand, encoding="utf-8", errors="replace") as fh:
+                    text.append(fh.read())
+    return names
+
+
+def lib_packages(envname):
+    """A lib_dep's include dir and sources, which pio passes and a plain CMake build does not.
+
+    Unity is handled on its own because every env links it. Anything else under an env's libdeps is
+    a package the env asked for - littlefs is the one in the tree, reached through the host mount
+    mock. The include dir costs nothing to add, so it always is; the sources are only compiled when
+    the suite actually reaches the package, because pio installs a package per env whether that
+    env's suite uses it or not.
+    """
+    base = os.path.join(ROOT, ".pio", "libdeps", envname)
+    if not os.path.isdir(base):
+        return [], []
+    incs, pkgs = [], []
+    for d in sorted(os.listdir(base)):
+        if d == "Unity":
+            continue
+        inc = os.path.join(base, d, "include")
+        src = os.path.join(base, d, "src")
+        if not os.path.isdir(inc) or not os.path.isdir(src):
+            continue
+        incs.append(rel(inc))
+        heads = [h for h in os.listdir(inc) if h.endswith(".h")]
+        srcs = [rel(os.path.join(src, f)) for f in sorted(os.listdir(src)) if f.endswith(".c")]
+        pkgs.append((heads, srcs))
+    return incs, pkgs
+
+
+def target_names(name, tests):
+    """One target name per suite: the env alone when it runs one, else the env plus the suite.
+
+    Each suite carries its own Unity main(), so an env that runs several links several mains into
+    one image. The direct compile in test/harness.py builds one binary per suite dir; this is that.
+    Two suites in one env can share a leaf name (native_ssh runs two `test_server`), so the suffix
+    grows leftward through the path until every name in the env is distinct.
+    """
+    if len(tests) == 1:
+        return {tests[0]: name}
+    parts = {t: t.split("/") for t in tests}
+    depth = 1
+    while True:
+        out = {t: name + "__" + "_".join(p[-depth:]) for t, p in parts.items()}
+        if len(set(out.values())) == len(tests) or depth >= max(len(p) for p in parts.values()):
+            return out
+        depth += 1
 
 
 def cmake_escape(s):
@@ -166,7 +244,8 @@ HEADER = """# ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dq
 # Regenerate with:  python tools/harness.py build cmake
 #
 # The matrix states what each env compiles; this is that, rendered. One executable target and one
-# test per env.
+# test per suite: a suite carries its own Unity main(), so an env that runs several is several
+# targets, named <env>__<suite>.
 #
 #   cmake -S test -B build/native
 #   cmake --build build/native -j
@@ -193,20 +272,22 @@ if(NOT PROTOCORE_UNITY_DIR)
     "Unity sources not found. Run `pio pkg install` once, or pass -DPROTOCORE_UNITY_DIR=<path to Unity/src>.")
 endif()
 
-add_library(protocore_unity STATIC "${PROTOCORE_UNITY_DIR}/unity.c")
-target_include_directories(protocore_unity PUBLIC "${PROTOCORE_UNITY_DIR}")
-
 # Every env compiles under the same base: C11, POSIX, no exceptions, -O1. Matched to the direct
 # compile in test/harness.py so a CMake build and a harness run are the same translation.
 add_library(protocore_env_base INTERFACE)
 target_compile_definitions(protocore_env_base INTERFACE _POSIX_C_SOURCE=200809L)
 target_compile_options(protocore_env_base INTERFACE -fno-exceptions -O1)
-target_link_libraries(protocore_env_base INTERFACE protocore_unity m)
+target_include_directories(protocore_env_base INTERFACE "${PROTOCORE_UNITY_DIR}")
+target_link_libraries(protocore_env_base INTERFACE m)
 
-# One env: its sources, its defines, its include dirs, and the suite it runs.
+# One suite: its sources, its defines, its include dirs, and the one suite it runs.
+#
+# unity.c is a source of the target, not a library beside it: UNITY_INCLUDE_DOUBLE and the rest of
+# Unity's configuration are env defines, and a shared library compiles them out of every env that
+# asked for them. The direct compile in test/harness.py puts unity.c in the same TU list.
 function(protocore_env name)
   cmake_parse_arguments(E "" "" "SOURCES;DEFINES;INCLUDES" ${ARGN})
-  add_executable(${name} ${E_SOURCES})
+  add_executable(${name} ${E_SOURCES} "${PROTOCORE_UNITY_DIR}/unity.c")
   target_include_directories(${name} PRIVATE ${E_INCLUDES})
   target_compile_definitions(${name} PRIVATE ${E_DEFINES})
   target_link_libraries(${name} PRIVATE protocore_env_base)
@@ -267,31 +348,39 @@ def render(envs, warn):
         srcs, missing = resolve_src(expand_interpolation(envs, inherited(envs, name, "src")))
         for g in missing:
             warn.append("%s: src filter matches nothing: %s" % (name, g))
-        suite, has_main = suite_sources(env)
-        if not suite:
-            warn.append("%s: no suite sources on disk (%s)" % (name, ", ".join(tests)))
-            continue
-        if not has_main and not any(s.endswith(GENERATED_RUNNER) for s in suite):
-            warn.append("%s: no main() and no %s - run `test/harness.py runners gen`" % (name, GENERATED_RUNNER))
-            continue
         incs, defs = split_flags(inherited(envs, name, "flags"))
-        incs = incs + suite_dirs(env)
-
+        lib_incs, lib_pkgs = lib_packages(name)
         desc = (env.get("desc") or "").strip().split("\n")[0]
-        out.append("# %s\n" % desc if desc else "")
-        out.append("protocore_env(%s\n" % name)
-        out.append("  SOURCES\n")
-        for s in srcs + suite:
-            out.append('    "${PROTOCORE_ROOT}/%s"\n' % cmake_escape(s))
-        if defs:
-            out.append("  DEFINES\n")
-            for d in defs:
-                out.append('    "%s"\n' % cmake_escape(d))
-        out.append("  INCLUDES\n")
-        for i in incs:
-            out.append('    "${PROTOCORE_ROOT}/%s"\n' % cmake_escape(i))
-        out.append(")\n\n")
-        rendered += 1
+        targets = target_names(name, tests)
+        for t in tests:
+            suite, has_main = suite_sources(t)
+            # A lib_dep the suite reaches has to be compiled in: pio links it, a plain CMake build
+            # does not, and the suite fails at the mock's `#include <lfs.h>` instead.
+            reached = reached_headers(t)
+            for heads, lib_srcs in lib_pkgs:
+                if reached & set(heads):
+                    suite = suite + lib_srcs
+            if not suite:
+                warn.append("%s: no suite sources on disk (%s)" % (name, t))
+                continue
+            if not has_main and not any(s.endswith(GENERATED_RUNNER) for s in suite):
+                warn.append("%s: no main() and no %s - run `test/harness.py runners gen`" % (targets[t], GENERATED_RUNNER))
+                continue
+
+            out.append("# %s\n" % desc if desc else "")
+            out.append("protocore_env(%s\n" % targets[t])
+            out.append("  SOURCES\n")
+            for s in srcs + suite:
+                out.append('    "${PROTOCORE_ROOT}/%s"\n' % cmake_escape(s))
+            if defs:
+                out.append("  DEFINES\n")
+                for d in defs:
+                    out.append('    "%s"\n' % cmake_escape(d))
+            out.append("  INCLUDES\n")
+            for i in incs + lib_incs + [suite_dir(t)]:
+                out.append('    "${PROTOCORE_ROOT}/%s"\n' % cmake_escape(i))
+            out.append(")\n\n")
+            rendered += 1
     return "".join(out), rendered
 
 
@@ -313,13 +402,13 @@ def main():
             print("test/CMakeLists.txt is stale - run `python tools/harness.py build cmake`", file=sys.stderr)
             return 1
         if not a.quiet:
-            print("test/CMakeLists.txt is current (%d envs)" % n)
+            print("test/CMakeLists.txt is current (%d targets)" % n)
         return 0
 
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
     if not a.quiet:
-        print("wrote %s: %d envs" % (rel(OUT), n))
+        print("wrote %s: %d targets" % (rel(OUT), n))
     for w in warn:
         print("  " + w, file=sys.stderr)
     return 0

@@ -15,8 +15,8 @@
 
 #if PROTOCORE_ENABLE_UMATI
 
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protostr.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protostr/protostr.h"
 #include "services/opcua/models/umati/umati.h"
 #include "services/opcua/opcua.h"
 

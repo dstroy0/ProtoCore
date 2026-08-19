@@ -11,7 +11,7 @@
  * level for that one translation unit, regardless of the consumer's size-optimized build:
  *
  * @code
- *   #include "crypto/cipher/chacha20.h"
+ *   #include "crypto/cipher/chacha20/chacha20.h"
  *   #include "crypto/crypto_opt.h"
  *   PROTOCORE_CRYPTO_HOT   // this TU builds at -O2 (or the configured level)
  * @endcode

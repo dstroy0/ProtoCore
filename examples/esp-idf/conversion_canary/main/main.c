@@ -16,7 +16,7 @@
 #include <stdio.h>
 
 #if PROTOCORE_ENABLE_RADIO_POWER
-#include "network_drivers/physical/radio_power.h"
+#include "network_drivers/physical/radio_power/radio_power.h"
 #endif
 
 void app_main(void);

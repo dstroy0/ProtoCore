@@ -21,7 +21,7 @@
 #define PROTOCORE_ENABLE_ESPNOW 1
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/radio/espnow/espnow.h"
 
 static const uint8_t MSG_COUNTER = 1;

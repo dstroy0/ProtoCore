@@ -25,10 +25,10 @@
 #define PROTOCORE_ENABLE_SMB 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/tcp.h"
-#include "network_drivers/application/smb/smb2.h" // SMB2_FILE_GENERIC_READ / SMB2_FILE_OPEN
-#include "network_drivers/application/smb/smb_client.h" // smb_open / smb_read / smb_close
+#include "network_drivers/application/smb/smb2/smb2.h" // SMB2_FILE_GENERIC_READ / SMB2_FILE_OPEN
+#include "network_drivers/application/smb/smb_client/smb_client.h" // smb_open / smb_read / smb_close
 
 
 // --- CHANGE ME: your WiFi ---

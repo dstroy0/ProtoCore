@@ -77,7 +77,6 @@ typedef struct
  * @var TelnetNs::close          the connection on @c slot closed; release its state
  * @var TelnetNs::proto_handler  the ProtoHandler the builtins list installs, which is what keeps
  *                               this module free of a dependency on the session layer
- * @var TelnetNs::internal       the console's state and the calls that reach it
  *
  * @code
  *   static const protocore_field HEAP[] = {{PROTOCORE_FK_LIT, 0, 11, "free heap: "}, PROTOCORE_U32,
@@ -88,7 +87,6 @@ typedef struct
  *   Telnet.frame(Telnet.internal);
  * @endcode
  */
-struct TelnetInternal;
 
 typedef struct
 {
@@ -100,22 +98,31 @@ typedef struct
     uint8_t u8;
     const struct ProtoHandler *handler;
 
-    void (*on_command)(struct TelnetInternal *ctx);
-    void (*print)(struct TelnetInternal *ctx);
-    void (*println)(struct TelnetInternal *ctx);
-    void (*frame)(struct TelnetInternal *ctx);
-    void (*client_count)(struct TelnetInternal *ctx);
+    void (*const on_command)(uint8_t *restrict work);
+    void (*const print)(uint8_t *restrict work);
+    void (*const println)(uint8_t *restrict work);
+    void (*const frame)(uint8_t *restrict work);
+    void (*const client_count)(uint8_t *restrict work);
 
-    void (*accept)(struct TelnetInternal *ctx);
-    void (*rx)(struct TelnetInternal *ctx);
-    void (*close)(struct TelnetInternal *ctx);
-    void (*proto_handler)(struct TelnetInternal *ctx);
-
-    struct TelnetInternal *internal;
+    void (*const accept)(uint8_t *restrict work);
+    void (*const rx)(uint8_t *restrict work);
+    void (*const close)(uint8_t *restrict work);
+    void (*const proto_handler)(uint8_t *restrict work);
 } TelnetNs;
 
 /** @brief The one symbol this module exports. */
 extern TelnetNs Telnet;
+
+/**
+ * @brief The PROTOCORE_TELNET_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_telnet_span(void);
 
 #endif // PROTOCORE_ENABLE_TELNET
 

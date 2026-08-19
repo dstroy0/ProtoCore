@@ -6,7 +6,13 @@
  * @brief Every byte the connections use, one span per slot.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH
+
 #include "network_drivers/presentation/ssh/ssh.h"
+#include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
+#include "network_drivers/presentation/ssh/common.h"
 
 // The connections' storage, owned by one instance (internal linkage). Reached only through
 // ssh_conn_slot(), at the offsets common.h names.
@@ -14,13 +20,61 @@ typedef struct
 {
     uint8_t mem[MAX_SSH_CONNS][SSH_SLOT_BORROW];
 } SshMemCtx;
-static SshMemCtx s_mem;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SSH_OFF_CTX 0u
+static_assert(SSH_OFF_CTX + sizeof(SshMemCtx) <= PROTOCORE_SSH_BORROW,
+              "PROTOCORE_SSH_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-uint8_t *ssh_conn_slot(uint8_t i)
+// The region, at its offset in the caller's borrow.
+#define SSH_CTX(w) ((SshMemCtx *)(void *)((w) + SSH_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
+    uint8_t *span; ///< PROTOCORE_SSH_BORROW persistent bytes, or null while the pool was short
+} SshOwnCtx;
+static SshOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_ssh_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SSH_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+
+static void ssh_conn_slot(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    uint8_t i = Ssh.conn_slot_args.i;
+
     if (i >= MAX_SSH_CONNS)
     {
-        return NULL;
+        Ssh.ptr = NULL;
+        return;
     }
-    return s_mem.mem[i];
+    Ssh.ptr = SSH_CTX(work)->mem[i];
 }
+SshNs Ssh = {
+    .conn_slot = ssh_conn_slot,
+};
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_SSH

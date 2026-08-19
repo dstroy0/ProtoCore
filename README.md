@@ -114,7 +114,7 @@ The one idea worth taking away: every HTTP version (1.1, 2, 3) is decoded into t
 
 ```cpp
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

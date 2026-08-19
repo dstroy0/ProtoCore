@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "server/net/iface_bridge/iface_bridge.h"
+#include "server/net/iface_bridge/iface_bridge/iface_bridge.h"
 #include "shared/ip/ip.h"
 #include <string.h>
 
@@ -317,19 +317,3 @@ void test_txn_build_edge_cases()
     TEST_ASSERT_EQUAL_UINT8(0x05, out[1]);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_map_and_find);
-    RUN_TEST(test_any_interface_and_dedup);
-    RUN_TEST(test_bad_address_rejected);
-    RUN_TEST(test_table_full);
-    RUN_TEST(test_txn_roundtrip);
-    RUN_TEST(test_txn_partial_and_readonly);
-    RUN_TEST(test_build_overflow_fails_closed);
-    RUN_TEST(test_null_arg_guards);
-    RUN_TEST(test_map_empty_ip_is_any_interface);
-    RUN_TEST(test_txn_parse_null_outputs);
-    RUN_TEST(test_txn_build_edge_cases);
-    return UNITY_END();
-}

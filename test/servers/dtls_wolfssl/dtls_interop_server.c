@@ -10,8 +10,8 @@
 // It completes the DTLS 1.3 handshake against the peer, then decrypts inbound application records
 // (epoch 3) and echoes them back, printing "INTEROP OK" once a full round trip has happened.
 
-#include "network_drivers/presentation/security/dtls/dtls_conn.h"
-#include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
+#include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 #include <arpa/inet.h>
 #include <cstdint>
 #include <cstdio>

@@ -6,7 +6,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
-#include "server/core/worker.h"
+#include "server/core/worker/worker.h"
 #include <unity.h>
 
 static int g_ran = 0;
@@ -64,11 +64,3 @@ void test_defer_null_fn_fails()
     TEST_ASSERT_EQUAL_INT(0, g_ran);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_defer_queues_and_the_drain_runs_it_once);
-    RUN_TEST(test_server_defer_routes_by_owner);
-    RUN_TEST(test_defer_null_fn_fails);
-    return UNITY_END();
-}

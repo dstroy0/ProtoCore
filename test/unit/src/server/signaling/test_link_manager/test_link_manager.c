@@ -9,7 +9,7 @@
 // the lower index breaks a tie", which makes selection a total order, and a policy that is not
 // deterministic reconfigures the netif on a tie and flaps traffic between two equal links forever.
 
-#include "server/signaling/link_manager.h"
+#include "server/signaling/link_manager/link_manager.h"
 
 #include <unity.h>
 

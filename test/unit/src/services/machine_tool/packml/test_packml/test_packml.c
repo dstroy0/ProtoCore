@@ -31,9 +31,17 @@ static uint32_t test_clock(void)
     return s_now;
 }
 
+// Move the clock and poll it. Clock.ms is what the module reads, and it only moves when
+// Clock.millis() takes the source's value, so setting s_now alone changes nothing.
+static void at_ms(uint32_t t)
+{
+    s_now = t;
+    Clock.millis(Clock.internal);
+}
+
 void setUp(void)
 {
-    s_now = 0;
+    at_ms(0);
     Clock.src.fn = test_clock;
     Clock.src.ticks_per_second = 1000u;
     Clock.set_ms(Clock.internal);
@@ -361,25 +369,25 @@ void test_service_speed_is_reported_only_while_executing(void)
 // Both are read off a clock the test steps, so the expected values are subtraction.
 void test_service_timers_measure_from_their_own_marks(void)
 {
-    s_now = 1000;
+    at_ms(1000);
     protocore_packml_svc_init(PACK_ML_MODE_PRODUCING); // reset_ms = state_entry_ms = 1000
 
-    s_now = 1500;
+    at_ms(1500);
     PackMlStatus st;
     protocore_packml_svc_status(&st);
     TEST_ASSERT_EQUAL_UINT32(500u, st.state_current_ms);        // 1500 - 1000
     TEST_ASSERT_EQUAL_UINT32(500u, st.acc_time_since_reset_ms); // 1500 - 1000
 
-    s_now = 2000;
+    at_ms(2000);
     TEST_ASSERT_TRUE(protocore_packml_svc_command(PACK_ML_COMMAND_RESET)); // both marks move to 2000
-    s_now = 2300;
+    at_ms(2300);
     protocore_packml_svc_status(&st);
     TEST_ASSERT_EQUAL_UINT32(300u, st.state_current_ms);
     TEST_ASSERT_EQUAL_UINT32(300u, st.acc_time_since_reset_ms);
 
-    s_now = 2400;
+    at_ms(2400);
     protocore_packml_svc_state_complete(); // Resetting -> Idle: only the state mark moves
-    s_now = 2450;
+    at_ms(2450);
     protocore_packml_svc_status(&st);
     TEST_ASSERT_EQUAL_UINT32(50u, st.state_current_ms);         // 2450 - 2400
     TEST_ASSERT_EQUAL_UINT32(450u, st.acc_time_since_reset_ms); // 2450 - 2000

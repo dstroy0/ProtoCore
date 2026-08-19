@@ -10,8 +10,8 @@
 // a complete Ed25519 SubjectPublicKeyInfo, which is the RFC 7250 RawPublicKey credential this module
 // emits. test_rfc8446_hello_retry_request_random and test_rfc8410_ed25519_spki are those two.
 
-#include "crypto/asymmetric/ed25519.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include <string.h>
 
 #include <unity.h>

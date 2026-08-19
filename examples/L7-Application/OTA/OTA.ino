@@ -19,8 +19,8 @@
 #define PROTOCORE_ENABLE_OTA 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "server/update/ota_service.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "server/update/ota_service/ota_service.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

@@ -1,6 +1,6 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
-#include "server/web/edge_cache/edge_fetch.h"
+#include "server/web/edge_cache/edge_fetch/edge_fetch.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -101,7 +101,7 @@ static EdgeFetchStatus run_fetch(EdgeFetch *f, const EdgeFetchTransport *t, uint
     return f->st;
 }
 
-static void test_fetch_content_length()
+ void test_fetch_content_length()
 {
     static const char *R = "HTTP/1.1 200 OK\r\nContent-Length: 5\r\nContent-Type: text/plain\r\n\r\nhello";
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 4, PROTO_TRUE, 7};
@@ -121,7 +121,7 @@ static void test_fetch_content_length()
     TEST_ASSERT_EQUAL_MEMORY("hello", f.buf + f.body_off, 5);
 }
 
-static void test_fetch_chunked()
+ void test_fetch_chunked()
 {
     static const char *R =
         "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n";
@@ -142,7 +142,7 @@ static void test_fetch_chunked()
     TEST_ASSERT_EQUAL_MEMORY("hello world", f.buf + f.body_off, 11);
 }
 
-static void test_fetch_close_delimited()
+ void test_fetch_close_delimited()
 {
     static const char *R = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nbody-till-close";
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 5};
@@ -161,7 +161,7 @@ static void test_fetch_close_delimited()
     TEST_ASSERT_EQUAL_MEMORY("body-till-close", f.buf + f.body_off, 15);
 }
 
-static void test_fetch_oversize()
+ void test_fetch_oversize()
 {
     static uint8_t big[PROTOCORE_EDGE_FETCH_BUF + 1024];
     const char *head = "HTTP/1.1 200 OK\r\nContent-Length: 6000\r\n\r\n";
@@ -182,7 +182,7 @@ static void test_fetch_oversize()
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_OVERSIZE, run_fetch(&f, &t, 1000));
 }
 
-static void test_fetch_timeout()
+ void test_fetch_timeout()
 {
     static const char *R = "HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\npartial";
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_FALSE, 2};
@@ -208,7 +208,7 @@ static void test_fetch_timeout()
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, EdgeFetcher.status);
 }
 
-static void test_fetch_open_fail()
+ void test_fetch_open_fail()
 {
     MockOrigin m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, -1};
     EdgeFetchTransport t = make_transport(&m);
@@ -224,7 +224,7 @@ static void test_fetch_open_fail()
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, f.st);
 }
 
-static void test_resp_complete_unit()
+ void test_resp_complete_unit()
 {
     size_t hl = 0;
     const char *partial = "HTTP/1.1 200 OK\r\nContent-Len";
@@ -281,7 +281,7 @@ static void test_resp_complete_unit()
     TEST_ASSERT_TRUE(EdgeFetcher.ok);
 }
 
-static void test_fetch_send_fail()
+ void test_fetch_send_fail()
 {
     MockOrigin m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 4};
     m.send_fail = PROTO_TRUE;
@@ -304,7 +304,7 @@ static void test_fetch_send_fail()
     TEST_ASSERT_EQUAL_INT(4, f.cid);
 }
 
-static void test_fetch_end_releases_once()
+ void test_fetch_end_releases_once()
 {
     static const char *R = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nhi";
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 11};
@@ -347,7 +347,7 @@ static void test_fetch_end_releases_once()
     TEST_ASSERT_EQUAL_INT(0, m2.close_calls);
 }
 
-static void test_fetch_pump_after_terminal_is_inert()
+ void test_fetch_pump_after_terminal_is_inert()
 {
     static const char *R = "HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n";
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 6};
@@ -371,7 +371,7 @@ static void test_fetch_pump_after_terminal_is_inert()
     TEST_ASSERT_EQUAL_UINT(got_before, f.got);
 }
 
-static void test_fetch_malformed_status_line()
+ void test_fetch_malformed_status_line()
 {
     static const char *R = "NOT-HTTP AT ALL\r\nX: y\r\n\r\nbody";
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 3};
@@ -388,7 +388,7 @@ static void test_fetch_malformed_status_line()
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, run_fetch(&f, &t, 1000));
 }
 
-static void test_fetch_closed_before_complete()
+ void test_fetch_closed_before_complete()
 {
     static const char *R = "HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\nonly-this";
     MockOrigin m = {(const uint8_t *)R, strlen(R), 0, 0, PROTO_TRUE, 8};
@@ -409,7 +409,7 @@ static void test_fetch_closed_before_complete()
     TEST_ASSERT_EQUAL(EDGE_FETCH_STATUS_FAILED, EdgeFetcher.status);
 }
 
-static void test_chunked_hex_sizes()
+ void test_chunked_hex_sizes()
 {
     size_t hl = 0;
     const char *lower = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\na\r\n0123456789\r\n0\r\n\r\n";
@@ -452,7 +452,7 @@ static void test_chunked_hex_sizes()
     TEST_ASSERT_FALSE(EdgeFetcher.ok);
 }
 
-static void test_chunked_trailers()
+ void test_chunked_trailers()
 {
     size_t hl = 0;
     const char *trailers = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
@@ -499,7 +499,7 @@ static void test_chunked_trailers()
     TEST_ASSERT_TRUE(EdgeFetcher.ok);
 }
 
-static void test_head_end_near_miss_separators()
+ void test_head_end_near_miss_separators()
 {
     size_t hl = 0;
     const char *lone_cr = "HTTP/1.1 200 OK\rX: y\r\n";
@@ -526,7 +526,7 @@ static void test_head_end_near_miss_separators()
     TEST_ASSERT_FALSE(EdgeFetcher.ok);
 }
 
-static void test_unusable_framing_headers_fall_through()
+ void test_unusable_framing_headers_fall_through()
 {
     size_t hl = 0;
 
@@ -567,7 +567,7 @@ static void test_unusable_framing_headers_fall_through()
     TEST_ASSERT_TRUE(EdgeFetcher.ok);
 }
 
-static void test_transfer_encoding_case_and_length_bounds()
+ void test_transfer_encoding_case_and_length_bounds()
 {
     size_t hl = 0;
     const char *mixed = "HTTP/1.1 200 OK\r\nTransfer-Encoding: ChUnKeD\r\n\r\n0\r\n\r\n";
@@ -603,25 +603,3 @@ static void test_transfer_encoding_case_and_length_bounds()
     TEST_ASSERT_TRUE(EdgeFetcher.ok);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_fetch_content_length);
-    RUN_TEST(test_fetch_chunked);
-    RUN_TEST(test_fetch_close_delimited);
-    RUN_TEST(test_fetch_oversize);
-    RUN_TEST(test_fetch_timeout);
-    RUN_TEST(test_fetch_open_fail);
-    RUN_TEST(test_resp_complete_unit);
-    RUN_TEST(test_fetch_send_fail);
-    RUN_TEST(test_fetch_end_releases_once);
-    RUN_TEST(test_fetch_pump_after_terminal_is_inert);
-    RUN_TEST(test_fetch_malformed_status_line);
-    RUN_TEST(test_fetch_closed_before_complete);
-    RUN_TEST(test_chunked_hex_sizes);
-    RUN_TEST(test_chunked_trailers);
-    RUN_TEST(test_head_end_near_miss_separators);
-    RUN_TEST(test_unusable_framing_headers_fall_through);
-    RUN_TEST(test_transfer_encoding_case_and_length_bounds);
-    return UNITY_END();
-}

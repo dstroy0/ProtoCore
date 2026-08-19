@@ -13,8 +13,8 @@
  */
 
 #include "network_drivers/network/forward/forward.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_FORWARD
 

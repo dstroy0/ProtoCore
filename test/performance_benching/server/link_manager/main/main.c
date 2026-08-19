@@ -14,7 +14,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "server/signaling/link_manager.h"
+#include "server/signaling/link_manager/link_manager.h"
 
 #include <stdbool.h>
 #include <stddef.h>

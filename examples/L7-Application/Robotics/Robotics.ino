@@ -27,7 +27,7 @@
 #define PROTOCORE_ENABLE_ROBOTICS 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/opcua/models/robotics/robotics.h"
 #include <math.h>
 

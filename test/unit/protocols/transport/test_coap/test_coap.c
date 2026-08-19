@@ -4,7 +4,7 @@
 #include "network_drivers/transport/udp/server/server.h"
 #include "network_drivers/transport/udp/udp.h"
 #include "server/clock/clock.h"
-#include "services/iot/coap/coap.h"
+#include "services/iot/coap/coap/coap.h"
 #include <string.h>
 
 #include <unity.h>

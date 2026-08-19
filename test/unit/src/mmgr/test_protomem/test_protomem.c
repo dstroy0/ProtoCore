@@ -13,7 +13,7 @@
 // property: only n bytes move, the move is correct under overlap in both directions, and a search
 // spans the whole bound rather than stopping at a NUL.
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include <string.h>
 
 #include <unity.h>

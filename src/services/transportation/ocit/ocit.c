@@ -7,7 +7,7 @@
  */
 
 #include "services/transportation/ocit/ocit.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_OCIT
 

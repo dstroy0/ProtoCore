@@ -13,7 +13,7 @@
 // and DF141 1 each, DF025 38, DF142 1, DF001 1, DF026 38, DF364 2, DF027 38 = 152 bits; 1006 adds
 // DF028 16 for 168), which test_message_1005_field_offsets reads back bit offset by bit offset.
 
-#include "services/timing_position/gnss/rtcm3.h"
+#include "services/timing_position/gnss/rtcm3/rtcm3.h"
 #include <string.h>
 
 #include <unity.h>

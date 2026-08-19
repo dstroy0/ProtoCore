@@ -14,7 +14,7 @@
 // the concatenation order and the HMAC-MD5 keying. A wrong NTOWFv2 makes every later value wrong,
 // and a right one makes them checkable.
 
-#include "network_drivers/application/smb/ntlm.h"
+#include "network_drivers/application/smb/ntlm/ntlm.h"
 #include <string.h>
 
 #include <unity.h>
@@ -30,7 +30,7 @@ void tearDown(void)
 
 // MS-NLMP 4.2.1 Common Values, as UTF-8 (the module takes the ASCII form and widens it itself).
 static const char *const USER = "User";
-static const char *const DOMAIN = "Domain";
+static const char *const DOMAIN_NAME = "Domain";
 static const char *const PASSWORD = "Password";
 
 // MS-NLMP 4.2.4.3 CHALLENGE_MESSAGE, ServerChallenge field at offset 0x18.
@@ -57,7 +57,7 @@ void test_msnlmp_ntowfv2_worked_example(void)
     uint8_t owf[16];
     Ntlm.ntowfv2_args.nt_hash = nt_hash;
     Ntlm.ntowfv2_args.user = USER;
-    Ntlm.ntowfv2_args.domain = DOMAIN;
+    Ntlm.ntowfv2_args.domain = DOMAIN_NAME;
     Ntlm.ntowfv2_args.owf = owf;
     Ntlm.ntowfv2(ntlm_work);
     TEST_ASSERT_TRUE(Ntlm.ok);
@@ -95,7 +95,7 @@ void test_msnlmp_ntlmv2_response_and_session_base_key(void)
     Ntlm.nt_hash(ntlm_work);
     Ntlm.ntowfv2_args.nt_hash = nt_hash;
     Ntlm.ntowfv2_args.user = USER;
-    Ntlm.ntowfv2_args.domain = DOMAIN;
+    Ntlm.ntowfv2_args.domain = DOMAIN_NAME;
     Ntlm.ntowfv2_args.owf = owf;
     Ntlm.ntowfv2(ntlm_work);
     TEST_ASSERT_TRUE(Ntlm.ok);
@@ -154,21 +154,21 @@ void test_only_the_user_is_uppercased(void)
     uint8_t owf[16];
     Ntlm.ntowfv2_args.nt_hash = nt_hash;
     Ntlm.ntowfv2_args.user = "user";
-    Ntlm.ntowfv2_args.domain = DOMAIN;
+    Ntlm.ntowfv2_args.domain = DOMAIN_NAME;
     Ntlm.ntowfv2_args.owf = owf;
     Ntlm.ntowfv2(ntlm_work);
     TEST_ASSERT_TRUE(Ntlm.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, owf, sizeof(WANT));
     Ntlm.ntowfv2_args.nt_hash = nt_hash;
     Ntlm.ntowfv2_args.user = "USER";
-    Ntlm.ntowfv2_args.domain = DOMAIN;
+    Ntlm.ntowfv2_args.domain = DOMAIN_NAME;
     Ntlm.ntowfv2_args.owf = owf;
     Ntlm.ntowfv2(ntlm_work);
     TEST_ASSERT_TRUE(Ntlm.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, owf, sizeof(WANT));
     Ntlm.ntowfv2_args.nt_hash = nt_hash;
     Ntlm.ntowfv2_args.user = "uSeR";
-    Ntlm.ntowfv2_args.domain = DOMAIN;
+    Ntlm.ntowfv2_args.domain = DOMAIN_NAME;
     Ntlm.ntowfv2_args.owf = owf;
     Ntlm.ntowfv2(ntlm_work);
     TEST_ASSERT_TRUE(Ntlm.ok);
@@ -331,7 +331,7 @@ void test_server_challenge_is_bound_into_the_proof(void)
     Ntlm.nt_hash(ntlm_work);
     Ntlm.ntowfv2_args.nt_hash = nt_hash;
     Ntlm.ntowfv2_args.user = USER;
-    Ntlm.ntowfv2_args.domain = DOMAIN;
+    Ntlm.ntowfv2_args.domain = DOMAIN_NAME;
     Ntlm.ntowfv2_args.owf = owf;
     Ntlm.ntowfv2(ntlm_work);
     TEST_ASSERT_TRUE(Ntlm.ok);
@@ -433,7 +433,7 @@ void test_mic_flag_changes_the_response_and_fails_closed(void)
     Ntlm.nt_hash(ntlm_work);
     Ntlm.ntowfv2_args.nt_hash = nt_hash;
     Ntlm.ntowfv2_args.user = USER;
-    Ntlm.ntowfv2_args.domain = DOMAIN;
+    Ntlm.ntowfv2_args.domain = DOMAIN_NAME;
     Ntlm.ntowfv2_args.owf = owf;
     Ntlm.ntowfv2(ntlm_work);
     TEST_ASSERT_TRUE(Ntlm.ok);
@@ -622,7 +622,7 @@ void test_ntowfv2_refuses_an_oversized_name_pair(void)
     uint8_t owf[16];
     Ntlm.ntowfv2_args.nt_hash = nt_hash;
     Ntlm.ntowfv2_args.user = long_user;
-    Ntlm.ntowfv2_args.domain = DOMAIN;
+    Ntlm.ntowfv2_args.domain = DOMAIN_NAME;
     Ntlm.ntowfv2_args.owf = owf;
     Ntlm.ntowfv2(ntlm_work);
     TEST_ASSERT_FALSE(Ntlm.ok);

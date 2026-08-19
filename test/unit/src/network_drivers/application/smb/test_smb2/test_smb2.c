@@ -14,7 +14,7 @@
 // (dialect revisions), sec 2.2.3 / 2.2.3.1 (NEGOTIATE and its contexts), sec 2.2.41
 // (TRANSFORM_HEADER) and sec 3.1.4.3 (the AEAD nonce lengths).
 
-#include "network_drivers/application/smb/smb2.h"
+#include "network_drivers/application/smb/smb2/smb2.h"
 #include <string.h>
 
 #include <unity.h>

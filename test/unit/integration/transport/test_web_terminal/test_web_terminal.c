@@ -50,7 +50,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -79,7 +79,7 @@ static uint8_t do_handshake(uint8_t slot)
                    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
                    "Sec-WebSocket-Version: 13\r\n\r\n");
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     Ws.slot = slot;
     Ws.find(protocore_ws_span());
@@ -91,7 +91,7 @@ void test_serves_terminal_page()
 {
     push_str(0, "GET /terminal HTTP/1.1\r\nHost: x\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
@@ -118,7 +118,7 @@ void test_ws_upgrade_requires_connection_token()
                 "Upgrade: websocket\r\n"
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     Ws.slot = 0;
     Ws.find(protocore_ws_span());
@@ -132,7 +132,7 @@ void test_ws_upgrade_rejects_bad_key_length()
                 "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                 "Sec-WebSocket-Key: c2hvcnQ=\r\nSec-WebSocket-Version: 13\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     Ws.slot = 0;
     Ws.find(protocore_ws_span());
@@ -204,7 +204,7 @@ static const char *get_path(uint8_t slot, const char *path)
     snprintf(req, sizeof(req), "GET %s HTTP/1.1\r\nHost: x\r\n\r\n", path);
     push_str(slot, req);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     return tcp_captured();
 }

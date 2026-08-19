@@ -14,34 +14,34 @@
 #include <Preferences.h>
 
 // --- self-implemented crypto (no PROTOCORE_ENABLE_* guard: part of src/) ---
-#include "crypto/aead/aesgcm.h"
-#include "crypto/aead/chachapoly.h"
-#include "crypto/asymmetric/bignum.h"
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/asymmetric/ecdsa.h"
-#include "crypto/asymmetric/ed25519.h"
-#include "crypto/asymmetric/fe25519.h"
-#include "crypto/cipher/aes256ctr.h"
-#include "crypto/cipher/chacha20.h"
-#include "crypto/hash/sha256.h"
-#include "crypto/hash/sha512.h"
-#include "crypto/mac/hmac_sha256.h"
-#include "crypto/mac/hmac_sha512.h"
-#include "crypto/mac/poly1305.h"
-#include "mmgr/secure.h"
+#include "crypto/aead/aesgcm/aesgcm.h"
+#include "crypto/aead/chachapoly/chachapoly.h"
+#include "crypto/asymmetric/bignum/bignum.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/asymmetric/ecdsa/ecdsa.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
+#include "crypto/asymmetric/fe25519/fe25519.h"
+#include "crypto/cipher/aes256ctr/aes256ctr.h"
+#include "crypto/cipher/chacha20/chacha20.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "crypto/hash/sha512/sha512.h"
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"
+#include "crypto/mac/hmac_sha512/hmac_sha512.h"
+#include "crypto/mac/poly1305/poly1305.h"
+#include "mmgr/secure/secure.h"
 #include "network_drivers/tls/ssh_rsa.h"
 
 // --- QUIC / DTLS 1.3 record + KDF crypto (guarded) ---
 #if PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS
-#include "crypto/aead/aes128gcm.h"
-#include "crypto/kdf/hkdf.h"
+#include "crypto/aead/aes128gcm/aes128gcm.h"
+#include "crypto/kdf/hkdf/hkdf.h"
 #include "network_drivers/tls/tls13_kdf.h"
 #endif
 #if PROTOCORE_ENABLE_DTLS
-#include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 #endif
 #if PROTOCORE_ENABLE_PQC_KEX
-#include "crypto/pqc/mlkem.h"
+#include "crypto/pqc/mlkem/mlkem.h"
 #endif
 
 // RSA host-key fixture (PKCS#8 DER, RSA-2048) - provisioned into NVS so ssh_rsa_sign() can read it.

@@ -12,7 +12,7 @@
 // merge (0x86 for SHA-3, 0x9F for SHAKE); at every other length they are separate writes and a
 // wrong pad is invisible.
 
-#include "crypto/hash/sha3.h"
+#include "crypto/hash/sha3/sha3.h"
 #include <string.h>
 
 #include <unity.h>

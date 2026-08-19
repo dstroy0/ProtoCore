@@ -17,6 +17,8 @@
 
 #include <unity.h>
 
+static uint8_t httpcache_work[16]; // the borrow an entry takes; Httpcache never reads it
+
 void setUp(void)
 {
 }
@@ -29,7 +31,11 @@ static char g_buf[256];
 static const char *build(const protocore_cache_control *cc)
 {
     g_buf[0] = 0;
-    (void)cache_control_build(g_buf, sizeof(g_buf), cc);
+    Httpcache.control_build_args.buf = g_buf;
+    Httpcache.control_build_args.cap = sizeof(g_buf);
+    Httpcache.control_build_args.cc = cc;
+    Httpcache.control_build(httpcache_work);
+    (void)Httpcache.n;
     return g_buf;
 }
 
@@ -43,37 +49,79 @@ void test_rfc9111_4_2_1_first_match(void)
     protocore_cache_control cc;
 
     // Bullet 1 beats bullet 2, but only when the cache is shared.
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.s_maxage = 600;
     cc.max_age = 60;
-    TEST_ASSERT_EQUAL_INT(600, (int)cache_freshness_lifetime(&cc, PROTO_TRUE, 3600));
-    TEST_ASSERT_EQUAL_INT(60, (int)cache_freshness_lifetime(&cc, PROTO_FALSE, 3600));
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_TRUE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = 3600;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(600, (int)Httpcache.value);
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_FALSE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = 3600;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(60, (int)Httpcache.value);
 
     // Bullet 2 beats bullet 3.
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.max_age = 60;
-    TEST_ASSERT_EQUAL_INT(60, (int)cache_freshness_lifetime(&cc, PROTO_TRUE, 3600));
-    TEST_ASSERT_EQUAL_INT(60, (int)cache_freshness_lifetime(&cc, PROTO_FALSE, 3600));
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_TRUE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = 3600;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(60, (int)Httpcache.value);
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_FALSE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = 3600;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(60, (int)Httpcache.value);
 
     // Bullet 3 applies when neither directive is present.
-    cache_control_init(&cc);
-    TEST_ASSERT_EQUAL_INT(3600, (int)cache_freshness_lifetime(&cc, PROTO_TRUE, 3600));
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_TRUE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = 3600;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(3600, (int)Httpcache.value);
 
     // Bullet 4: nothing explicit, so the caller is told to apply a heuristic (sec 4.2.2).
-    cache_control_init(&cc);
-    TEST_ASSERT_EQUAL_INT(-1, (int)cache_freshness_lifetime(&cc, PROTO_TRUE, -1));
-    TEST_ASSERT_EQUAL_INT(-1, (int)cache_freshness_lifetime(&cc, PROTO_FALSE, -1));
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_TRUE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = -1;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(-1, (int)Httpcache.value);
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_FALSE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = -1;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(-1, (int)Httpcache.value);
 
     // max-age=0 is present, not absent: it means "stale immediately", never "fall through".
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.max_age = 0;
-    TEST_ASSERT_EQUAL_INT(0, (int)cache_freshness_lifetime(&cc, PROTO_FALSE, 3600));
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_FALSE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = 3600;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(0, (int)Httpcache.value);
 
     // s-maxage=0 on a shared cache, likewise.
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.s_maxage = 0;
     cc.max_age = 60;
-    TEST_ASSERT_EQUAL_INT(0, (int)cache_freshness_lifetime(&cc, PROTO_TRUE, 3600));
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_TRUE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = 3600;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(0, (int)Httpcache.value);
 }
 
 // sec 1.2.2: "delta-seconds = 1*DIGIT ... a non-negative integer". Absent is -1 here, so a fresh
@@ -82,7 +130,8 @@ void test_init_is_an_empty_directive_set(void)
 {
     protocore_cache_control cc;
     memset(&cc, 0x5A, sizeof(cc));
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
 
     TEST_ASSERT_FALSE(cc.cc_public);
     TEST_ASSERT_FALSE(cc.cc_private);
@@ -102,7 +151,11 @@ void test_init_is_an_empty_directive_set(void)
     TEST_ASSERT_EQUAL_INT32(-1, cc.min_fresh);
 
     // Nothing set means nothing to send: 0 rather than an empty header value.
-    TEST_ASSERT_EQUAL_UINT(0u, cache_control_build(g_buf, sizeof(g_buf), &cc));
+    Httpcache.control_build_args.buf = g_buf;
+    Httpcache.control_build_args.cap = sizeof(g_buf);
+    Httpcache.control_build_args.cc = &cc;
+    Httpcache.control_build(httpcache_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Httpcache.n);
 }
 
 // sec 5.2: "Cache-Control = #cache-directive"; the RFC 9110 sec 5.6.1 list rule is comma-separated
@@ -114,42 +167,49 @@ void test_build_emits_the_grammar(void)
 {
     protocore_cache_control cc;
 
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.no_store = PROTO_TRUE;
     TEST_ASSERT_EQUAL_STRING("no-store", build(&cc));
 
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.cc_public = PROTO_TRUE;
     cc.max_age = 31536000;
     cc.cc_immutable = PROTO_TRUE;
     TEST_ASSERT_EQUAL_STRING("public, max-age=31536000, immutable", build(&cc));
 
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.cc_private = PROTO_TRUE;
     cc.no_cache = PROTO_TRUE;
     cc.must_revalidate = PROTO_TRUE;
     TEST_ASSERT_EQUAL_STRING("private, no-cache, must-revalidate", build(&cc));
 
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.cc_public = PROTO_TRUE;
     cc.max_age = 0;
     TEST_ASSERT_EQUAL_STRING("public, max-age=0", build(&cc));
 
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.no_transform = PROTO_TRUE;
     cc.must_understand = PROTO_TRUE;
     cc.proxy_revalidate = PROTO_TRUE;
     TEST_ASSERT_EQUAL_STRING("proxy-revalidate, no-transform, must-understand", build(&cc));
 
     // The RFC 5861 extensions.
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.max_age = 60;
     cc.stale_while_revalidate = 30;
     cc.stale_if_error = 86400;
     TEST_ASSERT_EQUAL_STRING("max-age=60, stale-while-revalidate=30, stale-if-error=86400", build(&cc));
 
     // The request-side directives of sec 5.2.1.
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.only_if_cached = PROTO_TRUE;
     cc.max_stale = 10;
     cc.min_fresh = 5;
@@ -157,7 +217,8 @@ void test_build_emits_the_grammar(void)
 
     // sec 5.2.1.2: "If no value is assigned to max-stale, then the client will accept a stale
     // response of any age" - the bare token, which this module spells as -2.
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.max_stale = -2;
     TEST_ASSERT_EQUAL_STRING("max-stale", build(&cc));
 }
@@ -167,12 +228,17 @@ void test_build_emits_the_grammar(void)
 void test_build_reports_its_own_length(void)
 {
     protocore_cache_control cc;
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     cc.cc_public = PROTO_TRUE;
     cc.max_age = 31536000;
     cc.cc_immutable = PROTO_TRUE;
 
-    size_t n = cache_control_build(g_buf, sizeof(g_buf), &cc);
+    Httpcache.control_build_args.buf = g_buf;
+    Httpcache.control_build_args.cap = sizeof(g_buf);
+    Httpcache.control_build_args.cc = &cc;
+    Httpcache.control_build(httpcache_work);
+    size_t n = Httpcache.n;
     TEST_ASSERT_EQUAL_UINT(strlen("public, max-age=31536000, immutable"), n);
     TEST_ASSERT_EQUAL_CHAR('\0', g_buf[n]);
 }
@@ -183,24 +249,40 @@ void test_parse_is_tolerant_as_sec_5_2_requires(void)
 {
     protocore_cache_control cc;
     static const char MIXED[] = "PUBLIC,  Max-Age=\"600\" , IMMUTABLE";
-    TEST_ASSERT_TRUE(cache_control_parse(MIXED, sizeof(MIXED) - 1, &cc));
+    Httpcache.control_parse_args.s = MIXED;
+    Httpcache.control_parse_args.len = sizeof(MIXED) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_TRUE(cc.cc_public);
     TEST_ASSERT_TRUE(cc.cc_immutable);
     TEST_ASSERT_EQUAL_INT32(600, cc.max_age);
 
     // sec 5.2.3: a directive a cache does not understand is ignored, not an error.
     static const char UNKNOWN[] = "surrogate-control=foo, max-age=42, x-nonsense";
-    TEST_ASSERT_TRUE(cache_control_parse(UNKNOWN, sizeof(UNKNOWN) - 1, &cc));
+    Httpcache.control_parse_args.s = UNKNOWN;
+    Httpcache.control_parse_args.len = sizeof(UNKNOWN) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(42, cc.max_age);
     TEST_ASSERT_FALSE(cc.cc_public);
 
     // Nothing known at all: false, and the set is left at its defaults.
     static const char NONE[] = "x-nonsense, another-thing=1";
-    TEST_ASSERT_FALSE(cache_control_parse(NONE, sizeof(NONE) - 1, &cc));
+    Httpcache.control_parse_args.s = NONE;
+    Httpcache.control_parse_args.len = sizeof(NONE) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_FALSE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(-1, cc.max_age);
 
     // A NULL value is refused rather than read.
-    TEST_ASSERT_FALSE(cache_control_parse(NULL, 10, &cc));
+    Httpcache.control_parse_args.s = NULL;
+    Httpcache.control_parse_args.len = 10;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_FALSE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(-1, cc.max_age);
 }
 
@@ -211,15 +293,27 @@ void test_parse_separates_bare_max_stale_from_valued(void)
     protocore_cache_control cc;
 
     static const char BARE[] = "max-stale";
-    TEST_ASSERT_TRUE(cache_control_parse(BARE, sizeof(BARE) - 1, &cc));
+    Httpcache.control_parse_args.s = BARE;
+    Httpcache.control_parse_args.len = sizeof(BARE) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(-2, cc.max_stale);
 
     static const char VALUED[] = "max-stale=10";
-    TEST_ASSERT_TRUE(cache_control_parse(VALUED, sizeof(VALUED) - 1, &cc));
+    Httpcache.control_parse_args.s = VALUED;
+    Httpcache.control_parse_args.len = sizeof(VALUED) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(10, cc.max_stale);
 
     static const char OTHER[] = "min-fresh=5";
-    TEST_ASSERT_TRUE(cache_control_parse(OTHER, sizeof(OTHER) - 1, &cc));
+    Httpcache.control_parse_args.s = OTHER;
+    Httpcache.control_parse_args.len = sizeof(OTHER) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(-1, cc.max_stale);
     TEST_ASSERT_EQUAL_INT32(5, cc.min_fresh);
 }
@@ -231,23 +325,39 @@ void test_delta_seconds_saturates_rather_than_wrapping(void)
 {
     protocore_cache_control cc;
 
-    static const char HUGE[] = "max-age=99999999999999999999";
-    TEST_ASSERT_TRUE(cache_control_parse(HUGE, sizeof(HUGE) - 1, &cc));
+    static const char OVERSIZE[] = "max-age=99999999999999999999";
+    Httpcache.control_parse_args.s = OVERSIZE;
+    Httpcache.control_parse_args.len = sizeof(OVERSIZE) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(2147483647, cc.max_age);
 
     // 2^31-1 itself survives unchanged, so the clamp is not eating a legal value.
     static const char TOP[] = "max-age=2147483647";
-    TEST_ASSERT_TRUE(cache_control_parse(TOP, sizeof(TOP) - 1, &cc));
+    Httpcache.control_parse_args.s = TOP;
+    Httpcache.control_parse_args.len = sizeof(TOP) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(2147483647, cc.max_age);
 
     // 2^31 itself is one past what the field holds and saturates to the same ceiling.
     static const char OVER[] = "max-age=2147483648";
-    TEST_ASSERT_TRUE(cache_control_parse(OVER, sizeof(OVER) - 1, &cc));
+    Httpcache.control_parse_args.s = OVER;
+    Httpcache.control_parse_args.len = sizeof(OVER) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(2147483647, cc.max_age);
 
     // "max-age" with no digits carries no delta-seconds at all.
     static const char NODIGITS[] = "max-age=";
-    TEST_ASSERT_TRUE(cache_control_parse(NODIGITS, sizeof(NODIGITS) - 1, &cc));
+    Httpcache.control_parse_args.s = NODIGITS;
+    Httpcache.control_parse_args.len = sizeof(NODIGITS) - 1;
+    Httpcache.control_parse_args.cc = &cc;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_EQUAL_INT32(-1, cc.max_age);
 }
 
@@ -255,7 +365,8 @@ void test_delta_seconds_saturates_rather_than_wrapping(void)
 void test_build_parse_round_trip(void)
 {
     protocore_cache_control out;
-    cache_control_init(&out);
+    Httpcache.control_init_args.cc = &out;
+    Httpcache.control_init(httpcache_work);
     out.cc_public = PROTO_TRUE;
     out.no_transform = PROTO_TRUE;
     out.must_revalidate = PROTO_TRUE;
@@ -267,11 +378,19 @@ void test_build_parse_round_trip(void)
     out.stale_while_revalidate = 60;
     out.stale_if_error = 120;
 
-    size_t n = cache_control_build(g_buf, sizeof(g_buf), &out);
+    Httpcache.control_build_args.buf = g_buf;
+    Httpcache.control_build_args.cap = sizeof(g_buf);
+    Httpcache.control_build_args.cc = &out;
+    Httpcache.control_build(httpcache_work);
+    size_t n = Httpcache.n;
     TEST_ASSERT_TRUE(n > 0);
 
     protocore_cache_control in;
-    TEST_ASSERT_TRUE(cache_control_parse(g_buf, n, &in));
+    Httpcache.control_parse_args.s = g_buf;
+    Httpcache.control_parse_args.len = n;
+    Httpcache.control_parse_args.cc = &in;
+    Httpcache.control_parse(httpcache_work);
+    TEST_ASSERT_TRUE(Httpcache.ok);
     TEST_ASSERT_TRUE(in.cc_public);
     TEST_ASSERT_TRUE(in.no_transform);
     TEST_ASSERT_TRUE(in.must_revalidate);
@@ -292,27 +411,50 @@ void test_presets_match_their_documented_directives(void)
     protocore_cache_control cc;
 
     // RFC 8246: "immutable" tells a cache not to revalidate while fresh.
-    cache_immutable_asset(&cc, 31536000u);
+    Httpcache.immutable_asset_args.cc = &cc;
+    Httpcache.immutable_asset_args.max_age = 31536000u;
+    Httpcache.immutable_asset(httpcache_work);
     TEST_ASSERT_EQUAL_STRING("public, max-age=31536000, immutable", build(&cc));
 
-    cache_revalidatable(&cc, 60u, 30);
+    Httpcache.revalidatable_args.cc = &cc;
+    Httpcache.revalidatable_args.max_age = 60u;
+    Httpcache.revalidatable_args.stale_while_revalidate = 30;
+    Httpcache.revalidatable(httpcache_work);
     TEST_ASSERT_EQUAL_STRING("public, max-age=60, stale-while-revalidate=30", build(&cc));
 
     // A negative stale-while-revalidate means "do not emit the directive".
-    cache_revalidatable(&cc, 60u, -1);
+    Httpcache.revalidatable_args.cc = &cc;
+    Httpcache.revalidatable_args.max_age = 60u;
+    Httpcache.revalidatable_args.stale_while_revalidate = -1;
+    Httpcache.revalidatable(httpcache_work);
     TEST_ASSERT_EQUAL_STRING("public, max-age=60", build(&cc));
 
-    cache_no_store(&cc);
+    Httpcache.no_store_args.cc = &cc;
+    Httpcache.no_store(httpcache_work);
     TEST_ASSERT_EQUAL_STRING("no-store", build(&cc));
 
-    cache_shared(&cc, 60u, 600u);
+    Httpcache.shared_args.cc = &cc;
+    Httpcache.shared_args.max_age = 60u;
+    Httpcache.shared_args.s_maxage = 600u;
+    Httpcache.shared(httpcache_work);
     TEST_ASSERT_EQUAL_STRING("public, max-age=60, s-maxage=600", build(&cc));
-    TEST_ASSERT_EQUAL_INT(600, (int)cache_freshness_lifetime(&cc, PROTO_TRUE, -1));
-    TEST_ASSERT_EQUAL_INT(60, (int)cache_freshness_lifetime(&cc, PROTO_FALSE, -1));
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_TRUE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = -1;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(600, (int)Httpcache.value);
+    Httpcache.freshness_lifetime_args.cc = &cc;
+    Httpcache.freshness_lifetime_args.shared = PROTO_FALSE;
+    Httpcache.freshness_lifetime_args.expires_minus_date = -1;
+    Httpcache.freshness_lifetime(httpcache_work);
+    TEST_ASSERT_EQUAL_INT(60, (int)Httpcache.value);
 
     // Each preset starts from an empty set, so a reused struct carries nothing across.
-    cache_immutable_asset(&cc, 10u);
-    cache_no_store(&cc);
+    Httpcache.immutable_asset_args.cc = &cc;
+    Httpcache.immutable_asset_args.max_age = 10u;
+    Httpcache.immutable_asset(httpcache_work);
+    Httpcache.no_store_args.cc = &cc;
+    Httpcache.no_store(httpcache_work);
     TEST_ASSERT_FALSE(cc.cc_public);
     TEST_ASSERT_FALSE(cc.cc_immutable);
     TEST_ASSERT_EQUAL_INT32(-1, cc.max_age);
@@ -323,19 +465,41 @@ void test_presets_match_their_documented_directives(void)
 void test_build_refuses_a_short_buffer(void)
 {
     protocore_cache_control cc;
-    cache_immutable_asset(&cc, 31536000u);
+    Httpcache.immutable_asset_args.cc = &cc;
+    Httpcache.immutable_asset_args.max_age = 31536000u;
+    Httpcache.immutable_asset(httpcache_work);
     const size_t want = strlen("public, max-age=31536000, immutable");
 
     char small[8];
     small[0] = 'x';
-    TEST_ASSERT_EQUAL_UINT(0u, cache_control_build(small, sizeof(small), &cc));
+    Httpcache.control_build_args.buf = small;
+    Httpcache.control_build_args.cap = sizeof(small);
+    Httpcache.control_build_args.cc = &cc;
+    Httpcache.control_build(httpcache_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Httpcache.n);
 
     // One octet short of value + NUL is still a refusal; exactly enough is not.
     char exact[64];
-    TEST_ASSERT_EQUAL_UINT(0u, cache_control_build(exact, want, &cc));
-    TEST_ASSERT_EQUAL_UINT(want, cache_control_build(exact, want + 1, &cc));
+    Httpcache.control_build_args.buf = exact;
+    Httpcache.control_build_args.cap = want;
+    Httpcache.control_build_args.cc = &cc;
+    Httpcache.control_build(httpcache_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Httpcache.n);
+    Httpcache.control_build_args.buf = exact;
+    Httpcache.control_build_args.cap = want + 1;
+    Httpcache.control_build_args.cc = &cc;
+    Httpcache.control_build(httpcache_work);
+    TEST_ASSERT_EQUAL_UINT(want, Httpcache.n);
     TEST_ASSERT_EQUAL_STRING("public, max-age=31536000, immutable", exact);
 
-    TEST_ASSERT_EQUAL_UINT(0u, cache_control_build(NULL, 64, &cc));
-    TEST_ASSERT_EQUAL_UINT(0u, cache_control_build(exact, 0, &cc));
+    Httpcache.control_build_args.buf = NULL;
+    Httpcache.control_build_args.cap = 64;
+    Httpcache.control_build_args.cc = &cc;
+    Httpcache.control_build(httpcache_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Httpcache.n);
+    Httpcache.control_build_args.buf = exact;
+    Httpcache.control_build_args.cap = 0;
+    Httpcache.control_build_args.cc = &cc;
+    Httpcache.control_build(httpcache_work);
+    TEST_ASSERT_EQUAL_UINT(0u, Httpcache.n);
 }

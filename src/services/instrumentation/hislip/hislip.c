@@ -7,12 +7,12 @@
  */
 
 #include "services/instrumentation/hislip/hislip.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 
 #if PROTOCORE_ENABLE_HISLIP
 
-#include "mmgr/endian.h"
+#include "mmgr/endian/endian.h"
 
 size_t protocore_hislip_build_header(uint8_t *buf, size_t cap, HislipMsg type, uint8_t control, uint32_t parameter,
                                      uint64_t payload_len)

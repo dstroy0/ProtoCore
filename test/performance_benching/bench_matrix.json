@@ -15,19 +15,10 @@
       "path": "core/numparse",
       "flags": [],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c"
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
+        "src/server/clock/clock.c"
       ]
     },
     "mmgr_dma": {
@@ -39,7 +30,7 @@
         "-DPROTOCORE_DMA_CHANNELS=2"
       ],
       "src": [
-        "src/mmgr/dma.c",
+        "src/mmgr/dma/dma.c",
         "src/server/clock/clock.c"
       ]
     },
@@ -49,19 +40,10 @@
       "path": "mmgr/protostr",
       "flags": [],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c"
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
+        "src/server/clock/clock.c"
       ]
     },
     "network_drivers_application_http_range": {
@@ -72,20 +54,11 @@
         "-DPROTOCORE_ENABLE_FILE_SERVING=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/application/http_range.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c"
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
+        "src/network_drivers/application/http_range/http_range.c",
+        "src/server/clock/clock.c"
       ]
     },
     "network_drivers_session_scp": {
@@ -97,80 +70,15 @@
         "-DPROTOCORE_ENABLE_SSH_SCP=1"
       ],
       "src": [
-        "src/crypto/aead/aesgcm.c",
-        "src/crypto/aead/chachapoly.c",
-        "src/crypto/asymmetric/bignum.c",
-        "src/crypto/asymmetric/curve25519.c",
-        "src/crypto/asymmetric/ecdsa.c",
-        "src/crypto/asymmetric/ed25519.c",
-        "src/crypto/asymmetric/fe25519.c",
-        "src/crypto/asymmetric/rsa.c",
-        "src/crypto/cipher/aes256ctr.c",
-        "src/crypto/cipher/aes_block.c",
-        "src/crypto/cipher/chacha20.c",
-        "src/crypto/ct_eq.c",
-        "src/crypto/hash/sha256.c",
-        "src/crypto/hash/sha512.c",
-        "src/crypto/mac/ghash.c",
-        "src/crypto/mac/hmac_sha256.c",
-        "src/crypto/mac/hmac_sha512.c",
-        "src/crypto/mac/poly1305.c",
-        "src/crypto/pqc/sntrup761.c",
-        "src/crypto/rng/rng.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/bytes.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/application/file_serving/file_serving.c",
-        "src/network_drivers/session/scp/scp.c",
-        "src/network_drivers/session/scp/ssh_scp.c",
-        "src/network_drivers/presentation/http/http.c",
-        "src/network_drivers/presentation/http/http_parser/http_parser.c",
-        "src/network_drivers/presentation/http/route/http_route.c",
-        "src/network_drivers/presentation/presentation.c",
-        "src/network_drivers/presentation/ssh/app/server.c",
-        "src/network_drivers/presentation/ssh/auth/auth.c",
-        "src/network_drivers/presentation/ssh/connection/connection.c",
-        "src/network_drivers/presentation/ssh/network/network.c",
-        "src/network_drivers/presentation/ssh/server/server.c",
-        "src/network_drivers/presentation/ssh/ssh.c",
-        "src/network_drivers/presentation/ssh/transport/extension.c",
-        "src/network_drivers/presentation/ssh/transport/phase_machine.c",
-        "src/network_drivers/presentation/ssh/transport/ssh_kexhash.c",
-        "src/network_drivers/presentation/ssh/transport/ssh_rsa.c",
-        "src/network_drivers/presentation/ssh/transport/transport.c",
-        "src/network_drivers/session/session.c",
-        "src/network_drivers/tls/tls.c",
-        "src/network_drivers/transport/diffserv/diffserv.c",
-        "src/network_drivers/transport/net_addr/net_addr.c",
-        "src/network_drivers/transport/tcp/client/client.c",
-        "src/network_drivers/transport/tcp/lower/lower.c",
-        "src/network_drivers/transport/tcp/protocol/protocol.c",
-        "src/network_drivers/transport/tcp/server/server.c",
-        "src/network_drivers/transport/tcp/tcp.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
+        "src/network_drivers/session/scp/scp/scp.c",
         "src/server/clock/clock.c",
-        "src/protocore.c",
-        "src/server/core/worker.c",
-        "src/server/io/middleware.c",
-        "src/server/io/response.c",
-        "src/server/protocore_builtins.c",
-        "src/server/regex.c",
-        "src/server/signaling/signaling.c",
-        "src/server/storage/filesystem.c",
-        "src/server/storage/mnt.c",
-        "src/shared/hex/hex.c",
-        "src/shared/ip/ip.c",
-        "src/shared/log/log.c",
-        "src/shared/time_compat/time_compat.c"
+        "src/shared/hex/hex.c"
       ]
     },
     "network_drivers_application_sftp": {
@@ -182,79 +90,15 @@
         "-DPROTOCORE_ENABLE_SSH_SFTP=1"
       ],
       "src": [
-        "src/crypto/aead/aesgcm.c",
-        "src/crypto/aead/chachapoly.c",
-        "src/crypto/asymmetric/bignum.c",
-        "src/crypto/asymmetric/curve25519.c",
-        "src/crypto/asymmetric/ecdsa.c",
-        "src/crypto/asymmetric/ed25519.c",
-        "src/crypto/asymmetric/fe25519.c",
-        "src/crypto/asymmetric/rsa.c",
-        "src/crypto/cipher/aes256ctr.c",
-        "src/crypto/cipher/aes_block.c",
-        "src/crypto/cipher/chacha20.c",
-        "src/crypto/ct_eq.c",
-        "src/crypto/hash/sha256.c",
-        "src/crypto/hash/sha512.c",
-        "src/crypto/mac/ghash.c",
-        "src/crypto/mac/hmac_sha256.c",
-        "src/crypto/mac/hmac_sha512.c",
-        "src/crypto/mac/poly1305.c",
-        "src/crypto/pqc/sntrup761.c",
-        "src/crypto/rng/rng.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/bytes.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/application/file_serving/file_serving.c",
-        "src/network_drivers/application/sftp/sftp.c",
-        "src/network_drivers/application/sftp/ssh_sftp.c",
-        "src/network_drivers/presentation/http/http.c",
-        "src/network_drivers/presentation/http/http_parser/http_parser.c",
-        "src/network_drivers/presentation/http/route/http_route.c",
-        "src/network_drivers/presentation/presentation.c",
-        "src/network_drivers/presentation/ssh/app/server.c",
-        "src/network_drivers/presentation/ssh/auth/auth.c",
-        "src/network_drivers/presentation/ssh/connection/connection.c",
-        "src/network_drivers/presentation/ssh/network/network.c",
-        "src/network_drivers/presentation/ssh/server/server.c",
-        "src/network_drivers/presentation/ssh/ssh.c",
-        "src/network_drivers/presentation/ssh/transport/extension.c",
-        "src/network_drivers/presentation/ssh/transport/phase_machine.c",
-        "src/network_drivers/presentation/ssh/transport/ssh_kexhash.c",
-        "src/network_drivers/presentation/ssh/transport/ssh_rsa.c",
-        "src/network_drivers/presentation/ssh/transport/transport.c",
-        "src/network_drivers/session/session.c",
-        "src/network_drivers/tls/tls.c",
-        "src/network_drivers/transport/diffserv/diffserv.c",
-        "src/network_drivers/transport/net_addr/net_addr.c",
-        "src/network_drivers/transport/tcp/client/client.c",
-        "src/network_drivers/transport/tcp/lower/lower.c",
-        "src/network_drivers/transport/tcp/protocol/protocol.c",
-        "src/network_drivers/transport/tcp/server/server.c",
-        "src/network_drivers/transport/tcp/tcp.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
+        "src/network_drivers/application/sftp/sftp/sftp.c",
         "src/server/clock/clock.c",
-        "src/protocore.c",
-        "src/server/core/worker.c",
-        "src/server/io/middleware.c",
-        "src/server/io/response.c",
-        "src/server/protocore_builtins.c",
-        "src/server/regex.c",
-        "src/server/signaling/signaling.c",
-        "src/server/storage/filesystem.c",
-        "src/server/storage/mnt.c",
         "src/shared/hex/hex.c",
-        "src/shared/ip/ip.c",
-        "src/shared/log/log.c",
         "src/shared/time_compat/time_compat.c"
       ]
     },
@@ -265,40 +109,29 @@
         "-DPROTOCORE_ENABLE_SMB=1"
       ],
       "src": [
-        "src/crypto/aead/aes128gcm.c",
-        "src/crypto/aead/aesccm.c",
-        "src/crypto/aead/aesgcm.c",
-        "src/crypto/cipher/aes256ctr.c",
-        "src/crypto/cipher/aes_block.c",
-        "src/crypto/cipher/chacha20.c",
+        "src/crypto/aead/aes128gcm/aes128gcm.c",
+        "src/crypto/aead/aesccm/aesccm.c",
+        "src/crypto/aead/aesgcm/aesgcm.c",
+        "src/crypto/cipher/aes_block/aes_block.c",
         "src/crypto/ct_eq.c",
-        "src/crypto/hash/md.c",
-        "src/crypto/hash/sha256.c",
-        "src/crypto/hash/sha512.c",
-        "src/crypto/kdf/kdf.c",
-        "src/crypto/mac/aes_cmac.c",
-        "src/crypto/mac/ghash.c",
-        "src/crypto/mac/hmac_sha256.c",
-        "src/crypto/rng/rng.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/application/smb/ntlm.c",
-        "src/network_drivers/application/smb/ntlmssp.c",
-        "src/network_drivers/application/smb/smb2.c",
-        "src/network_drivers/application/smb/smb_client.c",
-        "src/network_drivers/application/smb/spnego.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c"
+        "src/crypto/hash/md/md.c",
+        "src/crypto/hash/sha256/sha256.c",
+        "src/crypto/hash/sha512/sha512.c",
+        "src/crypto/kdf/kdf/kdf.c",
+        "src/crypto/mac/aes_cmac/aes_cmac.c",
+        "src/crypto/mac/ghash/ghash.c",
+        "src/crypto/mac/hmac_sha256/hmac_sha256.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
+        "src/network_drivers/application/smb/ntlm/ntlm.c",
+        "src/network_drivers/application/smb/ntlmssp/ntlmssp.c",
+        "src/network_drivers/application/smb/smb2/smb2.c",
+        "src/server/clock/clock.c"
       ]
     },
     "network_drivers_application_upload_service": {
@@ -310,17 +143,19 @@
         "-DBODY_BUF_SIZE=64"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/bytes/bytes.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/application/upload_service/upload_service.c",
         "src/network_drivers/presentation/http/http.c",
         "src/network_drivers/presentation/http/http_parser/http_parser.c",
@@ -331,15 +166,15 @@
         "src/network_drivers/transport/tcp/lower/lower.c",
         "src/network_drivers/transport/tcp/protocol/protocol.c",
         "src/network_drivers/transport/tcp/server/server.c",
-        "src/server/clock/clock.c",
         "src/protocore.c",
-        "src/server/core/worker.c",
+        "src/server/clock/clock.c",
+        "src/server/core/worker/worker.c",
         "src/server/io/middleware.c",
         "src/server/io/response.c",
         "src/server/protocore_builtins.c",
         "src/server/regex.c",
-        "src/server/signaling/signaling.c",
-        "src/server/storage/mnt.c",
+        "src/server/signaling/signaling/signaling.c",
+        "src/server/storage/mnt/mnt.c",
         "src/shared/hex/hex.c",
         "src/shared/ip/ip.c"
       ]
@@ -352,17 +187,10 @@
         "-DPROTOCORE_ENABLE_FILE_SERVING=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/application/webdav/webdav.c",
         "src/server/clock/clock.c",
         "src/shared/hex/hex.c"
@@ -375,29 +203,8 @@
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/bytes.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/network/dns/dns.c",
-        "src/network_drivers/network/dns/dns_resolver.c",
-        "src/network_drivers/network/dns/dns_server.c",
-        "src/network_drivers/network/dns/dns_wire.c",
-        "src/network_drivers/transport/diffserv/diffserv.c",
-        "src/network_drivers/transport/net_addr/net_addr.c",
-        "src/network_drivers/transport/udp/server/server.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c",
-        "src/shared/ip/ip.c"
+        "src/network_drivers/network/dns/dns_resolver/dns_resolver.c",
+        "src/server/clock/clock.c"
       ]
     },
     "network_drivers_physical_radio_power": {
@@ -407,19 +214,14 @@
         "-DPROTOCORE_ENABLE_RADIO_POWER=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/physical/physical.c",
-        "src/network_drivers/physical/radio_power.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
+        "src/network_drivers/physical/physical/physical.c",
+        "src/network_drivers/physical/radio_power/radio_power.c",
         "src/server/clock/clock.c",
         "src/shared/hex/hex.c",
         "src/shared/ip/ip.c"
@@ -430,20 +232,11 @@
       "path": "network_drivers/presentation/base64",
       "flags": [],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/codec/base64/base64.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c"
+        "src/server/clock/clock.c"
       ]
     },
     "network_drivers_presentation_deflate": {
@@ -454,23 +247,14 @@
         "-DPROTOCORE_ENABLE_WEBSOCKET=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/bitio.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/presentation/codec/deflate/deflate.c",
-        "src/network_drivers/presentation/codec/deflate/rfc1951.c",
+        "src/mmgr/bitio/bitio.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
+        "src/network_drivers/presentation/codec/deflate/deflate/deflate.c",
+        "src/network_drivers/presentation/codec/deflate/rfc1951/rfc1951.c",
         "src/network_drivers/presentation/codec/inflate/inflate.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c"
+        "src/server/clock/clock.c"
       ]
     },
     "network_drivers_presentation_http_parser": {
@@ -480,17 +264,10 @@
         "-DPROTOCORE_ENFORCE_HOST_HEADER=0"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/http/http_parser/http_parser.c",
         "src/server/clock/clock.c",
         "src/shared/hex/hex.c",
@@ -535,22 +312,13 @@
         "-DPROTOCORE_ENABLE_SSH=1"
       ],
       "src": [
-        "src/crypto/cipher/chacha20.c",
-        "src/crypto/hash/sha256.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c"
+        "src/crypto/cipher/chacha20/chacha20.c",
+        "src/crypto/hash/sha256/sha256.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
+        "src/server/clock/clock.c"
       ]
     },
     "server_bus_capture": {
@@ -560,9 +328,15 @@
         "-DPROTOCORE_ENABLE_BUS_CAPTURE=1"
       ],
       "src": [
-        "src/mmgr/endian.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/signaling/bus_capture.c",
+        "src/server/signaling/bus_capture/bus_capture.c",
         "src/shared/pcap/pcap.c"
       ]
     },
@@ -581,21 +355,16 @@
         "-DPROTOCORE_ENABLE_DEVICE_ID=1"
       ],
       "src": [
-        "src/crypto/hash/sha1.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/crypto/hash/sha1/sha1.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/signaling/device_id.c",
+        "src/server/signaling/device_id/device_id.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -606,22 +375,16 @@
         "-DPROTOCORE_ENABLE_EXC_DECODER=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/core/exc_coredump.c",
-        "src/server/core/exc_decoder.c",
-        "src/server/storage/filesystem.c",
-        "src/server/storage/mnt.c",
+        "src/server/core/exc_decoder/exc_decoder.c",
+        "src/server/storage/mnt/mnt.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -632,8 +395,14 @@
         "-DPROTOCORE_ENABLE_FAILSAFE=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/core/failsafe.c"
+        "src/server/core/failsafe/failsafe.c"
       ]
     },
     "server_gpio_map": {
@@ -643,39 +412,16 @@
         "-DPROTOCORE_ENABLE_GPIO_MAP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/presentation/http/http.c",
-        "src/network_drivers/presentation/http/http_parser/http_parser.c",
-        "src/network_drivers/presentation/http/route/http_route.c",
-        "src/network_drivers/presentation/presentation.c",
-        "src/network_drivers/session/session.c",
-        "src/network_drivers/transport/net_addr/net_addr.c",
-        "src/network_drivers/transport/tcp/lower/lower.c",
-        "src/network_drivers/transport/tcp/protocol/protocol.c",
-        "src/network_drivers/transport/tcp/server/server.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/protocore.c",
-        "src/server/core/worker.c",
-        "src/server/io/middleware.c",
-        "src/server/io/response.c",
-        "src/server/protocore_builtins.c",
-        "src/server/regex.c",
-        "src/server/signaling/gpio_map.c",
-        "src/server/signaling/gpio_map_routes.c",
-        "src/server/signaling/signaling.c",
-        "src/server/storage/mnt.c",
-        "src/shared/hex/hex.c",
-        "src/shared/ip/ip.c"
+        "src/server/signaling/gpio_map/gpio_map.c",
+        "src/shared/hex/hex.c"
       ]
     },
     "server_hw_health": {
@@ -685,19 +431,13 @@
         "-DPROTOCORE_ENABLE_HW_HEALTH=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/signaling/hw_health.c",
+        "src/server/signaling/hw_health/hw_health.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -709,7 +449,7 @@
       ],
       "src": [
         "src/server/clock/clock.c",
-        "src/server/signaling/link_manager.c"
+        "src/server/signaling/link_manager/link_manager.c"
       ]
     },
     "server_logbuf": {
@@ -719,19 +459,18 @@
         "-DPROTOCORE_ENABLE_LOGBUF=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/core/logbuf.c",
+        "src/server/core/logbuf/logbuf.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -743,7 +482,7 @@
       ],
       "src": [
         "src/server/clock/clock.c",
-        "src/server/update/ota_rollback.c"
+        "src/server/update/ota_rollback/ota_rollback.c"
       ]
     },
     "server_ota_service": {
@@ -754,7 +493,7 @@
       ],
       "src": [
         "src/server/clock/clock.c",
-        "src/server/update/ota_service.c"
+        "src/server/update/ota_service/ota_service.c"
       ]
     },
     "server_power_mgmt": {
@@ -764,19 +503,17 @@
         "-DPROTOCORE_ENABLE_POWER_MGMT=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/core/power_mgmt.c",
+        "src/server/core/power_mgmt/power_mgmt.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -787,17 +524,17 @@
         "-DPROTOCORE_ENFORCE_HOST_HEADER=0"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/regex.c",
         "src/shared/hex/hex.c"
@@ -820,7 +557,7 @@
       ],
       "src": [
         "src/server/clock/clock.c",
-        "src/server/core/sleep_sched.c"
+        "src/server/core/sleep_sched/sleep_sched.c"
       ]
     },
     "server_trace_capture": {
@@ -830,20 +567,8 @@
         "-DPROTOCORE_ENABLE_TRACE_CAPTURE=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
         "src/server/clock/clock.c",
-        "src/server/signaling/trace_capture.c",
-        "src/shared/hex/hex.c"
+        "src/server/signaling/trace_capture/trace_capture.c"
       ]
     },
     "services_ad9238": {
@@ -864,21 +589,12 @@
         "-DPROTOCORE_ENABLE_ADS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/ads/ads.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/ads/ads.c"
       ]
     },
     "services_ads1115": {
@@ -888,6 +604,13 @@
         "-DPROTOCORE_ENABLE_ADS1115=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/ads1115/ads1115.c"
       ]
@@ -899,21 +622,12 @@
         "-DPROTOCORE_ENABLE_AMQP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/iot/amqp/amqp.c",
-        "src/shared/hex/hex.c"
+        "src/services/iot/amqp/amqp.c"
       ]
     },
     "services_atc": {
@@ -923,17 +637,11 @@
         "-DPROTOCORE_ENABLE_ATC=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/machine_tool/atc/atc.c",
         "src/shared/hex/hex.c"
@@ -946,8 +654,20 @@
         "-DPROTOCORE_ENABLE_AUDIT_LOG=1"
       ],
       "src": [
+        "src/crypto/hash/sha256/sha256.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/security/audit_log/audit_log.c"
+        "src/server/security/audit_log/audit_log.c",
+        "src/shared/hex/hex.c"
       ]
     },
     "services_auth_lockout": {
@@ -958,18 +678,14 @@
         "-DPROTOCORE_ENABLE_AUTH_LOCKOUT=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
+        "src/server/security/auth_lockout/auth_lockout.c",
         "src/shared/hex/hex.c",
         "src/shared/ip/ip.c"
       ]
@@ -981,20 +697,11 @@
         "-DPROTOCORE_ENABLE_BACNET=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/bacnet/bacnet.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/bacnet/bacnet.c"
       ]
     },
     "services_ble_gatt": {
@@ -1004,17 +711,12 @@
         "-DPROTOCORE_ENABLE_BLE_GATT=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/radio/ble_gatt/ble_gatt.c",
         "src/shared/hex/hex.c"
@@ -1027,22 +729,13 @@
         "-DPROTOCORE_ENABLE_C37118=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/energy/c37118/c37118.c",
-        "src/shared/crc/crc.c",
-        "src/shared/hex/hex.c"
+        "src/shared/crc/crc.c"
       ]
     },
     "services_canopen": {
@@ -1052,20 +745,11 @@
         "-DPROTOCORE_ENABLE_CANOPEN=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/canopen/canopen.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/canopen/canopen.c"
       ]
     },
     "services_cc1101": {
@@ -1086,20 +770,11 @@
         "-DPROTOCORE_ENABLE_CCLINK=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/cclink/cclink.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/cclink/cclink.c"
       ]
     },
     "services_cia402": {
@@ -1110,22 +785,13 @@
         "-DPROTOCORE_ENABLE_CANOPEN=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/fieldbus/canopen/canopen.c",
-        "src/services/fieldbus/cia402/cia402.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/cia402/cia402.c"
       ]
     },
     "services_cip": {
@@ -1135,20 +801,11 @@
         "-DPROTOCORE_ENABLE_CIP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/cip/cip.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/cip/cip.c"
       ]
     },
     "services_cloudevents": {
@@ -1158,17 +815,12 @@
         "-DPROTOCORE_ENABLE_CLOUDEVENTS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/codec/json/json.c",
         "src/network_drivers/presentation/http/http_parser/http_parser.c",
         "src/server/clock/clock.c",
@@ -1187,26 +839,20 @@
         "-DPROTOCORE_COAP_BLOCK1_MAX=128"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/bytes.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/bytes/bytes.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/transport/diffserv/diffserv.c",
         "src/network_drivers/transport/net_addr/net_addr.c",
         "src/network_drivers/transport/udp/server/server.c",
         "src/server/clock/clock.c",
-        "src/services/iot/coap/coap.c",
-        "src/services/iot/coap/coaps.c",
-        "src/services/iot/coap/coaps_server.c",
+        "src/services/iot/coap/coap/coap.c",
         "src/shared/hex/hex.c",
         "src/shared/ip/ip.c"
       ]
@@ -1219,17 +865,16 @@
         "-DPROTOCORE_ENABLE_CONFIG_IO=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/storage/config_io/config_io.c",
         "src/server/storage/config_store/config_store.c",
@@ -1243,6 +888,13 @@
         "-DPROTOCORE_ENABLE_CONFIG_STORE=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/storage/config_store/config_store.c"
       ]
@@ -1254,20 +906,11 @@
         "-DPROTOCORE_ENABLE_CONTROL=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/system/control/control.c",
-        "src/shared/hex/hex.c"
+        "src/services/system/control/control.c"
       ]
     },
     "services_cotp": {
@@ -1277,20 +920,11 @@
         "-DPROTOCORE_ENABLE_COTP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/cotp/cotp.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/cotp/cotp.c"
       ]
     },
     "services_csrf": {
@@ -1300,6 +934,20 @@
         "-DPROTOCORE_ENABLE_CSRF=1"
       ],
       "src": [
+        "src/crypto/ct_eq.c",
+        "src/crypto/hash/sha256/sha256.c",
+        "src/crypto/mac/hmac_sha256/hmac_sha256.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/security/csrf/csrf.c",
         "src/shared/hex/hex.c"
@@ -1313,19 +961,45 @@
         "-DPROTOCORE_ENABLE_SSE=1"
       ],
       "src": [
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/network_drivers/application/web_assets.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/bytes/bytes.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
+        "src/network_drivers/application/web_assets/web_assets.c",
+        "src/network_drivers/presentation/http/http.c",
+        "src/network_drivers/presentation/http/http_parser/http_parser.c",
+        "src/network_drivers/presentation/http/route/http_route.c",
+        "src/network_drivers/presentation/http/sse/sse.c",
+        "src/network_drivers/presentation/presentation.c",
+        "src/network_drivers/session/session.c",
+        "src/network_drivers/session/sse/sse.c",
+        "src/network_drivers/transport/net_addr/net_addr.c",
+        "src/network_drivers/transport/tcp/lower/lower.c",
+        "src/network_drivers/transport/tcp/protocol/protocol.c",
+        "src/network_drivers/transport/tcp/server/server.c",
+        "src/protocore.c",
         "src/server/clock/clock.c",
+        "src/server/core/worker/worker.c",
+        "src/server/io/middleware.c",
         "src/server/io/response.c",
         "src/server/io/websocket_sse.c",
+        "src/server/protocore_builtins.c",
+        "src/server/regex.c",
+        "src/server/signaling/signaling/signaling.c",
+        "src/server/storage/mnt/mnt.c",
         "src/server/web/dashboard/dashboard.c",
-        "src/server/web/dashboard/dashboard_routes.c"
+        "src/server/web/dashboard/dashboard_routes.c",
+        "src/shared/hex/hex.c",
+        "src/shared/ip/ip.c"
       ]
     },
     "services_dbm": {
@@ -1336,23 +1010,14 @@
         "-DPROTOCORE_ENABLE_DBM=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/storage/dbm/dbm.c",
-        "src/services/storage/wal/wal.c",
-        "src/services/storage/wal/wal_store.c",
-        "src/shared/hex/hex.c"
+        "src/services/storage/wal/wal/wal.c",
+        "src/services/storage/wal/wal_store/wal_store.c"
       ]
     },
     "services_dds": {
@@ -1362,20 +1027,11 @@
         "-DPROTOCORE_ENABLE_DDS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/iot/dds/dds.c",
-        "src/shared/hex/hex.c"
+        "src/services/iot/dds/dds.c"
       ]
     },
     "services_devicenet": {
@@ -1385,20 +1041,11 @@
         "-DPROTOCORE_ENABLE_DEVICENET=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/devicenet/devicenet.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/devicenet/devicenet.c"
       ]
     },
     "services_df1": {
@@ -1420,20 +1067,11 @@
         "-DPROTOCORE_ENABLE_DIRECTNET=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/directnet/directnet.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/directnet/directnet.c"
       ]
     },
     "services_dmx": {
@@ -1443,20 +1081,11 @@
         "-DPROTOCORE_ENABLE_DMX=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/peripherals/dmx/dmx.c",
-        "src/shared/hex/hex.c"
+        "src/server/peripherals/dmx/dmx.c"
       ]
     },
     "services_dnc": {
@@ -1466,21 +1095,12 @@
         "-DPROTOCORE_ENABLE_DNC=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/machine_tool/dnc/dnc.c",
-        "src/services/machine_tool/dnc/dnc_stream.c",
-        "src/shared/hex/hex.c"
+        "src/services/machine_tool/dnc/dnc/dnc.c",
+        "src/services/machine_tool/dnc/dnc_stream/dnc_stream.c"
       ]
     },
     "services_dnp3": {
@@ -1490,22 +1110,13 @@
         "-DPROTOCORE_ENABLE_DNP3=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/energy/dnp3/dnp3.c",
-        "src/shared/crc/crc.c",
-        "src/shared/hex/hex.c"
+        "src/shared/crc/crc.c"
       ]
     },
     "services_dns_server": {
@@ -1549,24 +1160,19 @@
         "-DPROTOCORE_ENABLE_DOCSTORE=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/codec/json/json.c",
         "src/server/clock/clock.c",
         "src/services/storage/dbm/dbm.c",
         "src/services/storage/docstore/docstore.c",
-        "src/services/storage/wal/wal.c",
-        "src/services/storage/wal/wal_store.c",
+        "src/services/storage/wal/wal/wal.c",
+        "src/services/storage/wal/wal_store/wal_store.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -1591,65 +1197,19 @@
         "-DPROTOCORE_ENABLE_RANGE=1"
       ],
       "src": [
-        "src/crypto/cipher/chacha20.c",
-        "src/crypto/ct_eq.c",
-        "src/crypto/hash/sha256.c",
-        "src/crypto/rng/rng.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/bytes.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/application/http_range.c",
-        "src/network_drivers/network/dns/dns.c",
-        "src/network_drivers/network/dns/dns_resolver.c",
-        "src/network_drivers/network/dns/dns_server.c",
-        "src/network_drivers/network/dns/dns_wire.c",
-        "src/network_drivers/presentation/codec/base64/base64.c",
-        "src/network_drivers/presentation/http/auth/auth.c",
-        "src/network_drivers/presentation/http/http.c",
-        "src/network_drivers/presentation/http/http_parser/http_parser.c",
+        "src/crypto/hash/sha256/sha256.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/http/httpcache/httpcache.c",
-        "src/network_drivers/presentation/http/route/http_route.c",
-        "src/network_drivers/presentation/presentation.c",
-        "src/network_drivers/session/session.c",
-        "src/network_drivers/tls/tls.c",
-        "src/network_drivers/transport/diffserv/diffserv.c",
-        "src/network_drivers/transport/net_addr/net_addr.c",
-        "src/network_drivers/transport/tcp/client/client.c",
-        "src/network_drivers/transport/tcp/lower/lower.c",
-        "src/network_drivers/transport/tcp/protocol/protocol.c",
-        "src/network_drivers/transport/tcp/server/server.c",
-        "src/network_drivers/transport/tcp/tcp.c",
-        "src/network_drivers/transport/udp/server/server.c",
         "src/server/clock/clock.c",
-        "src/protocore.c",
-        "src/server/core/worker.c",
-        "src/server/io/middleware.c",
-        "src/server/io/response.c",
-        "src/server/io/webdav_handler.c",
-        "src/server/protocore_builtins.c",
-        "src/server/regex.c",
-        "src/server/signaling/signaling.c",
-        "src/server/storage/mnt.c",
-        "src/server/web/edge_cache/edge_cache.c",
-        "src/server/web/edge_cache/edge_cache_proxy.c",
-        "src/server/web/edge_cache/edge_cache_sd.c",
-        "src/server/web/edge_cache/edge_fetch.c",
-        "src/server/web/edge_cache/edge_mesh.c",
-        "src/services/net/http_client/http_client.c",
-        "src/services/storage/dbm/dbm.c",
+        "src/server/web/edge_cache/edge_cache/edge_cache.c",
         "src/shared/hex/hex.c",
         "src/shared/http_date/http_date.c",
-        "src/shared/ip/ip.c",
         "src/shared/time_compat/time_compat.c"
       ]
     },
@@ -1660,20 +1220,11 @@
         "-DPROTOCORE_ENABLE_ENIP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/enip/enip.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/enip/enip.c"
       ]
     },
     "services_enocean": {
@@ -1684,21 +1235,12 @@
         "-DPROTOCORE_ENOCEAN_MAX_DATA=16"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/radio/enocean/enocean.c",
-        "src/shared/crc/crc.c",
-        "src/shared/hex/hex.c"
+        "src/shared/crc/crc.c"
       ]
     },
     "services_espnow": {
@@ -1708,20 +1250,14 @@
         "-DPROTOCORE_ENABLE_ESPNOW=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/radio/espnow/espnow.c",
-        "src/shared/hex/hex.c"
+        "src/services/radio/espnow/espnow.c"
       ]
     },
     "services_euromap77": {
@@ -1732,21 +1268,16 @@
         "-DPROTOCORE_ENABLE_EUROMAP77=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/opcua/models/euromap77/euromap77.c",
-        "src/services/opcua/opcua.c",
-        "src/shared/hex/hex.c"
+        "src/services/opcua/opcua.c"
       ]
     },
     "services_fanuc_j519": {
@@ -1756,21 +1287,12 @@
         "-DPROTOCORE_ENABLE_FANUC_J519=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/machine_tool/fanuc_j519/fanuc_j519.c",
-        "src/shared/hex/hex.c"
+        "src/services/machine_tool/fanuc_j519/fanuc_j519.c"
       ]
     },
     "services_fdc2214": {
@@ -1780,6 +1302,13 @@
         "-DPROTOCORE_ENABLE_FDC2214=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/fdc2214/fdc2214.c"
       ]
@@ -1791,20 +1320,11 @@
         "-DPROTOCORE_ENABLE_FINS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/fins/fins.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/fins/fins.c"
       ]
     },
     "services_flow_export": {
@@ -1838,20 +1358,11 @@
         "-DPROTOCORE_ENABLE_FOCAS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/machine_tool/focas/focas.c",
-        "src/shared/hex/hex.c"
+        "src/services/machine_tool/focas/focas.c"
       ]
     },
     "services_forward": {
@@ -1866,20 +1377,15 @@
         "-DPROTOCORE_FWD_INSPECT=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/network/forward/forward.c",
-        "src/network_drivers/physical/physical.c",
-        "src/network_drivers/physical/radio_power.c",
+        "src/network_drivers/physical/physical/physical.c",
+        "src/network_drivers/physical/radio_power/radio_power.c",
         "src/server/clock/clock.c",
         "src/shared/hex/hex.c",
         "src/shared/ip/ip.c"
@@ -1894,17 +1400,12 @@
         "-DPROTOCORE_ENABLE_FORWARDED_TRUST=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/security/forwarded_trust/forwarded_trust.c",
         "src/shared/hex/hex.c",
@@ -1918,21 +1419,12 @@
         "-DPROTOCORE_ENABLE_FTP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/file_transfer/ftp/ftp.c",
-        "src/services/file_transfer/ftp/ftp_session.c",
-        "src/shared/hex/hex.c"
+        "src/services/file_transfer/ftp/ftp/ftp.c"
       ]
     },
     "services_gateway": {
@@ -1943,6 +1435,12 @@
         "-DPROTOCORE_GW_MAX_PORTS=4"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/net/gateway/gateway.c"
       ]
@@ -1954,22 +1452,14 @@
         "-DPROTOCORE_ENABLE_NTRIP_CASTER=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/timing_position/gnss/gnss_survey.c",
-        "src/services/timing_position/gnss/rtcm3.c",
-        "src/services/timing_position/nmea0183/nmea0183.c",
-        "src/shared/hex/hex.c"
+        "src/services/timing_position/gnss/gnss_survey/gnss_survey.c",
+        "src/services/timing_position/gnss/rtcm3/rtcm3.c",
+        "src/services/timing_position/nmea0183/nmea0183.c"
       ]
     },
     "services_goose": {
@@ -1979,20 +1469,12 @@
         "-DPROTOCORE_ENABLE_GOOSE=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/energy/goose/goose.c",
-        "src/shared/hex/hex.c"
+        "src/services/energy/goose/goose.c"
       ]
     },
     "services_gpib": {
@@ -2002,17 +1484,12 @@
         "-DPROTOCORE_ENABLE_GPIB=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/instrumentation/gpib/gpib.c",
         "src/shared/hex/hex.c"
@@ -2025,17 +1502,15 @@
         "-DPROTOCORE_ENABLE_GRAPHQL=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/iot/graphql/graphql.c",
         "src/shared/hex/hex.c"
@@ -2048,20 +1523,12 @@
         "-DPROTOCORE_ENABLE_GRPC_WEB=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/iot/grpcweb/grpcweb.c",
-        "src/shared/hex/hex.c"
+        "src/services/iot/grpcweb/grpcweb.c"
       ]
     },
     "services_guardrails": {
@@ -2071,17 +1538,15 @@
         "-DPROTOCORE_ENABLE_GUARDRAILS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/core/guardrails/guardrails.c",
         "src/shared/hex/hex.c"
@@ -2094,17 +1559,11 @@
         "-DPROTOCORE_ENABLE_HAAS_MDC=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/machine_tool/haas_mdc/haas_mdc.c",
         "src/shared/hex/hex.c"
@@ -2117,17 +1576,12 @@
         "-DPROTOCORE_ENABLE_HAPPY_EYEBALLS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/transport/happy_eyeballs/happy_eyeballs.c",
         "src/server/clock/clock.c",
         "src/shared/hex/hex.c",
@@ -2141,20 +1595,11 @@
         "-DPROTOCORE_ENABLE_HART=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/hart/hart.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/hart/hart.c"
       ]
     },
     "services_hislip": {
@@ -2164,21 +1609,13 @@
         "-DPROTOCORE_ENABLE_HISLIP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/instrumentation/hislip/hislip.c",
-        "src/shared/hex/hex.c"
+        "src/services/instrumentation/hislip/hislip.c"
       ]
     },
     "services_hmmd": {
@@ -2188,6 +1625,12 @@
         "-DPROTOCORE_ENABLE_HMMD=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/hmmd/hmmd.c"
       ]
@@ -2199,20 +1642,11 @@
         "-DPROTOCORE_ENABLE_HOSTLINK=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/hostlink/hostlink.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/hostlink/hostlink.c"
       ]
     },
     "services_hotswap": {
@@ -2222,8 +1656,18 @@
         "-DPROTOCORE_ENABLE_HOTSWAP=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/storage/hotswap/hotswap.c"
+        "src/server/storage/hotswap/hotswap.c",
+        "src/shared/hex/hex.c"
       ]
     },
     "services_http_client": {
@@ -2233,17 +1677,15 @@
         "-DPROTOCORE_ENABLE_HTTP_CLIENT=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/net/http_client/http_client.c",
         "src/shared/hex/hex.c"
@@ -2299,20 +1741,12 @@
         "-DPROTOCORE_ENABLE_HTTP_CACHE=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/http/httpcache/httpcache.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c"
+        "src/server/clock/clock.c"
       ]
     },
     "services_i2c": {
@@ -2330,20 +1764,11 @@
         "-DPROTOCORE_ENABLE_ICCP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/energy/iccp/iccp.c",
-        "src/shared/hex/hex.c"
+        "src/services/energy/iccp/iccp.c"
       ]
     },
     "services_iec60870": {
@@ -2353,20 +1778,11 @@
         "-DPROTOCORE_ENABLE_IEC60870=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/energy/iec60870/iec60870.c",
-        "src/shared/hex/hex.c"
+        "src/services/energy/iec60870/iec60870.c"
       ]
     },
     "services_iface_bridge": {
@@ -2376,19 +1792,14 @@
         "-DPROTOCORE_ENABLE_IFACE_BRIDGE=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/net/iface_bridge/iface_bridge.c",
+        "src/server/net/iface_bridge/iface_bridge/iface_bridge.c",
         "src/shared/hex/hex.c",
         "src/shared/ip/ip.c"
       ]
@@ -2400,35 +1811,27 @@
         "-DPROTOCORE_ENABLE_IKEV2=1"
       ],
       "src": [
-        "src/crypto/aead/aesgcm.c",
-        "src/crypto/asymmetric/bignum.c",
-        "src/crypto/asymmetric/curve25519.c",
-        "src/crypto/asymmetric/ecdsa.c",
-        "src/crypto/asymmetric/ed25519.c",
-        "src/crypto/asymmetric/fe25519.c",
-        "src/crypto/asymmetric/rsa.c",
-        "src/crypto/cipher/aes256ctr.c",
-        "src/crypto/cipher/aes_block.c",
+        "src/crypto/aead/aesgcm/aesgcm.c",
+        "src/crypto/asymmetric/bignum/bignum.c",
+        "src/crypto/asymmetric/curve25519/curve25519.c",
+        "src/crypto/asymmetric/ecdsa/ecdsa.c",
+        "src/crypto/asymmetric/fe25519/fe25519.c",
+        "src/crypto/asymmetric/rsa/rsa.c",
+        "src/crypto/cipher/aes_block/aes_block.c",
         "src/crypto/ct_eq.c",
-        "src/crypto/hash/sha256.c",
-        "src/crypto/hash/sha512.c",
-        "src/crypto/mac/ghash.c",
-        "src/crypto/mac/hmac_sha256.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/crypto/hash/sha256/sha256.c",
+        "src/crypto/hash/sha512/sha512.c",
+        "src/crypto/mac/ghash/ghash.c",
+        "src/crypto/mac/hmac_sha256/hmac_sha256.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/security/ikev2/ikev2.c",
-        "src/shared/hex/hex.c"
+        "src/services/security/ikev2/ikev2/ikev2.c"
       ]
     },
     "services_ina219": {
@@ -2438,6 +1841,13 @@
         "-DPROTOCORE_ENABLE_INA219=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/ina219/ina219.c"
       ]
@@ -2472,20 +1882,14 @@
         "-DPROTOCORE_ENABLE_J1939=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/j1939/j1939.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/j1939/j1939.c"
       ]
     },
     "services_j2735": {
@@ -2507,20 +1911,18 @@
       ],
       "src": [
         "src/crypto/ct_eq.c",
-        "src/crypto/hash/sha256.c",
-        "src/crypto/mac/hmac_sha256.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/crypto/hash/sha256/sha256.c",
+        "src/crypto/mac/hmac_sha256/hmac_sha256.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/codec/base64/base64.c",
         "src/server/clock/clock.c",
         "src/services/security/jwt/jwt.c",
@@ -2534,6 +1936,12 @@
         "-DPROTOCORE_ENABLE_LD2410=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/ld2410/ld2410.c"
       ]
@@ -2545,6 +1953,13 @@
         "-DPROTOCORE_ENABLE_LDC1614=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/ldc1614/ldc1614.c"
       ]
@@ -2556,20 +1971,11 @@
         "-DPROTOCORE_ENABLE_LONWORKS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/lonworks/lonworks.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/lonworks/lonworks.c"
       ]
     },
     "services_lora": {
@@ -2590,20 +1996,11 @@
         "-DPROTOCORE_ENABLE_LSV2=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/machine_tool/lsv2/lsv2.c",
-        "src/shared/hex/hex.c"
+        "src/services/machine_tool/lsv2/lsv2.c"
       ]
     },
     "services_lwm2m": {
@@ -2636,21 +2033,12 @@
         "-DPROTOCORE_ENABLE_MBPLUS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/fieldbus/mbplus/mbplus.c",
-        "src/shared/crc/crc.c",
-        "src/shared/hex/hex.c"
+        "src/shared/crc/crc.c"
       ]
     },
     "services_mbus": {
@@ -2660,31 +2048,47 @@
         "-DPROTOCORE_ENABLE_MBUS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/mbus/mbus.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/mbus/mbus.c"
       ]
     },
     "services_mdns_adaptive": {
       "desc": "On-device CCOUNT microbenchmark for the adaptive mDNS beacon scheduler (network_drivers/application/mdns_adaptive):\nthe pure scheduling decisions that pick *when* to re-announce. Benched here -\n- protocore_mdns_refresh_interval()      : the TTL/2 continuous-refresher cadence (overflow-guarded math),\n- protocore_mdns_beacon_adapt()          : the RF-contention backoff/recovery step (double on crowded air,\nhalve back toward base when quiet, clamped to [base, ceiling]),\n- protocore_mdns_beacon_due()            : the wrap-safe announce-due check run every tick,\n- protocore_mdns_beacon_presleep_due()   : the auto-sleep beacon (announce now if the record would lapse\nwhile the radio is off), and\n- protocore_mdns_contention_sample()     : the frame-counter -> per-window contention value (wrap-safe\ndelta, saturated to uint16), also run every tick.\nAll of the above are pure, wrap-safe integer math with no heap and no stdlib, so every call exercises\nthe real production code path. Deliberately OUT OF SCOPE: the device binding (protocore_mdns_adaptive_begin/\ntick/end) - it drives promiscuous 802.11 capture and re-applies mDNS TXT records over the radio, needs\nPROTOCORE_ENABLE_MDNS + PROTOCORE_ENABLE_PROMISC, and this rig has no associated station to sniff, so it is never\ncompiled or benched (contrast performance_benching/device/modbus, a pure codec fully in scope).\nBuild/flash (JTAG-capable S3 over its USB-Serial/JTAG port):\nidf.py -C test/performance_benching/mdns_adaptive -t upload --upload-port COM7\nthen open the port to capture the repeating \"DB ...\" lines (each run repeats every ~5 s, so a capture\nopened at any time still catches a full cycle).",
       "path": "services/mdns_adaptive",
       "flags": [
-        "-DPROTOCORE_ENABLE_MDNS_ADAPTIVE=1"
+        "-DPROTOCORE_ENABLE_MDNS_ADAPTIVE=1",
+        "-DPROTOCORE_ENABLE_MDNS=1",
+        "-DPROTOCORE_ENABLE_PROMISC=1",
+        "-DPROTOCORE_ENABLE_RADIO_POWER=1",
+        "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/bytes/bytes.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/application/mdns_adaptive/mdns_adaptive.c",
-        "src/server/clock/clock.c"
+        "src/network_drivers/application/mdns_service/mdns_service.c",
+        "src/network_drivers/network/dns/dns_wire/dns_wire.c",
+        "src/network_drivers/physical/physical/physical.c",
+        "src/network_drivers/physical/radio_power/radio_power.c",
+        "src/network_drivers/transport/diffserv/diffserv.c",
+        "src/network_drivers/transport/net_addr/net_addr.c",
+        "src/network_drivers/transport/udp/server/server.c",
+        "src/server/clock/clock.c",
+        "src/services/radio/promisc/promisc.c",
+        "src/shared/hex/hex.c",
+        "src/shared/ip/ip.c",
+        "src/shared/pcap/pcap.c"
       ]
     },
     "services_mdns_service": {
@@ -2694,26 +2098,20 @@
         "-DPROTOCORE_ENABLE_MDNS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/bytes.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/bytes/bytes.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/application/mdns_service/mdns_service.c",
-        "src/network_drivers/network/dns/dns.c",
-        "src/network_drivers/network/dns/dns_resolver.c",
-        "src/network_drivers/network/dns/dns_server.c",
-        "src/network_drivers/network/dns/dns_wire.c",
-        "src/network_drivers/physical/physical.c",
-        "src/network_drivers/physical/radio_power.c",
+        "src/network_drivers/network/dns/dns_wire/dns_wire.c",
+        "src/network_drivers/physical/physical/physical.c",
+        "src/network_drivers/physical/radio_power/radio_power.c",
         "src/network_drivers/transport/diffserv/diffserv.c",
         "src/network_drivers/transport/net_addr/net_addr.c",
         "src/network_drivers/transport/udp/server/server.c",
@@ -2729,21 +2127,12 @@
         "-DPROTOCORE_ENABLE_MELSEC=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/melsec/melsec.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/melsec/melsec.c"
       ]
     },
     "services_mms": {
@@ -2753,20 +2142,12 @@
         "-DPROTOCORE_ENABLE_MMS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/energy/mms/mms.c",
-        "src/shared/hex/hex.c"
+        "src/services/energy/mms/mms.c"
       ]
     },
     "services_mnt": {
@@ -2776,20 +2157,19 @@
         "-DPROTOCORE_ENABLE_MNT=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/storage/filesystem.c",
-        "src/server/storage/mnt.c",
+        "src/server/storage/filesystem/filesystem.c",
+        "src/server/storage/mnt/mnt.c",
         "src/shared/hex/hex.c"
       ]
     },
@@ -2800,21 +2180,8 @@
         "-DPROTOCORE_ENABLE_MODBUS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/modbus/modbus.c",
-        "src/shared/crc/crc.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/modbus/modbus/modbus.c"
       ]
     },
     "services_mpr121": {
@@ -2824,6 +2191,12 @@
         "-DPROTOCORE_ENABLE_MPR121=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/mpr121/mpr121.c"
       ]
@@ -2859,20 +2232,12 @@
         "-DPROTOCORE_ENABLE_MTCONNECT=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/machine_tool/mtconnect/mtconnect.c",
-        "src/shared/hex/hex.c"
+        "src/services/machine_tool/mtconnect/mtconnect.c"
       ]
     },
     "services_nats": {
@@ -2882,20 +2247,12 @@
         "-DPROTOCORE_ENABLE_NATS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/iot/nats/nats.c",
-        "src/shared/hex/hex.c"
+        "src/services/iot/nats/nats.c"
       ]
     },
     "services_nema_ts2": {
@@ -2905,21 +2262,12 @@
         "-DPROTOCORE_ENABLE_NEMA_TS2=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/transportation/nema_ts2/nema_ts2.c",
-        "src/shared/crc/crc.c",
-        "src/shared/hex/hex.c"
+        "src/shared/crc/crc.c"
       ]
     },
     "services_netadapt": {
@@ -2940,20 +2288,12 @@
         "-DPROTOCORE_ENABLE_NMEA0183=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/timing_position/nmea0183/nmea0183.c",
-        "src/shared/hex/hex.c"
+        "src/services/timing_position/nmea0183/nmea0183.c"
       ]
     },
     "services_nmea2000": {
@@ -2963,21 +2303,15 @@
         "-DPROTOCORE_ENABLE_NMEA2000=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/fieldbus/j1939/j1939.c",
-        "src/services/timing_position/nmea2000/nmea2000.c",
-        "src/shared/hex/hex.c"
+        "src/services/timing_position/nmea2000/nmea2000.c"
       ]
     },
     "services_nrf24": {
@@ -3011,19 +2345,17 @@
         "-DPROTOCORE_ENABLE_TIME_SOURCE=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/bytes.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/bytes/bytes.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/application/ntp_server/ntp_server.c",
         "src/network_drivers/transport/diffserv/diffserv.c",
         "src/network_drivers/transport/net_addr/net_addr.c",
@@ -3075,20 +2407,11 @@
         "-DPROTOCORE_ENABLE_NTS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/application/nts/nts.c",
-        "src/server/clock/clock.c",
-        "src/shared/hex/hex.c"
+        "src/server/clock/clock.c"
       ]
     },
     "services_oauth2": {
@@ -3122,20 +2445,11 @@
         "-DPROTOCORE_ENABLE_OCIT=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/transportation/ocit/ocit.c",
-        "src/shared/hex/hex.c"
+        "src/services/transportation/ocit/ocit.c"
       ]
     },
     "services_oidc": {
@@ -3145,23 +2459,22 @@
         "-DPROTOCORE_ENABLE_OIDC=1"
       ],
       "src": [
-        "src/crypto/asymmetric/bignum.c",
-        "src/crypto/asymmetric/rsa.c",
+        "src/crypto/asymmetric/bignum/bignum.c",
+        "src/crypto/asymmetric/rsa/rsa.c",
         "src/crypto/ct_eq.c",
-        "src/crypto/hash/sha256.c",
-        "src/crypto/hash/sha512.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/crypto/hash/sha256/sha256.c",
+        "src/crypto/hash/sha512/sha512.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/codec/base64/base64.c",
         "src/server/clock/clock.c",
         "src/services/security/oidc/oidc.c",
@@ -3175,20 +2488,12 @@
         "-DPROTOCORE_ENABLE_OPCUA=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/opcua/opcua.c",
-        "src/shared/hex/hex.c"
+        "src/services/opcua/opcua.c"
       ]
     },
     "services_opcua_client": {
@@ -3199,21 +2504,13 @@
         "-DPROTOCORE_ENABLE_OPCUA_CLIENT=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/opcua/opcua.c",
-        "src/services/opcua/opcua_client/opcua_client.c",
-        "src/shared/hex/hex.c"
+        "src/services/opcua/opcua_client/opcua_client.c"
       ]
     },
     "services_openadr": {
@@ -3223,17 +2520,11 @@
         "-DPROTOCORE_ENABLE_OPENADR=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/energy/openadr/openadr.c",
         "src/shared/hex/hex.c"
@@ -3280,6 +2571,12 @@
         "-DPROTOCORE_ENABLE_PCA9685=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/pca9685/pca9685.c"
       ]
@@ -3303,20 +2600,11 @@
         "-DPROTOCORE_ENABLE_POWERLINK=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/powerlink/powerlink.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/powerlink/powerlink.c"
       ]
     },
     "services_preempt_queue": {
@@ -3351,20 +2639,11 @@
         "-DPROTOCORE_ENABLE_PROFIBUS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/profibus/profibus.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/profibus/profibus.c"
       ]
     },
     "services_profinet": {
@@ -3374,20 +2653,11 @@
         "-DPROTOCORE_ENABLE_PROFINET=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/profinet/profinet.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/profinet/profinet.c"
       ]
     },
     "services_promisc": {
@@ -3397,20 +2667,15 @@
         "-DPROTOCORE_ENABLE_PROMISC=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
-        "src/network_drivers/physical/physical.c",
-        "src/network_drivers/physical/radio_power.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
+        "src/network_drivers/physical/physical/physical.c",
+        "src/network_drivers/physical/radio_power/radio_power.c",
         "src/server/clock/clock.c",
         "src/services/radio/promisc/promisc.c",
         "src/shared/hex/hex.c",
@@ -3425,20 +2690,15 @@
         "-DPROTOCORE_ENABLE_PROTOBUF=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/iot/protobuf/protobuf.c",
-        "src/shared/hex/hex.c"
+        "src/services/iot/protobuf/protobuf.c"
       ]
     },
     "services_provisioning_service": {
@@ -3457,17 +2717,12 @@
         "-DPROTOCORE_ENABLE_PROXY_PROTOCOL=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/transport/proxy_protocol/proxy_protocol.c",
         "src/server/clock/clock.c",
         "src/shared/hex/hex.c"
@@ -3480,7 +2735,7 @@
         "-DPROTOCORE_ENABLE_PSRAM_POOL=1"
       ],
       "src": [
-        "src/mmgr/psram_pool.c",
+        "src/mmgr/psram_pool/psram_pool.c",
         "src/server/clock/clock.c"
       ]
     },
@@ -3491,7 +2746,7 @@
         "-DPROTOCORE_ENABLE_RADIO_SNIFF=1"
       ],
       "src": [
-        "src/mmgr/endian.c",
+        "src/mmgr/endian/endian.c",
         "src/server/clock/clock.c",
         "src/services/radio/radio_sniff/radio_sniff.c",
         "src/shared/pcap/pcap.c"
@@ -3504,21 +2759,12 @@
         "-DPROTOCORE_ENABLE_RAWL2=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/fieldbus/rawl2/rawl2.c",
-        "src/shared/crc/crc.c",
-        "src/shared/hex/hex.c"
+        "src/shared/crc/crc.c"
       ]
     },
     "services_rcwl0516": {
@@ -3528,6 +2774,12 @@
         "-DPROTOCORE_ENABLE_RCWL0516=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/rcwl0516/rcwl0516.c"
       ]
@@ -3539,20 +2791,12 @@
         "-DPROTOCORE_ENABLE_REDIS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/iot/redis_resp/redis_resp.c",
-        "src/shared/hex/hex.c"
+        "src/services/iot/redis_resp/redis_resp.c"
       ]
     },
     "services_relay": {
@@ -3562,20 +2806,11 @@
         "-DPROTOCORE_ENABLE_RELAY=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/net/relay/relay.c",
-        "src/shared/hex/hex.c"
+        "src/server/net/relay/relay/relay.c"
       ]
     },
     "services_robotics": {
@@ -3586,21 +2821,16 @@
         "-DPROTOCORE_ENABLE_ROBOTICS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/opcua/models/robotics/robotics.c",
-        "src/services/opcua/opcua.c",
-        "src/shared/hex/hex.c"
+        "src/services/opcua/opcua.c"
       ]
     },
     "services_rtc": {
@@ -3610,6 +2840,12 @@
         "-DPROTOCORE_ENABLE_RTC=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/rtc/rtc.c"
       ]
@@ -3621,20 +2857,11 @@
         "-DPROTOCORE_ENABLE_S7COMM=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/s7comm/s7comm.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/s7comm/s7comm.c"
       ]
     },
     "services_safety_scl": {
@@ -3655,17 +2882,13 @@
         "-DPROTOCORE_ENABLE_SCPI=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/instrumentation/scpi/scpi.c",
         "src/shared/hex/hex.c"
@@ -3678,21 +2901,13 @@
         "-DPROTOCORE_ENABLE_SDI12=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/sdi12/sdi12.c",
-        "src/shared/crc/crc.c",
-        "src/shared/hex/hex.c"
+        "src/shared/crc/crc.c"
       ]
     },
     "services_sen0192": {
@@ -3702,6 +2917,12 @@
         "-DPROTOCORE_ENABLE_SEN0192=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/sen0192/sen0192.c"
       ]
@@ -3713,19 +2934,15 @@
         "-DPROTOCORE_ENABLE_SENML=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/bytes.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/bytes/bytes.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/codec/cbor/cbor.c",
         "src/network_drivers/presentation/codec/json/json.c",
         "src/server/clock/clock.c",
@@ -3740,17 +2957,11 @@
         "-DPROTOCORE_ENABLE_SEP2=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/energy/sep2/sep2.c",
         "src/shared/hex/hex.c"
@@ -3763,20 +2974,11 @@
         "-DPROTOCORE_ENABLE_SERCOS=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/sercos/sercos.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/sercos/sercos.c"
       ]
     },
     "services_sht3x": {
@@ -3786,8 +2988,16 @@
         "-DPROTOCORE_ENABLE_SHT3X=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/peripherals/sht3x/sht3x.c"
+        "src/server/peripherals/sht3x/sht3x.c",
+        "src/shared/crc/crc.c"
       ]
     },
     "services_sigfox": {
@@ -3808,20 +3018,14 @@
         "-DPROTOCORE_ENABLE_SIMATIC=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/simatic/simatic.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/simatic/simatic.c"
       ]
     },
     "services_smtp": {
@@ -3855,22 +3059,17 @@
         "-DPROTOCORE_ENABLE_SNMP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/net/snmp/snmp_agent.c",
-        "src/services/net/snmp/snmp_ber.c",
-        "src/services/net/snmp/snmp_v3.c",
-        "src/shared/hex/hex.c"
+        "src/services/net/snmp/snmp_agent/snmp_agent.c",
+        "src/services/net/snmp/snmp_ber/snmp_ber.c",
+        "src/services/net/snmp/snmp_v3/snmp_v3.c"
       ]
     },
     "services_snp": {
@@ -3880,20 +3079,11 @@
         "-DPROTOCORE_ENABLE_SNP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/fieldbus/snp/snp.c",
-        "src/shared/hex/hex.c"
+        "src/services/fieldbus/snp/snp.c"
       ]
     },
     "services_sockpool": {
@@ -3914,20 +3104,15 @@
         "-DPROTOCORE_ENABLE_SOUTHBOUND=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/southbound/southbound.c",
-        "src/shared/hex/hex.c"
+        "src/services/southbound/southbound/southbound.c"
       ]
     },
     "services_spa_router": {
@@ -3937,20 +3122,12 @@
         "-DPROTOCORE_ENABLE_SPA_ROUTER=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/server/web/spa_router/spa_router.c",
-        "src/shared/hex/hex.c"
+        "src/server/web/spa_router/spa_router.c"
       ]
     },
     "services_sparkplug": {
@@ -3960,21 +3137,16 @@
         "-DPROTOCORE_ENABLE_SPARKPLUG=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/iot/protobuf/protobuf.c",
-        "src/services/iot/sparkplug/sparkplug.c",
-        "src/shared/hex/hex.c"
+        "src/services/iot/sparkplug/sparkplug.c"
       ]
     },
     "services_sqlite": {
@@ -3984,20 +3156,12 @@
         "-DPROTOCORE_ENABLE_SQLITE=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/storage/sqlite/sqlite_format.c",
-        "src/shared/hex/hex.c"
+        "src/services/storage/sqlite/sqlite_format.c"
       ]
     },
     "services_statsd": {
@@ -4007,17 +3171,13 @@
         "-DPROTOCORE_ENABLE_STATSD=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/transport/diffserv/diffserv.c",
         "src/network_drivers/transport/net_addr/net_addr.c",
         "src/network_drivers/transport/udp/client/client.c",
@@ -4034,20 +3194,12 @@
         "-DPROTOCORE_ENABLE_STOMP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/iot/stomp/stomp.c",
-        "src/shared/hex/hex.c"
+        "src/services/iot/stomp/stomp.c"
       ]
     },
     "services_sunspec": {
@@ -4057,20 +3209,12 @@
         "-DPROTOCORE_ENABLE_SUNSPEC=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/energy/sunspec/sunspec.c",
-        "src/shared/hex/hex.c"
+        "src/services/energy/sunspec/sunspec.c"
       ]
     },
     "services_syslog": {
@@ -4080,17 +3224,13 @@
         "-DPROTOCORE_ENABLE_SYSLOG=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/transport/diffserv/diffserv.c",
         "src/network_drivers/transport/net_addr/net_addr.c",
         "src/network_drivers/transport/udp/client/client.c",
@@ -4130,17 +3270,11 @@
         "-DPROTOCORE_ENABLE_TIME_SOURCE=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/timing_position/time_source/time_source.c",
         "src/shared/hex/hex.c",
@@ -4166,22 +3300,16 @@
         "-DPROTOCORE_ENABLE_TOTP=1"
       ],
       "src": [
-        "src/crypto/hash/sha1.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/crypto/hash/sha1/sha1.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/security/totp/totp.c",
-        "src/shared/hex/hex.c"
+        "src/services/security/totp/totp.c"
       ]
     },
     "services_udp_telemetry": {
@@ -4191,17 +3319,15 @@
         "-DPROTOCORE_ENABLE_UDP_TELEMETRY=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/iot/udp_telemetry/udp_telemetry.c",
         "src/shared/hex/hex.c"
@@ -4215,21 +3341,16 @@
         "-DPROTOCORE_ENABLE_UMATI=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/opcua/models/umati/umati.c",
-        "src/services/opcua/opcua.c",
-        "src/shared/hex/hex.c"
+        "src/services/opcua/opcua.c"
       ]
     },
     "services_utmc": {
@@ -4239,17 +3360,12 @@
         "-DPROTOCORE_ENABLE_UTMC=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/transportation/utmc/utmc.c",
         "src/shared/hex/hex.c"
@@ -4262,6 +3378,12 @@
         "-DPROTOCORE_ENABLE_VL53L0X=1"
       ],
       "src": [
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/server/peripherals/vl53l0x/vl53l0x.c"
       ]
@@ -4273,21 +3395,13 @@
         "-DPROTOCORE_ENABLE_VXI11=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/instrumentation/vxi11/vxi11.c",
-        "src/shared/hex/hex.c"
+        "src/services/instrumentation/vxi11/vxi11.c"
       ]
     },
     "services_wal": {
@@ -4297,21 +3411,12 @@
         "-DPROTOCORE_ENABLE_WAL=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/storage/wal/wal.c",
-        "src/shared/hex/hex.c"
+        "src/services/storage/wal/wal/wal.c"
       ]
     },
     "services_wamp": {
@@ -4321,17 +3426,11 @@
         "-DPROTOCORE_ENABLE_WAMP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/codec/json/json.c",
         "src/server/clock/clock.c",
         "src/services/iot/wamp/wamp.c",
@@ -4345,20 +3444,11 @@
         "-DPROTOCORE_ENABLE_WAVE=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/transportation/wave/wave.c",
-        "src/shared/hex/hex.c"
+        "src/services/transportation/wave/wave.c"
       ]
     },
     "services_wearlevel": {
@@ -4369,7 +3459,7 @@
       ],
       "src": [
         "src/server/clock/clock.c",
-        "src/server/storage/wearlevel.c"
+        "src/server/storage/wearlevel/wearlevel.c"
       ]
     },
     "services_web_terminal": {
@@ -4380,20 +3470,47 @@
         "-DPROTOCORE_ENABLE_WEBSOCKET=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/crypto/hash/sha1/sha1.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/bytes/bytes.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protoframe/protoframe.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
+        "src/network_drivers/application/web_assets/web_assets.c",
+        "src/network_drivers/presentation/codec/base64/base64.c",
+        "src/network_drivers/presentation/http/http.c",
+        "src/network_drivers/presentation/http/http_parser/http_parser.c",
+        "src/network_drivers/presentation/http/route/http_route.c",
+        "src/network_drivers/presentation/http/websocket/websocket.c",
+        "src/network_drivers/presentation/presentation.c",
+        "src/network_drivers/session/session.c",
+        "src/network_drivers/session/ws/ws.c",
+        "src/network_drivers/transport/net_addr/net_addr.c",
+        "src/network_drivers/transport/tcp/lower/lower.c",
+        "src/network_drivers/transport/tcp/protocol/protocol.c",
+        "src/network_drivers/transport/tcp/server/server.c",
+        "src/protocore.c",
         "src/server/clock/clock.c",
+        "src/server/core/worker/worker.c",
+        "src/server/io/middleware.c",
+        "src/server/io/response.c",
+        "src/server/io/websocket_sse.c",
+        "src/server/protocore_builtins.c",
+        "src/server/regex.c",
+        "src/server/signaling/signaling/signaling.c",
+        "src/server/storage/mnt/mnt.c",
         "src/server/web/web_terminal/web_terminal.c",
-        "src/shared/hex/hex.c"
+        "src/shared/hex/hex.c",
+        "src/shared/ip/ip.c",
+        "src/shared/utf8/utf8.c"
       ]
     },
     "services_webhook": {
@@ -4403,17 +3520,12 @@
         "-DPROTOCORE_ENABLE_WEBHOOK=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/net/webhook/webhook.c",
         "src/shared/hex/hex.c"
@@ -4426,20 +3538,16 @@
         "-DPROTOCORE_ENABLE_WIFI_SNIFFER=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/radio/wifi_sniffer/wifi_sniffer.c",
-        "src/shared/hex/hex.c"
+        "src/shared/pcap/pcap.c"
       ]
     },
     "services_wisun": {
@@ -4449,17 +3557,12 @@
         "-DPROTOCORE_ENABLE_WISUN=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
         "src/services/radio/wisun/wisun.c",
         "src/shared/hex/hex.c",
@@ -4473,21 +3576,19 @@
         "-DPROTOCORE_ENABLE_WS_CLIENT=1"
       ],
       "src": [
-        "src/crypto/cipher/chacha20.c",
-        "src/crypto/hash/sha1.c",
+        "src/crypto/cipher/chacha20/chacha20.c",
+        "src/crypto/hash/sha1/sha1.c",
         "src/crypto/rng/rng.c",
-        "src/mmgr/arena.c",
-        "src/mmgr/endian.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/endian/endian.c",
+        "src/mmgr/float_bits/float_bits.c",
+        "src/mmgr/membuild/membuild.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/secure/secure.c",
+        "src/mmgr/span/span.c",
+        "src/mmgr/swar/swar.c",
         "src/network_drivers/presentation/codec/base64/base64.c",
         "src/server/clock/clock.c",
         "src/services/net/ws_client/ws_client.c",
@@ -4501,20 +3602,12 @@
         "-DPROTOCORE_ENABLE_XMPP=1"
       ],
       "src": [
-        "src/mmgr/arena.c",
-        "src/mmgr/float_bits.c",
-        "src/mmgr/membuild.c",
-        "src/mmgr/plaintext.c",
-        "src/mmgr/protoframe.c",
-        "src/mmgr/protomem.c",
-        "src/mmgr/protostr.c",
-        "src/mmgr/rawmemcpy.c",
-        "src/mmgr/secure.c",
-        "src/mmgr/span.c",
-        "src/mmgr/swar.c",
+        "src/mmgr/protomem/protomem.c",
+        "src/mmgr/protostr/protostr.c",
+        "src/mmgr/rawmemcpy/rawmemcpy.c",
+        "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/iot/xmpp/xmpp.c",
-        "src/shared/hex/hex.c"
+        "src/services/iot/xmpp/xmpp.c"
       ]
     },
     "services_zigbee": {

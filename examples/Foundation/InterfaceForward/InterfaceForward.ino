@@ -21,8 +21,8 @@
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "network_drivers/network/forward/forward.h"
-#include "mmgr/dma.h"
-#include "server/core/preempt_queue.h"
+#include "mmgr/dma/dma.h"
+#include "server/core/preempt_queue/preempt_queue.h"
 
 
 static const uint8_t IF_A = 0; // ingress interface (DMA channel 0)

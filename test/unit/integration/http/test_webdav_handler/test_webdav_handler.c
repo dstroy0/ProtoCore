@@ -5,7 +5,7 @@
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/transport/tcp/common.h"
 #include "protocore.h"
-#include "server/storage/filesystem.h"
+#include "server/storage/filesystem/filesystem.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -22,7 +22,7 @@ static void feed_and_handle(uint8_t slot, const char *req)
 {
     push_str(slot, req);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
 }
 
@@ -34,7 +34,7 @@ static void rearm()
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 }
 
@@ -103,7 +103,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -247,13 +247,13 @@ static void feed_put(uint8_t slot, const char *path, const uint8_t *body, size_t
     snprintf(hdr, sizeof(hdr), "PUT %s HTTP/1.1\r\nHost: x\r\nContent-Length: %u\r\n\r\n", path, (unsigned)n);
     push_str(slot, hdr);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     for (size_t off = 0; off < n;)
     {
         size_t chunk = n - off > 200 ? 200 : n - off;
         push_bytes(slot, body + off, chunk);
         HttpConn.slot = slot;
-        HttpConn.parse(HttpConn.internal);
+        HttpConn.parse(protocore_http_conn_span());
         off += chunk;
     }
     handle();
@@ -324,10 +324,10 @@ void test_put_stream_abort()
 
     push_str(0, "PUT /dav/ab.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 10\r\n\r\nabcd");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     TEST_ASSERT_TRUE(tree_has("/dav/ab.txt"));
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
 
     TEST_ASSERT_TRUE(tree_has("/dav/ab.txt"));
 }
@@ -339,13 +339,13 @@ static void feed_put_if(uint8_t slot, const char *path, const char *if_hdr, cons
              (unsigned)n);
     push_str(slot, hdr);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     for (size_t off = 0; off < n;)
     {
         size_t chunk = n - off > 200 ? 200 : n - off;
         push_bytes(slot, body + off, chunk);
         HttpConn.slot = slot;
-        HttpConn.parse(HttpConn.internal);
+        HttpConn.parse(protocore_http_conn_span());
         off += chunk;
     }
     handle();
@@ -736,10 +736,10 @@ void test_webdav_stream_put_abort_without_open()
     lfsm_fail_prog_always();
     push_str(0, "PUT /dav/never.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 10\r\n\r\nabcd");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     TEST_ASSERT_FALSE(tree_has("/dav/never.txt"));
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     TEST_ASSERT_FALSE(tree_has("/dav/never.txt"));
     lfsm_no_prog_failure();
 }
@@ -748,7 +748,7 @@ void test_webdav_status_on_dead_connection()
 {
     push_str(0, "UNLOCK /dav/x HTTP/1.1\r\nHost: x\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     conn_pool[0].pcb = NULL;
     handle();
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
@@ -793,7 +793,7 @@ void test_webdav_status_text_table()
     for (size_t i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
     {
         Http.code = expect[i].code;
-        Http.status_text(Http.internal);
+        Http.status_text(protocore_http_span());
         TEST_ASSERT_EQUAL_STRING(expect[i].phrase, Http.text);
     }
 
@@ -803,7 +803,7 @@ void test_webdav_status_text_table()
     for (size_t i = 0; i < 3u; i++)
     {
         Http.code = unknown[i];
-        Http.status_text(Http.internal);
+        Http.status_text(protocore_http_span());
         TEST_ASSERT_EQUAL_STRING("Unknown", Http.text);
     }
 }
@@ -875,51 +875,3 @@ void test_protocore_fs_resolve_traversal_and_root_edge()
     TEST_ASSERT_EQUAL_INT(-2, protocore_fs_resolve("/abc/", "def", "", out, 4));
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_protocore_fs_join_seam);
-    RUN_TEST(test_protocore_fs_resolve_traversal_and_root_edge);
-    RUN_TEST(test_webdav_status_text_table);
-    RUN_TEST(test_webdav_join_root_slash_with_empty_subpath);
-    RUN_TEST(test_put_stream_error_latches_for_later_chunks);
-    RUN_TEST(test_webdav_join_root_variants);
-    RUN_TEST(test_webdav_dav_empty_prefix_mount);
-    RUN_TEST(test_webdav_method_dispatch_edges);
-    RUN_TEST(test_webdav_copy_header_edges);
-    RUN_TEST(test_webdav_copy_dest_joins_to_root);
-    RUN_TEST(test_webdav_propfind_file_and_trailing_slash);
-    RUN_TEST(test_webdav_route_scan_skips_non_dav_routes);
-    RUN_TEST(test_webdav_stream_put_abort_without_open);
-    RUN_TEST(test_webdav_status_on_dead_connection);
-    RUN_TEST(test_webdav_get_put_dest_edges);
-    RUN_TEST(test_webdav_copy_dest_path_too_long_414);
-    RUN_TEST(test_webdav_recursive_open_failure);
-    RUN_TEST(test_webdav_source_path_too_long_414);
-    RUN_TEST(test_webdav_dav_wildcard_and_route_full);
-    RUN_TEST(test_webdav_error_paths);
-    RUN_TEST(test_webdav_deep_tree_rejected);
-    RUN_TEST(test_webdav_propfind_limit_and_proppatch);
-    RUN_TEST(test_webdav_copy_fs_table_full);
-    RUN_TEST(test_copy_collection_recursive);
-    RUN_TEST(test_copy_collection_depth0_shallow);
-    RUN_TEST(test_copy_overwrite_semantics);
-    RUN_TEST(test_move_collection_recursive);
-    RUN_TEST(test_delete_collection_recursive);
-    RUN_TEST(test_propfind_depth0_collection_only);
-    RUN_TEST(test_propfind_depth1_lists_members);
-    RUN_TEST(test_mkcol_create_and_conflict);
-    RUN_TEST(test_delete_single_file);
-    RUN_TEST(test_options_advertises_dav);
-    RUN_TEST(test_get_file_through_mount);
-    RUN_TEST(test_put_stream_create);
-    RUN_TEST(test_put_stream_overwrite);
-    RUN_TEST(test_put_empty_buffered);
-    RUN_TEST(test_put_stream_write_fails_507);
-    RUN_TEST(test_put_stream_open_fails_409);
-    RUN_TEST(test_put_stream_traversal_403);
-    RUN_TEST(test_put_stream_begin_declines);
-    RUN_TEST(test_put_stream_abort);
-    RUN_TEST(test_lock_enforcement);
-    return UNITY_END();
-}

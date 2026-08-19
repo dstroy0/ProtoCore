@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_MNT && defined(ARDUINO)
 
-#include "server/storage/mnt.h"
+#include "server/storage/mnt/mnt.h"
 
 namespace fs
 {

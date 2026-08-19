@@ -1,13 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/asymmetric/ed25519.h"
-#include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
-#include "network_drivers/presentation/security/dtls/dtls_conn.h"
-#include "network_drivers/presentation/security/dtls/dtls_handshake.h"
-#include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
+#include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
+#include "network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.h"
+#include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "server/clock/clock.h"
 #include <stdint.h>
@@ -562,7 +562,7 @@ static void server_cfg(DtlsServerConfig *cfg, const uint8_t server_ed_pub[32])
     cfg->cookie_key = SERVER_COOKIE_KEY;
 }
 
-static void test_full_handshake(void)
+ void test_full_handshake(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -601,7 +601,7 @@ static void test_full_handshake(void)
     complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, NULL, 0, PROTO_FALSE, 0);
 }
 
-static void test_full_handshake_rpk(void)
+ void test_full_handshake_rpk(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -641,7 +641,7 @@ static void test_full_handshake_rpk(void)
     complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, NULL, 0, PROTO_TRUE, 0);
 }
 
-static void test_cid_handshake(void)
+ void test_cid_handshake(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -688,7 +688,7 @@ static void test_cid_handshake(void)
     complete_handshake_from_flight(&g_dtls, tr, 1, flight, (size_t)fl, client_cid, sizeof(client_cid), PROTO_FALSE, 0);
 }
 
-static void test_hrr_group_renegotiation(void)
+ void test_hrr_group_renegotiation(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -773,7 +773,7 @@ static void test_hrr_group_renegotiation(void)
     complete_handshake_from_flight(&g_dtls, tr, 2, flight, (size_t)fl, NULL, 0, PROTO_FALSE, 0);
 }
 
-static void test_hrr_retry_without_cookie_rejected(void)
+ void test_hrr_retry_without_cookie_rejected(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -812,7 +812,7 @@ static void test_hrr_retry_without_cookie_rejected(void)
     TEST_ASSERT_EQUAL_UINT8(47, DtlsServer.alert(&g_dtls));
 }
 
-static void test_reject_no_tls13(void)
+ void test_reject_no_tls13(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -869,7 +869,7 @@ static int drive_server_flight(DtlsConn *conn, DtlsServerConfig *cfg, uint8_t **
     return DtlsServer.process(conn, ch_rec, ch_rl, flight, flight_cap);
 }
 
-static void test_pto_retransmit_and_recovery(void)
+ void test_pto_retransmit_and_recovery(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -912,7 +912,7 @@ static void test_pto_retransmit_and_recovery(void)
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.timeout_ms(&g_dtls));
 }
 
-static void test_pto_backoff_and_giveup(void)
+ void test_pto_backoff_and_giveup(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -938,7 +938,7 @@ static void test_pto_backoff_and_giveup(void)
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.process(&g_dtls, rflight, 1, rflight, sizeof(rflight)));
 }
 
-static void test_pto_ack_cancels_retransmit(void)
+ void test_pto_ack_cancels_retransmit(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -1204,7 +1204,7 @@ static int feed_epoch2_ack(DtlsConn *conn, ClientSession *st, uint64_t seq, cons
     return DtlsServer.process(conn, rec, rl, out, out_cap);
 }
 
-static void test_ciphertext_truncated_header_stops_walk(void)
+ void test_ciphertext_truncated_header_stops_walk(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1225,7 +1225,7 @@ static void test_ciphertext_truncated_header_stops_walk(void)
     TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&g_dtls2));
 }
 
-static void test_ciphertext_before_keys_is_discarded(void)
+ void test_ciphertext_before_keys_is_discarded(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1246,7 +1246,7 @@ static void test_ciphertext_before_keys_is_discarded(void)
     TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&g_dtls2));
 }
 
-static void test_plaintext_non_handshake_record_ignored(void)
+ void test_plaintext_non_handshake_record_ignored(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -1277,7 +1277,7 @@ static void test_plaintext_non_handshake_record_ignored(void)
     TEST_ASSERT_TRUE(DtlsServer.process(&g_dtls, ch_rec, ch_rl, out, sizeof(out)) > 0);
 }
 
-static void test_truncated_handshake_fragment_ignored(void)
+ void test_truncated_handshake_fragment_ignored(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1296,7 +1296,7 @@ static void test_truncated_handshake_fragment_ignored(void)
     TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&g_dtls));
 }
 
-static void test_fragment_for_other_msg_seq_ignored(void)
+ void test_fragment_for_other_msg_seq_ignored(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -1324,7 +1324,7 @@ static void test_fragment_for_other_msg_seq_ignored(void)
     TEST_ASSERT_TRUE(DtlsServer.process(&g_dtls, rec, rl0, out, sizeof(out)) > 0);
 }
 
-static void test_oversize_handshake_message_rejected(void)
+ void test_oversize_handshake_message_rejected(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1347,7 +1347,7 @@ static void test_oversize_handshake_message_rejected(void)
     TEST_ASSERT_EQUAL_UINT8(50, DtlsServer.alert(&g_dtls));
 }
 
-static void test_unexpected_message_in_start_rejected(void)
+ void test_unexpected_message_in_start_rejected(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1371,7 +1371,7 @@ static void test_unexpected_message_in_start_rejected(void)
     TEST_ASSERT_EQUAL_UINT8(10, DtlsServer.alert(&g_dtls));
 }
 
-static void test_client_hello_missing_algorithms_rejected(void)
+ void test_client_hello_missing_algorithms_rejected(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -1405,7 +1405,7 @@ static void test_client_hello_missing_algorithms_rejected(void)
     TEST_ASSERT_EQUAL_UINT8(40, DtlsServer.alert(&g_dtls2));
 }
 
-static void test_oversize_certificate_is_internal_error(void)
+ void test_oversize_certificate_is_internal_error(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -1434,7 +1434,7 @@ static void test_oversize_certificate_is_internal_error(void)
     TEST_ASSERT_EQUAL_UINT8(80, DtlsServer.alert(&g_dtls));
 }
 
-static void test_flight_out_cap_too_small_is_internal_error(void)
+ void test_flight_out_cap_too_small_is_internal_error(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -1467,7 +1467,7 @@ static void test_flight_out_cap_too_small_is_internal_error(void)
     TEST_ASSERT_EQUAL_UINT8(80, DtlsServer.alert(&g_dtls2));
 }
 
-static void test_retransmit_out_cap_too_small(void)
+ void test_retransmit_out_cap_too_small(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1484,7 +1484,7 @@ static void test_retransmit_out_cap_too_small(void)
     TEST_ASSERT_EQUAL_INT(-1, DtlsServer.on_timeout(&g_dtls, tiny, sizeof(tiny)));
 }
 
-static void test_timer_idle_when_done_or_failed(void)
+ void test_timer_idle_when_done_or_failed(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -1521,7 +1521,7 @@ static void test_timer_idle_when_done_or_failed(void)
     TEST_ASSERT_EQUAL_INT(0, DtlsServer.on_timeout(&g_dtls2, out, sizeof(out)));
 }
 
-static void test_client_finished_error_paths(void)
+ void test_client_finished_error_paths(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1565,7 +1565,7 @@ static void test_client_finished_error_paths(void)
     TEST_ASSERT_EQUAL_UINT8(10, DtlsServer.alert(&g_dtls2));
 }
 
-static void test_ack_malformed_and_partial_keep_timer(void)
+ void test_ack_malformed_and_partial_keep_timer(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1591,7 +1591,7 @@ static void test_ack_malformed_and_partial_keep_timer(void)
     TEST_ASSERT_EQUAL_INT((int)PROTOCORE_DTLS_PTO_INITIAL_MS, DtlsServer.timeout_ms(&g_dtls));
 }
 
-static void test_ack_replay_and_late_ack_ignored(void)
+ void test_ack_replay_and_late_ack_ignored(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1624,7 +1624,7 @@ static void test_ack_replay_and_late_ack_ignored(void)
     TEST_ASSERT_TRUE(DtlsServer.established(&g_dtls));
 }
 
-static void test_completion_ack_deferred_when_out_full(void)
+ void test_completion_ack_deferred_when_out_full(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1648,7 +1648,7 @@ static void test_completion_ack_deferred_when_out_full(void)
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_DTLS_CT_ACK, info.content_type);
 }
 
-static void test_forged_record_does_not_end_the_association(void)
+ void test_forged_record_does_not_end_the_association(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1684,7 +1684,7 @@ static void test_forged_record_does_not_end_the_association(void)
     TEST_ASSERT_EQUAL_MEMORY(payload, plain, sizeof(payload));
 }
 
-static void test_app_records_before_and_after_established(void)
+ void test_app_records_before_and_after_established(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1746,7 +1746,7 @@ static void test_app_records_before_and_after_established(void)
     TEST_ASSERT_EQUAL_MEMORY(payload, plain, sizeof(payload));
 }
 
-static void test_conn_id_edge_cases(void)
+ void test_conn_id_edge_cases(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -1851,7 +1851,7 @@ static proto_bool hrr_roundtrip_accepted(const uint8_t *addr, size_t addr_len)
     return DtlsServer.process(&g_dtls, rec, r2, flight, sizeof(flight)) > 0;
 }
 
-static void test_flight_fragments_to_the_pmtu(void)
+ void test_flight_fragments_to_the_pmtu(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -1881,7 +1881,7 @@ static void test_flight_fragments_to_the_pmtu(void)
     TEST_ASSERT_TRUE(g_dtls2.flight_count < g_dtls.flight_count);
 }
 
-static void test_cookie_is_worthless_to_another_peer(void)
+ void test_cookie_is_worthless_to_another_peer(void)
 {
     static const uint8_t OTHER_ADDR[] = {10, 0, 0, 9, 0x30, 0x39};
 
@@ -1935,7 +1935,7 @@ static void test_cookie_is_worthless_to_another_peer(void)
     TEST_ASSERT_TRUE(DtlsServer.process(&g_dtls, rec, r2, flight, sizeof(flight)) > 0);
 }
 
-static void test_peer_addr_zero_length_and_clamped(void)
+ void test_peer_addr_zero_length_and_clamped(void)
 {
 
     TEST_ASSERT_TRUE(hrr_roundtrip_accepted(TEST_PEER_ADDR, 0));
@@ -1947,7 +1947,7 @@ static void test_peer_addr_zero_length_and_clamped(void)
     TEST_ASSERT_TRUE(hrr_roundtrip_accepted(big_addr, sizeof(big_addr)));
 }
 
-static void test_hrr_retry_without_keyshare_rejected(void)
+ void test_hrr_retry_without_keyshare_rejected(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -1976,7 +1976,7 @@ static void test_hrr_retry_without_keyshare_rejected(void)
     TEST_ASSERT_EQUAL_UINT8(40, DtlsServer.alert(&g_dtls));
 }
 
-static void test_hrr_retry_with_corrupt_cookie_rejected(void)
+ void test_hrr_retry_with_corrupt_cookie_rejected(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -2021,7 +2021,7 @@ static void test_hrr_retry_with_corrupt_cookie_rejected(void)
     TEST_ASSERT_EQUAL_UINT8(47, DtlsServer.alert(&g_dtls));
 }
 
-static void test_non_finished_message_after_done_rejected(void)
+ void test_non_finished_message_after_done_rejected(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -2045,7 +2045,7 @@ static void test_non_finished_message_after_done_rejected(void)
     TEST_ASSERT_EQUAL_UINT8(10, DtlsServer.alert(&g_dtls));
 }
 
-static void test_epoch2_other_content_type_ignored(void)
+ void test_epoch2_other_content_type_ignored(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -2071,7 +2071,7 @@ static void test_epoch2_other_content_type_ignored(void)
     TEST_ASSERT_TRUE(DtlsServer.established(&g_dtls));
 }
 
-static void test_timer_stopped_by_done_state(void)
+ void test_timer_stopped_by_done_state(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -2092,7 +2092,7 @@ static void test_timer_stopped_by_done_state(void)
     TEST_ASSERT_EQUAL_UINT8(0, DtlsServer.alert(&g_dtls));
 }
 
-static void test_established_requires_app_keys(void)
+ void test_established_requires_app_keys(void)
 {
     uint8_t server_ed_pub[32];
     Ed25519.pubkey_args.pub = server_ed_pub;
@@ -2116,7 +2116,7 @@ static void test_established_requires_app_keys(void)
     TEST_ASSERT_FALSE(DtlsServer.open_app(&g_dtls, out, 16, app, sizeof(app), &app_len));
 }
 
-static void test_local_cid_requires_nonempty_id(void)
+ void test_local_cid_requires_nonempty_id(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -2193,48 +2193,3 @@ void test_low_order_keyshare_one_is_refused(void)
     low_order_share_is_refused(pub, "key share u=1");
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_low_order_keyshare_all_zero_is_refused);
-    RUN_TEST(test_low_order_keyshare_one_is_refused);
-    RUN_TEST(test_full_handshake);
-    RUN_TEST(test_timer_stopped_by_done_state);
-    RUN_TEST(test_established_requires_app_keys);
-    RUN_TEST(test_local_cid_requires_nonempty_id);
-    RUN_TEST(test_non_finished_message_after_done_rejected);
-    RUN_TEST(test_epoch2_other_content_type_ignored);
-    RUN_TEST(test_full_handshake_rpk);
-    RUN_TEST(test_cid_handshake);
-    RUN_TEST(test_hrr_group_renegotiation);
-    RUN_TEST(test_hrr_retry_without_cookie_rejected);
-    RUN_TEST(test_pto_retransmit_and_recovery);
-    RUN_TEST(test_pto_backoff_and_giveup);
-    RUN_TEST(test_pto_ack_cancels_retransmit);
-    RUN_TEST(test_reject_no_tls13);
-    RUN_TEST(test_ciphertext_truncated_header_stops_walk);
-    RUN_TEST(test_ciphertext_before_keys_is_discarded);
-    RUN_TEST(test_plaintext_non_handshake_record_ignored);
-    RUN_TEST(test_truncated_handshake_fragment_ignored);
-    RUN_TEST(test_fragment_for_other_msg_seq_ignored);
-    RUN_TEST(test_oversize_handshake_message_rejected);
-    RUN_TEST(test_unexpected_message_in_start_rejected);
-    RUN_TEST(test_client_hello_missing_algorithms_rejected);
-    RUN_TEST(test_oversize_certificate_is_internal_error);
-    RUN_TEST(test_flight_out_cap_too_small_is_internal_error);
-    RUN_TEST(test_retransmit_out_cap_too_small);
-    RUN_TEST(test_timer_idle_when_done_or_failed);
-    RUN_TEST(test_client_finished_error_paths);
-    RUN_TEST(test_ack_malformed_and_partial_keep_timer);
-    RUN_TEST(test_ack_replay_and_late_ack_ignored);
-    RUN_TEST(test_completion_ack_deferred_when_out_full);
-    RUN_TEST(test_forged_record_does_not_end_the_association);
-    RUN_TEST(test_app_records_before_and_after_established);
-    RUN_TEST(test_conn_id_edge_cases);
-    RUN_TEST(test_flight_fragments_to_the_pmtu);
-    RUN_TEST(test_cookie_is_worthless_to_another_peer);
-    RUN_TEST(test_peer_addr_zero_length_and_clamped);
-    RUN_TEST(test_hrr_retry_without_keyshare_rejected);
-    RUN_TEST(test_hrr_retry_with_corrupt_cookie_rejected);
-    return UNITY_END();
-}

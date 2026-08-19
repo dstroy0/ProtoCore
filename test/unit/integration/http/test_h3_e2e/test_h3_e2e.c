@@ -1,18 +1,18 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/http/http3/h3_conn.h"
-#include "network_drivers/presentation/http/http3/h3_frame.h"
-#include "network_drivers/presentation/http/http3/qpack.h"
-#include "network_drivers/presentation/http/http3/quic_conn.h"
-#include "network_drivers/presentation/http/http3/quic_crypto.h"
-#include "network_drivers/presentation/http/http3/quic_frame.h"
-#include "network_drivers/presentation/http/http3/quic_packet.h"
-#include "network_drivers/presentation/http/http3/quic_tls.h"
-#include "network_drivers/presentation/http/http3/quic_varint.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "network_drivers/presentation/http/http3/h3_conn/h3_conn.h"
+#include "network_drivers/presentation/http/http3/h3_frame/h3_frame.h"
+#include "network_drivers/presentation/http/http3/qpack/qpack.h"
+#include "network_drivers/presentation/http/http3/quic_conn/quic_conn.h"
+#include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
+#include "network_drivers/presentation/http/http3/quic_frame/quic_frame.h"
+#include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
+#include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h"
+#include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include <string.h>
 
@@ -682,9 +682,3 @@ void test_http3_get_end_to_end()
     TEST_ASSERT_TRUE(got);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_http3_get_end_to_end);
-    return UNITY_END();
-}

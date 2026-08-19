@@ -1,12 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
+#include "mmgr/arena/arena.h" // protocore_worker_count / _self / _set_self
 #include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // Clock.ms: the stamp check_timeouts judges against
-#include "server/core/worker.h"
+#include "server/core/worker/worker.h"
 #include <Arduino.h>
 #include <unity.h>
 
@@ -233,18 +234,3 @@ void test_dynamic_listener_creates_worker_queues(void)
     TcpListener.stop_dynamic(protocore_tcp_listener_span());
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_worker_count_is_two);
-    RUN_TEST(test_check_timeouts_reaps_only_owned_slots);
-    RUN_TEST(test_pool_init_defaults_owner_zero);
-    RUN_TEST(test_worker_self_id_roundtrip);
-    RUN_TEST(test_worker_lifecycle_raises_and_lowers_the_run_flag);
-    RUN_TEST(test_listener_worker_queues_init_and_lookup);
-    RUN_TEST(test_enqueue_routes_by_slot_owner_and_rejects_bad_owner);
-    RUN_TEST(test_accept_cb_round_robins_slot_owner);
-    RUN_TEST(test_dynamic_listener_creates_worker_queues);
-    RUN_TEST(test_defer_queues_and_run_deferred_runs_it);
-    return UNITY_END();
-}

@@ -12,7 +12,7 @@
 // from the trace's own handshake messages and checked against the hashes the RFC publishes for the
 // same derivations, so the inputs are the RFC's too.
 
-#include "crypto/hash/sha256.h"
+#include "crypto/hash/sha256/sha256.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include <string.h>
 

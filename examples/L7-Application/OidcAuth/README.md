@@ -61,7 +61,7 @@ added explanatory comments:
 #define PROTOCORE_ENABLE_OIDC 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/security/oidc/oidc.h"
 
 

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DIRECTNET
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/directnet/directnet.h"
 
 PROTOCORE_BEGIN_DECLS

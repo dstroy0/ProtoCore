@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DOCSTORE
 
-#include "mmgr/protostr.h" // str.eq: the string-field find compare
+#include "mmgr/protostr/protostr.h" // str.eq: the string-field find compare
 #include "network_drivers/presentation/codec/json/json.h"
 
 void protocore_docstore_open(protocore_doc_store *ds, struct protocore_dbm *db)

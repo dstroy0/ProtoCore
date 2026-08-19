@@ -19,7 +19,7 @@
 #define PROTOCORE_ENABLE_UDP_TELEMETRY 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/iot/udp_telemetry/udp_telemetry.h"
 
 static const char *SSID = "YOUR_SSID";

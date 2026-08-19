@@ -6,7 +6,7 @@
 // Linked against src/shared/swar.c and disassembled, it shows whether the members inline
 // into the loop under LTO or cost an indirect call per lane test.
 
-#include "mmgr/swar.h"
+#include "mmgr/swar/swar.h"
 
 static char buf[64] __attribute__((aligned(8)));
 volatile unsigned long swar_sink = 0;

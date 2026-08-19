@@ -28,7 +28,7 @@
 // The direction and level cases are properties, not spellings: four declared directions must be
 // told apart from one another, and a level is a flag on both the parse and the write paths.
 
-#include "server/signaling/gpio_map.h"
+#include "server/signaling/gpio_map/gpio_map.h"
 #include <string.h>
 
 #include <unity.h>

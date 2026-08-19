@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SPA_ROUTER
 
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 #include "server/web/spa_router/spa_router.h"
 
 PROTOCORE_BEGIN_DECLS

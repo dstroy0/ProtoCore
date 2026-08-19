@@ -67,7 +67,7 @@
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
-#include "network_drivers/presentation/codec/deflate/deflate.h"
+#include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 
 /**

@@ -18,7 +18,7 @@ static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 
-#include "mmgr/secure.h" // the persistent end the table is taken from
+#include "mmgr/secure/secure.h" // the persistent end the table is taken from
 #include "server/security/auth_lockout/auth_lockout.h"
 #include "shared/ip/ip.h" // protocore_ip: the address a bucket is keyed on
 

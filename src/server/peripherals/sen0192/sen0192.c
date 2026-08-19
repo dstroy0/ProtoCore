@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SEN0192
 
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "server/peripherals/sen0192/sen0192.h"
 
 PROTOCORE_BEGIN_DECLS

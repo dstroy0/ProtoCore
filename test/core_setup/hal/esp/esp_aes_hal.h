@@ -43,7 +43,7 @@
 #include "test/core_setup/hal/host/host_hw_reg.h"
 #endif
 
-#include "mmgr/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load at any alignment
+#include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load at any alignment
 
 PROTOCORE_BEGIN_DECLS
 

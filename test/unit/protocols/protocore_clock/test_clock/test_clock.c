@@ -154,15 +154,3 @@ void test_latency_budget_zero_disables()
     TEST_ASSERT_EQUAL_UINT32(0, s.over_budget);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_default_is_platform_millis);
-    RUN_TEST(test_custom_clock_divides_to_1000hz);
-    RUN_TEST(test_sub_khz_source_not_divided);
-    RUN_TEST(test_revert_to_default);
-    RUN_TEST(test_micros_custom_divides_to_1mhz);
-    RUN_TEST(test_latency_stat_records_and_budgets);
-    RUN_TEST(test_latency_budget_zero_disables);
-    return UNITY_END();
-}

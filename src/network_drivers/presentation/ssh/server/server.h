@@ -11,7 +11,6 @@
 
 #include "network_drivers/presentation/ssh/common.h"
 
-
 PROTOCORE_BEGIN_DECLS
 
 struct ProtoHandler;
@@ -40,9 +39,6 @@ struct ProtoHandler;
 /** @brief Stop accepting on a handle from ssh_rfwd_listener_open(). Open bridges are unaffected. */
 #endif
 
-/** @brief The listening role's own state and the calls that reach it, described only in server.c. */
-struct SshServerInternal;
-
 /**
  * @brief The SSH server role (RFC 4253 sec 4.1): the side that accepts a connection.
  *
@@ -57,7 +53,6 @@ struct SshServerInternal;
  * @var SshServerNs::rfwd_listener_close  release one
  * @var SshServerNs::proto_handler        the dispatch seam an SSH slot is driven through
  * @var SshServerNs::rfwd_proto_handler   the same for a forwarded slot
- * @var SshServerNs::internal   the role's state and the calls that reach it
  */
 typedef struct
 {
@@ -67,16 +62,25 @@ typedef struct
     int i32;
     const struct ProtoHandler *handler;
 
-    void (*rfwd_listener_open)(struct SshServerInternal *ctx);
-    void (*rfwd_listener_close)(struct SshServerInternal *ctx);
-    void (*proto_handler)(struct SshServerInternal *ctx);
-    void (*rfwd_proto_handler)(struct SshServerInternal *ctx);
-
-    struct SshServerInternal *internal;
+    void (*const rfwd_listener_open)(uint8_t *restrict work);
+    void (*const rfwd_listener_close)(uint8_t *restrict work);
+    void (*const proto_handler)(uint8_t *restrict work);
+    void (*const rfwd_proto_handler)(uint8_t *restrict work);
 } SshServerNs;
 
 /** @brief The one symbol this module exports. */
 extern SshServerNs SshServer;
+
+/**
+ * @brief The PROTOCORE_SSH_SERVER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_ssh_server_span(void);
 
 PROTOCORE_END_DECLS
 

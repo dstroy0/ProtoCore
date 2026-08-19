@@ -10,7 +10,7 @@
  */
 
 #include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_HTTP2 || PROTOCORE_ENABLE_HTTP3
 

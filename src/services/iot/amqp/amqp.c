@@ -14,8 +14,8 @@
 
 #if PROTOCORE_ENABLE_AMQP
 
-#include "mmgr/endian.h"   // endian.wr16be / rd32be: the network byte order of sec 4.2.5.1
-#include "mmgr/protomem.h" // mem.cpy: the payload spans a frame carries
+#include "mmgr/endian/endian.h"   // endian.wr16be / rd32be: the network byte order of sec 4.2.5.1
+#include "mmgr/protomem/protomem.h" // mem.cpy: the payload spans a frame carries
 
 // Write the 7 octet frame header at buf: type, channel, payload size (sec 4.2.3). Returns 7.
 static size_t write_frame_header(uint8_t *buf, uint8_t type, uint16_t channel, uint32_t size)

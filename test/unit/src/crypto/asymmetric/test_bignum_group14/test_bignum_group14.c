@@ -16,8 +16,8 @@
 // vectors are the same either way, which is what makes PROTOCORE_HAS_HW_BIGNUM a capability that runs
 // natively rather than one only silicon can answer.
 
-#include "crypto/asymmetric/bignum.h"
-#include "mmgr/secure.h"
+#include "crypto/asymmetric/bignum/bignum.h"
+#include "mmgr/secure/secure.h"
 #include <string.h>
 
 #include <unity.h>

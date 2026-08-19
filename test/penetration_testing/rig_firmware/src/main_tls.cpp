@@ -14,7 +14,7 @@
  * This file is built ONLY by env:rig_s3_tls (build_src_filter); the full rig builds main.cpp. WiFi creds come
  * from the RIG_WIFI_SSID / RIG_WIFI_PASS env via the WIFI_SSID / WIFI_PASS macros (never committed).
  */
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "protocore.h"
 #ifdef PROTOCORE_TLS_HS_BENCH
 #include "network_drivers/tls/tls.h" // protocore_tls_hs_bench (handshake device-CPU vs wall probe)

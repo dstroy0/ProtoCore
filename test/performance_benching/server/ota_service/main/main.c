@@ -28,7 +28,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "server/update/ota_service.h"
+#include "server/update/ota_service/ota_service.h"
 
 #include <stdbool.h>
 #include <stddef.h>

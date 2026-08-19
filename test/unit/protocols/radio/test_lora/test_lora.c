@@ -436,27 +436,3 @@ void test_driver_entry_points_reject_null_bus()
     TEST_ASSERT_EQUAL_UINT8(0, g_chip.reg[0x01]);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_frame_parse_null_guards_and_optional_outs);
-    RUN_TEST(test_frame_build_null_and_size_guards);
-    RUN_TEST(test_init_rejects_incomplete_bus);
-    RUN_TEST(test_init_sets_low_data_rate_optimize_at_high_sf);
-    RUN_TEST(test_driver_entry_points_reject_null_bus);
-    RUN_TEST(test_frame_build_then_parse);
-    RUN_TEST(test_frame_parse_rejects_short);
-    RUN_TEST(test_frame_build_bounds);
-    RUN_TEST(test_init_verifies_chip_and_lands_in_standby);
-    RUN_TEST(test_init_fails_on_wrong_version);
-    RUN_TEST(test_init_programs_frequency);
-    RUN_TEST(test_send_loads_fifo_and_starts_tx);
-    RUN_TEST(test_tx_done_flag);
-    RUN_TEST(test_set_rx_enters_continuous);
-    RUN_TEST(test_recv_reads_frame_and_rssi);
-    RUN_TEST(test_recv_no_packet);
-    RUN_TEST(test_recv_crc_error_dropped);
-    RUN_TEST(test_recv_truncates_to_cap);
-    RUN_TEST(test_frame_parse_build_guards);
-    return UNITY_END();
-}

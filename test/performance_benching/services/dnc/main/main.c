@@ -23,8 +23,8 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/machine_tool/dnc/dnc.h"
-#include "services/machine_tool/dnc/dnc_stream.h"
+#include "services/machine_tool/dnc/dnc/dnc.h"
+#include "services/machine_tool/dnc/dnc_stream/dnc_stream.h"
 
 #include <stdbool.h>
 #include <stddef.h>

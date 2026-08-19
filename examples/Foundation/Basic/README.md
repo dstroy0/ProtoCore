@@ -129,7 +129,7 @@ comments:
 #include "protocore.h"
 // Physical.wifi->init() / Physical.wifi->ready(): the physical-layer (L1) WiFi bring-up
 // helpers, plus Physical.link->egress_ip() for the assigned address.
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 // Credentials. Replace these with your network before flashing.
 static const char *SSID = "YOUR_SSID";

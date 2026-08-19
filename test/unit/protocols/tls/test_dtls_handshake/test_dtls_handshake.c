@@ -1,8 +1,8 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/mac/hmac_sha256.h"
-#include "network_drivers/presentation/security/dtls/dtls_handshake.h"
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"
+#include "network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -17,7 +17,7 @@ void tearDown()
 {
 }
 
-static void test_hs_header_roundtrip(void)
+ void test_hs_header_roundtrip(void)
 {
     uint8_t frag[30];
     for (unsigned i = 0; i < sizeof(frag); i++)
@@ -47,7 +47,7 @@ static void test_hs_header_roundtrip(void)
     TEST_ASSERT_EQUAL_MEMORY(frag, h.fragment, sizeof(frag));
 }
 
-static void test_hs_header_parse_rejects(void)
+ void test_hs_header_parse_rejects(void)
 {
     uint8_t buf[32];
     DtlsHsHeader h;
@@ -87,7 +87,7 @@ static void fill(uint8_t *b, size_t n)
     }
 }
 
-static void test_hs_reasm_single_fragment(void)
+ void test_hs_reasm_single_fragment(void)
 {
     uint8_t body[80];
     fill(body, sizeof(body));
@@ -100,7 +100,7 @@ static void test_hs_reasm_single_fragment(void)
     TEST_ASSERT_EQUAL_MEMORY(body, buf, sizeof(body));
 }
 
-static void test_hs_reasm_in_order(void)
+ void test_hs_reasm_in_order(void)
 {
     uint8_t body[100];
     fill(body, sizeof(body));
@@ -113,7 +113,7 @@ static void test_hs_reasm_in_order(void)
     TEST_ASSERT_EQUAL_MEMORY(body, buf, sizeof(body));
 }
 
-static void test_hs_reasm_out_of_order(void)
+ void test_hs_reasm_out_of_order(void)
 {
     uint8_t body[100];
     fill(body, sizeof(body));
@@ -126,7 +126,7 @@ static void test_hs_reasm_out_of_order(void)
     TEST_ASSERT_EQUAL_MEMORY(body, buf, sizeof(body));
 }
 
-static void test_hs_reasm_overlap_and_duplicate(void)
+ void test_hs_reasm_overlap_and_duplicate(void)
 {
     uint8_t body[100];
     fill(body, sizeof(body));
@@ -140,7 +140,7 @@ static void test_hs_reasm_overlap_and_duplicate(void)
     TEST_ASSERT_EQUAL_MEMORY(body, buf, sizeof(body));
 }
 
-static void test_hs_reasm_conflicting_overlap_aborts(void)
+ void test_hs_reasm_conflicting_overlap_aborts(void)
 {
     uint8_t body[100];
     fill(body, sizeof(body));
@@ -159,7 +159,7 @@ static void test_hs_reasm_conflicting_overlap_aborts(void)
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 1, 100, 41, other, 19));
 }
 
-static void test_hs_reasm_wrong_msg_seq_ignored(void)
+ void test_hs_reasm_wrong_msg_seq_ignored(void)
 {
     uint8_t body[40];
     fill(body, sizeof(body));
@@ -172,7 +172,7 @@ static void test_hs_reasm_wrong_msg_seq_ignored(void)
     TEST_ASSERT_EQUAL_MEMORY(body, buf, sizeof(body));
 }
 
-static void test_hs_reasm_empty_body(void)
+ void test_hs_reasm_empty_body(void)
 {
     uint8_t buf[16];
     DtlsHsReasm r;
@@ -182,7 +182,7 @@ static void test_hs_reasm_empty_body(void)
     TEST_ASSERT_EQUAL_UINT32(0, r.length);
 }
 
-static void test_hs_reasm_rejects(void)
+ void test_hs_reasm_rejects(void)
 {
     uint8_t body[300];
     fill(body, sizeof(body));
@@ -217,7 +217,7 @@ static void test_hs_reasm_rejects(void)
     }
 }
 
-static void test_ack_roundtrip(void)
+ void test_ack_roundtrip(void)
 {
     DtlsRecordNumber in[3] = {{2, 5}, {2, 6}, {3, 0x0102030405060708ull}};
     uint8_t out[64];
@@ -244,7 +244,7 @@ static void test_ack_roundtrip(void)
     TEST_ASSERT_EQUAL_size_t(0, count);
 }
 
-static void test_ack_parse_rejects(void)
+ void test_ack_parse_rejects(void)
 {
     DtlsRecordNumber out[4];
     size_t count = 0;
@@ -282,7 +282,7 @@ static const uint8_t COOKIE_WIRE[77] = {0x01, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66
                                         0x64, 0x8f, 0x15, 0x4c, 0xc1, 0x4c, 0x8a, 0xaa, 0xbf, 0x1a, 0x2e, 0xa4, 0x06,
                                         0xca, 0x8f, 0xe2, 0x49, 0xcf, 0x1d, 0x4d, 0xa1, 0x65, 0xbc, 0x6e, 0x94};
 
-static void test_cookie_kat(void)
+ void test_cookie_kat(void)
 {
     uint8_t out[PROTOCORE_DTLS_COOKIE_MAX];
     size_t n = DtlsHandshake.cookie_make(tw, COOKIE_KEY, COOKIE_TS, COOKIE_PAYLOAD, sizeof(COOKIE_PAYLOAD), COOKIE_ADDR,
@@ -291,7 +291,7 @@ static void test_cookie_kat(void)
     TEST_ASSERT_EQUAL_MEMORY(COOKIE_WIRE, out, sizeof(COOKIE_WIRE));
 }
 
-static void test_cookie_verify_accept_and_payload(void)
+ void test_cookie_verify_accept_and_payload(void)
 {
     uint8_t payload[64];
     size_t plen = 0;
@@ -302,7 +302,7 @@ static void test_cookie_verify_accept_and_payload(void)
     TEST_ASSERT_EQUAL_MEMORY(COOKIE_PAYLOAD, payload, plen);
 }
 
-static void test_cookie_verify_rejects(void)
+ void test_cookie_verify_rejects(void)
 {
     uint8_t payload[64];
     size_t plen = 0;
@@ -321,7 +321,7 @@ static void test_cookie_verify_rejects(void)
                                                   20, payload, sizeof(payload), &plen));
 }
 
-static void test_cookie_freshness(void)
+ void test_cookie_freshness(void)
 {
     uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
     const uint8_t payload[8] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -342,7 +342,7 @@ static void test_cookie_freshness(void)
                                                   out, sizeof(out), &plen));
 }
 
-static void test_hs_frag_build_rejects(void)
+ void test_hs_frag_build_rejects(void)
 {
     uint8_t body[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t out[64];
@@ -359,7 +359,7 @@ static void test_hs_frag_build_rejects(void)
                              DtlsHandshake.frag_build(1, 0, 8, 0, body, 8, out, PROTOCORE_DTLS_HS_HDR_LEN + 8));
 }
 
-static void test_hs_reasm_header_guards(void)
+ void test_hs_reasm_header_guards(void)
 {
     uint8_t body[64];
     fill(body, sizeof(body));
@@ -383,7 +383,7 @@ static void test_hs_reasm_header_guards(void)
     }
 }
 
-static void test_ack_build_rejects(void)
+ void test_ack_build_rejects(void)
 {
     uint8_t out[64];
 
@@ -394,7 +394,7 @@ static void test_ack_build_rejects(void)
     TEST_ASSERT_EQUAL_size_t(2 + 2 * 16, DtlsHandshake.ack_build(rns, 2, out, 2 + 2 * 16));
 }
 
-static void test_cookie_make_rejects(void)
+ void test_cookie_make_rejects(void)
 {
     uint8_t out[256];
     const uint8_t payload[8] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -411,7 +411,7 @@ static void test_cookie_make_rejects(void)
                                                           sizeof(COOKIE_ADDR), out, sizeof(out)));
 }
 
-static void test_cookie_empty_payload_roundtrip(void)
+ void test_cookie_empty_payload_roundtrip(void)
 {
     uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
     size_t n = DtlsHandshake.cookie_make(tw, COOKIE_KEY, 4242, NULL, 0, COOKIE_ADDR, sizeof(COOKIE_ADDR), cookie,
@@ -427,7 +427,7 @@ static void test_cookie_empty_payload_roundtrip(void)
     TEST_ASSERT_EQUAL_UINT8(0xEE, payload[0]);
 }
 
-static void test_cookie_verify_structural_rejects(void)
+ void test_cookie_verify_structural_rejects(void)
 {
     uint8_t payload[64];
     size_t plen = 0;
@@ -448,30 +448,3 @@ static void test_cookie_verify_structural_rejects(void)
                                                   sizeof(COOKIE_WIRE), small, sizeof(small), &plen));
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_hs_header_roundtrip);
-    RUN_TEST(test_hs_frag_build_rejects);
-    RUN_TEST(test_hs_reasm_header_guards);
-    RUN_TEST(test_ack_build_rejects);
-    RUN_TEST(test_cookie_make_rejects);
-    RUN_TEST(test_cookie_empty_payload_roundtrip);
-    RUN_TEST(test_cookie_verify_structural_rejects);
-    RUN_TEST(test_hs_header_parse_rejects);
-    RUN_TEST(test_hs_reasm_single_fragment);
-    RUN_TEST(test_hs_reasm_in_order);
-    RUN_TEST(test_hs_reasm_out_of_order);
-    RUN_TEST(test_hs_reasm_overlap_and_duplicate);
-    RUN_TEST(test_hs_reasm_conflicting_overlap_aborts);
-    RUN_TEST(test_hs_reasm_wrong_msg_seq_ignored);
-    RUN_TEST(test_hs_reasm_empty_body);
-    RUN_TEST(test_hs_reasm_rejects);
-    RUN_TEST(test_ack_roundtrip);
-    RUN_TEST(test_ack_parse_rejects);
-    RUN_TEST(test_cookie_kat);
-    RUN_TEST(test_cookie_verify_accept_and_payload);
-    RUN_TEST(test_cookie_verify_rejects);
-    RUN_TEST(test_cookie_freshness);
-    return UNITY_END();
-}

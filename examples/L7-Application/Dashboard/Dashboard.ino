@@ -25,7 +25,7 @@
 #define PROTOCORE_ENABLE_DASHBOARD 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "server/web/dashboard/dashboard.h"
 #include <math.h>
 

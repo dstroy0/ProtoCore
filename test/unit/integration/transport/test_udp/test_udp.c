@@ -323,18 +323,3 @@ void test_capture_refuses_a_buffer_that_cannot_hold_it()
     TEST_ASSERT_EQUAL_UINT(0, protocore_net_pcap_render(g_pcap, 8));
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_listener_delivers_in_order_with_boundaries);
-    RUN_TEST(test_listener_peer_carries_v6);
-    RUN_TEST(test_listener_sends_from_a_bound_port);
-    RUN_TEST(test_client_refuses_a_malformed_address_without_sending);
-    RUN_TEST(test_client_sends_both_families);
-    RUN_TEST(test_a_spent_pbuf_pool_drops_the_datagram);
-    RUN_TEST(test_every_send_returns_its_pbuf);
-    RUN_TEST(test_capture_renders_a_v4_datagram);
-    RUN_TEST(test_capture_renders_a_v6_datagram);
-    RUN_TEST(test_capture_refuses_a_buffer_that_cannot_hold_it);
-    return UNITY_END();
-}

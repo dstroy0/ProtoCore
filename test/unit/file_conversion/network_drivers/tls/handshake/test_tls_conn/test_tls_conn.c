@@ -22,10 +22,10 @@
 // HelloRetryRequest a MUST when the server selects a group the client offered without a matching
 // key_share; this driver refuses the connection instead. The case asserts the RFC's requirement.
 
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/asymmetric/ed25519.h"
-#include "crypto/hash/sha256.h"
-#include "crypto/hash/sha512.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "crypto/hash/sha512/sha512.h"
 #include "network_drivers/tls/tls.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/tls/record/record.h"

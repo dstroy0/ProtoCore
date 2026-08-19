@@ -13,7 +13,7 @@
 // on the wire, so the builder's QNAME is checked against a name the standard itself lays out rather
 // than against this encoder's own idea of one.
 
-#include "network_drivers/network/dns/dns_resolver.h"
+#include "network_drivers/network/dns/dns_resolver/dns_resolver.h"
 #include "network_drivers/transport/udp/server/server.h"
 #include "protocore_net_host.h"
 #include <string.h>

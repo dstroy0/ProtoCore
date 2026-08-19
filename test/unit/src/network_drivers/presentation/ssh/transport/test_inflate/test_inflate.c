@@ -5,10 +5,15 @@
 // zlib@openssh.com stream - what it gives back, the window it resolves back references out
 // of, and what it refuses.
 
-#include "network_drivers/presentation/ssh/transport/inflate.h"
-#include "network_drivers/presentation/ssh/transport/zlib.h"
+#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
+#include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
 #include <stdint.h>
 #include <unity.h>
+
+static uint8_t inflate_work[16]; // the borrow an entry takes; Inflate never reads it
+
+static uint8_t zlib_work[16]; // the borrow an entry takes; Zlib never reads it
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
@@ -27,7 +32,14 @@ static SshInflate s_inf;
 static size_t compress_one(const uint8_t *src, size_t len, uint8_t *dst, size_t cap)
 {
     size_t out = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_deflate_packet(&s_def, src, len, dst, cap, &out));
+    Zlib.packet_args.z = &s_def;
+    Zlib.packet_args.src = src;
+    Zlib.packet_args.src_len = len;
+    Zlib.packet_args.dst = dst;
+    Zlib.packet_args.dst_cap = cap;
+    Zlib.packet_args.out_len = &out;
+    Zlib.packet(zlib_work);
+    TEST_ASSERT_EQUAL_INT(0, Zlib.n);
     return out;
 }
 
@@ -35,15 +47,32 @@ static size_t compress_one(const uint8_t *src, size_t len, uint8_t *dst, size_t 
 static size_t expand_one(const uint8_t *src, size_t len, uint8_t *dst, size_t cap)
 {
     size_t out = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_inflate_packet(&s_inf, src, len, dst, cap, &out));
+    Inflate.packet_args.z = &s_inf;
+    Inflate.packet_args.src = src;
+    Inflate.packet_args.src_len = len;
+    Inflate.packet_args.dst = dst;
+    Inflate.packet_args.dst_cap = cap;
+    Inflate.packet_args.out_len = &out;
+    Inflate.packet(inflate_work);
+    TEST_ASSERT_EQUAL_INT(0, Inflate.n);
     return out;
 }
 
 void setUp(void)
 {
 
-    ssh_deflate_init(&s_def, s_work, s_head, s_prev, s_ll_code, s_ll_len, s_d_code, s_d_len);
-    ssh_inflate_init(&s_inf, s_window);
+    Zlib.init_args.z = &s_def;
+    Zlib.init_args.win = s_work;
+    Zlib.init_args.head = s_head;
+    Zlib.init_args.prev = s_prev;
+    Zlib.init_args.ll_code = s_ll_code;
+    Zlib.init_args.ll_len = s_ll_len;
+    Zlib.init_args.d_code = s_d_code;
+    Zlib.init_args.d_len = s_d_len;
+    Zlib.init(zlib_work);
+    Inflate.init_args.z = &s_inf;
+    Inflate.init_args.window = s_window;
+    Inflate.init(inflate_work);
 }
 void tearDown(void)
 {
@@ -111,8 +140,18 @@ static void test_sec6_2_re_initialization_starts_a_fresh_stream(void)
     (void)compress_one(msg, len, comp, sizeof(comp));
 
     // Both ends re-initialize, as a key exchange makes them.
-    ssh_deflate_init(&s_def, s_work, s_head, s_prev, s_ll_code, s_ll_len, s_d_code, s_d_len);
-    ssh_inflate_init(&s_inf, s_window);
+    Zlib.init_args.z = &s_def;
+    Zlib.init_args.win = s_work;
+    Zlib.init_args.head = s_head;
+    Zlib.init_args.prev = s_prev;
+    Zlib.init_args.ll_code = s_ll_code;
+    Zlib.init_args.ll_len = s_ll_len;
+    Zlib.init_args.d_code = s_d_code;
+    Zlib.init_args.d_len = s_d_len;
+    Zlib.init(zlib_work);
+    Inflate.init_args.z = &s_inf;
+    Inflate.init_args.window = s_window;
+    Inflate.init(inflate_work);
 
     const size_t cn = compress_one(msg, len, comp, sizeof(comp));
     TEST_ASSERT_EQUAL_UINT8(8u, comp[0] & 0x0Fu); // the RFC 1950 header opens the new stream
@@ -173,7 +212,14 @@ static void test_garbage_input_is_refused(void)
     }
     uint8_t back[256];
     size_t out = 0;
-    TEST_ASSERT_NOT_EQUAL(0, ssh_inflate_packet(&s_inf, junk, sizeof(junk), back, sizeof(back), &out));
+    Inflate.packet_args.z = &s_inf;
+    Inflate.packet_args.src = junk;
+    Inflate.packet_args.src_len = sizeof(junk);
+    Inflate.packet_args.dst = back;
+    Inflate.packet_args.dst_cap = sizeof(back);
+    Inflate.packet_args.out_len = &out;
+    Inflate.packet(inflate_work);
+    TEST_ASSERT_NOT_EQUAL(0, Inflate.n);
 }
 
 int main(void)

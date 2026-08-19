@@ -20,12 +20,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t httpcache_work[16]; // the borrow an entry takes; Httpcache never reads it
+
 void dbench_run(void)
 {
     // A fully-populated directive set (mirrors test_build_all_directives) - exercises every emit
     // branch of the builder (bare tokens, "key=value" deltas, and the bare max-stale case).
     protocore_cache_control full;
-    cache_control_init(&full);
+    Httpcache.control_init_args.cc = &full;
+    Httpcache.control_init(httpcache_work);
     full.cc_private = true;
     full.no_cache = true;
     full.max_age = 10;
@@ -48,7 +51,8 @@ void dbench_run(void)
 
     // A freshness input with both s-maxage and max-age set (shared cache honors s-maxage first).
     protocore_cache_control fresh;
-    cache_control_init(&fresh);
+    Httpcache.control_init_args.cc = &fresh;
+    Httpcache.control_init(httpcache_work);
     fresh.max_age = 100;
     fresh.s_maxage = 200;
 
@@ -61,15 +65,33 @@ void dbench_run(void)
         volatile long lsink = 0;
         protocore_cache_control scratch;
 
+        // The operands do not vary across iterations, so each is staged once above its macro;
+        // only the call is inside the timed loop.
+        Httpcache.control_build_args.buf = out;
+        Httpcache.control_build_args.cap = sizeof(out);
+        Httpcache.control_build_args.cc = &full;
         // Build the full directive set into a text buffer (all emit branches).
-        DBENCH_OP("cache_control_build full", 50000, sink += cache_control_build(out, sizeof(out), &full));
+        DBENCH_OP("Httpcache.control_build full", 50000,
+                  sink += (Httpcache.control_build(httpcache_work), Httpcache.n));
+
+        Httpcache.control_parse_args.s = kResponseHdr;
+        Httpcache.control_parse_args.len = kResponseLen;
+        Httpcache.control_parse_args.cc = &scratch;
         // Tolerant parse of a rich response Cache-Control value.
-        DBENCH_OP("cache_control_parse response", 50000,
-                  sink += (size_t)cache_control_parse(kResponseHdr, kResponseLen, &scratch));
+        DBENCH_OP("Httpcache.control_parse response", 50000,
+                  sink += (Httpcache.control_parse(httpcache_work), (size_t)Httpcache.ok));
+
+        Httpcache.immutable_asset_args.cc = &scratch;
+        Httpcache.immutable_asset_args.max_age = 31536000u;
         // First-class origin preset: fill for a 1-year immutable static asset.
-        DBENCH_OP("cache_immutable_asset preset", 200000, cache_immutable_asset(&scratch, 31536000u));
+        DBENCH_OP("Httpcache.immutable_asset preset", 200000, Httpcache.immutable_asset(httpcache_work));
+
+        Httpcache.freshness_lifetime_args.cc = &fresh;
+        Httpcache.freshness_lifetime_args.shared = true;
+        Httpcache.freshness_lifetime_args.expires_minus_date = 999;
         // RFC 9111 sec 4.2.1 freshness-lifetime precedence (shared cache).
-        DBENCH_OP("cache_freshness_lifetime", 200000, lsink += cache_freshness_lifetime(&fresh, true, 999));
+        DBENCH_OP("Httpcache.freshness_lifetime", 200000,
+                  lsink += (Httpcache.freshness_lifetime(httpcache_work), Httpcache.value));
 
         (void)sink;
         (void)lsink;

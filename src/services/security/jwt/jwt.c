@@ -9,15 +9,17 @@
  */
 
 #include "services/security/jwt/jwt.h"
-#include "mmgr/membuild.h" // protocore_sb: the quoted claim key a payload scan searches for
-#include "mmgr/protomem.h" // mem.chr / mem.cmp: the segment scan and the fixed-length alg compare
+#include "mmgr/membuild/membuild.h" // protocore_sb: the quoted claim key a payload scan searches for
+#include "mmgr/protomem/protomem.h" // mem.chr / mem.cmp: the segment scan and the fixed-length alg compare
+
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
 
 #if PROTOCORE_ENABLE_JWT
 
-#include "crypto/ct_eq.h"           // protocore_ct_eq: the RFC 7518 sec 3.2 constant-time compare
-#include "crypto/mac/hmac_sha256.h" // the HS256 MAC (RFC 7518 sec 3.1)
-#include "mmgr/protostr.h"          // str.len / find / starts / to_long
-#include "mmgr/secure.h"            // the MAC's working set, wiped on release
+#include "crypto/ct_eq.h"                       // protocore_ct_eq: the RFC 7518 sec 3.2 constant-time compare
+#include "crypto/mac/hmac_sha256/hmac_sha256.h" // the HS256 MAC (RFC 7518 sec 3.1)
+#include "mmgr/protostr/protostr.h"             // str.len / find / starts / to_long
+#include "mmgr/secure/secure.h"                 // the MAC's working set, wiped on release
 #include "network_drivers/presentation/codec/base64/base64.h" // base64url, RFC 4648 sec 5
 
 // HS256 emits a 32-byte MAC, and 32 bytes in base64url with the padding skipped are 43 characters
@@ -91,7 +93,12 @@ static proto_bool jws_split(const char *jws, size_t jws_len, JwsParts *parts)
 static proto_bool alg_is_hs256(const char *header, size_t header_len)
 {
     uint8_t buf[JWT_JOSE_HDR_CAP];
-    const size_t n = Base64.url_decode(header, header_len, buf, sizeof(buf) - 1u);
+    Base64.url_decode_args.src = header;
+    Base64.url_decode_args.src_len = header_len;
+    Base64.url_decode_args.dst = buf;
+    Base64.url_decode_args.dst_cap = sizeof(buf) - 1u;
+    Base64.url_decode(base64_work);
+    const size_t n = Base64.n;
     if (n == 0)
     {
         return PROTO_FALSE;
@@ -157,7 +164,12 @@ static const char *claim_value(const char *jws, size_t jws_len, const char *name
     {
         return NULL;
     }
-    const size_t n = Base64.url_decode(parts.payload, parts.payload_len, buf, buf_cap - 1u);
+    Base64.url_decode_args.src = parts.payload;
+    Base64.url_decode_args.src_len = parts.payload_len;
+    Base64.url_decode_args.dst = buf;
+    Base64.url_decode_args.dst_cap = buf_cap - 1u;
+    Base64.url_decode(base64_work);
+    const size_t n = Base64.n;
     if (n == 0)
     {
         return NULL;
@@ -259,7 +271,11 @@ static void verify_mac(uint8_t *restrict work)
 
     char computed[JWT_SIG_B64_CAP];
     // A 32-byte MAC is always 43 base64url characters, so this length test never fires.
-    if (Base64.url_encode(mac, sizeof(mac), computed) != JWT_SIG_B64_LEN)
+    Base64.url_encode_args.src = mac;
+    Base64.url_encode_args.src_len = sizeof(mac);
+    Base64.url_encode_args.dst = computed;
+    Base64.url_encode(base64_work);
+    if (Base64.n != JWT_SIG_B64_LEN)
     {
         return;
     }

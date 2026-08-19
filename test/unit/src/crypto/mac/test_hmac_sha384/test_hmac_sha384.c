@@ -15,9 +15,9 @@
 // still produce a self-consistent MAC, and cases 6 and 7 are what catch it: a 131-octet key is over
 // the real block and under no other plausible one.
 
-#include "crypto/hash/sha384.h" // PROTOCORE_SHA384_BLOCK_LEN: the block the pads are built on
-#include "crypto/mac/hmac_sha384.h"
-#include "crypto/mac/hmac_sha512.h"
+#include "crypto/hash/sha384/sha384.h" // PROTOCORE_SHA384_BLOCK_LEN: the block the pads are built on
+#include "crypto/mac/hmac_sha384/hmac_sha384.h"
+#include "crypto/mac/hmac_sha512/hmac_sha512.h"
 #include <string.h>
 
 #include <unity.h>

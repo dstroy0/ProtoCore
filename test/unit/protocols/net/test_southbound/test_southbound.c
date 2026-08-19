@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "services/southbound/southbound.h"
+#include "services/southbound/southbound/southbound.h"
 #include <unity.h>
 
 typedef struct
@@ -276,18 +276,3 @@ void test_block_not_found_and_arg_edges(void)
     TEST_ASSERT_EQUAL_INT(SB_ERR_ARG, sb_write_block("fake", 0, in, 0));
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_register_and_find);
-    RUN_TEST(test_read_write_dispatch);
-    RUN_TEST(test_block_atomic);
-    RUN_TEST(test_unsupported_capability);
-    RUN_TEST(test_registry_full);
-    RUN_TEST(test_dispatch_not_found_guards);
-    RUN_TEST(test_find_null_name);
-    RUN_TEST(test_read_missing_capability);
-    RUN_TEST(test_find_skips_driver_mutated_name_null);
-    RUN_TEST(test_block_not_found_and_arg_edges);
-    return UNITY_END();
-}

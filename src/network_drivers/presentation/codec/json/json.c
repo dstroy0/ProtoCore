@@ -7,8 +7,8 @@
  */
 
 #include "json.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protostr.h"
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protostr/protostr.h"
 #include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 // Longest member name protocore_json_find_member will scan for.

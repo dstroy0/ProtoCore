@@ -7,9 +7,9 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/smb -t upload --upload-port COM7
 #include "device_bench.h"
-#include "network_drivers/application/smb/ntlm.h"
-#include "network_drivers/application/smb/ntlmssp.h"
-#include "network_drivers/application/smb/smb2.h"
+#include "network_drivers/application/smb/ntlm/ntlm.h"
+#include "network_drivers/application/smb/ntlmssp/ntlmssp.h"
+#include "network_drivers/application/smb/smb2/smb2.h"
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -7,7 +7,7 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/wearlevel -t upload --upload-port COM7
 #include "device_bench.h"
-#include "server/storage/wearlevel.h"
+#include "server/storage/wearlevel/wearlevel.h"
 
 #include <stdbool.h>
 #include <stddef.h>

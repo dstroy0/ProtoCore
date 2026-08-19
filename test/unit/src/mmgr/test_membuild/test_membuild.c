@@ -14,8 +14,8 @@
 // make finish report zero, so a caller that ignores the flag emits nothing rather than a frame
 // missing its middle.
 
-#include "mmgr/float_bits.h" // dbl.from_bits - the bit patterns the predicates are asked about
-#include "mmgr/membuild.h"
+#include "mmgr/float_bits/float_bits.h" // dbl.from_bits - the bit patterns the predicates are asked about
+#include "mmgr/membuild/membuild.h"
 #include <string.h>
 
 #include <unity.h>

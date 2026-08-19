@@ -30,7 +30,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -51,14 +51,14 @@ static proto_bool hit(const char *method, const char *path)
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
     g_called = PROTO_FALSE;
     char req[160];
     snprintf(req, sizeof(req), "%s %s HTTP/1.1\r\n\r\n", method, path);
     push_str(0, req);
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     return g_called;
 }
@@ -266,32 +266,3 @@ void test_escape_class_space_direct()
     TEST_ASSERT_TRUE(regex_match("\\S", "q"));
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_numeric_class_plus);
-    RUN_TEST(test_dot_star_matches_rest);
-    RUN_TEST(test_escaped_dot_extension);
-    RUN_TEST(test_optional_quantifier);
-    RUN_TEST(test_range_class_only);
-    RUN_TEST(test_negated_class);
-    RUN_TEST(test_anchored_full_match);
-    RUN_TEST(test_method_still_enforced);
-    RUN_TEST(test_pathological_pattern_terminates_no_match);
-    RUN_TEST(test_escape_class_digit);
-    RUN_TEST(test_escape_class_word);
-    RUN_TEST(test_escape_class_space);
-    RUN_TEST(test_class_escaped_members);
-    RUN_TEST(test_trailing_backslash_atom);
-    RUN_TEST(test_class_leading_bracket_is_literal);
-    RUN_TEST(test_class_unterminated_fails_closed);
-    RUN_TEST(test_class_trailing_backslash_in_body);
-    RUN_TEST(test_class_escaped_bound_at_end);
-    RUN_TEST(test_empty_class_matches_nothing);
-    RUN_TEST(test_class_trailing_dash_is_literal);
-    RUN_TEST(test_class_two_ranges);
-    RUN_TEST(test_escape_class_digit_low_edge);
-    RUN_TEST(test_escape_class_word_edges);
-    RUN_TEST(test_escape_class_space_direct);
-    return UNITY_END();
-}

@@ -9,7 +9,7 @@
  * parser unit-test without pulling in the server. The pin table is caller-owned.
  */
 
-#include "server/signaling/gpio_map.h"
+#include "server/signaling/gpio_map/gpio_map.h"
 
 static uint8_t gpio_map_work[16]; // the borrow an entry takes; GpioMap never reads it
 

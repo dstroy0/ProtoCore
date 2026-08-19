@@ -45,8 +45,8 @@ with added explanatory comments:
 #define PROTOCORE_ENABLE_DEVICE_ID 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "server/signaling/device_id.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "server/signaling/device_id/device_id.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

@@ -37,7 +37,7 @@
 #ifndef PROTOCORE_FORWARD_H
 #define PROTOCORE_FORWARD_H
 
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 #include "protocore_config.h"
 // An interface is a physical thing: its id, its kind, and how bytes reach the wire all live at L1.

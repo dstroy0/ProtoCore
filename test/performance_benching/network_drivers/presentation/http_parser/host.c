@@ -41,10 +41,13 @@ static const char *POST_REQ = "POST /api/v1/config HTTP/1.1\r\n"
 // Feed a whole request string byte-by-byte through the parser (its real per-byte state machine).
 static ParseState parse_all(HttpReq *req, const char *s, size_t n)
 {
-    http_parser_reset(req);
+    HttpParser.reset_args.req = req;
+    HttpParser.reset(protocore_http_parser_span());
     for (size_t i = 0; i < n; i++)
     {
-        http_parser_feed(req, (uint8_t)s[i]);
+        HttpParser.feed_args.req = req;
+        HttpParser.feed_args.byte = (uint8_t)s[i];
+        HttpParser.feed(protocore_http_parser_span());
     }
     return req->parse_state;
 }

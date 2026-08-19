@@ -22,7 +22,7 @@
 #include "network_drivers/tls/tls.h"
 
 #include "crypto/rng/rng.h"                                 // Rng.fill: the per-handshake ephemeral and random
-#include "mmgr/secure.h"                                    // the persistent end this module's state is taken from
+#include "mmgr/secure/secure.h"                                    // the persistent end this module's state is taken from
 #include "network_drivers/tls/record/record.h"              // PROTOCORE_TLS_PLAINTEXT_HDR_LEN: the frame this reads
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the ring and the raw write
 

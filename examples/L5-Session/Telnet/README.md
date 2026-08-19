@@ -69,7 +69,7 @@ added explanatory comments:
 #define PROTOCORE_ENABLE_TELNET 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/presentation/telnet/telnet.h" // protocore_telnet_on_command / protocore_telnet_frame
 
 static const char *SSID = "YOUR_SSID";

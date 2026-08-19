@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
+
 void setUp(void)
 {
 }
@@ -26,14 +28,21 @@ void tearDown(void)
 static void expect_encode(const char *in, const char *want)
 {
     char out[128];
-    Base64.encode((const uint8_t *)in, strlen(in), out);
+    Base64.encode_args.src = (const uint8_t *)in;
+    Base64.encode_args.src_len = strlen(in);
+    Base64.encode_args.dst = out;
+    Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING(want, out);
 }
 
 static void expect_decode(const char *in, const char *want)
 {
     uint8_t out[128];
-    size_t n = Base64.decode(in, out, sizeof(out));
+    Base64.decode_args.src = in;
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = sizeof(out);
+    Base64.decode(base64_work);
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL_size_t(strlen(want), n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY((const uint8_t *)want, out, n);
 }
@@ -72,15 +81,27 @@ void test_rfc4648_alphabets_are_the_two_tables(void)
     char std_enc[8];
     char url_enc[8];
 
-    Base64.encode(IN, sizeof(IN), std_enc);
+    Base64.encode_args.src = IN;
+    Base64.encode_args.src_len = sizeof(IN);
+    Base64.encode_args.dst = std_enc;
+    Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("/+//", std_enc);
 
-    size_t n = Base64.url_encode(IN, sizeof(IN), url_enc);
+    Base64.url_encode_args.src = IN;
+    Base64.url_encode_args.src_len = sizeof(IN);
+    Base64.url_encode_args.dst = url_enc;
+    Base64.url_encode(base64_work);
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL_size_t(4, n);
     TEST_ASSERT_EQUAL_STRING("_-__", url_enc);
 
     uint8_t out[4];
-    TEST_ASSERT_EQUAL_size_t(3, Base64.url_decode("_-__", 4, out, sizeof(out)));
+    Base64.url_decode_args.src = "_-__";
+    Base64.url_decode_args.src_len = 4;
+    Base64.url_decode_args.dst = out;
+    Base64.url_decode_args.dst_cap = sizeof(out);
+    Base64.url_decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(3, Base64.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(IN, out, 3);
 }
 
@@ -89,8 +110,17 @@ void test_rfc4648_alphabets_are_the_two_tables(void)
 void test_each_alphabet_rejects_the_others_characters(void)
 {
     uint8_t out[8];
-    TEST_ASSERT_EQUAL_size_t(0, Base64.url_decode("/+//", 4, out, sizeof(out)));
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("_-__", out, sizeof(out)));
+    Base64.url_decode_args.src = "/+//";
+    Base64.url_decode_args.src_len = 4;
+    Base64.url_decode_args.dst = out;
+    Base64.url_decode_args.dst_cap = sizeof(out);
+    Base64.url_decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n);
+    Base64.decode_args.src = "_-__";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = sizeof(out);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n);
 }
 
 // sec 3.3 again, plus sec 3.2: padding brings the encoded form to a multiple of four characters, so
@@ -98,12 +128,36 @@ void test_each_alphabet_rejects_the_others_characters(void)
 void test_decode_rejects_malformed(void)
 {
     uint8_t out[64];
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Zm9", out, sizeof(out)));          // not a multiple of 4
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Zm=v", out, sizeof(out)));         // pad before the tail
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Zg=x", out, sizeof(out)));         // lone pad in the 3rd slot
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Zm9vYg==Zm9v", out, sizeof(out))); // padding mid-stream
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Zm9 ", out, sizeof(out)));         // space is not in the alphabet
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Z@9v", out, sizeof(out)));         // nor is '@'
+    Base64.decode_args.src = "Zm9";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = sizeof(out);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // not a multiple of 4
+    Base64.decode_args.src = "Zm=v";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = sizeof(out);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // pad before the tail
+    Base64.decode_args.src = "Zg=x";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = sizeof(out);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // lone pad in the 3rd slot
+    Base64.decode_args.src = "Zm9vYg==Zm9v";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = sizeof(out);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // padding mid-stream
+    Base64.decode_args.src = "Zm9 ";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = sizeof(out);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // space is not in the alphabet
+    Base64.decode_args.src = "Z@9v";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = sizeof(out);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // nor is '@'
 }
 
 // Every quad yields three octets, so a destination that cannot hold them is refused rather than
@@ -111,10 +165,18 @@ void test_decode_rejects_malformed(void)
 void test_decode_refuses_a_short_destination(void)
 {
     uint8_t small[2];
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Zm9vYmFy", small, sizeof(small)));
+    Base64.decode_args.src = "Zm9vYmFy";
+    Base64.decode_args.dst = small;
+    Base64.decode_args.dst_cap = sizeof(small);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n);
 
     uint8_t exact[6];
-    TEST_ASSERT_EQUAL_size_t(6, Base64.decode("Zm9vYmFy", exact, sizeof(exact)));
+    Base64.decode_args.src = "Zm9vYmFy";
+    Base64.decode_args.dst = exact;
+    Base64.decode_args.dst_cap = sizeof(exact);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(6, Base64.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY((const uint8_t *)"foobar", exact, 6);
 }
 
@@ -122,10 +184,26 @@ void test_decode_refuses_a_short_destination(void)
 void test_decode_guards_every_octet_of_a_quad(void)
 {
     uint8_t out[4];
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Zm9v", out, 0)); // refused before the 1st octet
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Zm9v", out, 1)); // refused before the 2nd
-    TEST_ASSERT_EQUAL_size_t(0, Base64.decode("Zm9v", out, 2)); // refused before the 3rd
-    TEST_ASSERT_EQUAL_size_t(3, Base64.decode("Zm9v", out, 3));
+    Base64.decode_args.src = "Zm9v";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = 0;
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // refused before the 1st octet
+    Base64.decode_args.src = "Zm9v";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = 1;
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // refused before the 2nd
+    Base64.decode_args.src = "Zm9v";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = 2;
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // refused before the 3rd
+    Base64.decode_args.src = "Zm9v";
+    Base64.decode_args.dst = out;
+    Base64.decode_args.dst_cap = 3;
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(3, Base64.n);
 }
 
 // sec 5: base64url carries no padding, so its encoded length is the character count alone and the
@@ -134,13 +212,28 @@ void test_decode_guards_every_octet_of_a_quad(void)
 void test_url_decode_stops_at_padding(void)
 {
     uint8_t out[8];
-    TEST_ASSERT_EQUAL_size_t(3, Base64.url_decode("Zm9v=", 5, out, sizeof(out)));
+    Base64.url_decode_args.src = "Zm9v=";
+    Base64.url_decode_args.src_len = 5;
+    Base64.url_decode_args.dst = out;
+    Base64.url_decode_args.dst_cap = sizeof(out);
+    Base64.url_decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(3, Base64.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY((const uint8_t *)"foo", out, 3);
 
     // The unpadded tails sec 3.2 allows: 2 characters carry one octet, 3 carry two.
-    TEST_ASSERT_EQUAL_size_t(1, Base64.url_decode("Zg", 2, out, sizeof(out)));
+    Base64.url_decode_args.src = "Zg";
+    Base64.url_decode_args.src_len = 2;
+    Base64.url_decode_args.dst = out;
+    Base64.url_decode_args.dst_cap = sizeof(out);
+    Base64.url_decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(1, Base64.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY((const uint8_t *)"f", out, 1);
-    TEST_ASSERT_EQUAL_size_t(2, Base64.url_decode("Zm8", 3, out, sizeof(out)));
+    Base64.url_decode_args.src = "Zm8";
+    Base64.url_decode_args.src_len = 3;
+    Base64.url_decode_args.dst = out;
+    Base64.url_decode_args.dst_cap = sizeof(out);
+    Base64.url_decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(2, Base64.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY((const uint8_t *)"fo", out, 2);
 }
 
@@ -149,13 +242,29 @@ void test_url_decode_stops_at_padding(void)
 void test_url_encode_carries_no_padding(void)
 {
     char out[16];
-    TEST_ASSERT_EQUAL_size_t(2, Base64.url_encode((const uint8_t *)"f", 1, out));
+    Base64.url_encode_args.src = (const uint8_t *)"f";
+    Base64.url_encode_args.src_len = 1;
+    Base64.url_encode_args.dst = out;
+    Base64.url_encode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(2, Base64.n);
     TEST_ASSERT_EQUAL_STRING("Zg", out);
-    TEST_ASSERT_EQUAL_size_t(3, Base64.url_encode((const uint8_t *)"fo", 2, out));
+    Base64.url_encode_args.src = (const uint8_t *)"fo";
+    Base64.url_encode_args.src_len = 2;
+    Base64.url_encode_args.dst = out;
+    Base64.url_encode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(3, Base64.n);
     TEST_ASSERT_EQUAL_STRING("Zm8", out);
-    TEST_ASSERT_EQUAL_size_t(4, Base64.url_encode((const uint8_t *)"foo", 3, out));
+    Base64.url_encode_args.src = (const uint8_t *)"foo";
+    Base64.url_encode_args.src_len = 3;
+    Base64.url_encode_args.dst = out;
+    Base64.url_encode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(4, Base64.n);
     TEST_ASSERT_EQUAL_STRING("Zm9v", out);
-    TEST_ASSERT_EQUAL_size_t(0, Base64.url_encode((const uint8_t *)"", 0, out));
+    Base64.url_encode_args.src = (const uint8_t *)"";
+    Base64.url_encode_args.src_len = 0;
+    Base64.url_encode_args.dst = out;
+    Base64.url_encode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n);
     TEST_ASSERT_EQUAL_STRING("", out);
 }
 
@@ -164,8 +273,18 @@ void test_url_encode_carries_no_padding(void)
 void test_url_decode_refuses_a_short_destination(void)
 {
     uint8_t out[2];
-    TEST_ASSERT_EQUAL_size_t(0, Base64.url_decode("Zm9v", 4, out, 0));
-    TEST_ASSERT_EQUAL_size_t(0, Base64.url_decode("Zm9v", 4, out, 2)); // 3 octets do not fit in 2
+    Base64.url_decode_args.src = "Zm9v";
+    Base64.url_decode_args.src_len = 4;
+    Base64.url_decode_args.dst = out;
+    Base64.url_decode_args.dst_cap = 0;
+    Base64.url_decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n);
+    Base64.url_decode_args.src = "Zm9v";
+    Base64.url_decode_args.src_len = 4;
+    Base64.url_decode_args.dst = out;
+    Base64.url_decode_args.dst_cap = 2;
+    Base64.url_decode(base64_work);
+    TEST_ASSERT_EQUAL_size_t(0, Base64.n); // 3 octets do not fit in 2
 }
 
 // Round-trip identity over every tail length (0, 1, 2 mod 3), in both alphabets. Encode and decode
@@ -184,16 +303,32 @@ void test_round_trip_is_the_identity(void)
         }
 
         char enc[132];
-        Base64.encode(in, len, enc);
+        Base64.encode_args.src = in;
+        Base64.encode_args.src_len = len;
+        Base64.encode_args.dst = enc;
+        Base64.encode(base64_work);
         TEST_ASSERT_EQUAL_size_t(((len + 2u) / 3u) * 4u, strlen(enc));
 
         uint8_t dec[96];
-        TEST_ASSERT_EQUAL_size_t(len, Base64.decode(enc, dec, sizeof(dec)));
+        Base64.decode_args.src = enc;
+        Base64.decode_args.dst = dec;
+        Base64.decode_args.dst_cap = sizeof(dec);
+        Base64.decode(base64_work);
+        TEST_ASSERT_EQUAL_size_t(len, Base64.n);
 
         char uenc[132];
-        size_t ulen = Base64.url_encode(in, len, uenc);
+        Base64.url_encode_args.src = in;
+        Base64.url_encode_args.src_len = len;
+        Base64.url_encode_args.dst = uenc;
+        Base64.url_encode(base64_work);
+        size_t ulen = Base64.n;
         uint8_t udec[96];
-        TEST_ASSERT_EQUAL_size_t(len, Base64.url_decode(uenc, ulen, udec, sizeof(udec)));
+        Base64.url_decode_args.src = uenc;
+        Base64.url_decode_args.src_len = ulen;
+        Base64.url_decode_args.dst = udec;
+        Base64.url_decode_args.dst_cap = sizeof(udec);
+        Base64.url_decode(base64_work);
+        TEST_ASSERT_EQUAL_size_t(len, Base64.n);
 
         if (len > 0)
         {

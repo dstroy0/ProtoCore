@@ -17,8 +17,8 @@
 
 #if PROTOCORE_ENABLE_STOMP
 
-#include "mmgr/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched over
-#include "mmgr/protostr.h" // str.len: the bounded length of a header-name needle
+#include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched over
+#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a header-name needle
 
 /** @brief Octets a lookup reads from its header-name needle. Sec 4.5 leaves every size limit open. */
 #define PROTOCORE_STOMP_HEADER_NAME_MAX 128

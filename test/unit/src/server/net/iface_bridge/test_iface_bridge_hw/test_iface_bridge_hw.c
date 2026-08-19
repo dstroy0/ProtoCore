@@ -18,7 +18,7 @@
 // rule table (iface_bridge.c) and the glue's bind table, and a bind pointing at the wrong rule
 // sends a socket's bytes to the wrong bus.
 
-#include "server/net/iface_bridge/iface_bridge_hw.c"
+#include "server/net/iface_bridge/iface_bridge_hw/iface_bridge_hw.c"
 
 #include <unity.h>
 

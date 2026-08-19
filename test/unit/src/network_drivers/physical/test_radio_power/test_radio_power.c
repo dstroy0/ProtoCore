@@ -15,7 +15,7 @@
 // refcount has to put the configured mode back when the last holder releases: a transfer that
 // leaves the radio dozing, or one that leaves it awake, is the failure this catches.
 
-#include "network_drivers/physical/radio_power.h"
+#include "network_drivers/physical/radio_power/radio_power.h"
 
 #include <unity.h>
 

@@ -121,7 +121,7 @@ explanatory comments:
 // #define PROTOCORE_SSH_FWD_MAX 3
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"    // protocore_ssh_auth_set_*_cb
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h" // protocore_ssh_channel_set_data_cb
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"    // protocore_ssh_conn_send / protocore_ssh_conn_setup

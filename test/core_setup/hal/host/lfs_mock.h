@@ -19,7 +19,7 @@
 #ifndef PROTOCORE_LFS_MOCK_H
 #define PROTOCORE_LFS_MOCK_H
 
-#include "server/storage/mnt.h"
+#include "server/storage/mnt/mnt.h"
 #include <lfs.h>
 
 #define LFSM_READ_SIZE 16

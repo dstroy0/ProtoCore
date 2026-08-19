@@ -30,7 +30,7 @@
 #define PROTOCORE_ENABLE_HTTP_CLIENT 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/net/http_client/http_client.h"
 
 static const char *SSID = "YOUR_SSID";

@@ -24,7 +24,7 @@
 #define PROTOCORE_ENABLE_SIMATIC 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/fieldbus/simatic/simatic.h"
 #include "server/clock/clock.h"
 

@@ -7,7 +7,7 @@
  */
 
 #include "services/transportation/wave/wave.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_WAVE
 

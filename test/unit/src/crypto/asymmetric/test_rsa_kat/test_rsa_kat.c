@@ -19,7 +19,7 @@
 // schoolbook product, native_rsa_kat_hw compiles the accelerator path against the HAL's host arm, and
 // the vectors are the same either way because the arms answer the same contract.
 
-#include "crypto/asymmetric/rsa.h"
+#include "crypto/asymmetric/rsa/rsa.h"
 #include <string.h>
 
 #include <unity.h>

@@ -13,7 +13,7 @@
 // dump, character for character, so the fields this extracts are the fields a real part prints
 // rather than the ones a hand-written sample happened to contain.
 
-#include "server/core/exc_decoder.h"
+#include "server/core/exc_decoder/exc_decoder.h"
 #include <string.h>
 
 #include <unity.h>

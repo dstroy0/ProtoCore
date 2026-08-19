@@ -361,11 +361,11 @@ void test_stream_drops_an_absurd_length_and_recovers(void)
     Ld2410.stream_reset_args.s = &s;
     Ld2410.stream_reset(protocore_ld2410_span());
 
-    static const uint8_t HUGE[6] = {0xF4, 0xF3, 0xF2, 0xF1, 0xFF, 0xFF};
-    for (size_t i = 0; i < sizeof(HUGE); i++)
+    static const uint8_t OVERSIZE[6] = {0xF4, 0xF3, 0xF2, 0xF1, 0xFF, 0xFF};
+    for (size_t i = 0; i < sizeof(OVERSIZE); i++)
     {
         Ld2410.stream_push_args.s = &s;
-        Ld2410.stream_push_args.byte = HUGE[i];
+        Ld2410.stream_push_args.byte = OVERSIZE[i];
         Ld2410.stream_push_args.out = &r;
         Ld2410.stream_push(protocore_ld2410_span());
         TEST_ASSERT_FALSE(Ld2410.ok);

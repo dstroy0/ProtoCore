@@ -49,7 +49,7 @@ with added explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

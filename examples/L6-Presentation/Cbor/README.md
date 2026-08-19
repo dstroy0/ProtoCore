@@ -69,7 +69,7 @@ explanatory comments:
 #define PROTOCORE_ENABLE_CBOR 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/presentation/codec/cbor/cbor.h"
 
 static const char *SSID = "YOUR_SSID";

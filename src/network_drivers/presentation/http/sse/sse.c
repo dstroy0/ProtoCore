@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_SSE
 
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
-#include "mmgr/secure.h"                                     // the persistent end this module's state is taken from
-#include "mmgr/span.h"                                       // span.ok: whether the pool had the bytes
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
+#include "mmgr/secure/secure.h"                                     // the persistent end this module's state is taken from
+#include "mmgr/span/span.h"                                       // span.ok: whether the pool had the bytes
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a stream sends on
 #include "sse.h"
 

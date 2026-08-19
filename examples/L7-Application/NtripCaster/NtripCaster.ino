@@ -35,10 +35,10 @@
 #define NTRIP_ROLE_BASE 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/tcp.h"
-#include "services/timing_position/gnss/gnss_survey.h"
-#include "services/timing_position/gnss/rtcm3.h"
+#include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
+#include "services/timing_position/gnss/rtcm3/rtcm3.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
 
 // --- CHANGE ME: your WiFi ---
@@ -92,7 +92,7 @@ static bool read_nmea_line(char *line, size_t cap, size_t *len)
 
 #if NTRIP_ROLE_BASE
 // ============================ BASE: survey-in + NTRIP caster ============================
-#include "services/timing_position/gnss/ntrip_caster_listener.h"
+#include "services/timing_position/gnss/ntrip_caster_listener/ntrip_caster_listener.h"
 
 static GnssSurvey s_survey;
 static bool s_surveyed = false;

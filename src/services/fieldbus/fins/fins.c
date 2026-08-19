@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_FINS
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/fins/fins.h"
 
 PROTOCORE_BEGIN_DECLS

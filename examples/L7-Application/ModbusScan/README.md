@@ -52,9 +52,9 @@ with added explanatory comments:
 #define PROTOCORE_ENABLE_MODBUS_MASTER 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "services/fieldbus/modbus/modbus.h"
-#include "services/fieldbus/modbus/modbus_master.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "services/fieldbus/modbus/modbus/modbus.h"
+#include "services/fieldbus/modbus/modbus_master/modbus_master.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

@@ -388,8 +388,8 @@ void test_parse_refuses_an_incomplete_frame(void)
 // than truncated into a size_t.
 void test_parse_refuses_an_oversized_payload_length(void)
 {
-    static const uint8_t HUGE[] = {0x82, 127, 0x00, 0x00, 0x00, 0x01, 0, 0, 0, 0}; // 2^32
-    TEST_ASSERT_FALSE(parse_frame(HUGE, sizeof(HUGE)));
+    static const uint8_t OVERSIZE[] = {0x82, 127, 0x00, 0x00, 0x00, 0x01, 0, 0, 0, 0}; // 2^32
+    TEST_ASSERT_FALSE(parse_frame(OVERSIZE, sizeof(OVERSIZE)));
 }
 
 // RFC 6455 sec 5.1 says a server does not mask, but a frame that sets MASK still carries a

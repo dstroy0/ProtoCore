@@ -14,7 +14,7 @@
 // The empty-message digest is the one RFC 8448 sec 3 prints as the Transcript-Hash("") that TLS
 // 1.3's "tls13 derived" step feeds to HKDF-Expand-Label.
 
-#include "crypto/hash/sha256.h"
+#include "crypto/hash/sha256/sha256.h"
 #include <string.h>
 
 #include <unity.h>

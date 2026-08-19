@@ -15,7 +15,7 @@ static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDeliver
 
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
 
-#include "network_drivers/application/web_assets.h" // PROTOCORE_SERVICE_WORKER
+#include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_SERVICE_WORKER
 #include "protocore.h"
 #include "shared/mime/mime.h"
 

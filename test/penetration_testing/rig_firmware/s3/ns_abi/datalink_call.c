@@ -5,7 +5,7 @@
 // src/network_drivers/datalink/datalink.c and disassembled, it shows whether Datalink.init is a
 // direct call under LTO and an indirect one without it.
 
-#include "network_drivers/datalink/datalink.h"
+#include "network_drivers/datalink/datalink/datalink.h"
 
 void app_main(void);
 void app_main(void)

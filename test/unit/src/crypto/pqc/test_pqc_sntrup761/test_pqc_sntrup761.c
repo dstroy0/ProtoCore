@@ -13,7 +13,7 @@
 // rejection on a tampered ciphertext, the public key embedded in the secret key at the offset the
 // header names, and the KeyGen retry when g is not invertible.
 
-#include "crypto/pqc/sntrup761.h"
+#include "crypto/pqc/sntrup761/sntrup761.h"
 #include "crypto/rng/rng.h" // this suite defines ::Rng itself; see the seam below
 #include <string.h>
 

@@ -421,21 +421,3 @@ void test_get_stats_null_out_is_noop()
     TEST_ASSERT_EQUAL_UINT32(1, stats().up_published);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_uplink_envelopes_and_publishes);
-    RUN_TEST(test_uplink_no_sink_drops);
-    RUN_TEST(test_uplink_unknown_port_drops);
-    RUN_TEST(test_uplink_rate_cap);
-    RUN_TEST(test_uplink_sink_refusal_counted);
-    RUN_TEST(test_downlink_transmits);
-    RUN_TEST(test_downlink_no_tx_or_unknown_port_drops);
-    RUN_TEST(test_downlink_tx_refusal_counted);
-    RUN_TEST(test_topic_format);
-    RUN_TEST(test_add_port_validation_and_table_full);
-    RUN_TEST(test_seq_increments_per_uplink);
-    RUN_TEST(test_topic_zero_and_overflow_steps);
-    RUN_TEST(test_get_stats_null_out_is_noop);
-    return UNITY_END();
-}

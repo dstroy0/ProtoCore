@@ -16,8 +16,8 @@
 
 #if PROTOCORE_ENABLE_LD2410
 
-#include "mmgr/protomem.h"
-#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/peripherals/ld2410/ld2410.h"
 
 PROTOCORE_BEGIN_DECLS

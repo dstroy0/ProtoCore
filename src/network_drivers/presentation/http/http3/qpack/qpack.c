@@ -1,0 +1,395 @@
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * @file qpack.c
+ * @brief QPACK (RFC 9204) - implementation. See qpack.h.
+ *
+ * The static table is generated verbatim from RFC 9204 Appendix A (0-indexed). The prefix-integer
+ * and Huffman primitives are shared with HPACK via protocore_hpack_prim.h. No dynamic table is maintained:
+ * we encode only against the static table and reject any dynamic-table reference on decode.
+ */
+
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_HTTP3
+
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
+#include "network_drivers/presentation/codec/hpack_prim/hpack_prim.h" // shared prefix-int + Huffman
+#include "network_drivers/presentation/http/http3/qpack/qpack.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// QPACK static table (RFC 9204 Appendix A, 0-indexed). {name, value}. Generated from the RFC.
+static const char *const QPACK_STATIC[99][2] = {
+    {":authority", ""},
+    {":path", "/"},
+    {"age", "0"},
+    {"content-disposition", ""},
+    {"content-length", "0"},
+    {"cookie", ""},
+    {"date", ""},
+    {"etag", ""},
+    {"if-modified-since", ""},
+    {"if-none-match", ""},
+    {"last-modified", ""},
+    {"link", ""},
+    {"location", ""},
+    {"referer", ""},
+    {"set-cookie", ""},
+    {":method", "CONNECT"},
+    {":method", "DELETE"},
+    {":method", "GET"},
+    {":method", "HEAD"},
+    {":method", "OPTIONS"},
+    {":method", "POST"},
+    {":method", "PUT"},
+    {":scheme", "http"},
+    {":scheme", "https"},
+    {":status", "103"},
+    {":status", "200"},
+    {":status", "304"},
+    {":status", "404"},
+    {":status", "503"},
+    {"accept", "*/*"},
+    {"accept", "application/dns-message"},
+    {"accept-encoding", "gzip, deflate, br"},
+    {"accept-ranges", "bytes"},
+    {"access-control-allow-headers", "cache-control"},
+    {"access-control-allow-headers", "content-type"},
+    {"access-control-allow-origin", "*"},
+    {"cache-control", "max-age=0"},
+    {"cache-control", "max-age=2592000"},
+    {"cache-control", "max-age=604800"},
+    {"cache-control", "no-cache"},
+    {"cache-control", "no-store"},
+    {"cache-control", "public, max-age=31536000"},
+    {"content-encoding", "br"},
+    {"content-encoding", "gzip"},
+    {"content-type", "application/dns-message"},
+    {"content-type", "application/javascript"},
+    {"content-type", "application/json"},
+    {"content-type", "application/x-www-form-urlencoded"},
+    {"content-type", "image/gif"},
+    {"content-type", "image/jpeg"},
+    {"content-type", "image/png"},
+    {"content-type", "text/css"},
+    {"content-type", "text/html;charset=utf-8"},
+    {"content-type", "text/plain"},
+    {"content-type", "text/plain;charset=utf-8"},
+    {"range", "bytes=0-"},
+    {"strict-transport-security", "max-age=31536000"},
+    {"strict-transport-security", "max-age=31536000;includesubdomains"},
+    {"strict-transport-security", "max-age=31536000;includesubdomains;preload"},
+    {"vary", "accept-encoding"},
+    {"vary", "origin"},
+    {"x-content-type-options", "nosniff"},
+    {"x-xss-protection", "1; mode=block"},
+    {":status", "100"},
+    {":status", "204"},
+    {":status", "206"},
+    {":status", "302"},
+    {":status", "400"},
+    {":status", "403"},
+    {":status", "421"},
+    {":status", "425"},
+    {":status", "500"},
+    {"accept-language", ""},
+    {"access-control-allow-credentials", "FALSE"},
+    {"access-control-allow-credentials", "TRUE"},
+    {"access-control-allow-headers", "*"},
+    {"access-control-allow-methods", "get"},
+    {"access-control-allow-methods", "get, post, options"},
+    {"access-control-allow-methods", "options"},
+    {"access-control-expose-headers", "content-length"},
+    {"access-control-request-headers", "content-type"},
+    {"access-control-request-method", "get"},
+    {"access-control-request-method", "post"},
+    {"alt-svc", "clear"},
+    {"authorization", ""},
+    {"content-security-policy", "script-src 'none';object-src 'none';base-uri 'none'"},
+    {"early-data", "1"},
+    {"expect-ct", ""},
+    {"forwarded", ""},
+    {"if-range", ""},
+    {"origin", ""},
+    {"purpose", "prefetch"},
+    {"server", ""},
+    {"timing-allow-origin", "*"},
+    {"upgrade-insecure-requests", "1"},
+    {"user-agent", ""},
+    {"x-forwarded-for", ""},
+    {"x-frame-options", "deny"},
+    {"x-frame-options", "sameorigin"},
+};
+
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void qpack_encode_prefix(uint8_t *restrict work)
+{
+    (void)work;
+    uint8_t *out = Qpack.encode_prefix_args.out;
+    size_t cap = Qpack.encode_prefix_args.cap;
+
+    if (cap < 2)
+    {
+        Qpack.n = 0;
+        return;
+    }
+    out[0] = 0x00; // Required Insert Count = 0
+    out[1] = 0x00; // S = 0, Delta Base = 0
+    Qpack.n = 2;
+}
+
+static void qpack_encode_header(uint8_t *restrict work)
+{
+    (void)work;
+    uint8_t *out = Qpack.encode_header_args.out;
+    size_t cap = Qpack.encode_header_args.cap;
+    const char *name = Qpack.encode_header_args.name;
+    size_t name_len = Qpack.encode_header_args.name_len;
+    const char *value = Qpack.encode_header_args.value;
+    size_t value_len = Qpack.encode_header_args.value_len;
+
+    int name_idx = -1, full_idx = -1;
+    for (int i = 0; i < 99; i++)
+    {
+        if (str.len(QPACK_STATIC[i][0], name_len + 1) == name_len && mem.cmp(QPACK_STATIC[i][0], name, name_len) == 0)
+        {
+            if (name_idx < 0)
+            {
+                name_idx = i;
+            }
+            if (str.len(QPACK_STATIC[i][1], value_len + 1) == value_len &&
+                mem.cmp(QPACK_STATIC[i][1], value, value_len) == 0)
+            {
+                full_idx = i;
+                break;
+            }
+        }
+    }
+    if (full_idx >= 0) // Indexed Field Line, static: 1 T=1 i(6)
+    {
+        Qpack.n = HpackPrim.encode_int(out, cap, 6, 0xC0, (uint32_t)full_idx);
+        return;
+    }
+
+    if (name_idx >= 0)
+    { // Literal Field Line with Name Reference, static: 01 N=0 T=1 i(4)
+        size_t o = HpackPrim.encode_int(out, cap, 4, 0x50, (uint32_t)name_idx);
+        if (!o)
+        {
+            Qpack.n = 0;
+            return;
+        }
+        size_t vs = HpackPrim.encode_str(out + o, cap - o, value, value_len);
+        if (!vs)
+        {
+            Qpack.n = 0;
+            return;
+        }
+        Qpack.n = o + vs;
+        return;
+    }
+
+    // Literal Field Line with Literal Name: 001 N=0 H NameLen(3), name string, value string.
+    size_t hl = HpackPrim.huff_len(name, name_len);
+    proto_bool huff = hl < name_len;
+    size_t nbytes = huff ? hl : name_len;
+    size_t o = HpackPrim.encode_int(out, cap, 3, (uint8_t)(0x20 | (huff ? 0x08 : 0x00)), (uint32_t)nbytes);
+    if (!o)
+    {
+        Qpack.n = 0;
+        return;
+    }
+    if (huff)
+    {
+        size_t body = HpackPrim.huff_encode(out + o, cap - o, name, name_len);
+        if (body != hl)
+        {
+            Qpack.n = 0;
+            return;
+        }
+        o += body;
+    }
+    else
+    {
+        if (o + name_len > cap)
+        {
+            Qpack.n = 0;
+            return;
+        }
+        mem.cpy(out + o, name, name_len);
+        o += name_len;
+    }
+    size_t vs = HpackPrim.encode_str(out + o, cap - o, value, value_len);
+    if (!vs)
+    {
+        Qpack.n = 0;
+        return;
+    }
+    Qpack.n = o + vs;
+}
+
+static void qpack_decode(uint8_t *restrict work)
+{
+    (void)work;
+    const uint8_t *block = Qpack.decode_args.block;
+    size_t len = Qpack.decode_args.len;
+    char *scratch = Qpack.decode_args.scratch;
+    size_t scratch_cap = Qpack.decode_args.scratch_cap;
+    QpackEmitFn emit = Qpack.decode_args.emit;
+    void *ctx = Qpack.decode_args.ctx;
+
+    size_t pos = 0;
+    // Encoded Field Section Prefix (RFC 9204 sec 4.5.1): Required Insert Count, then S + Delta Base.
+    size_t c = 0;
+    uint32_t ric = 0;
+    if (!HpackPrim.decode_int(block + pos, len - pos, 8, &c, &ric))
+    {
+        Qpack.ok = PROTO_FALSE;
+        return;
+    }
+    pos += c;
+    if (ric != 0) // a non-zero Required Insert Count references the dynamic table (capacity 0)
+    {
+        Qpack.ok = PROTO_FALSE;
+        return;
+    }
+    uint32_t base = 0;
+    if (!HpackPrim.decode_int(block + pos, len - pos, 7, &c, &base)) // S bit + Delta Base; ignored when RIC = 0
+    {
+        Qpack.ok = PROTO_FALSE;
+        return;
+    }
+    pos += c;
+
+    while (pos < len)
+    {
+        uint8_t b = block[pos];
+        if (b & 0x80)
+        {                    // Indexed Field Line (sec 4.5.2): 1 T i(6)
+            if (!(b & 0x40)) // T = 0 -> dynamic table
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+            uint32_t idx = 0;
+            if (!HpackPrim.decode_int(block + pos, len - pos, 6, &c, &idx) || idx >= 99)
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+            pos += c;
+            const char *nm = QPACK_STATIC[idx][0];
+            const char *vl = QPACK_STATIC[idx][1];
+            if (!emit(ctx, nm, str.len(nm, scratch_cap + 1), vl, str.len(vl, scratch_cap + 1)))
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+        }
+        else if ((b & 0xC0) == 0x40)
+        { // Literal Field Line with Name Reference (sec 4.5.4): 01 N T i(4)
+            proto_bool is_static = (b & 0x10) != 0;
+            uint32_t idx = 0;
+            if (!HpackPrim.decode_int(block + pos, len - pos, 4, &c, &idx))
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+            pos += c;
+            if (!is_static || idx >= 99) // dynamic name reference
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+            const char *nm = QPACK_STATIC[idx][0];
+            size_t nlen = str.len(nm, scratch_cap + 1);
+            if (nlen > scratch_cap)
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+            mem.cpy(scratch, nm, nlen);
+            size_t vlen = 0;
+            if (!HpackPrim.decode_str(block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen))
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+            if (!emit(ctx, scratch, nlen, scratch + nlen, vlen))
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+        }
+        else if ((b & 0xE0) == 0x20)
+        { // Literal Field Line with Literal Name (sec 4.5.6): 001 N H NameLen(3)
+            proto_bool huff = (b & 0x08) != 0;
+            uint32_t nlen32 = 0;
+            if (!HpackPrim.decode_int(block + pos, len - pos, 3, &c, &nlen32))
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+            pos += c;
+            if (pos + nlen32 > len)
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+            size_t nlen = 0;
+            if (huff)
+            {
+                if (!HpackPrim.huff_decode(block + pos, nlen32, scratch, scratch_cap, &nlen))
+                {
+                    Qpack.ok = PROTO_FALSE;
+                    return;
+                }
+            }
+            else
+            {
+                if (nlen32 > scratch_cap)
+                {
+                    Qpack.ok = PROTO_FALSE;
+                    return;
+                }
+                mem.cpy(scratch, block + pos, nlen32);
+                nlen = nlen32;
+            }
+            pos += nlen32;
+            size_t vlen = 0;
+            if (!HpackPrim.decode_str(block, len, &pos, scratch + nlen, scratch_cap - nlen, &vlen))
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+            if (!emit(ctx, scratch, nlen, scratch + nlen, vlen))
+            {
+                Qpack.ok = PROTO_FALSE;
+                return;
+            }
+        }
+        else
+        { // 0001 xxxx Indexed Post-Base / 0000 xxxx Literal Post-Base Name Ref: both dynamic
+            Qpack.ok = PROTO_FALSE;
+            return;
+        }
+    }
+    Qpack.ok = PROTO_TRUE;
+}
+
+QpackNs Qpack = {
+    .encode_prefix = qpack_encode_prefix,
+    .encode_header = qpack_encode_header,
+    .decode = qpack_decode,
+};
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP3

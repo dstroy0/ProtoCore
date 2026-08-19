@@ -29,8 +29,8 @@
 #define PROTOCORE_COAP_MAX_PAYLOAD 1024 // room for a multi-block representation
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "services/iot/coap/coap.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "services/iot/coap/coap/coap.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

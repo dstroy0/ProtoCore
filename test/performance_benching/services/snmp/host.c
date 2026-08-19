@@ -14,8 +14,8 @@
 //   src/mmgr/protomem.c src/mmgr/protostr.c src/shared/ip/ip.c -o /tmp/bs && /tmp/bs
 
 #define PROTOCORE_ENABLE_SNMP 1
-#include "services/net/snmp/snmp_agent.h"
-#include "services/net/snmp/snmp_ber.h"
+#include "services/net/snmp/snmp_agent/snmp_agent.h"
+#include "services/net/snmp/snmp_ber/snmp_ber.h"
 
 #include "host_bench.h"
 #include <stdint.h>

@@ -11,7 +11,7 @@
 // the specification itself wrote out rather than against this module's own idea of the layout. The
 // packet-number cases use the three worked examples of RFC 9000 Appendix A.2 and A.3.
 
-#include "network_drivers/presentation/http/http3/quic_packet.h"
+#include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
 #include <string.h>
 
 #include <unity.h>

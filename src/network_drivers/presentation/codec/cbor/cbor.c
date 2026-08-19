@@ -7,12 +7,12 @@
  */
 
 #include "cbor.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 
 #if PROTOCORE_NEED_CBOR
 
-#include "mmgr/bytes.h"
+#include "mmgr/bytes/bytes.h"
 
 static void put(protocore_span *w, uint8_t b)
 {

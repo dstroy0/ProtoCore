@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_LONWORKS
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/lonworks/lonworks.h"
 
 PROTOCORE_BEGIN_DECLS

@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "network_drivers/network/dns/dns_server.h"
+#include "network_drivers/network/dns/dns_server/dns_server.h"
 #include "network_drivers/transport/udp/server/server.h"
 #include "network_drivers/transport/udp/udp.h"
 #include "protocore_config.h"
@@ -496,21 +496,3 @@ void test_dns_begin_answers_a_query_over_the_wire()
     (void)UdpListener.ok;
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_a_record_answer);
-    RUN_TEST(test_nxdomain);
-    RUN_TEST(test_non_a_query_no_error);
-    RUN_TEST(test_multilabel_name_reaches_resolver);
-    RUN_TEST(test_malformed_guards);
-    RUN_TEST(test_table_add_lookup_case_insensitive);
-    RUN_TEST(test_end_to_end_with_table);
-    RUN_TEST(test_dns_opcode_notimp);
-    RUN_TEST(test_dns_truncated_questions);
-    RUN_TEST(test_dns_oversized_name);
-    RUN_TEST(test_dns_question_exceeds_out_cap);
-    RUN_TEST(test_dns_add_and_lookup_guards);
-    RUN_TEST(test_dns_begin_answers_a_query_over_the_wire);
-    return UNITY_END();
-}

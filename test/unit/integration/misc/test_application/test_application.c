@@ -9,7 +9,7 @@
 #include "protocore.h"
 #include "rx_feed.h"
 #include "server/core/proto_handler.h"
-#include "server/storage/mnt.h"
+#include "server/storage/mnt/mnt.h"
 #include <string.h>
 #include <unity.h>
 
@@ -85,9 +85,9 @@ static void arm_slot(uint8_t slot, const char *raw)
         s->rx_head = next;
     }
     HttpConn.slot = slot;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
 }
 
 #define MARK_MAX 8
@@ -121,7 +121,7 @@ static void reset_handler(uint8_t slot_id, HttpReq *req)
     (void)req;
     g_mark[0]++;
     HttpConn.slot = slot_id;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
 }
 
 static char g_body_seen[32];
@@ -135,7 +135,10 @@ static char g_query_seen[48];
 static void query_handler(uint8_t id, HttpReq *req)
 {
     (void)id;
-    const char *v = http_get_query(req, "id");
+    HttpParser.get_query_args.req = req;
+    HttpParser.get_query_args.key = "id";
+    HttpParser.get_query(protocore_http_parser_span());
+    const char *v = HttpParser.text;
     if (v)
     {
         strncpy(g_query_seen, v, sizeof(g_query_seen) - 1);
@@ -146,7 +149,10 @@ static char g_header_seen[48];
 static void header_handler(uint8_t id, HttpReq *req)
 {
     (void)id;
-    const char *v = http_get_header(req, "X-Token");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "X-Token";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *v = HttpParser.text;
     if (v)
     {
         strncpy(g_header_seen, v, sizeof(g_header_seen) - 1);
@@ -178,7 +184,7 @@ void setUp(void)
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     handler_called = PROTO_FALSE;
     handler_slot = 255;
@@ -379,9 +385,9 @@ void test_parse_error_slot_auto_reset(void)
 {
     push_str(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
     handle();
     TEST_ASSERT_NOT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
@@ -549,9 +555,9 @@ void race_error_and_valid_slot_in_same_handle(void)
 
     push_str(0, "TOOLONGMETHODNAME /path HTTP/1.1\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 
     arm_slot(1, "GET /ok HTTP/1.1\r\n\r\n");
@@ -590,9 +596,9 @@ void test_uri_too_long_auto_resets_slot(void)
 
     push_str(0, req);
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     TEST_ASSERT_EQUAL(PARSE_URI_TOO_LONG, http_pool[0].parse_state);
 
     handle();
@@ -1164,7 +1170,7 @@ void test_metrics_emits_prometheus(void)
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
     metrics(0);
     const char *out = tcp_captured();
@@ -1225,9 +1231,9 @@ void test_sse_broadcast_after_upgrade_matches_path(void)
     conn_pool[0].pcb = protocore_net_host_pcb();
     push_str(0, "GET /events HTTP/1.1\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
 
     tcp_capture_reset();
     handle();
@@ -1361,7 +1367,7 @@ void test_status_text_reason_phrases(void)
         conn_pool[0].proto = PROTO_HTTP;
         conn_pool[0].pcb = protocore_net_host_pcb();
         HttpConn.slot = 0;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
         send_text(0, cases[i].code, "text/plain", "x");
         char want[48];
@@ -1378,7 +1384,7 @@ void test_send_binary_body_with_nul(void)
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     const uint8_t body[] = {0x00, 0x00, 0x00, 0x00, 0x05, 'h', 'e', 0x00, 'l', 'o'};
     tcp_capture_reset();
     send_bin(0, 200, "application/grpc-web+proto", body, sizeof(body));
@@ -1510,7 +1516,7 @@ void test_redirect_response_and_code_normalization(void)
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
     redirect(0, 307, "/new");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "307 Temporary Redirect"));
@@ -1519,7 +1525,7 @@ void test_redirect_response_and_code_normalization(void)
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].pcb = protocore_net_host_pcb();
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
     redirect(0, 200, "/z");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "302 Found"));
@@ -1650,7 +1656,7 @@ static void live_slot(uint8_t slot)
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConn.slot = slot;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     http_pool[slot].version = HTTP_11;
 }
 
@@ -2207,14 +2213,14 @@ void test_upgrade_entry_points_on_dead_slot(void)
                 "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
     conn_pool[0].pcb = NULL;
     tcp_capture_reset();
-    TEST_ASSERT_FALSE(ws_do_upgrade(0, &http_pool[0], NULL));
+    TEST_ASSERT_FALSE(ws_do_upgrade(0, &http_pool[0], 0));
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 #endif
 #if PROTOCORE_ENABLE_SSE
     arm_slot(0, "GET /e HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = NULL;
     tcp_capture_reset();
-    TEST_ASSERT_FALSE(protocore_sse_do_upgrade(0, &http_pool[0], NULL));
+    TEST_ASSERT_FALSE(protocore_sse_do_upgrade(0, &http_pool[0], 0));
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 #endif
     tcp_capture_disable();

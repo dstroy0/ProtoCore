@@ -12,7 +12,7 @@
 //   (utf8.h is header-only)
 
 #define PROTOCORE_ENABLE_MQTT 1
-#include "services/iot/mqtt/mqtt.h"
+#include "services/iot/mqtt/mqtt/mqtt.h"
 
 #include "host_bench.h"
 #include <stdbool.h>

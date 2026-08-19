@@ -32,7 +32,7 @@ static void arm_slot(uint8_t slot)
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConn.slot = slot;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 }
 
@@ -41,7 +41,7 @@ static const char *do_req(uint8_t slot, const char *req_str)
     arm_slot(slot);
     push_str(slot, req_str);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     return tcp_captured();
 }
@@ -101,7 +101,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -240,19 +240,3 @@ void test_rate_limit_zero_window_disables()
     }
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_middleware_runs_then_handler);
-    RUN_TEST(test_middleware_runs_for_unmatched_route);
-    RUN_TEST(test_middleware_can_inject_response_header);
-    RUN_TEST(test_middleware_halt_short_circuits_handler);
-    RUN_TEST(test_middleware_runs_in_registration_order);
-    RUN_TEST(test_use_respects_capacity_cap);
-    RUN_TEST(test_rate_limit_allows_then_rejects);
-    RUN_TEST(test_rate_limit_window_resets);
-    RUN_TEST(test_rate_limit_disabled_by_default);
-    RUN_TEST(test_use_rejects_null_middleware);
-    RUN_TEST(test_rate_limit_zero_window_disables);
-    return UNITY_END();
-}

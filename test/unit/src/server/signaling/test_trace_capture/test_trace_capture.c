@@ -12,7 +12,7 @@
 //
 // The env sizes PROTOCORE_TC_MAX_WINDOW_SAMPLES at 32.
 
-#include "server/signaling/trace_capture.h"
+#include "server/signaling/trace_capture/trace_capture.h"
 
 #include <unity.h>
 

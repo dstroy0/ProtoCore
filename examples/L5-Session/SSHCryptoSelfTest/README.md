@@ -61,9 +61,9 @@ reproduced verbatim with added explanatory comments:
 
 #include "protocore.h" // discovers the library (adds src/ to the include path) - MUST come first
 
-#include "crypto/cipher/aes256ctr.h"
-#include "crypto/mac/hmac_sha256.h"
-#include "crypto/hash/sha256.h"
+#include "crypto/cipher/aes256ctr/aes256ctr.h"
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"
+#include "crypto/hash/sha256/sha256.h"
 
 
 // Byte-equality helper used by every check below.

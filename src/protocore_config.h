@@ -1011,6 +1011,23 @@
 #ifndef PROTOCORE_ENABLE_CT_EQ
 #define PROTOCORE_ENABLE_CT_EQ 1
 #endif
+// The request parser. Every HTTP path in the library feeds it, and 53 envs build it with no flag in
+// common, so a build that turns this off serves nothing over HTTP: stated for the shape every other
+// module has, not as a knob.
+#ifndef PROTOCORE_ENABLE_HTTP_PARSER
+#define PROTOCORE_ENABLE_HTTP_PARSER 1
+#endif
+// The RSA host key: DER parsing, the ssh-rsa blob encoding, and signing through Rsa. Named for SSH
+// but reached by IKEv2 and OIDC too, and 17 envs build it with no flag in common, so it is stated
+// for the shape every other module has rather than gated on any one caller.
+#ifndef PROTOCORE_ENABLE_SSH_RSA
+#define PROTOCORE_ENABLE_SSH_RSA 1
+#endif
+// The base64 codec. The WebSocket accept digest, Basic auth, JWS and every PEM path reach it, and 52
+// envs build it with no flag in common: stated for the shape every other module has, not as a knob.
+#ifndef PROTOCORE_ENABLE_BASE64
+#define PROTOCORE_ENABLE_BASE64 1
+#endif
 #ifndef PROTOCORE_ENABLE_KDF
 #define PROTOCORE_ENABLE_KDF 1
 #endif

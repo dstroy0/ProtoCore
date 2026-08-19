@@ -15,7 +15,7 @@
 //   -o /tmp/bc && /tmp/bc
 
 #define PROTOCORE_ENABLE_COAP 1
-#include "services/iot/coap/coap.h"
+#include "services/iot/coap/coap/coap.h"
 
 #include "host_bench.h"
 #include <stdint.h>

@@ -16,10 +16,10 @@
 //   ETH_PHY_MDC=23 ETH_PHY_MDIO=18 ETH_CLK_MODE=ETH_CLOCK_GPIO0_IN
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/udp/udp.h"
 #include "network_drivers/network/forward/forward.h"
-#include "server/signaling/bus_capture.h"
+#include "server/signaling/bus_capture/bus_capture.h"
 
 
 static const char *COLLECTOR_IP = "192.168.1.50";

@@ -17,9 +17,9 @@
 //   src/mmgr/secure.c src/mmgr/arena.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bssh && /tmp/bssh
 
 #define PROTOCORE_ENABLE_SSH 1
-#include "crypto/aead/chachapoly.h"
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/asymmetric/ed25519.h"
+#include "crypto/aead/chachapoly/chachapoly.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
 
 #include "host_bench.h"
 #include <stdint.h>

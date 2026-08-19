@@ -12,12 +12,12 @@
  */
 
 #include "services/iot/protobuf/protobuf.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_NEED_PROTOBUF
 
-#include "mmgr/protomem.h" // mem.cpy: the payload octets and the float bit patterns
-#include "mmgr/protostr.h" // str.len: the bounded length of a NUL-terminated LEN payload
+#include "mmgr/protomem/protomem.h" // mem.cpy: the payload octets and the float bit patterns
+#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a NUL-terminated LEN payload
 
 // One encoder row: the caller buffer it appends into, how far it has appended, and the sticky flag
 // an overflow sets.

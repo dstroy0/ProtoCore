@@ -14,14 +14,14 @@
  */
 
 #include "services/iot/statsd/statsd.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_STATSD
 
-#include "mmgr/protomem.h"                               // mem.cpy: the spans a line is assembled from
-#include "mmgr/protostr.h"                               // str.copy / str.len: the bounded field moves
+#include "mmgr/protomem/protomem.h"                               // mem.cpy: the spans a line is assembled from
+#include "mmgr/protostr/protostr.h"                               // str.copy / str.len: the bounded field moves
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one metric, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the daemon address, once
 

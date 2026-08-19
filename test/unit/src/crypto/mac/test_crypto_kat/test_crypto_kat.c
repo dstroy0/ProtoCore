@@ -15,14 +15,14 @@
 // low-order X25519 point, a malleable Ed25519 S. A primitive that only ever sees well-formed input
 // passes a round trip and still accepts all of them.
 
-#include "crypto/aead/aes128gcm.h"
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/asymmetric/ed25519.h"
-#include "crypto/cipher/chacha20.h"
-#include "crypto/kdf/hkdf.h"
-#include "crypto/mac/hmac_sha256.h"
-#include "crypto/mac/hmac_sha512.h"
-#include "crypto/mac/poly1305.h"
+#include "crypto/aead/aes128gcm/aes128gcm.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
+#include "crypto/cipher/chacha20/chacha20.h"
+#include "crypto/kdf/hkdf/hkdf.h"
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"
+#include "crypto/mac/hmac_sha512/hmac_sha512.h"
+#include "crypto/mac/poly1305/poly1305.h"
 #include <string.h>
 
 #include <unity.h>

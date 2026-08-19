@@ -3,13 +3,13 @@
 //
 // Same reason as test_quic_conn: this suite reads the engine's stream table, so it compiles
 // h3_conn.c into itself rather than widening h3_conn.h. The env's src list drops h3_conn.c.
-#include "network_drivers/presentation/http/http3/h3_conn.c"
-#include "network_drivers/presentation/http/http3/h3_frame.h"
-#include "network_drivers/presentation/http/http3/qpack.h"
-#include "network_drivers/presentation/http/http3/quic_conn.c"
-#include "network_drivers/presentation/http/http3/quic_conn.h"
-#include "network_drivers/presentation/http/http3/quic_frame.h"
-#include "network_drivers/presentation/http/http3/quic_varint.h"
+#include "network_drivers/presentation/http/http3/h3_conn/h3_conn.c"
+#include "network_drivers/presentation/http/http3/h3_frame/h3_frame.h"
+#include "network_drivers/presentation/http/http3/qpack/qpack.h"
+#include "network_drivers/presentation/http/http3/quic_conn/quic_conn.c"
+#include "network_drivers/presentation/http/http3/quic_conn/quic_conn.h"
+#include "network_drivers/presentation/http/http3/quic_frame/quic_frame.h"
+#include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 #include <string.h>
 
 #include <unity.h>
@@ -170,7 +170,7 @@ void test_request_dispatch_and_response()
     H3Frame.build_headers(h3_frame_work);
     size_t rp = H3Frame.n;
 
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("GET", g_method);
     TEST_ASSERT_EQUAL_STRING("/index.html", g_path);
@@ -272,7 +272,7 @@ void test_post_with_body()
     H3Frame.build_data(h3_frame_work);
     rp += H3Frame.n;
 
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 4, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 4, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("POST", g_method);
     TEST_ASSERT_EQUAL_STRING("/submit", g_path);
@@ -290,7 +290,7 @@ void test_control_stream_settings_sent()
     H3Conn.app_args.app = NULL;
     H3Conn.init(H3Conn.internal);
 
-    g_qc.cb.on_handshake_done(g_qc.cb.app, &g_qc);
+    g_qc.cb.on_handshake_done(g_qc.cb.app, g_qc_ctx);
     QuicStream *ctrl = find_stream(&g_qc, 3);
     TEST_ASSERT_NOT_NULL(ctrl);
 
@@ -340,7 +340,7 @@ void test_client_control_stream_settings()
     H3Frame.build_settings_args.n = 1;
     H3Frame.build_settings(h3_frame_work);
     sp += H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, sp, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, s, sp, PROTO_FALSE);
 
     H3Stream *st = find_h3(&g_h3, 2);
     TEST_ASSERT_NOT_NULL(st);
@@ -364,19 +364,19 @@ void test_client_uni_stream_types()
     QuicVarint.encode_args.value = 0x02;
     QuicVarint.encode(quic_varint_work);
     size_t n = QuicVarint.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 6, &t, n, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 6, &t, n, PROTO_FALSE);
     QuicVarint.encode_args.out = &t;
     QuicVarint.encode_args.cap = 1;
     QuicVarint.encode_args.value = 0x03;
     QuicVarint.encode(quic_varint_work);
     n = QuicVarint.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 10, &t, n, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 10, &t, n, PROTO_FALSE);
     QuicVarint.encode_args.out = &t;
     QuicVarint.encode_args.cap = 1;
     QuicVarint.encode_args.value = 0x1f;
     QuicVarint.encode(quic_varint_work);
     n = QuicVarint.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 14, &t, n, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 14, &t, n, PROTO_FALSE);
 
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_QPACK_ENC, find_h3(&g_h3, 6)->role);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_QPACK_DEC, find_h3(&g_h3, 10)->role);
@@ -393,11 +393,11 @@ void test_handshake_done_idempotent()
     H3Conn.app_args.app = NULL;
     H3Conn.init(H3Conn.internal);
 
-    g_qc.cb.on_handshake_done(g_qc.cb.app, &g_qc);
+    g_qc.cb.on_handshake_done(g_qc.cb.app, g_qc_ctx);
     QuicStream *ctrl = find_stream(&g_qc, 3);
     TEST_ASSERT_NOT_NULL(ctrl);
     size_t first = ctrl->tx_have;
-    g_qc.cb.on_handshake_done(g_qc.cb.app, &g_qc);
+    g_qc.cb.on_handshake_done(g_qc.cb.app, g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(first, ctrl->tx_have);
 }
 
@@ -419,11 +419,11 @@ void test_malformed_request_frame()
     H3Frame.write_header_args.length = 9999;
     H3Frame.write_header(h3_frame_work);
     size_t hp = H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, hdr, hp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, hdr, hp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 
     uint8_t junk[1] = {0xC0};
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 4, junk, sizeof(junk), PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 4, junk, sizeof(junk), PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 }
 
@@ -462,7 +462,7 @@ void test_stream_pool_full()
     uint8_t b = 0x00;
     for (uint64_t i = 0; i < PROTOCORE_H3_MAX_STREAMS; i++)
     {
-        g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, i * 4, &b, 1, PROTO_FALSE);
+        g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, i * 4, &b, 1, PROTO_FALSE);
     }
 
     uint8_t block[64];
@@ -493,7 +493,7 @@ void test_stream_pool_full()
     H3Frame.build_headers_args.len = bp;
     H3Frame.build_headers(h3_frame_work);
     size_t rp = H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, (uint64_t)PROTOCORE_H3_MAX_STREAMS * 4, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, (uint64_t)PROTOCORE_H3_MAX_STREAMS * 4, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
 }
 
@@ -508,10 +508,10 @@ void test_uni_stream_partial_type()
     H3Conn.init(H3Conn.internal);
 
     uint8_t b0 = 0x40;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, &b0, 1, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, &b0, 1, PROTO_FALSE);
     TEST_ASSERT_FALSE(find_h3(&g_h3, 2)->type_read);
     uint8_t b1 = 0x00;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, &b1, 1, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, &b1, 1, PROTO_FALSE);
     TEST_ASSERT_TRUE(find_h3(&g_h3, 2)->type_read);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, find_h3(&g_h3, 2)->role);
 }
@@ -556,7 +556,7 @@ void test_overlong_field_truncated()
     H3Frame.build_headers_args.len = bp;
     H3Frame.build_headers(h3_frame_work);
     size_t rp = H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, req, rp, PROTO_TRUE);
 
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_H3_METHOD_LEN - 1, strlen(g_method));
@@ -635,7 +635,7 @@ void test_h3_pseudo_header_name_variants()
     size_t rp = H3Frame.n;
 
     strcpy(g_auth, "unset");
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("GET", g_method);
     TEST_ASSERT_EQUAL_STRING("/ok", g_path);
@@ -695,7 +695,7 @@ void test_h3_request_unknown_frame_and_empty_data()
     H3Frame.build_data(h3_frame_work);
     rp += H3Frame.n;
 
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(1, g_requests);
     TEST_ASSERT_EQUAL_STRING("POST", g_method);
     TEST_ASSERT_EQUAL_UINT(4, g_body_len);
@@ -752,7 +752,7 @@ void test_h3_control_only_frames_on_a_request_stream()
         H3Frame.write_header(h3_frame_work);
         rp += H3Frame.n;
 
-        g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
+        g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, req, rp, PROTO_TRUE);
         TEST_ASSERT_EQUAL_INT(0, g_requests);
         TEST_ASSERT_TRUE(g_qc.close_queued);
         TEST_ASSERT_TRUE(g_qc.close_is_app);
@@ -777,7 +777,7 @@ void test_h3_error_before_app_keys_falls_back_to_transport()
     H3Frame.build_data_args.len = 4;
     H3Frame.build_data(h3_frame_work);
     size_t rp = H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, req, rp, PROTO_TRUE);
 
     TEST_ASSERT_TRUE(g_qc.close_queued);
     TEST_ASSERT_FALSE(g_qc.close_is_app);
@@ -802,7 +802,7 @@ void test_h3_data_before_headers()
     H3Frame.build_data_args.len = 4;
     H3Frame.build_data(h3_frame_work);
     size_t rp = H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, req, rp, PROTO_TRUE);
 
     TEST_ASSERT_EQUAL_INT(0, g_requests);
     TEST_ASSERT_TRUE(g_qc.close_queued);
@@ -833,7 +833,7 @@ void test_h3_second_control_stream()
     H3Frame.build_settings_args.n = 0;
     H3Frame.build_settings(h3_frame_work);
     p1 += H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s1, p1, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, s1, p1, PROTO_FALSE);
     TEST_ASSERT_FALSE(g_qc.close_queued);
 
     uint8_t s2[64];
@@ -842,7 +842,7 @@ void test_h3_second_control_stream()
     QuicVarint.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
     size_t p2 = QuicVarint.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 6, s2, p2, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 6, s2, p2, PROTO_FALSE);
     TEST_ASSERT_TRUE(g_qc.close_queued);
     TEST_ASSERT_TRUE(g_qc.close_is_app);
     TEST_ASSERT_EQUAL_UINT64(H3_STREAM_CREATION_ERROR, g_qc.close_error);
@@ -871,7 +871,7 @@ void test_h3_second_settings_frame()
     H3Frame.build_settings_args.n = 0;
     H3Frame.build_settings(h3_frame_work);
     p += H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, p, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, s, p, PROTO_FALSE);
     TEST_ASSERT_FALSE(g_qc.close_queued);
 
     uint8_t s2[128];
@@ -882,7 +882,7 @@ void test_h3_second_settings_frame()
     H3Frame.build_settings_args.n = 0;
     H3Frame.build_settings(h3_frame_work);
     size_t p2 = H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s2, p2, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, s2, p2, PROTO_FALSE);
     TEST_ASSERT_TRUE(g_qc.close_queued);
     TEST_ASSERT_TRUE(g_qc.close_is_app);
     TEST_ASSERT_EQUAL_UINT64(H3_FRAME_UNEXPECTED, g_qc.close_error);
@@ -928,7 +928,7 @@ void test_h3_no_request_callback()
     H3Frame.build_headers(h3_frame_work);
     size_t rp = H3Frame.n;
 
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, req, rp, PROTO_TRUE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, req, rp, PROTO_TRUE);
     TEST_ASSERT_EQUAL_INT(0, g_requests);
     H3Stream *st = find_h3(&g_h3, 0);
     TEST_ASSERT_NOT_NULL(st);
@@ -948,7 +948,7 @@ void test_h3_stream_buffer_overflow_clamped()
 
     static uint8_t big[PROTOCORE_H3_STREAM_BUF + 64];
     memset(big, 0x00, sizeof(big));
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 0, big, sizeof(big), PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 0, big, sizeof(big), PROTO_FALSE);
 
     H3Stream *st = find_h3(&g_h3, 0);
     TEST_ASSERT_NOT_NULL(st);
@@ -975,7 +975,7 @@ void test_h3_control_stream_frame_guards()
     QuicVarint.encode(quic_varint_work);
     size_t sp = QuicVarint.n;
     s[sp++] = 0xC0;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, sp, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, s, sp, PROTO_FALSE);
     H3Stream *st = find_h3(&g_h3, 2);
     TEST_ASSERT_NOT_NULL(st);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, st->role);
@@ -1000,7 +1000,7 @@ void test_h3_control_stream_frame_guards()
     H3Frame.write_header_args.length = 40;
     H3Frame.write_header(h3_frame_work);
     sp2 += H3Frame.n;
-    g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s2, sp2, PROTO_FALSE);
+    g_qc2.cb.on_stream_data(g_qc2.cb.app, g_qc2_ctx, 2, s2, sp2, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT64(defaults.max_field_section_size, g_h3b.peer_settings.max_field_section_size);
 
     g_qc2.b = g_qc2_b;
@@ -1023,7 +1023,7 @@ void test_h3_control_stream_frame_guards()
     H3Frame.write_header(h3_frame_work);
     sp3 += H3Frame.n;
     s3[sp3++] = 0x00;
-    g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s3, sp3, PROTO_FALSE);
+    g_qc2.cb.on_stream_data(g_qc2.cb.app, g_qc2_ctx, 2, s3, sp3, PROTO_FALSE);
     TEST_ASSERT_TRUE(g_qc2.close_queued);
     TEST_ASSERT_TRUE(g_qc2.close_is_app);
     TEST_ASSERT_EQUAL_UINT64(H3_MISSING_SETTINGS, g_qc2.close_error);
@@ -1055,7 +1055,7 @@ void test_h3_control_stream_frame_guards()
     H3Frame.write_header(h3_frame_work);
     sp4 += H3Frame.n;
     s4[sp4++] = 0x00;
-    g_qc2.cb.on_stream_data(g_qc2.cb.app, &g_qc2, 2, s4, sp4, PROTO_FALSE);
+    g_qc2.cb.on_stream_data(g_qc2.cb.app, g_qc2_ctx, 2, s4, sp4, PROTO_FALSE);
     TEST_ASSERT_FALSE(g_qc2.close_queued);
     H3Stream *sc = find_h3(&g_h3b, 2);
     TEST_ASSERT_NOT_NULL(sc);
@@ -1073,7 +1073,7 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     H3Conn.init(H3Conn.internal);
 
     uint8_t none = 0;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, &none, 0, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, &none, 0, PROTO_FALSE);
     H3Stream *st = find_h3(&g_h3, 2);
     TEST_ASSERT_NOT_NULL(st);
     TEST_ASSERT_FALSE(st->type_read);
@@ -1085,7 +1085,7 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     QuicVarint.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
     size_t tn = QuicVarint.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, t, tn, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, t, tn, PROTO_FALSE);
     TEST_ASSERT_TRUE(st->type_read);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, st->role);
 
@@ -1099,7 +1099,7 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     H3Frame.build_settings_args.n = 1;
     H3Frame.build_settings(h3_frame_work);
     size_t sp = H3Frame.n;
-    g_qc.cb.on_stream_data(g_qc.cb.app, &g_qc, 2, s, sp, PROTO_FALSE);
+    g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, s, sp, PROTO_FALSE);
     TEST_ASSERT_EQUAL_UINT64(4321, g_h3.peer_settings.max_field_section_size);
 }
 
@@ -1152,31 +1152,3 @@ void test_h3_respond_no_content_type_empty_body()
     TEST_ASSERT_EQUAL_STRING("", e_ctype);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_request_dispatch_and_response);
-    RUN_TEST(test_h3_pseudo_header_name_variants);
-    RUN_TEST(test_h3_request_unknown_frame_and_empty_data);
-    RUN_TEST(test_h3_control_only_frames_on_a_request_stream);
-    RUN_TEST(test_h3_error_before_app_keys_falls_back_to_transport);
-    RUN_TEST(test_h3_data_before_headers);
-    RUN_TEST(test_h3_second_control_stream);
-    RUN_TEST(test_h3_second_settings_frame);
-    RUN_TEST(test_h3_no_request_callback);
-    RUN_TEST(test_h3_stream_buffer_overflow_clamped);
-    RUN_TEST(test_h3_control_stream_frame_guards);
-    RUN_TEST(test_h3_uni_stream_empty_and_repeat_delivery);
-    RUN_TEST(test_h3_respond_no_content_type_empty_body);
-    RUN_TEST(test_post_with_body);
-    RUN_TEST(test_control_stream_settings_sent);
-    RUN_TEST(test_client_control_stream_settings);
-    RUN_TEST(test_client_uni_stream_types);
-    RUN_TEST(test_handshake_done_idempotent);
-    RUN_TEST(test_malformed_request_frame);
-    RUN_TEST(test_respond_body_too_large);
-    RUN_TEST(test_stream_pool_full);
-    RUN_TEST(test_uni_stream_partial_type);
-    RUN_TEST(test_overlong_field_truncated);
-    return UNITY_END();
-}

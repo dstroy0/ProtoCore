@@ -7,7 +7,7 @@
  */
 
 #include "services/energy/sep2/sep2.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 
 #if PROTOCORE_ENABLE_SEP2
 

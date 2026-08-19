@@ -10,7 +10,7 @@
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "esp_timer.h"
-#include "server/core/preempt_queue.h"
+#include "server/core/preempt_queue/preempt_queue.h"
 
 struct Reading
 {

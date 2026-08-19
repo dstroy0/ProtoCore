@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "server/signaling/bus_capture.h"
+#include "server/signaling/bus_capture/bus_capture.h"
 #include "shared/pcap/pcap.h"
 
 #include <stdbool.h>

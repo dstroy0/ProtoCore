@@ -12,10 +12,10 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
 #if PROTOCORE_ENABLE_SDI12
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "server/peripherals/sdi12/sdi12.h"
 
-#include "mmgr/protostr.h"
+#include "mmgr/protostr/protostr.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_ARC
 
 PROTOCORE_BEGIN_DECLS

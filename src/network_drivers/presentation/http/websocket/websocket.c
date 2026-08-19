@@ -17,20 +17,24 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+static uint8_t inflate_work[16]; // the borrow an entry takes; Inflate never reads it
+
+static uint8_t deflate_work[16]; // the borrow an entry takes; Deflate never reads it
+
 static uint8_t utf8_work[16]; // the borrow an entry takes; Utf8 never reads it
 
 #if PROTOCORE_ENABLE_WEBSOCKET
 
-#include "mmgr/protomem.h"
-#include "mmgr/secure.h" // the persistent end this module's state is taken from
-#include "mmgr/span.h"   // span.ok: whether the pool had the bytes
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
+#include "mmgr/span/span.h"     // span.ok: whether the pool had the bytes
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a frame goes out on
 #include "shared/utf8/utf8.h"
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
-#include "mmgr/plaintext.h"
-#include "network_drivers/presentation/codec/deflate/deflate.h"
+#include "mmgr/plaintext/plaintext.h"
+#include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #endif
 
@@ -293,7 +297,15 @@ static void send_frame(uint8_t *restrict work)
         if (scr && cbuf)
         {
             size_t clen = 0;
-            DeflateResult rc = Deflate.raw(payload, len, cbuf, cap, &clen, scr, DEFLATE_SCRATCH_SIZE);
+            Deflate.raw_args.src = payload;
+            Deflate.raw_args.src_len = len;
+            Deflate.raw_args.dst = cbuf;
+            Deflate.raw_args.dst_cap = cap;
+            Deflate.raw_args.out_len = &clen;
+            Deflate.raw_args.scratch = scr;
+            Deflate.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
+            Deflate.raw(deflate_work);
+            DeflateResult rc = Deflate.value;
             // Only adopt it if it actually shrank the message; otherwise send it
             // uncompressed (the per-message RSV1 flag makes that legal).
             // rc != DEFLATE_OK is unreachable here: Deflate.raw returns non-OK only on
@@ -460,7 +472,15 @@ static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
             in[comp_len + 2] = 0xff;
             in[comp_len + 3] = 0xff;
             size_t dlen = 0;
-            InflateResult rc = Inflate.raw(in, comp_len + 4, out, WS_FRAME_SIZE, &dlen, tbl, INFLATE_SCRATCH_SIZE);
+            Inflate.raw_args.src = in;
+            Inflate.raw_args.src_len = comp_len + 4;
+            Inflate.raw_args.dst = out;
+            Inflate.raw_args.dst_cap = WS_FRAME_SIZE;
+            Inflate.raw_args.out_len = &dlen;
+            Inflate.raw_args.scratch = tbl;
+            Inflate.raw_args.scratch_len = INFLATE_SCRATCH_SIZE;
+            Inflate.raw(inflate_work);
+            InflateResult rc = Inflate.value;
             if (rc == INFLATE_ERR_OVERFLOW)
             {
                 protocore_plaintext_release(pt_mark);

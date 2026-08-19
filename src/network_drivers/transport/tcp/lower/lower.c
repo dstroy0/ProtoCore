@@ -12,8 +12,8 @@
 #include "lower.h"
 #include "../protocol/protocol.h" // closing_check: the CLOSE_CHECK op finalizes a drained slot
 #include "config/platform/platform.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_DIFFSERV
 #include "../../diffserv/diffserv.h" // protocore_dscp_to_tos: the DS field byte the SET_TOS op stamps

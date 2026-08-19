@@ -15,8 +15,8 @@
 
 #if PROTOCORE_ENABLE_GATEWAY
 
-#include "mmgr/protomem.h"
-#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/net/gateway/gateway.h"
 
 #include "server/clock/clock.h" // protocore_millis(): the one time source the rate window reads

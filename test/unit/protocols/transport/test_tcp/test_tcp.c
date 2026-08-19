@@ -94,13 +94,3 @@ void test_marshaled_close_releases_the_slot()
     TEST_ASSERT_NULL(conn_pool[0].pcb);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_accept_wires_every_callback_on_the_pcb);
-    RUN_TEST(test_delivery_through_the_wired_callback_fills_the_ring);
-    RUN_TEST(test_peer_fin_through_the_wired_callback_closes_the_slot);
-    RUN_TEST(test_marshaled_send_reaches_the_capture);
-    RUN_TEST(test_marshaled_close_releases_the_slot);
-    return UNITY_END();
-}

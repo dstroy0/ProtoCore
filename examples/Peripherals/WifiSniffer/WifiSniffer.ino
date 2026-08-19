@@ -20,7 +20,7 @@
 // Build flags (whole build): PROTOCORE_ENABLE_WIFI_SNIFFER=1 PROTOCORE_ENABLE_PROMISC=1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
 #include "server/clock/clock.h" // protocore_millis
 

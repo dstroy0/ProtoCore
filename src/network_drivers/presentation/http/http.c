@@ -9,9 +9,10 @@
  */
 
 #include "network_drivers/presentation/http/http.h"
-#include "mmgr/membuild.h"  // protocore_sb: the Allow list is appended, not formatted
-#include "mmgr/protostr.h"  // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h" // raw.read: a captured segment moves into our own buffer
+#include "mmgr/membuild/membuild.h"   // protocore_sb: the Allow list is appended, not formatted
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protostr/protostr.h"   // str: the bounded-run walks
+#include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read: a captured segment moves into our own buffer
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "network_drivers/presentation/http/route/http_route.h" // HttpRoutes
 #include "network_drivers/session/session.h"                    // the per-connection tables this reads
@@ -44,41 +45,72 @@ struct HttpStorage
 #endif
 };
 
-/**
- * @brief The root's state and the calls that reach it - what HttpNs points at.
- *
- * @var HttpInternal::store  the registered handlers
- * @var HttpInternal::ns     the handle a caller sets a call's members on
- */
-struct HttpInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define HTTP_OFF_CTX 0u
+static_assert(HTTP_OFF_CTX + sizeof(struct HttpStorage) <= PROTOCORE_HTTP_BORROW,
+              "PROTOCORE_HTTP_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define HTTP_CTX(w) ((struct HttpStorage *)(void *)((w) + HTTP_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct HttpStorage *store;
-    HttpNs *ns;
-};
+    uint8_t *span; ///< PROTOCORE_HTTP_BORROW persistent bytes, or null while the pool was short
+} HttpOwnCtx;
+static HttpOwnCtx s_own;
 
-static struct HttpStorage s_store;
-
-static struct HttpInternal s_http = {.store = &s_store, .ns = &Http};
-
-static void set_not_found(struct HttpInternal *restrict ctx)
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_http_span(void)
 {
-    ctx->store->not_found = ctx->ns->cb;
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_HTTP_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+static void set_not_found(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    HTTP_CTX(work)->not_found = Http.cb;
 }
 
 // Every other owner protocore_server_reset() calls exposes this; without it a handler registered here
 // outlives the reset and answers requests the route table no longer knows about.
-static void reset(struct HttpInternal *restrict ctx)
+static void reset(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     static const struct HttpStorage blank = {0};
-    *ctx->store = blank;
+    *HTTP_CTX(work) = blank;
 }
 
 #if PROTOCORE_ENABLE_EDGE_CACHE
 // Edge-cache async-fetch pump seam (see server/web/edge_cache/edge_cache_proxy): a cache miss
 // suspends the client request and drives the non-blocking origin fetch from this slot's poll.
-static void set_edge_poll(struct HttpInternal *restrict ctx)
+static void set_edge_poll(uint8_t *restrict work)
 {
-    ctx->store->edge_poll = ctx->ns->edge_poll;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    HTTP_CTX(work)->edge_poll = Http.edge_poll;
 }
 #endif
 
@@ -91,101 +123,102 @@ static void set_edge_poll(struct HttpInternal *restrict ctx)
  * @param code HTTP status integer.
  * @return Pointer to a string-literal reason phrase; never null.
  */
-static void status_text(struct HttpInternal *restrict ctx)
+static void status_text(uint8_t *restrict work)
 {
-    const int code = ctx->ns->code;
+    (void)work;
+    const int code = Http.code;
     switch (code)
     {
     case 200:
-        ctx->ns->text = "OK";
+        Http.text = "OK";
         return;
     case 201:
-        ctx->ns->text = "Created";
+        Http.text = "Created";
         return;
     case 204:
-        ctx->ns->text = "No Content";
+        Http.text = "No Content";
         return;
     case 206:
-        ctx->ns->text = "Partial Content";
+        Http.text = "Partial Content";
         return;
 #if PROTOCORE_ENABLE_WEBDAV
     case 207:
-        ctx->ns->text = "Multi-Status";
+        Http.text = "Multi-Status";
         return;
 #endif
     case 301:
-        ctx->ns->text = "Moved Permanently";
+        Http.text = "Moved Permanently";
         return;
     case 302:
-        ctx->ns->text = "Found";
+        Http.text = "Found";
         return;
     case 303:
-        ctx->ns->text = "See Other";
+        Http.text = "See Other";
         return;
     case 304:
-        ctx->ns->text = "Not Modified";
+        Http.text = "Not Modified";
         return;
     case 307:
-        ctx->ns->text = "Temporary Redirect";
+        Http.text = "Temporary Redirect";
         return;
     case 308:
-        ctx->ns->text = "Permanent Redirect";
+        Http.text = "Permanent Redirect";
         return;
     case 400:
-        ctx->ns->text = "Bad Request";
+        Http.text = "Bad Request";
         return;
     case 401:
-        ctx->ns->text = "Unauthorized";
+        Http.text = "Unauthorized";
         return;
     case 403:
-        ctx->ns->text = "Forbidden";
+        Http.text = "Forbidden";
         return;
     case 404:
-        ctx->ns->text = "Not Found";
+        Http.text = "Not Found";
         return;
     case 405:
-        ctx->ns->text = "Method Not Allowed";
+        Http.text = "Method Not Allowed";
         return;
     case 408:
-        ctx->ns->text = "Request Timeout";
+        Http.text = "Request Timeout";
         return;
     case 409:
-        ctx->ns->text = "Conflict";
+        Http.text = "Conflict";
         return;
 #if PROTOCORE_ENABLE_WEBDAV
     case 412:
-        ctx->ns->text = "Precondition Failed";
+        Http.text = "Precondition Failed";
         return;
     case 423:
-        ctx->ns->text = "Locked";
+        Http.text = "Locked";
         return;
     case 502:
-        ctx->ns->text = "Bad Gateway";
+        Http.text = "Bad Gateway";
         return;
 #endif
     case 413:
-        ctx->ns->text = "Payload Too Large";
+        Http.text = "Payload Too Large";
         return;
     case 414:
-        ctx->ns->text = "URI Too Long";
+        Http.text = "URI Too Long";
         return;
     case 416:
-        ctx->ns->text = "Range Not Satisfiable";
+        Http.text = "Range Not Satisfiable";
         return;
     case 429:
-        ctx->ns->text = "Too Many Requests";
+        Http.text = "Too Many Requests";
         return;
     case 500:
-        ctx->ns->text = "Internal Server Error";
+        Http.text = "Internal Server Error";
         return;
     case 501:
-        ctx->ns->text = "Not Implemented";
+        Http.text = "Not Implemented";
         return;
     case 503:
-        ctx->ns->text = "Service Unavailable";
+        Http.text = "Service Unavailable";
         return;
     default:
-        ctx->ns->text = "Unknown";
+        Http.text = "Unknown";
         return;
     }
 }
@@ -200,83 +233,85 @@ static void status_text(struct HttpInternal *restrict ctx)
  * @param m Null-terminated method string, e.g. "POST".
  * @return Matching HttpMethod enum value, or HTTP_METHOD_UNKNOWN.
  */
-static void parse_method(struct HttpInternal *restrict ctx)
+static void parse_method(uint8_t *restrict work)
 {
-    const char *m = ctx->ns->method_args.token;
+    (void)work;
+    const char *m = Http.method_args.token;
     // Each compare is bounded by the token it is comparing against, not by the buffer @p m came
     // from: one more byte than the literal is already enough to decide, because a longer method
     // scans to the bound without finding its terminator and fails on length before any byte is
     // compared. That keeps this function honest about a caller it does not otherwise constrain.
     if (str.eq(m, "GET", sizeof("GET"), PROTO_FALSE))
     {
-        ctx->ns->method_of = HTTP_GET;
+        Http.method_of = HTTP_GET;
         return;
     }
     if (str.eq(m, "POST", sizeof("POST"), PROTO_FALSE))
     {
-        ctx->ns->method_of = HTTP_POST;
+        Http.method_of = HTTP_POST;
         return;
     }
     if (str.eq(m, "PUT", sizeof("PUT"), PROTO_FALSE))
     {
-        ctx->ns->method_of = HTTP_PUT;
+        Http.method_of = HTTP_PUT;
         return;
     }
     if (str.eq(m, "DELETE", sizeof("DELETE"), PROTO_FALSE))
     {
-        ctx->ns->method_of = HTTP_DELETE;
+        Http.method_of = HTTP_DELETE;
         return;
     }
     if (str.eq(m, "PATCH", sizeof("PATCH"), PROTO_FALSE))
     {
-        ctx->ns->method_of = HTTP_PATCH;
+        Http.method_of = HTTP_PATCH;
         return;
     }
     if (str.eq(m, "HEAD", sizeof("HEAD"), PROTO_FALSE))
     {
-        ctx->ns->method_of = HTTP_HEAD;
+        Http.method_of = HTTP_HEAD;
         return;
     }
     if (str.eq(m, "OPTIONS", sizeof("OPTIONS"), PROTO_FALSE))
     {
-        ctx->ns->method_of = HTTP_OPTIONS;
+        Http.method_of = HTTP_OPTIONS;
         return;
     }
-    ctx->ns->method_of = HTTP_METHOD_UNKNOWN;
+    Http.method_of = HTTP_METHOD_UNKNOWN;
     return;
 }
 
 /**
  * @brief Canonical method token for an HttpMethod (for the Allow header).
  */
-static void method_name(struct HttpInternal *restrict ctx)
+static void method_name(uint8_t *restrict work)
 {
-    const HttpMethod m = ctx->ns->method_args.method;
+    (void)work;
+    const HttpMethod m = Http.method_args.method;
     switch (m)
     {
     case HTTP_GET:
-        ctx->ns->text = "GET";
+        Http.text = "GET";
         return;
     case HTTP_POST:
-        ctx->ns->text = "POST";
+        Http.text = "POST";
         return;
     case HTTP_PUT:
-        ctx->ns->text = "PUT";
+        Http.text = "PUT";
         return;
     case HTTP_DELETE:
-        ctx->ns->text = "DELETE";
+        Http.text = "DELETE";
         return;
     case HTTP_PATCH:
-        ctx->ns->text = "PATCH";
+        Http.text = "PATCH";
         return;
     case HTTP_HEAD:
-        ctx->ns->text = "HEAD";
+        Http.text = "HEAD";
         return;
     case HTTP_OPTIONS:
-        ctx->ns->text = "OPTIONS";
+        Http.text = "OPTIONS";
         return;
     default:
-        ctx->ns->text = "";
+        Http.text = "";
         return;
     }
 }
@@ -292,21 +327,22 @@ static void method_name(struct HttpInternal *restrict ctx)
  * @param req_path    Incoming request path from the parsed HTTP request line.
  * @return True if the route matches the request path.
  */
-static void path_matches(struct HttpInternal *restrict ctx)
+static void path_matches(uint8_t *restrict work)
 {
-    const char *route = ctx->ns->route_args.route;
-    const proto_bool is_wildcard = ctx->ns->route_args.is_wildcard;
-    const char *req_path = ctx->ns->route_args.path;
+    (void)work;
+    const char *route = Http.route_args.route;
+    const proto_bool is_wildcard = Http.route_args.is_wildcard;
+    const char *req_path = Http.route_args.path;
     if (!is_wildcard)
     {
-        ctx->ns->ok = str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
+        Http.ok = str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
         return;
     }
 
     // Prefix match: compare everything up to (but not including) the '*'. A first difference AT the
     // bound is the whole prefix agreeing, which is what the scan returns when it never parts.
     size_t prefix_len = str.len(route, MAX_PATH_LEN) - 1;
-    ctx->ns->ok = str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
+    Http.ok = str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
 }
 
 // Record one `:name` path parameter (key from the route segment, value from the path segment).
@@ -343,11 +379,12 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
  *
  * @return True on a full match (params captured); false otherwise.
  */
-static void match_path_params(struct HttpInternal *restrict ctx)
+static void match_path_params(uint8_t *restrict work)
 {
-    const char *route = ctx->ns->route_args.route;
-    const char *path = ctx->ns->route_args.path;
-    HttpReq *req = ctx->ns->route_args.req;
+    (void)work;
+    const char *route = Http.route_args.route;
+    const char *path = Http.route_args.path;
+    HttpReq *req = Http.route_args.req;
     req->path_param_count = 0;
     const char *r = route;
     const char *p = path;
@@ -373,36 +410,38 @@ static void match_path_params(struct HttpInternal *restrict ctx)
         {
             if (plen == 0)
             {
-                ctx->ns->ok = PROTO_FALSE;
+                Http.ok = PROTO_FALSE;
                 return; // a `:name` segment must capture a non-empty value
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
         else if (rlen != plen || str.diff(rseg, pseg, rlen, PROTO_FALSE) != rlen)
         {
-            ctx->ns->ok = PROTO_FALSE;
+            Http.ok = PROTO_FALSE;
             return; // literal segment mismatch
         }
     }
 
     // Both strings must be fully consumed (identical segment counts).
-    ctx->ns->ok = (*r == '\0' && *p == '\0');
+    Http.ok = (*r == '\0' && *p == '\0');
 }
 
 // True when the request on this slot used the HEAD method, whose response must
 // carry the same headers as GET but no message body (RFC 7231 §4.3.2). External
 // linkage (declared in protocore.h): the split handler TUs call it.
-static void req_is_head(struct HttpInternal *restrict ctx)
+static void req_is_head(uint8_t *restrict work)
 {
-    ctx->ns->ok = str.eq(http_pool[ctx->ns->slot].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
+    (void)work;
+    Http.ok = str.eq(http_pool[Http.slot].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
-static void allow_append(struct HttpInternal *restrict ctx)
+static void allow_append(uint8_t *restrict work)
 {
-    char *buf = ctx->ns->allow.buf;
-    const size_t cap = ctx->ns->allow.cap;
-    const char *m = ctx->ns->method_args.token;
+    (void)work;
+    char *buf = Http.allow.buf;
+    const size_t cap = Http.allow.cap;
+    const char *m = Http.method_args.token;
     // method_name() hands back one of the seven method literals, so the longest of them is the
     // bound on @p m - the Allow buffer's capacity is the bound on `buf` and says nothing about it.
     //
@@ -446,7 +485,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
         HttpConn.slot = slot_id;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         return;
     }
 
@@ -469,7 +508,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     // The last write carries the flush: send_flush is write+output in one marshal, so
     // the response leaves in a single trip whether or not a body follows the header.
     Http.slot = slot_id;
-    Http.req_is_head(Http.internal);
+    Http.req_is_head(protocore_http_span());
     if (blen > 0 && !Http.ok)
     {
         ConnPool.slot = slot_id;
@@ -490,7 +529,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     ConnPool.slot = slot_id;
     ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
     HttpConn.slot = slot_id;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
 }
 
 // Send 405 Method Not Allowed with the required Allow header (RFC 7231 §6.5.5).
@@ -545,11 +584,12 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
     {
         return PROTO_FALSE;
     }
-    proto_bool matched =
-        r->is_regex ? regex_match(r->path, req->path)
-                    : (Http.route_args.route = r->path, Http.route_args.path = req->path, Http.route_args.req = req,
-                       Http.route_args.is_wildcard = r->is_wildcard,
-                       r->is_param ? Http.match_path_params(Http.internal) : Http.path_matches(Http.internal), Http.ok);
+    proto_bool matched = r->is_regex ? regex_match(r->path, req->path)
+                                     : (Http.route_args.route = r->path, Http.route_args.path = req->path,
+                                        Http.route_args.req = req, Http.route_args.is_wildcard = r->is_wildcard,
+                                        r->is_param ? Http.match_path_params(protocore_http_span())
+                                                    : Http.path_matches(protocore_http_span()),
+                                        Http.ok);
     if (!matched)
     {
         return PROTO_FALSE;
@@ -601,7 +641,10 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
     // X-CSRF-Token header (GET / HEAD / OPTIONS are exempt - not state-changing).
     if (method == HTTP_POST || method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_DELETE)
     {
-        const char *tok = http_get_header(req, "X-CSRF-Token");
+        HttpParser.get_header_args.req = req;
+        HttpParser.get_header_args.key = "X-CSRF-Token";
+        HttpParser.get_header(protocore_http_parser_span());
+        const char *tok = HttpParser.text;
         Csrf.verify_args.token = tok;
         Csrf.verify(protocore_csrf_span());
         if (!tok || !Csrf.valid)
@@ -617,12 +660,18 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
 #if PROTOCORE_ENABLE_WEBSOCKET
 static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
 {
-    const char *upgrade_hdr = http_get_header(req, "Upgrade");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Upgrade";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *upgrade_hdr = HttpParser.text;
     // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
     // header that includes the "Upgrade" token.
-    HttpConn.hdr_args.hdr = http_get_header(req, "Connection");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Connection";
+    HttpParser.get_header(protocore_http_parser_span());
+    HttpConn.hdr_args.hdr = HttpParser.text;
     HttpConn.hdr_args.token = "upgrade";
-    HttpConn.has_token(HttpConn.internal);
+    HttpConn.has_token(protocore_http_conn_span());
     proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
                                str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) && HttpConn.ok;
     if (!is_ws_upgrade)
@@ -631,7 +680,10 @@ static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, co
         return;
     }
     // RFC 6455 §4.2.1: only version 13 is supported; otherwise 426.
-    const char *ws_ver = http_get_header(req, "Sec-WebSocket-Version");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Sec-WebSocket-Version";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *ws_ver = HttpParser.text;
     if (ws_ver == NULL || !str.eq(ws_ver, "13", sizeof("13"), PROTO_FALSE))
     {
         ws_send_version_required(slot_id);
@@ -665,7 +717,12 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // spoofed header can neither evade a lockout nor frame another address.
     {
         char fbuf[PROTOCORE_IP_STR_MAX];
-        const char *fwd = http_forwarded_client(req, fbuf, sizeof(fbuf), NULL) ? fbuf : NULL;
+        HttpParser.forwarded_client_args.req = req;
+        HttpParser.forwarded_client_args.ip_out = fbuf;
+        HttpParser.forwarded_client_args.ip_cap = sizeof(fbuf);
+        HttpParser.forwarded_client_args.is_https = NULL;
+        HttpParser.forwarded_client(protocore_http_parser_span());
+        const char *fwd = HttpParser.ok ? fbuf : NULL;
         protocore_ip eff;
         ForwardedTrust.effective_ip_args.peer = &cip;
         ForwardedTrust.effective_ip_args.fwd_ip_str = fwd;
@@ -766,9 +823,9 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
             Http.allow.buf = allow_buf;
             Http.allow.cap = allow_cap;
             Http.method_args.token = "GET";
-            Http.allow_append(Http.internal);
+            Http.allow_append(protocore_http_span());
             Http.method_args.token = "HEAD";
-            Http.allow_append(Http.internal);
+            Http.allow_append(protocore_http_span());
             return PROTO_FALSE;
         }
         serve_static_request(slot_id, req, r);
@@ -784,18 +841,18 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
         // Path matches but method differs - record it for a 405 + Allow.
         *path_matched = PROTO_TRUE;
         Http.method_args.method = r->method;
-        Http.method_name(Http.internal);
+        Http.method_name(protocore_http_span());
         Http.allow.buf = allow_buf;
         Http.allow.cap = allow_cap;
         Http.method_args.token = Http.text;
-        Http.allow_append(Http.internal);
+        Http.allow_append(protocore_http_span());
         // A GET route also answers HEAD, so advertise it in Allow.
         if (r->method == HTTP_GET)
         {
             Http.allow.buf = allow_buf;
             Http.allow.cap = allow_cap;
             Http.method_args.token = "HEAD";
-            Http.allow_append(Http.internal);
+            Http.allow_append(protocore_http_span());
         }
         return PROTO_FALSE;
     }
@@ -809,12 +866,16 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
     return PROTO_TRUE;
 }
 
-static void match_and_execute(struct HttpInternal *restrict ctx)
+static void match_and_execute(uint8_t *restrict work)
 {
-    const uint8_t slot_id = ctx->ns->slot;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t slot_id = Http.slot;
     HttpReq *req = &http_pool[slot_id];
     Http.method_args.token = req->method;
-    Http.parse_method(Http.internal);
+    Http.parse_method(work);
     HttpMethod method = Http.method_of;
 
     // Start each request with no carried-over custom response headers or
@@ -861,7 +922,10 @@ static void match_and_execute(struct HttpInternal *restrict ctx)
 #endif
 
     // RFC 7230 §3.3.1: reject Transfer-Encoding
-    if (http_get_header(req, "Transfer-Encoding") != NULL)
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Transfer-Encoding";
+    HttpParser.get_header(protocore_http_parser_span());
+    if (HttpParser.text != NULL)
     {
         send_text(slot_id, 501, PROTOCORE_MIME_TEXT_PLAIN, "Not Implemented");
         return;
@@ -900,9 +964,9 @@ static void match_and_execute(struct HttpInternal *restrict ctx)
         return;
     }
 
-    if (ctx->store->not_found != NULL)
+    if (HTTP_CTX(work)->not_found != NULL)
     {
-        ctx->store->not_found(slot_id, req);
+        HTTP_CTX(work)->not_found(slot_id, req);
     }
     else
     {
@@ -914,13 +978,17 @@ static void match_and_execute(struct HttpInternal *restrict ctx)
 // HTTP through the same uniform seam as every other protocol, with no HTTP special case in the
 // loop. Runs the file/chunk send pumps, the WebSocket and SSE drains, the keep-alive re-parse, and
 // dispatches a completed request into the route table.
-static void poll_slot(struct HttpInternal *restrict ctx)
+static void poll_slot(uint8_t *restrict work)
 {
-    const uint8_t i = ctx->ns->slot;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t i = Http.slot;
 #if PROTOCORE_ENABLE_EDGE_CACHE
     // An edge-cache origin fetch in flight for this slot owns it: pump the fetch and skip the rest of the
     // HTTP pipeline until it completes (and hands off to send_chunked for the cached response).
-    if (ctx->store->edge_poll != NULL && ctx->store->edge_poll(i))
+    if (HTTP_CTX(work)->edge_poll != NULL && HTTP_CTX(work)->edge_poll(i))
     {
         return;
     }
@@ -989,7 +1057,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
                 ConnPool.slot = i;
                 ConnPool.abort_slot(protocore_conn_pool_span()); // transport owns TLS-free + detach + reset + RST
                 HttpConn.slot = i;
-                HttpConn.reset(HttpConn.internal);
+                HttpConn.reset(protocore_http_conn_span());
             }
             return;
         }
@@ -1016,7 +1084,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
             ConnPool.slot = i;
             ConnPool.begin_close(protocore_conn_pool_span());
             HttpConn.slot = i;
-            HttpConn.reset(HttpConn.internal);
+            HttpConn.reset(protocore_http_conn_span());
         }
         return; // slot is owned by WS; skip HTTP dispatch
     }
@@ -1047,7 +1115,7 @@ static void poll_slot(struct HttpInternal *restrict ctx)
     if (live && http_pool[i].parse_state != PARSE_COMPLETE)
     {
         HttpConn.slot = i;
-        HttpConn.parse(HttpConn.internal);
+        HttpConn.parse(protocore_http_conn_span());
     }
 #endif
 
@@ -1077,11 +1145,11 @@ static void poll_slot(struct HttpInternal *restrict ctx)
     {
         http_req_start_ms[i] = 0; // request complete: disarm; the next keep-alive request re-arms on its 1st byte
         Http.slot = i;
-        Http.match_and_execute(Http.internal);
+        Http.match_and_execute(work);
         if (http_pool[i].parse_state == PARSE_COMPLETE)
         {
             HttpConn.slot = i;
-            HttpConn.reset(HttpConn.internal);
+            HttpConn.reset(protocore_http_conn_span());
         }
     }
     else if (http_pool[i].parse_state == PARSE_ERROR)
@@ -1099,18 +1167,19 @@ static void poll_slot(struct HttpInternal *restrict ctx)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-HttpNs Http = {.status_text = status_text,
-               .parse_method = parse_method,
-               .method_name = method_name,
-               .path_matches = path_matches,
-               .match_path_params = match_path_params,
-               .req_is_head = req_is_head,
-               .allow_append = allow_append,
-               .match_and_execute = match_and_execute,
-               .set_not_found = set_not_found,
-               .poll_slot = poll_slot,
-               .reset = reset,
+HttpNs Http = {
+    .status_text = status_text,
+    .parse_method = parse_method,
+    .method_name = method_name,
+    .path_matches = path_matches,
+    .match_path_params = match_path_params,
+    .req_is_head = req_is_head,
+    .allow_append = allow_append,
+    .match_and_execute = match_and_execute,
+    .set_not_found = set_not_found,
+    .poll_slot = poll_slot,
+    .reset = reset,
 #if PROTOCORE_ENABLE_EDGE_CACHE
-               .set_edge_poll = set_edge_poll,
+    .set_edge_poll = set_edge_poll,
 #endif
-               .internal = &s_http};
+};

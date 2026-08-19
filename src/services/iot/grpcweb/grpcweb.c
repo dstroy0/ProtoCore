@@ -17,8 +17,8 @@
 
 #if PROTOCORE_ENABLE_GRPC_WEB
 
-#include "mmgr/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched on
-#include "mmgr/protostr.h" // str.len: the bounded length of a field-line's text
+#include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched on
+#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a field-line's text
 
 // Write Message-Length as a 4 byte unsigned integer, big endian.
 static void put_be32(uint8_t *buf, uint32_t v)

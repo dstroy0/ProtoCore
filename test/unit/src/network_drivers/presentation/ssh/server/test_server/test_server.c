@@ -18,7 +18,7 @@
 // The protocol handler this server registers, reached through its namespace.
 static const ProtoHandler *ssh_handler(void)
 {
-    SshServer.proto_handler(SshServer.internal);
+    SshServer.proto_handler(protocore_ssh_server_span());
     return SshServer.handler;
 }
 
@@ -26,14 +26,14 @@ static const ProtoHandler *ssh_handler(void)
 static int rfwd_listener_open(uint16_t bind_port)
 {
     SshServer.bind_port = bind_port;
-    SshServer.rfwd_listener_open(SshServer.internal);
+    SshServer.rfwd_listener_open(protocore_ssh_server_span());
     return SshServer.i32;
 }
 
 static void rfwd_listener_close(int handle)
 {
     SshServer.handle = handle;
-    SshServer.rfwd_listener_close(SshServer.internal);
+    SshServer.rfwd_listener_close(protocore_ssh_server_span());
 }
 
 void setUp(void)

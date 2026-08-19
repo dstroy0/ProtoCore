@@ -14,9 +14,9 @@
 // where a plaintext one is required, and the reverse. An ownership test written as bookkeeping
 // instead of as an address bound would let one pass for the other.
 
-#include "mmgr/arena.h" // protocore_worker_set_self - the slot identity a borrow resolves through
-#include "mmgr/plaintext.h"
-#include "mmgr/secure.h" // the other pool, for the disjointness property
+#include "mmgr/arena/arena.h" // protocore_worker_set_self - the slot identity a borrow resolves through
+#include "mmgr/plaintext/plaintext.h"
+#include "mmgr/secure/secure.h" // the other pool, for the disjointness property
 
 #include <unity.h>
 

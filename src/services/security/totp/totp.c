@@ -12,13 +12,13 @@
  */
 
 #include "services/security/totp/totp.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_TOTP
 
-#include "crypto/hash/sha1.h"
-#include "mmgr/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span.h"   // protocore_span, span.ok
+#include "crypto/hash/sha1/sha1.h"
+#include "mmgr/secure/secure.h" // the pool the digest borrow comes from
+#include "mmgr/span/span.h"   // protocore_span, span.ok
 
 /** @brief B: the block length HMAC pads K out to for SHA-1 (RFC 2104 sec 2). */
 #define PROTOCORE_TOTP_HMAC_B 64

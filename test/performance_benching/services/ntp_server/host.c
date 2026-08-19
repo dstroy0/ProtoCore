@@ -41,10 +41,16 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        HBENCH_NS(5000000,
-                  sink += protocore_ntp_server_build_response(req, sizeof(req), 2, PROTOCORE_NTP_REFID_LOCL,
-                                                              0xE9A1B2C3u, 0x80000000u, out, sizeof(out)),
-                  ns);
+        NtpServer.build_response_args.req = req;
+        NtpServer.build_response_args.req_len = sizeof(req);
+        NtpServer.build_response_args.stratum = 2;
+        NtpServer.build_response_args.refid = PROTOCORE_NTP_REFID_LOCL;
+        NtpServer.build_response_args.protocore_ntp_secs = 0xE9A1B2C3u;
+        NtpServer.build_response_args.protocore_ntp_frac = 0x80000000u;
+        NtpServer.build_response_args.out = out;
+        NtpServer.build_response_args.out_cap = sizeof(out);
+        NtpServer.build_response(protocore_ntp_server_span());
+        HBENCH_NS(5000000, sink += NtpServer.n, ns);
         hbench_row("ntp", "build_response (48-octet)", ns,
                    (double)(PROTOCORE_NTP_PACKET_LEN * 2)); // request + reply moved
         (void)sink;

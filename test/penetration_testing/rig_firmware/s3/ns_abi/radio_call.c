@@ -5,7 +5,7 @@
 // physical/radio_power.c and disassembled, it answers whether Radio.* is a direct call in this
 // library rather than in a four-function stand-in.
 
-#include "network_drivers/physical/radio_power.h"
+#include "network_drivers/physical/radio_power/radio_power.h"
 
 void app_main(void);
 void app_main(void)

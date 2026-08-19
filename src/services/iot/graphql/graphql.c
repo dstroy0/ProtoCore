@@ -16,13 +16,13 @@
  */
 
 #include "services/iot/graphql/graphql.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_GRAPHQL
 
-#include "mmgr/membuild.h" // Sb: the Int, Float and \uXXXX renderings
-#include "mmgr/protomem.h" // mem.cpy: the spans a name and a decoded String move with
-#include "mmgr/protostr.h" // str.eq / str.len: the bounded compares and measures
+#include "mmgr/membuild/membuild.h" // Sb: the Int, Float and \uXXXX renderings
+#include "mmgr/protomem/protomem.h" // mem.cpy: the spans a name and a decoded String move with
+#include "mmgr/protostr/protostr.h" // str.eq / str.len: the bounded compares and measures
 
 // The argument values in scope at a field (spec sec 6.4.1): indices into the document's argument
 // pool, in the order the path collected them.

@@ -89,7 +89,7 @@ added explanatory comments:
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/common.h" // access conn_pool and ConnState
 
 static const char *SSID = "YOUR_SSID";

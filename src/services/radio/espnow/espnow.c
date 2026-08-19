@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_ESPNOW
 
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
 #include "services/radio/espnow/espnow.h"
 
 PROTOCORE_BEGIN_DECLS

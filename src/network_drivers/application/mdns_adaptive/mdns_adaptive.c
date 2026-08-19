@@ -6,26 +6,46 @@
  * @brief Adaptive mDNS beacon scheduling (see mdns_adaptive.h).
  */
 
-#include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
-#include "shared/pcap/pcap.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_MDNS_ADAPTIVE
 
-#if PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
+#include "shared/pcap/pcap.h"
+
 #include "network_drivers/application/mdns_service/mdns_service.h" // protocore_mdns_txt
-#include "network_drivers/physical/physical.h"                     // Physical.wifi_channel
+#include "network_drivers/physical/physical/physical.h"            // Physical.wifi_channel
 #include "server/clock/clock.h"                                    // protocore_millis
 #include "services/radio/promisc/promisc.h"                        // protocore_promisc_*
-#endif
-uint32_t protocore_mdns_refresh_interval(uint32_t ttl_s)
+PROTOCORE_BEGIN_DECLS
+
+// The entries this file calls before reaching their definitions.
+static void mdns_adaptive_beacon_adapt(uint8_t *restrict work);
+static void mdns_adaptive_beacon_due(uint8_t *restrict work);
+static void mdns_adaptive_beacon_init(uint8_t *restrict work);
+static void mdns_adaptive_contention_init(uint8_t *restrict work);
+static void mdns_adaptive_contention_sample(uint8_t *restrict work);
+static void mdns_adaptive_refresh_interval(uint8_t *restrict work);
+
+static void mdns_adaptive_refresh_interval(uint8_t *restrict work)
 {
+    (void)work;
+    uint32_t ttl_s = MdnsAdaptive.refresh_interval_args.ttl_s;
+
     // Half the TTL, in ms; guard the *1000 against overflow.
     uint64_t half_ms = (uint64_t)ttl_s * 1000 / 2;
-    return half_ms > 0xFFFFFFFFu ? 0xFFFFFFFFu : (uint32_t)half_ms;
+    MdnsAdaptive.ms = half_ms > 0xFFFFFFFFu ? 0xFFFFFFFFu : (uint32_t)half_ms;
 }
 
-void protocore_mdns_beacon_init(MdnsBeacon *b, uint32_t base_ms, uint32_t max_ms, uint16_t hi_thresh)
+static void mdns_adaptive_beacon_init(uint8_t *restrict work)
 {
+    (void)work;
+    MdnsBeacon *b = MdnsAdaptive.beacon_init_args.b;
+    uint32_t base_ms = MdnsAdaptive.beacon_init_args.base_ms;
+    uint32_t max_ms = MdnsAdaptive.beacon_init_args.max_ms;
+    uint16_t hi_thresh = MdnsAdaptive.beacon_init_args.hi_thresh;
+
     if (!b)
     {
         return;
@@ -36,11 +56,16 @@ void protocore_mdns_beacon_init(MdnsBeacon *b, uint32_t base_ms, uint32_t max_ms
     b->hi_thresh = hi_thresh ? hi_thresh : 1;
 }
 
-uint32_t protocore_mdns_beacon_adapt(MdnsBeacon *b, uint16_t contention)
+static void mdns_adaptive_beacon_adapt(uint8_t *restrict work)
 {
+    (void)work;
+    MdnsBeacon *b = MdnsAdaptive.beacon_adapt_args.b;
+    uint16_t contention = MdnsAdaptive.beacon_adapt_args.contention;
+
     if (!b)
     {
-        return 0;
+        MdnsAdaptive.ms = 0;
+        return;
     }
     if (contention >= b->hi_thresh)
     {
@@ -60,37 +85,56 @@ uint32_t protocore_mdns_beacon_adapt(MdnsBeacon *b, uint16_t contention)
         }
         b->cur_ms = down;
     }
-    return b->cur_ms;
+    MdnsAdaptive.ms = b->cur_ms;
 }
 
-proto_bool protocore_mdns_beacon_due(const MdnsBeacon *b, uint32_t last_ms, uint32_t now_ms)
+static void mdns_adaptive_beacon_due(uint8_t *restrict work)
 {
+    (void)work;
+    const MdnsBeacon *b = MdnsAdaptive.beacon_due_args.b;
+    uint32_t last_ms = MdnsAdaptive.beacon_due_args.last_ms;
+    uint32_t now_ms = MdnsAdaptive.beacon_due_args.now_ms;
+
     if (!b)
     {
-        return PROTO_FALSE;
+        MdnsAdaptive.ok = PROTO_FALSE;
+        return;
     }
     uint32_t elapsed = now_ms - last_ms; // wrap-safe modular subtraction
-    return elapsed >= b->cur_ms;
+    MdnsAdaptive.ok = elapsed >= b->cur_ms;
 }
 
-proto_bool protocore_mdns_beacon_presleep_due(const MdnsBeacon *b, uint32_t last_ms, uint32_t now_ms, uint32_t sleep_ms)
+static void mdns_adaptive_beacon_presleep_due(uint8_t *restrict work)
 {
+    (void)work;
+    const MdnsBeacon *b = MdnsAdaptive.beacon_presleep_due_args.b;
+    uint32_t last_ms = MdnsAdaptive.beacon_presleep_due_args.last_ms;
+    uint32_t now_ms = MdnsAdaptive.beacon_presleep_due_args.now_ms;
+    uint32_t sleep_ms = MdnsAdaptive.beacon_presleep_due_args.sleep_ms;
+
     if (!b)
     {
-        return PROTO_FALSE;
+        MdnsAdaptive.ok = PROTO_FALSE;
+        return;
     }
     uint32_t elapsed = now_ms - last_ms;
     // Would the record lapse during the sleep? Compute in 64-bit so elapsed + sleep_ms cannot wrap.
     uint64_t after = (uint64_t)elapsed + sleep_ms;
-    return after >= b->cur_ms;
+    MdnsAdaptive.ok = after >= b->cur_ms;
 }
 
 // ---------------------------------------------------------------------------
 // Contention sampling
 // ---------------------------------------------------------------------------
 
-void protocore_mdns_contention_init(MdnsContentionWindow *w, uint32_t window_ms, uint32_t frames_now, uint32_t now_ms)
+static void mdns_adaptive_contention_init(uint8_t *restrict work)
 {
+    (void)work;
+    MdnsContentionWindow *w = MdnsAdaptive.contention_init_args.w;
+    uint32_t window_ms = MdnsAdaptive.contention_init_args.window_ms;
+    uint32_t frames_now = MdnsAdaptive.contention_init_args.frames_now;
+    uint32_t now_ms = MdnsAdaptive.contention_init_args.now_ms;
+
     if (!w)
     {
         return;
@@ -100,17 +144,24 @@ void protocore_mdns_contention_init(MdnsContentionWindow *w, uint32_t window_ms,
     w->window_ms = window_ms ? window_ms : 1000;
 }
 
-proto_bool protocore_mdns_contention_sample(MdnsContentionWindow *w, uint32_t frames_now, uint32_t now_ms,
-                                            uint16_t *out)
+static void mdns_adaptive_contention_sample(uint8_t *restrict work)
 {
+    (void)work;
+    MdnsContentionWindow *w = MdnsAdaptive.contention_sample_args.w;
+    uint32_t frames_now = MdnsAdaptive.contention_sample_args.frames_now;
+    uint32_t now_ms = MdnsAdaptive.contention_sample_args.now_ms;
+    uint16_t *out = MdnsAdaptive.contention_sample_args.out;
+
     if (!w || !out)
     {
-        return PROTO_FALSE;
+        MdnsAdaptive.ok = PROTO_FALSE;
+        return;
     }
     uint32_t elapsed = now_ms - w->last_ms; // wrap-safe modular subtraction
     if (elapsed < w->window_ms)
     {
-        return PROTO_FALSE;
+        MdnsAdaptive.ok = PROTO_FALSE;
+        return;
     }
     // Modular difference, so a wrapped frame counter still yields the true count as long as fewer
     // than 2^32 frames passed in one window - which no radio does in a second.
@@ -118,14 +169,12 @@ proto_bool protocore_mdns_contention_sample(MdnsContentionWindow *w, uint32_t fr
     *out = delta > 0xFFFF ? 0xFFFF : (uint16_t)delta;
     w->last_count = frames_now;
     w->last_ms = now_ms;
-    return PROTO_TRUE;
+    MdnsAdaptive.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // Device binding
 // ---------------------------------------------------------------------------
-
-#if PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
 
 /** @brief Owned state for the live adaptive announcer. */
 typedef struct
@@ -140,35 +189,87 @@ typedef struct
     uint8_t channel; ///< the channel capture is currently pinned to.
     proto_bool running;
 } MdnsAdaptiveCtx;
-static MdnsAdaptiveCtx s_ad = {};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define MDNS_ADAPTIVE_OFF_CTX 0u
+static_assert(MDNS_ADAPTIVE_OFF_CTX + sizeof(MdnsAdaptiveCtx) <= PROTOCORE_MDNS_ADAPTIVE_BORROW,
+              "PROTOCORE_MDNS_ADAPTIVE_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define MDNS_ADAPTIVE_CTX(w) ((MdnsAdaptiveCtx *)(void *)((w) + MDNS_ADAPTIVE_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_MDNS_ADAPTIVE_BORROW persistent bytes, or null while the pool was short
+} MdnsAdaptiveOwnCtx;
+static MdnsAdaptiveOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_mdns_adaptive_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_MDNS_ADAPTIVE_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
 
 // Promiscuous sink: the whole job is to count. Runs in the WiFi driver's callback context, so it
 // only touches the running total - no parsing, no allocation, no blocking.
 static void adaptive_sink(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_mdns_adaptive_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     (void)frame;
     (void)len;
     (void)rssi;
     (void)channel;
-    s_ad.frames++;
+    MDNS_ADAPTIVE_CTX(work)->frames++;
 }
 
-proto_bool protocore_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
+static void mdns_adaptive_begin(uint8_t *restrict work)
 {
-    if (!cfg || s_ad.running)
+    if (!work)
     {
-        return PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    const MdnsAdaptiveCfg *cfg = MdnsAdaptive.begin_args.cfg;
+
+    if (!cfg || MDNS_ADAPTIVE_CTX(work)->running)
+    {
+        MdnsAdaptive.ok = PROTO_FALSE;
+        return;
     }
     Physical.wifi_channel(protocore_physical_span());
     uint8_t ch = Physical.u8;
     if (ch == 0)
     {
-        return PROTO_FALSE; // not associated: there is no channel to pin capture to
+        MdnsAdaptive.ok = PROTO_FALSE; // not associated: there is no channel to pin capture to
+        return;
     }
 
-    s_ad.cfg = *cfg;
+    MDNS_ADAPTIVE_CTX(work)->cfg = *cfg;
     uint32_t now = Clock.ms;
-    uint32_t base = protocore_mdns_refresh_interval(cfg->ttl_s);
+    MdnsAdaptive.refresh_interval_args.ttl_s = cfg->ttl_s;
+    mdns_adaptive_refresh_interval(work);
+    uint32_t base = MdnsAdaptive.ms;
 
     // Never let the backoff push the refresh past the TTL: a cache evicts the record at its TTL, so
     // announcing slower than that makes the device silently undiscoverable - the opposite of the
@@ -177,25 +278,38 @@ proto_bool protocore_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg)
     uint64_t ttl_ms = (uint64_t)cfg->ttl_s * 1000;
     uint32_t safe_ceiling = (uint32_t)(ttl_ms - ttl_ms / 8 > 0xFFFFFFFFu ? 0xFFFFFFFFu : ttl_ms - ttl_ms / 8);
     uint32_t ceiling = cfg->max_interval_ms < safe_ceiling ? cfg->max_interval_ms : safe_ceiling;
-    protocore_mdns_beacon_init(&s_ad.beacon, base, ceiling, cfg->hi_contention);
-    s_ad.frames = 0;
-    protocore_mdns_contention_init(&s_ad.window, cfg->window_ms, 0, now);
-    s_ad.last_announce_ms = now;
-    s_ad.last_contention = 0;
-    s_ad.announces = 0;
-    s_ad.channel = ch;
+    MdnsAdaptive.beacon_init_args.b = &MDNS_ADAPTIVE_CTX(work)->beacon;
+    MdnsAdaptive.beacon_init_args.base_ms = base;
+    MdnsAdaptive.beacon_init_args.max_ms = ceiling;
+    MdnsAdaptive.beacon_init_args.hi_thresh = cfg->hi_contention;
+    mdns_adaptive_beacon_init(work);
+    MDNS_ADAPTIVE_CTX(work)->frames = 0;
+    MdnsAdaptive.contention_init_args.w = &MDNS_ADAPTIVE_CTX(work)->window;
+    MdnsAdaptive.contention_init_args.window_ms = cfg->window_ms;
+    MdnsAdaptive.contention_init_args.frames_now = 0;
+    MdnsAdaptive.contention_init_args.now_ms = now;
+    mdns_adaptive_contention_init(work);
+    MDNS_ADAPTIVE_CTX(work)->last_announce_ms = now;
+    MDNS_ADAPTIVE_CTX(work)->last_contention = 0;
+    MDNS_ADAPTIVE_CTX(work)->announces = 0;
+    MDNS_ADAPTIVE_CTX(work)->channel = ch;
 
     // Pin capture to the station's OWN channel and never hop, or the association drops.
     Promisc.begin_args.channel = ch;
     Promisc.begin_args.sink = adaptive_sink;
     Promisc.begin(protocore_promisc_span());
-    s_ad.running = Promisc.ok;
-    return s_ad.running;
+    MDNS_ADAPTIVE_CTX(work)->running = Promisc.ok;
+    MdnsAdaptive.ok = MDNS_ADAPTIVE_CTX(work)->running;
 }
 
-void protocore_mdns_adaptive_tick(void)
+static void mdns_adaptive_tick(uint8_t *restrict work)
 {
-    if (!s_ad.running)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    if (!MDNS_ADAPTIVE_CTX(work)->running)
     {
         return;
     }
@@ -204,56 +318,105 @@ void protocore_mdns_adaptive_tick(void)
     // Follow the station if it roamed to another channel, so capture stays on the live link.
     Physical.wifi_channel(protocore_physical_span());
     uint8_t ch = Physical.u8;
-    if (ch != 0 && ch != s_ad.channel)
+    if (ch != 0 && ch != MDNS_ADAPTIVE_CTX(work)->channel)
     {
         Promisc.set_channel_args.channel = ch;
         Promisc.set_channel(protocore_promisc_span());
-        s_ad.channel = ch;
+        MDNS_ADAPTIVE_CTX(work)->channel = ch;
     }
 
     // Close a contention window if one elapsed, and let it move the interval.
     uint16_t c;
-    if (protocore_mdns_contention_sample(&s_ad.window, s_ad.frames, now, &c))
+    MdnsAdaptive.contention_sample_args.w = &MDNS_ADAPTIVE_CTX(work)->window;
+    MdnsAdaptive.contention_sample_args.frames_now = MDNS_ADAPTIVE_CTX(work)->frames;
+    MdnsAdaptive.contention_sample_args.now_ms = now;
+    MdnsAdaptive.contention_sample_args.out = &c;
+    mdns_adaptive_contention_sample(work);
+    if (MdnsAdaptive.ok)
     {
-        s_ad.last_contention = c;
-        protocore_mdns_beacon_adapt(&s_ad.beacon, c);
+        MDNS_ADAPTIVE_CTX(work)->last_contention = c;
+        MdnsAdaptive.beacon_adapt_args.b = &MDNS_ADAPTIVE_CTX(work)->beacon;
+        MdnsAdaptive.beacon_adapt_args.contention = c;
+        mdns_adaptive_beacon_adapt(work);
     }
 
     // Re-announce when the (adaptive) interval has elapsed. Re-applying the TXT at its current value
     // re-announces on every PCB with no goodbye - a refresh, not an evict.
-    if (protocore_mdns_beacon_due(&s_ad.beacon, s_ad.last_announce_ms, now))
+    MdnsAdaptive.beacon_due_args.b = &MDNS_ADAPTIVE_CTX(work)->beacon;
+    MdnsAdaptive.beacon_due_args.last_ms = MDNS_ADAPTIVE_CTX(work)->last_announce_ms;
+    MdnsAdaptive.beacon_due_args.now_ms = now;
+    mdns_adaptive_beacon_due(work);
+    if (MdnsAdaptive.ok)
     {
-        protocore_mdns_txt(s_ad.cfg.key, s_ad.cfg.value);
-        s_ad.last_announce_ms = now;
-        s_ad.announces++;
+        MdnsService.txt_args.key = MDNS_ADAPTIVE_CTX(work)->cfg.key;
+        MdnsService.txt_args.value = MDNS_ADAPTIVE_CTX(work)->cfg.value;
+        MdnsService.txt(protocore_mdns_service_span());
+        MDNS_ADAPTIVE_CTX(work)->last_announce_ms = now;
+        MDNS_ADAPTIVE_CTX(work)->announces++;
     }
 }
 
-void protocore_mdns_adaptive_end(void)
+static void mdns_adaptive_end(uint8_t *restrict work)
 {
-    if (!s_ad.running)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    if (!MDNS_ADAPTIVE_CTX(work)->running)
     {
         return;
     }
     Promisc.end(protocore_promisc_span());
-    s_ad.running = PROTO_FALSE;
+    MDNS_ADAPTIVE_CTX(work)->running = PROTO_FALSE;
 }
 
-uint32_t protocore_mdns_adaptive_interval_ms(void)
+static void mdns_adaptive_interval_ms(uint8_t *restrict work)
 {
-    return s_ad.beacon.cur_ms;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    MdnsAdaptive.ms = MDNS_ADAPTIVE_CTX(work)->beacon.cur_ms;
 }
 
-uint16_t protocore_mdns_adaptive_contention(void)
+static void mdns_adaptive_contention(uint8_t *restrict work)
 {
-    return s_ad.last_contention;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    MdnsAdaptive.value = MDNS_ADAPTIVE_CTX(work)->last_contention;
 }
 
-uint32_t protocore_mdns_adaptive_announces(void)
+static void mdns_adaptive_announces(uint8_t *restrict work)
 {
-    return s_ad.announces;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    MdnsAdaptive.ms = MDNS_ADAPTIVE_CTX(work)->announces;
 }
 
-#endif // PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
+MdnsAdaptiveNs MdnsAdaptive = {
+    .refresh_interval = mdns_adaptive_refresh_interval,
+    .beacon_init = mdns_adaptive_beacon_init,
+    .beacon_adapt = mdns_adaptive_beacon_adapt,
+    .beacon_due = mdns_adaptive_beacon_due,
+    .beacon_presleep_due = mdns_adaptive_beacon_presleep_due,
+    .contention_init = mdns_adaptive_contention_init,
+    .contention_sample = mdns_adaptive_contention_sample,
+    .begin = mdns_adaptive_begin,
+    .tick = mdns_adaptive_tick,
+    .end = mdns_adaptive_end,
+    .interval_ms = mdns_adaptive_interval_ms,
+    .contention = mdns_adaptive_contention,
+    .announces = mdns_adaptive_announces,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MDNS_ADAPTIVE

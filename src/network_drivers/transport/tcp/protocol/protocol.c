@@ -20,11 +20,11 @@
 #include "../lower/lower.h"          // every call into the stack below goes through the seam
 #include "../server/server.h"        // TcpListener.enqueue: the owning listener posts the event
 #include "config/platform/platform.h"
-#include "mmgr/plaintext.h"     // the persistent end this module's state is taken from
-#include "mmgr/rawmemcpy.h"     // raw.read: the unaligned v6 address load
+#include "mmgr/plaintext/plaintext.h"     // the persistent end this module's state is taken from
+#include "mmgr/rawmemcpy/rawmemcpy.h"     // raw.read: the unaligned v6 address load
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock
 
-#include "server/core/worker.h" // Workers.wake() - resume a paced send when the window drains
+#include "server/core/worker/worker.h" // Workers.wake() - resume a paced send when the window drains
 
 #if PROTOCORE_ENABLE_TLS
 #include "network_drivers/tls/tls.h"

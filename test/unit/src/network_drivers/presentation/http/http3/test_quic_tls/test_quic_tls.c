@@ -13,10 +13,10 @@
 // flight differently cannot pass it. The flight ordering is RFC 8446 sec 4.4 / sec 2 Figure 1, and
 // each rejection below cites the sentence that requires it.
 
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/http/http3/quic_tls.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include <string.h>
 

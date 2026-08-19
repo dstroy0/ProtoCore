@@ -21,7 +21,7 @@
 #include <stdio.h>
 
 #include "device_bench.h"  // DBENCH_CYCLES
-#include "mmgr/protostr.h" // str: the bounded-run walks
+#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
 
 static double g_mhz = 240.0;
 

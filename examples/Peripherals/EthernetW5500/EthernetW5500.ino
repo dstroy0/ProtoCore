@@ -13,7 +13,7 @@
 //   CS = GPIO7  RST = GPIO6  INT = GPIO5  SCLK = GPIO12  MOSI = GPIO11  MISO = GPIO13  (VCC 3V3, GND)
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 
 static unsigned long request_count = 0;

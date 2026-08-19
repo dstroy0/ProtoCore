@@ -16,7 +16,6 @@
 
 #include "network_drivers/presentation/ssh/common.h"
 
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief Parsed SSH_MSG_USERAUTH_REQUEST. */
@@ -221,9 +220,6 @@ typedef struct
     SshPubkeyCb pubkey_cb;                  ///< what a public key is checked against
 } SshAuthCbs;
 
-/** @brief The authentication layer's own state and the calls that reach it, described only in auth.c. */
-struct SshAuthInternal;
-
 /**
  * @brief The SSH authentication protocol (RFC 4252): what a slot must satisfy before a service runs.
  *
@@ -255,7 +251,6 @@ struct SshAuthInternal;
  * @var SshAuthNs::handle_request          answer a USERAUTH_REQUEST
  * @var SshAuthNs::handle_info_response    answer a USERAUTH_INFO_RESPONSE (RFC 4256 sec 3.4)
  * @var SshAuthNs::dispatch                route messages 50 to 79
- * @var SshAuthNs::internal    the layer's state and the calls that reach it
  */
 typedef struct
 {
@@ -272,29 +267,38 @@ typedef struct
     proto_bool ok;
     int i32;
 
-    void (*set_password_cb)(struct SshAuthInternal *ctx);
-    void (*set_password_change_cb)(struct SshAuthInternal *ctx);
-    void (*set_pubkey_cb)(struct SshAuthInternal *ctx);
-    void (*pw_change_report)(struct SshAuthInternal *ctx);
-    void (*pw_change_clear)(struct SshAuthInternal *ctx);
-    void (*passwd_change_reply)(struct SshAuthInternal *ctx);
-    void (*write_publickey_request)(struct SshAuthInternal *ctx);
-    void (*timed_out)(struct SshAuthInternal *ctx);
-    void (*reset)(struct SshAuthInternal *ctx);
-    void (*parse_request)(struct SshAuthInternal *ctx);
-    void (*build_failure)(struct SshAuthInternal *ctx);
-    void (*build_success)(struct SshAuthInternal *ctx);
-    void (*handle_request)(struct SshAuthInternal *ctx);
+    void (*const set_password_cb)(uint8_t *restrict work);
+    void (*const set_password_change_cb)(uint8_t *restrict work);
+    void (*const set_pubkey_cb)(uint8_t *restrict work);
+    void (*const pw_change_report)(uint8_t *restrict work);
+    void (*const pw_change_clear)(uint8_t *restrict work);
+    void (*const passwd_change_reply)(uint8_t *restrict work);
+    void (*const write_publickey_request)(uint8_t *restrict work);
+    void (*const timed_out)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *restrict work);
+    void (*const parse_request)(uint8_t *restrict work);
+    void (*const build_failure)(uint8_t *restrict work);
+    void (*const build_success)(uint8_t *restrict work);
+    void (*const handle_request)(uint8_t *restrict work);
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
-    void (*handle_info_response)(struct SshAuthInternal *ctx);
+    void (*const handle_info_response)(uint8_t *restrict work);
 #endif
-    void (*dispatch)(struct SshAuthInternal *ctx);
-
-    struct SshAuthInternal *internal;
+    void (*const dispatch)(uint8_t *restrict work);
 } SshAuthNs;
 
 /** @brief The one symbol this module exports. */
 extern SshAuthNs SshAuth;
+
+/**
+ * @brief The PROTOCORE_SSH_AUTH_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_ssh_auth_span(void);
 
 PROTOCORE_END_DECLS
 

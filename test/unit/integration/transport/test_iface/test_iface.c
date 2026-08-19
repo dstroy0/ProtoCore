@@ -45,7 +45,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -68,11 +68,11 @@ static const char *do_req(protocore_if_kind iface, const char *req_str)
     conn_pool[0].pcb = protocore_net_host_pcb();
     conn_pool[0].iface = iface;
     HttpConn.slot = 0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
     push_str(0, req_str);
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     return tcp_captured();
 }
@@ -143,15 +143,3 @@ void test_set_ap_ip_updates_global()
     TEST_ASSERT_EQUAL_UINT32(0u, protocore_ap_ip);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_ap_only_matches_on_ap);
-    RUN_TEST(test_ap_only_hidden_on_sta);
-    RUN_TEST(test_sta_only_matches_on_sta);
-    RUN_TEST(test_sta_only_hidden_on_ap);
-    RUN_TEST(test_unfiltered_route_matches_any_interface);
-    RUN_TEST(test_same_path_two_interfaces_picks_correct);
-    RUN_TEST(test_set_ap_ip_updates_global);
-    return UNITY_END();
-}

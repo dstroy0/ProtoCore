@@ -12,7 +12,7 @@
 // RFC 4251 sec 5 supplies the second anchor: "the value 699921578 (0x29b7f4aa) is stored as
 // 29 b7 f4 aa", which is the writer's side of the same claim.
 
-#include "mmgr/endian.h"
+#include "mmgr/endian/endian.h"
 #include <string.h>
 
 #include <unity.h>

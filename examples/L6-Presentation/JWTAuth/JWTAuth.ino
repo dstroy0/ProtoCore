@@ -27,7 +27,7 @@
 #define PROTOCORE_ENABLE_JWT 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/security/jwt/jwt.h"
 
 static const char *SSID = "YOUR_SSID";

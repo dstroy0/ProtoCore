@@ -17,18 +17,17 @@
 #include "network_drivers/session/session.h"                 // file_send: the transfer the connection carries
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a response is written on
 
-#include "mmgr/membuild.h"                          // protocore_sb frame builder
-#include "mmgr/protostr.h"                          // str.find / str.has: the month table, traversal and gzip markers
-#include "network_drivers/application/http_range.h" // http_parse_byte_range (shared with the edge cache)
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protostr/protostr.h" // str.find / str.has: the month table, traversal and gzip markers
+#include "network_drivers/application/http_range/http_range.h" // http_parse_byte_range (shared with the edge cache)
 #include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/transport/tcp/tcp.h" // conn_pool, protocore_conn_*, TcpConn/ConnState
 #include "protocore.h"
-#include "server/storage/filesystem.h"      // protocore_fs_* - the accessor owns the root, the join, and the .. guard
-#include "shared/mime/mime.h"               // mime_type, PROTOCORE_MIME_*
-#include "shared/time_compat/time_compat.h" // protocore_gmtime_r (portable reentrant UTC)
-#include <stdio.h>                          // snprintf, sscanf
+#include "server/storage/filesystem/filesystem.h" // protocore_fs_* - the accessor owns the root, the join, and the .. guard
+#include "shared/mime/mime.h"                     // mime_type, PROTOCORE_MIME_*
+#include "shared/time_compat/time_compat.h"       // protocore_gmtime_r (portable reentrant UTC)
+#include <stdio.h>                                // snprintf, sscanf
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
-
 
 static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 
@@ -248,7 +247,8 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
     {
         Fs.io.handle = fh;
         Fs.close(protocore_filesystem_span());
-        http_parser_reset(&http_pool[slot_id]);
+        HttpParser.reset_args.req = &http_pool[slot_id];
+        HttpParser.reset(protocore_http_parser_span());
         return;
     }
 
@@ -321,174 +321,184 @@ void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_b
         }
     }
 
-    const char *inm = http_get_header(&http_pool[slot_id], "If-None-Match");
-    proto_bool not_modified =
-        inm ? inm_matches(inm, etag)
-            : http_not_modified_since(mtime, http_get_header(&http_pool[slot_id], "If-Modified-Since"));
+    // Both reads are staged before the choice: each is a lookup over the request's own headers, so
+    // taking both costs a scan and neither can be left in the middle of the conditional.
+    HttpParser.get_header_args.req = &http_pool[slot_id];
+    HttpParser.get_header_args.key = "If-None-Match";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *inm = HttpParser.text;
+    HttpParser.get_header_args.req = &http_pool[slot_id];
+    HttpParser.get_header_args.key = "If-Modified-Since";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *ims = HttpParser.text;
+    proto_bool not_modified = inm ? inm_matches(inm, etag) : http_not_modified_since(mtime, ims);
     if (not_modified)
     {
-        Fs.io.handle = fh;
-        Fs.close(protocore_filesystem_span());
-        char h304[RESP_HDR_BUF_SIZE];
-        protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
-        Sb.put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
-        Sb.put(&sb_h304, etag);
-        Sb.put(&sb_h304, "\r\n");
-        Sb.put(&sb_h304, lastmod_line);
-        Sb.put(&sb_h304, protocore_resp_cache_control());
-        Sb.put(&sb_h304, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-        Sb.put(&sb_h304, cl);
-        Sb.put(&sb_h304, "\r\n");
-        int n304 = (int)Sb.finish(&sb_h304);
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = h304;
-        ConnPool.io.len = (proto_u16)n304;
-        ConnPool.send_flush(protocore_conn_pool_span()); // header-only reply: write and flush in one marshal
-        protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
-        return;
-    }
-    char etag_line[48];
-    protocore_sb sb_etag_line = {etag_line, sizeof(etag_line), 0, PROTO_TRUE};
-    Sb.put(&sb_etag_line, "ETag: ");
-    Sb.put(&sb_etag_line, etag);
-    Sb.put(&sb_etag_line, "\r\n");
-    if (Sb.finish(&sb_etag_line) == 0)
-    {
-        etag_line[0] = '\0';
-    }
+                Fs.io.handle = fh;
+                Fs.close(protocore_filesystem_span());
+                char h304[RESP_HDR_BUF_SIZE];
+                protocore_sb sb_h304 = {h304, sizeof(h304), 0, PROTO_TRUE};
+                Sb.put(&sb_h304, "HTTP/1.1 304 Not Modified\r\nETag: ");
+                Sb.put(&sb_h304, etag);
+                Sb.put(&sb_h304, "\r\n");
+                Sb.put(&sb_h304, lastmod_line);
+                Sb.put(&sb_h304, protocore_resp_cache_control());
+                Sb.put(&sb_h304, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+                Sb.put(&sb_h304, cl);
+                Sb.put(&sb_h304, "\r\n");
+                int n304 = (int)Sb.finish(&sb_h304);
+                ConnPool.slot = slot_id;
+                ConnPool.io.data = h304;
+                ConnPool.io.len = (proto_u16)n304;
+                ConnPool.send_flush(protocore_conn_pool_span()); // header-only reply: write and flush in one marshal
+                protocore_resp_end(slot_id, 304, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+                return;
+            }
+            char etag_line[48];
+            protocore_sb sb_etag_line = {etag_line, sizeof(etag_line), 0, PROTO_TRUE};
+            Sb.put(&sb_etag_line, "ETag: ");
+            Sb.put(&sb_etag_line, etag);
+            Sb.put(&sb_etag_line, "\r\n");
+            if (Sb.finish(&sb_etag_line) == 0)
+            {
+                etag_line[0] = '\0';
+            }
 #else
     const char *etag_line = "";
     const char *lastmod_line = "";
 #endif
 
-    // Default: full 200 response covering the whole file.
-    int status = 200;
-    size_t body_len = file_size;
-    size_t body_off = 0; // file offset the body starts at (nonzero for a Range)
-    const char *accept_ranges = "";
-    char range_line[64];
-    range_line[0] = '\0';
+            // Default: full 200 response covering the whole file.
+            int status = 200;
+            size_t body_len = file_size;
+            size_t body_off = 0; // file offset the body starts at (nonzero for a Range)
+            const char *accept_ranges = "";
+            char range_line[64];
+            range_line[0] = '\0';
 
 #if PROTOCORE_ENABLE_RANGE
-    accept_ranges = "Accept-Ranges: bytes\r\n"; // advertise range support on every file response
-    size_t r_start = 0;
-    size_t r_end = 0;
-    HttpRange.http_parse_byte_range_args.hdr = http_get_header(&http_pool[slot_id], "Range");
-    HttpRange.http_parse_byte_range_args.size = file_size;
-    HttpRange.http_parse_byte_range_args.out_start = &r_start;
-    HttpRange.http_parse_byte_range_args.out_end = &r_end;
-    HttpRange.http_parse_byte_range(http_range_work);
-    int rr = HttpRange.n;
-    if (rr < 0)
-    {
-        // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
-        Fs.io.handle = fh;
-        Fs.close(protocore_filesystem_span());
-        char h416[RESP_HDR_BUF_SIZE];
-        protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
-        Sb.put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
-        Sb.u32(&sb_h416, (uint32_t)((unsigned)file_size));
-        Sb.put(&sb_h416, "\r\nContent-Length: 0\r\n");
-        Sb.put(&sb_h416, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-        Sb.put(&sb_h416, cl);
-        Sb.put(&sb_h416, "\r\n");
-        int n416 = (int)Sb.finish(&sb_h416);
-        ConnPool.slot = slot_id;
-        ConnPool.io.data = h416;
-        ConnPool.io.len = (proto_u16)n416;
-        ConnPool.send_flush(protocore_conn_pool_span());
-        protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
-        return;
-    }
-    if (rr > 0)
-    {
-        status = 206;
-        body_len = r_end - r_start + 1;
-        protocore_sb sb_range_line = {range_line, sizeof(range_line), 0, PROTO_TRUE};
-        Sb.put(&sb_range_line, "Content-Range: bytes ");
-        Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_start));
-        Sb.put(&sb_range_line, "-");
-        Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_end));
-        Sb.put(&sb_range_line, "/");
-        Sb.u32(&sb_range_line, (uint32_t)((unsigned)file_size));
-        Sb.put(&sb_range_line, "\r\n");
-        if (Sb.finish(&sb_range_line) == 0)
-        {
-            range_line[0] = '\0';
-        }
-        // A backend that cannot seek serves the whole representation instead, which keeps the body
-        // matching the headers. RFC 9110 14.2 permits a server to ignore Range.
-        Fs.io.handle = fh;
-        Fs.io.off = (uint64_t)r_start;
-        Fs.seek(protocore_filesystem_span());
-        if (Fs.ok)
-        {
-            body_off = r_start;
-        }
-        else
-        {
-            status = 200;
-            body_len = file_size;
-            range_line[0] = '\0';
-        }
-    }
+            accept_ranges = "Accept-Ranges: bytes\r\n"; // advertise range support on every file response
+            size_t r_start = 0;
+            size_t r_end = 0;
+            HttpParser.get_header_args.req = &http_pool[slot_id];
+            HttpParser.get_header_args.key = "Range";
+            HttpParser.get_header(protocore_http_parser_span());
+            HttpRange.http_parse_byte_range_args.hdr = HttpParser.text;
+            HttpRange.http_parse_byte_range_args.size = file_size;
+            HttpRange.http_parse_byte_range_args.out_start = &r_start;
+            HttpRange.http_parse_byte_range_args.out_end = &r_end;
+            HttpRange.http_parse_byte_range(http_range_work);
+            int rr = HttpRange.n;
+            if (rr < 0)
+            {
+                // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
+                Fs.io.handle = fh;
+                Fs.close(protocore_filesystem_span());
+                char h416[RESP_HDR_BUF_SIZE];
+                protocore_sb sb_h416 = {h416, sizeof(h416), 0, PROTO_TRUE};
+                Sb.put(&sb_h416, "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */");
+                Sb.u32(&sb_h416, (uint32_t)((unsigned)file_size));
+                Sb.put(&sb_h416, "\r\nContent-Length: 0\r\n");
+                Sb.put(&sb_h416, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+                Sb.put(&sb_h416, cl);
+                Sb.put(&sb_h416, "\r\n");
+                int n416 = (int)Sb.finish(&sb_h416);
+                ConnPool.slot = slot_id;
+                ConnPool.io.data = h416;
+                ConnPool.io.len = (proto_u16)n416;
+                ConnPool.send_flush(protocore_conn_pool_span());
+                protocore_resp_end(slot_id, 416, 0, keep, /*pre_flushed=*/PROTO_TRUE);
+                return;
+            }
+            if (rr > 0)
+            {
+                status = 206;
+                body_len = r_end - r_start + 1;
+                protocore_sb sb_range_line = {range_line, sizeof(range_line), 0, PROTO_TRUE};
+                Sb.put(&sb_range_line, "Content-Range: bytes ");
+                Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_start));
+                Sb.put(&sb_range_line, "-");
+                Sb.u32(&sb_range_line, (uint32_t)((unsigned)r_end));
+                Sb.put(&sb_range_line, "/");
+                Sb.u32(&sb_range_line, (uint32_t)((unsigned)file_size));
+                Sb.put(&sb_range_line, "\r\n");
+                if (Sb.finish(&sb_range_line) == 0)
+                {
+                    range_line[0] = '\0';
+                }
+                // A backend that cannot seek serves the whole representation instead, which keeps the body
+                // matching the headers. RFC 9110 14.2 permits a server to ignore Range.
+                Fs.io.handle = fh;
+                Fs.io.off = (uint64_t)r_start;
+                Fs.seek(protocore_filesystem_span());
+                if (Fs.ok)
+                {
+                    body_off = r_start;
+                }
+                else
+                {
+                    status = 200;
+                    body_len = file_size;
+                    range_line[0] = '\0';
+                }
+            }
 #endif
 
-    char header[RESP_HDR_BUF_SIZE];
-    protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
-    Sb.put(&sb_header, "HTTP/1.1 ");
-    Sb.i64(&sb_header, (int64_t)(status));
-    Sb.put(&sb_header, " ");
-    Http.code = status;
-    Http.status_text(Http.internal);
-    Sb.put(&sb_header, Http.text);
-    Sb.put(&sb_header, "\r\nContent-Type: ");
-    Sb.put(&sb_header, content_type);
-    Sb.put(&sb_header, "\r\nContent-Length: ");
-    Sb.u32(&sb_header, (uint32_t)((unsigned)body_len));
-    Sb.put(&sb_header, "\r\n");
-    Sb.put(&sb_header, accept_ranges);
-    Sb.put(&sb_header, range_line);
-    Sb.put(&sb_header, enc_line);
-    Sb.put(&sb_header, etag_line);
-    Sb.put(&sb_header, lastmod_line);
-    Sb.put(&sb_header, protocore_resp_cache_control());
-    Sb.put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
-    Sb.put(&sb_header, cl);
-    Sb.put(&sb_header, "\r\n");
-    int hlen = (int)Sb.finish(&sb_header);
-    if (hlen == 0)
-    {
-        header[0] = '\0';
-    }
+            char header[RESP_HDR_BUF_SIZE];
+            protocore_sb sb_header = {header, sizeof(header), 0, PROTO_TRUE};
+            Sb.put(&sb_header, "HTTP/1.1 ");
+            Sb.i64(&sb_header, (int64_t)(status));
+            Sb.put(&sb_header, " ");
+            Http.code = status;
+            Http.status_text(protocore_http_span());
+            Sb.put(&sb_header, Http.text);
+            Sb.put(&sb_header, "\r\nContent-Type: ");
+            Sb.put(&sb_header, content_type);
+            Sb.put(&sb_header, "\r\nContent-Length: ");
+            Sb.u32(&sb_header, (uint32_t)((unsigned)body_len));
+            Sb.put(&sb_header, "\r\n");
+            Sb.put(&sb_header, accept_ranges);
+            Sb.put(&sb_header, range_line);
+            Sb.put(&sb_header, enc_line);
+            Sb.put(&sb_header, etag_line);
+            Sb.put(&sb_header, lastmod_line);
+            Sb.put(&sb_header, protocore_resp_cache_control());
+            Sb.put(&sb_header, protocore_resp_cors_enabled() ? protocore_resp_cors_header() : "");
+            Sb.put(&sb_header, cl);
+            Sb.put(&sb_header, "\r\n");
+            int hlen = (int)Sb.finish(&sb_header);
+            if (hlen == 0)
+            {
+                header[0] = '\0';
+            }
 
-    ConnPool.slot = slot_id;
-    ConnPool.io.data = header;
-    ConnPool.io.len = (proto_u16)hlen;
-    ConnPool.send(protocore_conn_pool_span());
+            ConnPool.slot = slot_id;
+            ConnPool.io.data = header;
+            ConnPool.io.len = (proto_u16)hlen;
+            ConnPool.send(protocore_conn_pool_span());
 
-    // HEAD or empty body: headers only, finish now.
-    if (head || body_len == 0)
-    {
-        Fs.io.handle = fh;
-        Fs.close(protocore_filesystem_span());
-        protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
-        return;
-    }
+            // HEAD or empty body: headers only, finish now.
+            if (head || body_len == 0)
+            {
+                Fs.io.handle = fh;
+                Fs.close(protocore_filesystem_span());
+                protocore_resp_end(slot_id, status, 0, keep, /*pre_flushed=*/PROTO_FALSE);
+                return;
+            }
 
-    // Hand the body to the cross-loop pump: it pages out at most one send-buffer
-    // window now and resumes on later loops as the window drains, so a file larger
-    // than TCP_SND_BUF is never truncated. The pump owns the file and calls
-    // protocore_resp_end() at completion - do not close f or end the response here.
-    FileSend *s = &file_send[slot_id];
-    s->fh = fh;
-    s->off = body_off;
-    s->remaining = body_len;
-    s->status = status;
-    s->total = (int)body_len;
-    s->keep = keep;
-    s->active = PROTO_TRUE;
-    file_send_pump(slot_id);
+            // Hand the body to the cross-loop pump: it pages out at most one send-buffer
+            // window now and resumes on later loops as the window drains, so a file larger
+            // than TCP_SND_BUF is never truncated. The pump owns the file and calls
+            // protocore_resp_end() at completion - do not close f or end the response here.
+            FileSend *s = &file_send[slot_id];
+            s->fh = fh;
+            s->off = body_off;
+            s->remaining = body_len;
+            s->status = status;
+            s->total = (int)body_len;
+            s->keep = keep;
+            s->active = PROTO_TRUE;
+            file_send_pump(slot_id);
 }
 
 // Page out a pending file response across worker loops: send up to ConnPool.sndbuf()
@@ -586,7 +596,7 @@ void file_send_pump(uint8_t slot_id)
 void serve_file(uint8_t slot_id, const protocore_mnt_backend *file_sys, const char *fs_path, const char *content_type)
 {
     Http.slot = slot_id;
-    Http.req_is_head(Http.internal);
+    Http.req_is_head(protocore_http_span());
     serve_file_internal(slot_id, Http.ok, file_sys, fs_path, content_type, NULL);
 }
 
@@ -685,12 +695,15 @@ void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r)
 
     const char *ctype = mime_type(fs_path);
     Http.slot = slot_id;
-    Http.req_is_head(Http.internal);
+    Http.req_is_head(protocore_http_span());
     proto_bool head = Http.ok;
 
     // Pre-compressed variant: serve <path>.gz if the client accepts gzip and it
     // exists. Content-Type stays that of the original (uncompressed) resource.
-    const char *ae = http_get_header(req, "Accept-Encoding");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Accept-Encoding";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *ae = HttpParser.text;
     if (ae && str.has(ae, MAX_VAL_LEN, "gzip", sizeof("gzip"), PROTO_FALSE))
     {
         char gz[260];

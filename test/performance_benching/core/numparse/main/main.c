@@ -7,7 +7,7 @@
 //
 // Build/flash: idf.py -C test/performance_benching/core/numparse flash monitor
 #include "device_bench.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protostr/protostr.h"
 
 #include <stdbool.h>
 #include <stddef.h>

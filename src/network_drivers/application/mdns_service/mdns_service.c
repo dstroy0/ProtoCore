@@ -10,66 +10,118 @@
  * like every other datagram service in the tree.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_MDNS
+
 #include "mdns_service.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never reads it
 
-#if PROTOCORE_ENABLE_MDNS
+PROTOCORE_BEGIN_DECLS
 
 // Both backends' includes, ahead of either backend's code: what a translation unit reaches for is
 // stated once at its top, whichever arm the capability selects.
 #if PROTOCORE_HAS_VENDOR_MDNS
 #include "mdns.h" // the vendor's responder, driven through its own component API
 #else
-#include "mmgr/protostr.h"                               // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"                              // raw.read: every field moves whole
-#include "mmgr/secure.h"                                 // protocore_secure_persist_span: this module's storage
-#include "network_drivers/network/dns/dns_wire.h"        // the name codec both DNS halves share
-#include "network_drivers/physical/physical.h"           // Physical.egress_ip: the address the A record carries
-#include "network_drivers/transport/udp/server/server.h" // UdpListener: the 5353 group bind and the reply
+#include "mmgr/protostr/protostr.h"                        // str: the bounded-run walks
+#include "mmgr/rawmemcpy/rawmemcpy.h"                      // raw.read: every field moves whole
+#include "mmgr/secure/secure.h"                            // protocore_secure_persist_span: this module's storage
+#include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves share
+#include "network_drivers/physical/physical/physical.h"    // Physical.egress_ip: the address the A record carries
+#include "network_drivers/transport/udp/server/server.h"   // UdpListener: the 5353 group bind and the reply
 #endif
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_MDNS_SERVICE_BORROW persistent bytes, or null while the pool was short
+} MdnsServiceOwnCtx;
+static MdnsServiceOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_mdns_service_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_MDNS_SERVICE_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 #if PROTOCORE_HAS_VENDOR_MDNS
 
-proto_bool protocore_mdns_begin(const char *hostname, uint16_t http_port)
+// The entries this file calls before reaching their definitions.
+
+
+static void mdns_service_add_service(uint8_t *restrict work);
+
+static void mdns_service_begin(uint8_t *restrict work)
 {
+    (void)work;
+    const char *hostname = MdnsService.begin_args.hostname;
+    uint16_t http_port = MdnsService.begin_args.http_port;
+
     if (hostname == NULL || hostname[0] == '\0')
     {
-        return PROTO_FALSE;
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
     if (mdns_init() != ESP_OK)
     {
-        return PROTO_FALSE;
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
     if (mdns_hostname_set(hostname) != ESP_OK)
     {
-        return PROTO_FALSE;
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
     // Advertise an HTTP service so browsers / DNS-SD tools discover the device.
     mdns_service_add(NULL, "_http", "_tcp", http_port, NULL, 0);
-    return PROTO_TRUE;
+    MdnsService.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_mdns_txt(const char *key, const char *value)
+static void mdns_service_txt(uint8_t *restrict work)
 {
+    (void)work;
+    const char *key = MdnsService.txt_args.key;
+    const char *value = MdnsService.txt_args.value;
+
     if (key == NULL || value == NULL)
     {
-        return PROTO_FALSE;
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
     // Attach a TXT key/value to the _http._tcp service (Bonjour browsers show it).
-    return mdns_service_txt_item_set("_http", "_tcp", key, value) == ESP_OK;
+    MdnsService.ok = mdns_service_txt_item_set("_http", "_tcp", key, value) == ESP_OK;
 }
 
-proto_bool protocore_mdns_add_service(const char *service_type, const char *proto, uint16_t port)
+static void mdns_service_add_service(uint8_t *restrict work)
 {
+    (void)work;
+    const char *service_type = MdnsService.add_service_args.service_type;
+    const char *proto = MdnsService.add_service_args.proto;
+    uint16_t port = MdnsService.add_service_args.port;
+
     if (service_type == NULL || proto == NULL)
     {
-        return PROTO_FALSE;
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
     // Advertise an additional service, e.g. ("_https", "_tcp", 443).
-    return mdns_service_add(NULL, service_type, proto, port, NULL, 0) == ESP_OK;
+    MdnsService.ok = mdns_service_add(NULL, service_type, proto, port, NULL, 0) == ESP_OK;
 }
 
 #else // the portable responder
@@ -129,35 +181,46 @@ typedef struct
     protocore_span inst_name; ///< "<host>.<type>.<proto>.local"
     proto_bool running;
 } MdnsCtx;
-static MdnsCtx s_mdns;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define MDNS_SERVICE_OFF_CTX 0u
+static_assert(MDNS_SERVICE_OFF_CTX + sizeof(MdnsCtx) <= PROTOCORE_MDNS_SERVICE_BORROW,
+              "PROTOCORE_MDNS_SERVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define MDNS_SERVICE_CTX(w) ((MdnsCtx *)(void *)((w) + MDNS_SERVICE_OFF_CTX))
 
 // Take every borrow once and hold it for the life of the program. A responder answers for the names
 // the device is reached by, so its table and the replies it composes come from the secure pool,
 // whose release wipes. False when the pool cannot cover them; begin() fails closed on that.
-static proto_bool mdns_mem_bind(void)
+static proto_bool mdns_mem_bind(uint8_t *restrict work)
 {
-    if (span.has_storage(s_mdns.tx))
+    if (span.has_storage(MDNS_SERVICE_CTX(work)->tx))
     {
         return PROTO_TRUE;
     }
-    s_mdns.host = protocore_secure_persist_span(PROTOCORE_MDNS_LABEL_MAX);
-    s_mdns.fqdn = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    s_mdns.svc = protocore_secure_persist_span(sizeof(MdnsSvc) * PROTOCORE_MDNS_MAX_SERVICES);
-    s_mdns.txt = protocore_secure_persist_span(PROTOCORE_MDNS_TXT_MAX);
-    s_mdns.tx = protocore_secure_persist_span(PROTOCORE_MDNS_TX_MAX);
-    s_mdns.rd = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX + 8);
-    s_mdns.qname = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    s_mdns.svc_name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    s_mdns.inst_name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
-    return span.has_storage(s_mdns.host) && span.has_storage(s_mdns.fqdn) && span.has_storage(s_mdns.svc) &&
-           span.has_storage(s_mdns.txt) && span.has_storage(s_mdns.tx) && span.has_storage(s_mdns.rd) &&
-           span.has_storage(s_mdns.qname) && span.has_storage(s_mdns.svc_name) && span.has_storage(s_mdns.inst_name);
+    MDNS_SERVICE_CTX(work)->host = protocore_secure_persist_span(PROTOCORE_MDNS_LABEL_MAX);
+    MDNS_SERVICE_CTX(work)->fqdn = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
+    MDNS_SERVICE_CTX(work)->svc = protocore_secure_persist_span(sizeof(MdnsSvc) * PROTOCORE_MDNS_MAX_SERVICES);
+    MDNS_SERVICE_CTX(work)->txt = protocore_secure_persist_span(PROTOCORE_MDNS_TXT_MAX);
+    MDNS_SERVICE_CTX(work)->tx = protocore_secure_persist_span(PROTOCORE_MDNS_TX_MAX);
+    MDNS_SERVICE_CTX(work)->rd = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX + 8);
+    MDNS_SERVICE_CTX(work)->qname = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
+    MDNS_SERVICE_CTX(work)->svc_name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
+    MDNS_SERVICE_CTX(work)->inst_name = protocore_secure_persist_span(PROTOCORE_DNS_NAME_MAX);
+    return span.has_storage(MDNS_SERVICE_CTX(work)->host) && span.has_storage(MDNS_SERVICE_CTX(work)->fqdn) &&
+           span.has_storage(MDNS_SERVICE_CTX(work)->svc) && span.has_storage(MDNS_SERVICE_CTX(work)->txt) &&
+           span.has_storage(MDNS_SERVICE_CTX(work)->tx) && span.has_storage(MDNS_SERVICE_CTX(work)->rd) &&
+           span.has_storage(MDNS_SERVICE_CTX(work)->qname) && span.has_storage(MDNS_SERVICE_CTX(work)->svc_name) &&
+           span.has_storage(MDNS_SERVICE_CTX(work)->inst_name);
 }
 
 /** @brief Service @p i, over the borrow that holds the table. */
-static MdnsSvc *mdns_svc(size_t i)
+static MdnsSvc *mdns_svc(uint8_t *restrict work, size_t i)
 {
-    return &((MdnsSvc *)s_mdns.svc.buf)[i];
+    return &((MdnsSvc *)MDNS_SERVICE_CTX(work)->svc.buf)[i];
 }
 
 /** @brief A borrowed span read as the dotted name it holds. */
@@ -265,7 +328,7 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
 
 // The A record for this host, when the interface has an address to advertise. A responder with no
 // address says nothing rather than claiming 0.0.0.0.
-static uint16_t put_a(size_t *n)
+static uint16_t put_a(uint8_t *restrict work, size_t *n)
 {
     Physical.egress_ip(protocore_physical_span());
     uint32_t ip = Physical.u32;
@@ -273,9 +336,10 @@ static uint16_t put_a(size_t *n)
     {
         return 0;
     }
-    raw.read(s_mdns.rd.buf, &ip, 4); // network order already, as the stack keeps it
-    if (!rr_put(s_mdns.tx.buf, s_mdns.tx.cap, n, mdns_str(s_mdns.fqdn), PROTOCORE_MDNS_T_A, PROTOCORE_MDNS_C_FLUSH,
-                PROTOCORE_MDNS_TTL_HOST, s_mdns.rd.buf, 4))
+    raw.read(MDNS_SERVICE_CTX(work)->rd.buf, &ip, 4); // network order already, as the stack keeps it
+    if (!rr_put(MDNS_SERVICE_CTX(work)->tx.buf, MDNS_SERVICE_CTX(work)->tx.cap, n,
+                mdns_str(MDNS_SERVICE_CTX(work)->fqdn), PROTOCORE_MDNS_T_A, PROTOCORE_MDNS_C_FLUSH,
+                PROTOCORE_MDNS_TTL_HOST, MDNS_SERVICE_CTX(work)->rd.buf, 4))
     {
         return 0;
     }
@@ -283,26 +347,27 @@ static uint16_t put_a(size_t *n)
 }
 
 // SRV: priority, weight, port, then the target host name (RFC 2782).
-static uint16_t put_srv(const MdnsSvc *s, size_t *n)
+static uint16_t put_srv(uint8_t *restrict work, const MdnsSvc *s, size_t *n)
 {
-    uint8_t *rd = s_mdns.rd.buf;
+    uint8_t *rd = MDNS_SERVICE_CTX(work)->rd.buf;
     rd[0] = 0;
     rd[1] = 0;
     rd[2] = 0;
     rd[3] = 0;
     rd[4] = (uint8_t)(s->port >> 8);
     rd[5] = (uint8_t)s->port;
-    DnsWire.text.dotted = mdns_str(s_mdns.fqdn);
+    DnsWire.text.dotted = mdns_str(MDNS_SERVICE_CTX(work)->fqdn);
     DnsWire.text.out = rd + 6;
-    DnsWire.text.out_cap = s_mdns.rd.cap - 6;
+    DnsWire.text.out_cap = MDNS_SERVICE_CTX(work)->rd.cap - 6;
     DnsWire.encode(dns_wire_work);
     size_t w = DnsWire.n;
     if (w == 0)
     {
         return 0;
     }
-    if (!rr_put(s_mdns.tx.buf, s_mdns.tx.cap, n, mdns_str(s_mdns.inst_name), PROTOCORE_MDNS_T_SRV,
-                PROTOCORE_MDNS_C_FLUSH, PROTOCORE_MDNS_TTL_HOST, rd, 6 + w))
+    if (!rr_put(MDNS_SERVICE_CTX(work)->tx.buf, MDNS_SERVICE_CTX(work)->tx.cap, n,
+                mdns_str(MDNS_SERVICE_CTX(work)->inst_name), PROTOCORE_MDNS_T_SRV, PROTOCORE_MDNS_C_FLUSH,
+                PROTOCORE_MDNS_TTL_HOST, rd, 6 + w))
     {
         return 0;
     }
@@ -311,18 +376,19 @@ static uint16_t put_srv(const MdnsSvc *s, size_t *n)
 
 // TXT: the packed key=value strings, or one empty string when none were added - a DNS-SD TXT is
 // never zero-length (RFC 6763 sec 6.1).
-static uint16_t put_txt(size_t *n)
+static uint16_t put_txt(uint8_t *restrict work, size_t *n)
 {
-    const uint8_t *rd = s_mdns.txt.buf;
-    size_t rdlen = s_mdns.txt_len;
+    const uint8_t *rd = MDNS_SERVICE_CTX(work)->txt.buf;
+    size_t rdlen = MDNS_SERVICE_CTX(work)->txt_len;
     if (rdlen == 0)
     {
-        s_mdns.rd.buf[0] = 0;
-        rd = s_mdns.rd.buf;
+        MDNS_SERVICE_CTX(work)->rd.buf[0] = 0;
+        rd = MDNS_SERVICE_CTX(work)->rd.buf;
         rdlen = 1;
     }
-    if (!rr_put(s_mdns.tx.buf, s_mdns.tx.cap, n, mdns_str(s_mdns.inst_name), PROTOCORE_MDNS_T_TXT,
-                PROTOCORE_MDNS_C_FLUSH, PROTOCORE_MDNS_TTL_SVC, rd, rdlen))
+    if (!rr_put(MDNS_SERVICE_CTX(work)->tx.buf, MDNS_SERVICE_CTX(work)->tx.cap, n,
+                mdns_str(MDNS_SERVICE_CTX(work)->inst_name), PROTOCORE_MDNS_T_TXT, PROTOCORE_MDNS_C_FLUSH,
+                PROTOCORE_MDNS_TTL_SVC, rd, rdlen))
     {
         return 0;
     }
@@ -330,19 +396,19 @@ static uint16_t put_txt(size_t *n)
 }
 
 // A PTR whose rdata is one name.
-static uint16_t put_ptr(const char *owner, const char *target, size_t *n)
+static uint16_t put_ptr(uint8_t *restrict work, const char *owner, const char *target, size_t *n)
 {
     DnsWire.text.dotted = target;
-    DnsWire.text.out = s_mdns.rd.buf;
-    DnsWire.text.out_cap = s_mdns.rd.cap;
+    DnsWire.text.out = MDNS_SERVICE_CTX(work)->rd.buf;
+    DnsWire.text.out_cap = MDNS_SERVICE_CTX(work)->rd.cap;
     DnsWire.encode(dns_wire_work);
     size_t w = DnsWire.n;
     if (w == 0)
     {
         return 0;
     }
-    if (!rr_put(s_mdns.tx.buf, s_mdns.tx.cap, n, owner, PROTOCORE_MDNS_T_PTR, PROTOCORE_MDNS_C_IN,
-                PROTOCORE_MDNS_TTL_SVC, s_mdns.rd.buf, w))
+    if (!rr_put(MDNS_SERVICE_CTX(work)->tx.buf, MDNS_SERVICE_CTX(work)->tx.cap, n, owner, PROTOCORE_MDNS_T_PTR,
+                PROTOCORE_MDNS_C_IN, PROTOCORE_MDNS_TTL_SVC, MDNS_SERVICE_CTX(work)->rd.buf, w))
     {
         return 0;
     }
@@ -356,27 +422,29 @@ static proto_bool wants(uint16_t qtype, uint16_t want)
 }
 
 // Append every record this responder owns that answers @p qname / @p qtype, and report how many.
-static uint16_t answer_for(const char *qname, uint16_t qtype, size_t *n)
+static uint16_t answer_for(uint8_t *restrict work, const char *qname, uint16_t qtype, size_t *n)
 {
     uint16_t added = 0;
 
     DnsWire.cmp.a = qname;
-    DnsWire.cmp.b = mdns_str(s_mdns.fqdn);
+    DnsWire.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->fqdn);
     DnsWire.eq(dns_wire_work);
     if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_A))
     {
-        added += put_a(n);
+        added += put_a(work, n);
     }
 
     for (size_t i = 0; i < PROTOCORE_MDNS_MAX_SERVICES; i++)
     {
-        const MdnsSvc *s = mdns_svc(i);
+        const MdnsSvc *s = mdns_svc(work, i);
         if (!s->used)
         {
             continue;
         }
-        if (!name_of(mdns_str(s_mdns.svc_name), s_mdns.svc_name.cap, s->type, s->proto, NULL) ||
-            !name_of(mdns_str(s_mdns.inst_name), s_mdns.inst_name.cap, mdns_str(s_mdns.host), s->type, s->proto))
+        if (!name_of(mdns_str(MDNS_SERVICE_CTX(work)->svc_name), MDNS_SERVICE_CTX(work)->svc_name.cap, s->type,
+                     s->proto, NULL) ||
+            !name_of(mdns_str(MDNS_SERVICE_CTX(work)->inst_name), MDNS_SERVICE_CTX(work)->inst_name.cap,
+                     mdns_str(MDNS_SERVICE_CTX(work)->host), s->type, s->proto))
         {
             continue;
         }
@@ -386,27 +454,28 @@ static uint16_t answer_for(const char *qname, uint16_t qtype, size_t *n)
         DnsWire.eq(dns_wire_work);
         if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
-            added += put_ptr(PROTOCORE_MDNS_ENUM_NAME, mdns_str(s_mdns.svc_name), n);
+            added += put_ptr(work, PROTOCORE_MDNS_ENUM_NAME, mdns_str(MDNS_SERVICE_CTX(work)->svc_name), n);
         }
         DnsWire.cmp.a = qname;
-        DnsWire.cmp.b = mdns_str(s_mdns.svc_name);
+        DnsWire.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->svc_name);
         DnsWire.eq(dns_wire_work);
         if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
-            added += put_ptr(mdns_str(s_mdns.svc_name), mdns_str(s_mdns.inst_name), n);
+            added += put_ptr(work, mdns_str(MDNS_SERVICE_CTX(work)->svc_name),
+                             mdns_str(MDNS_SERVICE_CTX(work)->inst_name), n);
         }
         DnsWire.cmp.a = qname;
-        DnsWire.cmp.b = mdns_str(s_mdns.inst_name);
+        DnsWire.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->inst_name);
         DnsWire.eq(dns_wire_work);
         if (DnsWire.ok)
         {
             if (wants(qtype, PROTOCORE_MDNS_T_SRV))
             {
-                added += put_srv(s, n);
+                added += put_srv(work, s, n);
             }
             if (wants(qtype, PROTOCORE_MDNS_T_TXT))
             {
-                added += put_txt(n);
+                added += put_txt(work, n);
             }
         }
     }
@@ -417,9 +486,17 @@ static uint16_t answer_for(const char *qname, uint16_t qtype, size_t *n)
 // sender, so every resolver on the link updates its cache from it (RFC 6762 sec 6).
 static void mdns_udp_handler(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_mdns_service_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     (void)ctx;
     (void)peer;
-    if (!s_mdns.running || len < 12)
+    if (!MDNS_SERVICE_CTX(work)->running || len < 12)
     {
         return;
     }
@@ -434,7 +511,7 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
     }
 
     // The response header: no id to echo, no questions repeated, QR and AA set (RFC 6762 sec 18).
-    uint8_t *tx = s_mdns.tx.buf;
+    uint8_t *tx = MDNS_SERVICE_CTX(work)->tx.buf;
     for (size_t i = 0; i < 12; i++)
     {
         tx[i] = 0;
@@ -449,8 +526,8 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
         DnsWire.msg.pkt = data;
         DnsWire.msg.len = len;
         DnsWire.msg.off = off;
-        DnsWire.msg.out = mdns_str(s_mdns.qname);
-        DnsWire.msg.out_cap = s_mdns.qname.cap;
+        DnsWire.msg.out = mdns_str(MDNS_SERVICE_CTX(work)->qname);
+        DnsWire.msg.out_cap = MDNS_SERVICE_CTX(work)->qname.cap;
         DnsWire.msg.allow_ptr = PROTO_TRUE;
         DnsWire.decode(dns_wire_work);
         if (!DnsWire.ok)
@@ -464,7 +541,7 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
         }
         uint16_t qtype = (uint16_t)(((uint16_t)data[off] << 8) | data[off + 1]);
         off += 4;
-        an += answer_for(mdns_str(s_mdns.qname), qtype, &n);
+        an += answer_for(work, mdns_str(MDNS_SERVICE_CTX(work)->qname), qtype, &n);
     }
     if (an == 0)
     {
@@ -502,45 +579,65 @@ static proto_bool label_set(char *dst, size_t cap, const char *src)
     return PROTO_TRUE;
 }
 
-proto_bool protocore_mdns_add_service(const char *service_type, const char *proto, uint16_t port)
+static void mdns_service_add_service(uint8_t *restrict work)
 {
-    if (service_type == NULL || proto == NULL || !mdns_mem_bind())
+    if (!work)
     {
-        return PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    const char *service_type = MdnsService.add_service_args.service_type;
+    const char *proto = MdnsService.add_service_args.proto;
+    uint16_t port = MdnsService.add_service_args.port;
+
+    if (service_type == NULL || proto == NULL || !mdns_mem_bind(work))
+    {
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
     for (size_t i = 0; i < PROTOCORE_MDNS_MAX_SERVICES; i++)
     {
-        MdnsSvc *s = mdns_svc(i);
+        MdnsSvc *s = mdns_svc(work, i);
         if (s->used)
         {
             continue;
         }
         if (!label_set(s->type, sizeof s->type, service_type) || !label_set(s->proto, sizeof s->proto, proto))
         {
-            return PROTO_FALSE;
+            MdnsService.ok = PROTO_FALSE;
+            return;
         }
         s->port = port;
         s->used = PROTO_TRUE;
-        return PROTO_TRUE;
+        MdnsService.ok = PROTO_TRUE;
+        return;
     }
-    return PROTO_FALSE; // the table is full
+    MdnsService.ok = PROTO_FALSE; // the table is full
 }
 
-proto_bool protocore_mdns_txt(const char *key, const char *value)
+static void mdns_service_txt(uint8_t *restrict work)
 {
-    if (key == NULL || value == NULL || !mdns_mem_bind())
+    if (!work)
     {
-        return PROTO_FALSE;
+        return; // the pool was short of this module's borrow
     }
-    uint8_t *txt = s_mdns.txt.buf;
-    size_t kl = str.len(key, s_mdns.txt.cap);
-    size_t vl = str.len(value, s_mdns.txt.cap);
+    const char *key = MdnsService.txt_args.key;
+    const char *value = MdnsService.txt_args.value;
+
+    if (key == NULL || value == NULL || !mdns_mem_bind(work))
+    {
+        MdnsService.ok = PROTO_FALSE;
+        return;
+    }
+    uint8_t *txt = MDNS_SERVICE_CTX(work)->txt.buf;
+    size_t kl = str.len(key, MDNS_SERVICE_CTX(work)->txt.cap);
+    size_t vl = str.len(value, MDNS_SERVICE_CTX(work)->txt.cap);
     size_t entry = kl + 1 + vl; // "key=value"
-    if (kl == 0 || entry > 255 || s_mdns.txt_len + 1 + entry > s_mdns.txt.cap)
+    if (kl == 0 || entry > 255 || MDNS_SERVICE_CTX(work)->txt_len + 1 + entry > MDNS_SERVICE_CTX(work)->txt.cap)
     {
-        return PROTO_FALSE;
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
-    size_t n = s_mdns.txt_len;
+    size_t n = MDNS_SERVICE_CTX(work)->txt_len;
     txt[n] = (uint8_t)entry; // each string carries its own length (RFC 6763 sec 6.1)
     n++;
     raw.read(txt + n, key, kl);
@@ -549,42 +646,66 @@ proto_bool protocore_mdns_txt(const char *key, const char *value)
     n++;
     raw.read(txt + n, value, vl);
     n += vl;
-    s_mdns.txt_len = n;
-    return PROTO_TRUE;
+    MDNS_SERVICE_CTX(work)->txt_len = n;
+    MdnsService.ok = PROTO_TRUE;
 }
 
-proto_bool protocore_mdns_begin(const char *hostname, uint16_t http_port)
+static void mdns_service_begin(uint8_t *restrict work)
 {
-    if (hostname == NULL || hostname[0] == '\0' || !mdns_mem_bind())
+    if (!work)
     {
-        return PROTO_FALSE;
+        return; // the pool was short of this module's borrow
     }
-    if (!label_set(mdns_str(s_mdns.host), s_mdns.host.cap, hostname))
+    const char *hostname = MdnsService.begin_args.hostname;
+    uint16_t http_port = MdnsService.begin_args.http_port;
+
+    if (hostname == NULL || hostname[0] == '\0' || !mdns_mem_bind(work))
     {
-        return PROTO_FALSE;
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
-    if (!name_of(mdns_str(s_mdns.fqdn), s_mdns.fqdn.cap, mdns_str(s_mdns.host), NULL, NULL))
+    if (!label_set(mdns_str(MDNS_SERVICE_CTX(work)->host), MDNS_SERVICE_CTX(work)->host.cap, hostname))
     {
-        return PROTO_FALSE;
+        MdnsService.ok = PROTO_FALSE;
+        return;
+    }
+    if (!name_of(mdns_str(MDNS_SERVICE_CTX(work)->fqdn), MDNS_SERVICE_CTX(work)->fqdn.cap,
+                 mdns_str(MDNS_SERVICE_CTX(work)->host), NULL, NULL))
+    {
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
     for (size_t i = 0; i < PROTOCORE_MDNS_MAX_SERVICES; i++)
     {
-        mdns_svc(i)->used = PROTO_FALSE;
+        mdns_svc(work, i)->used = PROTO_FALSE;
     }
-    s_mdns.txt_len = 0;
-    if (!protocore_mdns_add_service("_http", "_tcp", http_port))
+    MDNS_SERVICE_CTX(work)->txt_len = 0;
+    MdnsService.add_service_args.service_type = "_http";
+    MdnsService.add_service_args.proto = "_tcp";
+    MdnsService.add_service_args.port = http_port;
+    mdns_service_add_service(work);
+    if (!MdnsService.ok)
     {
-        return PROTO_FALSE;
+        MdnsService.ok = PROTO_FALSE;
+        return;
     }
     UdpListener.port = PROTOCORE_MDNS_PORT;
     UdpListener.bind.handler = mdns_udp_handler;
     UdpListener.bind.handler_ctx = NULL;
     UdpListener.bind.group_ip = PROTOCORE_MDNS_GROUP;
     UdpListener.listen_multicast(protocore_udp_listener_span());
-    s_mdns.running = UdpListener.ok;
-    return s_mdns.running;
+    MDNS_SERVICE_CTX(work)->running = UdpListener.ok;
+    MdnsService.ok = MDNS_SERVICE_CTX(work)->running;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_MDNS
+
+MdnsServiceNs MdnsService = {
+    .begin = mdns_service_begin,
+    .txt = mdns_service_txt,
+    .add_service = mdns_service_add_service,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_MDNS

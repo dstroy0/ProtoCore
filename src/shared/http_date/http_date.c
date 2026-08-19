@@ -11,7 +11,7 @@
 
 #include "shared/http_date/http_date.h"
 
-#include "mmgr/membuild.h" // ::Sb: the builder each fixed-width field is appended through
+#include "mmgr/membuild/membuild.h" // ::Sb: the builder each fixed-width field is appended through
 
 static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
 

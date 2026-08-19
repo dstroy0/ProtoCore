@@ -12,8 +12,8 @@
 // reproduces the four RFC 8032 sec 7.1 vectors byte for byte, public key and signature both, which
 // pins the clamping, the deterministic nonce, the scalar reduction mod L, and the encoding.
 
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/asymmetric/ed25519.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
 #include <string.h>
 
 #include <unity.h>

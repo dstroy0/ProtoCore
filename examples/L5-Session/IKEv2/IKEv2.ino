@@ -26,9 +26,9 @@
 #define PROTOCORE_ENABLE_IKEV2 1
 
 #include "protocore.h" // library entry header (pulls in Arduino + sets the src/ include root)
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/udp/udp.h"
-#include "services/security/ikev2/ikev2.h"
+#include "services/security/ikev2/ikev2/ikev2.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

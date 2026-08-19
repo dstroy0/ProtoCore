@@ -39,7 +39,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -85,7 +85,7 @@ static void request(const char *range_hdr)
     }
     push_str(0, req);
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
 }
 
@@ -205,7 +205,7 @@ void test_head_with_range_no_body()
 {
     push_str(0, "HEAD /data HTTP/1.1\r\nRange: bytes=0-3\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "206 Partial Content"));
@@ -292,7 +292,7 @@ void test_serve_file_connection_gone()
     on_http("/gone", HTTP_GET, serve_data_conn_gone);
     push_str(0, "GET /gone HTTP/1.1\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     TEST_ASSERT_EQUAL_UINT(0, tcp_captured_len());
     TEST_ASSERT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -303,7 +303,7 @@ void test_unsatisfiable_range_416_carries_cors()
     set_cors("*");
     push_str(0, "GET /data HTTP/1.1\r\nHost: x\r\nRange: bytes=100-200\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     const char *out = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(out, "416 Range Not Satisfiable"));
@@ -312,29 +312,3 @@ void test_unsatisfiable_range_416_carries_cors()
     set_cors("");
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_unsatisfiable_range_416_carries_cors);
-    RUN_TEST(test_file_send_backpressure_resumes_across_polls);
-    RUN_TEST(test_file_send_write_fails_then_retries);
-    RUN_TEST(test_file_send_short_read_stops);
-    RUN_TEST(test_range_trailing_garbage_ignored);
-    RUN_TEST(test_range_start_after_end_unsatisfiable);
-    RUN_TEST(test_range_suffix_on_empty_file);
-    RUN_TEST(test_serve_file_connection_gone);
-    RUN_TEST(test_no_range_full_200);
-    RUN_TEST(test_range_prefix);
-    RUN_TEST(test_range_open_ended);
-    RUN_TEST(test_range_suffix);
-    RUN_TEST(test_range_single_byte);
-    RUN_TEST(test_range_clamped_to_eof);
-    RUN_TEST(test_range_unsatisfiable_416);
-    RUN_TEST(test_malformed_range_ignored);
-    RUN_TEST(test_range_overflow_start_unsatisfiable);
-    RUN_TEST(test_range_overflow_end_clamps);
-    RUN_TEST(test_range_suffix_zero_unsatisfiable);
-    RUN_TEST(test_multirange_falls_back_to_200);
-    RUN_TEST(test_head_with_range_no_body);
-    return UNITY_END();
-}

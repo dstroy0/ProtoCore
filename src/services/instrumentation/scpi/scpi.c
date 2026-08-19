@@ -7,9 +7,9 @@
  */
 
 #include "services/instrumentation/scpi/scpi.h"
-#include "mmgr/protoframe.h" // the one frame engine
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protoframe/protoframe.h" // the one frame engine
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 
 #if PROTOCORE_ENABLE_SCPI
 

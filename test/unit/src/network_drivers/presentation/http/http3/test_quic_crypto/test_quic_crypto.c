@@ -13,10 +13,10 @@
 // all have to be right at once. The AES and GCM primitives underneath are pinned to FIPS 197
 // Appendix C.1 and to Test Case 4 of the GCM specification.
 
-#include "crypto/aead/aes128gcm.h"
-#include "crypto/kdf/hkdf.h"
-#include "mmgr/secure.h"
-#include "network_drivers/presentation/http/http3/quic_crypto.h"
+#include "crypto/aead/aes128gcm/aes128gcm.h"
+#include "crypto/kdf/hkdf/hkdf.h"
+#include "mmgr/secure/secure.h"
+#include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
 #include <string.h>
 
 #include <unity.h>
@@ -80,7 +80,7 @@ static size_t hx(const char *s, uint8_t *buf, size_t cap)
 static uint8_t g_gcm_ws[PROTOCORE_WORK_AES128GCM] __attribute__((aligned(8)));
 static proto_bool g_gcm_live = PROTO_FALSE;
 
-static struct protocore_aes128gcm_key *gcm(const uint8_t *key)
+static uint8_t *gcm(const uint8_t *key)
 {
     if (g_gcm_live)
     {

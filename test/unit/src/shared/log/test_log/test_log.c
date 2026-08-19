@@ -15,8 +15,8 @@
 
 #include "shared/log/log.h"
 
-#include "mmgr/protoframe.h"
-#include "server/core/logbuf.h"
+#include "mmgr/protoframe/protoframe.h"
+#include "server/core/logbuf/logbuf.h"
 #include <string.h>
 
 #include <unity.h>

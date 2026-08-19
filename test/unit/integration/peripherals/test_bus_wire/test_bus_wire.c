@@ -6,7 +6,7 @@
 #include "server/peripherals/pca9685/pca9685.h"
 #include "server/peripherals/rtc/rtc.h"
 #include "server/peripherals/sht3x/sht3x.h"
-#include "server/peripherals/smbus.h"
+#include "server/peripherals/smbus/smbus.h"
 #include "server/peripherals/spi.h"
 #include <unity.h>
 
@@ -26,7 +26,7 @@ static void expect_tx(const uint8_t *want, size_t len, const char *what)
     TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, tx, len, what);
 }
 
-static void test_sht3x_read_wire(void)
+ void test_sht3x_read_wire(void)
 {
     uint8_t reply[6];
     reply[0] = 0x66;
@@ -61,7 +61,7 @@ static void test_sht3x_read_wire(void)
     TEST_ASSERT_EQUAL_INT32(Sht3x.milli, rh);
 }
 
-static void test_sht3x_bad_crc_rejected(void)
+ void test_sht3x_bad_crc_rejected(void)
 {
     uint8_t reply[6] = {0x66, 0x66, 0x00, 0x80, 0x00, 0x00};
     protocore_bus_host_preload(reply, sizeof(reply));
@@ -73,7 +73,7 @@ static void test_sht3x_bad_crc_rejected(void)
     TEST_ASSERT_FALSE(Sht3x.ok);
 }
 
-static void test_pca9685_set_pwm_wire(void)
+ void test_pca9685_set_pwm_wire(void)
 {
     Pca9685.set_pwm_args.channel = 3;
     Pca9685.set_pwm_args.on = 0;
@@ -85,7 +85,7 @@ static void test_pca9685_set_pwm_wire(void)
     expect_tx(want, sizeof(want), "pca9685 channel 3 write");
 }
 
-static void test_pca9685_servo_wire(void)
+ void test_pca9685_servo_wire(void)
 {
     Pca9685.set_servo_us_args.channel = 0;
     Pca9685.set_servo_us_args.microseconds = 1500;
@@ -99,7 +99,7 @@ static void test_pca9685_servo_wire(void)
     expect_tx(want, sizeof(want), "pca9685 servo write");
 }
 
-static void test_ina219_wire_is_big_endian(void)
+ void test_ina219_wire_is_big_endian(void)
 {
     Ina219.begin_args.addr = 0x40;
     Ina219.begin_args.current_lsb_ua = 100;
@@ -124,7 +124,7 @@ static void test_ina219_wire_is_big_endian(void)
     }
 }
 
-static void test_rtc_read_wire(void)
+ void test_rtc_read_wire(void)
 {
     const uint8_t regs[7] = {0x05, 0x04, 0x03, 0x02, 0x02, 0x01, 0x24};
     protocore_bus_host_preload(regs, sizeof(regs));
@@ -143,7 +143,7 @@ static void test_rtc_read_wire(void)
     TEST_ASSERT_EQUAL_UINT32(expect, epoch);
 }
 
-static void test_rtc_set_wire(void)
+ void test_rtc_set_wire(void)
 {
     uint32_t epoch = 1700000000u;
     Rtc.set_epoch_args.epoch = epoch;
@@ -158,7 +158,7 @@ static void test_rtc_set_wire(void)
     expect_tx(want, sizeof(want), "rtc set");
 }
 
-static void test_smbus_pec_on_the_wire(void)
+ void test_smbus_pec_on_the_wire(void)
 {
     Smbus.set_pec_args.on = PROTO_TRUE;
     Smbus.set_pec(protocore_smbus_span());
@@ -179,7 +179,7 @@ static void test_smbus_pec_on_the_wire(void)
     Smbus.set_pec(protocore_smbus_span());
 }
 
-static void test_smbus_without_pec(void)
+ void test_smbus_without_pec(void)
 {
     Smbus.set_pec_args.on = PROTO_FALSE;
     Smbus.set_pec(protocore_smbus_span());
@@ -192,7 +192,7 @@ static void test_smbus_without_pec(void)
     expect_tx(want, sizeof(want), "smbus write byte without pec");
 }
 
-static void test_smbus_word_is_little_endian(void)
+ void test_smbus_word_is_little_endian(void)
 {
     Smbus.write_word_args.addr = 0x2A;
     Smbus.write_word_args.cmd = 0x20;
@@ -203,7 +203,7 @@ static void test_smbus_word_is_little_endian(void)
     expect_tx(want, sizeof(want), "smbus write word");
 }
 
-static void test_smbus_read_word_wire(void)
+ void test_smbus_read_word_wire(void)
 {
     const uint8_t reply[2] = {0xEF, 0xBE};
     protocore_bus_host_preload(reply, sizeof(reply));
@@ -218,7 +218,7 @@ static void test_smbus_read_word_wire(void)
     expect_tx(want, sizeof(want), "smbus read word command");
 }
 
-static void test_i2c_scan_probes_every_address(void)
+ void test_i2c_scan_probes_every_address(void)
 {
     uint8_t found[8];
     TEST_ASSERT_EQUAL_size_t(0, protocore_i2c_scan(found, sizeof(found)));
@@ -230,7 +230,7 @@ static void test_i2c_scan_probes_every_address(void)
     TEST_ASSERT_EQUAL_UINT16(PROTOCORE_I2C_SCAN_LAST, protocore_bus_host_txn_at(want - 1)->target);
 }
 
-static void test_transfers_carry_their_address(void)
+ void test_transfers_carry_their_address(void)
 {
     Pca9685.set_pwm_args.channel = 0;
     Pca9685.set_pwm_args.on = 0;
@@ -249,7 +249,7 @@ static void test_transfers_carry_their_address(void)
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_BUS_HOST_I2C, protocore_bus_host_txn_at(0)->kind);
 }
 
-static void test_rtc_read_is_one_transaction(void)
+ void test_rtc_read_is_one_transaction(void)
 {
     const uint8_t regs[7] = {0x05, 0x04, 0x03, 0x02, 0x02, 0x01, 0x24};
     protocore_bus_host_preload(regs, sizeof(regs));
@@ -262,7 +262,7 @@ static void test_rtc_read_is_one_transaction(void)
     TEST_ASSERT_EQUAL_UINT32(7, t->rlen);
 }
 
-static void test_pca9685_begin_settles_the_oscillator(void)
+ void test_pca9685_begin_settles_the_oscillator(void)
 {
     Pca9685.begin_args.addr = PROTOCORE_PCA9685_I2C_ADDR;
     Pca9685.begin_args.freq_hz = PROTOCORE_PCA9685_FREQ;
@@ -274,7 +274,7 @@ static void test_pca9685_begin_settles_the_oscillator(void)
     TEST_ASSERT_GREATER_OR_EQUAL_UINT32_MESSAGE(500, gap, "oscillator settle was skipped");
 }
 
-static void test_failure_propagates(void)
+ void test_failure_propagates(void)
 {
     protocore_bus_host_fail_next(1);
     int32_t mv = 0;
@@ -283,7 +283,7 @@ static void test_failure_propagates(void)
     TEST_ASSERT_FALSE(Ina219.ok);
 }
 
-static void test_spi_wire(void)
+ void test_spi_wire(void)
 {
     TEST_ASSERT_TRUE(protocore_spi_begin());
     const uint8_t out[3] = {0xDE, 0xAD, 0xBE};
@@ -299,25 +299,3 @@ static void test_spi_wire(void)
     TEST_ASSERT_EQUAL_HEX8(0x00, in[2]);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_sht3x_read_wire);
-    RUN_TEST(test_sht3x_bad_crc_rejected);
-    RUN_TEST(test_pca9685_set_pwm_wire);
-    RUN_TEST(test_pca9685_servo_wire);
-    RUN_TEST(test_ina219_wire_is_big_endian);
-    RUN_TEST(test_rtc_read_wire);
-    RUN_TEST(test_rtc_set_wire);
-    RUN_TEST(test_smbus_pec_on_the_wire);
-    RUN_TEST(test_smbus_without_pec);
-    RUN_TEST(test_smbus_word_is_little_endian);
-    RUN_TEST(test_smbus_read_word_wire);
-    RUN_TEST(test_i2c_scan_probes_every_address);
-    RUN_TEST(test_transfers_carry_their_address);
-    RUN_TEST(test_rtc_read_is_one_transaction);
-    RUN_TEST(test_pca9685_begin_settles_the_oscillator);
-    RUN_TEST(test_failure_propagates);
-    RUN_TEST(test_spi_wire);
-    return UNITY_END();
-}

@@ -1,0 +1,315 @@
+// ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/**
+ * @file gpio_map.c
+ * @brief GPIO pin-mapper direction names, JSON serializer, control parser, and
+ *        the digital read / write helpers.
+ *
+ * The serializer and the `pin=&level=` parser are pure (host-tested); the digital
+ * I/O goes through the board profile's protocore_platform_gpio_* where a pin seam exists
+ * and is a no-op where there is none. No server dependency lives here.
+ */
+
+#include "server/signaling/gpio_map/gpio_map.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
+#include "server/clock/clock.h" // protocore_millis()
+
+#if PROTOCORE_ENABLE_GPIO_MAP
+
+#include "mmgr/protoframe/protoframe.h"
+
+// The wire name for a direction, so the serializer names one without going through the handle it is
+// itself being called on.
+static const char *dir_name_of(protocore_gpio_dir dir)
+{
+    switch (dir)
+    {
+    case PROTOCORE_GPIO_DIR_IN:
+        return "in";
+    case PROTOCORE_GPIO_DIR_IN_PULLUP:
+        return "in_pullup";
+    case PROTOCORE_GPIO_DIR_IN_PULLDOWN:
+        return "in_pulldown";
+    case PROTOCORE_GPIO_DIR_OUT:
+        return "out";
+    default:
+        return "in";
+    }
+}
+
+static void gpio_dir_name(uint8_t *restrict work)
+{
+    (void)work;
+    GpioMap.text = dir_name_of(GpioMap.args.dir);
+}
+
+// The document is three frames: the object that opens the array, one object per pin, and the
+// close. The separating comma is the pin frame's first field so a pin is one append either way.
+// The item index selects it; !!i is 0 or 1, so the separator is a load rather than a branch.
+static const char *const PROTOCORE_JSON_SEP[2] = {"", ","};
+
+static const protocore_field GPIO_OPEN[] = {{PROTOCORE_FK_LIT, 0, 9, "{\"pins\":["}, PROTOCORE_END};
+static const protocore_field GPIO_PIN[] = {
+    PROTOCORE_STR,                           // "," from the second pin on
+    {PROTOCORE_FK_LIT, 0, 7, "{\"pin\":"},   //
+    PROTOCORE_U32,                           // pin number
+    {PROTOCORE_FK_LIT, 0, 9, ",\"label\":"}, //
+    PROTOCORE_JSON,                          // label, quoted and escaped
+    {PROTOCORE_FK_LIT, 0, 7, ",\"dir\":"},   //
+    PROTOCORE_JSON,                          // direction name
+    {PROTOCORE_FK_LIT, 0, 9, ",\"level\":"}, //
+    PROTOCORE_U32,                           // 0 or 1
+    {PROTOCORE_FK_LIT, 0, 1, "}"},           //
+    PROTOCORE_END,
+};
+static const protocore_field GPIO_CLOSE[] = {{PROTOCORE_FK_LIT, 0, 2, "]}"}, PROTOCORE_END};
+
+static void gpio_json(uint8_t *restrict work)
+{
+    (void)work;
+    const protocore_gpio_pin *pins = GpioMap.args.pins;
+    const uint8_t count = GpioMap.args.count;
+    char *out = GpioMap.out_args.out;
+    const uint32_t cap = GpioMap.out_args.cap;
+
+    if (!out || cap == 0)
+    {
+        GpioMap.n = -1;
+        return;
+    }
+    out[0] = '\0';
+    if (!pins)
+    {
+        GpioMap.n = -1;
+        return;
+    }
+    if (frame.append(out, cap, GPIO_OPEN, NULL, 0) == 0)
+    {
+        GpioMap.n = -1;
+        return;
+    }
+    for (uint8_t i = 0; i < count; i++)
+    {
+        const protocore_gpio_pin *p = &pins[i];
+        if (frame.append(out, cap, GPIO_PIN,
+                         (const protocore_fval[]){PROTOCORE_VSTR(PROTOCORE_JSON_SEP[!!i]),
+                                                  PROTOCORE_VU32((uint32_t)p->pin), PROTOCORE_VJSON(p->label),
+                                                  PROTOCORE_VJSON(dir_name_of(p->dir)),
+                                                  PROTOCORE_VU32((uint32_t)(!!p->level))},
+                         5) == 0)
+        {
+            GpioMap.n = -1;
+            return;
+        }
+    }
+    // A document always carries its two braces, so nothing written is the close not fitting.
+    const int32_t written = (int32_t)frame.append(out, cap, GPIO_CLOSE, NULL, 0);
+    GpioMap.n = (written == 0) ? -1 : written;
+}
+
+// Read the decimal integer that follows "name=" in a form-encoded body. Returns
+// false if the field is absent or has no digits.
+static proto_bool form_field_uint(const char *body, size_t len, const char *name, unsigned *out)
+{
+    size_t nlen = str.len(name, len + 1);
+    for (size_t i = 0; i + nlen + 1 <= len; i++)
+    {
+        proto_bool at_field = (i == 0) || body[i - 1] == '&';
+        if (!at_field || mem.cmp(body + i, name, nlen) != 0 || body[i + nlen] != '=')
+        {
+            continue;
+        }
+        size_t j = i + nlen + 1;
+        if (j >= len || body[j] < '0' || body[j] > '9')
+        {
+            return PROTO_FALSE;
+        }
+        unsigned v = 0;
+        for (; j < len && body[j] >= '0' && body[j] <= '9'; j++)
+        {
+            const unsigned d = (unsigned)(body[j] - '0');
+            // The bound is checked before the multiply, so the accumulator never wraps.
+            const unsigned uint_max = (unsigned)-1;
+            if (v > (uint_max - d) / 10u)
+            {
+                return PROTO_FALSE;
+            }
+            v = v * 10u + d;
+        }
+        *out = v;
+        return PROTO_TRUE;
+    }
+    return PROTO_FALSE;
+}
+
+static void gpio_parse_set(uint8_t *restrict work)
+{
+    (void)work;
+    const char *body = GpioMap.parse_args.body;
+    const size_t len = GpioMap.parse_args.len;
+    uint8_t *pin = GpioMap.parse_args.pin_out;
+    uint8_t *level = GpioMap.parse_args.level_out;
+
+    if (!body || !pin || !level)
+    {
+        GpioMap.ok = PROTO_FALSE;
+        return;
+    }
+    unsigned p;
+    unsigned l;
+    if (!form_field_uint(body, len, "pin", &p) || !form_field_uint(body, len, "level", &l))
+    {
+        GpioMap.ok = PROTO_FALSE;
+        return;
+    }
+    // The field is a uint8_t, so a larger value has no pin to name. Narrowing it would deliver a
+    // different pin, one the table may well declare an output.
+    if (p > 0xFFu)
+    {
+        GpioMap.ok = PROTO_FALSE;
+        return;
+    }
+    *pin = (uint8_t)p;
+    *level = l ? 1 : 0;
+    GpioMap.ok = PROTO_TRUE;
+}
+
+static void gpio_is_output(uint8_t *restrict work)
+{
+    (void)work;
+    const protocore_gpio_pin *pins = GpioMap.args.pins;
+    const uint8_t count = GpioMap.args.count;
+    const uint8_t pin = GpioMap.args.pin;
+
+    if (!pins)
+    {
+        GpioMap.ok = PROTO_FALSE;
+        return;
+    }
+    for (uint8_t i = 0; i < count; i++)
+    {
+        if (pins[i].pin == pin && pins[i].dir == PROTOCORE_GPIO_DIR_OUT)
+        {
+            GpioMap.ok = PROTO_TRUE;
+            return;
+        }
+    }
+    GpioMap.ok = PROTO_FALSE;
+}
+
+#if PROTOCORE_HAS_GPIO
+
+static void gpio_begin_pins(uint8_t *restrict work)
+{
+    (void)work;
+    const protocore_gpio_pin *pins = GpioMap.args.pins;
+    const uint8_t count = GpioMap.args.count;
+
+    if (!pins)
+    {
+        return;
+    }
+    for (uint8_t i = 0; i < count; i++)
+    {
+        // The case label is this enum; the argument is the board profile's own pin-mode number.
+        switch (pins[i].dir)
+        {
+        case PROTOCORE_GPIO_DIR_OUT:
+            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_OUT);
+            break;
+        case PROTOCORE_GPIO_DIR_IN_PULLUP:
+            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_IN_PULLUP);
+            break;
+        case PROTOCORE_GPIO_DIR_IN_PULLDOWN:
+            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_IN_PULLDOWN);
+            break;
+        default:
+            protocore_platform_gpio_mode((uint8_t)(pins[i].pin), PROTOCORE_GPIO_IN);
+            break;
+        }
+    }
+}
+
+static void gpio_sample(uint8_t *restrict work)
+{
+    (void)work;
+    protocore_gpio_pin *pins = GpioMap.args.pins_rw;
+    const uint8_t count = GpioMap.args.count;
+
+    if (!pins)
+    {
+        return;
+    }
+    for (uint8_t i = 0; i < count; i++)
+    {
+        pins[i].level = (uint8_t)(protocore_platform_gpio_read((uint8_t)(pins[i].pin)) ? 1 : 0);
+    }
+}
+
+// level indexes this; !!level is 0 or 1, so the selection is a load rather than a branch.
+static const uint8_t PROTOCORE_GPIO_LEVEL[2] = {PROTOCORE_GPIO_LOW, PROTOCORE_GPIO_HIGH};
+
+static void gpio_write(uint8_t *restrict work)
+{
+    (void)work;
+    const uint8_t pin = GpioMap.args.pin;
+    const uint8_t level = GpioMap.args.level;
+
+    protocore_platform_gpio_write((uint8_t)(pin), PROTOCORE_GPIO_LEVEL[!!level]);
+}
+
+#else // no pin seam
+
+static void gpio_begin_pins(uint8_t *restrict work)
+{
+    (void)work;
+    const protocore_gpio_pin *pins = GpioMap.args.pins;
+    const uint8_t count = GpioMap.args.count;
+
+    (void)pins;
+    (void)count;
+}
+
+static void gpio_sample(uint8_t *restrict work)
+{
+    (void)work;
+    protocore_gpio_pin *pins = GpioMap.args.pins_rw;
+    const uint8_t count = GpioMap.args.count;
+
+    (void)pins;
+    (void)count;
+}
+
+static void gpio_write(uint8_t *restrict work)
+{
+    (void)work;
+    const uint8_t pin = GpioMap.args.pin;
+    const uint8_t level = GpioMap.args.level;
+
+    (void)pin;
+    (void)level;
+}
+
+#endif // PROTOCORE_HAS_GPIO
+
+// The route installer lives in gpio_map_routes.c, the arm that has an HTTP surface to install on;
+// it is bound here so the whole surface is one initializer rather than a runtime install. Weak, so
+// the pin core links on its own - the serializer and the parser are host-tested without the server,
+// and gpio_map_routes.c overrides this the moment it is in the build.
+__attribute__((weak)) void protocore_gpio_route_begin(uint8_t *restrict work)
+{
+}
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+GpioMapNs GpioMap = {.begin = protocore_gpio_route_begin,
+                     .dir_name = gpio_dir_name,
+                     .json = gpio_json,
+                     .parse_set = gpio_parse_set,
+                     .is_output = gpio_is_output,
+                     .begin_pins = gpio_begin_pins,
+                     .sample = gpio_sample,
+                     .write = gpio_write};
+
+#endif // PROTOCORE_ENABLE_GPIO_MAP

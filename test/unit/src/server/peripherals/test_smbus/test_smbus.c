@@ -18,7 +18,7 @@
 // driver that computed the same wrong thing; the slave cannot, because it folds in the address
 // octets itself and refuses the message when they do not match.
 
-#include "server/peripherals/smbus.h"
+#include "server/peripherals/smbus/smbus.h"
 #include "shared/crc/crc.h"
 
 #include "devices/smbus_device.h"

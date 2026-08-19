@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_NTS
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "network_drivers/application/nts/nts.h"
 
 PROTOCORE_BEGIN_DECLS

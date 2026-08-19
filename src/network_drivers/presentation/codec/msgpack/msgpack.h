@@ -32,7 +32,7 @@
 
 #if PROTOCORE_ENABLE_MSGPACK
 
-#include "mmgr/span.h" // protocore_span / protocore_cspan - the region, bound with span.from()
+#include "mmgr/span/span.h" // protocore_span / protocore_cspan - the region, bound with span.from()
 #include "network_drivers/presentation/codec/codec.h" // protocore_codec_type - one item vocabulary
 
 PROTOCORE_BEGIN_DECLS

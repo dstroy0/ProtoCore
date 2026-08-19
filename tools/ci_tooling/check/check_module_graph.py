@@ -45,14 +45,16 @@ def main():
         )
         rc = 1
 
-    text = gen_modules.render(mods)
-    cur = gen_modules.read(gen_modules.OUT) if os.path.isfile(gen_modules.OUT) else ""
-    if cur != text:
-        print("check_module_graph: src/CMakeLists.txt is stale - run `python tools/harness.py build modules`")
+    files = gen_modules.render_tree(mods)
+    stale = [p for p, t in files.items() if (gen_modules.read(p) if os.path.isfile(p) else "") != t]
+    if stale:
+        print("check_module_graph: %d CMakeLists.txt stale - run `python tools/harness.py build modules`" % len(stale))
+        for p in sorted(stale)[:8]:
+            print("   " + gen_modules.rel(p))
         rc = 1
 
     if rc == 0:
-        print("check_module_graph: OK - %d modules, no cycles, src/CMakeLists.txt current" % len(mods))
+        print("check_module_graph: OK - %d modules, no cycles, %d CMakeLists.txt current" % (len(mods), len(files)))
     return rc
 
 

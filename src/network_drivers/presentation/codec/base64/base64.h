@@ -21,39 +21,96 @@
 #ifndef PROTOCORE_BASE64_H
 #define PROTOCORE_BASE64_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-#include "protocore_config.h" // PROTOCORE_BEGIN_DECLS: the .cpp benches and sketches include this header
+#if PROTOCORE_ENABLE_BASE64
 
 PROTOCORE_BEGIN_DECLS
 
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
+/** @brief What encode takes: src, src_len, dst. */
+typedef struct
+{
+    const uint8_t *src;
+    size_t src_len;
+    char *dst;
+} Base64EncodeArgs;
+
+/** @brief What decode takes: src, dst, dst_cap. */
+typedef struct
+{
+    const char *src;
+    uint8_t *dst;
+    size_t dst_cap;
+} Base64DecodeArgs;
+
+/** @brief What url_encode takes: src, src_len, dst. */
+typedef struct
+{
+    const uint8_t *src;
+    size_t src_len;
+    char *dst;
+} Base64UrlEncodeArgs;
+
+/** @brief What url_decode takes: src, src_len, dst, dst_cap. */
+typedef struct
+{
+    const char *src;
+    size_t src_len;
+    uint8_t *dst;
+    size_t dst_cap;
+} Base64UrlDecodeArgs;
+
 /**
- * @brief The two alphabets, each in both directions.
+ * @brief Base64 encoder/decoder.
  *
- * @var Base64Ns::encode      write @p src_len bytes as NUL-terminated base64; @p dst holds at least
- *                            `((src_len + 2) / 3) * 4 + 1` bytes
- * @var Base64Ns::decode      read a NUL-terminated base64 string into at most @p dst_cap bytes; the
- *                            count written, or 0 on an invalid character or an output past the cap.
- *                            A caller that terminates afterward passes one less than the buffer size
+ * A caller sets the members a call takes, invokes it through ::Base64 with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Base64.encode_args.src = ...;
+ *   Base64.encode_args.src_len = ...;
+ *   Base64.encode_args.dst = ...;
+ *   Base64.encode(work);
+ *
+ * @var Base64Ns::encode_args  what encode takes: src, src_len, dst
+ * @var Base64Ns::decode_args  what decode takes: src, dst, dst_cap
+ * @var Base64Ns::url_encode_args  what url_encode takes: src, src_len, dst
+ * @var Base64Ns::url_decode_args  what url_decode takes: src, src_len, dst, dst_cap
+ * @var Base64Ns::ok  a call's true/false outcome
+ * @var Base64Ns::n  the count a call reports
+ * @var Base64Ns::encode  write src_len bytes as NUL-terminated base64; dst holds at least
+ * @var Base64Ns::decode  read a NUL-terminated base64 string into at most dst_cap bytes; the
  * @var Base64Ns::url_encode  the same encode in the '-' '_' alphabet with no '=' padding
- *                            (RFC 4648 sec 5); the character count written, never longer than encode's
- * @var Base64Ns::url_decode  read @p src_len base64url characters, stopping at an '='. Strict: the
- *                            '+' '/' characters are refused, so a JWS segment (RFC 7515) decodes as
- *                            base64url alone and never as a mixed alphabet. Streaming, so the final
- *                            group may be 2 or 3 characters. Bounded by @p dst_cap like decode
+ * @var Base64Ns::url_decode  read src_len base64url characters, stopping at an '='. Strict: the
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
 typedef struct
 {
-    void (*encode)(const uint8_t *src, size_t src_len, char *dst);
-    size_t (*decode)(const char *src, uint8_t *dst, size_t dst_cap);
-    size_t (*url_encode)(const uint8_t *src, size_t src_len, char *dst);
-    size_t (*url_decode)(const char *src, size_t src_len, uint8_t *dst, size_t dst_cap);
+    Base64EncodeArgs encode_args;
+    Base64DecodeArgs decode_args;
+    Base64UrlEncodeArgs url_encode_args;
+    Base64UrlDecodeArgs url_decode_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const encode)(uint8_t *restrict work);
+    void (*const decode)(uint8_t *restrict work);
+    void (*const url_encode)(uint8_t *restrict work);
+    void (*const url_decode)(uint8_t *restrict work);
 } Base64Ns;
 
 /** @brief The one symbol this module exports. */
-extern const Base64Ns Base64;
+extern Base64Ns Base64;
 
 PROTOCORE_END_DECLS
 
-#endif
+#endif // PROTOCORE_ENABLE_BASE64
+
+#endif // PROTOCORE_BASE64_H

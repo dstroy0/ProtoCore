@@ -316,7 +316,7 @@ void test_http_conn_open_releases_stale_sse_binding()
     sse_alloc(0, "/events");
     TEST_ASSERT_NOT_NULL(sse_find(0));
     HttpConn.slot = 0;
-    HttpConn.conn_open(HttpConn.internal);
+    HttpConn.conn_open(protocore_http_conn_span());
     TEST_ASSERT_NULL(sse_find(0));
 }
 
@@ -325,7 +325,7 @@ void test_http_conn_open_leaves_other_slot_sse_binding()
     sse_alloc(0, "/events");
     sse_alloc(1, "/metrics");
     HttpConn.slot = 0;
-    HttpConn.conn_open(HttpConn.internal);
+    HttpConn.conn_open(protocore_http_conn_span());
     TEST_ASSERT_NULL(sse_find(0));
     TEST_ASSERT_NOT_NULL(sse_find(1));
 }

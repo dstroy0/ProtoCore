@@ -13,7 +13,7 @@
 // there reads back a line that was already overwritten, so a /logs panel shows the failure that
 // preceded the one being investigated.
 
-#include "server/core/logbuf.h"
+#include "server/core/logbuf/logbuf.h"
 #include <string.h>
 
 #include <unity.h>

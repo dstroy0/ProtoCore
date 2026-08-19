@@ -18,11 +18,11 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 #if PROTOCORE_ENABLE_CSRF
 
 #include "crypto/ct_eq.h" // protocore_ct_eq: the constant-time signature compare
-#include "crypto/mac/hmac_sha256.h"
-#include "mmgr/protoframe.h" // the one frame engine
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str: the bounded-run walks
-#include "mmgr/secure.h"   // the persistent end the secret is taken from
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"
+#include "mmgr/protoframe/protoframe.h" // the one frame engine
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
+#include "mmgr/secure/secure.h"   // the persistent end the secret is taken from
 #include "server/security/csrf/csrf.h"
 #include "shared/hex/hex.h"
 

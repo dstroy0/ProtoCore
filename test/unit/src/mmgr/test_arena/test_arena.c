@@ -14,7 +14,7 @@
 // in full. That is only sound if the borrow owns every byte up to the next PROTOCORE_ARENA_ALIGN
 // boundary. The case asserts exactly that, from both ends.
 
-#include "mmgr/arena.h"
+#include "mmgr/arena/arena.h"
 #include <string.h>
 
 #include <unity.h>

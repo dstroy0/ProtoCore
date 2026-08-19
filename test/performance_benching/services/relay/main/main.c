@@ -8,7 +8,7 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/relay -t upload --upload-port COM7
 #include "device_bench.h"
-#include "server/net/relay/relay.h"
+#include "server/net/relay/relay/relay.h"
 
 #include <stdbool.h>
 #include <stddef.h>

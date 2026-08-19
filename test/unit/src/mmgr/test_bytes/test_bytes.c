@@ -12,7 +12,7 @@
 // wrong turns a shared secret into a value shifted by one byte, which fails as a MAC mismatch far
 // from here.
 
-#include "mmgr/bytes.h"
+#include "mmgr/bytes/bytes.h"
 #include <string.h>
 
 #include <unity.h>

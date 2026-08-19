@@ -14,7 +14,7 @@
 // is not driven here. What is driven is everything that happens before the first send, and every
 // path that returns without one.
 
-#include "network_drivers/session/scp/ssh_scp.c"
+#include "network_drivers/session/scp/ssh_scp/ssh_scp.c"
 
 #include <string.h>
 
@@ -63,7 +63,7 @@ void test_the_span_is_taken_once(void)
 void test_begin_refuses_a_null_borrow(void)
 {
     SshConnection.scp_open_cb = NULL;
-    SshConnection.set_scp_open_cb(SshConnection.internal);
+    SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
     SshScp.begin(NULL);
     TEST_ASSERT_NULL(SshConnection.scp_open_cb);
 }
@@ -106,7 +106,7 @@ void test_begin_registers_the_channel_callbacks_once(void)
     TEST_ASSERT_TRUE(SSH_SCP_CTX(work)->registered);
 
     SshConnection.scp_open_cb = NULL;
-    SshConnection.set_scp_open_cb(SshConnection.internal);
+    SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
     SshScp.begin(work);
     TEST_ASSERT_NULL(SshConnection.scp_open_cb);
 }

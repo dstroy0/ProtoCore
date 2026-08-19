@@ -25,10 +25,10 @@
 #include "../protocol/protocol.h"    // ConnPool: the slots an accept claims
 #include "../tcp.h"                  // the aggregate the halves hang off
 #include "config/platform/platform.h" // the stack's queues, under our names
-#include "mmgr/plaintext.h"                               // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h"                               // the persistent end this module's state is taken from
 #include "network_drivers/tls/tls.h"                      // TLS handshake begin (self-stubbing)
 #include "server/clock/clock.h"                           // protocore_millis() pluggable monotonic clock
-#include "server/core/worker.h"                           // Workers.wake() - nudge the owning worker task
+#include "server/core/worker/worker.h"                           // Workers.wake() - nudge the owning worker task
 
 static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 

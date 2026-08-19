@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "server/net/relay/relay.h"
+#include "server/net/relay/relay/relay.h"
 #include <string.h>
 
 #include <unity.h>
@@ -421,20 +421,3 @@ void test_note_eof_with_backlog_pending()
     TEST_ASSERT_EQUAL_MEMORY(data, b.out, 20);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_bidirectional);
-    RUN_TEST(test_backpressure);
-    RUN_TEST(test_half_close_shutdown);
-    RUN_TEST(test_send_error);
-    RUN_TEST(test_one_way_idle_then_close);
-    RUN_TEST(test_note_eof_out_of_band);
-    RUN_TEST(test_zero_length_read_no_progress);
-    RUN_TEST(test_flush_send_error);
-    RUN_TEST(test_send_error_reverse_direction);
-    RUN_TEST(test_null_argument_guards);
-    RUN_TEST(test_shutdown_null_seam);
-    RUN_TEST(test_note_eof_with_backlog_pending);
-    return UNITY_END();
-}

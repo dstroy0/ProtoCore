@@ -1,12 +1,12 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/hash/md.h"
-#include "network_drivers/application/smb/ntlm.h"
-#include "network_drivers/application/smb/ntlmssp.h"
-#include "network_drivers/application/smb/smb2.h"
-#include "network_drivers/application/smb/smb_client.h"
-#include "network_drivers/application/smb/spnego.h"
+#include "crypto/hash/md/md.h"
+#include "network_drivers/application/smb/ntlm/ntlm.h"
+#include "network_drivers/application/smb/ntlmssp/ntlmssp.h"
+#include "network_drivers/application/smb/smb2/smb2.h"
+#include "network_drivers/application/smb/smb_client/smb_client.h"
+#include "network_drivers/application/smb/spnego/spnego.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -1822,84 +1822,3 @@ void test_open_encrypted_share_requires_client_force()
     }
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_open_close_success);
-    RUN_TEST(test_auth_failure);
-    RUN_TEST(test_bad_share);
-    RUN_TEST(test_create_not_found);
-    RUN_TEST(test_io_error);
-    RUN_TEST(test_arg_validation);
-    RUN_TEST(test_read_file);
-    RUN_TEST(test_read_past_eof);
-    RUN_TEST(test_write_file);
-    RUN_TEST(test_write_then_read_roundtrip);
-    RUN_TEST(test_negotiate_malformed);
-    RUN_TEST(test_negotiate_dropped);
-    RUN_TEST(test_session1_bad_header);
-    RUN_TEST(test_session1_wrong_status);
-    RUN_TEST(test_session1_bad_body);
-    RUN_TEST(test_session1_no_secbuf);
-    RUN_TEST(test_session1_bad_spnego);
-    RUN_TEST(test_session1_bad_ntlmssp);
-    RUN_TEST(test_session2_dropped);
-    RUN_TEST(test_session2_bad_header);
-    RUN_TEST(test_tree_dropped);
-    RUN_TEST(test_tree_bad_body);
-    RUN_TEST(test_create_dropped);
-    RUN_TEST(test_create_bad_body);
-    RUN_TEST(test_long_share_overflow);
-    RUN_TEST(test_long_path_overflow);
-    RUN_TEST(test_long_user_overflow);
-    RUN_TEST(test_challenge_ti_ntlmv2_overflow);
-    RUN_TEST(test_challenge_ti_authenticate_overflow);
-    RUN_TEST(test_challenge_ti_spnego_overflow);
-    RUN_TEST(test_av_eol_only);
-    RUN_TEST(test_av_skip_then_find);
-    RUN_TEST(test_av_truncated_timestamp);
-    RUN_TEST(test_read_arg);
-    RUN_TEST(test_read_send_io);
-    RUN_TEST(test_read_recv_io);
-    RUN_TEST(test_read_bad_header);
-    RUN_TEST(test_read_status_error);
-    RUN_TEST(test_read_bad_body);
-    RUN_TEST(test_read_data_too_long);
-    RUN_TEST(test_read_zero_data);
-    RUN_TEST(test_write_arg);
-    RUN_TEST(test_write_send_io);
-    RUN_TEST(test_write_recv_io);
-    RUN_TEST(test_write_recv_overflow);
-    RUN_TEST(test_write_bad_header);
-    RUN_TEST(test_write_status_error);
-    RUN_TEST(test_write_bad_body);
-    RUN_TEST(test_write_zero_count);
-    RUN_TEST(test_write_count_too_big);
-    RUN_TEST(test_close_arg);
-    RUN_TEST(test_close_send_io);
-    RUN_TEST(test_close_recv_overflow);
-    RUN_TEST(test_close_recv_zero_len);
-    RUN_TEST(test_close_recv_trunc_body);
-    RUN_TEST(test_close_bad_header);
-    RUN_TEST(test_close_status_error);
-    RUN_TEST(test_close_bad_body);
-    RUN_TEST(test_open_arg_remaining_nulls);
-    RUN_TEST(test_open_null_domain);
-    RUN_TEST(test_tree_bad_header);
-    RUN_TEST(test_create_bad_header);
-    RUN_TEST(test_read_write_null_seam);
-    RUN_TEST(test_read_recv_overflow);
-    RUN_TEST(test_read_eof_status);
-    RUN_TEST(test_write_no_extend);
-    RUN_TEST(test_close_bad_transport_prefix);
-    RUN_TEST(test_signed_session_roundtrip);
-    RUN_TEST(test_signed_response_tampered);
-    RUN_TEST(test_unsigned_session_when_not_required);
-    RUN_TEST(test_open_signed_311_roundtrip);
-    RUN_TEST(test_signed_311_response_tampered);
-    RUN_TEST(test_open_encrypted_311_roundtrip);
-    RUN_TEST(test_open_encrypted_all_ciphers);
-    RUN_TEST(test_open_encrypted_share_requires_client_force);
-    RUN_TEST(test_encrypted_response_tampered);
-    return UNITY_END();
-}

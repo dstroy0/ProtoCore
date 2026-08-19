@@ -10,7 +10,7 @@
 // pick+mark leave every one of n slots at exactly k, with an imbalance of zero. A selector that is
 // merely "usually fair" still wears one slot out first.
 
-#include "server/storage/wearlevel.h"
+#include "server/storage/wearlevel/wearlevel.h"
 
 #include <unity.h>
 

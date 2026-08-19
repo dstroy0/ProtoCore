@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_WIFI_SNIFFER
 
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
 #include "services/radio/wifi_sniffer/wifi_sniffer.h"
 #include "shared/pcap/pcap.h"
 

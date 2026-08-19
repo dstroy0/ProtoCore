@@ -8,7 +8,7 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/trace_capture -t upload --upload-port COM7
 #include "device_bench.h"
-#include "server/signaling/trace_capture.h"
+#include "server/signaling/trace_capture/trace_capture.h"
 
 #include <stdbool.h>
 #include <stddef.h>

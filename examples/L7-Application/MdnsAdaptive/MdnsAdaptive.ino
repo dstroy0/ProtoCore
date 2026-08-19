@@ -25,7 +25,7 @@
 //                            PROTOCORE_ENABLE_MDNS_ADAPTIVE=1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/application/mdns_adaptive/mdns_adaptive.h"
 #include "network_drivers/application/mdns_service/mdns_service.h"
 #include "shared/mime/mime.h"

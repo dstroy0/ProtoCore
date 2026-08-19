@@ -59,8 +59,8 @@ with added explanatory comments:
 #define PROTOCORE_ENABLE_OTA_ROLLBACK 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "server/update/ota_rollback.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "server/update/ota_rollback/ota_rollback.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

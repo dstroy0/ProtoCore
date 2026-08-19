@@ -28,7 +28,7 @@
 #define PROTOCORE_ENABLE_AUDIT_LOG 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "server/security/audit_log/audit_log.h"
 
 static const char *SSID = "YOUR_SSID";

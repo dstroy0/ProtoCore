@@ -16,7 +16,6 @@
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief The request methods a route binds to. */
@@ -86,9 +85,7 @@ typedef struct
  * @var HttpNs::poll_slot          the ProtoHandler on_poll for an HTTP slot: pumps, drains, dispatches
  * @var HttpNs::reset              drop every handler registered here, back to the built-in answers
  * @var HttpNs::set_edge_poll      install the edge-cache origin fetch
- * @var HttpNs::internal           the surface's state and the calls that reach it
  */
-struct HttpInternal;
 
 typedef struct
 {
@@ -107,26 +104,35 @@ typedef struct
     const char *text;
     HttpMethod method_of;
 
-    void (*status_text)(struct HttpInternal *ctx);
-    void (*parse_method)(struct HttpInternal *ctx);
-    void (*method_name)(struct HttpInternal *ctx);
-    void (*path_matches)(struct HttpInternal *ctx);
-    void (*match_path_params)(struct HttpInternal *ctx);
-    void (*req_is_head)(struct HttpInternal *ctx);
-    void (*allow_append)(struct HttpInternal *ctx);
-    void (*match_and_execute)(struct HttpInternal *ctx);
-    void (*set_not_found)(struct HttpInternal *ctx);
-    void (*poll_slot)(struct HttpInternal *ctx);
-    void (*reset)(struct HttpInternal *ctx);
+    void (*const status_text)(uint8_t *restrict work);
+    void (*const parse_method)(uint8_t *restrict work);
+    void (*const method_name)(uint8_t *restrict work);
+    void (*const path_matches)(uint8_t *restrict work);
+    void (*const match_path_params)(uint8_t *restrict work);
+    void (*const req_is_head)(uint8_t *restrict work);
+    void (*const allow_append)(uint8_t *restrict work);
+    void (*const match_and_execute)(uint8_t *restrict work);
+    void (*const set_not_found)(uint8_t *restrict work);
+    void (*const poll_slot)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *restrict work);
 #if PROTOCORE_ENABLE_EDGE_CACHE
-    void (*set_edge_poll)(struct HttpInternal *ctx);
+    void (*const set_edge_poll)(uint8_t *restrict work);
 #endif
-
-    struct HttpInternal *internal;
 } HttpNs;
 
 /** @brief The one symbol this module exports. */
 extern HttpNs Http;
+
+/**
+ * @brief The PROTOCORE_HTTP_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_http_span(void);
 
 PROTOCORE_END_DECLS
 

@@ -10,14 +10,14 @@
 
 #if PROTOCORE_ENABLE_CIA402
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/canopen/canopen.h"
 #include "services/fieldbus/cia402/cia402.h"
 #include "shared/can/can.h"
 
 static uint8_t canopen_work[16]; // the borrow an entry takes; Canopen never reads it
 
-#include "mmgr/endian.h"
+#include "mmgr/endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 

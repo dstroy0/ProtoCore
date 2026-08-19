@@ -7,8 +7,8 @@
  */
 
 #include "services/energy/mms/mms.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 
 #if PROTOCORE_ENABLE_MMS
 

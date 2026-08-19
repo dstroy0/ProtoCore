@@ -58,7 +58,7 @@ verbatim with added explanatory comments:
 #define PROTOCORE_ENABLE_IP_ALLOWLIST 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/server/server.h" // Tcp.listener->ip_allow_add_cidr
 
 static const char *SSID = "YOUR_SSID";

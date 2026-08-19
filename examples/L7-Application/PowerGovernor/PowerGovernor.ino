@@ -21,9 +21,9 @@
 // Build flags (whole build): PROTOCORE_ENABLE_POWER_MGMT=1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "server/clock/clock.h" // protocore_millis - the library's monotonic source
-#include "server/core/power_mgmt.h"
+#include "server/core/power_mgmt/power_mgmt.h"
 #include "shared/mime/mime.h"
 
 static const char *WIFI_SSID = "your-ssid";

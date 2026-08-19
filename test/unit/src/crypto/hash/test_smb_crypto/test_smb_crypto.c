@@ -10,7 +10,7 @@
 // the ones with an 80-octet key, where RFC 2104 requires the key be hashed down before it is
 // padded - the branch a short key never reaches.
 
-#include "crypto/hash/md.h"
+#include "crypto/hash/md/md.h"
 #include <string.h>
 
 #include <unity.h>

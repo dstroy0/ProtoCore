@@ -15,9 +15,9 @@
  */
 
 #include "config/platform/platform.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
-#include "server/core/exc_decoder.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
+#include "server/core/exc_decoder/exc_decoder.h"
 
 #if PROTOCORE_ENABLE_EXC_DECODER && PROTOCORE_HAS_VENDOR_COREDUMP
 

@@ -5,7 +5,7 @@
 // outbound role - where the connection has got to, and the public half of a seed for
 // authorized_keys, which needs no connection at all.
 
-#include "network_drivers/presentation/ssh/app/client.h"
+#include "network_drivers/presentation/ssh/app/client/client.h"
 #include "network_drivers/presentation/ssh/client/client.h"
 #include <stdint.h>
 #include <unity.h>
@@ -14,7 +14,7 @@
 
 static void client_end(void)
 {
-    SshClient.end(SshClient.internal);
+    SshClient.end(protocore_ssh_client_span());
 }
 
 void setUp(void)

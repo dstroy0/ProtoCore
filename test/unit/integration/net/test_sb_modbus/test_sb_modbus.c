@@ -1,9 +1,9 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "services/fieldbus/modbus/modbus.h"
-#include "services/southbound/sb_modbus.h"
-#include "services/southbound/southbound.h"
+#include "services/fieldbus/modbus/modbus/modbus.h"
+#include "services/southbound/sb_modbus/sb_modbus.h"
+#include "services/southbound/southbound/southbound.h"
 #include <unity.h>
 
 static uint8_t sb_modbus_work[16]; // the borrow an entry takes; SbModbus never reads it
@@ -281,20 +281,3 @@ void test_txid_increments()
     TEST_ASSERT_EQUAL_UINT16(2, g_ctx.txid);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_read_single_holding);
-    RUN_TEST(test_read_block_matrix);
-    RUN_TEST(test_read_input_registers);
-    RUN_TEST(test_modbus_exception_surfaces);
-    RUN_TEST(test_transport_error_propagates);
-    RUN_TEST(test_write_single_round_trip);
-    RUN_TEST(test_write_block_round_trip);
-    RUN_TEST(test_input_registers_read_only);
-    RUN_TEST(test_write_bounds);
-    RUN_TEST(test_init_rejects_bad_args);
-    RUN_TEST(test_read_bounds);
-    RUN_TEST(test_txid_increments);
-    return UNITY_END();
-}

@@ -29,7 +29,7 @@
 #define PROTOCORE_ENABLE_NTP 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
 #include "network_drivers/application/ntp_server/ntp_server.h"
 #include "network_drivers/application/ntp_service/ntp_service.h"

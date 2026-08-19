@@ -1,18 +1,18 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/asymmetric/ed25519.h"
-#include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
-#include "network_drivers/presentation/security/dtls/dtls_conn.h"
-#include "network_drivers/presentation/security/dtls/dtls_handshake.h"
-#include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
+#include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
+#include "network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.h"
+#include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: what the server binds and what drains it
 #include "server/clock/clock.h"
-#include "services/iot/coap/coap.h"
-#include "services/iot/coap/coaps_server.h"
+#include "services/iot/coap/coap/coap.h"
+#include "services/iot/coap/coaps_server/coaps_server.h"
 #include <stdint.h>
 #include <string.h>
 

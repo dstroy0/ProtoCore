@@ -71,7 +71,7 @@ verbatim with added explanatory comments:
 #define PROTOCORE_ENABLE_FORWARDED_TRUST 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "server/security/forwarded_trust/forwarded_trust.h" // protocore_forwarded_trust_add_cidr()
 
 static const char *SSID = "YOUR_SSID";

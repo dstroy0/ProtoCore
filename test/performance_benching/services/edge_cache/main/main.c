@@ -16,7 +16,7 @@
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
 #include "network_drivers/presentation/http/httpcache/httpcache.h"
-#include "server/web/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache/edge_cache.h"
 #include "shared/http_date/http_date.h"
 
 #include <strings.h>

@@ -20,7 +20,7 @@
 // sizeof(RelayListenerCtx) would corrupt whatever the arena placed after it. The static_assert in
 // relay_listener.c proves the size at compile time; this proves the span is actually handed out.
 
-#include "server/net/relay/relay_listener.c"
+#include "server/net/relay/relay_listener/relay_listener.c"
 
 #include <unity.h>
 

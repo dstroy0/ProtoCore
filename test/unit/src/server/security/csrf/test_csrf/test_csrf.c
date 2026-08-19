@@ -11,7 +11,7 @@
 // rather than the round trip: a token that verified against itself would still pass every other
 // case here if the signature covered the wrong bytes, or no bytes at all.
 
-#include "crypto/mac/hmac_sha256.h"
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "server/security/csrf/csrf.h"
 #include <string.h>
 

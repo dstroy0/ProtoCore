@@ -16,7 +16,10 @@ static proto_bool g_found_a, g_found_b, g_found_missing;
 
 static void copy_param(const HttpReq *req, const char *key, char *out, size_t n, proto_bool *found)
 {
-    const char *v = http_get_param(req, key);
+    HttpParser.get_param_args.req = req;
+    HttpParser.get_param_args.key = key;
+    HttpParser.get_param(protocore_http_parser_span());
+    const char *v = HttpParser.text;
     *found = (v != NULL);
     if (v)
     {
@@ -66,7 +69,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -82,7 +85,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
 }
 
@@ -151,16 +154,3 @@ void test_param_route_wrong_method_405()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "405"));
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_single_param_captured);
-    RUN_TEST(test_multiple_params_captured);
-    RUN_TEST(test_missing_param_returns_null);
-    RUN_TEST(test_literal_segment_mismatch_404);
-    RUN_TEST(test_extra_segment_does_not_match);
-    RUN_TEST(test_empty_param_value_does_not_match);
-    RUN_TEST(test_exact_route_still_matches);
-    RUN_TEST(test_param_route_wrong_method_405);
-    return UNITY_END();
-}

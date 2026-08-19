@@ -25,9 +25,9 @@
 #define PROTOCORE_ENABLE_DNC 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/tcp.h"
-#include "services/machine_tool/dnc/dnc_stream.h" // dnc_stream + DncCfg / DncCode
+#include "services/machine_tool/dnc/dnc_stream/dnc_stream.h" // dnc_stream + DncCfg / DncCode
 
 
 // --- CHANGE ME: your WiFi ---

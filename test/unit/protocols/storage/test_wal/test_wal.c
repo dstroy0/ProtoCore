@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "services/storage/wal/wal.h"
+#include "services/storage/wal/wal/wal.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -137,16 +137,3 @@ void test_replay_null_callback(void)
     TEST_ASSERT_EQUAL_size_t(total, protocore_wal_replay(log, total, NULL, NULL));
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_crc32_known_vector);
-    RUN_TEST(test_encode_replay_roundtrip);
-    RUN_TEST(test_replay_recovers_to_last_good_on_corrupt_tail);
-    RUN_TEST(test_replay_stops_on_truncated_tail);
-    RUN_TEST(test_encode_capacity_and_empty_payload);
-    RUN_TEST(test_replay_empty_and_garbage);
-    RUN_TEST(test_encode_null_out_fails);
-    RUN_TEST(test_replay_null_callback);
-    return UNITY_END();
-}

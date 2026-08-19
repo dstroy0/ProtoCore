@@ -34,12 +34,12 @@
  */
 
 #include "protocore.h"
-#include "crypto/rng/rng.h"  // Rng: the CSRF secret's seed
-#include "mmgr/membuild.h"   // Sb: the frame builder
-#include "mmgr/plaintext.h"  // the diag document is borrowed, not a stack array
-#include "mmgr/protoframe.h" // the diag document is a frame spec, not a concatenation
-#include "mmgr/protostr.h"   // str: the bounded-run walks
-#include "mmgr/rawmemcpy.h"  // raw.read: every move here is into our own buffer
+#include "crypto/rng/rng.h"             // Rng: the CSRF secret's seed
+#include "mmgr/membuild/membuild.h"     // Sb: the frame builder
+#include "mmgr/plaintext/plaintext.h"   // the diag document is borrowed, not a stack array
+#include "mmgr/protoframe/protoframe.h" // the diag document is a frame spec, not a concatenation
+#include "mmgr/protostr/protostr.h"     // str: the bounded-run walks
+#include "mmgr/rawmemcpy/rawmemcpy.h"   // raw.read: every move here is into our own buffer
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/route/http_route.h"
 #include "network_drivers/presentation/presentation.h" // http_protocore_set_poll (install the instance-bound HTTP poll)
@@ -49,7 +49,7 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis(): the QUIC poll stamp and the request timeout
 #include "server/core/proto_handler.h"
-#include "server/core/worker.h"
+#include "server/core/worker/worker.h"
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
 static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDelivery never reads it
@@ -57,11 +57,11 @@ static uint8_t http_delivery_work[16]; // the borrow an entry takes; HttpDeliver
 static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 
 #if PROTOCORE_ENABLE_HTTP2
-#include "network_drivers/presentation/http/http2/h2_server.h"
+#include "network_drivers/presentation/http/http2/h2_server/h2_server.h"
 #endif
 #if PROTOCORE_ENABLE_HTTP3
-#include "network_drivers/presentation/http/http3/h3_server.h"   // the request seam begin() installs
-#include "network_drivers/presentation/http/http3/quic_server.h" // protocore_quic_server_begin / _poll
+#include "network_drivers/presentation/http/http3/h3_server/h3_server.h"     // the request seam begin() installs
+#include "network_drivers/presentation/http/http3/quic_server/quic_server.h" // protocore_quic_server_begin / _poll
 #endif
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
 #include "services/file_transfer/http_delivery/http_delivery.h" // protocore_delivery_cache_control (SWR directive)
@@ -74,7 +74,7 @@ static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 #include "server/io/webdav_handler.h" // try_serve_dav()
 #endif
 #if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
-#include "network_drivers/application/web_assets.h" // PROTOCORE_METRICS_PROM / PROTOCORE_STATS_JSON (generated)
+#include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_METRICS_PROM / PROTOCORE_STATS_JSON (generated)
 #endif
 #if PROTOCORE_HTTP_EMIT_DATE
 #if PROTOCORE_ENABLE_TIME_SOURCE
@@ -129,7 +129,8 @@ void protocore_server_reset(void)
     static const ServerCtx blank = {0};
     s_inst = blank;
     HttpRoutes.reset();
-    Http.reset(Http.internal); // the not-found handler, which answers instead of the built-in 404 while it is set
+    Http.reset(
+        protocore_http_span()); // the not-found handler, which answers instead of the built-in 404 while it is set
 #if PROTOCORE_ENABLE_AUTH
     // A credential id names a row by index and a route holds that id, so the two tables empty
     // together: routes left behind rows the table has no way to reach, and the table is bounded.
@@ -212,7 +213,7 @@ static void protocore_pump_trampoline(int worker_id)
 static void protocore_http_on_poll(uint8_t slot)
 {
     Http.slot = slot;
-    Http.poll_slot(Http.internal);
+    Http.poll_slot(protocore_http_span());
 }
 
 int32_t proto_begin(const WebServerConfig *cfg)
@@ -259,7 +260,7 @@ int32_t proto_begin(const WebServerConfig *cfg)
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(protocore_ws_span());
@@ -402,7 +403,7 @@ void stop(void)
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
     Ws.init(protocore_ws_span());
@@ -564,7 +565,7 @@ void on_sse(const char *path, SseConnectHandler on_connect)
 void on_not_found(Handler callback)
 {
     Http.cb = callback;
-    Http.set_not_found(Http.internal);
+    Http.set_not_found(protocore_http_span());
 }
 
 // set_cors() / set_cache_control() live in server/response.cpp, with the buffers they fill.
@@ -663,7 +664,7 @@ void service_once(int worker_id)
     // caller that drives service_once() directly still gets it. One pointer store; negligible at
     // poll cadence.
     HttpConn.poll = protocore_http_on_poll;
-    HttpConn.set_poll(HttpConn.internal);
+    HttpConn.set_poll(protocore_http_conn_span());
 
     Session.worker_id = worker_id;
     Session.tick(protocore_session_span());

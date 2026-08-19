@@ -11,7 +11,6 @@
 
 #include "network_drivers/presentation/ssh/common.h"
 
-
 PROTOCORE_BEGIN_DECLS
 
 // ---------------------------------------------------------------------------
@@ -557,9 +556,6 @@ typedef proto_bool (*SshForwardPolicyCb)(const char *host, uint16_t port);
 
 /** @brief Dispatch messages 80 to 127 (RFC 4254). */
 
-/** @brief The connection layer's own state and the calls that reach it, described only in connection.c. */
-struct SshConnectionInternal;
-
 /** @brief RFC 4254 sec 5.2 window: what a flow-control call reads and writes. */
 typedef struct
 {
@@ -641,7 +637,6 @@ typedef struct
  * @var SshConnectionNs::i32       a call's signed outcome
  * @var SshConnectionNs::u32       a call's 32-bit outcome
  * @var SshConnectionNs::found     the channel a lookup reports, or NULL
- * @var SshConnectionNs::internal  the layer's state and the calls that reach it
  */
 typedef struct
 {
@@ -657,70 +652,70 @@ typedef struct
     SshChannel *found;
 
     // sec 5.2 window
-    void (*flow_init)(struct SshConnectionInternal *ctx);
-    void (*flow_recv_take)(struct SshConnectionInternal *ctx);
-    void (*flow_replenish_due)(struct SshConnectionInternal *ctx);
-    void (*flow_local_credit)(struct SshConnectionInternal *ctx);
-    void (*flow_send_allows)(struct SshConnectionInternal *ctx);
-    void (*flow_send_cap)(struct SshConnectionInternal *ctx);
-    void (*flow_send_take)(struct SshConnectionInternal *ctx);
-    void (*flow_peer_add)(struct SshConnectionInternal *ctx);
+    void (*const flow_init)(uint8_t *restrict work);
+    void (*const flow_recv_take)(uint8_t *restrict work);
+    void (*const flow_replenish_due)(uint8_t *restrict work);
+    void (*const flow_local_credit)(uint8_t *restrict work);
+    void (*const flow_send_allows)(uint8_t *restrict work);
+    void (*const flow_send_cap)(uint8_t *restrict work);
+    void (*const flow_send_take)(uint8_t *restrict work);
+    void (*const flow_peer_add)(uint8_t *restrict work);
 
     // sec 5 channels
-    void (*channel_init)(struct SshConnectionInternal *ctx);
-    void (*chan_alloc)(struct SshConnectionInternal *ctx);
-    void (*chan_by_id)(struct SshConnectionInternal *ctx);
-    void (*channel_bind_service)(struct SshConnectionInternal *ctx);
-    void (*channel_handle_open)(struct SshConnectionInternal *ctx);
-    void (*channel_handle_open_confirm)(struct SshConnectionInternal *ctx);
-    void (*channel_handle_open_failure)(struct SshConnectionInternal *ctx);
-    void (*channel_handle_request)(struct SshConnectionInternal *ctx);
-    void (*channel_handle_data)(struct SshConnectionInternal *ctx);
-    void (*channel_handle_extended_data)(struct SshConnectionInternal *ctx);
-    void (*channel_handle_window_adjust)(struct SshConnectionInternal *ctx);
-    void (*channel_handle_eof)(struct SshConnectionInternal *ctx);
-    void (*channel_handle_close)(struct SshConnectionInternal *ctx);
-    void (*channel_build_data)(struct SshConnectionInternal *ctx);
-    void (*channel_build_eof)(struct SshConnectionInternal *ctx);
-    void (*channel_build_close)(struct SshConnectionInternal *ctx);
-    void (*channel_send_data)(struct SshConnectionInternal *ctx);
-    void (*channel_send_eof)(struct SshConnectionInternal *ctx);
-    void (*channel_send_close)(struct SshConnectionInternal *ctx);
-    void (*channel_send_exit_status)(struct SshConnectionInternal *ctx);
-    void (*channel_send_exit_signal)(struct SshConnectionInternal *ctx);
-    void (*channel_open_forwarded)(struct SshConnectionInternal *ctx);
-    void (*channel_send_open_forwarded)(struct SshConnectionInternal *ctx);
-    void (*channel_pty)(struct SshConnectionInternal *ctx);
+    void (*const channel_init)(uint8_t *restrict work);
+    void (*const chan_alloc)(uint8_t *restrict work);
+    void (*const chan_by_id)(uint8_t *restrict work);
+    void (*const channel_bind_service)(uint8_t *restrict work);
+    void (*const channel_handle_open)(uint8_t *restrict work);
+    void (*const channel_handle_open_confirm)(uint8_t *restrict work);
+    void (*const channel_handle_open_failure)(uint8_t *restrict work);
+    void (*const channel_handle_request)(uint8_t *restrict work);
+    void (*const channel_handle_data)(uint8_t *restrict work);
+    void (*const channel_handle_extended_data)(uint8_t *restrict work);
+    void (*const channel_handle_window_adjust)(uint8_t *restrict work);
+    void (*const channel_handle_eof)(uint8_t *restrict work);
+    void (*const channel_handle_close)(uint8_t *restrict work);
+    void (*const channel_build_data)(uint8_t *restrict work);
+    void (*const channel_build_eof)(uint8_t *restrict work);
+    void (*const channel_build_close)(uint8_t *restrict work);
+    void (*const channel_send_data)(uint8_t *restrict work);
+    void (*const channel_send_eof)(uint8_t *restrict work);
+    void (*const channel_send_close)(uint8_t *restrict work);
+    void (*const channel_send_exit_status)(uint8_t *restrict work);
+    void (*const channel_send_exit_signal)(uint8_t *restrict work);
+    void (*const channel_open_forwarded)(uint8_t *restrict work);
+    void (*const channel_send_open_forwarded)(uint8_t *restrict work);
+    void (*const channel_pty)(uint8_t *restrict work);
 
     // sec 6.2 / 6.7 terminal
-    void (*req_strings_present)(struct SshConnectionInternal *ctx);
-    void (*pty_req_fields_present)(struct SshConnectionInternal *ctx);
-    void (*pty_modes_valid)(struct SshConnectionInternal *ctx);
-    void (*pty_req_parse)(struct SshConnectionInternal *ctx);
-    void (*window_change_parse)(struct SshConnectionInternal *ctx);
+    void (*const req_strings_present)(uint8_t *restrict work);
+    void (*const pty_req_fields_present)(uint8_t *restrict work);
+    void (*const pty_modes_valid)(uint8_t *restrict work);
+    void (*const pty_req_parse)(uint8_t *restrict work);
+    void (*const window_change_parse)(uint8_t *restrict work);
 
     // sec 7 forwarding
-    void (*forward_begin)(struct SshConnectionInternal *ctx);
-    void (*forward_pump)(struct SshConnectionInternal *ctx);
-    void (*forward_binding)(struct SshConnectionInternal *ctx);
-    void (*forward_reset)(struct SshConnectionInternal *ctx);
-    void (*global_request_handle)(struct SshConnectionInternal *ctx);
-    void (*dispatch)(struct SshConnectionInternal *ctx);
+    void (*const forward_begin)(uint8_t *restrict work);
+    void (*const forward_pump)(uint8_t *restrict work);
+    void (*const forward_binding)(uint8_t *restrict work);
+    void (*const forward_reset)(uint8_t *restrict work);
+    void (*const global_request_handle)(uint8_t *restrict work);
+    void (*const dispatch)(uint8_t *restrict work);
 
     // the application handlers this layer calls back into
-    void (*set_data_cb)(struct SshConnectionInternal *ctx);
-    void (*set_pty_req_cb)(struct SshConnectionInternal *ctx);
-    void (*set_window_change_cb)(struct SshConnectionInternal *ctx);
-    void (*set_forward_open_cb)(struct SshConnectionInternal *ctx);
-    void (*set_forward_data_cb)(struct SshConnectionInternal *ctx);
-    void (*set_forward_confirm_cb)(struct SshConnectionInternal *ctx);
-    void (*set_forward_policy_cb)(struct SshConnectionInternal *ctx);
-    void (*set_rforward_open_cb)(struct SshConnectionInternal *ctx);
-    void (*set_rforward_cancel_cb)(struct SshConnectionInternal *ctx);
-    void (*set_sftp_open_cb)(struct SshConnectionInternal *ctx);
-    void (*set_sftp_data_cb)(struct SshConnectionInternal *ctx);
-    void (*set_scp_open_cb)(struct SshConnectionInternal *ctx);
-    void (*set_scp_data_cb)(struct SshConnectionInternal *ctx);
+    void (*const set_data_cb)(uint8_t *restrict work);
+    void (*const set_pty_req_cb)(uint8_t *restrict work);
+    void (*const set_window_change_cb)(uint8_t *restrict work);
+    void (*const set_forward_open_cb)(uint8_t *restrict work);
+    void (*const set_forward_data_cb)(uint8_t *restrict work);
+    void (*const set_forward_confirm_cb)(uint8_t *restrict work);
+    void (*const set_forward_policy_cb)(uint8_t *restrict work);
+    void (*const set_rforward_open_cb)(uint8_t *restrict work);
+    void (*const set_rforward_cancel_cb)(uint8_t *restrict work);
+    void (*const set_sftp_open_cb)(uint8_t *restrict work);
+    void (*const set_sftp_data_cb)(uint8_t *restrict work);
+    void (*const set_scp_open_cb)(uint8_t *restrict work);
+    void (*const set_scp_data_cb)(uint8_t *restrict work);
 
     // the handler a setter installs, read by the setter it belongs to
     SshChannelDataCb data_cb;
@@ -736,12 +731,21 @@ typedef struct
     SshSftpDataCb sftp_data_cb;
     SshScpOpenCb scp_open_cb;
     SshScpDataCb scp_data_cb;
-
-    struct SshConnectionInternal *internal;
 } SshConnectionNs;
 
 /** @brief The one symbol this module exports. */
 extern SshConnectionNs SshConnection;
+
+/**
+ * @brief The PROTOCORE_SSH_CONNECTION_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_ssh_connection_span(void);
 
 PROTOCORE_END_DECLS
 

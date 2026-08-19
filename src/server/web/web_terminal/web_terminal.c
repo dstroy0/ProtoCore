@@ -7,8 +7,8 @@
  */
 
 #include "server/web/web_terminal/web_terminal.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/secure.h"   // the persistent end this module's state is taken from
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/secure/secure.h"   // the persistent end this module's state is taken from
 #include "protocore.h"     // MAX_PATH_LEN, MAX_WS_CONNS, HttpReq, send_text
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
@@ -19,7 +19,7 @@ PROTOCORE_BEGIN_DECLS
 
 // Dependency (WEB_TERMINAL requires WEBSOCKET) is enforced centrally in protocore_config.h.
 
-#include "network_drivers/application/web_assets.h" // PROTOCORE_TERMINAL_PAGE
+#include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_TERMINAL_PAGE
 #include "shared/mime/mime.h"
 
 // ---------------------------------------------------------------------------

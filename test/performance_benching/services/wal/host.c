@@ -16,7 +16,7 @@
 #include "services/storage/dbm/dbm.h"
 #include "services/storage/docstore/docstore.h"
 #include "services/storage/sqlite/sqlite_format.h"
-#include "services/storage/wal/wal_store.h"
+#include "services/storage/wal/wal_store/wal_store.h"
 
 #include "host_bench.h"
 #include <stdint.h>

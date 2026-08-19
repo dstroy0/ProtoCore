@@ -10,7 +10,7 @@
 // octet against the published one. Bit packing order, big-endian register order, byte counts and
 // the +0x80 exception function code are all pinned by that single table.
 
-#include "services/fieldbus/modbus/modbus.h"
+#include "services/fieldbus/modbus/modbus/modbus.h"
 #include <string.h>
 
 #include <unity.h>

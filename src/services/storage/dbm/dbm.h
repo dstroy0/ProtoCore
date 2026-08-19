@@ -33,7 +33,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-#include "services/storage/wal/wal_store.h"
+#include "services/storage/wal/wal_store/wal_store.h"
 
 /** @brief One in-RAM index slot. `state`: 0 empty, 1 live, 2 deleted (tombstone, still probed through). */
 typedef struct

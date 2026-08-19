@@ -51,7 +51,7 @@ with added explanatory comments:
 #define PROTOCORE_ENABLE_DNS_RESOLVER 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/network/dns_resolver.h"
 
 static const char *SSID = "YOUR_SSID";

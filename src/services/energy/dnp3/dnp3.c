@@ -7,8 +7,8 @@
  */
 
 #include "services/energy/dnp3/dnp3.h"
-#include "mmgr/endian.h" // endian.rd16le / endian.rd32le
-#include "mmgr/protomem.h"
+#include "mmgr/endian/endian.h" // endian.rd16le / endian.rd32le
+#include "mmgr/protomem/protomem.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_DNP
 
 static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it

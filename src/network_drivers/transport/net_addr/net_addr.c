@@ -7,7 +7,7 @@
  */
 
 #include "network_drivers/transport/net_addr/net_addr.h"
-#include "mmgr/rawmemcpy.h" // raw.read: the byte reads of the stack's address words
+#include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read: the byte reads of the stack's address words
 
 PROTOCORE_BEGIN_DECLS
 

@@ -11,7 +11,6 @@
 
 #include "network_drivers/presentation/ssh/common.h"
 
-
 PROTOCORE_BEGIN_DECLS
 
 struct ProtoHandler;
@@ -93,9 +92,7 @@ typedef struct
  * @var SshNetworkNs::u8          the lowest unowned slot, or 0xFF when the pool is full
  * @var SshNetworkNs::n           a byte count a call reports
  * @var SshNetworkNs::region      the span a message may be built in for a frame without a copy
- * @var SshNetworkNs::internal    the bindings' state and the calls that reach them
  */
-struct SshNetworkInternal;
 
 typedef struct
 {
@@ -114,34 +111,43 @@ typedef struct
     size_t n;
     uint8_t *region;
 
-    void (*claim)(struct SshNetworkInternal *ctx);
-    void (*release)(struct SshNetworkInternal *ctx);
-    void (*slot_free)(struct SshNetworkInternal *ctx);
-    void (*owns)(struct SshNetworkInternal *ctx);
-    void (*tx_drain)(struct SshNetworkInternal *ctx);
-    void (*emit)(struct SshNetworkInternal *ctx);
-    void (*write_msg)(struct SshNetworkInternal *ctx);
-    void (*payload_region)(struct SshNetworkInternal *ctx);
-    void (*write_msg_at)(struct SshNetworkInternal *ctx);
+    void (*const claim)(uint8_t *restrict work);
+    void (*const release)(uint8_t *restrict work);
+    void (*const slot_free)(uint8_t *restrict work);
+    void (*const owns)(uint8_t *restrict work);
+    void (*const tx_drain)(uint8_t *restrict work);
+    void (*const emit)(uint8_t *restrict work);
+    void (*const write_msg)(uint8_t *restrict work);
+    void (*const payload_region)(uint8_t *restrict work);
+    void (*const write_msg_at)(uint8_t *restrict work);
 #if PROTOCORE_NEED_CLIENT
     // Bridging a channel to a socket of our own needs the client half of the transport, so these
     // exist exactly when TcpClient does.
-    void (*chan_open)(struct SshNetworkInternal *ctx);
-    void (*chan_adopt)(struct SshNetworkInternal *ctx);
-    void (*chan_by_cid)(struct SshNetworkInternal *ctx);
-    void (*chan_write)(struct SshNetworkInternal *ctx);
-    void (*chan_read)(struct SshNetworkInternal *ctx);
-    void (*chan_avail)(struct SshNetworkInternal *ctx);
-    void (*chan_drained)(struct SshNetworkInternal *ctx);
-    void (*chan_close)(struct SshNetworkInternal *ctx);
-    void (*chan_close_all)(struct SshNetworkInternal *ctx);
+    void (*const chan_open)(uint8_t *restrict work);
+    void (*const chan_adopt)(uint8_t *restrict work);
+    void (*const chan_by_cid)(uint8_t *restrict work);
+    void (*const chan_write)(uint8_t *restrict work);
+    void (*const chan_read)(uint8_t *restrict work);
+    void (*const chan_avail)(uint8_t *restrict work);
+    void (*const chan_drained)(uint8_t *restrict work);
+    void (*const chan_close)(uint8_t *restrict work);
+    void (*const chan_close_all)(uint8_t *restrict work);
 #endif // PROTOCORE_NEED_CLIENT
-
-    struct SshNetworkInternal *internal;
 } SshNetworkNs;
 
 /** @brief The one instance, defined in network.c. */
 extern SshNetworkNs SshNetwork;
+
+/**
+ * @brief The PROTOCORE_SSH_NETWORK_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_ssh_network_span(void);
 
 /** @brief Put the server identification string on the wire, raw, before any binary packet. */
 void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot);

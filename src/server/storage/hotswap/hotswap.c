@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_HOTSWAP
 
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/secure.h"   // the persistent end this module's state is taken from
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/secure/secure.h"   // the persistent end this module's state is taken from
 #include "server/storage/hotswap/hotswap.h"
 
 #include "server/clock/clock.h" // protocore_millis

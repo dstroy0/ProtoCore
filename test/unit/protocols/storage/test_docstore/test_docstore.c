@@ -3,7 +3,7 @@
 //
 #include "services/storage/dbm/dbm.h"
 #include "services/storage/docstore/docstore.h"
-#include "services/storage/wal/wal_store.h"
+#include "services/storage/wal/wal_store/wal_store.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -284,16 +284,3 @@ void test_find_skips_unreadable_document(void)
     TEST_ASSERT_EQUAL_INT(0, c.n);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_put_get_del);
-    RUN_TEST(test_find_by_field);
-    RUN_TEST(test_find_bool);
-    RUN_TEST(test_persist_and_query_across_reboot);
-    RUN_TEST(test_find_early_stop);
-    RUN_TEST(test_find_field_absent);
-    RUN_TEST(test_find_count_only_null_cb);
-    RUN_TEST(test_find_skips_unreadable_document);
-    return UNITY_END();
-}

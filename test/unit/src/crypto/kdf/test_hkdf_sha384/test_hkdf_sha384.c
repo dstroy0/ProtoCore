@@ -17,7 +17,7 @@
 // the SHA-384 suites use, so the HkdfLabel encoding (RFC 8446 sec 7.1) is checked against openssl's
 // TLS13-KDF rather than against itself.
 
-#include "crypto/kdf/hkdf_sha384.h"
+#include "crypto/kdf/hkdf_sha384/hkdf_sha384.h"
 #include <string.h>
 
 #include <unity.h>

@@ -13,9 +13,9 @@
  */
 
 #include "server/security/audit_log/audit_log.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str: the bounded-run walks
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
 #include "shared/hex/hex.h"
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
@@ -24,8 +24,8 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
 #if PROTOCORE_ENABLE_AUDIT_LOG
 
-#include "crypto/hash/sha256.h"
-#include "mmgr/secure.h" // the chain hash's working set, wiped on release
+#include "crypto/hash/sha256/sha256.h"
+#include "mmgr/secure/secure.h" // the chain hash's working set, wiped on release
 #include "server/clock/clock.h"
 
 PROTOCORE_BEGIN_DECLS

@@ -196,7 +196,10 @@ static const protocore_net_host_dgram *response(void)
 // RFC 6762 sec 3: mDNS runs on the IPv4 link-local multicast address 224.0.0.251, UDP port 5353.
 void test_begin_joins_the_rfc6762_group(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
     TEST_ASSERT_NOT_NULL(protocore_net_host_udp_pcb(MDNS_PORT));
 
     UdpListener.port = MDNS_PORT;
@@ -208,7 +211,10 @@ void test_begin_joins_the_rfc6762_group(void)
 // Section (sec 6). The answer goes to the group, not back to the asker (sec 6).
 void test_a_response_carries_the_rfc6762_header_bits(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
     ask("_http._tcp.local", T_PTR);
 
     const protocore_net_host_dgram *d = response();
@@ -234,7 +240,10 @@ void test_a_response_carries_the_rfc6762_header_bits(void)
 // most significant bit of the rrclass. A shared record (a DNS-SD PTR) does not.
 void test_the_cache_flush_bit_separates_unique_records_from_shared_ones(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
 
     Rec r;
     ask("myhost._http._tcp.local", T_SRV);
@@ -257,7 +266,10 @@ void test_the_cache_flush_bit_separates_unique_records_from_shared_ones(void)
 // offers. begin() registered _http._tcp, so that is what comes back.
 void test_service_enumeration_lists_the_registered_type(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
     ask("_services._dns-sd._udp.local", T_PTR);
 
     Rec r;
@@ -273,7 +285,10 @@ void test_service_enumeration_lists_the_registered_type(void)
 // type's PTR names it.
 void test_the_service_type_points_at_the_instance(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
     ask("_http._tcp.local", T_PTR);
 
     Rec r;
@@ -288,7 +303,10 @@ void test_the_service_type_points_at_the_instance(void)
 // order, and the target is the host's own name.
 void test_the_instance_srv_carries_the_port_and_the_target(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 8080));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 8080;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
     ask("myhost._http._tcp.local", T_SRV);
 
     Rec r;
@@ -307,7 +325,10 @@ void test_the_instance_srv_carries_the_port_and_the_target(void)
 // to say sends a TXT record containing a single zero byte, which is one empty string.
 void test_a_txt_record_is_never_zero_length(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
     ask("myhost._http._tcp.local", T_TXT);
 
     Rec r;
@@ -323,9 +344,18 @@ void test_a_txt_record_is_never_zero_length(void)
 //   the rdata is therefore 16 octets
 void test_txt_pairs_are_length_prefixed_key_equals_value(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
-    TEST_ASSERT_TRUE(protocore_mdns_txt("path", "/"));
-    TEST_ASSERT_TRUE(protocore_mdns_txt("fw", "1.2.3"));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
+    MdnsService.txt_args.key = "path";
+    MdnsService.txt_args.value = "/";
+    MdnsService.txt(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
+    MdnsService.txt_args.key = "fw";
+    MdnsService.txt_args.value = "1.2.3";
+    MdnsService.txt(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
     ask("myhost._http._tcp.local", T_TXT);
 
     Rec r;
@@ -341,7 +371,10 @@ void test_txt_pairs_are_length_prefixed_key_equals_value(void)
 // owns rather than picking one.
 void test_qtype_any_on_an_instance_answers_srv_and_txt(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
     ask("myhost._http._tcp.local", T_ANY);
 
     const protocore_net_host_dgram *d = response();
@@ -357,8 +390,15 @@ void test_qtype_any_on_an_instance_answers_srv_and_txt(void)
 // instance name and its own port.
 void test_an_added_service_is_advertised_beside_the_first(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
-    TEST_ASSERT_TRUE(protocore_mdns_add_service("_https", "_tcp", 443));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
+    MdnsService.add_service_args.service_type = "_https";
+    MdnsService.add_service_args.proto = "_tcp";
+    MdnsService.add_service_args.port = 443;
+    MdnsService.add_service(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
 
     Rec r;
     ask("_https._tcp.local", T_PTR);
@@ -383,7 +423,10 @@ void test_an_added_service_is_advertised_beside_the_first(void)
 // at a name it does own is the same silence.
 void test_a_name_this_host_does_not_own_draws_silence(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
 
     ask("someoneelse.local", T_A);
     TEST_ASSERT_EQUAL_size_t(0u, protocore_net_host_udp_sent());
@@ -401,7 +444,10 @@ void test_a_name_this_host_does_not_own_draws_silence(void)
 // make every responder on the link answer every other one.
 void test_a_response_on_the_group_is_not_answered(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
 
     uint8_t q[256];
     const size_t n = make_query(q, "_http._tcp.local", T_PTR);
@@ -414,7 +460,10 @@ void test_a_response_on_the_group_is_not_answered(void)
 // answered from whatever followed it in the buffer.
 void test_a_malformed_query_is_dropped(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
 
     // QDCOUNT 1, then a label claiming five octets with three present.
     uint8_t q[16] = {0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 5, 'l', 'o', 'c'};
@@ -431,12 +480,23 @@ void test_a_malformed_query_is_dropped(void)
 // overwriting a neighbour's entry.
 void test_the_service_table_fills_and_then_refuses(void)
 {
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80)); // takes the first slot
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok); // takes the first slot
     for (size_t i = 1; i < PROTOCORE_MDNS_MAX_SERVICES; i++)
     {
-        TEST_ASSERT_TRUE(protocore_mdns_add_service("_svc", "_tcp", (uint16_t)(1000u + i)));
+        MdnsService.add_service_args.service_type = "_svc";
+        MdnsService.add_service_args.proto = "_tcp";
+        MdnsService.add_service_args.port = (uint16_t)(1000u + i);
+        MdnsService.add_service(protocore_mdns_service_span());
+        TEST_ASSERT_TRUE(MdnsService.ok);
     }
-    TEST_ASSERT_FALSE(protocore_mdns_add_service("_over", "_tcp", 9999));
+    MdnsService.add_service_args.service_type = "_over";
+    MdnsService.add_service_args.proto = "_tcp";
+    MdnsService.add_service_args.port = 9999;
+    MdnsService.add_service(protocore_mdns_service_span());
+    TEST_ASSERT_FALSE(MdnsService.ok);
 
     // The first service still answers, so the refusal did not disturb the table.
     Rec r;
@@ -449,12 +509,35 @@ void test_the_service_table_fills_and_then_refuses(void)
 // missing host name would answer for ".local" itself.
 void test_a_missing_name_is_refused(void)
 {
-    TEST_ASSERT_FALSE(protocore_mdns_begin(NULL, 80));
-    TEST_ASSERT_FALSE(protocore_mdns_begin("", 80));
+    MdnsService.begin_args.hostname = NULL;
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_FALSE(MdnsService.ok);
+    MdnsService.begin_args.hostname = "";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_FALSE(MdnsService.ok);
 
-    TEST_ASSERT_TRUE(protocore_mdns_begin("myhost", 80));
-    TEST_ASSERT_FALSE(protocore_mdns_txt(NULL, "v"));
-    TEST_ASSERT_FALSE(protocore_mdns_txt("k", NULL));
-    TEST_ASSERT_FALSE(protocore_mdns_add_service(NULL, "_tcp", 1));
-    TEST_ASSERT_FALSE(protocore_mdns_add_service("_x", NULL, 1));
+    MdnsService.begin_args.hostname = "myhost";
+    MdnsService.begin_args.http_port = 80;
+    MdnsService.begin(protocore_mdns_service_span());
+    TEST_ASSERT_TRUE(MdnsService.ok);
+    MdnsService.txt_args.key = NULL;
+    MdnsService.txt_args.value = "v";
+    MdnsService.txt(protocore_mdns_service_span());
+    TEST_ASSERT_FALSE(MdnsService.ok);
+    MdnsService.txt_args.key = "k";
+    MdnsService.txt_args.value = NULL;
+    MdnsService.txt(protocore_mdns_service_span());
+    TEST_ASSERT_FALSE(MdnsService.ok);
+    MdnsService.add_service_args.service_type = NULL;
+    MdnsService.add_service_args.proto = "_tcp";
+    MdnsService.add_service_args.port = 1;
+    MdnsService.add_service(protocore_mdns_service_span());
+    TEST_ASSERT_FALSE(MdnsService.ok);
+    MdnsService.add_service_args.service_type = "_x";
+    MdnsService.add_service_args.proto = NULL;
+    MdnsService.add_service_args.port = 1;
+    MdnsService.add_service(protocore_mdns_service_span());
+    TEST_ASSERT_FALSE(MdnsService.ok);
 }

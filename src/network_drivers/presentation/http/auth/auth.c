@@ -11,18 +11,20 @@
  * matched route carries auth.
  */
 
-#include "crypto/ct_eq.h"       // protocore_ct_eq
-#include "crypto/hash/sha256.h" // protocore_sha256, PROTOCORE_SHA256_DIGEST_LEN (Digest)
-#include "mmgr/membuild.h"      // protocore_sb frame builder
-#include "mmgr/protomem.h"      // mem.chr: a span scan, for the decoded credential that carries NULs
-#include "mmgr/protostr.h"      // str.len / find / starts / eq / copy
-#include "mmgr/secure.h"        // the credential table is key material
+#include "crypto/ct_eq.h"              // protocore_ct_eq
+#include "crypto/hash/sha256/sha256.h" // protocore_sha256, PROTOCORE_SHA256_DIGEST_LEN (Digest)
+#include "mmgr/membuild/membuild.h"    // protocore_sb frame builder
+#include "mmgr/protomem/protomem.h"    // mem.chr: a span scan, for the decoded credential that carries NULs
+#include "mmgr/protostr/protostr.h"    // str.len / find / starts / eq / copy
+#include "mmgr/secure/secure.h"        // the credential table is key material
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.decode (Basic)
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a challenge writes on
 #include "protocore.h"
 #include "server/clock/clock.h" // protocore_millis() for the stateless nonce
 #include "shared/hex/hex.h"     // protocore_hex_encode/decode
+
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
 
 static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
@@ -301,7 +303,7 @@ static void verify_nonce(struct AuthInternal *restrict ctx)
     // Expected shape: 8 hex (issue) + '.' + 32 hex (MAC).
     if (str.len(nonce, 42) != 8 + 1 + 32 || nonce[8] != '.')
     {
-        return PROTO_FALSE;
+        return;
     }
     uint32_t issue;
     Hex.io.text = nonce;
@@ -311,7 +313,7 @@ static void verify_nonce(struct AuthInternal *restrict ctx)
     Hex.decode(hex_work);
     if (Hex.i32 != 4)
     {
-        return PROTO_FALSE;
+        return;
     }
     char mac_hex[33];
     digest_nonce_mac(work, ctx->store->digest_secret, issue, mac_hex);
@@ -325,7 +327,7 @@ static void verify_nonce(struct AuthInternal *restrict ctx)
     }
     if (diff != 0)
     {
-        return PROTO_FALSE; // not a nonce this server minted
+        return; // not a nonce this server minted
     }
     uint32_t age = Clock.ms - issue; // unsigned: tolerant of the 32-bit millis wrap
     ctx->ns->expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
@@ -341,7 +343,7 @@ static void challenge(struct AuthInternal *restrict ctx)
     if (c == NULL)
     {
         HttpConn.slot = slot_id;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         return;
     }
     ConnPool.slot = slot_id;
@@ -349,7 +351,7 @@ static void challenge(struct AuthInternal *restrict ctx)
     if (!ConnPool.ok)
     {
         HttpConn.slot = slot_id;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         return;
     }
 
@@ -408,7 +410,7 @@ static void challenge(struct AuthInternal *restrict ctx)
     // The flush rides the final write, so the challenge leaves in one marshal whether or not a body
     // follows the header.
     Http.slot = slot_id;
-    Http.req_is_head(Http.internal);
+    Http.req_is_head(protocore_http_span());
     if (!Http.ok)
     {
         ConnPool.slot = slot_id;
@@ -433,7 +435,10 @@ static void challenge(struct AuthInternal *restrict ctx)
 static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
 {
     (void)slot_id;
-    const char *auth_hdr = http_get_header(req, "Authorization");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Authorization";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *auth_hdr = HttpParser.text;
     if (!auth_hdr || !str.starts(auth_hdr, "Basic ", sizeof("Basic "), PROTO_FALSE))
     {
         return PROTO_FALSE;
@@ -442,7 +447,11 @@ static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
     uint8_t decoded[MAX_AUTH_LEN * 2 + 2];
     // Bound the write to leave room for the null terminator at decoded[n]; an
     // over-long Authorization value now fails the decode instead of overrunning.
-    size_t n = Base64.decode(auth_hdr + 6, decoded, sizeof(decoded) - 1);
+    Base64.decode_args.src = auth_hdr + 6;
+    Base64.decode_args.dst = decoded;
+    Base64.decode_args.dst_cap = sizeof(decoded) - 1;
+    Base64.decode(base64_work);
+    size_t n = Base64.n;
     if (n == 0)
     {
         return PROTO_FALSE;

@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/hash/sha1.h"
+#include "crypto/hash/sha1/sha1.h"
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #include "network_drivers/transport/tcp/common.h"
@@ -10,13 +10,45 @@
 #include "rx_feed.h"
 #include <unity.h>
 
+static uint8_t inflate_work[16]; // the borrow an entry takes; Inflate never reads it
+
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
+
 static uint8_t tw[4096]; // the borrow every namespace call in this suite runs out of
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
-#include "mmgr/plaintext.h"
-#include "network_drivers/presentation/codec/deflate/deflate.h"
+#include "mmgr/plaintext/plaintext.h"
+#include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #include "network_drivers/transport/tcp/tcp.h"
+
+// The largest single scratch allocation the plaintext arena will still serve.
+//
+// capacity() is the arena's nominal extent and used() counts only the scratch end, but the arena
+// also carries every persistent borrow the modules took at startup - so neither figure, nor their
+// difference, is what is allocatable. Halving between a mark and its release finds the real one
+// without assuming anything about how much has been taken.
+static size_t ws_scratch_available(void)
+{
+    size_t lo = 0;
+    size_t hi = protocore_plaintext_capacity();
+    while (lo < hi)
+    {
+        size_t mid = lo + (hi - lo + 1u) / 2u;
+        size_t mark = protocore_plaintext_mark();
+        void *p = protocore_plaintext_alloc(mid, 1);
+        protocore_plaintext_release(mark);
+        if (p != NULL)
+        {
+            lo = mid;
+        }
+        else
+        {
+            hi = mid - 1u;
+        }
+    }
+    return lo;
+}
 #endif
 
 static size_t build_frame(uint8_t *dst, WsOpcode opcode, proto_bool fin, const uint8_t *payload, uint16_t payload_len,
@@ -52,6 +84,7 @@ static size_t build_frame(uint8_t *dst, WsOpcode opcode, proto_bool fin, const u
     }
     return pos;
 }
+
 
 void setUp()
 {
@@ -126,7 +159,10 @@ void test_base64_encode_one_byte()
 {
     const uint8_t src[] = {0x4D};
     char out[8] = {0};
-    Base64.encode(src, 1, out);
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = 1;
+    Base64.encode_args.dst = out;
+    Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("TQ==", out);
 }
 
@@ -134,7 +170,10 @@ void test_base64_encode_two_bytes()
 {
     const uint8_t src[] = {0x4D, 0x61};
     char out[8] = {0};
-    Base64.encode(src, 2, out);
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = 2;
+    Base64.encode_args.dst = out;
+    Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("TWE=", out);
 }
 
@@ -142,7 +181,10 @@ void test_base64_encode_three_bytes()
 {
     const uint8_t src[] = {0x4D, 0x61, 0x6E};
     char out[8] = {0};
-    Base64.encode(src, 3, out);
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = 3;
+    Base64.encode_args.dst = out;
+    Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("TWFu", out);
 }
 
@@ -151,14 +193,21 @@ void test_base64_encode_ws_accept_key()
     const uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
                                                        0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
     char out[32] = {0};
-    Base64.encode(digest, PROTOCORE_SHA1_DIGEST_LEN, out);
+    Base64.encode_args.src = digest;
+    Base64.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
+    Base64.encode_args.dst = out;
+    Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", out);
 }
 
 void test_base64_decode_one_byte()
 {
     uint8_t dst[4] = {0};
-    size_t n = Base64.decode("TQ==", dst, sizeof(dst));
+    Base64.decode_args.src = "TQ==";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(1, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
 }
@@ -166,7 +215,11 @@ void test_base64_decode_one_byte()
 void test_base64_decode_two_bytes()
 {
     uint8_t dst[4] = {0};
-    size_t n = Base64.decode("TWE=", dst, sizeof(dst));
+    Base64.decode_args.src = "TWE=";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(2, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
     TEST_ASSERT_EQUAL(0x61, (int)dst[1]);
@@ -175,7 +228,11 @@ void test_base64_decode_two_bytes()
 void test_base64_decode_three_bytes()
 {
     uint8_t dst[4] = {0};
-    size_t n = Base64.decode("TWFu", dst, sizeof(dst));
+    Base64.decode_args.src = "TWFu";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(3, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
     TEST_ASSERT_EQUAL(0x61, (int)dst[1]);
@@ -185,7 +242,11 @@ void test_base64_decode_three_bytes()
 void test_base64_decode_ws_accept_key()
 {
     uint8_t dst[PROTOCORE_SHA1_DIGEST_LEN + 4] = {0};
-    size_t n = Base64.decode("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", dst, sizeof(dst));
+    Base64.decode_args.src = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(PROTOCORE_SHA1_DIGEST_LEN, (int)n);
     const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
                                                          0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
@@ -197,8 +258,15 @@ void test_base64_round_trip()
     const uint8_t src[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98};
     char encoded[24] = {0};
     uint8_t decoded[16] = {0};
-    Base64.encode(src, sizeof(src), encoded);
-    size_t n = Base64.decode(encoded, decoded, sizeof(decoded));
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = sizeof(src);
+    Base64.encode_args.dst = encoded;
+    Base64.encode(base64_work);
+    Base64.decode_args.src = encoded;
+    Base64.decode_args.dst = decoded;
+    Base64.decode_args.dst_cap = sizeof(decoded);
+    Base64.decode(base64_work);
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL((int)sizeof(src), (int)n);
     TEST_ASSERT_EQUAL_MEMORY(src, decoded, sizeof(src));
 }
@@ -206,25 +274,61 @@ void test_base64_round_trip()
 void test_base64_decode_rejects_misplaced_padding()
 {
     uint8_t dst[8] = {0};
-    TEST_ASSERT_EQUAL(0, (int)Base64.decode("A=BC", dst, sizeof(dst)));
-    TEST_ASSERT_EQUAL(0, (int)Base64.decode("AB=C", dst, sizeof(dst)));
-    TEST_ASSERT_EQUAL(0, (int)Base64.decode("=BCD", dst, sizeof(dst)));
-    TEST_ASSERT_EQUAL(0, (int)Base64.decode("TWE=TWFu", dst, sizeof(dst)));
-    TEST_ASSERT_EQUAL(0, (int)Base64.decode("TWF", dst, sizeof(dst)));
+    Base64.decode_args.src = "A=BC";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
+    Base64.decode_args.src = "AB=C";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
+    Base64.decode_args.src = "=BCD";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
+    Base64.decode_args.src = "TWE=TWFu";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
+    Base64.decode_args.src = "TWF";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL(0, (int)Base64.n);
 
-    TEST_ASSERT_EQUAL(1, (int)Base64.decode("TQ==", dst, sizeof(dst)));
-    TEST_ASSERT_EQUAL(2, (int)Base64.decode("TWE=", dst, sizeof(dst)));
+    Base64.decode_args.src = "TQ==";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL(1, (int)Base64.n);
+    Base64.decode_args.src = "TWE=";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL(2, (int)Base64.n);
 }
 
 void test_base64_decode_respects_capacity()
 {
 
     uint8_t dst[2] = {0};
-    size_t n = Base64.decode("TWFu", dst, sizeof(dst));
+    Base64.decode_args.src = "TWFu";
+    Base64.decode_args.dst = dst;
+    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64.decode(base64_work);
+    size_t n = Base64.n;
     TEST_ASSERT_EQUAL(0, (int)n);
 
     uint8_t dst3[3] = {0};
-    TEST_ASSERT_EQUAL(3, (int)Base64.decode("TWFu", dst3, sizeof(dst3)));
+    Base64.decode_args.src = "TWFu";
+    Base64.decode_args.dst = dst3;
+    Base64.decode_args.dst_cap = sizeof(dst3);
+    Base64.decode(base64_work);
+    TEST_ASSERT_EQUAL(3, (int)Base64.n);
 }
 
 void test_ws_pool_size()
@@ -1183,7 +1287,15 @@ void test_ws_permessage_deflate_outbound()
     uint8_t out[256];
     uint8_t scr[INFLATE_SCRATCH_SIZE];
     size_t out_len = 0;
-    int rc = (int)Inflate.raw(comp, plen + 4, out, sizeof(out), &out_len, scr, sizeof(scr));
+    Inflate.raw_args.src = comp;
+    Inflate.raw_args.src_len = plen + 4;
+    Inflate.raw_args.dst = out;
+    Inflate.raw_args.dst_cap = sizeof(out);
+    Inflate.raw_args.out_len = &out_len;
+    Inflate.raw_args.scratch = scr;
+    Inflate.raw_args.scratch_len = sizeof(scr);
+    Inflate.raw(inflate_work);
+    int rc = (int)Inflate.value;
     TEST_ASSERT_EQUAL_INT(INFLATE_OK, rc);
     TEST_ASSERT_EQUAL_size_t(mlen, out_len);
     TEST_ASSERT_EQUAL_MEMORY(msg, out, mlen);
@@ -1266,7 +1378,7 @@ void test_ws_permessage_deflate_scratch_exhausted_closes()
     TEST_ASSERT_NOT_NULL(ws);
     ws->pmd = PROTO_TRUE;
 
-    void *hog = protocore_plaintext_alloc(protocore_plaintext_capacity(), 1);
+    void *hog = protocore_plaintext_alloc(ws_scratch_available(), 1);
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
@@ -1293,7 +1405,7 @@ static void feed_compressed_with_arena_leaving(size_t leave)
     ws->pmd = PROTO_TRUE;
 
     protocore_plaintext_reset();
-    void *hog = protocore_plaintext_alloc(protocore_plaintext_capacity() - leave, 1);
+    void *hog = protocore_plaintext_alloc(ws_scratch_available() - leave, 1);
     TEST_ASSERT_NOT_NULL(hog);
 
     uint8_t frame[32];
@@ -1357,7 +1469,7 @@ void test_ws_outbound_binary_and_scratch_starved()
     tcp_capture_disable();
 
     protocore_plaintext_reset();
-    void *hog = protocore_plaintext_alloc(protocore_plaintext_capacity(), 1);
+    void *hog = protocore_plaintext_alloc(ws_scratch_available(), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
     Ws.conn = ws;
@@ -1371,7 +1483,7 @@ void test_ws_outbound_binary_and_scratch_starved()
     tcp_capture_disable();
 
     protocore_plaintext_reset();
-    hog = protocore_plaintext_alloc(protocore_plaintext_capacity() - (DEFLATE_SCRATCH_SIZE + 8), 1);
+    hog = protocore_plaintext_alloc(ws_scratch_available() - (DEFLATE_SCRATCH_SIZE + 8), 1);
     TEST_ASSERT_NOT_NULL(hog);
     tcp_capture_reset();
     Ws.conn = ws;

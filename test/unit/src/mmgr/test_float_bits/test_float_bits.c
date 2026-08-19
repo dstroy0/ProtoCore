@@ -12,7 +12,7 @@
 // rather than read out of this module or any other float formatter, so a bias off by one or a
 // shift off by a bit shows up as a wrong word instead of agreeing with itself.
 
-#include "mmgr/float_bits.h"
+#include "mmgr/float_bits/float_bits.h"
 
 #include <unity.h>
 

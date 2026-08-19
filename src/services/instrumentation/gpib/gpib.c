@@ -7,8 +7,8 @@
  */
 
 #include "services/instrumentation/gpib/gpib.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem.h"
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_GPIB
 

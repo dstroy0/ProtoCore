@@ -16,7 +16,7 @@
 
 #if PROTOCORE_ENABLE_RCWL0516
 
-#include "mmgr/plaintext.h"     // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h"     // the persistent end this module's state is taken from
 #include "server/clock/clock.h" // Clock.millis
 #include "server/peripherals/rcwl0516/rcwl0516.h"
 

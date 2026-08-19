@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HART
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/hart/hart.h"
 
 PROTOCORE_BEGIN_DECLS

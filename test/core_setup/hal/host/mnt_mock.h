@@ -20,7 +20,7 @@
 #ifndef PROTOCORE_MNT_MOCK_H
 #define PROTOCORE_MNT_MOCK_H
 
-#include "server/storage/mnt.h"
+#include "server/storage/mnt/mnt.h"
 
 #define MOCK_MNT_FILES 16
 #define MOCK_MNT_HANDLES 8

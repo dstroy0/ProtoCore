@@ -12,8 +12,8 @@
 // The OIDs, the PDU tags and the version field below all come from the registry assignments and
 // ASN.1 in RFC 3418, RFC 3416 sec 3 and RFC 1901 sec 3, with the arc arithmetic written out.
 
-#include "services/net/snmp/snmp_ber.h"
-#include "services/net/snmp/snmp_notify.h"
+#include "services/net/snmp/snmp_ber/snmp_ber.h"
+#include "services/net/snmp/snmp_notify/snmp_notify.h"
 #include <string.h>
 
 #include <unity.h>

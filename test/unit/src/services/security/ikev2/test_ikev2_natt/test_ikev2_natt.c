@@ -14,7 +14,7 @@
 // one of those four inputs changes it. That is stated rather than glossed - the digest value itself
 // is not pinned to a published number.
 
-#include "services/security/ikev2/ikev2_natt.h"
+#include "services/security/ikev2/ikev2_natt/ikev2_natt.h"
 #include <string.h>
 
 #include <unity.h>

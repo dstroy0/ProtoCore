@@ -57,7 +57,7 @@ with added explanatory comments:
 #define PROTOCORE_ENABLE_UPLOAD 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/upload_service.h"
 #include <LittleFS.h>
 

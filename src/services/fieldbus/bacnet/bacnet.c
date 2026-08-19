@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_BACNET
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/bacnet/bacnet.h"
 
 PROTOCORE_BEGIN_DECLS

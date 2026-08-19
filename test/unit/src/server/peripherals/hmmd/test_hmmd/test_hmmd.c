@@ -298,7 +298,7 @@ void test_stream_handles_a_partial_header_before_the_real_one(void)
 // recovers to decode the next real frame.
 void test_stream_drops_an_absurd_length_and_recovers(void)
 {
-    static const uint8_t HUGE[6] = {0xF4, 0xF3, 0xF2, 0xF1, 0xFF, 0xFF};
+    static const uint8_t OVERSIZE[6] = {0xF4, 0xF3, 0xF2, 0xF1, 0xFF, 0xFF};
     uint8_t frame[PROTOCORE_HMMD_FRAME_MAX];
     HmmdStream s;
     HmmdReport r;
@@ -306,10 +306,10 @@ void test_stream_drops_an_absurd_length_and_recovers(void)
     Hmmd.stream_reset_args.s = &s;
     Hmmd.stream_reset(protocore_hmmd_span());
 
-    for (size_t i = 0; i < sizeof(HUGE); i++)
+    for (size_t i = 0; i < sizeof(OVERSIZE); i++)
     {
         Hmmd.stream_push_args.s = &s;
-        Hmmd.stream_push_args.byte = HUGE[i];
+        Hmmd.stream_push_args.byte = OVERSIZE[i];
         Hmmd.stream_push_args.out = &r;
         Hmmd.stream_push(protocore_hmmd_span());
         TEST_ASSERT_FALSE(Hmmd.ok);

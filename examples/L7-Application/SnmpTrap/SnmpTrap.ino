@@ -21,8 +21,8 @@
 #define PROTOCORE_ENABLE_SNMP_TRAP 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "services/net/snmp/snmp_notify.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "services/net/snmp/snmp_notify/snmp_notify.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

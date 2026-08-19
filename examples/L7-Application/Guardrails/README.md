@@ -60,7 +60,7 @@ with added explanatory comments:
 #define PROTOCORE_ENABLE_GUARDRAILS 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "server/core/guardrails/guardrails.h"
 
 static const char *SSID = "YOUR_SSID";

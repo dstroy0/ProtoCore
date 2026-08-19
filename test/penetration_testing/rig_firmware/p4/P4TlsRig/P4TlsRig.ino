@@ -6,7 +6,7 @@
 // Same HTTPS/443 + /bench/tls ECC decomposition, so the TLS handshake wall-clock + the ECDHE/ECDSA CCOUNT
 // sweep are directly comparable to the S3 - the point being the P4's HW P-256 (mbedTLS ecc_alt) vs the S3's
 // software curves. Findings: docs/FEATURE_PERFORMANCE.md "Device-CPU breakdown + the ESP32-P4 (HW ECC)".
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "protocore.h"
 #ifdef PROTOCORE_TLS_HS_BENCH
 #include "network_drivers/tls/tls.h" // protocore_tls_hs_bench (handshake device-CPU vs wall probe)

@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
+
 void dbench_run(void)
 {
     static uint8_t src[1024];
@@ -25,10 +27,16 @@ void dbench_run(void)
         DBENCH_BANNER("base64");
         volatile size_t sink = 0;
         DBENCH_BULK("Base64.encode (1 KiB)", 100000, 1024, {
-            Base64.encode(src, 1024, enc);
+            Base64.encode_args.src = src;
+            Base64.encode_args.src_len = 1024;
+            Base64.encode_args.dst = enc;
+            Base64.encode(base64_work);
             sink += 1;
         });
-        DBENCH_BULK("Base64.decode (1 KiB)", 100000, 1024, sink += Base64.decode(enc, dec, sizeof(dec)));
+        Base64.decode_args.src = enc;
+        Base64.decode_args.dst = dec;
+        Base64.decode_args.dst_cap = sizeof(dec);
+        DBENCH_BULK("Base64.decode (1 KiB)", 100000, 1024, sink += (Base64.decode(base64_work), Base64.n));
         (void)sink;
         DBENCH_DONE();
     }

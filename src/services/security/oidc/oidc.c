@@ -12,15 +12,17 @@
  */
 
 #include "services/security/oidc/oidc.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem.h"
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protomem/protomem.h"
+
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
 
 #if PROTOCORE_ENABLE_OIDC
 
-#include "crypto/asymmetric/rsa.h"
-#include "mmgr/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
-#include "mmgr/protostr.h"  // str.len / eq: the bounded walks, in place of <string.h>
-#include "mmgr/secure.h"    // the signature digest's working set, wiped on release
+#include "crypto/asymmetric/rsa/rsa.h"
+#include "mmgr/plaintext/plaintext.h" // per-dispatch arena (keeps the decode buffers off the worker stack)
+#include "mmgr/protostr/protostr.h"   // str.len / eq: the bounded walks, in place of <string.h>
+#include "mmgr/secure/secure.h"       // the signature digest's working set, wiped on release
 #include "network_drivers/presentation/codec/base64/base64.h" // shared Base64.url_decode
 
 // The three parts of a JWS Compact Serialization (RFC 7515 sec 7.1).
@@ -299,7 +301,12 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
         return PROTO_FALSE;
     }
     uint8_t tmp[PROTOCORE_OIDC_RSA_BYTES + 8];
-    size_t nlen = Base64.url_decode(b64, str.len(b64, sizeof(b64)), tmp, sizeof(tmp));
+    Base64.url_decode_args.src = b64;
+    Base64.url_decode_args.src_len = str.len(b64, sizeof(b64));
+    Base64.url_decode_args.dst = tmp;
+    Base64.url_decode_args.dst_cap = sizeof(tmp);
+    Base64.url_decode(base64_work);
+    size_t nlen = Base64.n;
     if (nlen == 0 || !right_align(tmp, nlen, key->n, PROTOCORE_OIDC_RSA_BYTES))
     {
         return PROTO_FALSE;
@@ -310,7 +317,12 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
         return PROTO_FALSE;
     }
     uint8_t e_tmp[8];
-    size_t elen = Base64.url_decode(b64, str.len(b64, sizeof(b64)), e_tmp, sizeof(e_tmp));
+    Base64.url_decode_args.src = b64;
+    Base64.url_decode_args.src_len = str.len(b64, sizeof(b64));
+    Base64.url_decode_args.dst = e_tmp;
+    Base64.url_decode_args.dst_cap = sizeof(e_tmp);
+    Base64.url_decode(base64_work);
+    size_t elen = Base64.n;
     if (elen == 0 || !right_align(e_tmp, elen, key->e, 4))
     {
         return PROTO_FALSE;
@@ -346,7 +358,12 @@ static void token_kid(uint8_t *restrict work)
         return;
     }
     uint8_t hdr[PROTOCORE_OIDC_HDR_LEN];
-    size_t hn = Base64.url_decode(seg[OIDC_SEG_HEADER], seglen[OIDC_SEG_HEADER], hdr, sizeof(hdr) - 1);
+    Base64.url_decode_args.src = seg[OIDC_SEG_HEADER];
+    Base64.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
+    Base64.url_decode_args.dst = hdr;
+    Base64.url_decode_args.dst_cap = sizeof(hdr) - 1;
+    Base64.url_decode(base64_work);
+    size_t hn = Base64.n;
     if (hn == 0)
     {
         return;
@@ -467,7 +484,12 @@ static void verify_with_key(uint8_t *restrict work)
 
     // JOSE Header: require `alg` == RS256 (RFC 7515 sec 4.1.1), which rejects alg:none and the
     // MAC-based algorithms of OIDC Core sec 3.1.3.7 step 8.
-    size_t hn = Base64.url_decode(seg[OIDC_SEG_HEADER], seglen[OIDC_SEG_HEADER], hdr, PROTOCORE_OIDC_HDR_LEN - 1);
+    Base64.url_decode_args.src = seg[OIDC_SEG_HEADER];
+    Base64.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
+    Base64.url_decode_args.dst = hdr;
+    Base64.url_decode_args.dst_cap = PROTOCORE_OIDC_HDR_LEN - 1;
+    Base64.url_decode(base64_work);
+    size_t hn = Base64.n;
     if (hn == 0)
     {
         protocore_plaintext_release(scope);
@@ -485,8 +507,12 @@ static void verify_with_key(uint8_t *restrict work)
     }
 
     // JWS Signature: RSA-2048 -> exactly 256 bytes (RFC 7518 sec 3.3).
-    if (Base64.url_decode(seg[OIDC_SEG_SIGNATURE], seglen[OIDC_SEG_SIGNATURE], sig, PROTOCORE_OIDC_RSA_BYTES) !=
-        PROTOCORE_OIDC_RSA_BYTES)
+    Base64.url_decode_args.src = seg[OIDC_SEG_SIGNATURE];
+    Base64.url_decode_args.src_len = seglen[OIDC_SEG_SIGNATURE];
+    Base64.url_decode_args.dst = sig;
+    Base64.url_decode_args.dst_cap = PROTOCORE_OIDC_RSA_BYTES;
+    Base64.url_decode(base64_work);
+    if (Base64.n != PROTOCORE_OIDC_RSA_BYTES)
     {
         protocore_plaintext_release(scope);
         Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
@@ -524,7 +550,12 @@ static void verify_with_key(uint8_t *restrict work)
     }
 
     // JWS Payload: the Claims, trusted only now that the signature verifies.
-    size_t pn = Base64.url_decode(seg[OIDC_SEG_PAYLOAD], seglen[OIDC_SEG_PAYLOAD], pl, PROTOCORE_OIDC_MAX_LEN - 1);
+    Base64.url_decode_args.src = seg[OIDC_SEG_PAYLOAD];
+    Base64.url_decode_args.src_len = seglen[OIDC_SEG_PAYLOAD];
+    Base64.url_decode_args.dst = pl;
+    Base64.url_decode_args.dst_cap = PROTOCORE_OIDC_MAX_LEN - 1;
+    Base64.url_decode(base64_work);
+    size_t pn = Base64.n;
     if (pn == 0)
     {
         protocore_plaintext_release(scope);

@@ -43,7 +43,7 @@ reproduced verbatim with added explanatory comments:
 #define PROTOCORE_ENABLE_PARTITION_MONITOR 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "server/storage/partition_monitor/partition_monitor.h"
 
 static const char *SSID = "YOUR_SSID";

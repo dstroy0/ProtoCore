@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_CONTROL
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/system/control/control.h"
 
 PROTOCORE_BEGIN_DECLS

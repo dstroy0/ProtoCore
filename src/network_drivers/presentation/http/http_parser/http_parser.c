@@ -10,34 +10,82 @@
  * pulling bytes out of whatever transport buffer it uses.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_HTTP_PARSER
+
 #include "http_parser.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 #include "shared/ip/ip.h" // validate a recovered proxy client IP (v4/v6)
 
 static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 HttpReq http_pool[CONN_POOL_SLOTS];
 
-#if PROTOCORE_ENABLE_STREAM_BODY
 // Streaming-body hooks (OTA / file upload), owned by one instance (internal linkage): null
 // unless the application installs them. One named owner, unreachable cross-TU. (The http_pool[]
-// request table is the shared cross-TU substrate.)
+// request table is the shared cross-TU substrate.) Ungated, because storing them is what the setter
+// does in every build; PROTOCORE_ENABLE_STREAM_BODY decides only whether the feed path calls them.
 typedef struct
 {
     HttpStreamBeginCb stream_begin;
     HttpStreamDataCb stream_data;
     HttpStreamAbortCb stream_abort;
 } HttpParserCtx;
-static HttpParserCtx s_hp;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define HTTP_PARSER_OFF_CTX 0u
+static_assert(HTTP_PARSER_OFF_CTX + sizeof(HttpParserCtx) <= PROTOCORE_HTTP_PARSER_BORROW,
+              "PROTOCORE_HTTP_PARSER_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-void http_parser_set_stream_hooks(HttpStreamBeginCb begin, HttpStreamDataCb data, HttpStreamAbortCb abort)
+// The region, at its offset in the caller's borrow.
+#define HTTP_PARSER_CTX(w) ((HttpParserCtx *)(void *)((w) + HTTP_PARSER_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    s_hp.stream_begin = begin;
-    s_hp.stream_data = data;
-    s_hp.stream_abort = abort;
+    uint8_t *span; ///< PROTOCORE_HTTP_PARSER_BORROW persistent bytes, or null while the pool was short
+} HttpParserOwnCtx;
+static HttpParserOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_http_parser_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_HTTP_PARSER_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
 }
-#endif // PROTOCORE_ENABLE_STREAM_BODY
+
+// The entries this file calls before reaching their definitions.
+static void http_parser_get_header(uint8_t *restrict work);
+
+static void http_parser_set_stream_hooks(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    HttpStreamBeginCb begin = HttpParser.set_stream_hooks_args.begin;
+    HttpStreamDataCb data = HttpParser.set_stream_hooks_args.data;
+    HttpStreamAbortCb abort = HttpParser.set_stream_hooks_args.abort;
+
+    HTTP_PARSER_CTX(work)->stream_begin = begin;
+    HTTP_PARSER_CTX(work)->stream_data = data;
+    HTTP_PARSER_CTX(work)->stream_abort = abort;
+}
 
 // ---------------------------------------------------------------------------
 // FNV-1a hash constants for HTTP version validation
@@ -155,17 +203,24 @@ static void parse_query_params(HttpReq *req)
     }
 }
 
-void http_parser_reset(HttpReq *req)
+static void http_parser_reset(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    HttpReq *req = HttpParser.reset_args.req;
+
     uint8_t id = req->slot_id;
+
 #if PROTOCORE_ENABLE_STREAM_BODY
     // A streamed body that never reached PARSE_COMPLETE is being torn down (peer
     // reset / timeout / error): let the sink release its resource before we wipe
     // the state. The normal-completion reset runs while parse_state==PARSE_COMPLETE
     // (the handler already finished the sink), so this fires only on abort.
-    if (req->body_streaming && req->parse_state != PARSE_COMPLETE && s_hp.stream_abort)
+    if (req->body_streaming && req->parse_state != PARSE_COMPLETE && HTTP_PARSER_CTX(work)->stream_abort)
     {
-        s_hp.stream_abort(req);
+        HTTP_PARSER_CTX(work)->stream_abort(req);
     }
 #endif
     *req = (HttpReq){0}; // zero all fields
@@ -174,8 +229,15 @@ void http_parser_reset(HttpReq *req)
     req->_version_hash = PROTOCORE_FNV_OFFSET; // seed the FNV-1a accumulator
 }
 
-void http_parser_feed(HttpReq *p, uint8_t byte)
+static void http_parser_feed(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    HttpReq *p = HttpParser.feed_args.req;
+    uint8_t byte = HttpParser.feed_args.byte;
+
     // Terminal states (PARSE_COMPLETE / PARSE_ERROR / PARSE_ENTITY_TOO_LARGE / PARSE_URI_TOO_LONG) have no case
     // below, so they fall through to `default:` and no-op - no separate guard switch on the per-byte hot path.
     char c = (char)byte;
@@ -488,7 +550,8 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             // hook can match method/path/Authorization and begin a sink (Update
             // or a file). If it accepts, the body streams in chunks and the size
             // cap is bypassed; the matching route handler still runs at COMPLETE.
-            else if (p->content_length > 0 && s_hp.stream_begin && s_hp.stream_begin(p))
+            else if (p->content_length > 0 && HTTP_PARSER_CTX(work)->stream_begin &&
+                     HTTP_PARSER_CTX(work)->stream_begin(p))
             {
                 p->body_streaming = PROTO_TRUE;
                 p->parse_state = PARSE_BODY;
@@ -525,18 +588,18 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
             p->body[p->body_len++] = byte;
             if (p->body_len == BODY_BUF_SIZE)
             {
-                if (s_hp.stream_data)
+                if (HTTP_PARSER_CTX(work)->stream_data)
                 {
-                    s_hp.stream_data(p, p->body, p->body_len);
+                    HTTP_PARSER_CTX(work)->stream_data(p, p->body, p->body_len);
                 }
                 p->body_len = 0;
             }
             p->body_bytes_read++;
             if (p->body_bytes_read >= p->content_length)
             {
-                if (p->body_len && s_hp.stream_data)
+                if (p->body_len && HTTP_PARSER_CTX(work)->stream_data)
                 {
-                    s_hp.stream_data(p, p->body, p->body_len); // flush the tail
+                    HTTP_PARSER_CTX(work)->stream_data(p, p->body, p->body_len); // flush the tail
                 }
                 p->body_len = 0;
                 p->body[0] = '\0';
@@ -562,36 +625,56 @@ void http_parser_feed(HttpReq *p, uint8_t byte)
     }
 }
 
-const char *http_get_header(const HttpReq *req, const char *key)
+static void http_parser_get_header(uint8_t *restrict work)
 {
+    (void)work;
+    const HttpReq *req = HttpParser.get_header_args.req;
+    const char *key = HttpParser.get_header_args.key;
+
     for (uint8_t i = 0; i < req->header_count; i++)
     {
         if (str.eq(req->headers[i].key, key, MAX_KEY_LEN, PROTO_TRUE))
         {
-            return req->headers[i].val;
+            HttpParser.text = req->headers[i].val;
+            return;
         }
     }
-    return NULL;
+    HttpParser.text = NULL;
 }
 
-proto_bool http_get_cookie(const HttpReq *req, const char *name, char *out, size_t out_size)
+static void http_parser_get_cookie(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const HttpReq *req = HttpParser.get_cookie_args.req;
+    const char *name = HttpParser.get_cookie_args.name;
+    char *out = HttpParser.get_cookie_args.out;
+    size_t out_size = HttpParser.get_cookie_args.out_size;
+
     if (out == NULL || out_size == 0)
     {
-        return PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
+        return;
     }
     out[0] = '\0';
     if (req == NULL || name == NULL || name[0] == '\0')
     {
-        return PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
+        return;
     }
 
     // RFC 6265 4.2.1: the request "Cookie" header is "name1=value1; name2=value2".
     // Names are case-sensitive; a value may be DQUOTE-wrapped.
-    const char *c = http_get_header(req, "Cookie");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Cookie";
+    http_parser_get_header(work);
+    const char *c = HttpParser.text;
     if (c == NULL)
     {
-        return PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
+        return;
     }
     const size_t clen = str.len(c, MAX_VAL_LEN);
     const size_t nlen = str.len(name, MAX_VAL_LEN); // a matchable cookie-name span cannot exceed a header value
@@ -632,12 +715,13 @@ proto_bool http_get_cookie(const HttpReq *req, const char *name, char *out, size
                 }
                 mem.cpy(out, c + v, vlen);
                 out[vlen] = '\0';
-                return PROTO_TRUE;
+                HttpParser.ok = PROTO_TRUE;
+                return;
             }
         }
         at = stop + 1u;
     }
-    return PROTO_FALSE;
+    HttpParser.ok = PROTO_FALSE;
 }
 
 // Extract and validate a Forwarded / X-Forwarded-For client-address token from
@@ -821,21 +905,34 @@ static proto_bool fwd_value_is(const char *v, size_t n, const char *lit, size_t 
     return n == litlen && str.diff(v, lit, litlen, PROTO_TRUE) == litlen;
 }
 
-proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, proto_bool *is_https)
+static void http_parser_forwarded_client(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const HttpReq *req = HttpParser.forwarded_client_args.req;
+    char *ip_out = HttpParser.forwarded_client_args.ip_out;
+    size_t ip_cap = HttpParser.forwarded_client_args.ip_cap;
+    proto_bool *is_https = HttpParser.forwarded_client_args.is_https;
+
     if (is_https)
     {
         *is_https = PROTO_FALSE;
     }
     if (!ip_out || ip_cap == 0 || !req)
     {
-        return PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
+        return;
     }
     ip_out[0] = '\0';
 
     // Prefer RFC 7239 "Forwarded" (the leftmost element is the original client):
     //   Forwarded: for=192.0.2.60;proto=https, for=198.51.100.1
-    const char *fwd = http_get_header(req, "Forwarded");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Forwarded";
+    http_parser_get_header(work);
+    const char *fwd = HttpParser.text;
     if (fwd)
     {
         // RFC 7239 §4: Forwarded = 1#forwarded-element, the leftmost holding what the first proxy
@@ -855,61 +952,89 @@ proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap
         const char *f = fwd_param(fwd, elen, "for", 3u, &flen);
         if (f && fwd_extract_client(f, flen, ip_out, ip_cap))
         {
-            return PROTO_TRUE;
+            HttpParser.ok = PROTO_TRUE;
+            return;
         }
     }
 
     // De-facto X-Forwarded-For (comma list; leftmost = original client) + X-Forwarded-Proto.
     if (is_https)
     {
-        const char *xfp = http_get_header(req, "X-Forwarded-Proto");
+        HttpParser.get_header_args.req = req;
+        HttpParser.get_header_args.key = "X-Forwarded-Proto";
+        http_parser_get_header(work);
+        const char *xfp = HttpParser.text;
         if (xfp && str.starts(xfp, "https", 5, PROTO_TRUE))
         {
             *is_https = PROTO_TRUE;
         }
     }
-    const char *xff = http_get_header(req, "X-Forwarded-For");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "X-Forwarded-For";
+    http_parser_get_header(work);
+    const char *xff = HttpParser.text;
     if (xff)
     {
         const char *end = str.find(xff, MAX_VAL_LEN, ",", sizeof(","), PROTO_FALSE);
         size_t len = end ? (size_t)(end - xff) : str.len(xff, MAX_VAL_LEN);
         if (fwd_extract_client(xff, len, ip_out, ip_cap))
         {
-            return PROTO_TRUE;
+            HttpParser.ok = PROTO_TRUE;
+            return;
         }
     }
-    return PROTO_FALSE;
+    HttpParser.ok = PROTO_FALSE;
 }
 
-const char *http_get_query(const HttpReq *req, const char *key)
+static void http_parser_get_query(uint8_t *restrict work)
 {
+    (void)work;
+    const HttpReq *req = HttpParser.get_query_args.req;
+    const char *key = HttpParser.get_query_args.key;
+
     for (uint8_t i = 0; i < req->query_count; i++)
     {
         if (str.eq(req->query_params[i].key, key, QUERY_KEY_LEN, PROTO_FALSE))
         {
-            return req->query_params[i].val;
+            HttpParser.text = req->query_params[i].val;
+            return;
         }
     }
-    return NULL;
+    HttpParser.text = NULL;
 }
 
-proto_bool http_get_form(const HttpReq *req, const char *key, char *out, size_t out_size)
+static void http_parser_get_form(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const HttpReq *req = HttpParser.get_form_args.req;
+    const char *key = HttpParser.get_form_args.key;
+    char *out = HttpParser.get_form_args.out;
+    size_t out_size = HttpParser.get_form_args.out_size;
+
     if (out == NULL || out_size == 0)
     {
-        return PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
+        return;
     }
     out[0] = '\0';
     if (req == NULL || key == NULL)
     {
-        return PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
+        return;
     }
 
     // Only urlencoded bodies (allow a trailing "; charset=..." suffix).
-    const char *ct = http_get_header(req, "Content-Type");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Content-Type";
+    http_parser_get_header(work);
+    const char *ct = HttpParser.text;
     if (ct == NULL || !str.starts(ct, "application/x-www-form-urlencoded", 33, PROTO_TRUE))
     {
-        return PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
+        return;
     }
 
     const char *body = (const char *)req->body;
@@ -957,24 +1082,48 @@ proto_bool http_get_form(const HttpReq *req, const char *key, char *out, size_t 
             }
             mem.cpy(out, body + vs, vlen);
             out[vlen] = '\0';
-            return PROTO_TRUE;
+            HttpParser.ok = PROTO_TRUE;
+            return;
         }
     }
-    return PROTO_FALSE;
+    HttpParser.ok = PROTO_FALSE;
 }
 
-const char *http_get_param(const HttpReq *req, const char *key)
+static void http_parser_get_param(uint8_t *restrict work)
 {
+    (void)work;
+    const HttpReq *req = HttpParser.get_param_args.req;
+    const char *key = HttpParser.get_param_args.key;
+
     if (req == NULL || key == NULL)
     {
-        return NULL;
+        HttpParser.text = NULL;
+        return;
     }
     for (uint8_t i = 0; i < req->path_param_count; i++)
     {
         if (str.eq(req->path_params[i].key, key, QUERY_KEY_LEN, PROTO_FALSE))
         {
-            return req->path_params[i].val;
+            HttpParser.text = req->path_params[i].val;
+            return;
         }
     }
-    return NULL;
+    HttpParser.text = NULL;
 }
+
+// Designated, so a member's position in the struct does not decide what it binds to.
+HttpParserNs HttpParser = {
+    .set_stream_hooks = http_parser_set_stream_hooks,
+    .reset = http_parser_reset,
+    .feed = http_parser_feed,
+    .get_header = http_parser_get_header,
+    .get_cookie = http_parser_get_cookie,
+    .forwarded_client = http_parser_forwarded_client,
+    .get_query = http_parser_get_query,
+    .get_form = http_parser_get_form,
+    .get_param = http_parser_get_param,
+};
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP_PARSER

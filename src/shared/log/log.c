@@ -10,9 +10,9 @@
  */
 
 #include "shared/log/log.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
-#include "mmgr/protoframe.h" // frame.build: the line is a spec, not a format string
+#include "mmgr/protoframe/protoframe.h" // frame.build: the line is a spec, not a format string
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -43,7 +43,7 @@ uint8_t *protocore_log_span(void)
 #include <stdarg.h>
 
 #if PROTOCORE_ENABLE_LOGBUF
-#include "server/core/logbuf.h"
+#include "server/core/logbuf/logbuf.h"
 #endif
 
 /**

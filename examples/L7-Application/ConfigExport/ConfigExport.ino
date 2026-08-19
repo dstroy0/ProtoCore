@@ -19,7 +19,7 @@
 #define PROTOCORE_ENABLE_CONFIG_IO 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "server/storage/config_io/config_io.h"
 #include "server/storage/config_store/config_store.h"
 

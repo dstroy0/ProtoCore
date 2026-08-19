@@ -18,7 +18,7 @@
  * PROTOCORE_BEGIN_DECLS and PROTOCORE_END_DECLS, so the names it exports are C names.
  */
 
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 #if PROTOCORE_VENDOR_ESP
 

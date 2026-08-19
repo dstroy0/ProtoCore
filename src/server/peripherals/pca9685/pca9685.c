@@ -19,7 +19,7 @@
  turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
 
-#include "mmgr/secure.h"        // the persistent end this module's state is taken from
+#include "mmgr/secure/secure.h"        // the persistent end this module's state is taken from
 #include "server/clock/clock.h" // protocore_delay_us: the oscillator settle in begin()
 #include "server/peripherals/i2c.h"
 #include "server/peripherals/pca9685/pca9685.h"

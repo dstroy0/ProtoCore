@@ -19,7 +19,7 @@
  * rather than a library call.
  */
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #include <stddef.h>
 

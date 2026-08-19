@@ -12,15 +12,15 @@
 
 #include "network_drivers/tls/tls.h"
 
-#include "crypto/asymmetric/curve25519.h" // protocore_x25519, protocore_x25519_base
-#include "crypto/asymmetric/ed25519.h"    // Ed25519: the peer's CertificateVerify
+#include "crypto/asymmetric/curve25519/curve25519.h" // protocore_x25519, protocore_x25519_base
+#include "crypto/asymmetric/ed25519/ed25519.h"    // Ed25519: the peer's CertificateVerify
 #include "crypto/ct_eq.h"                 // protocore_ct_eq: the Finished compare
-#include "crypto/x509/x509.h"             // X509: the peer's certificate and the name it speaks for
-#include "crypto/x509/x509_verify.h"      // X509Verify: the path to the anchor, and CertificateVerify
-#include "mmgr/protomem.h"                // mem.cpy: the peer's presented key
-#include "mmgr/protostr.h"                // str.len: the ALPN protocol name lengths
-#include "mmgr/rawmemcpy.h"               // raw.read
-#include "mmgr/secure.h"                  // the borrow this driver runs out of, and protocore_secure_wipe
+#include "crypto/x509/x509/x509.h"             // X509: the peer's certificate and the name it speaks for
+#include "crypto/x509/x509_verify/x509_verify.h"      // X509Verify: the path to the anchor, and CertificateVerify
+#include "mmgr/protomem/protomem.h"                // mem.cpy: the peer's presented key
+#include "mmgr/protostr/protostr.h"                // str.len: the ALPN protocol name lengths
+#include "mmgr/rawmemcpy/rawmemcpy.h"               // raw.read
+#include "mmgr/secure/secure.h"                  // the borrow this driver runs out of, and protocore_secure_wipe
 
 // The secure-pool term this file declares against PROTOCORE_SECURE_ARENA_SIZE: one borrow per TLS
 // connection, taken from the persistent end and held for the life of the connection.

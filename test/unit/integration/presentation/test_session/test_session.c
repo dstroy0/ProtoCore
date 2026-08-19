@@ -47,7 +47,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         HttpConn.slot = (uint8_t)i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
 }
 
@@ -75,7 +75,7 @@ void test_reset_clears_mid_parse_state()
     http_pool[0].parse_state = PARSE_HEADER_KEY;
     http_pool[0].header_count = 3;
     HttpConn.slot = (uint8_t)0;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[0].header_count);
 }

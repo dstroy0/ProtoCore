@@ -21,8 +21,8 @@
 // Both moved under mmgr/ when the memory-management layer was separated out, and strbuf became
 // membuild. This bench is built from the tree, so it follows the tree.
 #include "device_bench.h" // DBENCH_CYCLES
-#include "mmgr/membuild.h"
-#include "mmgr/protoframe.h"
+#include "mmgr/membuild/membuild.h"
+#include "mmgr/protoframe/protoframe.h"
 
 static double g_mhz = 240.0;
 
