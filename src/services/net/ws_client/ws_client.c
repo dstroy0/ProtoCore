@@ -116,7 +116,7 @@ static_assert(WS_CLIENT_OFF_CTX + sizeof(struct WsClientStorage) <= PROTOCORE_WS
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_WS_CLIENT_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_WS_CLIENT_BORROW persistent bytes
 } WsClientOwnCtx;
 static WsClientOwnCtx s_own;
 
@@ -125,15 +125,11 @@ uint8_t *protocore_ws_client_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_WS_CLIENT_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            WS_CLIENT_CTX(s_own.span)->cid = -1;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_WS_CLIENT_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        WS_CLIENT_CTX(s_own.span)->cid = -1;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 #else
 // No storage member: without a network stack there is no connection to own, and the codec below

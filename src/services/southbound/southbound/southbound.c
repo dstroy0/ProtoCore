@@ -44,7 +44,7 @@ static_assert(SOUTHBOUND_OFF_CTX + sizeof(struct SouthboundStorage) <= PROTOCORE
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SOUTHBOUND_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SOUTHBOUND_BORROW persistent bytes
 } SouthboundOwnCtx;
 static SouthboundOwnCtx s_own;
 
@@ -53,13 +53,9 @@ uint8_t *protocore_southbound_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SOUTHBOUND_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SOUTHBOUND_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // The registered driver of that name, or null.

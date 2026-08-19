@@ -80,7 +80,7 @@ static_assert(TELNET_OFF_CTX + sizeof(struct TelnetStorage) <= PROTOCORE_TELNET_
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_TELNET_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_TELNET_BORROW persistent bytes
 } TelnetOwnCtx;
 static TelnetOwnCtx s_own;
 
@@ -89,13 +89,9 @@ uint8_t *protocore_telnet_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_TELNET_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_TELNET_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // Point TELNET_CTX(work)->conn at the row bound to ns->slot, or NULL.

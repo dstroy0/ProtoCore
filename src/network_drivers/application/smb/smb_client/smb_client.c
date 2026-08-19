@@ -173,7 +173,7 @@ static_assert(SMB_CLIENT_OFF_CTX + sizeof(SmbClientCtx) <= PROTOCORE_SMB_CLIENT_
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SMB_CLIENT_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SMB_CLIENT_BORROW persistent bytes
 } SmbClientOwnCtx;
 static SmbClientOwnCtx s_own;
 
@@ -182,13 +182,9 @@ uint8_t *protocore_smb_client_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SMB_CLIENT_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_SMB_CLIENT_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // SMB message-signing state for a session: the algorithm (HMAC-SHA256 for SMB 2.x, AES-CMAC for

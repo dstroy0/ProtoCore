@@ -46,7 +46,7 @@ extern void lowlevel_err_cb(void *arg, protocore_net_err err);
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_TCP_LISTENER_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_TCP_LISTENER_BORROW persistent bytes
 } TcpListenerOwnCtx;
 static TcpListenerOwnCtx s_own;
 
@@ -55,13 +55,9 @@ uint8_t *protocore_tcp_listener_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_TCP_LISTENER_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_TCP_LISTENER_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // Both teardowns are called by the add that replaces an active row, above their definitions.

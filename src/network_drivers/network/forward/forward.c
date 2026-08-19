@@ -275,7 +275,7 @@ static proto_bool pat_args_valid(const FwdMatchArgs *m)
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_FORWARD_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_FORWARD_BORROW persistent bytes
 } ForwardOwnCtx;
 static ForwardOwnCtx s_own;
 
@@ -284,16 +284,12 @@ uint8_t *protocore_forward_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_FORWARD_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // An empty access list passes every frame, and the borrow arrives zeroed, which reads
-            // as PROTOCORE_FWD_DENY. The carve happens once, so the default is applied here.
-            FORWARD_CTX(s_own.span)->acl_default = PROTOCORE_FWD_ALLOW;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_FORWARD_BORROW).buf;
+        // An empty access list passes every frame, and the borrow arrives zeroed, which reads
+        // as PROTOCORE_FWD_DENY. The carve happens once, so the default is applied here.
+        FORWARD_CTX(s_own.span)->acl_default = PROTOCORE_FWD_ALLOW;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void forward_reset(uint8_t *restrict work)

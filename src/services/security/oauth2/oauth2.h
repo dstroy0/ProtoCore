@@ -160,7 +160,7 @@ extern Oauth2Ns Oauth2;
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span, or NULL while the pool was short - which every entry refuses.
+ * @return the span.
  */
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 uint8_t *protocore_oauth2_span(void);

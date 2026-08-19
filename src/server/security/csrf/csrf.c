@@ -87,7 +87,7 @@ static void sign_nonce(uint8_t *restrict work, const uint8_t *nonce, size_t nlen
 // A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_CSRF_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_CSRF_BORROW persistent bytes
 } CsrfOwnCtx;
 static CsrfOwnCtx s_csrf;
 
@@ -98,13 +98,9 @@ uint8_t *protocore_csrf_span(void)
 {
     if (s_csrf.span == NULL)
     {
-        protocore_span s = protocore_secure_persist_span(PROTOCORE_CSRF_BORROW);
-        if (span.ok(s))
-        {
-            s_csrf.span = s.buf;
-        }
+        s_csrf.span = protocore_secure_persist_span(PROTOCORE_CSRF_BORROW).buf;
     }
-    return s_csrf.span; // null while the pool was short, which every entry refuses
+    return s_csrf.span;
 }
 
 // --- the entries -----------------------------------------------------------

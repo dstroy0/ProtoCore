@@ -81,7 +81,7 @@ static_assert(SSH_SFTP_OFF_CTX + sizeof(SshSftpCtx) <= PROTOCORE_SSH_SFTP_BORROW
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SSH_SFTP_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SSH_SFTP_BORROW persistent bytes
 } SshSftpOwnCtx;
 static SshSftpOwnCtx s_own;
 
@@ -90,15 +90,11 @@ uint8_t *protocore_ssh_sftp_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SSH_SFTP_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            SSH_SFTP_CTX(s_own.span)->root = -1;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SSH_SFTP_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        SSH_SFTP_CTX(s_own.span)->root = -1;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // --- handle table ---------------------------------------------------------------------------------

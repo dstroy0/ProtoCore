@@ -119,7 +119,7 @@ extern CsrfNs Csrf;
  * borrow comes from. Taken once from the end of the secure pool, which no mark and no release walks,
  * so the secret and the nonce counter last the life of the program.
  *
- * @return the span, or NULL while the pool was short - which every entry refuses.
+ * @return the span.
  */
 uint8_t *protocore_csrf_span(void);
 

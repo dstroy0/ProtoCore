@@ -47,7 +47,7 @@ static_assert(RADIO_POWER_OFF_CTX + sizeof(struct RadioStorage) <= PROTOCORE_RAD
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_RADIO_POWER_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_RADIO_POWER_BORROW persistent bytes
 } RadioOwnCtx;
 static RadioOwnCtx s_own;
 
@@ -56,13 +56,9 @@ uint8_t *protocore_radio_power_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_RADIO_POWER_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_RADIO_POWER_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void radio_ps_name(uint8_t *restrict work)

@@ -43,7 +43,7 @@ static inline proto_bool elapsed(uint32_t now, uint32_t since, uint32_t limit)
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_RCWL0516_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_RCWL0516_BORROW persistent bytes
 } Rcwl0516OwnCtx;
 static Rcwl0516OwnCtx s_own;
 
@@ -52,13 +52,9 @@ uint8_t *protocore_rcwl0516_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_RCWL0516_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_RCWL0516_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void rcwl0516_core_init(uint8_t *restrict work);

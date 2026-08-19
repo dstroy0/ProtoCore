@@ -172,7 +172,7 @@ static_assert(SSH_TRANSPORT_OFF_CTX + sizeof(struct SshTransportStorage) <= PROT
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SSH_TRANSPORT_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SSH_TRANSPORT_BORROW persistent bytes
 } SshTransportOwnCtx;
 static SshTransportOwnCtx s_own;
 
@@ -181,15 +181,11 @@ uint8_t *protocore_ssh_transport_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SSH_TRANSPORT_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            SSH_TRANSPORT_CTX(s_own.span)->prefer_rsa = PROTO_TRUE;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_SSH_TRANSPORT_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        SSH_TRANSPORT_CTX(s_own.span)->prefer_rsa = PROTO_TRUE;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 void ssh_kex_set_prefer_rsa(proto_bool prefer)

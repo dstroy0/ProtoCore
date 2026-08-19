@@ -156,7 +156,7 @@ static inline proto_bool line_append(char *out, size_t cap, size_t *pos, const c
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_STATSD_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_STATSD_BORROW persistent bytes
 } StatsdOwnCtx;
 static StatsdOwnCtx s_own;
 
@@ -165,15 +165,11 @@ uint8_t *protocore_statsd_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_STATSD_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            STATSD_CTX(s_own.span)->port = PROTOCORE_STATSD_PORT;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_STATSD_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        STATSD_CTX(s_own.span)->port = PROTOCORE_STATSD_PORT;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // Parse the daemon address and store the port and the tag list every later line carries.

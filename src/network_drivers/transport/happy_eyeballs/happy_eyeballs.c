@@ -86,7 +86,7 @@ static int pref_of(uint8_t *restrict work)
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_HAPPY_EYEBALLS_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_HAPPY_EYEBALLS_BORROW persistent bytes
 } HappyEyeballsOwnCtx;
 static HappyEyeballsOwnCtx s_own;
 
@@ -95,13 +95,9 @@ uint8_t *protocore_happy_eyeballs_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_HAPPY_EYEBALLS_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_HAPPY_EYEBALLS_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void happy_eyeballs_pref(uint8_t *restrict work)

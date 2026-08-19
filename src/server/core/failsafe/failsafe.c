@@ -38,7 +38,7 @@ static_assert(FAILSAFE_OFF_CTX + sizeof(struct FailsafeStorage) <= PROTOCORE_FAI
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_FAILSAFE_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_FAILSAFE_BORROW persistent bytes
 } FailsafeOwnCtx;
 static FailsafeOwnCtx s_own;
 
@@ -47,13 +47,9 @@ uint8_t *protocore_failsafe_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_FAILSAFE_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_FAILSAFE_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // Minimal unsigned -> decimal, no stdlib; returns chars written.

@@ -290,7 +290,7 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SSH_SCP_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SSH_SCP_BORROW persistent bytes
 } SshScpOwnCtx;
 static SshScpOwnCtx s_own;
 
@@ -299,15 +299,11 @@ uint8_t *protocore_ssh_scp_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SSH_SCP_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            SSH_SCP_CTX(s_own.span)->root = -1;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SSH_SCP_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        SSH_SCP_CTX(s_own.span)->root = -1;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void ssh_scp_begin(uint8_t *restrict work)

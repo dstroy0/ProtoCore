@@ -38,7 +38,7 @@ static const uint8_t PCA9685_PRESCALE_MAX = 255;
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_I2C_DEVICE_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_I2C_DEVICE_BORROW persistent bytes
 } Pca9685OwnCtx;
 static Pca9685OwnCtx s_own;
 
@@ -47,13 +47,9 @@ uint8_t *protocore_pca9685_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_I2C_DEVICE_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_I2C_DEVICE_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void pca9685_channel_reg(uint8_t *restrict work);

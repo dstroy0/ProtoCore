@@ -161,7 +161,7 @@ static size_t metric_encode(uint8_t slot, uint8_t *buf, size_t cap, const SpbMet
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SPARKPLUG_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SPARKPLUG_BORROW persistent bytes
 } SparkplugOwnCtx;
 static SparkplugOwnCtx s_own;
 
@@ -170,13 +170,9 @@ uint8_t *protocore_sparkplug_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SPARKPLUG_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SPARKPLUG_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // Join `spBv1.0/group_id/message_type/edge_node_id[/device_id]` (Sparkplug 3.0.0 sec 4.1) into

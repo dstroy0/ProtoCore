@@ -46,7 +46,7 @@ static_assert(CONFIG_STORE_OFF_CTX + sizeof(ConfigStoreCtx) <= PROTOCORE_CONFIG_
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_CONFIG_STORE_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_CONFIG_STORE_BORROW persistent bytes
 } ConfigStoreOwnCtx;
 static ConfigStoreOwnCtx s_own;
 
@@ -55,13 +55,9 @@ uint8_t *protocore_config_store_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_CONFIG_STORE_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_CONFIG_STORE_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void config_store_begin(uint8_t *restrict work)

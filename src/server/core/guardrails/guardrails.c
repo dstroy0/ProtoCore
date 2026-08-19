@@ -35,7 +35,7 @@ static_assert(GUARDRAILS_OFF_CTX + sizeof(struct GuardrailsStorage) <= PROTOCORE
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_GUARDRAILS_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_GUARDRAILS_BORROW persistent bytes
 } GuardrailsOwnCtx;
 static GuardrailsOwnCtx s_own;
 
@@ -44,13 +44,9 @@ uint8_t *protocore_guardrails_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_GUARDRAILS_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_GUARDRAILS_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void guardrails_eval(uint8_t *restrict work)

@@ -148,7 +148,7 @@ typedef struct
 // The one owned instance of the pointer to those bytes, private to this TU.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_EDGE_PROXY_TLS_BORROW secure bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_EDGE_PROXY_TLS_BORROW secure bytes
 } EdgeProxyTlsOwnCtx;
 static EdgeProxyTlsOwnCtx s_tls_own;
 
@@ -157,11 +157,7 @@ static EdgeProxyTlsCtx *edge_tls(void)
 {
     if (s_tls_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_EDGE_PROXY_TLS_BORROW);
-        if (span.ok(sp))
-        {
-            s_tls_own.span = sp.buf;
-        }
+        s_tls_own.span = protocore_secure_persist_span(PROTOCORE_EDGE_PROXY_TLS_BORROW).buf;
     }
     return (EdgeProxyTlsCtx *)(void *)s_tls_own.span; // null while the pool was short
 }
@@ -1653,7 +1649,7 @@ static const ProtoHandler s_mesh_handler = {
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_EDGE_PROXY_BORROW persistent PLAINTEXT bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_EDGE_PROXY_BORROW persistent PLAINTEXT bytes
 } EdgeProxyOwnCtx;
 static EdgeProxyOwnCtx s_own;
 
@@ -1662,13 +1658,9 @@ uint8_t *protocore_edge_cache_proxy_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_EDGE_PROXY_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_EDGE_PROXY_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void edge_cache_proxy_enable(uint8_t *restrict work)

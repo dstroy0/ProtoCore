@@ -115,7 +115,7 @@ static_assert(SNMP_AGENT_OFF_CTX + sizeof(struct SnmpAgentStorage) <= PROTOCORE_
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SNMP_AGENT_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SNMP_AGENT_BORROW persistent bytes
 } SnmpAgentOwnCtx;
 static SnmpAgentOwnCtx s_own;
 
@@ -124,15 +124,11 @@ uint8_t *protocore_snmp_agent_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SNMP_AGENT_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            (void)str.copy(SNMP_AGENT_CTX(s_own.span)->ro, PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY, SNMP_COMMUNITY_MAX);
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_SNMP_AGENT_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        (void)str.copy(SNMP_AGENT_CTX(s_own.span)->ro, PROTOCORE_SNMP_DEFAULT_RO_COMMUNITY, SNMP_COMMUNITY_MAX);
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // community_match()'s non-empty test is a no-op only while the read-only community is never

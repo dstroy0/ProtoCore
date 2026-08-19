@@ -25,7 +25,7 @@ PROTOCORE_BEGIN_DECLS
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_J1939_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_J1939_BORROW persistent bytes
 } J1939OwnCtx;
 static J1939OwnCtx s_own;
 
@@ -34,13 +34,9 @@ uint8_t *protocore_j1939_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_J1939_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_J1939_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void j1939_decode_id(uint8_t *restrict work);
