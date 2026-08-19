@@ -17,72 +17,152 @@
 #ifndef PROTOCORE_FILE_SERVING_H
 #define PROTOCORE_FILE_SERVING_H
 
-#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq
-#include "network_drivers/presentation/http/route/http_route.h"        // HttpRoute (by pointer)
-#include "server/storage/mnt/mnt.h" // protocore_mnt_backend
-
-#include "protocore_config.h"
-
-PROTOCORE_BEGIN_DECLS
-
-/** @brief Format @p epoch as an RFC 1123 GMT date into @p out (cap bytes); @p out is emptied for epoch <= 0. */
-void http_rfc1123(int64_t epoch, char *out, size_t cap);
+#include "network_drivers/presentation/http/http_parser/http_parser.h" // the complete type a public struct below holds by value
+#include "network_drivers/presentation/http/route/http_route.h" // the complete type a public struct below holds by value
+#include "protocore_config.h"                                   // the entry point: protocore_types.h for the widths
+#include "server/storage/mnt/mnt.h" // the complete type a public struct below holds by value
 
 #if PROTOCORE_ENABLE_FILE_SERVING
 
-/** @brief Dispatch a ROUTE_STATIC match: resolve the FS path and serve it (MIME/index/gzip). */
-void serve_static_request(uint8_t slot_id, HttpReq *req, const HttpRoute *r);
+PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_FILE_SERVING_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
+
+#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq: the type a parameter points at
+
+#include "network_drivers/presentation/http/route/http_route.h" // HttpRoute: the type a parameter points at
+
+#include "server/storage/mnt/mnt.h" // protocore_mnt_backend: the type a parameter points at
+
+/** @brief What http_rfc1123 takes: epoch, out, cap. */
+typedef struct
+{
+    int64_t epoch;
+    char *out;
+    size_t cap;
+} FileServingHttpRfc1123Args;
+
+/** @brief What serve_static_request takes: slot_id, req, r. */
+typedef struct
+{
+    uint8_t slot_id;
+    HttpReq *req;
+    const HttpRoute *r;
+} FileServingServeStaticRequestArgs;
+
+/** @brief What serve_file_internal takes: slot_id, head, file_sys, ... */
+typedef struct
+{
+    uint8_t slot_id;
+    proto_bool head;
+    const protocore_mnt_backend *file_sys;
+    const char *fs_path;
+    const char *content_type;
+    const char *content_encoding;
+} FileServingServeFileInternalArgs;
+
+/** @brief What file_send_pump takes: slot_id. */
+typedef struct
+{
+    uint8_t slot_id;
+} FileServingFileSendPumpArgs;
+
+/** @brief What holds_slot takes: slot. */
+typedef struct
+{
+    uint8_t slot;
+} FileServingHoldsSlotArgs;
+
+/** @brief What serve_file takes: slot_id, file_sys, fs_path, ... */
+typedef struct
+{
+    uint8_t slot_id;                       ///< Connection slot index
+    const protocore_mnt_backend *file_sys; ///< Backend to read from; NULL uses whatever is mounted (the board's)
+    const char *fs_path;                   ///< Request path to the file, resolved against the mount root
+    const char *content_type;              ///< MIME type string, e.g. "text/html"
+} FileServingServeFileArgs;
+
+/** @brief What serve_static takes: url_prefix, file_sys, fs_root. */
+typedef struct
+{
+    const char *url_prefix;                ///< URL prefix to mount (with or without a trailing `*`)
+    const protocore_mnt_backend *file_sys; ///< Backend to serve from; NULL uses whatever is mounted (the board's)
+    const char *fs_root;                   ///< Subtree on that backend (persistent string)
+} FileServingServeStaticArgs;
 
 /**
- * @brief Open @p fs_path on @p file_sys and stream it as 200 with the given type and optional
- *        Content-Encoding. A null @p file_sys means whatever is mounted.
+ * @brief Layer 7 static file responses: open a path on a mount and page it out over a slot. serve_file_internal() opens
+ * the file and writes the response head; file_send_pump() writes one send-buffer window per call until the file is
+ * drained, so a response larger than the buffer is spread across dispatches instead of held in one.
+ * protocore_file_holds_slot() reports whether a slot is mid-paging.
+ *
+ * A caller sets the members a call takes, invokes it through ::FileServing with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   FileServing.http_rfc1123_args.epoch = ...;
+ *   FileServing.http_rfc1123_args.out = ...;
+ *   FileServing.http_rfc1123_args.cap = ...;
+ *   FileServing.http_rfc1123(work);
+ *
+ * @var FileServingNs::http_rfc1123_args  what http_rfc1123 takes: epoch, out, cap
+ * @var FileServingNs::serve_static_request_args  what serve_static_request takes: slot_id, req, r
+ * @var FileServingNs::serve_file_internal_args  what serve_file_internal takes: slot_id, head, file_sys,
+ * @var FileServingNs::file_send_pump_args  what file_send_pump takes: slot_id
+ * @var FileServingNs::holds_slot_args  what holds_slot takes: slot
+ * @var FileServingNs::serve_file_args  what serve_file takes: slot_id, file_sys, fs_path,
+ * @var FileServingNs::serve_static_args  what serve_static takes: url_prefix, file_sys, fs_root
+ * @var FileServingNs::ok  a call's true/false outcome
+ * @var FileServingNs::http_rfc1123  format epoch as an RFC 1123 GMT date into out (cap bytes); out is ...
+ * @var FileServingNs::serve_static_request  dispatch a ROUTE_STATIC match: resolve the FS path and serve it ...
+ * @var FileServingNs::serve_file_internal  open fs_path on file_sys and stream it as 200 with the given type ...
+ * @var FileServingNs::file_send_pump  resume a pending file response: page out one send-buffer window, ...
+ * @var FileServingNs::holds_slot  true while a file response is paging out on slot
+ * @var FileServingNs::serve_file  serve a file from the mounted volume. Opens fs_path through the ...
+ * @var FileServingNs::serve_static  mount a filesystem subtree at a URL prefix (one-call static ...
+ *
+ * @c work is PROTOCORE_FILE_SERVING_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-void serve_file_internal(uint8_t slot_id, proto_bool head, const protocore_mnt_backend *file_sys, const char *fs_path,
-                         const char *content_type, const char *content_encoding);
+typedef struct
+{
+    FileServingHttpRfc1123Args http_rfc1123_args;
+    FileServingServeStaticRequestArgs serve_static_request_args;
+    FileServingServeFileInternalArgs serve_file_internal_args;
+    FileServingFileSendPumpArgs file_send_pump_args;
+    FileServingHoldsSlotArgs holds_slot_args;
+    FileServingServeFileArgs serve_file_args;
+    FileServingServeStaticArgs serve_static_args;
 
-/** @brief Resume a pending file response: page out one send-buffer window, finishing when drained. */
-void file_send_pump(uint8_t slot_id);
+    proto_bool ok;
 
-/** @brief True while a file response is paging out on @p slot. */
-proto_bool protocore_file_holds_slot(uint8_t slot);
+    void (*const http_rfc1123)(uint8_t *restrict work);
+    void (*const serve_static_request)(uint8_t *restrict work);
+    void (*const serve_file_internal)(uint8_t *restrict work);
+    void (*const file_send_pump)(uint8_t *restrict work);
+    void (*const holds_slot)(uint8_t *restrict work);
+    void (*const serve_file)(uint8_t *restrict work);
+    void (*const serve_static)(uint8_t *restrict work);
+} FileServingNs;
+
+/** @brief The one symbol this module exports. */
+extern FileServingNs FileServing;
 
 /**
- * @brief Serve a file from the mounted volume.
+ * @brief The PROTOCORE_FILE_SERVING_BORROW bytes this module's state lives in.
  *
- * Opens @p fs_path through the filesystem accessor, sends HTTP 200 with the appropriate headers
- * (Content-Type, Content-Length), and streams the file body in FILE_CHUNK_SIZE chunks. Sends 404 if
- * the file cannot be opened.
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
  *
- * @param slot_id      Connection slot index.
- * @param file_sys     Backend to read from; NULL uses whatever is mounted (the board's).
- * @param fs_path      Request path to the file, resolved against the mount root.
- * @param content_type MIME type string, e.g. "text/html".
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-void serve_file(uint8_t slot_id, const protocore_mnt_backend *file_sys, const char *fs_path, const char *content_type);
-
-/**
- * @brief Mount a filesystem subtree at a URL prefix (one-call static serving).
- *
- * Registers a wildcard route so every request under @p url_prefix is served from @p fs_root on the
- * mounted volume. The request path beyond the prefix is appended to @p fs_root; a request ending in
- * `/` (or exactly the prefix) serves `index.html`. Content-Type is auto-detected from the extension
- * (see mime_type()). If the client sends `Accept-Encoding: gzip` and a `<path>.gz` exists, the
- * pre-compressed file is served with `Content-Encoding: gzip`. Paths containing `..` are rejected
- * (404). Only GET and HEAD are served; other methods get 405.
- *
- * @code
- * serve_static("/", NULL, "/www");          // the board's own storage
- * serve_static("/ram/", protocore_mnt_ram(), "/"); // or any backend that satisfies our vtable
- * @endcode
- *
- * @param url_prefix  URL prefix to mount (with or without a trailing `*`).
- * @param file_sys    Backend to serve from; NULL uses whatever is mounted (the board's).
- * @param fs_root     Subtree on that backend (persistent string).
- */
-void serve_static(const char *url_prefix, const protocore_mnt_backend *file_sys, const char *fs_root);
-
-#endif // PROTOCORE_ENABLE_FILE_SERVING
+uint8_t *protocore_file_serving_span(void);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_FILE_SERVING
 
 #endif // PROTOCORE_FILE_SERVING_H

@@ -238,10 +238,6 @@ static void lockout_succeed(uint8_t *restrict work)
 static void lockout_reset(uint8_t *restrict work)
 {
     AuthLockout.ok = PROTO_FALSE;
-    if (!work)
-    {
-        return;
-    }
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
     AuthLockout.ok = PROTO_TRUE;
     for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)

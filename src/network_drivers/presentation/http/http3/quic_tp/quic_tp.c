@@ -252,10 +252,6 @@ static proto_bool quic_tp_apply(uint64_t id, const uint8_t *val, size_t vlen, Qu
 
 static void quic_tp_parse(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *buf = QuicTp.parse_args.buf;
     size_t len = QuicTp.parse_args.len;
     QuicTransportParams *tp = QuicTp.parse_args.tp;

@@ -17,6 +17,8 @@
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer an envelope is built with
 
+static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
+
 // The JSON member names an envelope carries (JSON Event Format 1.0.2 sec 3), spelled once so the
 // has-data and no-data paths emit the same keys.
 #define CE_ATTR_SPECVERSION "specversion"
@@ -67,15 +69,34 @@ static void cloudevents_build_structured(uint8_t *restrict work)
     }
 
     protocore_json_writer w = {0};
-    Json.init(&w, out, cap);
-    Json.begin_object(&w);
-    Json.kv_str(&w, CE_ATTR_SPECVERSION, PROTOCORE_CLOUDEVENTS_SPECVERSION);
-    Json.kv_str(&w, CE_ATTR_ID, CloudEvents.attr.id);
-    Json.kv_str(&w, CE_ATTR_SOURCE, CloudEvents.attr.source);
-    Json.kv_str(&w, CE_ATTR_TYPE, CloudEvents.attr.type);
+    Json.init_args.w = &w;
+    Json.init_args.buf = out;
+    Json.init_args.cap = cap;
+    Json.init(json_work);
+    Json.begin_object_args.w = &w;
+    Json.begin_object(json_work);
+    Json.kv_str_args.w = &w;
+    Json.kv_str_args.k = CE_ATTR_SPECVERSION;
+    Json.kv_str_args.v = PROTOCORE_CLOUDEVENTS_SPECVERSION;
+    Json.kv_str(json_work);
+    Json.kv_str_args.w = &w;
+    Json.kv_str_args.k = CE_ATTR_ID;
+    Json.kv_str_args.v = CloudEvents.attr.id;
+    Json.kv_str(json_work);
+    Json.kv_str_args.w = &w;
+    Json.kv_str_args.k = CE_ATTR_SOURCE;
+    Json.kv_str_args.v = CloudEvents.attr.source;
+    Json.kv_str(json_work);
+    Json.kv_str_args.w = &w;
+    Json.kv_str_args.k = CE_ATTR_TYPE;
+    Json.kv_str_args.v = CloudEvents.attr.type;
+    Json.kv_str(json_work);
     if (ce_present(CloudEvents.attr.subject))
     {
-        Json.kv_str(&w, CE_ATTR_SUBJECT, CloudEvents.attr.subject);
+        Json.kv_str_args.w = &w;
+        Json.kv_str_args.k = CE_ATTR_SUBJECT;
+        Json.kv_str_args.v = CloudEvents.attr.subject;
+        Json.kv_str(json_work);
     }
 
     // A JSON value goes out verbatim, a plain string goes out escaped, and either way the member is
@@ -88,24 +109,41 @@ static void cloudevents_build_structured(uint8_t *restrict work)
         {
             dct = CloudEvents.attr.datacontenttype;
         }
-        Json.kv_str(&w, CE_ATTR_DATACONTENTTYPE, dct);
-        Json.key(&w, CE_MEMBER_DATA);
-        Json.put_raw(&w, CloudEvents.data.json);
+        Json.kv_str_args.w = &w;
+        Json.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
+        Json.kv_str_args.v = dct;
+        Json.kv_str(json_work);
+        Json.key_args.w = &w;
+        Json.key_args.k = CE_MEMBER_DATA;
+        Json.key(json_work);
+        Json.put_raw_args.w = &w;
+        Json.put_raw_args.literal = CloudEvents.data.json;
+        Json.put_raw(json_work);
     }
     else if (CloudEvents.data.str)
     {
         if (ce_present(CloudEvents.attr.datacontenttype))
         {
-            Json.kv_str(&w, CE_ATTR_DATACONTENTTYPE, CloudEvents.attr.datacontenttype);
+            Json.kv_str_args.w = &w;
+            Json.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
+            Json.kv_str_args.v = CloudEvents.attr.datacontenttype;
+            Json.kv_str(json_work);
         }
-        Json.kv_str(&w, CE_MEMBER_DATA, CloudEvents.data.str);
+        Json.kv_str_args.w = &w;
+        Json.kv_str_args.k = CE_MEMBER_DATA;
+        Json.kv_str_args.v = CloudEvents.data.str;
+        Json.kv_str(json_work);
     }
     else if (ce_present(CloudEvents.attr.datacontenttype))
     {
-        Json.kv_str(&w, CE_ATTR_DATACONTENTTYPE, CloudEvents.attr.datacontenttype);
+        Json.kv_str_args.w = &w;
+        Json.kv_str_args.k = CE_ATTR_DATACONTENTTYPE;
+        Json.kv_str_args.v = CloudEvents.attr.datacontenttype;
+        Json.kv_str(json_work);
     }
 
-    Json.end_object(&w);
+    Json.end_object_args.w = &w;
+    Json.end_object(json_work);
     if (!protocore_json_ok(&w))
     {
         return;

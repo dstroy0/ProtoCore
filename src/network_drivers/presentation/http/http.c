@@ -20,6 +20,8 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h"    // ConnPool: the slot a response writes on
 #include "protocore.h"                                          // http_pool, and the request and route widths
 #include "server/io/webdav_handler.h"                           // Dav: a DAV mount is intercepted before the route loop
+static uint8_t http_routes_work[16];                            // the borrow an entry takes; HttpRoutes never reads it
+
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // protocore_millis() stamps the attempt the lockout counts
 #include "server/security/auth_lockout/auth_lockout.h"
@@ -82,10 +84,6 @@ uint8_t *protocore_http_span(void)
 
 static void set_not_found(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     HTTP_CTX(work)->not_found = Http.cb;
 }
 
@@ -93,10 +91,6 @@ static void set_not_found(uint8_t *restrict work)
 // outlives the reset and answers requests the route table no longer knows about.
 static void reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     static const struct HttpStorage blank = {0};
     *HTTP_CTX(work) = blank;
 }
@@ -106,10 +100,6 @@ static void reset(uint8_t *restrict work)
 // suspends the client request and drives the non-blocking origin fetch from this slot's poll.
 static void set_edge_poll(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     HTTP_CTX(work)->edge_poll = Http.edge_poll;
 }
 #endif
@@ -753,12 +743,11 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
         protocore_secure_release(auth_mark);
         return PROTO_FALSE; // pool exhausted: fail closed
     }
-    Auth.work = auth_ws.buf;
     Auth.slot = slot_id;
     Auth.req = req;
     Auth.id = r->auth_id;
     Auth.nonce_args.stale = PROTO_FALSE;
-    Auth.check(Auth.internal);
+    Auth.check(auth_ws.buf);
     proto_bool stale = Auth.nonce_args.stale;
     proto_bool ok = Auth.ok;
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
@@ -778,11 +767,10 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
 #endif
     if (!ok)
     {
-        Auth.work = auth_ws.buf;
         Auth.slot = slot_id;
         Auth.id = r->auth_id;
         Auth.nonce_args.stale = stale;
-        Auth.challenge(Auth.internal);
+        Auth.challenge(auth_ws.buf);
         protocore_secure_release(auth_mark);
         return PROTO_FALSE;
     }
@@ -828,7 +816,10 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
             Http.allow_append(protocore_http_span());
             return PROTO_FALSE;
         }
-        serve_static_request(slot_id, req, r);
+        FileServing.serve_static_request_args.slot_id = slot_id;
+        FileServing.serve_static_request_args.req = req;
+        FileServing.serve_static_request_args.r = r;
+        FileServing.serve_static_request(protocore_file_serving_span());
         return PROTO_TRUE;
     }
 #endif // PROTOCORE_ENABLE_FILE_SERVING
@@ -868,10 +859,6 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
 
 static void match_and_execute(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t slot_id = Http.slot;
     HttpReq *req = &http_pool[slot_id];
     Http.method_args.token = req->method;
@@ -944,9 +931,12 @@ static void match_and_execute(uint8_t *restrict work)
     char allow_buf[64];
     allow_buf[0] = '\0';
 
-    for (uint8_t i = 0; i < HttpRoutes.count(); i++)
+    HttpRoutes.count(http_routes_work);
+    for (uint8_t i = 0; i < HttpRoutes.value; i++)
     {
-        HttpRoute *r = HttpRoutes.at(i);
+        HttpRoutes.at_args.i = i;
+        HttpRoutes.at(http_routes_work);
+        HttpRoute *r = HttpRoutes.ptr;
         if (!route_admits(r, slot_id, req))
         {
             continue;
@@ -980,10 +970,6 @@ static void match_and_execute(uint8_t *restrict work)
 // dispatches a completed request into the route table.
 static void poll_slot(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t i = Http.slot;
 #if PROTOCORE_ENABLE_EDGE_CACHE
     // An edge-cache origin fetch in flight for this slot owns it: pump the fetch and skip the rest of the
@@ -996,9 +982,12 @@ static void poll_slot(uint8_t *restrict work)
 #if PROTOCORE_ENABLE_FILE_SERVING
     // A file response in flight owns the slot: page out the next window and
     // skip the rest of the pipeline until the whole body has been sent.
-    if (protocore_file_holds_slot(i))
+    FileServing.holds_slot_args.slot = i;
+    FileServing.holds_slot(protocore_file_serving_span());
+    if (FileServing.ok)
     {
-        file_send_pump(i);
+        FileServing.file_send_pump_args.slot_id = i;
+        FileServing.file_send_pump(protocore_file_serving_span());
         return;
     }
 #endif

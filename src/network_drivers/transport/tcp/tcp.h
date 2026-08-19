@@ -24,15 +24,15 @@
 #ifndef PROTOCORE_TCP_H
 #define PROTOCORE_TCP_H
 
-#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPoolNs: the accepted connections
-#include "network_drivers/transport/tcp/server/server.h"     // TcpListenerNs: the bound ports
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#include "protocore_config.h"
+#if PROTOCORE_ENABLE_TCP
 
 #if PROTOCORE_NEED_CLIENT
 #include "network_drivers/transport/tcp/client/client.h" // TcpClientNs: dialing out
 #endif
-
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPoolNs: the accepted connections
+#include "network_drivers/transport/tcp/server/server.h"     // TcpListenerNs: the bound ports
 PROTOCORE_BEGIN_DECLS
 
 /**
@@ -58,5 +58,7 @@ typedef struct
 extern TcpNs Tcp;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_TCP
 
 #endif // PROTOCORE_TCP_H

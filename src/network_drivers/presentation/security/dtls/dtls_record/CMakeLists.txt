@@ -8,9 +8,8 @@
 if(PROTOCORE_ENABLE_DTLS)
   protocore_module(pc_network_drivers_presentation_security_dtls_dtls_record
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/dtls_record.c"
-    PUBLIC
-      pc_crypto_aead_aes128gcm
     PRIVATE
+      pc_crypto_aead_aes128gcm
       pc_mmgr_protomem
       pc_mmgr_secure
       pc_network_drivers_tls_key_schedule

@@ -19,6 +19,8 @@
 
 #include <unity.h>
 
+static uint8_t hpack_prim_work[16]; // the borrow an entry takes; HpackPrim never reads it
+
 void setUp(void)
 {
 }
@@ -41,22 +43,58 @@ void test_rfc7541_c1_integer_examples(void)
     size_t consumed = 0;
     uint32_t v = 0;
 
-    TEST_ASSERT_EQUAL_size_t(1, HpackPrim.encode_int(b, sizeof(b), 5, 0, 10));
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = sizeof(b);
+    HpackPrim.encode_int_args.prefix_bits = 5;
+    HpackPrim.encode_int_args.flags = 0;
+    HpackPrim.encode_int_args.value = 10;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(1, HpackPrim.n);
     TEST_ASSERT_EQUAL_HEX8(0x0a, b[0]);
-    TEST_ASSERT_TRUE(HpackPrim.decode_int(b, 1, 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = b;
+    HpackPrim.decode_int_args.len = 1;
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_UINT32(10, v);
     TEST_ASSERT_EQUAL_size_t(1, consumed);
 
     static const uint8_t C112[3] = {0x1f, 0x9a, 0x0a};
-    TEST_ASSERT_EQUAL_size_t(3, HpackPrim.encode_int(b, sizeof(b), 5, 0, 1337));
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = sizeof(b);
+    HpackPrim.encode_int_args.prefix_bits = 5;
+    HpackPrim.encode_int_args.flags = 0;
+    HpackPrim.encode_int_args.value = 1337;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(3, HpackPrim.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(C112, b, 3);
-    TEST_ASSERT_TRUE(HpackPrim.decode_int(C112, sizeof(C112), 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = C112;
+    HpackPrim.decode_int_args.len = sizeof(C112);
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_UINT32(1337, v);
     TEST_ASSERT_EQUAL_size_t(3, consumed);
 
-    TEST_ASSERT_EQUAL_size_t(1, HpackPrim.encode_int(b, sizeof(b), 8, 0, 42));
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = sizeof(b);
+    HpackPrim.encode_int_args.prefix_bits = 8;
+    HpackPrim.encode_int_args.flags = 0;
+    HpackPrim.encode_int_args.value = 42;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(1, HpackPrim.n);
     TEST_ASSERT_EQUAL_HEX8(0x2a, b[0]);
-    TEST_ASSERT_TRUE(HpackPrim.decode_int(b, 1, 8, &consumed, &v));
+    HpackPrim.decode_int_args.in = b;
+    HpackPrim.decode_int_args.len = 1;
+    HpackPrim.decode_int_args.prefix_bits = 8;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_UINT32(42, v);
 }
 
@@ -69,15 +107,39 @@ void test_prefix_flags_are_left_alone(void)
     uint32_t v = 0;
 
     // A dynamic table size update is 001 then a 5-bit prefix integer (sec 6.3).
-    TEST_ASSERT_EQUAL_size_t(1, HpackPrim.encode_int(b, sizeof(b), 5, 0x20, 10));
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = sizeof(b);
+    HpackPrim.encode_int_args.prefix_bits = 5;
+    HpackPrim.encode_int_args.flags = 0x20;
+    HpackPrim.encode_int_args.value = 10;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(1, HpackPrim.n);
     TEST_ASSERT_EQUAL_HEX8(0x2a, b[0]);
-    TEST_ASSERT_TRUE(HpackPrim.decode_int(b, 1, 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = b;
+    HpackPrim.decode_int_args.len = 1;
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_UINT32(10, v);
 
     // An indexed header field is 1 then a 7-bit prefix (sec 6.1); index 2 gives C.2.4's 0x82.
-    TEST_ASSERT_EQUAL_size_t(1, HpackPrim.encode_int(b, sizeof(b), 7, 0x80, 2));
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = sizeof(b);
+    HpackPrim.encode_int_args.prefix_bits = 7;
+    HpackPrim.encode_int_args.flags = 0x80;
+    HpackPrim.encode_int_args.value = 2;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(1, HpackPrim.n);
     TEST_ASSERT_EQUAL_HEX8(0x82, b[0]);
-    TEST_ASSERT_TRUE(HpackPrim.decode_int(b, 1, 7, &consumed, &v));
+    HpackPrim.decode_int_args.in = b;
+    HpackPrim.decode_int_args.len = 1;
+    HpackPrim.decode_int_args.prefix_bits = 7;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_UINT32(2, v);
 }
 
@@ -92,12 +154,24 @@ void test_prefix_int_round_trips_at_every_width(void)
         for (size_t i = 0; i < sizeof(VALUES) / sizeof(VALUES[0]); i++)
         {
             uint8_t b[8];
-            size_t n = HpackPrim.encode_int(b, sizeof(b), bits, 0, VALUES[i]);
+            HpackPrim.encode_int_args.out = b;
+            HpackPrim.encode_int_args.cap = sizeof(b);
+            HpackPrim.encode_int_args.prefix_bits = bits;
+            HpackPrim.encode_int_args.flags = 0;
+            HpackPrim.encode_int_args.value = VALUES[i];
+            HpackPrim.encode_int(hpack_prim_work);
+            size_t n = HpackPrim.n;
             TEST_ASSERT_TRUE(n > 0);
 
             size_t consumed = 0;
             uint32_t got = 0;
-            TEST_ASSERT_TRUE(HpackPrim.decode_int(b, n, bits, &consumed, &got));
+            HpackPrim.decode_int_args.in = b;
+            HpackPrim.decode_int_args.len = n;
+            HpackPrim.decode_int_args.prefix_bits = bits;
+            HpackPrim.decode_int_args.consumed = &consumed;
+            HpackPrim.decode_int_args.value = &got;
+            HpackPrim.decode_int(hpack_prim_work);
+            TEST_ASSERT_TRUE(HpackPrim.ok);
             TEST_ASSERT_EQUAL_UINT32(VALUES[i], got);
             TEST_ASSERT_EQUAL_size_t(n, consumed);
         }
@@ -114,30 +188,72 @@ void test_prefix_int_rejects_an_overflowing_encoding(void)
 
     // Four continuations put the fifth octet's payload at bit 28, so its value may not exceed 0x0f.
     static const uint8_t LARGEST[6] = {0x1f, 0x80, 0x80, 0x80, 0x80, 0x0f};
-    TEST_ASSERT_TRUE(HpackPrim.decode_int(LARGEST, sizeof(LARGEST), 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = LARGEST;
+    HpackPrim.decode_int_args.len = sizeof(LARGEST);
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_UINT32(31u + (0x0fu << 28), v);
     TEST_ASSERT_EQUAL_size_t(6, consumed);
 
     static const uint8_t JUST_OVER[6] = {0x1f, 0x80, 0x80, 0x80, 0x80, 0x10};
-    TEST_ASSERT_FALSE(HpackPrim.decode_int(JUST_OVER, sizeof(JUST_OVER), 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = JUST_OVER;
+    HpackPrim.decode_int_args.len = sizeof(JUST_OVER);
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     static const uint8_t WAY_OVER[6] = {0x1f, 0x80, 0x80, 0x80, 0x80, 0x7f};
-    TEST_ASSERT_FALSE(HpackPrim.decode_int(WAY_OVER, sizeof(WAY_OVER), 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = WAY_OVER;
+    HpackPrim.decode_int_args.len = sizeof(WAY_OVER);
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     // The octet-length bound: a sixth continuation is past any shift a 32-bit result can take.
     static const uint8_t TOO_LONG[8] = {0x1f, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00};
-    TEST_ASSERT_FALSE(HpackPrim.decode_int(TOO_LONG, sizeof(TOO_LONG), 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = TOO_LONG;
+    HpackPrim.decode_int_args.len = sizeof(TOO_LONG);
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     // A continuation that never terminates inside the octets available.
     static const uint8_t UNTERMINATED[3] = {0x1f, 0x80, 0x80};
-    TEST_ASSERT_FALSE(HpackPrim.decode_int(UNTERMINATED, sizeof(UNTERMINATED), 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = UNTERMINATED;
+    HpackPrim.decode_int_args.len = sizeof(UNTERMINATED);
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     // A prefix at its maximum with no continuation at all.
     static const uint8_t NO_CONTINUATION[1] = {0x1f};
-    TEST_ASSERT_FALSE(HpackPrim.decode_int(NO_CONTINUATION, sizeof(NO_CONTINUATION), 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = NO_CONTINUATION;
+    HpackPrim.decode_int_args.len = sizeof(NO_CONTINUATION);
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     // Nothing to read.
-    TEST_ASSERT_FALSE(HpackPrim.decode_int(UNTERMINATED, 0, 5, &consumed, &v));
+    HpackPrim.decode_int_args.in = UNTERMINATED;
+    HpackPrim.decode_int_args.len = 0;
+    HpackPrim.decode_int_args.prefix_bits = 5;
+    HpackPrim.decode_int_args.consumed = &consumed;
+    HpackPrim.decode_int_args.value = &v;
+    HpackPrim.decode_int(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 }
 
 // A short output buffer is reported rather than written past: the first octet, and a continuation
@@ -145,11 +261,41 @@ void test_prefix_int_rejects_an_overflowing_encoding(void)
 void test_encode_int_refuses_a_short_buffer(void)
 {
     uint8_t b[8];
-    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.encode_int(b, 0, 5, 0, 10));
-    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.encode_int(b, 1, 5, 0, 1337)); // needs three octets
-    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.encode_int(b, 2, 5, 0, 1337));
-    TEST_ASSERT_EQUAL_size_t(3, HpackPrim.encode_int(b, 3, 5, 0, 1337));
-    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.encode_int(b, 1, 7, 0, 200)); // one continuation, no room
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = 0;
+    HpackPrim.encode_int_args.prefix_bits = 5;
+    HpackPrim.encode_int_args.flags = 0;
+    HpackPrim.encode_int_args.value = 10;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.n);
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = 1;
+    HpackPrim.encode_int_args.prefix_bits = 5;
+    HpackPrim.encode_int_args.flags = 0;
+    HpackPrim.encode_int_args.value = 1337;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.n); // needs three octets
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = 2;
+    HpackPrim.encode_int_args.prefix_bits = 5;
+    HpackPrim.encode_int_args.flags = 0;
+    HpackPrim.encode_int_args.value = 1337;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.n);
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = 3;
+    HpackPrim.encode_int_args.prefix_bits = 5;
+    HpackPrim.encode_int_args.flags = 0;
+    HpackPrim.encode_int_args.value = 1337;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(3, HpackPrim.n);
+    HpackPrim.encode_int_args.out = b;
+    HpackPrim.encode_int_args.cap = 1;
+    HpackPrim.encode_int_args.prefix_bits = 7;
+    HpackPrim.encode_int_args.flags = 0;
+    HpackPrim.encode_int_args.value = 200;
+    HpackPrim.encode_int(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.n); // one continuation, no room
 }
 
 // The Huffman-coded string literals RFC 7541 prints in full, each with the octet count its length
@@ -197,11 +343,25 @@ void test_appendix_c_huffman_strings(void)
         char back[64];
         size_t back_len = 0;
 
-        TEST_ASSERT_EQUAL_size_t(CASES[i].n, HpackPrim.huff_len(CASES[i].text, len));
-        TEST_ASSERT_EQUAL_size_t(CASES[i].n, HpackPrim.huff_encode(out, sizeof(out), CASES[i].text, len));
+        HpackPrim.huff_len_args.s = CASES[i].text;
+        HpackPrim.huff_len_args.n = len;
+        HpackPrim.huff_len(hpack_prim_work);
+        TEST_ASSERT_EQUAL_size_t(CASES[i].n, HpackPrim.n);
+        HpackPrim.huff_encode_args.out = out;
+        HpackPrim.huff_encode_args.cap = sizeof(out);
+        HpackPrim.huff_encode_args.s = CASES[i].text;
+        HpackPrim.huff_encode_args.n = len;
+        HpackPrim.huff_encode(hpack_prim_work);
+        TEST_ASSERT_EQUAL_size_t(CASES[i].n, HpackPrim.n);
         TEST_ASSERT_EQUAL_UINT8_ARRAY(CASES[i].want, out, CASES[i].n);
 
-        TEST_ASSERT_TRUE(HpackPrim.huff_decode(CASES[i].want, CASES[i].n, back, sizeof(back), &back_len));
+        HpackPrim.huff_decode_args.in = CASES[i].want;
+        HpackPrim.huff_decode_args.n = CASES[i].n;
+        HpackPrim.huff_decode_args.out = back;
+        HpackPrim.huff_decode_args.cap = sizeof(back);
+        HpackPrim.huff_decode_args.out_len = &back_len;
+        HpackPrim.huff_decode(hpack_prim_work);
+        TEST_ASSERT_TRUE(HpackPrim.ok);
         TEST_ASSERT_EQUAL_size_t(len, back_len);
         TEST_ASSERT_EQUAL_MEMORY(CASES[i].text, back, len);
     }
@@ -274,13 +434,27 @@ void test_appendix_b_huffman_table(void)
         }
 
         uint8_t out[8];
-        TEST_ASSERT_EQUAL_size_t(octets, HpackPrim.huff_len(&in, 1));
-        TEST_ASSERT_EQUAL_size_t(octets, HpackPrim.huff_encode(out, sizeof(out), &in, 1));
+        HpackPrim.huff_len_args.s = &in;
+        HpackPrim.huff_len_args.n = 1;
+        HpackPrim.huff_len(hpack_prim_work);
+        TEST_ASSERT_EQUAL_size_t(octets, HpackPrim.n);
+        HpackPrim.huff_encode_args.out = out;
+        HpackPrim.huff_encode_args.cap = sizeof(out);
+        HpackPrim.huff_encode_args.s = &in;
+        HpackPrim.huff_encode_args.n = 1;
+        HpackPrim.huff_encode(hpack_prim_work);
+        TEST_ASSERT_EQUAL_size_t(octets, HpackPrim.n);
         TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, octets);
 
         char back[8];
         size_t back_len = 0;
-        TEST_ASSERT_TRUE(HpackPrim.huff_decode(want, octets, back, sizeof(back), &back_len));
+        HpackPrim.huff_decode_args.in = want;
+        HpackPrim.huff_decode_args.n = octets;
+        HpackPrim.huff_decode_args.out = back;
+        HpackPrim.huff_decode_args.cap = sizeof(back);
+        HpackPrim.huff_decode_args.out_len = &back_len;
+        HpackPrim.huff_decode(hpack_prim_work);
+        TEST_ASSERT_TRUE(HpackPrim.ok);
         TEST_ASSERT_EQUAL_size_t(1, back_len);
         TEST_ASSERT_EQUAL_UINT8((uint8_t)sym, (uint8_t)back[0]);
     }
@@ -296,36 +470,86 @@ void test_huffman_decode_rejects_bad_padding_and_eos(void)
 
     // EOS is the 30-bit all-ones code, so four octets of 0xff resolve to it.
     static const uint8_t EOS[4] = {0xff, 0xff, 0xff, 0xff};
-    TEST_ASSERT_FALSE(HpackPrim.huff_decode(EOS, sizeof(EOS), out, sizeof(out), &out_len));
+    HpackPrim.huff_decode_args.in = EOS;
+    HpackPrim.huff_decode_args.n = sizeof(EOS);
+    HpackPrim.huff_decode_args.out = out;
+    HpackPrim.huff_decode_args.cap = sizeof(out);
+    HpackPrim.huff_decode_args.out_len = &out_len;
+    HpackPrim.huff_decode(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     // '0' is the 5-bit code 00000, so five of them fill 25 bits and leave 7 of padding: legal when
     // the padding is all ones, a decoding error when it is not.
     static const uint8_t PAD_ONES[4] = {0x00, 0x00, 0x00, 0x7f};
-    TEST_ASSERT_TRUE(HpackPrim.huff_decode(PAD_ONES, sizeof(PAD_ONES), out, sizeof(out), &out_len));
+    HpackPrim.huff_decode_args.in = PAD_ONES;
+    HpackPrim.huff_decode_args.n = sizeof(PAD_ONES);
+    HpackPrim.huff_decode_args.out = out;
+    HpackPrim.huff_decode_args.cap = sizeof(out);
+    HpackPrim.huff_decode_args.out_len = &out_len;
+    HpackPrim.huff_decode(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_size_t(5, out_len);
     TEST_ASSERT_EQUAL_MEMORY("00000", out, 5);
 
     static const uint8_t PAD_ZEROS[4] = {0x00, 0x00, 0x00, 0x00};
-    TEST_ASSERT_FALSE(HpackPrim.huff_decode(PAD_ZEROS, sizeof(PAD_ZEROS), out, sizeof(out), &out_len));
+    HpackPrim.huff_decode_args.in = PAD_ZEROS;
+    HpackPrim.huff_decode_args.n = sizeof(PAD_ZEROS);
+    HpackPrim.huff_decode_args.out = out;
+    HpackPrim.huff_decode_args.cap = sizeof(out);
+    HpackPrim.huff_decode_args.out_len = &out_len;
+    HpackPrim.huff_decode(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     // A whole octet of ones with nothing before it is eight bits of padding, one more than allowed.
     static const uint8_t PAD_OCTET[1] = {0xff};
-    TEST_ASSERT_FALSE(HpackPrim.huff_decode(PAD_OCTET, sizeof(PAD_OCTET), out, sizeof(out), &out_len));
+    HpackPrim.huff_decode_args.in = PAD_OCTET;
+    HpackPrim.huff_decode_args.n = sizeof(PAD_OCTET);
+    HpackPrim.huff_decode_args.out = out;
+    HpackPrim.huff_decode_args.cap = sizeof(out);
+    HpackPrim.huff_decode_args.out_len = &out_len;
+    HpackPrim.huff_decode(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     // A destination too small for the symbols decoded is refused rather than overrun.
     static const uint8_t WWW[12] = {0xf1, 0xe3, 0xc2, 0xe5, 0xf2, 0x3a, 0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff};
     char tiny[4];
-    TEST_ASSERT_FALSE(HpackPrim.huff_decode(WWW, sizeof(WWW), tiny, sizeof(tiny), &out_len));
+    HpackPrim.huff_decode_args.in = WWW;
+    HpackPrim.huff_decode_args.n = sizeof(WWW);
+    HpackPrim.huff_decode_args.out = tiny;
+    HpackPrim.huff_decode_args.cap = sizeof(tiny);
+    HpackPrim.huff_decode_args.out_len = &out_len;
+    HpackPrim.huff_decode(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 }
 
 // A destination too small for the encoded octets reports 0 rather than writing part of a code.
 void test_huff_encode_refuses_a_short_buffer(void)
 {
     uint8_t out[16];
-    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.huff_encode(out, 0, "www.example.com", 15));
-    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.huff_encode(out, 11, "www.example.com", 15)); // needs twelve
-    TEST_ASSERT_EQUAL_size_t(12, HpackPrim.huff_encode(out, 12, "www.example.com", 15));
-    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.huff_encode(out, 0, "a", 1)); // no room for the last octet
+    HpackPrim.huff_encode_args.out = out;
+    HpackPrim.huff_encode_args.cap = 0;
+    HpackPrim.huff_encode_args.s = "www.example.com";
+    HpackPrim.huff_encode_args.n = 15;
+    HpackPrim.huff_encode(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.n);
+    HpackPrim.huff_encode_args.out = out;
+    HpackPrim.huff_encode_args.cap = 11;
+    HpackPrim.huff_encode_args.s = "www.example.com";
+    HpackPrim.huff_encode_args.n = 15;
+    HpackPrim.huff_encode(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.n); // needs twelve
+    HpackPrim.huff_encode_args.out = out;
+    HpackPrim.huff_encode_args.cap = 12;
+    HpackPrim.huff_encode_args.s = "www.example.com";
+    HpackPrim.huff_encode_args.n = 15;
+    HpackPrim.huff_encode(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(12, HpackPrim.n);
+    HpackPrim.huff_encode_args.out = out;
+    HpackPrim.huff_encode_args.cap = 0;
+    HpackPrim.huff_encode_args.s = "a";
+    HpackPrim.huff_encode_args.n = 1;
+    HpackPrim.huff_encode(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.n); // no room for the last octet
 }
 
 // sec 5.2: a string literal is an H bit at 0x80, a 7-bit prefix length, then that many octets. Both
@@ -339,7 +563,14 @@ void test_decode_str_reads_both_forms(void)
     // C.3.1's raw form: 0x0f then "www.example.com".
     static const uint8_t RAW[16] = {0x0f, 0x77, 0x77, 0x77, 0x2e, 0x65, 0x78, 0x61,
                                     0x6d, 0x70, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x6d};
-    TEST_ASSERT_TRUE(HpackPrim.decode_str(RAW, sizeof(RAW), &pos, out, sizeof(out), &out_len));
+    HpackPrim.decode_str_args.block = RAW;
+    HpackPrim.decode_str_args.len = sizeof(RAW);
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = out;
+    HpackPrim.decode_str_args.cap = sizeof(out);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_size_t(15, out_len);
     TEST_ASSERT_EQUAL_MEMORY("www.example.com", out, 15);
     TEST_ASSERT_EQUAL_size_t(sizeof(RAW), pos);
@@ -347,7 +578,14 @@ void test_decode_str_reads_both_forms(void)
     // C.4.1's Huffman form: 0x8c then twelve octets.
     static const uint8_t HUFF[13] = {0x8c, 0xf1, 0xe3, 0xc2, 0xe5, 0xf2, 0x3a, 0x6b, 0xa0, 0xab, 0x90, 0xf4, 0xff};
     pos = 0;
-    TEST_ASSERT_TRUE(HpackPrim.decode_str(HUFF, sizeof(HUFF), &pos, out, sizeof(out), &out_len));
+    HpackPrim.decode_str_args.block = HUFF;
+    HpackPrim.decode_str_args.len = sizeof(HUFF);
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = out;
+    HpackPrim.decode_str_args.cap = sizeof(out);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_size_t(15, out_len);
     TEST_ASSERT_EQUAL_MEMORY("www.example.com", out, 15);
     TEST_ASSERT_EQUAL_size_t(sizeof(HUFF), pos);
@@ -356,14 +594,35 @@ void test_decode_str_reads_both_forms(void)
     // literal is a valid empty string.
     static const uint8_t SEQ[6] = {0x02, 'a', 'b', 0x01, 'c', 0x00};
     pos = 0;
-    TEST_ASSERT_TRUE(HpackPrim.decode_str(SEQ, sizeof(SEQ), &pos, out, sizeof(out), &out_len));
+    HpackPrim.decode_str_args.block = SEQ;
+    HpackPrim.decode_str_args.len = sizeof(SEQ);
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = out;
+    HpackPrim.decode_str_args.cap = sizeof(out);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_size_t(2, out_len);
     TEST_ASSERT_EQUAL_size_t(3, pos);
-    TEST_ASSERT_TRUE(HpackPrim.decode_str(SEQ, sizeof(SEQ), &pos, out, sizeof(out), &out_len));
+    HpackPrim.decode_str_args.block = SEQ;
+    HpackPrim.decode_str_args.len = sizeof(SEQ);
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = out;
+    HpackPrim.decode_str_args.cap = sizeof(out);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_size_t(1, out_len);
     TEST_ASSERT_EQUAL_MEMORY("c", out, 1);
     TEST_ASSERT_EQUAL_size_t(5, pos);
-    TEST_ASSERT_TRUE(HpackPrim.decode_str(SEQ, sizeof(SEQ), &pos, out, sizeof(out), &out_len));
+    HpackPrim.decode_str_args.block = SEQ;
+    HpackPrim.decode_str_args.len = sizeof(SEQ);
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = out;
+    HpackPrim.decode_str_args.cap = sizeof(out);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_size_t(0, out_len);
     TEST_ASSERT_EQUAL_size_t(6, pos);
 }
@@ -377,26 +636,61 @@ void test_decode_str_fails_closed(void)
     size_t pos = 0;
 
     static const uint8_t OVER_BLOCK[3] = {0x0f, 'w', 'w'}; // declares fifteen octets, carries two
-    TEST_ASSERT_FALSE(HpackPrim.decode_str(OVER_BLOCK, sizeof(OVER_BLOCK), &pos, out, sizeof(out), &out_len));
+    HpackPrim.decode_str_args.block = OVER_BLOCK;
+    HpackPrim.decode_str_args.len = sizeof(OVER_BLOCK);
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = out;
+    HpackPrim.decode_str_args.cap = sizeof(out);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     pos = 0;
     static const uint8_t TEN[11] = {0x0a, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
     char tiny[4];
-    TEST_ASSERT_FALSE(HpackPrim.decode_str(TEN, sizeof(TEN), &pos, tiny, sizeof(tiny), &out_len));
+    HpackPrim.decode_str_args.block = TEN;
+    HpackPrim.decode_str_args.len = sizeof(TEN);
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = tiny;
+    HpackPrim.decode_str_args.cap = sizeof(tiny);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     pos = 0;
     static const uint8_t ONE[1] = {0x00};
-    TEST_ASSERT_FALSE(HpackPrim.decode_str(ONE, 0, &pos, out, sizeof(out), &out_len)); // nothing to read
+    HpackPrim.decode_str_args.block = ONE;
+    HpackPrim.decode_str_args.len = 0;
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = out;
+    HpackPrim.decode_str_args.cap = sizeof(out);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok); // nothing to read
 
     // A length prefix whose continuation never terminates.
     pos = 0;
     static const uint8_t BAD_LEN[2] = {0xff, 0x80};
-    TEST_ASSERT_FALSE(HpackPrim.decode_str(BAD_LEN, sizeof(BAD_LEN), &pos, out, sizeof(out), &out_len));
+    HpackPrim.decode_str_args.block = BAD_LEN;
+    HpackPrim.decode_str_args.len = sizeof(BAD_LEN);
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = out;
+    HpackPrim.decode_str_args.cap = sizeof(out);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 
     // A Huffman literal whose padding is zeros rather than the EOS prefix.
     pos = 0;
     static const uint8_t BAD_PAD[2] = {0x81, 0x00};
-    TEST_ASSERT_FALSE(HpackPrim.decode_str(BAD_PAD, sizeof(BAD_PAD), &pos, out, sizeof(out), &out_len));
+    HpackPrim.decode_str_args.block = BAD_PAD;
+    HpackPrim.decode_str_args.len = sizeof(BAD_PAD);
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = out;
+    HpackPrim.decode_str_args.cap = sizeof(out);
+    HpackPrim.decode_str_args.out_len = &out_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_FALSE(HpackPrim.ok);
 }
 
 // sec 5.2 leaves the choice of form to the encoder, and this one takes whichever is shorter, so a
@@ -410,32 +704,71 @@ void test_encode_str_picks_the_shorter_form(void)
 
     // "www.example.com" is fifteen octets raw and twelve Huffman-coded, so the H bit is set and the
     // length is the Huffman length: C.4.1's 0x8c.
-    size_t n = HpackPrim.encode_str(out, sizeof(out), "www.example.com", 15);
+    HpackPrim.encode_str_args.out = out;
+    HpackPrim.encode_str_args.cap = sizeof(out);
+    HpackPrim.encode_str_args.s = "www.example.com";
+    HpackPrim.encode_str_args.n = 15;
+    HpackPrim.encode_str(hpack_prim_work);
+    size_t n = HpackPrim.n;
     TEST_ASSERT_EQUAL_size_t(13, n);
     TEST_ASSERT_EQUAL_HEX8(0x8c, out[0]);
-    TEST_ASSERT_TRUE(HpackPrim.decode_str(out, n, &pos, back, sizeof(back), &back_len));
+    HpackPrim.decode_str_args.block = out;
+    HpackPrim.decode_str_args.len = n;
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = back;
+    HpackPrim.decode_str_args.cap = sizeof(back);
+    HpackPrim.decode_str_args.out_len = &back_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_size_t(15, back_len);
     TEST_ASSERT_EQUAL_MEMORY("www.example.com", back, 15);
 
     // Two octets whose Appendix B codes are 28 and 30 bits: Huffman makes them longer, so the raw
     // form wins and the H bit stays clear.
     static const char WIDE[2] = {(char)0x02, (char)0x0a};
-    n = HpackPrim.encode_str(out, sizeof(out), WIDE, sizeof(WIDE));
+    HpackPrim.encode_str_args.out = out;
+    HpackPrim.encode_str_args.cap = sizeof(out);
+    HpackPrim.encode_str_args.s = WIDE;
+    HpackPrim.encode_str_args.n = sizeof(WIDE);
+    HpackPrim.encode_str(hpack_prim_work);
+    n = HpackPrim.n;
     TEST_ASSERT_EQUAL_size_t(3, n);
     TEST_ASSERT_EQUAL_HEX8(0x02, out[0]); // H clear, length two
     pos = 0;
-    TEST_ASSERT_TRUE(HpackPrim.decode_str(out, n, &pos, back, sizeof(back), &back_len));
+    HpackPrim.decode_str_args.block = out;
+    HpackPrim.decode_str_args.len = n;
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = back;
+    HpackPrim.decode_str_args.cap = sizeof(back);
+    HpackPrim.decode_str_args.out_len = &back_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_size_t(2, back_len);
     TEST_ASSERT_EQUAL_MEMORY(WIDE, back, 2);
 
     // The empty string is one octet either way.
-    n = HpackPrim.encode_str(out, sizeof(out), "", 0);
+    HpackPrim.encode_str_args.out = out;
+    HpackPrim.encode_str_args.cap = sizeof(out);
+    HpackPrim.encode_str_args.s = "";
+    HpackPrim.encode_str_args.n = 0;
+    HpackPrim.encode_str(hpack_prim_work);
+    n = HpackPrim.n;
     TEST_ASSERT_EQUAL_size_t(1, n);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[0]);
 
     // A destination too small for either form reports 0.
-    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.encode_str(out, 4, "www.example.com", 15));
-    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.encode_str(out, 0, "x", 1));
+    HpackPrim.encode_str_args.out = out;
+    HpackPrim.encode_str_args.cap = 4;
+    HpackPrim.encode_str_args.s = "www.example.com";
+    HpackPrim.encode_str_args.n = 15;
+    HpackPrim.encode_str(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.n);
+    HpackPrim.encode_str_args.out = out;
+    HpackPrim.encode_str_args.cap = 0;
+    HpackPrim.encode_str_args.s = "x";
+    HpackPrim.encode_str_args.n = 1;
+    HpackPrim.encode_str(hpack_prim_work);
+    TEST_ASSERT_EQUAL_size_t(0, HpackPrim.n);
 }
 
 // Round-trip a literal holding every octet value, which puts codes of every width beside each other
@@ -449,13 +782,25 @@ void test_encode_str_round_trips_every_octet(void)
     }
 
     uint8_t block[1024];
-    size_t n = HpackPrim.encode_str(block, sizeof(block), in, sizeof(in));
+    HpackPrim.encode_str_args.out = block;
+    HpackPrim.encode_str_args.cap = sizeof(block);
+    HpackPrim.encode_str_args.s = in;
+    HpackPrim.encode_str_args.n = sizeof(in);
+    HpackPrim.encode_str(hpack_prim_work);
+    size_t n = HpackPrim.n;
     TEST_ASSERT_TRUE(n > 0);
 
     char back[256];
     size_t back_len = 0;
     size_t pos = 0;
-    TEST_ASSERT_TRUE(HpackPrim.decode_str(block, n, &pos, back, sizeof(back), &back_len));
+    HpackPrim.decode_str_args.block = block;
+    HpackPrim.decode_str_args.len = n;
+    HpackPrim.decode_str_args.pos = &pos;
+    HpackPrim.decode_str_args.out = back;
+    HpackPrim.decode_str_args.cap = sizeof(back);
+    HpackPrim.decode_str_args.out_len = &back_len;
+    HpackPrim.decode_str(hpack_prim_work);
+    TEST_ASSERT_TRUE(HpackPrim.ok);
     TEST_ASSERT_EQUAL_size_t(sizeof(in), back_len);
     TEST_ASSERT_EQUAL_MEMORY(in, back, sizeof(in));
     TEST_ASSERT_EQUAL_size_t(n, pos);

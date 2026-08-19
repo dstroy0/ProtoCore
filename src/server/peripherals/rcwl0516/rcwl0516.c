@@ -159,10 +159,6 @@ static void rcwl0516_presence_take_event(uint8_t *restrict work)
 
 static void rcwl0516_core_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     PresenceCore *c = Rcwl0516.core_init_args.c;
     uint32_t now = Rcwl0516.core_init_args.now;
 
@@ -208,10 +204,6 @@ static int dev_pin(uint8_t *restrict work)
 
 static void rcwl0516_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     int out_pin = Rcwl0516.begin_args.out_pin;
 
     RCWL0516_CTX(work)->pin = out_pin;
@@ -226,11 +218,6 @@ static void rcwl0516_begin(uint8_t *restrict work)
 
 static void rcwl0516_poll(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     const int pin = dev_pin(work);
     if (pin < 0)
     {
@@ -247,11 +234,6 @@ static void rcwl0516_poll(uint8_t *restrict work)
 
 static void rcwl0516_present(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     Rcwl0516.presence_get_args.c = &RCWL0516_CTX(work)->core;
     rcwl0516_presence_get(work);
 }

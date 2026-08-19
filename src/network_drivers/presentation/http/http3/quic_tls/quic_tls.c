@@ -8,11 +8,13 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+#if PROTOCORE_ENABLE_HTTP3
+
 static uint8_t quic_crypto_work[16]; // the borrow an entry takes; QuicCrypto never reads it
 
 static uint8_t quic_tp_work[16]; // the borrow an entry takes; QuicTp never reads it
 
-#if PROTOCORE_ENABLE_HTTP3
+PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_ENABLE_PQC_KEX
 #include "crypto/pqc/mlkem/mlkem.h" // MlKem (X25519MLKEM768 hybrid)
@@ -424,8 +426,17 @@ static proto_bool process_message(QuicTls *qt, int level, const uint8_t *msg, si
     return PROTO_FALSE;
 }
 
-void protocore_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void quic_tls_server_init(uint8_t *restrict work)
 {
+    (void)work;
+    QuicTls *qt = QuicTlsServer.server_init_args.qt;
+    const QuicTlsConfig *cfg = QuicTlsServer.server_init_args.cfg;
+
     mem.zero(qt, sizeof(*qt));
     qt->cfg = *cfg;
     qt->transcript = qt->hash_work;
@@ -433,11 +444,18 @@ void protocore_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg)
     qt->state = QTLS_START;
 }
 
-size_t protocore_quic_tls_recv_crypto(QuicTls *qt, int level, const uint8_t *data, size_t len)
+static void quic_tls_recv_crypto(uint8_t *restrict work)
 {
+    (void)work;
+    QuicTls *qt = QuicTlsServer.recv_crypto_args.qt;
+    int level = QuicTlsServer.recv_crypto_args.level;
+    const uint8_t *data = QuicTlsServer.recv_crypto_args.data;
+    size_t len = QuicTlsServer.recv_crypto_args.len;
+
     if (qt->state == QTLS_FAILED)
     {
-        return len; // drain; the connection is closing
+        QuicTlsServer.n = len; // drain; the connection is closing
+        return;
     }
     size_t off = 0;
     while (off + 4 <= len)
@@ -450,7 +468,8 @@ size_t protocore_quic_tls_recv_crypto(QuicTls *qt, int level, const uint8_t *dat
         }
         if (!process_message(qt, level, data + off, total))
         {
-            return off + total; // consumed through the offending message; state is FAILED/handled
+            QuicTlsServer.n = off + total; // consumed through the offending message; state is FAILED/handled
+            return;
         }
         off += total;
         if (qt->state == QTLS_DONE)
@@ -458,41 +477,68 @@ size_t protocore_quic_tls_recv_crypto(QuicTls *qt, int level, const uint8_t *dat
             break;
         }
     }
-    return off;
+    QuicTlsServer.n = off;
 }
 
-const uint8_t *protocore_quic_tls_flight(const QuicTls *qt, int level, size_t *len)
+static void quic_tls_flight(uint8_t *restrict work)
 {
+    (void)work;
+    const QuicTls *qt = QuicTlsServer.flight_args.qt;
+    int level = QuicTlsServer.flight_args.level;
+    size_t *len = QuicTlsServer.flight_args.len;
+
     if (level == QUIC_ENC_INITIAL)
     {
         *len = qt->flight_initial_len;
-        return qt->flight_initial;
+        QuicTlsServer.bytes = qt->flight_initial;
+        return;
     }
     if (level == QUIC_ENC_HANDSHAKE)
     {
         *len = qt->flight_hs_len;
-        return qt->flight_hs;
+        QuicTlsServer.bytes = qt->flight_hs;
+        return;
     }
     *len = 0;
-    return NULL;
+    QuicTlsServer.bytes = NULL;
 }
 
-QuicPacketKeys *protocore_quic_tls_keys(QuicTls *qt, int level, proto_bool is_server)
+static void quic_tls_keys(uint8_t *restrict work)
 {
+    (void)work;
+    QuicTls *qt = QuicTlsServer.keys_args.qt;
+    int level = QuicTlsServer.keys_args.level;
+    proto_bool is_server = QuicTlsServer.keys_args.is_server;
+
     if (level == QUIC_ENC_HANDSHAKE && qt->hs_keys_ready)
     {
-        return is_server ? &qt->hs_server : &qt->hs_client;
+        QuicTlsServer.pkt_keys = is_server ? &qt->hs_server : &qt->hs_client;
+        return;
     }
     if (level == QUIC_ENC_APP && qt->ap_keys_ready)
     {
-        return is_server ? &qt->ap_server : &qt->ap_client;
+        QuicTlsServer.pkt_keys = is_server ? &qt->ap_server : &qt->ap_client;
+        return;
     }
-    return NULL;
+    QuicTlsServer.pkt_keys = NULL;
 }
 
-const QuicTransportParams *protocore_quic_tls_peer_params(const QuicTls *qt)
+static void quic_tls_peer_params(uint8_t *restrict work)
 {
-    return qt->have_peer ? &qt->peer : NULL;
+    (void)work;
+    const QuicTls *qt = QuicTlsServer.peer_params_args.qt;
+
+    QuicTlsServer.peer = qt->have_peer ? &qt->peer : NULL;
 }
+
+QuicTlsServerNs QuicTlsServer = {
+    .server_init = quic_tls_server_init,
+    .recv_crypto = quic_tls_recv_crypto,
+    .flight = quic_tls_flight,
+    .keys = quic_tls_keys,
+    .peer_params = quic_tls_peer_params,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP3

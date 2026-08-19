@@ -9,6 +9,10 @@
  * so a caller reaches both through @ref Udp and neither half has to know the other exists.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_UDP
+
 #include "network_drivers/transport/udp/udp.h"
 
 #include "network_drivers/transport/udp/client/client.h"
@@ -18,3 +22,5 @@
 // the listener, and sending to a destination is the client. Designated, so a member's position in
 // the struct does not decide what it binds to.
 UdpNs Udp = {.listener = &UdpListener, .client = &UdpClient};
+
+#endif // PROTOCORE_ENABLE_UDP

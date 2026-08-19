@@ -489,10 +489,6 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_mdns_service_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     (void)ctx;
     (void)peer;
@@ -581,10 +577,6 @@ static proto_bool label_set(char *dst, size_t cap, const char *src)
 
 static void mdns_service_add_service(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *service_type = MdnsService.add_service_args.service_type;
     const char *proto = MdnsService.add_service_args.proto;
     uint16_t port = MdnsService.add_service_args.port;
@@ -616,10 +608,6 @@ static void mdns_service_add_service(uint8_t *restrict work)
 
 static void mdns_service_txt(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *key = MdnsService.txt_args.key;
     const char *value = MdnsService.txt_args.value;
 
@@ -652,10 +640,6 @@ static void mdns_service_txt(uint8_t *restrict work)
 
 static void mdns_service_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *hostname = MdnsService.begin_args.hostname;
     uint16_t http_port = MdnsService.begin_args.http_port;
 

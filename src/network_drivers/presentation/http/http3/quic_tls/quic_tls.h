@@ -31,15 +31,18 @@
 #ifndef PROTOCORE_QUIC_TLS_H
 #define PROTOCORE_QUIC_TLS_H
 
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+#include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h" // the complete type a public struct below holds by value
+#include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h" // the complete type a public struct below holds by value
+#include "network_drivers/tls/key_schedule/key_schedule.h" // the complete type a public struct below holds by value
+#include "protocore_config.h"                              // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
 
-#include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
-#include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
-#include "network_drivers/tls/key_schedule/key_schedule.h"
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief QUIC encryption levels (RFC 9001 sec 4). 0-RTT is not supported. */
 #define QUIC_ENC_INITIAL 0
@@ -112,35 +115,97 @@ typedef struct
     proto_bool have_peer;
 } QuicTls;
 
-/** @brief Initialize a server handshake with @p cfg (copied). Resets the transcript and state. */
-void protocore_quic_tls_server_init(QuicTls *qt, const QuicTlsConfig *cfg);
+/** @brief What server_init takes: qt, cfg. */
+typedef struct
+{
+    QuicTls *qt;
+    const QuicTlsConfig *cfg;
+} QuicTlsServerServerInitArgs;
+
+/** @brief What recv_crypto takes: qt, level, data, len. */
+typedef struct
+{
+    QuicTls *qt;
+    int level;
+    const uint8_t *data;
+    size_t len;
+} QuicTlsServerRecvCryptoArgs;
+
+/** @brief What flight takes: qt, level, len. */
+typedef struct
+{
+    const QuicTls *qt;
+    int level;
+    size_t *len;
+} QuicTlsServerFlightArgs;
+
+/** @brief What keys takes: qt, level, is_server. */
+typedef struct
+{
+    QuicTls *qt;
+    int level;
+    proto_bool is_server;
+} QuicTlsServerKeysArgs;
+
+/** @brief What peer_params takes: qt. */
+typedef struct
+{
+    const QuicTls *qt;
+} QuicTlsServerPeerParamsArgs;
 
 /**
- * @brief Feed in-order CRYPTO stream bytes for encryption level @p level.
+ * @brief TLS 1.3 server handshake state machine for QUIC (RFC 9001 / RFC 8446).
  *
- * Consumes as many complete handshake messages as @p data holds. At QUIC_ENC_INITIAL it expects the
- * ClientHello and, on success, builds the whole server flight and derives the Handshake + 1-RTT keys.
- * At QUIC_ENC_HANDSHAKE it expects the client Finished and verifies it. On a fatal error it sets the
- * state to QTLS_FAILED and an alert. @return the number of leading bytes of @p data consumed (a
- * partial trailing message is left for the next call).
+ * A caller sets the members a call takes, invokes it through ::QuicTlsServer with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   QuicTlsServer.server_init_args.qt = ...;
+ *   QuicTlsServer.server_init_args.cfg = ...;
+ *   QuicTlsServer.server_init(work);
+ *
+ * @var QuicTlsServerNs::server_init_args  what server_init takes: qt, cfg
+ * @var QuicTlsServerNs::recv_crypto_args  what recv_crypto takes: qt, level, data, len
+ * @var QuicTlsServerNs::flight_args  what flight takes: qt, level, len
+ * @var QuicTlsServerNs::keys_args  what keys takes: qt, level, is_server
+ * @var QuicTlsServerNs::peer_params_args  what peer_params takes: qt
+ * @var QuicTlsServerNs::ok  a call's true/false outcome
+ * @var QuicTlsServerNs::n  the count a call reports
+ * @var QuicTlsServerNs::bytes  a pointer to the flight bytes and its length via len (0 if none). ...
+ * @var QuicTlsServerNs::pkt_keys  what a call reports
+ * @var QuicTlsServerNs::peer  what a call reports
+ * @var QuicTlsServerNs::server_init  initialize a server handshake with cfg (copied). Resets the ...
+ * @var QuicTlsServerNs::recv_crypto  feed in-order CRYPTO stream bytes for encryption level level. ...
+ * @var QuicTlsServerNs::flight  the pending outbound CRYPTO flight for level (QUIC_ENC_INITIAL / ...
+ * @var QuicTlsServerNs::keys  the packet-protection keys for level (QUIC_ENC_HANDSHAKE / ...
+ * @var QuicTlsServerNs::peer_params  the client's parsed transport parameters (valid once the ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t protocore_quic_tls_recv_crypto(QuicTls *qt, int level, const uint8_t *data, size_t len);
+typedef struct
+{
+    QuicTlsServerServerInitArgs server_init_args;
+    QuicTlsServerRecvCryptoArgs recv_crypto_args;
+    QuicTlsServerFlightArgs flight_args;
+    QuicTlsServerKeysArgs keys_args;
+    QuicTlsServerPeerParamsArgs peer_params_args;
 
-/**
- * @brief The pending outbound CRYPTO flight for @p level (QUIC_ENC_INITIAL / QUIC_ENC_HANDSHAKE).
- * @return a pointer to the flight bytes and its length via @p len (0 if none). The transport engine
- * fragments these into CRYPTO frames and tracks its own send offset / retransmission.
- */
-const uint8_t *protocore_quic_tls_flight(const QuicTls *qt, int level, size_t *len);
+    proto_bool ok;
+    size_t n;
+    const uint8_t *bytes;
+    QuicPacketKeys *pkt_keys;
+    const QuicTransportParams *peer;
 
-/**
- * @brief The packet-protection keys for @p level (QUIC_ENC_HANDSHAKE / QUIC_ENC_APP), @p is_server
- * picking the seal (server) or open (client) direction. @return NULL if those keys are not ready.
- */
-QuicPacketKeys *protocore_quic_tls_keys(QuicTls *qt, int level, proto_bool is_server);
+    void (*const server_init)(uint8_t *restrict work);
+    void (*const recv_crypto)(uint8_t *restrict work);
+    void (*const flight)(uint8_t *restrict work);
+    void (*const keys)(uint8_t *restrict work);
+    void (*const peer_params)(uint8_t *restrict work);
+} QuicTlsServerNs;
 
-/** @brief The client's parsed transport parameters (valid once the ClientHello is processed). */
-const QuicTransportParams *protocore_quic_tls_peer_params(const QuicTls *qt);
+/** @brief The one symbol this module exports. */
+extern QuicTlsServerNs QuicTlsServer;
 
 PROTOCORE_END_DECLS
 

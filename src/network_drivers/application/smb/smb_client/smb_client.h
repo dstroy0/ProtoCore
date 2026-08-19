@@ -22,13 +22,16 @@
 #ifndef PROTOCORE_SMB_CLIENT_H
 #define PROTOCORE_SMB_CLIENT_H
 
-#include "protocore_config.h"
+#include "network_drivers/application/smb/smb2/smb2.h" // the complete type a public struct below holds by value
+#include "protocore_config.h"                          // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SMB
 
 PROTOCORE_BEGIN_DECLS
 
-#include "network_drivers/application/smb/smb2/smb2.h" // Smb2SignAlgo (the per-session signing algorithm carried on the handle)
+// PROTOCORE_SMB_CLIENT_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /** @brief Result of an SMB client operation. 0 is success; each failure is a distinct code. */
 typedef enum PROTO_ENUM_PACKED
@@ -48,6 +51,7 @@ typedef enum PROTO_ENUM_PACKED
  *         close / error / timeout.
  */
 typedef int (*SmbSendFn)(void *ctx, const uint8_t *data, size_t len);
+
 typedef int (*SmbRecvFn)(void *ctx, uint8_t *buf, size_t cap);
 
 /** @brief Server credentials + the file to open. Strings are ASCII/UTF-8 (encoded UTF-16LE for you). */
@@ -86,35 +90,110 @@ typedef struct
     uint64_t enc_nonce; ///< monotonic per-session AEAD nonce counter, persisted across read/write/close
 } SmbHandle;
 
-/**
- * @brief Run NEGOTIATE -> NTLMv2 SESSION_SETUP -> TREE_CONNECT -> CREATE and fill @p h.
- * @return SMB_OK with @p h populated, or an ::SmbResult error.
- */
-SmbResult smb_open(const SmbConfig *cfg, SmbHandle *h, SmbSendFn send, SmbRecvFn recv, void *ctx);
+/** @brief What smb_open takes: cfg, h, send, recv, ctx. */
+typedef struct
+{
+    const SmbConfig *cfg;
+    SmbHandle *h;
+    SmbSendFn send;
+    SmbRecvFn recv;
+    void *ctx;
+} SmbClientSmbOpenArgs;
+
+/** @brief What smb_close takes: h, send, recv, ctx. */
+typedef struct
+{
+    SmbHandle *h;
+    SmbSendFn send;
+    SmbRecvFn recv;
+    void *ctx;
+} SmbClientSmbCloseArgs;
+
+/** @brief What smb_read takes: h, offset, out, cap, out_len, send, ... */
+typedef struct
+{
+    SmbHandle *h;
+    uint64_t offset;
+    uint8_t *out;
+    size_t cap;
+    size_t *out_len; ///< receives the number of bytes actually read (may be < cap at EOF)
+    SmbSendFn send;
+    SmbRecvFn recv;
+    void *ctx;
+} SmbClientSmbReadArgs;
+
+/** @brief What smb_write takes: h, offset, data, len, written, send, ... */
+typedef struct
+{
+    SmbHandle *h;
+    uint64_t offset;
+    const uint8_t *data;
+    size_t len;
+    size_t *written; ///< receives the number of bytes written (equals len on success)
+    SmbSendFn send;
+    SmbRecvFn recv;
+    void *ctx;
+} SmbClientSmbWriteArgs;
 
 /**
- * @brief CLOSE the open handle (releases the server-side FileId).
- * @return SMB_OK, or an ::SmbResult error.
+ * @brief SMB2 client dialogue engine (PROTOCORE_ENABLE_SMB) - drives the smb2 / ntlm / spnego wire codecs through a
+ * real session to open a file on a Windows share.
+ *
+ * A caller sets the members a call takes, invokes it through ::SmbClient with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   SmbClient.smb_open_args.cfg = ...;
+ *   SmbClient.smb_open_args.h = ...;
+ *   SmbClient.smb_open_args.send = ...;
+ *   SmbClient.smb_open_args.recv = ...;
+ *   SmbClient.smb_open_args.ctx = ...;
+ *   SmbClient.smb_open(work);
+ *   // SmbClient.value is what the call reports
+ *
+ * @var SmbClientNs::smb_open_args  what smb_open takes: cfg, h, send, recv, ctx
+ * @var SmbClientNs::smb_close_args  what smb_close takes: h, send, recv, ctx
+ * @var SmbClientNs::smb_read_args  what smb_read takes: h, offset, out, cap, out_len, send,
+ * @var SmbClientNs::smb_write_args  what smb_write takes: h, offset, data, len, written, send,
+ * @var SmbClientNs::ok  a call's true/false outcome
+ * @var SmbClientNs::value  SMB_OK with h populated, or an ::SmbResult error
+ * @var SmbClientNs::smb_open  run NEGOTIATE -> NTLMv2 SESSION_SETUP -> TREE_CONNECT -> CREATE and ...
+ * @var SmbClientNs::smb_close  CLOSE the open handle (releases the server-side FileId)
+ * @var SmbClientNs::smb_read  read up to cap bytes from offset of the open handle, looping READ ...
+ * @var SmbClientNs::smb_write  write len bytes at offset of the open handle, looping WRITE ...
+ *
+ * @c work is PROTOCORE_SMB_CLIENT_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-SmbResult smb_close(SmbHandle *h, SmbSendFn send, SmbRecvFn recv, void *ctx);
+typedef struct
+{
+    SmbClientSmbOpenArgs smb_open_args;
+    SmbClientSmbCloseArgs smb_close_args;
+    SmbClientSmbReadArgs smb_read_args;
+    SmbClientSmbWriteArgs smb_write_args;
+
+    proto_bool ok;
+    SmbResult value;
+
+    void (*const smb_open)(uint8_t *restrict work);
+    void (*const smb_close)(uint8_t *restrict work);
+    void (*const smb_read)(uint8_t *restrict work);
+    void (*const smb_write)(uint8_t *restrict work);
+} SmbClientNs;
+
+/** @brief The one symbol this module exports. */
+extern SmbClientNs SmbClient;
 
 /**
- * @brief Read up to @p cap bytes from @p offset of the open handle, looping READ requests until the
- *        buffer is full or the server signals end of file.
- * @param out_len receives the number of bytes actually read (may be < @p cap at EOF).
- * @return SMB_OK, or an ::SmbResult error. Reads at most PROTOCORE_SMB_BUF-sized chunks per round trip.
+ * @brief The PROTOCORE_SMB_CLIENT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-SmbResult smb_read(SmbHandle *h, uint64_t offset, uint8_t *out, size_t cap, size_t *out_len, SmbSendFn send,
-                   SmbRecvFn recv, void *ctx);
-
-/**
- * @brief Write @p len bytes at @p offset of the open handle, looping WRITE requests until all bytes
- *        are acknowledged. Grows the handle's cached file_size if the write extends the file.
- * @param written receives the number of bytes written (equals @p len on success).
- * @return SMB_OK, or an ::SmbResult error.
- */
-SmbResult smb_write(SmbHandle *h, uint64_t offset, const uint8_t *data, size_t len, size_t *written, SmbSendFn send,
-                    SmbRecvFn recv, void *ctx);
+uint8_t *protocore_smb_client_span(void);
 
 PROTOCORE_END_DECLS
 

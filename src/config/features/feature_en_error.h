@@ -243,6 +243,19 @@
 #define PROTOCORE_WORK_H3_CONN ((size_t)PROTOCORE_QUIC_MAX_CONNS * PROTOCORE_H3_CONN_BORROW)
 #endif
 
+// The QUIC/HTTP3 server, whole: its control state, the connection pool and the ingest ring, all
+// carved out of the one span protocore.c hands it. 96 bytes of control state, 56 per pool slot, and
+// one buffered datagram plus its peer per ring entry - measured, and the static_assert in
+// quic_server.c is what proves the three regions fit. 11168 bytes for the default
+// PROTOCORE_QUIC_MAX_CONNS of 2 and PROTOCORE_QUIC_INGEST_RING of 8, and scales with both and with
+// PROTOCORE_QUIC_MAX_DATAGRAM. Slot bookkeeping and datagrams, no key material of its own, so the
+// plaintext end.
+#ifndef PROTOCORE_QUIC_SERVER_BORROW
+#define PROTOCORE_QUIC_SERVER_BORROW                                                                                   \
+    (96u + (size_t)PROTOCORE_QUIC_MAX_CONNS * 56u +                                                                    \
+     (size_t)PROTOCORE_QUIC_INGEST_RING * ((size_t)PROTOCORE_QUIC_MAX_DATAGRAM + 24u))
+#endif
+
 // The QUIC transport under it takes its own borrow from the same end: the bytes it owes each stream
 // and the CRYPTO window per packet-number space. Proved by a static_assert in quic_conn.c.
 // Only the byte buffers: the connection's context is key material and takes a secure borrow instead
@@ -1038,6 +1051,22 @@
 #define PROTOCORE_SECURE_WORK_AEAD 0
 #endif
 
+// The SMB client's one sequential dialogue: the send and receive framing buffers, the NTLMv2
+// response, the AUTHENTICATE blob, the second SESSION_SETUP body, the UTF-16 staging and the
+// CHALLENGE target-info, plus the bytes this connection's crypto calls work out of. Measured at
+// 6272 bytes for the default PROTOCORE_SMB_BUF of 1024, and scales with it. It holds the NTLM
+// response and a keyed MAC context, so the secure end.
+#ifndef PROTOCORE_SMB_CLIENT_BORROW
+#define PROTOCORE_SMB_CLIENT_BORROW                                                                                    \
+    (2u * PROTOCORE_SMB_BUF + 5u * (PROTOCORE_SMB_BUF / 2) + PROTOCORE_CRYPTO_BORROW_MAX)
+#endif
+
+#if PROTOCORE_ENABLE_SMB
+#define PROTOCORE_SECURE_WORK_SMBCLIENT PROTOCORE_SMB_CLIENT_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SMBCLIENT 0
+#endif
+
 #if PROTOCORE_ENABLE_SMB
 #define PROTOCORE_SECURE_WORK_SMB                                                                                      \
     (PROTOCORE_WORK_AESCCM + PROTOCORE_WORK_AES128GCM + PROTOCORE_MD_BORROW + PROTOCORE_KDF_BORROW)
@@ -1505,7 +1534,7 @@
      PROTOCORE_SECURE_WORK_SNMPV3 + PROTOCORE_SECURE_WORK_SNMPAGENT + PROTOCORE_SECURE_WORK_OAUTH2 +                   \
      PROTOCORE_SECURE_WORK_SSHCLIENT + PROTOCORE_SECURE_WORK_SSHTRANSPORT +                                            \
      PROTOCORE_SECURE_WORK_SSHAUTH + PROTOCORE_SECURE_WORK_SSHCONNECTION +                                             \
-     PROTOCORE_SECURE_WORK_SSHRSA + PROTOCORE_SECURE_WORK_SSHSLOTS +                                                   \
+     PROTOCORE_SECURE_WORK_SSHRSA + PROTOCORE_SECURE_WORK_SSHSLOTS + PROTOCORE_SECURE_WORK_SMBCLIENT +                 \
      256) // + 256: alignment round-up across the individual borrows
 #endif
 

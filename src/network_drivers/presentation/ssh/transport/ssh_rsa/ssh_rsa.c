@@ -196,11 +196,6 @@ static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
 
 static void ssh_rsa_load_pubkey(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     if (!span.has_storage(SSH_RSA_CTX(work)->d))
     {
         SSH_RSA_CTX(work)->d = protocore_secure_persist_span(PROTOCORE_RSA_KEY_BYTES);
@@ -240,10 +235,6 @@ static void ssh_rsa_load_pubkey(uint8_t *restrict work)
 
 static void ssh_rsa_sign(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t *crypto_work = SshRsa.sign_args.crypto_work;
     const uint8_t *msg = SshRsa.sign_args.msg;
     size_t msg_len = SshRsa.sign_args.msg_len;

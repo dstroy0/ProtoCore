@@ -15,6 +15,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+static uint8_t smb2_work[16]; // the borrow an entry takes; Smb2 never reads it
+
 static uint8_t ntlm_work[16]; // the borrow an entry takes; Ntlm never reads it
 
 static uint8_t ntlmssp_work[16]; // the borrow an entry takes; Ntlmssp never reads it

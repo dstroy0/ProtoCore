@@ -103,10 +103,6 @@ uint8_t *protocore_conn_pool_span(void)
 // so the increments must not tear, but nothing orders anything against them.
 static void obs_bump(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // DRAINED is gauge-only: the close reason that entered the dwell was already counted.
     if (ConnPool.obs.reason != PROTOCORE_CONN_R_DRAINED)
     {
@@ -117,19 +113,11 @@ static void obs_bump(uint8_t *restrict work)
 // Install the observer a call is carrying. Null unregisters.
 static void on_event(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     CONN_POOL_CTX(work)->event_cb = ConnPool.obs.event_cb_in;
 }
 
 static void counters_get(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     protocore_conn_counters c;
     c.accepts = atomic_load_explicit(&CONN_POOL_CTX(work)->ctr[PROTOCORE_CONN_R_ACCEPT], memory_order_relaxed);
     c.closes_remote =
@@ -156,10 +144,6 @@ static void counters_get(uint8_t *restrict work)
 
 static void counters_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     for (int i = 0; i < 9; i++)
     {
         atomic_store_explicit(&CONN_POOL_CTX(work)->ctr[i], 0, memory_order_relaxed);
@@ -169,10 +153,6 @@ static void counters_reset(uint8_t *restrict work)
 // A real state transition: bump the reason counter and fire the callback.
 static void obs_transition(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     obs_bump(work);
     if (CONN_POOL_CTX(work)->event_cb != NULL)
     {
@@ -183,10 +163,6 @@ static void obs_transition(uint8_t *restrict work)
 // A non-transition notice (backpressure / defer-drop): bump and fire with old == new.
 static void obs_notice(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     obs_bump(work);
     if (CONN_POOL_CTX(work)->event_cb != NULL)
     {
@@ -275,10 +251,6 @@ static int32_t protocore_conn_alloc_free(void)
 
 static void timeout_ms(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     ConnPool.u32 = CONN_POOL_CTX(work)->conn_timeout_ms;
 }
 
@@ -587,10 +559,6 @@ static void protocore_conn_enqueue(TcpConn *slot, const TcpEvt *evt)
 
 static void init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     CONN_POOL_CTX(work)->conn_timeout_ms = ConnPool.life.conn_timeout_ms;
     // The template lives in storage and the copy runs before any listener is accepting, so the
     // non-atomic struct assignment over the atomic members races nothing.
@@ -786,10 +754,6 @@ static void touch_active(uint8_t *restrict work)
 
 static void check_timeouts(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint32_t now = Clock.ms;
     for (int i = 0; i < MAX_CONNS; i++)
     {

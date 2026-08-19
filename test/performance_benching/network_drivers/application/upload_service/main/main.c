@@ -20,10 +20,6 @@
 void dbench_run(void)
 {
     uint8_t *work = protocore_upload_service_span();
-    if (work == NULL)
-    {
-        return; // the pool was short of this module's borrow
-    }
 
     for (;;)
     {

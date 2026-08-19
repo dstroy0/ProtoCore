@@ -35,16 +35,21 @@
 #ifndef PROTOCORE_DTLS_CONN_H
 #define PROTOCORE_DTLS_CONN_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_DTLS
 
-PROTOCORE_BEGIN_DECLS
-
-#include "crypto/hash/sha256/sha256.h"
+// DtlsConn embeds these by value: the reassembler and record numbers, the epoch key sets and the
+// replay windows, and the key schedule the handshake runs through.
 #include "network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.h"
 #include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
+
+PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief Largest inbound handshake message body reassembled (ClientHello / client Finished). */
 #define PROTOCORE_DTLS_CONN_REASM_CAP 1024
@@ -182,39 +187,168 @@ typedef struct
         flight_buf[PROTOCORE_DTLS_FLIGHT_CAP]; ///< the current flight's DTLS handshake fragments, for retransmission
 } DtlsConn;
 
+/** @brief What init takes: c, cfg, peer_addr, peer_addr_len. */
+typedef struct
+{
+    DtlsConn *c;
+    const DtlsServerConfig *cfg;
+    const uint8_t *peer_addr;
+    size_t peer_addr_len;
+} DtlsServerInitArgs;
+
+/** @brief What process takes: c, dgram, len, out, out_cap. */
+typedef struct
+{
+    DtlsConn *c;
+    const uint8_t *dgram;
+    size_t len;
+    uint8_t *out;
+    size_t out_cap;
+} DtlsServerProcessArgs;
+
+/** @brief What timeout_ms takes: c. */
+typedef struct
+{
+    const DtlsConn *c;
+} DtlsServerTimeoutMsArgs;
+
+/** @brief What on_timeout takes: c, out, out_cap. */
+typedef struct
+{
+    DtlsConn *c;
+    uint8_t *out;
+    size_t out_cap;
+} DtlsServerOnTimeoutArgs;
+
+/** @brief What established takes: c. */
+typedef struct
+{
+    const DtlsConn *c;
+} DtlsServerEstablishedArgs;
+
+/** @brief What alert takes: c. */
+typedef struct
+{
+    const DtlsConn *c;
+} DtlsServerAlertArgs;
+
+/** @brief What app_write_keys takes: c. */
+typedef struct
+{
+    DtlsConn *c;
+} DtlsServerAppWriteKeysArgs;
+
+/** @brief What app_read_keys takes: c. */
+typedef struct
+{
+    DtlsConn *c;
+} DtlsServerAppReadKeysArgs;
+
+/** @brief What local_cid takes: c, out. */
+typedef struct
+{
+    const DtlsConn *c;
+    uint8_t *out;
+} DtlsServerLocalCidArgs;
+
+/** @brief What open_app takes: c, rec, rec_len, out, out_cap, out_len. */
+typedef struct
+{
+    DtlsConn *c;
+    const uint8_t *rec;
+    size_t rec_len;
+    uint8_t *out;
+    size_t out_cap;
+    size_t *out_len;
+} DtlsServerOpenAppArgs;
+
+/** @brief What seal_app takes: c, data, len, out, out_cap. */
+typedef struct
+{
+    DtlsConn *c;
+    const uint8_t *data;
+    size_t len;
+    uint8_t *out;
+    size_t out_cap;
+} DtlsServerSealAppArgs;
+
 /**
- * @brief The server side of a DTLS connection. DtlsConn is the caller's struct; this drives it.
+ * @brief DTLS 1.3 server handshake state machine (RFC 9147 §5-6).
  *
- * @var DtlsConnNs::init           bind a connection to its configuration and peer address
- * @var DtlsConnNs::process        turn one received datagram, writing whatever it owes back into @p out
- * @var DtlsConnNs::timeout_ms     milliseconds until the flight needs retransmitting
- * @var DtlsConnNs::on_timeout     retransmit the current flight once that timeout has passed
- * @var DtlsConnNs::established    whether the handshake has completed
- * @var DtlsConnNs::alert          the alert that ended the connection, or 0
- * @var DtlsConnNs::app_write_keys the application-epoch write keys
+ * A caller sets the members a call takes, invokes it through ::DtlsServer with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   DtlsServer.init_args.c = ...;
+ *   DtlsServer.init_args.cfg = ...;
+ *   DtlsServer.init_args.peer_addr = ...;
+ *   DtlsServer.init_args.peer_addr_len = ...;
+ *   DtlsServer.init(work);
+ *
+ * @var DtlsConnNs::init_args  what init takes: c, cfg, peer_addr, peer_addr_len
+ * @var DtlsConnNs::process_args  what process takes: c, dgram, len, out, out_cap
+ * @var DtlsConnNs::timeout_ms_args  what timeout_ms takes: c
+ * @var DtlsConnNs::on_timeout_args  what on_timeout takes: c, out, out_cap
+ * @var DtlsConnNs::established_args  what established takes: c
+ * @var DtlsConnNs::alert_args  what alert takes: c
+ * @var DtlsConnNs::app_write_keys_args  what app_write_keys takes: c
+ * @var DtlsConnNs::app_read_keys_args  what app_read_keys takes: c
+ * @var DtlsConnNs::local_cid_args  what local_cid takes: c, out
+ * @var DtlsConnNs::open_app_args  what open_app takes: c, rec, rec_len, out, out_cap, out_len
+ * @var DtlsConnNs::seal_app_args  what seal_app takes: c, data, len, out, out_cap
+ * @var DtlsConnNs::ok  a call's true/false outcome
+ * @var DtlsConnNs::n  the count a call reports
+ * @var DtlsConnNs::value  the value a call reports
+ * @var DtlsConnNs::ptr  the pointer a call reports
+ * @var DtlsConnNs::init  bind a connection to its configuration and peer address
+ * @var DtlsConnNs::process  turn one received datagram, writing whatever it owes back into out
+ * @var DtlsConnNs::timeout_ms  milliseconds until the flight needs retransmitting
+ * @var DtlsConnNs::on_timeout  retransmit the current flight once that timeout has passed
+ * @var DtlsConnNs::established  whether the handshake has completed
+ * @var DtlsConnNs::alert  the alert that ended the connection, or 0
+ * @var DtlsConnNs::app_write_keys  the application-epoch write keys
  * @var DtlsConnNs::app_read_keys  the application-epoch read keys
- * @var DtlsConnNs::local_cid      this side's connection id, and its length
- * @var DtlsConnNs::open_app       open one application-data record once the handshake is done
- * @var DtlsConnNs::seal_app       seal application data into one record
+ * @var DtlsConnNs::local_cid  this side's connection id, and its length
+ * @var DtlsConnNs::open_app  open one application-data record once the handshake is done
+ * @var DtlsConnNs::seal_app  seal application data into one record
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
 typedef struct
 {
-    void (*init)(DtlsConn *c, const DtlsServerConfig *cfg, const uint8_t *peer_addr, size_t peer_addr_len);
-    int (*process)(DtlsConn *c, const uint8_t *dgram, size_t len, uint8_t *out, size_t out_cap);
-    int (*timeout_ms)(const DtlsConn *c);
-    int (*on_timeout)(DtlsConn *c, uint8_t *out, size_t out_cap);
-    proto_bool (*established)(const DtlsConn *c);
-    uint8_t (*alert)(const DtlsConn *c);
-    DtlsRecordKeys *(*app_write_keys)(DtlsConn *c);
-    DtlsRecordKeys *(*app_read_keys)(DtlsConn *c);
-    size_t (*local_cid)(const DtlsConn *c, uint8_t *out);
-    proto_bool (*open_app)(DtlsConn *c, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
-                           size_t *out_len);
-    size_t (*seal_app)(DtlsConn *c, const uint8_t *data, size_t len, uint8_t *out, size_t out_cap);
+    DtlsServerInitArgs init_args;
+    DtlsServerProcessArgs process_args;
+    DtlsServerTimeoutMsArgs timeout_ms_args;
+    DtlsServerOnTimeoutArgs on_timeout_args;
+    DtlsServerEstablishedArgs established_args;
+    DtlsServerAlertArgs alert_args;
+    DtlsServerAppWriteKeysArgs app_write_keys_args;
+    DtlsServerAppReadKeysArgs app_read_keys_args;
+    DtlsServerLocalCidArgs local_cid_args;
+    DtlsServerOpenAppArgs open_app_args;
+    DtlsServerSealAppArgs seal_app_args;
+
+    proto_bool ok;
+    int n;
+    uint8_t value;
+    DtlsRecordKeys *ptr;
+
+    void (*const init)(uint8_t *restrict work);
+    void (*const process)(uint8_t *restrict work);
+    void (*const timeout_ms)(uint8_t *restrict work);
+    void (*const on_timeout)(uint8_t *restrict work);
+    void (*const established)(uint8_t *restrict work);
+    void (*const alert)(uint8_t *restrict work);
+    void (*const app_write_keys)(uint8_t *restrict work);
+    void (*const app_read_keys)(uint8_t *restrict work);
+    void (*const local_cid)(uint8_t *restrict work);
+    void (*const open_app)(uint8_t *restrict work);
+    void (*const seal_app)(uint8_t *restrict work);
 } DtlsConnNs;
 
 /** @brief The one symbol this module exports. */
-extern const DtlsConnNs DtlsServer;
+extern DtlsConnNs DtlsServer;
 
 PROTOCORE_END_DECLS
 

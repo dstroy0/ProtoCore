@@ -110,6 +110,7 @@ protocore_env(native_accept_gate
     "PROTOCORE_IP_ALLOWLIST_SLOTS=4"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -372,6 +373,11 @@ protocore_env(native_application
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_FILE_SERVING=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
@@ -543,6 +549,11 @@ protocore_env(native_auth
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_AUTH=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
@@ -648,6 +659,7 @@ protocore_env(native_base64
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1053,6 +1065,11 @@ protocore_env(native_chunked
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -1146,6 +1163,9 @@ protocore_env(native_client
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1197,6 +1217,7 @@ protocore_env(native_cloudevents
     "${PROTOCORE_ROOT}/test/unit/src/services/iot/cloudevents/test_cloudevents/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_CLOUDEVENTS=1"
+    "PROTOCORE_ENABLE_JSON=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1235,6 +1256,7 @@ protocore_env(native_coap
     "PROTOCORE_COAP_BLOCK_SZX_MAX=2"
     "PROTOCORE_COAP_BLOCK1_MAX=128"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1274,6 +1296,7 @@ protocore_env(native_coap_observe
     "PROTOCORE_COAP_BLOCK1_MAX=128"
     "PROTOCORE_ENABLE_COAP_OBSERVE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1331,6 +1354,7 @@ protocore_env(native_coaps
     "PROTOCORE_ENABLE_COAP=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1388,6 +1412,7 @@ protocore_env(native_coaps_server
     "PROTOCORE_ENABLE_COAP=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1444,6 +1469,7 @@ protocore_env(native_coaps_server_nostack
     "PROTOCORE_ENABLE_DTLS=1"
     "PROTOCORE_ENABLE_COAP=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1543,6 +1569,7 @@ protocore_env(native_codec_deflate
   DEFINES
     "PROTOCORE_ENABLE_WS_DEFLATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
+    "PROTOCORE_ENABLE_DEFLATE_RFC1951=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1588,6 +1615,7 @@ protocore_env(native_codec_inflate
   DEFINES
     "PROTOCORE_ENABLE_WS_DEFLATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
+    "PROTOCORE_ENABLE_DEFLATE_RFC1951=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1608,6 +1636,8 @@ protocore_env(native_codec_rfc1951
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951/test_rfc1951.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951/unity_runner.c"
+  DEFINES
+    "PROTOCORE_ENABLE_DEFLATE_RFC1951=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -1800,6 +1830,11 @@ protocore_env(native_codeql
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_CSRF=1"
     "PROTOCORE_ENABLE_AUTH=1"
     "PROTOCORE_ENABLE_AUTH_LOCKOUT=1"
@@ -1887,6 +1922,8 @@ protocore_env(native_codeql
     "PROTOCORE_ENABLE_MDNS=1"
     "PROTOCORE_ENABLE_PROMISC=1"
     "PROTOCORE_PHYSICAL_HAS_BACKEND=1"
+    "PROTOCORE_ENABLE_DEFLATE_RFC1951=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -2249,6 +2286,11 @@ protocore_env(native_dashboard
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_DASHBOARD=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -2389,6 +2431,11 @@ protocore_env(native_defer
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -2572,6 +2619,11 @@ protocore_env(native_diag
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_DIAG=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
@@ -2611,6 +2663,7 @@ protocore_env(native_diffserv
   DEFINES
     "PROTOCORE_ENABLE_DIFFSERV=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -2703,6 +2756,11 @@ protocore_env(native_digest_auth
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_AUTH=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
@@ -2798,6 +2856,11 @@ protocore_env(native_digest_vectors
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_AUTH=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
@@ -2911,6 +2974,11 @@ protocore_env(native_dispatch
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -3066,6 +3134,7 @@ protocore_env(native_dns_resolver
   DEFINES
     "PROTOCORE_ENABLE_DNS_RESOLVER=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3102,6 +3171,7 @@ protocore_env(native_dns_server
   DEFINES
     "PROTOCORE_ENABLE_DNS_SERVER=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3174,6 +3244,7 @@ protocore_env(native_docstore
     "PROTOCORE_ENABLE_WAL=1"
     "PROTOCORE_ENABLE_DBM=1"
     "PROTOCORE_ENABLE_DOCSTORE=1"
+    "PROTOCORE_ENABLE_JSON=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3523,9 +3594,15 @@ protocore_env(native_edge_cache_proxy
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_EDGE_CACHE=1"
     "PROTOCORE_ENABLE_HTTP_CACHE=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -3942,6 +4019,11 @@ protocore_env(native_file_serving
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_FILE_SERVING=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
@@ -4124,6 +4206,11 @@ protocore_env(native_form_params
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -4288,6 +4375,9 @@ protocore_env(native_ftp_session
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_FTP_SESSION=1"
     "PROTOCORE_ENABLE_FTP=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -4920,9 +5010,15 @@ protocore_env(native_h3_server
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -5345,6 +5441,7 @@ protocore_env(native_http_parser
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -5530,6 +5627,11 @@ protocore_env(native_iface
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -5615,6 +5717,7 @@ protocore_env(native_iface_bridge_hw
     "PROTOCORE_ENABLE_IFACE_BRIDGE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6027,6 +6130,11 @@ protocore_env(native_json
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6050,6 +6158,8 @@ protocore_env(native_json_codec
     "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/json/test_json/test_json.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/json/test_json/unity_runner.c"
+  DEFINES
+    "PROTOCORE_ENABLE_JSON=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6169,6 +6279,9 @@ protocore_env(native_keepalive
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6623,6 +6736,7 @@ protocore_env(native_mdns_adaptive
     "PROTOCORE_ENABLE_PROMISC=1"
     "PROTOCORE_PHYSICAL_HAS_BACKEND=1"
     "PROTOCORE_ENABLE_RADIO_POWER=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6664,6 +6778,7 @@ protocore_env(native_mdns_service
   DEFINES
     "PROTOCORE_ENABLE_MDNS=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -6800,6 +6915,11 @@ protocore_env(native_middleware
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -7378,6 +7498,11 @@ protocore_env(native_multipart
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7631,6 +7756,7 @@ protocore_env(native_ntp_server
     "PROTOCORE_ENABLE_NTP_SERVER=1"
     "PROTOCORE_ENABLE_TIME_SOURCE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7673,6 +7799,7 @@ protocore_env(native_ntp_service
   DEFINES
     "PROTOCORE_ENABLE_NTP=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7726,6 +7853,7 @@ protocore_env(native_oauth2_exchange
   DEFINES
     "PROTOCORE_ENABLE_OAUTH2=1"
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
+    "PROTOCORE_ENABLE_JSON=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7751,6 +7879,7 @@ protocore_env(native_oauth2_rfc6749
     "${PROTOCORE_ROOT}/test/unit/src/services/security/oauth2/test_oauth2/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_OAUTH2=1"
+    "PROTOCORE_ENABLE_JSON=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7802,6 +7931,10 @@ protocore_env(native_oauth2_transport
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_OAUTH2=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -7836,6 +7969,7 @@ protocore_env(native_observability
   DEFINES
     "PROTOCORE_ENABLE_OBSERVABILITY=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8102,6 +8236,8 @@ protocore_env(native_partition
     "${PROTOCORE_ROOT}/test/unit/src/server/storage/partition_monitor/test_partition_monitor/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_PARTITION_MONITOR=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8160,6 +8296,8 @@ protocore_env(native_partition_ota
   DEFINES
     "PROTOCORE_ENABLE_PARTITION_MONITOR=1"
     "PROTOCORE_HAS_VENDOR_OTA=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8251,6 +8389,11 @@ protocore_env(native_path_params
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -8436,6 +8579,8 @@ protocore_env(native_pentest
     "PROTOCORE_ENABLE_FILE_SERVING=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MODBUS_RTU=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -8811,6 +8956,7 @@ protocore_env(native_presentation
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9096,7 +9242,13 @@ protocore_env(native_prov
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_PROVISIONING=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9376,6 +9528,7 @@ protocore_env(native_quic_server
     "PROTOCORE_ENABLE_HTTP3=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9779,6 +9932,9 @@ protocore_env(native_range
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -9959,6 +10115,11 @@ protocore_env(native_regex
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -10030,6 +10191,7 @@ protocore_env(native_relay_listener
     "${PROTOCORE_ROOT}/test/unit/src/server/net/relay/test_relay_listener/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_RELAY=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10124,10 +10286,16 @@ protocore_env(native_response_headers
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_NTP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10148,6 +10316,8 @@ protocore_env(native_rfc1951
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951/test_rfc1951.c"
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/presentation/codec/deflate/test_rfc1951/unity_runner.c"
+  DEFINES
+    "PROTOCORE_ENABLE_DEFLATE_RFC1951=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10512,6 +10682,7 @@ protocore_env(native_scp_server
     "PROTOCORE_ENABLE_MNT=1"
     "PROTOCORE_ENABLE_SSH_SCP=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10694,6 +10865,7 @@ protocore_env(native_senml_pack
     "${PROTOCORE_ROOT}/test/unit/src/services/iot/senml/test_senml/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_SENML=1"
+    "PROTOCORE_ENABLE_JSON=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10791,6 +10963,7 @@ protocore_env(native_session
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -10799,6 +10972,98 @@ protocore_env(native_session
     "${PROTOCORE_ROOT}/."
     "${PROTOCORE_ROOT}/.pio/libdeps/native_session/littlefs/include"
     "${PROTOCORE_ROOT}/test/unit/integration/presentation/test_session"
+)
+
+# The SFTP v3 server subsystem (application/sftp/ssh_sftp.c) driven over a real SSH session channel: a subsystem "sftp" CHANNEL_REQUEST tags the channel, SSH_FXP_* requests arrive as CHANNEL_DATA, and responses are read back off the wire. Storage is the RAM mount backend. Expected values are transcribed from draft-ietf-secsh-filexfer-02, the authoritative text for SFTP v3. Nothing else in the matrix compiles this file.
+protocore_env(native_sftp_server
+  SOURCES
+    "${PROTOCORE_ROOT}/src/shared/ip/ip.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/http_parser/http_parser.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/server/server.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/tcp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/client/client.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/protocol/protocol.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/tcp/lower/lower.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/transport/net_addr/net_addr.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/presentation.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/session/session.c"
+    "${PROTOCORE_ROOT}/src/server/protocore_builtins.c"
+    "${PROTOCORE_ROOT}/src/mmgr/plaintext/plaintext.c"
+    "${PROTOCORE_ROOT}/src/mmgr/arena/arena.c"
+    "${PROTOCORE_ROOT}/src/server/core/worker/worker.c"
+    "${PROTOCORE_ROOT}/src/crypto/hash/sha1/sha1.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/base64/base64.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/websocket/websocket.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/session/ws/ws.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/http/sse/sse.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/session/sse/sse.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/codec/multipart/multipart.c"
+    "${PROTOCORE_ROOT}/src/crypto/hash/sha256/sha256.c"
+    "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
+    "${PROTOCORE_ROOT}/src/crypto/cipher/chacha20/chacha20.c"
+    "${PROTOCORE_ROOT}/src/crypto/rng/rng.c"
+    "${PROTOCORE_ROOT}/src/mmgr/protomem/protomem.c"
+    "${PROTOCORE_ROOT}/src/crypto/mac/poly1305/poly1305.c"
+    "${PROTOCORE_ROOT}/src/crypto/aead/chachapoly/chachapoly.c"
+    "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha512/hmac_sha512.c"
+    "${PROTOCORE_ROOT}/src/crypto/cipher/aes256ctr/aes256ctr.c"
+    "${PROTOCORE_ROOT}/src/crypto/aead/aesgcm/aesgcm.c"
+    "${PROTOCORE_ROOT}/src/crypto/asymmetric/ecdsa/ecdsa.c"
+    "${PROTOCORE_ROOT}/src/crypto/asymmetric/bignum/bignum.c"
+    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_bignum.c"
+    "${PROTOCORE_ROOT}/src/crypto/asymmetric/rsa/rsa.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.c"
+    "${PROTOCORE_ROOT}/src/crypto/hash/sha512/sha512.c"
+    "${PROTOCORE_ROOT}/src/crypto/asymmetric/curve25519/curve25519.c"
+    "${PROTOCORE_ROOT}/src/crypto/asymmetric/ed25519/ed25519.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/transport/transport.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/phase_machine/phase_machine.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/extension/extension.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/ssh.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/auth/auth.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/connection/connection.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/server/server.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/app/server/server.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/network/network.c"
+    "${PROTOCORE_ROOT}/src/mmgr/secure/secure.c"
+    "${PROTOCORE_ROOT}/test/core_setup/hal/portable/portable_platform.c"
+    "${PROTOCORE_ROOT}/src/server/clock/clock.c"
+    "${PROTOCORE_ROOT}/src/mmgr/protostr/protostr.c"
+    "${PROTOCORE_ROOT}/test/core_setup/hal/host/host_nvs.c"
+    "${PROTOCORE_ROOT}/src/mmgr/protoframe/protoframe.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/application/sftp/ssh_sftp/ssh_sftp.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/application/sftp/sftp/sftp.c"
+    "${PROTOCORE_ROOT}/src/server/storage/mnt/mnt.c"
+    "${PROTOCORE_ROOT}/src/server/storage/filesystem/filesystem.c"
+    "${PROTOCORE_ROOT}/src/mmgr/bytes/bytes.c"
+    "${PROTOCORE_ROOT}/src/mmgr/endian/endian.c"
+    "${PROTOCORE_ROOT}/src/mmgr/membuild/membuild.c"
+    "${PROTOCORE_ROOT}/src/mmgr/rawmemcpy/rawmemcpy.c"
+    "${PROTOCORE_ROOT}/src/mmgr/span/span.c"
+    "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
+    "${PROTOCORE_ROOT}/src/shared/hex/hex.c"
+    "${PROTOCORE_ROOT}/src/shared/log/log.c"
+    "${PROTOCORE_ROOT}/src/shared/time_compat/time_compat.c"
+    "${PROTOCORE_ROOT}/src/shared/utf8/utf8.c"
+    "${PROTOCORE_ROOT}/src/mmgr/float_bits/float_bits.c"
+    "${PROTOCORE_ROOT}/src/crypto/mac/ghash/ghash.c"
+    "${PROTOCORE_ROOT}/src/network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c"
+    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/test_ssh_sftp.c"
+    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp/unity_runner.c"
+  DEFINES
+    "PROTOCORE_ENABLE_SSH=1"
+    "PROTOCORE_SSH_MAX_CHANNELS=3"
+    "PROTOCORE_ENABLE_MNT=1"
+    "PROTOCORE_ENABLE_SSH_SFTP=1"
+    "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
+  INCLUDES
+    "${PROTOCORE_ROOT}/test/core_setup/hal/host"
+    "${PROTOCORE_ROOT}/test/support"
+    "${PROTOCORE_ROOT}/src"
+    "${PROTOCORE_ROOT}/include"
+    "${PROTOCORE_ROOT}/."
+    "${PROTOCORE_ROOT}/test/unit/src/network_drivers/application/sftp/test_ssh_sftp"
 )
 
 # SFTP version 3 wire codec (network_drivers/application/sftp, draft-ietf-secsh-filexfer-02): the sec 3 packet framing whose length field counts the data area and excludes itself, the sec 3 packet type numbers, the sec 5 ATTRS flag bits and field order (including skipping the extended fields), the sec 6.3 SSH_FXP_OPEN pflags, the sec 7 status codes and the STATUS / HANDLE / DATA / NAME / ATTRS response layouts octet by octet, the bounds-checked reader (a string longer than its payload is refused), the length-prefix backfill, and the ls -l longname whose permission column is derived from POSIX.1 permission bits.
@@ -11491,6 +11756,7 @@ protocore_env(native_snmp__test_snmp_ber
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11529,6 +11795,7 @@ protocore_env(native_snmp__test_snmp_agent
   DEFINES
     "PROTOCORE_ENABLE_SNMP=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11654,6 +11921,7 @@ protocore_env(native_snmp_v3
     "PROTOCORE_ENABLE_SNMP_V3=1"
     "PROTOCORE_ENABLE_SNMP_TRAP=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -11887,6 +12155,7 @@ protocore_env(native_sse
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
   INCLUDES
@@ -11967,6 +12236,7 @@ protocore_env(native_ssh__transport_test_extension
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12044,6 +12314,7 @@ protocore_env(native_ssh__transport_test_comp
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12121,6 +12392,7 @@ protocore_env(native_ssh__transport_test_zlib
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12198,6 +12470,7 @@ protocore_env(native_ssh__transport_test_inflate
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12276,6 +12549,7 @@ protocore_env(native_ssh__transport_test_phase_machine
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12354,6 +12628,7 @@ protocore_env(native_ssh__transport_test_transport
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12432,6 +12707,7 @@ protocore_env(native_ssh__ssh_test_ssh
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12509,6 +12785,7 @@ protocore_env(native_ssh__client_test_client
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12586,6 +12863,7 @@ protocore_env(native_ssh__app_test_client
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12663,6 +12941,7 @@ protocore_env(native_ssh__server_test_server
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12741,6 +13020,7 @@ protocore_env(native_ssh__network_test_network
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12818,6 +13098,7 @@ protocore_env(native_ssh__auth_test_auth
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12896,6 +13177,7 @@ protocore_env(native_ssh__connection_test_connection
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -12973,6 +13255,7 @@ protocore_env(native_ssh__app_test_server
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13067,6 +13350,9 @@ protocore_env(native_ssh_client
     "PROTOCORE_ENABLE_SSH_CLIENT=1"
     "PROTOCORE_SSH_MAX_CHANNELS=4"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13151,6 +13437,7 @@ protocore_env(native_ssh_conn
     "PROTOCORE_ENABLE_SSH=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13445,6 +13732,9 @@ protocore_env(native_ssh_forward
     "PROTOCORE_SSH_MAX_CHANNELS=3"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13520,6 +13810,7 @@ protocore_env(native_ssh_kbdint
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_SSH_ALLOW_PASSWORD=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13590,6 +13881,7 @@ protocore_env(native_statsd
   DEFINES
     "PROTOCORE_ENABLE_STATSD=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13709,6 +14001,7 @@ protocore_env(native_syslog
   DEFINES
     "PROTOCORE_ENABLE_SYSLOG=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13826,6 +14119,7 @@ protocore_env(native_tcp
     "${PROTOCORE_ROOT}/test/unit/protocols/transport/test_tcp/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13872,6 +14166,9 @@ protocore_env(native_tcp_client
   DEFINES
     "PROTOCORE_ENABLE_HTTP_CLIENT=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13906,6 +14203,7 @@ protocore_env(native_tcp_conn
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/protocol/test_tcp_conn/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13940,6 +14238,7 @@ protocore_env(native_tcp_evt
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/test_tcp_evt/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -13985,6 +14284,7 @@ protocore_env(native_tcp_listener
     "PROTOCORE_IP_ALLOWLIST_SLOTS=4"
     "PROTOCORE_ENABLE_DIFFSERV=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14019,6 +14319,7 @@ protocore_env(native_tcp_ns
     "${PROTOCORE_ROOT}/test/unit/src/network_drivers/transport/tcp/test_tcp/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14080,6 +14381,7 @@ protocore_env(native_telnet
   DEFINES
     "PROTOCORE_ENABLE_TELNET=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14172,6 +14474,11 @@ protocore_env(native_template
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -14541,6 +14848,7 @@ protocore_env(native_transport
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14676,6 +14984,7 @@ protocore_env(native_udp_transport
     "${PROTOCORE_ROOT}/test/unit/integration/transport/test_udp_transport/unity_runner.c"
   DEFINES
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_UDP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14789,6 +15098,9 @@ protocore_env(native_upload
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -14953,6 +15265,7 @@ protocore_env(native_wamp
     "${PROTOCORE_ROOT}/test/unit/src/services/iot/wamp/test_wamp/unity_runner.c"
   DEFINES
     "PROTOCORE_ENABLE_WAMP=1"
+    "PROTOCORE_ENABLE_JSON=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -15086,6 +15399,11 @@ protocore_env(native_web_terminal
     "PROTOCORE_HTTP_EMIT_DATE=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -15181,6 +15499,11 @@ protocore_env(native_webdav_handler
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_WEB_ASSETS=1"
+    "PROTOCORE_ENABLE_HTTP_ROUTE=1"
+    "PROTOCORE_ENABLE_JSON=1"
+    "PROTOCORE_ENABLE_DNS=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -15280,6 +15603,7 @@ protocore_env(native_websocket
   DEFINES
     "PROTOCORE_ENFORCE_HOST_HEADER=0"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_TCP=1"
     "PROTOCORE_ENABLE_WEBSOCKET=1"
     "PROTOCORE_ENABLE_SSE=1"
   INCLUDES
@@ -15353,6 +15677,7 @@ protocore_env(native_workers
   DEFINES
     "PROTOCORE_WORKER_COUNT=2"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -15389,6 +15714,7 @@ protocore_env(native_workers_stack
   DEFINES
     "PROTOCORE_WORKER_COUNT=2"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -15483,6 +15809,8 @@ protocore_env(native_ws_deflate
     "PROTOCORE_ENABLE_SSE=1"
     "PROTOCORE_HAS_NET_STACK=1"
     "PROTOCORE_ENABLE_MULTIPART=1"
+    "PROTOCORE_ENABLE_DEFLATE_RFC1951=1"
+    "PROTOCORE_ENABLE_TCP=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"

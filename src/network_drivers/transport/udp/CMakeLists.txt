@@ -7,10 +7,13 @@
 add_subdirectory(client)
 add_subdirectory(server)
 
-protocore_module(pc_network_drivers_transport_udp
-  SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/udp.c"
-  PUBLIC
-    pc_network_drivers_transport_udp_client
-    pc_network_drivers_transport_udp_server
-)
 protocore_header_module(pc_network_drivers_transport_udp_common DEPS pc_mmgr_bytes pc_mmgr_ring pc_shared_ip)
+
+if(PROTOCORE_ENABLE_UDP)
+  protocore_module(pc_network_drivers_transport_udp
+    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/udp.c"
+    PUBLIC
+      pc_network_drivers_transport_udp_client
+      pc_network_drivers_transport_udp_server
+  )
+endif()

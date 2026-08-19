@@ -379,22 +379,12 @@ static void sha384_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA38
 
 static void sha384_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Sha384.ok = PROTO_FALSE;
-        return;
-    }
     sha384_state_init(work);
     Sha384.ok = PROTO_TRUE;
 }
 
 static void sha384_update(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Sha384.ok = PROTO_FALSE;
-        return;
-    }
     sha384_absorb(work, Sha384.update_args.data, Sha384.update_args.len);
 }
 

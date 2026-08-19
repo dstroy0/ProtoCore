@@ -173,10 +173,6 @@ static uint32_t v3_uptime_s(void)
 
 static void v3_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *engine_id = SnmpV3.engine.engine_id;
     const size_t engine_id_len = SnmpV3.engine.engine_id_len;
     if (engine_id && engine_id_len >= 5 && engine_id_len <= SNMP_V3_ENGINEID_MAX)
@@ -194,10 +190,6 @@ static void v3_init(uint8_t *restrict work)
 // message (RFC 3414 sec 2.6, derivation per RFC 7860 sec 9.3).
 static void v3_set_user(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *user = SnmpV3.user.user;
     const char *auth_pass = SnmpV3.user.auth_pass;
     const char *priv_pass = SnmpV3.user.priv_pass;
@@ -226,20 +218,12 @@ static void v3_set_user(uint8_t *restrict work)
 
 static void v3_set_boots(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     SNMP_V3_CTX(work)->boots = SnmpV3.engine.boots;
     SnmpV3.ok = PROTO_TRUE;
 }
 
 static void v3_get_boots(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     SnmpV3.u32 = SNMP_V3_CTX(work)->boots;
     SnmpV3.ok = PROTO_TRUE;
 }
@@ -578,10 +562,6 @@ static size_t build_report(uint8_t *restrict work, long msg_id, proto_bool auth,
 
 static void v3_process(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *req = SnmpV3.msg.req;
     const size_t req_len = SnmpV3.msg.req_len;
     uint8_t *resp = SnmpV3.msg.resp;

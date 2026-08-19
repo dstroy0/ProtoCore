@@ -74,10 +74,6 @@ static void http_parser_get_header(uint8_t *restrict work);
 
 static void http_parser_set_stream_hooks(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     HttpStreamBeginCb begin = HttpParser.set_stream_hooks_args.begin;
     HttpStreamDataCb data = HttpParser.set_stream_hooks_args.data;
     HttpStreamAbortCb abort = HttpParser.set_stream_hooks_args.abort;
@@ -205,10 +201,6 @@ static void parse_query_params(HttpReq *req)
 
 static void http_parser_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     HttpReq *req = HttpParser.reset_args.req;
 
     uint8_t id = req->slot_id;
@@ -231,10 +223,6 @@ static void http_parser_reset(uint8_t *restrict work)
 
 static void http_parser_feed(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     HttpReq *p = HttpParser.feed_args.req;
     uint8_t byte = HttpParser.feed_args.byte;
 
@@ -244,7 +232,6 @@ static void http_parser_feed(uint8_t *restrict work)
 
     switch (p->parse_state)
     {
-
     case PARSE_METHOD:
         if (c == ' ')
         {
@@ -644,10 +631,6 @@ static void http_parser_get_header(uint8_t *restrict work)
 
 static void http_parser_get_cookie(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const HttpReq *req = HttpParser.get_cookie_args.req;
     const char *name = HttpParser.get_cookie_args.name;
     char *out = HttpParser.get_cookie_args.out;
@@ -907,10 +890,6 @@ static proto_bool fwd_value_is(const char *v, size_t n, const char *lit, size_t 
 
 static void http_parser_forwarded_client(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const HttpReq *req = HttpParser.forwarded_client_args.req;
     char *ip_out = HttpParser.forwarded_client_args.ip_out;
     size_t ip_cap = HttpParser.forwarded_client_args.ip_cap;
@@ -1005,10 +984,6 @@ static void http_parser_get_query(uint8_t *restrict work)
 
 static void http_parser_get_form(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const HttpReq *req = HttpParser.get_form_args.req;
     const char *key = HttpParser.get_form_args.key;
     char *out = HttpParser.get_form_args.out;

@@ -165,10 +165,6 @@ static proto_bool emit(uint8_t *restrict work, uint8_t slot, size_t len)
 proto_bool protocore_tls_global_init(const uint8_t *cert, size_t cert_len, const uint8_t *key, size_t key_len)
 {
     uint8_t *work = protocore_tls_span();
-    if (!work)
-    {
-        return PROTO_FALSE;
-    }
     // RFC 7250 raw public keys: this engine presents an Ed25519 key, not an X.509 chain, so the
     // credential is the 32-byte public key and the 32-byte signing seed that matches it.
     if (cert == NULL || key == NULL || cert_len != 32u || key_len != 32u)

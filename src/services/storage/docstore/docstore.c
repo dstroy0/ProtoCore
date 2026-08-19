@@ -13,6 +13,8 @@
 #include "mmgr/protostr/protostr.h" // str.eq: the string-field find compare
 #include "network_drivers/presentation/codec/json/json.h"
 
+static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
+
 void protocore_docstore_open(protocore_doc_store *ds, struct protocore_dbm *db)
 {
     ds->db = db;
@@ -87,7 +89,12 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     proto_bool match = PROTO_FALSE;
     if (f->kind == FIND_STR)
     {
-        if (Json.get_str(json, f->field, f->fieldtmp, sizeof(f->fieldtmp)))
+        Json.get_str_args.json = json;
+        Json.get_str_args.key = f->field;
+        Json.get_str_args.out = f->fieldtmp;
+        Json.get_str_args.out_cap = sizeof(f->fieldtmp);
+        Json.get_str(json_work);
+        if (Json.ok)
         {
             match = str.eq(f->fieldtmp, f->sval, sizeof(f->fieldtmp), PROTO_FALSE);
         }
@@ -95,7 +102,11 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     else if (f->kind == FIND_INT)
     {
         long v = 0;
-        if (Json.get_int(json, f->field, &v))
+        Json.get_int_args.json = json;
+        Json.get_int_args.key = f->field;
+        Json.get_int_args.out = &v;
+        Json.get_int(json_work);
+        if (Json.ok)
         {
             match = (v == f->ival);
         }
@@ -103,7 +114,11 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     else
     {
         proto_bool b = PROTO_FALSE;
-        if (Json.get_bool(json, f->field, &b))
+        Json.get_bool_args.json = json;
+        Json.get_bool_args.key = f->field;
+        Json.get_bool_args.out = &b;
+        Json.get_bool(json_work);
+        if (Json.ok)
         {
             match = (b == f->bval);
         }

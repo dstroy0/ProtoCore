@@ -171,10 +171,6 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_ssh_scp_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     if (slot >= MAX_SSH_CONNS)
     {
@@ -316,11 +312,6 @@ uint8_t *protocore_ssh_scp_span(void)
 
 static void ssh_scp_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     // Bind the root this server answers from. Naming a different one than SFTP is how the two end up
     // over different storage; naming the same one shares it and costs one entry.
     Fs.mount = "mnt/scp";

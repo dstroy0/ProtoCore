@@ -205,12 +205,17 @@ LOOP = re.compile(r"\b(while|for)\s*\($")
 
 
 def after_short_circuit(s, pos, mask=None):
-    """True when the call at pos sits to the right of an `&&` or `||` in the same statement.
+    """True when the call at pos sits to the right of an `&&`, `||`, `?` or `:` in the same statement.
 
     Hoisting it above the statement runs it before the operand that gates it, and unconditionally.
     `if (!r8(REG, &irq) || !data_ready(irq))` is the shape: r8 fills irq and the right operand reads
     it, so a hoisted data_ready sees the value from before the read - and runs even when r8 already
     decided the answer.
+
+    A conditional operator gates its branches the same way, and it is worse when it is missed: the
+    staging for the second branch was hoisted INTO the middle of the expression rather than above
+    it. smb_client's `return algo == CMAC ? verify_cmac(...) : verify(...)` came out as a syntax
+    error, and the half of it that did parse ran verify_cmac unconditionally.
     """
     if mask is None:
         mask = code_mask(s)
@@ -229,10 +234,25 @@ def after_short_circuit(s, pos, mask=None):
             depth -= 1
         elif depth == 0 and c in "&|" and i > 0 and s[i - 1] == c:
             return True
+        elif depth == 0 and c == "?":
+            return True
+        # `:` also ends a label, a bitfield width and a `case`; only the one belonging to a `?`
+        # already scanned past on this statement gates a branch.
+        elif depth == 0 and c == ":" and s[i - 1 : i] != ":" and s[i + 1 : i + 2] != ":":
+            return "?" in _statement_before(s, i, mask)
         elif depth == 0 and c == ";":
             break
         i -= 1
     return False
+
+
+def _statement_before(s, pos, mask):
+    """The code bytes from the start of this statement up to @p pos, comments and literals blanked."""
+    i, out = pos - 1, []
+    while i >= 0 and mask[i] and s[i] != ";" and s[i] != "{" and s[i] != "}":
+        out.append(s[i])
+        i -= 1
+    return "".join(reversed(out))
 
 # Macros that evaluate an argument more than once. Hoisting a call out of one of these is the
 # loop-condition mistake wearing a macro: DBENCH_OP(label, n, expr) runs expr n times to time it,

@@ -477,10 +477,6 @@ static proto_bool ws_tx_plain(uint8_t *restrict work, const uint8_t *data, size_
 // Drain plaintext octets from the transport slot into the receive ring.
 static void ws_pump_plain(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t tmp[WSC_PUMP_CHUNK];
     for (;;)
     {
@@ -538,10 +534,6 @@ static int ws_tls_recv(void *bio, unsigned char *buf, size_t len)
 // Drain plaintext out of the TLS session into the receive ring.
 static void ws_pump_tls(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t tmp[WSC_PUMP_CHUNK];
     for (;;)
     {
@@ -567,10 +559,6 @@ static void ws_pump_tls(uint8_t *restrict work)
 
 static void ws_pump(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
 #if PROTOCORE_ENABLE_WS_CLIENT_TLS
     if (WS_CLIENT_CTX(work)->secure)
     {
@@ -619,10 +607,6 @@ static proto_bool ws_emit_frame(uint8_t *restrict work, uint8_t opcode, const ui
 // RFC 6455 sec 7.1.1: close the WebSocket connection - end the TLS session, then the transport slot.
 static void ws_close_transport(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
 #if PROTOCORE_ENABLE_WS_CLIENT_TLS
     if (WS_CLIENT_CTX(work)->secure)
     {
@@ -694,10 +678,6 @@ static void ws_handle_frame(uint8_t *restrict work, uint8_t opcode, proto_bool f
 // RFC 6455 sec 6.2: read what arrived and process each complete frame in it.
 static void ws_process_rx(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     ws_pump(work);
     for (;;)
     {
@@ -739,10 +719,6 @@ static void ws_process_rx(uint8_t *restrict work)
 
 static void ws_on_message(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     WS_CLIENT_CTX(work)->on_message = WsClient.msg.on_message;
 }
 
@@ -750,10 +726,6 @@ static void ws_on_message(uint8_t *restrict work)
 // opening handshake and verify the server's. The connection is established when that verifies.
 static void ws_connect(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *host = WsClient.handshake.host;
     const char *resource_name = WsClient.handshake.resource_name;
     const uint16_t port = WsClient.handshake.port;
@@ -924,10 +896,6 @@ static void ws_send_binary(uint8_t *restrict work)
 
 static void ws_loop(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     WsClient.ok = PROTO_FALSE;
     if (!WS_CLIENT_CTX(work)->established)
     {
@@ -944,20 +912,12 @@ static void ws_loop(uint8_t *restrict work)
 
 static void ws_connected(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     WsClient.ok = WS_CLIENT_CTX(work)->established;
 }
 
 // RFC 6455 sec 5.5.1 then sec 7.1.1: send a Close frame, then close the WebSocket connection.
 static void ws_close(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (WS_CLIENT_CTX(work)->established)
     {
         ws_emit_frame(work, (uint8_t)WSC_OP_CLOSE, NULL, 0);

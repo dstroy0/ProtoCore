@@ -255,10 +255,6 @@ static SnmpMibEntry *mib_alloc(uint8_t *restrict work)
 
 static void agent_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     SNMP_AGENT_CTX(work)->mib_count = 0;
     SNMP_AGENT_CTX(work)->rw_set = PROTO_FALSE;
     SNMP_AGENT_CTX(work)->rw[0] = '\0';
@@ -273,10 +269,6 @@ static void agent_init(uint8_t *restrict work)
 
 static void set_rw_community(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *rw = SnmpAgent.community.rw;
     if (!rw || !rw[0])
     {
@@ -908,10 +900,6 @@ static void dispatch_pdu(uint8_t *restrict work)
 
 static void agent_process(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *req = SnmpAgent.msg.req;
     const size_t req_len = SnmpAgent.msg.req_len;
     uint8_t *resp = SnmpAgent.msg.resp;

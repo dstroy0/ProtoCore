@@ -88,10 +88,6 @@ static void quic_crypto_keys_from_secret(uint8_t *restrict work)
 
 static void quic_crypto_derive_initial_secrets(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t *keys_work = QuicCrypto.derive_initial_secrets_args.keys_work;
     const uint8_t *dcid = QuicCrypto.derive_initial_secrets_args.dcid;
     size_t dcid_len = QuicCrypto.derive_initial_secrets_args.dcid_len;

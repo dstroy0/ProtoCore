@@ -36,10 +36,6 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/presentation/http/http3/h3_conn/h3_conn.h"
 #include "network_drivers/presentation/http/http3/quic_conn/quic_conn.h"
 
-#ifndef PROTOCORE_QUIC_INGEST_RING
-#define PROTOCORE_QUIC_INGEST_RING                                                                                     \
-    8 ///< datagrams buffered from the lwIP thread until protocore_quic_server_poll() drains them
-#endif
 #ifndef PROTOCORE_HTTP3_PORT
 #define PROTOCORE_HTTP3_PORT 443 ///< default UDP port the HTTP/3 server binds (QUIC)
 #endif
@@ -93,9 +89,6 @@ typedef struct
     size_t body_len;          ///< how many
 } QuicRespArgs;
 
-/** @brief The server's own state and the calls that reach it, described only in quic_server.c. */
-struct QuicServerInternal;
-
 /**
  * @brief The HTTP/3 server: a QUIC connection pool over one bound UDP port.
  *
@@ -115,7 +108,6 @@ struct QuicServerInternal;
  *                                  request callback
  * @var QuicServerNs::active_conns  open connections, for diagnostics and tests
  * @var QuicServerNs::stop          close the UDP binding and release every pool slot
- * @var QuicServerNs::internal      the server's state and the calls that reach it
  */
 typedef struct
 {
@@ -128,18 +120,27 @@ typedef struct
     proto_bool ok;
     uint8_t u8;
 
-    void (*begin)(struct QuicServerInternal *ctx);
-    void (*poll)(struct QuicServerInternal *ctx);
-    void (*respond)(struct QuicServerInternal *ctx);
-    void (*active_conns)(struct QuicServerInternal *ctx);
-    void (*stop)(struct QuicServerInternal *ctx);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const poll)(uint8_t *restrict work);
+    void (*const respond)(uint8_t *restrict work);
+    void (*const active_conns)(uint8_t *restrict work);
+    void (*const stop)(uint8_t *restrict work);
 
-    struct QuicServerInternal *internal;
 } QuicServerNs;
 
 /** @brief The one symbol this module exports. */
 extern QuicServerNs QuicServer;
 
+/**
+ * @brief The PROTOCORE_QUIC_SERVER_BORROW bytes this server runs out of.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the server lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_quic_server_span(void);
 /**
  * @brief The response sink the HTTP/3 bridge installs; its shape is the seam's, not this module's.
  */

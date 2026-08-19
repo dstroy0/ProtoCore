@@ -15,6 +15,8 @@
 
 #include <unity.h>
 
+static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
+
 void setUp(void)
 {
 }
@@ -28,7 +30,10 @@ static protocore_json_writer g_w;
 // Bind the writer to the shared buffer and return it, so each case reads as one build.
 static protocore_json_writer *wr(void)
 {
-    Json.init(&g_w, g_buf, sizeof(g_buf));
+    Json.init_args.w = &g_w;
+    Json.init_args.buf = g_buf;
+    Json.init_args.cap = sizeof(g_buf);
+    Json.init(json_work);
     return &g_w;
 }
 
@@ -53,28 +58,71 @@ static const char *const RFC8259_DOC = "{\n"
 void test_rfc8259_section_13_example_document(void)
 {
     protocore_json_writer *w = wr();
-    Json.begin_object(w);
-    Json.key(w, "Image");
-    Json.begin_object(w);
-    Json.kv_int(w, "Width", 800);
-    Json.kv_int(w, "Height", 600);
-    Json.kv_str(w, "Title", "View from 15th Floor");
-    Json.key(w, "Thumbnail");
-    Json.begin_object(w);
-    Json.kv_str(w, "Url", "http://www.example.com/image/481989943");
-    Json.kv_int(w, "Height", 125);
-    Json.kv_int(w, "Width", 100);
-    Json.end_object(w);
-    Json.kv_bool(w, "Animated", PROTO_FALSE);
-    Json.key(w, "IDs");
-    Json.begin_array(w);
-    Json.put_int(w, 116);
-    Json.put_int(w, 943);
-    Json.put_int(w, 234);
-    Json.put_int(w, 38793);
-    Json.end_array(w);
-    Json.end_object(w);
-    Json.end_object(w);
+    Json.begin_object_args.w = w;
+    Json.begin_object(json_work);
+    Json.key_args.w = w;
+    Json.key_args.k = "Image";
+    Json.key(json_work);
+    Json.begin_object_args.w = w;
+    Json.begin_object(json_work);
+    Json.kv_int_args.w = w;
+    Json.kv_int_args.k = "Width";
+    Json.kv_int_args.v = 800;
+    Json.kv_int(json_work);
+    Json.kv_int_args.w = w;
+    Json.kv_int_args.k = "Height";
+    Json.kv_int_args.v = 600;
+    Json.kv_int(json_work);
+    Json.kv_str_args.w = w;
+    Json.kv_str_args.k = "Title";
+    Json.kv_str_args.v = "View from 15th Floor";
+    Json.kv_str(json_work);
+    Json.key_args.w = w;
+    Json.key_args.k = "Thumbnail";
+    Json.key(json_work);
+    Json.begin_object_args.w = w;
+    Json.begin_object(json_work);
+    Json.kv_str_args.w = w;
+    Json.kv_str_args.k = "Url";
+    Json.kv_str_args.v = "http://www.example.com/image/481989943";
+    Json.kv_str(json_work);
+    Json.kv_int_args.w = w;
+    Json.kv_int_args.k = "Height";
+    Json.kv_int_args.v = 125;
+    Json.kv_int(json_work);
+    Json.kv_int_args.w = w;
+    Json.kv_int_args.k = "Width";
+    Json.kv_int_args.v = 100;
+    Json.kv_int(json_work);
+    Json.end_object_args.w = w;
+    Json.end_object(json_work);
+    Json.kv_bool_args.w = w;
+    Json.kv_bool_args.k = "Animated";
+    Json.kv_bool_args.v = PROTO_FALSE;
+    Json.kv_bool(json_work);
+    Json.key_args.w = w;
+    Json.key_args.k = "IDs";
+    Json.key(json_work);
+    Json.begin_array_args.w = w;
+    Json.begin_array(json_work);
+    Json.put_int_args.w = w;
+    Json.put_int_args.v = 116;
+    Json.put_int(json_work);
+    Json.put_int_args.w = w;
+    Json.put_int_args.v = 943;
+    Json.put_int(json_work);
+    Json.put_int_args.w = w;
+    Json.put_int_args.v = 234;
+    Json.put_int(json_work);
+    Json.put_int_args.w = w;
+    Json.put_int_args.v = 38793;
+    Json.put_int(json_work);
+    Json.end_array_args.w = w;
+    Json.end_array(json_work);
+    Json.end_object_args.w = w;
+    Json.end_object(json_work);
+    Json.end_object_args.w = w;
+    Json.end_object(json_work);
 
     TEST_ASSERT_TRUE(protocore_json_ok(w));
     TEST_ASSERT_EQUAL_STRING("{\"Image\":{\"Width\":800,\"Height\":600,\"Title\":\"View from 15th Floor\","
@@ -92,9 +140,14 @@ void test_rfc8259_mandatory_escapes(void)
 {
     static const char V[] = {'q', '"', '\\', 0x01, 0x1f, '\b', '\f', '\n', '\r', '\t', '/', '\0'};
     protocore_json_writer *w = wr();
-    Json.begin_object(w);
-    Json.kv_str(w, "k", V);
-    Json.end_object(w);
+    Json.begin_object_args.w = w;
+    Json.begin_object(json_work);
+    Json.kv_str_args.w = w;
+    Json.kv_str_args.k = "k";
+    Json.kv_str_args.v = V;
+    Json.kv_str(json_work);
+    Json.end_object_args.w = w;
+    Json.end_object(json_work);
     TEST_ASSERT_TRUE(protocore_json_ok(w));
     TEST_ASSERT_EQUAL_STRING("{\"k\":\"q\\\"\\\\\\u0001\\u001f\\b\\f\\n\\r\\t/\"}", protocore_json_c_str(w));
 }
@@ -103,9 +156,14 @@ void test_rfc8259_mandatory_escapes(void)
 void test_member_name_is_escaped(void)
 {
     protocore_json_writer *w = wr();
-    Json.begin_object(w);
-    Json.kv_int(w, "a\"b", 1);
-    Json.end_object(w);
+    Json.begin_object_args.w = w;
+    Json.begin_object(json_work);
+    Json.kv_int_args.w = w;
+    Json.kv_int_args.k = "a\"b";
+    Json.kv_int_args.v = 1;
+    Json.kv_int(json_work);
+    Json.end_object_args.w = w;
+    Json.end_object(json_work);
     TEST_ASSERT_EQUAL_STRING("{\"a\\\"b\":1}", protocore_json_c_str(w));
 }
 
@@ -113,18 +171,30 @@ void test_member_name_is_escaped(void)
 void test_rfc8259_literal_names(void)
 {
     protocore_json_writer *w = wr();
-    Json.begin_array(w);
-    Json.put_bool(w, PROTO_FALSE);
-    Json.put_null(w);
-    Json.put_bool(w, PROTO_TRUE);
-    Json.end_array(w);
+    Json.begin_array_args.w = w;
+    Json.begin_array(json_work);
+    Json.put_bool_args.w = w;
+    Json.put_bool_args.v = PROTO_FALSE;
+    Json.put_bool(json_work);
+    Json.put_null_args.w = w;
+    Json.put_null(json_work);
+    Json.put_bool_args.w = w;
+    Json.put_bool_args.v = PROTO_TRUE;
+    Json.put_bool(json_work);
+    Json.end_array_args.w = w;
+    Json.end_array(json_work);
     TEST_ASSERT_EQUAL_STRING("[false,null,true]", protocore_json_c_str(w));
 }
 
 // Read one string member into @p out; returns what the reader reported.
 static proto_bool get_str(const char *doc, const char *key, char *out, size_t cap)
 {
-    return Json.get_str(doc, key, out, cap);
+    Json.get_str_args.json = doc;
+    Json.get_str_args.key = key;
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = cap;
+    Json.get_str(json_work);
+    return Json.ok;
 }
 
 // RFC 8259 sec 7: "a string containing only the G clef character (U+1D11E) may be represented as
@@ -201,12 +271,30 @@ void test_reader_matches_only_top_level_members(void)
     long n = 12345;
     proto_bool b = PROTO_TRUE;
 
-    TEST_ASSERT_FALSE(Json.get_int(RFC8259_DOC, "Width", &n));
+    Json.get_int_args.json = RFC8259_DOC;
+    Json.get_int_args.key = "Width";
+    Json.get_int_args.out = &n;
+    Json.get_int(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
     TEST_ASSERT_EQUAL_INT(12345, n); // untouched
-    TEST_ASSERT_FALSE(Json.get_str(RFC8259_DOC, "Url", out, sizeof(out)));
-    TEST_ASSERT_FALSE(Json.get_bool(RFC8259_DOC, "Animated", &b));
+    Json.get_str_args.json = RFC8259_DOC;
+    Json.get_str_args.key = "Url";
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_bool_args.json = RFC8259_DOC;
+    Json.get_bool_args.key = "Animated";
+    Json.get_bool_args.out = &b;
+    Json.get_bool(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
     TEST_ASSERT_TRUE(b);
-    TEST_ASSERT_FALSE(Json.get_str(RFC8259_DOC, "Image", out, sizeof(out)));
+    Json.get_str_args.json = RFC8259_DOC;
+    Json.get_str_args.key = "Image";
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
 }
 
 // Whitespace between tokens carries no meaning (RFC 8259 sec 2), so a member found in the RFC's own
@@ -217,11 +305,24 @@ void test_reader_skips_insignificant_whitespace(void)
     long n = 0;
     proto_bool b = PROTO_FALSE;
     static const char *const SPACED = "  {  \"s\" :  \"v\" ,  \"n\" : -7 ,  \"b\" : true  }  ";
-    TEST_ASSERT_TRUE(Json.get_str(SPACED, "s", out, sizeof(out)));
+    Json.get_str_args.json = SPACED;
+    Json.get_str_args.key = "s";
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_TRUE(Json.ok);
     TEST_ASSERT_EQUAL_STRING("v", out);
-    TEST_ASSERT_TRUE(Json.get_int(SPACED, "n", &n));
+    Json.get_int_args.json = SPACED;
+    Json.get_int_args.key = "n";
+    Json.get_int_args.out = &n;
+    Json.get_int(json_work);
+    TEST_ASSERT_TRUE(Json.ok);
     TEST_ASSERT_EQUAL_INT(-7, n);
-    TEST_ASSERT_TRUE(Json.get_bool(SPACED, "b", &b));
+    Json.get_bool_args.json = SPACED;
+    Json.get_bool_args.key = "b";
+    Json.get_bool_args.out = &b;
+    Json.get_bool(json_work);
+    TEST_ASSERT_TRUE(Json.ok);
     TEST_ASSERT_TRUE(b);
 }
 
@@ -229,25 +330,56 @@ void test_reader_skips_insignificant_whitespace(void)
 void test_write_read_round_trip(void)
 {
     protocore_json_writer *w = wr();
-    Json.begin_object(w);
-    Json.kv_str(w, "s", "a\"b\\c\nd");
-    Json.kv_int(w, "n", -2147483647L);
-    Json.kv_uint(w, "u", 65535UL);
-    Json.kv_bool(w, "b", PROTO_FALSE);
-    Json.end_object(w);
+    Json.begin_object_args.w = w;
+    Json.begin_object(json_work);
+    Json.kv_str_args.w = w;
+    Json.kv_str_args.k = "s";
+    Json.kv_str_args.v = "a\"b\\c\nd";
+    Json.kv_str(json_work);
+    Json.kv_int_args.w = w;
+    Json.kv_int_args.k = "n";
+    Json.kv_int_args.v = -2147483647L;
+    Json.kv_int(json_work);
+    Json.kv_uint_args.w = w;
+    Json.kv_uint_args.k = "u";
+    Json.kv_uint_args.v = 65535UL;
+    Json.kv_uint(json_work);
+    Json.kv_bool_args.w = w;
+    Json.kv_bool_args.k = "b";
+    Json.kv_bool_args.v = PROTO_FALSE;
+    Json.kv_bool(json_work);
+    Json.end_object_args.w = w;
+    Json.end_object(json_work);
     TEST_ASSERT_TRUE(protocore_json_ok(w));
 
     char out[32];
     long n = 0;
     proto_bool b = PROTO_TRUE;
     const char *doc = protocore_json_c_str(w);
-    TEST_ASSERT_TRUE(Json.get_str(doc, "s", out, sizeof(out)));
+    Json.get_str_args.json = doc;
+    Json.get_str_args.key = "s";
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_TRUE(Json.ok);
     TEST_ASSERT_EQUAL_STRING("a\"b\\c\nd", out);
-    TEST_ASSERT_TRUE(Json.get_int(doc, "n", &n));
+    Json.get_int_args.json = doc;
+    Json.get_int_args.key = "n";
+    Json.get_int_args.out = &n;
+    Json.get_int(json_work);
+    TEST_ASSERT_TRUE(Json.ok);
     TEST_ASSERT_EQUAL_INT(-2147483647L, n);
-    TEST_ASSERT_TRUE(Json.get_int(doc, "u", &n));
+    Json.get_int_args.json = doc;
+    Json.get_int_args.key = "u";
+    Json.get_int_args.out = &n;
+    Json.get_int(json_work);
+    TEST_ASSERT_TRUE(Json.ok);
     TEST_ASSERT_EQUAL_INT(65535L, n);
-    TEST_ASSERT_TRUE(Json.get_bool(doc, "b", &b));
+    Json.get_bool_args.json = doc;
+    Json.get_bool_args.key = "b";
+    Json.get_bool_args.out = &b;
+    Json.get_bool(json_work);
+    TEST_ASSERT_TRUE(Json.ok);
     TEST_ASSERT_FALSE(b);
 }
 
@@ -257,11 +389,31 @@ void test_reader_refuses_a_mismatched_type(void)
 {
     long n = 0;
     proto_bool b = PROTO_FALSE;
-    TEST_ASSERT_FALSE(Json.get_int("{\"n\":\"42\"}", "n", &n));
-    TEST_ASSERT_FALSE(Json.get_int("{\"n\":abc}", "n", &n));
-    TEST_ASSERT_FALSE(Json.get_bool("{\"b\":\"true\"}", "b", &b));
-    TEST_ASSERT_FALSE(Json.get_bool("{\"b\":1}", "b", &b));
-    TEST_ASSERT_FALSE(Json.get_bool("{\"b\":truthy}", "b", &b));
+    Json.get_int_args.json = "{\"n\":\"42\"}";
+    Json.get_int_args.key = "n";
+    Json.get_int_args.out = &n;
+    Json.get_int(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_int_args.json = "{\"n\":abc}";
+    Json.get_int_args.key = "n";
+    Json.get_int_args.out = &n;
+    Json.get_int(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_bool_args.json = "{\"b\":\"true\"}";
+    Json.get_bool_args.key = "b";
+    Json.get_bool_args.out = &b;
+    Json.get_bool(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_bool_args.json = "{\"b\":1}";
+    Json.get_bool_args.key = "b";
+    Json.get_bool_args.out = &b;
+    Json.get_bool(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_bool_args.json = "{\"b\":truthy}";
+    Json.get_bool_args.key = "b";
+    Json.get_bool_args.out = &b;
+    Json.get_bool(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
 }
 
 // A missing member, a non-object body and a null argument are all reported, never guessed at.
@@ -270,17 +422,68 @@ void test_reader_guards(void)
     char out[8];
     long n = 0;
     proto_bool b = PROTO_FALSE;
-    TEST_ASSERT_FALSE(Json.get_str("{\"a\":\"x\"}", "b", out, sizeof(out)));
-    TEST_ASSERT_FALSE(Json.get_str("[1,2]", "a", out, sizeof(out)));
-    TEST_ASSERT_FALSE(Json.get_str(NULL, "a", out, sizeof(out)));
-    TEST_ASSERT_FALSE(Json.get_str("{\"a\":\"x\"}", NULL, out, sizeof(out)));
-    TEST_ASSERT_FALSE(Json.get_str("{\"a\":\"x\"}", "a", NULL, sizeof(out)));
-    TEST_ASSERT_FALSE(Json.get_str("{\"a\":\"x\"}", "a", out, 0));
-    TEST_ASSERT_FALSE(Json.get_int("{\"a\":1}", "a", NULL));
-    TEST_ASSERT_FALSE(Json.get_bool("{\"a\":true}", "a", NULL));
-    TEST_ASSERT_FALSE(Json.get_str("{\"a\" \"x\"}", "a", out, sizeof(out))); // no ':'
-    TEST_ASSERT_FALSE(Json.get_int("{}", "a", &n));
-    TEST_ASSERT_FALSE(Json.get_bool("", "a", &b));
+    Json.get_str_args.json = "{\"a\":\"x\"}";
+    Json.get_str_args.key = "b";
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_str_args.json = "[1,2]";
+    Json.get_str_args.key = "a";
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_str_args.json = NULL;
+    Json.get_str_args.key = "a";
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_str_args.json = "{\"a\":\"x\"}";
+    Json.get_str_args.key = NULL;
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_str_args.json = "{\"a\":\"x\"}";
+    Json.get_str_args.key = "a";
+    Json.get_str_args.out = NULL;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_str_args.json = "{\"a\":\"x\"}";
+    Json.get_str_args.key = "a";
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = 0;
+    Json.get_str(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_int_args.json = "{\"a\":1}";
+    Json.get_int_args.key = "a";
+    Json.get_int_args.out = NULL;
+    Json.get_int(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_bool_args.json = "{\"a\":true}";
+    Json.get_bool_args.key = "a";
+    Json.get_bool_args.out = NULL;
+    Json.get_bool(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_str_args.json = "{\"a\" \"x\"}";
+    Json.get_str_args.key = "a";
+    Json.get_str_args.out = out;
+    Json.get_str_args.out_cap = sizeof(out);
+    Json.get_str(json_work);
+    TEST_ASSERT_FALSE(Json.ok); // no ':'
+    Json.get_int_args.json = "{}";
+    Json.get_int_args.key = "a";
+    Json.get_int_args.out = &n;
+    Json.get_int(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
+    Json.get_bool_args.json = "";
+    Json.get_bool_args.key = "a";
+    Json.get_bool_args.out = &b;
+    Json.get_bool(json_work);
+    TEST_ASSERT_FALSE(Json.ok);
 }
 
 // A destination shorter than the value truncates to capacity and still terminates, rather than
@@ -303,10 +506,18 @@ void test_writer_overflow_latches_and_terminates(void)
 {
     char small[8];
     protocore_json_writer w;
-    Json.init(&w, small, sizeof(small));
-    Json.begin_object(&w);
-    Json.kv_str(&w, "key", "a long value that does not fit");
-    Json.end_object(&w);
+    Json.init_args.w = &w;
+    Json.init_args.buf = small;
+    Json.init_args.cap = sizeof(small);
+    Json.init(json_work);
+    Json.begin_object_args.w = &w;
+    Json.begin_object(json_work);
+    Json.kv_str_args.w = &w;
+    Json.kv_str_args.k = "key";
+    Json.kv_str_args.v = "a long value that does not fit";
+    Json.kv_str(json_work);
+    Json.end_object_args.w = &w;
+    Json.end_object(json_work);
     TEST_ASSERT_FALSE(protocore_json_ok(&w));
     TEST_ASSERT_EQUAL_UINT(sizeof(small) - 1, strlen(small));
     TEST_ASSERT_TRUE(protocore_json_length(&w) < sizeof(small));
@@ -318,10 +529,12 @@ void test_writer_depth_limit(void)
     protocore_json_writer *w = wr();
     for (int i = 0; i < JSON_MAX_DEPTH; i++)
     {
-        Json.begin_array(w);
+        Json.begin_array_args.w = w;
+        Json.begin_array(json_work);
     }
     TEST_ASSERT_TRUE(protocore_json_ok(w));
-    Json.begin_array(w);
+    Json.begin_array_args.w = w;
+    Json.begin_array(json_work);
     TEST_ASSERT_FALSE(protocore_json_ok(w));
 }
 
@@ -329,10 +542,13 @@ void test_writer_depth_limit(void)
 void test_writer_unbalanced_close(void)
 {
     protocore_json_writer *w = wr();
-    Json.begin_object(w);
-    Json.end_object(w);
+    Json.begin_object_args.w = w;
+    Json.begin_object(json_work);
+    Json.end_object_args.w = w;
+    Json.end_object(json_work);
     TEST_ASSERT_TRUE(protocore_json_ok(w));
-    Json.end_object(w);
+    Json.end_object_args.w = w;
+    Json.end_object(json_work);
     TEST_ASSERT_FALSE(protocore_json_ok(w));
 }
 
@@ -340,13 +556,20 @@ void test_writer_unbalanced_close(void)
 void test_writer_without_storage(void)
 {
     protocore_json_writer w;
-    Json.init(&w, NULL, 64);
+    Json.init_args.w = &w;
+    Json.init_args.buf = NULL;
+    Json.init_args.cap = 64;
+    Json.init(json_work);
     TEST_ASSERT_FALSE(protocore_json_ok(&w));
-    Json.begin_object(&w);
+    Json.begin_object_args.w = &w;
+    Json.begin_object(json_work);
     TEST_ASSERT_EQUAL_UINT(0u, protocore_json_length(&w));
 
     char one[1];
-    Json.init(&w, one, 0);
+    Json.init_args.w = &w;
+    Json.init_args.buf = one;
+    Json.init_args.cap = 0;
+    Json.init(json_work);
     TEST_ASSERT_FALSE(protocore_json_ok(&w));
     TEST_ASSERT_EQUAL_UINT(0u, protocore_json_length(&w));
 }
@@ -356,12 +579,23 @@ void test_writer_without_storage(void)
 void test_writer_raw_literal(void)
 {
     protocore_json_writer *w = wr();
-    Json.begin_object(w);
-    Json.kv_raw(w, "f", "1.25e-3");
-    Json.key(w, "arr");
-    Json.put_raw(w, "[1,2]");
-    Json.kv_null(w, "z");
-    Json.end_object(w);
+    Json.begin_object_args.w = w;
+    Json.begin_object(json_work);
+    Json.kv_raw_args.w = w;
+    Json.kv_raw_args.k = "f";
+    Json.kv_raw_args.literal = "1.25e-3";
+    Json.kv_raw(json_work);
+    Json.key_args.w = w;
+    Json.key_args.k = "arr";
+    Json.key(json_work);
+    Json.put_raw_args.w = w;
+    Json.put_raw_args.literal = "[1,2]";
+    Json.put_raw(json_work);
+    Json.kv_null_args.w = w;
+    Json.kv_null_args.k = "z";
+    Json.kv_null(json_work);
+    Json.end_object_args.w = w;
+    Json.end_object(json_work);
     TEST_ASSERT_TRUE(protocore_json_ok(w));
     TEST_ASSERT_EQUAL_STRING("{\"f\":1.25e-3,\"arr\":[1,2],\"z\":null}", protocore_json_c_str(w));
 }

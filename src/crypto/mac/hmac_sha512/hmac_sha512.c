@@ -86,10 +86,6 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PR
 static void hmac_init(uint8_t *restrict work)
 {
     HmacSha512.ok = PROTO_FALSE;
-    if (!work)
-    {
-        return;
-    }
     Hmac512Work *w = HMAC512_WORK(work);
     // ipad -> scratch (opad slot holds the padded key), opad -> the slot final reads it back from
     build_key_block(HmacSha512.key_args.key, HmacSha512.key_args.key_len, w->ipad, 0x36u, w->opad, HMAC512_HASH(work));
@@ -105,11 +101,6 @@ static void hmac_init(uint8_t *restrict work)
 
 static void hmac_update(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        HmacSha512.ok = PROTO_FALSE;
-        return;
-    }
     Sha512.update_args.data = HmacSha512.update_args.data;
     Sha512.update_args.len = HmacSha512.update_args.len;
     Sha512.update(HMAC512_INNER(work));

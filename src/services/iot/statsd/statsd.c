@@ -179,10 +179,6 @@ uint8_t *protocore_statsd_span(void)
 // Parse the daemon address and store the port and the tag list every later line carries.
 static void statsd_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     STATSD_CTX(work)->ready = PROTO_FALSE;
     Statsd.ok = PROTO_FALSE;
     STATSD_CTX(work)->port = Statsd.server.port ? Statsd.server.port : PROTOCORE_STATSD_PORT;
@@ -268,10 +264,6 @@ static void statsd_format(uint8_t *restrict work)
 // Stamp the stored tag list, format into the client's line storage, and send it as one datagram.
 static void statsd_emit(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Statsd.ok = PROTO_FALSE;
     Statsd.n = 0;
     if (!STATSD_CTX(work)->ready)
@@ -298,10 +290,6 @@ static void statsd_emit(uint8_t *restrict work)
 // Add value.i64 to the bucket, annotated with metric.rate.
 static void statsd_count(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, Statsd.value.i64)] = '\0';
     Statsd.value.text = STATSD_CTX(work)->val;
     Statsd.metric.type = STATSD_COUNTER;
@@ -311,10 +299,6 @@ static void statsd_count(uint8_t *restrict work)
 // Assign value.i64 to the bucket.
 static void statsd_gauge(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     STATSD_CTX(work)->val[i64_str(STATSD_CTX(work)->val, Statsd.value.i64)] = '\0';
     Statsd.value.text = STATSD_CTX(work)->val;
     Statsd.metric.type = STATSD_GAUGE;
@@ -325,10 +309,6 @@ static void statsd_gauge(uint8_t *restrict work)
 // Adjust the bucket by value.i64, the sign written so the daemon adds rather than assigns.
 static void statsd_gauge_delta(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     STATSD_CTX(work)->val[i64_delta_str(STATSD_CTX(work)->val, Statsd.value.i64)] = '\0';
     Statsd.value.text = STATSD_CTX(work)->val;
     Statsd.metric.type = STATSD_GAUGE;
@@ -339,10 +319,6 @@ static void statsd_gauge_delta(uint8_t *restrict work)
 // Record value.ms milliseconds.
 static void statsd_timing(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     STATSD_CTX(work)->val[u64_str(STATSD_CTX(work)->val, Statsd.value.ms)] = '\0';
     Statsd.value.text = STATSD_CTX(work)->val;
     Statsd.metric.type = STATSD_TIMING;

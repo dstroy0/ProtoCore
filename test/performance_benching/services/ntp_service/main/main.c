@@ -47,10 +47,6 @@ void dbench_run(void)
     static char datebuf[40]; // RFC IMF-fixdate is 29 chars + NUL; 40 is comfortable headroom
 
     uint8_t *work = protocore_ntp_service_span();
-    if (work == NULL)
-    {
-        return; // the pool was short of this module's borrow
-    }
 
     for (;;)
     {

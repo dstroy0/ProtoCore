@@ -142,19 +142,9 @@ struct AuthStorage
     uint8_t count;             ///< how many rows are recorded
 };
 
-/**
- * @brief The table's state and the calls that reach it - what AuthNs points at.
- *
- * @var AuthInternal::store  the keying secret and the credential rows, in secure memory
- * @var AuthInternal::ns     the handle a caller sets a call's members on
- */
-struct AuthInternal
-{
-    struct AuthStorage *store;
-    AuthNs *ns;
-};
-
-static struct AuthInternal s_auth = {.ns = &Auth};
+// The credential table, bound on first use. Registered once at setup and read by every
+// connection, so it is not per-connection storage and does not arrive as a borrow.
+static struct AuthStorage *s_store;
 
 _Static_assert(sizeof(struct AuthStorage) <= PROTOCORE_WORK_AUTH_TABLE,
                "credential table outgrew PROTOCORE_WORK_AUTH_TABLE");
@@ -162,24 +152,24 @@ _Static_assert(sizeof(struct AuthStorage) <= PROTOCORE_WORK_AUTH_TABLE,
 // Bound on first use rather than at an init the caller has to remember: registration and the
 // first rekey both arrive before any request is served, and either one is a fine moment. The borrow
 // is from the persistent end, which no mark walks and no release reclaims, and it comes back zeroed.
-static struct AuthStorage *bind_auth(struct AuthInternal *restrict ctx)
+static struct AuthStorage *bind_auth(void)
 {
-    if (ctx->store == NULL)
+    if (s_store == NULL)
     {
         protocore_span sp = protocore_secure_persist_span(sizeof(struct AuthStorage));
         if (span.ok(sp))
         {
-            ctx->store = (struct AuthStorage *)sp.buf;
+            s_store = (struct AuthStorage *)sp.buf;
         }
     }
-    return ctx->store;
+    return s_store;
 }
 
 // The set ns->id names, or NULL when it names nothing - an unregistered id, or a pool that could
 // not be borrowed. Every caller fails closed on NULL.
-static const AuthCred *cred_at(struct AuthInternal *restrict ctx, uint8_t id)
+static const AuthCred *cred_at(uint8_t id)
 {
-    const struct AuthStorage *a = ctx->store;
+    const struct AuthStorage *a = s_store;
     if (a == NULL || id >= a->count)
     {
         return NULL;
@@ -189,26 +179,25 @@ static const AuthCred *cred_at(struct AuthInternal *restrict ctx, uint8_t id)
 
 // Record one credential set and return the id that names it, or PROTOCORE_AUTH_NONE when the table is
 // full. Registration runs at setup, so there is no release path and none is offered.
-static void add(struct AuthInternal *restrict ctx)
+static void add(uint8_t *restrict work)
 {
-    struct AuthStorage *a = bind_auth(ctx);
+    struct AuthStorage *a = bind_auth();
     if (a == NULL || a->count >= MAX_ROUTES)
     {
-        ctx->ns->u8 = PROTOCORE_AUTH_NONE;
+        Auth.u8 = PROTOCORE_AUTH_NONE;
         return;
     }
     AuthCred *c = &a->cred[a->count];
-    (void)str.copy(c->realm, ctx->ns->cred.realm, MAX_AUTH_LEN);
-    (void)str.copy(c->user, ctx->ns->cred.user, MAX_AUTH_LEN);
-    (void)str.copy(c->pass, ctx->ns->cred.pass, MAX_AUTH_LEN);
-    c->digest = ctx->ns->cred.digest;
-    ctx->ns->u8 = a->count++;
+    (void)str.copy(c->realm, Auth.cred.realm, MAX_AUTH_LEN);
+    (void)str.copy(c->user, Auth.cred.user, MAX_AUTH_LEN);
+    (void)str.copy(c->pass, Auth.cred.pass, MAX_AUTH_LEN);
+    c->digest = Auth.cred.digest;
+    Auth.u8 = a->count++;
 }
 
-static void rekey(struct AuthInternal *restrict ctx)
+static void rekey(uint8_t *restrict work)
 {
-    uint8_t *work = ctx->ns->work;
-    struct AuthStorage *a = bind_auth(ctx);
+    struct AuthStorage *a = bind_auth();
     if (a == NULL)
     {
         return;
@@ -261,12 +250,11 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     return issue;
 }
 
-static void mint_nonce(struct AuthInternal *restrict ctx)
+static void mint_nonce(uint8_t *restrict work)
 {
-    uint8_t *work = ctx->ns->work;
-    char *out = ctx->ns->nonce_args.out;
-    const size_t cap = ctx->ns->nonce_args.cap;
-    if (bind_auth(ctx) == NULL)
+    char *out = Auth.nonce_args.out;
+    const size_t cap = Auth.nonce_args.cap;
+    if (bind_auth() == NULL)
     {
         out[0] = '\0';
         return;
@@ -279,7 +267,7 @@ static void mint_nonce(struct AuthInternal *restrict ctx)
     Hex.args.upper = PROTO_FALSE;
     Hex.encode(hex_work); // 4 bytes -> 8 hex chars
     char mac_hex[33];
-    digest_nonce_mac(work, ctx->store->digest_secret, issue, mac_hex);
+    digest_nonce_mac(work, s_store->digest_secret, issue, mac_hex);
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb_out, issue_hex);
     Sb.put(&sb_out, ".");
@@ -290,13 +278,12 @@ static void mint_nonce(struct AuthInternal *restrict ctx)
     }
 }
 
-static void verify_nonce(struct AuthInternal *restrict ctx)
+static void verify_nonce(uint8_t *restrict work)
 {
-    uint8_t *work = ctx->ns->work;
-    const char *nonce = ctx->ns->nonce_args.nonce;
-    ctx->ns->expired = PROTO_FALSE;
-    ctx->ns->ok = PROTO_FALSE;
-    if (bind_auth(ctx) == NULL)
+    const char *nonce = Auth.nonce_args.nonce;
+    Auth.expired = PROTO_FALSE;
+    Auth.ok = PROTO_FALSE;
+    if (bind_auth() == NULL)
     {
         return;
     }
@@ -316,7 +303,7 @@ static void verify_nonce(struct AuthInternal *restrict ctx)
         return;
     }
     char mac_hex[33];
-    digest_nonce_mac(work, ctx->store->digest_secret, issue, mac_hex);
+    digest_nonce_mac(work, s_store->digest_secret, issue, mac_hex);
     // Constant-time compare of the 32 MAC hex chars: a forged nonce never reveals
     // how many leading characters matched.
     const char *got = nonce + 9;
@@ -330,16 +317,15 @@ static void verify_nonce(struct AuthInternal *restrict ctx)
         return; // not a nonce this server minted
     }
     uint32_t age = Clock.ms - issue; // unsigned: tolerant of the 32-bit millis wrap
-    ctx->ns->expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
-    ctx->ns->ok = PROTO_TRUE;
+    Auth.expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
+    Auth.ok = PROTO_TRUE;
 }
 
-static void challenge(struct AuthInternal *restrict ctx)
+static void challenge(uint8_t *restrict work)
 {
-    uint8_t *work = ctx->ns->work;
-    const uint8_t slot_id = ctx->ns->slot;
-    const proto_bool stale = ctx->ns->nonce_args.stale;
-    const AuthCred *c = cred_at(ctx, ctx->ns->id);
+    const uint8_t slot_id = Auth.slot;
+    const proto_bool stale = Auth.nonce_args.stale;
+    const AuthCred *c = cred_at(Auth.id);
     if (c == NULL)
     {
         HttpConn.slot = slot_id;
@@ -363,9 +349,9 @@ static void challenge(struct AuthInternal *restrict ctx)
     if (c->digest)
     {
         char nonce[48];
-        ctx->ns->nonce_args.out = nonce;
-        ctx->ns->nonce_args.cap = sizeof(nonce);
-        mint_nonce(ctx); // a fresh, timestamped nonce per challenge
+        Auth.nonce_args.out = nonce;
+        Auth.nonce_args.cap = sizeof(nonce);
+        mint_nonce(work); // a fresh, timestamped nonce per challenge
         protocore_sb sb_challenge = {challenge, sizeof(challenge), 0, PROTO_TRUE};
         Sb.put(&sb_challenge, "WWW-Authenticate: Digest realm=\"");
         Sb.put(&sb_challenge, c->realm);
@@ -517,11 +503,10 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     // The nonce must be one this server minted (authentic MAC). A stale (expired)
     // nonce is still authentic - we finish the credential check below and let the
     // caller reissue with stale=true rather than rejecting outright (RFC 7616 3.3).
-    s_auth.ns->work = work;
-    s_auth.ns->nonce_args.nonce = nonce;
-    verify_nonce(&s_auth);
-    const proto_bool nonce_expired = s_auth.ns->expired;
-    if (!s_auth.ns->ok)
+    Auth.nonce_args.nonce = nonce;
+    verify_nonce(work);
+    const proto_bool nonce_expired = Auth.expired;
+    if (!Auth.ok)
     {
         return PROTO_FALSE;
     }
@@ -613,30 +598,31 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
 
 // The scheme belongs to the credential, so the caller states which credential set applies and
 // nothing above this file has to know whether that set is Basic or Digest.
-static void check(struct AuthInternal *restrict ctx)
+static void check(uint8_t *restrict work)
 {
-    const AuthCred *c = cred_at(ctx, ctx->ns->id);
+    const AuthCred *c = cred_at(Auth.id);
     if (c == NULL)
     {
-        ctx->ns->ok = PROTO_FALSE;
+        Auth.ok = PROTO_FALSE;
         return;
     }
     if (c->digest)
     {
-        ctx->ns->ok = check_digest(ctx->ns->work, ctx->ns->slot, ctx->ns->req, c, &ctx->ns->nonce_args.stale);
+        Auth.ok = check_digest(work, Auth.slot, Auth.req, c, &Auth.nonce_args.stale);
         return;
     }
-    ctx->ns->ok = check_basic(ctx->ns->slot, ctx->ns->req, c);
+    Auth.ok = check_basic(Auth.slot, Auth.req, c);
 }
 
 // The count is the table, and a row is wiped on hand-out, so nothing below the count can carry a
 // previous tenant's credential and there is nothing to wipe here. The keying secret survives: it is
 // the server's, not a route's, and rekey() is what replaces it.
-static void reset(struct AuthInternal *restrict ctx)
+static void reset(uint8_t *restrict work)
 {
-    if (ctx->store != NULL)
+    (void)work;
+    if (s_store != NULL)
     {
-        ctx->store->count = 0;
+        s_store->count = 0;
     }
 }
 
@@ -647,7 +633,6 @@ AuthNs Auth = {.add = add,
                .rekey = rekey,
                .mint_nonce = mint_nonce,
                .verify_nonce = verify_nonce,
-               .reset = reset,
-               .internal = &s_auth};
+               .reset = reset};
 
 #endif // PROTOCORE_ENABLE_AUTH

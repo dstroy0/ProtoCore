@@ -12,10 +12,16 @@
  * The one symbol this file exports is @ref HttpRoutes.
  */
 
-#include "network_drivers/presentation/http/route/http_route.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_HTTP_ROUTE
+
 #include "mmgr/protomem/protomem.h" // mem.zero: the hand-out wipe
-#include "mmgr/secure/secure.h"   // where the table lives
-#include "protocore.h"     // completes HttpRoute; route.h names it only as an opaque tag
+#include "mmgr/secure/secure.h"     // where the table lives
+#include "network_drivers/presentation/http/route/http_route.h"
+#include "protocore.h" // completes HttpRoute; route.h names it only as an opaque tag
+
+PROTOCORE_BEGIN_DECLS
 
 // The table's layout, known only here. The handle is the module's one file-scope mutable; the
 // storage behind it belongs to the secure pool.
@@ -45,12 +51,20 @@ static struct HttpRouteCtx *bind_route(void)
     return s_route;
 }
 
-static HttpRoute *add(void)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void http_routes_add(uint8_t *restrict work)
 {
+    (void)work;
+
     struct HttpRouteCtx *t = bind_route();
     if (t == NULL || t->count >= MAX_ROUTES)
     {
-        return NULL;
+        HttpRoutes.ptr = NULL;
+        return;
     }
     HttpRoute *r = &t->entry[t->count];
     t->count++;
@@ -60,25 +74,33 @@ static HttpRoute *add(void)
     // dispatch to it. There is no release path - routes are registered at setup and live forever -
     // so hand-out is the only moment this can be done.
     mem.zero(r, sizeof(*r));
-    return r;
+    HttpRoutes.ptr = r;
 }
 
-static uint8_t count(void)
+static void http_routes_count(uint8_t *restrict work)
 {
-    return s_route == NULL ? 0u : s_route->count;
+    (void)work;
+
+    HttpRoutes.value = s_route == NULL ? 0u : s_route->count;
 }
 
-static HttpRoute *at(uint8_t i)
+static void http_routes_at(uint8_t *restrict work)
 {
+    (void)work;
+    uint8_t i = HttpRoutes.at_args.i;
+
     if (s_route == NULL || i >= s_route->count)
     {
-        return NULL;
+        HttpRoutes.ptr = NULL;
+        return;
     }
-    return &s_route->entry[i];
+    HttpRoutes.ptr = &s_route->entry[i];
 }
 
-static void reset(void)
+static void http_routes_reset(uint8_t *restrict work)
 {
+    (void)work;
+
     // The count is the table: add() zeroes an entry on hand-out, so nothing below the count can carry
     // a previous tenant's fields and there is nothing to wipe here.
     if (s_route != NULL)
@@ -87,4 +109,13 @@ static void reset(void)
     }
 }
 
-const HttpRouteNs HttpRoutes = {add, count, at, reset};
+HttpRouteNs HttpRoutes = {
+    .add = http_routes_add,
+    .count = http_routes_count,
+    .at = http_routes_at,
+    .reset = http_routes_reset,
+};
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP_ROUTE

@@ -332,10 +332,6 @@ static void base64_decode(uint8_t *restrict work)
 
 static void base64_url_encode(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t *src = Base64.url_encode_args.src;
     size_t src_len = Base64.url_encode_args.src_len;
     char *dst = Base64.url_encode_args.dst;

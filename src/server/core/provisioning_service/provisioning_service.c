@@ -184,10 +184,6 @@ static void prov_dns_recv(const uint8_t *req, size_t qlen, const struct protocor
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_provisioning_service_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     (void)ctx;
     if (qlen < 12)
@@ -292,10 +288,6 @@ static void prov_save_handler(uint8_t slot_id, HttpReq *req)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_provisioning_service_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     char ssid[33];
     char psk[64];

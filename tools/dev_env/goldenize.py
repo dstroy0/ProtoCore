@@ -341,16 +341,43 @@ def module_types(header_text):
     a whole type and left the rest of the struct behind.
     """
     out, mask = [], code_mask(header_text)
-    for m in re.finditer(r"(?:^/\*\*(?:(?!\*/).)*?\*/\s*)?^typedef\b", header_text, re.M | re.S):
+    # A tagged enum or struct at file scope is the module's vocabulary too, and is not a typedef:
+    # ptp.h's `enum protocore_ptp_msg_type { PROTOCORE_PTP_SYNC = 0x0, ... };` was dropped, and the
+    # .c that compares against those names stopped compiling.
+    for m in re.finditer(
+        r"(?:^/\*\*(?:(?!\*/).)*?\*/\s*)?^(?:typedef\b|(?:enum|struct|union)\s+\w+\s*\{)", header_text, re.M | re.S
+    ):
         if not mask[m.end() - 1]:
             continue
         semi = header_text.find(";", m.end())
-        brace = header_text.find("{", m.end())
+        # A tagged form matches through its own `{`; a typedef's brace is still ahead.
+        brace = m.end() - 1 if header_text[m.end() - 1] == "{" else header_text.find("{", m.end())
         end = typedef_end(header_text, brace) if brace != -1 and (semi == -1 or brace < semi) else semi + 1
         t = header_text[m.start() : end].strip()
         if re.search(r"\}\s*\w+(Args|Ns|Bind)\s*;\s*$", t):
             continue  # generated shapes, not the module's own
         out.append(t)
+    return out
+
+
+def module_externs(header_text, ns):
+    """The data the header published beside its calls: `extern const uint8_t x[32];` and its comment.
+
+    rsa.h and bignum.h are the shape - a golden module exports its namespace AND the constants a
+    caller compares against. Regenerating without them dropped tls13_msg's
+    `extern const uint8_t protocore_tls13_hrr_random[32];` while leaving the .c that defines it and
+    the parse that reads it, so the module and every consumer stopped compiling. The namespace's own
+    `extern <X>Ns <X>;` is not one of these: the generator writes that itself.
+    """
+    out, mask = [], code_mask(header_text)
+    for m in re.finditer(r"^extern\s+(?:const\s+)?(\w+)\b[^;{]*;", header_text, re.M):
+        # The namespace's own declaration is the generator's to write, and the module spells it
+        # `extern const <X>Ns <X>;` today - skipping only the unqualified form carried it here as
+        # well, so the regenerated header declared HttpRoutes twice, once still const.
+        if m.group(1) == ns or not mask[m.start()]:
+            continue
+        doc = comment_above(header_text, m.start())
+        out.append(((doc + "\n") if doc else "") + m.group(0).strip())
     return out
 
 
@@ -362,7 +389,10 @@ def module_inlines(header_text):
     cia402.h, which showed up only as a link error from the suite that called them.
     """
     out, mask = [], code_mask(header_text)
-    for m in re.finditer(r"^static\s+inline\b", header_text, re.M):
+    # PROTOCORE_INLINE is `static inline` behind the always_inline attribute
+    # (config/platform/compiler_directives.h), and matching only the spelled-out form dropped
+    # json.h's protocore_json_ok / _length / _c_str while eight call sites still used them.
+    for m in re.finditer(r"^(?:static\s+inline|PROTOCORE_INLINE)\b", header_text, re.M):
         if not mask[m.start()]:
             continue
         brace = header_text.find("{", m.end())
@@ -441,7 +471,7 @@ def module_macros(header_text, guard):
     wire values is one thing, not five - splitting it and spacing the parts out loses that it was a
     table at all. The include guard and anything the config owns are skipped.
     """
-    runs, prev_end = [], None
+    runs, ends, prev_end = [], [], None
     for m in MACRO.finditer(header_text):
         name = m.group(1)
         if name == guard or name.endswith("_BORROW"):
@@ -457,8 +487,28 @@ def module_macros(header_text, guard):
             head = comment_above(header_text, start)
             runs.append([head] if head else [])
             runs[-1].append(header_text[start:end].strip())
+        ends[len(runs) - 1 :] = [end]
         prev_end = end
-    return ["\n".join(r) for r in runs]
+    return [group_closed("\n".join(r), header_text, e) for r, e in zip(runs, ends)]
+
+
+# A doxygen group opener, and its closer on a line of its own: `///@{` ... `///@}`, `/** @} */`.
+GROUP_OPEN = re.compile(r"@\{")
+GROUP_CLOSE = re.compile(r"@\}")
+GROUP_CLOSE_LINE = re.compile(r"\A\s*\n?[ \t]*((?:///|/\*\*|\*)[^\n]*@\}[^\n]*)")
+
+
+def group_closed(run, header_text, end):
+    """A run whose comment opened a doxygen group, with the group's closing line put back.
+
+    comment_above takes the `/** @name ... */ ///@{` that introduces a table of wire values, and
+    the run ends at its last #define - so the `///@}` on the next line is outside both and would
+    be dropped. Every define after the regenerated header's group would then read as part of it.
+    """
+    if not GROUP_OPEN.search(run) or GROUP_CLOSE.search(run):
+        return run
+    m = GROUP_CLOSE_LINE.match(header_text[end:])
+    return run + "\n" + (m.group(1) if m else "///@}")
 
 
 # Which persistent end the module's own bytes come from. protocore_config.h states the rule beside
@@ -693,15 +743,51 @@ def find_gate(s):
     inner capability arm - tls13_msg would have been regenerated under PROTOCORE_ENABLE_PQC_KEX and
     would have vanished from every build without it. `#ifdef` / `#ifndef` do not match, so the
     include guard is not read as a gate.
+
+    A header with NO gate returns "". The gate is the FIRST conditional after the include guard AND
+    it closes only at the end of the header - both, because http_route opens with
+    `#if PROTOCORE_ENABLE_WEBSOCKET` around one include and tcp with `#if PROTOCORE_NEED_CLIENT`
+    around one declaration, and either read alone takes an inner arm for the module's gate.
     """
-    for m in re.finditer(r"^[ \t]*#[ \t]*if[ \t]+([^\n]*)$", s, re.M):
-        cond = re.sub(r"/\*.*?\*/", " ", m.group(1))
-        cond = re.sub(r"//.*$", "", cond).strip()
-        if cond.endswith("\\"):
-            continue  # a continued condition is not one this rewrites
-        if GATE_TOKEN.search(cond):
-            return cond
-    return ""
+    m = re.search(r"^[ \t]*#[ \t]*(?:if\w*|endif)\b[^\n]*", s[guard_end(s) :], re.M)
+    if not m or not re.match(r"^[ \t]*#[ \t]*if[ \t]", m.group(0)):
+        return ""
+    cond = re.sub(r"/\*.*?\*/", " ", m.group(0).split(None, 1)[-1].lstrip("if \t"))
+    cond = re.sub(r"//.*$", "", cond).strip()
+    if cond.endswith("\\") or not GATE_TOKEN.search(cond):
+        return ""
+    return cond if wraps_body(s, guard_end(s) + m.end()) else ""
+
+
+def guard_end(s):
+    """Just past the include guard's `#define`, where the header's own text begins."""
+    m = re.search(r"^[ \t]*#[ \t]*ifndef[ \t]+(\w+)[ \t]*\n[ \t]*#[ \t]*define[ \t]+\1\b[^\n]*\n", s, re.M)
+    return m.end() if m else 0
+
+
+def wraps_body(s, at):
+    """Does the `#if` ending at @p at close only at the end of the header.
+
+    A module with no gate at all opens with an inner capability arm - http_route's
+    `#if PROTOCORE_ENABLE_WEBSOCKET` around one include, tcp's `#if PROTOCORE_NEED_CLIENT` around
+    one declaration. Taking the first condition found regenerates the whole module under that arm
+    and it vanishes from every build without it. The module's own gate is the one whose `#endif` is
+    the last thing before the include guard's.
+    """
+    depth = 0
+    for m in re.finditer(r"^[ \t]*#[ \t]*(if\w*|endif)\b[^\n]*", s[at:], re.M):
+        if m.group(1).startswith("if"):
+            depth += 1
+            continue
+        if depth:
+            depth -= 1
+            continue
+        # The gate's own #endif. Only the linkage close and the include guard's #endif may follow
+        # it - a declaration after it is one this condition does not cover, so it is not the gate.
+        rest = re.sub(r"/\*.*?\*/|//[^\n]*", " ", s[at + m.end() :], flags=re.S)
+        rest = re.sub(r"^[ \t]*PROTOCORE_(?:BEGIN|END)_DECLS[ \t]*$", "", rest, flags=re.M)
+        return re.sub(r"^[ \t]*#[ \t]*endif\b[^\n]*$", "", rest, count=1, flags=re.M).strip() == ""
+    return False
 
 
 def outside_conditionals(s, at, gate=None):
@@ -775,25 +861,16 @@ def rename_handle(s):
 
 
 def guard_borrow(s, pre):
-    """`if (!work) return;` for an entry that reaches into the borrow.
+    """Nothing. The borrow cannot be null, so an entry never checks it.
 
-    The span accessor hands back null when the pool was short, and says every entry refuses it. An
-    entry that reaches the context faults on that null instead, so the refusal is written where the
-    borrow is named - which covers the dereference one call down in a private helper as well as the
-    one written out. An entry that never touches `work` needs none and gets none.
+    Storage comes from the caller, the TU static_asserts that what it was handed covers its
+    regions, and the arena sums every borrow before the program is built - so the pool being short
+    is a build failure, not a run-time case. This used to write a null check into every entry that
+    reached the context: 443 branches across 106 files that cannot be taken, one extra step on
+    every call for a case that does not exist.
     """
-    out, at = [], 0
-    for m in re.finditer(r"^static void \w+\(uint8_t \*restrict work\)[ \t]*\r?\n\{", s, re.M):
-        brace = m.end() - 1
-        body = s[brace + 1 : brace_end(s, brace)]
-        bmask = code_mask(body)
-        named = [k for k in re.finditer(r"(?<![\w.>-])work(?![\w])", body) if bmask[k.start()]]
-        if not named or re.search(r"^\s*if \(!work\)", body, re.M) or re.search(r"^\s*\(void\)work;", body, re.M):
-            continue
-        out.append(s[at : brace + 1])
-        out.append("\n    if (!work)\n    {\n        return; // the pool was short of this module's borrow\n    }")
-        at = brace + 1
-    return "".join(out) + s[at:]
+    del pre
+    return s
 
 
 def void_work(s):
@@ -1204,11 +1281,15 @@ def scan_vtable(hpath):
             }
         )
     name = snake(obj_name)
+    moved, held = classify_includes(s)
     return {
         "from": "vtable",
         "macros": module_macros(s, re.search(r"#ifndef (\w+)", s).group(1) if re.search(r"#ifndef (\w+)", s) else ""),
         "types": module_types(s),
         "inlines": module_inlines(s),
+        "externs": module_externs(s, ns_name),
+        "moved_includes": moved,
+        "held_includes": held,
         "module": name,
         "ns": ns_name,
         "object": obj_name,
@@ -1261,23 +1342,7 @@ def scan(hpath):
                 "params": params,
             }
         )
-    # Every include the header carried moves down to the .c: the golden header has only the config.
-    # An include the header's OWN kept text still needs is the exception - a public struct with a
-    # by-value member of a type that include defines cannot be declared without it, and moving it
-    # leaves the header naming a type nothing declared.
-    kept = "\n".join(module_types(s) + module_macros(s, ""))
-    moved, held = [], []
-    for x in re.findall(r'^#\s*include\s+("[^"]+")', s, re.M):
-        if "protocore_config.h" in x:
-            continue
-        inc = os.path.join(R, "src", x.strip('"').replace("/", os.sep))
-        names = set()
-        if os.path.exists(inc):
-            names = {g for t in PROVIDES.findall(io.open(inc, encoding="utf-8").read()) for g in t if g}
-        if any(re.search(r"(?<![\w])%s(?![\w])" % re.escape(n), kept) for n in names if n):
-            held.append(x)
-        else:
-            moved.append(x)
+    moved, held = classify_includes(s)
     suites = find_suites(hpath, mod)
     # A module with no file-static context holds nothing between calls, so it carves no borrow,
     # states none, and needs no span accessor - tls_policy is the shape. That is read off the .c
@@ -1289,6 +1354,7 @@ def scan(hpath):
         "macros": module_macros(s, re.search(r"#ifndef (\w+)", s).group(1) if re.search(r"#ifndef (\w+)", s) else ""),
         "types": module_types(s),
         "inlines": module_inlines(s),
+        "externs": module_externs(s, camel(mod) + "Ns"),
         "suites": suites,
         "moved_includes": moved,
         "module": mod,
@@ -1466,6 +1532,9 @@ def gen_header(spec, original):
     for t in spec.get("inlines", []):
         lines.append(t)
         lines.append("")
+    for t in spec.get("externs", []):
+        lines.append(t)
+        lines.append("")
     for t in foreign_types(spec):
         # A typedef cannot be forward-declared, so its own header comes in; only a struct tag takes
         # the declaration.
@@ -1576,6 +1645,21 @@ def gen_header(spec, original):
     )
 
 
+# Rewrites one file may take before the pass is treated as non-terminating. The largest real count
+# in this tree is json.c at 57.
+REWRITE_CAP = 2000
+
+
+def already_converted(args, span):
+    """True when this call is the `<Obj>.<entry>(<span>)` a prior pass of this loop wrote.
+
+    A vtable module is matched on the same spelling the conversion emits, and a successful rewrite
+    restarts the scan from the top of the file. An entry taking exactly one parameter is therefore
+    met again with exactly one argument, and without this it is staged a second time - forever.
+    """
+    return len(args) == 1 and args[0].strip() == span.strip()
+
+
 def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
     """Every call to a flat name becomes staging + entry + the result member.
 
@@ -1625,6 +1709,9 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
                         at = m.end()
                         continue
                     a = N.split_args(s[m.end() : end - 1])
+                    if already_converted(a, spec["span"]):
+                        at = m.end()
+                        continue
                     if len(a) != len(e["params"]):
                         at = m.end()
                         continue
@@ -1638,6 +1725,13 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
                         mask = code_mask(s)
                         n += 1
                         at = 0
+                        if n > REWRITE_CAP:
+                            raise SystemExit(
+                                "rewrite_calls: %s took %d rewrites of %s, past the %d cap.\n"
+                                "  A pass that keeps matching what it just wrote does not terminate;"
+                                " the file was NOT written."
+                                % (rel, n, m.group(1), REWRITE_CAP)
+                            )
                     except ValueError as ex:
                         skipped.append((rel, s[: m.start()].count("\n") + 1, str(ex)))
                         at = m.end()
@@ -1767,11 +1861,42 @@ def declare_work(s, spec):
     if not re.match(r"^\w+$", name) or re.search(r"\b%s\s*\[" % re.escape(name), s):
         return s
     decl = "static uint8_t %s[16]; // the borrow an entry takes; %s never reads it\n\n" % (name, spec["object"])
-    # After the last include that is NOT inside a conditional arm. An include under `#if CAP` is
-    # compiled only when that capability is on, and a declaration parked beside it disappears with
-    # it - leaving every call site in the file naming an identifier that is not there.
-    last, depth = None, 0
-    for m in re.finditer(r"^[ \t]*#\s*(if\w*|else|elif|endif|include)\b[^\n]*\n", s, re.M):
+    k = work_decl_at(s, spec["object"])
+    return s[:k] + decl + s[k:]
+
+
+def work_decl_at(s, obj):
+    """Where the nominal borrow goes: with the calls that pass it, never outside their arm.
+
+    The calls live inside the CONSUMING file's own gate - wamp.c reaches Json only under
+    `#if PROTOCORE_ENABLE_WAMP` - so a declaration parked above that gate is 16 bytes of BSS in
+    every build with the capability off. It must not go the other way either: parked beside an
+    include under an INNER `#if CAP`, it vanishes when that capability is off and every call site
+    names an identifier that is not there. So: the outermost conditional that encloses the first
+    call, and after the last include inside it.
+    """
+    mask = code_mask(s)
+    first = None
+    for m in re.finditer(r"(?<![\w.>])%s\s*\." % re.escape(obj), s):
+        if mask[m.start()]:
+            first = m.start()
+            break
+
+    # The conditionals still open where that call sits, outermost first.
+    open_ifs, stack = [], []
+    for m in re.finditer(r"^[ \t]*#\s*(if\w*|endif)\b[^\n]*\n", s, re.M):
+        if first is not None and m.start() >= first:
+            break
+        if m.group(1).startswith("if"):
+            stack.append(m)
+        elif stack:
+            stack.pop()
+    open_ifs = stack
+
+    start = open_ifs[0].end() if open_ifs else 0
+    stop = first if first is not None else len(s)
+    depth, last = 0, None
+    for m in re.finditer(r"^[ \t]*#\s*(if\w*|else|elif|endif|include)\b[^\n]*\n", s[start:stop], re.M):
         kind = m.group(1)
         if kind.startswith("if"):
             depth += 1
@@ -1779,10 +1904,42 @@ def declare_work(s, spec):
             depth = max(0, depth - 1)
         elif kind == "include" and depth == 0:
             last = m
-    k = last.end() if last else 0
+    k = start + last.end() if last else start
     while s[k : k + 1] == "\n":
         k += 1
-    return s[:k] + decl + s[k:]
+    return k
+
+
+def drop_flat_protos(s, flats):
+    """Forward declarations of the flat names this conversion renamed, and the comment over them.
+
+    A file that calls an entry above its definition carries `static <ret> <flat>(<params>);` near
+    the top. The definition below it becomes `static void <mod>_<entry>(uint8_t *restrict work)`,
+    so what is left declares a function that no longer exists and describes a rule that no longer
+    applies. A block is dropped whole only when every declaration in it is one of these.
+    """
+    if not flats:
+        return s
+    run = re.compile(
+        r"^(?:[ \t]*static\s[^;{]*?\b(?:%s)\s*\([^;{]*\);[ \t]*\n)+" % "|".join(re.escape(f) for f in flats), re.M
+    )
+    lead = re.compile(r"(?:^[ \t]*//[^\n]*\n)+\Z", re.M)
+    after = re.compile(r"[ \t]*static\s[^;{]*\);[ \t]*$", re.M)
+    out, at = [], 0
+    for m in run.finditer(s):
+        if m.start() < at:
+            continue
+        start, end = m.start(), m.end()
+        # The comment introducing the run goes with it, unless a declaration this pass did not
+        # rename follows - that one still needs what the comment says.
+        c = lead.search(s, 0, start)
+        if c and not after.match(s, end):
+            start = c.start()
+        out.append(s[at:start])
+        at = end
+        while s[at : at + 1] == "\n":
+            at += 1
+    return "".join(out) + s[at:] if out else s
 
 
 def drop_self_assign(s, obj):
@@ -2029,6 +2186,7 @@ def restructure_source(spec):
     # the return carried describes the call, so it rides up onto it rather than going with the line;
     # enip's `return protocore_eip_build(...); // no command-specific data` is the shape.
     s = drop_self_assign(s, obj)
+    s = drop_flat_protos(s, {e["flat"] for e in spec["entries"]})
 
     # An entry this file calls before the definition it sits above needs a prototype: without one
     # the call is an implicit declaration with external linkage, and the `static` definition below
@@ -2115,8 +2273,7 @@ def restructure_source(spec):
     # before one leaves every entry defined after it bound by nothing: base64's url codecs and
     # http_parser's accessors both went that way. A source with no gate yet takes the end of the
     # file, and the shape pass below wraps it.
-    tail = re.search(r"^[ \t]*#[ \t]*endif\b[^\n]*\n\s*$", s, re.M)
-    end = tail.start() if tail else len(s.rstrip()) + 1
+    end = gate_endif(s)
     s = s[:end] + defn + "\n\nPROTOCORE_END_DECLS\n\n" + s[end:]
     # the golden file shape is the same pass `shape` runs, so it runs here rather than being a
     # second command a conversion can forget: config alone above the gate, everything else below
@@ -2196,11 +2353,13 @@ def shape_text(s, p, gate=None):
     moved = head[cut:].strip("\n")
     moved = re.sub(r'^#\s*include\s+"protocore_config\.h"[^\n]*\n?', "", moved, flags=re.M).strip("\n")
 
-    # the include guard is the outermost thing in a header: it wraps the gate, never the reverse
+    # The include guard is the outermost thing in a header: it wraps the gate, never the reverse.
+    # `(?:\n|\Z)` because `moved` was stripped of its trailing newline just above - requiring one
+    # made the match fail on a header whose guard is the LAST thing before the gate, and the guard
+    # was emitted below the gate instead of above it.
+    GUARD_RE = r"^#ifndef (\w+)[ \t]*\n#define \1[ \t]*(?:\n|\Z)"
     guard = ""
-    gm = re.search(r"^#ifndef (\w+)[ \t]*\n#define \1[ \t]*\n", moved, re.M) or re.search(
-        r"^#ifndef (\w+)[ \t]*\n#define \1[ \t]*\n", tail, re.M
-    )
+    gm = re.search(GUARD_RE, moved, re.M) or re.search(GUARD_RE, tail, re.M)
     if gm:
         guard = gm.group(0).rstrip("\n") + "\n"
         moved = moved.replace(gm.group(0), "", 1).strip("\n")
@@ -2231,6 +2390,44 @@ def shape_text(s, p, gate=None):
 PROVIDES = re.compile(
     r"^\s*#\s*define\s+(\w+)|\}\s*(\w+)\s*;|^\s*extern\s+\w+\s+(\w+)\s*;|typedef\s+[^;{]*?\b(\w+)\s*;", re.M
 )
+
+
+def gate_endif(s):
+    """Where the namespace initializer goes: just before the `#endif` that closes the whole file.
+
+    `$` under re.M matches the end of ANY line, so a pattern asking for "an #endif with nothing but
+    whitespace after it" matched the first #endif followed by a blank line - an inner capability arm.
+    quic_tls.c's initializer landed inside `#if PROTOCORE_ENABLE_PQC_KEX`, so every entry defined
+    below it was bound by nothing and no build without PQC linked. A source with no gate yet takes
+    the end of the file, and the shape pass wraps it.
+    """
+    m = re.search(r"^[ \t]*#[ \t]*endif\b[^\n]*\n\s*\Z", s, re.M)
+    return m.start() if m else len(s.rstrip()) + 1
+
+
+def classify_includes(s):
+    """The header's includes, split into the ones that move down to the .c and the ones that stay.
+
+    Every include the header carried moves down: the golden header has only the config. An include
+    the header's OWN kept text still needs is the exception - a public struct with a by-value member
+    of a type that include defines cannot be declared without it, and moving it leaves the header
+    naming a type nothing declared. dtls_conn's DtlsConn embeds a DtlsRecordKeys, a DtlsReplayWindow
+    and a Tls13KeySchedule, and dropping all three includes broke every consumer of the header.
+    """
+    kept = "\n".join(module_types(s) + module_macros(s, ""))
+    moved, held = [], []
+    for x in re.findall(r'^#\s*include\s+("[^"]+")', s, re.M):
+        if "protocore_config.h" in x:
+            continue
+        inc = os.path.join(R, "src", x.strip('"').replace("/", os.sep))
+        names = set()
+        if os.path.exists(inc):
+            names = {g for t in PROVIDES.findall(io.open(inc, encoding="utf-8").read()) for g in t if g}
+        if any(re.search(r"(?<![\w])%s(?![\w])" % re.escape(n), kept) for n in names if n):
+            held.append(x)
+        else:
+            moved.append(x)
+    return moved, held
 
 
 def prune_header(p):
@@ -2306,7 +2503,7 @@ def main():
         emit(hp, hout)
         print("source:", spec["source"])
         emit(sp, sout)
-        total, files = P.convert_calls(spec, ["src", "test", "examples", "vendor", "include"])
+        total, files = P.convert_calls(spec, ["src", "test", "examples", "vendor", "include"], emit)
         print("call sites: %d" % total)
         for rel, n in files:
             print("   %-70s %d" % (rel, n))
@@ -2377,6 +2574,25 @@ def main():
             print(
                 "REFUSED: %s names both this module's public type and the namespace object.\n"
                 '  Set "object" in the spec to a name the module does not already define.' % spec["object"]
+            )
+            return 1
+        # An entry is defined as `static void <module>_<entry>(uint8_t *restrict work)`. A private
+        # helper already carrying that name becomes a second definition at a different signature:
+        # json.c had `static void json_put_raw(protocore_json_writer *, const char *)` and the
+        # conversion wrote `static void json_put_raw(uint8_t *restrict)` beside it.
+        csrc = io.open(os.path.join(R, spec["source"].replace("/", os.sep)), encoding="utf-8").read()
+        taken = []
+        for e in spec["entries"]:
+            name = "%s_%s" % (spec["module"], e["entry"])
+            if name in (x["flat"] for x in spec["entries"]) or name == e.get("impl"):
+                continue  # the module's own function, which this pass is renaming
+            if re.search(r"^\s*static\s[^;{]*\b%s\s*\([^)]*\)\s*\n?\s*\{" % re.escape(name), csrc, re.M):
+                taken.append(name)
+        if taken:
+            print(
+                "REFUSED: %s already defines %s as a private helper, and that is the name the\n"
+                "  entry would take. Rename the helper in the .c first, then re-run."
+                % (spec["source"], ", ".join(taken))
             )
             return 1
         # Every entry takes `uint8_t *restrict work`, so a parameter already called that would be

@@ -15,13 +15,16 @@
  * server that resolved would need a root, a path buffer, and a capacity of its own.
  */
 
-#include "network_drivers/application/sftp/ssh_sftp/ssh_sftp.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SSH_SFTP
+
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
+#include "network_drivers/application/sftp/ssh_sftp/ssh_sftp.h"
 #include "network_drivers/session/session.h" // sftp_sess: the session the connection carries
 
 static uint8_t sftp_work[16]; // the borrow an entry takes; Sftp never reads it
-
-#if PROTOCORE_ENABLE_SSH_SFTP
 
 #include "mmgr/endian/endian.h"     // the u32 <-> big-endian bytes serializers
 #include "mmgr/protostr/protostr.h" // str: the bounded-run walks
@@ -30,11 +33,11 @@ static uint8_t sftp_work[16]; // the borrow an entry takes; Sftp never reads it
 #include "network_drivers/presentation/ssh/network/network.h" // protocore_ssh_channel_send_data / protocore_ssh_channel_send_close
 #include "server/storage/filesystem/filesystem.h"
 
+PROTOCORE_BEGIN_DECLS
+
 // Leave headroom below one SSH packet for the CHANNEL_DATA framing, so protocore_ssh_channel_send_data never rejects a
 // response.
 #define PROTOCORE_SFTP_RESP_CAP (SSH_PKT_BUF_SIZE - 16)
-// Worst-case one READDIR NAME entry (filename + longname + attrs), used to stash an entry that did not fit.
-#define PROTOCORE_SFTP_ENTRY_MAX (PROTOCORE_FILESYSTEM_PATH_MAX + 320)
 
 // All SFTP state in one owner with internal linkage, work buffers included: a stack array is the one
 // allocation the fixed-footprint accounting cannot see. Requests are served one at a time, so one of each
@@ -61,7 +64,42 @@ typedef struct
 
 // -1 until bound, not the 0 static storage would give: root 0 is a valid root, so a zeroed field
 // would resolve against somebody else's storage before protocore_ssh_sftp_begin() ran.
-static SshSftpCtx s_sftp = {.root = -1};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define SSH_SFTP_OFF_CTX 0u
+static_assert(SSH_SFTP_OFF_CTX + sizeof(SshSftpCtx) <= PROTOCORE_SSH_SFTP_BORROW,
+              "PROTOCORE_SSH_SFTP_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define SSH_SFTP_CTX(w) ((SshSftpCtx *)(void *)((w) + SSH_SFTP_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_SSH_SFTP_BORROW persistent bytes, or null while the pool was short
+} SshSftpOwnCtx;
+static SshSftpOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_ssh_sftp_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SSH_SFTP_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+            // A borrow arrives zeroed, and these do not start at zero.
+            SSH_SFTP_CTX(s_own.span)->root = -1;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
 
 // --- handle table ---------------------------------------------------------------------------------
 static_assert(PROTOCORE_SFTP_MAX_HANDLES > 0 && PROTOCORE_SFTP_MAX_HANDLES <= 32,
@@ -110,20 +148,20 @@ static int handle_index(SftpSession *s, const uint8_t *h, uint32_t hl)
 // --- helpers --------------------------------------------------------------------------------------
 // Take a wire path (length-prefixed, not NUL-terminated) into request slot @p slot as a C string. "" and "."
 // both name the mount root. Nothing is resolved here; the string that comes back is the client's own bytes.
-static const char *req_path(int slot, const uint8_t *p, uint32_t plen)
+static const char *req_path(uint8_t *restrict work, int slot, const uint8_t *p, uint32_t plen)
 {
     if (p == NULL || plen >= PROTOCORE_FILESYSTEM_PATH_MAX)
     {
         return NULL;
     }
-    mem.cpy(s_sftp.req[slot], p, plen);
-    s_sftp.req[slot][plen] = '\0';
-    if (plen == 0 || (plen == 1 && s_sftp.req[slot][0] == '.'))
+    mem.cpy(SSH_SFTP_CTX(work)->req[slot], p, plen);
+    SSH_SFTP_CTX(work)->req[slot][plen] = '\0';
+    if (plen == 0 || (plen == 1 && SSH_SFTP_CTX(work)->req[slot][0] == '.'))
     {
-        s_sftp.req[slot][0] = '/';
-        s_sftp.req[slot][1] = '\0';
+        SSH_SFTP_CTX(work)->req[slot][0] = '/';
+        SSH_SFTP_CTX(work)->req[slot][1] = '\0';
     }
-    return s_sftp.req[slot];
+    return SSH_SFTP_CTX(work)->req[slot];
 }
 
 static void attrs_from_stat(const protocore_mnt_stat *st, SftpAttrs *a)
@@ -138,7 +176,7 @@ static void attrs_from_stat(const protocore_mnt_stat *st, SftpAttrs *a)
 
 // A refused send is a peer that is gone, and a gone peer sends nothing back: end the session
 // rather than writing further responses into a channel nobody reads.
-static void send_resp(SftpSession *s, size_t n)
+static void send_resp(uint8_t *restrict work, SftpSession *s, size_t n)
 {
     if (n == 0)
     {
@@ -146,7 +184,7 @@ static void send_resp(SftpSession *s, size_t n)
     }
     SshConnection.chan.slot = s->slot;
     SshConnection.chan.channel = s->channel;
-    SshConnection.chan.data = s_sftp.out;
+    SshConnection.chan.data = SSH_SFTP_CTX(work)->out;
     SshConnection.chan.len = n;
     SshConnection.channel_send_data(protocore_ssh_connection_span());
     if (SshConnection.i32 < 0)
@@ -157,27 +195,27 @@ static void send_resp(SftpSession *s, size_t n)
         s->active = PROTO_FALSE;
     }
 }
-static void send_status(SftpSession *s, uint32_t id, uint32_t code, const char *msg)
+static void send_status(uint8_t *restrict work, SftpSession *s, uint32_t id, uint32_t code, const char *msg)
 {
     Sftp.build_status_args.id = id;
     Sftp.build_status_args.code = code;
     Sftp.build_status_args.msg = msg;
-    Sftp.build_status_args.out = s_sftp.out;
+    Sftp.build_status_args.out = SSH_SFTP_CTX(work)->out;
     Sftp.build_status_args.cap = PROTOCORE_SFTP_RESP_CAP;
     Sftp.build_status(sftp_work);
-    send_resp(s, Sftp.n);
+    send_resp(work, s, Sftp.n);
 }
-static void send_handle(SftpSession *s, uint32_t id, int hi)
+static void send_handle(uint8_t *restrict work, SftpSession *s, uint32_t id, int hi)
 {
     // The serializer returns the width it wrote, which is the length the HANDLE string carries.
-    size_t n = endian.wr32be(s_sftp.hb, (uint32_t)hi);
+    size_t n = endian.wr32be(SSH_SFTP_CTX(work)->hb, (uint32_t)hi);
     Sftp.build_handle_args.id = id;
-    Sftp.build_handle_args.handle = s_sftp.hb;
+    Sftp.build_handle_args.handle = SSH_SFTP_CTX(work)->hb;
     Sftp.build_handle_args.hlen = n;
-    Sftp.build_handle_args.out = s_sftp.out;
+    Sftp.build_handle_args.out = SSH_SFTP_CTX(work)->out;
     Sftp.build_handle_args.cap = PROTOCORE_SFTP_RESP_CAP;
     Sftp.build_handle(sftp_work);
-    send_resp(s, Sftp.n);
+    send_resp(work, s, Sftp.n);
 }
 // --- write streaming ------------------------------------------------------------------------------
 static void write_stream_bytes(SftpSession *s, const uint8_t *data, size_t n)
@@ -200,16 +238,16 @@ static void write_stream_bytes(SftpSession *s, const uint8_t *data, size_t n)
     s->wr_off += n;
     s->wr_remaining -= (uint32_t)n;
 }
-static void finish_write(SftpSession *s)
+static void finish_write(uint8_t *restrict work, SftpSession *s)
 {
-    send_status(s, s->wr_id, s->wr_err ? PROTOCORE_SSH_FX_FAILURE : PROTOCORE_SSH_FX_OK,
+    send_status(work, s, s->wr_id, s->wr_err ? PROTOCORE_SSH_FX_FAILURE : PROTOCORE_SSH_FX_OK,
                 s->wr_err ? "write failed" : "");
     s->writing = PROTO_FALSE;
 }
 
 // --- READDIR --------------------------------------------------------------------------------------
 // Serialize one directory entry (filename + longname + attrs) into the entry buffer; @return its length.
-static size_t build_entry(const protocore_mnt_stat *st, const char *name, size_t name_len)
+static size_t build_entry(uint8_t *restrict work, const protocore_mnt_stat *st, const char *name, size_t name_len)
 {
     SftpAttrs a = {0};
     attrs_from_stat(st, &a);
@@ -220,21 +258,21 @@ static size_t build_entry(const protocore_mnt_stat *st, const char *name, size_t
     Sftp.format_longname_args.size = a.size;
     Sftp.format_longname_args.mtime = a.mtime;
     Sftp.format_longname_args.name = name;
-    Sftp.format_longname_args.out = s_sftp.ln;
-    Sftp.format_longname_args.cap = sizeof(s_sftp.ln);
+    Sftp.format_longname_args.out = SSH_SFTP_CTX(work)->ln;
+    Sftp.format_longname_args.cap = sizeof(SSH_SFTP_CTX(work)->ln);
     Sftp.format_longname(sftp_work);
     size_t ln_len = Sftp.n;
     SftpWriter w;
     Sftp.wr_init_args.w = &w;
-    Sftp.wr_init_args.out = s_sftp.ent;
-    Sftp.wr_init_args.cap = sizeof(s_sftp.ent);
+    Sftp.wr_init_args.out = SSH_SFTP_CTX(work)->ent;
+    Sftp.wr_init_args.cap = sizeof(SSH_SFTP_CTX(work)->ent);
     Sftp.wr_init(sftp_work); // reserves a 4-byte length prefix we discard below
     Sftp.wr_string_args.w = &w;
     Sftp.wr_string_args.s = name;
     Sftp.wr_string_args.n = (uint32_t)name_len;
     Sftp.wr_string(sftp_work);
     Sftp.wr_string_args.w = &w;
-    Sftp.wr_string_args.s = s_sftp.ln;
+    Sftp.wr_string_args.s = SSH_SFTP_CTX(work)->ln;
     Sftp.wr_string_args.n = (uint32_t)ln_len;
     Sftp.wr_string(sftp_work);
     Sftp.wr_attrs_args.w = &w;
@@ -245,20 +283,21 @@ static size_t build_entry(const protocore_mnt_stat *st, const char *name, size_t
         return 0;
     }
     size_t el = w.off - 4;
-    mem.move(s_sftp.ent, s_sftp.ent + 4, el); // drop the reserved prefix so the entry bytes start at ent[0]
+    mem.move(SSH_SFTP_CTX(work)->ent, SSH_SFTP_CTX(work)->ent + 4,
+             el); // drop the reserved prefix so the entry bytes start at ent[0]
     return el;
 }
 
-static void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
+static void do_readdir(uint8_t *restrict work, SftpSession *s, uint32_t id, SftpHandle *H)
 {
     if (H->readdir_done && !H->has_pending)
     {
-        send_status(s, id, PROTOCORE_SSH_FX_EOF, "");
+        send_status(work, s, id, PROTOCORE_SSH_FX_EOF, "");
         return;
     }
     SftpWriter w;
     Sftp.wr_init_args.w = &w;
-    Sftp.wr_init_args.out = s_sftp.out;
+    Sftp.wr_init_args.out = SSH_SFTP_CTX(work)->out;
     Sftp.wr_init_args.cap = PROTOCORE_SFTP_RESP_CAP;
     Sftp.wr_init(sftp_work);
     Sftp.wr_u8_args.w = &w;
@@ -289,15 +328,16 @@ static void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
         protocore_mnt_stat st = {0};
         Fs.io.handle = H->fh;
         Fs.io.stat = &st;
-        Fs.io.name_out = s_sftp.nm;
-        Fs.io.name_cap = sizeof(s_sftp.nm);
+        Fs.io.name_out = SSH_SFTP_CTX(work)->nm;
+        Fs.io.name_cap = sizeof(SSH_SFTP_CTX(work)->nm);
         Fs.readdir(protocore_filesystem_span());
         if (!Fs.ok)
         {
             H->readdir_done = PROTO_TRUE;
             break;
         }
-        size_t el = build_entry(&st, s_sftp.nm, str.len(s_sftp.nm, sizeof(s_sftp.nm)));
+        size_t el = build_entry(work, &st, SSH_SFTP_CTX(work)->nm,
+                                str.len(SSH_SFTP_CTX(work)->nm, sizeof(SSH_SFTP_CTX(work)->nm)));
         if (el == 0)
         {
             continue; // entry could not be serialized (pathological name) - skip it
@@ -309,21 +349,21 @@ static void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
             if (count == 0) // first entry too big for an empty response - emit it anyway (best effort)
             {
                 Sftp.wr_bytes_args.w = &w;
-                Sftp.wr_bytes_args.b = s_sftp.ent;
+                Sftp.wr_bytes_args.b = SSH_SFTP_CTX(work)->ent;
                 Sftp.wr_bytes_args.n = el;
                 Sftp.wr_bytes(sftp_work);
                 count++;
             }
             else // stash it for the next READDIR
             {
-                mem.cpy(H->pend, s_sftp.ent, el);
+                mem.cpy(H->pend, SSH_SFTP_CTX(work)->ent, el);
                 H->pend_len = (uint16_t)el;
                 H->has_pending = PROTO_TRUE;
             }
             break;
         }
         Sftp.wr_bytes_args.w = &w;
-        Sftp.wr_bytes_args.b = s_sftp.ent;
+        Sftp.wr_bytes_args.b = SSH_SFTP_CTX(work)->ent;
         Sftp.wr_bytes_args.n = el;
         Sftp.wr_bytes(sftp_work);
         count++;
@@ -331,7 +371,7 @@ static void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
 
     if (count == 0) // nothing to return -> end of directory
     {
-        send_status(s, id, PROTOCORE_SSH_FX_EOF, "");
+        send_status(work, s, id, PROTOCORE_SSH_FX_EOF, "");
         return;
     }
     Sftp.wr_patch_u32_args.w = &w;
@@ -341,7 +381,7 @@ static void do_readdir(SftpSession *s, uint32_t id, SftpHandle *H)
     Sftp.wr_finish_args.w = &w;
     Sftp.wr_finish(sftp_work);
     size_t n = Sftp.n;
-    send_resp(s, n);
+    send_resp(work, s, n);
 }
 
 // Remember which request path a handle was opened with, so FSTAT can answer without a second kind of
@@ -358,7 +398,7 @@ static void keep_req(SftpHandle *H, const char *req)
 }
 
 // --- one complete non-WRITE request ---------------------------------------------------------------
-static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
+static void handle_packet(uint8_t *restrict work, SftpSession *s, const uint8_t *buf, size_t total)
 {
     SftpReader r;
     Sftp.rd_init_args.r = &r;
@@ -371,10 +411,10 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
 
     if (type == PROTOCORE_SSH_FXP_INIT)
     {
-        Sftp.build_version_args.out = s_sftp.out;
+        Sftp.build_version_args.out = SSH_SFTP_CTX(work)->out;
         Sftp.build_version_args.cap = PROTOCORE_SFTP_RESP_CAP;
         Sftp.build_version(sftp_work);
-        send_resp(s, Sftp.n);
+        send_resp(work, s, Sftp.n);
         return;
     }
 
@@ -397,7 +437,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string(sftp_work);
         if (!Sftp.ok)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
+            send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
             return;
         }
         Sftp.rd_u32_args.r = &r;
@@ -408,10 +448,10 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_attrs_args.a = &a;
         Sftp.rd_attrs(sftp_work);
         (void)Sftp.ok; // read to advance the reader past the attrs; the open flags decide the mode
-        const char *req = req_path(0, p, pl);
+        const char *req = req_path(work, 0, p, pl);
         if (req == NULL)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
+            send_status(work, s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
         proto_bool writing = (pflags & PROTOCORE_SSH_FXF_WRITE) != 0;
@@ -421,10 +461,10 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         int hi = alloc_handle(s);
         if (hi < 0)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_FAILURE, "too many open handles");
+            send_status(work, s, id, PROTOCORE_SSH_FX_FAILURE, "too many open handles");
             return;
         }
-        Fs.path.root = s_sftp.root;
+        Fs.path.root = SSH_SFTP_CTX(work)->root;
         Fs.path.dir = req;
         Fs.path.name = "";
         Fs.io.mode = mode;
@@ -435,7 +475,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             // A backend refuses to open a directory as a file, so the distinction the client sees is
             // recovered from the record rather than from a second open.
             protocore_mnt_stat st = {0};
-            Fs.path.root = s_sftp.root;
+            Fs.path.root = SSH_SFTP_CTX(work)->root;
             Fs.path.dir = req;
             Fs.path.name = "";
             Fs.io.stat = &st;
@@ -443,7 +483,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
             proto_bool is_dir = Fs.ok && st.is_dir;
             // NO_SUCH_FILE only for a plain read that found nothing - that is the one case a client
             // acts on differently. A directory, or any failed write, is FAILURE.
-            send_status(s, id, (is_dir || writing) ? PROTOCORE_SSH_FX_FAILURE : PROTOCORE_SSH_FX_NO_SUCH_FILE,
+            send_status(work, s, id, (is_dir || writing) ? PROTOCORE_SSH_FX_FAILURE : PROTOCORE_SSH_FX_NO_SUCH_FILE,
                         is_dir ? "is a directory" : "open failed");
             return;
         }
@@ -453,7 +493,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         s->handles[hi].readdir_done = PROTO_FALSE;
         s->handles[hi].has_pending = PROTO_FALSE;
         keep_req(&s->handles[hi], req);
-        send_handle(s, id, hi);
+        send_handle(work, s, id, hi);
         return;
     }
     case PROTOCORE_SSH_FXP_CLOSE: {
@@ -465,17 +505,17 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string(sftp_work);
         if (!Sftp.ok)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
+            send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
             return;
         }
         int hi = handle_index(s, h, hl);
         if (hi < 0)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_FAILURE, "bad handle");
+            send_status(work, s, id, PROTOCORE_SSH_FX_FAILURE, "bad handle");
             return;
         }
         free_handle(s, hi);
-        send_status(s, id, PROTOCORE_SSH_FX_OK, "");
+        send_status(work, s, id, PROTOCORE_SSH_FX_OK, "");
         return;
     }
     case PROTOCORE_SSH_FXP_READ: {
@@ -487,7 +527,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string(sftp_work);
         if (!Sftp.ok)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
+            send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
             return;
         }
         Sftp.rd_u64_args.r = &r;
@@ -499,7 +539,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         int hi = handle_index(s, h, hl);
         if (!r.ok || hi < 0 || s->handles[hi].is_dir)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_FAILURE, "bad handle");
+            send_status(work, s, id, PROTOCORE_SSH_FX_FAILURE, "bad handle");
             return;
         }
         Fs.io.handle = s->handles[hi].fh;
@@ -507,27 +547,27 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Fs.seek(protocore_filesystem_span());
         if (!Fs.ok)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_FAILURE, "seek");
+            send_status(work, s, id, PROTOCORE_SSH_FX_FAILURE, "seek");
             return;
         }
         uint32_t want = rlen < PROTOCORE_SFTP_MAX_READ ? rlen : PROTOCORE_SFTP_MAX_READ;
         Fs.io.handle = s->handles[hi].fh;
-        Fs.io.buf = s_sftp.rbuf;
+        Fs.io.buf = SSH_SFTP_CTX(work)->rbuf;
         Fs.io.n = want;
         Fs.read(protocore_filesystem_span());
         int got = Fs.i32;
         if (got <= 0)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_EOF, "");
+            send_status(work, s, id, PROTOCORE_SSH_FX_EOF, "");
             return;
         }
         Sftp.build_data_args.id = id;
-        Sftp.build_data_args.data = s_sftp.rbuf;
+        Sftp.build_data_args.data = SSH_SFTP_CTX(work)->rbuf;
         Sftp.build_data_args.dlen = (uint32_t)got;
-        Sftp.build_data_args.out = s_sftp.out;
+        Sftp.build_data_args.out = SSH_SFTP_CTX(work)->out;
         Sftp.build_data_args.cap = PROTOCORE_SFTP_RESP_CAP;
         Sftp.build_data(sftp_work);
-        send_resp(s, Sftp.n);
+        send_resp(work, s, Sftp.n);
         return;
     }
     case PROTOCORE_SSH_FXP_OPENDIR: {
@@ -537,26 +577,26 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string_args.out = &p;
         Sftp.rd_string_args.out_len = &pl;
         Sftp.rd_string(sftp_work);
-        const char *req = r.ok ? req_path(0, p, pl) : NULL;
+        const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
+            send_status(work, s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
         int hi = alloc_handle(s);
         if (hi < 0)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_FAILURE, "too many open handles");
+            send_status(work, s, id, PROTOCORE_SSH_FX_FAILURE, "too many open handles");
             return;
         }
-        Fs.path.root = s_sftp.root;
+        Fs.path.root = SSH_SFTP_CTX(work)->root;
         Fs.path.dir = req;
         Fs.path.name = "";
         Fs.opendir(protocore_filesystem_span());
         int fh = Fs.i32;
         if (fh < 0)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_NO_SUCH_FILE, "not a directory");
+            send_status(work, s, id, PROTOCORE_SSH_FX_NO_SUCH_FILE, "not a directory");
             return;
         }
         s->open_mask |= (1u << hi);
@@ -565,7 +605,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         s->handles[hi].readdir_done = PROTO_FALSE;
         s->handles[hi].has_pending = PROTO_FALSE;
         keep_req(&s->handles[hi], req);
-        send_handle(s, id, hi);
+        send_handle(work, s, id, hi);
         return;
     }
     case PROTOCORE_SSH_FXP_READDIR: {
@@ -577,16 +617,16 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string(sftp_work);
         if (!Sftp.ok)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
+            send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
             return;
         }
         int hi = handle_index(s, h, hl);
         if (hi < 0 || !s->handles[hi].is_dir)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_FAILURE, "bad handle");
+            send_status(work, s, id, PROTOCORE_SSH_FX_FAILURE, "bad handle");
             return;
         }
-        do_readdir(s, id, &s->handles[hi]);
+        do_readdir(work, s, id, &s->handles[hi]);
         return;
     }
     case PROTOCORE_SSH_FXP_STAT:
@@ -597,31 +637,31 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string_args.out = &p;
         Sftp.rd_string_args.out_len = &pl;
         Sftp.rd_string(sftp_work);
-        const char *req = r.ok ? req_path(0, p, pl) : NULL;
+        const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
+            send_status(work, s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
         protocore_mnt_stat st = {0};
-        Fs.path.root = s_sftp.root;
+        Fs.path.root = SSH_SFTP_CTX(work)->root;
         Fs.path.dir = req;
         Fs.path.name = "";
         Fs.io.stat = &st;
         Fs.stat(protocore_filesystem_span());
         if (!Fs.ok)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_NO_SUCH_FILE, "");
+            send_status(work, s, id, PROTOCORE_SSH_FX_NO_SUCH_FILE, "");
             return;
         }
         SftpAttrs a = {0};
         attrs_from_stat(&st, &a);
         Sftp.build_attrs_args.id = id;
         Sftp.build_attrs_args.a = &a;
-        Sftp.build_attrs_args.out = s_sftp.out;
+        Sftp.build_attrs_args.out = SSH_SFTP_CTX(work)->out;
         Sftp.build_attrs_args.cap = PROTOCORE_SFTP_RESP_CAP;
         Sftp.build_attrs(sftp_work);
-        send_resp(s, Sftp.n);
+        send_resp(work, s, Sftp.n);
         return;
     }
     case PROTOCORE_SSH_FXP_FSTAT: {
@@ -633,7 +673,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string(sftp_work);
         if (!Sftp.ok)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
+            send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
             return;
         }
         int hi = handle_index(s, h, hl);
@@ -641,7 +681,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         proto_bool stat_ok = PROTO_FALSE;
         if (hi >= 0)
         {
-            Fs.path.root = s_sftp.root;
+            Fs.path.root = SSH_SFTP_CTX(work)->root;
             Fs.path.dir = s->handles[hi].req;
             Fs.path.name = "";
             Fs.io.stat = &st;
@@ -650,17 +690,17 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         }
         if (!stat_ok)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_FAILURE, "bad handle");
+            send_status(work, s, id, PROTOCORE_SSH_FX_FAILURE, "bad handle");
             return;
         }
         SftpAttrs a = {0};
         attrs_from_stat(&st, &a);
         Sftp.build_attrs_args.id = id;
         Sftp.build_attrs_args.a = &a;
-        Sftp.build_attrs_args.out = s_sftp.out;
+        Sftp.build_attrs_args.out = SSH_SFTP_CTX(work)->out;
         Sftp.build_attrs_args.cap = PROTOCORE_SFTP_RESP_CAP;
         Sftp.build_attrs(sftp_work);
-        send_resp(s, Sftp.n);
+        send_resp(work, s, Sftp.n);
         return;
     }
     case PROTOCORE_SSH_FXP_REMOVE: {
@@ -670,17 +710,17 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string_args.out = &p;
         Sftp.rd_string_args.out_len = &pl;
         Sftp.rd_string(sftp_work);
-        const char *req = r.ok ? req_path(0, p, pl) : NULL;
+        const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
+            send_status(work, s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        Fs.path.root = s_sftp.root;
+        Fs.path.root = SSH_SFTP_CTX(work)->root;
         Fs.path.dir = req;
         Fs.path.name = "";
         Fs.remove(protocore_filesystem_span());
-        send_status(s, id, Fs.ok ? PROTOCORE_SSH_FX_OK : PROTOCORE_SSH_FX_FAILURE, "");
+        send_status(work, s, id, Fs.ok ? PROTOCORE_SSH_FX_OK : PROTOCORE_SSH_FX_FAILURE, "");
         return;
     }
     case PROTOCORE_SSH_FXP_MKDIR: {
@@ -690,17 +730,17 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string_args.out = &p;
         Sftp.rd_string_args.out_len = &pl;
         Sftp.rd_string(sftp_work);
-        const char *req = r.ok ? req_path(0, p, pl) : NULL;
+        const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
+            send_status(work, s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        Fs.path.root = s_sftp.root;
+        Fs.path.root = SSH_SFTP_CTX(work)->root;
         Fs.path.dir = req;
         Fs.path.name = "";
         Fs.mkdir(protocore_filesystem_span());
-        send_status(s, id, Fs.ok ? PROTOCORE_SSH_FX_OK : PROTOCORE_SSH_FX_FAILURE, "");
+        send_status(work, s, id, Fs.ok ? PROTOCORE_SSH_FX_OK : PROTOCORE_SSH_FX_FAILURE, "");
         return;
     }
     case PROTOCORE_SSH_FXP_RMDIR: {
@@ -710,17 +750,17 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string_args.out = &p;
         Sftp.rd_string_args.out_len = &pl;
         Sftp.rd_string(sftp_work);
-        const char *req = r.ok ? req_path(0, p, pl) : NULL;
+        const char *req = r.ok ? req_path(work, 0, p, pl) : NULL;
         if (req == NULL)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
+            send_status(work, s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        Fs.path.root = s_sftp.root;
+        Fs.path.root = SSH_SFTP_CTX(work)->root;
         Fs.path.dir = req;
         Fs.path.name = "";
         Fs.rmdir(protocore_filesystem_span());
-        send_status(s, id, Fs.ok ? PROTOCORE_SSH_FX_OK : PROTOCORE_SSH_FX_FAILURE, "");
+        send_status(work, s, id, Fs.ok ? PROTOCORE_SSH_FX_OK : PROTOCORE_SSH_FX_FAILURE, "");
         return;
     }
     case PROTOCORE_SSH_FXP_RENAME: {
@@ -736,20 +776,20 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string_args.out = &np;
         Sftp.rd_string_args.out_len = &nl;
         Sftp.rd_string(sftp_work);
-        const char *from = r.ok ? req_path(0, op, ol) : NULL;
-        const char *to = (from != NULL) ? req_path(1, np, nl) : NULL;
+        const char *from = r.ok ? req_path(work, 0, op, ol) : NULL;
+        const char *to = (from != NULL) ? req_path(work, 1, np, nl) : NULL;
         if (to == NULL)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
+            send_status(work, s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "bad path");
             return;
         }
-        Fs.path.root = s_sftp.root;
+        Fs.path.root = SSH_SFTP_CTX(work)->root;
         Fs.path.dir = from;
         Fs.path.name = "";
         Fs.dest.dir = to;
         Fs.dest.name = "";
         Fs.rename(protocore_filesystem_span());
-        send_status(s, id, Fs.ok ? PROTOCORE_SSH_FX_OK : PROTOCORE_SSH_FX_FAILURE, "");
+        send_status(work, s, id, Fs.ok ? PROTOCORE_SSH_FX_OK : PROTOCORE_SSH_FX_FAILURE, "");
         return;
     }
     case PROTOCORE_SSH_FXP_REALPATH: {
@@ -761,26 +801,26 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.rd_string(sftp_work);
         if (!r.ok)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
+            send_status(work, s, id, PROTOCORE_SSH_FX_BAD_MESSAGE, "");
             return;
         }
-        const char *req = req_path(0, p, pl);
+        const char *req = req_path(work, 0, p, pl);
         if (req == NULL)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_FAILURE, "path too long");
+            send_status(work, s, id, PROTOCORE_SSH_FX_FAILURE, "path too long");
             return;
         }
         // REALPATH answers in the client's namespace, so it canonicalizes against "/" rather than the
         // mount root. This is the accessor's own canonicalizer, called with the root the answer is in.
-        int rc = protocore_fs_resolve("/", req, "", s_sftp.req[1], sizeof(s_sftp.req[1]));
+        int rc = protocore_fs_resolve("/", req, "", SSH_SFTP_CTX(work)->req[1], sizeof(SSH_SFTP_CTX(work)->req[1]));
         if (rc == -1)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "traversal");
+            send_status(work, s, id, PROTOCORE_SSH_FX_PERMISSION_DENIED, "traversal");
             return;
         }
         if (rc != 0)
         {
-            send_status(s, id, PROTOCORE_SSH_FX_FAILURE, "path too long");
+            send_status(work, s, id, PROTOCORE_SSH_FX_FAILURE, "path too long");
             return;
         }
         SftpAttrs a = {0};
@@ -792,28 +832,28 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
         Sftp.format_longname_args.perms = a.permissions;
         Sftp.format_longname_args.size = 0;
         Sftp.format_longname_args.mtime = 0;
-        Sftp.format_longname_args.name = s_sftp.req[1];
-        Sftp.format_longname_args.out = s_sftp.ln;
-        Sftp.format_longname_args.cap = sizeof(s_sftp.ln);
+        Sftp.format_longname_args.name = SSH_SFTP_CTX(work)->req[1];
+        Sftp.format_longname_args.out = SSH_SFTP_CTX(work)->ln;
+        Sftp.format_longname_args.cap = sizeof(SSH_SFTP_CTX(work)->ln);
         Sftp.format_longname(sftp_work);
         Sftp.build_name1_args.id = id;
-        Sftp.build_name1_args.name = s_sftp.req[1];
-        Sftp.build_name1_args.longname = s_sftp.ln;
+        Sftp.build_name1_args.name = SSH_SFTP_CTX(work)->req[1];
+        Sftp.build_name1_args.longname = SSH_SFTP_CTX(work)->ln;
         Sftp.build_name1_args.a = &a;
-        Sftp.build_name1_args.out = s_sftp.out;
+        Sftp.build_name1_args.out = SSH_SFTP_CTX(work)->out;
         Sftp.build_name1_args.cap = PROTOCORE_SFTP_RESP_CAP;
         Sftp.build_name1(sftp_work);
-        send_resp(s, Sftp.n);
+        send_resp(work, s, Sftp.n);
         return;
     }
     case PROTOCORE_SSH_FXP_SETSTAT:
     case PROTOCORE_SSH_FXP_FSETSTAT:
         // We do not implement chmod/chown/truncate-via-setstat; accept it (OK) so `put` does not fail on the
         // trailing FSETSTAT that sets mode/mtime - the values are simply not applied.
-        send_status(s, id, PROTOCORE_SSH_FX_OK, "");
+        send_status(work, s, id, PROTOCORE_SSH_FX_OK, "");
         return;
     default:
-        send_status(s, id, PROTOCORE_SSH_FX_OP_UNSUPPORTED, "unsupported");
+        send_status(work, s, id, PROTOCORE_SSH_FX_OP_UNSUPPORTED, "unsupported");
         return;
     }
 }
@@ -821,7 +861,7 @@ static void handle_packet(SftpSession *s, const uint8_t *buf, size_t total)
 // --- framing loop ---------------------------------------------------------------------------------
 // Consume complete packets from the accumulator. A WRITE switches to streaming mode. @return false to tear the
 // channel down (malformed / oversized non-WRITE packet).
-static proto_bool process_acc(SftpSession *s)
+static proto_bool process_acc(uint8_t *restrict work, SftpSession *s)
 {
     for (;;)
     {
@@ -893,7 +933,7 @@ static proto_bool process_acc(SftpSession *s)
             s->acc_len -= (uint16_t)consumed;
             if (s->wr_remaining == 0)
             {
-                finish_write(s); // all data was already in the accumulator
+                finish_write(work, s); // all data was already in the accumulator
             }
             if (s->writing)
             {
@@ -910,7 +950,7 @@ static proto_bool process_acc(SftpSession *s)
         {
             return PROTO_TRUE; // wait for the rest
         }
-        handle_packet(s, s->acc, total);
+        handle_packet(work, s, s->acc, total);
         mem.move(s->acc, s->acc + total, s->acc_len - total);
         s->acc_len -= (uint16_t)total;
     }
@@ -937,6 +977,10 @@ static void protocore_sftp_on_open(uint8_t slot, uint32_t channel)
 
 static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t *data, size_t len)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_ssh_sftp_span();
+
     if (slot >= MAX_SSH_CONNS)
     {
         return;
@@ -956,7 +1000,7 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
             len -= take;
             if (s->wr_remaining == 0)
             {
-                finish_write(s);
+                finish_write(work, s);
             }
             continue;
         }
@@ -974,7 +1018,7 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
         s->acc_len += (uint16_t)take;
         data += take;
         len -= take;
-        if (!process_acc(s))
+        if (!process_acc(work, s))
         {
             SshConnection.chan.slot = slot;
             SshConnection.chan.channel = s->channel;
@@ -986,14 +1030,14 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
 }
 
 // --- public API -----------------------------------------------------------------------------------
-void protocore_ssh_sftp_begin(void)
+static void ssh_sftp_begin(uint8_t *restrict work)
 {
     // Bind the root this server answers from. The name is what the accessor maps; two servers naming
     // the same one share it and cost one entry, and naming different ones is how they end up over
     // different storage without either being able to tell.
     Fs.mount = "mnt/sftp";
     Fs.begin(protocore_filesystem_span());
-    s_sftp.root = Fs.i32;
+    SSH_SFTP_CTX(work)->root = Fs.i32;
 
     for (int i = 0; i < MAX_SSH_CONNS; i++)
     {
@@ -1002,14 +1046,20 @@ void protocore_ssh_sftp_begin(void)
         // zero, so a first call closes nothing - it never mistakes handle 0 for an open file.
         free_all_handles(&sftp_sess[i]);
     }
-    if (!s_sftp.registered)
+    if (!SSH_SFTP_CTX(work)->registered)
     {
         SshConnection.sftp_open_cb = protocore_sftp_on_open;
         SshConnection.set_sftp_open_cb(protocore_ssh_connection_span());
         SshConnection.sftp_data_cb = protocore_sftp_on_data;
         SshConnection.set_sftp_data_cb(protocore_ssh_connection_span());
-        s_sftp.registered = PROTO_TRUE;
+        SSH_SFTP_CTX(work)->registered = PROTO_TRUE;
     }
 }
+
+SshSftpNs SshSftp = {
+    .begin = ssh_sftp_begin,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_SFTP

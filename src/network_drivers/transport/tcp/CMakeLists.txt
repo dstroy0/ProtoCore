@@ -9,12 +9,15 @@ add_subdirectory(lower)
 add_subdirectory(protocol)
 add_subdirectory(server)
 
-protocore_module(pc_network_drivers_transport_tcp
-  SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tcp.c"
-  PUBLIC
-    pc_network_drivers_transport_tcp_client
-    pc_network_drivers_transport_tcp_protocol
-    pc_network_drivers_transport_tcp_server
-)
 protocore_header_module(pc_network_drivers_transport_tcp_common DEPS pc_mmgr_ring pc_network_drivers_transport_tcp_evt pc_shared_ip)
 protocore_header_module(pc_network_drivers_transport_tcp_evt)
+
+if(PROTOCORE_ENABLE_TCP)
+  protocore_module(pc_network_drivers_transport_tcp
+    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tcp.c"
+    PUBLIC
+      pc_network_drivers_transport_tcp_client
+      pc_network_drivers_transport_tcp_protocol
+      pc_network_drivers_transport_tcp_server
+  )
+endif()

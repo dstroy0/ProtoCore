@@ -156,10 +156,6 @@ static void pq_task(void *arg)
 
 static void pq_start(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const protocore_pq_lane lane = PreemptQueue.lane;
     const protocore_pq_config *cfg = PreemptQueue.cfg;
 
@@ -196,10 +192,6 @@ static void pq_start(uint8_t *restrict work)
 
 static void pq_post(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const protocore_pq_lane lane = PreemptQueue.lane;
 
     PreemptQueue.ok = PROTO_FALSE;
@@ -219,10 +211,6 @@ static void pq_post(uint8_t *restrict work)
 
 static void pq_post_urgent(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const protocore_pq_lane lane = PreemptQueue.lane;
 
     PreemptQueue.ok = PROTO_FALSE;
@@ -242,10 +230,6 @@ static void pq_post_urgent(uint8_t *restrict work)
 
 static void pq_post_from_isr(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const protocore_pq_lane lane = PreemptQueue.lane;
 
     PreemptQueue.ok = PROTO_FALSE;
@@ -273,10 +257,6 @@ static void pq_drain(uint8_t *restrict work)
 
 static void pq_stop(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const protocore_pq_lane lane = PreemptQueue.lane;
 
     if (!lane_ok(lane))
@@ -293,19 +273,11 @@ static void pq_stop(uint8_t *restrict work)
 
 static void pq_running(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     PreemptQueue.ok = lane_ok(PreemptQueue.lane) && PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)PreemptQueue.lane];
 }
 
 static void pq_high_water(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     PreemptQueue.n = lane_ok(PreemptQueue.lane) ? PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)PreemptQueue.lane] : 0;
 }
 

@@ -111,10 +111,6 @@ static void line_append_escaped(uint8_t *restrict work, const char *s)
 // The separator before a field set entry: a space before the first, a comma before the rest.
 static void line_sep(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     line_append(work, UDP_TELEMETRY_CTX(work)->have_field ? "," : " ");
     UDP_TELEMETRY_CTX(work)->have_field = PROTO_TRUE;
 }
@@ -123,10 +119,6 @@ static void line_sep(uint8_t *restrict work)
 // complete point - nothing overflowed and the field set holds at least one entry.
 static void line_result(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     UdpTelemetry.n = UDP_TELEMETRY_CTX(work)->pos;
     UdpTelemetry.overflow = UDP_TELEMETRY_CTX(work)->overflow;
     UdpTelemetry.ok = !UDP_TELEMETRY_CTX(work)->overflow && UDP_TELEMETRY_CTX(work)->have_field;
@@ -169,10 +161,6 @@ uint8_t *protocore_udp_telemetry_span(void)
 // every send refuses.
 static void udp_telemetry_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
 #if PROTOCORE_HAS_NET_STACK
     Ip.args.text = UdpTelemetry.collector.addr;
     Ip.args.out = &UDP_TELEMETRY_CTX(work)->collector;
@@ -205,10 +193,6 @@ static void udp_telemetry_measurement(uint8_t *restrict work)
 // Append `,tag_key=tag_value` (line protocol element 2).
 static void udp_telemetry_tag(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // The tag set is comma separated and sits between the measurement and the space that opens the
     // field set, so an entry appended after a field would read as a field. The line latches
     // overflow instead.
@@ -273,10 +257,6 @@ static void udp_telemetry_field_float(uint8_t *restrict work)
 // Append ` <timestamp>` (line protocol element 4), Unix nanoseconds.
 static void udp_telemetry_timestamp(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // The timestamp trails the field set, one space between them, so a line with no field has no
     // point to stamp. The line latches overflow instead.
     if (!UDP_TELEMETRY_CTX(work)->have_field)
@@ -300,10 +280,6 @@ static void udp_telemetry_timestamp(uint8_t *restrict work)
 // duplicate protection are not guaranteed), so ok reports only that the stack took the octets.
 static void udp_telemetry_send(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     UdpTelemetry.ok = PROTO_FALSE;
 #if PROTOCORE_HAS_NET_STACK
     if (!UDP_TELEMETRY_CTX(work)->ready || !UdpTelemetry.payload.data)
@@ -323,10 +299,6 @@ static void udp_telemetry_send(uint8_t *restrict work)
 // point, and nothing leaves.
 static void udp_telemetry_write(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (UDP_TELEMETRY_CTX(work)->overflow || !UDP_TELEMETRY_CTX(work)->have_field)
     {
         UdpTelemetry.ok = PROTO_FALSE;

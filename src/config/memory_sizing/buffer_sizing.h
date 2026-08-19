@@ -2545,6 +2545,16 @@
 #define PROTOCORE_QUIC_MAX_CONNS 2
 #endif
 
+/** @brief Datagrams buffered from the lwIP thread until the server poll drains them. */
+#ifndef PROTOCORE_QUIC_INGEST_RING
+#define PROTOCORE_QUIC_INGEST_RING 8
+#endif
+
+/** @brief Largest UDP payload the QUIC transport sends or accepts (conservative, under a 1500 MTU). */
+#ifndef PROTOCORE_QUIC_MAX_DATAGRAM
+#define PROTOCORE_QUIC_MAX_DATAGRAM 1350
+#endif
+
 // What one HTTP/3 request stream holds: the frames it reassembles and the three pseudo-headers it
 // captures out of them. Every one is a power of two, so a stream reaches its own bytes with a shift.
 #ifndef PROTOCORE_H3_STREAM_BUF
@@ -2884,6 +2894,15 @@
 #endif
 
 /**
+ * @brief Largest serialized SSH_FXP_NAME entry one READDIR emits: filename, `ls -l` longname and
+ *        attributes. Sizes the per-handle stash an entry that did not fit is held in, which is a
+ *        field of SftpHandle in session.h, so it is stated here rather than in the server's own .c.
+ */
+#ifndef PROTOCORE_SFTP_ENTRY_MAX
+#define PROTOCORE_SFTP_ENTRY_MAX (PROTOCORE_FILESYSTEM_PATH_MAX + 320)
+#endif
+
+/**
  * @brief Place the per-connection SSH compression state in external PSRAM (ESP32).
  *
  * Like PROTOCORE_H2_POOL_IN_PSRAM / PROTOCORE_TLS_ARENA_IN_PSRAM: moves the compressor pool
@@ -2954,7 +2973,7 @@
 #endif
 
 #if PROTOCORE_ENABLE_HTTP3
-#define PROTOCORE_PLAINTEXT_WORK_H3CONN (PROTOCORE_WORK_H3_CONN + PROTOCORE_WORK_QUIC_CONN)
+#define PROTOCORE_PLAINTEXT_WORK_H3CONN (PROTOCORE_WORK_H3_CONN + PROTOCORE_WORK_QUIC_CONN + PROTOCORE_QUIC_SERVER_BORROW)
 #else
 #define PROTOCORE_PLAINTEXT_WORK_H3CONN 0
 #endif
@@ -3276,6 +3295,34 @@
 #define PROTOCORE_PLAINTEXT_WORK_SSHSCP PROTOCORE_SSH_SCP_BORROW
 #else
 #define PROTOCORE_PLAINTEXT_WORK_SSHSCP 0
+#endif
+
+// The SFTP server's bound root and registration flag, its one response-build buffer, the READ
+// scratch, two request paths, one serialized READDIR entry with its longname and the entry's own
+// name, and a handle on its way into a HANDLE response. Measured at 5008 bytes for the default
+// SSH_PKT_BUF_SIZE, PROTOCORE_SFTP_MAX_READ and PROTOCORE_FILESYSTEM_PATH_MAX, and scales with all
+// three. File bytes and paths, no key material, so the plaintext end.
+#ifndef PROTOCORE_SSH_SFTP_BORROW
+#define PROTOCORE_SSH_SFTP_BORROW                                                                                      \
+    ((size_t)SSH_PKT_BUF_SIZE + PROTOCORE_SFTP_MAX_READ + 5u * PROTOCORE_FILESYSTEM_PATH_MAX + 656u)
+#endif
+
+#if PROTOCORE_ENABLE_SSH_SFTP
+#define PROTOCORE_PLAINTEXT_WORK_SSHSFTP PROTOCORE_SSH_SFTP_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SSHSFTP 0
+#endif
+
+// The static file server's bound accessor root. Measured at 4 bytes; the per-slot transfer state
+// this pages out of is session's, not here. A handle, no key material, so the plaintext end.
+#ifndef PROTOCORE_FILE_SERVING_BORROW
+#define PROTOCORE_FILE_SERVING_BORROW 16u
+#endif
+
+#if PROTOCORE_ENABLE_FILE_SERVING
+#define PROTOCORE_PLAINTEXT_WORK_FILESERVING PROTOCORE_FILE_SERVING_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_FILESERVING 0
 #endif
 
 // The HTTP request parser's streaming-body hooks: the three callbacks an application installs to
@@ -3608,7 +3655,8 @@
      PROTOCORE_PLAINTEXT_WORK_TELNET + PROTOCORE_PLAINTEXT_WORK_MDNSSERVICE +                                          \
      PROTOCORE_PLAINTEXT_WORK_NTPSERVER + PROTOCORE_PLAINTEXT_WORK_NTPSERVICE +                                        \
      PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE + PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE +                                  \
-     PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + 256)
+     PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + PROTOCORE_PLAINTEXT_WORK_SSHSFTP +                                          \
+     PROTOCORE_PLAINTEXT_WORK_FILESERVING + 256)
 #endif
 
 /**

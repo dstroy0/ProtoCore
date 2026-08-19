@@ -170,11 +170,6 @@ static void protocore_keccak_squeeze(KeccakCtx *c, uint8_t *out, size_t outlen)
 
 static void sha3_absorb(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Sha3.ok = PROTO_FALSE;
-        return;
-    }
     protocore_keccak_absorb(SHA3_SPONGE(work), Sha3.absorb_args.rate, Sha3.absorb_args.in, Sha3.absorb_args.inlen,
                             Sha3.absorb_args.domain);
     SHA3_SPONGE(work)->absorbed = 1;
@@ -244,11 +239,6 @@ static void sha3_shake256(uint8_t *restrict work)
 
 static void sha3_shake128_absorb(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Sha3.ok = PROTO_FALSE;
-        return;
-    }
     protocore_keccak_absorb(SHA3_SPONGE(work), KECCAK_RATE_SHAKE128, Sha3.shake128_absorb_args.in,
                             Sha3.shake128_absorb_args.inlen, 0x1F);
     SHA3_SPONGE(work)->absorbed = 1;

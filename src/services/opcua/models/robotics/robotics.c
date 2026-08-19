@@ -273,10 +273,6 @@ static proto_bool robotics_read(uint16_t ns, uint32_t id, uint32_t attribute, Op
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
     uint8_t *restrict work = protocore_robotics_span();
-    if (work == NULL)
-    {
-        return PROTO_FALSE; // the pool was short, so there is no bound model to answer from
-    }
     const RoboticsMotionDeviceSystem *mds = ROBOTICS_CTX(work)->mds;
     if (!mds || ns != ROBOTICS_CTX(work)->ns || attribute != OPCUA_ATTR_VALUE)
     {
@@ -382,10 +378,6 @@ static int32_t robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, ui
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
     uint8_t *restrict work = protocore_robotics_span();
-    if (work == NULL)
-    {
-        return -1; // the pool was short, so there is no bound model to answer from
-    }
     const RoboticsCtx *c = ROBOTICS_CTX(work);
     const RoboticsMotionDeviceSystem *mds = c->mds;
     if (!mds)

@@ -114,10 +114,6 @@ uint8_t *protocore_lwm2m_tlv_span(void)
 // write and the finish fail closed.
 static void tlv_open(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     LWM2M_TLV_CTX(work)->w.buf = Lwm2mTlv.sink.buf;
     LWM2M_TLV_CTX(work)->w.cap = Lwm2mTlv.sink.cap;
     LWM2M_TLV_CTX(work)->w.pos = 0;
@@ -129,10 +125,6 @@ static void tlv_open(uint8_t *restrict work)
 // and the Value (LwM2M Core sec 7.4.5 Table 7.4.5.-1).
 static void tlv_write(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Lwm2mTlvWriteCursor *w = &LWM2M_TLV_CTX(work)->w;
     const uint8_t *value = Lwm2mTlv.val.opaque;
     const size_t value_len = Lwm2mTlv.val.len;
@@ -201,10 +193,6 @@ static void tlv_write(uint8_t *restrict work)
 // Stage the Integer in its shortest width and emit it.
 static void tlv_write_integer(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const size_t n = integer_octets(Lwm2mTlv.val.integer_value);
     store_be(LWM2M_TLV_CTX(work)->w.scalar, (uint64_t)Lwm2mTlv.val.integer_value, n);
     Lwm2mTlv.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
@@ -215,10 +203,6 @@ static void tlv_write_integer(uint8_t *restrict work)
 // Stage the Boolean as one octet and emit it: the Length of a Boolean is always 1.
 static void tlv_write_boolean(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     LWM2M_TLV_CTX(work)->w.scalar[0] = Lwm2mTlv.val.boolean_value ? 1 : 0;
     Lwm2mTlv.val.opaque = LWM2M_TLV_CTX(work)->w.scalar;
     Lwm2mTlv.val.len = 1;
@@ -229,10 +213,6 @@ static void tlv_write_boolean(uint8_t *restrict work)
 // cannot fit beside a Type byte and an Identifier, so the write poisons the cursor.
 static void tlv_write_string(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (!Lwm2mTlv.val.string_value)
     {
         Lwm2mTlv.ok = PROTO_FALSE;
@@ -246,10 +226,6 @@ static void tlv_write_string(uint8_t *restrict work)
 // Stage the Float as binary64 in network byte order and emit it.
 static void tlv_write_float(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint64_t bits;
     double v = Lwm2mTlv.val.float_value;
     mem.cpy(&bits, &v, 8);
@@ -262,10 +238,6 @@ static void tlv_write_float(uint8_t *restrict work)
 // Count the octets emitted. A poisoned cursor reports 0, so a truncated payload never leaves.
 static void tlv_finish(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Lwm2mTlv.ok = !LWM2M_TLV_CTX(work)->w.overflow;
     Lwm2mTlv.n = LWM2M_TLV_CTX(work)->w.overflow ? 0 : LWM2M_TLV_CTX(work)->w.pos;
 }
@@ -273,10 +245,6 @@ static void tlv_finish(uint8_t *restrict work)
 // Bind the source buffer and put the reader cursor at its first entry.
 static void tlv_parse(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     LWM2M_TLV_CTX(work)->r.buf = Lwm2mTlv.source.buf;
     LWM2M_TLV_CTX(work)->r.len = Lwm2mTlv.source.len;
     LWM2M_TLV_CTX(work)->r.pos = 0;
@@ -287,10 +255,6 @@ static void tlv_parse(uint8_t *restrict work)
 // end of the source or on an entry the source cuts short.
 static void tlv_next(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const Lwm2mTlvReadCursor *r = &LWM2M_TLV_CTX(work)->r;
     const uint8_t *buf = r->buf;
     const size_t len = r->len;

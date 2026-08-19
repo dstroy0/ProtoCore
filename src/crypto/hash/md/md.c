@@ -292,31 +292,16 @@ static void md_begin(uint8_t *restrict work, md_compress_fn compress)
 
 static void md_md5_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Md.ok = PROTO_FALSE;
-        return;
-    }
     md_begin(work, protocore_md5_compress);
 }
 
 static void md_md4_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Md.ok = PROTO_FALSE;
-        return;
-    }
     md_begin(work, protocore_md4_compress);
 }
 
 static void md_update(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Md.ok = PROTO_FALSE;
-        return;
-    }
     md_absorb(MD_STATE(work), Md.update_args.data, Md.update_args.len, md_bound(work));
 }
 

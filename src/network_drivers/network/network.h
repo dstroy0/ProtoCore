@@ -53,7 +53,9 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef struct
 {
+#if PROTOCORE_ENABLE_DNS
     DnsNs *dns; ///< the RESOLVER and the NAME SERVER (RFC 1034 sec 2.4)
+#endif
 #if PROTOCORE_ENABLE_FORWARD
     ForwardNs *forward; ///< the forwarding plane (RFC 1812 sec 5)
 #endif

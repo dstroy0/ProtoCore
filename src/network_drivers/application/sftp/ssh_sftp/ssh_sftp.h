@@ -26,17 +26,53 @@
 #ifndef PROTOCORE_SSH_SFTP_H
 #define PROTOCORE_SSH_SFTP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SSH_SFTP
 
 PROTOCORE_BEGIN_DECLS
 
+// PROTOCORE_SSH_SFTP_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
+
 /**
- * @brief Serve the SFTP subsystem from the mounted filesystem. Installs the channel subsystem +
- *        data callbacks. Call once, after protocore_ssh_conn_setup() and protocore_fs_begin().
+ * @brief SFTP v3 server subsystem - the SSH_FXP_* state machine over an SSH session channel
+ * (PROTOCORE_ENABLE_SSH_SFTP).
+ *
+ * A caller sets the members a call takes, invokes it through ::SshSftp with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   SshSftp.begin(work);
+ *
+ * @var SshSftpNs::ok  a call's true/false outcome
+ * @var SshSftpNs::begin  serve the SFTP subsystem from the mounted filesystem. Installs the ...
+ *
+ * @c work is PROTOCORE_SSH_SFTP_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-void protocore_ssh_sftp_begin(void);
+typedef struct
+{
+
+    proto_bool ok;
+
+    void (*const begin)(uint8_t *restrict work);
+} SshSftpNs;
+
+/** @brief The one symbol this module exports. */
+extern SshSftpNs SshSftp;
+
+/**
+ * @brief The PROTOCORE_SSH_SFTP_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_ssh_sftp_span(void);
 
 PROTOCORE_END_DECLS
 

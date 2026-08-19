@@ -126,11 +126,10 @@ void test_request_dispatch_and_response()
     g_requests = 0;
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
     TEST_ASSERT_NOT_NULL(g_qc.cb.on_stream_data);
 
     uint8_t block[128];
@@ -177,13 +176,12 @@ void test_request_dispatch_and_response()
     TEST_ASSERT_EQUAL_STRING("example.org", g_auth);
     TEST_ASSERT_EQUAL_UINT(0, g_body_len);
 
-    H3Conn.bind.b = g_h3_b;
     H3Conn.respond_args.stream_id = 0;
     H3Conn.respond_args.status = 200;
     H3Conn.respond_args.content_type = "text/plain";
     H3Conn.respond_args.body = (const uint8_t *)"hello";
     H3Conn.respond_args.body_len = 5;
-    H3Conn.respond(H3Conn.internal);
+    H3Conn.respond(g_h3_b);
     TEST_ASSERT_TRUE(H3Conn.ok);
     QuicStream *st = find_stream(&g_qc, 0);
     TEST_ASSERT_NOT_NULL(st);
@@ -231,11 +229,10 @@ void test_post_with_body()
     g_requests = 0;
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t block[128];
     Qpack.encode_prefix_args.out = block;
@@ -284,11 +281,10 @@ void test_control_stream_settings_sent()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     g_qc.cb.on_handshake_done(g_qc.cb.app, g_qc_ctx);
     QuicStream *ctrl = find_stream(&g_qc, 3);
@@ -319,11 +315,10 @@ void test_client_control_stream_settings()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t s[64];
     QuicVarint.encode_args.out = s;
@@ -352,11 +347,10 @@ void test_client_uni_stream_types()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t t;
     QuicVarint.encode_args.out = &t;
@@ -387,11 +381,10 @@ void test_handshake_done_idempotent()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     g_qc.cb.on_handshake_done(g_qc.cb.app, g_qc_ctx);
     QuicStream *ctrl = find_stream(&g_qc, 3);
@@ -406,11 +399,10 @@ void test_malformed_request_frame()
     g_requests = 0;
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t hdr[8];
     H3Frame.write_header_args.out = hdr;
@@ -431,20 +423,18 @@ void test_respond_body_too_large()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
     static uint8_t big[PROTOCORE_H3_STREAM_BUF + 200];
     memset(big, 'x', sizeof(big));
-    H3Conn.bind.b = g_h3_b;
     H3Conn.respond_args.stream_id = 0;
     H3Conn.respond_args.status = 200;
     H3Conn.respond_args.content_type = "text/plain";
     H3Conn.respond_args.body = big;
     H3Conn.respond_args.body_len = sizeof(big);
-    H3Conn.respond(H3Conn.internal);
+    H3Conn.respond(g_h3_b);
     TEST_ASSERT_FALSE(H3Conn.ok);
 }
 
@@ -453,11 +443,10 @@ void test_stream_pool_full()
     g_requests = 0;
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t b = 0x00;
     for (uint64_t i = 0; i < PROTOCORE_H3_MAX_STREAMS; i++)
@@ -501,11 +490,10 @@ void test_uni_stream_partial_type()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t b0 = 0x40;
     g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, &b0, 1, PROTO_FALSE);
@@ -521,11 +509,10 @@ void test_overlong_field_truncated()
     g_requests = 0;
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t block[128];
     Qpack.encode_prefix_args.out = block;
@@ -567,11 +554,10 @@ void test_h3_pseudo_header_name_variants()
     g_requests = 0;
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t block[256];
     Qpack.encode_prefix_args.out = block;
@@ -647,11 +633,10 @@ void test_h3_request_unknown_frame_and_empty_data()
     g_requests = 0;
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t block[128];
     Qpack.encode_prefix_args.out = block;
@@ -710,11 +695,10 @@ void test_h3_control_only_frames_on_a_request_stream()
         g_requests = 0;
         g_qc.b = g_qc_b;
         established_qc(&g_qc);
-        H3Conn.bind.b = g_h3_b;
         H3Conn.bind.qc = g_qc_ctx;
         H3Conn.app_args.on_request = on_request;
         H3Conn.app_args.app = NULL;
-        H3Conn.init(H3Conn.internal);
+        H3Conn.init(g_h3_b);
 
         uint8_t block[128];
         Qpack.encode_prefix_args.out = block;
@@ -764,11 +748,10 @@ void test_h3_error_before_app_keys_falls_back_to_transport()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t req[128];
     H3Frame.build_data_args.out = req;
@@ -789,11 +772,10 @@ void test_h3_data_before_headers()
     g_requests = 0;
     g_qc.b = g_qc_b;
     established_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t req[128];
     H3Frame.build_data_args.out = req;
@@ -814,11 +796,10 @@ void test_h3_second_control_stream()
 {
     g_qc.b = g_qc_b;
     established_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t s1[64];
     QuicVarint.encode_args.out = s1;
@@ -852,11 +833,10 @@ void test_h3_second_settings_frame()
 {
     g_qc.b = g_qc_b;
     established_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t s[128];
     QuicVarint.encode_args.out = s;
@@ -893,11 +873,10 @@ void test_h3_no_request_callback()
     g_requests = 0;
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = NULL;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t block[128];
     Qpack.encode_prefix_args.out = block;
@@ -940,11 +919,10 @@ void test_h3_stream_buffer_overflow_clamped()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     static uint8_t big[PROTOCORE_H3_STREAM_BUF + 64];
     memset(big, 0x00, sizeof(big));
@@ -959,11 +937,10 @@ void test_h3_control_stream_frame_guards()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
     H3Settings defaults;
     H3Frame.settings_defaults_args.s = &defaults;
     H3Frame.settings_defaults(h3_frame_work);
@@ -983,11 +960,10 @@ void test_h3_control_stream_frame_guards()
 
     g_qc2.b = g_qc2_b;
     minimal_qc(&g_qc2);
-    H3Conn.bind.b = g_h3b_b;
     H3Conn.bind.qc = g_qc2_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3b_b);
     uint8_t s2[64];
     QuicVarint.encode_args.out = s2;
     QuicVarint.encode_args.cap = sizeof(s2);
@@ -1005,11 +981,10 @@ void test_h3_control_stream_frame_guards()
 
     g_qc2.b = g_qc2_b;
     established_qc(&g_qc2);
-    H3Conn.bind.b = g_h3b_b;
     H3Conn.bind.qc = g_qc2_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3b_b);
     uint8_t s3[64];
     QuicVarint.encode_args.out = s3;
     QuicVarint.encode_args.cap = sizeof(s3);
@@ -1030,11 +1005,10 @@ void test_h3_control_stream_frame_guards()
 
     g_qc2.b = g_qc2_b;
     minimal_qc(&g_qc2);
-    H3Conn.bind.b = g_h3b_b;
     H3Conn.bind.qc = g_qc2_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3b_b);
     uint8_t s4[64];
     QuicVarint.encode_args.out = s4;
     QuicVarint.encode_args.cap = sizeof(s4);
@@ -1066,11 +1040,10 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
     uint8_t none = 0;
     g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, &none, 0, PROTO_FALSE);
@@ -1107,19 +1080,17 @@ void test_h3_respond_no_content_type_empty_body()
 {
     g_qc.b = g_qc_b;
     minimal_qc(&g_qc);
-    H3Conn.bind.b = g_h3_b;
     H3Conn.bind.qc = g_qc_ctx;
     H3Conn.app_args.on_request = on_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(g_h3_b);
 
-    H3Conn.bind.b = g_h3_b;
     H3Conn.respond_args.stream_id = 0;
     H3Conn.respond_args.status = 204;
     H3Conn.respond_args.content_type = NULL;
     H3Conn.respond_args.body = NULL;
     H3Conn.respond_args.body_len = 0;
-    H3Conn.respond(H3Conn.internal);
+    H3Conn.respond(g_h3_b);
     TEST_ASSERT_TRUE(H3Conn.ok);
     QuicStream *st = find_stream(&g_qc, 0);
     TEST_ASSERT_NOT_NULL(st);
@@ -1151,4 +1122,3 @@ void test_h3_respond_no_content_type_empty_body()
     TEST_ASSERT_EQUAL_STRING("204", e_status);
     TEST_ASSERT_EQUAL_STRING("", e_ctype);
 }
-

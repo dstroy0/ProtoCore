@@ -736,10 +736,6 @@ static uint16_t next_packet_id(uint8_t *restrict work)
 // Control Packet lands in tx.
 static void bind_codec_buffers(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Mqtt.buf.out = MQTT_CTX(work)->tx;
     Mqtt.buf.cap = PROTOCORE_MQTT_BUF_SIZE;
     Mqtt.buf.body = MQTT_CTX(work)->rx;
@@ -781,10 +777,6 @@ static proto_bool tx_plain(uint8_t *restrict work, const uint8_t *data, size_t l
 // that has nothing. A full buffer stops draining, which is the backpressure the peer sees.
 static void fill_plain(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     size_t room = PROTOCORE_MQTT_BUF_SIZE - MQTT_CTX(work)->rx_len;
     if (room == 0)
     {
@@ -838,10 +830,6 @@ static int tls_recv(void *bio, unsigned char *buf, size_t len)
 // Append what the session has decrypted to the reassembly buffer. Same shape as fill_plain.
 static void fill_tls(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     size_t room = PROTOCORE_MQTT_BUF_SIZE - MQTT_CTX(work)->rx_len;
     if (room == 0)
     {
@@ -879,10 +867,6 @@ static proto_bool tx_arm(uint8_t *restrict work, size_t len)
 // flag drops once the last octet is out.
 static void tx_drain(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (!MQTT_CTX(work)->tx_ready)
     {
         return;
@@ -913,10 +897,6 @@ static void tx_drain(uint8_t *restrict work)
 // Close the Network Connection (sec 4.2). A link still coming up is given up with the slot.
 static void link_close(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
 #if PROTOCORE_ENABLE_MQTT_TLS
     if (MQTT_CTX(work)->use_tls)
     {
@@ -1115,10 +1095,6 @@ static void handle_packet(uint8_t *restrict work, const uint8_t *body, MqttType 
 // where it landed, so nothing is copied out to parse it.
 static void process_rx(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
 #if PROTOCORE_ENABLE_MQTT_TLS
     if (MQTT_CTX(work)->use_tls)
     {
@@ -1165,10 +1141,6 @@ static void process_rx(uint8_t *restrict work)
 // handshake and the CONNACK each report where they are and the caller comes back on its own tick.
 static void link_step(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (MQTT_CTX(work)->closed || (Clock.ms - MQTT_CTX(work)->timer) >= MQTT_CTX(work)->link_budget_ms)
     {
         link_close(work);
@@ -1244,20 +1216,12 @@ static void link_step(uint8_t *restrict work)
 
 static void mqtt_on_message(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     MQTT_CTX(work)->on_message = Mqtt.delivery.on_message;
     Mqtt.ok = PROTO_TRUE;
 }
 
 static void mqtt_connect(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Mqtt.ok = PROTO_FALSE;
     if (!Mqtt.server.host || !Mqtt.session.client_id)
     {
@@ -1326,10 +1290,6 @@ static void mqtt_connect(uint8_t *restrict work)
 
 static void mqtt_publish(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Mqtt.ok = PROTO_FALSE;
     if (!MQTT_CTX(work)->session_up || Mqtt.message.qos > 2)
     {
@@ -1378,10 +1338,6 @@ static void mqtt_publish(uint8_t *restrict work)
 
 static void mqtt_subscribe(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Mqtt.ok = PROTO_FALSE;
     if (!MQTT_CTX(work)->session_up)
     {
@@ -1395,10 +1351,6 @@ static void mqtt_subscribe(uint8_t *restrict work)
 
 static void mqtt_unsubscribe(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Mqtt.ok = PROTO_FALSE;
     if (!MQTT_CTX(work)->session_up)
     {
@@ -1412,10 +1364,6 @@ static void mqtt_unsubscribe(uint8_t *restrict work)
 
 static void mqtt_loop(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // A connect still coming up takes one step per call, and nothing below it runs until the Server
     // has answered: this is the tick the connect hands the link to.
     if (MQTT_CTX(work)->link != MQTT_LINK_IDLE)
@@ -1501,19 +1449,11 @@ static void mqtt_loop(uint8_t *restrict work)
 
 static void mqtt_connected(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Mqtt.ok = MQTT_CTX(work)->session_up;
 }
 
 static void mqtt_disconnect(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (MQTT_CTX(work)->cid >= 0 && MQTT_CTX(work)->session_up)
     {
         bind_codec_buffers(work);

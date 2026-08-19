@@ -17,12 +17,20 @@ from goldenize import (  # noqa: E402
     dropped_tag_decls,
     gutted_macros,
     enclosing_has_work,
+    find_gate,
+    gate_endif,
     first_sentence,
     land_returns,
+    module_externs,
+    work_decl_at,
     module_inlines,
+    already_converted,
+    drop_flat_protos,
     module_macros,
+    module_types,
     ns_owns_state,
     rename_handle,
+    shape_text,
 )
 
 FAIL = 0
@@ -126,6 +134,28 @@ check(
     "\n    // the last one to return wins\n    Mod.value = raw;\n",
 )
 
+# ptp.h publishes `enum protocore_ptp_msg_type { PROTOCORE_PTP_SYNC = 0x0, ... };` - a tagged enum,
+# not a typedef. The regenerated header dropped it and the .c that compares against those names
+# stopped compiling.
+print("module_types: a tagged enum or struct is vocabulary too")
+check(
+    "a tagged enum is kept",
+    module_types("/** the types. */\nenum msg_type\n{\n    SYNC = 0x0,\n    RESP = 0x9\n};\n"),
+    ["/** the types. */\nenum msg_type\n{\n    SYNC = 0x0,\n    RESP = 0x9\n};"],
+)
+check(
+    "a tagged struct is kept",
+    module_types("struct Foo\n{\n    int a;\n};\n"),
+    ["struct Foo\n{\n    int a;\n};"],
+)
+check(
+    "a typedef is still kept",
+    module_types("typedef struct\n{\n    int a;\n} Foo;\n"),
+    ["typedef struct\n{\n    int a;\n} Foo;"],
+)
+check("a generated Args shape is still skipped", module_types("typedef struct\n{\n    int a;\n} FooArgs;\n"), [])
+check("a forward declaration is not a definition", module_types("struct Foo;\n"), [])
+
 print("module_macros: a macro carries the doc block above it")
 check(
     "the block directly above comes with the define",
@@ -151,6 +181,21 @@ check(
     "the include guard is still skipped, doc block or not",
     module_macros("/** the guard. */\n#define PROTOCORE_X_H\n#define A 1\n", "PROTOCORE_X_H"),
     ["#define A 1"],
+)
+check(
+    "a run whose comment opened a doxygen group carries the group's closer",
+    module_macros("/** @name Wire values. */\n///@{\n#define A 1\n#define B 2\n///@}\n", ""),
+    ["/** @name Wire values. */\n///@{\n#define A 1\n#define B 2\n///@}"],
+)
+check(
+    "the closer comes back in the spelling the header used",
+    module_macros("/** @name V.\n *  @{ */\n#define A 1\n/** @} */\n", ""),
+    ["/** @name V.\n *  @{ */\n#define A 1\n/** @} */"],
+)
+check(
+    "a run with no group opener gets no closer invented for it",
+    module_macros("/** @brief One. */\n#define A 1\n", ""),
+    ["/** @brief One. */\n#define A 1"],
 )
 check(
     "a contiguous run stays one block, not one block each",
@@ -182,6 +227,99 @@ check(
     module_macros("// about the type.\ntypedef int T;\n\n#define A 1\n", ""),
     ["#define A 1"],
 )
+
+# A vtable module is matched on the spelling the conversion emits, and a successful rewrite
+# restarts the scan at the top of the file. dtls_record's replay_init takes one parameter, so the
+# call just written was met again with one argument, staged again, and met again: `convert gen`
+# ran for ten minutes on a module with 173 call sites and never finished.
+# dtls_conn calls established() above its definition, so it carried
+# `static proto_bool protocore_dtls_conn_established(const DtlsConn *c);` near the top under a
+# comment explaining why. The definition became `static void dtls_server_established(uint8_t
+# *restrict work)`, leaving a declaration of a function that no longer exists.
+print("drop_flat_protos: a renamed entry leaves no forward declaration behind")
+check(
+    "the declaration and the comment over it both go",
+    drop_flat_protos(
+        "// Called above their definitions.\nstatic proto_bool protocore_x_up(const C *c);\n\nstatic void body(void)\n",
+        {"protocore_x_up"},
+    ),
+    "static void body(void)\n",
+)
+check(
+    "a block declaring something this pass did not rename is left alone",
+    drop_flat_protos("static proto_bool other(const C *c);\n", {"protocore_x_up"}),
+    "static proto_bool other(const C *c);\n",
+)
+check(
+    "a mixed block keeps the comment the declaration still under it needs",
+    drop_flat_protos(
+        "// Called above their definitions.\nstatic void protocore_x_up(C *c);\nstatic void other(C *c);\n",
+        {"protocore_x_up"},
+    ),
+    "// Called above their definitions.\nstatic void other(C *c);\n",
+)
+check(
+    "a definition is not a declaration",
+    drop_flat_protos("static void protocore_x_up(C *c)\n{\n    return;\n}\n", {"protocore_x_up"}),
+    "static void protocore_x_up(C *c)\n{\n    return;\n}\n",
+)
+
+# http_route.h opens `#if PROTOCORE_ENABLE_WEBSOCKET` around ONE include and tcp.h opens
+# `#if PROTOCORE_NEED_CLIENT` around ONE declaration. Neither is the module's gate, and
+# regenerating the whole header under one would drop the module from every build without that
+# capability.
+# quic_tls.c has `#if PROTOCORE_ENABLE_PQC_KEX` arms through the middle of the file. `$` under
+# re.M matches the end of any line, so "an #endif with nothing but whitespace after it" matched the
+# first one followed by a blank line: the namespace initializer landed inside the PQC arm, and every
+# entry defined below it was bound by nothing.
+print("gate_endif: the #endif that closes the file, not an inner arm's")
+PQC = "#if PROTOCORE_ENABLE_HTTP3\nint a;\n#if PROTOCORE_ENABLE_PQC\nint b;\n#endif\n\nint c;\n#endif // gate\n"
+check("an inner arm's #endif with a blank line after it is not the end", PQC[gate_endif(PQC) :], "#endif // gate\n")
+check(
+    "trailing whitespace after the last #endif does not hide it",
+    "#if X\nint a;\n#endif\n\n\n"[gate_endif("#if X\nint a;\n#endif\n\n\n") :],
+    "#endif\n\n\n",
+)
+check("a source with no conditional at all appends at the end", gate_endif("int a;\n") > len("int a;"), True)
+
+print("find_gate: the condition that wraps the body, or nothing")
+GUARD = "#ifndef PROTOCORE_X_H\n#define PROTOCORE_X_H\n\n"
+check(
+    "a gate around the whole body is the gate",
+    find_gate(GUARD + '#if PROTOCORE_ENABLE_X\n#include "a.h"\nvoid f(void);\n#endif\n\n#endif\n'),
+    "PROTOCORE_ENABLE_X",
+)
+check(
+    "a compound condition comes back whole",
+    find_gate(GUARD + "#if (PROTOCORE_ENABLE_A || PROTOCORE_ENABLE_B)\nvoid f(void);\n#endif\n\n#endif\n"),
+    "(PROTOCORE_ENABLE_A || PROTOCORE_ENABLE_B)",
+)
+check(
+    "an inner arm around one include is not a gate",
+    find_gate(GUARD + '#if PROTOCORE_ENABLE_WS\n#include "ws.h"\n#endif\n\nvoid f(void);\n\n#endif\n'),
+    "",
+)
+check(
+    "nor is the last of several inner arms",
+    find_gate(GUARD + "#if PROTOCORE_NEED_CLIENT\nint a;\n#endif\n#if PROTOCORE_NEED_CLIENT\nint b;\n#endif\n\n#endif\n"),
+    "",
+)
+check(
+    "a gate with inner arms inside it is still the gate",
+    find_gate(
+        GUARD + "#if PROTOCORE_ENABLE_X\n#if PROTOCORE_ENABLE_PQC\nint a;\n#endif\nvoid f(void);\n#endif\n\n#endif\n"
+    ),
+    "PROTOCORE_ENABLE_X",
+)
+check("a header with no conditional at all has no gate", find_gate(GUARD + "void f(void);\n\n#endif\n"), "")
+
+print("already_converted: the call this pass wrote is not a call to convert")
+check("one argument, and it is the span", already_converted(["dtls_record_work"], "dtls_record_work"), True)
+check("whitespace either side does not hide it", already_converted([" dtls_record_work "], "dtls_record_work"), True)
+check("an accessor span is recognized too", already_converted(["protocore_x_span()"], "protocore_x_span()"), True)
+check("one argument that is an operand is a call", already_converted(["&c->replay_ep2"], "dtls_record_work"), False)
+check("two arguments are never the converted form", already_converted(["a", "dtls_record_work"], "dtls_record_work"), False)
+check("no arguments are not either", already_converted([], "dtls_record_work"), False)
 
 
 # A self-call is rewritten as `<module>_<entry>(work)`, so the function it sits in has to have one.
@@ -380,28 +518,17 @@ check(
     "#if X\nint a;\n#else\n// nothing here\n#endif\n",
 )
 
-print("\nguard_borrow: an entry that reaches the context refuses a null borrow")
+# The borrow cannot be null: storage comes from the caller, the TU static_asserts that what it was
+# handed covers its regions, and the arena sums every borrow before the program is built. A short
+# pool is a BUILD failure, and the assert is what we want catching it - a run-time check would only
+# hide the thing the assert exists to report. 443 of these were removed from 106 files.
+print("\nguard_borrow: no entry checks the borrow, because it cannot be null")
 DIRECT = "static void a(uint8_t *restrict work)\n{\n    X.n = FS_CTX(work)->n;\n}\n"
-check(
-    "a written-out dereference gets the refusal",
-    guard_borrow(DIRECT, "FS"),
-    "static void a(uint8_t *restrict work)\n{\n    if (!work)\n    {\n        return;"
-    " // the pool was short of this module's borrow\n    }\n    X.n = FS_CTX(work)->n;\n}\n",
-)
+check("a written-out dereference gets no check", guard_borrow(DIRECT, "FS"), DIRECT)
 HELPER = "static void a(uint8_t *restrict work)\n{\n    X.ok = store(work) != NULL;\n}\n"
-check(
-    "so does one that hands the borrow to a helper",
-    guard_borrow(HELPER, "FS"),
-    "static void a(uint8_t *restrict work)\n{\n    if (!work)\n    {\n        return;"
-    " // the pool was short of this module's borrow\n    }\n    X.ok = store(work) != NULL;\n}\n",
-)
+check("nor does one that hands the borrow to a helper", guard_borrow(HELPER, "FS"), HELPER)
 VOIDED = "static void a(uint8_t *restrict work)\n{\n    (void)work;\n    X.n = 1;\n}\n"
-check("an entry that says it ignores the borrow is left alone", guard_borrow(VOIDED, "FS"), VOIDED)
-AGAIN = ("static void a(uint8_t *restrict work)\n{\n    if (!work)\n    {\n        return;\n    }\n"
-         "    X.n = FS_CTX(work)->n;\n}\n")
-check("a refusal already there is not written twice", guard_borrow(AGAIN, "FS"), AGAIN)
-COMMENT = "static void a(uint8_t *restrict work)\n{\n    // work is the borrow\n    X.n = 1;\n}\n"
-check("the word in a comment is not the borrow being reached", guard_borrow(COMMENT, "FS"), COMMENT)
+check("an entry that ignores the borrow is left alone", guard_borrow(VOIDED, "FS"), VOIDED)
 
 print("\nns_owns_state: both shapes of held state")
 check(
@@ -437,6 +564,71 @@ check(
     module_macros("#ifndef PROTOCORE_OTHER\n#define PROTOCORE_ACK 6\n#endif\n", "PROTOCORE_X_H"),
     ["#define PROTOCORE_ACK 6"],
 )
+
+# The include guard is the outermost thing in a header. The guard was located with a pattern
+# requiring a trailing newline, and the text it was searched in had just been stripped of one, so a
+# header whose guard is the LAST thing before the gate did not match: json.h, tcp.h and four others
+# came out with `#include "protocore_config.h"` and `#if PROTOCORE_ENABLE_JSON` ABOVE the guard.
+# json.h spells its three accessors `PROTOCORE_INLINE`, which is `static inline` behind the
+# always_inline attribute. Matching only the spelled-out form dropped all three from the
+# regenerated header while eight call sites still used them.
+# rsa.h and bignum.h export const data beside their namespace, and regenerating dropped
+# tls13_msg's `extern const uint8_t protocore_tls13_hrr_random[32];` while the .c still defined it.
+# The namespace's OWN declaration is the generator's to write, and skipping only the unqualified
+# form carried `extern const HttpRouteNs HttpRoutes;` through as data - declared twice, once const.
+# wamp.c reaches Json only under `#if PROTOCORE_ENABLE_WAMP`, and the nominal borrow was placed
+# after the last include OUTSIDE every conditional - above that gate, so 16 bytes of BSS in every
+# build with WAMP off. It must not go the other way either: beside an include under an inner
+# `#if CAP` it vanishes when that capability is off.
+print("\nwork_decl_at: the borrow goes with the calls that pass it")
+WAMP = '#include "wamp.h"\n\n#if PROTOCORE_ENABLE_WAMP\n\n#include "json.h"\n\nvoid f(void)\n{\n    Json.init(w);\n}\n\n#endif\n'
+check("inside the file's own gate, after the include there", WAMP[work_decl_at(WAMP, "Json") :].startswith("void f"), True)
+FLAT = '#include "a.h"\n#include "b.h"\n\nvoid f(void)\n{\n    Json.init(w);\n}\n'
+check("a file with no gate takes the last include", FLAT[work_decl_at(FLAT, "Json") :].startswith("void f"), True)
+INNER = '#include "a.h"\n\n#if PROTOCORE_ENABLE_X\n#include "x.h"\n#endif\n\nvoid f(void)\n{\n    Json.init(w);\n}\n'
+check(
+    "an inner arm's include is not where it goes",
+    INNER[work_decl_at(INNER, "Json") :].startswith("#if PROTOCORE_ENABLE_X"),
+    True,
+)
+
+print("\nmodule_externs: the data beside the namespace, but not the namespace")
+check(
+    "a const array export is kept, with its comment",
+    module_externs("/** @brief The HRR random. */\nextern const uint8_t hrr[32];\n", "XNs"),
+    ["/** @brief The HRR random. */\nextern const uint8_t hrr[32];"],
+)
+check("the namespace's own declaration is not data", module_externs("extern XNs X;\n", "XNs"), [])
+check("nor is it when spelled const", module_externs("extern const XNs X;\n", "XNs"), [])
+check("another module's namespace IS data here", module_externs("extern YNs Y;\n", "XNs"), ["extern YNs Y;"])
+
+print("\nmodule_inlines: PROTOCORE_INLINE is an inline too")
+check(
+    "a PROTOCORE_INLINE helper is kept, with its comment",
+    module_inlines("/** @brief Ok. */\nPROTOCORE_INLINE proto_bool ok(const W *w)\n{\n    return w->ok;\n}\n"),
+    ["/** @brief Ok. */\nPROTOCORE_INLINE proto_bool ok(const W *w)\n{\n    return w->ok;\n}"],
+)
+check(
+    "a static inline helper is still kept",
+    module_inlines("static inline int f(void)\n{\n    return 1;\n}\n"),
+    ["static inline int f(void)\n{\n    return 1;\n}"],
+)
+check("a plain declaration is not an inline", module_inlines("proto_bool ok(const W *w);\n"), [])
+
+print("\nshape_text: the guard wraps the gate, never the reverse")
+GATED_H = (
+    "// banner\n\n"
+    "/**\n * @file x.h\n */\n\n"
+    "#ifndef PROTOCORE_X_H\n#define PROTOCORE_X_H\n\n"
+    '#include "protocore_config.h"\n\n'
+    "#if PROTOCORE_ENABLE_X\n\n"
+    "PROTOCORE_BEGIN_DECLS\n\nvoid f(void);\n\nPROTOCORE_END_DECLS\n\n"
+    "#endif // PROTOCORE_ENABLE_X\n\n#endif // PROTOCORE_X_H\n"
+)
+shaped, _how = shape_text(GATED_H, "x.h", "PROTOCORE_ENABLE_X")
+check("the guard still comes first", shaped.index("#ifndef PROTOCORE_X_H") < shaped.index("protocore_config.h"), True)
+check("and the gate is under it", shaped.index("protocore_config.h") < shaped.index("#if PROTOCORE_ENABLE_X"), True)
+check("the banner is still the first line", shaped.startswith("// banner"), True)
 
 print("\nFAILURES: %d" % FAIL)
 sys.exit(1 if FAIL else 0)

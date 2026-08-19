@@ -123,10 +123,6 @@ static void ipsec_db_protocore_ipsec_selector_match(uint8_t *restrict work)
 
 static void ipsec_db_protocore_ipsec_spd_lookup(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const IpsecSpd *spd = IpsecDb.protocore_ipsec_spd_lookup_args.spd;
     const IpsecFlow *flow = IpsecDb.protocore_ipsec_spd_lookup_args.flow;
 
@@ -218,10 +214,6 @@ static void ipsec_db_protocore_ipsec_sad_init(uint8_t *restrict work)
 
 static void ipsec_db_protocore_ipsec_sad_add(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     IpsecSad *sad = IpsecDb.protocore_ipsec_sad_add_args.sad;
     uint32_t spi = IpsecDb.protocore_ipsec_sad_add_args.spi;
     const uint8_t *dst = IpsecDb.protocore_ipsec_sad_add_args.dst;
@@ -300,10 +292,6 @@ static void ipsec_db_protocore_ipsec_sad_find(uint8_t *restrict work)
 
 static void ipsec_db_protocore_ipsec_sad_remove(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     IpsecSad *sad = IpsecDb.protocore_ipsec_sad_remove_args.sad;
     uint32_t spi = IpsecDb.protocore_ipsec_sad_remove_args.spi;
 

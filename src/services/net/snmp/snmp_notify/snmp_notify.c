@@ -250,10 +250,6 @@ static void build_v2c(uint8_t *restrict work)
 // Build the message into the send stage and hand it to the datagram service.
 static void send_built(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     SnmpNotify.buf.out = SNMP_NOTIFY_CTX(work)->tx;
     SnmpNotify.buf.cap = sizeof(SNMP_NOTIFY_CTX(work)->tx);
     build_v2c(work);
@@ -285,10 +281,6 @@ static void send_built(uint8_t *restrict work)
 // counter and sysUpTime.0 from the clock.
 static void trap_v2c(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     SnmpNotify.pdu.pdu_tag = (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2;
 #if PROTOCORE_HAS_NET_STACK
     SnmpNotify.pdu.request_id = SNMP_NOTIFY_CTX(work)->trap_reqid++;

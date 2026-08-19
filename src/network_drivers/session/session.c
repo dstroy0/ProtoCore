@@ -109,10 +109,6 @@ static void proto_builtins(uint8_t *restrict work)
 
 static void proto_register(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of the session borrow
-    }
     if ((unsigned)Protocols.proto < PROTO_MAX_HANDLERS)
     {
         SESSION_CTX(work)->proto_handlers[(unsigned)Protocols.proto] = Protocols.h;
@@ -121,11 +117,6 @@ static void proto_register(uint8_t *restrict work)
 
 static void proto_get(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Protocols.handler = NULL;
-        return; // the pool was short of the session borrow
-    }
     // The protocol asked for, read before the bootstrap below can touch it. Registering the
     // built-ins runs back through THIS namespace - protocore_builtins.c sets Protocols.proto once
     // per entry - so a lookup that read Protocols.proto afterwards would answer for whichever

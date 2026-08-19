@@ -157,10 +157,6 @@ static_assert(TCP_LISTENER_OFF_CTX + sizeof(struct TcpListenerStorage) <= PROTOC
 
 static void listener_accept_allowed(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // Unsigned subtraction wraps correctly across the millis() rollover.
     if ((uint32_t)(TcpListener.gate.now_ms - TCP_LISTENER_CTX(work)->accept.window_start) >=
         PROTOCORE_ACCEPT_THROTTLE_WINDOW_MS)
@@ -179,10 +175,6 @@ static void listener_accept_allowed(uint8_t *restrict work)
 
 static void listener_accept_throttle_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TCP_LISTENER_CTX(work)->accept.window_start = 0;
     TCP_LISTENER_CTX(work)->accept.count = 0;
 }
@@ -195,10 +187,6 @@ static void listener_accept_throttle_reset(uint8_t *restrict work)
 
 static void listener_accept_allowed_ip(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Ip.args.ip = TcpListener.gate.addr;
     Ip.is_unspecified(ip_work);
     if (Ip.ok)
@@ -268,10 +256,6 @@ static void listener_accept_allowed_ip(uint8_t *restrict work)
 
 static void listener_per_ip_throttle_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
         TCP_LISTENER_CTX(work)->iptt.buckets[i].addr.family = PROTOCORE_IP_NONE;
@@ -289,10 +273,6 @@ static void listener_per_ip_throttle_reset(uint8_t *restrict work)
 
 static void listener_ip_allow_add(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TcpListener.ok = PROTO_FALSE;
     if (!TcpListener.gate.addr)
     {
@@ -386,10 +366,6 @@ static void listener_ip_allow_add_cidr(uint8_t *restrict work)
 
 static void listener_ip_allowed(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TCP_LISTENER_CTX(work)->allow.count == 0)
     {
         TcpListener.ok = PROTO_TRUE; // no rules configured -> allow all (fail-open by design)
@@ -413,10 +389,6 @@ static void listener_ip_allowed(uint8_t *restrict work)
 
 static void listener_ip_allowlist_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     for (int i = 0; i < PROTOCORE_IP_ALLOWLIST_SLOTS; i++)
     {
         TCP_LISTENER_CTX(work)->allow.rules[i].network.family = PROTOCORE_IP_NONE;
@@ -428,10 +400,6 @@ static void listener_ip_allowlist_reset(uint8_t *restrict work)
 
 static void listener_worker_queues_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     for (int i = 0; i < PROTOCORE_WORKER_COUNT; i++)
     {
         if (!TCP_LISTENER_CTX(work)->lq.wq[i])
@@ -445,10 +413,6 @@ static void listener_worker_queues_init(uint8_t *restrict work)
 
 static void listener_worker_queue(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (TcpListener.q.worker_id < 0 || TcpListener.q.worker_id >= PROTOCORE_WORKER_COUNT)
     {
         TcpListener.queue = NULL;
@@ -478,10 +442,6 @@ static void listener_queue(uint8_t *restrict work)
 
 static void listener_enqueue(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     TcpListener.ok = PROTO_FALSE;
     if (TcpListener.q.evt == NULL || TcpListener.q.evt->slot_id >= CONN_POOL_SLOTS)
     {

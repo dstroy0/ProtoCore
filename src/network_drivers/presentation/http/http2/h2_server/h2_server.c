@@ -221,10 +221,6 @@ static void cb_header(void *app, uint32_t stream_id, const char *n, size_t nl, c
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
     uint8_t *restrict work = protocore_h2_server_span();
-    if (work == NULL)
-    {
-        return;
-    }
     const uint8_t slot = (uint8_t)(uintptr_t)app;
     uint8_t *mask = &H2_SERVER_CTX(work)->slot[slot].hmask;
     HttpReq *r = &http_pool[slot];
@@ -320,10 +316,6 @@ static proto_bool cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
     uint8_t *restrict work = protocore_h2_server_span();
-    if (work == NULL)
-    {
-        return PROTO_FALSE;
-    }
     const uint8_t slot = (uint8_t)(uintptr_t)app;
     const uint8_t mask = H2_SERVER_CTX(work)->slot[slot].hmask;
     H2_SERVER_CTX(work)->slot[slot].hmask = 0; // the block is judged here; the next one starts clean

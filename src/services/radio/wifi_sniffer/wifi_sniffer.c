@@ -373,10 +373,6 @@ static void sniffer_sink(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_wifi_sniffer_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     WifiFrame f;
     WifiSniffer.parse_args.frame = frame;
@@ -399,10 +395,6 @@ static void sniffer_sink(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_
 
 static void wifi_sniffer_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t first_chan = WifiSniffer.begin_args.first_chan;
     uint8_t last_chan = WifiSniffer.begin_args.last_chan;
     uint16_t dwell_ms = WifiSniffer.begin_args.dwell_ms;
@@ -430,11 +422,6 @@ static void wifi_sniffer_begin(uint8_t *restrict work)
 
 static void wifi_sniffer_tick(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     if (!WIFI_SNIFFER_CTX(work)->running)
     {
         return;
@@ -456,11 +443,6 @@ static void wifi_sniffer_tick(uint8_t *restrict work)
 
 static void wifi_sniffer_end(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     if (!WIFI_SNIFFER_CTX(work)->running)
     {
         return;
@@ -471,31 +453,16 @@ static void wifi_sniffer_end(uint8_t *restrict work)
 
 static void wifi_sniffer_stats(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     WifiSniffer.stats_out = &WIFI_SNIFFER_CTX(work)->stats;
 }
 
 static void wifi_sniffer_survey(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     WifiSniffer.survey_out = &WIFI_SNIFFER_CTX(work)->survey;
 }
 
 static void wifi_sniffer_scan(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     WifiSniffer.scan_out = &WIFI_SNIFFER_CTX(work)->scan;
 }
 
@@ -505,10 +472,6 @@ static void wifi_sniffer_scan(uint8_t *restrict work)
 // way. There is no source to put in promiscuous mode, so the sniff does not start.
 static void wifi_sniffer_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t first_chan = WifiSniffer.begin_args.first_chan;
     uint8_t last_chan = WifiSniffer.begin_args.last_chan;
     uint16_t dwell_ms = WifiSniffer.begin_args.dwell_ms;
@@ -539,41 +502,21 @@ static void wifi_sniffer_tick(uint8_t *restrict work)
 
 static void wifi_sniffer_end(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     WIFI_SNIFFER_CTX(work)->running = PROTO_FALSE;
 }
 
 static void wifi_sniffer_stats(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     WifiSniffer.stats_out = &WIFI_SNIFFER_CTX(work)->stats;
 }
 
 static void wifi_sniffer_survey(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     WifiSniffer.survey_out = &WIFI_SNIFFER_CTX(work)->survey;
 }
 
 static void wifi_sniffer_scan(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     WifiSniffer.scan_out = &WIFI_SNIFFER_CTX(work)->scan;
 }
 

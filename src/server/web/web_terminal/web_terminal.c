@@ -64,10 +64,6 @@ static void term_ws_connect(uint8_t ws_id)
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
     uint8_t *restrict work = protocore_web_terminal_span();
-    if (work == NULL)
-    {
-        return;
-    }
     // ws_id always addresses a real pool slot: the WebSocket layer numbers ws_pool[i].ws_id = i for
     // i < MAX_WS_CONNS and dispatches every route callback as cb(ws->ws_id), so the bound check
     // cannot fail. Same reasoning for the ws_id checks in term_ws_message / term_ws_close below.
@@ -84,10 +80,6 @@ static void term_ws_message(uint8_t ws_id)
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
     uint8_t *restrict work = protocore_web_terminal_span();
-    if (work == NULL)
-    {
-        return;
-    }
     // Branch-excluded for the ws_id bound only (see term_ws_connect); the cb arms are both
     // exercised by the suite (with and without a registered command callback).
     if (WEB_TERMINAL_CTX(work)->cb && ws_id < MAX_WS_CONNS)
@@ -103,10 +95,6 @@ static void term_ws_close(uint8_t ws_id)
     // The signature belongs to whoever dispatches this, so the borrow comes from the accessor
     // rather than a parameter.
     uint8_t *restrict work = protocore_web_terminal_span();
-    if (work == NULL)
-    {
-        return;
-    }
     if (ws_id < MAX_WS_CONNS)
     {
         WEB_TERMINAL_CTX(work)->is_client[ws_id] = PROTO_FALSE;

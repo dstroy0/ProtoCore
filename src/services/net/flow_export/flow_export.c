@@ -239,10 +239,6 @@ static void v5_record(uint8_t *restrict work)
 // Length stays zero until message_finish.
 static void ipfix_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     FlowExport.ok = PROTO_FALSE;
     FlowExport.n = 0;
     if (!FlowExport.out.buf)
@@ -269,10 +265,6 @@ static void ipfix_begin(uint8_t *restrict work)
 // Count stays zero until message_finish.
 static void v9_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     FlowExport.ok = PROTO_FALSE;
     FlowExport.n = 0;
     if (!FlowExport.out.buf)
@@ -300,10 +292,6 @@ static void v9_begin(uint8_t *restrict work)
 // Field Specifier per field. RFC 3954 sec 5.1 counts a Template Record toward Count.
 static void template_set(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     FlowExport.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     const FlowFieldSpecifier *fields = FlowExport.tmpl.fields;
@@ -338,10 +326,6 @@ static void template_set(uint8_t *restrict work)
 // RFC 3954 sec 5.2 reserves FlowSet IDs 0 through 255.
 static void data_set_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     FlowExport.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (FlowExport.template_id < FLOW_TEMPLATE_ID_MIN)
@@ -362,10 +346,6 @@ static void data_set_begin(uint8_t *restrict work)
 // Template order; this copies them in and counts the record.
 static void data_record(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     FlowExport.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (!m->set_start || !FlowExport.data.record || FlowExport.data.len == 0)
@@ -385,10 +365,6 @@ static void data_record(uint8_t *restrict work)
 // the Length is the Set Header plus all records plus the optional padding.
 static void data_set_end(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     FlowExport.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (!m->set_start)
@@ -414,10 +390,6 @@ static void data_set_end(uint8_t *restrict work)
 // rather than reporting a truncated length.
 static void message_finish(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     FlowExport.ok = PROTO_FALSE;
     FlowExport.n = 0;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);

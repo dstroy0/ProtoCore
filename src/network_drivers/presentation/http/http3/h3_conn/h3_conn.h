@@ -43,10 +43,9 @@ PROTOCORE_BEGIN_DECLS
 typedef void (*H3RequestFn)(void *app, uint8_t *h3, uint64_t stream_id, const char *method, const char *path,
                             const char *authority, const uint8_t *body, size_t body_len);
 
-/** @brief The span a connection runs out of, and the QUIC transport under it. */
+/** @brief The QUIC transport under this connection. The connection's own storage is the borrow. */
 typedef struct
 {
-    uint8_t *b;  ///< PROTOCORE_H3_CONN_BORROW plaintext bytes; the context, then the streams
     uint8_t *qc; ///< the QUIC connection's context span (::QuicConnNs::bind, member ctx)
 } H3ConnBind;
 
@@ -67,25 +66,23 @@ typedef struct
     size_t body_len;          ///< its length
 } H3ConnRespondArgs;
 
-/** @brief The connection's own calls, described only in h3_conn.c. */
-struct H3ConnInternal;
-
 /**
  * @brief HTTP/3 server connection (RFC 9114).
  *
- * A caller binds the span and the QUIC connection under it, sets the members a call takes, invokes
- * it through ::H3Conn, and reads the outcome off the same handle.
+ * The connection's storage is the CALLER's: it arrives as the entry's borrow, and this file lays
+ * its context and per-stream buffers out at compile-time offsets inside it. A caller binds the QUIC
+ * connection under it, sets the members a call takes, invokes it through ::H3Conn with those bytes,
+ * and reads the outcome off the same handle.
  *
- *   H3Conn.bind.b = byte_span;
  *   H3Conn.bind.qc = quic_ctx_span;
  *   H3Conn.app_args.on_request = on_request;
  *   H3Conn.app_args.app = app;
- *   H3Conn.init(H3Conn.internal);
+ *   H3Conn.init(byte_span);
  *   H3Conn.respond_args.stream_id = id;
  *   H3Conn.respond_args.status = 200;
- *   H3Conn.respond(H3Conn.internal);
+ *   H3Conn.respond(byte_span);
  *
- * @var H3ConnNs::bind          the span this connection runs out of, and the QUIC connection under it
+ * @var H3ConnNs::bind          the QUIC connection under this one; the storage is the borrow
  * @var H3ConnNs::app_args      what the application is told about
  * @var H3ConnNs::respond_args  one response, serialized onto a request stream
  * @var H3ConnNs::ok            a call's true/false outcome
@@ -110,10 +107,9 @@ typedef struct
 
     proto_bool ok;
 
-    void (*const init)(struct H3ConnInternal *ctx);
-    void (*const respond)(struct H3ConnInternal *ctx);
+    void (*const init)(uint8_t *restrict work);
+    void (*const respond)(uint8_t *restrict work);
 
-    struct H3ConnInternal *internal;
 } H3ConnNs;
 
 /** @brief The one symbol this module exports. */

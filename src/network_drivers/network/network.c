@@ -22,7 +22,10 @@ static void network_init(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-NetworkNs network = {.dns = &Dns,
+NetworkNs network = {
+#if PROTOCORE_ENABLE_DNS
+    .dns = &Dns,
+#endif
 #if PROTOCORE_ENABLE_FORWARD
                      .forward = &Forward,
 #endif

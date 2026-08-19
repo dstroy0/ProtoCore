@@ -213,10 +213,6 @@ static void quic_packet_pn_length(uint8_t *restrict work)
 
 static void quic_packet_pn_encode(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     uint8_t *out = QuicPacket.pn_encode_args.out;
     size_t cap = QuicPacket.pn_encode_args.cap;
     uint64_t full_pn = QuicPacket.pn_encode_args.full_pn;

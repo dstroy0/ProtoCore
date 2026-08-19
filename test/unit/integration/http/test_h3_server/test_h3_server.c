@@ -655,7 +655,7 @@ void test_h3_request_served_by_route()
     TEST_ASSERT_TRUE(response_ok(&ap_s));
     TEST_ASSERT_EQUAL_UINT8(0, http_h3[PROTOCORE_H3_DISPATCH_SLOT]);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_h3_begin_edges()

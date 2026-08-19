@@ -27,10 +27,6 @@ static void control_pid_reset(uint8_t *restrict work);
 
 static void control_pid_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Pid *p = Control.pid_init_args.p;
     float kp = Control.pid_init_args.kp;
     float ki = Control.pid_init_args.ki;

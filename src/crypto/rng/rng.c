@@ -148,10 +148,6 @@ static void rng_fill(uint8_t *restrict work)
 static void rng_reseed(uint8_t *restrict work)
 {
     Rng.ok = PROTO_FALSE;
-    if (!work)
-    {
-        return;
-    }
     rng_platform_seed(work);
     Rng.ok = PROTO_TRUE;
 }

@@ -100,14 +100,10 @@ typedef struct
     size_t cap;        ///< how much room it has; at least 48
 } AuthNonceArgs;
 
-/** @brief The credential table's own state and the calls that reach it, described only in auth.c. */
-struct AuthInternal;
-
 /**
  * A caller sets the members a call takes, invokes it through ::Auth, and reads the outcome off the
  * same handle.
  *
- * @var AuthNs::work     the caller's scratch region a call borrows
  * @var AuthNs::slot     the connection a challenge or a check acts on
  * @var AuthNs::req      the parsed request a check reads its credential from
  * @var AuthNs::id       the credential set a call names
@@ -116,11 +112,9 @@ struct AuthInternal;
  * @var AuthNs::ok       a call's true/false outcome
  * @var AuthNs::expired  the MAC is authentic but the issue time falls outside the nonce lifetime
  * @var AuthNs::u8       the id an add reports, or ::PROTOCORE_AUTH_NONE when the table is full
- * @var AuthNs::internal the table's state and the calls that reach it
  */
 typedef struct
 {
-    uint8_t *work;       ///< the caller's scratch region a call borrows
     uint8_t slot;        ///< the connection a challenge or a check acts on
     struct HttpReq *req; ///< the parsed request a check reads its credential from
     uint8_t id;          ///< the credential set a call names
@@ -132,15 +126,14 @@ typedef struct
     proto_bool expired;
     uint8_t u8;
 
-    void (*add)(struct AuthInternal *ctx);
-    void (*check)(struct AuthInternal *ctx);
-    void (*challenge)(struct AuthInternal *ctx);
-    void (*rekey)(struct AuthInternal *ctx);
-    void (*mint_nonce)(struct AuthInternal *ctx);
-    void (*verify_nonce)(struct AuthInternal *ctx);
-    void (*reset)(struct AuthInternal *ctx);
+    void (*const add)(uint8_t *restrict work);
+    void (*const check)(uint8_t *restrict work);
+    void (*const challenge)(uint8_t *restrict work);
+    void (*const rekey)(uint8_t *restrict work);
+    void (*const mint_nonce)(uint8_t *restrict work);
+    void (*const verify_nonce)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *restrict work);
 
-    struct AuthInternal *internal;
 } AuthNs;
 
 /** @brief The one symbol this module exports. */

@@ -113,6 +113,42 @@
 #define PROTOCORE_ENABLE_MSGPACK 0
 #endif
 
+// The bounded JSON writer and top-level reader (codec/json).
+#ifndef PROTOCORE_ENABLE_JSON
+#define PROTOCORE_ENABLE_JSON 0
+#endif
+
+// The RFC 1951 sec 3.2.5 length and distance tables, read by the DEFLATE encoder and decoder and by
+// the SSH zlib@openssh.com stream codecs.
+#ifndef PROTOCORE_ENABLE_DEFLATE_RFC1951
+#define PROTOCORE_ENABLE_DEFLATE_RFC1951 0
+#endif
+
+// The HTTP route table: the match, the per-route interface gate and the handler a request reaches.
+#ifndef PROTOCORE_ENABLE_HTTP_ROUTE
+#define PROTOCORE_ENABLE_HTTP_ROUTE 0
+#endif
+
+// The built-in dashboard, provisioning form and captive-portal pages served from flash.
+#ifndef PROTOCORE_ENABLE_WEB_ASSETS
+#define PROTOCORE_ENABLE_WEB_ASSETS 0
+#endif
+
+// The DNS query/response codec the resolver and the server both encode through.
+#ifndef PROTOCORE_ENABLE_DNS
+#define PROTOCORE_ENABLE_DNS 0
+#endif
+
+// The TCP surface: the shared connection state every TCP role reaches through.
+#ifndef PROTOCORE_ENABLE_TCP
+#define PROTOCORE_ENABLE_TCP 0
+#endif
+
+// The UDP surface: the shared socket state the client and the listener reach through.
+#ifndef PROTOCORE_ENABLE_UDP
+#define PROTOCORE_ENABLE_UDP 0
+#endif
+
 #ifndef PROTOCORE_ENABLE_FILE_SERVING
 #define PROTOCORE_ENABLE_FILE_SERVING 0
 #endif

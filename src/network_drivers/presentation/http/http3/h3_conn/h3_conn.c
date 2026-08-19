@@ -69,13 +69,8 @@ typedef struct
     H3Stream streams[PROTOCORE_H3_MAX_STREAMS];
 } H3ConnCtx;
 
-// The handle a caller sets a call's members on, and the connection the bound span holds.
-struct H3ConnInternal
-{
-    H3ConnCtx *c; ///< the connection, resolved from the bound span
-    H3ConnNs *ns; ///< the handle a caller sets a call's members on
-};
-
+// The caller hands these bytes to every entry; PROTOCORE_H3_CONN_BORROW is what it must give, and
+// the assert below is this file checking it got that much.
 // H3ConnNs::respond builds its response HEADERS frame from a fixed 256-byte QPACK block into a
 // PROTOCORE_H3_STREAM_BUF output buffer, which is why that builder's failure guard carries a coverage
 // exclusion. PROTOCORE_H3_STREAM_BUF is an overridable macro (h3_conn.h), so pin the relationship here
@@ -204,9 +199,8 @@ static void h3_fail(H3ConnCtx *h3, uint64_t error_code)
 {
     if (h3->qc)
     {
-        QuicConn.bind.ctx = h3->qc;
         QuicConn.close_args.error_code = error_code;
-        QuicConn.close_app(QuicConn.internal);
+        QuicConn.close_app(h3->qc);
     }
 }
 
@@ -462,12 +456,11 @@ static void on_handshake_done(void *app, uint8_t *qc)
     H3Frame.build_settings_args.n = 2;
     H3Frame.build_settings(h3_frame_work);
     p += H3Frame.n;
-    QuicConn.bind.ctx = qc;
     QuicConn.stream_send_args.stream_id = 3;
     QuicConn.stream_send_args.data = buf;
     QuicConn.stream_send_args.len = p;
     QuicConn.stream_send_args.fin = PROTO_FALSE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(qc);
 
     // QPACK encoder (id 7, type 0x02) and decoder (id 11, type 0x03) streams: type byte only.
     uint8_t t;
@@ -476,23 +469,21 @@ static void on_handshake_done(void *app, uint8_t *qc)
     QuicVarint.encode_args.value = 0x02;
     QuicVarint.encode(quic_varint_work);
     size_t n = QuicVarint.n;
-    QuicConn.bind.ctx = qc;
     QuicConn.stream_send_args.stream_id = 7;
     QuicConn.stream_send_args.data = &t;
     QuicConn.stream_send_args.len = n;
     QuicConn.stream_send_args.fin = PROTO_FALSE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(qc);
     QuicVarint.encode_args.out = &t;
     QuicVarint.encode_args.cap = 1;
     QuicVarint.encode_args.value = 0x03;
     QuicVarint.encode(quic_varint_work);
     n = QuicVarint.n;
-    QuicConn.bind.ctx = qc;
     QuicConn.stream_send_args.stream_id = 11;
     QuicConn.stream_send_args.data = &t;
     QuicConn.stream_send_args.len = n;
     QuicConn.stream_send_args.fin = PROTO_FALSE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(qc);
     h3->next_uni_id = 15;
 }
 
@@ -520,9 +511,8 @@ static void h3_conn_open(H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, voi
     H3Frame.settings_defaults(h3_frame_work);
 
     QuicConnCallbacks cb = {on_stream_data, on_handshake_done, h3};
-    QuicConn.bind.ctx = qc;
     QuicConn.cb = cb;
-    QuicConn.callbacks(QuicConn.internal);
+    QuicConn.callbacks(qc);
 }
 
 static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, const char *content_type,
@@ -623,12 +613,11 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
         }
         op += dn;
     }
-    QuicConn.bind.ctx = h3->qc;
     QuicConn.stream_send_args.stream_id = stream_id;
     QuicConn.stream_send_args.data = out;
     QuicConn.stream_send_args.len = op;
     QuicConn.stream_send_args.fin = PROTO_TRUE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(h3->qc);
     const proto_bool sent = (QuicConn.n == op);
     return sent;
 }
@@ -636,32 +625,27 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
 // --- the entries -----------------------------------------------------------
 
 // The bound span, as this file's connection. Every entry starts here.
-static H3ConnCtx *h3_bound(struct H3ConnInternal *restrict ctx)
+static H3ConnCtx *h3_bound(uint8_t *restrict work)
 {
-    if (!ctx || !ctx->ns->bind.b)
-    {
-        return NULL;
-    }
-    ctx->c = H3_CTX(ctx->ns->bind.b);
-    return ctx->c;
+    return work ? H3_CTX(work) : NULL;
 }
 
-static void h3_conn_init(struct H3ConnInternal *restrict ctx)
+static void h3_conn_init(uint8_t *restrict work)
 {
-    H3ConnCtx *h3 = h3_bound(ctx);
+    H3ConnCtx *h3 = h3_bound(work);
     H3Conn.ok = PROTO_FALSE;
     if (!h3 || !H3Conn.bind.qc)
     {
         return;
     }
-    h3->b = H3Conn.bind.b; // survives the wipe inside h3_conn_open
+    h3->b = work; // survives the wipe inside h3_conn_open
     h3_conn_open(h3, H3Conn.bind.qc, H3Conn.app_args.on_request, H3Conn.app_args.app);
     H3Conn.ok = (h3->b != NULL);
 }
 
-static void h3_conn_respond(struct H3ConnInternal *restrict ctx)
+static void h3_conn_respond(uint8_t *restrict work)
 {
-    H3ConnCtx *h3 = h3_bound(ctx);
+    H3ConnCtx *h3 = h3_bound(work);
     H3Conn.ok = PROTO_FALSE;
     if (!h3)
     {
@@ -671,9 +655,7 @@ static void h3_conn_respond(struct H3ConnInternal *restrict ctx)
                               H3Conn.respond_args.content_type, H3Conn.respond_args.body, H3Conn.respond_args.body_len);
 }
 
-static struct H3ConnInternal s_h3 = {.ns = &H3Conn};
-
-H3ConnNs H3Conn = {.init = h3_conn_init, .respond = h3_conn_respond, .internal = &s_h3};
+H3ConnNs H3Conn = {.init = h3_conn_init, .respond = h3_conn_respond};
 
 PROTOCORE_END_DECLS
 

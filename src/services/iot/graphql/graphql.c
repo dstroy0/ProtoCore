@@ -163,10 +163,6 @@ static proto_bool is_name_continue(char c)
 // Raise a request error (spec sec 7.1.2), keeping any more specific error already raised.
 static void flag_request_error(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (GRAPHQL_CTX(work)->doc.err == PROTOCORE_GQL_OK)
     {
         GRAPHQL_CTX(work)->doc.err = PROTOCORE_GQL_ERR_PARSE;
@@ -849,10 +845,6 @@ static void graphql_arg_bool(uint8_t *restrict work)
 // serialize the response map (sec 7.1) into ns->response.
 static void graphql_execute(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     GqlExecution *ex = &GRAPHQL_CTX(work)->exec;
 

@@ -9,7 +9,6 @@ if(PROTOCORE_ENABLE_DTLS)
   protocore_module(pc_network_drivers_presentation_security_dtls_dtls_conn
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/dtls_conn.c"
     PUBLIC
-      pc_crypto_hash_sha256
       pc_network_drivers_presentation_security_dtls_dtls_handshake
       pc_network_drivers_presentation_security_dtls_dtls_record
       pc_network_drivers_tls_key_schedule

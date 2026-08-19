@@ -130,10 +130,6 @@ static void power_decide(uint8_t *restrict work)
 
 static void power_json(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const PowerPlan *plan = Power.out_args.plan;
     const int16_t temp_c = Power.out_args.temp_c;
     char *out = Power.out_args.out;
@@ -182,10 +178,6 @@ static void power_json(uint8_t *restrict work)
 
 static void power_brownout(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // Read once and latch: the reset reason describes this boot, so it must not change under a
     // caller polling it every tick through the recovery window.
     if (!POWER_MGMT_CTX(work)->boot_checked)
@@ -230,10 +222,6 @@ static void power_apply(uint8_t *restrict work)
 #if PROTOCORE_HAS_VENDOR_BT
 static void power_gate_bt(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     Power.ok = PROTO_FALSE;
     if (POWER_MGMT_CTX(work)->bt_released)
     {

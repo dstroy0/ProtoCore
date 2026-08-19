@@ -228,10 +228,6 @@ static void relay_on_accept(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_relay_listener_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     ConnPool.slot = slot;
     ConnPool.listener_id(protocore_conn_pool_span());
@@ -283,10 +279,6 @@ static void relay_on_data(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_relay_listener_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     service(work, slot);
 }
@@ -296,10 +288,6 @@ static void relay_on_poll(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_relay_listener_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     ConnPool.slot = slot;
     ConnPool.active(protocore_conn_pool_span());
@@ -315,10 +303,6 @@ static void relay_on_close(uint8_t slot)
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_relay_listener_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     RelayBridge *br = bridge_by_conn(work, slot);
     if (br)
@@ -403,7 +387,6 @@ static void relay_listener_publish(uint8_t *restrict work)
 
 static void relay_listener_reset(uint8_t *restrict work)
 {
-
     for (int i = 0; i < PROTOCORE_RELAY_MAX_PUBLISH; i++)
     {
         RELAY_LISTENER_CTX(work)->binds[i].active = PROTO_FALSE;

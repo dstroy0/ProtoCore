@@ -85,7 +85,6 @@ static void verdict(protocore_x509_status st)
 // build cannot verify rather than one to truncate.
 static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, uint8_t *e_out)
 {
-
     Der.read_args.buf = der;
     Der.read_args.len = len;
     Der.read_args.pos = 0;
@@ -136,7 +135,6 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
 // takes r || s as two fixed 32-octet big-endian fields. Each is left-padded into its half.
 static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PROTOCORE_ECDSA_P256_SIG_LEN])
 {
-
     Der.read_args.buf = der;
     Der.read_args.len = len;
     Der.read_args.pos = 0;
@@ -269,11 +267,6 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
 
 static void x509_signature(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        verdict(PROTOCORE_X509_ERR_ARGS);
-        return; // the pool was short of this module's borrow
-    }
     const X509Cert *cert = X509Verify.link_args.cert;
     const X509Cert *issuer = X509Verify.link_args.issuer;
     if (cert == NULL || issuer == NULL || cert->tbs.p == NULL || cert->sig.p == NULL || issuer->key.p == NULL)
@@ -286,11 +279,6 @@ static void x509_signature(uint8_t *restrict work)
 
 static void x509_message(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        verdict(PROTOCORE_X509_ERR_ARGS);
-        return; // the pool was short of this module's borrow
-    }
     const X509Cert *signer = X509Verify.message_args.signer;
     const uint8_t *msg = X509Verify.message_args.msg;
     const uint8_t *sig = X509Verify.message_args.sig;

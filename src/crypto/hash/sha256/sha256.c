@@ -354,22 +354,12 @@ static void sha256_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA25
 
 static void sha256_init(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Sha256.ok = PROTO_FALSE;
-        return;
-    }
     sha256_state_init(work);
     Sha256.ok = PROTO_TRUE;
 }
 
 static void sha256_update(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        Sha256.ok = PROTO_FALSE;
-        return;
-    }
     sha256_absorb(work, Sha256.update_args.data, Sha256.update_args.len);
 }
 

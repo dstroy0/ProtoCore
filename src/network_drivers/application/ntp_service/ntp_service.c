@@ -117,10 +117,6 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
     // The signature belongs to whoever dispatches this, so the borrow comes from the
     // accessor rather than a parameter.
     uint8_t *restrict work = protocore_ntp_service_span();
-    if (work == NULL)
-    {
-        return;
-    }
 
     (void)peer;
     (void)ctx;
@@ -159,10 +155,6 @@ static void ntp_service_epoch(uint8_t *restrict work);
 
 static void ntp_service_begin(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *tz = NtpService.begin_args.tz;
     const char *server1 = NtpService.begin_args.server1;
     const char *server2 = NtpService.begin_args.server2;
@@ -221,21 +213,11 @@ static void ntp_service_begin(uint8_t *restrict work)
 
 static void ntp_service_synced(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     NtpService.ok = NTP_SERVICE_CTX(work)->epoch != 0;
 }
 
 static void ntp_service_epoch(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     if (NTP_SERVICE_CTX(work)->epoch == 0)
     {
         NtpService.value = 0;
@@ -248,10 +230,6 @@ static void ntp_service_epoch(uint8_t *restrict work)
 
 static void ntp_service_set_test_epoch(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     time_t epoch = NtpService.set_test_epoch_args.epoch;
 
     NTP_SERVICE_CTX(work)->epoch = epoch;
@@ -288,11 +266,6 @@ size_t protocore_ntp_http_date(char *out, size_t out_cap)
 // NTP alongside an RTC / GPS.
 static void ntp_service_time_source(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
-
     ntp_service_epoch(work);
     NtpService.ms = (uint32_t)NtpService.value;
 }

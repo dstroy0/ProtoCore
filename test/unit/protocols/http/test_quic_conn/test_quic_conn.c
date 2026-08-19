@@ -19,6 +19,8 @@
 
 #include <unity.h>
 
+static uint8_t quic_tls_work[16]; // the borrow an entry takes; QuicTlsServer never reads it
+
 static uint8_t quic_crypto_work[16]; // the borrow an entry takes; QuicCrypto never reads it
 
 static uint8_t quic_packet_work[16]; // the borrow an entry takes; QuicPacket never reads it
@@ -402,7 +404,6 @@ void test_full_handshake_and_stream()
     QuicTlsConfig cfg;
     make_cfg(&cfg);
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.init_args.cfg = &cfg;
     QuicConn.init_args.odcid = ODCID;
@@ -412,7 +413,7 @@ void test_full_handshake_and_stream()
     QuicConn.init_args.our_scid = SERVER_SCID;
     QuicConn.init_args.our_scid_len = (uint8_t)(sizeof(SERVER_SCID));
     QuicConn.cb = cb;
-    QuicConn.init(QuicConn.internal);
+    QuicConn.init(g_qc_ctx);
 
     QuicInitialSecrets init;
     QuicCrypto.derive_initial_secrets_args.keys_work = tw;
@@ -452,19 +453,17 @@ void test_full_handshake_and_stream()
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
 
     uint8_t sdg[1500];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     size_t sl = QuicConn.n;
     TEST_ASSERT_TRUE(sl > 0);
 
@@ -582,23 +581,20 @@ void test_full_handshake_and_stream()
     hfl += QuicFrame.n;
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_client_keys, hfr, hfl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = idg;
     QuicConn.recv_args.len = idl + hdl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
 
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_established(QuicConn.internal);
+    QuicConn.is_established(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.established);
     TEST_ASSERT_TRUE(g_hs_done);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     sl = QuicConn.n;
     TEST_ASSERT_TRUE(sl > 0);
     proto_bool saw_hs_done = PROTO_FALSE;
@@ -639,29 +635,26 @@ void test_full_handshake_and_stream()
     size_t sfl = QuicFrame.n;
     uint8_t s1[256];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_client_keys, sfr, sfl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = s1;
     QuicConn.recv_args.len = s1l;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT64(0, g_stream_id);
     TEST_ASSERT_EQUAL_UINT(3, g_stream_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY("GET", g_stream_data, 3);
     TEST_ASSERT_TRUE(g_stream_fin);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = 0;
     QuicConn.stream_send_args.data = (const uint8_t *)"OK";
     QuicConn.stream_send_args.len = 2;
     QuicConn.stream_send_args.fin = PROTO_TRUE;
-    QuicConn.stream_send(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
+    QuicConn.stream_send(g_qc_ctx);
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     sl = QuicConn.n;
     TEST_ASSERT_TRUE(sl > 0);
 
@@ -712,19 +705,16 @@ void test_full_handshake_and_stream()
     }
     TEST_ASSERT_TRUE(got_resp);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 5000;
-    QuicConn.on_timeout(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
+    QuicConn.on_timeout(g_qc_ctx);
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 5000 + PROTOCORE_QUIC_PTO_MS + 1;
-    QuicConn.on_timeout(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
+    QuicConn.on_timeout(g_qc_ctx);
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     sl = QuicConn.n;
     TEST_ASSERT_TRUE(sl > 0);
     proto_bool resent = PROTO_FALSE;
@@ -779,7 +769,6 @@ void test_pto_retransmits_flight()
     QuicTlsConfig cfg;
     make_cfg(&cfg);
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.init_args.cfg = &cfg;
     QuicConn.init_args.odcid = ODCID;
@@ -789,7 +778,7 @@ void test_pto_retransmits_flight()
     QuicConn.init_args.our_scid = SERVER_SCID;
     QuicConn.init_args.our_scid_len = (uint8_t)(sizeof(SERVER_SCID));
     QuicConn.cb = cb;
-    QuicConn.init(QuicConn.internal);
+    QuicConn.init(g_qc_ctx);
 
     QuicInitialSecrets init;
     QuicCrypto.derive_initial_secrets_args.keys_work = tw;
@@ -826,48 +815,41 @@ void test_pto_retransmits_flight()
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
 
     uint8_t sdg[1500];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1000;
-    QuicConn.on_timeout(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
+    QuicConn.on_timeout(g_qc_ctx);
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1000 + PROTOCORE_QUIC_PTO_MS + 1;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     uint8_t sdg2[1500];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg2;
     QuicConn.send_args.cap = sizeof(sdg2);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     size_t sl2 = QuicConn.n;
     TEST_ASSERT_TRUE(sl2 > 0);
     uint8_t plain[2048], sh[512];
@@ -881,16 +863,14 @@ void test_pto_retransmits_flight()
 
     g_qc.space[QUIC_ENC_INITIAL].discarded = PROTO_TRUE;
     g_qc.space[QUIC_ENC_HANDSHAKE].largest_acked = g_qc.space[QUIC_ENC_HANDSHAKE].last_ae_pn;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1000 + 10 * PROTOCORE_QUIC_PTO_MS;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     TEST_ASSERT_FALSE(g_qc.pto_armed);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg2;
     QuicConn.send_args.cap = sizeof(sdg2);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -899,7 +879,6 @@ static void feed_client_initial(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicInit
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);
-    QuicConn.bind.ctx = QUIC_SPAN(qc);
     QuicConn.bind.b = qc_span(qc);
     QuicConn.init_args.cfg = &cfg;
     QuicConn.init_args.odcid = ODCID;
@@ -918,7 +897,7 @@ static void feed_client_initial(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicInit
         QuicConn.cb.on_handshake_done = NULL;
         QuicConn.cb.app = NULL;
     }
-    QuicConn.init(QuicConn.internal);
+    QuicConn.init(QUIC_SPAN(qc));
     QuicCrypto.derive_initial_secrets_args.keys_work = tw;
     QuicCrypto.derive_initial_secrets_args.dcid = ODCID;
     QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
@@ -951,11 +930,10 @@ static void feed_client_initial(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicInit
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init->client, frames, fl);
-    QuicConn.bind.ctx = QUIC_SPAN(qc);
     QuicConn.bind.b = qc_span(qc);
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(QUIC_SPAN(qc));
     TEST_ASSERT_TRUE(QuicConn.ok);
 }
 
@@ -968,25 +946,21 @@ void test_connection_close_api()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicConn.close(QuicConn.internal);
+    QuicConn.close(g_qc_ctx);
     uint8_t cdg[512];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = cdg;
     QuicConn.send_args.cap = sizeof(cdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.closed);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = cdg;
     QuicConn.send_args.cap = sizeof(cdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -1000,11 +974,10 @@ void test_connection_close_on_malformed_frame()
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
 
     uint8_t sdg[1500];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     size_t sl = QuicConn.n;
     TEST_ASSERT_TRUE(sl > 0);
     uint8_t plain[2048], sh[512];
@@ -1057,18 +1030,16 @@ void test_connection_close_on_malformed_frame()
     uint8_t bdg[256];
     size_t bl = build_long(bdg, sizeof(bdg), QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                            0, &hs_client_keys, bad, sizeof(bad));
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = bdg;
     QuicConn.recv_args.len = bl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
 
     uint8_t cdg[512];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = cdg;
     QuicConn.send_args.cap = sizeof(cdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     size_t cl = QuicConn.n;
     TEST_ASSERT_TRUE(cl > 0);
     size_t cw = 0;
@@ -1102,14 +1073,12 @@ void test_connection_close_on_malformed_frame()
         }
     }
     TEST_ASSERT_TRUE(saw);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.closed);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = cdg;
     QuicConn.send_args.cap = sizeof(cdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -1117,7 +1086,6 @@ static void init_conn(QuicConnCtx *qc, QuicConnCallbacks *cb)
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);
-    QuicConn.bind.ctx = QUIC_SPAN(qc);
     QuicConn.bind.b = qc_span(qc);
     QuicConn.init_args.cfg = &cfg;
     QuicConn.init_args.odcid = ODCID;
@@ -1136,7 +1104,7 @@ static void init_conn(QuicConnCtx *qc, QuicConnCallbacks *cb)
         QuicConn.cb.on_handshake_done = NULL;
         QuicConn.cb.app = NULL;
     }
-    QuicConn.init(QuicConn.internal);
+    QuicConn.init(QUIC_SPAN(qc));
 }
 
 void test_quic_recv_connection_close()
@@ -1164,20 +1132,17 @@ void test_quic_recv_connection_close()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.closed);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 }
 
@@ -1206,14 +1171,12 @@ void test_quic_recv_ping_and_max_data()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 }
 
@@ -1233,11 +1196,10 @@ void test_quic_recv_bad_version()
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, 1);
     dg[1] = dg[2] = dg[3] = dg[4] = 0xAA;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 }
 
@@ -1256,11 +1218,10 @@ void test_quic_recv_unsupported_long_type()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_0RTT, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, 1);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 }
 
@@ -1278,11 +1239,10 @@ void test_quic_recv_short_before_app_keys()
     uint8_t fr[8] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_short(dg, sizeof(dg), SERVER_SCID, sizeof(SERVER_SCID), 0, &init.client, fr, 1);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 }
 
@@ -1292,11 +1252,10 @@ void test_quic_recv_short_too_short()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     uint8_t dg[1] = {0x40};
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = sizeof(dg);
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 }
 
@@ -1316,16 +1275,13 @@ void test_quic_recv_unprotect_failure()
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, 1);
     dg[dl - 1] ^= 0xFF;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_established(QuicConn.internal);
+    QuicConn.is_established(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.established);
 }
 
@@ -1335,11 +1291,10 @@ void test_quic_recv_truncated_long_header()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     uint8_t dg[4] = {0xC0, 0x00, 0x00, 0x00};
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = sizeof(dg);
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 }
 
@@ -1349,11 +1304,10 @@ void test_quic_send_amplification_limited()
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
     uint8_t out[256];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof(out);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -1380,14 +1334,12 @@ void test_quic_crypto_out_of_order_and_dup()
     size_t fl = QuicFrame.n;
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 
     QuicFrame.build_crypto_args.out = fr;
@@ -1399,20 +1351,18 @@ void test_quic_crypto_out_of_order_and_dup()
     fl = QuicFrame.n;
     dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1,
                     &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     uint8_t dg2[256];
     size_t dl2 = build_long(dg2, sizeof(dg2), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             2, &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg2;
     QuicConn.recv_args.len = dl2;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
 }
 
@@ -1440,18 +1390,15 @@ void test_quic_timeout_when_closed()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.closed);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1000;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
 }
 
 void test_quic_stream_send_table_full()
@@ -1461,22 +1408,20 @@ void test_quic_stream_send_table_full()
     init_conn(&g_qc, &cb);
     for (int i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.stream_send_args.stream_id = (uint64_t)(i * 4);
         QuicConn.stream_send_args.data = (const uint8_t *)"hi";
         QuicConn.stream_send_args.len = 2;
         QuicConn.stream_send_args.fin = PROTO_FALSE;
-        QuicConn.stream_send(QuicConn.internal);
+        QuicConn.stream_send(g_qc_ctx);
         TEST_ASSERT_EQUAL_UINT(2, QuicConn.n);
     }
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = 999;
     QuicConn.stream_send_args.data = (const uint8_t *)"x";
     QuicConn.stream_send_args.len = 1;
     QuicConn.stream_send_args.fin = PROTO_FALSE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -1499,39 +1444,35 @@ void test_quic_recv_malformed_initial_headers()
     QuicPacket.build_long_header(quic_packet_work);
     size_t hn = QuicPacket.n;
     dg[hn] = 0xC0;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = hn + 1;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 
     dg[hn] = 0x40;
     dg[hn + 1] = 0xFF;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = hn + 2;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 
     dg[hn] = 0x00;
     dg[hn + 1] = 0xC0;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = hn + 2;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 
     dg[hn] = 0x00;
     dg[hn + 1] = 0x44;
     dg[hn + 2] = 0x00;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = hn + 8;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 
     dg[hn] = 0x00;
@@ -1541,11 +1482,10 @@ void test_quic_recv_malformed_initial_headers()
     QuicVarint.encode(quic_varint_work);
     size_t c = QuicVarint.n;
     memset(dg + hn + 1 + c, 0, 1450 - (hn + 1 + c));
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = 1450;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 }
 
@@ -1570,14 +1510,12 @@ void test_quic_recv_handshake_done_frame()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, hd, hdl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 }
 
@@ -1608,11 +1546,10 @@ void test_quic_conn_stream_frames()
         size_t fl = QuicFrame.n;
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
         g_stream_len = 0;
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.recv_args.datagram = dg;
         QuicConn.recv_args.len = dl;
-        QuicConn.recv(QuicConn.internal);
+        QuicConn.recv(g_qc_ctx);
         TEST_ASSERT_EQUAL_UINT(0, g_stream_len);
     }
 
@@ -1632,11 +1569,10 @@ void test_quic_conn_stream_frames()
         size_t fl = QuicFrame.n;
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
         g_stream_fin = PROTO_FALSE;
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.recv_args.datagram = dg;
         QuicConn.recv_args.len = dl;
-        QuicConn.recv(QuicConn.internal);
+        QuicConn.recv(g_qc_ctx);
         TEST_ASSERT_TRUE(g_stream_fin);
     }
 
@@ -1659,11 +1595,10 @@ void test_quic_conn_stream_frames()
             fl += QuicFrame.n;
         }
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.recv_args.datagram = dg;
         QuicConn.recv_args.len = dl;
-        QuicConn.recv(QuicConn.internal);
+        QuicConn.recv(g_qc_ctx);
         TEST_ASSERT_TRUE(QuicConn.ok);
     }
 }
@@ -1695,14 +1630,12 @@ void test_quic_conn_crypto_window_clamp()
     QuicFrame.build_crypto(quic_frame_work);
     size_t fl = QuicFrame.n;
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
     QuicFrame.build_crypto_args.out = fr;
     QuicFrame.build_crypto_args.cap = sizeof fr;
@@ -1712,13 +1645,11 @@ void test_quic_conn_crypto_window_clamp()
     QuicFrame.build_crypto(quic_frame_work);
     fl = QuicFrame.n;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 1, &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 }
 
@@ -1744,22 +1675,19 @@ void test_quic_conn_crypto_error_close()
     size_t fl = QuicFrame.n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.close_args.error_code = 0;
-    QuicConn.close(QuicConn.internal);
+    QuicConn.close(g_qc_ctx);
     uint8_t out[256];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
 }
 
@@ -1777,22 +1705,19 @@ void test_quic_conn_no_keys_build()
     uint8_t fr[32] = {QUIC_FT_PING};
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, sizeof fr);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     uint8_t out[256];
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     (void)QuicConn.n;
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 }
 
@@ -1805,22 +1730,18 @@ void test_quic_conn_pto_not_yet()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
     uint8_t out[2048];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 0;
-    QuicConn.on_timeout(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
+    QuicConn.on_timeout(g_qc_ctx);
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1;
-    QuicConn.on_timeout(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 }
 
@@ -1835,11 +1756,10 @@ void test_quic_conn_send_tiny_cap()
         size_t ch_len = 0;
         feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
         uint8_t out[64];
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.send_args.out = out;
         QuicConn.send_args.cap = cap;
-        QuicConn.send(QuicConn.internal);
+        QuicConn.send(g_qc_ctx);
         (void)QuicConn.n;
     }
 }
@@ -1849,7 +1769,6 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
 {
     QuicTlsConfig cfg;
     make_cfg(&cfg);
-    QuicConn.bind.ctx = QUIC_SPAN(qc);
     QuicConn.bind.b = qc_span(qc);
     QuicConn.init_args.cfg = &cfg;
     QuicConn.init_args.odcid = ODCID;
@@ -1868,7 +1787,7 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
         QuicConn.cb.on_handshake_done = NULL;
         QuicConn.cb.app = NULL;
     }
-    QuicConn.init(QuicConn.internal);
+    QuicConn.init(QUIC_SPAN(qc));
     QuicCrypto.derive_initial_secrets_args.keys_work = tw;
     QuicCrypto.derive_initial_secrets_args.dcid = ODCID;
     QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
@@ -1905,18 +1824,16 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init->client, frames, fl);
-    QuicConn.bind.ctx = QUIC_SPAN(qc);
     QuicConn.bind.b = qc_span(qc);
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(QUIC_SPAN(qc));
 
     uint8_t sdg[1500];
-    QuicConn.bind.ctx = QUIC_SPAN(qc);
     QuicConn.bind.b = qc_span(qc);
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(QUIC_SPAN(qc));
     size_t sl = QuicConn.n;
     uint8_t plain[2048], sh[512], hsflight[1024];
     size_t wire = 0;
@@ -2021,16 +1938,14 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     hfl += QuicFrame.n;
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_client_keys, hfr, hfl);
-    QuicConn.bind.ctx = QUIC_SPAN(qc);
     QuicConn.bind.b = qc_span(qc);
     QuicConn.recv_args.datagram = idg;
     QuicConn.recv_args.len = idl + hdl;
-    QuicConn.recv(QuicConn.internal);
-    QuicConn.bind.ctx = QUIC_SPAN(qc);
+    QuicConn.recv(QUIC_SPAN(qc));
     QuicConn.bind.b = qc_span(qc);
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(QUIC_SPAN(qc));
 }
 
 void test_quic_conn_stream_nothing_to_send()
@@ -2041,27 +1956,23 @@ void test_quic_conn_stream_nothing_to_send()
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     uint8_t out[512];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = 0;
     QuicConn.stream_send_args.data = (const uint8_t *)"OK";
     QuicConn.stream_send_args.len = 2;
     QuicConn.stream_send_args.fin = PROTO_TRUE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(2, QuicConn.n);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 }
 
@@ -2072,22 +1983,19 @@ void test_quic_conn_short_header_tiny_cap()
     QuicInitialSecrets init;
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = 0;
     QuicConn.stream_send_args.data = (const uint8_t *)"DATA";
     QuicConn.stream_send_args.len = 4;
     QuicConn.stream_send_args.fin = PROTO_FALSE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(g_qc_ctx);
     uint8_t out[8];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = 4;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     (void)QuicConn.n;
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 }
 
@@ -2103,20 +2011,17 @@ void test_quic_conn_close_level_fallback()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 5,
                            &init.client, bad, sizeof bad);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     uint8_t out[256];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.closed);
 }
 
@@ -2125,7 +2030,6 @@ void test_quic_conn_null_callbacks()
     fill();
     QuicTlsConfig cfg;
     make_cfg(&cfg);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.init_args.cfg = &cfg;
     QuicConn.init_args.odcid = ODCID;
@@ -2137,7 +2041,7 @@ void test_quic_conn_null_callbacks()
     QuicConn.cb.on_stream_data = NULL; // this connection is opened with no hooks at all
     QuicConn.cb.on_handshake_done = NULL;
     QuicConn.cb.app = NULL;
-    QuicConn.init(QuicConn.internal);
+    QuicConn.init(g_qc_ctx);
     TEST_ASSERT_NULL(g_qc.cb.on_stream_data);
     TEST_ASSERT_NULL(g_qc.cb.on_handshake_done);
 
@@ -2170,22 +2074,19 @@ void test_quic_conn_null_callbacks()
     fl += QuicFrame.n;
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT(0, g_stream_len);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 
     QuicPacketKeys apc, aps;
     QuicInitialSecrets init2;
     complete_handshake(&g_qc2, NULL, &init2, &apc, &aps, sizeof(CLIENT_SCID));
-    QuicConn.bind.ctx = g_qc2_ctx;
-    QuicConn.is_established(QuicConn.internal);
+    QuicConn.is_established(g_qc2_ctx);
     TEST_ASSERT_TRUE(QuicConn.established);
     TEST_ASSERT_FALSE(g_hs_done);
 }
@@ -2215,20 +2116,18 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     QuicFrame.build_stream(quic_frame_work);
     size_t fl = QuicFrame.n;
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT(4, g_stream_len);
 
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT(4, g_stream_len);
 
@@ -2243,11 +2142,10 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     fl = QuicFrame.n;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
     g_stream_fin = PROTO_FALSE;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_FALSE(g_stream_fin);
 
@@ -2261,21 +2159,19 @@ void test_quic_conn_stream_duplicate_and_stale_fin()
     QuicFrame.build_stream(quic_frame_work);
     fl = QuicFrame.n;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_TRUE(g_stream_fin);
 
     g_stream_fin = PROTO_FALSE;
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, pn++, &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_FALSE(g_stream_fin);
 }
@@ -2298,11 +2194,10 @@ void test_quic_conn_frame_dispatch_variants()
         const uint8_t ack_ecn[8] = {0x03, 5, 0, 0, 0, 0, 0, 0};
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, ack_ecn,
                                sizeof ack_ecn);
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.recv_args.datagram = dg;
         QuicConn.recv_args.len = dl;
-        QuicConn.recv(QuicConn.internal);
+        QuicConn.recv(g_qc_ctx);
         TEST_ASSERT_TRUE(QuicConn.ok);
         TEST_ASSERT_EQUAL_INT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_acked);
         TEST_ASSERT_FALSE(g_qc.space[QUIC_ENC_INITIAL].ack_eliciting_rx);
@@ -2316,11 +2211,10 @@ void test_quic_conn_frame_dispatch_variants()
         QuicFrame.build_ack(quic_frame_work);
         size_t ol = QuicFrame.n;
         dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 1, &init.client, older, ol);
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.recv_args.datagram = dg;
         QuicConn.recv_args.len = dl;
-        QuicConn.recv(QuicConn.internal);
+        QuicConn.recv(g_qc_ctx);
         TEST_ASSERT_TRUE(QuicConn.ok);
         TEST_ASSERT_EQUAL_INT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_acked);
     }
@@ -2331,14 +2225,12 @@ void test_quic_conn_frame_dispatch_variants()
         const uint8_t app_close[3] = {0x1d, 0x05, 0x00};
         size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, app_close,
                                sizeof app_close);
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.recv_args.datagram = dg;
         QuicConn.recv_args.len = dl;
-        QuicConn.recv(QuicConn.internal);
+        QuicConn.recv(g_qc_ctx);
         TEST_ASSERT_TRUE(QuicConn.ok);
-        QuicConn.bind.ctx = g_qc_ctx;
-        QuicConn.is_closed(QuicConn.internal);
+        QuicConn.is_closed(g_qc_ctx);
         TEST_ASSERT_TRUE(QuicConn.closed);
         TEST_ASSERT_FALSE(g_qc.space[QUIC_ENC_INITIAL].ack_eliciting_rx);
     }
@@ -2349,14 +2241,12 @@ void test_quic_conn_frame_dispatch_variants()
         const uint8_t misc[6] = {QUIC_FT_RESET_STREAM, 0x00, 0x01, 0x02, QUIC_FT_MAX_STREAMS_BIDI, 0x08};
         size_t dl =
             build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 0, &init.client, misc, sizeof misc);
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.recv_args.datagram = dg;
         QuicConn.recv_args.len = dl;
-        QuicConn.recv(QuicConn.internal);
+        QuicConn.recv(g_qc_ctx);
         TEST_ASSERT_TRUE(QuicConn.ok);
-        QuicConn.bind.ctx = g_qc_ctx;
-        QuicConn.is_closed(QuicConn.internal);
+        QuicConn.is_closed(g_qc_ctx);
         TEST_ASSERT_FALSE(QuicConn.closed);
         TEST_ASSERT_EQUAL_UINT(0, g_stream_len);
     }
@@ -2378,11 +2268,10 @@ void test_quic_recv_zero_version()
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, 1);
     dg[1] = dg[2] = dg[3] = dg[4] = 0x00;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
 }
 
@@ -2401,20 +2290,18 @@ void test_quic_recv_older_packet_number()
     uint8_t dg[256];
 
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 5, &init.client, fr, sizeof fr);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_rx);
 
     dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, 8, CLIENT_SCID, 4, 1, &init.client, fr, sizeof fr);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT64(5, g_qc.space[QUIC_ENC_INITIAL].largest_rx);
 }
@@ -2437,14 +2324,12 @@ void test_quic_recv_short_header_decrypt_failure()
     uint8_t dg[256];
     size_t dl = build_short(dg, sizeof dg, SERVER_SCID, sizeof(SERVER_SCID), 0, &apc, fr, fl);
     dg[dl - 1] ^= 0xFF;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.ok);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 }
 
@@ -2478,16 +2363,14 @@ void test_quic_conn_crypto_after_handshake_done()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 7,
                            &hs_client_keys, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT8(QTLS_DONE, g_qc.tls.state);
     TEST_ASSERT_FALSE(g_qc.handshake_done_queued);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 
     g_qc.handshake_done_sent = PROTO_FALSE;
@@ -2506,11 +2389,10 @@ void test_quic_conn_crypto_after_handshake_done()
     fl += 20;
     dl = build_long(dg, sizeof dg, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 8,
                     &hs_client_keys, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT64(off + sizeof(frag), g_qc.space[QUIC_ENC_HANDSHAKE].crypto_rx_off);
     TEST_ASSERT_TRUE(g_qc.handshake_done_queued);
@@ -2543,25 +2425,22 @@ void test_quic_conn_close_after_peer_close()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.closed);
     TEST_ASSERT_TRUE(g_qc.draining);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.close_args.error_code = QUIC_ERR_FRAME_ENCODING;
-    QuicConn.close(QuicConn.internal);
+    QuicConn.close(g_qc_ctx);
     TEST_ASSERT_FALSE(g_qc.close_queued);
     uint8_t out[512];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -2576,25 +2455,22 @@ void test_quic_conn_close_queued_then_peer_close()
 
     g_qc.address_validated = PROTO_TRUE;
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     for (int i = 0; i < 8 && QuicConn.n > 0; i++)
     {
     }
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicConn.close(QuicConn.internal);
+    QuicConn.close(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.close_queued);
 
     uint8_t fr[32];
@@ -2610,26 +2486,23 @@ void test_quic_conn_close_queued_then_peer_close()
     uint8_t dg[256];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 1,
                            &init.client, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.draining);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
     TEST_ASSERT_TRUE(g_qc.close_sent);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -2642,26 +2515,23 @@ void test_quic_conn_close_send_no_room()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicConn.close(QuicConn.internal);
+    QuicConn.close(g_qc_ctx);
     uint8_t tiny[8];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = tiny;
     QuicConn.send_args.cap = sizeof tiny;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
     TEST_ASSERT_FALSE(g_qc.close_sent);
     TEST_ASSERT_FALSE(g_qc.closed);
 
     uint8_t out[512];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
     TEST_ASSERT_TRUE(g_qc.close_sent);
 }
@@ -2675,20 +2545,17 @@ void test_quic_conn_close_level_out_of_range()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicConn.close(QuicConn.internal);
+    QuicConn.close(g_qc_ctx);
     g_qc.close_level = 200;
     uint8_t out[512];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.closed);
 }
 
@@ -2702,10 +2569,9 @@ void test_quic_conn_highest_sealed_level_fallback()
         g_qc.space[l].discarded = PROTO_TRUE;
     }
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicConn.close(QuicConn.internal);
+    QuicConn.close(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.close_queued);
     TEST_ASSERT_EQUAL_UINT8(QUIC_ENC_INITIAL, g_qc.close_level);
 }
@@ -2721,7 +2587,6 @@ void test_quic_conn_crypto_flight_fragmented()
     cfg.cert_len = sizeof(big_cert);
 
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.init_args.cfg = &cfg;
     QuicConn.init_args.odcid = ODCID;
@@ -2731,7 +2596,7 @@ void test_quic_conn_crypto_flight_fragmented()
     QuicConn.init_args.our_scid = SERVER_SCID;
     QuicConn.init_args.our_scid_len = (uint8_t)(sizeof(SERVER_SCID));
     QuicConn.cb = cb;
-    QuicConn.init(QuicConn.internal);
+    QuicConn.init(g_qc_ctx);
     QuicInitialSecrets init;
     QuicCrypto.derive_initial_secrets_args.keys_work = tw;
     QuicCrypto.derive_initial_secrets_args.dcid = ODCID;
@@ -2767,24 +2632,26 @@ void test_quic_conn_crypto_flight_fragmented()
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, g_qc.tls.state);
 
     size_t hs_flight_len = 0;
-    (void)protocore_quic_tls_flight(&g_qc.tls, QUIC_ENC_HANDSHAKE, &hs_flight_len);
+    QuicTlsServer.flight_args.qt = &g_qc.tls;
+    QuicTlsServer.flight_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServer.flight_args.len = &hs_flight_len;
+    QuicTlsServer.flight(quic_tls_work);
+    (void)QuicTlsServer.bytes;
     TEST_ASSERT_TRUE(hs_flight_len > PROTOCORE_QUIC_MAX_DATAGRAM);
 
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     size_t first = QuicConn.n;
     TEST_ASSERT_TRUE(first > 0);
     uint64_t sent_after_first = g_qc.space[QUIC_ENC_HANDSHAKE].crypto_tx_off;
@@ -2795,11 +2662,10 @@ void test_quic_conn_crypto_flight_fragmented()
     size_t total = sent_after_first;
     for (int i = 0; i < 8 && total < hs_flight_len; i++)
     {
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.send_args.out = out;
         QuicConn.send_args.cap = sizeof out;
-        QuicConn.send(QuicConn.internal);
+        QuicConn.send(g_qc_ctx);
         TEST_ASSERT_TRUE(QuicConn.n > 0);
         total = g_qc.space[QUIC_ENC_HANDSHAKE].crypto_tx_off;
     }
@@ -2827,29 +2693,26 @@ void test_quic_conn_stream_tx_partitioning()
     size_t fl = QuicFrame.n;
     uint8_t sdg[256];
     size_t sl = build_short(sdg, sizeof sdg, SERVER_SCID, sizeof(SERVER_SCID), 1, &apc, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = sdg;
     QuicConn.recv_args.len = sl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     (void)QuicConn.n;
 
     static uint8_t big[PROTOCORE_QUIC_STREAM_TX - 64];
     memset(big, 0x5A, sizeof(big));
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = 0;
     QuicConn.stream_send_args.data = big;
     QuicConn.stream_send_args.len = sizeof(big);
     QuicConn.stream_send_args.fin = PROTO_TRUE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(g_qc_ctx);
     size_t queued = QuicConn.n;
     TEST_ASSERT_EQUAL_UINT(sizeof(big), queued);
     QuicStream *st = NULL;
@@ -2862,40 +2725,36 @@ void test_quic_conn_stream_tx_partitioning()
     }
     TEST_ASSERT_NOT_NULL(st);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     (void)QuicConn.n;
     TEST_ASSERT_TRUE(st->tx_sent > 0);
     TEST_ASSERT_TRUE(st->tx_sent < st->tx_have);
     TEST_ASSERT_EQUAL_UINT64(st->tx_sent, st->tx_off);
     TEST_ASSERT_FALSE(st->tx_fin_sent);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
     TEST_ASSERT_EQUAL_UINT(st->tx_have, st->tx_sent);
     TEST_ASSERT_TRUE(st->tx_fin_sent);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = 0;
     QuicConn.stream_send_args.data = d;
     QuicConn.stream_send_args.len = 2;
     QuicConn.stream_send_args.fin = PROTO_FALSE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(2, QuicConn.n);
     size_t before = st->tx_sent;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
     TEST_ASSERT_EQUAL_UINT(before + 2, st->tx_sent);
     TEST_ASSERT_TRUE(st->tx_fin_sent);
@@ -2910,19 +2769,17 @@ void test_quic_conn_stream_fin_only()
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = 0;
     QuicConn.stream_send_args.data = (const uint8_t *)"BODY";
     QuicConn.stream_send_args.len = 4;
     QuicConn.stream_send_args.fin = PROTO_FALSE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(4, QuicConn.n);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
     QuicStream *st = NULL;
     for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
@@ -2936,20 +2793,18 @@ void test_quic_conn_stream_fin_only()
     TEST_ASSERT_EQUAL_UINT(st->tx_have, st->tx_sent);
     TEST_ASSERT_FALSE(st->tx_fin_sent);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = 0;
     QuicConn.stream_send_args.data = (const uint8_t *)"";
     QuicConn.stream_send_args.len = 0;
     QuicConn.stream_send_args.fin = PROTO_TRUE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
     TEST_ASSERT_TRUE(st->tx_fin);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     size_t n = QuicConn.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_TRUE(st->tx_fin_sent);
@@ -2968,11 +2823,10 @@ void test_quic_conn_stream_fin_only()
     TEST_ASSERT_EQUAL_UINT64(0, f.stream.length);
     TEST_ASSERT_TRUE(f.stream.fin);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -2990,22 +2844,20 @@ void test_quic_conn_stream_tx_datagram_full()
     for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
         ids[i] = 0x3F00000000000000ull + (uint64_t)(i * 4);
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.stream_send_args.stream_id = ids[i];
         QuicConn.stream_send_args.data = payload;
         QuicConn.stream_send_args.len = sizeof(payload);
         QuicConn.stream_send_args.fin = PROTO_FALSE;
-        QuicConn.stream_send(QuicConn.internal);
+        QuicConn.stream_send(g_qc_ctx);
         TEST_ASSERT_EQUAL_UINT(sizeof(payload), QuicConn.n);
     }
 
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     (void)QuicConn.n;
 
     size_t untouched = 0, partial = 0;
@@ -3032,11 +2884,10 @@ void test_quic_conn_stream_tx_datagram_full()
     g_qc.address_validated = PROTO_TRUE;
     for (int round = 0; round < 20; round++)
     {
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.send_args.out = out;
         QuicConn.send_args.cap = sizeof out;
-        QuicConn.send(QuicConn.internal);
+        QuicConn.send(g_qc_ctx);
         (void)QuicConn.n;
     }
     for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
@@ -3049,11 +2900,10 @@ void test_quic_conn_stream_tx_datagram_full()
             }
         }
     }
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -3065,13 +2915,12 @@ void test_quic_conn_stream_send_clamped()
 
     static uint8_t huge[PROTOCORE_QUIC_STREAM_TX + 512];
     memset(huge, 0x2B, sizeof(huge));
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = 0;
     QuicConn.stream_send_args.data = huge;
     QuicConn.stream_send_args.len = sizeof(huge);
     QuicConn.stream_send_args.fin = PROTO_TRUE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(g_qc_ctx);
     size_t took = QuicConn.n;
     TEST_ASSERT_EQUAL_UINT(PROTOCORE_QUIC_STREAM_TX, took);
 
@@ -3096,13 +2945,12 @@ void test_quic_conn_stream_send_sentinel_id()
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.stream_send_args.stream_id = UINT64_MAX;
     QuicConn.stream_send_args.data = (const uint8_t *)"hi";
     QuicConn.stream_send_args.len = 2;
     QuicConn.stream_send_args.fin = PROTO_TRUE;
-    QuicConn.stream_send(QuicConn.internal);
+    QuicConn.stream_send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(2, QuicConn.n);
     for (size_t i = 0; i < PROTOCORE_QUIC_MAX_STREAMS; i++)
     {
@@ -3110,11 +2958,10 @@ void test_quic_conn_stream_send_sentinel_id()
     }
 
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 }
 
@@ -3127,36 +2974,32 @@ void test_quic_conn_pto_backoff_ceiling()
     size_t ch_len = 0;
     feed_client_initial(&g_qc, &cb, &init, ch, &ch_len);
     uint8_t out[2048];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.n > 0);
 
     uint32_t now = 1000;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = now;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.pto_armed);
 
     for (int i = 0; i < 12; i++)
     {
         now = g_qc.pto_deadline_ms + 1;
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.timeout_args.now_ms = now;
-        QuicConn.on_timeout(QuicConn.internal);
+        QuicConn.on_timeout(g_qc_ctx);
     }
     TEST_ASSERT_EQUAL_UINT8(8, g_qc.pto_count);
 
     g_qc.pto_count = 40;
     g_qc.pto_armed = PROTO_FALSE;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 0;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.pto_armed);
     TEST_ASSERT_EQUAL_UINT32(2097152000u, g_qc.pto_deadline_ms);
 }
@@ -3169,20 +3012,18 @@ void test_quic_conn_ack_owed_without_rx()
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
 
     g_qc.space[QUIC_ENC_APP].ack_eliciting_rx = PROTO_TRUE;
     g_qc.space[QUIC_ENC_APP].have_rx = PROTO_FALSE;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     TEST_ASSERT_EQUAL_UINT(0, QuicConn.n);
     TEST_ASSERT_TRUE(g_qc.space[QUIC_ENC_APP].ack_eliciting_rx);
 }
@@ -3203,32 +3044,28 @@ void test_quic_conn_close_level_without_keys()
     uint8_t dg[512];
     size_t dl = build_long(dg, sizeof dg, QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, fr, sizeof fr);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_UINT8(QTLS_START, g_qc.tls.state);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.close_args.error_code = QUIC_ERR_NO_ERROR;
-    QuicConn.close(QuicConn.internal);
+    QuicConn.close(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.close_queued);
     g_qc.close_level = QUIC_ENC_APP;
     TEST_ASSERT_FALSE(g_qc.space[QUIC_ENC_APP].discarded);
 
     uint8_t out[512];
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.send_args.out = out;
     QuicConn.send_args.cap = sizeof out;
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(g_qc_ctx);
     size_t n = QuicConn.n;
     TEST_ASSERT_TRUE(n > 0);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.closed);
 
     uint8_t plain[512];
@@ -3245,14 +3082,12 @@ void test_quic_conn_is_closed_draining_only()
     fill();
     QuicConnCallbacks cb = {on_stream_data, on_hs_done, NULL};
     init_conn(&g_qc, &cb);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 
     g_qc.draining = PROTO_TRUE;
     TEST_ASSERT_FALSE(g_qc.closed);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.closed);
 }
 
@@ -3268,10 +3103,9 @@ void test_quic_conn_pto_outstanding_per_space()
 
         g_qc.space[levels[i]].last_ae_pn = 3;
         g_qc.space[levels[i]].largest_acked = 2;
-        QuicConn.bind.ctx = g_qc_ctx;
         QuicConn.bind.b = g_qc_b;
         QuicConn.timeout_args.now_ms = 1000;
-        QuicConn.on_timeout(QuicConn.internal);
+        QuicConn.on_timeout(g_qc_ctx);
         TEST_ASSERT_TRUE(g_qc.pto_armed);
         TEST_ASSERT_EQUAL_UINT32(1000 + PROTOCORE_QUIC_PTO_MS, g_qc.pto_deadline_ms);
     }
@@ -3279,10 +3113,9 @@ void test_quic_conn_pto_outstanding_per_space()
     init_conn(&g_qc, &cb);
     g_qc.pto_armed = PROTO_TRUE;
     g_qc.pto_count = 3;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1000;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     TEST_ASSERT_FALSE(g_qc.pto_armed);
     TEST_ASSERT_EQUAL_UINT8(0, g_qc.pto_count);
 
@@ -3290,10 +3123,9 @@ void test_quic_conn_pto_outstanding_per_space()
     g_qc.space[QUIC_ENC_APP].last_ae_pn = 3;
     g_qc.space[QUIC_ENC_APP].largest_acked = 2;
     g_qc.space[QUIC_ENC_APP].discarded = PROTO_TRUE;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1000;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     TEST_ASSERT_FALSE(g_qc.pto_armed);
 }
 
@@ -3305,10 +3137,9 @@ void test_quic_conn_pto_disarms_when_all_acked()
     QuicPacketKeys apc, aps;
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1000;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.pto_armed);
 
     uint8_t fr[32];
@@ -3321,23 +3152,20 @@ void test_quic_conn_pto_disarms_when_all_acked()
     size_t fl = QuicFrame.n;
     uint8_t dg[256];
     size_t dl = build_short(dg, sizeof dg, SERVER_SCID, sizeof(SERVER_SCID), 0, &apc, fr, fl);
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(g_qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.ok);
     TEST_ASSERT_EQUAL_INT64(0, g_qc.space[QUIC_ENC_APP].largest_acked);
 
     g_qc.pto_armed = PROTO_TRUE;
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 2000;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     TEST_ASSERT_FALSE(g_qc.pto_armed);
     TEST_ASSERT_EQUAL_UINT8(0, g_qc.pto_count);
-    QuicConn.bind.ctx = g_qc_ctx;
-    QuicConn.is_closed(QuicConn.internal);
+    QuicConn.is_closed(g_qc_ctx);
     TEST_ASSERT_FALSE(QuicConn.closed);
 }
 
@@ -3350,22 +3178,18 @@ void test_quic_conn_pto_requeues_handshake_done_once()
     complete_handshake(&g_qc, &cb, &init, &apc, &aps, sizeof(CLIENT_SCID));
     TEST_ASSERT_TRUE(g_qc.handshake_done_sent);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1000;
-    QuicConn.on_timeout(QuicConn.internal);
-    QuicConn.bind.ctx = g_qc_ctx;
+    QuicConn.on_timeout(g_qc_ctx);
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = 1000 + PROTOCORE_QUIC_PTO_MS + 1;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.handshake_done_queued);
     TEST_ASSERT_FALSE(g_qc.handshake_done_sent);
 
-    QuicConn.bind.ctx = g_qc_ctx;
     QuicConn.bind.b = g_qc_b;
     QuicConn.timeout_args.now_ms = g_qc.pto_deadline_ms + 1;
-    QuicConn.on_timeout(QuicConn.internal);
+    QuicConn.on_timeout(g_qc_ctx);
     TEST_ASSERT_TRUE(g_qc.handshake_done_queued);
     TEST_ASSERT_FALSE(g_qc.handshake_done_sent);
 }
-

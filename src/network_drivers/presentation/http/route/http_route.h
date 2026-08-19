@@ -15,11 +15,16 @@
 #ifndef PROTOCORE_HTTP_ROUTE_H
 #define PROTOCORE_HTTP_ROUTE_H
 
-#include "network_drivers/presentation/http/http.h" // HttpMethod and Handler: what a row dispatches on
+#include "network_drivers/presentation/http/http.h" // the complete type a public struct below holds by value
+#include "protocore_config.h"                       // the entry point: protocore_types.h for the widths
 
-#include "protocore_config.h"                       // the entry point: MAX_ROUTES, and the widths
+#if PROTOCORE_ENABLE_HTTP_ROUTE
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /** @brief Discriminates between HTTP, WebSocket, and SSE route entries. */
 typedef enum
@@ -88,31 +93,53 @@ typedef struct HttpRoute
 /** @brief The table's storage. Declared, never defined here: the layout stays in route.c. */
 typedef struct HttpRouteCtx HttpRouteCtx;
 
+/** @brief What at takes: i. */
+typedef struct
+{
+    uint8_t i;
+} HttpRoutesAtArgs;
+
 /**
- * @brief The route-table module.
+ * @brief The route table: where a request goes.
  *
- * @var HttpRouteNs::add    take the next free entry, zeroed and ready to fill, or NULL when full. The
- *                      first one borrows the table from the secure pool.
- * @var HttpRouteNs::count  entries currently registered.
- * @var HttpRouteNs::at     entry @c i, or NULL if @c i is past the end.
- * @var HttpRouteNs::reset  empty the table. For tests: a case that does not reset matches against every
- *                      route the previous cases registered.
+ * A caller sets the members a call takes, invokes it through ::HttpRoutes with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * The storage handle is not a member. The borrow is taken at the first @ref HttpRouteNs::add and this
- * object is `const`, so a member could only ever hold an address settled before the program did.
- * Nothing above this module needs the handle: a caller takes an entry or walks by index.
+ *   HttpRoutes.add(work);
+ *   // HttpRoutes.ptr is what the call reports
+ *
+ * @var HttpRouteNs::at_args  what at takes: i
+ * @var HttpRouteNs::ok  a call's true/false outcome
+ * @var HttpRouteNs::ptr  the pointer a call reports
+ * @var HttpRouteNs::value  the value a call reports
+ * @var HttpRouteNs::add  take the next free entry, zeroed and ready to fill, or NULL when ...
+ * @var HttpRouteNs::count  entries currently registered
+ * @var HttpRouteNs::at  entry i, or NULL if i is past the end
+ * @var HttpRouteNs::reset  empty the table. For tests: a case that does not reset matches ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
 typedef struct
 {
-    HttpRoute *(*add)(void);
-    uint8_t (*count)(void);
-    HttpRoute *(*at)(uint8_t i);
-    void (*reset)(void);
+    HttpRoutesAtArgs at_args;
+
+    proto_bool ok;
+    HttpRoute *ptr;
+    uint8_t value;
+
+    void (*const add)(uint8_t *restrict work);
+    void (*const count)(uint8_t *restrict work);
+    void (*const at)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *restrict work);
 } HttpRouteNs;
 
 /** @brief The one symbol this module exports. */
-extern const HttpRouteNs HttpRoutes;
+extern HttpRouteNs HttpRoutes;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_HTTP_ROUTE
 
 #endif // PROTOCORE_HTTP_ROUTE_H

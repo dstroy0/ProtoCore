@@ -572,10 +572,6 @@ static proto_bool peer_done(uint8_t *restrict work)
 // request carried).
 static void close_conn(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (HTTP_CLIENT_CTX(work)->cid >= 0)
     {
         TcpClient.cid = HTTP_CLIENT_CTX(work)->cid;
@@ -588,10 +584,6 @@ static void close_conn(uint8_t *restrict work)
 // read until the body is framed or the deadline passes. Fills status, body and body_len.
 static void exchange(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     HttpClientNs *ns = &HttpClient;
     ns->status = 0;
     ns->body = NULL;

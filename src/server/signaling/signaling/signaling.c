@@ -59,10 +59,6 @@ uint8_t *protocore_signaling_span(void)
 
 static void signal_put_response(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int code = Signal.put.code;
 
     SIGNALING_CTX(work)->state.requests_total++;
@@ -82,10 +78,6 @@ static void signal_put_response(uint8_t *restrict work)
 
 static void signal_put_tick(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     SIGNALING_CTX(work)->state.uptime_ms = Signal.put.uptime_ms;
     SIGNALING_CTX(work)->state.conns_active = Signal.put.conns_active;
     SIGNALING_CTX(work)->state.listeners_up = Signal.put.listeners_up;
@@ -93,10 +85,6 @@ static void signal_put_tick(uint8_t *restrict work)
 
 static void signal_know(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     if (Signal.out == NULL)
     {
         return;
@@ -108,10 +96,6 @@ static void signal_know(uint8_t *restrict work)
 
 static void signal_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     // The tallies are per-run: a server that has started over has answered no requests. Zero is the
     // bucket's initial state, so the reset is the same store the static initialization performs.
     static const struct SignalingStorage blank = {0};

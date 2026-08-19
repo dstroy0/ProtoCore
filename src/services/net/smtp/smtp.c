@@ -536,10 +536,6 @@ uint8_t *protocore_smtp_span(void)
 
 static void run_session(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     SMTP_CTX(work)->code = 0;
     SMTP_CTX(work)->keyword_seen = PROTO_FALSE;
 
@@ -780,10 +776,6 @@ static proto_bool wire_starttls(void *ctx)
 // Dial the server, step the open to a connection, walk the session, close.
 static void send_message(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     SMTP_CTX(work)->code = 0;
     if (!Smtp.session.host)
     {

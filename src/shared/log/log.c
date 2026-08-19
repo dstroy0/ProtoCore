@@ -67,19 +67,11 @@ static_assert(LOG_OFF_CTX + sizeof(struct LogStorage) <= PROTOCORE_LOG_BORROW,
 
 static void log_set_sink(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     LOG_CTX(work)->sink = Log.sink;
 }
 
 static void log_emit(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint8_t level = Log.frame.level;
     const struct protocore_field *spec = Log.frame.spec;
 

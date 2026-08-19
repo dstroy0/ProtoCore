@@ -70,13 +70,12 @@ static void app_request(void *app, uint8_t *h3, uint64_t sid, const char *method
     (void)app;
     strncpy(g_method, method, sizeof(g_method) - 1);
     strncpy(g_path, path, sizeof(g_path) - 1);
-    H3Conn.bind.b = h3; // the callback is handed the connection's span
     H3Conn.respond_args.stream_id = sid;
     H3Conn.respond_args.status = 200;
     H3Conn.respond_args.content_type = "text/plain";
     H3Conn.respond_args.body = (const uint8_t *)"hello h3";
     H3Conn.respond_args.body_len = 8;
-    H3Conn.respond(H3Conn.internal);
+    H3Conn.respond(h3);
 }
 
 static void fill()
@@ -330,7 +329,6 @@ void test_http3_get_end_to_end()
 
     static uint8_t qc_ctx[PROTOCORE_QUIC_CONN_CTX_BORROW];
     static uint8_t qc_b[PROTOCORE_QUIC_CONN_BORROW];
-    QuicConn.bind.ctx = qc_ctx;
     QuicConn.bind.b = qc_b;
     QuicConn.init_args.cfg = &cfg;
     QuicConn.init_args.odcid = ODCID;
@@ -339,13 +337,12 @@ void test_http3_get_end_to_end()
     QuicConn.init_args.peer_scid_len = (uint8_t)(sizeof(CLIENT_SCID));
     QuicConn.init_args.our_scid = SERVER_SCID;
     QuicConn.init_args.our_scid_len = (uint8_t)(sizeof(SERVER_SCID));
-    QuicConn.init(QuicConn.internal);
+    QuicConn.init(qc_ctx);
     static uint8_t h3_b[PROTOCORE_H3_CONN_BORROW];
-    H3Conn.bind.b = h3_b;
     H3Conn.bind.qc = qc_ctx;
     H3Conn.app_args.on_request = app_request;
     H3Conn.app_args.app = NULL;
-    H3Conn.init(H3Conn.internal);
+    H3Conn.init(h3_b);
 
     QuicInitialSecrets init;
     QuicCrypto.derive_initial_secrets_args.keys_work = tw;
@@ -384,18 +381,16 @@ void test_http3_get_end_to_end()
     uint8_t dg[1500];
     size_t dl = build_long(dg, sizeof(dg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID), 0,
                            &init.client, frames, fl);
-    QuicConn.bind.ctx = qc_ctx;
     QuicConn.bind.b = qc_b;
     QuicConn.recv_args.datagram = dg;
     QuicConn.recv_args.len = dl;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(qc_ctx);
 
     uint8_t sdg[1500], plain[2048], sh[512], hsf[1024];
-    QuicConn.bind.ctx = qc_ctx;
     QuicConn.bind.b = qc_b;
     QuicConn.send_args.out = sdg;
     QuicConn.send_args.cap = sizeof(sdg);
-    QuicConn.send(QuicConn.internal);
+    QuicConn.send(qc_ctx);
     size_t sl = QuicConn.n;
     size_t wire = 0;
     uint8_t ty = 0;
@@ -498,23 +493,20 @@ void test_http3_get_end_to_end()
     hfl += QuicFrame.n;
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
-    QuicConn.bind.ctx = qc_ctx;
     QuicConn.bind.b = qc_b;
     QuicConn.recv_args.datagram = idg;
     QuicConn.recv_args.len = idl + hdl;
-    QuicConn.recv(QuicConn.internal);
-    QuicConn.bind.ctx = qc_ctx;
-    QuicConn.is_established(QuicConn.internal);
+    QuicConn.recv(qc_ctx);
+    QuicConn.is_established(qc_ctx);
     TEST_ASSERT_TRUE(QuicConn.established);
 
-    QuicConn.bind.ctx = qc_ctx;
     QuicConn.bind.b = qc_b;
     // Drain: send is called until it reports nothing left, so the call is the condition.
     do
     {
         QuicConn.send_args.out = sdg;
         QuicConn.send_args.cap = sizeof(sdg);
-        QuicConn.send(QuicConn.internal);
+        QuicConn.send(qc_ctx);
         sl = QuicConn.n;
     } while (sl > 0);
 
@@ -566,24 +558,22 @@ void test_http3_get_end_to_end()
     size_t sfrl = QuicFrame.n;
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), SERVER_SCID, sizeof(SERVER_SCID), 0, &ap_c, sfr, sfrl);
-    QuicConn.bind.ctx = qc_ctx;
     QuicConn.bind.b = qc_b;
     QuicConn.recv_args.datagram = s1;
     QuicConn.recv_args.len = s1l;
-    QuicConn.recv(QuicConn.internal);
+    QuicConn.recv(qc_ctx);
 
     TEST_ASSERT_EQUAL_STRING("GET", g_method);
     TEST_ASSERT_EQUAL_STRING("/hello", g_path);
 
     proto_bool got = PROTO_FALSE;
-    QuicConn.bind.ctx = qc_ctx;
     QuicConn.bind.b = qc_b;
     // Drain: send is called until it reports nothing left, so the call is the condition.
     for (;;)
     {
         QuicConn.send_args.out = sdg;
         QuicConn.send_args.cap = sizeof(sdg);
-        QuicConn.send(QuicConn.internal);
+        QuicConn.send(qc_ctx);
         sl = QuicConn.n;
         if (sl == 0)
         {
@@ -681,4 +671,3 @@ void test_http3_get_end_to_end()
     }
     TEST_ASSERT_TRUE(got);
 }
-

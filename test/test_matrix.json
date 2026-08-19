@@ -15,7 +15,8 @@
         "-DPROTOCORE_PER_IP_THROTTLE_SLOTS=4",
         "-DPROTOCORE_IP_ALLOWLIST_SLOTS=4",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -510,7 +511,10 @@
       "desc": "Outbound TCP client transport (network_drivers/transport/tcp/tcp_client.c), the pooled\nlayer-4 peer of tcp.c used by http_client / mqtt / ws_client / relay / smtp / ssh\nport-forward (PROTOCORE_NEED_CLIENT). The marshaled path is driven against the host pcb driver:\nthe connect completes inline, sends land in the capture, and received bytes arrive through\nthe recv callback the client armed. Covers the dial, the ring, the peer FIN and pool exhaustion.",
       "flags": [
         "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -560,7 +564,8 @@
     "native_cloudevents": {
       "desc": "CloudEvents v1.0 envelope (services/iot/cloudevents): the structured-JSON builder\n(over the JSON writer) + the binary-mode ce-* header reader. Pure host tests.",
       "flags": [
-        "-DPROTOCORE_ENABLE_CLOUDEVENTS=1"
+        "-DPROTOCORE_ENABLE_CLOUDEVENTS=1",
+        "-DPROTOCORE_ENABLE_JSON=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -593,7 +598,8 @@
         "-DPROTOCORE_ENABLE_COAP_BLOCK=1",
         "-DPROTOCORE_COAP_BLOCK_SZX_MAX=2",
         "-DPROTOCORE_COAP_BLOCK1_MAX=128",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<services/iot/coap/coap/coap.c>",
@@ -627,7 +633,8 @@
         "-DPROTOCORE_COAP_BLOCK_SZX_MAX=2",
         "-DPROTOCORE_COAP_BLOCK1_MAX=128",
         "-DPROTOCORE_ENABLE_COAP_OBSERVE=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<services/iot/coap/coap/coap.c>",
@@ -659,7 +666,8 @@
         "-DPROTOCORE_ENABLE_DTLS=1",
         "-DPROTOCORE_ENABLE_COAP=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+        "-DPROTOCORE_ENABLE_TLS_RPK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<services/iot/coap/coaps/coaps.c>",
@@ -710,7 +718,8 @@
         "-DPROTOCORE_ENABLE_DTLS=1",
         "-DPROTOCORE_ENABLE_COAP=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+        "-DPROTOCORE_ENABLE_TLS_RPK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<services/iot/coap/coaps_server/coaps_server.c>",
@@ -762,7 +771,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_DTLS=1",
         "-DPROTOCORE_ENABLE_COAP=1",
-        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+        "-DPROTOCORE_ENABLE_TLS_RPK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<services/iot/coap/coaps_server/coaps_server.c>",
@@ -898,7 +908,9 @@
         "-DPROTOCORE_HAS_NET_STACK=1",
         "-DPROTOCORE_ENABLE_MDNS=1",
         "-DPROTOCORE_ENABLE_PROMISC=1",
-        "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1"
+        "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
+        "-DPROTOCORE_ENABLE_DEFLATE_RFC1951=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -1396,7 +1408,8 @@
       "desc": "The RFC 1951 DEFLATE compressor (network_drivers/presentation/codec/deflate), the WebSocket permessage-deflate sender. The load-bearing case derives the exact output octets for three inputs from RFC 1951 alone - sec 3.2.3's block header, sec 3.2.6's fixed code table, sec 3.2.5's length and distance codes, sec 3.1.1's bit order and RFC 7692 sec 7.2.1's stripped 00 00 ff ff tail - with the bit-by-bit derivation written beside the bytes, so a compressor that agreed with its own decompressor while emitting a non-conforming stream fails here rather than passing. The rest is round-trip identity through INFLATE over text, the empty input, a single octet, every octet value, highly repetitive input that must actually shrink, a chain walk driven past its budget, a candidate match past the window that must be discarded, and random and low-entropy corpora; plus the fail-closed paths for an output buffer and a scratch buffer that are too small.",
       "flags": [
         "-DPROTOCORE_ENABLE_WS_DEFLATE=1",
-        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_DEFLATE_RFC1951=1"
       ],
       "src": [
         "+<network_drivers/presentation/codec/deflate/deflate/deflate.c>",
@@ -1410,7 +1423,9 @@
       "tests": [
         "unit/src/network_drivers/presentation/codec/deflate/test_deflate"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_device_id": {
       "desc": "MAC-derived device UUID (server/signaling/device_id): RFC 4122 v5 from a MAC via SHA-1.\nPure core - the ESP32 MAC read is ARDUINO-gated - so it unit-tests on the host\nagainst Python uuid.uuid5 reference values.",
@@ -1480,7 +1495,8 @@
       "desc": "DiffServ QoS marking (PROTOCORE_ENABLE_DIFFSERV): the DSCP->TOS encode (DSCP << 2, ECN 0), the\nserver-wide and UDP DSCP defaults through the DiffServ entries and through the flat readers the\naccept path uses, and the per-listener override (TcpListener.set_dscp, which names the port, incl.\nthe UNSET sentinel + 6-bit mask + unknown-port miss). A live connection has no setter: RFC 9293 sec\n3.9.2 SHLD-23. The accept callback's three arms - per-listener override, server default, best-effort\nskip - and a dynamic (forwarded) listener taking the sentinel. Pure L4 core, host-tested.",
       "flags": [
         "-DPROTOCORE_ENABLE_DIFFSERV=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -1784,7 +1800,8 @@
       "desc": "The portable DNS resolver (network_drivers/network/dns/dns_resolver, RFC 1035) on the build\nwhere PROTOCORE_HAS_VENDOR_DNS_RESOLVER is 0: the A-record question it writes, the answer it reads back -\nwalking past a CNAME and following the compression pointers a real response uses - and the replies it\nrefuses on a wrong id, a set RCODE, a question rather than an answer, or no A record at all. Plus the\ndotted-quad fast path, the nameserver setter, and the classifier that rejects a loopback or multicast\nanswer as a rebinding indicator.",
       "flags": [
         "-DPROTOCORE_ENABLE_DNS_RESOLVER=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<network_drivers/network/dns/dns_resolver/dns_resolver.c>",
@@ -1820,7 +1837,8 @@
       "desc": "Authoritative DNS server (network_drivers/network/dns/dns_server): the A-record response builder\n(QNAME parse, compressed A answer, NXDOMAIN, non-A query, header flags, malformed\nguards), the built-in name->IP table (add / case-insensitive lookup / clear), and begin() binding\nport 53 on the UDP listener, driven against the host pcb driver.",
       "flags": [
         "-DPROTOCORE_ENABLE_DNS_SERVER=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<network_drivers/network/dns/dns_server/dns_server.c>",
@@ -1875,7 +1893,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_WAL=1",
         "-DPROTOCORE_ENABLE_DBM=1",
-        "-DPROTOCORE_ENABLE_DOCSTORE=1"
+        "-DPROTOCORE_ENABLE_DOCSTORE=1",
+        "-DPROTOCORE_ENABLE_JSON=1"
       ],
       "src": [
         "+<services/storage/wal/wal/wal.c>",
@@ -1892,7 +1911,9 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/float_bits/float_bits.c>"
       ],
-      "tests": ["unit/protocols/storage/test_docstore"]
+      "tests": [
+        "unit/protocols/storage/test_docstore"
+      ]
     },
     "native_dshot": {
       "desc": "DShot ESC throttle codec (server/peripherals/dshot): the 16-bit frame (11-bit value + telemetry +\n4-bit nibble-xor CRC), the bidirectional inverted-CRC variant, decode/validate, and per-rate bit\ntiming. Pure host tests with hand-computed vectors.",
@@ -2067,7 +2088,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_EDGE_CACHE=1",
         "-DPROTOCORE_ENABLE_HTTP_CACHE=1",
-        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1"
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<server/web/edge_cache/edge_cache_proxy/edge_cache_proxy.c>",
@@ -2619,7 +2641,10 @@
         "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
         "-DPROTOCORE_ENABLE_FTP_SESSION=1",
-        "-DPROTOCORE_ENABLE_FTP=1"
+        "-DPROTOCORE_ENABLE_FTP=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -2996,7 +3021,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_HTTP3=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+        "-DPROTOCORE_ENABLE_TLS_RPK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "${env:native_stack_http.build_src_filter}",
@@ -3053,7 +3079,10 @@
         "+<test/core_setup/hal/host/protocore_dma_host.c>",
         "+<crypto/hash/sha384/sha384.c>",
         "+<crypto/mac/hmac_sha384/hmac_sha384.c>",
-        "+<crypto/kdf/hkdf_sha384/hkdf_sha384.c>"
+        "+<crypto/kdf/hkdf_sha384/hkdf_sha384.c>",
+        "+<src/mmgr/plaintext/plaintext.c>",
+        "+<src/mmgr/span/span.c>",
+        "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
         "unit/integration/http/test_h3_server"
@@ -3434,7 +3463,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_IFACE_BRIDGE=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
-        "-DPROTOCORE_ENABLE_SSE=1"
+        "-DPROTOCORE_ENABLE_SSE=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<server/net/iface_bridge/iface_bridge/iface_bridge.c>",
@@ -3622,7 +3652,8 @@
       "desc": "The RFC 1951 INFLATE core (network_drivers/presentation/codec/inflate), the WebSocket permessage-deflate receiver. The load-bearing case assembles its streams bit by bit from the RFC itself - sec 3.2.3's block header, sec 3.2.4's stored block with its ones-complement NLEN, sec 3.2.6's fixed code table, sec 3.2.5's length and distance codes and sec 3.1.1's bit order - with the derivation written beside each octet, so nothing there was produced by a compressor and copied back. One dynamic-Huffman block (sec 3.2.7) carries its own code lengths and cannot be hand packed, so its octets come from a reference encoder while the expected value stays the plaintext that went in. The refusals are the RFC's own statements: BTYPE 11 is reserved, NLEN must be the complement of LEN, literal/length 286-287 and distance 30-31 never occur, a distance may not reach before the start of the output, and a stream that ends mid-block is incomplete. Also the permessage-deflate payload with RFC 7692 sec 7.2.2's marker appended, two blocks concatenating, and the output and scratch bounds.",
       "flags": [
         "-DPROTOCORE_ENABLE_WS_DEFLATE=1",
-        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_DEFLATE_RFC1951=1"
       ],
       "src": [
         "+<network_drivers/presentation/codec/inflate/inflate.c>",
@@ -3635,7 +3666,9 @@
       "tests": [
         "unit/src/network_drivers/presentation/codec/inflate/test_inflate"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_interbus": {
       "desc": "INTERBUS summation-frame codec (services/fieldbus/interbus): the summation frame (loopback +\nper-device 16-bit slices + CRC-16/CCITT FCS) assemble + disassemble. Pure host tests (FCS 0x29B1).",
@@ -3742,7 +3775,9 @@
     },
     "native_json_codec": {
       "desc": "Zero-heap JSON writer and top-level reader (network_drivers/presentation/codec/json, RFC 8259): the sec 13 example object built byte for byte, the sec 7 mandatory escape set, the sec 7 \"\\uD834\\uDD1E\" G clef surrogate pair decoded to its RFC 3629 UTF-8 form, the sec 8.2 unpaired surrogate mapped to U+FFFD, the sec 3 literal names, top-level-only member matching, write/read round trip, and the overflow / depth / null-storage refusals.",
-      "flags": [],
+      "flags": [
+        "-DPROTOCORE_ENABLE_JSON=1"
+      ],
       "src": [
         "+<network_drivers/presentation/codec/json/json.c>",
         "+<mmgr/membuild/membuild.c>",
@@ -3753,8 +3788,12 @@
         "+<mmgr/float_bits/float_bits.c>",
         "+<shared/hex/hex.c>"
       ],
-      "tests": ["unit/src/network_drivers/presentation/codec/json/test_json"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/presentation/codec/json/test_json"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_jwt_rfc7515": {
       "desc": "HS256 JWT verifier (services/security/jwt). Anchored on RFC 7515 Appendix A.1's complete example:\nthe token, the symmetric JWK and the MAC all come from the RFC, so the HMAC is judged against a\nsignature this library did not produce. Also RFC 7515 sec 4.1.1 + RFC 8725 sec 3.1 algorithm\nenforcement (alg none / RS256 / HS384 / absent), sec 7.1 serialization shape, RFC 6750 sec 2.1\nBearer credentials with the RFC 7235 sec 2.1 case-insensitive scheme, RFC 7519 sec 4.1.4 / 4.1.5\nexp and nbf with skew leeway, sec 4.1.6 iat, and RFC 6749 sec 3.3 whole-token scope matching.",
@@ -3791,7 +3830,10 @@
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_HTTP_ROUTE=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -3854,7 +3896,10 @@
         "+<mmgr/float_bits/float_bits.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20/chacha20.c>",
-        "+<test/core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>",
+        "+<src/mmgr/plaintext/plaintext.c>",
+        "+<src/mmgr/span/span.c>",
+        "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
         "unit/integration/server/test_keepalive"
@@ -4078,7 +4123,8 @@
         "-DPROTOCORE_ENABLE_MDNS=1",
         "-DPROTOCORE_ENABLE_PROMISC=1",
         "-DPROTOCORE_PHYSICAL_HAS_BACKEND=1",
-        "-DPROTOCORE_ENABLE_RADIO_POWER=1"
+        "-DPROTOCORE_ENABLE_RADIO_POWER=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<network_drivers/application/mdns_adaptive/mdns_adaptive.c>",
@@ -4120,7 +4166,8 @@
       "desc": "The portable mDNS / DNS-SD responder (network_drivers/application/mdns_service, RFC 6762 /\nRFC 6763) on the build where PROTOCORE_HAS_VENDOR_MDNS is 0: joining 224.0.0.251:5353 through the UDP\nlistener, and answering a query for the service-enumeration name, a service type, and an instance's\nSRV / TXT - each answer read back off the wire and decoded by the test's own label reader.",
       "flags": [
         "-DPROTOCORE_ENABLE_MDNS=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<network_drivers/application/mdns_service/mdns_service.c>",
@@ -4611,7 +4658,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_NTP_SERVER=1",
         "-DPROTOCORE_ENABLE_TIME_SOURCE=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<network_drivers/application/ntp_server/ntp_server.c>",
@@ -4649,7 +4697,8 @@
       "desc": "The SNTP client (network_drivers/application/ntp_service, RFC 4330), which is the client on\nevery target: the mode-3 request it puts on the wire, the mode-4 reply it accepts, and the ones it\nrefuses - a wrong mode, a kiss-o'-death stratum, an origin that does not echo the request's transmit\nstamp, and a pre-2021 clock. Plus the epoch advancing off the monotonic tick between syncs.",
       "flags": [
         "-DPROTOCORE_ENABLE_NTP=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<network_drivers/application/ntp_service/ntp_service.c>",
@@ -4718,7 +4767,10 @@
     },
     "native_oauth2_rfc6749": {
       "desc": "OAuth 2.0 token-endpoint client (services/security/oauth2). Anchored on RFC 6749: sec 4.1.3's\nAccess Token Request body and sec 6's refresh body reproduced with the running example's code,\nclient id and secret, sec 5.1's token response and sec 5.2's error object parsed, and the RFC 3986\nsec 2.1 / 2.3 percent-encoding checked over the unreserved set and the octets outside it. Also the\nRFC 7636 sec 4.5 PKCE code_verifier parameter and the all-or-nothing short-buffer refusal.",
-      "flags": ["-DPROTOCORE_ENABLE_OAUTH2=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_OAUTH2=1",
+        "-DPROTOCORE_ENABLE_JSON=1"
+      ],
       "src": [
         "+<services/security/oauth2/oauth2.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
@@ -4730,15 +4782,20 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/float_bits/float_bits.c>"
       ],
-      "tests": ["unit/src/services/security/oauth2/test_oauth2"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/security/oauth2/test_oauth2"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     
     "native_oauth2_exchange": {
       "desc": "The oauth2 transport calls: the borrow they carve their request body and reply into, and what they report when the exchange never reached an endpoint. PROTOCORE_ENABLE_HTTP_CLIENT is what compiles them at all, and without a net stack HttpClient.post reports HTTP_CLIENT_ERR_CONNECT.",
       "flags": [
         "-DPROTOCORE_ENABLE_OAUTH2=1",
-        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1"
+        "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
+        "-DPROTOCORE_ENABLE_JSON=1"
       ],
       "src": [
         "+<network_drivers/presentation/codec/json/json.c>",
@@ -4766,7 +4823,11 @@
       "flags": [
         "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_OAUTH2=1"
+        "-DPROTOCORE_ENABLE_OAUTH2=1",
+        "-DPROTOCORE_ENABLE_JSON=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -4810,7 +4871,8 @@
       "desc": "Transport observability (PROTOCORE_ENABLE_OBSERVABILITY): the protocore_conn_on_event\nhook, by-reason counters, the live CONN_CLOSING gauge, and that the real lwIP\ncallbacks (recv FIN / error / timeout / local close / backpressure) drive the\nright counter. Pure L4 core - host-tested.",
       "flags": [
         "-DPROTOCORE_ENABLE_OBSERVABILITY=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -4982,7 +5044,9 @@
     "native_partition": {
       "desc": "Flash partition-map monitor (server/storage/partition_monitor core): the kind\nclassifier + JSON serializer host-test here; the esp_partition walk is ESP32-only.",
       "flags": [
-        "-DPROTOCORE_ENABLE_PARTITION_MONITOR=1"
+        "-DPROTOCORE_ENABLE_PARTITION_MONITOR=1",
+        "-DPROTOCORE_ENABLE_HTTP_ROUTE=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<server/storage/partition_monitor/partition_monitor.c>",
@@ -5038,7 +5102,9 @@
       "desc": "The partition monitor's capability arm: the same suite as native_partition, built with PROTOCORE_HAS_VENDOR_OTA=1 so collect compiles the arm that walks the table through protocore_platform_partition_walk. native_partition drives the other arm, which reports no partitions. Both arms ship, so both are run.",
       "flags": [
         "-DPROTOCORE_ENABLE_PARTITION_MONITOR=1",
-        "-DPROTOCORE_HAS_VENDOR_OTA=1"
+        "-DPROTOCORE_HAS_VENDOR_OTA=1",
+        "-DPROTOCORE_ENABLE_HTTP_ROUTE=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<server/storage/partition_monitor/partition_monitor.c>",
@@ -5174,7 +5240,9 @@
         "-DPROTOCORE_ENABLE_HTTP3=1",
         "-DPROTOCORE_ENABLE_FILE_SERVING=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MODBUS_RTU=1"
+        "-DPROTOCORE_ENABLE_MODBUS_RTU=1",
+        "-DPROTOCORE_ENABLE_JSON=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -5789,7 +5857,8 @@
         "pre:test/gen_test_runners.py"
       ],
       "flags": [
-        "-DPROTOCORE_ENABLE_PROVISIONING=1"
+        "-DPROTOCORE_ENABLE_PROVISIONING=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "base": "env:native_stack_http"
     },
@@ -5955,7 +6024,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_HTTP3=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_TLS_RPK=1"
+        "-DPROTOCORE_ENABLE_TLS_RPK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<network_drivers/presentation/http/http3/quic_server/quic_server.c>",
@@ -6001,7 +6071,10 @@
         "+<crypto/aead/aes128gcm/aes128gcm.c>",
         "+<crypto/hash/sha384/sha384.c>",
         "+<crypto/mac/hmac_sha384/hmac_sha384.c>",
-        "+<crypto/kdf/hkdf_sha384/hkdf_sha384.c>"
+        "+<crypto/kdf/hkdf_sha384/hkdf_sha384.c>",
+        "+<src/mmgr/plaintext/plaintext.c>",
+        "+<src/mmgr/span/span.c>",
+        "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
         "unit/integration/http/test_quic_server"
@@ -6178,7 +6251,10 @@
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_HTTP_ROUTE=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -6242,7 +6318,10 @@
         "+<mmgr/float_bits/float_bits.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20/chacha20.c>",
-        "+<test/core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>",
+        "+<src/mmgr/plaintext/plaintext.c>",
+        "+<src/mmgr/span/span.c>",
+        "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
         "unit/integration/server/test_range"
@@ -6330,7 +6409,8 @@
     "native_relay_listener": {
       "desc": "Relay / DNAT listener bind table (server/net/relay/relay_listener): the published front-port binds, the bridge allocator, and the host-length and table-full refusals. The suite includes relay_listener.c so its file-static bind lookup and bridge allocator are reachable, which is why the env does not build that .c itself.",
       "flags": [
-        "-DPROTOCORE_ENABLE_RELAY=1"
+        "-DPROTOCORE_ENABLE_RELAY=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<server/net/relay/relay/relay.c>",
@@ -6381,7 +6461,8 @@
             "-DPROTOCORE_ENABLE_NTP=1",
             "-DPROTOCORE_ENABLE_WEBSOCKET=1",
             "-DPROTOCORE_ENABLE_SSE=1",
-            "-DPROTOCORE_HAS_NET_STACK=1"
+            "-DPROTOCORE_HAS_NET_STACK=1",
+            "-DPROTOCORE_ENABLE_UDP=1"
           ],
           "src": [
             "${env:native_stack_http.build_src_filter}",
@@ -6407,7 +6488,9 @@
         },
     "native_rfc1951": {
       "desc": "The RFC 1951 sec 3.2.5 length and distance tables and the sec 3.2.6 fixed-Huffman construction over them, defined once in codec/deflate/rfc1951.c and read by both DEFLATE codecs and both SSH zlib codecs. Every expected value is transcribed from RFC 1951, so the tables are checked against the standard rather than against themselves.",
-      "flags": [],
+      "flags": [
+        "-DPROTOCORE_ENABLE_DEFLATE_RFC1951=1"
+      ],
       "src": [
         "-<*>",
         "+<mmgr/protomem/protomem.c>",
@@ -6419,11 +6502,15 @@
       "tests": [
         "unit/src/network_drivers/presentation/codec/deflate/test_rfc1951"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_codec_rfc1951": {
       "desc": "The RFC 1951 code tables (network_drivers/presentation/codec/deflate/rfc1951): the sec 3.2.5 length and distance tables transcribed from the RFC's own printed rows rather than from the implementation, checked entry by entry and then checked to tile their ranges without a gap all the way to the largest distance of 32768. The sec 3.2.6 fixed-Huffman construction is checked against the four code length runs and against every boundary code that section prints in full, stored bit-reversed because sec 3.1.1 puts a code on the wire most significant bit first while the bit writer packs LSB-first. The two emitters are then driven through a real bit writer and their octets derived by hand: one literal, a shortest back-reference, the single length code for 258, a length whose offset lands in the extra bits, and a writer with no room latching overflow instead of writing past it.",
-      "flags": [],
+      "flags": [
+        "-DPROTOCORE_ENABLE_DEFLATE_RFC1951=1"
+      ],
       "src": [
         "+<network_drivers/presentation/codec/deflate/rfc1951/rfc1951.c>",
         "+<mmgr/bitio/bitio.c>",
@@ -6434,7 +6521,9 @@
       "tests": [
         "unit/src/network_drivers/presentation/codec/deflate/test_rfc1951"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_ring": {
       "desc": "The shared ring primitive (mmgr/ring.h) and its three views: bytes by head/tail, whole\nmessages by segment, and claimable slots by mask. Both TCP transports and both UDP rings sit on\nthis file and it had no suite of its own - it was only ever exercised as a side effect of theirs,\nwhich is how the wrap could move from a modulo to a mask on the strength of transport envs alone.\nCovers the power-of-two capacity the mask index requires, a wrapped entry reading back whole, a\nsegment staying invisible until it is published and refusing rather than overwriting one in\nflight, and the slot view: first taker wins, ready is marked minus held, next is the lowest set,\nand a losing hold cannot redirect the wire by clobbering the winner's keepout.",
@@ -6645,7 +6734,8 @@
         "-DPROTOCORE_SSH_MAX_CHANNELS=3",
         "-DPROTOCORE_ENABLE_MNT=1",
         "-DPROTOCORE_ENABLE_SSH_SCP=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -6799,7 +6889,10 @@
     },
     "native_senml_pack": {
       "desc": "SenML Pack builders and Record resolver (services/iot/senml), RFC 8428: the sec 5.1.1 and sec 5.1.2 JSON Packs reproduced character for character, the sec 4.2 value fields in their sec 5 JSON types, the sec 6 Table 4 CBOR integer map keys as RFC 8949 encodes them (-2 as 0x21, -3 as 0x22, the rest as themselves) with an integral Number as an integer and a non-integral one as a binary32 float, and the sec 4.6 resolve folding Base Name and Base Time forward, plus the zero-byte reports on a short buffer. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_SENML=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SENML=1",
+        "-DPROTOCORE_ENABLE_JSON=1"
+      ],
       "src": [
         "+<services/iot/senml/senml.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
@@ -6815,8 +6908,12 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/float_bits/float_bits.c>"
       ],
-      "tests": ["unit/src/services/iot/senml/test_senml"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/iot/senml/test_senml"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_sep2": {
       "desc": "IEEE 2030.5 (SEP 2.0) resource codec (services/energy/sep2): the DeviceCapability, EndDevice,\nand DERControl XML documents (urn:ieee:std:2030.5:ns), XML-escaped. Pure host tests.",
@@ -6859,7 +6956,8 @@
         "-DPROTOCORE_SSH_MAX_CHANNELS=3",
         "-DPROTOCORE_ENABLE_MNT=1",
         "-DPROTOCORE_ENABLE_SSH_SFTP=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -6932,9 +7030,14 @@
         "+<shared/utf8/utf8.c>",
         "+<mmgr/float_bits/float_bits.c>",
         "+<crypto/mac/ghash/ghash.c>",
-        "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>"
+        "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>",
+        "+<src/mmgr/plaintext/plaintext.c>",
+        "+<src/mmgr/span/span.c>",
+        "+<src/mmgr/arena/arena.c>"
       ],
-      "tests": []
+      "tests": [
+        "unit/src/network_drivers/application/sftp/test_ssh_sftp"
+      ]
     },
     "native_sht3x": {
       "desc": "Sensirion SHT3x temperature/humidity codec (server/peripherals/sht3x): the CRC-8 against the\ndatasheet check value (0xBEEF -> 0x92), the raw-tick -> milli-unit temperature/humidity\nconversions at the range endpoints and a mid value, and the six-byte single-shot response\nparse (both CRCs checked, corrupt CRC rejected). Pure - the I2C transfer is ESP32-only.",
@@ -7028,7 +7131,9 @@
     },
     "native_smb": {
       "desc": "SMB2 client (network_drivers/application/smb, MS-SMB2 / MS-NLMP): the SMB2 wire codec (transport frame,\nsync header, NEGOTIATE, SESSION_SETUP, TREE_CONNECT/CREATE/CLOSE/READ/WRITE); the NTLM digests\nMD4 (RFC 1320) / MD5 (RFC 1321) / HMAC-MD5 (RFC 2104) KAT-verified vs the RFC vectors; the\nNTLMv2 response (NThash / NTOWFv2 / NTProofStr / SessionBaseKey) vs the MS-NLMP section 4.2\nworked example; the NTLMSSP message codec; the SPNEGO GSS-API DER wrapping (RFC 4178) verified\nbyte-exact + independently vs openssl; and the smb_client dialogue engine (the full NEGOTIATE\n-> NTLMv2 SESSION_SETUP -> TREE_CONNECT -> CREATE -> CLOSE handshake) driven by a scripted mock\nSMB2 server over a send/recv seam. Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_SMB=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SMB=1"
+      ],
       "src": [
         "+<network_drivers/application/smb/smb2/smb2.c>",
         "+<crypto/aead/aesgcm/aesgcm.c>",
@@ -7056,7 +7161,10 @@
         "+<mmgr/span/span.c>",
         "+<mmgr/swar/swar.c>",
         "+<crypto/mac/ghash/ghash.c>",
-        "+<crypto/aead/aes128gcm/aes128gcm.c>"
+        "+<crypto/aead/aes128gcm/aes128gcm.c>",
+        "+<src/mmgr/secure/secure.c>",
+        "+<src/mmgr/span/span.c>",
+        "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
         "unit/src/network_drivers/application/smb/test_smb2",
@@ -7066,7 +7174,9 @@
         "unit/src/network_drivers/application/smb/test_spnego",
         "unit/integration/smb/test_smb_client"
       ],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_md_kat": {
       "desc": "MD4, MD5 and HMAC-MD5 (crypto/hash/md.h), the legacy digests NTLM needs. Runs the published test suites whole: RFC 1321 Appendix A.5 for MD5, RFC 1320 Appendix A.5 for MD4, and all seven RFC 2202 section 2 HMAC-MD5 cases including the two with an 80-octet key that RFC 2104 requires be hashed down first. Adds streaming / one-shot agreement at every split, context reuse across the two algorithms, and the 55/56 and 63/64 padding boundaries.",
@@ -7252,7 +7362,8 @@
       "desc": "SNMP ASN.1 BER codec (the version-agnostic base for the SNMP agent). Pure\ncodec - no lwIP/UDP - so it unit-tests on the host.",
       "flags": [
         "-DPROTOCORE_ENABLE_SNMP=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<services/net/snmp/snmp_ber/snmp_ber.c>",
@@ -7355,7 +7466,8 @@
         "-DPROTOCORE_ENABLE_SNMP=1",
         "-DPROTOCORE_ENABLE_SNMP_V3=1",
         "-DPROTOCORE_ENABLE_SNMP_TRAP=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<services/net/snmp/snmp_ber/snmp_ber.c>",
@@ -7385,7 +7497,9 @@
         "+<mmgr/swar/swar.c>",
         "+<shared/hex/hex.c>"
       ],
-      "tests": ["unit/protocols/iot/test_snmp_v3"]
+      "tests": [
+        "unit/protocols/iot/test_snmp_v3"
+      ]
     },
     "native_snp": {
       "desc": "GE Fanuc SNP serial frame codec (services/fieldbus/snp): the Series Ninety Protocol frame\n([control][length][data][BCC]) build + validate, the BCC being the Block Check Code of GE Fanuc\nGFK-0582D p. 7-62 (seed zero; per byte, XOR then rotate the accumulator left one bit),\nchecked against the three X-Attach messages that manual prints with their computed\nBCC octets. Pure host tests.",
@@ -7513,7 +7627,8 @@
         "-DPROTOCORE_ENABLE_SSH_SCP=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<crypto/hash/sha256/sha256.c>",
@@ -7587,7 +7702,9 @@
         "unit/src/network_drivers/presentation/ssh/connection/test_connection",
         "unit/src/network_drivers/presentation/ssh/app/test_server"
       ],
-      "extra_scripts": ["pre:test/ensure_test_keys.py"]
+      "extra_scripts": [
+        "pre:test/ensure_test_keys.py"
+      ]
     },
     "native_aesgcm_kat": {
       "desc": "AES-256-GCM (crypto/aead/aesgcm.h) against the NIST CAVP AES-256-GCM known-answer vectors from the SP 800-38D validation set (Keylen 256 / IVlen 96 / Taglen 128): empty message, AAD-only GMAC, one whole block, and a partial final block. Adds tamper refusal on tag, ciphertext, AAD and nonce, the RFC 5647 sec 7.1 invocation-counter advance, the NIST SP 800-38D sec 6.5 GCTR counter byte carry, and in-place sealing.",
@@ -7656,7 +7773,10 @@
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_ENABLE_SSH_CLIENT=1",
         "-DPROTOCORE_SSH_MAX_CHANNELS=4",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -7745,7 +7865,9 @@
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_ENABLE_SSH_ZLIB=1",
         "-DPROTOCORE_ENABLE_WS_DEFLATE=1",
-        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_DEFLATE_RFC1951=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<crypto/hash/sha256/sha256.c>",
@@ -7810,14 +7932,17 @@
         "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>"
       ],
       "tests": [],
-      "extra_scripts": ["pre:test/ensure_test_keys.py"]
+      "extra_scripts": [
+        "pre:test/ensure_test_keys.py"
+      ]
     },
     "native_ssh_conn": {
       "desc": "SSH wired through the real transport/session layers (PROTO_SSH byte-pump)",
       "flags": [
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -8205,7 +8330,10 @@
         "-DPROTOCORE_SSH_PORT_FORWARD=1",
         "-DPROTOCORE_SSH_MAX_CHANNELS=3",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -8288,7 +8416,11 @@
     },
     "native_ssh_hardened": {
       "desc": "SSH built with password auth disabled (publickey-only hardening)",
-      "flags": ["-DPROTOCORE_ENABLE_SSH=1", "-DPROTOCORE_SSH_ALLOW_PASSWORD=0"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_SSH=1",
+        "-DPROTOCORE_SSH_ALLOW_PASSWORD=0",
+        "-DPROTOCORE_ENABLE_TCP=1"
+      ],
       "src": [
         "+<crypto/hash/sha256/sha256.c>",
         "+<crypto/mac/hmac_sha256/hmac_sha256.c>",
@@ -8346,13 +8478,16 @@
         "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>"
       ],
       "tests": [],
-      "extra_scripts": ["pre:test/ensure_test_keys.py"]
+      "extra_scripts": [
+        "pre:test/ensure_test_keys.py"
+      ]
     },
     "native_ssh_inflate": {
       "desc": "SSH client-to-server resumable INFLATE (ssh_inflate): decompresses OpenSSH's per-packet\nZ_PARTIAL_FLUSH zlib stream across packets with a 32 KB context-takeover window. Verified against\ngolden vectors produced by real zlib (windowBits 15, Z_PARTIAL_FLUSH per packet; tools/crypto/gen_ssh_inflate_vectors.py),\ncovering fixed/dynamic/stored blocks, cross-packet back-references, and empty/tiny payloads. Pure host tests.",
       "flags": [
         "-DPROTOCORE_ENABLE_SSH=1",
-        "-DPROTOCORE_ENABLE_SSH_ZLIB=1"
+        "-DPROTOCORE_ENABLE_SSH_ZLIB=1",
+        "-DPROTOCORE_ENABLE_DEFLATE_RFC1951=1"
       ],
       "src": [
         "+<network_drivers/presentation/ssh/transport/inflate/inflate.c>",
@@ -8379,7 +8514,8 @@
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_SSH_ALLOW_PASSWORD=1"
+        "-DPROTOCORE_SSH_ALLOW_PASSWORD=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<crypto/hash/sha256/sha256.c>",
@@ -8451,7 +8587,8 @@
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_ENABLE_MNT=1",
         "-DPROTOCORE_ENABLE_SSH_SFTP=1",
-        "-DPROTOCORE_ENABLE_SSH_SCP=1"
+        "-DPROTOCORE_ENABLE_SSH_SCP=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<crypto/hash/sha256/sha256.c>",
@@ -8516,7 +8653,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_SSH_MAX_CHANNELS=3",
-        "-DPROTOCORE_ENABLE_PQC_KEX=1"
+        "-DPROTOCORE_ENABLE_PQC_KEX=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<crypto/hash/sha256/sha256.c>",
@@ -8578,7 +8716,9 @@
         "+<network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.c>"
       ],
       "tests": [],
-      "extra_scripts": ["pre:test/ensure_test_keys.py"]
+      "extra_scripts": [
+        "pre:test/ensure_test_keys.py"
+      ]
     },
     "native_ssh_sftp": {
       "desc": "SFTP protocol v3 wire codec (network_drivers/application/sftp): the SSH_FXP_* request reader + response builders\n(VERSION / STATUS / HANDLE / DATA / ATTRS / NAME), the ATTRS blob encode/decode round-trip (size / perms /\nmtime + the flag word, skipping unknown/extended fields), packet length-framing (need-more vs\nmalformed/too-big), and the ls -l longname formatter. Pure host tests (no fs / no SSH).",
@@ -8635,7 +8775,8 @@
         "-DPROTOCORE_ENABLE_SSH=1",
         "-DPROTOCORE_ENABLE_SSH_ZLIB=1",
         "-DPROTOCORE_ENABLE_WS_DEFLATE=1",
-        "-DPROTOCORE_ENABLE_WEBSOCKET=1"
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_DEFLATE_RFC1951=1"
       ],
       "src": [
         "+<network_drivers/presentation/ssh/transport/zlib/zlib.c>",
@@ -8666,7 +8807,12 @@
         "-DPROTOCORE_ENABLE_WEB_TERMINAL=1",
         "-DPROTOCORE_HTTP_EMIT_DATE=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_WEB_ASSETS=1",
+        "-DPROTOCORE_ENABLE_HTTP_ROUTE=1",
+        "-DPROTOCORE_ENABLE_JSON=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -8735,7 +8881,10 @@
         "+<test/core_setup/hal/host/host_platform.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20/chacha20.c>",
-        "+<test/core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>",
+        "+<src/mmgr/plaintext/plaintext.c>",
+        "+<src/mmgr/span/span.c>",
+        "+<src/mmgr/arena/arena.c>"
       ],
       "tests": []
     },
@@ -8743,7 +8892,8 @@
       "desc": "Layers 4-6 stack: transport + session + presentation + the standalone parser, no app layer. Base env for the suites that build on it; it runs no suite of its own.\nThese suites predate the RFC 7230 \u00a75.4 Host rule and feed bare HTTP/1.1\nrequest lines to exercise parser mechanics; Host enforcement is verified\nseparately in env:native_compliance.",
       "flags": [
         "-DPROTOCORE_ENFORCE_HOST_HEADER=0",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -8786,7 +8936,8 @@
       "desc": "StatsD metrics client (services/iot/statsd): the pure line formatter (name:value|type,\nsample rate, DogStatsD tags) plus the count/gauge/timing/set emit helpers, whose sent\nbytes are captured through the transport UDP service's host seam.",
       "flags": [
         "-DPROTOCORE_ENABLE_STATSD=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<services/iot/statsd/statsd.c>",
@@ -8853,7 +9004,8 @@
       "desc": "Syslog client (RFC 5424) line formatter. Pure formatter - no lwIP/UDP - so it\nunit-tests on the host (udp_transport provides host stubs for protocore_udp_sendto).",
       "flags": [
         "-DPROTOCORE_ENABLE_SYSLOG=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<services/net/syslog/syslog.c>",
@@ -8881,7 +9033,8 @@
     "native_tcp": {
       "desc": "The TCP path a stack drives, run on the host against the pcb driver in test/core_setup/hal/host. This is the only env that compiles the marshaled\narm of tcp_conn.c - every send, output, close, abort and recved the target routes through\npc_tcp_marshal - and the only one that drives a segment through the callbacks listener_accept_cb\ninstalled on the pcb rather than naming lowlevel_recv_cb directly.",
       "flags": [
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -8911,7 +9064,10 @@
       "desc": "tcp_client.h: the outbound client pool - slot claim, the non-blocking resolve/connect\npump, the whole-open timeout bound, the wire ring and its ack-on-consume window\nreopening (RFC 9293 sec 3.8.6). PROTOCORE_ENABLE_HTTP_CLIENT turns PROTOCORE_NEED_CLIENT\non, which is what compiles the translation unit's body at all.",
       "flags": [
         "-DPROTOCORE_ENABLE_HTTP_CLIENT=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -8978,7 +9134,8 @@
         "pre:test/gen_test_runners.py"
       ],
       "flags": [
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ]
     },
     "native_tcp_evt": {
@@ -9009,7 +9166,8 @@
         "pre:test/gen_test_runners.py"
       ],
       "flags": [
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ]
     },
     "native_tcp_listener": {
@@ -9025,7 +9183,8 @@
         "-DPROTOCORE_PER_IP_THROTTLE_SLOTS=4",
         "-DPROTOCORE_IP_ALLOWLIST_SLOTS=4",
         "-DPROTOCORE_ENABLE_DIFFSERV=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -9082,7 +9241,8 @@
         "pre:test/gen_test_runners.py"
       ],
       "flags": [
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ]
     },
     "native_telemetry": {
@@ -9101,7 +9261,8 @@
       "desc": "Telnet server (RFC 854 IAC negotiation + line editing) wired through the real\ntransport ring buffer; output checked via the tcp_write capture mock.",
       "flags": [
         "-DPROTOCORE_ENABLE_TELNET=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -9537,7 +9698,8 @@
     "native_udp_transport": {
       "desc": "UDP transport multicast receive (network_drivers/transport/udp.c): joining an IPv4\nmulticast group by dotted-quad, rejecting a non-multicast or malformed group, delivering a group\ndatagram to the registered handler, and leaving the group (releasing the listener slot). Drives the\nhost UDP mock's inject seam.",
       "flags": [
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_UDP=1"
       ],
       "src": [
         "+<network_drivers/transport/udp/udp.c>",
@@ -9595,7 +9757,10 @@
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_HTTP_ROUTE=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -9659,7 +9824,10 @@
         "+<mmgr/float_bits/float_bits.c>",
         "+<crypto/rng/rng.c>",
         "+<crypto/cipher/chacha20/chacha20.c>",
-        "+<test/core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>",
+        "+<src/mmgr/plaintext/plaintext.c>",
+        "+<src/mmgr/span/span.c>",
+        "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
         "unit/integration/server/test_upload"
@@ -9747,7 +9915,10 @@
     },
     "native_wamp": {
       "desc": "WAMP messaging codec (services/iot/wamp): the JSON-array message builders (HELLO /\nSUBSCRIBE / PUBLISH / CALL / REGISTER / YIELD / GOODBYE over JsonWriter) + the positional\narray parser (type / ids / URIs, nesting-aware). Pure host tests.",
-      "flags": ["-DPROTOCORE_ENABLE_WAMP=1"],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WAMP=1",
+        "-DPROTOCORE_ENABLE_JSON=1"
+      ],
       "src": [
         "+<services/iot/wamp/wamp.c>",
         "+<network_drivers/presentation/codec/json/json.c>",
@@ -9759,8 +9930,12 @@
         "+<shared/hex/hex.c>",
         "+<mmgr/float_bits/float_bits.c>"
       ],
-      "tests": ["unit/src/services/iot/wamp/test_wamp"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/services/iot/wamp/test_wamp"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ]
     },
     "native_wave_wsmp": {
       "desc": "IEEE 1609 WAVE codec (services/transportation/wave): the PSID P-encoding at both ends of all four length classes, the 1609.3 WSMP header build and parse, and the 1609.2 secured-message envelope. IEEE 1609 is not obtainable, so the vectors are derived from the documented P-encoding rule with the derivation written beside them; the load-bearing case is the round-trip property that every PSID the encoder accepts must decode back to itself. Pure host tests.",
@@ -9820,7 +9995,12 @@
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_WEB_ASSETS=1",
+        "-DPROTOCORE_ENABLE_HTTP_ROUTE=1",
+        "-DPROTOCORE_ENABLE_JSON=1",
+        "-DPROTOCORE_ENABLE_DNS=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -9888,7 +10068,10 @@
         "+<shared/time_compat/time_compat.c>",
         "+<shared/utf8/utf8.c>",
         "+<mmgr/float_bits/float_bits.c>",
-        "+<test/core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>",
+        "+<src/mmgr/plaintext/plaintext.c>",
+        "+<src/mmgr/span/span.c>",
+        "+<src/mmgr/arena/arena.c>"
       ],
       "tests": [
         "unit/integration/http/test_webdav_handler"
@@ -9994,7 +10177,8 @@
       "desc": "Core-partitioning invariant at N=2 (PROTOCORE_WORKER_COUNT=2): each worker reaps\nonly its owned slots (check_timeouts ownership). The host queue is keyed by handle, so\nper-worker routing is checkable here rather than only on hardware.",
       "flags": [
         "-DPROTOCORE_WORKER_COUNT=2",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -10023,7 +10207,8 @@
       "desc": "PROTOCORE_WORKER_COUNT=2 over the stack path, which nothing else compiles: native_tcp is\nsingle-worker and takes the other arm of listener_enqueue, so the multi-worker arm - the per-worker queue routing and the wake that\nfollows it - had no witness in the matrix at all.",
       "flags": [
         "-DPROTOCORE_WORKER_COUNT=2",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<network_drivers/transport/tcp/tcp.c>",
@@ -10120,7 +10305,9 @@
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1",
         "-DPROTOCORE_HAS_NET_STACK=1",
-        "-DPROTOCORE_ENABLE_MULTIPART=1"
+        "-DPROTOCORE_ENABLE_MULTIPART=1",
+        "-DPROTOCORE_ENABLE_DEFLATE_RFC1951=1",
+        "-DPROTOCORE_ENABLE_TCP=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",

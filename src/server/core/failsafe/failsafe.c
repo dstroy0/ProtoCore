@@ -75,10 +75,6 @@ static size_t u32_dec(uint32_t v, char *out)
 
 static void failsafe_reset(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const protocore_lifeline blank = {0};
     for (int i = 0; i < PROTOCORE_FAILSAFE_MAX_LIFELINES; i++)
     {
@@ -90,10 +86,6 @@ static void failsafe_reset(uint8_t *restrict work)
 
 static void failsafe_add(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const char *name = Failsafe.args.name;
     const uint32_t deadline_ms = Failsafe.args.deadline_ms;
     const uint32_t now = Failsafe.args.now;
@@ -116,10 +108,6 @@ static void failsafe_add(uint8_t *restrict work)
 
 static void failsafe_feed(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const int id = Failsafe.args.id;
     const uint32_t now = Failsafe.args.now;
 
@@ -136,20 +124,12 @@ static void failsafe_feed(uint8_t *restrict work)
 
 static void failsafe_on_breach(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     FAILSAFE_CTX(work)->cb = Failsafe.out_args.cb;
     FAILSAFE_CTX(work)->cb_arg = Failsafe.out_args.arg;
 }
 
 static void failsafe_check(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint32_t now = Failsafe.args.now;
 
     uint32_t mask = 0;
@@ -199,10 +179,6 @@ static void fs_put_u32(char *out, size_t cap, size_t *n, uint32_t v)
 
 static void failsafe_json(uint8_t *restrict work)
 {
-    if (!work)
-    {
-        return; // the pool was short of this module's borrow
-    }
     const uint32_t now = Failsafe.args.now;
     char *out = Failsafe.out_args.out;
     const size_t cap = Failsafe.out_args.cap;

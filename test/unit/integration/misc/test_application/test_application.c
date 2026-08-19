@@ -671,7 +671,10 @@ void test_serve_static_file_and_mime(void)
     Mnt.mount(mnt_work);
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     arm_slot(0, "GET /style.css HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
     tcp_capture_reset();
@@ -690,7 +693,10 @@ void test_serve_static_cache_control(void)
     Mnt.mount(mnt_work);
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
 
     set_cache_control("max-age=3600");
     arm_slot(0, "GET /style.css HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -719,7 +725,10 @@ void test_serve_static_index_fallback(void)
     Mnt.mount(mnt_work);
     static const char html[] = "<h1>home</h1>";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/index.html", html));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     arm_slot(0, "GET / HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
     tcp_capture_reset();
@@ -739,7 +748,10 @@ void test_serve_static_gzip_when_accepted(void)
     static const char gzbody[] = "\x1f\x8b"
                                  "FAKEGZIP";
     TEST_ASSERT_TRUE(lfsm_write_file("/www/app.js.gz", gzbody, sizeof(gzbody) - 1));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     arm_slot(0, "GET /app.js HTTP/1.1\r\nHost: x\r\nAccept-Encoding: gzip, deflate\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
     tcp_capture_reset();
@@ -758,7 +770,10 @@ void test_serve_static_wildcard_and_route_full(void)
     Mnt.mount(mnt_work);
     static const char js[] = "x=1;";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
-    serve_static("/assets*", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/assets*";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     arm_slot(0, "GET /assets/app.js HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
     tcp_capture_reset();
@@ -769,7 +784,10 @@ void test_serve_static_wildcard_and_route_full(void)
 
     for (int i = 0; i < MAX_ROUTES + 3; i++)
     {
-        serve_static("/s", lfsm(), "/www");
+        FileServing.serve_static_args.url_prefix = "/s";
+        FileServing.serve_static_args.file_sys = lfsm();
+        FileServing.serve_static_args.fs_root = "/www";
+        FileServing.serve_static(protocore_file_serving_span());
     }
 }
 
@@ -811,7 +829,10 @@ void test_serve_static_no_gzip_when_not_accepted(void)
     static const char js[] = "console.log(1)";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js.gz", "GZIPPED"));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     arm_slot(0, "GET /app.js HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
     tcp_capture_reset();
@@ -828,7 +849,10 @@ void test_serve_static_traversal_not_leaked(void)
     Mnt.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/secret", "topsecret"));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     arm_slot(0, "GET /../secret HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
     tcp_capture_reset();
@@ -844,7 +868,10 @@ void test_serve_static_missing_is_404(void)
     Mnt.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/www/exists.txt", "hi"));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     arm_slot(0, "GET /nope.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
     tcp_capture_reset();
@@ -860,7 +887,10 @@ void test_serve_static_etag_conditional_get(void)
     Mnt.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
 
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
@@ -900,7 +930,10 @@ void test_serve_static_inm_star_list_weak(void)
     Mnt.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
 
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
@@ -966,7 +999,10 @@ void test_serve_static_last_modified_conditional_get(void)
     Mnt.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     const char *LM = "Thu, 01 Jan 1970 00:16:40 GMT";
     char req[200];
     const char *o;
@@ -1025,7 +1061,10 @@ void test_serve_static_ims_field_comparisons(void)
     Mnt.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     const char *ims[] = {
         "Fri, 01 Jan 1971 00:16:40 GMT",
         "Sun, 01 Feb 1970 00:16:40 GMT",
@@ -1062,7 +1101,10 @@ void test_serve_static_no_timestamp(void)
     Mnt.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/www/page.html", "<html>hi</html>"));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
 
     arm_slot(0, "GET /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
@@ -1089,7 +1131,10 @@ void test_serve_static_if_modified_since_malformed(void)
     Mnt.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     const char *bad[] = {
         "not a date",
         "Thu, 01",
@@ -1709,7 +1754,10 @@ void test_cache_control_null_clears_header(void)
     Mnt.mount(mnt_work);
     static const char body[] = "x";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/c.txt", body));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
 
     set_cache_control("max-age=60");
     set_cache_control(NULL);
@@ -1912,7 +1960,10 @@ void test_static_mount_rejects_non_get_methods(void)
     Mnt.mount(mnt_work);
     static const char body[] = "hi";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/a.txt", body));
-    serve_static("/", lfsm(), "/www");
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = lfsm();
+    FileServing.serve_static_args.fs_root = "/www";
+    FileServing.serve_static(protocore_file_serving_span());
     arm_slot(0, "POST /a.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 0\r\n\r\n");
     conn_pool[0].pcb = protocore_net_host_pcb();
     tcp_capture_reset();
