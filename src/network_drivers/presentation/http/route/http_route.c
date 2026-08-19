@@ -23,45 +23,54 @@
 
 PROTOCORE_BEGIN_DECLS
 
-// The table's layout, known only here. The handle is the module's one file-scope mutable; the
-// storage behind it belongs to the secure pool.
+// The table's layout, known only here. The storage behind it belongs to the secure pool.
 struct HttpRouteCtx
 {
     HttpRoute entry[MAX_ROUTES];
     uint8_t count;
 };
-static struct HttpRouteCtx *s_route;
 
-_Static_assert(sizeof(struct HttpRouteCtx) <= PROTOCORE_WORK_ROUTE_TABLE,
-               "route table outgrew PROTOCORE_WORK_ROUTE_TABLE");
+// The caller's borrow, split: the table at its offset. One pointer arrives and every region is that
+// pointer plus a compile-time offset, so the assert below proves the span covers it before anything
+// runs.
+#define ROUTE_OFF_CTX 0u
+static_assert(ROUTE_OFF_CTX + sizeof(struct HttpRouteCtx) <= PROTOCORE_HTTP_ROUTE_BORROW,
+              "PROTOCORE_HTTP_ROUTE_BORROW is short of the route table - raise it in protocore_config.h, which"
+              " sums it into its arena");
 
-// Bound on first use rather than at an init the caller has to remember: a registration is the first
-// thing that touches the table, and every reader runs after one. The borrow is from the persistent
-// end, which no mark walks and no release reclaims, and it comes back zeroed.
-static struct HttpRouteCtx *bind_route(void)
+// The region, at its offset in the caller's borrow.
+#define ROUTE_CTX(w) ((struct HttpRouteCtx *)(void *)((w) + ROUTE_OFF_CTX))
+
+// The one owned instance, private to this TU: the pointer to the bytes taken for the table.
+static uint8_t *s_span;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from. Every registrar
+// and every reader drives the same table, so the bytes are the module's rather than any one
+// caller's. Taken from the persistent end, which no mark walks and no release reclaims, and it comes
+// back zeroed.
+uint8_t *protocore_http_route_span(void)
 {
-    if (s_route == NULL)
+    if (s_span == NULL)
     {
-        protocore_span s = protocore_secure_persist_span(sizeof(struct HttpRouteCtx));
-        if (span.ok(s))
-        {
-            s_route = (struct HttpRouteCtx *)s.buf;
-        }
+        s_span = protocore_secure_persist_span(PROTOCORE_HTTP_ROUTE_BORROW).buf;
     }
-    return s_route;
+    return s_span;
 }
 
 // --- the entries -----------------------------------------------------------
 
-// No context and no borrow: every operand is the caller's. The borrow an entry takes is
-// never read.
+// The table is the borrow: every entry reads it through ROUTE_CTX, and a null borrow is a pool that
+// could not be taken, which every one of them fails closed on.
 
 static void http_routes_add(uint8_t *restrict work)
 {
-    (void)work;
-
-    struct HttpRouteCtx *t = bind_route();
-    if (t == NULL || t->count >= MAX_ROUTES)
+    if (work == NULL)
+    {
+        HttpRoutes.ptr = NULL;
+        return;
+    }
+    struct HttpRouteCtx *t = ROUTE_CTX(work);
+    if (t->count >= MAX_ROUTES)
     {
         HttpRoutes.ptr = NULL;
         return;
@@ -79,33 +88,28 @@ static void http_routes_add(uint8_t *restrict work)
 
 static void http_routes_count(uint8_t *restrict work)
 {
-    (void)work;
-
-    HttpRoutes.value = s_route == NULL ? 0u : s_route->count;
+    HttpRoutes.value = work == NULL ? 0u : ROUTE_CTX(work)->count;
 }
 
 static void http_routes_at(uint8_t *restrict work)
 {
-    (void)work;
     uint8_t i = HttpRoutes.at_args.i;
 
-    if (s_route == NULL || i >= s_route->count)
+    if (work == NULL || i >= ROUTE_CTX(work)->count)
     {
         HttpRoutes.ptr = NULL;
         return;
     }
-    HttpRoutes.ptr = &s_route->entry[i];
+    HttpRoutes.ptr = &ROUTE_CTX(work)->entry[i];
 }
 
 static void http_routes_reset(uint8_t *restrict work)
 {
-    (void)work;
-
     // The count is the table: add() zeroes an entry on hand-out, so nothing below the count can carry
     // a previous tenant's fields and there is nothing to wipe here.
-    if (s_route != NULL)
+    if (work != NULL)
     {
-        s_route->count = 0;
+        ROUTE_CTX(work)->count = 0;
     }
 }
 

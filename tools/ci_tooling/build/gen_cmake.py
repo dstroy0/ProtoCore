@@ -25,6 +25,7 @@ import glob as _glob
 import json
 import os
 import re
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -335,7 +336,23 @@ def render_owed(owed):
     return "".join(out)
 
 
-def render(envs, warn):
+def make_runner(test):
+    """Generate the suite's unity_runner.c through the test harness. True when one is on disk after.
+
+    Unity's generator lives under .pio/libdeps, so this fails on a checkout that has never installed
+    it - which is exactly the case that must not write a truncated CMakeLists.
+    """
+    sd = os.path.join(ROOT, "test", *test.split("/"))
+    subprocess.run(
+        [sys.executable, os.path.join(ROOT, "test", "harness.py"), "runners", "gen", rel(sd)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    return os.path.isfile(os.path.join(sd, GENERATED_RUNNER))
+
+
+def render(envs, warn, dropped):
     out = [HEADER, render_owed(load_owed())]
     rendered = 0
     for name in sorted(envs):
@@ -364,8 +381,21 @@ def render(envs, warn):
                 warn.append("%s: no suite sources on disk (%s)" % (name, t))
                 continue
             if not has_main and not any(s.endswith(GENERATED_RUNNER) for s in suite):
-                warn.append("%s: no main() and no %s - run `test/harness.py runners gen`" % (targets[t], GENERATED_RUNNER))
-                continue
+                # The runner is generated, not committed, so a fresh checkout has none of them and
+                # every generated-runner suite would drop out - 437 targets down to 27, written over
+                # the committed file without an error. Make it, and count the miss if it cannot be.
+                if make_runner(t):
+                    suite, has_main = suite_sources(t)
+                    reached = reached_headers(t)
+                    for heads, lib_srcs in lib_pkgs:
+                        if reached & set(heads):
+                            suite = suite + lib_srcs
+                else:
+                    dropped.append(targets[t])
+                    warn.append(
+                        "%s: no main() and no %s - run `test/harness.py runners gen`" % (targets[t], GENERATED_RUNNER)
+                    )
+                    continue
 
             out.append("# %s\n" % desc if desc else "")
             out.append("protocore_env(%s\n" % targets[t])
@@ -394,7 +424,20 @@ def main():
         envs = json.load(f)["envs"]
 
     warn = []
-    text, n = render(envs, warn)
+    dropped = []
+    text, n = render(envs, warn, dropped)
+
+    # A target dropped for a missing runner is a target the file loses, and this file is committed.
+    # Refuse the write rather than hand back a smaller CMakeLists that still looks like a good one.
+    if dropped and not a.check:
+        print(
+            "gen_cmake: %d suite(s) have no main() and no %s, and one could not be generated.\n"
+            "  test/CMakeLists.txt was NOT written - it would have lost those targets silently.\n"
+            "  Unity's generator lives under .pio/libdeps; install it, then re-run.\n"
+            "  first few: %s" % (len(dropped), GENERATED_RUNNER, " ".join(sorted(dropped)[:5])),
+            file=sys.stderr,
+        )
+        return 1
 
     if a.check:
         cur = open(OUT, encoding="utf-8").read() if os.path.isfile(OUT) else ""

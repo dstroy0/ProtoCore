@@ -22,7 +22,12 @@ static uint8_t dtls_record_work[16]; // the borrow an entry takes; DtlsRecord ne
 #include "crypto/asymmetric/curve25519/curve25519.h"
 #include "crypto/asymmetric/ed25519/ed25519.h" // protocore_ed25519_pubkey for the RFC 7250 RawPublicKey
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
+#include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h" // the RFC 7250 RawPublicKey Certificate
 #include "server/clock/clock.h" // protocore_millis() stamps / checks the HelloRetryRequest cookie freshness
+
+static uint8_t tls13_rpk_work[16]; // the borrow an entry takes; Tls13Rpk never reads it
+
+static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
 
 PROTOCORE_BEGIN_DECLS
 
@@ -271,7 +276,11 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
 
     c->transcript = c->hash_work;
     transcript_start(c, c->transcript); // restart: message_hash(Hash(CH1)) replaces ClientHello1
-    size_t n = protocore_tls13_build_message_hash(c->msgbuf, sizeof(c->msgbuf), ch1_hash);
+    Tls13Msg.build_message_hash_args.out = c->msgbuf;
+    Tls13Msg.build_message_hash_args.cap = sizeof(c->msgbuf);
+    Tls13Msg.build_message_hash_args.ch1_hash = ch1_hash;
+    Tls13Msg.build_message_hash(tls13_msg_work);
+    size_t n = Tls13Msg.n;
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -297,9 +306,17 @@ static int send_hello_retry(DtlsConn *c, const Tls13ClientHello *ch, const uint8
         return fail(c, ALERT_INTERNAL_ERROR);
     }
 
-    n = protocore_tls13_build_hello_retry_request(c->msgbuf, sizeof(c->msgbuf), ch->session_id, ch->session_id_len,
-                                                  TLS_GROUP_X25519, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, cookie,
-                                                  clen, /*dtls=*/PROTO_TRUE);
+    Tls13Msg.build_hello_retry_request_args.out = c->msgbuf;
+    Tls13Msg.build_hello_retry_request_args.cap = sizeof(c->msgbuf);
+    Tls13Msg.build_hello_retry_request_args.session_id = ch->session_id;
+    Tls13Msg.build_hello_retry_request_args.session_id_len = ch->session_id_len;
+    Tls13Msg.build_hello_retry_request_args.selected_group = TLS_GROUP_X25519;
+    Tls13Msg.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
+    Tls13Msg.build_hello_retry_request_args.cookie = cookie;
+    Tls13Msg.build_hello_retry_request_args.cookie_len = clen;
+    Tls13Msg.build_hello_retry_request_args.dtls = /*dtls=*/PROTO_TRUE;
+    Tls13Msg.build_hello_retry_request(tls13_msg_work);
+    n = Tls13Msg.n;
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -371,7 +388,12 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
                                size_t *out_len)
 {
     Tls13ClientHello ch;
-    if (!protocore_tls13_parse_client_hello(msg, msg_len, &ch, /*dtls=*/PROTO_TRUE))
+    Tls13Msg.parse_client_hello_args.msg = msg;
+    Tls13Msg.parse_client_hello_args.len = msg_len;
+    Tls13Msg.parse_client_hello_args.out = &ch;
+    Tls13Msg.parse_client_hello_args.dtls = /*dtls=*/PROTO_TRUE;
+    Tls13Msg.parse_client_hello(tls13_msg_work);
+    if (!Tls13Msg.ok)
     {
         return fail(c, ALERT_DECODE_ERROR);
     }
@@ -443,10 +465,20 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     flight_reset(c); // this ClientHello starts a fresh server flight (ServerHello..Finished)
 
     // ServerHello (epoch 0, plaintext).
-    size_t n = protocore_tls13_build_server_hello(
-        c->msgbuf, sizeof(c->msgbuf), c->cfg.server_random, ch.session_id, ch.session_id_len, server_share, 32,
-        TLS_GROUP_X25519, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, /*dtls=*/PROTO_TRUE,
-        c->cid_negotiated ? c->local_cid : NULL, c->cid_negotiated ? c->local_cid_len : 0);
+    Tls13Msg.build_server_hello_args.out = c->msgbuf;
+    Tls13Msg.build_server_hello_args.cap = sizeof(c->msgbuf);
+    Tls13Msg.build_server_hello_args.random = c->cfg.server_random;
+    Tls13Msg.build_server_hello_args.session_id = ch.session_id;
+    Tls13Msg.build_server_hello_args.session_id_len = ch.session_id_len;
+    Tls13Msg.build_server_hello_args.share = server_share;
+    Tls13Msg.build_server_hello_args.share_len = 32;
+    Tls13Msg.build_server_hello_args.group = TLS_GROUP_X25519;
+    Tls13Msg.build_server_hello_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
+    Tls13Msg.build_server_hello_args.dtls = /*dtls=*/PROTO_TRUE;
+    Tls13Msg.build_server_hello_args.conn_id = c->cid_negotiated ? c->local_cid : NULL;
+    Tls13Msg.build_server_hello_args.conn_id_len = c->cid_negotiated ? c->local_cid_len : 0;
+    Tls13Msg.build_server_hello(tls13_msg_work);
+    size_t n = Tls13Msg.n;
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -501,7 +533,12 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     }
 
     // EncryptedExtensions.
-    n = protocore_tls13_build_encrypted_extensions_empty(c->msgbuf, sizeof(c->msgbuf), rpk, NULL);
+    Tls13Msg.build_encrypted_extensions_empty_args.out = c->msgbuf;
+    Tls13Msg.build_encrypted_extensions_empty_args.cap = sizeof(c->msgbuf);
+    Tls13Msg.build_encrypted_extensions_empty_args.rpk_server_cert = rpk;
+    Tls13Msg.build_encrypted_extensions_empty_args.alpn = NULL;
+    Tls13Msg.build_encrypted_extensions_empty(tls13_msg_work);
+    n = Tls13Msg.n;
     transcript_add(c, c->transcript, c->msgbuf, n);
     if (!flight_add(c, 2, c->msgbuf, n))
     {
@@ -516,11 +553,22 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
         Ed25519.pubkey_args.seed = c->cfg.ed25519_seed;
         Ed25519.pubkey_args.pub = ed_pub;
         Ed25519.pubkey(c->sign_work);
-        n = protocore_tls13_build_certificate_rpk(c->msgbuf, sizeof(c->msgbuf), ed_pub);
+        Tls13Rpk.build_certificate_args.out = c->msgbuf;
+        Tls13Rpk.build_certificate_args.cap = sizeof(c->msgbuf);
+        Tls13Rpk.build_certificate_args.ed25519_pub = ed_pub;
+        Tls13Rpk.build_certificate(tls13_rpk_work);
+        n = Tls13Rpk.n;
     }
     else
 #endif
-        n = protocore_tls13_build_certificate(c->msgbuf, sizeof(c->msgbuf), c->cfg.cert_der, c->cfg.cert_len);
+    {
+        Tls13Msg.build_certificate_args.out = c->msgbuf;
+        Tls13Msg.build_certificate_args.cap = sizeof(c->msgbuf);
+        Tls13Msg.build_certificate_args.cert_der = c->cfg.cert_der;
+        Tls13Msg.build_certificate_args.cert_len = c->cfg.cert_len;
+        Tls13Msg.build_certificate(tls13_msg_work);
+        n = Tls13Msg.n;
+    }
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -533,8 +581,14 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
 
     // CertificateVerify signs Transcript-Hash(..Certificate).
     snapshot(c, c->transcript, hash);
-    n = protocore_tls13_build_cert_verify(c->sign_work, c->msgbuf, sizeof(c->msgbuf), hash, c->ks.len,
-                                          c->cfg.ed25519_seed);
+    Tls13Msg.build_cert_verify_args.sign_work = c->sign_work;
+    Tls13Msg.build_cert_verify_args.out = c->msgbuf;
+    Tls13Msg.build_cert_verify_args.cap = sizeof(c->msgbuf);
+    Tls13Msg.build_cert_verify_args.transcript_hash = hash;
+    Tls13Msg.build_cert_verify_args.hash_len = c->ks.len;
+    Tls13Msg.build_cert_verify_args.seed = c->cfg.ed25519_seed;
+    Tls13Msg.build_cert_verify(tls13_msg_work);
+    n = Tls13Msg.n;
     if (!n)
     {
         return fail(c, ALERT_INTERNAL_ERROR);
@@ -553,7 +607,12 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     Tls13Ks.finished_args.transcript_hash = hash;
     Tls13Ks.finished_args.out = verify;
     Tls13Ks.finished_mac(NULL);
-    n = protocore_tls13_build_finished(c->msgbuf, sizeof(c->msgbuf), verify, c->ks.len);
+    Tls13Msg.build_finished_args.out = c->msgbuf;
+    Tls13Msg.build_finished_args.cap = sizeof(c->msgbuf);
+    Tls13Msg.build_finished_args.verify_data = verify;
+    Tls13Msg.build_finished_args.verify_len = c->ks.len;
+    Tls13Msg.build_finished(tls13_msg_work);
+    n = Tls13Msg.n;
     transcript_add(c, c->transcript, c->msgbuf, n);
     if (!flight_add(c, 2, c->msgbuf, n))
     {

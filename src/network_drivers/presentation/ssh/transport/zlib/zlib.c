@@ -101,7 +101,11 @@ static void zlib_init(uint8_t *restrict work)
     z->d_len = d_len;
     z->hist = 0;
     z->header_sent = PROTO_FALSE;
-    protocore_rfc1951_build_fixed(z->ll_code, z->ll_len, z->d_code, z->d_len);
+    Rfc1951.build_fixed_args.ll_code = z->ll_code;
+    Rfc1951.build_fixed_args.ll_len = z->ll_len;
+    Rfc1951.build_fixed_args.d_code = z->d_code;
+    Rfc1951.build_fixed_args.d_len = z->d_len;
+    Rfc1951.build_fixed(work);
 }
 
 static void zlib_packet(uint8_t *restrict work)
@@ -184,12 +188,23 @@ static void zlib_packet(uint8_t *restrict work)
         size_t advance;
         if (best_len >= PROTOCORE_MIN_MATCH)
         {
-            protocore_rfc1951_emit_match(&w, z->ll_code, z->ll_len, z->d_code, z->d_len, best_len, best_dist);
+            Rfc1951.emit_match_args.w = &w;
+            Rfc1951.emit_match_args.ll_code = z->ll_code;
+            Rfc1951.emit_match_args.ll_len = z->ll_len;
+            Rfc1951.emit_match_args.d_code = z->d_code;
+            Rfc1951.emit_match_args.d_len = z->d_len;
+            Rfc1951.emit_match_args.len = best_len;
+            Rfc1951.emit_match_args.dist = best_dist;
+            Rfc1951.emit_match(work);
             advance = (size_t)best_len;
         }
         else
         {
-            protocore_rfc1951_emit_literal(&w, z->ll_code, z->ll_len, buf[i]);
+            Rfc1951.emit_literal_args.w = &w;
+            Rfc1951.emit_literal_args.ll_code = z->ll_code;
+            Rfc1951.emit_literal_args.ll_len = z->ll_len;
+            Rfc1951.emit_literal_args.b = buf[i];
+            Rfc1951.emit_literal(work);
             advance = 1;
         }
 

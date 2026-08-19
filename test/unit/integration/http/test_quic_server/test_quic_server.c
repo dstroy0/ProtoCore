@@ -100,7 +100,7 @@ static void run(uint32_t now_ms)
 {
     UdpListener.poll(protocore_udp_listener_span());
     QuicServer.now_ms = now_ms;
-    QuicServer.poll(QuicServer.internal);
+    QuicServer.poll(protocore_quic_server_span());
     UdpListener.poll(protocore_udp_listener_span());
     harvest();
 }
@@ -124,7 +124,7 @@ static void app_request(void *, uint32_t conn_id, uint64_t sid, const char *meth
     QuicServer.resp.content_type = "text/plain";
     QuicServer.resp.body = (const uint8_t *)"hello h3";
     QuicServer.resp.body_len = 8;
-    QuicServer.respond(QuicServer.internal);
+    QuicServer.respond(protocore_quic_server_span());
 }
 
 static void fill()
@@ -522,7 +522,7 @@ void test_quic_server_http3_get()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     QuicInitialSecrets init;
@@ -564,7 +564,7 @@ void test_quic_server_http3_get()
                            &init.client, frames, fl);
 
     feed(dg, dl, "192.0.2.10", 40000, 0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
@@ -728,8 +728,8 @@ void test_quic_server_http3_get()
 
     TEST_ASSERT_TRUE(response_ok(&ap_s));
 
-    QuicServer.stop(QuicServer.internal);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
 }
 
@@ -744,25 +744,25 @@ void test_idle_connection_reaped()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg[1500];
     size_t dl = make_client_initial(dg, sizeof(dg));
     feed(dg, dl, "192.0.2.10", 40000, now);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     now += PROTOCORE_QUIC_IDLE_MS - 1;
     run(now);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
     now += 2;
     run(now);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 static void bulk_rng(uint8_t *out, size_t len)
@@ -801,7 +801,7 @@ void test_quic_server_input_guards()
     QuicServer.begin_args.cfg = NULL;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_FALSE(QuicServer.ok);
     QuicServerConfig scfg;
     config(&scfg, NULL);
@@ -809,26 +809,26 @@ void test_quic_server_input_guards()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_FALSE(QuicServer.ok);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
     QuicServer.now_ms = 0;
-    QuicServer.poll(QuicServer.internal);
+    QuicServer.poll(protocore_quic_server_span());
 
     scfg.rng = test_rng;
     QuicServer.begin_args.port = H3_PORT;
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t one[1] = {0x40};
     feed(one, 0, "192.0.2.1", 1, 0);
     static uint8_t huge[PROTOCORE_QUIC_MAX_DATAGRAM + 1];
     feed(huge, sizeof(huge), "192.0.2.1", 1, 0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
     TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 
@@ -838,7 +838,7 @@ void test_quic_server_input_guards()
     QuicServer.resp.content_type = "text/plain";
     QuicServer.resp.body = NULL;
     QuicServer.resp.body_len = 0;
-    QuicServer.respond(QuicServer.internal);
+    QuicServer.respond(protocore_quic_server_span());
     TEST_ASSERT_FALSE(QuicServer.ok);
 
     uint8_t bad_long[1] = {0xC0};
@@ -847,10 +847,10 @@ void test_quic_server_input_guards()
     feed(short_tiny, sizeof(short_tiny), "192.0.2.1", 1, 0);
     uint8_t short_unknown[1 + PROTOCORE_QUIC_SCID_LEN] = {0x40, 9, 9, 9, 9, 9, 9, 9, 9};
     feed(short_unknown, sizeof(short_unknown), "192.0.2.1", 1, 0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_ingest_ring_drops_past_capacity()
@@ -862,7 +862,7 @@ void test_ingest_ring_drops_past_capacity()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dcid_a[8] = {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7};
@@ -878,15 +878,15 @@ void test_ingest_ring_drops_past_capacity()
     }
     deliver(b, bl, "192.0.2.1", 1);
     run(0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(2, QuicServer.u8);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
     QuicServer.begin_args.port = H3_PORT;
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     deliver(a, al, "192.0.2.1", 1);
@@ -896,10 +896,10 @@ void test_ingest_ring_drops_past_capacity()
     }
     deliver(b, bl, "192.0.2.1", 1);
     run(0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_quic_server_pool_full()
@@ -911,7 +911,7 @@ void test_quic_server_pool_full()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     for (int i = 0; i <= PROTOCORE_QUIC_MAX_CONNS; i++)
@@ -922,9 +922,9 @@ void test_quic_server_pool_full()
         deliver(dg, dl, "192.0.2.10", 40000);
     }
     run(0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_QUIC_MAX_CONNS, QuicServer.u8);
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_quic_server_replies_to_the_captured_peer()
@@ -936,13 +936,13 @@ void test_quic_server_replies_to_the_captured_peer()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg[1500];
     size_t dl = make_client_initial(dg, sizeof(dg));
     feed(dg, dl, "255.255.255.255", 40009, 0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     TEST_ASSERT_GREATER_THAN(0, (int)protocore_net_host_udp_count());
@@ -953,7 +953,7 @@ void test_quic_server_replies_to_the_captured_peer()
     TEST_ASSERT_EQUAL_UINT16(40009, d->dst_port);
     TEST_ASSERT_EQUAL_UINT16(H3_PORT, d->src_port);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_quic_server_unrenderable_peer_dropped()
@@ -965,18 +965,18 @@ void test_quic_server_unrenderable_peer_dropped()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg[1500];
     size_t dl = make_client_initial(dg, sizeof(dg));
     feed(dg, dl, NULL, 40000, 0);
 
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
     TEST_ASSERT_EQUAL_INT(0, (int)protocore_net_host_udp_sent());
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_quic_server_respond_unknown_id_with_active_conn()
@@ -988,13 +988,13 @@ void test_quic_server_respond_unknown_id_with_active_conn()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg0[256];
     size_t dl0 = make_min_initial(dg0, sizeof(dg0), ODCID, sizeof(ODCID));
     feed(dg0, dl0, "192.0.2.10", 40000, 0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     QuicServer.stream.conn_id = 2;
@@ -1003,10 +1003,10 @@ void test_quic_server_respond_unknown_id_with_active_conn()
     QuicServer.resp.content_type = "text/plain";
     QuicServer.resp.body = NULL;
     QuicServer.resp.body_len = 0;
-    QuicServer.respond(QuicServer.internal);
+    QuicServer.respond(protocore_quic_server_span());
     TEST_ASSERT_FALSE(QuicServer.ok);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_quic_server_begin_default_port()
@@ -1018,10 +1018,10 @@ void test_quic_server_begin_default_port()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
     TEST_ASSERT_NOT_NULL(protocore_net_host_udp_pcb(PROTOCORE_HTTP3_PORT));
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_quic_server_route_header_edges()
@@ -1033,13 +1033,13 @@ void test_quic_server_route_header_edges()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     uint8_t dg0[256];
     size_t dl0 = make_min_initial(dg0, sizeof(dg0), ODCID, sizeof(ODCID));
     feed(dg0, dl0, "192.0.2.10", 40000, 0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     uint8_t short_dcid[4] = {0x11, 0x22, 0x33, 0x44};
@@ -1087,7 +1087,7 @@ void test_quic_server_route_header_edges()
     deliver(scid_hdr, scid_hdr_len, "192.0.2.13", 40003);
 
     run(0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     uint8_t wrong_scid[1 + PROTOCORE_QUIC_SCID_LEN];
@@ -1097,10 +1097,10 @@ void test_quic_server_route_header_edges()
         wrong_scid[1 + i] = (uint8_t)(0xEE + i);
     }
     feed(wrong_scid, sizeof(wrong_scid), "192.0.2.14", 40004, 0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_quic_server_close_reaped_before_idle()
@@ -1114,7 +1114,7 @@ void test_quic_server_close_reaped_before_idle()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = app_request;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     QuicInitialSecrets init;
@@ -1136,7 +1136,7 @@ void test_quic_server_close_reaped_before_idle()
     size_t dl0 = build_long(dg0, sizeof(dg0), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             0, &init.client, frames0, fl0);
     feed(dg0, dl0, "192.0.2.20", 40010, now);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
     uint8_t cc_frames[64];
@@ -1154,10 +1154,10 @@ void test_quic_server_close_reaped_before_idle()
                             1, &init.client, cc_frames, cc_len);
     now += 5;
     feed(dg1, dl1, "192.0.2.20", 40010, now);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(0, QuicServer.u8);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 
 void test_quic_server_on_request_null()
@@ -1170,7 +1170,7 @@ void test_quic_server_on_request_null()
     QuicServer.begin_args.cfg = &scfg;
     QuicServer.begin_args.on_request = NULL;
     QuicServer.begin_args.app = NULL;
-    QuicServer.begin(QuicServer.internal);
+    QuicServer.begin(protocore_quic_server_span());
     TEST_ASSERT_TRUE(QuicServer.ok);
 
     QuicInitialSecrets init;
@@ -1212,7 +1212,7 @@ void test_quic_server_on_request_null()
                            &init.client, frames, fl);
 
     feed(dg, dl, "192.0.2.10", 40000, 0);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
@@ -1368,9 +1368,9 @@ void test_quic_server_on_request_null()
     feed(s1, s1l, "192.0.2.10", 40000, 0);
 
     TEST_ASSERT_EQUAL_STRING("", g_method);
-    QuicServer.active_conns(QuicServer.internal);
+    QuicServer.active_conns(protocore_quic_server_span());
     TEST_ASSERT_EQUAL_UINT8(1, QuicServer.u8);
 
-    QuicServer.stop(QuicServer.internal);
+    QuicServer.stop(protocore_quic_server_span());
 }
 

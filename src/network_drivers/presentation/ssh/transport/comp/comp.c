@@ -17,7 +17,8 @@ static uint8_t zlib_work[16]; // the borrow an entry takes; Zlib never reads it
 #include "network_drivers/presentation/ssh/common.h"
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"
 
-#include "mmgr/secure/secure.h" // protocore_secure_wipe
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/secure/secure.h"       // protocore_secure_wipe
 #include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
 #include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
 
@@ -52,7 +53,32 @@ typedef struct
 {
     SshCompState comp[MAX_SSH_CONNS];
 } SshCompCtx;
-static PROTOCORE_SSH_COMP_ATTR SshCompCtx s_ssh_comp;
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define COMP_OFF_CTX 0u
+static_assert(COMP_OFF_CTX + sizeof(SshCompCtx) <= PROTOCORE_SSH_COMP_BORROW,
+              "PROTOCORE_SSH_COMP_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define COMP_CTX(w) ((SshCompCtx *)(void *)((w) + COMP_OFF_CTX))
+
+// The one owned instance, private to this TU: the pointer to the bytes taken for the table.
+static uint8_t *s_span;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from. The transport and
+// the server both drive one connection's compressor, so the bytes are the module's rather than
+// either caller's, and they are persistent because the streams take context over from packet to
+// packet. Plaintext: session data, no key material.
+uint8_t *protocore_ssh_comp_span(void)
+{
+    if (s_span == NULL)
+    {
+        s_span = protocore_plaintext_persist_span(PROTOCORE_SSH_COMP_BORROW).buf;
+    }
+    return s_span;
+}
 
 static void start_s2c(SshCompState *c)
 {
@@ -89,7 +115,7 @@ static void comp_reset(uint8_t *restrict work)
     {
         return;
     }
-    SshCompState *c = &s_ssh_comp.comp[i];
+    SshCompState *c = &COMP_CTX(work)->comp[i];
     c->s2c_alg = SSH_COMP_NONE;
     c->s2c_active = PROTO_FALSE;
     c->c2s_alg = SSH_COMP_NONE;
@@ -101,7 +127,6 @@ static void comp_reset(uint8_t *restrict work)
 
 static void comp_set_s2c(uint8_t *restrict work)
 {
-    (void)work;
     uint8_t i = Comp.set_s2c_args.i;
     SshCompAlg alg = Comp.set_s2c_args.alg;
 
@@ -109,12 +134,11 @@ static void comp_set_s2c(uint8_t *restrict work)
     {
         return;
     }
-    s_ssh_comp.comp[i].s2c_alg = alg;
+    COMP_CTX(work)->comp[i].s2c_alg = alg;
 }
 
 static void comp_set_c2s(uint8_t *restrict work)
 {
-    (void)work;
     uint8_t i = Comp.set_c2s_args.i;
     SshCompAlg alg = Comp.set_c2s_args.alg;
 
@@ -122,13 +146,12 @@ static void comp_set_c2s(uint8_t *restrict work)
     {
         return;
     }
-    s_ssh_comp.comp[i].c2s_alg = alg;
+    COMP_CTX(work)->comp[i].c2s_alg = alg;
 }
 
 // "zlib" (non-delayed) starts both directions at NEWKEYS; "zlib@openssh.com" waits for auth success.
 static void comp_on_newkeys(uint8_t *restrict work)
 {
-    (void)work;
     uint8_t i = Comp.on_newkeys_args.i;
 
     if (i >= MAX_SSH_CONNS)
@@ -137,7 +160,7 @@ static void comp_on_newkeys(uint8_t *restrict work)
     }
     // RFC 4253 sec 6.2: "The compression context is initialized after each key exchange", so a
     // re-exchange starts both streams over rather than carrying the previous LZ77 window across it.
-    SshCompState *c = &s_ssh_comp.comp[i];
+    SshCompState *c = &COMP_CTX(work)->comp[i];
     if (c->s2c_alg == SSH_COMP_ZLIB)
     {
         start_s2c(c);
@@ -150,14 +173,13 @@ static void comp_on_newkeys(uint8_t *restrict work)
 
 static void comp_on_auth_success(uint8_t *restrict work)
 {
-    (void)work;
     uint8_t i = Comp.on_auth_success_args.i;
 
     if (i >= MAX_SSH_CONNS)
     {
         return;
     }
-    SshCompState *c = &s_ssh_comp.comp[i];
+    SshCompState *c = &COMP_CTX(work)->comp[i];
     if (c->s2c_alg == SSH_COMP_ZLIB_DELAYED && !c->s2c_active)
     {
         start_s2c(c);
@@ -170,15 +192,13 @@ static void comp_on_auth_success(uint8_t *restrict work)
 
 static void comp_s2c_active(uint8_t *restrict work)
 {
-    (void)work;
     uint8_t i = Comp.s2c_active_args.i;
 
-    Comp.ok = i < MAX_SSH_CONNS && s_ssh_comp.comp[i].s2c_active;
+    Comp.ok = i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].s2c_active;
 }
 
 static void comp_s2c(uint8_t *restrict work)
 {
-    (void)work;
     uint8_t i = Comp.s2c_args.i;
     const uint8_t *src = Comp.s2c_args.src;
     size_t src_len = Comp.s2c_args.src_len;
@@ -186,12 +206,12 @@ static void comp_s2c(uint8_t *restrict work)
     size_t dst_cap = Comp.s2c_args.dst_cap;
     size_t *out_len = Comp.s2c_args.out_len;
 
-    if (i >= MAX_SSH_CONNS || !s_ssh_comp.comp[i].s2c_active)
+    if (i >= MAX_SSH_CONNS || !COMP_CTX(work)->comp[i].s2c_active)
     {
         Comp.n = -1;
         return;
     }
-    Zlib.packet_args.z = &s_ssh_comp.comp[i].z;
+    Zlib.packet_args.z = &COMP_CTX(work)->comp[i].z;
     Zlib.packet_args.src = src;
     Zlib.packet_args.src_len = src_len;
     Zlib.packet_args.dst = dst;
@@ -203,15 +223,13 @@ static void comp_s2c(uint8_t *restrict work)
 
 static void comp_c2s_active(uint8_t *restrict work)
 {
-    (void)work;
     uint8_t i = Comp.c2s_active_args.i;
 
-    Comp.ok = i < MAX_SSH_CONNS && s_ssh_comp.comp[i].c2s_active;
+    Comp.ok = i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].c2s_active;
 }
 
 static void comp_c2s(uint8_t *restrict work)
 {
-    (void)work;
     uint8_t i = Comp.c2s_args.i;
     const uint8_t *src = Comp.c2s_args.src;
     size_t src_len = Comp.c2s_args.src_len;
@@ -219,12 +237,12 @@ static void comp_c2s(uint8_t *restrict work)
     size_t dst_cap = Comp.c2s_args.dst_cap;
     size_t *out_len = Comp.c2s_args.out_len;
 
-    if (i >= MAX_SSH_CONNS || !s_ssh_comp.comp[i].c2s_active)
+    if (i >= MAX_SSH_CONNS || !COMP_CTX(work)->comp[i].c2s_active)
     {
         Comp.n = -1;
         return;
     }
-    Inflate.packet_args.z = &s_ssh_comp.comp[i].inf;
+    Inflate.packet_args.z = &COMP_CTX(work)->comp[i].inf;
     Inflate.packet_args.src = src;
     Inflate.packet_args.src_len = src_len;
     Inflate.packet_args.dst = dst;

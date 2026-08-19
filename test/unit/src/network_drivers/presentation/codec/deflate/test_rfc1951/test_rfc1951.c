@@ -39,23 +39,63 @@ void tearDown(void)
 {
 }
 
+static uint8_t rfc1951_work[16]; // the borrow an entry takes; Rfc1951 never reads it
+
+// Thin wrappers so a case reads as the operation it is checking rather than four assignments.
+static void build_fixed(uint16_t *ll_code, uint8_t *ll_len, uint16_t *d_code, uint8_t *d_len)
+{
+    Rfc1951.build_fixed_args.ll_code = ll_code;
+    Rfc1951.build_fixed_args.ll_len = ll_len;
+    Rfc1951.build_fixed_args.d_code = d_code;
+    Rfc1951.build_fixed_args.d_len = d_len;
+    Rfc1951.build_fixed(rfc1951_work);
+}
+
+static uint16_t rev(uint16_t code, int len)
+{
+    Rfc1951.reverse_bits_args.code = code;
+    Rfc1951.reverse_bits_args.len = len;
+    Rfc1951.reverse_bits(rfc1951_work);
+    return Rfc1951.u16;
+}
+
+static void emit_literal(protocore_bit_writer *w, const uint16_t *ll_code, const uint8_t *ll_len, uint8_t b)
+{
+    Rfc1951.emit_literal_args.w = w;
+    Rfc1951.emit_literal_args.ll_code = ll_code;
+    Rfc1951.emit_literal_args.ll_len = ll_len;
+    Rfc1951.emit_literal_args.b = b;
+    Rfc1951.emit_literal(rfc1951_work);
+}
+
+static void emit_match(protocore_bit_writer *w, const uint16_t *ll_code, const uint8_t *ll_len,
+                       const uint16_t *d_code, const uint8_t *d_len, int len, int dist)
+{
+    Rfc1951.emit_match_args.w = w;
+    Rfc1951.emit_match_args.ll_code = ll_code;
+    Rfc1951.emit_match_args.ll_len = ll_len;
+    Rfc1951.emit_match_args.d_code = d_code;
+    Rfc1951.emit_match_args.d_len = d_len;
+    Rfc1951.emit_match_args.len = len;
+    Rfc1951.emit_match_args.dist = dist;
+    Rfc1951.emit_match(rfc1951_work);
+}
+
 void test_length_table_matches_rfc(void)
 {
-    const Rfc1951Ns *r = RFC1951;
     for (int i = 0; i < 29; i++)
     {
-        TEST_ASSERT_EQUAL_INT16(RFC_LEN_BASE[i], r->len_base[i]);
-        TEST_ASSERT_EQUAL_INT16(RFC_LEN_EXTRA[i], r->len_extra[i]);
+        TEST_ASSERT_EQUAL_INT16(RFC_LEN_BASE[i], Rfc1951.len_base[i]);
+        TEST_ASSERT_EQUAL_INT16(RFC_LEN_EXTRA[i], Rfc1951.len_extra[i]);
     }
 }
 
 void test_distance_table_matches_rfc(void)
 {
-    const Rfc1951Ns *r = RFC1951;
     for (int i = 0; i < 30; i++)
     {
-        TEST_ASSERT_EQUAL_INT16(RFC_DIST_BASE[i], r->dist_base[i]);
-        TEST_ASSERT_EQUAL_INT16(RFC_DIST_EXTRA[i], r->dist_extra[i]);
+        TEST_ASSERT_EQUAL_INT16(RFC_DIST_BASE[i], Rfc1951.dist_base[i]);
+        TEST_ASSERT_EQUAL_INT16(RFC_DIST_EXTRA[i], Rfc1951.dist_extra[i]);
     }
 }
 
@@ -64,34 +104,37 @@ void test_distance_table_matches_rfc(void)
 // span. Code 285 breaks the run by design, being the single length 258.
 void test_length_spans_are_contiguous(void)
 {
-    const Rfc1951Ns *r = RFC1951;
     for (int i = 0; i < 27; i++)
     {
-        const int span = 1 << r->len_extra[i];
-        TEST_ASSERT_EQUAL_INT16(r->len_base[i] + span, r->len_base[i + 1]);
+        const int span = 1 << Rfc1951.len_extra[i];
+        TEST_ASSERT_EQUAL_INT16(Rfc1951.len_base[i] + span, Rfc1951.len_base[i + 1]);
     }
-    TEST_ASSERT_EQUAL_INT16(258, r->len_base[28]);
+    TEST_ASSERT_EQUAL_INT16(258, Rfc1951.len_base[28]);
 }
 
 // The distance ranges tile all the way to 32768, sec 3.2.5's largest distance.
 void test_distance_spans_are_contiguous(void)
 {
-    const Rfc1951Ns *r = RFC1951;
     for (int i = 0; i < 29; i++)
     {
-        const int span = 1 << r->dist_extra[i];
-        TEST_ASSERT_EQUAL_INT16(r->dist_base[i] + span, r->dist_base[i + 1]);
+        const int span = 1 << Rfc1951.dist_extra[i];
+        TEST_ASSERT_EQUAL_INT16(Rfc1951.dist_base[i] + span, Rfc1951.dist_base[i + 1]);
     }
     // Code 29's printed range is 24577-32768, so its last value is base + 2^extra - 1.
-    TEST_ASSERT_EQUAL_INT32(32768, r->dist_base[29] + (1 << r->dist_extra[29]) - 1);
+    TEST_ASSERT_EQUAL_INT32(32768, Rfc1951.dist_base[29] + (1 << Rfc1951.dist_extra[29]) - 1);
 }
 
-// The accessor hands out one instance, which is what lets the encoder and the decoder read the same
-// table rather than two copies that can drift.
-void test_namespace_is_one_instance(void)
+// One namespace holds all four tables, which is what lets the encoder and the decoder read the same
+// table rather than two copies that can drift. Four distinct arrays, every one of them bound.
+void test_namespace_holds_all_four_tables(void)
 {
-    TEST_ASSERT_EQUAL_PTR(protocore_rfc1951(), protocore_rfc1951());
-    TEST_ASSERT_EQUAL_PTR(RFC1951->len_base, protocore_rfc1951()->len_base);
+    TEST_ASSERT_NOT_NULL(Rfc1951.len_base);
+    TEST_ASSERT_NOT_NULL(Rfc1951.len_extra);
+    TEST_ASSERT_NOT_NULL(Rfc1951.dist_base);
+    TEST_ASSERT_NOT_NULL(Rfc1951.dist_extra);
+    TEST_ASSERT_NOT_EQUAL(Rfc1951.len_base, Rfc1951.len_extra);
+    TEST_ASSERT_NOT_EQUAL(Rfc1951.dist_base, Rfc1951.dist_extra);
+    TEST_ASSERT_NOT_EQUAL(Rfc1951.len_base, Rfc1951.dist_base);
 }
 
 // RFC 1951 sec 3.2.6: literal/length values 0-143 take 8 bits, 144-255 take 9, 256-279 take 7 and
@@ -102,7 +145,7 @@ void test_build_fixed_lengths_match_rfc(void)
     uint8_t ll_len[288];
     uint16_t d_code[30];
     uint8_t d_len[30];
-    protocore_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
+    build_fixed(ll_code, ll_len, d_code, d_len);
 
     for (int s = 0; s < 144; s++)
     {
@@ -136,39 +179,39 @@ void test_build_fixed_codes_are_the_rfc_codes_reversed(void)
     uint8_t ll_len[288];
     uint16_t d_code[30];
     uint8_t d_len[30];
-    protocore_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
+    build_fixed(ll_code, ll_len, d_code, d_len);
 
-    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x30, 8), ll_code[0]);    // 00110000
-    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0xBF, 8), ll_code[143]);  // 10111111
-    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x190, 9), ll_code[144]); // 110010000
-    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x1FF, 9), ll_code[255]); // 111111111
-    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x00, 7), ll_code[256]);  // 0000000
-    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0x17, 7), ll_code[279]);  // 0010111
-    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0xC0, 8), ll_code[280]);  // 11000000
-    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0xC7, 8), ll_code[287]);  // 11000111
+    TEST_ASSERT_EQUAL_UINT16(rev(0x30, 8), ll_code[0]);    // 00110000
+    TEST_ASSERT_EQUAL_UINT16(rev(0xBF, 8), ll_code[143]);  // 10111111
+    TEST_ASSERT_EQUAL_UINT16(rev(0x190, 9), ll_code[144]); // 110010000
+    TEST_ASSERT_EQUAL_UINT16(rev(0x1FF, 9), ll_code[255]); // 111111111
+    TEST_ASSERT_EQUAL_UINT16(rev(0x00, 7), ll_code[256]);  // 0000000
+    TEST_ASSERT_EQUAL_UINT16(rev(0x17, 7), ll_code[279]);  // 0010111
+    TEST_ASSERT_EQUAL_UINT16(rev(0xC0, 8), ll_code[280]);  // 11000000
+    TEST_ASSERT_EQUAL_UINT16(rev(0xC7, 8), ll_code[287]);  // 11000111
 
     // The whole 0-143 run is consecutive from 00110000, which is what "canonical" means here.
     for (int s = 0; s < 144; s++)
     {
-        TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits((uint16_t)(0x30 + s), 8), ll_code[s]);
+        TEST_ASSERT_EQUAL_UINT16(rev((uint16_t)(0x30 + s), 8), ll_code[s]);
     }
     // Distance codes are 0..29 in order, five bits each.
     for (int s = 0; s < 30; s++)
     {
-        TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits((uint16_t)s, 5), d_code[s]);
+        TEST_ASSERT_EQUAL_UINT16(rev((uint16_t)s, 5), d_code[s]);
     }
 }
 
 // Reversing the same width twice is the identity, so a code written out and read back is the code.
 void test_reverse_bits_is_its_own_inverse(void)
 {
-    TEST_ASSERT_EQUAL_UINT16(0x0C, protocore_rfc1951_reverse_bits(0x30, 8)); // 00110000 -> 00001100
-    TEST_ASSERT_EQUAL_UINT16(0x30, protocore_rfc1951_reverse_bits(0x0C, 8));
-    TEST_ASSERT_EQUAL_UINT16(0x01, protocore_rfc1951_reverse_bits(0x10, 5)); // 10000 -> 00001
-    TEST_ASSERT_EQUAL_UINT16(0x00, protocore_rfc1951_reverse_bits(0x00, 7));
+    TEST_ASSERT_EQUAL_UINT16(0x0C, rev(0x30, 8)); // 00110000 -> 00001100
+    TEST_ASSERT_EQUAL_UINT16(0x30, rev(0x0C, 8));
+    TEST_ASSERT_EQUAL_UINT16(0x01, rev(0x10, 5)); // 10000 -> 00001
+    TEST_ASSERT_EQUAL_UINT16(0x00, rev(0x00, 7));
     for (uint16_t v = 0; v < 256; v++)
     {
-        TEST_ASSERT_EQUAL_UINT16(v, protocore_rfc1951_reverse_bits(protocore_rfc1951_reverse_bits(v, 8), 8));
+        TEST_ASSERT_EQUAL_UINT16(v, rev(rev(v, 8), 8));
     }
 }
 
@@ -182,13 +225,13 @@ void test_emit_literal_puts_the_code_on_the_wire(void)
     uint8_t ll_len[288];
     uint16_t d_code[30];
     uint8_t d_len[30];
-    protocore_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
+    build_fixed(ll_code, ll_len, d_code, d_len);
 
     uint8_t out[4];
     memset(out, 0, sizeof(out));
     protocore_bit_writer w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
 
-    protocore_rfc1951_emit_literal(&w, ll_code, ll_len, 'A');
+    emit_literal(&w, ll_code, ll_len, 'A');
     bitw.align(&w);
 
     TEST_ASSERT_FALSE(w.overflow);
@@ -206,13 +249,13 @@ void test_emit_match_selects_the_code_for_the_span(void)
     uint8_t ll_len[288];
     uint16_t d_code[30];
     uint8_t d_len[30];
-    protocore_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
+    build_fixed(ll_code, ll_len, d_code, d_len);
 
     uint8_t out[4];
     memset(out, 0, sizeof(out));
     protocore_bit_writer w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
 
-    protocore_rfc1951_emit_match(&w, ll_code, ll_len, d_code, d_len, 3, 1);
+    emit_match(&w, ll_code, ll_len, d_code, d_len, 3, 1);
     bitw.align(&w);
 
     TEST_ASSERT_FALSE(w.overflow);
@@ -230,20 +273,20 @@ void test_emit_match_uses_the_single_length_code_for_258(void)
     uint8_t ll_len[288];
     uint16_t d_code[30];
     uint8_t d_len[30];
-    protocore_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
+    build_fixed(ll_code, ll_len, d_code, d_len);
 
     uint8_t out[8];
     memset(out, 0, sizeof(out));
     protocore_bit_writer w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
 
-    protocore_rfc1951_emit_match(&w, ll_code, ll_len, d_code, d_len, 258, 1);
+    emit_match(&w, ll_code, ll_len, d_code, d_len, 258, 1);
     bitw.align(&w);
 
     TEST_ASSERT_FALSE(w.overflow);
     // Symbol 285 is 280 + 5, so its 8-bit code is 11000000 + 5 = 11000101; then the 5-bit distance
     // code 00000. Thirteen bits, so two octets.
     TEST_ASSERT_EQUAL_size_t(2, w.cnt);
-    TEST_ASSERT_EQUAL_UINT16(protocore_rfc1951_reverse_bits(0xC5, 8), ll_code[285]);
+    TEST_ASSERT_EQUAL_UINT16(rev(0xC5, 8), ll_code[285]);
 }
 
 // A length that falls inside a printed range carries its offset in the extra bits: length 12 sits in
@@ -251,25 +294,24 @@ void test_emit_match_uses_the_single_length_code_for_258(void)
 // sits in code 4's "5,6" span, so the extra bit is 5 - 5 = 0.
 void test_emit_match_writes_the_offset_in_the_extra_bits(void)
 {
-    const Rfc1951Ns *r = RFC1951;
 
     // The table itself says which code a span belongs to, which is what the emitter walks.
-    TEST_ASSERT_EQUAL_INT16(11, r->len_base[8]); // code 257 + 8 = 265
-    TEST_ASSERT_EQUAL_INT16(1, r->len_extra[8]);
-    TEST_ASSERT_EQUAL_INT16(5, r->dist_base[4]); // distance code 4
-    TEST_ASSERT_EQUAL_INT16(1, r->dist_extra[4]);
+    TEST_ASSERT_EQUAL_INT16(11, Rfc1951.len_base[8]); // code 257 + 8 = 265
+    TEST_ASSERT_EQUAL_INT16(1, Rfc1951.len_extra[8]);
+    TEST_ASSERT_EQUAL_INT16(5, Rfc1951.dist_base[4]); // distance code 4
+    TEST_ASSERT_EQUAL_INT16(1, Rfc1951.dist_extra[4]);
 
     uint16_t ll_code[288];
     uint8_t ll_len[288];
     uint16_t d_code[30];
     uint8_t d_len[30];
-    protocore_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
+    build_fixed(ll_code, ll_len, d_code, d_len);
 
     uint8_t out[8];
     memset(out, 0, sizeof(out));
     protocore_bit_writer w = {out, sizeof(out), 0, 0, 0, PROTO_FALSE};
 
-    protocore_rfc1951_emit_match(&w, ll_code, ll_len, d_code, d_len, 12, 5);
+    emit_match(&w, ll_code, ll_len, d_code, d_len, 12, 5);
     bitw.align(&w);
 
     TEST_ASSERT_FALSE(w.overflow);
@@ -284,13 +326,13 @@ void test_emit_past_the_buffer_latches_overflow(void)
     uint8_t ll_len[288];
     uint16_t d_code[30];
     uint8_t d_len[30];
-    protocore_rfc1951_build_fixed(ll_code, ll_len, d_code, d_len);
+    build_fixed(ll_code, ll_len, d_code, d_len);
 
     uint8_t out[1];
     out[0] = 0;
     protocore_bit_writer w = {out, 0, 0, 0, 0, PROTO_FALSE};
 
-    protocore_rfc1951_emit_literal(&w, ll_code, ll_len, 'A');
+    emit_literal(&w, ll_code, ll_len, 'A');
     bitw.align(&w);
 
     TEST_ASSERT_TRUE(w.overflow);

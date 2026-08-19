@@ -34,8 +34,6 @@
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h"
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h" // ssh_rsa_encode_pubkey/sign, ssh_host_pubkey, SSH_RSA_*
 #include "server/clock/clock.h"                                         // protocore_millis() (re-key timer)
-static uint8_t comp_work[16]; // the borrow an entry takes; Comp never reads it
-
 static uint8_t phase_machine_work[16]; // the borrow an entry takes; PhaseMachine never reads it
 
 static uint8_t extension_work[16]; // the borrow an entry takes; Extension never reads it
@@ -1017,7 +1015,7 @@ void ssh_kexinit_parse(uint8_t *restrict work)
         }
         Comp.set_c2s_args.i = i;
         Comp.set_c2s_args.alg = comp;
-        Comp.set_c2s(comp_work);
+        Comp.set_c2s(protocore_ssh_comp_span());
         if (!bytes.rd_str(payload, len, &off, &list, &nlen) ||
             negotiate_alg(list, nlen, compc, 3, &comp, as_client) < 0)
         {
@@ -1026,7 +1024,7 @@ void ssh_kexinit_parse(uint8_t *restrict work)
         }
         Comp.set_s2c_args.i = i;
         Comp.set_s2c_args.alg = comp;
-        Comp.set_s2c(comp_work);
+        Comp.set_s2c(protocore_ssh_comp_span());
     }
 #else
     // Both directions must offer "none" (no compression built in).
@@ -2077,7 +2075,7 @@ void ssh_newkeys_sent(uint8_t *restrict work)
 #if PROTOCORE_ENABLE_SSH_ZLIB
     // "zlib" (non-delayed) starts its s2c (outbound) stream here; idempotent, so a re-key does not restart it.
     Comp.on_newkeys_args.i = i;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
 #endif
 }
 
@@ -2542,7 +2540,7 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
     // by a full send - the same atomicity the stateful cipher below already requires. The wire buffer
     // is sized (SSH_WIRE_CAP) so the compressed payload can never overflow out_cap and desync.
     Comp.s2c_active_args.i = i;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     if (Comp.ok)
     {
         // TODO(slot): the compressor's output still borrows; it has no named offset yet.
@@ -2560,7 +2558,7 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
             Comp.s2c_args.dst = cbuf;
             Comp.s2c_args.dst_cap = bound;
             Comp.s2c_args.out_len = &clen;
-            Comp.s2c(comp_work);
+            Comp.s2c(protocore_ssh_comp_span());
             comp_failed = (Comp.n != 0);
         }
         if (comp_failed)
@@ -2728,7 +2726,7 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
     size_t inflate_scope = protocore_plaintext_mark();
 #if PROTOCORE_ENABLE_SSH_ZLIB
     Comp.c2s_active_args.i = i;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     if (Comp.ok)
     {
         uint8_t *dbuf = (uint8_t *)protocore_plaintext_alloc(SSH_PKT_BUF_SIZE, 16);
@@ -2744,7 +2742,7 @@ static int ssh_dispatch_payload(uint8_t i, const uint8_t *payload, size_t payloa
             Comp.c2s_args.dst = dbuf;
             Comp.c2s_args.dst_cap = SSH_PKT_BUF_SIZE;
             Comp.c2s_args.out_len = &dlen;
-            Comp.c2s(comp_work);
+            Comp.c2s(protocore_ssh_comp_span());
             inflate_failed = (Comp.n != 0);
         }
         if (inflate_failed)

@@ -10,6 +10,7 @@ if(PROTOCORE_ENABLE_DEFLATE_RFC1951)
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/rfc1951.c"
     PUBLIC
       pc_mmgr_bitio
+    PRIVATE
       pc_mmgr_protomem
   )
 endif()

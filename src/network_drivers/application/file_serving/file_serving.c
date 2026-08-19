@@ -34,8 +34,6 @@
 #include <stdio.h>                                // snprintf, sscanf
 #include <time.h> // strftime (RFC 1123 / conditional-GET dates) (RFC 1123 / conditional-GET dates)
 
-static uint8_t http_routes_work[16]; // the borrow an entry takes; HttpRoutes never reads it
-
 static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 
 static uint8_t time_compat_work[16]; // the borrow an entry takes; TimeCompat never reads it
@@ -682,7 +680,7 @@ static void file_serving_serve_static(uint8_t *restrict work)
     const protocore_mnt_backend *file_sys = FileServing.serve_static_args.file_sys;
     const char *fs_root = FileServing.serve_static_args.fs_root;
 
-    HttpRoutes.add(http_routes_work);
+    HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = HttpRoutes.ptr;
     if (r == NULL)
     {

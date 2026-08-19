@@ -3,11 +3,11 @@
 
 /**
  * @file rfc1951.h
- * @brief The RFC 1951 sec 3.2.5 length and distance tables, as one namespace.
+ * @brief The RFC 1951 sec 3.2.5 length and distance tables, and the fixed-Huffman coder over them.
  *
- * The four tables are defined once in rfc1951.c and reached through a pointer to that instance. The
- * DEFLATE encoder and decoder (codec/deflate, codec/inflate) and the SSH zlib@openssh.com stream
- * codecs (ssh/transport/ssh_zlib, ssh/transport/ssh_inflate) read them.
+ * The four tables are defined once in rfc1951.c and read off this namespace. The DEFLATE encoder and
+ * decoder (codec/deflate, codec/inflate) and the SSH zlib@openssh.com stream codecs
+ * (ssh/transport/ssh_zlib, ssh/transport/ssh_inflate) read them.
  *
  * @author  Douglas Quigg (dstroy0)
  * @date    2026
@@ -21,17 +21,79 @@
 #if PROTOCORE_ENABLE_DEFLATE_RFC1951
 
 #include "mmgr/bitio/bitio.h" // protocore_bit_writer - what the emitters write through
-#include "mmgr/protomem/protomem.h" // mem.set - what build_fixed zeroes its bit-length counts with
 
 PROTOCORE_BEGIN_DECLS
 
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
+
+/** @brief What reverse_bits takes: a code, and how many of its low bits to reverse. */
+typedef struct
+{
+    uint16_t code; ///< the code whose low @c len bits are reversed
+    int len;       ///< how many low bits to reverse
+} Rfc1951ReverseBitsArgs;
+
+/** @brief What build_fixed takes: the four tables it fills. */
+typedef struct
+{
+    uint16_t *ll_code; ///< 288 entries: the lit/length code, bit-reversed
+    uint8_t *ll_len;   ///< 288 entries: its bit length
+    uint16_t *d_code;  ///< 30 entries: the distance code, bit-reversed
+    uint8_t *d_len;    ///< 30 entries: its bit length
+} Rfc1951BuildFixedArgs;
+
+/** @brief What emit_literal takes: the writer, the lit/length code tables, and the byte. */
+typedef struct
+{
+    protocore_bit_writer *w; ///< the bit writer the code goes out through
+    const uint16_t *ll_code; ///< 288 entries, from build_fixed
+    const uint8_t *ll_len;   ///< 288 entries, from build_fixed
+    uint8_t b;               ///< the literal byte
+} Rfc1951EmitLiteralArgs;
+
+/** @brief What emit_match takes: the writer, all four code tables, and the back-reference. */
+typedef struct
+{
+    protocore_bit_writer *w; ///< the bit writer the codes go out through
+    const uint16_t *ll_code; ///< 288 entries, from build_fixed
+    const uint8_t *ll_len;   ///< 288 entries, from build_fixed
+    const uint16_t *d_code;  ///< 30 entries, from build_fixed
+    const uint8_t *d_len;    ///< 30 entries, from build_fixed
+    int len;                 ///< match length, 3..258
+    int dist;                ///< match distance, 1..32768
+} Rfc1951EmitMatchArgs;
+
 /**
- * @brief The length and distance tables of RFC 1951 sec 3.2.5.
+ * @brief The RFC 1951 sec 3.2.5 tables, and the fixed Huffman coder of sec 3.2.6 over them.
  *
- * @var Rfc1951Ns::len_base   29 entries: base length for codes 257..285
- * @var Rfc1951Ns::len_extra  29 entries: extra bits read after each of those codes
- * @var Rfc1951Ns::dist_base  30 entries: base distance for codes 0..29
- * @var Rfc1951Ns::dist_extra 30 entries: extra bits read after each of those codes
+ * A caller sets the members a call takes, invokes it through ::Rfc1951 with the bytes it runs out
+ * of, and reads the outcome off the same handle. The four tables are read straight off it.
+ *
+ *   Rfc1951.emit_literal_args.w = &w;
+ *   Rfc1951.emit_literal_args.ll_code = ll_code;
+ *   Rfc1951.emit_literal_args.ll_len = ll_len;
+ *   Rfc1951.emit_literal_args.b = src[i];
+ *   Rfc1951.emit_literal(work);
+ *
+ * @var Rfc1951Ns::len_base           29 entries: base length for codes 257..285
+ * @var Rfc1951Ns::len_extra          29 entries: extra bits read after each of those codes
+ * @var Rfc1951Ns::dist_base          30 entries: base distance for codes 0..29
+ * @var Rfc1951Ns::dist_extra         30 entries: extra bits read after each of those codes
+ * @var Rfc1951Ns::reverse_bits_args  what reverse_bits takes: a code, and how many of its low bits to reverse
+ * @var Rfc1951Ns::build_fixed_args   what build_fixed takes: the four tables it fills
+ * @var Rfc1951Ns::emit_literal_args  what emit_literal takes: the writer, the lit/length code tables, and the byte
+ * @var Rfc1951Ns::emit_match_args    what emit_match takes: the writer, all four code tables, and the back-reference
+ * @var Rfc1951Ns::u16                the reversed code the last reverse_bits produced
+ * @var Rfc1951Ns::reverse_bits       reverse the low @c len bits of @c code, MSB-first on the wire
+ * @var Rfc1951Ns::build_fixed        fill the fixed Huffman code/length tables (sec 3.2.6), each code bit-reversed
+ * @var Rfc1951Ns::emit_literal       emit one literal byte through the fixed lit/length code
+ * @var Rfc1951Ns::emit_match         emit a (length, distance) back-reference through the fixed code tables
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing between
+ * calls, so there is no state to keep and nothing to wipe. The parameter is there so a caller
+ * drives every namespace the same way.
  */
 typedef struct
 {
@@ -39,121 +101,22 @@ typedef struct
     const short *len_extra;
     const short *dist_base;
     const short *dist_extra;
+
+    Rfc1951ReverseBitsArgs reverse_bits_args;
+    Rfc1951BuildFixedArgs build_fixed_args;
+    Rfc1951EmitLiteralArgs emit_literal_args;
+    Rfc1951EmitMatchArgs emit_match_args;
+
+    uint16_t u16;
+
+    void (*const reverse_bits)(uint8_t *restrict work);
+    void (*const build_fixed)(uint8_t *restrict work);
+    void (*const emit_literal)(uint8_t *restrict work);
+    void (*const emit_match)(uint8_t *restrict work);
 } Rfc1951Ns;
 
-/** @brief The one instance. */
-const Rfc1951Ns *protocore_rfc1951(void);
-
-/** @brief Reader shorthand: RFC1951->len_base[code]. */
-#define RFC1951 (protocore_rfc1951())
-
-/** @brief Reverse the low @p len bits of @p code (a Huffman code goes on the wire MSB-first). */
-PROTOCORE_INLINE uint16_t protocore_rfc1951_reverse_bits(uint16_t code, int len)
-{
-    uint16_t r = 0;
-    for (int k = 0; k < len; k++)
-    {
-        r = (uint16_t)((r << 1) | (code & 1));
-        code >>= 1;
-    }
-    return r;
-}
-
-/**
- * @brief Build the fixed Huffman code/length tables (RFC 1951 sec 3.2.6), each code bit-reversed.
- *
- * @p ll_code / @p ll_len hold 288 entries, @p d_code / @p d_len hold 30.
- */
-PROTOCORE_INLINE void protocore_rfc1951_build_fixed(uint16_t *ll_code, uint8_t *ll_len, uint16_t *d_code,
-                                                    uint8_t *d_len)
-{
-    int sym = 0;
-    for (; sym < 144; sym++)
-    {
-        ll_len[sym] = 8;
-    }
-    for (; sym < 256; sym++)
-    {
-        ll_len[sym] = 9;
-    }
-    for (; sym < 280; sym++)
-    {
-        ll_len[sym] = 7;
-    }
-    for (; sym < 288; sym++)
-    {
-        ll_len[sym] = 8;
-    }
-    for (sym = 0; sym < 30; sym++)
-    {
-        d_len[sym] = 5;
-    }
-
-    // Canonical code assignment (RFC 1951 sec 3.2.2) for the lit/length alphabet.
-    uint16_t bl_count[16];
-    mem.set(bl_count, 0, sizeof(bl_count));
-    for (sym = 0; sym < 288; sym++)
-    {
-        bl_count[ll_len[sym]]++;
-    }
-    uint16_t next_code[16];
-    next_code[0] = 0;
-    uint16_t code = 0;
-    for (int bits = 1; bits <= 15; bits++)
-    {
-        code = (uint16_t)((code + bl_count[bits - 1]) << 1);
-        next_code[bits] = code;
-    }
-    for (sym = 0; sym < 288; sym++)
-    {
-        int len = ll_len[sym];
-        ll_code[sym] = protocore_rfc1951_reverse_bits(next_code[len], len);
-        next_code[len]++;
-    }
-
-    // Distance alphabet: 30 codes all of length 5 -> codes 0..29 in order.
-    for (sym = 0; sym < 30; sym++)
-    {
-        d_code[sym] = protocore_rfc1951_reverse_bits((uint16_t)sym, 5);
-    }
-}
-
-/** @brief Emit one literal byte through the fixed lit/length code. */
-PROTOCORE_INLINE void protocore_rfc1951_emit_literal(protocore_bit_writer *w, const uint16_t *ll_code,
-                                                     const uint8_t *ll_len, uint8_t b)
-{
-    bitw.put(w, ll_code[b], ll_len[b]);
-}
-
-/** @brief Emit a (@p len, @p dist) back-reference through the fixed code tables (RFC 1951 sec 3.2.5). */
-PROTOCORE_INLINE void protocore_rfc1951_emit_match(protocore_bit_writer *w, const uint16_t *ll_code,
-                                                   const uint8_t *ll_len, const uint16_t *d_code, const uint8_t *d_len,
-                                                   int len, int dist)
-{
-    const Rfc1951Ns *r = protocore_rfc1951();
-    int li = 0;
-    while (li < 28 && len >= r->len_base[li + 1])
-    {
-        li++;
-    }
-    int lsym = 257 + li;
-    bitw.put(w, ll_code[lsym], ll_len[lsym]);
-    if (r->len_extra[li])
-    {
-        bitw.put(w, (uint32_t)(len - r->len_base[li]), r->len_extra[li]);
-    }
-
-    int di = 0;
-    while (di < 29 && dist >= r->dist_base[di + 1])
-    {
-        di++;
-    }
-    bitw.put(w, d_code[di], d_len[di]);
-    if (r->dist_extra[di])
-    {
-        bitw.put(w, (uint32_t)(dist - r->dist_base[di]), r->dist_extra[di]);
-    }
-}
+/** @brief The one symbol this module exports. */
+extern Rfc1951Ns Rfc1951;
 
 PROTOCORE_END_DECLS
 

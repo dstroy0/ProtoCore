@@ -156,6 +156,19 @@ typedef struct
 /** @brief The one symbol this module exports. */
 extern CompNs Comp;
 
+/**
+ * @brief The bytes every entry here runs out of: one compressor per SSH connection.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where that
+ * borrow comes from. The transport and the server both drive the same connection's streams, so the
+ * bytes belong to this module rather than to either caller. Taken once from the end of the plaintext
+ * pool, which no mark and no release walks, because a zlib@openssh.com stream takes its window over
+ * from one packet to the next.
+ *
+ * @return the span.
+ */
+uint8_t *protocore_ssh_comp_span(void);
+
 PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_SSH_ZLIB

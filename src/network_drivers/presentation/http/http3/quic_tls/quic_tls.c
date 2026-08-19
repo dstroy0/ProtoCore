@@ -24,6 +24,8 @@ PROTOCORE_BEGIN_DECLS
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
+static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
+
 // TLS alert codes we may raise (RFC 8446 sec 6).
 #define TLS_ALERT_UNEXPECTED_MESSAGE 10
 #define TLS_ALERT_HANDSHAKE_FAILURE 40
@@ -141,7 +143,11 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     qt->transcript = qt->hash_work;
     transcript_start(qt, qt->transcript);
     uint8_t mh[40];
-    size_t mhn = protocore_tls13_build_message_hash(mh, sizeof(mh), ch1_hash);
+    Tls13Msg.build_message_hash_args.out = mh;
+    Tls13Msg.build_message_hash_args.cap = sizeof(mh);
+    Tls13Msg.build_message_hash_args.ch1_hash = ch1_hash;
+    Tls13Msg.build_message_hash(tls13_msg_work);
+    size_t mhn = Tls13Msg.n;
     if (!mhn)
     {
         fail(qt, TLS_ALERT_INTERNAL_ERROR);
@@ -150,10 +156,17 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     transcript_add(qt, qt->transcript, mh, mhn); // message_hash is transcript-only, never sent
 
     qt->flight_initial_len = 0;
-    size_t n = protocore_tls13_build_hello_retry_request(qt->flight_initial, sizeof(qt->flight_initial), ch->session_id,
-                                                         ch->session_id_len, TLS_GROUP_X25519MLKEM768,
-                                                         PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, NULL, 0,
-                                                         /*dtls=*/PROTO_FALSE);
+    Tls13Msg.build_hello_retry_request_args.out = qt->flight_initial;
+    Tls13Msg.build_hello_retry_request_args.cap = sizeof(qt->flight_initial);
+    Tls13Msg.build_hello_retry_request_args.session_id = ch->session_id;
+    Tls13Msg.build_hello_retry_request_args.session_id_len = ch->session_id_len;
+    Tls13Msg.build_hello_retry_request_args.selected_group = TLS_GROUP_X25519MLKEM768;
+    Tls13Msg.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
+    Tls13Msg.build_hello_retry_request_args.cookie = NULL;
+    Tls13Msg.build_hello_retry_request_args.cookie_len = 0;
+    Tls13Msg.build_hello_retry_request_args.dtls = /*dtls=*/PROTO_FALSE;
+    Tls13Msg.build_hello_retry_request(tls13_msg_work);
+    size_t n = Tls13Msg.n;
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
         return PROTO_FALSE;
@@ -166,7 +179,12 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
 static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t msg_len)
 {
     Tls13ClientHello ch;
-    if (!protocore_tls13_parse_client_hello(msg, msg_len, &ch, /*dtls=*/PROTO_FALSE))
+    Tls13Msg.parse_client_hello_args.msg = msg;
+    Tls13Msg.parse_client_hello_args.len = msg_len;
+    Tls13Msg.parse_client_hello_args.out = &ch;
+    Tls13Msg.parse_client_hello_args.dtls = /*dtls=*/PROTO_FALSE;
+    Tls13Msg.parse_client_hello(tls13_msg_work);
+    if (!Tls13Msg.ok)
     {
         fail(qt, TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
@@ -297,11 +315,20 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // ServerHello (Initial-level flight). The Initial CRYPTO is one contiguous byte stream, so after a
     // HelloRetryRequest the ServerHello is appended after the HRR already in flight_initial - build at the
     // current offset (0 on the happy path, the HRR's end on a retry) and do not reset the length.
-    size_t n = protocore_tls13_build_server_hello(qt->flight_initial + qt->flight_initial_len,
-                                                  sizeof(qt->flight_initial) - qt->flight_initial_len, qt->cfg.random,
-                                                  ch.session_id, ch.session_id_len, server_share, share_len, group,
-                                                  PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256, /*dtls=*/PROTO_FALSE,
-                                                  /*conn_id=*/NULL, /*conn_id_len=*/0);
+    Tls13Msg.build_server_hello_args.out = qt->flight_initial + qt->flight_initial_len;
+    Tls13Msg.build_server_hello_args.cap = sizeof(qt->flight_initial) - qt->flight_initial_len;
+    Tls13Msg.build_server_hello_args.random = qt->cfg.random;
+    Tls13Msg.build_server_hello_args.session_id = ch.session_id;
+    Tls13Msg.build_server_hello_args.session_id_len = ch.session_id_len;
+    Tls13Msg.build_server_hello_args.share = server_share;
+    Tls13Msg.build_server_hello_args.share_len = share_len;
+    Tls13Msg.build_server_hello_args.group = group;
+    Tls13Msg.build_server_hello_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
+    Tls13Msg.build_server_hello_args.dtls = /*dtls=*/PROTO_FALSE;
+    Tls13Msg.build_server_hello_args.conn_id = /*conn_id=*/NULL;
+    Tls13Msg.build_server_hello_args.conn_id_len = /*conn_id_len=*/0;
+    Tls13Msg.build_server_hello(tls13_msg_work);
+    size_t n = Tls13Msg.n;
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
         return PROTO_FALSE;
@@ -336,17 +363,25 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     QuicTp.encode(quic_tp_work);
     size_t tp_len = QuicTp.n;
 
-    n = protocore_tls13_build_encrypted_extensions(qt->flight_hs + qt->flight_hs_len,
-                                                   sizeof(qt->flight_hs) - qt->flight_hs_len, tp_enc, tp_len,
-                                                   /*rpk_server_cert=*/PROTO_FALSE);
+    Tls13Msg.build_encrypted_extensions_args.out = qt->flight_hs + qt->flight_hs_len;
+    Tls13Msg.build_encrypted_extensions_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
+    Tls13Msg.build_encrypted_extensions_args.quic_tp = tp_enc;
+    Tls13Msg.build_encrypted_extensions_args.quic_tp_len = tp_len;
+    Tls13Msg.build_encrypted_extensions_args.rpk_server_cert = /*rpk_server_cert=*/PROTO_FALSE;
+    Tls13Msg.build_encrypted_extensions(tls13_msg_work);
+    n = Tls13Msg.n;
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
         // PROTOCORE_H3_CRYPTO_BUF >= PROTOCORE_QUIC_TLS_EE_MAX is pinned by the static_assert above
     }
 
-    n = protocore_tls13_build_certificate(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len,
-                                          qt->cfg.cert_der, qt->cfg.cert_len);
+    Tls13Msg.build_certificate_args.out = qt->flight_hs + qt->flight_hs_len;
+    Tls13Msg.build_certificate_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
+    Tls13Msg.build_certificate_args.cert_der = qt->cfg.cert_der;
+    Tls13Msg.build_certificate_args.cert_len = qt->cfg.cert_len;
+    Tls13Msg.build_certificate(tls13_msg_work);
+    n = Tls13Msg.n;
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -354,9 +389,14 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
     // CertificateVerify signs Transcript-Hash(ClientHello..Certificate).
     snapshot_hash(qt, qt->transcript, hash);
-    n = protocore_tls13_build_cert_verify(qt->sign_work, qt->flight_hs + qt->flight_hs_len,
-                                          sizeof(qt->flight_hs) - qt->flight_hs_len, hash, qt->ks.len,
-                                          qt->cfg.ed25519_seed);
+    Tls13Msg.build_cert_verify_args.sign_work = qt->sign_work;
+    Tls13Msg.build_cert_verify_args.out = qt->flight_hs + qt->flight_hs_len;
+    Tls13Msg.build_cert_verify_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
+    Tls13Msg.build_cert_verify_args.transcript_hash = hash;
+    Tls13Msg.build_cert_verify_args.hash_len = qt->ks.len;
+    Tls13Msg.build_cert_verify_args.seed = qt->cfg.ed25519_seed;
+    Tls13Msg.build_cert_verify(tls13_msg_work);
+    n = Tls13Msg.n;
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -366,8 +406,12 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     snapshot_hash(qt, qt->transcript, hash);
     uint8_t verify[TLS13_SECRET_MAX];
     ks_finished(qt, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
-    n = protocore_tls13_build_finished(qt->flight_hs + qt->flight_hs_len, sizeof(qt->flight_hs) - qt->flight_hs_len,
-                                       verify, qt->ks.len);
+    Tls13Msg.build_finished_args.out = qt->flight_hs + qt->flight_hs_len;
+    Tls13Msg.build_finished_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
+    Tls13Msg.build_finished_args.verify_data = verify;
+    Tls13Msg.build_finished_args.verify_len = qt->ks.len;
+    Tls13Msg.build_finished(tls13_msg_work);
+    n = Tls13Msg.n;
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;

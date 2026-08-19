@@ -9,6 +9,7 @@ if(PROTOCORE_ENABLE_SSH_ZLIB)
   protocore_module(pc_network_drivers_presentation_ssh_transport_comp
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/comp.c"
     PRIVATE
+      pc_mmgr_plaintext
       pc_mmgr_secure
       pc_network_drivers_presentation_ssh_common
       pc_network_drivers_presentation_ssh_transport_inflate

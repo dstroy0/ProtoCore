@@ -16,5 +16,6 @@ protocore_module(pc_network_drivers_tls_handshake
     pc_mmgr_protostr
     pc_mmgr_rawmemcpy
     pc_mmgr_secure
+    pc_network_drivers_presentation_http_http3_tls13_rpk
     pc_network_drivers_tls
 )

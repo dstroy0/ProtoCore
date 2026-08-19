@@ -21,8 +21,6 @@
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
 #include "server/core/proto_handler.h"
-static uint8_t comp_work[16]; // the borrow an entry takes; Comp never reads it
-
 static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
@@ -131,7 +129,7 @@ static void net_accept(uint8_t conn_slot)
     SshConnection.channel_init(protocore_ssh_connection_span());
 #if PROTOCORE_ENABLE_SSH_ZLIB
     Comp.reset_args.i = j;
-    Comp.reset(comp_work); // clear compression state for the new connection (not run on a re-key)
+    Comp.reset(protocore_ssh_comp_span()); // clear compression state for the new connection (not run on a re-key)
 #endif
 
     ssh_net_version_exchange_send(j, conn_slot);

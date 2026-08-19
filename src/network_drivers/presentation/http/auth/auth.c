@@ -33,21 +33,6 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 // ---------------------------------------------------------------------------
 
 #if PROTOCORE_ENABLE_AUTH
-// One-shot SHA-256 of @p data, written as 64 lowercase hex chars + NUL.
-static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[65])
-{
-    uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
-    Sha256.hash_args.data = data;
-    Sha256.hash_args.len = len;
-    Sha256.hash_args.out = d;
-    Sha256.hash(work);
-    Hex.io.in = d;
-    Hex.io.n = PROTOCORE_SHA256_DIGEST_LEN;
-    Hex.io.out = out;
-    Hex.args.upper = PROTO_FALSE;
-    Hex.encode(hex_work);
-}
-
 // Extract the value of @p key from a Digest auth header into @p out.
 // Handles both quoted ("value") and token (value) forms. The match must sit on
 // a field boundary (start, or after ' '/',') and be immediately followed by '='
@@ -142,35 +127,61 @@ struct AuthStorage
     uint8_t count;             ///< how many rows are recorded
 };
 
-// The credential table, bound on first use. Registered once at setup and read by every
-// connection, so it is not per-connection storage and does not arrive as a borrow.
-static struct AuthStorage *s_store;
+// The caller's borrow, split: the credential table, then the bytes SHA-256 runs out of. The table
+// persists between calls and the hash scratch does not, so they are two regions of one span rather
+// than two borrows - the worst case over everything an entry here reaches, taken once.
+#define AUTH_OFF_TABLE 0u
+#define AUTH_OFF_SHA (AUTH_OFF_TABLE + sizeof(struct AuthStorage))
+static_assert(AUTH_OFF_SHA + PROTOCORE_SHA256_BORROW <= PROTOCORE_HTTP_AUTH_BORROW,
+              "PROTOCORE_HTTP_AUTH_BORROW must cover the credential table and the SHA-256 borrow behind it: raise"
+              " it in protocore_config.h, which sums it into its arena");
 
-_Static_assert(sizeof(struct AuthStorage) <= PROTOCORE_WORK_AUTH_TABLE,
-               "credential table outgrew PROTOCORE_WORK_AUTH_TABLE");
+// The regions, at their offsets in the caller's borrow.
+#define AUTH_TABLE(w) ((struct AuthStorage *)(void *)((w) + AUTH_OFF_TABLE))
+#define AUTH_SHA(w) ((w) + AUTH_OFF_SHA)
 
-// Bound on first use rather than at an init the caller has to remember: registration and the
-// first rekey both arrive before any request is served, and either one is a fine moment. The borrow
-// is from the persistent end, which no mark walks and no release reclaims, and it comes back zeroed.
-static struct AuthStorage *bind_auth(void)
+// One-shot SHA-256 of @p data, written as 64 lowercase hex chars + NUL. Takes the module span: the
+// hash runs on its own region of it.
+static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[65])
 {
-    if (s_store == NULL)
+    uint8_t d[PROTOCORE_SHA256_DIGEST_LEN];
+    Sha256.hash_args.data = data;
+    Sha256.hash_args.len = len;
+    Sha256.hash_args.out = d;
+    Sha256.hash(AUTH_SHA(work));
+    Hex.io.in = d;
+    Hex.io.n = PROTOCORE_SHA256_DIGEST_LEN;
+    Hex.io.out = out;
+    Hex.args.upper = PROTO_FALSE;
+    Hex.encode(hex_work);
+}
+
+// The one owned instance, private to this TU: the pointer to the bytes taken for the table.
+static uint8_t *s_span;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from. Registration, the
+// rekey and every request read one table, so the bytes are the module's rather than any one
+// caller's. Taken from the persistent end, which no mark walks and no release reclaims, and it comes
+// back zeroed.
+uint8_t *protocore_http_auth_span(void)
+{
+    if (s_span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(sizeof(struct AuthStorage));
-        if (span.ok(sp))
-        {
-            s_store = (struct AuthStorage *)sp.buf;
-        }
+        s_span = protocore_secure_persist_span(PROTOCORE_HTTP_AUTH_BORROW).buf;
     }
-    return s_store;
+    return s_span;
 }
 
 // The set ns->id names, or NULL when it names nothing - an unregistered id, or a pool that could
 // not be borrowed. Every caller fails closed on NULL.
-static const AuthCred *cred_at(uint8_t id)
+static const AuthCred *cred_at(uint8_t *work, uint8_t id)
 {
-    const struct AuthStorage *a = s_store;
-    if (a == NULL || id >= a->count)
+    if (work == NULL)
+    {
+        return NULL;
+    }
+    const struct AuthStorage *a = AUTH_TABLE(work);
+    if (id >= a->count)
     {
         return NULL;
     }
@@ -181,8 +192,13 @@ static const AuthCred *cred_at(uint8_t id)
 // full. Registration runs at setup, so there is no release path and none is offered.
 static void add(uint8_t *restrict work)
 {
-    struct AuthStorage *a = bind_auth();
-    if (a == NULL || a->count >= MAX_ROUTES)
+    if (work == NULL)
+    {
+        Auth.u8 = PROTOCORE_AUTH_NONE;
+        return;
+    }
+    struct AuthStorage *a = AUTH_TABLE(work);
+    if (a->count >= MAX_ROUTES)
     {
         Auth.u8 = PROTOCORE_AUTH_NONE;
         return;
@@ -197,11 +213,11 @@ static void add(uint8_t *restrict work)
 
 static void rekey(uint8_t *restrict work)
 {
-    struct AuthStorage *a = bind_auth();
-    if (a == NULL)
+    if (work == NULL)
     {
         return;
     }
+    struct AuthStorage *a = AUTH_TABLE(work);
     // Seed a 128-bit keying secret from the hardware CSPRNG (protocore_platform_rand_u32() on
     // ESP32; a non-crypto mock on native test builds), folded through SHA-256 with
     // a counter + millis() so even a weak host RNG yields distinct values across
@@ -223,7 +239,7 @@ static void rekey(uint8_t *restrict work)
     Sha256.hash_args.data = seed;
     Sha256.hash_args.len = sizeof(seed);
     Sha256.hash_args.out = d;
-    Sha256.hash(work);
+    Sha256.hash(AUTH_SHA(work));
     raw.read(a->digest_secret, d, sizeof(a->digest_secret)); // first 128 bits
 }
 
@@ -241,7 +257,7 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     Sha256.hash_args.data = material;
     Sha256.hash_args.len = sizeof(material);
     Sha256.hash_args.out = d;
-    Sha256.hash(work);
+    Sha256.hash(AUTH_SHA(work));
     Hex.io.in = d;
     Hex.io.n = 16;
     Hex.io.out = mac_hex;
@@ -254,7 +270,7 @@ static void mint_nonce(uint8_t *restrict work)
 {
     char *out = Auth.nonce_args.out;
     const size_t cap = Auth.nonce_args.cap;
-    if (bind_auth() == NULL)
+    if (work == NULL)
     {
         out[0] = '\0';
         return;
@@ -267,7 +283,7 @@ static void mint_nonce(uint8_t *restrict work)
     Hex.args.upper = PROTO_FALSE;
     Hex.encode(hex_work); // 4 bytes -> 8 hex chars
     char mac_hex[33];
-    digest_nonce_mac(work, s_store->digest_secret, issue, mac_hex);
+    digest_nonce_mac(work, AUTH_TABLE(work)->digest_secret, issue, mac_hex);
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb_out, issue_hex);
     Sb.put(&sb_out, ".");
@@ -283,7 +299,7 @@ static void verify_nonce(uint8_t *restrict work)
     const char *nonce = Auth.nonce_args.nonce;
     Auth.expired = PROTO_FALSE;
     Auth.ok = PROTO_FALSE;
-    if (bind_auth() == NULL)
+    if (work == NULL)
     {
         return;
     }
@@ -303,7 +319,7 @@ static void verify_nonce(uint8_t *restrict work)
         return;
     }
     char mac_hex[33];
-    digest_nonce_mac(work, s_store->digest_secret, issue, mac_hex);
+    digest_nonce_mac(work, AUTH_TABLE(work)->digest_secret, issue, mac_hex);
     // Constant-time compare of the 32 MAC hex chars: a forged nonce never reveals
     // how many leading characters matched.
     const char *got = nonce + 9;
@@ -325,7 +341,7 @@ static void challenge(uint8_t *restrict work)
 {
     const uint8_t slot_id = Auth.slot;
     const proto_bool stale = Auth.nonce_args.stale;
-    const AuthCred *c = cred_at(Auth.id);
+    const AuthCred *c = cred_at(work, Auth.id);
     if (c == NULL)
     {
         HttpConn.slot = slot_id;
@@ -600,7 +616,7 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
 // nothing above this file has to know whether that set is Basic or Digest.
 static void check(uint8_t *restrict work)
 {
-    const AuthCred *c = cred_at(Auth.id);
+    const AuthCred *c = cred_at(work, Auth.id);
     if (c == NULL)
     {
         Auth.ok = PROTO_FALSE;
@@ -619,10 +635,9 @@ static void check(uint8_t *restrict work)
 // the server's, not a route's, and rekey() is what replaces it.
 static void reset(uint8_t *restrict work)
 {
-    (void)work;
-    if (s_store != NULL)
+    if (work != NULL)
     {
-        s_store->count = 0;
+        AUTH_TABLE(work)->count = 0;
     }
 }
 

@@ -232,6 +232,72 @@ eq(
     "void t(void)\n{\n    int a = 1;\n    Ns.entry(w);\n    reg(Ns.ptr);\n}\n",
 )
 
+# 14. one statement becomes several, so a braceless control head has to gain a brace. Without it
+# dtls_conn's `else` kept only the first staging line and ran the other five unconditionally, which
+# overwrote the RawPublicKey Certificate with the X.509 one.
+src9 = "void t(void)\n{\n    if (rpk)\n    {\n        x = 1;\n    }\n    else\n        n = old_call(a);\n}\n"
+pos9 = src9.index("old_call")
+end9 = N.close_paren(src9, pos9 + len("old_call("))
+eq(
+    "braceless else gains a brace",
+    N.rewrite(src9, pos9, end9, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    "void t(void)\n{\n    if (rpk)\n    {\n        x = 1;\n    }\n    else\n{\n        Ns.args.a = a;\n"
+    "        Ns.entry(w);\n        n = Ns.n;\n        }\n}\n",
+)
+
+# 14a. a `#endif` between the head and its body does not hide the head
+src9a = "void t(void)\n{\n    if (r)\n    {\n        x = 1;\n    }\n    else\n#endif\n        n = old_call(a);\n}\n"
+pos9a = src9a.index("old_call")
+end9a = N.close_paren(src9a, pos9a + len("old_call("))
+eq(
+    "brace lands past the #endif",
+    N.rewrite(src9a, pos9a, end9a, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    "void t(void)\n{\n    if (r)\n    {\n        x = 1;\n    }\n    else\n#endif\n{\n        Ns.args.a = a;\n"
+    "        Ns.entry(w);\n        n = Ns.n;\n        }\n}\n",
+)
+
+# 14b. a braceless `if` body is one statement to statement_start, so the staging used to land ABOVE
+# the head and the call ran whatever the condition said.
+src9b = "void t(void)\n{\n    if (ok)\n        n = old_call(a);\n    next();\n}\n"
+pos9b = src9b.index("old_call")
+end9b = N.close_paren(src9b, pos9b + len("old_call("))
+eq(
+    "braceless if keeps the call guarded",
+    N.rewrite(src9b, pos9b, end9b, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    "void t(void)\n{\n    if (ok)\n{\n        Ns.args.a = a;\n        Ns.entry(w);\n"
+    "        n = Ns.n;\n        }\n    next();\n}\n",
+)
+
+# 14c. the same with the call's value unused: the whole statement is the body
+src9c = "void t(void)\n{\n    if (ok)\n        old_call(a);\n    next();\n}\n"
+pos9c = src9c.index("old_call")
+end9c = N.close_paren(src9c, pos9c + len("old_call("))
+eq(
+    "braceless if with an unused result stays guarded",
+    N.rewrite(src9c, pos9c, end9c, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    "void t(void)\n{\n    if (ok)\n{\n        Ns.args.a = a;\n        Ns.entry(w);\n        }\n    next();\n}\n",
+)
+
+# 14d. a body that already has its brace does not get a second one
+src9d = "void t(void)\n{\n    if (ok)\n    {\n        n = old_call(a);\n    }\n}\n"
+pos9d = src9d.index("old_call")
+end9d = N.close_paren(src9d, pos9d + len("old_call("))
+eq(
+    "an already braced body is left alone",
+    N.rewrite(src9d, pos9d, end9d, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.n"),
+    "void t(void)\n{\n    if (ok)\n    {\n        Ns.args.a = a;\n        Ns.entry(w);\n        n = Ns.n;\n    }\n}\n",
+)
+
+# 14e. a call in the head's own condition is not a body, and the plain statement is untouched
+src9e = "void t(void)\n{\n    if (old_call(a))\n    {\n        step();\n    }\n}\n"
+pos9e = src9e.index("old_call")
+end9e = N.close_paren(src9e, pos9e + len("old_call("))
+eq(
+    "a condition call is not braced as a body",
+    N.rewrite(src9e, pos9e, end9e, ["Ns.args.a = a;", "Ns.entry(w);"], "Ns.ok"),
+    "void t(void)\n{\n    Ns.args.a = a;\n    Ns.entry(w);\n    if (Ns.ok)\n    {\n        step();\n    }\n}\n",
+)
+
 print()
 print("FAILURES:", fails)
 sys.exit(1 if fails else 0)

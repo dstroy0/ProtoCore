@@ -12,19 +12,17 @@
 
 #include <unity.h>
 
-static uint8_t comp_work[16]; // the borrow an entry takes; Comp never reads it
-
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
 void setUp(void)
 {
     Comp.reset_args.i = 0;
-    Comp.reset(comp_work);
+    Comp.reset(protocore_ssh_comp_span());
 }
 void tearDown(void)
 {
     Comp.reset_args.i = 0;
-    Comp.reset(comp_work);
+    Comp.reset(protocore_ssh_comp_span());
 }
 
 // ---------------------------------------------------------------------------
@@ -34,10 +32,10 @@ void tearDown(void)
 static void test_sec6_2_neither_direction_starts_compressed(void)
 {
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
 }
 
@@ -46,25 +44,25 @@ static void test_sec6_2_none_never_activates(void)
 {
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_NONE;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.set_c2s_args.i = 0;
     Comp.set_c2s_args.alg = SSH_COMP_NONE;
-    Comp.set_c2s(comp_work);
+    Comp.set_c2s(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.on_auth_success_args.i = 0;
-    Comp.on_auth_success(comp_work);
+    Comp.on_auth_success(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
 }
 
@@ -78,24 +76,24 @@ static void test_sec6_2_zlib_starts_at_newkeys_not_at_negotiation(void)
 {
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.set_c2s_args.i = 0;
     Comp.set_c2s_args.alg = SSH_COMP_ZLIB;
-    Comp.set_c2s(comp_work);
+    Comp.set_c2s(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok); // negotiated, not yet in use
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
 
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_TRUE(Comp.ok);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_TRUE(Comp.ok);
 }
 
@@ -105,17 +103,17 @@ static void test_sec7_1_the_two_directions_are_independent(void)
 {
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.set_c2s_args.i = 0;
     Comp.set_c2s_args.alg = SSH_COMP_NONE;
-    Comp.set_c2s(comp_work);
+    Comp.set_c2s(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_TRUE(Comp.ok);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
 }
 
@@ -125,9 +123,9 @@ static void test_sec6_2_each_key_exchange_reinitializes_the_context(void)
 {
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
 
     static const uint8_t msg[] = "a payload long enough to be worth a back reference, twice over";
     const size_t len = sizeof(msg) - 1;
@@ -140,7 +138,7 @@ static void test_sec6_2_each_key_exchange_reinitializes_the_context(void)
     Comp.s2c_args.dst = a;
     Comp.s2c_args.dst_cap = sizeof(a);
     Comp.s2c_args.out_len = &na;
-    Comp.s2c(comp_work);
+    Comp.s2c(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(0, Comp.n);
     Comp.s2c_args.i = 0;
     Comp.s2c_args.src = msg;
@@ -148,19 +146,19 @@ static void test_sec6_2_each_key_exchange_reinitializes_the_context(void)
     Comp.s2c_args.dst = b;
     Comp.s2c_args.dst_cap = sizeof(b);
     Comp.s2c_args.out_len = &nb;
-    Comp.s2c(comp_work);
+    Comp.s2c(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(0, Comp.n);
     TEST_ASSERT_LESS_THAN_size_t(na, nb); // the second was matched out of the window
 
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work); // a re-exchange completes
+    Comp.on_newkeys(protocore_ssh_comp_span()); // a re-exchange completes
     Comp.s2c_args.i = 0;
     Comp.s2c_args.src = msg;
     Comp.s2c_args.src_len = len;
     Comp.s2c_args.dst = c;
     Comp.s2c_args.dst_cap = sizeof(c);
     Comp.s2c_args.out_len = &nc;
-    Comp.s2c(comp_work);
+    Comp.s2c(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(0, Comp.n);
 
     // The window went with the old context, so this costs what the first one did, not what the
@@ -176,17 +174,17 @@ static void test_delayed_does_not_start_at_newkeys(void)
 {
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB_DELAYED;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.set_c2s_args.i = 0;
     Comp.set_c2s_args.alg = SSH_COMP_ZLIB_DELAYED;
-    Comp.set_c2s(comp_work);
+    Comp.set_c2s(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
 }
 
@@ -194,19 +192,19 @@ static void test_delayed_starts_at_authentication_success(void)
 {
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB_DELAYED;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.set_c2s_args.i = 0;
     Comp.set_c2s_args.alg = SSH_COMP_ZLIB_DELAYED;
-    Comp.set_c2s(comp_work);
+    Comp.set_c2s(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
     Comp.on_auth_success_args.i = 0;
-    Comp.on_auth_success(comp_work);
+    Comp.on_auth_success(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_TRUE(Comp.ok);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_TRUE(Comp.ok);
 }
 
@@ -215,9 +213,9 @@ static void test_auth_success_does_not_disturb_plain_zlib(void)
 {
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
 
     static const uint8_t msg[] = "a payload long enough to be worth a back reference, twice over";
     const size_t len = sizeof(msg) - 1;
@@ -229,18 +227,18 @@ static void test_auth_success_does_not_disturb_plain_zlib(void)
     Comp.s2c_args.dst = a;
     Comp.s2c_args.dst_cap = sizeof(a);
     Comp.s2c_args.out_len = &na;
-    Comp.s2c(comp_work);
+    Comp.s2c(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(0, Comp.n);
 
     Comp.on_auth_success_args.i = 0;
-    Comp.on_auth_success(comp_work);
+    Comp.on_auth_success(protocore_ssh_comp_span());
     Comp.s2c_args.i = 0;
     Comp.s2c_args.src = msg;
     Comp.s2c_args.src_len = len;
     Comp.s2c_args.dst = b;
     Comp.s2c_args.dst_cap = sizeof(b);
     Comp.s2c_args.out_len = &nb;
-    Comp.s2c(comp_work);
+    Comp.s2c(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(0, Comp.n);
     TEST_ASSERT_LESS_THAN_size_t(na, nb); // the window survived, so this is still the cheap copy
 }
@@ -250,11 +248,11 @@ static void test_delayed_start_is_idempotent(void)
 {
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB_DELAYED;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
     Comp.on_auth_success_args.i = 0;
-    Comp.on_auth_success(comp_work);
+    Comp.on_auth_success(protocore_ssh_comp_span());
 
     static const uint8_t msg[] = "a payload long enough to be worth a back reference, twice over";
     const size_t len = sizeof(msg) - 1;
@@ -266,18 +264,18 @@ static void test_delayed_start_is_idempotent(void)
     Comp.s2c_args.dst = a;
     Comp.s2c_args.dst_cap = sizeof(a);
     Comp.s2c_args.out_len = &na;
-    Comp.s2c(comp_work);
+    Comp.s2c(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(0, Comp.n);
 
     Comp.on_auth_success_args.i = 0;
-    Comp.on_auth_success(comp_work); // again
+    Comp.on_auth_success(protocore_ssh_comp_span()); // again
     Comp.s2c_args.i = 0;
     Comp.s2c_args.src = msg;
     Comp.s2c_args.src_len = len;
     Comp.s2c_args.dst = b;
     Comp.s2c_args.dst_cap = sizeof(b);
     Comp.s2c_args.out_len = &nb;
-    Comp.s2c(comp_work);
+    Comp.s2c(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(0, Comp.n);
     TEST_ASSERT_LESS_THAN_size_t(na, nb); // the stream continued rather than restarting
 }
@@ -297,7 +295,7 @@ static void test_inactive_direction_refuses_rather_than_transforming(void)
     size_t n = 0;
 
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.s2c_args.i = 0;
     Comp.s2c_args.src = msg;
@@ -305,10 +303,10 @@ static void test_inactive_direction_refuses_rather_than_transforming(void)
     Comp.s2c_args.dst = out;
     Comp.s2c_args.dst_cap = sizeof(out);
     Comp.s2c_args.out_len = &n;
-    Comp.s2c(comp_work);
+    Comp.s2c(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(-1, Comp.n);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.c2s_args.i = 0;
     Comp.c2s_args.src = msg;
@@ -316,7 +314,7 @@ static void test_inactive_direction_refuses_rather_than_transforming(void)
     Comp.c2s_args.dst = out;
     Comp.c2s_args.dst_cap = sizeof(out);
     Comp.c2s_args.out_len = &n;
-    Comp.c2s(comp_work);
+    Comp.c2s(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(-1, Comp.n);
 }
 
@@ -330,9 +328,9 @@ static void test_active_direction_transforms_the_payload(void)
     }
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
 
     uint8_t out[2048];
     size_t n = 0;
@@ -342,7 +340,7 @@ static void test_active_direction_transforms_the_payload(void)
     Comp.s2c_args.dst = out;
     Comp.s2c_args.dst_cap = sizeof(out);
     Comp.s2c_args.out_len = &n;
-    Comp.s2c(comp_work);
+    Comp.s2c(protocore_ssh_comp_span());
     TEST_ASSERT_EQUAL_INT(0, Comp.n);
     TEST_ASSERT_LESS_THAN_size_t(sizeof(src), n);
 }
@@ -356,32 +354,32 @@ static void test_reset_clears_both_directions(void)
 {
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.set_c2s_args.i = 0;
     Comp.set_c2s_args.alg = SSH_COMP_ZLIB;
-    Comp.set_c2s(comp_work);
+    Comp.set_c2s(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_TRUE(Comp.ok);
 
     Comp.reset_args.i = 0;
-    Comp.reset(comp_work);
+    Comp.reset(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
 
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work); // no algorithm negotiated on the new connection yet
+    Comp.on_newkeys(protocore_ssh_comp_span()); // no algorithm negotiated on the new connection yet
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.c2s_active_args.i = 0;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
 }
 
@@ -394,17 +392,17 @@ static void test_state_is_per_slot(void)
         return;
     }
     Comp.reset_args.i = 1;
-    Comp.reset(comp_work);
+    Comp.reset(protocore_ssh_comp_span());
     Comp.set_s2c_args.i = 0;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = 0;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = 0;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_TRUE(Comp.ok);
     Comp.s2c_active_args.i = 1;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
 }
 
@@ -413,19 +411,19 @@ static void test_slot_past_the_pool_is_inert(void)
 {
     const uint8_t bad = MAX_SSH_CONNS;
     Comp.reset_args.i = bad;
-    Comp.reset(comp_work);
+    Comp.reset(protocore_ssh_comp_span());
     Comp.set_s2c_args.i = bad;
     Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
-    Comp.set_s2c(comp_work);
+    Comp.set_s2c(protocore_ssh_comp_span());
     Comp.on_newkeys_args.i = bad;
-    Comp.on_newkeys(comp_work);
+    Comp.on_newkeys(protocore_ssh_comp_span());
     Comp.on_auth_success_args.i = bad;
-    Comp.on_auth_success(comp_work);
+    Comp.on_auth_success(protocore_ssh_comp_span());
     Comp.s2c_active_args.i = bad;
-    Comp.s2c_active(comp_work);
+    Comp.s2c_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
     Comp.c2s_active_args.i = bad;
-    Comp.c2s_active(comp_work);
+    Comp.c2s_active(protocore_ssh_comp_span());
     TEST_ASSERT_FALSE(Comp.ok);
 }
 
