@@ -92,7 +92,7 @@ static void store_be(uint8_t *dst, uint64_t bits, size_t n)
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_LWM2M_TLV_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_LWM2M_TLV_BORROW persistent bytes
 } Lwm2mTlvOwnCtx;
 static Lwm2mTlvOwnCtx s_own;
 
@@ -101,13 +101,9 @@ uint8_t *protocore_lwm2m_tlv_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_LWM2M_TLV_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_LWM2M_TLV_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // Bind the sink buffer and clear the cursor. A sink with no buffer starts poisoned, so every later

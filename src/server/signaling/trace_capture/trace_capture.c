@@ -61,7 +61,7 @@ static_assert(TRACE_CAPTURE_OFF_CTX + sizeof(struct TraceCaptureStorage) <= PROT
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_TRACE_CAPTURE_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_TRACE_CAPTURE_BORROW persistent bytes
 } TraceCaptureOwnCtx;
 static TraceCaptureOwnCtx s_own;
 
@@ -70,13 +70,9 @@ uint8_t *protocore_trace_capture_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_TRACE_CAPTURE_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_TRACE_CAPTURE_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void ring_push(uint8_t *restrict work, uint16_t sample)

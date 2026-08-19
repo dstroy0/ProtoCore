@@ -226,7 +226,7 @@ static protocore_net_err dispatch_trampoline(protocore_net_call *c)
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_TCP_LOWER_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_TCP_LOWER_BORROW persistent bytes
 } TcpLowerOwnCtx;
 static TcpLowerOwnCtx s_own;
 
@@ -235,15 +235,11 @@ uint8_t *protocore_tcp_lower_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_TCP_LOWER_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            TCP_LOWER_CTX(s_own.span)->ttl = PROTOCORE_TCP_TTL;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_TCP_LOWER_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        TCP_LOWER_CTX(s_own.span)->ttl = PROTOCORE_TCP_TTL;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void marshal(uint8_t *restrict work)

@@ -151,7 +151,7 @@ extern AuditLogNs AuditLog;
  * that borrow comes from. Taken once from the end of the pool, which no mark and no release
  * walks, so the state lasts the life of the program.
  *
- * @return the span, or NULL while the pool was short - which every entry refuses.
+ * @return the span.
  */
 uint8_t *protocore_audit_log_span(void);
 

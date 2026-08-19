@@ -37,7 +37,7 @@ static_assert(SSH_OFF_CTX + sizeof(SshMemCtx) <= PROTOCORE_SSH_BORROW,
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SSH_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SSH_BORROW persistent bytes
 } SshOwnCtx;
 static SshOwnCtx s_own;
 
@@ -46,13 +46,9 @@ uint8_t *protocore_ssh_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SSH_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_SSH_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 

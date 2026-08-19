@@ -77,7 +77,7 @@ static void bit_set(uint8_t *a, uint16_t i, proto_bool v)
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_MODBUS_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_MODBUS_BORROW persistent bytes
 } ModbusOwnCtx;
 static ModbusOwnCtx s_own;
 
@@ -86,13 +86,9 @@ uint8_t *protocore_modbus_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_MODBUS_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_MODBUS_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void modbus_process_adu(uint8_t *restrict work);

@@ -119,7 +119,7 @@ extern RadioNs Radio;
  * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where that
  * borrow comes from. Taken once from the end of the pool, so it lasts the life of the program.
  *
- * @return the span, or NULL while the pool was short - which every entry refuses.
+ * @return the span.
  */
 uint8_t *protocore_radio_power_span(void);
 

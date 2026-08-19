@@ -106,7 +106,7 @@ static_assert(NTP_SERVER_OFF_CTX + sizeof(NtpServerCtx) <= PROTOCORE_NTP_SERVER_
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_NTP_SERVER_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_NTP_SERVER_BORROW persistent bytes
 } NtpServerOwnCtx;
 static NtpServerOwnCtx s_own;
 
@@ -115,16 +115,12 @@ uint8_t *protocore_ntp_server_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_NTP_SERVER_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            NTP_SERVER_CTX(s_own.span)->refid = PROTOCORE_NTP_REFID_LOCL;
-            NTP_SERVER_CTX(s_own.span)->stratum = PROTOCORE_NTP_SERVER_STRATUM;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_NTP_SERVER_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        NTP_SERVER_CTX(s_own.span)->refid = PROTOCORE_NTP_REFID_LOCL;
+        NTP_SERVER_CTX(s_own.span)->stratum = PROTOCORE_NTP_SERVER_STRATUM;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // UDP handler: answer each request from the current time (silent if we have none).

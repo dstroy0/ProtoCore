@@ -176,7 +176,7 @@ static void append_pdu(uint8_t *restrict work, BerEnc *e)
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SNMP_NOTIFY_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SNMP_NOTIFY_BORROW persistent bytes
 } SnmpNotifyOwnCtx;
 static SnmpNotifyOwnCtx s_own;
 
@@ -185,15 +185,11 @@ uint8_t *protocore_snmp_notify_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SNMP_NOTIFY_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            SNMP_NOTIFY_CTX(s_own.span)->trap_reqid = 1;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_SNMP_NOTIFY_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        SNMP_NOTIFY_CTX(s_own.span)->trap_reqid = 1;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void build_pdu(uint8_t *restrict work)

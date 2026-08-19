@@ -72,7 +72,7 @@ static_assert(CONN_POOL_OFF_CTX + sizeof(struct ConnPoolStorage) <= PROTOCORE_CO
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_CONN_POOL_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_CONN_POOL_BORROW persistent bytes
 } ConnPoolOwnCtx;
 static ConnPoolOwnCtx s_own;
 
@@ -81,15 +81,11 @@ uint8_t *protocore_conn_pool_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_CONN_POOL_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            CONN_POOL_CTX(s_own.span)->conn_timeout_ms = CONN_TIMEOUT_MS;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_CONN_POOL_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        CONN_POOL_CTX(s_own.span)->conn_timeout_ms = CONN_TIMEOUT_MS;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // ---------------------------------------------------------------------------

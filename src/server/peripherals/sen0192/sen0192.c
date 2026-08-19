@@ -35,7 +35,7 @@ PROTOCORE_BEGIN_DECLS
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SEN0192_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SEN0192_BORROW persistent bytes
 } Sen0192OwnCtx;
 static Sen0192OwnCtx s_own;
 
@@ -44,13 +44,9 @@ uint8_t *protocore_sen0192_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_SEN0192_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_SEN0192_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void sen0192_motion_events(uint8_t *restrict work);

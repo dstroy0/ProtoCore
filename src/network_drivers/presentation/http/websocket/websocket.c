@@ -830,13 +830,9 @@ uint8_t *protocore_ws_span(void)
     static uint8_t *s_span;
     if (s_span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_WS_BORROW);
-        if (span.ok(sp))
-        {
-            s_span = sp.buf;
-        }
+        s_span = protocore_secure_persist_span(PROTOCORE_WS_BORROW).buf;
     }
-    return s_span; // null while the pool was short, which every entry refuses
+    return s_span;
 }
 
 WsNs Ws = {.route_add = route_add,

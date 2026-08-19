@@ -21,7 +21,7 @@ static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_COAPS_SERVER_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_COAPS_SERVER_BORROW persistent bytes
 } CoapsServerOwnCtx;
 static CoapsServerOwnCtx s_own;
 
@@ -30,13 +30,9 @@ uint8_t *protocore_coaps_server_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_COAPS_SERVER_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_COAPS_SERVER_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 #if PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP

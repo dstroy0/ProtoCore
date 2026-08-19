@@ -70,7 +70,7 @@ static_assert(RNG_OFF_CHACHA + PROTOCORE_CHACHA20_BORROW <= PROTOCORE_RNG_BORROW
 // A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_RNG_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_RNG_BORROW persistent bytes
 } RngOwnCtx;
 static RngOwnCtx s_rng;
 
@@ -110,13 +110,9 @@ uint8_t *protocore_rng_span(void)
 {
     if (s_rng.span == NULL)
     {
-        protocore_span s = protocore_secure_persist_span(PROTOCORE_RNG_BORROW);
-        if (span.ok(s))
-        {
-            s_rng.span = s.buf;
-        }
+        s_rng.span = protocore_secure_persist_span(PROTOCORE_RNG_BORROW).buf;
     }
-    return s_rng.span; // null while the pool was short, which every entry refuses
+    return s_rng.span;
 }
 
 // --- the entries -----------------------------------------------------------

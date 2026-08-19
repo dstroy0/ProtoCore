@@ -211,13 +211,9 @@ uint8_t *protocore_sse_span(void)
     static uint8_t *s_span;
     if (s_span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SSE_BORROW);
-        if (span.ok(sp))
-        {
-            s_span = sp.buf;
-        }
+        s_span = protocore_secure_persist_span(PROTOCORE_SSE_BORROW).buf;
     }
-    return s_span; // null while the pool was short, which every entry refuses
+    return s_span;
 }
 
 SseNs Sse = {.route_add = route_add,

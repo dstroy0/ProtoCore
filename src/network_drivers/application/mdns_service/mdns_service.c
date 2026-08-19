@@ -42,7 +42,7 @@ PROTOCORE_BEGIN_DECLS
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_MDNS_SERVICE_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_MDNS_SERVICE_BORROW persistent bytes
 } MdnsServiceOwnCtx;
 static MdnsServiceOwnCtx s_own;
 
@@ -51,13 +51,9 @@ uint8_t *protocore_mdns_service_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_MDNS_SERVICE_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_MDNS_SERVICE_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 #if PROTOCORE_HAS_VENDOR_MDNS

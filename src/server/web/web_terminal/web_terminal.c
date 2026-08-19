@@ -109,7 +109,7 @@ static void term_ws_close(uint8_t ws_id)
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_WEB_TERMINAL_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_WEB_TERMINAL_BORROW persistent bytes
 } WebTerminalOwnCtx;
 static WebTerminalOwnCtx s_own;
 
@@ -118,13 +118,9 @@ uint8_t *protocore_web_terminal_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_WEB_TERMINAL_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_WEB_TERMINAL_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 static void web_terminal_begin(uint8_t *restrict work)

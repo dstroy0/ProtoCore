@@ -90,7 +90,7 @@ proto_bool bucket_locked(const LockoutBucket *b, uint32_t now_ms)
 // The one owned instance, private to this TU: the pointer to the bytes this module took for itself.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_AUTH_LOCKOUT_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_AUTH_LOCKOUT_BORROW persistent bytes
 } LockoutOwnCtx;
 static LockoutOwnCtx s_own;
 
@@ -98,13 +98,9 @@ uint8_t *protocore_auth_lockout_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_AUTH_LOCKOUT_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_AUTH_LOCKOUT_BORROW).buf;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // --- the entries -----------------------------------------------------------

@@ -124,7 +124,7 @@ static_assert(SNMP_V3_OFF_CTX + sizeof(struct SnmpV3Storage) <= PROTOCORE_SNMP_V
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_SNMP_V3_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_SNMP_V3_BORROW persistent bytes
 } SnmpV3OwnCtx;
 static SnmpV3OwnCtx s_own;
 
@@ -133,18 +133,14 @@ uint8_t *protocore_snmp_v3_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_secure_persist_span(PROTOCORE_SNMP_V3_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            SNMP_V3_CTX(s_own.span)->boots = 1;
-            SNMP_V3_CTX(s_own.span)->engine_id_len = 9;
-            static const uint8_t engine_id0[] = {0x80, 0x00, 0xC0, 0xDE, 0x05, 0x01, 0x02, 0x03, 0x04};
-            mem.cpy(SNMP_V3_CTX(s_own.span)->engine_id, engine_id0, sizeof(engine_id0));
-        }
+        s_own.span = protocore_secure_persist_span(PROTOCORE_SNMP_V3_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        SNMP_V3_CTX(s_own.span)->boots = 1;
+        SNMP_V3_CTX(s_own.span)->engine_id_len = 9;
+        static const uint8_t engine_id0[] = {0x80, 0x00, 0xC0, 0xDE, 0x05, 0x01, 0x02, 0x03, 0x04};
+        mem.cpy(SNMP_V3_CTX(s_own.span)->engine_id, engine_id0, sizeof(engine_id0));
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // v3_sec is a fixed 256 octets and what build_message() packs into it scales with two overridable

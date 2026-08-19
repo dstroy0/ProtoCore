@@ -83,7 +83,7 @@ static_assert(FILE_SERVING_OFF_CTX + sizeof(FileCtx) <= PROTOCORE_FILE_SERVING_B
 // itself. A caller that hands in its own borrow never reaches it.
 typedef struct
 {
-    uint8_t *span; ///< PROTOCORE_FILE_SERVING_BORROW persistent bytes, or null while the pool was short
+    uint8_t *span; ///< PROTOCORE_FILE_SERVING_BORROW persistent bytes
 } FileServingOwnCtx;
 static FileServingOwnCtx s_own;
 
@@ -92,15 +92,11 @@ uint8_t *protocore_file_serving_span(void)
 {
     if (s_own.span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_FILE_SERVING_BORROW);
-        if (span.ok(sp))
-        {
-            s_own.span = sp.buf;
-            // A borrow arrives zeroed, and these do not start at zero.
-            FILE_SERVING_CTX(s_own.span)->root = -1;
-        }
+        s_own.span = protocore_plaintext_persist_span(PROTOCORE_FILE_SERVING_BORROW).buf;
+        // A borrow arrives zeroed, and these do not start at zero.
+        FILE_SERVING_CTX(s_own.span)->root = -1;
     }
-    return s_own.span; // null while the pool was short, which every entry refuses
+    return s_own.span;
 }
 
 // The root file serving resolves against: the whole mount. A static route carries its own subtree as

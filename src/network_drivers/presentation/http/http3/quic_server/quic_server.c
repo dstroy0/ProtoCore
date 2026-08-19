@@ -127,13 +127,9 @@ uint8_t *protocore_quic_server_span(void)
 {
     if (s_span == NULL)
     {
-        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_QUIC_SERVER_BORROW);
-        if (span.ok(sp))
-        {
-            s_span = sp.buf;
-        }
+        s_span = protocore_plaintext_persist_span(PROTOCORE_QUIC_SERVER_BORROW).buf;
     }
-    return s_span; // null while the pool was short, which every entry refuses
+    return s_span;
 }
 
 // Copy @p src into @p dst, stopping at the NUL or one short of @p cap, and terminate.

@@ -126,7 +126,7 @@ extern X509VerifyNs X509Verify;
  * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where that
  * borrow comes from. RSA is what sizes it - a 2048-bit verification works over the modulus.
  *
- * @return the span, or NULL while the pool was short - which every entry refuses.
+ * @return the span.
  */
 uint8_t *protocore_x509_verify_span(void);
 
