@@ -30,9 +30,9 @@
 // Build flags (whole build): PROTOCORE_ENABLE_EXC_DECODER=1 PROTOCORE_ENABLE_FTP=1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "services/file_transfer/ftp/ftp_session.h"
-#include "server/core/exc_decoder.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "services/file_transfer/ftp/ftp_session/ftp_session.h"
+#include "server/core/exc_decoder/exc_decoder.h"
 #include "shared/log/log.h"
 #include "shared/mime/mime.h"
 #include <SD_MMC.h>

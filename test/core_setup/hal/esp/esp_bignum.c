@@ -11,9 +11,9 @@
  */
 
 #include "config/platform/platform.h" // PROTOCORE_HAS_HW_BIGNUM
-#include "crypto/asymmetric/bignum.h"
+#include "crypto/asymmetric/bignum/bignum.h"
 #include "crypto/crypto_opt.h"
-#include "mmgr/secure.h"
+#include "mmgr/secure/secure.h"
 
 #if PROTOCORE_HAS_HW_BIGNUM
 

@@ -3,8 +3,8 @@
 //
 #include "network_drivers/transport/udp/server/server.h"
 #include "network_drivers/transport/udp/udp.h"
-#include "services/net/snmp/snmp_agent.h"
-#include "services/net/snmp/snmp_ber.h"
+#include "services/net/snmp/snmp_agent/snmp_agent.h"
+#include "services/net/snmp/snmp_ber/snmp_ber.h"
 #include <string.h>
 
 #include <unity.h>
@@ -1272,49 +1272,3 @@ void test_udp_handler_drops_unanswerable()
     reset_udp();
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_init_community_defaults);
-    RUN_TEST(test_empty_rw_community_clears_write);
-    RUN_TEST(test_add_string_null_value);
-    RUN_TEST(test_registration_table_limits);
-    RUN_TEST(test_getnext_picks_smallest_out_of_order);
-    RUN_TEST(test_set_v1_error_variants);
-    RUN_TEST(test_get_failing_getter_is_nosuchinstance);
-    RUN_TEST(test_get_short_oid_is_nosuchobject);
-    RUN_TEST(test_getbulk_saturates_varbind_table);
-    RUN_TEST(test_dispatch_truncated_pdu_fields);
-    RUN_TEST(test_dispatch_empty_varbind_list_tiny_buffer);
-    RUN_TEST(test_message_truncated_before_community);
-    RUN_TEST(test_udp_handler_drops_unanswerable);
-    RUN_TEST(test_registration_and_rw_edges);
-    RUN_TEST(test_ipaddress_value_encodes);
-    RUN_TEST(test_set_wrong_type_and_unknown);
-    RUN_TEST(test_getbulk_variants);
-    RUN_TEST(test_dispatch_value_types_and_malformed);
-    RUN_TEST(test_get_string_v2c);
-    RUN_TEST(test_get_unknown_v2c_exception);
-    RUN_TEST(test_get_bad_instance_v2c_nosuchinstance);
-    RUN_TEST(test_get_unknown_v1_error);
-    RUN_TEST(test_getnext_walks_to_first);
-    RUN_TEST(test_getnext_past_end_endofmibview);
-    RUN_TEST(test_set_without_rw_community_denied);
-    RUN_TEST(test_set_with_rw_community_invokes_setter);
-    RUN_TEST(test_set_readonly_not_writable);
-    RUN_TEST(test_getbulk_returns_multiple);
-    RUN_TEST(test_dynamic_counter_value);
-    RUN_TEST(test_uptime_is_timeticks);
-    RUN_TEST(test_unknown_community_no_response);
-    RUN_TEST(test_v3_message_dropped);
-    RUN_TEST(test_getbulk_repeaters_and_end);
-    RUN_TEST(test_getbulk_nonrep_clamp_and_v1_reject);
-    RUN_TEST(test_response_too_big_reencodes);
-    RUN_TEST(test_version_and_community_guards);
-    RUN_TEST(test_dispatch_malformed_pdu);
-    RUN_TEST(test_udp_handler_via_inject);
-    RUN_TEST(test_malformed_message_guards);
-    RUN_TEST(test_snmp_dispatch_varbind_guards);
-    RUN_TEST(test_snmp_oid_cmp_request_longer);
-    return UNITY_END();
-}

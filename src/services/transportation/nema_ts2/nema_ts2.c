@@ -7,7 +7,7 @@
  */
 
 #include "services/transportation/nema_ts2/nema_ts2.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC16_X25
 
 static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it

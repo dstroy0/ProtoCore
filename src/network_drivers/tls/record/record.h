@@ -37,8 +37,8 @@
 #ifndef PROTOCORE_TLS_RECORD_H
 #define PROTOCORE_TLS_RECORD_H
 
-#include "crypto/aead/aes128gcm.h" // Aes128Gcm, the 0x1301 record AEAD
-#include "crypto/aead/aesgcm.h"    // AesGcm, the 0x1302 record AEAD
+#include "crypto/aead/aes128gcm/aes128gcm.h" // Aes128Gcm, the 0x1301 record AEAD
+#include "crypto/aead/aesgcm/aesgcm.h"    // AesGcm, the 0x1302 record AEAD
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 
@@ -46,7 +46,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-#include "network_drivers/presentation/http/http3/tls13_msg.h" // the suite code points TlsCipher takes its values from
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h" // the suite code points TlsCipher takes its values from
 
 /** @name Record content types (RFC 8446 sec 5).
  *  Shared by the TLSPlaintext `type` field and the TLSInnerPlaintext trailing content type. */

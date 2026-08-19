@@ -14,7 +14,7 @@
 // bits and field order, sec 6.3 pflags, sec 7 status codes and response layouts) and on POSIX.1
 // permission bits for the longname's mode column.
 
-#include "network_drivers/application/sftp/sftp.h"
+#include "network_drivers/application/sftp/sftp/sftp.h"
 #include <string.h>
 
 #include <unity.h>
@@ -434,9 +434,9 @@ void test_frame_length(void)
     Sftp.frame_len(sftp_work);
     TEST_ASSERT_EQUAL_size_t((size_t)-1, Sftp.n);
 
-    static const uint8_t HUGE[4] = {0xFF, 0xFF, 0xFF, 0xFF};
-    Sftp.frame_len_args.buf = HUGE;
-    Sftp.frame_len_args.have = sizeof(HUGE);
+    static const uint8_t OVERSIZE[4] = {0xFF, 0xFF, 0xFF, 0xFF};
+    Sftp.frame_len_args.buf = OVERSIZE;
+    Sftp.frame_len_args.have = sizeof(OVERSIZE);
     Sftp.frame_len_args.max = 34000;
     Sftp.frame_len(sftp_work);
     TEST_ASSERT_EQUAL_size_t((size_t)-1, Sftp.n);

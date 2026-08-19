@@ -711,30 +711,3 @@ void test_peer_addr_refuses_a_buffer_it_cannot_fill_and_allows_a_null_port_out()
     TEST_ASSERT_EQUAL_STRING("198.51.100.5", g_edge_ip);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_join_records_the_group);
-    RUN_TEST(test_group_datagram_reaches_the_handler);
-    RUN_TEST(test_counts_repeated_announcements);
-    RUN_TEST(test_rejects_non_multicast_group);
-    RUN_TEST(test_accepts_group_range_edges);
-    RUN_TEST(test_rejects_malformed_group);
-    RUN_TEST(test_leave_releases_the_slot);
-    RUN_TEST(test_leave_ignores_a_plain_listener);
-    RUN_TEST(test_listen_rebinds_existing_port);
-    RUN_TEST(test_listen_refuses_a_third_port_when_the_pool_is_full);
-    RUN_TEST(test_multicast_group_too_long_for_buffer_rejected);
-    RUN_TEST(test_multicast_join_finds_slot_past_an_unrelated_listener);
-    RUN_TEST(test_multicast_rejoin_scans_past_a_freed_lower_slot);
-    RUN_TEST(test_peer_addr_rejects_null_peer);
-    RUN_TEST(test_peer_addr_copies_and_tolerates_null_outparams);
-    RUN_TEST(test_send_paths_are_captured);
-    RUN_TEST(test_a_refused_send_reports_the_refusal);
-    RUN_TEST(test_send_rejects_null_zero_and_oversized_payload);
-    RUN_TEST(test_inject_skips_a_listener_with_no_handler);
-    RUN_TEST(test_an_untagged_source_address_carries_no_address);
-    RUN_TEST(test_multicast_lookup_skips_a_different_multicast_group);
-    RUN_TEST(test_peer_addr_refuses_a_buffer_it_cannot_fill_and_allows_a_null_port_out);
-    return UNITY_END();
-}

@@ -10,7 +10,7 @@
 // object grammar and sec 6's int production ("leading zeros are not allowed"), which is a published
 // grammar rather than whatever this builder happens to produce.
 
-#include "server/signaling/hw_health.h"
+#include "server/signaling/hw_health/hw_health.h"
 #include <string.h>
 
 #include <unity.h>

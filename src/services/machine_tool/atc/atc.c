@@ -7,8 +7,8 @@
  */
 
 #include "services/machine_tool/atc/atc.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protostr.h" // str.eq: the FIO point name lookup
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protostr/protostr.h" // str.eq: the FIO point name lookup
 
 #if PROTOCORE_ENABLE_ATC
 

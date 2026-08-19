@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "mmgr/dma.h"
+#include "mmgr/dma/dma.h"
 #include "protocore_dma_host.h"
 #include <string.h>
 
@@ -285,20 +285,3 @@ void test_channel_guard_subconditions()
     TEST_ASSERT_EQUAL_UINT16(0, protocore_dma_host_capture(0, NULL, 4));
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_open_validates);
-    RUN_TEST(test_ingress_emits_rx_event);
-    RUN_TEST(test_buffer_fills_then_partial_flush);
-    RUN_TEST(test_ping_pong_flips_buffer);
-    RUN_TEST(test_egress_captures_tx);
-    RUN_TEST(test_tx_one_in_flight_fail_closed);
-    RUN_TEST(test_tx_rejects_bad_len);
-    RUN_TEST(test_loopback_round_trip);
-    RUN_TEST(test_feed_fail_closed_when_full);
-    RUN_TEST(test_closed_channel_is_inert);
-    RUN_TEST(test_two_channels_independent);
-    RUN_TEST(test_channel_guard_subconditions);
-    return UNITY_END();
-}

@@ -11,12 +11,12 @@
  */
 
 #include "services/iot/lwm2m/lwm2m_tlv.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_LWM2M
 
-#include "mmgr/protomem.h" // mem.cpy: the Value octets a write copies, and the Float bit pattern
-#include "mmgr/protostr.h" // str.len: the bounded String measure
+#include "mmgr/protomem/protomem.h" // mem.cpy: the Value octets a write copies, and the Float bit pattern
+#include "mmgr/protostr/protostr.h" // str.len: the bounded String measure
 
 // The writer cursor: the caller buffer, how far into it the last write reached, and the poison an
 // entry that did not fit leaves behind. scalar holds the octets a typed write stages.

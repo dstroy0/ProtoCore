@@ -24,7 +24,7 @@
 // ice-cold and un-throttle" - and lines 87-90 do exactly that, clearing the throttle unconditionally
 // when there is no sensor. The case asserts the documented rule, not the code.
 
-#include "server/core/power_mgmt.h"
+#include "server/core/power_mgmt/power_mgmt.h"
 
 #include <string.h>
 #include <unity.h>

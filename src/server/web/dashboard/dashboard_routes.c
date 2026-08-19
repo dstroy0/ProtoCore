@@ -17,7 +17,7 @@
 
 // Dependency (DASHBOARD requires SSE) is enforced centrally in protocore_config.h.
 
-#include "network_drivers/application/web_assets.h" // PROTOCORE_DASHBOARD_PAGE
+#include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_DASHBOARD_PAGE
 #include "protocore.h"
 #include "shared/mime/mime.h"
 #if PROTOCORE_ENABLE_WEBSOCKET

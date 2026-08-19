@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SNP
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/snp/snp.h"
 
 PROTOCORE_BEGIN_DECLS

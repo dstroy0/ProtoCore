@@ -24,7 +24,6 @@
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "network_drivers/session/session.h" // the per-connection tables this reads
 
-
 // ---------------------------------------------------------------------------
 // Slot-indexed wrappers called by the session and application layers
 // ---------------------------------------------------------------------------
@@ -132,9 +131,6 @@ typedef struct
     const char *token; ///< the token looked for, case-insensitive
 } HttpHdrArgs;
 
-/** @brief The HTTP connection glue's own state and the calls that reach it, described only in presentation.c. */
-struct HttpConnInternal;
-
 /**
  * @brief Layer 6 - the HTTP connection: what wires a transport slot to the HTTP parser.
  *
@@ -153,7 +149,6 @@ struct HttpConnInternal;
  * @var HttpConnNs::has_token   whether hdr_args.token appears as an element of hdr_args.hdr
  * @var HttpConnNs::proto_handler  the L5 dispatch seam this module registers into
  * @var HttpConnNs::set_poll    install the per-slot poll pump
- * @var HttpConnNs::internal    the glue's state and the calls that reach it
  */
 typedef struct
 {
@@ -165,22 +160,31 @@ typedef struct
     proto_bool ok;
     const struct ProtoHandler *handler;
 
-    void (*reset)(struct HttpConnInternal *ctx);
-    void (*conn_open)(struct HttpConnInternal *ctx);
-    void (*parse)(struct HttpConnInternal *ctx);
+    void (*const reset)(uint8_t *restrict work);
+    void (*const conn_open)(uint8_t *restrict work);
+    void (*const parse)(uint8_t *restrict work);
 #if PROTOCORE_ENABLE_KEEPALIVE
-    void (*keepalive_eval)(struct HttpConnInternal *ctx);
+    void (*const keepalive_eval)(uint8_t *restrict work);
 #endif
 #if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
-    void (*has_token)(struct HttpConnInternal *ctx);
+    void (*const has_token)(uint8_t *restrict work);
 #endif
-    void (*proto_handler)(struct HttpConnInternal *ctx);
-    void (*set_poll)(struct HttpConnInternal *ctx);
-
-    struct HttpConnInternal *internal;
+    void (*const proto_handler)(uint8_t *restrict work);
+    void (*const set_poll)(uint8_t *restrict work);
 } HttpConnNs;
 
 /** @brief The one symbol this module exports. */
 extern HttpConnNs HttpConn;
+
+/**
+ * @brief The PROTOCORE_HTTP_CONN_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_http_conn_span(void);
 
 #endif

@@ -8,11 +8,13 @@
 // Neither is a component of SSH; both are programs sec 6.5 starts over a channel already open as
 // "session", which is why the channel keeps its sec 5.1 type and gains a service instead.
 
-#include "network_drivers/presentation/ssh/app/server.h"
+#include "network_drivers/presentation/ssh/app/server/server.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include <stdint.h>
 
 #include <unity.h>
+
+static uint8_t ssh_app_server_work[16]; // the borrow an entry takes; SshAppServer never reads it
 
 // The file-transfer request classifier, reached through the app-server namespace.
 static proto_bool classify_file_transfer_request(uint8_t slot, uint32_t channel, const uint8_t *rtype,
@@ -27,7 +29,7 @@ static proto_bool classify_file_transfer_request(uint8_t slot, uint32_t channel,
     SshAppServer.req.len = len;
     SshAppServer.req.off = off ? *off : 0u;
     SshAppServer.accept = accept ? *accept : PROTO_FALSE;
-    SshAppServer.classify(SshAppServer.internal);
+    SshAppServer.classify(ssh_app_server_work);
     if (off)
     {
         *off = SshAppServer.req.off;
@@ -43,20 +45,20 @@ static proto_bool classify_file_transfer_request(uint8_t slot, uint32_t channel,
 static int chan_alloc(uint8_t slot)
 {
     SshConnection.chan.slot = slot;
-    SshConnection.chan_alloc(SshConnection.internal);
+    SshConnection.chan_alloc(protocore_ssh_connection_span());
     return SshConnection.i32;
 }
 
 static void channel_set_sftp_open_cb(SshSftpOpenCb cb)
 {
     SshConnection.sftp_open_cb = cb;
-    SshConnection.set_sftp_open_cb(SshConnection.internal);
+    SshConnection.set_sftp_open_cb(protocore_ssh_connection_span());
 }
 
 static void channel_set_scp_open_cb(SshScpOpenCb cb)
 {
     SshConnection.scp_open_cb = cb;
-    SshConnection.set_scp_open_cb(SshConnection.internal);
+    SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
 }
 
 #if PROTOCORE_ENABLE_SSH_SFTP || PROTOCORE_ENABLE_SSH_SCP
@@ -75,12 +77,12 @@ static void sftp_open(uint8_t i, uint32_t channel)
 }
 #endif
 #if PROTOCORE_ENABLE_SSH_SCP
-static void scp_open(uint8_t i, uint32_t channel, const char *cmd, uint32_t cmd_len)
+static void scp_open(uint8_t i, uint32_t channel, const char *cmd, size_t cmd_len)
 {
     (void)i;
     s_scp_opens++;
     s_opened_channel = channel;
-    uint32_t k = 0;
+    size_t k = 0;
     for (; k < cmd_len && k + 1 < sizeof(s_scp_command); k++)
     {
         s_scp_command[k] = cmd[k];
@@ -107,7 +109,7 @@ static uint32_t open_session_channel(void)
 void setUp(void)
 {
     SshConnection.chan.slot = 0;
-    SshConnection.channel_init(SshConnection.internal);
+    SshConnection.channel_init(protocore_ssh_connection_span());
     s_sftp_opens = 0;
     s_scp_opens = 0;
     s_opened_channel = 0xFFFFFFFFu;

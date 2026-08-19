@@ -12,7 +12,7 @@
 // The fixed-Huffman construction is checked against the sec 3.2.6 code lengths and against the four
 // boundary codes that section prints in full.
 
-#include "network_drivers/presentation/codec/deflate/rfc1951.h"
+#include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h"
 #include <string.h>
 
 #include <unity.h>

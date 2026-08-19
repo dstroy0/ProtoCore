@@ -16,7 +16,7 @@
  */
 
 #include "network_drivers/session/session.h"
-#include "mmgr/plaintext.h"
+#include "mmgr/plaintext/plaintext.h"
 #include "network_drivers/presentation/presentation.h" // http_req_start_ms: the request deadline a first byte arms
 #include "network_drivers/presentation/ssh/network/network.h" // SshNetwork.owns: which SSH slot this stream carries
 #include "network_drivers/transport/tcp/protocol/protocol.h"  // ConnPool: the slot an event names
@@ -24,8 +24,7 @@
 #include "network_drivers/transport/udp/server/server.h"      // UdpListener: the datagram rings this tick drains
 #include "server/clock/clock.h"                               // Clock.ms: the pass stamp an arm takes
 #include "server/core/proto_handler.h"
-#include "server/storage/filesystem.h" // Fs: the source a released transfer still holds open
-
+#include "server/storage/filesystem/filesystem.h" // Fs: the source a released transfer still holds open
 
 // This layer is protocol-agnostic: it owns the dispatch mechanism only (register / look up /
 // route / drain) and names no protocol. Each protocol's handler lives in its own module and is
@@ -171,7 +170,7 @@ static void conn_release(uint8_t slot)
     {
         SshNetwork.ssh_slot = i;
         SshNetwork.conn_slot = slot;
-        SshNetwork.owns(SshNetwork.internal);
+        SshNetwork.owns(protocore_ssh_network_span());
         if (!SshNetwork.ok)
         {
             continue;

@@ -10,7 +10,7 @@
  * counter that answers 429 + Retry-After past the budget.
  */
 
-#include "mmgr/protoframe.h" // the one frame engine
+#include "mmgr/protoframe/protoframe.h" // the one frame engine
 #include "protocore.h"
 #include "server/clock/clock.h" // protocore_millis: the library clock, not the platform's
 #include "shared/mime/mime.h"   // PROTOCORE_MIME_TEXT_PLAIN

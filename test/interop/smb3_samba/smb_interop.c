@@ -10,8 +10,8 @@
 // Config via environment (all optional): SMB_HOST (127.0.0.1), SMB_PORT (445), SMB_USER, SMB_PASS,
 // SMB_DOMAIN (""), SMB_SHARE (\\host\share UNC), SMB_PATH (file name). Exit 0 on a byte-exact round trip.
 
-#include "network_drivers/application/smb/smb2.h"
-#include "network_drivers/application/smb/smb_client.h"
+#include "network_drivers/application/smb/smb2/smb2.h"
+#include "network_drivers/application/smb/smb_client/smb_client.h"
 #include <arpa/inet.h>
 #include <cstdio>
 #include <cstdlib>

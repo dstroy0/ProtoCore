@@ -69,8 +69,8 @@ explanatory comments:
 #define PROTOCORE_ENABLE_COAP 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "services/iot/coap/coap.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "services/iot/coap/coap/coap.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

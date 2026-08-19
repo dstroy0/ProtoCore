@@ -11,15 +11,17 @@
 // sec 4.4.3 prints the signed content for a 32-byte-0x01 transcript hash, which pins the 64-space
 // pad, the exact context string and the 0x00 separator without trusting our own assembler.
 
-#include "crypto/asymmetric/ed25519.h"
-#include "crypto/hash/sha512.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
+#include "crypto/hash/sha512/sha512.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include <string.h>
 
 #include <unity.h>
 
-// Ed25519 signing and verification hash with SHA-512, so they borrow what a SHA-512 context does.
-static uint8_t g_work[PROTOCORE_SHA512_BORROW] __attribute__((aligned(8)));
+// Ed25519.sign, .verify and .pubkey are what this suite calls, directly and through
+// protocore_tls13_build_cert_verify, so the span is theirs. PROTOCORE_ED25519_BORROW already
+// carries the SHA-512 context they hash with.
+static uint8_t g_work[PROTOCORE_ED25519_BORROW] __attribute__((aligned(8)));
 
 void setUp(void)
 {

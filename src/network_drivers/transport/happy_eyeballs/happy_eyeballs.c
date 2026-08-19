@@ -12,7 +12,7 @@ static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_HAPPY_EYEBALLS
 
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/transport/happy_eyeballs/happy_eyeballs.h"
 #include "shared/ip/ip.h"
 

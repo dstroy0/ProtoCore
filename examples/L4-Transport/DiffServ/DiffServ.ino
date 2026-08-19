@@ -19,7 +19,7 @@
  */
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/diffserv/diffserv.h"
 
 static const char *SSID = "YOUR_SSID";

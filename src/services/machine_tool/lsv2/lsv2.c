@@ -7,7 +7,7 @@
  */
 
 #include "services/machine_tool/lsv2/lsv2.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_LSV2
 

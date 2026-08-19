@@ -54,7 +54,7 @@ PEM cert/key are elided here (see the `.ino`); the C++ is verbatim with comments
 #define PROTOCORE_ENABLE_TLS 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/presentation/http/websocket/websocket.h" // ws_pool[] for the echo payload
 
 static const char *SSID = "YOUR_SSID";

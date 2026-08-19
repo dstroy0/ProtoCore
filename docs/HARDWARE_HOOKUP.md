@@ -367,7 +367,7 @@ Open the port with the baud rate and framing your device expects, then pump byte
 through the codec. A half-duplex RS-485 send looks like this:
 
 ```cpp
-#include "services/fieldbus/modbus/modbus.h"
+#include "services/fieldbus/modbus/modbus/modbus.h"
 
 HardwareSerial &bus = Serial2;
 const int DE_RE = 4; // RS-485 direction-control GPIO

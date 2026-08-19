@@ -20,11 +20,11 @@
 
 #if PROTOCORE_ENABLE_RNG
 
-#include "crypto/cipher/chacha20.h"
+#include "crypto/cipher/chacha20/chacha20.h"
 #include "crypto/crypto_opt.h"
 #include "crypto/rng/rng.h"
-#include "mmgr/protomem.h"
-#include "mmgr/secure.h" // protocore_secure_wipe
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/secure/secure.h" // protocore_secure_wipe
 
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS

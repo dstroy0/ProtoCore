@@ -12,8 +12,8 @@
 // {NULL, n} that survived construction is a null pointer with a capacity a caller is entitled to
 // write, which is exactly the failure the type exists to remove.
 
-#include "mmgr/bytes.h"
-#include "mmgr/span.h"
+#include "mmgr/bytes/bytes.h"
+#include "mmgr/span/span.h"
 #include <string.h>
 
 #include <unity.h>

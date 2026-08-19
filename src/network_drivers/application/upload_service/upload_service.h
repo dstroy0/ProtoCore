@@ -18,30 +18,67 @@
 #ifndef PROTOCORE_UPLOAD_SERVICE_H
 #define PROTOCORE_UPLOAD_SERVICE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_UPLOAD
 
 PROTOCORE_BEGIN_DECLS
 
-/**
- * @brief Register a streaming-upload endpoint.
- *
- * A `POST @p path` request streams its body into @p dest_path on the mounted store
- * (the file is truncated/created). The route handler replies `200 OK <n> bytes` on
- * success, or 500 on a write failure or when nothing is mounted.
- *
- * The destination store is whatever protocore_mnt_mount() last mounted, read through
- * protocore_mnt_active() at each request, so an upload follows a hotswap rather than
- * capturing one filesystem at registration time.
- *
- * @param path      the upload URL (e.g. "/upload").
- * @param dest_path destination file path (e.g. "/uploads/data.bin").
- */
-void protocore_upload_begin(const char *path, const char *dest_path);
+// PROTOCORE_UPLOAD_SERVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
-/** @brief Bytes written by the most recent upload (for handlers / tests). */
-size_t protocore_upload_last_size();
+/** @brief What begin takes: path, dest_path. */
+typedef struct
+{
+    const char *path;      ///< the upload URL (e.g. "/upload")
+    const char *dest_path; ///< destination file path (e.g. "/uploads/data.bin")
+} UploadServiceBeginArgs;
+
+/**
+ * @brief Streaming file upload to an Arduino FS (PROTOCORE_ENABLE_UPLOAD).
+ *
+ * A caller sets the members a call takes, invokes it through ::UploadService with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   UploadService.begin_args.path = ...;
+ *   UploadService.begin_args.dest_path = ...;
+ *   UploadService.begin(work);
+ *
+ * @var UploadServiceNs::begin_args  what begin takes: path, dest_path
+ * @var UploadServiceNs::ok  a call's true/false outcome
+ * @var UploadServiceNs::n  the count a call reports
+ * @var UploadServiceNs::begin  register a streaming-upload endpoint. A `POST path` request streams ...
+ * @var UploadServiceNs::last_size  bytes written by the most recent upload (for handlers / tests)
+ *
+ * @c work is PROTOCORE_UPLOAD_SERVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ */
+typedef struct
+{
+    UploadServiceBeginArgs begin_args;
+
+    proto_bool ok;
+    size_t n;
+
+    void (*const begin)(uint8_t *restrict work);
+    void (*const last_size)(uint8_t *restrict work);
+} UploadServiceNs;
+
+/** @brief The one symbol this module exports. */
+extern UploadServiceNs UploadService;
+
+/**
+ * @brief The PROTOCORE_UPLOAD_SERVICE_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_upload_service_span(void);
 
 PROTOCORE_END_DECLS
 

@@ -12,9 +12,9 @@
  */
 
 #include "services/net/webhook/webhook.h"
-#include "mmgr/membuild.h" // protocore_sb: the bounded frame builder the URI is built with
-#include "mmgr/protomem.h" // mem.cpy
-#include "mmgr/protostr.h" // str.len: bounded length, no stdlib
+#include "mmgr/membuild/membuild.h" // protocore_sb: the bounded frame builder the URI is built with
+#include "mmgr/protomem/protomem.h" // mem.cpy
+#include "mmgr/protostr/protostr.h" // str.len: bounded length, no stdlib
 
 #if PROTOCORE_ENABLE_WEBHOOK
 

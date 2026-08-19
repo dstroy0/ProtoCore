@@ -15,6 +15,8 @@
 #include <stdint.h>
 #include <string.h>
 
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
+
 int main(void)
 {
     hbench_header();
@@ -30,11 +32,19 @@ int main(void)
     volatile size_t sink = 0;
 
     double ns_e = 0.0;
-    HBENCH_NS(200000, Base64.encode(src, N, enc), ns_e);
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = N;
+    Base64.encode_args.dst = enc;
+    Base64.encode(base64_work);
+    HBENCH_NS(200000, Base64.ok, ns_e);
     hbench_row("base64", "encode 1 KiB", ns_e, (double)N);
 
     double ns_d = 0.0;
-    HBENCH_NS(200000, sink += Base64.decode(enc, dec, sizeof(dec)), ns_d);
+    Base64.decode_args.src = enc;
+    Base64.decode_args.dst = dec;
+    Base64.decode_args.dst_cap = sizeof(dec);
+    Base64.decode(base64_work);
+    HBENCH_NS(200000, sink += Base64.n, ns_d);
     hbench_row("base64", "decode 1 KiB", ns_d, (double)N);
 
     (void)sink;

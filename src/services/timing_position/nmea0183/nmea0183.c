@@ -7,11 +7,11 @@
  */
 
 #include "services/timing_position/nmea0183/nmea0183.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_NEED_NMEA0183
 
-#include "mmgr/protostr.h"
+#include "mmgr/protostr/protostr.h"
 
 uint8_t protocore_nmea0183_checksum(const char *s, size_t len)
 {

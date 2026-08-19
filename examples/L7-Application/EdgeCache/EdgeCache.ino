@@ -25,8 +25,8 @@
 #define PROTOCORE_ENABLE_HTTP_CLIENT 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "server/web/edge_cache/edge_cache_proxy.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "server/web/edge_cache/edge_cache_proxy/edge_cache_proxy.h"
 
 // --- Optional L2 (SD) persistence tier: set PROTOCORE_ENABLE_DBM=1 (with an SD card) to keep the cached set
 // across a reboot. Evicted L1 entries spill to a dbm store on the WAL; a reboot replays the log and the
@@ -34,7 +34,7 @@
 #if PROTOCORE_ENABLE_DBM
 #include "services/storage/dbm/dbm.h"
 #include "services/storage/wal/wal_fs.h"
-#include "services/storage/wal/wal_store.h"
+#include "services/storage/wal/wal_store/wal_store.h"
 #include <SD.h>
 #endif
 

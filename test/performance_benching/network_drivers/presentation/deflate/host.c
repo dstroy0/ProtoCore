@@ -12,12 +12,16 @@
 //   src/network_drivers/presentation/codec/deflate/deflate.c
 //   src/network_drivers/presentation/codec/inflate/inflate.c src/mmgr/protomem.c -o /tmp/bd && /tmp/bd
 
-#include "network_drivers/presentation/codec/deflate/deflate.h"
+#include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 
 #include "host_bench.h"
 #include <stdint.h>
 #include <string.h>
+
+static uint8_t inflate_work[16]; // the borrow an entry takes; Inflate never reads it
+
+static uint8_t deflate_work[16]; // the borrow an entry takes; Deflate never reads it
 
 // A realistic WebSocket text frame: a JSON telemetry message (structured + repetitive -> compressible).
 static const char *MSG = "{\"type\":\"telemetry\",\"ts\":1720700000,\"sensors\":["
@@ -34,7 +38,14 @@ int main(void)
     uint8_t plain[512];
     size_t clen = 0, plen = 0;
 
-    Deflate.raw((const uint8_t *)MSG, n, comp, sizeof(comp), &clen, dscratch, DEFLATE_SCRATCH_SIZE);
+    Deflate.raw_args.src = (const uint8_t *)MSG;
+    Deflate.raw_args.src_len = n;
+    Deflate.raw_args.dst = comp;
+    Deflate.raw_args.dst_cap = sizeof(comp);
+    Deflate.raw_args.out_len = &clen;
+    Deflate.raw_args.scratch = dscratch;
+    Deflate.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
+    Deflate.raw(deflate_work);
     // permessage-deflate (RFC 7692) strips the 00 00 FF FF sync-flush trailer on send; the receiver
     // appends it back before inflating (Inflate.raw is called with comp_len + 4).
     comp[clen] = 0x00;
@@ -52,8 +63,15 @@ int main(void)
             200000,
             {
                 size_t o = 0;
-                sink +=
-                    (int)Deflate.raw((const uint8_t *)MSG, n, comp, sizeof(comp), &o, dscratch, DEFLATE_SCRATCH_SIZE);
+                Deflate.raw_args.src = (const uint8_t *)MSG;
+                Deflate.raw_args.src_len = n;
+                Deflate.raw_args.dst = comp;
+                Deflate.raw_args.dst_cap = sizeof(comp);
+                Deflate.raw_args.out_len = &o;
+                Deflate.raw_args.scratch = dscratch;
+                Deflate.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
+                Deflate.raw(deflate_work);
+                sink += (int)Deflate.value;
             },
             ns);
         hbench_row("ws-deflate", "deflate (json msg)", ns, (double)n);
@@ -67,7 +85,15 @@ int main(void)
             200000,
             {
                 plen = 0;
-                sink += (int)Inflate.raw(comp, clen + 4, plain, sizeof(plain), &plen, iscratch, INFLATE_SCRATCH_SIZE);
+                Inflate.raw_args.src = comp;
+                Inflate.raw_args.src_len = clen + 4;
+                Inflate.raw_args.dst = plain;
+                Inflate.raw_args.dst_cap = sizeof(plain);
+                Inflate.raw_args.out_len = &plen;
+                Inflate.raw_args.scratch = iscratch;
+                Inflate.raw_args.scratch_len = INFLATE_SCRATCH_SIZE;
+                Inflate.raw(inflate_work);
+                sink += (int)Inflate.value;
             },
             ns);
         hbench_row("ws-deflate", "inflate (json msg)", ns, (double)plen);

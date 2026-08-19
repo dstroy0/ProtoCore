@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HOSTLINK
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/hostlink/hostlink.h"
 
 PROTOCORE_BEGIN_DECLS

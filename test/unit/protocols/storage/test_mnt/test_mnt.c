@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "server/storage/filesystem.h"
+#include "server/storage/filesystem/filesystem.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -1303,39 +1303,3 @@ void test_status_separates_the_reasons()
     TEST_ASSERT_TRUE((Fs.bits & PROTOCORE_FS_STORAGE_EXHAUSTED) != 0);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_null_store_is_intentional_and_says_so);
-    RUN_TEST(test_status_separates_the_reasons);
-    RUN_TEST(test_root_without_trailing_slash);
-    RUN_TEST(test_leaf_joins_onto_a_directory);
-    RUN_TEST(test_remove_takes_the_whole_subtree);
-    RUN_TEST(test_remove_file_and_missing_unchanged);
-    RUN_TEST(test_copy_file);
-    RUN_TEST(test_copy_takes_the_whole_subtree);
-    RUN_TEST(test_tree_ops_refuse_traversal);
-    RUN_TEST(test_unbound_root_fails_closed);
-    RUN_TEST(test_write_then_read_file);
-    RUN_TEST(test_streamed_write_and_read);
-    RUN_TEST(test_write_mode_truncates);
-    RUN_TEST(test_append_extends);
-    RUN_TEST(test_remove_and_rename);
-    RUN_TEST(test_missing_file_fails_closed);
-    RUN_TEST(test_read_buffer_too_small_fails_closed);
-    RUN_TEST(test_file_full_is_bounded);
-    RUN_TEST(test_file_pool_exhaustion);
-    RUN_TEST(test_handle_pool_exhaustion);
-    RUN_TEST(test_unmounted_fails_closed);
-    RUN_TEST(test_ram_guard_subconditions);
-    RUN_TEST(test_unmounted_all_entry_points);
-    RUN_TEST(test_handle_validity_edges);
-    RUN_TEST(test_write_to_read_handle_rejected);
-    RUN_TEST(test_rename_argument_guards);
-    RUN_TEST(test_rename_overwrites_destination);
-    RUN_TEST(test_read_file_handle_exhaustion);
-    RUN_TEST(test_write_file_larger_than_capacity);
-    RUN_TEST(test_zero_progress_backend_terminates);
-    RUN_TEST(test_remove_refuses_the_root_itself);
-    return UNITY_END();
-}

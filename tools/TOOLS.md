@@ -113,6 +113,7 @@ One entry point for CI: `harness.py ci` hands off to it unread, so `harness.py c
 | `check_examples.py`          |   | `--verbose`                    |                              |
 | `check_frame_specs.py`       | W | `--fix --verbose`              |                              |
 | `check_layering.py`          |   | `--baseline --list`            |                              |
+| `check_module_graph.py`      |   |                                |                              |
 | `check_null_ctx.py`          | W | `--baseline`                   |                              |
 | `check_owned_context.py`     |   | `--baseline`                   |                              |
 | `check_src_banned.py`        |   | `--all --baseline`             |                              |
@@ -192,9 +193,12 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 
 ## build/
 
-| Script           | W | Flags | Shells out to |
-| ---------------- | - | ----- | ------------- |
-| `ccache_wrap.sh` | W |       | ccache, pio   |
+| Script             | W | Flags                                | Shells out to |
+| ------------------ | - | ------------------------------------ | ------------- |
+| `ccache_wrap.sh`   | W |                                      | ccache, pio   |
+| `gen_cmake.py`     | W | `--check --quiet`                    |               |
+| `gen_modules.py`   | W | `--check --cycles --graph --unowned` |               |
+| `split_modules.py` | W | `--go --list`                        |               |
 
 ## crypto/ - generates test vectors and keys
 
@@ -236,6 +240,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `strip_comments.py`   | W | `--exclude --ext --go --no-header`                                                                                       |                 |
 | `uaspace.py`          |   |                                                                                                                          |                 |
 | `uatree.py`           |   |                                                                                                                          |                 |
+| `yank_includes.py`    | W | `--conditional --go --orphan`                                                                                            |                 |
 
 `nsconv.py`, `codemask.py`, `uaspace.py`, `pimpl.py` and `funnel.py` are libraries: `goldenize.py` is the entry point for the last two. `gen_x509_fixture.py` is the second half of `gen_x509_fixture.sh`.
 

@@ -4,7 +4,7 @@
 #include "mnt_mock.h"
 #include "network_drivers/transport/tcp/common.h"
 #include "protocore.h"
-#include "server/storage/mnt.h"
+#include "server/storage/mnt/mnt.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -55,7 +55,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -77,7 +77,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
 }
 
@@ -258,7 +258,7 @@ void test_multiple_content_types()
         conn_pool[0].proto = PROTO_HTTP;
         conn_pool[0].pcb = protocore_net_host_pcb();
         HttpConn.slot = 0;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
 
         on_http(cur_path, HTTP_GET, h_case);
@@ -281,7 +281,7 @@ static void rearm(uint8_t slot)
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConn.slot = slot;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 }
 
@@ -452,13 +452,13 @@ void stress_serve_file_50_requests()
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
         HttpConn.slot = slot;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
         handler_called = PROTO_FALSE;
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
         HttpConn.slot = slot;
-        HttpConn.parse(HttpConn.internal);
+        HttpConn.parse(protocore_http_conn_span());
         handle();
 
         TEST_ASSERT_TRUE_MESSAGE(handler_called, "handler not called");
@@ -480,7 +480,7 @@ void stress_alternate_missing_and_found()
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
         HttpConn.slot = slot;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
 
         if (i % 2 == 0)
@@ -494,7 +494,7 @@ void stress_alternate_missing_and_found()
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
         HttpConn.slot = slot;
-        HttpConn.parse(HttpConn.internal);
+        HttpConn.parse(protocore_http_conn_span());
         handle();
 
         if (i % 2 == 0)
@@ -525,7 +525,7 @@ void test_inm_leading_ows_still_matches()
 
     push_str(0, "GET /p.html HTTP/1.1\r\nHost: x\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     inject_header(0, "If-None-Match", " \t\"f-3e8\"");
     handle();
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));

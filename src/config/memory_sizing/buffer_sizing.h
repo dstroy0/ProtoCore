@@ -2774,6 +2774,24 @@
 #endif
 
 /**
+ * @brief One connection's whole span: the wire, the session, the exchange, the packet and the rx
+ *        regions end to end, which ssh.c hands out one slot at a time.
+ *
+ * Stated here as a number because the offsets that sum to it are built in
+ * network_drivers/presentation/ssh/common.h, which this file cannot see. common.h is the translation
+ * unit that includes both, so it is where this is proved against the real SSH_SLOT_BORROW - the same
+ * arrangement PROTOCORE_SSH_CPUB_MAX has with the PQC key sizes.
+ */
+#ifndef PROTOCORE_SSH_SLOT_BYTES
+#define PROTOCORE_SSH_SLOT_BYTES 183616u
+#endif
+
+/** @brief Every slot's span together: the bytes ssh.c takes from the secure pool. */
+#ifndef PROTOCORE_SSH_BORROW
+#define PROTOCORE_SSH_BORROW ((size_t)MAX_SSH_CONNS * PROTOCORE_SSH_SLOT_BYTES)
+#endif
+
+/**
  * @brief SSH TCP port forwarding (`direct-tcpip`, i.e. `ssh -L`). Default off.
  *
  * When set, the SSH server can open an outbound TCP connection to a client-named
@@ -3260,6 +3278,139 @@
 #define PROTOCORE_PLAINTEXT_WORK_SSHSCP 0
 #endif
 
+// The HTTP request parser's streaming-body hooks: the three callbacks an application installs to
+// take a body as it arrives. Measured at 24 bytes. Function pointers, no key material, so the
+// plaintext end. The per-slot request table is http_pool[], which is not a borrow.
+#ifndef PROTOCORE_HTTP_PARSER_BORROW
+#define PROTOCORE_HTTP_PARSER_BORROW 32u
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_HTTPPARSER PROTOCORE_HTTP_PARSER_BORROW
+
+// The adaptive mDNS announcer's live state: its config, the beacon interval, the contention window,
+// the running frame total the promiscuous sink bumps, and the channel capture is pinned to.
+// Measured at 80 bytes. Beacon timing, no key material, so the plaintext end.
+#ifndef PROTOCORE_MDNS_ADAPTIVE_BORROW
+#define PROTOCORE_MDNS_ADAPTIVE_BORROW 96u
+#endif
+
+#if PROTOCORE_ENABLE_MDNS_ADAPTIVE
+#define PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE PROTOCORE_MDNS_ADAPTIVE_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE 0
+#endif
+
+// The upload service's in-flight transfer: the sink the streamed body is handed to and the byte
+// count the last one carried. Measured at 32 bytes. Upload bookkeeping, no key material, so the
+// plaintext end.
+#ifndef PROTOCORE_UPLOAD_SERVICE_BORROW
+#define PROTOCORE_UPLOAD_SERVICE_BORROW 48u
+#endif
+
+#if PROTOCORE_ENABLE_UPLOAD
+#define PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE PROTOCORE_UPLOAD_SERVICE_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE 0
+#endif
+
+// The SNTP client's session: the epoch the last accepted reply carried, the millisecond it arrived
+// so the monotonic clock can carry it between syncs, the cookie that reply had to echo, and the
+// request span held in flight. Measured at 48 bytes. A wall clock and an anti-spoof cookie, no key
+// material, so the plaintext end.
+#ifndef PROTOCORE_NTP_SERVICE_BORROW
+#define PROTOCORE_NTP_SERVICE_BORROW 64u
+#endif
+
+#if PROTOCORE_ENABLE_NTP
+#define PROTOCORE_PLAINTEXT_WORK_NTPSERVICE PROTOCORE_NTP_SERVICE_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_NTPSERVICE 0
+#endif
+
+// The NTP server's advertised stratum and reference id. Measured at 8 bytes. Clock metadata, no
+// key material, so the plaintext end.
+#ifndef PROTOCORE_NTP_SERVER_BORROW
+#define PROTOCORE_NTP_SERVER_BORROW 16u
+#endif
+
+#if PROTOCORE_ENABLE_NTP_SERVER
+#define PROTOCORE_PLAINTEXT_WORK_NTPSERVER PROTOCORE_NTP_SERVER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_NTPSERVER 0
+#endif
+
+// The mDNS responder's advertised host name, the services and TXT pairs it answers with, and the
+// UDP binding it answers on. Measured at 304 bytes. Service names, no key material, so the
+// plaintext end.
+#ifndef PROTOCORE_MDNS_SERVICE_BORROW
+#define PROTOCORE_MDNS_SERVICE_BORROW 320u
+#endif
+
+#if PROTOCORE_ENABLE_MDNS
+#define PROTOCORE_PLAINTEXT_WORK_MDNSSERVICE PROTOCORE_MDNS_SERVICE_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_MDNSSERVICE 0
+#endif
+
+// The Telnet console's per-slot NVT table, the read scratch a slot's bytes are staged in for the
+// IAC walk, the command callback and the row a call is bound to. Measured at 1568 bytes for the
+// default MAX_TELNET_CONNS and RX_BUF_SIZE, and scales with both. Console lines, no key material,
+// so the plaintext end.
+#ifndef PROTOCORE_TELNET_BORROW
+#define PROTOCORE_TELNET_BORROW                                                                                        \
+    ((size_t)MAX_TELNET_CONNS * (TELNET_BUF_SIZE + 16u) + (size_t)RX_BUF_SIZE + 32u)
+#endif
+
+#if PROTOCORE_ENABLE_TELNET
+#define PROTOCORE_PLAINTEXT_WORK_TELNET PROTOCORE_TELNET_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_TELNET 0
+#endif
+
+// The HTTP connection glue's read scratch, where a slot's available bytes are staged for the
+// parser, plus the per-slot pump the application installs. Measured at 1032 bytes for the default
+// RX_BUF_SIZE of 1024, and scales with it. Request bytes, not key material, so the plaintext end.
+#ifndef PROTOCORE_HTTP_CONN_BORROW
+#define PROTOCORE_HTTP_CONN_BORROW ((size_t)RX_BUF_SIZE + 32u)
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_HTTPCONN PROTOCORE_HTTP_CONN_BORROW
+
+// The HTTP surface's registered handlers: the not-found handler, and the edge-cache fetch pump when
+// that capability is built. Measured at 8 bytes, 16 with PROTOCORE_ENABLE_EDGE_CACHE. Function
+// pointers, no key material, so the plaintext end.
+#ifndef PROTOCORE_HTTP_BORROW
+#define PROTOCORE_HTTP_BORROW 32u
+#endif
+
+#define PROTOCORE_PLAINTEXT_WORK_HTTP PROTOCORE_HTTP_BORROW
+
+// The SSH network layer's slot-to-stream map: which socket each SSH slot uses, which pool that
+// handle indexes, the socket each channel bridges, and the one-time init flag. Measured at 20 bytes
+// for the default MAX_SSH_CONNS of 1, 24 with PROTOCORE_SSH_MAX_CHANNELS raised to 4, and scales
+// with both. Slot numbers and socket handles, no key material, so the plaintext end.
+#ifndef PROTOCORE_SSH_NETWORK_BORROW
+#define PROTOCORE_SSH_NETWORK_BORROW ((size_t)MAX_SSH_CONNS * (4u + 4u * PROTOCORE_SSH_MAX_CHANNELS) + 16u)
+#endif
+
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+#define PROTOCORE_PLAINTEXT_WORK_SSHNETWORK PROTOCORE_SSH_NETWORK_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SSHNETWORK 0
+#endif
+
+// The SSH listening role's per-slot teardown flag, one octet per connection. Measured at 1 byte for
+// the default MAX_SSH_CONNS of 1, and scales with it. No key material, so the plaintext end.
+#ifndef PROTOCORE_SSH_SERVER_BORROW
+#define PROTOCORE_SSH_SERVER_BORROW ((size_t)MAX_SSH_CONNS + 8u)
+#endif
+
+#if PROTOCORE_ENABLE_SSH
+#define PROTOCORE_PLAINTEXT_WORK_SSHSERVER PROTOCORE_SSH_SERVER_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_SSHSERVER 0
+#endif
+
 // The RCWL-0516's debounce and hold state and the GPIO pin it samples. Measured at 28 bytes. A pin
 // level, so the plaintext end.
 #ifndef PROTOCORE_RCWL0516_BORROW
@@ -3451,7 +3602,13 @@
      PROTOCORE_PLAINTEXT_WORK_FLOWEXPORT + PROTOCORE_PLAINTEXT_WORK_SYSLOG + PROTOCORE_PLAINTEXT_WORK_POWERMGMT +      \
      PROTOCORE_PLAINTEXT_WORK_GUARDRAILS + PROTOCORE_PLAINTEXT_WORK_FAILSAFE + PROTOCORE_PLAINTEXT_WORK_WORKER +       \
      PROTOCORE_PLAINTEXT_WORK_PREEMPTQUEUE + PROTOCORE_PLAINTEXT_WORK_LOGBUF + PROTOCORE_PLAINTEXT_WORK_SESSION +      \
-     PROTOCORE_PLAINTEXT_WORK_SIGNALING + PROTOCORE_PLAINTEXT_WORK_TRACECAPTURE + 256)
+     PROTOCORE_PLAINTEXT_WORK_SIGNALING + PROTOCORE_PLAINTEXT_WORK_TRACECAPTURE +                                      \
+     PROTOCORE_PLAINTEXT_WORK_SSHSERVER + PROTOCORE_PLAINTEXT_WORK_HTTP +                                          \
+     PROTOCORE_PLAINTEXT_WORK_SSHNETWORK + PROTOCORE_PLAINTEXT_WORK_HTTPCONN +                                         \
+     PROTOCORE_PLAINTEXT_WORK_TELNET + PROTOCORE_PLAINTEXT_WORK_MDNSSERVICE +                                          \
+     PROTOCORE_PLAINTEXT_WORK_NTPSERVER + PROTOCORE_PLAINTEXT_WORK_NTPSERVICE +                                        \
+     PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE + PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE +                                  \
+     PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + 256)
 #endif
 
 /**

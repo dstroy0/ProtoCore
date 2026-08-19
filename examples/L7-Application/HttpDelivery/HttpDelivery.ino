@@ -17,7 +17,7 @@
 // Build flags (whole build): PROTOCORE_ENABLE_HTTP_DELIVERY=1 PROTOCORE_ENABLE_FILE_SERVING=1 PROTOCORE_ENABLE_RANGE=1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/file_transfer/http_delivery/http_delivery.h"
 #include "shared/mime/mime.h" // PROTOCORE_MIME_TEXT_HTML
 #include <SD_MMC.h>

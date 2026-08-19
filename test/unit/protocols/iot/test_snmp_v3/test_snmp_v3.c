@@ -1,13 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/mac/hmac_sha256.h"
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "network_drivers/transport/udp/udp.h"
-#include "services/net/snmp/snmp_agent.h"
-#include "services/net/snmp/snmp_ber.h"
-#include "services/net/snmp/snmp_crypto.h"
-#include "services/net/snmp/snmp_notify.h"
-#include "services/net/snmp/snmp_v3.h"
+#include "services/net/snmp/snmp_agent/snmp_agent.h"
+#include "services/net/snmp/snmp_ber/snmp_ber.h"
+#include "services/net/snmp/snmp_crypto/snmp_crypto.h"
+#include "services/net/snmp/snmp_notify/snmp_notify.h"
+#include "services/net/snmp/snmp_v3/snmp_v3.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -1622,40 +1622,3 @@ void test_v3_trap_reports_transport_failure()
     TEST_ASSERT_EQUAL_UINT16(162, protocore_net_host_udp_at(0)->dst_port);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_v3_trap_reports_transport_failure);
-    RUN_TEST(test_v3_truncated_fields_fail_closed);
-    RUN_TEST(test_v3_outer_tag_and_empty_flags);
-    RUN_TEST(test_v3_scoped_truncated_headers);
-    RUN_TEST(test_v3_same_length_wrong_engine_id);
-    RUN_TEST(test_v3_unknown_user_variants);
-    RUN_TEST(test_v3_oversized_message_is_wrong_digest);
-    RUN_TEST(test_v3_boots_mismatch_not_in_time);
-    RUN_TEST(test_v3_privacy_parameter_edges);
-    RUN_TEST(test_v3_init_length_guards_and_null_user);
-    RUN_TEST(test_v3_response_scopedpdu_overflow);
-    RUN_TEST(test_v3_field_tag_corruption);
-    RUN_TEST(test_v3_scoped_parse_rejections);
-    RUN_TEST(test_v3_discovery_malformed_scoped);
-    RUN_TEST(test_v3_auth_edge_rejections);
-    RUN_TEST(test_v3_message_structure_rejections);
-    RUN_TEST(test_v3_init_and_boots_accessors);
-    RUN_TEST(test_v3_discovery_variants);
-    RUN_TEST(test_v3_priv_not_configured);
-    RUN_TEST(test_v3_notify_paths);
-    RUN_TEST(test_v3_notify_overflow_guards);
-    RUN_TEST(test_localize_key_sha256_vector);
-    RUN_TEST(test_localize_key_empty_password);
-    RUN_TEST(test_aes128_fips197_vector);
-    RUN_TEST(test_aes_cfb_roundtrip_partial_block);
-    RUN_TEST(test_discovery_reports_engine_id);
-    RUN_TEST(test_authnopriv_get);
-    RUN_TEST(test_authpriv_get);
-    RUN_TEST(test_wrong_auth_password_reports_wrong_digest);
-    RUN_TEST(test_unknown_user_reports);
-    RUN_TEST(test_not_in_time_window_reports);
-    RUN_TEST(test_inform_v3_builds_informrequest);
-    return UNITY_END();
-}

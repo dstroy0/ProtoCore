@@ -1,13 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "network_drivers/presentation/http/http2/h2_server.h"
+#include "network_drivers/presentation/http/http2/h2_server/h2_server.h"
 #include "network_drivers/session/session.h" // the per-connection tables this suite stands in for
 #include "network_drivers/transport/tcp/common.h"
 
-#include "network_drivers/presentation/http/http2/h2_conn.h"
-#include "network_drivers/presentation/http/http2/h2_frame.h"
-#include "network_drivers/presentation/http/http2/hpack.h"
+#include "network_drivers/presentation/http/http2/h2_conn/h2_conn.h"
+#include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h"
+#include "network_drivers/presentation/http/http2/hpack/hpack.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 
@@ -307,23 +307,3 @@ void test_h2s_mask_clears_between_blocks(void)
     assert_accepted();
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_h2s_minimal_request_is_accepted);
-    RUN_TEST(test_h2s_path_query_split);
-    RUN_TEST(test_h2s_missing_method_is_malformed);
-    RUN_TEST(test_h2s_missing_scheme_is_malformed);
-    RUN_TEST(test_h2s_missing_path_is_malformed);
-    RUN_TEST(test_h2s_empty_path_is_malformed);
-    RUN_TEST(test_h2s_duplicate_pseudo_is_malformed);
-    RUN_TEST(test_h2s_pseudo_after_regular_is_malformed);
-    RUN_TEST(test_h2s_unknown_pseudo_is_malformed);
-    RUN_TEST(test_h2s_uppercase_name_is_malformed);
-    RUN_TEST(test_h2s_bad_name_bytes_are_malformed);
-    RUN_TEST(test_h2s_padded_value_is_malformed);
-    RUN_TEST(test_h2s_connection_specific_is_malformed);
-    RUN_TEST(test_h2s_te_trailers_only);
-    RUN_TEST(test_h2s_mask_clears_between_blocks);
-    return UNITY_END();
-}

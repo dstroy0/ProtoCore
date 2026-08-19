@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HTTP_DELIVERY
 
-#include "mmgr/membuild.h" // protocore_sb frame builder
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "services/file_transfer/http_delivery/http_delivery.h"
 
 PROTOCORE_BEGIN_DECLS

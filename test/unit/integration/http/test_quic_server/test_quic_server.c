@@ -1,18 +1,18 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/http/http3/h3_conn.h"
-#include "network_drivers/presentation/http/http3/h3_frame.h"
-#include "network_drivers/presentation/http/http3/qpack.h"
-#include "network_drivers/presentation/http/http3/quic_crypto.h"
-#include "network_drivers/presentation/http/http3/quic_frame.h"
-#include "network_drivers/presentation/http/http3/quic_packet.h"
-#include "network_drivers/presentation/http/http3/quic_server.h"
-#include "network_drivers/presentation/http/http3/quic_tp.h"
-#include "network_drivers/presentation/http/http3/quic_varint.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "network_drivers/presentation/http/http3/h3_conn/h3_conn.h"
+#include "network_drivers/presentation/http/http3/h3_frame/h3_frame.h"
+#include "network_drivers/presentation/http/http3/qpack/qpack.h"
+#include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
+#include "network_drivers/presentation/http/http3/quic_frame/quic_frame.h"
+#include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
+#include "network_drivers/presentation/http/http3/quic_server/quic_server.h"
+#include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
+#include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/transport/udp/server/server.h"
 #include "network_drivers/transport/udp/udp.h"
@@ -1374,20 +1374,3 @@ void test_quic_server_on_request_null()
     QuicServer.stop(QuicServer.internal);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_quic_server_http3_get);
-    RUN_TEST(test_idle_connection_reaped);
-    RUN_TEST(test_quic_server_input_guards);
-    RUN_TEST(test_ingest_ring_drops_past_capacity);
-    RUN_TEST(test_quic_server_pool_full);
-    RUN_TEST(test_quic_server_replies_to_the_captured_peer);
-    RUN_TEST(test_quic_server_unrenderable_peer_dropped);
-    RUN_TEST(test_quic_server_begin_default_port);
-    RUN_TEST(test_quic_server_respond_unknown_id_with_active_conn);
-    RUN_TEST(test_quic_server_route_header_edges);
-    RUN_TEST(test_quic_server_close_reaped_before_idle);
-    RUN_TEST(test_quic_server_on_request_null);
-    return UNITY_END();
-}

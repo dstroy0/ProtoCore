@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "network_drivers/network/dns/dns_resolver.h"
+#include "network_drivers/network/dns/dns_resolver/dns_resolver.h"
 #include "network_drivers/network/network.h"
 #include "network_drivers/transport/tcp/client/client.h"
 #include "network_drivers/transport/tcp/tcp.h"
@@ -292,16 +292,3 @@ void test_pool_exhaustion_refuses_a_further_open()
     }
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_the_dial_resolves_a_literal);
-    RUN_TEST(test_open_connects_and_reports_the_slot);
-    RUN_TEST(test_open_refuses_a_bad_host_and_a_refused_connect);
-    RUN_TEST(test_send_reaches_the_wire);
-    RUN_TEST(test_received_bytes_buffer_and_drain);
-    RUN_TEST(test_a_peer_fin_closes_the_slot);
-    RUN_TEST(test_guards_reject_ids_outside_the_pool);
-    RUN_TEST(test_pool_exhaustion_refuses_a_further_open);
-    return UNITY_END();
-}

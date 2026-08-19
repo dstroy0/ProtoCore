@@ -10,7 +10,7 @@
 // and settings identifier values come from the IANA tables RFC 9114 sec 11.2.1 and sec 11.2.2
 // register, and the settings defaults from sec 7.2.4.1 and RFC 9204 sec 5.
 
-#include "network_drivers/presentation/http/http3/h3_frame.h"
+#include "network_drivers/presentation/http/http3/h3_frame/h3_frame.h"
 #include <string.h>
 
 #include <unity.h>

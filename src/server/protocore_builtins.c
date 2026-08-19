@@ -19,7 +19,7 @@
 #include "network_drivers/presentation/ssh/server/server.h"
 #endif
 #if PROTOCORE_NEED_MODBUS
-#include "services/fieldbus/modbus/modbus.h"
+#include "services/fieldbus/modbus/modbus/modbus.h"
 #endif
 #if PROTOCORE_ENABLE_OPCUA
 #include "services/opcua/opcua.h"
@@ -38,16 +38,18 @@ static inline void register_if(ProtoConn proto, const ProtoHandler *h)
 
 void protocore_register_builtins(void)
 {
-    HttpConn.proto_handler(HttpConn.internal); // always present
+    HttpConn.proto_handler(protocore_http_conn_span()); // always present
     register_if(PROTO_HTTP, HttpConn.handler);
 #if PROTOCORE_ENABLE_TELNET
-    Telnet.proto_handler(Telnet.internal);
+    Telnet.proto_handler(protocore_telnet_span());
     register_if(PROTO_TELNET, Telnet.handler);
 #endif
 #if PROTOCORE_ENABLE_SSH
-    register_if(PROTO_SSH, ssh_protocore_handler());
+    SshServer.proto_handler(protocore_ssh_server_span());
+    register_if(PROTO_SSH, SshServer.handler);
 #if PROTOCORE_SSH_PORT_FORWARD
-    register_if(PROTO_SSH_RFWD, ssh_protocore_rfwd_handler());
+    SshServer.rfwd_proto_handler(protocore_ssh_server_span());
+    register_if(PROTO_SSH_RFWD, SshServer.handler);
 #endif
 #endif
 #if PROTOCORE_NEED_MODBUS

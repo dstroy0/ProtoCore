@@ -14,8 +14,8 @@
 
 #if PROTOCORE_ENABLE_HMMD
 
-#include "mmgr/protomem.h"
-#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/peripherals/hmmd/hmmd.h"
 
 PROTOCORE_BEGIN_DECLS

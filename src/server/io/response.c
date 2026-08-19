@@ -12,9 +12,9 @@
  * other file can name.
  */
 
-#include "mmgr/membuild.h" // protocore_sb frame builder (replaces snprintf)
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str.len: send_text measures the body it was handed
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder (replaces snprintf)
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h" // str.len: send_text measures the body it was handed
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/session/session.h"                 // the per-connection tables this reads
 #include "network_drivers/transport/tcp/common.h"            // conn_pool, TcpConn/ConnState
@@ -27,8 +27,8 @@
 static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
 #if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
-#include "network_drivers/application/web_assets.h" // PROTOCORE_STATS_JSON / PROTOCORE_METRICS_PROM (generated)
-#include "server/clock/clock.h"                     // protocore_millis: the library clock, not the platform's
+#include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_STATS_JSON / PROTOCORE_METRICS_PROM (generated)
+#include "server/clock/clock.h" // protocore_millis: the library clock, not the platform's
 
 // Render @p v as decimal into the fixed field @p dst. Both exposition snapshots below fill a
 // dozen of these. Unlike snprintf, Sb.finish() does NOT terminate when the value would not
@@ -264,7 +264,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     if (!ConnPool.ok)
     {
         HttpConn.slot = slot_id;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         return;
     }
 
@@ -279,7 +279,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     protocore_sb_lit(&hb, "HTTP/1.1 ");
     Sb.u32(&hb, (uint32_t)code);
     protocore_sb_lit(&hb, " ");
-    Http.code = code, Http.status_text(Http.internal), Sb.put(&hb, Http.text);
+    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&hb, Http.text);
     protocore_sb_lit(&hb, "\r\nContent-Type: ");
     Sb.put(&hb, content_type);
     protocore_sb_lit(&hb, "\r\nContent-Length: ");
@@ -289,7 +289,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
     Http.slot = slot_id;
-    Http.req_is_head(Http.internal);
+    Http.req_is_head(protocore_http_span());
     proto_bool head = Http.ok;
 
     ConnPool.slot = slot_id;
@@ -328,7 +328,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     if (!ConnPool.ok)
     {
         HttpConn.slot = slot_id;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         return;
     }
 
@@ -355,7 +355,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     }
     Sb.u32(&hb2, (uint32_t)code);
     Sb.put(&hb2, " ");
-    Http.code = code, Http.status_text(Http.internal), Sb.put(&hb2, Http.text);
+    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&hb2, Http.text);
     Sb.put(&hb2, "\r\nContent-Type: ");
     Sb.put(&hb2, content_type);
     Sb.put(&hb2, raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
@@ -369,7 +369,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
 
     // HEAD carries the headers but no body or terminator.
     Http.slot = slot_id;
-    Http.req_is_head(Http.internal);
+    Http.req_is_head(protocore_http_span());
     if (Http.ok || !source)
     {
         protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
@@ -871,7 +871,7 @@ void protocore_resp_end(uint8_t slot_id, int code, int body_len, proto_bool keep
     }
     note_response(slot_id, code, body_len);
     HttpConn.slot = slot_id;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
 }
 
 // Resolve the Connection response header (and report keep-alive intent) in one
@@ -881,7 +881,7 @@ const char *protocore_resp_conn_hdr(uint8_t slot_id, proto_bool *keep_out)
     proto_bool keep = PROTO_FALSE;
 #if PROTOCORE_ENABLE_KEEPALIVE
     HttpConn.slot = slot_id;
-    HttpConn.keepalive_eval(HttpConn.internal);
+    HttpConn.keepalive_eval(protocore_http_conn_span());
     keep = HttpConn.ok;
 #else
     (void)slot_id;
@@ -1003,7 +1003,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
         HttpConn.slot = slot_id;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         return;
     }
 
@@ -1017,7 +1017,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     Sb.put(&sb_header2, "HTTP/1.1 ");
     Sb.i64(&sb_header2, (int64_t)(code));
     Sb.put(&sb_header2, " ");
-    Http.code = code, Http.status_text(Http.internal), Sb.put(&sb_header2, Http.text);
+    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header2, Http.text);
     Sb.put(&sb_header2, "\r\nContent-Type: ");
     Sb.put(&sb_header2, content_type);
     Sb.put(&sb_header2, "\r\nContent-Length: ");
@@ -1043,7 +1043,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     // begins the CONN_CLOSING dwell on the close path (finalized once ACKed).
 
     Http.slot = slot_id;
-    Http.req_is_head(Http.internal);
+    Http.req_is_head(protocore_http_span());
     proto_bool head = Http.ok;
 
     // HEAD responses carry the headers (incl. Content-Length) but no body. For a
@@ -1108,7 +1108,7 @@ void send_empty(uint8_t slot_id, int code)
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
         HttpConn.slot = slot_id;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         return;
     }
 
@@ -1120,7 +1120,7 @@ void send_empty(uint8_t slot_id, int code)
     Sb.put(&sb_header3, "HTTP/1.1 ");
     Sb.i64(&sb_header3, (int64_t)(code));
     Sb.put(&sb_header3, " ");
-    Http.code = code, Http.status_text(Http.internal), Sb.put(&sb_header3, Http.text);
+    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header3, Http.text);
     Sb.put(&sb_header3, "\r\nContent-Length: 0\r\n");
     int hlen = (int)Sb.finish(&sb_header3);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
@@ -1143,7 +1143,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
         HttpConn.slot = slot_id;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
         return;
     }
 
@@ -1169,7 +1169,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
     Sb.put(&sb_header4, "HTTP/1.1 ");
     Sb.i64(&sb_header4, (int64_t)(code));
     Sb.put(&sb_header4, " ");
-    Http.code = code, Http.status_text(Http.internal), Sb.put(&sb_header4, Http.text);
+    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header4, Http.text);
     Sb.put(&sb_header4, "\r\nLocation: ");
     Sb.put(&sb_header4, location);
     Sb.put(&sb_header4, "\r\nContent-Length: 0\r\n");

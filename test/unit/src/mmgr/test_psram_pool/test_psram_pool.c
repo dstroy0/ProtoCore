@@ -11,7 +11,7 @@
 // way the sum overflows for a large size and the refusal inverts into an acceptance, which is the
 // one failure mode that hands out the reserve.
 
-#include "mmgr/psram_pool.h"
+#include "mmgr/psram_pool/psram_pool.h"
 
 #include <unity.h>
 

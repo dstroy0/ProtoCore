@@ -11,11 +11,15 @@
 // each derivation is written out beside its bytes. A compressor that agreed with its own decompressor
 // but wrote a non-conforming stream would pass every round-trip and fail here.
 
-#include "network_drivers/presentation/codec/deflate/deflate.h"
+#include "network_drivers/presentation/codec/deflate/deflate/deflate.h"
 #include "network_drivers/presentation/codec/inflate/inflate.h"
 #include <string.h>
 
 #include <unity.h>
+
+static uint8_t inflate_work[16]; // the borrow an entry takes; Inflate never reads it
+
+static uint8_t deflate_work[16]; // the borrow an entry takes; Deflate never reads it
 
 static uint8_t g_dscratch[DEFLATE_SCRATCH_SIZE];
 static uint8_t g_iscratch[INFLATE_SCRATCH_SIZE];
@@ -35,8 +39,15 @@ void tearDown(void)
 static size_t compress(const uint8_t *src, size_t src_len)
 {
     size_t clen = 0;
-    TEST_ASSERT_EQUAL_INT(DEFLATE_OK,
-                          Deflate.raw(src, src_len, g_comp, sizeof(g_comp), &clen, g_dscratch, sizeof(g_dscratch)));
+    Deflate.raw_args.src = src;
+    Deflate.raw_args.src_len = src_len;
+    Deflate.raw_args.dst = g_comp;
+    Deflate.raw_args.dst_cap = sizeof(g_comp);
+    Deflate.raw_args.out_len = &clen;
+    Deflate.raw_args.scratch = g_dscratch;
+    Deflate.raw_args.scratch_len = sizeof(g_dscratch);
+    Deflate.raw(deflate_work);
+    TEST_ASSERT_EQUAL_INT(DEFLATE_OK, Deflate.value);
     return clen;
 }
 
@@ -53,8 +64,15 @@ static size_t round_trip(const uint8_t *src, size_t src_len)
     g_comp[clen + 3] = 0xff;
 
     size_t plen = 0;
-    TEST_ASSERT_EQUAL_INT(
-        INFLATE_OK, Inflate.raw(g_comp, clen + 4, g_plain, sizeof(g_plain), &plen, g_iscratch, sizeof(g_iscratch)));
+    Inflate.raw_args.src = g_comp;
+    Inflate.raw_args.src_len = clen + 4;
+    Inflate.raw_args.dst = g_plain;
+    Inflate.raw_args.dst_cap = sizeof(g_plain);
+    Inflate.raw_args.out_len = &plen;
+    Inflate.raw_args.scratch = g_iscratch;
+    Inflate.raw_args.scratch_len = sizeof(g_iscratch);
+    Inflate.raw(inflate_work);
+    TEST_ASSERT_EQUAL_INT(INFLATE_OK, Inflate.value);
     TEST_ASSERT_EQUAL_size_t(src_len, plen);
     if (src_len)
     {
@@ -275,8 +293,15 @@ void test_output_overflow_fails_closed(void)
     }
     uint8_t tiny[16];
     size_t clen = 0;
-    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_OVERFLOW,
-                          Deflate.raw(buf, sizeof(buf), tiny, sizeof(tiny), &clen, g_dscratch, sizeof(g_dscratch)));
+    Deflate.raw_args.src = buf;
+    Deflate.raw_args.src_len = sizeof(buf);
+    Deflate.raw_args.dst = tiny;
+    Deflate.raw_args.dst_cap = sizeof(tiny);
+    Deflate.raw_args.out_len = &clen;
+    Deflate.raw_args.scratch = g_dscratch;
+    Deflate.raw_args.scratch_len = sizeof(g_dscratch);
+    Deflate.raw(deflate_work);
+    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_OVERFLOW, Deflate.value);
 }
 
 // Working memory one octet short of what the tables need is refused before anything is written.
@@ -284,6 +309,13 @@ void test_scratch_too_small_fails_closed(void)
 {
     uint8_t small[DEFLATE_SCRATCH_SIZE - 1];
     size_t clen = 0;
-    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_SCRATCH, Deflate.raw((const uint8_t *)"anything", 8, g_comp, sizeof(g_comp),
-                                                           &clen, small, sizeof(small)));
+    Deflate.raw_args.src = (const uint8_t *)"anything";
+    Deflate.raw_args.src_len = 8;
+    Deflate.raw_args.dst = g_comp;
+    Deflate.raw_args.dst_cap = sizeof(g_comp);
+    Deflate.raw_args.out_len = &clen;
+    Deflate.raw_args.scratch = small;
+    Deflate.raw_args.scratch_len = sizeof(small);
+    Deflate.raw(deflate_work);
+    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_SCRATCH, Deflate.value);
 }

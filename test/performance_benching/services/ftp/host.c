@@ -11,7 +11,7 @@
 //   src/services/file_transfer/ftp/ftp.c src/mmgr/protomem.c src/mmgr/protostr.c -o /tmp/bf && /tmp/bf
 
 #define PROTOCORE_ENABLE_FTP 1
-#include "services/file_transfer/ftp/ftp.h"
+#include "services/file_transfer/ftp/ftp/ftp.h"
 
 #include "host_bench.h"
 #include <stdint.h>

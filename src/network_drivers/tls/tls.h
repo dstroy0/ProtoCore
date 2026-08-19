@@ -28,7 +28,7 @@ PROTOCORE_BEGIN_DECLS
 // ---------------------------------------------------------------------------
 // This file owns the connection; handshake/ drives it and record/ frames for it.
 
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/tls/record/record.h"
 

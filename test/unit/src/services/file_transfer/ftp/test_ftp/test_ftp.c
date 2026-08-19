@@ -14,7 +14,7 @@
 // address and TCP port broken into 8-bit fields, so p1 is the port's high octet, and the derivation
 // is written out at the case.
 
-#include "services/file_transfer/ftp/ftp.h"
+#include "services/file_transfer/ftp/ftp/ftp.h"
 #include <string.h>
 
 #include <unity.h>

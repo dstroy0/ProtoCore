@@ -56,7 +56,7 @@ reproduced verbatim with added explanatory comments:
 #define PROTOCORE_ENABLE_TIME_SOURCE 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/application/ntp_service/ntp_service.h"
 #include "services/timing_position/time_source/time_source.h"
 

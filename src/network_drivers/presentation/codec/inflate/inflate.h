@@ -28,11 +28,15 @@
 #ifndef PROTOCORE_INFLATE_H
 #define PROTOCORE_INFLATE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /**
  * @brief Working-memory bytes inflate_raw() needs for its Huffman tables.
@@ -51,22 +55,55 @@ typedef enum PROTO_ENUM_PACKED
     INFLATE_ERR_SCRATCH = -3    ///< scratch_len < INFLATE_SCRATCH_SIZE
 } InflateResult;
 
+/** @brief What raw takes: src, src_len, dst, dst_cap, out_len, ... */
+typedef struct
+{
+    const uint8_t *src;
+    size_t src_len;
+    uint8_t *dst;
+    size_t dst_cap;
+    size_t *out_len;
+    void *scratch;
+    size_t scratch_len;
+} InflateRawArgs;
+
 /**
- * @brief The one call, and the module's only symbol.
+ * @brief Bounded RFC 1951 DEFLATE decompressor (INFLATE) - no heap.
  *
- * @var InflateNs::raw  Decompress a raw DEFLATE (RFC 1951) stream. @p dst is also the window, so a
- *                    decompressed message must fit @p dst_cap.
- *                    @p out_len takes the length on success and @p scratch is caller working memory
- *                    of at least INFLATE_SCRATCH_SIZE bytes. INFLATE_OK (0), else a negative ::InflateResult
+ * A caller sets the members a call takes, invokes it through ::Inflate with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Inflate.raw_args.src = ...;
+ *   Inflate.raw_args.src_len = ...;
+ *   Inflate.raw_args.dst = ...;
+ *   Inflate.raw_args.dst_cap = ...;
+ *   Inflate.raw_args.out_len = ...;
+ *   Inflate.raw_args.scratch = ...;
+ *   Inflate.raw_args.scratch_len = ...;
+ *   Inflate.raw(work);
+ *   // Inflate.value is what the call reports
+ *
+ * @var InflateNs::raw_args  what raw takes: src, src_len, dst, dst_cap, out_len,
+ * @var InflateNs::ok  a call's true/false outcome
+ * @var InflateNs::value  the value a call reports
+ * @var InflateNs::raw  decompress a raw DEFLATE (RFC 1951) stream. dst is also the window, ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
 typedef struct
 {
-    InflateResult (*raw)(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
-                         void *scratch, size_t scratch_len);
+    InflateRawArgs raw_args;
+
+    proto_bool ok;
+    InflateResult value;
+
+    void (*const raw)(uint8_t *restrict work);
 } InflateNs;
 
 /** @brief The one symbol this module exports. */
-extern const InflateNs Inflate;
+extern InflateNs Inflate;
 
 PROTOCORE_END_DECLS
 

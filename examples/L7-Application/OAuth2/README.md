@@ -56,7 +56,7 @@ explanatory comments:
 #define PROTOCORE_ENABLE_HTTP_CLIENT 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/security/oauth2/oauth2.h"
 
 static const char *SSID = "YOUR_SSID";

@@ -1,18 +1,18 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/http/http3/h3_frame.h"
-#include "network_drivers/presentation/http/http3/h3_server.h"
-#include "network_drivers/presentation/http/http3/qpack.h"
-#include "network_drivers/presentation/http/http3/quic_crypto.h"
-#include "network_drivers/presentation/http/http3/quic_frame.h"
-#include "network_drivers/presentation/http/http3/quic_packet.h"
-#include "network_drivers/presentation/http/http3/quic_server.h"
-#include "network_drivers/presentation/http/http3/quic_tp.h"
-#include "network_drivers/presentation/http/http3/quic_varint.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "network_drivers/presentation/http/http3/h3_frame/h3_frame.h"
+#include "network_drivers/presentation/http/http3/h3_server/h3_server.h"
+#include "network_drivers/presentation/http/http3/qpack/qpack.h"
+#include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
+#include "network_drivers/presentation/http/http3/quic_frame/quic_frame.h"
+#include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
+#include "network_drivers/presentation/http/http3/quic_server/quic_server.h"
+#include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
+#include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/session/session.h" // http_h3 / http_resp_sink: HTTP's per-slot state
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include "network_drivers/transport/tcp/common.h"
@@ -46,6 +46,10 @@ static uint8_t tw_t[4096];
 
 void setUp()
 {
+    // Every case starts with no listener and no HTTP/3 certificate, so what one begins does not
+    // decide what the next one sees. test_h3_begin_edges asks proto_begin for NO_LISTENERS, which
+    // is only the answer from that state.
+    protocore_server_reset();
 }
 void tearDown()
 {
@@ -729,11 +733,3 @@ void test_h3_dispatch_edges()
     send_empty(0, 204);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_h3_begin_edges);
-    RUN_TEST(test_h3_request_served_by_route);
-    RUN_TEST(test_h3_dispatch_edges);
-    return UNITY_END();
-}

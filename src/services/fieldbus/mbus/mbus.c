@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_MBUS
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/mbus/mbus.h"
 
 PROTOCORE_BEGIN_DECLS

@@ -30,15 +30,15 @@
 #ifndef PROTOCORE_MULTIPART_H
 #define PROTOCORE_MULTIPART_H
 
-#include "network_drivers/presentation/presentation.h" // for HttpReq, http_get_header
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-#include "protocore_config.h"
+#if PROTOCORE_ENABLE_MULTIPART
 
 PROTOCORE_BEGIN_DECLS
 
-// ---------------------------------------------------------------------------
-// Data types
-// ---------------------------------------------------------------------------
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /**
  * @brief One parsed part from a multipart body.
@@ -64,29 +64,61 @@ typedef struct
     int part_count;                           ///< Number of valid entries in parts[].
 } MultipartBody;
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+#include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq: the type a parameter points at
+
+/** @brief What parse takes: req, mp. */
+typedef struct
+{
+    HttpReq *req;
+    MultipartBody *mp;
+} MultipartParseArgs;
+
+/** @brief What get_field takes: mp, field. */
+typedef struct
+{
+    const MultipartBody *mp;
+    const char *field;
+} MultipartGetFieldArgs;
 
 /**
- * @brief The in-place form-data parser.
+ * @brief In-place multipart/form-data parser (RFC 7578).
  *
- * @var MultipartNs::parse      scan @p req's body as multipart/form-data, reading the boundary from
- *                              Content-Type and null-terminating each part's headers and data in
- *                              place. True when at least one part was found. @p req must be
- *                              PARSE_COMPLETE
- * @var MultipartNs::get_field  the data pointer of the first part whose name matches @p field, or
- *                              NULL. The simple-form case, where each field name appears once
+ * A caller sets the members a call takes, invokes it through ::Multipart with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   Multipart.parse_args.req = ...;
+ *   Multipart.parse_args.mp = ...;
+ *   Multipart.parse(work);
+ *   // Multipart.ok is what the call reports
+ *
+ * @var MultipartNs::parse_args  what parse takes: req, mp
+ * @var MultipartNs::get_field_args  what get_field takes: mp, field
+ * @var MultipartNs::ok  a call's true/false outcome
+ * @var MultipartNs::text  the string a call reports
+ * @var MultipartNs::parse  scan req's body as multipart/form-data, reading the boundary from
+ * @var MultipartNs::get_field  the data pointer of the first part whose name matches field, or
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
 typedef struct
 {
-    proto_bool (*parse)(HttpReq *req, MultipartBody *mp);
-    const char *(*get_field)(const MultipartBody *mp, const char *field);
+    MultipartParseArgs parse_args;
+    MultipartGetFieldArgs get_field_args;
+
+    proto_bool ok;
+    const char *text;
+
+    void (*const parse)(uint8_t *restrict work);
+    void (*const get_field)(uint8_t *restrict work);
 } MultipartNs;
 
 /** @brief The one symbol this module exports. */
-extern const MultipartNs Multipart;
+extern MultipartNs Multipart;
 
 PROTOCORE_END_DECLS
 
-#endif
+#endif // PROTOCORE_ENABLE_MULTIPART
+
+#endif // PROTOCORE_MULTIPART_H

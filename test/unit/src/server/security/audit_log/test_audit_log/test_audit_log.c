@@ -12,7 +12,7 @@
 // then walk one field at a time; a field left out of the hash would pass verify() after being
 // altered, and each of those cases would fail. The JSON string escaping is RFC 8259 sec 7.
 
-#include "crypto/hash/sha256.h"
+#include "crypto/hash/sha256/sha256.h"
 #include "server/clock/clock.h" // Clock.millis(): refresh the stamp a record carries
 #include "server/security/audit_log/audit_log.h"
 #include <string.h>

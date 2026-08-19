@@ -467,12 +467,12 @@ def module_macros(header_text, guard):
 POOLS = {
     "secure": {
         "call": "protocore_secure_persist_span",
-        "include": '#include "mmgr/secure.h"',
+        "include": '#include "mmgr/secure/secure.h"',
         "why": "// the persistent end this module's key material is taken from",
     },
     "plaintext": {
         "call": "protocore_plaintext_persist_span",
-        "include": '#include "mmgr/plaintext.h"',
+        "include": '#include "mmgr/plaintext/plaintext.h"',
         "why": "// the persistent end this module's state is taken from",
     },
 }
@@ -480,6 +480,17 @@ POOLS = {
 
 def camel(mod):
     return "".join(p.capitalize() for p in re.split(r"[_\-]", mod) if p)
+
+
+def snake(obj):
+    """The namespace object as the flat name its borrow and its regions are spelled with.
+
+    `SshAppServer` -> `ssh_app_server`. The file leaf is not unique across the tree - three modules
+    are named server.c and two client.c - so a borrow named from the leaf collides in
+    protocore_config.h, where one global namespace holds every constant. The object is the one name
+    that is already unique, because it is the symbol the module exports.
+    """
+    return re.sub(r"(?<=[^A-Z_])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "_", obj).lower()
 
 
 def parse_params(txt):
@@ -578,6 +589,33 @@ def ns_entries(header_text):
     return out
 
 
+def find_suites(hpath, mod):
+    """The suite directories that test this module, the mirror path first.
+
+    A module is tested from the mirror of its own path - src/a/b/c.c from test/unit/src/a/b/test_c/,
+    which `env add` enforces. Matching `test_<mod>` anywhere under test/ instead returns every
+    module in the tree that ends in the same leaf: ssh/app/client picked up ssh/client's suite and
+    protocols/transport's, and gen would regenerate an unrelated suite's runner and rewrite its call
+    sites. The walk stays as the fallback for a suite that does not sit on the mirror yet, and is
+    only reached when the mirror holds nothing.
+    """
+    rel_h = os.path.relpath(hpath, R).replace("\\", "/")
+    mirror = os.path.join(R, "test", "unit", *os.path.dirname(rel_h).split("/"), "test_" + mod)
+    if os.path.isdir(mirror):
+        return [os.path.relpath(mirror, R).replace("\\", "/")]
+    # a module whose directory is its own name is mirrored one level up: src/a/b/b.c -> test/unit/src/a/test_b
+    parent = os.path.dirname(os.path.dirname(rel_h))
+    up = os.path.join(R, "test", "unit", *parent.split("/"), "test_" + mod) if parent else ""
+    if up and os.path.isdir(up):
+        return [os.path.relpath(up, R).replace("\\", "/")]
+    out = []
+    for dp, dns, _ in os.walk(os.path.join(R, "test")):
+        for d in dns:
+            if d == "test_" + mod:
+                out.append(os.path.relpath(os.path.join(dp, d), R).replace("\\", "/"))
+    return out
+
+
 def scan_ns(hpath):
     """The spec for a module already on the Ns shape: only the signatures and the handle change.
 
@@ -591,24 +629,24 @@ def scan_ns(hpath):
     obj = re.search(r"^\s*extern\s+(?:const\s+)?\w+Ns\s+(\w+)\s*;", s, re.M)
     cpath = hpath[:-1] + "c"
     csrc = io.open(cpath, encoding="utf-8").read() if os.path.exists(cpath) else ""
-    suites = []
-    for dp, dns, _ in os.walk(os.path.join(R, "test")):
-        for d in dns:
-            if d == "test_" + mod:
-                suites.append(os.path.relpath(os.path.join(dp, d), R).replace("\\", "/"))
+    suites = find_suites(hpath, mod)
+    # The borrow, the region macros and the span accessor are named from the OBJECT, not the file
+    # leaf: three modules are named server.c and two client.c, and protocore_config.h holds one
+    # global namespace, so a leaf-named borrow collides with another module's.
+    name = snake(obj.group(1)) if obj else mod
     return {
         "from": "ns",
-        "module": mod,
+        "module": name,
         "ns": ns.group(1) if ns else camel(mod) + "Ns",
         "object": obj.group(1) if obj else camel(mod),
         "gate": gate,
         "header": os.path.relpath(hpath, R).replace("\\", "/"),
         "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
-        "borrow": "PROTOCORE_%s_BORROW" % mod.upper(),
+        "borrow": "PROTOCORE_%s_BORROW" % name.upper(),
         "pool": "secure",
         "suites": suites,
         "owns_state": ns_owns_state(csrc),
-        "span": "%s_work" % mod,
+        "span": "%s_work" % name,
         "entries": [{"entry": e} for e in ns_entries(s)],
     }
 
@@ -640,7 +678,7 @@ def ns_owns_state(csrc):
     Two shapes hold it: a `struct <X>Storage` reached through the Internal handle, and a file-static
     `<X>Ctx` beside it. Either one is state that belongs in the borrow.
     """
-    return bool(re.search(r"struct\s+\w+Storage\b", csrc)) or bool(find_context(csrc))
+    return bool(re.search(r"(?:struct\s+\w+Storage\b|\}\s*\w+Storage\s*;)", csrc)) or bool(find_context(csrc))
 
 
 GATE_TOKEN = re.compile(r"PROTOCORE_(?:ENABLE|NEED|TLS|HAS)_\w+")
@@ -809,11 +847,17 @@ def gen_ns(spec):
     # the opaque handle is what the borrow replaces
     h2 = NS_HANDLE.sub("", h2)
     # and the forward declaration of it, with the doc comment that described it, if nothing else
-    # names it
+    # names it. A comment carrying `@var <X>Ns::` documents the NAMESPACE, not the handle, and only
+    # happens to sit above the declaration - taking it deleted the whole HttpNs member list.
     if not re.search(r"\bInternal\b", NS_ENTRY.sub("", h2)):
+
+        def _drop_fwd(m):
+            doc = m.group(1) or ""
+            return doc if re.search(r"@var\s+\w+Ns::", doc) else ""
+
         h2 = re.sub(
-            r"(?:^[ \t]*/\*\*(?:(?!\*/).)*?\*/[ \t]*\r?\n)?" r"^[ \t]*struct\s+\w+Internal\s*;[^\n]*\n",
-            "",
+            r"((?:^[ \t]*/\*\*(?:(?!\*/).)*?\*/[ \t]*\r?\n)?)" r"^[ \t]*struct\s+\w+Internal\s*;[^\n]*\n",
+            _drop_fwd,
             h2,
             flags=re.M | re.S,
         )
@@ -852,10 +896,16 @@ def gen_ns(spec):
     inst = re.search(r"static\s+(?:struct\s+)?\w+Internal\s+(s_\w+)\s*=", c)
     # A _Static_assert sized against a member of the storage instance outlives that instance, and
     # has to stay a constant expression, so it asks the type rather than an object.
-    store = re.search(r"static\s+struct\s+(\w+Storage)\s+(s_\w+)\s*[=;]", c)
+    store = re.search(r"static\s+(?:struct\s+)?(\w+Storage)\s+(s_\w+)\s*[=;]", c)
+    # How the storage type is spelled, read from the ORIGINAL source: `struct <X>Storage { ... };`
+    # carries a tag, `typedef struct { ... } <X>Storage;` does not, and naming a tagless one
+    # `struct <X>Storage` declares a different, incomplete type. Read after the rewrites below it
+    # would find the `struct` this function itself injects and take a tagless module for a tagged one.
+    storage_tagged = bool(re.search(r"struct\s+\w+Storage\b", c))
     if store:
+        sname = ("struct " if storage_tagged else "") + store.group(1)
         c2 = re.sub(
-            r"sizeof\(%s\.(\w+)\)" % re.escape(store.group(2)), r"sizeof(((struct %s *)0)->\1)" % store.group(1), c2
+            r"sizeof\(%s\.(\w+)\)" % re.escape(store.group(2)), r"sizeof(((%s *)0)->\1)" % sname, c2
         )
         # Whatever still names the instance reads the region instead. A caller here has no handle -
         # it is a callback with a fixed signature - so it asks the accessor for the borrow.
@@ -871,20 +921,28 @@ def gen_ns(spec):
             "%s_CTX(protocore_%s_span())->" % (PRE, spec["module"]),
             c2,
         )
+        # and its ns hop is the namespace, reached by name. A function that is not an entry reads
+        # the instance directly - `s_sshtr.ns->slot = i` - and the instance is deleted below, so
+        # leaving these named an identifier that is gone.
+        c2 = re.sub(r"(?<![\w.>-])%s\.ns->" % re.escape(inst.group(1)), "%s." % obj, c2)
+    # Where the module's own file passes the handle on, it passes a borrow now. A module that holds
+    # state has an accessor to ask; a stateless one has no accessor emitted at all, so it passes the
+    # same nominal buffer its external callers pass - naming the accessor there would leave the file
+    # calling a function nothing defines.
+    own_borrow = "protocore_%s_span()" % spec["module"] if spec.get("owns_state") else spec["span"]
     if inst:
         c2 = re.sub(
             r"&%s\b(?=\s*[,)])" % re.escape(inst.group(1)),
             lambda m: (
                 m.group(0)
                 if re.search(r"\.internal\s*=\s*$", c2[max(0, m.start() - 32) : m.start()])
-                else "protocore_%s_span()" % spec["module"]
+                else own_borrow
             ),
             c2,
         )
     c2 = re.sub(
         r"uint8_t \*(\w+)\s*=\s*&s_\w+\s*;",
-        lambda m: "uint8_t *%s = protocore_%s_span();"
-        % ("work" if m.group(1) == "ctx" else m.group(1), spec["module"]),
+        lambda m: "uint8_t *%s = %s;" % ("work" if m.group(1) == "ctx" else m.group(1), own_borrow),
         c2,
     )
     # the namespace is reached by name, and the state through the borrow
@@ -914,9 +972,13 @@ def gen_ns(spec):
     c2 = re.sub(r"^[ \t]*\(void\)ctx;[ \t]*\r?\n", "", c2, flags=re.M)
     c2 = rename_handle(c2)
 
-    stor = re.search(r"struct\s+(\w+Storage)\b", c2)
+    # A storage struct is written either way: `struct <X>Storage { ... };` with a tag, or
+    # `typedef struct { ... } <X>Storage;` without one. Reading only the tagged spelling skipped the
+    # carve for a tagless module while still emitting the accessor and the `<PRE>_CTX(work)` reads,
+    # so the file named a macro nothing defined - ssh/client is the shape.
+    stor = re.search(r"struct\s+(\w+Storage)\b", c) or re.search(r"\}\s*(\w+Storage)\s*;", c)
     if stor and spec.get("owns_state"):
-        ctype = "struct " + stor.group(1)
+        ctype = ("struct " if storage_tagged else "") + stor.group(1)
         # the storage struct is what the borrow is carved for
         block = (
             "// The caller's borrow, split: the context at its offset. One pointer arrives and every\n"
@@ -929,8 +991,8 @@ def gen_ns(spec):
             "// The region, at its offset in the caller's borrow.\n"
             "#define %s_CTX(w) ((%s *)(void *)((w) + %s_OFF_CTX))\n"
         ) % (PRE, PRE, ctype, spec["borrow"], spec["borrow"], PRE, ctype, PRE)
-        m = re.search(r"^static\s+struct\s+\w+Storage\s+\w+\s*;[ \t]*\r?\n", c2, re.M)
-        init = re.search(r"^static\s+struct\s+\w+Storage\s+(\w+)\s*=\s*\{(.*?)\};", c2, re.M | re.S)
+        m = re.search(r"^static\s+(?:struct\s+)?\w+Storage\s+\w+\s*;[ \t]*\r?\n", c2, re.M)
+        init = re.search(r"^static\s+(?:struct\s+)?\w+Storage\s+(\w+)\s*=\s*\{(.*?)\};", c2, re.M | re.S)
         if init:
             # A borrow arrives zeroed, so whatever the initializer seeded is lost unless the spec
             # says what it was. Then the carve seats it, once, before any entry can read the region.
@@ -946,12 +1008,12 @@ def gen_ns(spec):
                     % (init.group(1), ", ".join("`%s`" % x for x in missing), missing[0])
                 )
                 return notes
-            c2 = c2[: init.start()] + ("static struct %s %s;" % (stor.group(1), init.group(1))) + c2[init.end() :]
+            c2 = c2[: init.start()] + ("static %s %s;" % (ctype, init.group(1))) + c2[init.end() :]
             notes.append("the initializer's defaults move to the carve: " + ", ".join(sorted(stated)))
             # the instance is the plain declaration now, and the search above ran before the strip
-            m = re.search(r"^static\s+struct\s+\w+Storage\s+\w+\s*;[ \t]*\r?\n", c2, re.M)
+            m = re.search(r"^static\s+(?:struct\s+)?\w+Storage\s+\w+\s*;[ \t]*\r?\n", c2, re.M)
         if m:
-            inst = re.match(r"^static\s+struct\s+\w+Storage\s+(\w+)\s*;", c2[m.start() : m.end()])
+            inst = re.match(r"^static\s+(?:struct\s+)?\w+Storage\s+(\w+)\s*;", c2[m.start() : m.end()])
             c2 = c2[: m.start()] + block + c2[m.end() :]
             notes.append("the storage struct is now the context the borrow carries")
             # A function that is not an entry has no borrow to take, so a direct read of the
@@ -968,7 +1030,7 @@ def gen_ns(spec):
                 )
         else:
             notes.append(
-                "REFUSED: no `static struct %sStorage <name>;` to carve the borrow for - the "
+                "REFUSED: no `static %sStorage <name>;` to carve the borrow for - the "
                 "instance is not in the shape this reads." % obj
             )
             return notes
@@ -1047,10 +1109,121 @@ def gen_ns(spec):
             "argument. Give it the borrow by hand." % x
         )
 
+    # A stateless module's own file now passes that nominal buffer, so the file has to hold one.
+    if not spec.get("owns_state") and re.search(r"\b%s\b" % re.escape(spec["span"]), c2):
+        c2 = declare_work(c2, spec)
+
     if c2 != c:
         emit(cp, c2)
     notes.append("source: handle reads rewritten to the namespace and the borrow")
     return notes
+
+
+# A plain vtable member: `size_t (*decode)(const char *src, uint8_t *dst, size_t dst_cap);` inside
+# the namespace struct. Neither a flat declaration nor the Internal-handle shape, so neither of the
+# other two scanners sees it.
+VTABLE_ENTRY = re.compile(
+    r"^[ \t]*(?P<ret>(?:const\s+)?[A-Za-z_][\w\s]*?[\s\*]*)\(\*(?:const\s+)?(?P<name>\w+)\)"
+    r"\s*\((?P<params>[^;]*)\)\s*;",
+    re.M,
+)
+
+# What the .c binds each member to: `.decode = b64_decode,` in the one initializer.
+VTABLE_BIND = re.compile(r"\.(?P<entry>\w+)\s*=\s*(?P<impl>\w+)\s*[,}]")
+
+
+def scan_vtable(hpath):
+    """The spec for a module whose namespace is a plain function-pointer table.
+
+    Base64, Json, Cbor and the DTLS trio are this shape: the members carry real return types and
+    real parameters rather than a handle, so `scan` (flat declarations) and `scan_ns` (the
+    `struct <X>Internal *ctx` shape) both come back with nothing. The entries are built the same way
+    the flat path builds them - args structs and a result member per return type - and each carries
+    two extra names: `impl`, the static function the .c binds to that member, and `call`, the
+    `<Obj>.<entry>` spelling a caller uses, which is what the call-site pass matches.
+    """
+    s = io.open(hpath, encoding="utf-8").read()
+    mod = os.path.splitext(os.path.basename(hpath))[0]
+    gate = find_gate(s)
+    ns = re.search(r"\}\s*(\w+Ns)\s*;", s)
+    obj = re.search(r"^\s*extern\s+(?:const\s+)?\w+Ns\s+(\w+)\s*;", s, re.M)
+    ns_name = ns.group(1) if ns else camel(mod) + "Ns"
+    obj_name = obj.group(1) if obj else camel(mod)
+    cpath = hpath[:-1] + "c"
+    csrc = io.open(cpath, encoding="utf-8").read() if os.path.exists(cpath) else ""
+
+    # The namespace's own doc block documents its members as `@var <X>Ns::<name> <text>`, so that is
+    # where an entry's brief comes from rather than a comment above the member.
+    var_doc = {}
+    for m in re.finditer(r"@var\s+%s::(\w+)\s+([^\n]*)" % re.escape(ns_name), s):
+        var_doc[m.group(1)] = one_line(re.sub(r"\s+", " ", m.group(2)).strip(), 110)
+
+    # The members, in the order the struct lists them - which is what a POSITIONAL initializer binds
+    # by. Collected before the initializer is read so both spellings can be paired.
+    mask = code_mask(s)
+    members = [m for m in VTABLE_ENTRY.finditer(s) if mask[m.start()] and m.group("ret").strip()]
+
+    # What the .c binds, so an entry knows which static function is its implementation. The tree's
+    # convention is a designated initializer, but base64's predates it and binds by position.
+    bind = {}
+    init = re.search(r"\b%s\s+%s\s*=\s*\{(.*?)\};" % (re.escape(ns_name), re.escape(obj_name)), csrc, re.S)
+    if init:
+        body = init.group(1)
+        if "." in body and VTABLE_BIND.search(body):
+            for m in VTABLE_BIND.finditer(body):
+                bind[m.group("entry")] = m.group("impl")
+        else:
+            names = [x.strip() for x in body.split(",") if x.strip()]
+            for mem, impl in zip(members, names):
+                if re.match(r"^\w+$", impl):
+                    bind[mem.group("name")] = impl
+
+    entries, notes = [], []
+    for m in members:
+        name = m.group("name")
+        ret = re.sub(r"\s+", " ", m.group("ret")).strip()
+        if name not in bind:
+            continue  # a callback typedef, or a member the initializer does not bind
+        result = RESULT.get(ret, "value")
+        if ret not in RESULT and ret.endswith("*"):
+            result = "ptr"
+        rtype = "proto_bool" if result == "ok" else ret
+        params = parse_params(m.group("params"))
+        entries.append(
+            {
+                "result_type": rtype,
+                "flat": bind[name],
+                "impl": bind[name],
+                "call": "%s.%s" % (obj_name, name),
+                "entry": name,
+                "ret": ret,
+                "result": result,
+                "brief": var_doc.get(name, ""),
+                "returns": "",
+                "params": params,
+            }
+        )
+    name = snake(obj_name)
+    return {
+        "from": "vtable",
+        "macros": module_macros(s, re.search(r"#ifndef (\w+)", s).group(1) if re.search(r"#ifndef (\w+)", s) else ""),
+        "types": module_types(s),
+        "inlines": module_inlines(s),
+        "module": name,
+        "ns": ns_name,
+        "object": obj_name,
+        "gate": gate,
+        "header": os.path.relpath(hpath, R).replace("\\", "/"),
+        "source": os.path.relpath(hpath, R).replace("\\", "/")[:-1] + "c",
+        "borrow": "PROTOCORE_%s_BORROW" % name.upper(),
+        "pool": "secure",
+        "suites": find_suites(hpath, mod),
+        "owns_state": bool(find_context(csrc)),
+        "span": "%s_work" % name,
+        "brief": first_sentence(doc_tags(doc_above(s, s.find("#ifndef")))[0]),
+        "entries": resolve_result_collisions(entries, notes),
+        "notes": notes,
+    }
 
 
 def scan(hpath):
@@ -1105,11 +1278,7 @@ def scan(hpath):
             held.append(x)
         else:
             moved.append(x)
-    suites = []
-    for dp, dns, _ in os.walk(os.path.join(R, "test")):
-        for d in dns:
-            if d == "test_" + mod:
-                suites.append(os.path.relpath(os.path.join(dp, d), R).replace("\\", "/"))
+    suites = find_suites(hpath, mod)
     # A module with no file-static context holds nothing between calls, so it carves no borrow,
     # states none, and needs no span accessor - tls_policy is the shape. That is read off the .c
     # rather than chosen: the state is there or it is not.
@@ -1408,10 +1577,18 @@ def gen_header(spec, original):
 
 
 def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
-    """Every call to a flat name becomes staging + entry + the result member."""
+    """Every call to a flat name becomes staging + entry + the result member.
+
+    A vtable module is already called through its namespace - `Base64.decode(a, b, c)` - so what a
+    caller writes is `<Obj>.<entry>`, not the flat name the .c defines. The entry states that
+    spelling as `call`, and it is what the pattern matches; the lookbehind that keeps a flat name off
+    `x.name(` is dropped for it, since the dot IS the call here.
+    """
     obj = spec["object"]
-    byname = {e["flat"]: e for e in spec["entries"]}
-    pat = re.compile(r"(?<![\w.>])(%s)\s*\(" % "|".join(re.escape(k) for k in byname))
+    vtable = spec.get("from") == "vtable"
+    byname = {(e.get("call") if vtable else e["flat"]): e for e in spec["entries"]}
+    lead = "" if vtable else r"(?<![\w.>])"
+    pat = re.compile(r"%s(%s)\s*\(" % (lead, "|".join(re.escape(k) for k in byname)))
     total, skipped = 0, []
     for root in roots:
         for dp, _, fns in os.walk(os.path.join(R, root)):
@@ -1479,6 +1656,45 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
     return total, skipped
 
 
+# A function definition at file scope: a signature ending in `)` with the brace on the next line,
+# which is the shape clang-format leaves this tree in.
+FUNC_DEF = re.compile(r"^([A-Za-z_][^;{}#]*?\([^;{}]*\))[ \t]*\r?\n\{", re.M | re.S)
+
+
+def takes_work(s, pos):
+    """Does the function containing @p pos have a `work` parameter of its own.
+
+    Inside the module's own .c, an ENTRY has one and a private helper does not. Handing `work` to a
+    helper that has none leaves the file naming an undeclared identifier - http.c's send_error_close,
+    route matcher and poll helper were three.
+    """
+    sig = None
+    for m in FUNC_DEF.finditer(s):
+        if m.start() > pos:
+            break
+        sig = m.group(1)
+    return bool(sig) and bool(re.search(r"\bwork\s*[,)]", sig))
+
+
+def above_capability_split(s, pos):
+    """Where the span accessor goes: inside the module's gate, but above any capability arm.
+
+    A two-arm module carves its context in ONE arm, so the first entry definition - which is what
+    the accessor is otherwise placed before - sits inside that arm. The accessor put there does not
+    exist for the other arm, and the link fails on whichever arm the env actually builds:
+    mdns_service's portable responder called a `protocore_mdns_service_span` that only the vendor
+    arm defined. The outermost open `#if` at @p pos is the module's own gate and the accessor
+    belongs under it; the next one in is a capability split and the accessor belongs above it.
+    """
+    open_ifs = []
+    for m in re.finditer(r"^[ \t]*#[ \t]*(if\w*|endif)\b[^\n]*\n", s[:pos], re.M):
+        if m.group(1).startswith("if"):
+            open_ifs.append(m.start())
+        elif open_ifs:
+            open_ifs.pop()
+    return open_ifs[1] if len(open_ifs) > 1 else pos
+
+
 def rewrite_ns_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
     """`X.entry(X.internal)` becomes `X.entry(work)` everywhere the object is driven.
 
@@ -1518,7 +1734,7 @@ def rewrite_ns_calls(spec, roots=("src", "test", "examples", "vendor", "include"
                     # borrow. In any other file that `work` belongs to the module being compiled,
                     # and passing it on would have the callee carve its context out of someone
                     # else's bytes - promisc handing Radio its own borrow was exactly that.
-                    if own:
+                    if own and takes_work(s, m.start()):
                         arg = "work"
                     elif spec.get("owns_state"):
                         arg = span
@@ -1683,8 +1899,11 @@ def restructure_source(spec):
     notes = []
     for e in spec["entries"]:
         gap = r"\s*" if e["ret"].rstrip().endswith("*") else r"\s+"
+        # `static` is optional: a flat module's definitions are its public API and carry none, while
+        # a vtable module's are private - only the namespace is exported - so every one of them is
+        # static and the anchored pattern found nothing.
         sig = re.compile(
-            r"^%s%s%s\s*\((?P<params>[^;{]*)\)\s*\{" % (re.escape(e["ret"]), gap, re.escape(e["flat"])),
+            r"^(?:static\s+)?%s%s%s\s*\((?P<params>[^;{]*)\)\s*\{" % (re.escape(e["ret"]), gap, re.escape(e["flat"])),
             re.M,
         )
         # EVERY definition, not just the first. A capability and its complement are two arms of one
@@ -1822,6 +2041,7 @@ def restructure_source(spec):
             )
             s = s[: first.start()] + protos + "\n" + s[first.start() :]
 
+    pending_accessor = None
     if not spec.get("owns_state", True):
         # No file-static context: the module holds nothing, so there is no span to take and no
         # borrow to carve. tls_policy.c is the shape - the note says so where the context would be.
@@ -1851,15 +2071,22 @@ def restructure_source(spec):
             "    return s_own.span; // null while the pool was short, which every entry refuses\n}\n\n"
         ) % (spec["borrow"], obj, obj, spec["span"].replace("()", "(void)"), pool["call"], spec["borrow"],
              seat_defaults(spec, spec["module"].upper())[0])
-        first = re.search(r"^static void %s_\w+\(uint8_t \*restrict work\)" % spec["module"], s, re.M)
-        if first:
-            s = s[: first.start()] + accessor + s[first.start() :]
+        pending_accessor = accessor
         if pool["include"] not in s:
             k = s.index("#include")
             s = s[:k] + pool["include"] + " " + pool["why"] + "\n" + s[k:]
 
     # the point of the shape: the context moves into the borrow, with offsets and an assert
     s = funnel(s, spec["module"], spec["borrow"], notes, seat_defaults(spec, spec["module"].upper())[1])
+    # The accessor goes in AFTER the carve, because seating a non-zero default dereferences
+    # <PRE>_CTX and the funnel is what defines it. Placed before, the file called a macro that is
+    # declared further down and gcc read it as an implicit function.
+    if pending_accessor:
+        ctx_macro = re.search(r"^#define %s_CTX\(w\)[^\n]*\n" % spec["module"].upper(), s, re.M)
+        anchor = re.search(r"^static void %s_\w+\(uint8_t \*restrict work\)" % spec["module"], s, re.M)
+        at = ctx_macro.end() if ctx_macro else (above_capability_split(s, anchor.start()) if anchor else None)
+        if at is not None:
+            s = s[:at] + pending_accessor + s[at:]
     s = drop_void_work(s)
     # The accessor above says every entry refuses a null borrow. The funnel is what puts the
     # dereference in, so the refusal goes in right after it, for the entries that gained one.
@@ -1872,7 +2099,24 @@ def restructure_source(spec):
         obj,
         "".join(".%s = %s_%s,\n" % (e["entry"], spec["module"], e["entry"]) for e in spec["entries"]),
     )
-    end = s.rindex("#endif")
+    # A vtable module already HAS an initializer - that table is what it exported - so the old one
+    # goes before the new one is appended, or the file defines the object twice.
+    if spec.get("from") == "vtable":
+        old = re.search(
+            r"^(?:const\s+)?%s\s+%s\s*=\s*\{.*?\};[ \t]*\r?\n" % (re.escape(ns), re.escape(obj)), s, re.M | re.S
+        )
+        if old:
+            s = s[: old.start()] + s[old.end() :]
+            mask = code_mask(s)
+
+    # Before the gate's closing #endif, so the namespace is defined inside the capability - but only
+    # when that #endif really does close the file, which means nothing but whitespace follows it. An
+    # inner capability arm near the end of the file is NOT the gate, and putting the initializer
+    # before one leaves every entry defined after it bound by nothing: base64's url codecs and
+    # http_parser's accessors both went that way. A source with no gate yet takes the end of the
+    # file, and the shape pass below wraps it.
+    tail = re.search(r"^[ \t]*#[ \t]*endif\b[^\n]*\n\s*$", s, re.M)
+    end = tail.start() if tail else len(s.rstrip()) + 1
     s = s[:end] + defn + "\n\nPROTOCORE_END_DECLS\n\n" + s[end:]
     # the golden file shape is the same pass `shape` runs, so it runs here rather than being a
     # second command a conversion can forget: config alone above the gate, everything else below
@@ -2090,11 +2334,15 @@ def main():
         # for what it actually is rather than answered with an empty spec.
         hp = os.path.join(R, arg.replace("/", os.sep))
         text = io.open(hp, encoding="utf-8").read()
-        spec = (
-            scan_ns(hp)
-            if re.search(r"^\s*extern\s+(?:const\s+)?\w+Ns\s+\w+\s*;", text, re.M) and not GOLDEN_ENTRY.search(text)
-            else scan(hp)
-        )
+        is_ns = re.search(r"^\s*extern\s+(?:const\s+)?\w+Ns\s+\w+\s*;", text, re.M) and not GOLDEN_ENTRY.search(text)
+        if not is_ns:
+            spec = scan(hp)
+        elif ns_entries(text):
+            spec = scan_ns(hp)  # the `struct <X>Internal *ctx` shape
+        elif VTABLE_ENTRY.search(text):
+            spec = scan_vtable(hp)  # a plain function-pointer table
+        else:
+            spec = scan_ns(hp)
         print(json.dumps(spec, indent=2))
         return 0
     if cmd == "gen":

@@ -13,7 +13,7 @@
 // condition RFC 5280 sec 6.1.3 and sec 6.1.4 states gets a case that violates exactly it, with
 // everything else about the certificate left correct.
 
-#include "crypto/x509/x509_verify.h"
+#include "crypto/x509/x509_verify/x509_verify.h"
 #include "x509_fixture.h"
 #include <string.h>
 

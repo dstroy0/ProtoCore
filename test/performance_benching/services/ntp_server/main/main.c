@@ -36,23 +36,38 @@ void dbench_run(void)
     static const uint32_t secs = 0xE6C50000u;
     static const uint32_t frac = 0x80000000u;
     static uint8_t out[PROTOCORE_NTP_PACKET_LEN];
+    uint8_t *work = protocore_ntp_server_span();
+    if (work == NULL)
+    {
+        return; // the pool was short of this module's borrow
+    }
 
     for (;;)
     {
         DBENCH_BANNER("ntp_server");
         volatile size_t sink = 0;
+        // The operands do not vary across iterations, so they are staged once above each macro;
+        // only the call itself is inside the timed loop.
+        NtpServer.build_response_args.req = req;
+        NtpServer.build_response_args.req_len = sizeof(req);
+        NtpServer.build_response_args.protocore_ntp_secs = secs;
+        NtpServer.build_response_args.protocore_ntp_frac = frac;
+        NtpServer.build_response_args.out = out;
+        NtpServer.build_response_args.out_cap = sizeof(out);
+
         // Full server reply build: stratum 3 relay advertising the local clock (LOCL).
-        DBENCH_OP("protocore_ntp_server_build_response", 100000,
-                  sink += protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs, frac,
-                                                              out, sizeof(out)));
+        NtpServer.build_response_args.stratum = 3;
+        NtpServer.build_response_args.refid = PROTOCORE_NTP_REFID_LOCL;
+        DBENCH_OP("NtpServer.build_response", 100000, sink += (NtpServer.build_response(work), NtpServer.n));
         // Same codec advertising a stratum-1 GPS reference clock (different stratum/refid inputs).
-        DBENCH_OP("build_response gps stratum1", 100000,
-                  sink += protocore_ntp_server_build_response(req, sizeof(req), 1, PROTOCORE_NTP_REFID_GPS, secs, frac,
-                                                              out, sizeof(out)));
+        NtpServer.build_response_args.stratum = 1;
+        NtpServer.build_response_args.refid = PROTOCORE_NTP_REFID_GPS;
+        DBENCH_OP("build_response gps stratum1", 100000, sink += (NtpServer.build_response(work), NtpServer.n));
         // Throughput view: the reply is a fixed 48-octet packet, so report ns/byte + MB/s.
+        NtpServer.build_response_args.stratum = 3;
+        NtpServer.build_response_args.refid = PROTOCORE_NTP_REFID_LOCL;
         DBENCH_BULK("build_response throughput", 100000, PROTOCORE_NTP_PACKET_LEN,
-                    sink += protocore_ntp_server_build_response(req, sizeof(req), 3, PROTOCORE_NTP_REFID_LOCL, secs,
-                                                                frac, out, sizeof(out)));
+                    sink += (NtpServer.build_response(work), NtpServer.n));
         (void)sink;
         DBENCH_DONE();
     }

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_CANOPEN
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/canopen/canopen.h"
 #include "shared/can/can.h"
 

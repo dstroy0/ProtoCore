@@ -27,7 +27,7 @@
 #define PTP_MASTER 0 // 1 = grandmaster (source time from GPS/RTC/...), 0 = slave (follow a master)
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/udp/udp.h"
 #include "server/clock/clock.h"
 #include "network_drivers/application/ptp/ptp.h"

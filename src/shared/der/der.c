@@ -8,7 +8,7 @@
 
 #include "shared/der/der.h"
 
-#include "mmgr/protomem.h" // mem.cmp: the OID comparison
+#include "mmgr/protomem/protomem.h" // mem.cmp: the OID comparison
 
 PROTOCORE_BEGIN_DECLS
 

@@ -136,7 +136,7 @@ def render_source(themes):
     lines = [
         BANNER,
         "",
-        '#include "network_drivers/application/binary_asset_blobs.h"',
+        '#include "network_drivers/application/binary_asset_blobs/binary_asset_blobs.h"',
         "",
         "#if PROTOCORE_ENABLE_THEMES",
         "",

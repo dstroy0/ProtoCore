@@ -10,7 +10,7 @@
 // represented. The rest of the file walks Table 4's range column, which fixes exactly where the
 // encoder must step from 1 to 2 to 4 to 8 bytes.
 
-#include "network_drivers/presentation/http/http3/quic_varint.h"
+#include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
 #include <string.h>
 
 #include <unity.h>

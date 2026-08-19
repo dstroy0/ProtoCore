@@ -378,7 +378,7 @@ def render_header(assets):
 
 
 def render_source(assets):
-    lines = [BANNER, "", '#include "network_drivers/application/web_assets.h"', ""]
+    lines = [BANNER, "", '#include "network_drivers/application/web_assets/web_assets.h"', ""]
     last_type = None
     for a in assets:
         if a.type != last_type:

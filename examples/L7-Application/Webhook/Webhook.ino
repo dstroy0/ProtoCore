@@ -18,7 +18,7 @@
 #define PROTOCORE_ENABLE_WEBHOOK 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/net/webhook/webhook.h"
 
 static const char *SSID = "YOUR_SSID";

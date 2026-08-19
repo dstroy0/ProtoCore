@@ -12,7 +12,7 @@
 // than from a build macro, at every offset within a word. A wrong shift or a byte order copied from
 // a config knob cannot agree with a value built from the bytes themselves.
 
-#include "mmgr/rawmemcpy.h"
+#include "mmgr/rawmemcpy/rawmemcpy.h"
 #include <string.h>
 
 #include <unity.h>

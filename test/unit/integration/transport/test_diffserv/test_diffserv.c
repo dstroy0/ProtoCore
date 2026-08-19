@@ -37,7 +37,7 @@ void tearDown()
 {
 }
 
-static void test_dscp_to_tos_encode()
+ void test_dscp_to_tos_encode()
 {
     TEST_ASSERT_EQUAL_UINT8(0, protocore_dscp_to_tos(PROTOCORE_DSCP_CS0));
     TEST_ASSERT_EQUAL_UINT8(0xB8, protocore_dscp_to_tos(PROTOCORE_DSCP_EF));
@@ -47,7 +47,7 @@ static void test_dscp_to_tos_encode()
     TEST_ASSERT_EQUAL_UINT8(0x04, protocore_dscp_to_tos(0x41));
 }
 
-static void test_default_dscp_roundtrip()
+ void test_default_dscp_roundtrip()
 {
     DiffServ.default_dscp(g_ds);
     TEST_ASSERT_EQUAL_UINT8(0, DiffServ.u8);
@@ -64,7 +64,7 @@ static void test_default_dscp_roundtrip()
     TEST_ASSERT_EQUAL_UINT8(63, DiffServ.u8);
 }
 
-static void test_udp_dscp_roundtrip()
+ void test_udp_dscp_roundtrip()
 {
     DiffServ.udp_dscp(g_ds);
     TEST_ASSERT_EQUAL_UINT8(0, DiffServ.u8);
@@ -81,7 +81,7 @@ static void test_udp_dscp_roundtrip()
 }
 
 // The two marks are one pair of bytes, so a write through one entry is what the other reads.
-static void test_the_two_defaults_are_separate_marks()
+ void test_the_two_defaults_are_separate_marks()
 {
     DiffServ.dscp = PROTOCORE_DSCP_EF;
     DiffServ.set_default(g_ds);
@@ -96,7 +96,7 @@ static void test_the_two_defaults_are_separate_marks()
 
 // The accept path takes no borrow, so it reads the marks through the module's own span. These are
 // the calls listener_accept_cb and the UDP send path actually make.
-static void test_the_flat_readers_report_what_the_entries_wrote()
+ void test_the_flat_readers_report_what_the_entries_wrote()
 {
     DiffServ.dscp = PROTOCORE_DSCP_CS6;
     DiffServ.set_default(g_ds);
@@ -107,7 +107,7 @@ static void test_the_flat_readers_report_what_the_entries_wrote()
     TEST_ASSERT_EQUAL_UINT8(34, protocore_diffserv_udp_dscp());
 }
 
-static void test_listen_set_dscp_override_and_sentinel()
+ void test_listen_set_dscp_override_and_sentinel()
 {
     TcpListener.idx = 0;
     TcpListener.bind.port = 8080;
@@ -144,7 +144,7 @@ static void test_listen_set_dscp_override_and_sentinel()
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
-static void test_accept_cb_applies_per_listener_dscp_override()
+ void test_accept_cb_applies_per_listener_dscp_override()
 {
     ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
@@ -166,7 +166,7 @@ static void test_accept_cb_applies_per_listener_dscp_override()
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
-static void test_accept_cb_falls_back_to_server_default_dscp()
+ void test_accept_cb_falls_back_to_server_default_dscp()
 {
     ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
@@ -187,7 +187,7 @@ static void test_accept_cb_falls_back_to_server_default_dscp()
     TcpListener.stop(protocore_tcp_listener_span());
 }
 
-static void test_accept_cb_skips_tos_write_at_best_effort()
+ void test_accept_cb_skips_tos_write_at_best_effort()
 {
     ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
@@ -208,7 +208,7 @@ static void test_accept_cb_skips_tos_write_at_best_effort()
 
 // A forwarded port is a plaintext bridge started from a running task, and takes the sentinel, so it
 // marks with whatever the server-wide default is at accept rather than a mark fixed at add time.
-static void test_dynamic_listener_inherits_default_dscp()
+ void test_dynamic_listener_inherits_default_dscp()
 {
     TcpListener.idx = 1;
     TcpListener.bind.port = 2222;
@@ -221,18 +221,3 @@ static void test_dynamic_listener_inherits_default_dscp()
     TcpListener.stop_dynamic(protocore_tcp_listener_span());
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_dscp_to_tos_encode);
-    RUN_TEST(test_default_dscp_roundtrip);
-    RUN_TEST(test_udp_dscp_roundtrip);
-    RUN_TEST(test_the_two_defaults_are_separate_marks);
-    RUN_TEST(test_the_flat_readers_report_what_the_entries_wrote);
-    RUN_TEST(test_listen_set_dscp_override_and_sentinel);
-    RUN_TEST(test_accept_cb_applies_per_listener_dscp_override);
-    RUN_TEST(test_accept_cb_falls_back_to_server_default_dscp);
-    RUN_TEST(test_accept_cb_skips_tos_write_at_best_effort);
-    RUN_TEST(test_dynamic_listener_inherits_default_dscp);
-    return UNITY_END();
-}

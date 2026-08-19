@@ -7,7 +7,7 @@
  */
 
 #include "services/energy/iccp/iccp.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_ICCP
 

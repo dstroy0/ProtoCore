@@ -13,15 +13,17 @@
 
 #include "services/net/ws_client/ws_client.h"
 
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
+
 #if PROTOCORE_ENABLE_WS_CLIENT
 
-#include "crypto/hash/sha1.h"                                 // Sha1: the accept computation
+#include "crypto/hash/sha1/sha1.h"                            // Sha1: the accept computation
 #include "crypto/rng/rng.h"                                   // Rng: the key and the Masking-key
-#include "mmgr/membuild.h"                                    // protocore_sb: the request-line and its field lines
-#include "mmgr/protomem.h"                                    // mem.cpy / mem.cmp / mem.chr
-#include "mmgr/protostr.h"                                    // str.len / str.starts
-#include "mmgr/secure.h"                                      // the pool the digest borrow comes from
-#include "mmgr/span.h"                                        // protocore_span, span.ok
+#include "mmgr/membuild/membuild.h"                           // protocore_sb: the request-line and its field lines
+#include "mmgr/protomem/protomem.h"                           // mem.cpy / mem.cmp / mem.chr
+#include "mmgr/protostr/protostr.h"                           // str.len / str.starts
+#include "mmgr/secure/secure.h"                               // the pool the digest borrow comes from
+#include "mmgr/span/span.h"                                   // protocore_span, span.ok
 #include "network_drivers/presentation/codec/base64/base64.h" // Base64.encode (RFC 4648)
 #include "server/clock/clock.h"                               // protocore_millis, pcdelay
 
@@ -181,7 +183,10 @@ static void ws_accept_for_key(uint8_t *restrict work)
     Sha1.hash_args.out = digest;
     Sha1.hash(w.buf);
     protocore_secure_release(mark);
-    Base64.encode(digest, PROTOCORE_SHA1_DIGEST_LEN, accept);
+    Base64.encode_args.src = digest;
+    Base64.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
+    Base64.encode_args.dst = accept;
+    Base64.encode(base64_work);
 }
 
 // The client's opening handshake: a GET request-line (RFC 9112 sec 3) and the field lines RFC 6455
@@ -843,7 +848,10 @@ static void ws_connect(uint8_t *restrict work)
     Rng.fill_args.len = sizeof(key_raw);
     Rng.fill(protocore_rng_span());
     char key_b64[PROTOCORE_WS_KEY_CAP];
-    Base64.encode(key_raw, sizeof(key_raw), key_b64);
+    Base64.encode_args.src = key_raw;
+    Base64.encode_args.src_len = sizeof(key_raw);
+    Base64.encode_args.dst = key_b64;
+    Base64.encode(base64_work);
     char accept[PROTOCORE_WS_ACCEPT_CAP];
     WsClient.handshake.key = key_b64;
     WsClient.handshake.accept = accept;

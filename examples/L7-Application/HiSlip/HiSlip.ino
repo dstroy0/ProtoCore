@@ -24,7 +24,7 @@
 #define PROTOCORE_ENABLE_HISLIP 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "services/instrumentation/hislip/hislip.h"
 

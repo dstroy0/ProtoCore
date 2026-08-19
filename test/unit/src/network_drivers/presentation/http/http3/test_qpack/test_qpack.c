@@ -12,7 +12,7 @@
 // those octets because Huffman coding is the encoder's choice (sec 5), so it is checked by decoding
 // its output and by the representation byte it selects.
 
-#include "network_drivers/presentation/http/http3/qpack.h"
+#include "network_drivers/presentation/http/http3/qpack/qpack.h"
 #include <string.h>
 
 #include <unity.h>

@@ -6,16 +6,31 @@
  * @brief Cache-Control builder / parser / freshness implementation (see httpcache.h).
  */
 
-#include "httpcache.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP_CACHE
 
+#include "httpcache.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
+
+PROTOCORE_BEGIN_DECLS
+
 static const size_t CC_SENT = (size_t)-1; // overflow sentinel threaded through the emitters
 
-void cache_control_init(protocore_cache_control *cc)
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void httpcache_control_init(uint8_t *restrict work);
+
+static void httpcache_control_init(uint8_t *restrict work)
 {
+    (void)work;
+    protocore_cache_control *cc = Httpcache.control_init_args.cc;
+
     cc->cc_public = PROTO_FALSE;
     cc->cc_private = PROTO_FALSE;
     cc->no_store = PROTO_FALSE;
@@ -98,11 +113,17 @@ static size_t cc_kv(char *buf, size_t cap, size_t n, proto_bool *first, const ch
     return cc_emit_uint(buf, cap, n, (unsigned)v);
 }
 
-size_t cache_control_build(char *buf, size_t cap, const protocore_cache_control *cc)
+static void httpcache_control_build(uint8_t *restrict work)
 {
+    (void)work;
+    char *buf = Httpcache.control_build_args.buf;
+    size_t cap = Httpcache.control_build_args.cap;
+    const protocore_cache_control *cc = Httpcache.control_build_args.cc;
+
     if (!buf || !cc || cap == 0)
     {
-        return 0;
+        Httpcache.n = 0;
+        return;
     }
     size_t n = 0;
     proto_bool first = PROTO_TRUE;
@@ -178,10 +199,11 @@ size_t cache_control_build(char *buf, size_t cap, const protocore_cache_control 
 
     if (n == CC_SENT || first || n + 1 > cap)
     {
-        return 0; // overflow, or nothing was emitted, or no room for the NUL
+        Httpcache.n = 0; // overflow, or nothing was emitted, or no room for the NUL
+        return;
     }
     buf[n] = 0;
-    return n;
+    Httpcache.n = n;
 }
 
 // --- parse -----------------------------------------------------------------
@@ -354,12 +376,22 @@ static proto_bool cache_parse_one_directive(const char *s, size_t len, size_t *i
     return nlen && cc_match(cc, s + start, nlen, val, vlen);
 }
 
-proto_bool cache_control_parse(const char *s, size_t len, protocore_cache_control *cc)
+static void httpcache_control_parse(uint8_t *restrict work)
 {
-    cache_control_init(cc);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const char *s = Httpcache.control_parse_args.s;
+    size_t len = Httpcache.control_parse_args.len;
+    protocore_cache_control *cc = Httpcache.control_parse_args.cc;
+
+    Httpcache.control_init_args.cc = cc;
+    httpcache_control_init(work);
     if (!s)
     {
-        return PROTO_FALSE;
+        Httpcache.ok = PROTO_FALSE;
+        return;
     }
     proto_bool found = PROTO_FALSE;
     size_t i = 0;
@@ -370,22 +402,39 @@ proto_bool cache_control_parse(const char *s, size_t len, protocore_cache_contro
             found = PROTO_TRUE;
         }
     }
-    return found;
+    Httpcache.ok = found;
 }
 
 // --- presets + freshness ---------------------------------------------------
 
-void cache_immutable_asset(protocore_cache_control *cc, uint32_t max_age)
+static void httpcache_immutable_asset(uint8_t *restrict work)
 {
-    cache_control_init(cc);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    protocore_cache_control *cc = Httpcache.immutable_asset_args.cc;
+    uint32_t max_age = Httpcache.immutable_asset_args.max_age;
+
+    Httpcache.control_init_args.cc = cc;
+    httpcache_control_init(work);
     cc->cc_public = PROTO_TRUE;
     cc->max_age = (int32_t)(max_age > 2147483647u ? 2147483647u : max_age);
     cc->cc_immutable = PROTO_TRUE;
 }
 
-void cache_revalidatable(protocore_cache_control *cc, uint32_t max_age, int32_t stale_while_revalidate)
+static void httpcache_revalidatable(uint8_t *restrict work)
 {
-    cache_control_init(cc);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    protocore_cache_control *cc = Httpcache.revalidatable_args.cc;
+    uint32_t max_age = Httpcache.revalidatable_args.max_age;
+    int32_t stale_while_revalidate = Httpcache.revalidatable_args.stale_while_revalidate;
+
+    Httpcache.control_init_args.cc = cc;
+    httpcache_control_init(work);
     cc->cc_public = PROTO_TRUE;
     cc->max_age = (int32_t)(max_age > 2147483647u ? 2147483647u : max_age);
     if (stale_while_revalidate >= 0)
@@ -394,35 +443,72 @@ void cache_revalidatable(protocore_cache_control *cc, uint32_t max_age, int32_t 
     }
 }
 
-void cache_no_store(protocore_cache_control *cc)
+static void httpcache_no_store(uint8_t *restrict work)
 {
-    cache_control_init(cc);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    protocore_cache_control *cc = Httpcache.no_store_args.cc;
+
+    Httpcache.control_init_args.cc = cc;
+    httpcache_control_init(work);
     cc->no_store = PROTO_TRUE;
 }
 
-void cache_shared(protocore_cache_control *cc, uint32_t max_age, uint32_t s_maxage)
+static void httpcache_shared(uint8_t *restrict work)
 {
-    cache_control_init(cc);
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    protocore_cache_control *cc = Httpcache.shared_args.cc;
+    uint32_t max_age = Httpcache.shared_args.max_age;
+    uint32_t s_maxage = Httpcache.shared_args.s_maxage;
+
+    Httpcache.control_init_args.cc = cc;
+    httpcache_control_init(work);
     cc->cc_public = PROTO_TRUE;
     cc->max_age = (int32_t)(max_age > 2147483647u ? 2147483647u : max_age);
     cc->s_maxage = (int32_t)(s_maxage > 2147483647u ? 2147483647u : s_maxage);
 }
 
-long cache_freshness_lifetime(const protocore_cache_control *cc, proto_bool shared, long expires_minus_date)
+static void httpcache_freshness_lifetime(uint8_t *restrict work)
 {
+    (void)work;
+    const protocore_cache_control *cc = Httpcache.freshness_lifetime_args.cc;
+    proto_bool shared = Httpcache.freshness_lifetime_args.shared;
+    long expires_minus_date = Httpcache.freshness_lifetime_args.expires_minus_date;
+
     if (shared && cc->s_maxage >= 0)
     {
-        return cc->s_maxage;
+        Httpcache.value = cc->s_maxage;
+        return;
     }
     if (cc->max_age >= 0)
     {
-        return cc->max_age;
+        Httpcache.value = cc->max_age;
+        return;
     }
     if (expires_minus_date >= 0)
     {
-        return expires_minus_date;
+        Httpcache.value = expires_minus_date;
+        return;
     }
-    return -1; // no explicit expiration - the caller applies a heuristic
+    Httpcache.value = -1; // no explicit expiration - the caller applies a heuristic
 }
+
+HttpcacheNs Httpcache = {
+    .control_init = httpcache_control_init,
+    .control_build = httpcache_control_build,
+    .control_parse = httpcache_control_parse,
+    .immutable_asset = httpcache_immutable_asset,
+    .revalidatable = httpcache_revalidatable,
+    .no_store = httpcache_no_store,
+    .shared = httpcache_shared,
+    .freshness_lifetime = httpcache_freshness_lifetime,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_HTTP_CACHE

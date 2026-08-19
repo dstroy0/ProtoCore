@@ -12,12 +12,12 @@
 
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 
-#include "crypto/hash/sha256.h"
-#include "crypto/hash/sha384.h"
-#include "crypto/kdf/hkdf.h"
-#include "crypto/kdf/hkdf_sha384.h"
-#include "crypto/mac/hmac_sha256.h"
-#include "crypto/mac/hmac_sha384.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "crypto/hash/sha384/sha384.h"
+#include "crypto/kdf/hkdf/hkdf.h"
+#include "crypto/kdf/hkdf_sha384/hkdf_sha384.h"
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"
+#include "crypto/mac/hmac_sha384/hmac_sha384.h"
 
 // RFC 8446 sec 7.1 ("tls13 ") and RFC 9147 sec 5.9 ("dtls13") HKDF-Expand-Label prefixes.
 const Tls13Kdf TLS13_KDF = {"tls13 "};

@@ -28,11 +28,15 @@
 #ifndef PROTOCORE_HTTPCACHE_H
 #define PROTOCORE_HTTPCACHE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HTTP_CACHE
 
 PROTOCORE_BEGIN_DECLS
+
+// This module holds nothing between calls, so it carves no borrow and states none. An entry
+// takes one all the same, and never reads it, so every namespace in the tree is invoked the
+// same way.
 
 /**
  * @brief A `Cache-Control` directive set (a superset of request + response directives).
@@ -41,7 +45,7 @@ PROTOCORE_BEGIN_DECLS
  * field-name lists on `no-cache` / `private` are not captured (presence only). @ref max_stale
  * uses -1 = absent and -2 = present with no value ("accept any staleness").
  */
-typedef struct
+typedef struct protocore_cache_control
 {
     // response cacheability
     proto_bool cc_public;        ///< `public`
@@ -64,55 +68,125 @@ typedef struct
     int32_t min_fresh;              ///< `min-fresh=N` (request)
 } protocore_cache_control;
 
-/** @brief Reset to an empty set (all flags false, all delta-seconds -1). */
-void cache_control_init(protocore_cache_control *cc);
+/** @brief What control_init takes: cc. */
+typedef struct
+{
+    protocore_cache_control *cc;
+} HttpcacheControlInitArgs;
+
+/** @brief What control_build takes: buf, cap, cc. */
+typedef struct
+{
+    char *buf;
+    size_t cap;
+    const protocore_cache_control *cc;
+} HttpcacheControlBuildArgs;
+
+/** @brief What control_parse takes: s, len, cc. */
+typedef struct
+{
+    const char *s;
+    size_t len;
+    protocore_cache_control *cc;
+} HttpcacheControlParseArgs;
+
+/** @brief What immutable_asset takes: cc, max_age. */
+typedef struct
+{
+    protocore_cache_control *cc;
+    uint32_t max_age;
+} HttpcacheImmutableAssetArgs;
+
+/** @brief What revalidatable takes: cc, max_age, ... */
+typedef struct
+{
+    protocore_cache_control *cc;
+    uint32_t max_age;
+    int32_t stale_while_revalidate;
+} HttpcacheRevalidatableArgs;
+
+/** @brief What no_store takes: cc. */
+typedef struct
+{
+    protocore_cache_control *cc;
+} HttpcacheNoStoreArgs;
+
+/** @brief What shared takes: cc, max_age, s_maxage. */
+typedef struct
+{
+    protocore_cache_control *cc;
+    uint32_t max_age;
+    uint32_t s_maxage;
+} HttpcacheSharedArgs;
+
+/** @brief What freshness_lifetime takes: cc, shared, ... */
+typedef struct
+{
+    const protocore_cache_control *cc;
+    proto_bool shared;       ///< true for a shared cache (honors s-maxage)
+    long expires_minus_date; ///< `Expires` minus `Date` in seconds, or < 0 when that pair is absent
+} HttpcacheFreshnessLifetimeArgs;
 
 /**
- * @brief Build the canonical `Cache-Control` value (no `Cache-Control:` prefix, no CRLF).
+ * @brief HTTP `Cache-Control` directive builder + parser + freshness helper (RFC 9111), PROTOCORE_ENABLE_HTTP_CACHE.
  *
- * Emits every set directive as a comma-separated list in a stable order. Pass the result to
- * set_cache_control().
+ * A caller sets the members a call takes, invokes it through ::Httpcache with the bytes it runs
+ * out of, and reads the outcome off the same handle.
  *
- * @return bytes written (excluding NUL), or 0 on overflow or an empty directive set.
+ *   Httpcache.control_init_args.cc = ...;
+ *   Httpcache.control_init(work);
+ *
+ * @var HttpcacheNs::control_init_args  what control_init takes: cc
+ * @var HttpcacheNs::control_build_args  what control_build takes: buf, cap, cc
+ * @var HttpcacheNs::control_parse_args  what control_parse takes: s, len, cc
+ * @var HttpcacheNs::immutable_asset_args  what immutable_asset takes: cc, max_age
+ * @var HttpcacheNs::revalidatable_args  what revalidatable takes: cc, max_age,
+ * @var HttpcacheNs::no_store_args  what no_store takes: cc
+ * @var HttpcacheNs::shared_args  what shared takes: cc, max_age, s_maxage
+ * @var HttpcacheNs::freshness_lifetime_args  what freshness_lifetime takes: cc, shared,
+ * @var HttpcacheNs::ok  true if at least one known directive was parsed
+ * @var HttpcacheNs::n  bytes written (excluding NUL), or 0 on overflow or an empty ...
+ * @var HttpcacheNs::value  the freshness lifetime in seconds, or -1 when none is explicit ...
+ * @var HttpcacheNs::control_init  reset to an empty set (all flags false, all delta-seconds -1)
+ * @var HttpcacheNs::control_build  build the canonical `Cache-Control` value (no `Cache-Control:` ...
+ * @var HttpcacheNs::control_parse  parse a `Cache-Control` header value into cc (initializes it ...
+ * @var HttpcacheNs::immutable_asset  long-lived immutable static asset: `public, max-age=<secs>, ...
+ * @var HttpcacheNs::revalidatable  cacheable but served-while-revalidating: `public, max-age=<secs>` ...
+ * @var HttpcacheNs::no_store  dynamic / sensitive - never store: `no-store`
+ * @var HttpcacheNs::shared  distinct shared-cache TTL: `public, max-age=<browser>, ...
+ * @var HttpcacheNs::freshness_lifetime  freshness lifetime in seconds (RFC 9111 sec 4.2.1), first-match ...
+ *
+ * @c work is bytes the CALLER holds. This module reads none of them: it carries nothing
+ * between calls, so there is no state to keep and nothing to wipe. The parameter is there so
+ * a caller drives every namespace the same way.
  */
-size_t cache_control_build(char *buf, size_t cap, const protocore_cache_control *cc);
+typedef struct
+{
+    HttpcacheControlInitArgs control_init_args;
+    HttpcacheControlBuildArgs control_build_args;
+    HttpcacheControlParseArgs control_parse_args;
+    HttpcacheImmutableAssetArgs immutable_asset_args;
+    HttpcacheRevalidatableArgs revalidatable_args;
+    HttpcacheNoStoreArgs no_store_args;
+    HttpcacheSharedArgs shared_args;
+    HttpcacheFreshnessLifetimeArgs freshness_lifetime_args;
 
-/**
- * @brief Parse a `Cache-Control` header value into @p cc (initializes it first).
- *
- * Tolerant: directive names are case-insensitive, unknown directives are ignored, delta-seconds
- * values may be bare or quoted. Optional field-name lists are recognized but not captured.
- *
- * @return true if at least one known directive was parsed.
- */
-proto_bool cache_control_parse(const char *s, size_t len, protocore_cache_control *cc);
+    proto_bool ok;
+    size_t n;
+    long value;
 
-// --- first-class origin presets (fill @p cc for a common edge-cacheable response) ---
+    void (*const control_init)(uint8_t *restrict work);
+    void (*const control_build)(uint8_t *restrict work);
+    void (*const control_parse)(uint8_t *restrict work);
+    void (*const immutable_asset)(uint8_t *restrict work);
+    void (*const revalidatable)(uint8_t *restrict work);
+    void (*const no_store)(uint8_t *restrict work);
+    void (*const shared)(uint8_t *restrict work);
+    void (*const freshness_lifetime)(uint8_t *restrict work);
+} HttpcacheNs;
 
-/** @brief Long-lived immutable static asset: `public, max-age=<secs>, immutable`. */
-void cache_immutable_asset(protocore_cache_control *cc, uint32_t max_age);
-
-/**
- * @brief Cacheable but served-while-revalidating: `public, max-age=<secs>` plus
- *        `stale-while-revalidate=<swr>` when @p stale_while_revalidate >= 0.
- */
-void cache_revalidatable(protocore_cache_control *cc, uint32_t max_age, int32_t stale_while_revalidate);
-
-/** @brief Dynamic / sensitive - never store: `no-store`. */
-void cache_no_store(protocore_cache_control *cc);
-
-/** @brief Distinct shared-cache TTL: `public, max-age=<browser>, s-maxage=<shared>`. */
-void cache_shared(protocore_cache_control *cc, uint32_t max_age, uint32_t s_maxage);
-
-/**
- * @brief Freshness lifetime in seconds (RFC 9111 sec 4.2.1), first-match precedence:
- *        s-maxage (only when @p shared) -> max-age -> @p expires_minus_date (if >= 0) -> heuristic.
- *
- * @param shared            true for a shared cache (honors s-maxage).
- * @param expires_minus_date `Expires` minus `Date` in seconds, or < 0 when that pair is absent.
- * @return the freshness lifetime in seconds, or -1 when none is explicit (caller applies a heuristic).
- */
-long cache_freshness_lifetime(const protocore_cache_control *cc, proto_bool shared, long expires_minus_date);
+/** @brief The one symbol this module exports. */
+extern HttpcacheNs Httpcache;
 
 PROTOCORE_END_DECLS
 

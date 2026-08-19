@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_CT_EQ
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 PROTOCORE_BEGIN_DECLS
 

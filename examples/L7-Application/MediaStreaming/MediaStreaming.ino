@@ -24,7 +24,7 @@
  */
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 // The camera + mic drivers are ESP32-S3 / arduino-esp32-3.x only; guard so the sketch builds anywhere.
 #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0) && defined(CONFIG_IDF_TARGET_ESP32S3)

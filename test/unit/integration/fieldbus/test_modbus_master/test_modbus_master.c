@@ -1,8 +1,8 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "services/fieldbus/modbus/modbus.h"
-#include "services/fieldbus/modbus/modbus_master.h"
+#include "services/fieldbus/modbus/modbus/modbus.h"
+#include "services/fieldbus/modbus/modbus_master/modbus_master.h"
 #include <unity.h>
 
 static uint8_t modbus_master_work[16]; // the borrow an entry takes; ModbusMaster never reads it
@@ -1066,35 +1066,3 @@ void test_fc16_17_guards()
     TEST_ASSERT_EQUAL_INT(-1, ModbusMaster.i32);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_build_read_bytes);
-    RUN_TEST(test_build_rejects_bad_args);
-    RUN_TEST(test_round_trip_holding_regs);
-    RUN_TEST(test_round_trip_exception);
-    RUN_TEST(test_parse_short_frame_fails);
-    RUN_TEST(test_build_null_out_and_input_fc);
-    RUN_TEST(test_parse_null_adu);
-    RUN_TEST(test_parse_bad_protocol_id);
-    RUN_TEST(test_parse_unexpected_function);
-    RUN_TEST(test_parse_exception_null_out);
-    RUN_TEST(test_parse_bad_byte_count);
-    RUN_TEST(test_parse_max_regs_and_null_out);
-    RUN_TEST(test_parse_accepts_input_regs_function);
-    RUN_TEST(test_build_write_single_bytes);
-    RUN_TEST(test_round_trip_write_single);
-    RUN_TEST(test_build_write_multiple_bytes);
-    RUN_TEST(test_round_trip_write_multiple);
-    RUN_TEST(test_build_write_rejects_bad_args);
-    RUN_TEST(test_parse_write_response_edges);
-    RUN_TEST(test_round_trip_read_coils);
-    RUN_TEST(test_round_trip_read_discrete_inputs);
-    RUN_TEST(test_round_trip_write_single_coil);
-    RUN_TEST(test_round_trip_write_multiple_coils);
-    RUN_TEST(test_bit_build_and_parse_guards);
-    RUN_TEST(test_round_trip_mask_write);
-    RUN_TEST(test_round_trip_read_write_multiple);
-    RUN_TEST(test_fc16_17_guards);
-    return UNITY_END();
-}

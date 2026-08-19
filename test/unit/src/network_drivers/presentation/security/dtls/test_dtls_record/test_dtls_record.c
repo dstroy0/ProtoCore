@@ -11,7 +11,7 @@
 // number is not the real one and that the receiver still reconstructs it. Without both, records
 // would either be rejected by a conforming peer or leak the counter a datagram protocol hides.
 
-#include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 #include <string.h>
 
 #include <unity.h>

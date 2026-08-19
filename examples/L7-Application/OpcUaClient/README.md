@@ -75,7 +75,7 @@ with added explanatory comments:
 #define PROTOCORE_ENABLE_OPCUA_CLIENT 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/opcua/opcua.h"
 #include "services/opcua/opcua_client/opcua_client.h"
 

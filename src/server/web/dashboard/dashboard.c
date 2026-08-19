@@ -14,12 +14,12 @@
 
 #if PROTOCORE_ENABLE_DASHBOARD
 
-#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/web/dashboard/dashboard.h"
 
-#include "mmgr/membuild.h" // Sb: the route paths begin() composes
-#include "mmgr/protoframe.h"
-#include "mmgr/protostr.h"
+#include "mmgr/membuild/membuild.h" // Sb: the route paths begin() composes
+#include "mmgr/protoframe/protoframe.h"
+#include "mmgr/protostr/protostr.h"
 #include "protocore.h" // on_http / on_sse / on_ws: the tables the begin entry installs on
 
 PROTOCORE_BEGIN_DECLS

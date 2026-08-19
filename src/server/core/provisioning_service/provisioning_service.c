@@ -15,9 +15,9 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
 #if PROTOCORE_ENABLE_PROVISIONING
 
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str: the bounded-run walks
-#include "mmgr/secure.h"   // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
+#include "mmgr/secure/secure.h"   // the persistent end this module's state is taken from
 #include "provisioning_service.h"
 #include "server/clock/clock.h" // pcdelay
 #include "shared/hex/hex.h"
@@ -28,8 +28,8 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 // ---------------------------------------------------------------------------
 
 #include "test/core_setup/hal/nvs.h" // the credentials outlive the reboot that applies them
-#include "network_drivers/application/web_assets.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/application/web_assets/web_assets.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the catch-all DNS binds a port
 #include "protocore.h"
 

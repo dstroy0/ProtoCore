@@ -19,8 +19,8 @@
 // thresholds the clause names, X = P and X = -4, which is where a renderer that hardcodes one style
 // or gets the inequality inclusive-vs-exclusive wrong first disagrees.
 
-#include "mmgr/float_bits.h" // dbl.from_bits - the non-finite encodings, built from their fields
-#include "mmgr/membuild.h"
+#include "mmgr/float_bits/float_bits.h" // dbl.from_bits - the non-finite encodings, built from their fields
+#include "mmgr/membuild/membuild.h"
 #include <string.h>
 
 #include <unity.h>

@@ -8,8 +8,8 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/snmp -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/net/snmp/snmp_agent.h"
-#include "services/net/snmp/snmp_ber.h"
+#include "services/net/snmp/snmp_agent/snmp_agent.h"
+#include "services/net/snmp/snmp_ber/snmp_ber.h"
 
 #include <stdbool.h>
 #include <stddef.h>

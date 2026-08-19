@@ -9,14 +9,14 @@
 #ifndef PROTOCORE_SSH_COMMON_H
 #define PROTOCORE_SSH_COMMON_H
 
-#include "mmgr/bytes.h"       // protocore_span, bytes.* writers, bytes.rd_str / bytes.rd_u32 readers
-#include "mmgr/protostr.h"    // str.len: the length prefix on a written string
-#include "crypto/aead/chachapoly.h"   // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
-#include "crypto/asymmetric/bignum.h" // protocore_bignum - the DH ephemeral in the memory map
-#include "crypto/cipher/aes256ctr.h"  // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the aes keys and IVs
-#include "crypto/mac/hmac_sha256.h"   // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
-#include "crypto/pqc/sntrup761.h"     // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
-#include "network_drivers/presentation/ssh/transport/ssh_kexhash.h" // SSH_KEXHASH_MAX_LEN - the session id span
+#include "mmgr/bytes/bytes.h"       // protocore_span, bytes.* writers, bytes.rd_str / bytes.rd_u32 readers
+#include "mmgr/protostr/protostr.h"    // str.len: the length prefix on a written string
+#include "crypto/aead/chachapoly/chachapoly.h"   // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
+#include "crypto/asymmetric/bignum/bignum.h" // protocore_bignum - the DH ephemeral in the memory map
+#include "crypto/cipher/aes256ctr/aes256ctr.h"  // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the aes keys and IVs
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"   // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
+#include "crypto/pqc/sntrup761/sntrup761.h"     // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
+#include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h" // SSH_KEXHASH_MAX_LEN - the session id span
 
 #include "protocore_config.h" // protocore_types.h for the fixed widths, PROTOCORE_INLINE, the SSH sizing constants
 
@@ -367,6 +367,13 @@ static_assert((SSH_WIRE_CAP & (SSH_WIRE_CAP - 1u)) == 0u, "SSH_WIRE_CAP must sta
 // place by ssh_pkt_send_at(). What remains on the pool is a payload-sized transient.
 static_assert(PROTOCORE_WORK_SSH_CONN >= (size_t)SSH_PKT_BUF_SIZE,
               "PROTOCORE_WORK_SSH_CONN must cover one transient payload: raise it in protocore_config.h");
+
+// PROTOCORE_SSH_SLOT_BYTES is sized in protocore_config.h, which cannot see the offset chain above.
+// This is the translation unit that includes both, so it is where the number is checked against the
+// span it has to cover.
+static_assert(PROTOCORE_SSH_SLOT_BYTES >= SSH_SLOT_BORROW,
+              "PROTOCORE_SSH_SLOT_BYTES must cover one connection's whole span: raise it in protocore_config.h, "
+              "which sums it into the secure arena");
 
 // PROTOCORE_SSH_CPUB_MAX is sized in protocore_config.h, which cannot see the PQC key sizes. This is the
 // translation unit that includes both, so it is where the two spellings are checked against it.

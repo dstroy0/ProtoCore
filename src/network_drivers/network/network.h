@@ -20,7 +20,7 @@
 #ifndef PROTOCORE_NETWORK_H
 #define PROTOCORE_NETWORK_H
 
-#include "network_drivers/network/dns/dns.h"
+#include "network_drivers/network/dns/dns/dns.h"
 #include "shared/ip/ip.h"
 
 #include "protocore_config.h" // first: the feature flags the includes below are gated on

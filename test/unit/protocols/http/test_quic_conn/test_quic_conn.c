@@ -1,19 +1,19 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/hash/sha256.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/hash/sha256/sha256.h"
 // This suite asserts on the engine's own state - the packet-number spaces, the stream table, the
 // Probe Timeout - which the golden shape keeps private to quic_conn.c. It compiles that translation
 // unit into itself rather than widening the header, so quic_conn.h stays the public contract and
 // every assertion below reads the real thing. The env's src list drops quic_conn.c to match.
-#include "network_drivers/presentation/http/http3/quic_conn.c"
-#include "network_drivers/presentation/http/http3/quic_crypto.h"
-#include "network_drivers/presentation/http/http3/quic_frame.h"
-#include "network_drivers/presentation/http/http3/quic_packet.h"
-#include "network_drivers/presentation/http/http3/quic_tls.h"
-#include "network_drivers/presentation/http/http3/quic_varint.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
+#include "network_drivers/presentation/http/http3/quic_conn/quic_conn.c"
+#include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h"
+#include "network_drivers/presentation/http/http3/quic_frame/quic_frame.h"
+#include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
+#include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h"
+#include "network_drivers/presentation/http/http3/quic_varint/quic_varint.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 #include <string.h>
 
@@ -95,11 +95,11 @@ static size_t g_stream_len;
 static uint64_t g_stream_id;
 static proto_bool g_stream_fin;
 
-static void on_hs_done(void *, struct QuicConn *)
+static void on_hs_done(void *, uint8_t *)
 {
     g_hs_done = PROTO_TRUE;
 }
-static void on_stream_data(void *, struct QuicConn *, uint64_t id, const uint8_t *data, size_t len, proto_bool fin)
+static void on_stream_data(void *, uint8_t *, uint64_t id, const uint8_t *data, size_t len, proto_bool fin)
 {
     g_stream_id = id;
     if (len && g_stream_len + len <= sizeof(g_stream_data))
@@ -3369,60 +3369,3 @@ void test_quic_conn_pto_requeues_handshake_done_once()
     TEST_ASSERT_FALSE(g_qc.handshake_done_sent);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_full_handshake_and_stream);
-    RUN_TEST(test_quic_conn_null_callbacks);
-    RUN_TEST(test_quic_conn_stream_duplicate_and_stale_fin);
-    RUN_TEST(test_quic_conn_frame_dispatch_variants);
-    RUN_TEST(test_quic_recv_zero_version);
-    RUN_TEST(test_quic_recv_older_packet_number);
-    RUN_TEST(test_quic_recv_short_header_decrypt_failure);
-    RUN_TEST(test_quic_conn_crypto_after_handshake_done);
-    RUN_TEST(test_quic_conn_close_after_peer_close);
-    RUN_TEST(test_quic_conn_close_queued_then_peer_close);
-    RUN_TEST(test_quic_conn_close_send_no_room);
-    RUN_TEST(test_quic_conn_close_level_out_of_range);
-    RUN_TEST(test_quic_conn_highest_sealed_level_fallback);
-    RUN_TEST(test_quic_conn_crypto_flight_fragmented);
-    RUN_TEST(test_quic_conn_stream_tx_partitioning);
-    RUN_TEST(test_quic_conn_stream_tx_datagram_full);
-    RUN_TEST(test_quic_conn_stream_fin_only);
-    RUN_TEST(test_quic_conn_stream_send_clamped);
-    RUN_TEST(test_quic_conn_stream_send_sentinel_id);
-    RUN_TEST(test_quic_conn_pto_backoff_ceiling);
-    RUN_TEST(test_quic_conn_ack_owed_without_rx);
-    RUN_TEST(test_quic_conn_close_level_without_keys);
-    RUN_TEST(test_quic_conn_is_closed_draining_only);
-    RUN_TEST(test_quic_conn_pto_outstanding_per_space);
-    RUN_TEST(test_quic_conn_pto_disarms_when_all_acked);
-    RUN_TEST(test_quic_conn_pto_requeues_handshake_done_once);
-    RUN_TEST(test_pto_retransmits_flight);
-    RUN_TEST(test_connection_close_api);
-    RUN_TEST(test_connection_close_on_malformed_frame);
-    RUN_TEST(test_quic_send_amplification_limited);
-    RUN_TEST(test_quic_crypto_out_of_order_and_dup);
-    RUN_TEST(test_quic_timeout_when_closed);
-    RUN_TEST(test_quic_stream_send_table_full);
-    RUN_TEST(test_quic_recv_connection_close);
-    RUN_TEST(test_quic_recv_ping_and_max_data);
-    RUN_TEST(test_quic_recv_bad_version);
-    RUN_TEST(test_quic_recv_unsupported_long_type);
-    RUN_TEST(test_quic_recv_short_before_app_keys);
-    RUN_TEST(test_quic_recv_short_too_short);
-    RUN_TEST(test_quic_recv_unprotect_failure);
-    RUN_TEST(test_quic_recv_truncated_long_header);
-    RUN_TEST(test_quic_recv_malformed_initial_headers);
-    RUN_TEST(test_quic_recv_handshake_done_frame);
-    RUN_TEST(test_quic_conn_stream_frames);
-    RUN_TEST(test_quic_conn_crypto_window_clamp);
-    RUN_TEST(test_quic_conn_crypto_error_close);
-    RUN_TEST(test_quic_conn_no_keys_build);
-    RUN_TEST(test_quic_conn_pto_not_yet);
-    RUN_TEST(test_quic_conn_send_tiny_cap);
-    RUN_TEST(test_quic_conn_stream_nothing_to_send);
-    RUN_TEST(test_quic_conn_short_header_tiny_cap);
-    RUN_TEST(test_quic_conn_close_level_fallback);
-    return UNITY_END();
-}

@@ -11,7 +11,7 @@
 // RFC 6125 sec 6.4.3's three rules each get a case, and so does each way a wildcard can be
 // stretched past them - *.com, bar.*.example.net, and a wildcard asked to span a dot.
 
-#include "crypto/x509/x509.h"
+#include "crypto/x509/x509/x509.h"
 #include "x509_fixture.h"
 #include <string.h>
 

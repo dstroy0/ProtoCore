@@ -17,13 +17,65 @@ Everything under tools/ is reachable from here, so `harness.py help` is the whol
   crypto        test vectors and keys
   assets        diagrams, theme previews, favicons, svg tooltips
   hooks         git hooks: install, status, cspell, dependabot
-  build         build environments: envs, ccache, psram
+  build         THE BUILD: modules, cmake, split - plus envs, ccache, psram
   selftest      run the tools' own self-tests
   doc gen       regenerate the derived tables in tools/TOOLS.md
 
 The point is discovery. Half these scripts have names that do not say what they do, which is how
 the same tool gets written twice - and a tool nobody can find gets written a second time. One entry
 point means what a session learns about driving the tooling does not have to be re-derived.
+
+HOW THIS TREE BUILDS - READ THIS BEFORE TOUCHING A BUILD FILE
+
+  CMake, GENERATED FROM THE TREE. Every CMakeLists.txt under src/ says "GENERATED ... Do not edit"
+  and means it: a hand edit is reverted by the next `build modules` and reported as drift by
+  `ci check module_graph` in between. Change the generator, never the output.
+
+  A MODULE IS A DIRECTORY. One .c, the .h beside it, and the CMakeLists.txt declaring the target.
+  A new .c/.h pair dropped beside an existing one is wrong - `build split` moves it into its own
+  directory and rewrites every reference.
+
+    build modules    439 CMakeLists.txt under src/, one per directory
+    build cmake      test/CMakeLists.txt: one target and one ctest per env
+    build split      a pair still sharing a directory (dry run by default)
+
+  Dependencies are read out of what each module includes, split by WHICH FILE included it: a
+  header's includes are PUBLIC (they propagate, and only they can close a cycle), a .c's are
+  PRIVATE. Two .c files calling each other's published handle is ordinary C, not a cycle.
+
+  CTEST RUNS THE TESTS. Every one of them, every time, at 0.06 s per test:
+
+    tools/harness.py build cmake                                  regenerate test/CMakeLists.txt
+    cmake -S test -B build/native
+    cmake --build build/native -j                                 incremental; -- -k for every failure
+    ctest --test-dir build/native -j                              the whole matrix
+    ctest --test-dir build/native -R native_<env> --output-on-failure    one env
+
+  `test/harness.py run <env>` compiles an env from scratch by itself and does not read the CMake.
+  A from-scratch single-env compile is slower than building and running the WHOLE matrix here, so
+  it is never the faster check and never the right first move. Build with cmake, run with ctest.
+
+A HWCAP IS NEVER REMOVED. NOT ONCE, NOT TO MAKE A LINK SUCCEED.
+
+  A capability arm is a `#if PROTOCORE_HAS_HW_<X>` half and a `#if !PROTOCORE_HAS_HW_<X>` half.
+  Both ship. When an env fails to link a symbol a hw arm defines, that is the CAP BEING OFF, and
+  the fix is to turn it on and build the arm - never to swap in the portable half, never to delete
+  the hw source from the env, never to drop the flag.
+
+  A hw arm that lives in src/ and calls vendor silicon MOVES to test/core_setup/hal/<vendor>/ and
+  is guarded there. It does not get deleted: moving it is what keeps the vendor cap testable on
+  the host. Both arms always stay.
+
+  THE HOST DRIVES EVERYTHING - BOTH ARMS. The two halves are mutually exclusive, so one env cannot
+  hold both: give each its own env, same suite in both.
+
+    env add native_x_sw --after native_x --clone native_x
+    env update native_x_sw --drop-src <host arm> --src <portable arm> \
+                           --drop-flags=-DPROTOCORE_HAS_HW_X=1 --flags=-DPROTOCORE_HAS_HW_X=0
+
+  Audit before finishing any matrix work. Every hit must be a path rename, not a removal:
+
+    git diff test/test_matrix.json | grep "^-" | grep -iE "hal/|_hw|HW_"
 
 THE TWO THINGS THAT COST THE MOST TIME
 

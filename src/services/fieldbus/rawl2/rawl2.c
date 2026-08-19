@@ -12,7 +12,7 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 
 #if PROTOCORE_ENABLE_RAWL2
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/rawl2/rawl2.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC32_ISO_HDLC
 

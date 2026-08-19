@@ -492,23 +492,3 @@ void test_emit_overlong_name_is_noop()
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_format_types);
-    RUN_TEST(test_format_sample_rate);
-    RUN_TEST(test_format_tags_and_both);
-    RUN_TEST(test_format_guards);
-    RUN_TEST(test_emit_counter_and_negative);
-    RUN_TEST(test_emit_gauge_and_delta);
-    RUN_TEST(test_emit_timing_set_sampled);
-    RUN_TEST(test_emit_global_tags);
-    RUN_TEST(test_emit_noop_until_begin);
-    RUN_TEST(test_rate_clamp_and_stage_overflow);
-    RUN_TEST(test_format_guard_null_out_and_zero_cap);
-    RUN_TEST(test_format_append_chain_overflow_points);
-    RUN_TEST(test_format_rate_zero_and_empty_tags);
-    RUN_TEST(test_emit_zero_value_and_set_null_member);
-    RUN_TEST(test_emit_overlong_name_is_noop);
-    return UNITY_END();
-}

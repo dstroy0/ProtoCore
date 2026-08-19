@@ -26,7 +26,7 @@
 #define PROTOCORE_ENABLE_GRAPHQL 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/iot/graphql/graphql.h"
 
 static const char *SSID = "YOUR_SSID";

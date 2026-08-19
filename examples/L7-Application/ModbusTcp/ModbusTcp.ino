@@ -26,8 +26,8 @@
 #define PROTOCORE_ENABLE_MODBUS 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "services/fieldbus/modbus/modbus.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "services/fieldbus/modbus/modbus/modbus.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

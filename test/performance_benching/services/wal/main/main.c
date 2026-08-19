@@ -8,7 +8,7 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/wal -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/storage/wal/wal.h"
+#include "services/storage/wal/wal/wal.h"
 
 #include <stdbool.h>
 #include <stddef.h>

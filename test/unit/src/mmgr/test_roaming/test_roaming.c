@@ -18,7 +18,7 @@
 // ahead of it, so a decoder that reads the candidate at the fixed offset picks up whichever octets
 // the optional fields left there and hands the supplicant a BSSID that was never named.
 
-#include "network_drivers/datalink/roaming.h"
+#include "network_drivers/datalink/roaming/roaming.h"
 #include <string.h>
 
 #include <unity.h>

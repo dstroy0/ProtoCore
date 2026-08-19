@@ -17,8 +17,8 @@
 
 #if PROTOCORE_ENABLE_ROBOTICS
 
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protostr.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protostr/protostr.h"
 #include "services/opcua/models/robotics/robotics.h"
 #include "services/opcua/opcua.h"
 

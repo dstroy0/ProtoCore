@@ -312,22 +312,3 @@ void test_log_overflow_when_ready()
     TEST_ASSERT_EQUAL_UINT(0, udp_cap_len());
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_pri_local0_info);
-    RUN_TEST(test_pri_computation_varies);
-    RUN_TEST(test_nilvalue_for_empty_fields);
-    RUN_TEST(test_empty_message_ok);
-    RUN_TEST(test_overflow_returns_zero);
-    RUN_TEST(test_length_matches_strlen);
-    RUN_TEST(test_init_and_log_captured);
-    RUN_TEST(test_log_not_ready_when_no_server);
-    RUN_TEST(test_format_null_and_pri_clamp);
-    RUN_TEST(test_init_truncates_long_fields);
-    RUN_TEST(test_init_empty_server_ip_not_ready);
-    RUN_TEST(test_format_hostname_empty_appname_null);
-    RUN_TEST(test_format_append_boundaries);
-    RUN_TEST(test_log_overflow_when_ready);
-    return UNITY_END();
-}

@@ -134,13 +134,28 @@ static void cloudevents_read_binary(uint8_t *restrict work)
         return;
     }
 
-    CloudEvents.attr.id = http_get_header(CloudEvents.msg.req, CE_HDR_ID);
-    CloudEvents.attr.source = http_get_header(CloudEvents.msg.req, CE_HDR_SOURCE);
-    CloudEvents.attr.type = http_get_header(CloudEvents.msg.req, CE_HDR_TYPE);
-    CloudEvents.attr.subject = http_get_header(CloudEvents.msg.req, CE_HDR_SUBJECT);
+    HttpParser.get_header_args.req = CloudEvents.msg.req;
+    HttpParser.get_header_args.key = CE_HDR_ID;
+    HttpParser.get_header(protocore_http_parser_span());
+    CloudEvents.attr.id = HttpParser.text;
+    HttpParser.get_header_args.req = CloudEvents.msg.req;
+    HttpParser.get_header_args.key = CE_HDR_SOURCE;
+    HttpParser.get_header(protocore_http_parser_span());
+    CloudEvents.attr.source = HttpParser.text;
+    HttpParser.get_header_args.req = CloudEvents.msg.req;
+    HttpParser.get_header_args.key = CE_HDR_TYPE;
+    HttpParser.get_header(protocore_http_parser_span());
+    CloudEvents.attr.type = HttpParser.text;
+    HttpParser.get_header_args.req = CloudEvents.msg.req;
+    HttpParser.get_header_args.key = CE_HDR_SUBJECT;
+    HttpParser.get_header(protocore_http_parser_span());
+    CloudEvents.attr.subject = HttpParser.text;
     // datacontenttype rides in Content-Type, and a ce-datacontenttype header "MUST NOT also be
     // present in the message" (HTTP Protocol Binding 1.0.2 sec 3.1.1).
-    CloudEvents.attr.datacontenttype = http_get_header(CloudEvents.msg.req, CE_HDR_CONTENT_TYPE);
+    HttpParser.get_header_args.req = CloudEvents.msg.req;
+    HttpParser.get_header_args.key = CE_HDR_CONTENT_TYPE;
+    HttpParser.get_header(protocore_http_parser_span());
+    CloudEvents.attr.datacontenttype = HttpParser.text;
 
     CloudEvents.ok =
         ce_present(CloudEvents.attr.id) && ce_present(CloudEvents.attr.source) && ce_present(CloudEvents.attr.type);

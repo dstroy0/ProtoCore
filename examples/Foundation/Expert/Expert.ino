@@ -23,7 +23,7 @@
  */
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/tcp.h" // access conn_pool and ConnState
 
 static const char *SSID = "YOUR_SSID";

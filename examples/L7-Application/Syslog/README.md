@@ -63,7 +63,7 @@ added explanatory comments:
 #define PROTOCORE_ENABLE_SYSLOG 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/net/syslog/syslog.h"
 
 static const char *SSID = "YOUR_SSID";

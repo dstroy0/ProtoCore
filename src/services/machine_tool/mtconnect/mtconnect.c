@@ -7,8 +7,8 @@
  */
 
 #include "services/machine_tool/mtconnect/mtconnect.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 
 #if PROTOCORE_ENABLE_MTCONNECT
 

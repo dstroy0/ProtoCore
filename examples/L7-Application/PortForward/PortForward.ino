@@ -26,8 +26,8 @@
 #define PROTOCORE_ENABLE_RELAY 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "server/net/relay/relay_listener.h" // protocore_relay_publish
+#include "network_drivers/physical/physical/physical.h"
+#include "server/net/relay/relay_listener/relay_listener.h" // protocore_relay_publish
 
 // --- CHANGE ME: your WiFi ---
 static const char *SSID = "YOUR_SSID";

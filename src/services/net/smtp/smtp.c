@@ -11,11 +11,13 @@
  */
 
 #include "services/net/smtp/smtp.h"
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protostr.h" // str.len: the bounded length this library uses
-#include "mmgr/secure.h"   // the persistent end this module's key material is taken from
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protostr/protostr.h" // str.len: the bounded length this library uses
+#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
 #include "protocore_config.h"
 #include "server/clock/clock.h" // protocore_millis, pcdelay
+
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
 
 #if PROTOCORE_ENABLE_SMTP
 
@@ -323,7 +325,10 @@ static SmtpResult auth_response(uint8_t *restrict work, const char *secret)
     {
         return SMTP_ERR_OVERFLOW; // the encoding plus CRLF plus NUL must fit
     }
-    Base64.encode((const uint8_t *)secret, slen, SMTP_CTX(work)->b64);
+    Base64.encode_args.src = (const uint8_t *)secret;
+    Base64.encode_args.src_len = slen;
+    Base64.encode_args.dst = SMTP_CTX(work)->b64;
+    Base64.encode(base64_work);
     SMTP_CTX(work)->b64[elen] = '\r';
     SMTP_CTX(work)->b64[elen + 1] = '\n';
     SMTP_CTX(work)->b64[elen + 2] = '\0';

@@ -13,7 +13,7 @@
 // whose next lane is 0x01 reports BOTH lanes zero. Reading only the lowest set lane hides that, and
 // this header promises exactness so two masks may be ANDed and any lane read.
 
-#include "mmgr/swar.h"
+#include "mmgr/swar/swar.h"
 #include <string.h>
 
 #include <unity.h>

@@ -15,7 +15,7 @@
 // that same total. Length is what separates one datagram's messages, and it is the one field whose
 // width changes with the message, so its boundary is where a codec silently desynchronizes.
 
-#include "services/iot/mqtt/mqtt_sn.h"
+#include "services/iot/mqtt/mqtt_sn/mqtt_sn.h"
 #include <string.h>
 
 #include <unity.h>

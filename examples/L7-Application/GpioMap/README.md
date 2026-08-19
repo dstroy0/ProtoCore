@@ -58,8 +58,8 @@ toggles.
 #define PROTOCORE_ENABLE_GPIO_MAP 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "server/signaling/gpio_map.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "server/signaling/gpio_map/gpio_map.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

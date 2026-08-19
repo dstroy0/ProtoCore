@@ -19,9 +19,9 @@
 #include "network_drivers/application/ntp_server/ntp_server.h" // NTP/SNTP server (UDP/123) + ntp_server_build_response bench
 #include "network_drivers/application/nts/nts.h"       // NTS (RFC 8915) framing codecs - nts_ke_parse device bench
 #include "network_drivers/application/webdav/webdav.h" // webdav_ms_entry (207 Multi-Status hot op)
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/presentation/codec/base64/base64.h"   // base64_decode (Basic auth hot path)
-#include "network_drivers/presentation/codec/deflate/deflate.h" // deflate_raw (permessage-deflate TX hot op)
+#include "network_drivers/presentation/codec/deflate/deflate/deflate.h" // deflate_raw (permessage-deflate TX hot op)
 #include "network_drivers/presentation/codec/inflate/inflate.h" // inflate_raw (permessage-deflate RX hot op)
 #include "network_drivers/presentation/http/sse/sse.h"          // sse_format (SSE framing hot op)
 #include "network_drivers/transport/client.h"                   // protocore_client_* (device-as-Redis-client probe)
@@ -32,15 +32,15 @@
 #include "services/energy/sep2/sep2.h"          // IEEE 2030.5 (SEP2) resource codec - device-as-server XML interop
 #include "services/energy/sunspec/sunspec.h"    // SunSpec model codec - Common model seeded into the Modbus regs
 #include "services/fieldbus/bacnet/bacnet.h"    // BACnet/IP BVLC+NPDU codec - npdu_parse device bench + fuzz
-#include "services/fieldbus/modbus/modbus.h"    // Modbus TCP slave (TCP/502) + modbus_process_adu bench
+#include "services/fieldbus/modbus/modbus/modbus.h"    // Modbus TCP slave (TCP/502) + modbus_process_adu bench
 #include "services/fieldbus/opcua/opcua.h"      // OPC UA Binary server (TCP/4840) + handshake bench
 #include "services/fieldbus/s7comm/s7comm.h"    // Siemens S7 codec - s7_parse_header device bench + fuzz
-#include "services/file_transfer/ftp/ftp.h"     // FTP client wire codec (RFC 959) - device-as-FTP-client probe
+#include "services/file_transfer/ftp/ftp/ftp.h"     // FTP client wire codec (RFC 959) - device-as-FTP-client probe
 #include "services/iot/amqp/amqp.h"             // AMQP 0-9-1 frame/method codec - device-as-AMQP-client probe
-#include "services/iot/coap/coap.h"             // CoAP server (RFC 7252) + coap_server_process bench
+#include "services/iot/coap/coap/coap.h"             // CoAP server (RFC 7252) + coap_server_process bench
 #include "services/iot/graphql/graphql.h"       // GraphQL query engine - device-as-server POST /graphql interop
 #include "services/iot/grpcweb/grpcweb.h"       // gRPC-web framing - device-as-server POST /grpc interop
-#include "services/iot/mqtt/mqtt.h"             // MQTT 3.1.1 client codec (mqtt_build_publish bench)
+#include "services/iot/mqtt/mqtt/mqtt.h"             // MQTT 3.1.1 client codec (mqtt_build_publish bench)
 #include "services/iot/nats/nats.h"             // NATS pub/sub client codec - device-as-NATS-client probe
 #include "services/iot/protobuf/protobuf.h"     // Protobuf wire codec - gRPC-web message body (Greeter echo)
 #include "services/iot/redis_resp/redis_resp.h" // RESP2/3 codec (resp_parse fuzz + bench)
@@ -52,8 +52,8 @@
 #include "services/machine_tool/mtconnect/mtconnect.h" // MTConnect agent (probe/current/sample XML)
 #include "services/net/dns_server/dns_server.h" // Authoritative DNS server (UDP/53) + dns_server_build_response bench
 #include "services/net/smtp/smtp.h"             // SMTP client (RFC 5321) - device-as-SMTP-client probe + smtp_run bench
-#include "services/net/snmp/snmp_agent.h"       // SNMP v1/v2c agent (UDP/161) + snmp_agent_process bench
-#include "services/net/snmp/snmp_ber.h"         // BER encoder to build the /bench SNMP request
+#include "services/net/snmp/snmp_agent/snmp_agent.h"       // SNMP v1/v2c agent (UDP/161) + snmp_agent_process bench
+#include "services/net/snmp/snmp_ber/snmp_ber.h"         // BER encoder to build the /bench SNMP request
 #include "services/net/syslog/syslog.h"         // RFC 5424 syslog client (UDP) - device-as-syslog-client probe
 #include "services/net/ws_client/ws_client.h"   // outbound WebSocket client codec - WAMP transport for the probe
 #include "services/security/jwt/jwt.h"          // JWT HS256 bearer-auth verify - device-as-server /jwt/verify

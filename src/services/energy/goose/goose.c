@@ -7,8 +7,8 @@
  */
 
 #include "services/energy/goose/goose.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 
 #if PROTOCORE_ENABLE_GOOSE
 

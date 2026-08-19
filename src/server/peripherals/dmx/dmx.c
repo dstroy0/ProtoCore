@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DMX
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "server/peripherals/dmx/dmx.h"
 
 PROTOCORE_BEGIN_DECLS

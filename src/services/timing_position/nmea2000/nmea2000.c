@@ -7,7 +7,7 @@
  */
 
 #include "services/timing_position/nmea2000/nmea2000.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "shared/can/can.h"
 
 #if PROTOCORE_ENABLE_NMEA2000

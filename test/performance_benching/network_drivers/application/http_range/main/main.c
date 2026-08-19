@@ -6,7 +6,7 @@
 // per-request hot op for 206 Partial Content. Pure. Build/flash: pio run -d
 // performance_benching/network_drivers/application/http_range -t upload
 #include "device_bench.h"
-#include "network_drivers/application/http_range.h"
+#include "network_drivers/application/http_range/http_range.h"
 
 #include <stdbool.h>
 #include <stddef.h>

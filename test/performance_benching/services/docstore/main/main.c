@@ -19,7 +19,7 @@
 #include "device_bench.h"
 #include "services/storage/dbm/dbm.h"
 #include "services/storage/docstore/docstore.h"
-#include "services/storage/wal/wal_store.h"
+#include "services/storage/wal/wal_store/wal_store.h"
 
 #include <stdio.h>
 

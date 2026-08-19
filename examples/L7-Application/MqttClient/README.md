@@ -65,8 +65,8 @@ with added explanatory comments:
 #define PROTOCORE_ENABLE_MQTT 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
-#include "services/iot/mqtt/mqtt.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "services/iot/mqtt/mqtt/mqtt.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

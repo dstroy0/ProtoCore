@@ -15,7 +15,7 @@
 // signed or clamped comparison there reports every lifeline overdue at once, which is a spurious
 // emergency stop on a machine that was running correctly.
 
-#include "server/core/failsafe.h"
+#include "server/core/failsafe/failsafe.h"
 #include <string.h>
 
 #include <unity.h>

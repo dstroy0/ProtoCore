@@ -24,7 +24,7 @@
 #define PROTOCORE_ENABLE_LSV2 1
 
 #include "protocore.h" // library entry header (also sets the src/ include root)
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "services/machine_tool/lsv2/lsv2.h"
 

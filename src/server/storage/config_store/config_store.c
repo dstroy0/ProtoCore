@@ -11,9 +11,9 @@
  */
 
 #include "config_store.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
-#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
+#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 

@@ -13,7 +13,7 @@
 // while still reporting success. The kinds themselves are the vocabulary of protocore_config.h,
 // which separates a wired route (RFC 894 framing) from an IEEE 802 wireless one (RFC 1042).
 
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include <string.h>
 
 #include <unity.h>

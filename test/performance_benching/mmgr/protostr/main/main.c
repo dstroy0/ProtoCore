@@ -13,7 +13,7 @@
 // The haystack is 32 KB of repeated request headers, long enough that the word loops rather than the
 // call dominate, with a marker planted at a known head and tail offset.
 #include "device_bench.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protostr/protostr.h"
 
 #include <stddef.h>
 #include <stdint.h>

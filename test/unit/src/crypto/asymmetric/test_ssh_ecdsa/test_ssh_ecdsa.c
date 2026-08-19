@@ -13,7 +13,7 @@
 // ECDH is pinned to RFC 5903 sec 8.1 (256-bit Random ECP Group), which publishes both private keys,
 // both public points, and the single shared X coordinate the two sides must agree on.
 
-#include "crypto/asymmetric/ecdsa.h"
+#include "crypto/asymmetric/ecdsa/ecdsa.h"
 #include <string.h>
 
 #include <unity.h>

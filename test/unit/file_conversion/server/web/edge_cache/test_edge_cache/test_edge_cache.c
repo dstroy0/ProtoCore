@@ -24,13 +24,15 @@
 // internal key format. RFC 9110 sec 4.2.3 does fix which parts of a URI compare case-insensitively,
 // so that much of the key is anchored.
 
-#include "network_drivers/application/http_range.h"
+#include "network_drivers/application/http_range/http_range.h"
 #include "network_drivers/presentation/http/httpcache/httpcache.h"
-#include "server/web/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache/edge_cache.h"
 #include "shared/http_date/http_date.h"
 #include <string.h>
 
 #include <unity.h>
+
+static uint8_t httpcache_work[16]; // the borrow an entry takes; Httpcache never reads it
 
 static uint8_t http_range_work[16]; // the borrow an entry takes; HttpRange never reads it
 
@@ -444,7 +446,10 @@ void test_field_lookup_refuses_rather_than_truncates(void)
 
 static void parse_cc(const char *s, protocore_cache_control *cc)
 {
-    cache_control_parse(s, strlen(s), cc);
+    Httpcache.control_parse_args.s = s;
+    Httpcache.control_parse_args.len = strlen(s);
+    Httpcache.control_parse_args.cc = cc;
+    Httpcache.control_parse(httpcache_work);
 }
 
 // RFC 9111 sec 4.2.1 evaluates four rules and uses the first match:
@@ -476,7 +481,8 @@ void test_rfc9111_freshness_lifetime_precedence(void)
     TEST_ASSERT_EQUAL_INT32(50, EdgeCache.secs);
 
     protocore_cache_control none;
-    cache_control_init(&none);
+    Httpcache.control_init_args.cc = &none;
+    Httpcache.control_init(httpcache_work);
     EdgeCache.freshness_lifetime_args.cc = &none;
     EdgeCache.freshness_lifetime_args.shared = PROTO_TRUE;
     EdgeCache.freshness_lifetime_args.date_epoch = NOV6_1994;
@@ -1184,7 +1190,8 @@ void test_sweep_drops_only_unrevalidatable_stale_entries(void)
 void test_rfc9111_storeability(void)
 {
     protocore_cache_control cc;
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
     EdgeCache.is_storeable_args.status = 200;
     EdgeCache.is_storeable_args.method = "GET";
     EdgeCache.is_storeable_args.cc = &cc;
@@ -1389,7 +1396,8 @@ void test_freshness_falls_back_to_the_default_ttl(void)
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *e = store("/x", "");
     protocore_cache_control cc;
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
 
     EdgeCache.entry_set_freshness_args.e = e;
     EdgeCache.entry_set_freshness_args.cc = &cc;
@@ -1431,7 +1439,8 @@ void test_an_expires_in_the_past_stores_as_stale(void)
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *e = store("/x", "");
     protocore_cache_control cc;
-    cache_control_init(&cc);
+    Httpcache.control_init_args.cc = &cc;
+    Httpcache.control_init(httpcache_work);
 
     EdgeCache.entry_set_freshness_args.e = e;
     EdgeCache.entry_set_freshness_args.cc = &cc;

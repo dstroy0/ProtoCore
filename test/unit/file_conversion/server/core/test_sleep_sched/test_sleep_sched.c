@@ -38,7 +38,7 @@
 // value: the header documents no behavior for a null cfg, and 0 is the only report that does not
 // invent thresholds the caller never supplied.
 
-#include "server/core/sleep_sched.h"
+#include "server/core/sleep_sched/sleep_sched.h"
 
 #include <unity.h>
 

@@ -16,8 +16,8 @@
 
 #if PROTOCORE_ENABLE_EUROMAP77
 
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protostr.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protostr/protostr.h"
 #include "services/opcua/opcua.h"
 #include "services/opcua/models/euromap77/euromap77.h"
 

@@ -15,7 +15,7 @@
 #if PROTOCORE_ENABLE_DIFFSERV
 
 #include "diffserv.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 /**
  * @brief The two code points this server marks with, held where only this file describes them.

@@ -1053,6 +1053,92 @@
 #define PROTOCORE_SECURE_WORK_SSHCONN 0
 #endif
 
+// The dialling role's session: the negotiated methods, the relay connection, the KEX private scalar,
+// and the hybrid decapsulation key when one is built. Measured at 368 bytes classical, 2136 with
+// sntrup761 and 2768 with ML-KEM-768, which share one union so the larger arm is the size. Carries
+// the KEX private and the hybrid secret key, so the secure end.
+#ifndef PROTOCORE_SSH_CLIENT_BORROW
+#if PROTOCORE_ENABLE_PQC_KEX
+#define PROTOCORE_SSH_CLIENT_BORROW 2816u
+#elif PROTOCORE_ENABLE_SSH_SNTRUP761
+#define PROTOCORE_SSH_CLIENT_BORROW 2176u
+#else
+#define PROTOCORE_SSH_CLIENT_BORROW 384u
+#endif
+#endif
+
+#if PROTOCORE_ENABLE_SSH_CLIENT
+#define PROTOCORE_SECURE_WORK_SSHCLIENT PROTOCORE_SSH_CLIENT_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SSHCLIENT 0
+#endif
+
+// Every SSH connection's span, which ssh.c hands out one slot at a time. This is the largest single
+// borrow in the tree - 177472 bytes at the default sizing - and it is the bytes that used to sit in
+// ssh.c's BSS, so the arena grows by exactly what BSS shed. Slot memory holds the session keys, so
+// the secure end.
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+#define PROTOCORE_SECURE_WORK_SSHSLOTS PROTOCORE_SSH_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SSHSLOTS 0
+#endif
+
+// The SSH RSA host key: the borrowed span holding the private exponent, and whether it has been
+// parsed. Measured at 40 bytes; the key bytes themselves are a separate PROTOCORE_RSA_KEY_BYTES
+// borrow this points at. A private exponent, so the secure end.
+#ifndef PROTOCORE_SSH_RSA_BORROW
+#define PROTOCORE_SSH_RSA_BORROW 64u
+#endif
+
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+#define PROTOCORE_SECURE_WORK_SSHRSA PROTOCORE_SSH_RSA_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SSHRSA 0
+#endif
+
+// The SSH channel layer's remote-forward bindings (RFC 4254 sec 7.1), the application hooks it
+// calls back into, and the local-forward admission policy. Measured at 176 bytes with every SSH
+// capability on, and scales with PROTOCORE_SSH_RFWD_MAX. Carries the bound addresses a forward
+// names, so the secure end alongside the rest of the SSH state.
+#ifndef PROTOCORE_SSH_CONNECTION_BORROW
+#define PROTOCORE_SSH_CONNECTION_BORROW                                                                                \
+    ((size_t)PROTOCORE_SSH_RFWD_MAX * (PROTOCORE_SSH_FWD_HOST_MAX + 16u) + 128u)
+#endif
+
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+#define PROTOCORE_SECURE_WORK_SSHCONNECTION PROTOCORE_SSH_CONNECTION_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SSHCONNECTION 0
+#endif
+
+// The SSH auth layer's per-slot state: failure counts, the sec 4 timeout stamps, the user and
+// service each slot's state belongs to, the deferred password change, the armed keyboard-interactive
+// exchange, and the three application verifiers. Measured at 112 bytes, 144 with
+// PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE, and scales with MAX_SSH_CONNS. Carries user names and
+// a password change in flight, so the secure end.
+#ifndef PROTOCORE_SSH_AUTH_BORROW
+#define PROTOCORE_SSH_AUTH_BORROW ((size_t)MAX_SSH_CONNS * 160u + 32u)
+#endif
+
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+#define PROTOCORE_SECURE_WORK_SSHAUTH PROTOCORE_SSH_AUTH_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SSHAUTH 0
+#endif
+
+// The SSH transport machine's host signing keys - the ed25519 seed and public half, the P-256
+// scalar and point, whether each is loaded - and the runtime KEX preference. Measured at 164 bytes.
+// Host private keys, so the secure end.
+#ifndef PROTOCORE_SSH_TRANSPORT_BORROW
+#define PROTOCORE_SSH_TRANSPORT_BORROW 192u
+#endif
+
+#if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
+#define PROTOCORE_SECURE_WORK_SSHTRANSPORT PROTOCORE_SSH_TRANSPORT_BORROW
+#else
+#define PROTOCORE_SECURE_WORK_SSHTRANSPORT 0
+#endif
+
 #if PROTOCORE_ENABLE_AUTH
 #define PROTOCORE_SECURE_WORK_AUTH PROTOCORE_WORK_AUTH_TABLE
 #else
@@ -1417,6 +1503,9 @@
      PROTOCORE_SECURE_WORK_COAPSSERVER + PROTOCORE_SECURE_WORK_MQTT + PROTOCORE_SECURE_WORK_SNMPNOTIFY +               \
      PROTOCORE_SECURE_WORK_HTTPCLIENT + PROTOCORE_SECURE_WORK_SMTP + PROTOCORE_SECURE_WORK_WSCLIENT +                  \
      PROTOCORE_SECURE_WORK_SNMPV3 + PROTOCORE_SECURE_WORK_SNMPAGENT + PROTOCORE_SECURE_WORK_OAUTH2 +                   \
+     PROTOCORE_SECURE_WORK_SSHCLIENT + PROTOCORE_SECURE_WORK_SSHTRANSPORT +                                            \
+     PROTOCORE_SECURE_WORK_SSHAUTH + PROTOCORE_SECURE_WORK_SSHCONNECTION +                                             \
+     PROTOCORE_SECURE_WORK_SSHRSA + PROTOCORE_SECURE_WORK_SSHSLOTS +                                                   \
      256) // + 256: alignment round-up across the individual borrows
 #endif
 

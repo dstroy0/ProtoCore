@@ -7,12 +7,12 @@
  */
 
 #include "services/instrumentation/vxi11/vxi11.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 
 #if PROTOCORE_ENABLE_VXI11
 
-#include "mmgr/endian.h"
+#include "mmgr/endian/endian.h"
 
 static const uint32_t RPC_MSGTYPE_CALL = 0;
 static const uint32_t RPC_MSGTYPE_REPLY = 1;

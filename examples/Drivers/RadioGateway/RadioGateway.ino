@@ -21,8 +21,8 @@
 
 #include "protocore.h" // discovers the library (adds src/ to the include path)
 #include "server/net/gateway/gateway.h"
-#include "mmgr/dma.h"
-#include "server/core/preempt_queue.h"
+#include "mmgr/dma/dma.h"
+#include "server/core/preempt_queue/preempt_queue.h"
 
 
 static const uint8_t RADIO_PORT = 0; // DMA channel 0 == the LoRa module

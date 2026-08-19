@@ -12,7 +12,7 @@
 // peer silently rejects. Every SETTINGS bound below is the initial value or the legal range that
 // sec 6.5.2 states in words.
 
-#include "network_drivers/presentation/http/http2/h2_frame.h"
+#include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h"
 #include <string.h>
 
 #include <unity.h>

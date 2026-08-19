@@ -12,7 +12,7 @@
 // sec 3.2.6, and under sec 3.1.1 that is the two octets 03 00. A writer that packs high bit first,
 // or that pads a partial byte with anything but zero, emits different octets there.
 
-#include "mmgr/bitio.h"
+#include "mmgr/bitio/bitio.h"
 #include <string.h>
 
 #include <unity.h>

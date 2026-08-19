@@ -13,7 +13,7 @@
 // The remaining expected octets are derived here from the definitions X.690 and RFC 3417 state,
 // with the derivation written beside each vector.
 
-#include "services/net/snmp/snmp_ber.h"
+#include "services/net/snmp/snmp_ber/snmp_ber.h"
 #include <string.h>
 
 #include <unity.h>

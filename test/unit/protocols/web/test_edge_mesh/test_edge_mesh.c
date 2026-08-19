@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "network_drivers/presentation/http/httpcache/httpcache.h"
-#include "server/web/edge_cache/edge_cache.h"
-#include "server/web/edge_cache/edge_cache_sd.h"
-#include "server/web/edge_cache/edge_fetch.h"
-#include "server/web/edge_cache/edge_mesh.h"
+#include "server/web/edge_cache/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache_sd/edge_cache_sd.h"
+#include "server/web/edge_cache/edge_fetch/edge_fetch.h"
+#include "server/web/edge_cache/edge_mesh/edge_mesh.h"
 #include "shared/http_date/http_date.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -56,7 +56,7 @@ static void fill_entry(EdgeEntry *e, const char *canon, const char *etag, const 
     e->insert_ms = 0;
 }
 
-static void test_request_roundtrip()
+ void test_request_roundtrip()
 {
     uint8_t digest[32];
     for (int i = 0; i < 32; i++)
@@ -94,7 +94,7 @@ static void test_request_roundtrip()
     TEST_ASSERT_EQUAL_STRING(vary, v2);
 }
 
-static void test_request_incomplete_then_complete()
+ void test_request_incomplete_then_complete()
 {
     uint8_t digest[32];
     memset(digest, 0xAB, 32);
@@ -143,7 +143,7 @@ static void test_request_incomplete_then_complete()
     TEST_ASSERT_EQUAL(EDGE_MESH_PARSE_HIT, EdgeMesh.parse);
 }
 
-static void test_request_malformed()
+ void test_request_malformed()
 {
     uint8_t digest[32];
     memset(digest, 1, 32);
@@ -196,7 +196,7 @@ static void test_request_malformed()
     TEST_ASSERT_EQUAL(EDGE_MESH_PARSE_MALFORMED, EdgeMesh.parse);
 }
 
-static void test_entry_frame_roundtrip()
+ void test_entry_frame_roundtrip()
 {
     static const uint8_t body[] = {0x00, 0xFF, 0x10, 'a', 0x00, 'z', 0x7F, 0x80};
     char canon[PROTOCORE_EDGE_KEY_MAX];
@@ -253,7 +253,7 @@ static void test_entry_frame_roundtrip()
     TEST_ASSERT_EQUAL_UINT32(now2, out.insert_ms);
 }
 
-static void test_age_propagation()
+ void test_age_propagation()
 {
     static const uint8_t body[] = {'h', 'i'};
     char canon[PROTOCORE_EDGE_KEY_MAX];
@@ -330,7 +330,7 @@ static void build_hit_frame(uint8_t *frame, size_t cap, size_t *fn_out, long cur
     *fn_out = EdgeMesh.n;
 }
 
-static void test_response_roundtrip()
+ void test_response_roundtrip()
 {
     uint8_t frame[PROTOCORE_EDGE_MESH_ENTRY_MAX];
     size_t fn = 0;
@@ -387,7 +387,7 @@ static void test_response_roundtrip()
     TEST_ASSERT_EQUAL(EDGE_MESH_PARSE_MISS, EdgeMesh.parse);
 }
 
-static void test_response_malformed()
+ void test_response_malformed()
 {
     size_t eoff = 0;
     size_t elen = 0;
@@ -495,7 +495,7 @@ static EdgeMeshStatus run_mesh(EdgeMeshFetch *m, const EdgeFetchTransport *t, ui
 
 static uint8_t g_rbuf[PROTOCORE_EDGE_MESH_RESP_MAX];
 
-static void test_requester_hit()
+ void test_requester_hit()
 {
     uint8_t frame[PROTOCORE_EDGE_MESH_ENTRY_MAX];
     size_t fn = 0;
@@ -542,7 +542,7 @@ static void test_requester_hit()
     EdgeMesh.fetch_end(edge_mesh_work);
 }
 
-static void test_requester_miss()
+ void test_requester_miss()
 {
     uint8_t resp[8];
     EdgeMesh.build_response_args.hit = PROTO_FALSE;
@@ -568,7 +568,7 @@ static void test_requester_miss()
     TEST_ASSERT_EQUAL(EDGE_MESH_STATUS_MISS, run_mesh(&mf, &t, 1000));
 }
 
-static void test_requester_open_fail()
+ void test_requester_open_fail()
 {
     MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, -1, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
@@ -586,7 +586,7 @@ static void test_requester_open_fail()
     TEST_ASSERT_EQUAL(EDGE_MESH_STATUS_FAILED, mf.st);
 }
 
-static void test_requester_send_fail()
+ void test_requester_send_fail()
 {
     MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 7, PROTO_FALSE};
     EdgeFetchTransport t = peer_transport(&m);
@@ -604,7 +604,7 @@ static void test_requester_send_fail()
     TEST_ASSERT_EQUAL(EDGE_MESH_STATUS_FAILED, mf.st);
 }
 
-static void test_requester_timeout()
+ void test_requester_timeout()
 {
 
     uint8_t partial[4] = {'E', 'M', PROTOCORE_EDGE_MESH_VERSION, 1};
@@ -633,7 +633,7 @@ static void test_requester_timeout()
     TEST_ASSERT_EQUAL(EDGE_MESH_STATUS_FAILED, EdgeMesh.status);
 }
 
-static void test_requester_peer_closed_early()
+ void test_requester_peer_closed_early()
 {
     uint8_t partial[5] = {'E', 'M', PROTOCORE_EDGE_MESH_VERSION, 1, 0};
     MockPeer m = {partial, sizeof(partial), 0, 0, PROTO_TRUE, 7, PROTO_TRUE};
@@ -652,7 +652,7 @@ static void test_requester_peer_closed_early()
     TEST_ASSERT_EQUAL(EDGE_MESH_STATUS_FAILED, run_mesh(&mf, &t, 1000));
 }
 
-static void test_requester_malformed()
+ void test_requester_malformed()
 {
     uint8_t junk[6] = {'X', 'X', 0, 0, 0, 0};
     MockPeer m = {junk, sizeof(junk), 0, 0, PROTO_TRUE, 7, PROTO_TRUE};
@@ -671,7 +671,7 @@ static void test_requester_malformed()
     TEST_ASSERT_EQUAL(EDGE_MESH_STATUS_FAILED, run_mesh(&mf, &t, 1000));
 }
 
-static void test_parse_short_and_bad_prefixes()
+ void test_parse_short_and_bad_prefixes()
 {
     size_t eoff = 0;
     size_t elen = 0;
@@ -731,7 +731,7 @@ static void test_parse_short_and_bad_prefixes()
     TEST_ASSERT_EQUAL(EDGE_MESH_PARSE_MALFORMED, EdgeMesh.parse);
 }
 
-static void test_build_request_guards()
+ void test_build_request_guards()
 {
     uint8_t digest[32];
     memset(digest, 5, sizeof(digest));
@@ -777,7 +777,7 @@ static void test_build_request_guards()
     TEST_ASSERT_EQUAL_UINT(2 + 1 + 1 + 32 + 2 + strlen(canon) + 2, n);
 }
 
-static void test_parse_request_incomplete_at_every_field()
+ void test_parse_request_incomplete_at_every_field()
 {
     uint8_t digest[32];
     memset(digest, 0x5A, sizeof(digest));
@@ -821,7 +821,7 @@ static void test_parse_request_incomplete_at_every_field()
     TEST_ASSERT_EQUAL(EDGE_MESH_PARSE_HIT, EdgeMesh.parse);
 }
 
-static void test_parse_request_hdrs_too_long_for_destination()
+ void test_parse_request_hdrs_too_long_for_destination()
 {
     uint8_t digest[32];
     memset(digest, 1, sizeof(digest));
@@ -854,7 +854,7 @@ static void test_parse_request_hdrs_too_long_for_destination()
     TEST_ASSERT_EQUAL(EDGE_MESH_PARSE_MALFORMED, EdgeMesh.parse);
 }
 
-static void test_parse_request_null_outputs()
+ void test_parse_request_null_outputs()
 {
     uint8_t digest[32];
     memset(digest, 9, sizeof(digest));
@@ -880,7 +880,7 @@ static void test_parse_request_null_outputs()
     TEST_ASSERT_EQUAL(EDGE_MESH_PARSE_HIT, EdgeMesh.parse);
 }
 
-static void test_serialize_entry_guards_and_clamps()
+ void test_serialize_entry_guards_and_clamps()
 {
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), "/s");
@@ -952,7 +952,7 @@ static void test_serialize_entry_guards_and_clamps()
     TEST_ASSERT_EQUAL_INT(0, got.age_hdr);
 }
 
-static void test_deserialize_entry_guards()
+ void test_deserialize_entry_guards()
 {
     char canon[PROTOCORE_EDGE_KEY_MAX];
     mkcanon(canon, sizeof(canon), "/d");
@@ -1010,7 +1010,7 @@ static void test_deserialize_entry_guards()
     TEST_ASSERT_TRUE(EdgeMesh.ok);
 }
 
-static void test_build_response_guards()
+ void test_build_response_guards()
 {
     uint8_t out[64];
     uint8_t entry[8] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -1065,7 +1065,7 @@ static void test_build_response_guards()
     TEST_ASSERT_EQUAL_UINT(4 + 2 + 8, EdgeMesh.n);
 }
 
-static void test_parse_response_null_outputs()
+ void test_parse_response_null_outputs()
 {
     uint8_t frame[PROTOCORE_EDGE_MESH_ENTRY_MAX];
     size_t fn = 0;
@@ -1088,7 +1088,7 @@ static void test_parse_response_null_outputs()
     TEST_ASSERT_EQUAL(EDGE_MESH_PARSE_HIT, EdgeMesh.parse);
 }
 
-static void test_requester_begin_argument_guards()
+ void test_requester_begin_argument_guards()
 {
     MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
@@ -1164,7 +1164,7 @@ static void test_requester_begin_argument_guards()
     TEST_ASSERT_EQUAL_INT(-1, mf.cid);
 }
 
-static void test_requester_pump_guards()
+ void test_requester_pump_guards()
 {
     MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, 7, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
@@ -1215,7 +1215,7 @@ static void test_requester_pump_guards()
 
 static uint8_t g_flood[PROTOCORE_EDGE_MESH_RESP_MAX];
 
-static void test_requester_buffer_full_without_a_frame()
+ void test_requester_buffer_full_without_a_frame()
 {
 
     memset(g_flood, 0xAA, sizeof(g_flood));
@@ -1246,7 +1246,7 @@ static void test_requester_buffer_full_without_a_frame()
     TEST_ASSERT_EQUAL_UINT(sizeof(g_rbuf), mf.got);
 }
 
-static void test_requester_pump_skips_the_read_when_the_buffer_is_already_full()
+ void test_requester_pump_skips_the_read_when_the_buffer_is_already_full()
 {
 
     static uint8_t hdr[6] = {'E', 'M', PROTOCORE_EDGE_MESH_VERSION, 1, 0xFF, 0xFF};
@@ -1279,7 +1279,7 @@ static void test_requester_pump_skips_the_read_when_the_buffer_is_already_full()
     TEST_ASSERT_EQUAL_UINT(0, m.cursor);
 }
 
-static void test_requester_end_without_a_connection()
+ void test_requester_end_without_a_connection()
 {
     MockPeer m = {(const uint8_t *)"", 0, 0, 0, PROTO_FALSE, -1, PROTO_TRUE};
     EdgeFetchTransport t = peer_transport(&m);
@@ -1318,36 +1318,3 @@ static void test_requester_end_without_a_connection()
     TEST_ASSERT_EQUAL_INT(-1, mf.cid);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_request_roundtrip);
-    RUN_TEST(test_request_incomplete_then_complete);
-    RUN_TEST(test_request_malformed);
-    RUN_TEST(test_entry_frame_roundtrip);
-    RUN_TEST(test_age_propagation);
-    RUN_TEST(test_response_roundtrip);
-    RUN_TEST(test_response_malformed);
-    RUN_TEST(test_requester_hit);
-    RUN_TEST(test_requester_miss);
-    RUN_TEST(test_requester_open_fail);
-    RUN_TEST(test_requester_send_fail);
-    RUN_TEST(test_requester_timeout);
-    RUN_TEST(test_requester_peer_closed_early);
-    RUN_TEST(test_requester_malformed);
-    RUN_TEST(test_parse_short_and_bad_prefixes);
-    RUN_TEST(test_build_request_guards);
-    RUN_TEST(test_parse_request_incomplete_at_every_field);
-    RUN_TEST(test_parse_request_hdrs_too_long_for_destination);
-    RUN_TEST(test_parse_request_null_outputs);
-    RUN_TEST(test_serialize_entry_guards_and_clamps);
-    RUN_TEST(test_deserialize_entry_guards);
-    RUN_TEST(test_build_response_guards);
-    RUN_TEST(test_parse_response_null_outputs);
-    RUN_TEST(test_requester_begin_argument_guards);
-    RUN_TEST(test_requester_pump_guards);
-    RUN_TEST(test_requester_buffer_full_without_a_frame);
-    RUN_TEST(test_requester_pump_skips_the_read_when_the_buffer_is_already_full);
-    RUN_TEST(test_requester_end_without_a_connection);
-    return UNITY_END();
-}

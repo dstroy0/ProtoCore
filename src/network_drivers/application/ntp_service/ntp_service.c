@@ -9,22 +9,29 @@
  * sent, and keeps the epoch in its own state.
  */
 
-#include "ntp_service.h"
-#include "shared/http_date/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
-#include <time.h>                       // time_t: the epoch this module reports
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
-
-static uint8_t http_date_work[16]; // the borrow an entry takes; HttpDate never reads it
+// Both arms of the gate below format the HTTP Date header, so the formatter and the borrow its
+// entry takes sit above the gate rather than inside one arm.
+#include "shared/http_date/http_date.h" // HttpDate.format - the shared IMF-fixdate formatter
+static uint8_t http_date_work[16];      // the borrow an entry takes; HttpDate never reads it
 
 #if PROTOCORE_ENABLE_NTP
 
-#include "mmgr/endian.h"                                 // endian.rd32be / endian.wr32be: the timestamp fields
-#include "mmgr/secure.h"                                 // protocore_secure_persist_span: this module's storage
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "network_drivers/application/ntp_service/ntp_service.h"
+#include <time.h> // time_t: the epoch this module reports
+
+static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
+
+#include "mmgr/endian/endian.h"                          // endian.rd32be / endian.wr32be: the timestamp fields
+#include "mmgr/secure/secure.h"                          // protocore_secure_persist_span: this module's storage
 #include "network_drivers/application/ntp/ntp.h"         // the packet this role asks with
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the client port and the ask
 #include "server/clock/clock.h"                          // Clock.millis: how the epoch advances between syncs
 #include "shared/ip/ip.h"                                // Ip.parse: a server given as a literal address
+
+PROTOCORE_BEGIN_DECLS
 
 // A successful sync moves the clock well past this sentinel (2021-01-01 UTC);
 // a cold-booted RTC sits near the Unix epoch.
@@ -40,19 +47,53 @@ typedef struct
     uint32_t cookie;    ///< the transmit stamp the reply must echo as its origin
     protocore_span req; ///< the request in flight, borrowed once and held
 } NtpSvcCtx;
-static NtpSvcCtx s_ntp_svc = {0, 0, 0, {NULL, 0, 0, PROTO_FALSE}};
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define NTP_SERVICE_OFF_CTX 0u
+static_assert(NTP_SERVICE_OFF_CTX + sizeof(NtpSvcCtx) <= PROTOCORE_NTP_SERVICE_BORROW,
+              "PROTOCORE_NTP_SERVICE_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define NTP_SERVICE_CTX(w) ((NtpSvcCtx *)(void *)((w) + NTP_SERVICE_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
+{
+    uint8_t *span; ///< PROTOCORE_NTP_SERVICE_BORROW persistent bytes, or null while the pool was short
+} NtpServiceOwnCtx;
+static NtpServiceOwnCtx s_own;
+
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_ntp_service_span(void)
+{
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_NTP_SERVICE_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
 
 // Take the request borrow on first use and hold it for the life of the program. The cookie it
 // carries is what authenticates the reply, so the bytes come from the secure pool, whose release
 // wipes. False when the pool cannot cover it, and begin() fails closed on that.
-static proto_bool ntp_mem_bind(void)
+static proto_bool ntp_mem_bind(uint8_t *restrict work)
 {
-    if (span.has_storage(s_ntp_svc.req))
+    if (span.has_storage(NTP_SERVICE_CTX(work)->req))
     {
         return PROTO_TRUE;
     }
-    s_ntp_svc.req = protocore_secure_persist_span(PROTOCORE_NTP_PACKET_LEN);
-    return span.has_storage(s_ntp_svc.req);
+    NTP_SERVICE_CTX(work)->req = protocore_secure_persist_span(PROTOCORE_NTP_PACKET_LEN);
+    return span.has_storage(NTP_SERVICE_CTX(work)->req);
 }
 
 /**
@@ -73,6 +114,14 @@ static uint32_t ntp_now(void)
 
 static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_udp_peer *peer, void *ctx)
 {
+    // The signature belongs to whoever dispatches this, so the borrow comes from the
+    // accessor rather than a parameter.
+    uint8_t *restrict work = protocore_ntp_service_span();
+    if (work == NULL)
+    {
+        return;
+    }
+
     (void)peer;
     (void)ctx;
     if (len < PROTOCORE_NTP_PACKET_LEN)
@@ -87,7 +136,7 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
     {
         return; // stratum 0 is a kiss-o'-death; past 15 is unsynchronized
     }
-    if (endian.rd32be(data + PROTOCORE_NTP_OFF_ORIGIN_SEC) != s_ntp_svc.cookie)
+    if (endian.rd32be(data + PROTOCORE_NTP_OFF_ORIGIN_SEC) != NTP_SERVICE_CTX(work)->cookie)
     {
         return; // not an answer to what this client asked
     }
@@ -101,12 +150,23 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
     {
         return; // a server that answers with a pre-2021 clock is not one to follow
     }
-    s_ntp_svc.epoch = epoch;
-    s_ntp_svc.sync_ms = ntp_now();
+    NTP_SERVICE_CTX(work)->epoch = epoch;
+    NTP_SERVICE_CTX(work)->sync_ms = ntp_now();
 }
 
-proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *server2)
+// The entries this file calls before reaching their definitions.
+static void ntp_service_epoch(uint8_t *restrict work);
+
+static void ntp_service_begin(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const char *tz = NtpService.begin_args.tz;
+    const char *server1 = NtpService.begin_args.server1;
+    const char *server2 = NtpService.begin_args.server2;
+
     (void)tz; // the epoch this client reports is UTC; nothing here formats a local time
     (void)server2;
     const char *host = PROTOCORE_NTP_SERVER1;
@@ -115,16 +175,18 @@ proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *
         host = server1;
     }
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    if (!ntp_mem_bind())
+    if (!ntp_mem_bind(work))
     {
-        return PROTO_FALSE; // no storage
+        NtpService.ok = PROTO_FALSE; // no storage
+        return;
     }
     Ip.args.text = host;
     Ip.args.out = &dst;
     Ip.parse(ip_work);
     if (!Ip.ok)
     {
-        return PROTO_FALSE; // a name, and this client has no resolver of its own
+        NtpService.ok = PROTO_FALSE; // a name, and this client has no resolver of its own
+        return;
     }
     // Bind every time rather than remembering: the listener rebinds a port it already holds, and a
     // port closed underneath this client is exactly the case a remembered flag would send a datagram
@@ -136,51 +198,71 @@ proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *
     UdpListener.listen(protocore_udp_listener_span());
     if (!UdpListener.ok)
     {
-        return PROTO_FALSE;
+        NtpService.ok = PROTO_FALSE;
+        return;
     }
     // The transmit stamp doubles as the cookie the reply has to echo. Ticks, not a clock: this runs
     // before there is one.
-    s_ntp_svc.cookie = ntp_now() | 1u;
-    uint8_t *req = s_ntp_svc.req.buf;
+    NTP_SERVICE_CTX(work)->cookie = ntp_now() | 1u;
+    uint8_t *req = NTP_SERVICE_CTX(work)->req.buf;
     for (size_t i = 0; i < PROTOCORE_NTP_PACKET_LEN; i++)
     {
         req[i] = 0;
     }
     req[0] = PROTOCORE_NTP_LI_VN_MODE(PROTOCORE_NTP_LI_NONE, PROTOCORE_NTP_VERSION, PROTOCORE_NTP_MODE_CLIENT);
-    endian.wr32be(req + PROTOCORE_NTP_OFF_TX_SEC, s_ntp_svc.cookie);
+    endian.wr32be(req + PROTOCORE_NTP_OFF_TX_SEC, NTP_SERVICE_CTX(work)->cookie);
     UdpListener.send_args.dst = &dst;
     UdpListener.send_args.dst_port = PROTOCORE_NTP_PORT;
     UdpListener.send_args.data = req;
     UdpListener.send_args.len = PROTOCORE_NTP_PACKET_LEN;
     UdpListener.sendto(protocore_udp_listener_span());
-    return UdpListener.ok;
+    NtpService.ok = UdpListener.ok;
 }
 
-proto_bool protocore_ntp_synced(void)
+static void ntp_service_synced(uint8_t *restrict work)
 {
-    return s_ntp_svc.epoch != 0;
-}
-
-time_t protocore_ntp_epoch(void)
-{
-    if (s_ntp_svc.epoch == 0)
+    if (!work)
     {
-        return 0;
+        return; // the pool was short of this module's borrow
+    }
+
+    NtpService.ok = NTP_SERVICE_CTX(work)->epoch != 0;
+}
+
+static void ntp_service_epoch(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    if (NTP_SERVICE_CTX(work)->epoch == 0)
+    {
+        NtpService.value = 0;
+        return;
     }
     // The reply fixed one instant; the monotonic clock carries it forward from there.
-    uint32_t elapsed = ntp_now() - s_ntp_svc.sync_ms;
-    return s_ntp_svc.epoch + (time_t)(elapsed / 1000u);
+    uint32_t elapsed = ntp_now() - NTP_SERVICE_CTX(work)->sync_ms;
+    NtpService.value = NTP_SERVICE_CTX(work)->epoch + (time_t)(elapsed / 1000u);
 }
 
-void protocore_ntp_set_test_epoch(time_t epoch)
+static void ntp_service_set_test_epoch(uint8_t *restrict work)
 {
-    s_ntp_svc.epoch = epoch;
-    s_ntp_svc.sync_ms = ntp_now();
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    time_t epoch = NtpService.set_test_epoch_args.epoch;
+
+    NTP_SERVICE_CTX(work)->epoch = epoch;
+    NTP_SERVICE_CTX(work)->sync_ms = ntp_now();
 }
 
 size_t protocore_ntp_http_date(char *out, size_t out_cap)
 {
-    HttpDate.args.epoch = protocore_ntp_epoch();
+    // Not an entry, so the borrow comes from the accessor rather than a parameter.
+    NtpService.epoch(protocore_ntp_service_span());
+    HttpDate.args.epoch = NtpService.value;
     HttpDate.args.out = out;
     HttpDate.args.out_cap = (uint32_t)out_cap;
     HttpDate.format(http_date_work);
@@ -204,8 +286,24 @@ size_t protocore_ntp_http_date(char *out, size_t out_cap)
 // NTP as a registry time source (protocore_ntp_epoch is 0 until a reply lands). Register it with
 // protocore_time_source_add() so the aggregated protocore_time_now() - and the HTTP Date header - can be fed by
 // NTP alongside an RTC / GPS.
-uint32_t protocore_ntp_time_source(void)
+static void ntp_service_time_source(uint8_t *restrict work)
 {
-    return (uint32_t)protocore_ntp_epoch();
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
+    ntp_service_epoch(work);
+    NtpService.ms = (uint32_t)NtpService.value;
 }
+NtpServiceNs NtpService = {
+    .begin = ntp_service_begin,
+    .synced = ntp_service_synced,
+    .epoch = ntp_service_epoch,
+    .time_source = ntp_service_time_source,
+    .set_test_epoch = ntp_service_set_test_epoch,
+};
+
+PROTOCORE_END_DECLS
+
 #endif

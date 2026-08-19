@@ -19,8 +19,8 @@
 // The env sizes PROTOCORE_PQ_DEPTH 4, PROTOCORE_PQ_ITEM_SIZE 16, PROTOCORE_DMA_BUF_SIZE 8,
 // PROTOCORE_DMA_CHANNELS 2.
 
-#include "mmgr/dma.h"
-#include "server/core/preempt_queue.h"
+#include "mmgr/dma/dma.h"
+#include "server/core/preempt_queue/preempt_queue.h"
 // The host DMA driver defines the protocore_dma_hw_* hooks with external linkage, so it belongs to
 // exactly one translation unit. Unity's runner generator copies every line matching "#include" at
 // the start of a line into the runner; the space after the '#' keeps this one out of that copy and

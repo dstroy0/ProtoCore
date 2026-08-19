@@ -12,9 +12,9 @@
  */
 
 #include "services/security/oauth2/oauth2.h"
-#include "mmgr/membuild.h"  // Sb: the bounded builder the body is written with
-#include "mmgr/protomem.h"  // mem.cpy: the reply into the module's own buffer
-#include "mmgr/secure.h"    // the persistent end this module's key material is taken from
+#include "mmgr/membuild/membuild.h"  // Sb: the bounded builder the body is written with
+#include "mmgr/protomem/protomem.h"  // mem.cpy: the reply into the module's own buffer
+#include "mmgr/secure/secure.h"    // the persistent end this module's key material is taken from
 #include "shared/hex/hex.h" // Hex.digit: the two digits of a percent-encoded octet
 
 static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it

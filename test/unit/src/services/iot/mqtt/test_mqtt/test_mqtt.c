@@ -14,7 +14,7 @@
 // first and last value with the exact octets beside it, and Remaining Length is what separates one
 // Control Packet from the next on a byte stream, so an off-by-one there desynchronizes the session.
 
-#include "services/iot/mqtt/mqtt.h"
+#include "services/iot/mqtt/mqtt/mqtt.h"
 #include <string.h>
 
 #include <unity.h>

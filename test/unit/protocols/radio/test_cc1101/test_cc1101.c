@@ -432,26 +432,3 @@ void test_send_null_spi(void)
     TEST_ASSERT_FALSE(Cc1101.ok);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_init_configures_and_detects);
-    RUN_TEST(test_init_fails_when_absent);
-    RUN_TEST(test_send_writes_fifo_and_strobes_tx);
-    RUN_TEST(test_send_rejects_bad_len);
-    RUN_TEST(test_tx_done);
-    RUN_TEST(test_set_rx);
-    RUN_TEST(test_recv_reads_packet_and_rssi);
-    RUN_TEST(test_recv_empty);
-    RUN_TEST(test_recv_truncates);
-    RUN_TEST(test_rssi_decode);
-    RUN_TEST(test_send_guard_subconditions);
-    RUN_TEST(test_init_null_args);
-    RUN_TEST(test_init_no_regs);
-    RUN_TEST(test_tx_done_null_args);
-    RUN_TEST(test_set_rx_null_args);
-    RUN_TEST(test_recv_null_args);
-    RUN_TEST(test_recv_bad_length);
-    RUN_TEST(test_send_null_spi);
-    return UNITY_END();
-}

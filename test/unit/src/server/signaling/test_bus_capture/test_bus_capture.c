@@ -14,7 +14,7 @@
 //
 // ISO 11898-1 fixes the identifier widths the flags select between: 11 bits standard, 29 extended.
 
-#include "server/signaling/bus_capture.h"
+#include "server/signaling/bus_capture/bus_capture.h"
 #include "shared/pcap/pcap.h"
 #include <string.h>
 

@@ -7,8 +7,8 @@
  */
 
 #include "services/fieldbus/j1939/j1939.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
 #include "shared/can/can.h"
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths

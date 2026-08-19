@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_BLE_GATT
 
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem.h"
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protomem/protomem.h"
 #include "services/radio/ble_gatt/ble_gatt.h"
 #include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 

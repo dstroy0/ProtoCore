@@ -12,7 +12,7 @@
 // The nonce advance is RFC 5647 sec 7.1: the 12-octet IV is a 4-octet fixed field followed by an
 // 8-octet invocation counter incremented once per binary packet.
 
-#include "crypto/aead/aesgcm.h"
+#include "crypto/aead/aesgcm/aesgcm.h"
 #include <string.h>
 
 #include <unity.h>

@@ -12,11 +12,15 @@
  * the output buffer doubles as the LZ77 window (see inflate.h).
  */
 
-#include "inflate.h"
-#include "mmgr/protomem.h"
-#include "network_drivers/presentation/codec/deflate/rfc1951.h" // RFC1951: the sec 3.2.5 tables
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_WS_DEFLATE
+
+#include "inflate.h"
+#include "mmgr/protomem/protomem.h"
+#include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h" // RFC1951: the sec 3.2.5 tables
+
+PROTOCORE_BEGIN_DECLS
 
 #define PROTOCORE_MAXBITS 15    // max bits in a Huffman code
 #define PROTOCORE_MAXLCODES 288 // max literal/length codes
@@ -371,12 +375,26 @@ static InflateResult dynamic(State *s, Huffman *lencode, Huffman *distcode, shor
     return codes(s, lencode, distcode);
 }
 
-static InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *dst, size_t dst_cap, size_t *out_len,
-                                 void *scratch, size_t scratch_len)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void inflate_raw(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *src = Inflate.raw_args.src;
+    size_t src_len = Inflate.raw_args.src_len;
+    uint8_t *dst = Inflate.raw_args.dst;
+    size_t dst_cap = Inflate.raw_args.dst_cap;
+    size_t *out_len = Inflate.raw_args.out_len;
+    void *scratch = Inflate.raw_args.scratch;
+    size_t scratch_len = Inflate.raw_args.scratch_len;
+
     if (scratch_len < INFLATE_SCRATCH_SIZE)
     {
-        return INFLATE_ERR_SCRATCH;
+        Inflate.value = INFLATE_ERR_SCRATCH;
+        return;
     }
 
     Tables *t = (Tables *)scratch;
@@ -408,7 +426,8 @@ static InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *ds
         int type = bits(&s, 2);
         if (s.err)
         {
-            return INFLATE_ERR_MALFORMED;
+            Inflate.value = INFLATE_ERR_MALFORMED;
+            return;
         }
 
         InflateResult rc;
@@ -426,19 +445,25 @@ static InflateResult inflate_raw(const uint8_t *src, size_t src_len, uint8_t *ds
         }
         else
         {
-            return INFLATE_ERR_MALFORMED; // type 3 is reserved
+            Inflate.value = INFLATE_ERR_MALFORMED; // type 3 is reserved
+            return;
         }
 
         if (rc != INFLATE_OK)
         {
-            return rc;
+            Inflate.value = rc;
+            return;
         }
     } while (!last);
 
     *out_len = s.outcnt;
-    return INFLATE_OK;
+    Inflate.value = INFLATE_OK;
 }
 
-const InflateNs Inflate = {inflate_raw};
+InflateNs Inflate = {
+    .raw = inflate_raw,
+};
+
+PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_WS_DEFLATE

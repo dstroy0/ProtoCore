@@ -1,9 +1,9 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "network_drivers/presentation/http/http2/h2_conn.c"
-#include "network_drivers/presentation/http/http2/h2_frame.h"
-#include "network_drivers/presentation/http/http2/hpack.c"
+#include "network_drivers/presentation/http/http2/h2_conn/h2_conn.c"
+#include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h"
+#include "network_drivers/presentation/http/http2/hpack/hpack.c"
 #include <string.h>
 
 #include <unity.h>
@@ -1121,49 +1121,3 @@ void test_h2_respond_content_length_no_room(void)
     TEST_ASSERT_EQUAL_INT(1, count_frames(cap.out, cap.out_len, H2_HEADERS, NULL));
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_init_and_request);
-    RUN_TEST(test_respond_roundtrip);
-    RUN_TEST(test_ping_and_split_recv);
-    RUN_TEST(test_bad_preface);
-    RUN_TEST(test_h2_headers_padded_priority);
-    RUN_TEST(test_h2_headers_pad_overflow);
-    RUN_TEST(test_h2_stream_id_must_increase);
-    RUN_TEST(test_h2_headers_rfc7541_c31_block);
-    RUN_TEST(test_h2_trailers_on_open_stream);
-    RUN_TEST(test_h2_trailers_without_end_stream_reset_the_stream);
-    RUN_TEST(test_h2_trailers_reject_pseudo_headers);
-    RUN_TEST(test_h2_headers_on_ended_stream_is_a_connection_error);
-    RUN_TEST(test_h2_headers_bad_stream_id);
-    RUN_TEST(test_h2_stream_table_full_rst);
-    RUN_TEST(test_h2_continuation);
-    RUN_TEST(test_h2_continuation_guards);
-    RUN_TEST(test_h2_data);
-    RUN_TEST(test_h2_window_update);
-    RUN_TEST(test_h2_rst_priority_push);
-    RUN_TEST(test_h2_goaway_then_ignore);
-    RUN_TEST(test_h2_settings_ack_and_bad);
-    RUN_TEST(test_h2_ping_bad);
-    RUN_TEST(test_h2_frame_too_big);
-    RUN_TEST(test_h2_respond_paths_and_goaway);
-    RUN_TEST(test_h2_more_guards);
-    RUN_TEST(test_h2_continuation_more);
-    RUN_TEST(test_h2_respond_content_type_too_big);
-    RUN_TEST(test_h2_null_callbacks);
-    RUN_TEST(test_h2_headers_stream_zero);
-    RUN_TEST(test_h2_continuation_without_headers);
-    RUN_TEST(test_h2_idle_stream_frames_are_connection_errors);
-    RUN_TEST(test_h2_window_update_on_a_closed_stream_is_ignored);
-    RUN_TEST(test_h2_frame_size_and_stream_id_rules);
-    RUN_TEST(test_h2_content_length_must_match_the_data);
-    RUN_TEST(test_h2_continuation_flood_is_bounded);
-    RUN_TEST(test_h2_data_empty_and_unknown_stream);
-    RUN_TEST(test_h2_data_after_end_stream_resets_the_stream);
-    RUN_TEST(test_h2_window_update_zero_and_overflow);
-    RUN_TEST(test_h2_continuation_after_stream_freed);
-    RUN_TEST(test_h2_respond_default_chunk_size);
-    RUN_TEST(test_h2_respond_content_length_no_room);
-    return UNITY_END();
-}

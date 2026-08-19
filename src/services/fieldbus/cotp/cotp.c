@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_COTP
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/cotp/cotp.h"
 
 PROTOCORE_BEGIN_DECLS

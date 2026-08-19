@@ -29,7 +29,7 @@
  */
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/presentation/ssh/ssh_client.h"
 #include "shared/mime/mime.h"
 

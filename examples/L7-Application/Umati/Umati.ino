@@ -26,7 +26,7 @@
 #define PROTOCORE_ENABLE_UMATI 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/opcua/models/umati/umati.h"
 #include <math.h>
 

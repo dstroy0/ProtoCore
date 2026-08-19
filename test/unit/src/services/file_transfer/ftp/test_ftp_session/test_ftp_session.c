@@ -11,7 +11,7 @@
 // test_ftp covers the wire codec these steps build and parse. This covers the state machine that
 // orders them, its refusals, and what it does with a connection that never comes up.
 
-#include "services/file_transfer/ftp/ftp_session.c"
+#include "services/file_transfer/ftp/ftp_session/ftp_session.c"
 
 #include "network_drivers/transport/tcp/client/client.h"
 
@@ -21,11 +21,12 @@
 
 static uint8_t g_payload[64];
 
-static size_t src_bytes(void *ctx, uint8_t *out, size_t cap)
+static size_t src_bytes(void *ctx, size_t offset, uint8_t *out, size_t cap)
 {
     (void)ctx;
-    const size_t n = cap < sizeof(g_payload) ? cap : sizeof(g_payload);
-    mem.cpy(out, g_payload, n);
+    const size_t left = offset < sizeof(g_payload) ? sizeof(g_payload) - offset : 0;
+    const size_t n = cap < left ? cap : left;
+    mem.cpy(out, g_payload + offset, n);
     return n;
 }
 

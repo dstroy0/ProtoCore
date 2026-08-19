@@ -11,16 +11,18 @@
  * called by the route dispatcher.
  */
 
-#include "mmgr/membuild.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str.has: the permessage-deflate token in Sec-WebSocket-Extensions
+#include "mmgr/membuild/membuild.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h" // str.has: the permessage-deflate token in Sec-WebSocket-Extensions
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq, http_pool: the request being upgraded
 #include "network_drivers/transport/tcp/protocol/protocol.h"           // ConnPool: the slot a refusal is written on
 #include "network_drivers/transport/tcp/tcp.h"
+static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
+
 #if PROTOCORE_ENABLE_WEBSOCKET
-#include "crypto/hash/sha1.h"
-#include "mmgr/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span.h"   // protocore_span, span.ok
+#include "crypto/hash/sha1/sha1.h"
+#include "mmgr/secure/secure.h" // the pool the digest borrow comes from
+#include "mmgr/span/span.h"     // protocore_span, span.ok
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #include "network_drivers/session/ws/ws.h" // SessionWs: the channel this handshake opens
@@ -61,7 +63,11 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     }
     // RFC 6455 4.2.1: the Sec-WebSocket-Key must base64-decode to exactly 16 bytes.
     uint8_t raw[24];
-    if (Base64.decode(client_key, raw, sizeof(raw)) != 16)
+    Base64.decode_args.src = client_key;
+    Base64.decode_args.dst = raw;
+    Base64.decode_args.dst_cap = sizeof(raw);
+    Base64.decode(base64_work);
+    if (Base64.n != 16)
     {
         out[0] = '\0';
         return PROTO_FALSE;
@@ -85,7 +91,10 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     Sha1.hash_args.out = digest;
     Sha1.hash(w.buf);
     protocore_secure_release(mark);
-    Base64.encode(digest, PROTOCORE_SHA1_DIGEST_LEN, out);
+    Base64.encode_args.src = digest;
+    Base64.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
+    Base64.encode_args.dst = out;
+    Base64.encode(base64_work);
     return PROTO_TRUE;
 }
 
@@ -102,7 +111,8 @@ void ws_send_version_required(uint8_t slot_id)
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
-        http_parser_reset(&http_pool[slot_id]);
+        HttpParser.reset_args.req = &http_pool[slot_id];
+        HttpParser.reset(protocore_http_parser_span());
         return;
     }
 
@@ -118,7 +128,8 @@ void ws_send_version_required(uint8_t slot_id)
     ConnPool.flush(protocore_conn_pool_span());
     ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
 
-    http_parser_reset(&http_pool[slot_id]);
+    HttpParser.reset_args.req = &http_pool[slot_id];
+    HttpParser.reset(protocore_http_parser_span());
 }
 
 /**
@@ -129,7 +140,10 @@ void ws_send_version_required(uint8_t slot_id)
  */
 proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
-    const char *client_key = http_get_header(req, "Sec-WebSocket-Key");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Sec-WebSocket-Key";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *client_key = HttpParser.text;
     if (!client_key)
     {
         return PROTO_FALSE;
@@ -154,7 +168,10 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
     // Negotiate permessage-deflate (RFC 7692) if the client offered it. We force
     // no_context_takeover in both directions so each message decompresses
     // independently (the INFLATE window is the message buffer, not a kept window).
-    const char *ws_ext = http_get_header(req, "Sec-WebSocket-Extensions");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Sec-WebSocket-Extensions";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *ws_ext = HttpParser.text;
     proto_bool pmd =
         ws_ext && str.has(ws_ext, MAX_VAL_LEN, "permessage-deflate", sizeof("permessage-deflate"), PROTO_FALSE);
     protocore_sb sb_hdr = {hdr, sizeof(hdr), 0, PROTO_TRUE};
@@ -184,7 +201,8 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
     ConnPool.flush(protocore_conn_pool_span());
 
     // Reset HTTP parser but keep the TCP slot -- WS owns it now
-    http_parser_reset(&http_pool[slot_id]);
+    HttpParser.reset_args.req = &http_pool[slot_id];
+    HttpParser.reset(protocore_http_parser_span());
 
     // The channel is the session layer's: it takes the number, binds it to this slot and runs the
     // route's connect. This layer sent the handshake bytes.
@@ -240,7 +258,8 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route
     // path is what protocore_sse_broadcast() matches against.
     char path[MAX_PATH_LEN];
     str.copy(path, req->path, sizeof(path));
-    http_parser_reset(&http_pool[slot_id]);
+    HttpParser.reset_args.req = &http_pool[slot_id];
+    HttpParser.reset(protocore_http_parser_span());
 
     // The stream is the session layer's: it takes the number, binds it to this connection and runs
     // the route's connect. This layer sent the handshake bytes.

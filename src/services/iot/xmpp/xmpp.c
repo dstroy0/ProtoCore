@@ -15,8 +15,8 @@
 
 #if PROTOCORE_ENABLE_XMPP
 
-#include "mmgr/protomem.h" // mem.cpy: a literal and an entity move whole
-#include "mmgr/protostr.h" // str.len / str.starts: the bounded length and the attribute-name match
+#include "mmgr/protomem/protomem.h" // mem.cpy: a literal and an entity move whole
+#include "mmgr/protostr/protostr.h" // str.len / str.starts: the bounded length and the attribute-name match
 
 // RFC 6120 sec 8.1: the common attribute names, and RFC 6120 sec 4.7 the stream header's two.
 #define PROTOCORE_XMPP_ATTR_TO "to"

@@ -12,10 +12,10 @@
 
 #include "network_drivers/tls/record/record.h"
 
-#include "crypto/aead/aes128gcm.h" // Aes128Gcm - the 0x1301 record AEAD
-#include "crypto/aead/aesgcm.h"    // AesGcm - the 0x1302 record AEAD
-#include "mmgr/protomem.h"         // mem.cpy / mem.zero
-#include "mmgr/secure.h"           // the secure pool: key/iv material during derivation
+#include "crypto/aead/aes128gcm/aes128gcm.h" // Aes128Gcm - the 0x1301 record AEAD
+#include "crypto/aead/aesgcm/aesgcm.h"    // AesGcm - the 0x1302 record AEAD
+#include "mmgr/protomem/protomem.h"         // mem.cpy / mem.zero
+#include "mmgr/secure/secure.h"           // the secure pool: key/iv material during derivation
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 
 /**

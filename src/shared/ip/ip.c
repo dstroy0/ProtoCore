@@ -12,7 +12,7 @@
  */
 
 #include "shared/ip/ip.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 // -------------------------------------------------------------------------------------------

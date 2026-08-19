@@ -10,7 +10,7 @@
 // On ESP32 the same quic_server binds UDP through protocore_udp; this harness is the Linux stand-in that
 // lets a real client validate the wire without flashing a board.
 
-#include "network_drivers/presentation/http/http3/quic_server.h"
+#include "network_drivers/presentation/http/http3/quic_server/quic_server.h"
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>

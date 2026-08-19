@@ -18,17 +18,34 @@
  * closes the timing gap on the base64url (JWT) path, which was previously a plain branchy software decoder.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_BASE64
+
 #include "base64.h"
 
-#include "mmgr/protostr.h"    // str: the bounded-run walks
-#include "mmgr/swar.h"        // the lane math; the classification below is base64's own
-#include "protocore_config.h" // PROTOCORE_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
-                              // strnlen
+#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
+#include "mmgr/swar/swar.h"         // the lane math; the classification below is base64's own
+#include "protocore_config.h"       // PROTOCORE_BASE64_SWAR (scalar vs SWAR constant-time decode; default SWAR)
+                                    // strnlen
 
 static const char B64_TABLE[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-static void protocore_base64_encode(const uint8_t *src, size_t src_len, char *dst)
+// The entries this file calls before reaching their definitions.
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void base64_encode(uint8_t *restrict work);
+
+static void base64_encode(uint8_t *restrict work)
 {
+    (void)work;
+    const uint8_t *src = Base64.encode_args.src;
+    size_t src_len = Base64.encode_args.src_len;
+    char *dst = Base64.encode_args.dst;
+
     size_t i = 0;
     size_t j = 0;
 
@@ -140,12 +157,18 @@ static inline uint32_t swar_quad(uint32_t a, uint32_t *ok)
     return val;
 }
 
-static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
+static void base64_decode(uint8_t *restrict work)
 {
+    (void)work;
+    const char *src = Base64.decode_args.src;
+    uint8_t *dst = Base64.decode_args.dst;
+    size_t dst_cap = Base64.decode_args.dst_cap;
+
     size_t src_len = str.len(src, ((dst_cap + 2) / 3) * 4 + 4);
     if (src_len == 0 || (src_len & 3u) != 0)
     {
-        return 0;
+        Base64.n = 0;
+        return;
     }
     size_t out = 0;
     uint32_t bad = 0;
@@ -162,7 +185,8 @@ static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_
         int p3 = is_last && (c3 == '=');
         if (p2 && !p3)
         {
-            return 0;
+            Base64.n = 0;
+            return;
         }
         // A padded final quad: swap each '=' for 'A' (value 0, always valid) so the lane classifies, then
         // drop the matching output byte. Position is public length info, so this branch leaks no secret.
@@ -176,14 +200,16 @@ static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_
         uint32_t d = (val >> 24) & 0xFF;
         if (out >= dst_cap)
         {
-            return 0;
+            Base64.n = 0;
+            return;
         }
         dst[out++] = (uint8_t)((a << 2) | (b >> 4));
         if (!p2)
         {
             if (out >= dst_cap)
             {
-                return 0;
+                Base64.n = 0;
+                return;
             }
             dst[out++] = (uint8_t)((b << 4) | (c >> 2));
         }
@@ -191,26 +217,34 @@ static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_
         {
             if (out >= dst_cap)
             {
-                return 0;
+                Base64.n = 0;
+                return;
             }
             dst[out++] = (uint8_t)((c << 6) | d);
         }
     }
     if (bad)
     {
-        return 0;
+        Base64.n = 0;
+        return;
     }
-    return out;
+    Base64.n = out;
 }
 #else
-static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_cap)
+static void base64_decode(uint8_t *restrict work)
 {
+    (void)work;
+    const char *src = Base64.decode_args.src;
+    uint8_t *dst = Base64.decode_args.dst;
+    size_t dst_cap = Base64.decode_args.dst_cap;
+
     // Bounded length (a missing NUL cannot run past what dst_cap could ever hold). Canonical base64 is
     // whole 4-character quads.
     size_t src_len = str.len(src, ((dst_cap + 2) / 3) * 4 + 4);
     if (src_len == 0 || (src_len & 3u) != 0)
     {
-        return 0;
+        Base64.n = 0;
+        return;
     }
 
     size_t out = 0;
@@ -230,7 +264,8 @@ static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_
         int p3 = is_last && (c3 == '=');
         if (p2 && !p3)
         {
-            return 0; // "xx=y" - a lone pad must sit in the 4th position, not the 3rd
+            Base64.n = 0; // "xx=y" - a lone pad must sit in the 4th position, not the 3rd
+            return;
         }
 
         uint32_t v0 = ct_b64_val_plus1(c0, 0);
@@ -252,14 +287,16 @@ static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_
         // Reassemble the 24-bit group; padding trims the tail. Every write is bounded by dst_cap.
         if (out >= dst_cap)
         {
-            return 0;
+            Base64.n = 0;
+            return;
         }
         dst[out++] = (uint8_t)((a << 2) | (b >> 4));
         if (!p2)
         {
             if (out >= dst_cap)
             {
-                return 0;
+                Base64.n = 0;
+                return;
             }
             dst[out++] = (uint8_t)((b << 4) | (c >> 2));
         }
@@ -267,7 +304,8 @@ static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_
         {
             if (out >= dst_cap)
             {
-                return 0;
+                Base64.n = 0;
+                return;
             }
             dst[out++] = (uint8_t)((c << 6) | d);
         }
@@ -275,10 +313,12 @@ static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_
 
     if (bad)
     {
-        return 0;
+        Base64.n = 0;
+        return;
     }
-    return out;
+    Base64.n = out;
 }
+
 #endif // PROTOCORE_BASE64_SWAR
 
 // ---------------------------------------------------------------------------
@@ -290,9 +330,20 @@ static size_t protocore_base64_decode(const char *src, uint8_t *dst, size_t dst_
 // buffer or re-padding.
 // ---------------------------------------------------------------------------
 
-static size_t protocore_base64url_encode(const uint8_t *src, size_t src_len, char *dst)
+static void base64_url_encode(uint8_t *restrict work)
 {
-    protocore_base64_encode(src, src_len, dst); // standard base64, '='-padded, NUL-terminated
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    const uint8_t *src = Base64.url_encode_args.src;
+    size_t src_len = Base64.url_encode_args.src_len;
+    char *dst = Base64.url_encode_args.dst;
+
+    Base64.encode_args.src = src;
+    Base64.encode_args.src_len = src_len;
+    Base64.encode_args.dst = dst;
+    base64_encode(work); // standard base64, '='-padded, NUL-terminated
     size_t n = 0;
     for (size_t i = 0; dst[i]; i++)
     {
@@ -312,15 +363,21 @@ static size_t protocore_base64url_encode(const uint8_t *src, size_t src_len, cha
         n = i + 1;
     }
     dst[n] = '\0';
-    return n;
+    Base64.n = n;
 }
 
 // Constant-time base64url decode (RFC 4648 sec 5, '-'/'_'), used by JWT / JWS (RFC 7515) and OIDC - a
 // secret path, so it shares the branchless classifier above (the standard '+'/'/' are rejected here). The
 // only difference from protocore_base64_decode is framing: base64url carries no padding, and the final group may
 // be 2 or 3 characters (an unbounded streaming decode rather than whole quads).
-size_t protocore_base64url_decode(const char *src, size_t src_len, uint8_t *dst, size_t dst_cap)
+static void base64_url_decode(uint8_t *restrict work)
 {
+    (void)work;
+    const char *src = Base64.url_decode_args.src;
+    size_t src_len = Base64.url_decode_args.src_len;
+    uint8_t *dst = Base64.url_decode_args.dst;
+    size_t dst_cap = Base64.url_decode_args.dst_cap;
+
     size_t o = 0;
     uint32_t acc = 0;
     int bits = 0;
@@ -341,17 +398,28 @@ size_t protocore_base64url_decode(const char *src, size_t src_len, uint8_t *dst,
             bits -= 8;
             if (o >= dst_cap)
             {
-                return 0;
+                Base64.n = 0;
+                return;
             }
             dst[o++] = (uint8_t)((acc >> bits) & 0xFF);
         }
     }
     if (bad)
     {
-        return 0;
+        Base64.n = 0;
+        return;
     }
-    return o;
+    Base64.n = o;
 }
 
-const Base64Ns Base64 = {protocore_base64_encode, protocore_base64_decode, protocore_base64url_encode,
-                         protocore_base64url_decode};
+// Designated, so a member's position in the struct does not decide what it binds to.
+Base64Ns Base64 = {
+    .encode = base64_encode,
+    .decode = base64_decode,
+    .url_encode = base64_url_encode,
+    .url_decode = base64_url_decode,
+};
+
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_BASE64

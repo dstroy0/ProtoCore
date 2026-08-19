@@ -4,17 +4,50 @@
 """
 harness.py - the one entry point for the native test matrix.
 
+`run` IS CMAKE AND CTEST. 0.06 s per test, and the build is incremental:
+
+    harness.py run                  the whole matrix
+    harness.py run native_telnet    one env, and every suite it runs
+
+which is `tools/harness.py build cmake`, `cmake --build build/native -j -- -k`, then `ctest`. Those
+three are the same thing spelled out, and are what to reach for when reading a build error:
+
+    cmake --build build/native -j -- -k    `-k` is load bearing: without it make stops at the
+                                           first failing target and the other 30 stay hidden
+
+`run --direct` is the old path - it compiles each env by itself and never reads the CMake, so one
+env through it costs more than building and running the whole matrix. --debug, --coverage and
+--report-out imply it because each reads one env's own build or its own Unity output.
+
+A HWCAP IS NEVER REMOVED FROM AN ENV. An unresolved symbol that a test/core_setup/hal/<vendor>/
+arm defines is the CAP BEING OFF: turn it on and build that arm. Never swap in the hal/portable
+half, never drop the hal source, never drop the flag - the env goes green and the arm the hardware
+runs stops being tested, and nothing reports it. A hw arm in src/ MOVES to core_setup and is
+guarded there; it is not deleted.
+
+THE HOST DRIVES EVERYTHING - BOTH ARMS. The halves are mutually exclusive, so one env cannot hold
+both. Give each its own env, the same suite in both `tests` lists:
+
+    harness.py env add native_x_sw --after native_x --clone native_x
+    harness.py env update native_x_sw --drop-src <host arm> --src <portable arm> \
+        --drop-flags=-DPROTOCORE_HAS_HW_X=1 --flags=-DPROTOCORE_HAS_HW_X=0
+
+Audit before finishing. Every hit must be a path rename, not a removal:
+
+    git diff test/test_matrix.json | grep "^-" | grep -iE "hal/|_hw|HW_"
+
 Everything the harness can do is a subcommand here, so `harness.py -h` is the whole surface:
 
   env add       splice a new env into test/test_matrix.json
   env update    change an existing env's flags / src / tests / extra_scripts (adds; --drop-* removes)
   env addsrc    add the same deps to EVERY env that builds a given .c
+  env addflag   add the same flags to EVERY env that builds a given .c (how a gate is wired up)
   env gen       regenerate the generated block of platformio.ini from the matrix
   env select    map changed files to the envs they affect
   env list      print the envs the matrix defines
   env deps      rebuild test/dep_graph.json from the compiler include closure
 
-  run           build and run test envs natively (no pio); --pio runs them through `pio test`
+  run           build the matrix with CMake and run it with ctest; --direct compiles here instead
   bare          cross-compile the core, and boot it on the part under QEMU
   bench         the microbenchmark matrix
   runners gen   the bridge to Unity's generate_test_runner.rb: what makes a suite runnable
@@ -73,6 +106,16 @@ not asked to move. Those five are the whole supported surface.
 
 The matrix is the single source of truth. Every mutation takes the table's lock, splices text so
 the file is not reformatted, and re-parses to prove no other env moved.
+
+THE BUILD IS GENERATED CMAKE. src/ carries one CMakeLists.txt per module directory and test/ carries
+one target plus one ctest per env, both written by tools/harness.py (build modules / build cmake).
+They say "GENERATED ... Do not edit" and mean it - change the generator.
+
+    cmake -S test -B build/native && cmake --build build/native -j && ctest --test-dir build/native
+
+`run` below is the direct compile, unchanged and still the fastest way to check one env: it reads
+test_matrix.json and invokes gcc itself, so it does not go through the CMake and does not prove it.
+Adding an env means editing test_matrix.json AND running `tools/harness.py build cmake` after it.
 """
 
 import argparse
@@ -294,6 +337,63 @@ def resolve_tests(tests, src):
     return tests, None
 
 
+HWCAP_REFUSAL = """refusing to update %s: this drops a capability arm and puts nothing in its place.
+
+  %s
+
+A capability is two mutually exclusive arms - test/core_setup/hal/<vendor>/ under
+PROTOCORE_HAS_HW_<X>, and test/core_setup/hal/portable/ under !PROTOCORE_HAS_HW_<X>. Both ship, and
+the host drives BOTH. An env left with neither still links, still goes green, and has stopped
+testing the arm the hardware runs - which nothing reports.
+
+An unresolved symbol a hal arm defines is the CAP BEING OFF. Turn it on and build that arm; do not
+swap in the other half.
+
+To cover the other arm, give it its OWN env and keep this one as it is:
+
+  harness.py env add <name>_sw --after <name> --clone <name>
+  harness.py env update <name>_sw --drop-src <hal arm> --src <other arm> \\
+      --drop-flags=-DPROTOCORE_HAS_HW_<X>=1 --flags=-DPROTOCORE_HAS_HW_<X>=0
+
+Dropping one arm and adding the other IN THE SAME CALL is what this allows: it is a swap, not a
+removal, and it is how the twin env above is pointed at its arm."""
+
+
+def hal_arm(path):
+    """The hal vendor directory a src entry names, or None. `+<test/core_setup/hal/host/x.c>` -> host."""
+    m = re.search(r"test/core_setup/hal/([^/]+)/", path.replace("\\", "/"))
+    return m.group(1) if m else None
+
+
+def hwcap_orphaned(before, after):
+    """Lines naming every hal file the edit removes while adding no arm in its place.
+
+    A swap - one arm out, another in - is the legitimate edit and reports nothing. A bare removal
+    leaves the env with no arm at all, which is the one that goes green having stopped testing.
+    """
+    was = {s for s in before.get("src", []) if hal_arm(s)}
+    now = {s for s in after.get("src", []) if hal_arm(s)}
+    gone = was - now
+    if not gone:
+        return []
+    # `platform` is the per-env host seam every env carries, not a capability's arm.
+    gone = {g for g in gone if "_platform.c" not in g}
+    if not gone or (now - was):
+        return []
+    return sorted("dropped: %s" % g for g in gone)
+
+
+def src_filter(p):
+    """A path in the matrix's own src spelling, whichever form it arrived in.
+
+    The matrix writes a source as `+<path>`, and a caller reading the matrix passes it back already
+    written that way. Wrapping that a second time gives `+<+<path>>`, which matches no file and is
+    only found when the link fails.
+    """
+    p = p.strip()
+    return p if p.startswith(("+<", "-<")) else "+<%s>" % p
+
+
 def cmd_env_add(a):
     lock = lock_acquire(TABLE)
     if not lock:
@@ -320,7 +420,7 @@ def cmd_env_add(a):
             return 1
         src = list(envs[a.clone]["src"]) if a.clone else (["-<*>"] if a.only else [])
         flags = list(envs[a.clone].get("flags", [])) if a.clone else []
-        src += ["+<%s>" % p for p in a.src if "+<%s>" % p not in src]
+        src += [p for p in (src_filter(x) for x in a.src) if p not in src]
         flags += [f for f in (unescape_flag(x) for x in a.flags) if f not in flags]
         # A --base env EXTENDS a stack: it inherits that stack's flags and build_src_filter through
         # platformio, so it states only what it adds. Copying the stack's src instead (--clone)
@@ -374,9 +474,13 @@ def cmd_env_update(a):
                 entry[key] = cur
 
         merge("flags", a.flags, a.drop_flags, wrap=unescape_flag)
-        merge("src", a.src, a.drop_src, wrap=lambda p: "+<%s>" % p)
+        merge("src", a.src, a.drop_src, wrap=src_filter)
         merge("tests", a.tests, a.drop_tests)
         merge("extra_scripts", a.extra_scripts, a.drop_extra_scripts)
+        left = hwcap_orphaned(envs[a.name], entry)
+        if left:
+            print(HWCAP_REFUSAL % (a.name, "\n  ".join(left)))
+            return 1
         if a.desc is not None:
             entry["desc"] = a.desc
         if a.base is not None:
@@ -417,7 +521,7 @@ def cmd_env_addsrc(a):
             src = e.get("src")
             if not src or not any(a.builds in x for x in src):
                 continue
-            add = ["+<%s>" % d for d in a.dep]
+            add = [src_filter(d) for d in a.dep]
             add = [x for x in add if x not in src]
             if not add:
                 continue
@@ -429,6 +533,46 @@ def cmd_env_addsrc(a):
             print("%-40s + %s" % (name, ", ".join(x[2:-1] for x in add)))
         if not changed:
             print("no env builds %s that is missing those deps" % a.builds)
+            return 0
+        rc = write_verified(TABLE, text, before, changed, expect)
+        if rc == 0:
+            print("\n%d envs updated; run: harness.py env gen" % len(changed))
+        return rc
+    finally:
+        lock_release(lock)
+
+
+def cmd_env_addflag(a):
+    """Add the same flags to every env that already builds a given .c.
+
+    Giving a module its enable gate is this operation: the header wraps in
+    PROTOCORE_ENABLE_<X>, which defaults off, so every env that was compiling the module without
+    ever naming it has to start naming it. Doing that by hand across 40 envs is what makes a
+    session reach for a script and rewrite the whole table.
+    """
+    lock = lock_acquire(TABLE)
+    if not lock:
+        print("could not take the table lock within %.0fs" % LOCK_TIMEOUT_S)
+        return 1
+    try:
+        text, before = read_table(TABLE)
+        changed, expect = set(), {}
+        for name, e in before["envs"].items():
+            src = e.get("src")
+            if not src or not any(a.builds in x for x in src):
+                continue
+            flags = list(e.get("flags", []))
+            add = [f for f in (unescape_flag(x) for x in a.flag) if f not in flags]
+            if not add:
+                continue
+            entry = json.loads(json.dumps(e))
+            entry["flags"] = flags + add
+            text = splice_replace(text, name, entry)
+            changed.add(name)
+            expect[name] = entry
+            print("%-40s + %s" % (name, ", ".join(add)))
+        if not changed:
+            print("no env builds %s that is missing those flags" % a.builds)
             return 0
         rc = write_verified(TABLE, text, before, changed, expect)
         if rc == 0:
@@ -1141,6 +1285,7 @@ def find_unity_generator(libdeps=None, envname=None):
 UNITY_CASE = re.compile(r"^[ \t]*void[ \t]+(test_\w+)[ \t]*\([ \t]*(?:void)?[ \t]*\)", re.M)
 NEAR_MISS = re.compile(r"^[ \t]*void[ \t]+(\w+)[ \t]*\([ \t]*(?:void)?[ \t]*\)[ \t]*\r?\n[ \t]*\{", re.M)
 NOT_A_CASE = ("setUp", "tearDown", "main", "suiteSetUp", "suiteTearDown")
+RUNNER_CASE = re.compile(r"^\s*run_test\(\s*(\w+)\s*,", re.M)
 
 
 def runner_cases(path):
@@ -1171,6 +1316,17 @@ def generate_runner(suite_dir, libdeps=None, envname=None):
     if not os.path.isdir(suite_dir):
         return None
     candidates = [f for f in sorted(os.listdir(suite_dir)) if f.endswith(".c") and f != GENERATED_RUNNER]
+    # A suite that writes its own main() registers its own cases, so a generated runner beside it is
+    # a second main() in the same link. The build compiles every .c in the suite directory, so the
+    # file existing at all is what breaks it - not anything the caller asked for.
+    for f in candidates:
+        with open(os.path.join(suite_dir, f), encoding="utf-8", errors="replace") as fh:
+            if "int main(" in fh.read():
+                stale = os.path.join(suite_dir, GENERATED_RUNNER)
+                if os.path.isfile(stale):
+                    os.remove(stale)
+                    print("removed %s: %s defines its own main()" % (os.path.relpath(stale, ROOT), f))
+                return None
     sources = [f for f in candidates if runner_cases(os.path.join(suite_dir, f))[0]]
     if not sources:
         # A .c with no collectable case is the common way a new suite silently does nothing.
@@ -1208,6 +1364,21 @@ def generate_runner(suite_dir, libdeps=None, envname=None):
     src = os.path.join(suite_dir, sources[0])
     out = os.path.join(suite_dir, GENERATED_RUNNER)
     subprocess.run([ruby, generator, src, out], check=True)
+    # The generator's own pattern does not read the parameter list, so a file-scope helper named
+    # test_* is registered as a case and called with no arguments. Whatever it registers that is
+    # not a `void test_<name>(void)` in the source is that, and it is refused here: the runner is
+    # removed so the next build cannot link it.
+    registered = set(RUNNER_CASE.findall(open(out, encoding="utf-8").read()))
+    over = sorted(registered - set(runner_cases(src)[0]))
+    if over:
+        os.remove(out)
+        raise SystemExit(
+            "runners: %s registers %s, which is not a case.\n"
+            "  Unity's generator collects on the name alone, so a helper called test_<something>\n"
+            "  is registered and then called with no arguments. A case takes (void) and nothing\n"
+            "  else - rename the helper, or mark it static."
+            % (os.path.relpath(src, ROOT), ", ".join(over))
+        )
     return out
 
 
@@ -2003,9 +2174,49 @@ def cmd_bench(a):
     return bench.main(a.rest)
 
 
+def run_cmake(a):
+    """Build the matrix with CMake and run it with ctest.
+
+    Regenerates test/CMakeLists.txt from the matrix through tools/harness.py, configures
+    build/native if it is not there, builds keep-going so every failing target is named in one
+    pass, then runs ctest. A ctest name is a target name: <env>, or <env>__<suite> where an env
+    runs several. Named envs select by that prefix.
+    """
+    tools = os.path.join(ROOT, "tools", "harness.py")
+    build = os.path.join(ROOT, "build", "native")
+    jobs = ["-j", str(a.jobs)] if a.jobs else ["-j"]
+
+    r = subprocess.run([sys.executable, tools, "build", "cmake"], cwd=ROOT, capture_output=True, text=True)
+    if r.returncode != 0:
+        print(r.stdout + r.stderr)
+        return r.returncode
+    print(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "test/CMakeLists.txt regenerated")
+
+    if not os.path.exists(os.path.join(build, "CMakeCache.txt")):
+        r = subprocess.run(["cmake", "-S", os.path.join(ROOT, "test"), "-B", build], cwd=ROOT)
+        if r.returncode != 0:
+            return r.returncode
+
+    r = subprocess.run(["cmake", "--build", build] + jobs + ["--", "-k"], cwd=ROOT,
+                       capture_output=not a.verbose, text=True)
+    if r.returncode != 0:
+        broke = sorted(set(re.findall(r"CMakeFiles/(\w+)\.dir/all\] Error", (r.stdout or "") + (r.stderr or ""))))
+        print("%d target(s) did not build: %s" % (len(broke), " ".join(broke)))
+        print("  cmake --build build/native -j -- -k     to read the errors")
+
+    cmd = ["ctest", "--test-dir", build, "--output-on-failure"] + jobs
+    if a.envs:
+        cmd += ["-R", "^(%s)(__|$)" % "|".join(re.escape(n) for n in a.envs)]
+    return subprocess.run(cmd, cwd=ROOT).returncode
+
+
 def cmd_run(a):
     if a.pio:
         return run_pio(a)
+    # --debug, --coverage and --report-out each read one env's own build or its own Unity output,
+    # which only the direct compile below produces.
+    if not (a.direct or a.debug or a.coverage or a.report_out):
+        return run_cmake(a)
     with open(TABLE, encoding="utf-8") as f:
         table = json.load(f)["envs"]
     names = a.envs or [n for n, e in table.items() if e.get("tests") and n not in NEVER_SELECT]
@@ -2201,26 +2412,26 @@ def build_parser():
         "inherited through the ini, so the new env states only what it adds. Use this, not "
         "--clone, when the module needs a whole stack built around it.",
     )
-    p.add_argument("--src", nargs="*", default=[], help="repo-relative .c paths to build")
+    p.add_argument("--src", action="extend", nargs="*", default=[], help="repo-relative .c paths to build")
     # Attached form, one per flag: --flags=-DPROTOCORE_ENABLE_X=1 (a bare -D reads as an option).
     p.add_argument("--flags", action="append", default=[], metavar="=-DNAME=VALUE")
-    p.add_argument("--extra-scripts", nargs="*", default=[], dest="extra_scripts")
+    p.add_argument("--extra-scripts", action="extend", nargs="*", default=[], dest="extra_scripts")
     p.add_argument("--desc", default="")
     p.add_argument("--only", action="store_true", help="build only --src, nothing else")
     p.set_defaults(fn=cmd_env_add)
 
     p = env.add_parser("update", help="change an existing env")
     p.add_argument("name")
-    p.add_argument("--src", nargs="*", default=[], help="repo-relative .c paths to add")
-    p.add_argument("--drop-src", nargs="*", default=[], dest="drop_src")
+    p.add_argument("--src", action="extend", nargs="*", default=[], help="repo-relative .c paths to add")
+    p.add_argument("--drop-src", action="extend", nargs="*", default=[], dest="drop_src")
     # A flag value starts with '-', which argparse reads as an option, so these take one value at a
     # time in the attached form: --flags=-DPROTOCORE_ENABLE_MNT=1, repeated per flag.
     p.add_argument("--flags", action="append", default=[], metavar="=-DNAME=VALUE")
     p.add_argument("--drop-flags", action="append", default=[], dest="drop_flags", metavar="=-DNAME=VALUE")
-    p.add_argument("--tests", nargs="*", default=[])
-    p.add_argument("--drop-tests", nargs="*", default=[], dest="drop_tests")
-    p.add_argument("--extra-scripts", nargs="*", default=[], dest="extra_scripts")
-    p.add_argument("--drop-extra-scripts", nargs="*", default=[], dest="drop_extra_scripts")
+    p.add_argument("--tests", action="extend", nargs="*", default=[])
+    p.add_argument("--drop-tests", action="extend", nargs="*", default=[], dest="drop_tests")
+    p.add_argument("--extra-scripts", action="extend", nargs="*", default=[], dest="extra_scripts")
+    p.add_argument("--drop-extra-scripts", action="extend", nargs="*", default=[], dest="drop_extra_scripts")
     p.add_argument("--desc", default=None)
     p.add_argument(
         "--base",
@@ -2240,8 +2451,25 @@ def build_parser():
         "so no session has to write a script that rewrites the table.",
     )
     p.add_argument("builds", help="the .c whose envs get the deps, e.g. udp/client/client.c")
-    p.add_argument("--dep", nargs="+", required=True, help="repo-relative .c paths to add")
+    p.add_argument("--dep", action="extend", nargs="+", required=True, help="repo-relative .c paths to add")
     p.set_defaults(fn=cmd_env_addsrc)
+
+    p = env.add_parser(
+        "addflag",
+        help="add the same flags to every env that builds a given .c",
+        description="Giving a module its enable gate is this: the header wraps in "
+        "PROTOCORE_ENABLE_<X>, which defaults off, so every env that was compiling the module "
+        "without naming it has to start naming it. One splice, not a script.",
+    )
+    p.add_argument("builds", help="the .c whose envs get the flags, e.g. codec/multipart/multipart.c")
+    p.add_argument(
+        "--flag",
+        action="append",
+        required=True,
+        metavar="=-DNAME=VALUE",
+        help="attached form, one per flag: --flag=-DPROTOCORE_ENABLE_MULTIPART=1 (a bare -D reads as an option)",
+    )
+    p.set_defaults(fn=cmd_env_addflag)
 
     p = env.add_parser("remove", help="cut envs out of the matrix")
     p.add_argument("name", nargs="+")
@@ -2299,9 +2527,15 @@ def build_parser():
 
     p = sub.add_parser(
         "run",
-        help="build and run test envs natively (no pio)",
+        help="build the matrix with CMake and run it with ctest",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
+            "This calls `tools/harness.py build cmake`, builds build/native keep-going, and runs\n"
+            "ctest - 0.06 s per test, and an incremental build. It is what to reach for.\n"
+            "\n"
+            "  harness.py run                          the whole matrix\n"
+            "  harness.py run native_telnet            one env (and every suite it runs)\n"
+            "\n"
             "driving one env's binary by hand:\n"
             "  harness.py run --debug <env>            build -g -O0; the binary stays at\n"
             "                                         .pio/native/<env>.exe\n"
@@ -2329,6 +2563,11 @@ def build_parser():
     )
     p.add_argument("--report-out", metavar="PATH", help="write the run's TEST_REPORT.md here")
     p.add_argument("--pio", action="store_true", help="run the envs through `pio test` instead")
+    p.add_argument(
+        "--direct",
+        action="store_true",
+        help="compile each env here instead of through CMake; --debug, --coverage and --report-out imply it",
+    )
     p.set_defaults(fn=cmd_run, group="run", cmd="")
 
     # runners / keys / report -------------------------------------------

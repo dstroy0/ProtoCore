@@ -60,7 +60,7 @@ The complete sketch ([DiffServ.ino](DiffServ.ino)):
 
 ```cpp
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/diffserv/diffserv.h"
 
 PC server;

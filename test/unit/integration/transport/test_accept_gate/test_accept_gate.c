@@ -456,27 +456,3 @@ void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_accept_throttle_window);
-    RUN_TEST(test_accept_throttle_rollover);
-    RUN_TEST(test_per_ip_independent_budgets);
-    RUN_TEST(test_per_ip_v6_distinct_buckets);
-    RUN_TEST(test_per_ip_window_rollover);
-    RUN_TEST(test_per_ip_unspecified_defers);
-    RUN_TEST(test_per_ip_eviction_bounded);
-    RUN_TEST(test_ip_allowlist_empty_allows_all);
-    RUN_TEST(test_ip_allowlist_cidr);
-    RUN_TEST(test_ip_allowlist_cidr_string);
-    RUN_TEST(test_ip_allowlist_family_isolation);
-    RUN_TEST(test_ip_allowlist_host_and_zero_prefix);
-    RUN_TEST(test_ip_allowlist_rejects_bad_and_full);
-    RUN_TEST(test_protocore_register_builtins_installs_http);
-    RUN_TEST(test_clock_default_is_platform_millis);
-    RUN_TEST(test_clock_custom_and_revert);
-    RUN_TEST(test_accept_cb_global_throttle_rejects_over_budget);
-    RUN_TEST(test_accept_cb_ip_allowlist_allows_when_empty);
-    RUN_TEST(test_accept_cb_ip_allowlist_rejects_once_a_rule_exists);
-    return UNITY_END();
-}

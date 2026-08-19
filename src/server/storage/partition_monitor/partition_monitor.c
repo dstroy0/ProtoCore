@@ -16,8 +16,8 @@
 
 #include "server/storage/partition_monitor/partition_monitor.h"
 
-#include "mmgr/protoframe.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protoframe/protoframe.h"
+#include "mmgr/protostr/protostr.h"
 #include "protocore.h" // on_http: the route table the begin entry installs on
 
 PROTOCORE_BEGIN_DECLS

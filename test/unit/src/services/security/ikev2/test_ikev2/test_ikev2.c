@@ -10,7 +10,7 @@
 // come from sec 3.3 through 3.15 the same way, and the Curve25519 key exchange (Diffie-Hellman Group
 // Num 31, RFC 8031 sec 3) is checked against RFC 7748 sec 6.1's published X25519 test vector.
 
-#include "services/security/ikev2/ikev2.h"
+#include "services/security/ikev2/ikev2/ikev2.h"
 #include <string.h>
 
 #include <unity.h>

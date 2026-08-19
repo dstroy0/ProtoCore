@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_PROXY_PROTOCOL
 
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem.h"
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protomem/protomem.h"
 #include "network_drivers/transport/proxy_protocol/proxy_protocol.h"
 
 PROTOCORE_BEGIN_DECLS

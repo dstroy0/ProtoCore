@@ -14,7 +14,7 @@
 // ignores the return then sends nothing instead of half a header line, which is the difference
 // between a dropped response and a desynchronized peer.
 
-#include "mmgr/protoframe.h"
+#include "mmgr/protoframe/protoframe.h"
 #include <string.h>
 
 #include <unity.h>

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_S7COMM
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/s7comm/s7comm.h"
 
 PROTOCORE_BEGIN_DECLS

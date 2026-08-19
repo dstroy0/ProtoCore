@@ -358,25 +358,3 @@ void test_recv_with_null_pipe_out_ok()
     TEST_ASSERT_EQUAL_HEX8(0x00, g.reg[0x07] & 0x40);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_init_configures_and_powers_up);
-    RUN_TEST(test_init_fails_when_absent);
-    RUN_TEST(test_send_pads_to_width_and_keys_tx);
-    RUN_TEST(test_send_rejects_oversize);
-    RUN_TEST(test_tx_done_flag);
-    RUN_TEST(test_set_rx_enters_prx);
-    RUN_TEST(test_recv_reads_payload_and_pipe);
-    RUN_TEST(test_recv_no_packet);
-    RUN_TEST(test_recv_fifo_empty_pipe);
-    RUN_TEST(test_recv_truncates_to_cap);
-    RUN_TEST(test_data_rate_variants);
-    RUN_TEST(test_init_rejects_null_args);
-    RUN_TEST(test_send_rejects_null_args_and_zero_len);
-    RUN_TEST(test_tx_done_null_bus);
-    RUN_TEST(test_set_rx_null_bus_is_noop);
-    RUN_TEST(test_recv_rejects_null_args);
-    RUN_TEST(test_recv_with_null_pipe_out_ok);
-    return UNITY_END();
-}

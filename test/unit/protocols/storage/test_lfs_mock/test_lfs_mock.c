@@ -277,23 +277,3 @@ void test_medium_error_refuses_a_write_and_leaves_the_store_usable()
     TEST_ASSERT_EQUAL_INT(10, b->size("/after.txt"));
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_format_mounts_an_empty_volume);
-    RUN_TEST(test_write_then_read_round_trips);
-    RUN_TEST(test_seek_reads_from_the_offset);
-    RUN_TEST(test_directory_lists_its_children_only);
-    RUN_TEST(test_stat_tells_a_directory_from_a_file);
-    RUN_TEST(test_rename_and_remove);
-    RUN_TEST(test_append_adds_to_the_end);
-    RUN_TEST(test_open_missing_for_read_fails);
-    RUN_TEST(test_a_full_volume_refuses_rather_than_pretending);
-    RUN_TEST(test_fill_volume_leaves_nothing_creatable);
-    RUN_TEST(test_fill_leaving_room_still_creates_but_cannot_write);
-    RUN_TEST(test_read_one_file_while_writing_another);
-    RUN_TEST(test_two_writers_at_once);
-    RUN_TEST(test_store_still_answers_after_a_full_fill);
-    RUN_TEST(test_medium_error_refuses_a_write_and_leaves_the_store_usable);
-    return UNITY_END();
-}

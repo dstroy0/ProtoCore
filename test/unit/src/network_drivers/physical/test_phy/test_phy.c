@@ -16,8 +16,8 @@
 // The backend holds one static link state with no reset, so bring-up is monotonic and the cases run
 // in the order the file lists them.
 
-#include "network_drivers/physical/physical.h"
-#include "network_drivers/physical/radio_power.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "network_drivers/physical/radio_power/radio_power.h"
 
 #include <string.h>
 

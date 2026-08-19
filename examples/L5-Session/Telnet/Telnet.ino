@@ -25,8 +25,8 @@
 #define PROTOCORE_ENABLE_TELNET 1
 
 #include "protocore.h"
-#include "mmgr/protoframe.h"
-#include "network_drivers/physical/physical.h"
+#include "mmgr/protoframe/protoframe.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/presentation/telnet/telnet.h"
 
 static const char *SSID = "YOUR_SSID";

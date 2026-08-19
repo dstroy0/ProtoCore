@@ -11,7 +11,6 @@
 
 #include "network_drivers/presentation/ssh/common.h"
 
-
 PROTOCORE_BEGIN_DECLS
 
 /** @brief Lifecycle phase of the forward, for observability. */
@@ -74,9 +73,6 @@ typedef struct
     size_t len;             ///< how many
 } SshClientMsgArgs;
 
-/** @brief The dialling role's own state and the calls that reach it, described only in client.c. */
-struct SshClientInternal;
-
 typedef struct
 {
     const protocore_ssh_client_cfg *cfg; ///< what a begin dials with
@@ -87,18 +83,27 @@ typedef struct
     uint8_t *work;                       ///< the crypto scratch a lookup reports
     protocore_ssh_client_state state_of; ///< the phase a lookup reports
 
-    void (*send)(struct SshClientInternal *ctx);
-    void (*crypto_work)(struct SshClientInternal *ctx);
-    void (*state)(struct SshClientInternal *ctx);
-    void (*begin)(struct SshClientInternal *ctx);
-    void (*poll)(struct SshClientInternal *ctx);
-    void (*end)(struct SshClientInternal *ctx);
-
-    struct SshClientInternal *internal;
+    void (*const send)(uint8_t *restrict work);
+    void (*const crypto_work)(uint8_t *restrict work);
+    void (*const state)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const poll)(uint8_t *restrict work);
+    void (*const end)(uint8_t *restrict work);
 } SshClientNs;
 
 /** @brief The one instance, defined in client.c. */
 extern SshClientNs SshClient;
+
+/**
+ * @brief The PROTOCORE_SSH_CLIENT_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_ssh_client_span(void);
 
 #endif // PROTOCORE_ENABLE_SSH_CLIENT
 

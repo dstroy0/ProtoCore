@@ -981,39 +981,3 @@ void test_on_browse_display_name_empty_mask()
     TEST_ASSERT_EQUAL_UINT32(OPCUA_NODECLASS_OBJECT, refs[0].node_class);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_builders_encode_null_strings);
-    RUN_TEST(test_on_ack_header_guards);
-    RUN_TEST(test_msg_envelope_guards);
-    RUN_TEST(test_on_open_envelope_and_result_guards);
-    RUN_TEST(test_on_open_rejects_message_size_mismatch);
-    RUN_TEST(test_parsers_reject_bad_service_result);
-    RUN_TEST(test_parsers_reject_truncated_body);
-    RUN_TEST(test_on_read_optional_fields_and_limits);
-    RUN_TEST(test_on_write_limits_and_null_sink);
-    RUN_TEST(test_on_browse_limits_and_null_sink);
-    RUN_TEST(test_on_browse_display_name_empty_mask);
-    RUN_TEST(test_browse_display_name_locale);
-    RUN_TEST(test_on_read_all_variant_types);
-    RUN_TEST(test_client_parsers_reject_fault);
-    RUN_TEST(test_client_parsers_reject_malformed);
-    RUN_TEST(test_hello_ack_roundtrip);
-    RUN_TEST(test_open_roundtrip);
-    RUN_TEST(test_session_roundtrip);
-    RUN_TEST(test_get_endpoints_roundtrip);
-    RUN_TEST(test_service_fault_rejected_by_parsers);
-    RUN_TEST(test_read_roundtrip);
-    RUN_TEST(test_browse_roundtrip);
-    RUN_TEST(test_write_roundtrip);
-    RUN_TEST(test_close_session_roundtrip);
-    RUN_TEST(test_close_channel_is_clo);
-    RUN_TEST(test_seq_and_request_id_increment);
-    RUN_TEST(test_builder_overflow_guard);
-    RUN_TEST(test_on_read_unknown_variant_rejected);
-    RUN_TEST(test_response_parsers_reject_negative_count);
-    RUN_TEST(test_on_open_guards);
-    RUN_TEST(test_response_header_string_table_skip);
-    return UNITY_END();
-}

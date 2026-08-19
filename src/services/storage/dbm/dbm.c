@@ -7,7 +7,7 @@
  */
 
 #include "services/storage/dbm/dbm.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_DBM
 

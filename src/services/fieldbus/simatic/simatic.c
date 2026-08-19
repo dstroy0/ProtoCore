@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SIMATIC
 
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/simatic/simatic.h"
 
 PROTOCORE_BEGIN_DECLS

@@ -7,7 +7,7 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/sftp -t upload --upload-port COM7
 #include "device_bench.h"
-#include "network_drivers/application/sftp/sftp.h"
+#include "network_drivers/application/sftp/sftp/sftp.h"
 
 #include <stdbool.h>
 #include <stddef.h>

@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/hash/sha256.h"
+#include "crypto/hash/sha256/sha256.h"
 #include "network_drivers/transport/tcp/common.h"
 #include "protocore.h"
 #include "server/clock/clock.h"
@@ -96,7 +96,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -119,7 +119,7 @@ static void rearm_slot(uint8_t slot)
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
     HttpConn.slot = slot;
-    HttpConn.reset(HttpConn.internal);
+    HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 }
 
@@ -127,7 +127,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
 }
 
@@ -375,19 +375,3 @@ void test_stale_nonce_triggers_transparent_retry()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_challenge_is_digest_sha256);
-    RUN_TEST(test_valid_digest_authenticates);
-    RUN_TEST(test_wrong_password_rejected);
-    RUN_TEST(test_bad_nonce_rejected);
-    RUN_TEST(test_wrong_username_rejected);
-    RUN_TEST(test_wrong_qop_rejected);
-    RUN_TEST(test_missing_response_field_rejected);
-    RUN_TEST(test_basic_scheme_on_digest_route_rejected);
-    RUN_TEST(test_uri_mismatch_rejected);
-    RUN_TEST(test_nonce_is_stateless_timestamped);
-    RUN_TEST(test_stale_nonce_triggers_transparent_retry);
-    return UNITY_END();
-}

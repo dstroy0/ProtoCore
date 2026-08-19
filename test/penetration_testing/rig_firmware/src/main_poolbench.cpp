@@ -23,8 +23,8 @@
 
 #include "protocore.h"
 
-#include "mmgr/plaintext.h"
-#include "mmgr/secure.h"
+#include "mmgr/plaintext/plaintext.h"
+#include "mmgr/secure/secure.h"
 
 #include "device_bench.h" // DBENCH_CYCLES
 #include <stdlib.h>       // malloc/free/qsort for the traditional comparison

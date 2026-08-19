@@ -7,9 +7,10 @@
  */
 
 #include "network_drivers/presentation/telnet/telnet.h"
-#include "mmgr/protoframe.h" // frame.build: a console line is a spec, not a format string
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str: the bounded-run walks
+#include "mmgr/plaintext/plaintext.h"   // the persistent end this module's state is taken from
+#include "mmgr/protoframe/protoframe.h" // frame.build: a console line is a spec, not a format string
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h" // str: the bounded-run walks
 
 #if PROTOCORE_ENABLE_TELNET
 
@@ -58,37 +59,58 @@ struct TelnetStorage
 {
     Nvt tn[MAX_TELNET_CONNS];
     uint8_t rx[RX_BUF_SIZE]; ///< where a slot's bytes are staged for the IAC walk
+    TelnetCommandCb cmd_cb;  ///< what a completed line is handed to
+    Nvt *conn;               ///< the row bound to the slot a call names, or NULL
 };
 
-/**
- * @brief The console's state and the calls that reach it - what TelnetNs points at.
- *
- * @var TelnetInternal::store   the per-slot connection table
- * @var TelnetInternal::ns      the handle a caller sets a call's members on
- * @var TelnetInternal::cmd_cb  the per-line command handler the application registered
- * @var TelnetInternal::conn    the row the private steps below act on
- */
-struct TelnetInternal
+// The caller's borrow, split: the context at its offset. One pointer arrives and every
+// region is that pointer plus a compile-time offset, so the assert below proves the span
+// covers them before anything runs.
+#define TELNET_OFF_CTX 0u
+static_assert(TELNET_OFF_CTX + sizeof(struct TelnetStorage) <= PROTOCORE_TELNET_BORROW,
+              "PROTOCORE_TELNET_BORROW is short of the module context - raise it in protocore_config.h, which"
+              " sums it into its arena");
+
+// The region, at its offset in the caller's borrow.
+#define TELNET_CTX(w) ((struct TelnetStorage *)(void *)((w) + TELNET_OFF_CTX))
+
+// --- the program's shared state, beside the namespace not on it -------------
+
+// The one owned instance, private to this TU: the pointer to the bytes this module took for
+// itself. A caller that hands in its own borrow never reaches it.
+typedef struct
 {
-    struct TelnetStorage *store;
-    TelnetNs *ns;
-    TelnetCommandCb cmd_cb;
-    Nvt *conn;
-};
+    uint8_t *span; ///< PROTOCORE_TELNET_BORROW persistent bytes, or null while the pool was short
+} TelnetOwnCtx;
+static TelnetOwnCtx s_own;
 
-static struct TelnetStorage s_store;
-
-static struct TelnetInternal s_telnet = {.store = &s_store, .ns = &Telnet};
-
-// Point ctx->conn at the row bound to ns->slot, or NULL.
-static void find_conn(struct TelnetInternal *restrict ctx)
+// Not an entry: an entry takes a borrow and this is where that borrow comes from.
+uint8_t *protocore_telnet_span(void)
 {
-    ctx->conn = NULL;
+    if (s_own.span == NULL)
+    {
+        protocore_span sp = protocore_plaintext_persist_span(PROTOCORE_TELNET_BORROW);
+        if (span.ok(sp))
+        {
+            s_own.span = sp.buf;
+        }
+    }
+    return s_own.span; // null while the pool was short, which every entry refuses
+}
+
+// Point TELNET_CTX(work)->conn at the row bound to ns->slot, or NULL.
+static void find_conn(uint8_t *restrict work)
+{
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    TELNET_CTX(work)->conn = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
     {
-        if (ctx->store->tn[i].used && ctx->store->tn[i].slot == ctx->ns->slot)
+        if (TELNET_CTX(work)->tn[i].used && TELNET_CTX(work)->tn[i].slot == Telnet.slot)
         {
-            ctx->conn = &ctx->store->tn[i];
+            TELNET_CTX(work)->conn = &TELNET_CTX(work)->tn[i];
             return;
         }
     }
@@ -155,43 +177,51 @@ static void data_send(uint8_t slot, const void *data, size_t n)
 // Connection lifecycle (called from the session layer)
 // ---------------------------------------------------------------------------
 
-static void accept_conn(struct TelnetInternal *restrict ctx)
+static void accept_conn(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     Nvt *t = NULL;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
     {
-        if (!ctx->store->tn[i].used)
+        if (!TELNET_CTX(work)->tn[i].used)
         {
-            t = &ctx->store->tn[i];
+            t = &TELNET_CTX(work)->tn[i];
             break;
         }
     }
     if (!t)
     {
         // No Telnet capacity: drop the connection (transport owns the teardown).
-        ConnPool.slot = ctx->ns->slot;
+        ConnPool.slot = Telnet.slot;
         ConnPool.close(protocore_conn_pool_span());
         return;
     }
     mem.set(t, 0, sizeof(*t));
     t->used = PROTO_TRUE;
-    t->slot = ctx->ns->slot;
+    t->slot = Telnet.slot;
     t->st = TN_NORMAL;
-    ctx->conn = t;
+    TELNET_CTX(work)->conn = t;
 
     // Server-side echo + character-at-a-time (suppress go-ahead).
     static const uint8_t neg[] = {T_IAC, T_WILL, OPT_ECHO, T_IAC, T_WILL, OPT_SGA};
-    command_send(ctx->ns->slot, neg, sizeof(neg));
+    command_send(Telnet.slot, neg, sizeof(neg));
     static const char greet[] = "PC Telnet ready\r\n> ";
-    command_send(ctx->ns->slot, greet, sizeof(greet) - 1);
+    command_send(Telnet.slot, greet, sizeof(greet) - 1);
 }
 
-static void close_conn(struct TelnetInternal *restrict ctx)
+static void close_conn(uint8_t *restrict work)
 {
-    find_conn(ctx);
-    if (ctx->conn)
+    if (!work)
     {
-        ctx->conn->used = PROTO_FALSE;
+        return; // the pool was short of this module's borrow
+    }
+    find_conn(work);
+    if (TELNET_CTX(work)->conn)
+    {
+        TELNET_CTX(work)->conn->used = PROTO_FALSE;
     }
 }
 
@@ -200,9 +230,9 @@ static void line_dispatch(uint8_t slot, Nvt *t)
 {
     t->line[t->len] = '\0';
     command_send(slot, "\r\n", 2);
-    if (s_telnet.cmd_cb != NULL)
+    if (TELNET_CTX(protocore_telnet_span())->cmd_cb != NULL)
     {
-        s_telnet.cmd_cb(t->line, (uint8_t)(t - s_store.tn));
+        TELNET_CTX(protocore_telnet_span())->cmd_cb(t->line, (uint8_t)(t - TELNET_CTX(protocore_telnet_span())->tn));
     }
     t->len = 0;
     command_send(slot, "> ", 2);
@@ -254,24 +284,28 @@ static void nvt_data(uint8_t slot, Nvt *t, uint8_t b)
 }
 
 // The worker fills this slot's scratch once, then the IAC state machine walks it.
-static void rx(struct TelnetInternal *restrict ctx)
+static void rx(uint8_t *restrict work)
 {
-    find_conn(ctx);
-    if (!ctx->conn)
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    find_conn(work);
+    if (!TELNET_CTX(work)->conn)
     {
         return;
     }
-    const uint8_t slot = ctx->ns->slot;
-    Nvt *t = ctx->conn;
+    const uint8_t slot = Telnet.slot;
+    Nvt *t = TELNET_CTX(work)->conn;
 
     ConnPool.slot = slot;
-    ConnPool.io.buf = ctx->store->rx;
-    ConnPool.io.cap = sizeof(ctx->store->rx);
+    ConnPool.io.buf = TELNET_CTX(work)->rx;
+    ConnPool.io.cap = sizeof(TELNET_CTX(work)->rx);
     ConnPool.read(protocore_conn_pool_span());
 
     for (size_t i = 0; i < ConnPool.n; i++)
     {
-        const uint8_t b = ctx->store->rx[i];
+        const uint8_t b = TELNET_CTX(work)->rx[i];
         switch (t->st)
         // (TN_NORMAL/TN_IAC/TN_OPT/TN_SB/TN_SB_IAC) has a case below; the compiler's defensive "no case
         // matched" branch can't be reached from any host input
@@ -350,61 +384,81 @@ static void rx(struct TelnetInternal *restrict ctx)
 // Application API
 // ---------------------------------------------------------------------------
 
-static void on_command(struct TelnetInternal *restrict ctx)
+static void on_command(uint8_t *restrict work)
 {
-    ctx->cmd_cb = ctx->ns->cb;
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
+    TELNET_CTX(work)->cmd_cb = Telnet.cb;
 }
 
 // RFC 854: application output travels the NVT data stream, so a literal IAC is doubled on the way.
-static void broadcast(struct TelnetInternal *restrict ctx, const char *s, size_t n)
+static void broadcast(uint8_t *restrict work, const char *s, size_t n)
 {
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
     {
-        if (ctx->store->tn[i].used)
+        if (TELNET_CTX(work)->tn[i].used)
         {
-            data_send(ctx->store->tn[i].slot, s, n);
+            data_send(TELNET_CTX(work)->tn[i].slot, s, n);
         }
     }
 }
 
-static void print(struct TelnetInternal *restrict ctx)
+static void print(uint8_t *restrict work)
 {
-    if (ctx->ns->out.text)
+    if (!work)
     {
-        broadcast(ctx, ctx->ns->out.text, str.len(ctx->ns->out.text, TELNET_BUF_SIZE)); // line-oriented console
+        return; // the pool was short of this module's borrow
+    }
+    if (Telnet.out.text)
+    {
+        broadcast(work, Telnet.out.text, str.len(Telnet.out.text, TELNET_BUF_SIZE)); // line-oriented console
     }
 }
 
-static void println(struct TelnetInternal *restrict ctx)
+static void println(uint8_t *restrict work)
 {
-    if (ctx->ns->out.text)
+    if (!work)
     {
-        broadcast(ctx, ctx->ns->out.text, str.len(ctx->ns->out.text, TELNET_BUF_SIZE));
+        return; // the pool was short of this module's borrow
     }
-    broadcast(ctx, "\r\n", 2);
+    if (Telnet.out.text)
+    {
+        broadcast(work, Telnet.out.text, str.len(Telnet.out.text, TELNET_BUF_SIZE));
+    }
+    broadcast(work, "\r\n", 2);
 }
 
-static void frame_out(struct TelnetInternal *restrict ctx)
+static void frame_out(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     char buf[TELNET_BUF_SIZE];
-    size_t n = frame.build(buf, sizeof(buf), ctx->ns->out.spec, ctx->ns->out.val, ctx->ns->out.nv);
+    size_t n = frame.build(buf, sizeof(buf), Telnet.out.spec, Telnet.out.val, Telnet.out.nv);
     if (n > 0)
     {
-        broadcast(ctx, buf, n);
+        broadcast(work, buf, n);
     }
 }
 
-static void client_count(struct TelnetInternal *restrict ctx)
+static void client_count(uint8_t *restrict work)
 {
+    if (!work)
+    {
+        return; // the pool was short of this module's borrow
+    }
     uint8_t c = 0;
     for (int i = 0; i < MAX_TELNET_CONNS; i++)
     {
-        if (ctx->store->tn[i].used)
+        if (TELNET_CTX(work)->tn[i].used)
         {
             c++;
         }
     }
-    ctx->ns->u8 = c;
+    Telnet.u8 = c;
 }
 
 // The session layer's seam dictates these shapes, so they stay as they are and carry the slot onto
@@ -412,17 +466,17 @@ static void client_count(struct TelnetInternal *restrict ctx)
 static void evt_accept(uint8_t slot)
 {
     Telnet.slot = slot;
-    accept_conn(&s_telnet);
+    accept_conn(protocore_telnet_span());
 }
 static void evt_rx(uint8_t slot)
 {
     Telnet.slot = slot;
-    rx(&s_telnet);
+    rx(protocore_telnet_span());
 }
 static void evt_close(uint8_t slot)
 {
     Telnet.slot = slot;
-    close_conn(&s_telnet);
+    close_conn(protocore_telnet_span());
 }
 
 // The Telnet ProtoHandler (Layer 5 dispatch seam) - installed by the builtins list through this
@@ -431,9 +485,10 @@ static void evt_close(uint8_t slot)
 // on_poll are unset: a null on_abort falls back to on_close, and this protocol is not polled.
 static const ProtoHandler s_telnet_handler = {.on_accept = evt_accept, .on_data = evt_rx, .on_close = evt_close};
 
-static void proto_handler(struct TelnetInternal *restrict ctx)
+static void proto_handler(uint8_t *restrict work)
 {
-    ctx->ns->handler = &s_telnet_handler;
+    (void)work;
+    Telnet.handler = &s_telnet_handler;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -445,7 +500,6 @@ TelnetNs Telnet = {.on_command = on_command,
                    .accept = accept_conn,
                    .rx = rx,
                    .close = close_conn,
-                   .proto_handler = proto_handler,
-                   .internal = &s_telnet};
+                   .proto_handler = proto_handler};
 
 #endif // PROTOCORE_ENABLE_TELNET

@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_MELSEC
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/melsec/melsec.h"
 
-#include "mmgr/endian.h"
+#include "mmgr/endian/endian.h"
 
 PROTOCORE_BEGIN_DECLS
 

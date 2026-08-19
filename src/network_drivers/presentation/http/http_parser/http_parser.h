@@ -4,9 +4,15 @@
 #ifndef PROTOCORE_HTTP_PARSER_H
 #define PROTOCORE_HTTP_PARSER_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+#if PROTOCORE_ENABLE_HTTP_PARSER
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_HTTP_PARSER_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 typedef enum PROTO_ENUM_PACKED
 {
@@ -89,9 +95,13 @@ typedef struct HttpReq
 #endif
 } HttpReq;
 
+/**
+ * @brief The per-slot request table every HTTP layer parses into and reads back out of.
+ *
+ * Not an entry: it is the shared cross-TU substrate a caller indexes by slot, not something the
+ * namespace hands out, so it is reached by name.
+ */
 extern HttpReq http_pool[CONN_POOL_SLOTS];
-
-#if PROTOCORE_ENABLE_STREAM_BODY
 
 typedef proto_bool (*HttpStreamBeginCb)(HttpReq *req);
 
@@ -99,25 +109,153 @@ typedef void (*HttpStreamDataCb)(HttpReq *req, const uint8_t *data, size_t len);
 
 typedef void (*HttpStreamAbortCb)(HttpReq *req);
 
-void http_parser_set_stream_hooks(HttpStreamBeginCb begin, HttpStreamDataCb data, HttpStreamAbortCb abort);
-#endif
+/** @brief What set_stream_hooks takes: begin, data, abort. */
+typedef struct
+{
+    HttpStreamBeginCb begin;
+    HttpStreamDataCb data;
+    HttpStreamAbortCb abort;
+} HttpParserSetStreamHooksArgs;
 
-void http_parser_reset(HttpReq *req);
+/** @brief What reset takes: req. */
+typedef struct
+{
+    HttpReq *req;
+} HttpParserResetArgs;
 
-void http_parser_feed(HttpReq *req, uint8_t byte);
+/** @brief What feed takes: req, byte. */
+typedef struct
+{
+    HttpReq *req;
+    uint8_t byte;
+} HttpParserFeedArgs;
 
-const char *http_get_header(const HttpReq *req, const char *key);
+/** @brief What get_header takes: req, key. */
+typedef struct
+{
+    const HttpReq *req;
+    const char *key;
+} HttpParserGetHeaderArgs;
 
-proto_bool http_get_cookie(const HttpReq *req, const char *name, char *out, size_t out_size);
+/** @brief What get_cookie takes: req, name, out, out_size. */
+typedef struct
+{
+    const HttpReq *req;
+    const char *name;
+    char *out;
+    size_t out_size;
+} HttpParserGetCookieArgs;
 
-proto_bool http_forwarded_client(const HttpReq *req, char *ip_out, size_t ip_cap, proto_bool *is_https);
+/** @brief What forwarded_client takes: req, ip_out, ip_cap, is_https. */
+typedef struct
+{
+    const HttpReq *req;
+    char *ip_out;
+    size_t ip_cap;
+    proto_bool *is_https;
+} HttpParserForwardedClientArgs;
 
-const char *http_get_query(const HttpReq *req, const char *key);
+/** @brief What get_query takes: req, key. */
+typedef struct
+{
+    const HttpReq *req;
+    const char *key;
+} HttpParserGetQueryArgs;
 
-proto_bool http_get_form(const HttpReq *req, const char *key, char *out, size_t out_size);
+/** @brief What get_form takes: req, key, out, out_size. */
+typedef struct
+{
+    const HttpReq *req;
+    const char *key;
+    char *out;
+    size_t out_size;
+} HttpParserGetFormArgs;
 
-const char *http_get_param(const HttpReq *req, const char *key);
+/** @brief What get_param takes: req, key. */
+typedef struct
+{
+    const HttpReq *req;
+    const char *key;
+} HttpParserGetParamArgs;
+
+/**
+ * @brief HttpParser.
+ *
+ * A caller sets the members a call takes, invokes it through ::HttpParser with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   HttpParser.set_stream_hooks_args.begin = ...;
+ *   HttpParser.set_stream_hooks_args.data = ...;
+ *   HttpParser.set_stream_hooks_args.abort = ...;
+ *   HttpParser.set_stream_hooks(work);
+ *
+ * @var HttpParserNs::set_stream_hooks_args  what set_stream_hooks takes: begin, data, abort
+ * @var HttpParserNs::reset_args  what reset takes: req
+ * @var HttpParserNs::feed_args  what feed takes: req, byte
+ * @var HttpParserNs::get_header_args  what get_header takes: req, key
+ * @var HttpParserNs::get_cookie_args  what get_cookie takes: req, name, out, out_size
+ * @var HttpParserNs::forwarded_client_args  what forwarded_client takes: req, ip_out, ip_cap, is_https
+ * @var HttpParserNs::get_query_args  what get_query takes: req, key
+ * @var HttpParserNs::get_form_args  what get_form takes: req, key, out, out_size
+ * @var HttpParserNs::get_param_args  what get_param takes: req, key
+ * @var HttpParserNs::ok  a call's true/false outcome
+ * @var HttpParserNs::text  the string a call reports
+ * @var HttpParserNs::set_stream_hooks  set_stream_hooks
+ * @var HttpParserNs::reset  reset
+ * @var HttpParserNs::feed  feed
+ * @var HttpParserNs::get_header  get_header
+ * @var HttpParserNs::get_cookie  get_cookie
+ * @var HttpParserNs::forwarded_client  forwarded_client
+ * @var HttpParserNs::get_query  get_query
+ * @var HttpParserNs::get_form  get_form
+ * @var HttpParserNs::get_param  get_param
+ *
+ * @c work is PROTOCORE_HTTP_PARSER_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
+ */
+typedef struct
+{
+    HttpParserSetStreamHooksArgs set_stream_hooks_args;
+    HttpParserResetArgs reset_args;
+    HttpParserFeedArgs feed_args;
+    HttpParserGetHeaderArgs get_header_args;
+    HttpParserGetCookieArgs get_cookie_args;
+    HttpParserForwardedClientArgs forwarded_client_args;
+    HttpParserGetQueryArgs get_query_args;
+    HttpParserGetFormArgs get_form_args;
+    HttpParserGetParamArgs get_param_args;
+
+    proto_bool ok;
+    const char *text;
+
+    void (*const set_stream_hooks)(uint8_t *restrict work);
+    void (*const reset)(uint8_t *restrict work);
+    void (*const feed)(uint8_t *restrict work);
+    void (*const get_header)(uint8_t *restrict work);
+    void (*const get_cookie)(uint8_t *restrict work);
+    void (*const forwarded_client)(uint8_t *restrict work);
+    void (*const get_query)(uint8_t *restrict work);
+    void (*const get_form)(uint8_t *restrict work);
+    void (*const get_param)(uint8_t *restrict work);
+} HttpParserNs;
+
+/** @brief The one symbol this module exports. */
+extern HttpParserNs HttpParser;
+
+/**
+ * @brief The PROTOCORE_HTTP_PARSER_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_http_parser_span(void);
 
 PROTOCORE_END_DECLS
 
-#endif
+#endif // PROTOCORE_ENABLE_HTTP_PARSER
+
+#endif // PROTOCORE_HTTP_PARSER_H

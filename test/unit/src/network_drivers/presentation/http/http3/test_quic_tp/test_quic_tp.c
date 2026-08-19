@@ -10,7 +10,7 @@
 // section states verbatim, the second parses an ID/Length/Value string written out by hand from the
 // sec 18 figure so the parser is checked against the spec's byte layout, not against our encoder.
 
-#include "network_drivers/presentation/http/http3/quic_tp.h"
+#include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
 #include <string.h>
 
 #include <unity.h>

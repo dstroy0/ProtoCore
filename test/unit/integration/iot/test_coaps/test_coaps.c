@@ -1,18 +1,18 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "crypto/aead/aes128gcm.h"
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/asymmetric/ed25519.h"
-#include "crypto/cipher/aes_block.h"
-#include "crypto/hash/sha256.h"
-#include "network_drivers/presentation/http/http3/tls13_msg.h"
-#include "network_drivers/presentation/security/dtls/dtls_conn.h"
-#include "network_drivers/presentation/security/dtls/dtls_handshake.h"
-#include "network_drivers/presentation/security/dtls/dtls_record.h"
+#include "crypto/aead/aes128gcm/aes128gcm.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
+#include "crypto/cipher/aes_block/aes_block.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"
+#include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
+#include "network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.h"
+#include "network_drivers/presentation/security/dtls/dtls_record/dtls_record.h"
 #include "network_drivers/tls/key_schedule/key_schedule.h"
-#include "services/iot/coap/coap.h"
-#include "services/iot/coap/coaps.h"
+#include "services/iot/coap/coap/coap.h"
+#include "services/iot/coap/coaps/coaps.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -310,7 +310,7 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     DtlsRecord.keys_derive(cli_app_write, DTLS_CIPHER_AES_128_GCM_SHA256, 3, cks.s + TLS13_KS_CLIENT_AP);
 }
 
-static void test_coap_over_dtls(void)
+ void test_coap_over_dtls(void)
 {
     DtlsRecordKeys cli_app_write, cli_app_read;
     handshake(&g_dtls, &cli_app_write, &cli_app_read);
@@ -346,7 +346,7 @@ static void test_coap_over_dtls(void)
     TEST_ASSERT_EQUAL_MEMORY("hi", coap_resp + info.pt_len - 2, 2);
 }
 
-static void test_coap_over_dtls_replay_dropped(void)
+ void test_coap_over_dtls_replay_dropped(void)
 {
     DtlsRecordKeys cli_app_write, cli_app_read;
     handshake(&g_dtls, &cli_app_write, &cli_app_read);
@@ -372,7 +372,7 @@ static void test_coap_over_dtls_replay_dropped(void)
     TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
 }
 
-static void test_coaps_no_coap_response(void)
+ void test_coaps_no_coap_response(void)
 {
     DtlsRecordKeys cli_app_write, cli_app_read;
     handshake(&g_dtls, &cli_app_write, &cli_app_read);
@@ -393,7 +393,7 @@ static void test_coaps_no_coap_response(void)
     TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
 }
 
-static void test_coaps_non_app_record(void)
+ void test_coaps_non_app_record(void)
 {
     DtlsRecordKeys cli_app_write, cli_app_read;
     handshake(&g_dtls, &cli_app_write, &cli_app_read);
@@ -417,7 +417,7 @@ static void test_coaps_non_app_record(void)
     TEST_ASSERT_TRUE(DtlsServer.established(&g_dtls));
 }
 
-static void test_coaps_wrong_epoch_record(void)
+ void test_coaps_wrong_epoch_record(void)
 {
     DtlsRecordKeys cli_app_write, cli_app_read;
     handshake(&g_dtls, &cli_app_write, &cli_app_read);
@@ -436,7 +436,7 @@ static void test_coaps_wrong_epoch_record(void)
     TEST_ASSERT_EQUAL_INT(0, Coaps.i32);
 }
 
-static void test_coaps_forwards_handshake(void)
+ void test_coaps_forwards_handshake(void)
 {
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
@@ -478,7 +478,7 @@ static void test_coaps_forwards_handshake(void)
     TEST_ASSERT_TRUE(fl > 0);
 }
 
-static void test_aes256_key_expand_kat(void)
+ void test_aes256_key_expand_kat(void)
 {
     static const uint8_t key[32] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
                                     0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
@@ -494,15 +494,3 @@ static void test_aes256_key_expand_kat(void)
     TEST_ASSERT_EQUAL_MEMORY(expect_ct, ct, 16);
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_coap_over_dtls);
-    RUN_TEST(test_coap_over_dtls_replay_dropped);
-    RUN_TEST(test_coaps_no_coap_response);
-    RUN_TEST(test_coaps_non_app_record);
-    RUN_TEST(test_coaps_wrong_epoch_record);
-    RUN_TEST(test_coaps_forwards_handshake);
-    RUN_TEST(test_aes256_key_expand_kat);
-    return UNITY_END();
-}

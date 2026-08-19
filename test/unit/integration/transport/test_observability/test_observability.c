@@ -409,32 +409,3 @@ void test_recv_during_closing_is_reset_not_processed()
     TEST_ASSERT_EQUAL(PROTOCORE_CONN_R_ABORT, g_reason);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_transition_fires_hook_with_args);
-    RUN_TEST(test_each_reason_bumps_its_counter);
-    RUN_TEST(test_closing_gauge_is_derived_from_pool);
-    RUN_TEST(test_reset_clears_cumulative_not_derived_gauge);
-    RUN_TEST(test_no_hook_after_unregister);
-    RUN_TEST(test_notice_without_hook_still_counts);
-    RUN_TEST(test_recv_fin_counts_remote_close);
-    RUN_TEST(test_err_cb_counts_error_close);
-    RUN_TEST(test_timeout_sweep_counts_timeout);
-    RUN_TEST(test_local_close_counts_local);
-    RUN_TEST(test_abort_slot_counts_abort_and_frees);
-    RUN_TEST(test_abort_slot_noop_on_free_slot);
-    RUN_TEST(test_backpressure_counts_when_ring_full);
-
-    RUN_TEST(test_begin_close_dwells_then_drains_on_ack);
-    RUN_TEST(test_begin_close_finalizes_immediately_when_already_drained);
-    RUN_TEST(test_begin_close_noop_if_not_active);
-    RUN_TEST(test_closing_timeout_reaps_stuck_slot);
-    RUN_TEST(test_recv_during_closing_is_reset_not_processed);
-    RUN_TEST(test_stop_posts_abort_transition_for_each_live_slot);
-    RUN_TEST(test_err_cb_during_closing_counts_drained_not_error);
-    RUN_TEST(test_enqueue_failure_from_recv_cb_counts_defer_drop);
-    RUN_TEST(test_accept_cb_posts_accept_transition);
-    RUN_TEST(test_accept_cb_enqueue_failure_posts_defer_drop);
-    return UNITY_END();
-}

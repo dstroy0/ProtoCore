@@ -7,7 +7,7 @@
  */
 
 #include "services/energy/iec60870/iec60870.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_IEC60870
 

@@ -18,8 +18,8 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
  turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
 
-#include "mmgr/endian.h"        // endian.wr16be: the commands and words are big-endian
-#include "mmgr/secure.h"        // the persistent end this module's state is taken from
+#include "mmgr/endian/endian.h"        // endian.wr16be: the commands and words are big-endian
+#include "mmgr/secure/secure.h"        // the persistent end this module's state is taken from
 #include "server/clock/clock.h" // pcdelay
 #include "server/peripherals/i2c.h"
 #include "server/peripherals/sht3x/sht3x.h"

@@ -71,10 +71,10 @@
 #if DAQ_FRONTEND == DAQ_FRONTEND_SCPI_SCOPE
 #include "services/instrumentation/scpi/scpi.h"
 #else
-#include "mmgr/dma.h"
-#include "server/core/preempt_queue.h"
+#include "mmgr/dma/dma.h"
+#include "server/core/preempt_queue/preempt_queue.h"
 #include "server/peripherals/ad9238/ad9238.h"
-#include "server/signaling/trace_capture.h"
+#include "server/signaling/trace_capture/trace_capture.h"
 #include <SPI.h>
 #endif
 

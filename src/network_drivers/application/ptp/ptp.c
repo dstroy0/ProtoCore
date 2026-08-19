@@ -7,7 +7,7 @@
  */
 
 #include "network_drivers/application/ptp/ptp.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_PTP
 

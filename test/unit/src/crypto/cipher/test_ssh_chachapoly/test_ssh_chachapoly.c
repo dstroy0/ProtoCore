@@ -18,7 +18,7 @@
 // cannot pass. The Poly1305 tag itself has no published value reachable this way, so it is held to
 // properties instead: it verifies what it covers and refuses every change to it.
 
-#include "crypto/aead/chachapoly.h"
+#include "crypto/aead/chachapoly/chachapoly.h"
 #include <string.h>
 
 #include <unity.h>

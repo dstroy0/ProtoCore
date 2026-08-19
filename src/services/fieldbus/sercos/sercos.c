@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SERCOS
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/sercos/sercos.h"
 
 PROTOCORE_BEGIN_DECLS

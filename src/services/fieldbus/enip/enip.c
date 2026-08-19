@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_ENIP
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/enip/enip.h"
 
 PROTOCORE_BEGIN_DECLS

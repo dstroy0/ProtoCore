@@ -12,8 +12,8 @@ static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_WISUN
 
-#include "mmgr/membuild.h" // protocore_sb frame builder
-#include "mmgr/protomem.h"
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "mmgr/protomem/protomem.h"
 #include "services/radio/wisun/wisun.h"
 
 PROTOCORE_BEGIN_DECLS

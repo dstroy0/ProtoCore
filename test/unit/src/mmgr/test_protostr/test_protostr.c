@@ -14,7 +14,7 @@
 // a header name, a token or a path match something it is not, which is a security property and not
 // a formatting one.
 
-#include "mmgr/protostr.h"
+#include "mmgr/protostr/protostr.h"
 #include <string.h>
 
 #include <unity.h>

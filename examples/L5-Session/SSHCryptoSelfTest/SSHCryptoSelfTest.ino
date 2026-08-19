@@ -21,9 +21,9 @@
 
 #include "protocore.h" // discovers the library (adds src/ to the include path) - MUST come first
 
-#include "crypto/cipher/aes256ctr.h"
-#include "crypto/hash/sha256.h"
-#include "crypto/mac/hmac_sha256.h"
+#include "crypto/cipher/aes256ctr/aes256ctr.h"
+#include "crypto/hash/sha256/sha256.h"
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"
 
 
 static bool eq(const uint8_t *a, const uint8_t *b, size_t n)

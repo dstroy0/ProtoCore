@@ -13,7 +13,7 @@
 //   src/mmgr/protomem.c src/mmgr/protostr.c src/shared/ip/ip.c -o /tmp/bd && /tmp/bd
 
 #define PROTOCORE_ENABLE_DNS_SERVER 1
-#include "network_drivers/network/dns/dns_server.h"
+#include "network_drivers/network/dns/dns_server/dns_server.h"
 
 #include "host_bench.h"
 #include <stdint.h>

@@ -22,10 +22,10 @@
 // with `idf.py -p <PORT> flash monitor`.
 //
 // Modbus and SNMP have no authentication or encryption - run them only on a trusted control network.
-#include "network_drivers/physical/physical.h" // init_wifi_physical / wifi_ready
+#include "network_drivers/physical/physical/physical.h" // init_wifi_physical / wifi_ready
 #include "protocore.h"
-#include "services/fieldbus/modbus/modbus.h"
-#include "services/net/snmp/snmp_agent.h"
+#include "services/fieldbus/modbus/modbus/modbus.h"
+#include "services/net/snmp/snmp_agent/snmp_agent.h"
 #include <Arduino.h>
 
 static const char *WIFI_SSID = "YOUR_SSID";

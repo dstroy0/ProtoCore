@@ -12,8 +12,8 @@
 // leaves a window in which the next tenant is given memory still holding the previous one's key
 // material, and that window is invisible to a test that only checks the bytes are eventually clean.
 
-#include "mmgr/plaintext.h"
-#include "mmgr/secure.h"
+#include "mmgr/plaintext/plaintext.h"
+#include "mmgr/secure/secure.h"
 #include <string.h>
 
 #include <unity.h>

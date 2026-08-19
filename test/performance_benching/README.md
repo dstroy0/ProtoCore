@@ -35,7 +35,7 @@ and the pinned task. A bench therefore holds only what is specific to it:
 
 ```c
 #include "device_bench.h"
-#include "services/fieldbus/modbus/modbus.h"
+#include "services/fieldbus/modbus/modbus/modbus.h"
 
 void dbench_run(void)
 {

@@ -12,11 +12,11 @@
  */
 
 #include "services/machine_tool/fanuc_j519/fanuc_j519.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_FANUC_J519
 
-#include "mmgr/endian.h"
+#include "mmgr/endian/endian.h"
 // memcpy (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)
 
 // --- float <-> little-endian binary32 --------------------------------------------------------

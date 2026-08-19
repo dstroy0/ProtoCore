@@ -11,10 +11,10 @@
 
 #if PROTOCORE_ENABLE_PROMISC
 
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem.h"
-#include "network_drivers/physical/physical.h"
-#include "network_drivers/physical/radio_power.h" // Radio: the monitor-mode seam this drives
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
+#include "network_drivers/physical/physical/physical.h"
+#include "network_drivers/physical/radio_power/radio_power.h" // Radio: the monitor-mode seam this drives
 #include "services/radio/promisc/promisc.h"
 #include "shared/pcap/pcap.h"
 

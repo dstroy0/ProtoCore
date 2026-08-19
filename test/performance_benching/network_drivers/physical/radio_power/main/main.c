@@ -11,7 +11,7 @@
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/radio_power -t upload --upload-port COM7
 #include "device_bench.h"
-#include "network_drivers/physical/radio_power.h"
+#include "network_drivers/physical/radio_power/radio_power.h"
 
 #include <stdbool.h>
 #include <stddef.h>

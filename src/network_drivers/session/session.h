@@ -23,7 +23,7 @@
 
 #include "network_drivers/transport/tcp/evt.h" // EvtType, TcpEvt: the events this layer drains
 #include "server/core/proto_handler.h" // ProtoRegistryNs: carried below as Session.proto
-#include "server/core/worker.h"        // WorkerNs: carried below as Session.workers
+#include "server/core/worker/worker.h"        // WorkerNs: carried below as Session.workers
 
 #include "protocore_config.h"                  // CONN_POOL_SLOTS, proto_bool: the tables below
 

@@ -5,10 +5,15 @@
 // zlib@openssh.com stream - the header that opens it, the history it keeps, and the bound a
 // caller sizes its destination by.
 
-#include "network_drivers/presentation/ssh/transport/inflate.h"
-#include "network_drivers/presentation/ssh/transport/zlib.h"
+#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
+#include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
 #include <stdint.h>
 #include <unity.h>
+
+static uint8_t inflate_work[16]; // the borrow an entry takes; Inflate never reads it
+
+static uint8_t zlib_work[16]; // the borrow an entry takes; Zlib never reads it
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
@@ -27,7 +32,14 @@ static SshInflate s_inf;
 static size_t compress_one(const uint8_t *src, size_t len, uint8_t *dst, size_t cap)
 {
     size_t out = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_deflate_packet(&s_def, src, len, dst, cap, &out));
+    Zlib.packet_args.z = &s_def;
+    Zlib.packet_args.src = src;
+    Zlib.packet_args.src_len = len;
+    Zlib.packet_args.dst = dst;
+    Zlib.packet_args.dst_cap = cap;
+    Zlib.packet_args.out_len = &out;
+    Zlib.packet(zlib_work);
+    TEST_ASSERT_EQUAL_INT(0, Zlib.n);
     return out;
 }
 
@@ -35,15 +47,32 @@ static size_t compress_one(const uint8_t *src, size_t len, uint8_t *dst, size_t 
 static size_t expand_one(const uint8_t *src, size_t len, uint8_t *dst, size_t cap)
 {
     size_t out = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_inflate_packet(&s_inf, src, len, dst, cap, &out));
+    Inflate.packet_args.z = &s_inf;
+    Inflate.packet_args.src = src;
+    Inflate.packet_args.src_len = len;
+    Inflate.packet_args.dst = dst;
+    Inflate.packet_args.dst_cap = cap;
+    Inflate.packet_args.out_len = &out;
+    Inflate.packet(inflate_work);
+    TEST_ASSERT_EQUAL_INT(0, Inflate.n);
     return out;
 }
 
 void setUp(void)
 {
 
-    ssh_deflate_init(&s_def, s_work, s_head, s_prev, s_ll_code, s_ll_len, s_d_code, s_d_len);
-    ssh_inflate_init(&s_inf, s_window);
+    Zlib.init_args.z = &s_def;
+    Zlib.init_args.win = s_work;
+    Zlib.init_args.head = s_head;
+    Zlib.init_args.prev = s_prev;
+    Zlib.init_args.ll_code = s_ll_code;
+    Zlib.init_args.ll_len = s_ll_len;
+    Zlib.init_args.d_code = s_d_code;
+    Zlib.init_args.d_len = s_d_len;
+    Zlib.init(zlib_work);
+    Inflate.init_args.z = &s_inf;
+    Inflate.init_args.window = s_window;
+    Inflate.init(inflate_work);
 }
 void tearDown(void)
 {
@@ -138,7 +167,14 @@ static void test_undersized_destination_is_refused(void)
     const uint8_t msg[] = "something that will not fit in four bytes";
     uint8_t comp[4];
     size_t out = 0;
-    TEST_ASSERT_NOT_EQUAL(0, ssh_deflate_packet(&s_def, msg, sizeof(msg) - 1, comp, sizeof(comp), &out));
+    Zlib.packet_args.z = &s_def;
+    Zlib.packet_args.src = msg;
+    Zlib.packet_args.src_len = sizeof(msg) - 1;
+    Zlib.packet_args.dst = comp;
+    Zlib.packet_args.dst_cap = sizeof(comp);
+    Zlib.packet_args.out_len = &out;
+    Zlib.packet(zlib_work);
+    TEST_ASSERT_NOT_EQUAL(0, Zlib.n);
 }
 
 int main(void)

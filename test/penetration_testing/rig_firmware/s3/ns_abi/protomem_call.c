@@ -1,4 +1,4 @@
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 static unsigned char buf[64] __attribute__((aligned(8)));
 volatile unsigned long sink = 0;
 void app_main(void);

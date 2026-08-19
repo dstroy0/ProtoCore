@@ -5,7 +5,7 @@
 // the "publickey" method, and the "keyboard-interactive" exchange.
 
 #include "network_drivers/presentation/ssh/auth/auth.h"
-#include "network_drivers/presentation/ssh/transport/transport.h"
+#include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include "server/clock/clock.h" // Clock.millis(): refresh the stamp auth.c judges the cooldown against
 #include <Arduino.h>            // set_millis(): time travel past the change cooldown
 #include <stdint.h>
@@ -16,7 +16,7 @@ static int auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
     SshAuth.msg.payload = payload;
     SshAuth.msg.len = len;
     SshAuth.req = req;
-    SshAuth.parse_request(SshAuth.internal);
+    SshAuth.parse_request(protocore_ssh_auth_span());
     return SshAuth.i32;
 }
 
@@ -31,7 +31,7 @@ static int auth_handle_info_response(uint8_t slot, const uint8_t *payload, size_
     SshAuth.msg.len = len;
     SshAuth.out_args.out = out;
     SshAuth.out_args.cap = cap;
-    SshAuth.handle_info_response(SshAuth.internal);
+    SshAuth.handle_info_response(protocore_ssh_auth_span());
     if (out_len)
     {
         *out_len = SshAuth.out_args.out_len;
@@ -45,7 +45,7 @@ static int auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_b
     SshAuth.out_args.out = out;
     SshAuth.out_args.cap = cap;
     SshAuth.partial = partial;
-    SshAuth.build_failure(SshAuth.internal);
+    SshAuth.build_failure(protocore_ssh_auth_span());
     if (out_len)
     {
         *out_len = SshAuth.out_args.out_len;
@@ -57,7 +57,7 @@ static int auth_build_success(uint8_t *out, size_t *out_len, size_t cap)
 {
     SshAuth.out_args.out = out;
     SshAuth.out_args.cap = cap;
-    SshAuth.build_success(SshAuth.internal);
+    SshAuth.build_success(protocore_ssh_auth_span());
     if (out_len)
     {
         *out_len = SshAuth.out_args.out_len;
@@ -78,7 +78,7 @@ static void auth_write_publickey_request(protocore_span *w, const uint8_t *sid, 
     SshAuth.userauth.pk_algo = pk_algo;
     SshAuth.userauth.pk_blob = pk_blob;
     SshAuth.userauth.pk_len = pk_len;
-    SshAuth.write_publickey_request(SshAuth.internal);
+    SshAuth.write_publickey_request(protocore_ssh_auth_span());
 }
 
 // The userauth layer, reached through its namespace: set the members a call reads, invoke it, take
@@ -86,26 +86,26 @@ static void auth_write_publickey_request(protocore_span *w, const uint8_t *sid, 
 static void auth_reset(uint8_t slot)
 {
     SshAuth.slot = slot;
-    SshAuth.reset(SshAuth.internal);
+    SshAuth.reset(protocore_ssh_auth_span());
 }
 
 static void auth_set_password_cb(SshPasswordCb cb)
 {
     SshAuth.cbs.password_cb = cb;
-    SshAuth.set_password_cb(SshAuth.internal);
+    SshAuth.set_password_cb(protocore_ssh_auth_span());
 }
 
 static void auth_set_password_change_cb(SshPasswordChangeCb cb)
 {
     SshAuth.cbs.password_change_cb = cb;
-    SshAuth.set_password_change_cb(SshAuth.internal);
+    SshAuth.set_password_change_cb(protocore_ssh_auth_span());
 }
 
 static void auth_pw_change_report(uint8_t slot, proto_bool ok)
 {
     SshAuth.slot = slot;
     SshAuth.ok = ok;
-    SshAuth.pw_change_report(SshAuth.internal);
+    SshAuth.pw_change_report(protocore_ssh_auth_span());
 }
 
 static int auth_handle_request(uint8_t slot, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
@@ -116,7 +116,7 @@ static int auth_handle_request(uint8_t slot, const uint8_t *payload, size_t len,
     SshAuth.msg.len = len;
     SshAuth.out_args.out = out;
     SshAuth.out_args.cap = cap;
-    SshAuth.handle_request(SshAuth.internal);
+    SshAuth.handle_request(protocore_ssh_auth_span());
     if (out_len)
     {
         *out_len = SshAuth.out_args.out_len;

@@ -17,8 +17,8 @@
 // case that catches a wrong seed: a digest that is the first 48 octets of SHA-512 would pass every
 // self-consistency check here and fail on the wire.
 
-#include "crypto/hash/sha384.h"
-#include "crypto/hash/sha512.h"
+#include "crypto/hash/sha384/sha384.h"
+#include "crypto/hash/sha512/sha512.h"
 #include <string.h>
 
 #include <unity.h>

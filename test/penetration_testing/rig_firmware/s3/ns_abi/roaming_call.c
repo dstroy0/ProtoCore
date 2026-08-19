@@ -5,7 +5,7 @@
 // src/network_drivers/datalink/roaming.c and disassembled, it shows whether Roam.* is a direct call
 // under LTO and an indirect one without it.
 
-#include "network_drivers/datalink/roaming.h"
+#include "network_drivers/datalink/roaming/roaming.h"
 
 volatile uint8_t roam_sink = 0;
 

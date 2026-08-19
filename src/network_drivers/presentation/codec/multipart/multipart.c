@@ -6,9 +6,13 @@
  * @brief In-place multipart/form-data parser implementation.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_MULTIPART
+
 #include "multipart.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str.find: a quoted parameter key, and the boundary in a Content-Type
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h" // str.find: a quoted parameter key, and the boundary in a Content-Type
 
 // Longest parameter key the header scan will match ("name=", "filename=").
 #define MULTIPART_KEY_MAX 32
@@ -56,21 +60,35 @@ static char *extract_quoted_param(char *src, const char *key)
     return p;
 }
 
-static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
+// --- the entries -----------------------------------------------------------
+
+// No context and no borrow: every operand is the caller's. The borrow an entry takes is
+// never read.
+
+static void multipart_parse(uint8_t *restrict work)
 {
+    (void)work;
+    HttpReq *req = Multipart.parse_args.req;
+    MultipartBody *mp = Multipart.parse_args.mp;
+
     mp->part_count = 0;
 
-    const char *ct = http_get_header(req, "Content-Type");
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Content-Type";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *ct = HttpParser.text;
     if (!ct)
     {
-        return PROTO_FALSE;
+        Multipart.ok = PROTO_FALSE;
+        return;
     }
 
     // Extract boundary value (may be quoted or unquoted)
     const char *bsearch = str.find(ct, MAX_VAL_LEN, "boundary=", sizeof("boundary="), PROTO_FALSE);
     if (!bsearch)
     {
-        return PROTO_FALSE;
+        Multipart.ok = PROTO_FALSE;
+        return;
     }
     bsearch += 9;
     if (*bsearch == '"')
@@ -91,7 +109,8 @@ static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
 
     if (blen == 0)
     {
-        return PROTO_FALSE;
+        Multipart.ok = PROTO_FALSE;
+        return;
     }
 
     // Delimiter is "--" + boundary
@@ -116,7 +135,8 @@ static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
     char *pos = mem_find(body, (size_t)(end - body), delim, dlen);
     if (!pos)
     {
-        return PROTO_FALSE;
+        Multipart.ok = PROTO_FALSE;
+        return;
     }
     pos += dlen;
     if (pos + 2 <= end && pos[0] == '\r' && pos[1] == '\n')
@@ -151,7 +171,8 @@ static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
             char *line_end = mem_find(pos, (size_t)(end - pos), "\r\n", 2);
             if (!line_end)
             {
-                return PROTO_FALSE;
+                Multipart.ok = PROTO_FALSE;
+                return;
             }
 
             *line_end = '\0'; // null-terminate header line
@@ -188,7 +209,8 @@ static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
         char *next = mem_find(pos, (size_t)(end - pos), ddelim, ddlen);
         if (!next)
         {
-            return PROTO_FALSE;
+            Multipart.ok = PROTO_FALSE;
+            return;
         }
 
         part->data = pos;
@@ -204,20 +226,31 @@ static proto_bool protocore_multipart_parse(HttpReq *req, MultipartBody *mp)
         }
     }
 
-    return mp->part_count > 0;
+    Multipart.ok = mp->part_count > 0;
 }
 
-static const char *protocore_multipart_get_field(const MultipartBody *mp, const char *field)
+static void multipart_get_field(uint8_t *restrict work)
 {
+    (void)work;
+    const MultipartBody *mp = Multipart.get_field_args.mp;
+    const char *field = Multipart.get_field_args.field;
+
     for (int i = 0; i < mp->part_count; i++)
     {
         if (mp->parts[i].name &&
             str.eq(mp->parts[i].name, field, str.len(mp->parts[i].name, str.len(field, 0xFFFF)) + 1u, PROTO_FALSE))
         {
-            return mp->parts[i].data;
+            Multipart.text = mp->parts[i].data;
+            return;
         }
     }
-    return NULL;
+    Multipart.text = NULL;
 }
+MultipartNs Multipart = {
+    .parse = multipart_parse,
+    .get_field = multipart_get_field,
+};
 
-const MultipartNs Multipart = {protocore_multipart_parse, protocore_multipart_get_field};
+PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_MULTIPART

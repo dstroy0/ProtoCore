@@ -14,12 +14,12 @@
  */
 
 #include "services/net/flow_export/flow_export.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protomem.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_FLOW_EXPORT
 
-#include "mmgr/endian.h"
+#include "mmgr/endian/endian.h"
 
 #define FLOW_V5_VERSION 5 ///< vendor NetFlow Version 5 packet Version field
 

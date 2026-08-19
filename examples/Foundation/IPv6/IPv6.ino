@@ -12,7 +12,7 @@
 
 #include "protocore.h"
 #include "shared/ip/ip.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 static const char *SSID = "YOUR_SSID";
 static const char *PASSWORD = "YOUR_PASSWORD";

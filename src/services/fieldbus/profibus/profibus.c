@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_PROFIBUS
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/profibus/profibus.h"
 
 PROTOCORE_BEGIN_DECLS

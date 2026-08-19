@@ -11,7 +11,7 @@
 // Decaps's K from (dk, c). A round trip alone would agree with a wrong NTT or a wrong compression
 // as long as both halves were wrong the same way; these do not.
 
-#include "crypto/pqc/mlkem.h"
+#include "crypto/pqc/mlkem/mlkem.h"
 #include <string.h>
 
 #include <unity.h>

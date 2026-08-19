@@ -26,7 +26,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -43,7 +43,7 @@ void test_diag_serves_build_info_json()
     on_http("/diag", HTTP_GET, diag_handler);
     push_str(0, "GET /diag HTTP/1.1\r\nHost: x\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
 
     const char *resp = tcp_captured();
@@ -59,7 +59,7 @@ void test_diag_json_braces_balanced()
     on_http("/diag2", HTTP_GET, diag_handler);
     push_str(0, "GET /diag2 HTTP/1.1\r\nHost: x\r\n\r\n");
     HttpConn.slot = 0;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
     const char *j = tcp_captured();
     int depth = 0, min_depth = 0;
@@ -82,10 +82,3 @@ void test_diag_json_braces_balanced()
     TEST_ASSERT_EQUAL_INT(0, min_depth);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_diag_serves_build_info_json);
-    RUN_TEST(test_diag_json_braces_balanced);
-    return UNITY_END();
-}

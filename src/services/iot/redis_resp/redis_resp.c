@@ -14,8 +14,8 @@
 
 #if PROTOCORE_ENABLE_REDIS
 
-#include "mmgr/protomem.h" // mem.cpy: the argument octets an encode moves
-#include "mmgr/protostr.h" // str.len: the bounded length of a NUL-terminated argument
+#include "mmgr/protomem/protomem.h" // mem.cpy: the argument octets an encode moves
+#include "mmgr/protostr/protostr.h" // str.len: the bounded length of a NUL-terminated argument
 
 // Write "<first_byte><decimal n>\r\n" into buf at *pos and advance it. The digits fall out low first
 // into tmp and are emitted reversed. False when the prefix would reach cap with the NUL reserved.

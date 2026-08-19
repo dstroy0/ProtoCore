@@ -16,9 +16,9 @@
  * the full 20-protocol rig is DRAM-full. Built ONLY by env:rig_s3_smb (build_src_filter). WiFi creds come
  * from RIG_WIFI_SSID / RIG_WIFI_PASS via the WIFI_SSID / WIFI_PASS macros (never committed).
  */
-#include "network_drivers/application/smb/smb2.h"       // Smb2Access / Smb2Disposition masks
-#include "network_drivers/application/smb/smb_client.h" // smb_open / smb_read / smb_close dialogue engine
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/application/smb/smb2/smb2.h"       // Smb2Access / Smb2Disposition masks
+#include "network_drivers/application/smb/smb_client/smb_client.h" // smb_open / smb_read / smb_close dialogue engine
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/transport/client.h" // protocore_client_* (device-as-SMB2-client probe transport)
 #include "protocore.h"
 #include <Arduino.h>

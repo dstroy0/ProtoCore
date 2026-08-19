@@ -11,7 +11,7 @@
 // byte and is the load-bearing case: a decoder that gets it right cannot be reading OFFSET from the
 // wrong bits or resuming the walk in the wrong place.
 
-#include "network_drivers/network/dns/dns_wire.h"
+#include "network_drivers/network/dns/dns_wire/dns_wire.h"
 #include <string.h>
 
 #include <unity.h>

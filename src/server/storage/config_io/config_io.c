@@ -13,11 +13,11 @@
 
 #if PROTOCORE_ENABLE_CONFIG_IO
 
-#include "mmgr/protoframe.h" // the one frame engine
-#include "mmgr/protomem.h"
+#include "mmgr/protoframe/protoframe.h" // the one frame engine
+#include "mmgr/protomem/protomem.h"
 #include "server/storage/config_io/config_io.h"
 
-#include "mmgr/protostr.h"
+#include "mmgr/protostr/protostr.h"
 #include "server/storage/config_store/config_store.h"
 
 PROTOCORE_BEGIN_DECLS

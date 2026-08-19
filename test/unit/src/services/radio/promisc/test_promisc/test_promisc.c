@@ -14,7 +14,7 @@
 // The pcap framing is checked against the libpcap savefile layout and the tcpdump link-layer type
 // registry, which assigns LINKTYPE_IEEE802_11 the value 105.
 
-#include "network_drivers/physical/physical.h" // protocore_phy_mock_deliver: the radio's receive path
+#include "network_drivers/physical/physical/physical.h" // protocore_phy_mock_deliver: the radio's receive path
 #include "services/radio/promisc/promisc.h"
 #include "shared/pcap/pcap.h"
 #include <string.h>

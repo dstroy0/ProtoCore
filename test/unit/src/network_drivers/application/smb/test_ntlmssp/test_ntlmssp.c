@@ -13,7 +13,7 @@
 // module parses, it comes from the network, and everything downstream (the server challenge, the
 // AV_PAIR blob the NTLMv2 response is computed over) is read out of it at offsets that dump fixes.
 
-#include "network_drivers/application/smb/ntlmssp.h"
+#include "network_drivers/application/smb/ntlmssp/ntlmssp.h"
 #include <string.h>
 
 #include <unity.h>

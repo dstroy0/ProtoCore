@@ -13,7 +13,7 @@
 
 #if PROTOCORE_HOST && PROTOCORE_HAS_HW_AES
 
-#include "crypto/cipher/aes_block.h" // protocore_aes_key_expand / protocore_aes_encrypt_block
+#include "crypto/cipher/aes_block/aes_block.h" // protocore_aes_key_expand / protocore_aes_encrypt_block
 
 PROTOCORE_BEGIN_DECLS
 

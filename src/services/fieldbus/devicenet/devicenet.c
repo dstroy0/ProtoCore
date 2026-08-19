@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DEVICENET
 
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 #include "services/fieldbus/devicenet/devicenet.h"
 #include "shared/can/can.h"
 

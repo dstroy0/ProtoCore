@@ -4,7 +4,7 @@
 // Arduino autostart is enabled (CONFIG_AUTOSTART_ARDUINO=y in sdkconfig.defaults), so the arduino-esp32
 // component calls setup() once and loop() forever - the same shape as an .ino sketch. Set your Wi-Fi
 // credentials below and flash with `idf.py flash monitor`.
-#include "network_drivers/physical/physical.h" // init_wifi_physical / wifi_ready
+#include "network_drivers/physical/physical/physical.h" // init_wifi_physical / wifi_ready
 #include "protocore.h"
 #include <Arduino.h>
 

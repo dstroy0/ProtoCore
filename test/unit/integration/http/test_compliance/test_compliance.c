@@ -11,10 +11,13 @@
 
 static void feed_request(uint8_t slot, const char *raw)
 {
-    http_parser_reset(&http_pool[slot]);
+    HttpParser.reset_args.req = &http_pool[slot];
+    HttpParser.reset(protocore_http_parser_span());
     for (const char *s = raw; *s; s++)
     {
-        http_parser_feed(&http_pool[slot], (uint8_t)*s);
+        HttpParser.feed_args.req = &http_pool[slot];
+        HttpParser.feed_args.byte = (uint8_t)*s;
+        HttpParser.feed(protocore_http_parser_span());
     }
 }
 
@@ -24,7 +27,8 @@ void setUp()
     {
         http_pool[i] = (HttpReq){0};
         http_pool[i].slot_id = (uint8_t)i;
-        http_parser_reset(&http_pool[i]);
+        HttpParser.reset_args.req = &http_pool[i];
+        HttpParser.reset(protocore_http_parser_span());
     }
 }
 
@@ -146,27 +150,3 @@ void test_transfer_encoding_case_insensitive_rejected()
     TEST_ASSERT_EQUAL(PARSE_ERROR, http_pool[0].parse_state);
 }
 
-int main()
-{
-    UNITY_BEGIN();
-
-    RUN_TEST(test_http11_missing_host_rejected);
-    RUN_TEST(test_http11_with_host_ok);
-    RUN_TEST(test_http10_missing_host_ok);
-    RUN_TEST(test_duplicate_host_rejected);
-    RUN_TEST(test_duplicate_host_rejected_http10);
-    RUN_TEST(test_host_beyond_max_headers_still_counted);
-    RUN_TEST(test_duplicate_host_with_one_beyond_cap_rejected);
-
-    RUN_TEST(test_content_length_non_digit_rejected);
-    RUN_TEST(test_content_length_empty_rejected);
-    RUN_TEST(test_content_length_conflicting_duplicate_rejected);
-    RUN_TEST(test_content_length_matching_duplicate_ok);
-    RUN_TEST(test_content_length_valid_body);
-
-    RUN_TEST(test_transfer_encoding_chunked_rejected);
-    RUN_TEST(test_transfer_encoding_with_content_length_rejected);
-    RUN_TEST(test_transfer_encoding_case_insensitive_rejected);
-
-    return UNITY_END();
-}

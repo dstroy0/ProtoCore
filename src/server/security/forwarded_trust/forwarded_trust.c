@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 #include "server/security/forwarded_trust/forwarded_trust.h"
-#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "shared/ip/ip.h"
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths

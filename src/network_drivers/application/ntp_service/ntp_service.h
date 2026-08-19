@@ -19,28 +19,33 @@
 #ifndef PROTOCORE_NTP_SERVICE_H
 #define PROTOCORE_NTP_SERVICE_H
 
-#include <time.h>
-
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 PROTOCORE_BEGIN_DECLS
 
 /**
- * @brief Format the current time as an RFC 7231 IMF-fixdate (HTTP `Date`).
+ * @brief Format the current time as an RFC 7231 IMF-fixdate (HTTP `Date`), e.g.
+ *        "Sun, 06 Nov 1994 08:49:37 GMT". Always GMT.
  *
- * Writes e.g. "Sun, 06 Nov 1994 08:49:37 GMT" into @p out. Always GMT.
- *
- * Declared outside the PROTOCORE_ENABLE_NTP gate because ntp_service.c defines it on both arms of its own
- * gate, and PROTOCORE_HTTP_EMIT_DATE reaches it whenever no PROTOCORE_ENABLE_TIME_SOURCE registry is built.
+ * Not an entry, and outside the gate below: ntp_service.c defines it on both arms of its own gate,
+ * and server/io/response.c reaches it whenever no PROTOCORE_ENABLE_TIME_SOURCE registry is built,
+ * whether or not NTP itself is.
  *
  * @param out      Destination buffer (>= 30 bytes recommended).
  * @param out_cap  Capacity of @p out.
- * @return Number of characters written (excluding the null), or 0 if time is
- *         not yet available / disabled.
+ * @return characters written excluding the null, or 0 when no time is available.
  */
 size_t protocore_ntp_http_date(char *out, size_t out_cap);
 
+PROTOCORE_END_DECLS
+
 #if PROTOCORE_ENABLE_NTP
+
+PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_NTP_SERVICE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /** @brief Server this asks when the caller names none. */
 #define PROTOCORE_NTP_SERVER1 "pool.ntp.org"
@@ -48,50 +53,79 @@ size_t protocore_ntp_http_date(char *out, size_t out_cap);
 /** @brief Server this falls back to when the caller names none. */
 #define PROTOCORE_NTP_SERVER2 "time.nist.gov"
 
-/**
- * @brief Start the SNTP client.
- *
- * Returns immediately; the first sync arrives asynchronously (poll
- * protocore_ntp_synced()). Call once after the WiFi link is up.
- *
- * @param tz     POSIX TZ string (e.g. "UTC0", "EST5EDT,M3.2.0,M11.1.0"). NULL selects UTC.
- * @param server1  Primary NTP server. NULL selects PROTOCORE_NTP_SERVER1.
- * @param server2  Secondary NTP server. NULL selects PROTOCORE_NTP_SERVER2.
- * @return true if the client was started; false if disabled at compile time.
- */
-proto_bool protocore_ntp_begin(const char *tz, const char *server1, const char *server2);
+/** @brief What begin takes: tz, server1, server2. */
+typedef struct
+{
+    const char *tz;      ///< POSIX TZ string (e.g. "UTC0", "EST5EDT,M3.2.0,M11.1.0"). NULL selects UTC
+    const char *server1; ///< Primary NTP server. NULL selects PROTOCORE_NTP_SERVER1
+    const char *server2; ///< Secondary NTP server. NULL selects PROTOCORE_NTP_SERVER2
+} NtpServiceBeginArgs;
+
+/** @brief What set_test_epoch takes: epoch. */
+typedef struct
+{
+    time_t epoch;
+} NtpServiceSetTestEpochArgs;
 
 /**
- * @brief True once a plausible wall-clock time has been obtained from SNTP.
+ * @brief Optional SNTP wall-clock time sync (PROTOCORE_ENABLE_NTP).
  *
- * Checks that the system clock has advanced past 2021-01-01.
+ * A caller sets the members a call takes, invokes it through ::NtpService with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   NtpService.begin_args.tz = ...;
+ *   NtpService.begin_args.server1 = ...;
+ *   NtpService.begin_args.server2 = ...;
+ *   NtpService.begin(work);
+ *   // NtpService.ok is what the call reports
+ *
+ * @var NtpServiceNs::begin_args  what begin takes: tz, server1, server2
+ * @var NtpServiceNs::set_test_epoch_args  what set_test_epoch takes: epoch
+ * @var NtpServiceNs::ok  true if the client was started; false if disabled at compile time
+ * @var NtpServiceNs::value  the value a call reports
+ * @var NtpServiceNs::ms  the milliseconds a call reports
+ * @var NtpServiceNs::begin  start the SNTP client. Returns immediately; the first sync arrives ...
+ * @var NtpServiceNs::synced  true once a plausible wall-clock time has been obtained from SNTP. ...
+ * @var NtpServiceNs::epoch  current Unix epoch seconds, or 0 if not yet synced (or disabled)
+ * @var NtpServiceNs::time_source  NTP as a time source for the multi-source registry ...
+ * @var NtpServiceNs::set_test_epoch  seed the clock without asking a server: the accessors above report ...
+ *
+ * @c work is PROTOCORE_NTP_SERVICE_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-proto_bool protocore_ntp_synced(void);
+typedef struct
+{
+    NtpServiceBeginArgs begin_args;
+    NtpServiceSetTestEpochArgs set_test_epoch_args;
+
+    proto_bool ok;
+    time_t value;
+    uint32_t ms;
+
+    void (*const begin)(uint8_t *restrict work);
+    void (*const synced)(uint8_t *restrict work);
+    void (*const epoch)(uint8_t *restrict work);
+    void (*const time_source)(uint8_t *restrict work);
+    void (*const set_test_epoch)(uint8_t *restrict work);
+} NtpServiceNs;
+
+/** @brief The one symbol this module exports. */
+extern NtpServiceNs NtpService;
 
 /**
- * @brief Current Unix epoch seconds, or 0 if not yet synced (or disabled).
- */
-time_t protocore_ntp_epoch(void);
-
-/**
- * @brief NTP as a time source for the multi-source registry (services/timing_position/time_source).
+ * @brief The PROTOCORE_NTP_SERVICE_BORROW bytes this module's state lives in.
  *
- * Register with protocore_time_source_add("ntp", priority, protocore_ntp_time_source). Returns the
- * current epoch, or 0 when not synced.
- */
-uint32_t protocore_ntp_time_source(void);
-
-/**
- * @brief Seed the clock without asking a server: the accessors above report @p epoch from now on.
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
  *
- * The client keeps the epoch itself, so setting it is the same operation a reply performs. A caller
- * that already knows the time (an RTC, a provisioning step, a test) uses this instead of a round
- * trip. 0 puts the client back to never-synced.
+ * @return the span, or NULL while the pool was short - which every entry refuses.
  */
-void protocore_ntp_set_test_epoch(time_t epoch);
-
-#endif // PROTOCORE_ENABLE_NTP
+uint8_t *protocore_ntp_service_span(void);
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_NTP
 
 #endif // PROTOCORE_NTP_SERVICE_H

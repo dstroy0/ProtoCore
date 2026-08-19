@@ -12,12 +12,12 @@
  */
 
 #include "services/iot/sparkplug/sparkplug.h"
-#include "mmgr/plaintext.h" // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_SPARKPLUG
 
-#include "mmgr/protomem.h"                  // mem.cpy / mem.set: the spans a topic and a decode move
-#include "mmgr/protostr.h"                  // str.len: the bounded length of each topic element
+#include "mmgr/protomem/protomem.h"                  // mem.cpy / mem.set: the spans a topic and a decode move
+#include "mmgr/protostr/protostr.h"                  // str.len: the bounded length of each topic element
 #include "services/iot/protobuf/protobuf.h" // the wire codec a Payload and a Metric are written with
 
 // Sparkplug 3.0.0 sec 4.1: the namespace element and the MQTT topic level separator that follows it.

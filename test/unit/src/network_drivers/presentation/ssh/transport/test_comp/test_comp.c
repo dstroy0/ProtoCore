@@ -5,21 +5,26 @@
 // over. "none" and "zlib" are the RFC's two methods; "zlib@openssh.com" is the same codec holding
 // off until authentication has succeeded, so nothing before that point is compressed.
 
-#include "network_drivers/presentation/ssh/transport/comp.h"
-#include "network_drivers/presentation/ssh/transport/transport.h"
+#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/transport/comp/comp.h"
+#include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include <stdint.h>
 
 #include <unity.h>
+
+static uint8_t comp_work[16]; // the borrow an entry takes; Comp never reads it
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
 void setUp(void)
 {
-    ssh_comp_reset(0);
+    Comp.reset_args.i = 0;
+    Comp.reset(comp_work);
 }
 void tearDown(void)
 {
-    ssh_comp_reset(0);
+    Comp.reset_args.i = 0;
+    Comp.reset(comp_work);
 }
 
 // ---------------------------------------------------------------------------
@@ -28,21 +33,39 @@ void tearDown(void)
 
 static void test_sec6_2_neither_direction_starts_compressed(void)
 {
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
 }
 
 // Negotiating "none" leaves both directions uncompressed however many key exchanges run.
 static void test_sec6_2_none_never_activates(void)
 {
-    ssh_comp_set_s2c(0, SSH_COMP_NONE);
-    ssh_comp_set_c2s(0, SSH_COMP_NONE);
-    ssh_comp_on_newkeys(0);
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
-    ssh_comp_on_auth_success(0);
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_NONE;
+    Comp.set_s2c(comp_work);
+    Comp.set_c2s_args.i = 0;
+    Comp.set_c2s_args.alg = SSH_COMP_NONE;
+    Comp.set_c2s(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.on_auth_success_args.i = 0;
+    Comp.on_auth_success(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -53,45 +76,92 @@ static void test_sec6_2_none_never_activates(void)
 
 static void test_sec6_2_zlib_starts_at_newkeys_not_at_negotiation(void)
 {
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
-    ssh_comp_set_c2s(0, SSH_COMP_ZLIB);
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0)); // negotiated, not yet in use
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
+    Comp.set_s2c(comp_work);
+    Comp.set_c2s_args.i = 0;
+    Comp.set_c2s_args.alg = SSH_COMP_ZLIB;
+    Comp.set_c2s(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok); // negotiated, not yet in use
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
 
-    ssh_comp_on_newkeys(0);
-    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_TRUE(ssh_comp_c2s_active(0));
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_TRUE(Comp.ok);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_TRUE(Comp.ok);
 }
 
 // The two directions are negotiated separately (sec 7.1 lists compression per direction), so one
 // may be compressed while the other is not.
 static void test_sec7_1_the_two_directions_are_independent(void)
 {
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
-    ssh_comp_set_c2s(0, SSH_COMP_NONE);
-    ssh_comp_on_newkeys(0);
-    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
+    Comp.set_s2c(comp_work);
+    Comp.set_c2s_args.i = 0;
+    Comp.set_c2s_args.alg = SSH_COMP_NONE;
+    Comp.set_c2s(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_TRUE(Comp.ok);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
 }
 
 // "The compression context is initialized after each key exchange." A re-exchange starts the stream
 // over rather than carrying the previous window across it.
 static void test_sec6_2_each_key_exchange_reinitializes_the_context(void)
 {
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
-    ssh_comp_on_newkeys(0);
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
+    Comp.set_s2c(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
 
     static const uint8_t msg[] = "a payload long enough to be worth a back reference, twice over";
     const size_t len = sizeof(msg) - 1;
     uint8_t a[2048], b[2048], c[2048];
     size_t na = 0, nb = 0, nc = 0;
 
-    TEST_ASSERT_EQUAL_INT(0, ssh_comp_s2c(0, msg, len, a, sizeof(a), &na));
-    TEST_ASSERT_EQUAL_INT(0, ssh_comp_s2c(0, msg, len, b, sizeof(b), &nb));
+    Comp.s2c_args.i = 0;
+    Comp.s2c_args.src = msg;
+    Comp.s2c_args.src_len = len;
+    Comp.s2c_args.dst = a;
+    Comp.s2c_args.dst_cap = sizeof(a);
+    Comp.s2c_args.out_len = &na;
+    Comp.s2c(comp_work);
+    TEST_ASSERT_EQUAL_INT(0, Comp.n);
+    Comp.s2c_args.i = 0;
+    Comp.s2c_args.src = msg;
+    Comp.s2c_args.src_len = len;
+    Comp.s2c_args.dst = b;
+    Comp.s2c_args.dst_cap = sizeof(b);
+    Comp.s2c_args.out_len = &nb;
+    Comp.s2c(comp_work);
+    TEST_ASSERT_EQUAL_INT(0, Comp.n);
     TEST_ASSERT_LESS_THAN_size_t(na, nb); // the second was matched out of the window
 
-    ssh_comp_on_newkeys(0); // a re-exchange completes
-    TEST_ASSERT_EQUAL_INT(0, ssh_comp_s2c(0, msg, len, c, sizeof(c), &nc));
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work); // a re-exchange completes
+    Comp.s2c_args.i = 0;
+    Comp.s2c_args.src = msg;
+    Comp.s2c_args.src_len = len;
+    Comp.s2c_args.dst = c;
+    Comp.s2c_args.dst_cap = sizeof(c);
+    Comp.s2c_args.out_len = &nc;
+    Comp.s2c(comp_work);
+    TEST_ASSERT_EQUAL_INT(0, Comp.n);
 
     // The window went with the old context, so this costs what the first one did, not what the
     // second one did.
@@ -104,55 +174,111 @@ static void test_sec6_2_each_key_exchange_reinitializes_the_context(void)
 
 static void test_delayed_does_not_start_at_newkeys(void)
 {
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
-    ssh_comp_set_c2s(0, SSH_COMP_ZLIB_DELAYED);
-    ssh_comp_on_newkeys(0);
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB_DELAYED;
+    Comp.set_s2c(comp_work);
+    Comp.set_c2s_args.i = 0;
+    Comp.set_c2s_args.alg = SSH_COMP_ZLIB_DELAYED;
+    Comp.set_c2s(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
 }
 
 static void test_delayed_starts_at_authentication_success(void)
 {
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
-    ssh_comp_set_c2s(0, SSH_COMP_ZLIB_DELAYED);
-    ssh_comp_on_newkeys(0);
-    ssh_comp_on_auth_success(0);
-    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_TRUE(ssh_comp_c2s_active(0));
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB_DELAYED;
+    Comp.set_s2c(comp_work);
+    Comp.set_c2s_args.i = 0;
+    Comp.set_c2s_args.alg = SSH_COMP_ZLIB_DELAYED;
+    Comp.set_c2s(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
+    Comp.on_auth_success_args.i = 0;
+    Comp.on_auth_success(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_TRUE(Comp.ok);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_TRUE(Comp.ok);
 }
 
 // Authentication succeeding does not start plain "zlib" over: that one is the key exchange's.
 static void test_auth_success_does_not_disturb_plain_zlib(void)
 {
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
-    ssh_comp_on_newkeys(0);
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
+    Comp.set_s2c(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
 
     static const uint8_t msg[] = "a payload long enough to be worth a back reference, twice over";
     const size_t len = sizeof(msg) - 1;
     uint8_t a[2048], b[2048];
     size_t na = 0, nb = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_comp_s2c(0, msg, len, a, sizeof(a), &na));
+    Comp.s2c_args.i = 0;
+    Comp.s2c_args.src = msg;
+    Comp.s2c_args.src_len = len;
+    Comp.s2c_args.dst = a;
+    Comp.s2c_args.dst_cap = sizeof(a);
+    Comp.s2c_args.out_len = &na;
+    Comp.s2c(comp_work);
+    TEST_ASSERT_EQUAL_INT(0, Comp.n);
 
-    ssh_comp_on_auth_success(0);
-    TEST_ASSERT_EQUAL_INT(0, ssh_comp_s2c(0, msg, len, b, sizeof(b), &nb));
+    Comp.on_auth_success_args.i = 0;
+    Comp.on_auth_success(comp_work);
+    Comp.s2c_args.i = 0;
+    Comp.s2c_args.src = msg;
+    Comp.s2c_args.src_len = len;
+    Comp.s2c_args.dst = b;
+    Comp.s2c_args.dst_cap = sizeof(b);
+    Comp.s2c_args.out_len = &nb;
+    Comp.s2c(comp_work);
+    TEST_ASSERT_EQUAL_INT(0, Comp.n);
     TEST_ASSERT_LESS_THAN_size_t(na, nb); // the window survived, so this is still the cheap copy
 }
 
 // A second USERAUTH_SUCCESS cannot restart a delayed stream underneath a running connection.
 static void test_delayed_start_is_idempotent(void)
 {
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB_DELAYED);
-    ssh_comp_on_newkeys(0);
-    ssh_comp_on_auth_success(0);
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB_DELAYED;
+    Comp.set_s2c(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
+    Comp.on_auth_success_args.i = 0;
+    Comp.on_auth_success(comp_work);
 
     static const uint8_t msg[] = "a payload long enough to be worth a back reference, twice over";
     const size_t len = sizeof(msg) - 1;
     uint8_t a[2048], b[2048];
     size_t na = 0, nb = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_comp_s2c(0, msg, len, a, sizeof(a), &na));
+    Comp.s2c_args.i = 0;
+    Comp.s2c_args.src = msg;
+    Comp.s2c_args.src_len = len;
+    Comp.s2c_args.dst = a;
+    Comp.s2c_args.dst_cap = sizeof(a);
+    Comp.s2c_args.out_len = &na;
+    Comp.s2c(comp_work);
+    TEST_ASSERT_EQUAL_INT(0, Comp.n);
 
-    ssh_comp_on_auth_success(0); // again
-    TEST_ASSERT_EQUAL_INT(0, ssh_comp_s2c(0, msg, len, b, sizeof(b), &nb));
+    Comp.on_auth_success_args.i = 0;
+    Comp.on_auth_success(comp_work); // again
+    Comp.s2c_args.i = 0;
+    Comp.s2c_args.src = msg;
+    Comp.s2c_args.src_len = len;
+    Comp.s2c_args.dst = b;
+    Comp.s2c_args.dst_cap = sizeof(b);
+    Comp.s2c_args.out_len = &nb;
+    Comp.s2c(comp_work);
+    TEST_ASSERT_EQUAL_INT(0, Comp.n);
     TEST_ASSERT_LESS_THAN_size_t(na, nb); // the stream continued rather than restarting
 }
 
@@ -170,10 +296,28 @@ static void test_inactive_direction_refuses_rather_than_transforming(void)
     uint8_t out[256];
     size_t n = 0;
 
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_EQUAL_INT(-1, ssh_comp_s2c(0, msg, len, out, sizeof(out), &n));
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
-    TEST_ASSERT_EQUAL_INT(-1, ssh_comp_c2s(0, msg, len, out, sizeof(out), &n));
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.s2c_args.i = 0;
+    Comp.s2c_args.src = msg;
+    Comp.s2c_args.src_len = len;
+    Comp.s2c_args.dst = out;
+    Comp.s2c_args.dst_cap = sizeof(out);
+    Comp.s2c_args.out_len = &n;
+    Comp.s2c(comp_work);
+    TEST_ASSERT_EQUAL_INT(-1, Comp.n);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.c2s_args.i = 0;
+    Comp.c2s_args.src = msg;
+    Comp.c2s_args.src_len = len;
+    Comp.c2s_args.dst = out;
+    Comp.c2s_args.dst_cap = sizeof(out);
+    Comp.c2s_args.out_len = &n;
+    Comp.c2s(comp_work);
+    TEST_ASSERT_EQUAL_INT(-1, Comp.n);
 }
 
 // A compressed payload is not the payload, which is the only observable difference that matters.
@@ -184,12 +328,22 @@ static void test_active_direction_transforms_the_payload(void)
     {
         src[k] = (uint8_t)('A' + (k % 4u));
     }
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
-    ssh_comp_on_newkeys(0);
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
+    Comp.set_s2c(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
 
     uint8_t out[2048];
     size_t n = 0;
-    TEST_ASSERT_EQUAL_INT(0, ssh_comp_s2c(0, src, sizeof(src), out, sizeof(out), &n));
+    Comp.s2c_args.i = 0;
+    Comp.s2c_args.src = src;
+    Comp.s2c_args.src_len = sizeof(src);
+    Comp.s2c_args.dst = out;
+    Comp.s2c_args.dst_cap = sizeof(out);
+    Comp.s2c_args.out_len = &n;
+    Comp.s2c(comp_work);
+    TEST_ASSERT_EQUAL_INT(0, Comp.n);
     TEST_ASSERT_LESS_THAN_size_t(sizeof(src), n);
 }
 
@@ -200,18 +354,35 @@ static void test_active_direction_transforms_the_payload(void)
 // A slot handed back to the pool carries no algorithm and no stream into the next connection.
 static void test_reset_clears_both_directions(void)
 {
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
-    ssh_comp_set_c2s(0, SSH_COMP_ZLIB);
-    ssh_comp_on_newkeys(0);
-    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
+    Comp.set_s2c(comp_work);
+    Comp.set_c2s_args.i = 0;
+    Comp.set_c2s_args.alg = SSH_COMP_ZLIB;
+    Comp.set_c2s(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_TRUE(Comp.ok);
 
-    ssh_comp_reset(0);
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    Comp.reset_args.i = 0;
+    Comp.reset(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
 
-    ssh_comp_on_newkeys(0); // no algorithm negotiated on the new connection yet
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(0));
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work); // no algorithm negotiated on the new connection yet
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.c2s_active_args.i = 0;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
 }
 
 // The state is per slot, so one connection's compression is not another's.
@@ -222,23 +393,40 @@ static void test_state_is_per_slot(void)
         TEST_IGNORE_MESSAGE("needs a second slot");
         return;
     }
-    ssh_comp_reset(1);
-    ssh_comp_set_s2c(0, SSH_COMP_ZLIB);
-    ssh_comp_on_newkeys(0);
-    TEST_ASSERT_TRUE(ssh_comp_s2c_active(0));
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(1));
+    Comp.reset_args.i = 1;
+    Comp.reset(comp_work);
+    Comp.set_s2c_args.i = 0;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
+    Comp.set_s2c(comp_work);
+    Comp.on_newkeys_args.i = 0;
+    Comp.on_newkeys(comp_work);
+    Comp.s2c_active_args.i = 0;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_TRUE(Comp.ok);
+    Comp.s2c_active_args.i = 1;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
 }
 
 // A slot past the pool answers inactive and takes no state.
 static void test_slot_past_the_pool_is_inert(void)
 {
     const uint8_t bad = MAX_SSH_CONNS;
-    ssh_comp_reset(bad);
-    ssh_comp_set_s2c(bad, SSH_COMP_ZLIB);
-    ssh_comp_on_newkeys(bad);
-    ssh_comp_on_auth_success(bad);
-    TEST_ASSERT_FALSE(ssh_comp_s2c_active(bad));
-    TEST_ASSERT_FALSE(ssh_comp_c2s_active(bad));
+    Comp.reset_args.i = bad;
+    Comp.reset(comp_work);
+    Comp.set_s2c_args.i = bad;
+    Comp.set_s2c_args.alg = SSH_COMP_ZLIB;
+    Comp.set_s2c(comp_work);
+    Comp.on_newkeys_args.i = bad;
+    Comp.on_newkeys(comp_work);
+    Comp.on_auth_success_args.i = bad;
+    Comp.on_auth_success(comp_work);
+    Comp.s2c_active_args.i = bad;
+    Comp.s2c_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
+    Comp.c2s_active_args.i = bad;
+    Comp.c2s_active(comp_work);
+    TEST_ASSERT_FALSE(Comp.ok);
 }
 
 int main(void)

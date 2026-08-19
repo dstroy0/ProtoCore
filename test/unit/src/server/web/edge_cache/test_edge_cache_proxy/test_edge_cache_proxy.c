@@ -12,8 +12,8 @@
 // prefix field, so test_the_map_table_is_bounded is the load-bearing case: it fills the table and
 // then asserts the next map is refused rather than overwriting a live route.
 
-#include "server/web/edge_cache/edge_cache.h"
-#include "server/web/edge_cache/edge_cache_proxy.h"
+#include "server/web/edge_cache/edge_cache/edge_cache.h"
+#include "server/web/edge_cache/edge_cache_proxy/edge_cache_proxy.h"
 
 #include <unity.h>
 

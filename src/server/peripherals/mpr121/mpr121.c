@@ -20,8 +20,8 @@
  turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
 
-#include "mmgr/protomem.h"
-#include "mmgr/secure.h"        // the persistent end this module's state is taken from
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/secure/secure.h"        // the persistent end this module's state is taken from
 #include "server/clock/clock.h" // pcdelay
 #include "server/peripherals/i2c.h"
 #include "server/peripherals/mpr121/mpr121.h"

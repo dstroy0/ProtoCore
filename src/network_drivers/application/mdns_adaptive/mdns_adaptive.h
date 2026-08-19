@@ -24,11 +24,15 @@
 #ifndef PROTOCORE_MDNS_ADAPTIVE_H
 #define PROTOCORE_MDNS_ADAPTIVE_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_MDNS_ADAPTIVE
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_MDNS_ADAPTIVE_BORROW - the bytes this module runs out of - is stated in protocore_config.h, which sums
+// it into its arena. A caller takes them once and passes the pointer to every call. How they
+// are carved is this module's and is never named here.
 
 /** @brief Adaptive beacon state. */
 typedef struct
@@ -38,35 +42,6 @@ typedef struct
     uint32_t cur_ms;    ///< current adaptive interval.
     uint16_t hi_thresh; ///< contention count at/above which the interval backs off.
 } MdnsBeacon;
-
-/** @brief The continuous-refresher cadence for a record TTL: half the TTL, in milliseconds. */
-uint32_t protocore_mdns_refresh_interval(uint32_t ttl_s);
-
-/** @brief Initialize a beacon. @p cur_ms starts at @p base_ms. */
-void protocore_mdns_beacon_init(MdnsBeacon *b, uint32_t base_ms, uint32_t max_ms, uint16_t hi_thresh);
-
-/**
- * @brief Adapt the interval to observed RF contention (announces/collisions seen in the last window).
- *        contention >= hi_thresh doubles the interval (capped at max_ms); contention == 0 halves it back
- *        toward base_ms; moderate contention holds.
- * @return the new interval (ms).
- */
-uint32_t protocore_mdns_beacon_adapt(MdnsBeacon *b, uint16_t contention);
-
-/** @brief Is an announce due now? (wrap-safe: elapsed since @p last_ms >= the current interval). */
-proto_bool protocore_mdns_beacon_due(const MdnsBeacon *b, uint32_t last_ms, uint32_t now_ms);
-
-/**
- * @brief Auto-sleep beacon: should we announce *before* sleeping for @p sleep_ms?
- *        True when the elapsed-since-last plus the sleep would meet/exceed the interval - i.e. the record
- *        would lapse mid-sleep - so we refresh proactively before the radio goes off.
- */
-proto_bool protocore_mdns_beacon_presleep_due(const MdnsBeacon *b, uint32_t last_ms, uint32_t now_ms,
-                                              uint32_t sleep_ms);
-
-// ---------------------------------------------------------------------------
-// Contention sampling
-// ---------------------------------------------------------------------------
 
 /**
  * @brief Turns a free-running frame counter into a per-window contention value.
@@ -83,34 +58,6 @@ typedef struct
     uint32_t window_ms;  ///< how long a sampling window is.
 } MdnsContentionWindow;
 
-/** @brief Start sampling at @p now_ms, anchored to the current counter @p frames_now. */
-void protocore_mdns_contention_init(MdnsContentionWindow *w, uint32_t window_ms, uint32_t frames_now, uint32_t now_ms);
-
-/**
- * @brief If a window has elapsed, report the frames counted in it and start the next window.
- *
- * @param frames_now the current running frame total (monotonic; a wrap is handled).
- * @param out        receives the frame count for the window (saturated at 0xFFFF).
- * @return true when a window closed and @p out was written; false if the window is not up yet.
- */
-proto_bool protocore_mdns_contention_sample(MdnsContentionWindow *w, uint32_t frames_now, uint32_t now_ms,
-                                            uint16_t *out);
-
-#if PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
-// ---------------------------------------------------------------------------
-// Device binding (needs PROTOCORE_ENABLE_MDNS + PROTOCORE_ENABLE_PROMISC)
-// ---------------------------------------------------------------------------
-//
-// Ties the three shipped pieces together on hardware: a promiscuous capture pinned to the station's
-// own channel supplies the contention count, the beacon scheduler turns that into an announce
-// interval, and the announce is a TXT re-apply on the running mDNS responder (which re-announces on
-// every PCB with no goodbye and no re-probe, so it refreshes the record rather than evicting it).
-//
-// Promiscuous capture is a radio-layer callback, not a socket, so unlike a second bind on UDP 5353
-// it does not turn the responder announce-only - verified on hardware (the record keeps resolving in
-// avahi while the capture runs). It is still the whole radio: this owns promiscuous mode, so it
-// cannot run at the same time as the wifi_sniffer live channel-hopping binding.
-
 /** @brief What to advertise and how aggressively to adapt. */
 typedef struct
 {
@@ -123,31 +70,152 @@ typedef struct
     uint32_t window_ms;       ///< contention sampling window (0 => a 1000 ms default).
 } MdnsAdaptiveCfg;
 
-/**
- * @brief Start adaptive announcing: begin promiscuous capture on the station's current channel and
- *        arm the beacon. Call after the mDNS service is up and the station is associated.
- * @return false if the station is not associated or promiscuous capture could not start.
- */
-proto_bool protocore_mdns_adaptive_begin(const MdnsAdaptiveCfg *cfg);
+/** @brief What refresh_interval takes: ttl_s. */
+typedef struct
+{
+    uint32_t ttl_s;
+} MdnsAdaptiveRefreshIntervalArgs;
+
+/** @brief What beacon_init takes: b, base_ms, max_ms, hi_thresh. */
+typedef struct
+{
+    MdnsBeacon *b;
+    uint32_t base_ms;
+    uint32_t max_ms;
+    uint16_t hi_thresh;
+} MdnsAdaptiveBeaconInitArgs;
+
+/** @brief What beacon_adapt takes: b, contention. */
+typedef struct
+{
+    MdnsBeacon *b;
+    uint16_t contention;
+} MdnsAdaptiveBeaconAdaptArgs;
+
+/** @brief What beacon_due takes: b, last_ms, now_ms. */
+typedef struct
+{
+    const MdnsBeacon *b;
+    uint32_t last_ms;
+    uint32_t now_ms;
+} MdnsAdaptiveBeaconDueArgs;
+
+/** @brief What beacon_presleep_due takes: b, last_ms, now_ms, sleep_ms. */
+typedef struct
+{
+    const MdnsBeacon *b;
+    uint32_t last_ms;
+    uint32_t now_ms;
+    uint32_t sleep_ms;
+} MdnsAdaptiveBeaconPresleepDueArgs;
+
+/** @brief What contention_init takes: w, window_ms, frames_now, now_ms. */
+typedef struct
+{
+    MdnsContentionWindow *w;
+    uint32_t window_ms;
+    uint32_t frames_now;
+    uint32_t now_ms;
+} MdnsAdaptiveContentionInitArgs;
+
+/** @brief What contention_sample takes: w, frames_now, now_ms, out. */
+typedef struct
+{
+    MdnsContentionWindow *w;
+    uint32_t frames_now; ///< the current running frame total (monotonic; a wrap is handled)
+    uint32_t now_ms;
+    uint16_t *out; ///< receives the frame count for the window (saturated at 0xFFFF)
+} MdnsAdaptiveContentionSampleArgs;
+
+/** @brief What begin takes: cfg. */
+typedef struct
+{
+    const MdnsAdaptiveCfg *cfg;
+} MdnsAdaptiveBeginArgs;
 
 /**
- * @brief Advance the schedule: sample contention, adapt the interval, follow the station's channel
- *        if it roamed, and re-announce when due. Cheap; call every loop.
+ * @brief Adaptive mDNS beacon scheduling: RF-aware backoff, TTL refresher, auto-sleep beacon
+ * (PROTOCORE_ENABLE_MDNS_ADAPTIVE).
+ *
+ * A caller sets the members a call takes, invokes it through ::MdnsAdaptive with the bytes it runs
+ * out of, and reads the outcome off the same handle.
+ *
+ *   MdnsAdaptive.refresh_interval_args.ttl_s = ...;
+ *   MdnsAdaptive.refresh_interval(work);
+ *   // MdnsAdaptive.ms is what the call reports
+ *
+ * @var MdnsAdaptiveNs::refresh_interval_args  what refresh_interval takes: ttl_s
+ * @var MdnsAdaptiveNs::beacon_init_args  what beacon_init takes: b, base_ms, max_ms, hi_thresh
+ * @var MdnsAdaptiveNs::beacon_adapt_args  what beacon_adapt takes: b, contention
+ * @var MdnsAdaptiveNs::beacon_due_args  what beacon_due takes: b, last_ms, now_ms
+ * @var MdnsAdaptiveNs::beacon_presleep_due_args  what beacon_presleep_due takes: b, last_ms, now_ms, sleep_ms
+ * @var MdnsAdaptiveNs::contention_init_args  what contention_init takes: w, window_ms, frames_now, now_ms
+ * @var MdnsAdaptiveNs::contention_sample_args  what contention_sample takes: w, frames_now, now_ms, out
+ * @var MdnsAdaptiveNs::begin_args  what begin takes: cfg
+ * @var MdnsAdaptiveNs::ok  true when a window closed and out was written; false if the window ...
+ * @var MdnsAdaptiveNs::ms  the new interval (ms)
+ * @var MdnsAdaptiveNs::value  the value a call reports
+ * @var MdnsAdaptiveNs::refresh_interval  the continuous-refresher cadence for a record TTL: half the TTL, in ...
+ * @var MdnsAdaptiveNs::beacon_init  initialize a beacon. cur_ms starts at base_ms
+ * @var MdnsAdaptiveNs::beacon_adapt  adapt the interval to observed RF contention (announces/collisions ...
+ * @var MdnsAdaptiveNs::beacon_due  is an announce due now? (wrap-safe: elapsed since last_ms >= the ...
+ * @var MdnsAdaptiveNs::beacon_presleep_due  auto-sleep beacon: should we announce *before* sleeping for ...
+ * @var MdnsAdaptiveNs::contention_init  start sampling at now_ms, anchored to the current counter frames_now
+ * @var MdnsAdaptiveNs::contention_sample  if a window has elapsed, report the frames counted in it and start ...
+ * @var MdnsAdaptiveNs::begin  start adaptive announcing: begin promiscuous capture on the ...
+ * @var MdnsAdaptiveNs::tick  advance the schedule: sample contention, adapt the interval, follow ...
+ * @var MdnsAdaptiveNs::end  stop adaptive announcing and release promiscuous mode
+ * @var MdnsAdaptiveNs::interval_ms  current adaptive announce interval (ms) - for a diagnostics panel
+ * @var MdnsAdaptiveNs::contention  frames counted in the most recently closed window - the live ...
+ * @var MdnsAdaptiveNs::announces  total announces sent since begin()
+ *
+ * @c work is PROTOCORE_MDNS_ADAPTIVE_BORROW bytes the CALLER took, at an address it knows. It arrives
+ * @c restrict and is not held past the call, so nothing here aliases it. How those bytes are
+ * carved is this module's and is never named here.
  */
-void protocore_mdns_adaptive_tick(void);
+typedef struct
+{
+    MdnsAdaptiveRefreshIntervalArgs refresh_interval_args;
+    MdnsAdaptiveBeaconInitArgs beacon_init_args;
+    MdnsAdaptiveBeaconAdaptArgs beacon_adapt_args;
+    MdnsAdaptiveBeaconDueArgs beacon_due_args;
+    MdnsAdaptiveBeaconPresleepDueArgs beacon_presleep_due_args;
+    MdnsAdaptiveContentionInitArgs contention_init_args;
+    MdnsAdaptiveContentionSampleArgs contention_sample_args;
+    MdnsAdaptiveBeginArgs begin_args;
 
-/** @brief Stop adaptive announcing and release promiscuous mode. */
-void protocore_mdns_adaptive_end(void);
+    proto_bool ok;
+    uint32_t ms;
+    uint16_t value;
 
-/** @brief Current adaptive announce interval (ms) - for a diagnostics panel. */
-uint32_t protocore_mdns_adaptive_interval_ms(void);
+    void (*const refresh_interval)(uint8_t *restrict work);
+    void (*const beacon_init)(uint8_t *restrict work);
+    void (*const beacon_adapt)(uint8_t *restrict work);
+    void (*const beacon_due)(uint8_t *restrict work);
+    void (*const beacon_presleep_due)(uint8_t *restrict work);
+    void (*const contention_init)(uint8_t *restrict work);
+    void (*const contention_sample)(uint8_t *restrict work);
+    void (*const begin)(uint8_t *restrict work);
+    void (*const tick)(uint8_t *restrict work);
+    void (*const end)(uint8_t *restrict work);
+    void (*const interval_ms)(uint8_t *restrict work);
+    void (*const contention)(uint8_t *restrict work);
+    void (*const announces)(uint8_t *restrict work);
+} MdnsAdaptiveNs;
 
-/** @brief Frames counted in the most recently closed window - the live contention signal. */
-uint16_t protocore_mdns_adaptive_contention(void);
+/** @brief The one symbol this module exports. */
+extern MdnsAdaptiveNs MdnsAdaptive;
 
-/** @brief Total announces sent since begin(). */
-uint32_t protocore_mdns_adaptive_announces(void);
-#endif // PROTOCORE_HAS_VENDOR_WIFI && PROTOCORE_ENABLE_MDNS && PROTOCORE_ENABLE_PROMISC
+/**
+ * @brief The PROTOCORE_MDNS_ADAPTIVE_BORROW bytes this module's state lives in.
+ *
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where
+ * that borrow comes from. Taken once from the end of the pool, which no mark and no release
+ * walks, so the state lasts the life of the program.
+ *
+ * @return the span, or NULL while the pool was short - which every entry refuses.
+ */
+uint8_t *protocore_mdns_adaptive_span(void);
 
 PROTOCORE_END_DECLS
 

@@ -12,7 +12,7 @@
 // Build/flash: S3 via pio (env rig_s3_linktest, WiFi); P4 via arduino-cli (p4/build_p4_linktest.sh, Ethernet).
 #include <Arduino.h>
 
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 // Credentials come from the build environment (sysenv RIG_WIFI_SSID / RIG_WIFI_PASS via the pio env), never
 // committed - the placeholders below only keep an unconfigured build compiling.

@@ -19,11 +19,18 @@
 
 void dbench_run(void)
 {
+    uint8_t *work = protocore_upload_service_span();
+    if (work == NULL)
+    {
+        return; // the pool was short of this module's borrow
+    }
+
     for (;;)
     {
         DBENCH_BANNER("upload_service");
         volatile size_t sink = 0;
-        DBENCH_OP("protocore_upload_last_size (getter)", 200000, sink += protocore_upload_last_size());
+        DBENCH_OP("UploadService.last_size (getter)", 200000,
+                  sink += (UploadService.last_size(work), UploadService.n));
         (void)sink;
         DBENCH_DONE();
     }

@@ -17,7 +17,7 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "network_drivers/network/dns/dns_resolver.h"
+#include "network_drivers/network/dns/dns_resolver/dns_resolver.h"
 
 #include <stdbool.h>
 #include <stddef.h>

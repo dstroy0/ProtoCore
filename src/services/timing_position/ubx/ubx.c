@@ -7,7 +7,7 @@
  */
 
 #include "services/timing_position/ubx/ubx.h"
-#include "mmgr/protomem.h"
+#include "mmgr/protomem/protomem.h"
 
 #if PROTOCORE_ENABLE_UBX
 

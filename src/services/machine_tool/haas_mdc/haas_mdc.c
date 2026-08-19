@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_HAAS_MDC
 
-#include "mmgr/membuild.h" // protocore_sb frame builder
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 
 // Trim leading and trailing spaces from [s, s+len); updates s and len in place.
 static void trim(const char **s, size_t *len)

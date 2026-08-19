@@ -7,12 +7,12 @@
  */
 
 #include "msgpack.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 
 #if PROTOCORE_ENABLE_MSGPACK
 
-#include "mmgr/bytes.h"
+#include "mmgr/bytes/bytes.h"
 
 // Thin local names over the shared byte verbs (bytes.h) so the call sites
 // below read the same as before; the cursor invariants live in one place.

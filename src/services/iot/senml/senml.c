@@ -16,8 +16,8 @@
 
 #if PROTOCORE_ENABLE_SENML
 
-#include "mmgr/membuild.h" // Sb: the Number rendering, and the resolved-Name concatenation
-#include "mmgr/span.h"     // protocore_span: the region a binary build writes into
+#include "mmgr/membuild/membuild.h" // Sb: the Number rendering, and the resolved-Name concatenation
+#include "mmgr/span/span.h"     // protocore_span: the region a binary build writes into
 #include "network_drivers/presentation/codec/json/json.h"
 
 // RFC 8428 sec 6 Table 4: the integer map keys the binary representation uses for the labels. Base

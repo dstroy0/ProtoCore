@@ -16,8 +16,8 @@
  turn the driver off - there is no software stand-in for a part on the other end of a bus."
 #endif
 
-#include "mmgr/endian.h" // endian.wr16be / endian.rd16be: the registers are big-endian
-#include "mmgr/secure.h" // the persistent end this module's state is taken from
+#include "mmgr/endian/endian.h" // endian.wr16be / endian.rd16be: the registers are big-endian
+#include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/peripherals/i2c.h"
 #include "server/peripherals/ldc1614/ldc1614.h"
 

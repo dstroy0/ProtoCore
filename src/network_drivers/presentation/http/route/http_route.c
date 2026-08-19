@@ -13,8 +13,8 @@
  */
 
 #include "network_drivers/presentation/http/route/http_route.h"
-#include "mmgr/protomem.h" // mem.zero: the hand-out wipe
-#include "mmgr/secure.h"   // where the table lives
+#include "mmgr/protomem/protomem.h" // mem.zero: the hand-out wipe
+#include "mmgr/secure/secure.h"   // where the table lives
 #include "protocore.h"     // completes HttpRoute; route.h names it only as an opaque tag
 
 // The table's layout, known only here. The handle is the module's one file-scope mutable; the

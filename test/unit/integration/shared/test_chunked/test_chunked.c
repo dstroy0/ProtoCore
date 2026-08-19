@@ -191,7 +191,7 @@ void setUp()
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
         HttpConn.slot = i;
-        HttpConn.reset(HttpConn.internal);
+        HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
     Sse.init(protocore_sse_span());
@@ -211,7 +211,7 @@ static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
     HttpConn.slot = slot;
-    HttpConn.parse(HttpConn.internal);
+    HttpConn.parse(protocore_http_conn_span());
     handle();
 }
 
@@ -386,23 +386,3 @@ void test_hex_u32_size_line()
     }
 }
 
-int main()
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_hex_u32_size_line);
-    RUN_TEST(test_chunked_source_overreport_clamped);
-    RUN_TEST(test_chunked_backpressure_resumes_across_polls);
-    RUN_TEST(test_headers_announce_chunked_no_content_length);
-    RUN_TEST(test_single_chunk_framing);
-    RUN_TEST(test_multiple_chunks_in_order);
-    RUN_TEST(test_printf_chunk);
-    RUN_TEST(test_single_piece_then_terminator);
-    RUN_TEST(test_empty_body_is_just_terminator);
-    RUN_TEST(test_large_chunked_body_not_truncated);
-    RUN_TEST(test_head_sends_headers_only);
-    RUN_TEST(test_custom_header_injected_into_chunked);
-    RUN_TEST(test_log_hook_reports_total_body_length);
-    RUN_TEST(test_http10_falls_back_to_close_delimited);
-    RUN_TEST(test_http10_large_body_not_truncated);
-    return UNITY_END();
-}

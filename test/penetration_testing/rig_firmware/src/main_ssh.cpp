@@ -8,7 +8,7 @@
 // Connect:  ssh -p 22 admin@<ip>   (password s3cret); the server echoes each line back.
 #include <Arduino.h>
 
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "network_drivers/presentation/ssh/auth/ssh_auth.h"
 #include "network_drivers/presentation/ssh/connection/ssh_channel.h"
 #include "network_drivers/presentation/ssh/connection/ssh_conn.h"
@@ -17,8 +17,8 @@
 #include <WiFi.h>
 
 #ifdef PROTOCORE_SSH_BENCH
-#include "crypto/asymmetric/curve25519.h"
-#include "crypto/asymmetric/ed25519.h"
+#include "crypto/asymmetric/curve25519/curve25519.h"
+#include "crypto/asymmetric/ed25519/ed25519.h"
 #include "driver/periph_ctrl.h" // periph_module_enable(PERIPH_RSA_MODULE) - proper clk/reset for the accelerator
 #include "soc/hwcrypto_reg.h"   // S3 RSA/MPI accelerator register map (MODMULT experiment)
 #include "soc/periph_defs.h"

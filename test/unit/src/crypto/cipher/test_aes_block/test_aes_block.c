@@ -11,7 +11,7 @@
 // The key schedule is checked separately at its own published values (FIPS 197 Appendix A), because
 // a schedule that is wrong only in a late round key still produces a correct-looking first round.
 
-#include "crypto/cipher/aes_block.h"
+#include "crypto/cipher/aes_block/aes_block.h"
 #include <string.h>
 
 #include <unity.h>

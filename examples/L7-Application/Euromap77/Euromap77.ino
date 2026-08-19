@@ -27,7 +27,7 @@
 #define PROTOCORE_ENABLE_EUROMAP77 1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "services/opcua/models/euromap77/euromap77.h"
 #include <math.h>
 

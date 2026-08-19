@@ -16,7 +16,7 @@
  * same. The link comes up instantly because there is no radio to wait on.
  */
 
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 
 #if PROTOCORE_PHYSICAL_HAS_BACKEND && !PROTOCORE_VENDOR_ESP
 

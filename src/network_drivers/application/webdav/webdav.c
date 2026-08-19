@@ -13,8 +13,8 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
 #if PROTOCORE_ENABLE_WEBDAV
 
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h" // str.find: the scheme marker inside a Destination header
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h" // str.find: the scheme marker inside a Destination header
 #include "network_drivers/application/webdav/webdav.h"
 #include "shared/hex/hex.h"
 

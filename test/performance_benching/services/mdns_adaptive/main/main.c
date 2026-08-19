@@ -33,10 +33,20 @@ void dbench_run(void)
     // Beacon armed with the same realistic values the host test uses: 120 s TTL -> 60 s base cadence,
     // an 8 min backoff ceiling, back off at >= 5 contenders/window.
     MdnsBeacon b;
-    protocore_mdns_beacon_init(&b, 60000, 480000, 5);
+    MdnsAdaptive.beacon_init_args.b = &b;
+    MdnsAdaptive.beacon_init_args.base_ms = 60000;
+    MdnsAdaptive.beacon_init_args.max_ms = 480000;
+    MdnsAdaptive.beacon_init_args.hi_thresh = 5;
+    MdnsAdaptive.beacon_init(protocore_mdns_adaptive_span());
     // A contention-sampling window and its scratch out-param.
     MdnsContentionWindow w;
     uint16_t c = 0;
+
+    uint8_t *work = protocore_mdns_adaptive_span();
+    if (work == NULL)
+    {
+        return; // the pool was short of this module's borrow
+    }
 
     for (;;)
     {
@@ -45,20 +55,47 @@ void dbench_run(void)
         volatile uint32_t sinkb = 0;
         volatile uint16_t sink16 = 0;
 
+        // The operands do not vary across iterations, so each is staged once above its macro;
+        // only the call is inside the timed loop.
+        MdnsAdaptive.refresh_interval_args.ttl_s = 120;
         // TTL/2 refresher cadence: the *1000/2 math with its 64-bit overflow guard.
-        DBENCH_OP("protocore_mdns_refresh_interval", 200000, sink32 += protocore_mdns_refresh_interval(120));
+        DBENCH_OP("MdnsAdaptive.refresh_interval", 200000,
+                  sink32 += (MdnsAdaptive.refresh_interval(work), MdnsAdaptive.ms));
+
+        MdnsAdaptive.beacon_adapt_args.b = &b;
+        MdnsAdaptive.beacon_adapt_args.contention = 8;
         // RF-contention backoff/recovery step (mutates cur_ms in place; settles at the ceiling clamp).
-        DBENCH_OP("protocore_mdns_beacon_adapt", 200000, sink32 += protocore_mdns_beacon_adapt(&b, 8));
+        DBENCH_OP("MdnsAdaptive.beacon_adapt", 200000,
+                  sink32 += (MdnsAdaptive.beacon_adapt(work), MdnsAdaptive.ms));
+
+        MdnsAdaptive.beacon_due_args.b = &b;
+        MdnsAdaptive.beacon_due_args.last_ms = 1000;
+        MdnsAdaptive.beacon_due_args.now_ms = 1000 + 60000;
         // Wrap-safe announce-due check (evaluated every tick in production).
-        DBENCH_OP("protocore_mdns_beacon_due", 200000, sinkb += protocore_mdns_beacon_due(&b, 1000, 1000 + 60000));
+        DBENCH_OP("MdnsAdaptive.beacon_due", 200000,
+                  sinkb += (MdnsAdaptive.beacon_due(work), MdnsAdaptive.ok));
+
+        MdnsAdaptive.beacon_presleep_due_args.b = &b;
+        MdnsAdaptive.beacon_presleep_due_args.last_ms = 0;
+        MdnsAdaptive.beacon_presleep_due_args.now_ms = 10000;
+        MdnsAdaptive.beacon_presleep_due_args.sleep_ms = 60000;
         // Auto-sleep beacon: would the record lapse mid-sleep? (64-bit sum, no overflow).
-        DBENCH_OP("protocore_mdns_beacon_presleep_due", 200000,
-                  sinkb += protocore_mdns_beacon_presleep_due(&b, 0, 10000, 60000));
+        DBENCH_OP("MdnsAdaptive.beacon_presleep_due", 200000,
+                  sinkb += (MdnsAdaptive.beacon_presleep_due(work), MdnsAdaptive.ok));
+
+        MdnsAdaptive.contention_init_args.w = &w;
+        MdnsAdaptive.contention_init_args.window_ms = 1000;
+        MdnsAdaptive.contention_init_args.frames_now = 0;
+        MdnsAdaptive.contention_init_args.now_ms = 0;
+        MdnsAdaptive.contention_sample_args.w = &w;
+        MdnsAdaptive.contention_sample_args.frames_now = 500;
+        MdnsAdaptive.contention_sample_args.now_ms = 100000;
+        MdnsAdaptive.contention_sample_args.out = &c;
         // Frame-counter -> per-window contention (re-arm the window each call so the full wrap-safe
         // delta + uint16 saturation path is measured, not the every-tick "window not up yet" early-out).
-        DBENCH_OP("protocore_mdns_contention_sample", 200000,
-                  sink16 += (protocore_mdns_contention_init(&w, 1000, 0, 0),
-                             protocore_mdns_contention_sample(&w, 500, 100000, &c)));
+        DBENCH_OP("MdnsAdaptive.contention_sample", 200000,
+                  sink16 += (MdnsAdaptive.contention_init(work), MdnsAdaptive.contention_sample(work),
+                             MdnsAdaptive.ok));
 
         (void)sink32;
         (void)sinkb;

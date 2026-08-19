@@ -14,7 +14,7 @@
 // sign-extend. Get either wrong and a -1 A current reads as +2047 A, or a 12 V rail reads as 768 V,
 // with the reading still inside every plausible range a consumer would sanity-check against.
 
-#include "server/peripherals/pmbus.h"
+#include "server/peripherals/pmbus/pmbus.h"
 
 #include <unity.h>
 

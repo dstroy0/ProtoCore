@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "services/storage/wal/wal_store.h"
+#include "services/storage/wal/wal_store/wal_store.h"
 #include <stdint.h>
 #include <string.h>
 
@@ -631,43 +631,3 @@ void test_pread_in_and_out_of_range(void)
     TEST_ASSERT_FALSE(protocore_wal_store_pread(&s, protocore_wal_store_capacity(&s) - 2, buf, 5));
 }
 
-int main(void)
-{
-    UNITY_BEGIN();
-    RUN_TEST(test_format_then_mount_empty);
-    RUN_TEST(test_mount_unformatted_fails);
-    RUN_TEST(test_append_without_checkpoint_recovers_via_tail);
-    RUN_TEST(test_checkpoint_commits_then_tail);
-    RUN_TEST(test_torn_tail_recovers_to_last_good);
-    RUN_TEST(test_ab_superblock_fallback);
-    RUN_TEST(test_append_full_fails_closed);
-    RUN_TEST(test_format_and_mount_too_small);
-    RUN_TEST(test_format_write_b_unwired_fails);
-    RUN_TEST(test_format_write_super_a_fails);
-    RUN_TEST(test_null_sync_still_commits);
-    RUN_TEST(test_mount_read_unwired_fails);
-    RUN_TEST(test_mount_super_crc_mismatch);
-    RUN_TEST(test_mount_head_past_capacity_rejected);
-    RUN_TEST(test_replay_truncated_len_stops);
-    RUN_TEST(test_replay_header_read_fails);
-    RUN_TEST(test_replay_payload_read_fails);
-    RUN_TEST(test_append_header_write_fails);
-    RUN_TEST(test_append_payload_write_fails);
-    RUN_TEST(test_checkpoint_super_write_fails);
-    RUN_TEST(test_checkpoint_second_sync_fails);
-    RUN_TEST(test_scan_reads_records);
-    RUN_TEST(test_scan_null_callback_counts);
-    RUN_TEST(test_scan_scratch_too_small);
-    RUN_TEST(test_scan_header_read_fails);
-    RUN_TEST(test_scan_full_read_fails);
-    RUN_TEST(test_scan_bad_magic_stops);
-    RUN_TEST(test_scan_crc_mismatch_stops);
-    RUN_TEST(test_pread_in_and_out_of_range);
-    RUN_TEST(test_mount_picks_newer_generation_a);
-    RUN_TEST(test_replay_tail_seq_not_bumped_when_not_newer);
-    RUN_TEST(test_format_sync_fails);
-    RUN_TEST(test_checkpoint_first_sync_fails);
-    RUN_TEST(test_scan_stops_on_length_overrun);
-    RUN_TEST(test_scan_stops_when_record_exceeds_scratch);
-    return UNITY_END();
-}

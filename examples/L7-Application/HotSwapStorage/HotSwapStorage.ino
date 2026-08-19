@@ -26,7 +26,7 @@
 // Build flags (whole build): PROTOCORE_ENABLE_HOTSWAP=1
 
 #include "protocore.h"
-#include "network_drivers/physical/physical.h"
+#include "network_drivers/physical/physical/physical.h"
 #include "server/storage/hotswap/hotswap.h"
 #include "shared/mime/mime.h"
 #include <SD_MMC.h>

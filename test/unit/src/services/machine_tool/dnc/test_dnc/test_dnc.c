@@ -11,7 +11,7 @@
 // test_iso_parity_is_even holds the ISO/RS-358 side to its own. The framing cases follow
 // RS-274 / ISO 6983: a program is bounded by the '%' rewind stop and its blocks end at End-of-Block.
 
-#include "services/machine_tool/dnc/dnc.h"
+#include "services/machine_tool/dnc/dnc/dnc.h"
 #include <string.h>
 
 #include <unity.h>

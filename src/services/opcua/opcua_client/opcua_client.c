@@ -9,8 +9,8 @@
  */
 
 #include "services/opcua/opcua_client/opcua_client.h"
-#include "mmgr/protomem.h"
-#include "mmgr/protostr.h"
+#include "mmgr/protomem/protomem.h"
+#include "mmgr/protostr/protostr.h"
 
 #if PROTOCORE_ENABLE_OPCUA_CLIENT
 

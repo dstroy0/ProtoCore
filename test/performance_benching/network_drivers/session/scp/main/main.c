@@ -9,7 +9,7 @@
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/scp -t upload --upload-port COM7
 #include "device_bench.h"
-#include "network_drivers/session/scp/scp.h"
+#include "network_drivers/session/scp/scp/scp.h"
 
 #include <stdbool.h>
 #include <stddef.h>
