@@ -267,6 +267,52 @@ check("and the offsets question with it", na["offsets chain"] is None)
 check("but the namespace question still applies", na["namespace"] is True)
 print()
 
+print("the gate is the conditional that wraps the body, not the first one in the file")
+# Reading the first `#if PROTOCORE_ENABLE_*` as the gate is how protocol.h lost its types. Its
+# first one is around a single struct in the middle of the header, and the shape pass - handed that
+# as the gate - hoisted it to the top with the includes underneath, so ConnState and TcpEvt existed
+# only when observability was on. The build named the types, not the gate.
+WRAPPED = """#ifndef P_H
+#define P_H
+#include "protocore_config.h"
+#if PROTOCORE_ENABLE_P
+typedef int T;
+#if PROTOCORE_ENABLE_OBSERVABILITY
+typedef int Obs;
+#endif
+typedef int U;
+#endif
+#endif
+"""
+check("the wrapping conditional is the gate", S.module_gate(WRAPPED) == "PROTOCORE_ENABLE_P")
+# protocol.h's actual shape: an include guard, no module gate, and one ENABLE arm in the middle.
+UNGATED = """#ifndef P_H
+#define P_H
+#include "protocore_config.h"
+typedef int T;
+#if PROTOCORE_ENABLE_OBSERVABILITY
+typedef int Obs;
+#endif
+typedef int U;
+#endif
+"""
+check("an arm that closes mid-file is not a gate", S.module_gate(UNGATED) == "")
+check("the golden's own gate is read", S.module_gate(io.open(S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8").read()) == "PROTOCORE_ENABLE_SHA256")
+# A source has no include guard, so the body ends at EOF.
+check(
+    "a source's gate closes at the end of the file",
+    S.module_gate('#include "protocore_config.h"\n#if PROTOCORE_ENABLE_P\nvoid f(void) {}\n#endif\n') == "PROTOCORE_ENABLE_P",
+)
+# NEED is a gate; HAS is a capability arm inside one, and a question about the board rather than
+# about the module. modbus is gated PROTOCORE_NEED_MODBUS and was read as having no gate at all.
+check("NEED gates a module too", S.module_gate(WRAPPED.replace("ENABLE_P", "NEED_P")) == "PROTOCORE_NEED_P")
+check(
+    "HAS does not, even wrapping the body",
+    S.module_gate(WRAPPED.replace("#if PROTOCORE_ENABLE_P", "#if PROTOCORE_HAS_BUS")) == "",
+)
+check("a file with no conditional at all has no gate", S.module_gate("void f(void) {}\n") == "")
+print()
+
 print("a check compares the golden's SHAPE, not its SIZE")
 # The golden has four entries. Three checks compared a module's count to that four, so a module
 # with twelve entries - the same design, a bigger module - answered no. That reported 328 modules

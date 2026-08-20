@@ -31,6 +31,63 @@ GOLDEN = "src/crypto/hash/sha256/sha256.h"
 # --- identity ---------------------------------------------------------------
 
 
+COND = re.compile(r"^[ \t]*#[ \t]*(if|ifdef|ifndef|endif)\b([^\n]*)$", re.M)
+# Only these open a module. A capability is an ARM inside one - the module is the thing that can be
+# switched off wholesale, and PROTOCORE_HAS_BUS is a question about the board.
+GATE_MACRO = re.compile(r"^\(?\s*(PROTOCORE_(?:ENABLE|NEED)_\w+)")
+
+
+def module_gate(text):
+    """The `#if` that wraps the file's whole body, or "" if nothing does.
+
+    NOT the first PROTOCORE_* conditional in the file, which is what this used to read. protocol.h's
+    first one is `#if PROTOCORE_ENABLE_OBSERVABILITY` around a single struct in the middle of the
+    header; taking that for the module's gate made the shape pass hoist it to the top with the
+    includes underneath, and the header then declared ConnState, TcpEvt and the rest only when
+    observability was on. Eleven translation units stopped seeing them, and the failure named the
+    types rather than the gate.
+
+    So the gate is found STRUCTURALLY: it is the conditional whose `#endif` has nothing after it but
+    whitespace, comments, and the include guard's own `#endif`. An arm that closes in the middle of
+    the file does not wrap the body and is not a gate however it is spelled.
+    """
+    stack, spans = [], []
+    for m in COND.finditer(text):
+        if m.group(1) == "endif":
+            if stack:
+                a, expr = stack.pop()
+                spans.append({"open": a, "close": m.start(), "end": m.end(), "expr": expr, "depth": len(stack)})
+        else:
+            stack.append((m.start(), m.group(2).strip()))
+    if not spans:
+        return ""
+    # The include guard, if there is one: the outermost span, opened by `#ifndef <NAME>_H`.
+    guard_end = len(text)
+    outer = [s for s in spans if s["depth"] == 0]
+    if outer:
+        last = max(outer, key=lambda s: s["end"])
+        # Its `#endif`, not its `#if`. Measuring to the guard's OPENING made every slice below
+        # empty and reversed, an empty string matches "nothing but whitespace", and the very first
+        # PROTOCORE_ENABLE_* in the file came back as the gate - which is the guess this function
+        # replaces, returned by the function that replaced it.
+        if re.match(r"^\w+_H\b", last["expr"]) and re.search(r"^[ \t]*#[ \t]*ifndef\b", text[last["open"] : last["open"] + 40], re.M):
+            guard_end = last["close"]
+    for s in sorted(spans, key=lambda s: s["open"]):
+        g = GATE_MACRO.match(s["expr"])
+        if not g:
+            continue
+        # Nothing but blank lines and comments between its `#endif` and the end of the body.
+        rest = text[s["end"] : guard_end] if guard_end < len(text) else text[s["end"] :]
+        # Comments removed and the remainder stripped, rather than matched as one pattern. The
+        # single-pattern form `(?:\s|/\*.*?\*/|//[^\n]*)*` is a quantified alternation of
+        # quantifiers, and on the kilobyte of text that follows a mid-file `#endif` it backtracks
+        # long enough to look like a hang - the tree audit stopped finishing.
+        rest = re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", rest, flags=re.S))
+        if not rest.strip():
+            return g.group(1)
+    return ""
+
+
 def identity(htext, ctext, hpath):
     """The names this module calls itself by, read off the pair.
 
@@ -41,8 +98,7 @@ def identity(htext, ctext, hpath):
     ident = {"module": mod}
     m = re.search(r"^\s*#\s*ifndef\s+(\w+)", htext, re.M)
     ident["guard"] = m.group(1) if m else ""
-    m = re.search(r"^\s*#\s*if\s+(PROTOCORE_ENABLE_\w+)", htext, re.M)
-    ident["gate"] = m.group(1) if m else ""
+    ident["gate"] = module_gate(htext)
     # The object the module publishes. Read the TABLE first: since the handle reshape it is a
     # `static const <X>Ns <X>` in the header, and the only `extern` left is the operands - so the
     # extern form now answers ("Sha256Vars", "Sha256V"), and substituting that wrong pair into the
@@ -109,7 +165,22 @@ TYPEDEF = re.compile(r"\btypedef\s+(struct|enum|union)\b", re.M)
 FUNC_DEF = re.compile(r"(?P<head>^[A-Za-z_][^;{}#]*?)\b(?P<name>[A-Za-z_]\w*)\s*\((?P<params>[^;{}]*)\)\s*\{", re.M)
 FUNC_DECL = re.compile(r"(?P<head>^[A-Za-z_][^;{}#]*?)\b(?P<name>[A-Za-z_]\w*)\s*\((?P<params>[^;{}]*)\)\s*;", re.M)
 EXTERN = re.compile(r"^\s*extern\s+(?P<type>(?:const\s+)?[\w\s\*]+?)\s+(?P<name>\w+)\s*(?:\[[^\]]*\])?\s*;", re.M)
-OBJDEF = re.compile(r"^(?P<qual>(?:static\s+|const\s+)*)(?P<type>\w+)\s+(?P<name>\w+)\s*(?P<arr>\[[^\]]*\])?\s*=", re.M)
+# An object at file scope. `;` as well as `=`, and a pointer run before the name.
+#
+# Requiring an initializer made `no file statics` blind to exactly the declaration it exists to
+# find: `static uint8_t mnt_work[16];` reserves sixteen bytes of .bss and has no `=`, and there are
+# 142 of those in src/ - one per callee per file, each one a stand-in borrow for an entry that does
+# not read what it is handed. The check reported two file statics tree-wide and the golden's own
+# answer, zero, was right for the wrong reason.
+#
+# Indentation is what keeps this off locals and struct members: `^` with re.M anchors at a line
+# start, and both of those are indented. Anything at column 0 inside a record is skipped by span,
+# and a type that is a keyword is skipped by name.
+OBJDEF = re.compile(
+    r"^(?P<qual>(?:static\s+|const\s+|volatile\s+)*)(?P<type>\w+)\s+(?P<ptr>\*+\s*)?"
+    r"(?P<name>\w+)\s*(?P<arr>\[[^\]]*\])?\s*(?:=|;)",
+    re.M,
+)
 STATIC_ASSERT = re.compile(r"\bstatic_assert\s*\(", re.M)
 # The borrow tested against null, in any position. `pre` captures what precedes the identifier so a
 # `->work` / `.work` struct member can be told apart from the borrow itself.
