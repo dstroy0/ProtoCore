@@ -287,17 +287,17 @@ void test_multiple_events_drained_in_one_tick()
 
 void test_protocore_register_out_of_range_is_nop()
 {
-    Protocols.proto = (ProtoConn)250;
-    Protocols.h = NULL;
+    ProtocolsV.proto = (ProtoConn)250;
+    ProtocolsV.h = NULL;
     Protocols.add(protocore_session_span());
     TEST_PASS();
 }
 
 void test_protocore_get_out_of_range_returns_null()
 {
-    Protocols.proto = (ProtoConn)250;
+    ProtocolsV.proto = (ProtoConn)250;
     Protocols.get(protocore_session_span());
-    TEST_ASSERT_NULL(Protocols.handler);
+    TEST_ASSERT_NULL(ProtocolsV.handler);
 }
 
 // The very first lookup also bootstraps the built-in handlers, and that bootstrap runs back through
@@ -316,25 +316,25 @@ void test_the_bootstrapping_lookup_still_answers_for_the_protocol_asked_for()
     static const ProtoHandler mine = {NULL, NULL, NULL, NULL};
     const ProtoConn asked = (ProtoConn)(PROTO_MAX_HANDLERS - 1); // in range, and no built-in claims it
 
-    Protocols.proto = asked;
-    Protocols.h = &mine;
+    ProtocolsV.proto = asked;
+    ProtocolsV.h = &mine;
     Protocols.add(protocore_session_span());
 
     // PROTO_HTTP's entry is the sentinel the bootstrap keys on, so clearing it puts the registry
     // back where it is before that first lookup.
-    Protocols.proto = PROTO_HTTP;
-    Protocols.h = NULL;
+    ProtocolsV.proto = PROTO_HTTP;
+    ProtocolsV.h = NULL;
     Protocols.add(protocore_session_span());
 
-    Protocols.proto = asked;
+    ProtocolsV.proto = asked;
     Protocols.get(protocore_session_span());
-    TEST_ASSERT_EQUAL_PTR(&mine, Protocols.handler);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)asked, (uint32_t)Protocols.proto);
+    TEST_ASSERT_EQUAL_PTR(&mine, ProtocolsV.handler);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)asked, (uint32_t)ProtocolsV.proto);
 
     // and the bootstrap still happened: PROTO_HTTP is registered again.
-    Protocols.proto = PROTO_HTTP;
+    ProtocolsV.proto = PROTO_HTTP;
     Protocols.get(protocore_session_span());
-    TEST_ASSERT_NOT_NULL(Protocols.handler);
+    TEST_ASSERT_NOT_NULL(ProtocolsV.handler);
 }
 
 void test_dispatch_drops_unregistered_protocol_event()
@@ -356,8 +356,8 @@ void test_dispatch_drops_unregistered_protocol_event()
 void test_dispatch_skips_null_callback_fields()
 {
     static const ProtoHandler fake_handler = {NULL, NULL, NULL, NULL};
-    Protocols.proto = PROTO_TELNET;
-    Protocols.h = &fake_handler;
+    ProtocolsV.proto = PROTO_TELNET;
+    ProtocolsV.h = &fake_handler;
     Protocols.add(protocore_session_span());
 
     conn_pool[0].proto = PROTO_TELNET;

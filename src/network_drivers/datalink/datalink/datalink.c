@@ -15,11 +15,12 @@
 #include "network_drivers/datalink/datalink/datalink.h"
 
 // Reports the layer up. The driver below performs every RFC 1122 sec 2.3.3 encapsulation step.
-static void datalink_init(uint8_t *restrict work)
+void protocore_datalink_init(uint8_t *restrict work)
 {
     (void)work;
-    Datalink.ok = PROTO_TRUE;
+    DatalinkV.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-DatalinkNs Datalink = {.init = datalink_init};
+/** @brief The operands and the outcome. */
+DatalinkVars DatalinkV;

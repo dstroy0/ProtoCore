@@ -365,12 +365,12 @@ void test_ip_allowlist_rejects_bad_and_full()
 void test_protocore_register_builtins_installs_http(void)
 {
     Protocols.register_builtins(protocore_session_span());
-    Protocols.proto = PROTO_HTTP;
+    ProtocolsV.proto = PROTO_HTTP;
     Protocols.get(protocore_session_span());
-    TEST_ASSERT_NOT_NULL(Protocols.handler);
-    Protocols.proto = PROTO_TELNET;
+    TEST_ASSERT_NOT_NULL(ProtocolsV.handler);
+    ProtocolsV.proto = PROTO_TELNET;
     Protocols.get(protocore_session_span());
-    TEST_ASSERT_NULL(Protocols.handler);
+    TEST_ASSERT_NULL(ProtocolsV.handler);
 }
 
 void test_clock_default_is_platform_millis(void)

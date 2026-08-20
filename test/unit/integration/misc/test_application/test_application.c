@@ -1865,14 +1865,14 @@ void test_slot_poll_requires_registered_handler_with_poll(void)
     TEST_ASSERT_FALSE(handler_called);
 
     static const ProtoHandler no_poll = {NULL, NULL, NULL, NULL};
-    Protocols.proto = PROTO_TELNET;
-    Protocols.h = &no_poll;
+    ProtocolsV.proto = PROTO_TELNET;
+    ProtocolsV.h = &no_poll;
     Protocols.add(protocore_session_span());
     handle();
     TEST_ASSERT_FALSE(handler_called);
 
-    Protocols.proto = PROTO_TELNET;
-    Protocols.h = NULL;
+    ProtocolsV.proto = PROTO_TELNET;
+    ProtocolsV.h = NULL;
     Protocols.add(protocore_session_span());
     conn_pool[0].proto = PROTO_HTTP;
     handle();

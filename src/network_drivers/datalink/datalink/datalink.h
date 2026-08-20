@@ -44,12 +44,28 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     proto_bool ok; ///< PROTO_TRUE once init has run
+} DatalinkVars;
 
-    void (*const init)(uint8_t *restrict work); ///< link-layer bring-up (RFC 1122 sec 2)
+/** @brief The operands and the outcome. */
+extern DatalinkVars DatalinkV;
+
+/** @brief The entries. */
+typedef struct
+{
+    void (*const init)(uint8_t *restrict work);
 } DatalinkNs;
 
-/** @brief The one symbol this module exports. */
-extern DatalinkNs Datalink;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DatalinkV or a region of the borrow at a fixed offset.
+void protocore_datalink_init(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Datalink.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DatalinkNs Datalink __attribute__((unused)) = {
+    .init = protocore_datalink_init,
+};
 
 PROTOCORE_END_DECLS
 

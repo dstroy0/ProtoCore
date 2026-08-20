@@ -459,8 +459,8 @@ void protocore_iface_bridge_hw_publish(uint8_t *restrict work)
     bus_begin(work, &rule->target);
     if (!IFACE_BRIDGE_HW_CTX(work)->registered)
     {
-        SessionV.proto->proto = PROTO_BRIDGE;
-        SessionV.proto->h = &s_bridge_handler;
+        ProtocolsV.proto = PROTO_BRIDGE;
+        ProtocolsV.h = &s_bridge_handler;
         SessionV.proto->add(protocore_session_span());
         IFACE_BRIDGE_HW_CTX(work)->registered = PROTO_TRUE;
     }
