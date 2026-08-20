@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b12d17e`](https://github.com/dstroy0/ProtoCore/commit/b12d17efe110939fa53f5396786f153f7eb38eff))
 - update CHANGELOG.md [skip ci] ([`a850521`](https://github.com/dstroy0/ProtoCore/commit/a850521320b0e99824e63728d3189ebf4ba24738))
 - update CHANGELOG.md [skip ci] ([`3a7d58b`](https://github.com/dstroy0/ProtoCore/commit/3a7d58b77986b0e9d4fbe31397b022fbc789d2b1))
 - update CHANGELOG.md [skip ci] ([`dd93a4a`](https://github.com/dstroy0/ProtoCore/commit/dd93a4a1bbea1a45863c5031f7263a3b83bb8d75))
@@ -405,6 +406,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- remove the vendor arms, which never resolved to an implementation ([`71f731e`](https://github.com/dstroy0/ProtoCore/commit/71f731e7c981ac675c0eeb7656636b27843033ba))
 - give PROTOCORE_ENABLE_X509 the parser to gate ([`6c9a6c1`](https://github.com/dstroy0/ProtoCore/commit/6c9a6c12094edd399a6191614c844df85a87789b))
 - split the RAM disk out of the mount registry ([`9d47e08`](https://github.com/dstroy0/ProtoCore/commit/9d47e08f0278a94d9a8558ff215933e68ef3419e))
 - stop two TUs reaching in, gate the module over its whole body ([`423eb31`](https://github.com/dstroy0/ProtoCore/commit/423eb31fd3f39d26266a203651dea92baafa287e))
