@@ -1,0 +1,3 @@
+[submodule "include/MMgr"]
+	path = include/MMgr
+	url = https://github.com/dstroy0/MMgr.git
