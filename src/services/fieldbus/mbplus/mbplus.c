@@ -33,11 +33,11 @@ void protocore_mbplus_crc(uint8_t *restrict work)
     size_t len = MbplusV.crc_args.len;
 
     // CRC-16/X-25: poly 0x1021 reflected, init 0xFFFF, xorout 0xFFFF - cataloged as CRC-16/IBM-SDLC.
-    Crc.args.params = &PROTOCORE_CRC16_X25;
-    Crc.args.data = bytes;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC16_X25;
+    CrcV.args.data = bytes;
+    CrcV.args.len = len;
     Crc.compute(crc_work);
-    MbplusV.value = (uint16_t)Crc.value;
+    MbplusV.value = (uint16_t)CrcV.value;
 }
 
 void protocore_mbplus_build(uint8_t *restrict work)

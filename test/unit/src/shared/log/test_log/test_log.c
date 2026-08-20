@@ -60,7 +60,7 @@ static void capture(uint8_t level, const char *line)
 
 static void install(protocore_log_sink_fn fn)
 {
-    Log.sink = fn;
+    LogV.sink = fn;
     Log.set_sink(protocore_log_span());
 }
 

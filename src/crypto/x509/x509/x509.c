@@ -46,23 +46,23 @@ static const uint8_t OID_BASIC_CONSTRAINTS[] = {0x55, 0x1D, 0x13}; // { id-ce 19
 // One value at @p pos in @p der. The reader is stateless, so every step names its own bytes.
 static proto_bool at(const uint8_t *der, size_t len, size_t pos)
 {
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = pos;
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = pos;
     Der.read(NULL);
-    return Der.ok;
+    return DerV.ok;
 }
 
 // Whether the OID value at @p pos is @p oid.
 static proto_bool oid_is(const uint8_t *der, size_t len, size_t pos, const uint8_t *oid, size_t oid_len)
 {
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = pos;
-    Der.oid_args.oid = oid;
-    Der.oid_args.oid_len = oid_len;
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = pos;
+    DerV.oid_args.oid = oid;
+    DerV.oid_args.oid_len = oid_len;
     Der.oid_eq(NULL);
-    return Der.ok;
+    return DerV.ok;
 }
 
 // The AlgorithmIdentifier at @p pos as one of the signature algorithms this profile verifies
@@ -70,17 +70,17 @@ static proto_bool oid_is(const uint8_t *der, size_t len, size_t pos, const uint8
 // something close to it, so a caller refuses rather than verifying under the wrong scheme.
 static protocore_x509_sig_alg sig_alg_at(const uint8_t *der, size_t len, size_t pos)
 {
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = pos;
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = pos;
     Der.enter(NULL); // AlgorithmIdentifier ::= SEQUENCE { algorithm OBJECT IDENTIFIER, parameters }
-    if (!Der.ok)
+    if (!DerV.ok)
     {
         return PROTOCORE_X509_SIG_UNKNOWN;
     }
     // enter leaves the position on the value it stepped to, so the OID is named by that rather than
     // by backing up over its header - which would assume the header's width.
-    const size_t alg = Der.read_args.pos;
+    const size_t alg = DerV.read_args.pos;
     if (oid_is(der, len, alg, OID_RSA_SHA256, sizeof(OID_RSA_SHA256)))
     {
         return PROTOCORE_X509_SIG_RSA_SHA256;
@@ -120,8 +120,8 @@ static proto_bool spki_read(const uint8_t *der, size_t len, size_t pos, X509Cert
         return PROTO_FALSE;
     }
     out->spki.p = der + pos;
-    out->spki.len = Der.tlv.next - pos;
-    const size_t inner = (size_t)(Der.tlv.content - der);
+    out->spki.len = DerV.tlv.next - pos;
+    const size_t inner = (size_t)(DerV.tlv.content - der);
 
     // AlgorithmIdentifier first.
     if (!at(der, len, inner))
@@ -129,8 +129,8 @@ static proto_bool spki_read(const uint8_t *der, size_t len, size_t pos, X509Cert
         return PROTO_FALSE;
     }
     const size_t alg_seq = inner;
-    const size_t after_alg = Der.tlv.next;
-    const size_t alg_oid = (size_t)(Der.tlv.content - der);
+    const size_t after_alg = DerV.tlv.next;
+    const size_t alg_oid = (size_t)(DerV.tlv.content - der);
 
     if (oid_is(der, len, alg_oid, OID_ED25519, sizeof(OID_ED25519)))
     {
@@ -148,7 +148,7 @@ static proto_bool spki_read(const uint8_t *der, size_t len, size_t pos, X509Cert
         {
             return PROTO_FALSE;
         }
-        const size_t params = Der.tlv.next;
+        const size_t params = DerV.tlv.next;
         out->key_alg =
             (params < alg_seq + out->spki.len && oid_is(der, len, params, OID_SECP256R1, sizeof(OID_SECP256R1)))
                 ? PROTOCORE_X509_KEY_EC_P256
@@ -160,16 +160,16 @@ static proto_bool spki_read(const uint8_t *der, size_t len, size_t pos, X509Cert
     }
 
     // subjectPublicKey BIT STRING.
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = after_alg;
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = after_alg;
     Der.bitstring(NULL);
-    if (!Der.ok)
+    if (!DerV.ok)
     {
         return PROTO_FALSE;
     }
-    out->key.p = Der.tlv.content;
-    out->key.len = Der.tlv.len;
+    out->key.p = DerV.tlv.content;
+    out->key.len = DerV.tlv.len;
     return PROTO_TRUE;
 }
 
@@ -180,61 +180,61 @@ static proto_bool extension_read(const uint8_t *der, size_t len, size_t pos, X50
     {
         return PROTO_FALSE;
     }
-    const size_t end = Der.tlv.next;
-    size_t p = (size_t)(Der.tlv.content - der);
+    const size_t end = DerV.tlv.next;
+    size_t p = (size_t)(DerV.tlv.content - der);
 
     if (!at(der, len, p))
     {
         return PROTO_FALSE;
     }
     const size_t oid_pos = p;
-    p = Der.tlv.next;
+    p = DerV.tlv.next;
 
     // critical is DEFAULT FALSE, so it is present only when TRUE (X.690 sec 11.5).
-    if (p < end && at(der, len, p) && Der.tlv.tag == PROTOCORE_DER_BOOLEAN)
+    if (p < end && at(der, len, p) && DerV.tlv.tag == PROTOCORE_DER_BOOLEAN)
     {
-        p = Der.tlv.next;
+        p = DerV.tlv.next;
     }
 
-    if (!at(der, len, p) || Der.tlv.tag != PROTOCORE_DER_OCTET_STRING)
+    if (!at(der, len, p) || DerV.tlv.tag != PROTOCORE_DER_OCTET_STRING)
     {
         return PROTO_FALSE;
     }
-    const uint8_t *val = Der.tlv.content;
-    const size_t val_len = Der.tlv.len;
+    const uint8_t *val = DerV.tlv.content;
+    const size_t val_len = DerV.tlv.len;
     const size_t val_pos = (size_t)(val - der);
 
     if (oid_is(der, len, oid_pos, OID_BASIC_CONSTRAINTS, sizeof(OID_BASIC_CONSTRAINTS)))
     {
         // sec 4.2.1.9: BasicConstraints ::= SEQUENCE { cA BOOLEAN DEFAULT FALSE, pathLen INTEGER OPTIONAL }
         out->has_bc = PROTO_TRUE;
-        if (!at(der, len, val_pos) || Der.tlv.tag != PROTOCORE_DER_SEQUENCE)
+        if (!at(der, len, val_pos) || DerV.tlv.tag != PROTOCORE_DER_SEQUENCE)
         {
             return PROTO_FALSE;
         }
-        const size_t bc_end = Der.tlv.next;
-        size_t q = (size_t)(Der.tlv.content - der);
-        if (q < bc_end && at(der, len, q) && Der.tlv.tag == PROTOCORE_DER_BOOLEAN)
+        const size_t bc_end = DerV.tlv.next;
+        size_t q = (size_t)(DerV.tlv.content - der);
+        if (q < bc_end && at(der, len, q) && DerV.tlv.tag == PROTOCORE_DER_BOOLEAN)
         {
             // X.690 sec 11.1: in DER, TRUE is all ones. Any other non-zero is a second encoding.
-            if (Der.tlv.len != 1u || (Der.tlv.content[0] != 0x00u && Der.tlv.content[0] != 0xFFu))
+            if (DerV.tlv.len != 1u || (DerV.tlv.content[0] != 0x00u && DerV.tlv.content[0] != 0xFFu))
             {
                 return PROTO_FALSE;
             }
-            out->is_ca = (Der.tlv.content[0] == 0xFFu);
-            q = Der.tlv.next;
+            out->is_ca = (DerV.tlv.content[0] == 0xFFu);
+            q = DerV.tlv.next;
         }
         if (q < bc_end)
         {
-            Der.read_args.buf = der;
-            Der.read_args.len = len;
-            Der.read_args.pos = q;
+            DerV.read_args.buf = der;
+            DerV.read_args.len = len;
+            DerV.read_args.pos = q;
             Der.uint(NULL);
-            if (!Der.ok || Der.u64 > 0xFFFFFFFFULL)
+            if (!DerV.ok || DerV.u64 > 0xFFFFFFFFULL)
             {
                 return PROTO_FALSE;
             }
-            out->path_len = (uint32_t)Der.u64;
+            out->path_len = (uint32_t)DerV.u64;
             out->has_path_len = PROTO_TRUE;
         }
     }
@@ -242,22 +242,22 @@ static proto_bool extension_read(const uint8_t *der, size_t len, size_t pos, X50
     {
         // sec 4.2.1.3: KeyUsage ::= BIT STRING, bit 0 the most significant of the first octet.
         out->has_ku = PROTO_TRUE;
-        if (!at(der, len, val_pos) || Der.tlv.tag != PROTOCORE_DER_BIT_STRING || Der.tlv.len < 2u)
+        if (!at(der, len, val_pos) || DerV.tlv.tag != PROTOCORE_DER_BIT_STRING || DerV.tlv.len < 2u)
         {
             return PROTO_FALSE;
         }
-        const uint8_t unused = Der.tlv.content[0];
+        const uint8_t unused = DerV.tlv.content[0];
         if (unused > 7u)
         {
             return PROTO_FALSE;
         }
         uint16_t bits = 0;
-        for (size_t i = 1; i < Der.tlv.len && i <= 2u; i++)
+        for (size_t i = 1; i < DerV.tlv.len && i <= 2u; i++)
         {
             for (uint8_t b = 0; b < 8u; b++)
             {
                 const size_t index = (i - 1u) * 8u + b;
-                if (Der.tlv.content[i] & (uint8_t)(0x80u >> b))
+                if (DerV.tlv.content[i] & (uint8_t)(0x80u >> b))
                 {
                     bits |= (uint16_t)(1u << index);
                 }
@@ -289,40 +289,40 @@ void protocore_x509_parse(uint8_t *restrict work)
     X509Cert *c = &X509V.cert;
 
     // Certificate ::= SEQUENCE { tbsCertificate, signatureAlgorithm, signatureValue } (sec 4.1)
-    if (!at(der, len, 0) || Der.tlv.tag != PROTOCORE_DER_SEQUENCE)
+    if (!at(der, len, 0) || DerV.tlv.tag != PROTOCORE_DER_SEQUENCE)
     {
         return;
     }
-    const size_t cert_end = Der.tlv.next;
-    size_t p = (size_t)(Der.tlv.content - der);
+    const size_t cert_end = DerV.tlv.next;
+    size_t p = (size_t)(DerV.tlv.content - der);
 
     // tbsCertificate: kept whole, because that is what the signature covers (sec 4.1.1.2).
-    if (!at(der, len, p) || Der.tlv.tag != PROTOCORE_DER_SEQUENCE)
+    if (!at(der, len, p) || DerV.tlv.tag != PROTOCORE_DER_SEQUENCE)
     {
         return;
     }
     c->tbs.p = der + p;
-    c->tbs.len = Der.tlv.next - p;
-    const size_t tbs_end = Der.tlv.next;
-    size_t t = (size_t)(Der.tlv.content - der);
+    c->tbs.len = DerV.tlv.next - p;
+    const size_t tbs_end = DerV.tlv.next;
+    size_t t = (size_t)(DerV.tlv.content - der);
 
     // version [0] EXPLICIT Version DEFAULT v1 (sec 4.1.2.1)
     if (!at(der, len, t))
     {
         return;
     }
-    if (Der.tlv.tag == PROTOCORE_DER_CONTEXT_CONSTRUCTED(0))
+    if (DerV.tlv.tag == PROTOCORE_DER_CONTEXT_CONSTRUCTED(0))
     {
-        const size_t after = Der.tlv.next;
-        Der.read_args.buf = der;
-        Der.read_args.len = len;
-        Der.read_args.pos = (size_t)(Der.tlv.content - der);
+        const size_t after = DerV.tlv.next;
+        DerV.read_args.buf = der;
+        DerV.read_args.len = len;
+        DerV.read_args.pos = (size_t)(DerV.tlv.content - der);
         Der.uint(NULL);
-        if (!Der.ok || Der.u64 > 2u)
+        if (!DerV.ok || DerV.u64 > 2u)
         {
             return;
         }
-        c->version = (uint8_t)Der.u64;
+        c->version = (uint8_t)DerV.u64;
         t = after;
     }
     else
@@ -332,13 +332,13 @@ void protocore_x509_parse(uint8_t *restrict work)
 
     // serialNumber (sec 4.1.2.2): up to 20 octets, so it is kept as it was encoded rather than
     // read into a number.
-    if (!at(der, len, t) || Der.tlv.tag != PROTOCORE_DER_INTEGER)
+    if (!at(der, len, t) || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return;
     }
-    c->serial.p = Der.tlv.content;
-    c->serial.len = Der.tlv.len;
-    t = Der.tlv.next;
+    c->serial.p = DerV.tlv.content;
+    c->serial.len = DerV.tlv.len;
+    t = DerV.tlv.next;
 
     // signature: the algorithm inside the TBS. sec 4.1.1.2 requires it to equal the outer one, and
     // the caller compares them - a mismatch is a signature substitution.
@@ -347,51 +347,51 @@ void protocore_x509_parse(uint8_t *restrict work)
     {
         return;
     }
-    t = Der.tlv.next;
+    t = DerV.tlv.next;
 
     // issuer Name: kept encoded, because a chain matches it against a subject byte for byte.
-    if (!at(der, len, t) || Der.tlv.tag != PROTOCORE_DER_SEQUENCE)
+    if (!at(der, len, t) || DerV.tlv.tag != PROTOCORE_DER_SEQUENCE)
     {
         return;
     }
     c->issuer.p = der + t;
-    c->issuer.len = Der.tlv.next - t;
-    t = Der.tlv.next;
+    c->issuer.len = DerV.tlv.next - t;
+    t = DerV.tlv.next;
 
     // validity ::= SEQUENCE { notBefore Time, notAfter Time } (sec 4.1.2.5)
-    if (!at(der, len, t) || Der.tlv.tag != PROTOCORE_DER_SEQUENCE)
+    if (!at(der, len, t) || DerV.tlv.tag != PROTOCORE_DER_SEQUENCE)
     {
         return;
     }
-    const size_t val_end = Der.tlv.next;
-    size_t v = (size_t)(Der.tlv.content - der);
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = v;
+    const size_t val_end = DerV.tlv.next;
+    size_t v = (size_t)(DerV.tlv.content - der);
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = v;
     Der.time(NULL);
-    if (!Der.ok)
+    if (!DerV.ok)
     {
         return;
     }
-    c->not_before = Der.u64;
-    v = Der.tlv.next;
-    Der.read_args.pos = v;
+    c->not_before = DerV.u64;
+    v = DerV.tlv.next;
+    DerV.read_args.pos = v;
     Der.time(NULL);
-    if (!Der.ok)
+    if (!DerV.ok)
     {
         return;
     }
-    c->not_after = Der.u64;
+    c->not_after = DerV.u64;
     t = val_end;
 
     // subject Name, likewise kept encoded.
-    if (!at(der, len, t) || Der.tlv.tag != PROTOCORE_DER_SEQUENCE)
+    if (!at(der, len, t) || DerV.tlv.tag != PROTOCORE_DER_SEQUENCE)
     {
         return;
     }
     c->subject.p = der + t;
-    c->subject.len = Der.tlv.next - t;
-    t = Der.tlv.next;
+    c->subject.len = DerV.tlv.next - t;
+    t = DerV.tlv.next;
 
     if (!spki_read(der, len, t, c))
     {
@@ -401,7 +401,7 @@ void protocore_x509_parse(uint8_t *restrict work)
     {
         return;
     }
-    t = Der.tlv.next;
+    t = DerV.tlv.next;
 
     // The optional trailing fields: issuerUniqueID [1], subjectUniqueID [2], extensions [3].
     while (t < tbs_end)
@@ -410,17 +410,17 @@ void protocore_x509_parse(uint8_t *restrict work)
         {
             return;
         }
-        const uint8_t tag = Der.tlv.tag;
-        const size_t next = Der.tlv.next;
+        const uint8_t tag = DerV.tlv.tag;
+        const size_t next = DerV.tlv.next;
         if (tag == PROTOCORE_DER_CONTEXT_CONSTRUCTED(3))
         {
             // extensions [3] EXPLICIT Extensions, and Extensions is a SEQUENCE OF Extension.
-            if (!at(der, len, (size_t)(Der.tlv.content - der)) || Der.tlv.tag != PROTOCORE_DER_SEQUENCE)
+            if (!at(der, len, (size_t)(DerV.tlv.content - der)) || DerV.tlv.tag != PROTOCORE_DER_SEQUENCE)
             {
                 return;
             }
-            const size_t ext_end = Der.tlv.next;
-            size_t e = (size_t)(Der.tlv.content - der);
+            const size_t ext_end = DerV.tlv.next;
+            size_t e = (size_t)(DerV.tlv.content - der);
             while (e < ext_end)
             {
                 if (!extension_read(der, len, e, c))
@@ -431,7 +431,7 @@ void protocore_x509_parse(uint8_t *restrict work)
                 {
                     return;
                 }
-                e = Der.tlv.next;
+                e = DerV.tlv.next;
             }
         }
         t = next;
@@ -450,21 +450,21 @@ void protocore_x509_parse(uint8_t *restrict work)
         return;
     }
     c->sig_alg = outer;
-    const size_t sig_pos = Der.tlv.next;
+    const size_t sig_pos = DerV.tlv.next;
     if (sig_pos >= cert_end)
     {
         return;
     }
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = sig_pos;
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = sig_pos;
     Der.bitstring(NULL);
-    if (!Der.ok)
+    if (!DerV.ok)
     {
         return;
     }
-    c->sig.p = Der.tlv.content;
-    c->sig.len = Der.tlv.len;
+    c->sig.p = DerV.tlv.content;
+    c->sig.len = DerV.tlv.len;
 
     X509V.ok = PROTO_TRUE;
 }
@@ -650,24 +650,24 @@ void protocore_x509_name_match(uint8_t *restrict work)
     // GeneralNames ::= SEQUENCE OF GeneralName; dNSName is [2] IA5String (sec 4.2.1.6).
     const uint8_t *der = c->san.p;
     const size_t len = c->san.len;
-    if (!at(der, len, 0) || Der.tlv.tag != PROTOCORE_DER_SEQUENCE)
+    if (!at(der, len, 0) || DerV.tlv.tag != PROTOCORE_DER_SEQUENCE)
     {
         return;
     }
-    const size_t end = Der.tlv.next;
-    size_t p = (size_t)(Der.tlv.content - der);
+    const size_t end = DerV.tlv.next;
+    size_t p = (size_t)(DerV.tlv.content - der);
     while (p < end)
     {
         if (!at(der, len, p))
         {
             return;
         }
-        if (Der.tlv.tag == PROTOCORE_DER_CONTEXT(2) && dns_match(Der.tlv.content, Der.tlv.len, host, rn))
+        if (DerV.tlv.tag == PROTOCORE_DER_CONTEXT(2) && dns_match(DerV.tlv.content, DerV.tlv.len, host, rn))
         {
             X509V.ok = PROTO_TRUE;
             return;
         }
-        p = Der.tlv.next;
+        p = DerV.tlv.next;
     }
 }
 

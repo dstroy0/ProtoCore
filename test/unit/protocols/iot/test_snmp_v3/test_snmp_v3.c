@@ -34,53 +34,53 @@ static proto_bool snmp_localize_key(uint8_t *work, const char *password, const u
 // The SNMPv3 / USM message path, reached through its namespace.
 static proto_bool snmp_v3_init(const uint8_t *engine_id, size_t engine_id_len)
 {
-    SnmpV3.engine.engine_id = engine_id;
-    SnmpV3.engine.engine_id_len = engine_id_len;
+    SnmpV3V.engine.engine_id = engine_id;
+    SnmpV3V.engine.engine_id_len = engine_id_len;
     SnmpV3.init(protocore_snmp_v3_span());
-    return SnmpV3.ok;
+    return SnmpV3V.ok;
 }
 
 static proto_bool snmp_v3_set_user(const char *user, const char *auth_pass, const char *priv_pass)
 {
-    SnmpV3.user.user = user;
-    SnmpV3.user.auth_pass = auth_pass;
-    SnmpV3.user.priv_pass = priv_pass;
+    SnmpV3V.user.user = user;
+    SnmpV3V.user.auth_pass = auth_pass;
+    SnmpV3V.user.priv_pass = priv_pass;
     SnmpV3.set_user(protocore_snmp_v3_span());
-    return SnmpV3.ok;
+    return SnmpV3V.ok;
 }
 
 static void snmp_v3_set_boots(uint32_t boots)
 {
-    SnmpV3.engine.boots = boots;
+    SnmpV3V.engine.boots = boots;
     SnmpV3.set_boots(protocore_snmp_v3_span());
 }
 
 static uint32_t snmp_v3_get_boots(void)
 {
     SnmpV3.get_boots(protocore_snmp_v3_span());
-    return SnmpV3.u32;
+    return SnmpV3V.u32;
 }
 
 static size_t snmp_v3_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t resp_cap)
 {
-    SnmpV3.msg.req = req;
-    SnmpV3.msg.req_len = req_len;
-    SnmpV3.msg.resp = resp;
-    SnmpV3.msg.resp_cap = resp_cap;
+    SnmpV3V.msg.req = req;
+    SnmpV3V.msg.req_len = req_len;
+    SnmpV3V.msg.resp = resp;
+    SnmpV3V.msg.resp_cap = resp_cap;
     SnmpV3.process(protocore_snmp_v3_span());
-    return SnmpV3.n;
+    return SnmpV3V.n;
 }
 
 static void snmp_v3_notify(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
                            size_t trap_oid_len, const SnmpVarbind *vbs, size_t vb_count)
 {
-    SnmpV3.notify.dst_ip = dst_ip;
-    SnmpV3.notify.port = port;
-    SnmpV3.notify.request_id = request_id;
-    SnmpV3.notify.trap_oid = trap_oid;
-    SnmpV3.notify.trap_oid_len = trap_oid_len;
-    SnmpV3.notify.vbs = vbs;
-    SnmpV3.notify.vb_count = vb_count;
+    SnmpV3V.notify.dst_ip = dst_ip;
+    SnmpV3V.notify.port = port;
+    SnmpV3V.notify.request_id = request_id;
+    SnmpV3V.notify.trap_oid = trap_oid;
+    SnmpV3V.notify.trap_oid_len = trap_oid_len;
+    SnmpV3V.notify.vbs = vbs;
+    SnmpV3V.notify.vb_count = vb_count;
 }
 
 static proto_bool snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t *trap_oid, size_t trap_oid_len,
@@ -88,7 +88,7 @@ static proto_bool snmp_trap_v3(const char *dst_ip, uint16_t port, const uint32_t
 {
     snmp_v3_notify(dst_ip, port, 0u, trap_oid, trap_oid_len, vbs, vb_count);
     SnmpV3.trap(protocore_snmp_v3_span());
-    return SnmpV3.ok;
+    return SnmpV3V.ok;
 }
 
 static proto_bool snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t request_id, const uint32_t *trap_oid,
@@ -96,7 +96,7 @@ static proto_bool snmp_inform_v3(const char *dst_ip, uint16_t port, uint32_t req
 {
     snmp_v3_notify(dst_ip, port, request_id, trap_oid, trap_oid_len, vbs, vb_count);
     SnmpV3.inform(protocore_snmp_v3_span());
-    return SnmpV3.ok;
+    return SnmpV3V.ok;
 }
 
 // The BER codec, reached through its namespace. The cursor stays the caller's: several encodings
@@ -1621,4 +1621,3 @@ void test_v3_trap_reports_transport_failure()
     TEST_ASSERT_EQUAL_size_t(1, protocore_net_host_udp_count());
     TEST_ASSERT_EQUAL_UINT16(162, protocore_net_host_udp_at(0)->dst_port);
 }
-

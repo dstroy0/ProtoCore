@@ -90,17 +90,17 @@ static void verdict(protocore_x509_status st)
 // build cannot verify rather than one to truncate.
 static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, uint8_t *e_out)
 {
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = 0;
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = 0;
     Der.enter(NULL); // into RSAPublicKey, landing on modulus
-    if (!Der.ok || Der.tlv.tag != PROTOCORE_DER_INTEGER)
+    if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return PROTO_FALSE;
     }
-    const uint8_t *m = Der.tlv.content;
-    size_t mlen = Der.tlv.len;
-    const size_t after_mod = Der.tlv.next;
+    const uint8_t *m = DerV.tlv.content;
+    size_t mlen = DerV.tlv.len;
+    const size_t after_mod = DerV.tlv.next;
     // X.690 sec 8.3.2: the leading zero is there to keep the modulus positive, and is not part of it.
     if (mlen > 0u && m[0] == 0x00u)
     {
@@ -114,14 +114,14 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
     mem.set(n_out, 0, PROTOCORE_RSA_KEY_BYTES);
     mem.cpy(n_out + (PROTOCORE_RSA_KEY_BYTES - mlen), m, mlen);
 
-    Der.read_args.pos = after_mod;
+    DerV.read_args.pos = after_mod;
     Der.read(NULL);
-    if (!Der.ok || Der.tlv.tag != PROTOCORE_DER_INTEGER)
+    if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return PROTO_FALSE;
     }
-    const uint8_t *e = Der.tlv.content;
-    size_t elen = Der.tlv.len;
+    const uint8_t *e = DerV.tlv.content;
+    size_t elen = DerV.tlv.len;
     if (elen > 0u && e[0] == 0x00u)
     {
         e++;
@@ -140,11 +140,11 @@ static proto_bool rsa_key_split(const uint8_t *der, size_t len, uint8_t *n_out, 
 // takes r || s as two fixed 32-octet big-endian fields. Each is left-padded into its half.
 static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PROTOCORE_ECDSA_P256_SIG_LEN])
 {
-    Der.read_args.buf = der;
-    Der.read_args.len = len;
-    Der.read_args.pos = 0;
+    DerV.read_args.buf = der;
+    DerV.read_args.len = len;
+    DerV.read_args.pos = 0;
     Der.enter(NULL); // into the SEQUENCE, landing on r
-    if (!Der.ok || Der.tlv.tag != PROTOCORE_DER_INTEGER)
+    if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
     {
         return PROTO_FALSE;
     }
@@ -155,13 +155,13 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
         if (half == 1u)
         {
             Der.read(NULL);
-            if (!Der.ok || Der.tlv.tag != PROTOCORE_DER_INTEGER)
+            if (!DerV.ok || DerV.tlv.tag != PROTOCORE_DER_INTEGER)
             {
                 return PROTO_FALSE;
             }
         }
-        const uint8_t *v = Der.tlv.content;
-        size_t vlen = Der.tlv.len;
+        const uint8_t *v = DerV.tlv.content;
+        size_t vlen = DerV.tlv.len;
         if (vlen > 0u && v[0] == 0x00u)
         {
             v++;
@@ -174,7 +174,7 @@ static proto_bool ecdsa_sig_split(const uint8_t *der, size_t len, uint8_t out[PR
         mem.cpy(out + half * 32u + (32u - vlen), v, vlen);
         if (half == 0u)
         {
-            Der.read_args.pos = Der.tlv.next;
+            DerV.read_args.pos = DerV.tlv.next;
         }
     }
     return PROTO_TRUE;

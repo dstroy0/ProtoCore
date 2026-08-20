@@ -61,11 +61,11 @@ static void sht3x_crc8(uint8_t *restrict work)
     size_t len = Sht3x.crc8_args.len;
 
     // The Sensirion CRC-8 is the cataloge's CRC-8/NRSC-5 (poly 0x31, init 0xFF, no reflection, no final XOR).
-    Crc.args.params = &PROTOCORE_CRC8_NRSC5;
-    Crc.args.data = data;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC8_NRSC5;
+    CrcV.args.data = data;
+    CrcV.args.len = len;
     Crc.compute(crc_work);
-    Sht3x.crc = (uint8_t)Crc.value;
+    Sht3x.crc = (uint8_t)CrcV.value;
 }
 
 static void sht3x_temp_mc(uint8_t *restrict work)

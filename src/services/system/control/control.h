@@ -334,10 +334,16 @@ typedef struct
     ControlPidUpdateNArgs pid_update_n_args;
     ControlPidLogHeaderArgs pid_log_header_args;
     ControlPidLogRecordArgs pid_log_record_args;
-
     proto_bool ok;
     size_t n;
+} ControlVars;
 
+/** @brief The operands and the outcome. */
+extern ControlVars ControlV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const pid_init)(uint8_t *restrict work);
     void (*const pid_set_output_limits)(uint8_t *restrict work);
     void (*const pid_set_integral_limits)(uint8_t *restrict work);
@@ -350,8 +356,35 @@ typedef struct
     void (*const pid_log_record)(uint8_t *restrict work);
 } ControlNs;
 
-/** @brief The one symbol this module exports. */
-extern ControlNs Control;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ControlV or a region of the borrow at a fixed offset.
+void protocore_control_pid_init(uint8_t *restrict work);
+void protocore_control_pid_set_output_limits(uint8_t *restrict work);
+void protocore_control_pid_set_integral_limits(uint8_t *restrict work);
+void protocore_control_pid_set_derivative_filter(uint8_t *restrict work);
+void protocore_control_pid_set_feedforward(uint8_t *restrict work);
+void protocore_control_pid_set_rate(uint8_t *restrict work);
+void protocore_control_pid_reset(uint8_t *restrict work);
+void protocore_control_pid_update_n(uint8_t *restrict work);
+void protocore_control_pid_log_header(uint8_t *restrict work);
+void protocore_control_pid_log_record(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Control.pid_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ControlNs Control __attribute__((unused)) = {
+    .pid_init = protocore_control_pid_init,
+    .pid_set_output_limits = protocore_control_pid_set_output_limits,
+    .pid_set_integral_limits = protocore_control_pid_set_integral_limits,
+    .pid_set_derivative_filter = protocore_control_pid_set_derivative_filter,
+    .pid_set_feedforward = protocore_control_pid_set_feedforward,
+    .pid_set_rate = protocore_control_pid_set_rate,
+    .pid_reset = protocore_control_pid_reset,
+    .pid_update_n = protocore_control_pid_update_n,
+    .pid_log_header = protocore_control_pid_log_header,
+    .pid_log_record = protocore_control_pid_log_record,
+};
 
 PROTOCORE_END_DECLS
 

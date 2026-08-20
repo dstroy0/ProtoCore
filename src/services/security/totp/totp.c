@@ -110,43 +110,43 @@ static uint32_t hotp_value(const uint8_t *key, size_t keylen, uint64_t counter, 
 // Digit, with 0 taking the RFC 4226 sec 5.3 minimum.
 static uint8_t otp_digit(uint8_t *restrict work)
 {
-    return Totp.digit ? Totp.digit : (uint8_t)PROTOCORE_TOTP_DIGIT_MIN;
+    return TotpV.digit ? TotpV.digit : (uint8_t)PROTOCORE_TOTP_DIGIT_MIN;
 }
 
 // RFC 6238 sec 4.2 T = (Current Unix time - T0) / X, floored. X of 0 takes the default; a clock
 // behind T0 gives step 0.
 static uint64_t time_step(uint8_t *restrict work)
 {
-    uint32_t x = Totp.step.x;
+    uint32_t x = TotpV.step.x;
     if (x == 0)
     {
         x = PROTOCORE_TOTP_X_DEFAULT;
     }
-    if (Totp.step.unix_time < Totp.step.t0)
+    if (TotpV.step.unix_time < TotpV.step.t0)
     {
         return 0;
     }
-    return (Totp.step.unix_time - Totp.step.t0) / x;
+    return (TotpV.step.unix_time - TotpV.step.t0) / x;
 }
 
 // HOTP(K,C) for the counter the caller set (RFC 4226 sec 5.3).
-static void hotp(uint8_t *restrict work)
+void protocore_totp_hotp(uint8_t *restrict work)
 {
-    Totp.u32 = hotp_value(Totp.k, Totp.keylen, Totp.step.counter, otp_digit(work));
+    TotpV.u32 = hotp_value(TotpV.k, TotpV.keylen, TotpV.step.counter, otp_digit(work));
 }
 
 // RFC 6238 sec 4.2 TOTP = HOTP(K, T).
-static void totp(uint8_t *restrict work)
+void protocore_totp_totp(uint8_t *restrict work)
 {
-    Totp.u32 = hotp_value(Totp.k, Totp.keylen, time_step(work), otp_digit(work));
+    TotpV.u32 = hotp_value(TotpV.k, TotpV.keylen, time_step(work), otp_digit(work));
 }
 
 // RFC 6238 sec 6: match the submitted OTP against T and every step within the drift limit forward
 // and backward of it. Steps below the epoch are skipped; a negative drift matches nothing.
-static void verify(uint8_t *restrict work)
+void protocore_totp_verify(uint8_t *restrict work)
 {
-    Totp.ok = PROTO_FALSE;
-    const int32_t drift = Totp.check.drift;
+    TotpV.ok = PROTO_FALSE;
+    const int32_t drift = TotpV.check.drift;
     if (drift < 0)
     {
         return;
@@ -160,9 +160,9 @@ static void verify(uint8_t *restrict work)
         {
             continue;
         }
-        if (hotp_value(Totp.k, Totp.keylen, (uint64_t)c, digit) == Totp.check.otp)
+        if (hotp_value(TotpV.k, TotpV.keylen, (uint64_t)c, digit) == TotpV.check.otp)
         {
-            Totp.ok = PROTO_TRUE;
+            TotpV.ok = PROTO_TRUE;
             return;
         }
     }
@@ -172,14 +172,14 @@ static void verify(uint8_t *restrict work)
 // and 2-7 carry 26..31; lowercase carries the same values as uppercase, and '=', ' ' and '-' are
 // skipped rather than rejected under RFC 4648 sec 3.3. Any other character, or a byte past cap,
 // ends the decode at -1.
-static void base32_decode(uint8_t *restrict work)
+void protocore_totp_base32_decode(uint8_t *restrict work)
 {
     (void)work;
-    const char *b32 = Totp.secret.b32;
-    uint8_t *out = Totp.secret.out;
-    const size_t cap = Totp.secret.cap;
+    const char *b32 = TotpV.secret.b32;
+    uint8_t *out = TotpV.secret.out;
+    const size_t cap = TotpV.secret.cap;
 
-    Totp.i32 = -1;
+    TotpV.i32 = -1;
     if (!b32 || !out)
     {
         return;
@@ -223,10 +223,11 @@ static void base32_decode(uint8_t *restrict work)
             out[n++] = (uint8_t)((buffer >> bits) & 0xFF);
         }
     }
-    Totp.i32 = (int32_t)n;
+    TotpV.i32 = (int32_t)n;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-TotpNs Totp = {.hotp = hotp, .totp = totp, .verify = verify, .base32_decode = base32_decode};
+/** @brief The operands and the outcome. */
+TotpVars TotpV;
 
 #endif // PROTOCORE_ENABLE_TOTP

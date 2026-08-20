@@ -18,13 +18,13 @@ static uint8_t utf8_work[16]; // the borrow an entry takes; Utf8 never reads it
 
 #if PROTOCORE_ENABLE_MQTT
 
-#include "mmgr/protomem/protomem.h"    // mem.cpy / mem.chr / mem.move / mem.set: the spans a packet is built from
-#include "mmgr/protostr/protostr.h"    // str.len: the bounded field lengths
-#include "shared/utf8/utf8.h" // Utf8.valid: a Topic Name is a UTF-8 encoded string (sec 1.5.3)
+#include "mmgr/protomem/protomem.h" // mem.cpy / mem.chr / mem.move / mem.set: the spans a packet is built from
+#include "mmgr/protostr/protostr.h" // str.len: the bounded field lengths
+#include "shared/utf8/utf8.h"       // Utf8.valid: a Topic Name is a UTF-8 encoded string (sec 1.5.3)
 
 #if PROTOCORE_HAS_NET_STACK
-#include "mmgr/secure/secure.h"                                 // secure.persist_span: this module's storage
-#include "mmgr/span/span.h"                                   // span.ok: the borrow landed
+#include "mmgr/secure/secure.h"                          // secure.persist_span: this module's storage
+#include "mmgr/span/span.h"                              // span.ok: the borrow landed
 #include "network_drivers/transport/tcp/client/client.h" // TcpClient: the outbound transport (L4)
 #include "server/clock/clock.h"                          // protocore_millis: the link timer and Keep Alive
 #if PROTOCORE_ENABLE_MQTT_TLS
@@ -632,10 +632,10 @@ static void mqtt_parse_publish(uint8_t *restrict work)
     }
     // sec 1.5.3: a UTF-8 encoded string must be well-formed (MQTT-1.5.3-1) and must not encode
     // U+0000 (MQTT-1.5.3-2).
-    Utf8.args.s = buf + off;
-    Utf8.args.n = tlen;
+    Utf8V.args.s = buf + off;
+    Utf8V.args.n = tlen;
     Utf8.valid(utf8_work);
-    if (!Utf8.ok || mem.chr(buf + off, tlen, 0x00))
+    if (!Utf8V.ok || mem.chr(buf + off, tlen, 0x00))
     {
         return;
     }

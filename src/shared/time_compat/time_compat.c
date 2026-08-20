@@ -12,19 +12,20 @@
 
 #include "shared/time_compat/time_compat.h"
 
-static void time_gmtime(uint8_t *restrict work)
+void protocore_time_compat_gmtime(uint8_t *restrict work)
 {
     (void)work;
-    const time_t epoch = TimeCompat.args.epoch;
-    struct tm *out = TimeCompat.args.out;
+    const time_t epoch = TimeCompatV.args.epoch;
+    struct tm *out = TimeCompatV.args.out;
 
 #if defined(_WIN32)
     // One runtime takes (tm, time) and returns an errno_t; the other takes (time, tm) and returns
     // the destination. Both are reduced to "the destination, or NULL" here.
-    TimeCompat.tm_out = (gmtime_s(out, &epoch) == 0) ? out : NULL;
+    TimeCompatV.tm_out = (gmtime_s(out, &epoch) == 0) ? out : NULL;
 #else
-    TimeCompat.tm_out = gmtime_r(&epoch, out);
+    TimeCompatV.tm_out = gmtime_r(&epoch, out);
 #endif
 }
 
-TimeCompatNs TimeCompat = {.gmtime = time_gmtime};
+/** @brief The operands and the outcome. */
+TimeCompatVars TimeCompatV;

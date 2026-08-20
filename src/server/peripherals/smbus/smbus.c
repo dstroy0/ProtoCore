@@ -98,29 +98,29 @@ void protocore_smbus_addr_byte(uint8_t *restrict work)
 // The register a PEC starts from.
 static uint32_t pec_begin(void)
 {
-    Crc.args.params = &PROTOCORE_CRC8_SMBUS;
+    CrcV.args.params = &PROTOCORE_CRC8_SMBUS;
     Crc.begin(crc_work);
-    return Crc.value;
+    return CrcV.value;
 }
 
 // Fold @p len octets at @p data into the running register @p crc.
 static uint32_t pec_fold(uint32_t crc, const uint8_t *data, size_t len)
 {
-    Crc.args.params = &PROTOCORE_CRC8_SMBUS;
-    Crc.args.crc = crc;
-    Crc.args.data = data;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC8_SMBUS;
+    CrcV.args.crc = crc;
+    CrcV.args.data = data;
+    CrcV.args.len = len;
     Crc.update(crc_work);
-    return Crc.value;
+    return CrcV.value;
 }
 
 // The PEC octet a running register finishes to.
 static uint8_t pec_final(uint32_t crc)
 {
-    Crc.args.params = &PROTOCORE_CRC8_SMBUS;
-    Crc.args.crc = crc;
+    CrcV.args.params = &PROTOCORE_CRC8_SMBUS;
+    CrcV.args.crc = crc;
     Crc.final(crc_work);
-    return (uint8_t)Crc.value;
+    return (uint8_t)CrcV.value;
 }
 
 void protocore_smbus_pec_write(uint8_t *restrict work)

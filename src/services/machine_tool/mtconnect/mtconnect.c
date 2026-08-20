@@ -237,11 +237,11 @@ static void put_creation_time(uint8_t *restrict work)
 {
     Clock.millis(Clock.internal);
     struct tm tmv;
-    TimeCompat.args.epoch = (time_t)(Clock.ms / 1000u);
-    TimeCompat.args.out = &tmv;
+    TimeCompatV.args.epoch = (time_t)(Clock.ms / 1000u);
+    TimeCompatV.args.out = &tmv;
     TimeCompat.gmtime(time_compat_work);
     put(work, "\" creationTime=\"");
-    if (TimeCompat.tm_out == NULL)
+    if (TimeCompatV.tm_out == NULL)
     {
         put(work, "1970-01-01T00:00:00Z");
         return;

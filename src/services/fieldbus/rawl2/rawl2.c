@@ -146,11 +146,11 @@ void protocore_rawl2_fcs(uint8_t *restrict work)
     size_t len = Rawl2V.fcs_args.len;
 
     // CRC-32/ISO-HDLC (the Ethernet FCS): reflected poly 0xEDB88320, init/xorout 0xFFFFFFFF.
-    Crc.args.params = &PROTOCORE_CRC32_ISO_HDLC;
-    Crc.args.data = bytes;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC32_ISO_HDLC;
+    CrcV.args.data = bytes;
+    CrcV.args.len = len;
     Crc.compute(crc_work);
-    Rawl2V.u32 = Crc.value;
+    Rawl2V.u32 = CrcV.value;
 }
 
 /** @brief The operands and the outcome. */

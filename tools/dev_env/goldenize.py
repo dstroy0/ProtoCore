@@ -2818,7 +2818,15 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
         # `HttpConn.protocore_auth_reset(...)`), and the same text inside an #include path
         # (`server/core/http_conn/...` became `server/core/protocore_http_conn_...`, and the file
         # stopped existing).
-        cout = sub_code_only(cout, r"(?<![.\w])(?<!->)\b%s\b" % re.escape(old), f)
+        # Followed by `(`, and not preceded by `.` or `->`, and only in CODE. The three together
+        # are what makes this a FUNCTION rather than something that merely shares its name:
+        #   - `(` excludes a struct member DECLARATION. southbound binds `.count = count` and its
+        #     context struct declares `size_t count;`, which has no dot before it either - renaming
+        #     that left the field called protocore_southbound_count while every `->count` use kept
+        #     the old name.
+        #   - the lookbehinds exclude a member ACCESS on some other namespace.
+        #   - code_mask excludes an #include path and any comment naming the old spelling.
+        cout = sub_code_only(cout, r"(?<![.\w])(?<!->)\b%s\b(?=\s*\()" % re.escape(old), f)
     # The entries have to lose `static`, wherever they are spelled. Stripping it only from the
     # definition leaves a forward declaration still static above it - "static declaration of X
     # follows non-static declaration", once per entry, in every module that forward-declares its

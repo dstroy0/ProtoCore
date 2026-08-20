@@ -37,68 +37,68 @@ static SouthboundDriver g_drv;
 static int32_t sbm_init(protocore_sb_modbus_ctx *ctx, protocore_sb_modbus_txn txn, void *io, ModbusFunction fc,
                         uint8_t unit)
 {
-    SbModbus.ctx = ctx;
-    SbModbus.txn = txn;
-    SbModbus.io = io;
-    SbModbus.fc = fc;
-    SbModbus.unit = unit;
+    SbModbusV.ctx = ctx;
+    SbModbusV.txn = txn;
+    SbModbusV.io = io;
+    SbModbusV.fc = fc;
+    SbModbusV.unit = unit;
     SbModbus.init(sb_modbus_work);
-    return SbModbus.i32;
+    return SbModbusV.i32;
 }
 
 // Bind a vtable to an instance.
 static int32_t sbm_driver(SouthboundDriver *drv_out, const char *name, protocore_sb_modbus_ctx *ctx)
 {
-    SbModbus.drv_out = drv_out;
-    SbModbus.name = name;
-    SbModbus.ctx = ctx;
+    SbModbusV.drv_out = drv_out;
+    SbModbusV.name = name;
+    SbModbusV.ctx = ctx;
     SbModbus.driver(sb_modbus_work);
-    return SbModbus.i32;
+    return SbModbusV.i32;
 }
 
 static int32_t sb_add(const SouthboundDriver *drv)
 {
-    Southbound.drv = drv;
+    SouthboundV.drv = drv;
     Southbound.add(protocore_southbound_span());
-    return Southbound.i32;
+    return SouthboundV.i32;
 }
 
 static int32_t sb_read(const char *name, uint32_t point, int32_t *value_out)
 {
-    Southbound.name = name;
-    Southbound.point.point = point;
-    Southbound.point.value_out = value_out;
+    SouthboundV.name = name;
+    SouthboundV.point.point = point;
+    SouthboundV.point.value_out = value_out;
     Southbound.read(protocore_southbound_span());
-    return Southbound.i32;
+    return SouthboundV.i32;
 }
 
 static int32_t sb_write(const char *name, uint32_t point, int32_t value)
 {
-    Southbound.name = name;
-    Southbound.point.point = point;
-    Southbound.point.value = value;
+    SouthboundV.name = name;
+    SouthboundV.point.point = point;
+    SouthboundV.point.value = value;
     Southbound.write(protocore_southbound_span());
-    return Southbound.i32;
+    return SouthboundV.i32;
 }
 
 static int32_t sb_read_block(const char *name, uint32_t first, int32_t *out, size_t n)
 {
-    Southbound.name = name;
-    Southbound.block.first = first;
-    Southbound.block.out = out;
-    Southbound.block.n = n;
+    SouthboundV.name = name;
+    SouthboundV.block.first = first;
+    SouthboundV.block.out = out;
+    SouthboundV.block.n = n;
     Southbound.read_block(protocore_southbound_span());
-    return Southbound.i32;
+    return SouthboundV.i32;
 }
 
 static int32_t sb_write_block(const char *name, uint32_t first, const int32_t *in, size_t n)
 {
-    Southbound.name = name;
-    Southbound.block.first = first;
-    Southbound.block.in = in;
-    Southbound.block.n = n;
+    SouthboundV.name = name;
+    SouthboundV.block.first = first;
+    SouthboundV.block.in = in;
+    SouthboundV.block.n = n;
     Southbound.write_block(protocore_southbound_span());
-    return Southbound.i32;
+    return SouthboundV.i32;
 }
 
 void setUp()
@@ -280,4 +280,3 @@ void test_txid_increments()
     sb_read("plc", 0, &v);
     TEST_ASSERT_EQUAL_UINT16(2, g_ctx.txid);
 }
-

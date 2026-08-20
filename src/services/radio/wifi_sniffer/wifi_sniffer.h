@@ -250,14 +250,20 @@ typedef struct
     WifiSnifferSurveyGetArgs survey_get_args;
     WifiSnifferSurveyBestArgs survey_best_args;
     WifiSnifferBeginArgs begin_args;
-
     proto_bool ok;
     uint8_t value;
     const WifiChannelSurvey *ptr;
     const WifiStats *stats_out;
     const WifiSurvey *survey_out;
     const WifiScan *scan_out;
+} WifiSnifferVars;
 
+/** @brief The operands and the outcome. */
+extern WifiSnifferVars WifiSnifferV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse)(uint8_t *restrict work);
     void (*const stats_reset)(uint8_t *restrict work);
     void (*const stats_add)(uint8_t *restrict work);
@@ -277,8 +283,49 @@ typedef struct
     void (*const scan)(uint8_t *restrict work);
 } WifiSnifferNs;
 
-/** @brief The one symbol this module exports. */
-extern WifiSnifferNs WifiSniffer;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WifiSnifferV or a region of the borrow at a fixed offset.
+void protocore_wifi_sniffer_parse(uint8_t *restrict work);
+void protocore_wifi_sniffer_stats_reset(uint8_t *restrict work);
+void protocore_wifi_sniffer_stats_add(uint8_t *restrict work);
+void protocore_wifi_sniffer_should_roam(uint8_t *restrict work);
+void protocore_wifi_sniffer_scan_init(uint8_t *restrict work);
+void protocore_wifi_sniffer_scan_due(uint8_t *restrict work);
+void protocore_wifi_sniffer_scan_next(uint8_t *restrict work);
+void protocore_wifi_sniffer_survey_reset(uint8_t *restrict work);
+void protocore_wifi_sniffer_survey_add(uint8_t *restrict work);
+void protocore_wifi_sniffer_survey_get(uint8_t *restrict work);
+void protocore_wifi_sniffer_survey_best(uint8_t *restrict work);
+void protocore_wifi_sniffer_begin(uint8_t *restrict work);
+void protocore_wifi_sniffer_tick(uint8_t *restrict work);
+void protocore_wifi_sniffer_end(uint8_t *restrict work);
+void protocore_wifi_sniffer_stats(uint8_t *restrict work);
+void protocore_wifi_sniffer_survey(uint8_t *restrict work);
+void protocore_wifi_sniffer_scan(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `WifiSniffer.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WifiSnifferNs WifiSniffer __attribute__((unused)) = {
+    .parse = protocore_wifi_sniffer_parse,
+    .stats_reset = protocore_wifi_sniffer_stats_reset,
+    .stats_add = protocore_wifi_sniffer_stats_add,
+    .should_roam = protocore_wifi_sniffer_should_roam,
+    .scan_init = protocore_wifi_sniffer_scan_init,
+    .scan_due = protocore_wifi_sniffer_scan_due,
+    .scan_next = protocore_wifi_sniffer_scan_next,
+    .survey_reset = protocore_wifi_sniffer_survey_reset,
+    .survey_add = protocore_wifi_sniffer_survey_add,
+    .survey_get = protocore_wifi_sniffer_survey_get,
+    .survey_best = protocore_wifi_sniffer_survey_best,
+    .begin = protocore_wifi_sniffer_begin,
+    .tick = protocore_wifi_sniffer_tick,
+    .end = protocore_wifi_sniffer_end,
+    .stats = protocore_wifi_sniffer_stats,
+    .survey = protocore_wifi_sniffer_survey,
+    .scan = protocore_wifi_sniffer_scan,
+};
 
 /**
  * @brief The PROTOCORE_WIFI_SNIFFER_BORROW bytes this module's state lives in.

@@ -43,19 +43,19 @@ void protocore_df1_bcc(uint8_t *restrict work)
 // as CRC-16/ARC. The data and the ETX are two runs, folded into one register.
 static uint16_t df1_crc_data_plus_etx(const uint8_t *data, size_t len, uint8_t etx)
 {
-    Crc.args.params = &PROTOCORE_CRC16_ARC;
+    CrcV.args.params = &PROTOCORE_CRC16_ARC;
     Crc.begin(crc_work);
-    Crc.args.crc = Crc.value;
-    Crc.args.data = data;
-    Crc.args.len = len;
+    CrcV.args.crc = CrcV.value;
+    CrcV.args.data = data;
+    CrcV.args.len = len;
     Crc.update(crc_work);
-    Crc.args.crc = Crc.value;
-    Crc.args.data = &etx;
-    Crc.args.len = 1;
+    CrcV.args.crc = CrcV.value;
+    CrcV.args.data = &etx;
+    CrcV.args.len = 1;
     Crc.update(crc_work);
-    Crc.args.crc = Crc.value;
+    CrcV.args.crc = CrcV.value;
     Crc.final(crc_work);
-    return (uint16_t)Crc.value;
+    return (uint16_t)CrcV.value;
 }
 
 void protocore_df1_crc(uint8_t *restrict work)
@@ -64,11 +64,11 @@ void protocore_df1_crc(uint8_t *restrict work)
     const uint8_t *data = Df1V.crc_args.data;
     size_t len = Df1V.crc_args.len;
 
-    Crc.args.params = &PROTOCORE_CRC16_ARC;
-    Crc.args.data = data;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC16_ARC;
+    CrcV.args.data = data;
+    CrcV.args.len = len;
     Crc.compute(crc_work);
-    Df1V.u16 = (uint16_t)Crc.value;
+    Df1V.u16 = (uint16_t)CrcV.value;
 }
 
 void protocore_df1_build_frame(uint8_t *restrict work)

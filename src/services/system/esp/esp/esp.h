@@ -144,18 +144,39 @@ typedef struct
     EspGcmDecapsulateArgs gcm_decapsulate_args;
     EspReplayInitArgs replay_init_args;
     EspReplayCheckArgs replay_check_args;
-
     proto_bool ok;
     size_t n;
+} EspVars;
 
+/** @brief The operands and the outcome. */
+extern EspVars EspV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const gcm_encapsulate)(uint8_t *restrict work);
     void (*const gcm_decapsulate)(uint8_t *restrict work);
     void (*const replay_init)(uint8_t *restrict work);
     void (*const replay_check)(uint8_t *restrict work);
 } EspNs;
 
-/** @brief The one symbol this module exports. */
-extern EspNs Esp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in EspV or a region of the borrow at a fixed offset.
+void protocore_esp_gcm_encapsulate(uint8_t *restrict work);
+void protocore_esp_gcm_decapsulate(uint8_t *restrict work);
+void protocore_esp_replay_init(uint8_t *restrict work);
+void protocore_esp_replay_check(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Esp.gcm_encapsulate(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const EspNs Esp __attribute__((unused)) = {
+    .gcm_encapsulate = protocore_esp_gcm_encapsulate,
+    .gcm_decapsulate = protocore_esp_gcm_decapsulate,
+    .replay_init = protocore_esp_replay_init,
+    .replay_check = protocore_esp_replay_check,
+};
 
 PROTOCORE_END_DECLS
 

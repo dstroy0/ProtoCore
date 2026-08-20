@@ -117,62 +117,62 @@ static void put_param(protocore_sb *b, const char *name, const char *value)
 // RFC 6749 sec 4.1.3: grant_type=authorization_code, code, redirect_uri, client_id, the sec 2.3.1
 // client password where the client authenticates, and the RFC 7636 sec 4.5 code_verifier where it
 // does not. i32 takes the encoded length, or 0 when the body did not fit.
-static void build_code_request(uint8_t *restrict work)
+void protocore_oauth2_build_code_request(uint8_t *restrict work)
 {
     (void)work;
-    Oauth2.i32 = 0;
-    if (!Oauth2.code_grant.code || !Oauth2.code_grant.redirect_uri || !Oauth2.client.client_id || !Oauth2.request.out ||
-        Oauth2.request.cap == 0)
+    Oauth2V.i32 = 0;
+    if (!Oauth2V.code_grant.code || !Oauth2V.code_grant.redirect_uri || !Oauth2V.client.client_id ||
+        !Oauth2V.request.out || Oauth2V.request.cap == 0)
     {
         return;
     }
-    protocore_sb b = {Oauth2.request.out, Oauth2.request.cap, 0, PROTO_TRUE};
+    protocore_sb b = {Oauth2V.request.out, Oauth2V.request.cap, 0, PROTO_TRUE};
     Sb.put(&b, "grant_type=authorization_code");
-    put_param(&b, "code", Oauth2.code_grant.code);
-    put_param(&b, "redirect_uri", Oauth2.code_grant.redirect_uri);
-    put_param(&b, "client_id", Oauth2.client.client_id);
-    if (Oauth2.client.client_secret)
+    put_param(&b, "code", Oauth2V.code_grant.code);
+    put_param(&b, "redirect_uri", Oauth2V.code_grant.redirect_uri);
+    put_param(&b, "client_id", Oauth2V.client.client_id);
+    if (Oauth2V.client.client_secret)
     {
-        put_param(&b, "client_secret", Oauth2.client.client_secret);
+        put_param(&b, "client_secret", Oauth2V.client.client_secret);
     }
-    if (Oauth2.code_grant.code_verifier)
+    if (Oauth2V.code_grant.code_verifier)
     {
-        put_param(&b, "code_verifier", Oauth2.code_grant.code_verifier);
+        put_param(&b, "code_verifier", Oauth2V.code_grant.code_verifier);
     }
-    Oauth2.i32 = (int32_t)Sb.finish(&b);
+    Oauth2V.i32 = (int32_t)Sb.finish(&b);
 }
 
 // RFC 6749 sec 6: grant_type=refresh_token, refresh_token, client_id, and the sec 2.3.1 client
 // password where the client authenticates. i32 takes the encoded length, or 0 when it did not fit.
-static void build_refresh_request(uint8_t *restrict work)
+void protocore_oauth2_build_refresh_request(uint8_t *restrict work)
 {
     (void)work;
-    Oauth2.i32 = 0;
-    if (!Oauth2.refresh_grant.refresh_token || !Oauth2.client.client_id || !Oauth2.request.out ||
-        Oauth2.request.cap == 0)
+    Oauth2V.i32 = 0;
+    if (!Oauth2V.refresh_grant.refresh_token || !Oauth2V.client.client_id || !Oauth2V.request.out ||
+        Oauth2V.request.cap == 0)
     {
         return;
     }
-    protocore_sb b = {Oauth2.request.out, Oauth2.request.cap, 0, PROTO_TRUE};
+    protocore_sb b = {Oauth2V.request.out, Oauth2V.request.cap, 0, PROTO_TRUE};
     Sb.put(&b, "grant_type=refresh_token");
-    put_param(&b, "refresh_token", Oauth2.refresh_grant.refresh_token);
-    put_param(&b, "client_id", Oauth2.client.client_id);
-    if (Oauth2.client.client_secret)
+    put_param(&b, "refresh_token", Oauth2V.refresh_grant.refresh_token);
+    put_param(&b, "client_id", Oauth2V.client.client_id);
+    if (Oauth2V.client.client_secret)
     {
-        put_param(&b, "client_secret", Oauth2.client.client_secret);
+        put_param(&b, "client_secret", Oauth2V.client.client_secret);
     }
-    Oauth2.i32 = (int32_t)Sb.finish(&b);
+    Oauth2V.i32 = (int32_t)Sb.finish(&b);
 }
 
 // RFC 6749 sec 5.1: read access_token, token_type, expires_in and refresh_token out of the reply,
 // plus the OpenID Connect id_token where the provider sends one. ok stays false when access_token is
 // absent, which is the shape of the sec 5.2 error object.
-static void parse_token_response(uint8_t *restrict work)
+void protocore_oauth2_parse_token_response(uint8_t *restrict work)
 {
     (void)work;
-    Oauth2.ok = PROTO_FALSE;
-    const char *json = Oauth2.response.json;
-    Oauth2Tokens *t = Oauth2.response.tokens;
+    Oauth2V.ok = PROTO_FALSE;
+    const char *json = Oauth2V.response.json;
+    Oauth2Tokens *t = Oauth2V.response.tokens;
     if (!json || !t)
     {
         return;
@@ -216,7 +216,7 @@ static void parse_token_response(uint8_t *restrict work)
     {
         t->expires_in = e;
     }
-    Oauth2.ok = PROTO_TRUE;
+    Oauth2V.ok = PROTO_TRUE;
 }
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
@@ -229,10 +229,10 @@ static void post_and_parse(uint8_t *restrict work, int body_len)
 {
     if (body_len <= 0)
     {
-        Oauth2.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_BUILD;
+        Oauth2V.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_BUILD;
         return;
     }
-    HttpClient.target.url = Oauth2.request.token_endpoint;
+    HttpClient.target.url = Oauth2V.request.token_endpoint;
     HttpClient.request.content_type = "application/x-www-form-urlencoded";
     HttpClient.request.body = (const uint8_t *)OAUTH2_CTX(work)->body;
     HttpClient.request.body_len = (size_t)body_len;
@@ -244,7 +244,7 @@ static void post_and_parse(uint8_t *restrict work, int body_len)
     const int32_t st = HttpClient.status;
     if (st <= 0)
     {
-        Oauth2.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT;
+        Oauth2V.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT;
         return;
     }
     const size_t room = sizeof(OAUTH2_CTX(work)->resp) - 1;
@@ -254,41 +254,34 @@ static void post_and_parse(uint8_t *restrict work, int body_len)
         mem.cpy(OAUTH2_CTX(work)->resp, HttpClient.body, k);
     }
     OAUTH2_CTX(work)->resp[k] = '\0';
-    Oauth2.response.json = OAUTH2_CTX(work)->resp;
-    parse_token_response(work);
-    Oauth2.i32 = Oauth2.ok ? st : (st >= 400 ? st : (int32_t)PROTOCORE_OAUTH2_ERR_RESPONSE);
+    Oauth2V.response.json = OAUTH2_CTX(work)->resp;
+    protocore_oauth2_parse_token_response(work);
+    Oauth2V.i32 = Oauth2V.ok ? st : (st >= 400 ? st : (int32_t)PROTOCORE_OAUTH2_ERR_RESPONSE);
 }
 
 // RFC 6749 sec 4.1.3 request, sec 4.1.4 response: the body is built into the store's own buffer, so
 // the caller sets only the endpoint, the grant members and response.tokens.
-static void exchange_code(uint8_t *restrict work)
+void protocore_oauth2_exchange_code(uint8_t *restrict work)
 {
-    Oauth2.request.out = OAUTH2_CTX(work)->body;
-    Oauth2.request.cap = sizeof(OAUTH2_CTX(work)->body);
-    build_code_request(work);
-    post_and_parse(work, (int)Oauth2.i32);
+    Oauth2V.request.out = OAUTH2_CTX(work)->body;
+    Oauth2V.request.cap = sizeof(OAUTH2_CTX(work)->body);
+    protocore_oauth2_build_code_request(work);
+    post_and_parse(work, (int)Oauth2V.i32);
 }
 
 // RFC 6749 sec 6: the same exchange presenting refresh_grant.refresh_token.
-static void refresh(uint8_t *restrict work)
+void protocore_oauth2_refresh(uint8_t *restrict work)
 {
-    Oauth2.request.out = OAUTH2_CTX(work)->body;
-    Oauth2.request.cap = sizeof(OAUTH2_CTX(work)->body);
-    build_refresh_request(work);
-    post_and_parse(work, (int)Oauth2.i32);
+    Oauth2V.request.out = OAUTH2_CTX(work)->body;
+    Oauth2V.request.cap = sizeof(OAUTH2_CTX(work)->body);
+    protocore_oauth2_build_refresh_request(work);
+    post_and_parse(work, (int)Oauth2V.i32);
 }
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-Oauth2Ns Oauth2 = {
-    .build_code_request = build_code_request,
-    .build_refresh_request = build_refresh_request,
-    .parse_token_response = parse_token_response,
-#if PROTOCORE_ENABLE_HTTP_CLIENT
-    .exchange_code = exchange_code,
-    .refresh = refresh,
-#endif
-};
+/** @brief The operands and the outcome. */
+Oauth2Vars Oauth2V;
 
 #endif // PROTOCORE_ENABLE_OAUTH2

@@ -183,53 +183,54 @@ static int sb_modbus_write_block(void *vctx, uint32_t first, const int32_t *in, 
 }
 
 // Fill a caller-owned instance from the transport seam and the slave it addresses.
-static void init(uint8_t *restrict work)
+void protocore_sb_modbus_init(uint8_t *restrict work)
 {
     (void)work;
-    protocore_sb_modbus_ctx *c = SbModbus.ctx;
-    if (!c || !SbModbus.txn)
+    protocore_sb_modbus_ctx *c = SbModbusV.ctx;
+    if (!c || !SbModbusV.txn)
     {
-        SbModbus.i32 = SB_ERR_ARG;
+        SbModbusV.i32 = SB_ERR_ARG;
         return;
     }
-    if (SbModbus.fc != MODBUS_FC_READ_HOLDING_REGS && SbModbus.fc != MODBUS_FC_READ_INPUT_REGS)
+    if (SbModbusV.fc != MODBUS_FC_READ_HOLDING_REGS && SbModbusV.fc != MODBUS_FC_READ_INPUT_REGS)
     {
-        SbModbus.i32 = SB_ERR_ARG;
+        SbModbusV.i32 = SB_ERR_ARG;
         return;
     }
-    c->txn = SbModbus.txn;
-    c->io = SbModbus.io;
-    c->fc = SbModbus.fc;
-    c->unit = SbModbus.unit;
+    c->txn = SbModbusV.txn;
+    c->io = SbModbusV.io;
+    c->fc = SbModbusV.fc;
+    c->unit = SbModbusV.unit;
     c->txid = 0;
     c->last_exception = 0;
-    SbModbus.i32 = SB_OK;
+    SbModbusV.i32 = SB_OK;
 }
 
 // Bind the vtable the southbound registry dispatches through to one instance.
-static void driver(uint8_t *restrict work)
+void protocore_sb_modbus_driver(uint8_t *restrict work)
 {
     (void)work;
-    protocore_sb_modbus_ctx *c = SbModbus.ctx;
-    SouthboundDriver *drv_out = SbModbus.drv_out;
-    if (!drv_out || !SbModbus.name || !c || !c->txn)
+    protocore_sb_modbus_ctx *c = SbModbusV.ctx;
+    SouthboundDriver *drv_out = SbModbusV.drv_out;
+    if (!drv_out || !SbModbusV.name || !c || !c->txn)
     {
-        SbModbus.i32 = SB_ERR_ARG;
+        SbModbusV.i32 = SB_ERR_ARG;
         return;
     }
     // Holding registers are read/write; input registers are read-only (a Modbus input register cannot be
     // written), so an input-register driver leaves write / write_block unbound (framework: SB_ERR_UNSUPPORTED).
     proto_bool writable = (c->fc == MODBUS_FC_READ_HOLDING_REGS);
-    drv_out->name = SbModbus.name;
+    drv_out->name = SbModbusV.name;
     drv_out->read = &sb_modbus_read;
     drv_out->write = writable ? &sb_modbus_write : NULL;
     drv_out->read_block = &sb_modbus_read_block;
     drv_out->write_block = writable ? &sb_modbus_write_block : NULL;
     drv_out->ctx = c;
-    SbModbus.i32 = SB_OK;
+    SbModbusV.i32 = SB_OK;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SbModbusNs SbModbus = {.init = init, .driver = driver};
+/** @brief The operands and the outcome. */
+SbModbusVars SbModbusV;
 
 #endif // PROTOCORE_ENABLE_SOUTHBOUND && PROTOCORE_ENABLE_MODBUS_MASTER

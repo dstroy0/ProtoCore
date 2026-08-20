@@ -517,10 +517,10 @@ static void ws_finish_frame(uint8_t *restrict work, WsConn *ws)
         size_t n = ws->msg_len < WS_FRAME_SIZE ? ws->msg_len : WS_FRAME_SIZE;
         // RFC 6455 8.1: a TEXT message MUST be valid UTF-8 (checked on the fully
         // reassembled + decompressed message); otherwise fail the connection with 1007.
-        Utf8.args.s = ws->buf;
-        Utf8.args.n = n;
+        Utf8V.args.s = ws->buf;
+        Utf8V.args.n = n;
         Utf8.valid(utf8_work);
-        if (ws->msg_opcode == WS_OP_TEXT && !Utf8.ok)
+        if (ws->msg_opcode == WS_OP_TEXT && !Utf8V.ok)
         {
             WsV.conn = ws;
             WsV.frame.code = WS_CLOSE_INVALID_PAYLOAD;

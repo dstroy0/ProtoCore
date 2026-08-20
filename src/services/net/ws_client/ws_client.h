@@ -161,10 +161,16 @@ typedef struct
     WsFrameArgs frame;         ///< the base framing protocol's fields
     WsBufArgs buf;             ///< the octets a codec call moves
     WsMessageArgs msg;         ///< the Application data a Data frame carries
-
     proto_bool ok;
     size_t n;
+} WsClientVars;
 
+/** @brief The operands and the outcome. */
+extern WsClientVars WsClientV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const accept_for_key)(uint8_t *restrict work);
     void (*const build_opening_handshake)(uint8_t *restrict work);
     void (*const check_server_handshake)(uint8_t *restrict work);
@@ -179,8 +185,39 @@ typedef struct
     void (*const close)(uint8_t *restrict work);
 } WsClientNs;
 
-/** @brief The one symbol this module exports. */
-extern WsClientNs WsClient;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WsClientV or a region of the borrow at a fixed offset.
+void protocore_ws_client_accept_for_key(uint8_t *restrict work);
+void protocore_ws_client_build_opening_handshake(uint8_t *restrict work);
+void protocore_ws_client_check_server_handshake(uint8_t *restrict work);
+void protocore_ws_client_build_frame(uint8_t *restrict work);
+void protocore_ws_client_parse_frame(uint8_t *restrict work);
+void protocore_ws_client_on_message(uint8_t *restrict work);
+void protocore_ws_client_connect(uint8_t *restrict work);
+void protocore_ws_client_send_text(uint8_t *restrict work);
+void protocore_ws_client_send_binary(uint8_t *restrict work);
+void protocore_ws_client_loop(uint8_t *restrict work);
+void protocore_ws_client_connected(uint8_t *restrict work);
+void protocore_ws_client_close(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `WsClient.accept_for_key(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WsClientNs WsClient __attribute__((unused)) = {
+    .accept_for_key = protocore_ws_client_accept_for_key,
+    .build_opening_handshake = protocore_ws_client_build_opening_handshake,
+    .check_server_handshake = protocore_ws_client_check_server_handshake,
+    .build_frame = protocore_ws_client_build_frame,
+    .parse_frame = protocore_ws_client_parse_frame,
+    .on_message = protocore_ws_client_on_message,
+    .connect = protocore_ws_client_connect,
+    .send_text = protocore_ws_client_send_text,
+    .send_binary = protocore_ws_client_send_binary,
+    .loop = protocore_ws_client_loop,
+    .connected = protocore_ws_client_connected,
+    .close = protocore_ws_client_close,
+};
 
 /**
  * @brief The PROTOCORE_WS_CLIENT_BORROW bytes this module's state lives in.
