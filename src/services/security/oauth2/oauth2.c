@@ -236,11 +236,12 @@ static void post_and_parse(uint8_t *restrict work, int body_len)
     HttpClientV.request.content_type = "application/x-www-form-urlencoded";
     HttpClientV.request.body = (const uint8_t *)OAUTH2_CTX(work)->body;
     HttpClientV.request.body_len = (size_t)body_len;
-#if PROTOCORE_HAS_NET_STACK
+    // HttpClient's OWN span, not oauth2's. With a network stack this entry reaches
+    // HTTP_CLIENT_CTX(work), so the borrow has to be the one http_client carved; without one it
+    // discards the argument. The span is published unconditionally, so one call covers both arms -
+    // this used to be an #if that passed the span on one side and NULL on the other, and a borrow
+    // is a compile-time guarantee that is never null.
     HttpClient.post(protocore_http_client_span());
-#else
-    HttpClient.post(NULL);
-#endif
     const int32_t st = HttpClientV.status;
     if (st <= 0)
     {

@@ -162,6 +162,28 @@ check("a struct member called work is NOT counted", "e->work" not in found)
 check("so the count is two, not three", t["null_borrow_tests"] == 2)
 print()
 
+print("a call does not spell the borrow as null")
+d = design(
+    "static void f(uint8_t *restrict work)\n{\n"
+    "    Der.read(work);\n"
+    "    Der.enter(NULL);\n"
+    "    Hpack.encode_header(nullptr);\n"
+    "    memset(p, 0, n);\n"
+    '    log_it("Der.read(NULL) used to be written here");\n'
+    "}\n"
+)
+t = S.traits(d, "source")
+# The other half of `no null-borrow test`: that one asks whether the CALLEE doubts the guarantee,
+# this one asks whether the CALLER keeps it. Sixty-two of the sixty-three in the tree reached
+# entries that discard the argument, so nothing crashed and nothing reported them.
+check("a null borrow argument is found", t["null_borrow_args"] == 2)
+check("both spellings count", t["null_borrow_calls"] == ["Der.enter(NULL)", "Hpack.encode_header(nullptr)"])
+check("a real borrow is not one", "Der.read(work)" not in " ".join(t["null_borrow_calls"]))
+# `memset(p, 0, n)` is a call with a literal 0 and no borrow anywhere near it.
+check("an unrelated zero argument is not one", "memset" not in " ".join(t["null_borrow_calls"]))
+check("and the same call inside a string is not code", t["null_borrow_args"] == 2)
+print()
+
 print("a namespace is reached in one hop, and the reader can tell which hop it is")
 gsrc = io.open(S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.c", encoding="utf-8").read()
 

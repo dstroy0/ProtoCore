@@ -384,7 +384,7 @@ static void protocore_dtls_negotiate_conn_id(DtlsConn *c, const Tls13ClientHello
 // messages), installing handshake and application keys. Mirrors protocore_quic_tls process_client_hello. If the
 // client did not offer an X25519 key_share, this instead sends a HelloRetryRequest and returns to wait
 // for the client's second ClientHello (RFC 9147 §5.1).
-static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, uint8_t *out, size_t out_cap,
+static int handle_client_hello(uint8_t *restrict work, DtlsConn *c, const uint8_t *msg, size_t msg_len, uint8_t *out, size_t out_cap,
                                size_t *out_len)
 {
     Tls13ClientHello ch;
@@ -498,12 +498,12 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     // This handshake offers TLS_AES_128_GCM_SHA256 only, so the schedule's hash is SHA-256. It is
     // stated rather than assumed because the schedule binds either.
     Tls13KsV.bind.is384 = PROTO_FALSE;
-    Tls13Ks.early(NULL);
+    Tls13Ks.early(work);
     Tls13KsV.bind.ks = &c->ks;
     Tls13KsV.step.ecdhe = ecdhe;
     Tls13KsV.step.ch_sh_hash = hash;
     Tls13KsV.step.ecdhe_len = 32;
-    Tls13Ks.handshake(NULL);
+    Tls13Ks.handshake(work);
     protocore_secure_wipe(ecdhe, sizeof(ecdhe)); // every epoch-2 and epoch-3 key derives from these 32 bytes
     DtlsRecordV.keys_derive_args.out = &c->ep2_srv;
     DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
@@ -606,7 +606,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     Tls13KsV.finished_args.base_secret = c->ks.s + TLS13_KS_SERVER_HS;
     Tls13KsV.finished_args.transcript_hash = hash;
     Tls13KsV.finished_args.out = verify;
-    Tls13Ks.finished_mac(NULL);
+    Tls13Ks.finished_mac(work);
     Tls13MsgV.build_finished_args.out = c->msgbuf;
     Tls13MsgV.build_finished_args.cap = sizeof(c->msgbuf);
     Tls13MsgV.build_finished_args.verify_data = verify;
@@ -624,7 +624,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
     snapshot(c, c->transcript, c->hs_finished_hash);
     Tls13KsV.bind.ks = &c->ks;
     Tls13KsV.step.ch_sfin_hash = c->hs_finished_hash;
-    Tls13Ks.master(NULL);
+    Tls13Ks.master(work);
     DtlsRecordV.keys_derive_args.out = &c->ep3_srv;
     DtlsRecordV.keys_derive_args.cipher = DTLS_CIPHER_AES_128_GCM_SHA256;
     DtlsRecordV.keys_derive_args.epoch = 3;
@@ -653,7 +653,7 @@ static int handle_client_hello(DtlsConn *c, const uint8_t *msg, size_t msg_len, 
 }
 
 // Verify the client's Finished and complete the handshake.
-static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_len)
+static int handle_client_finished(uint8_t *restrict work, DtlsConn *c, const uint8_t *msg, size_t msg_len)
 {
     if (msg[0] != TLS_HS_FINISHED || msg_len != 4 + c->ks.len)
     {
@@ -663,7 +663,7 @@ static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_le
     Tls13KsV.finished_args.base_secret = c->ks.s + TLS13_KS_CLIENT_HS;
     Tls13KsV.finished_args.transcript_hash = c->hs_finished_hash;
     Tls13KsV.finished_args.out = c->ks.s + TLS13_KS_VERIFY;
-    Tls13Ks.finished_mac(NULL);
+    Tls13Ks.finished_mac(work);
     if (!protocore_ct_eq(c->ks.s + TLS13_KS_VERIFY, msg + 4, c->ks.len))
     {
         return fail(c, ALERT_DECRYPT_ERROR);
@@ -681,16 +681,16 @@ static int handle_client_finished(DtlsConn *c, const uint8_t *msg, size_t msg_le
     return 0;
 }
 
-static int dispatch_message(DtlsConn *c, const uint8_t *tls_msg, size_t tls_len, uint8_t *out, size_t out_cap,
+static int dispatch_message(uint8_t *restrict work, DtlsConn *c, const uint8_t *tls_msg, size_t tls_len, uint8_t *out, size_t out_cap,
                             size_t *out_len)
 {
     if (c->state == DTLS_CONN_STATE_START && tls_msg[0] == TLS_HS_CLIENT_HELLO)
     {
-        return handle_client_hello(c, tls_msg, tls_len, out, out_cap, out_len);
+        return handle_client_hello(work, c, tls_msg, tls_len, out, out_cap, out_len);
     }
     if (c->state == DTLS_CONN_STATE_WAIT_FINISHED && tls_msg[0] == TLS_HS_FINISHED)
     {
-        return handle_client_finished(c, tls_msg, tls_len);
+        return handle_client_finished(work, c, tls_msg, tls_len);
     }
     if (c->state == DTLS_CONN_STATE_DONE && tls_msg[0] == TLS_HS_FINISHED)
     {
@@ -707,7 +707,7 @@ static int dispatch_message(DtlsConn *c, const uint8_t *tls_msg, size_t tls_len,
 
 // Parse and reassemble the DTLS handshake fragments carried in one record's payload, dispatching each
 // complete TLS message.
-static int drive_handshake(DtlsConn *c, const uint8_t *payload, size_t plen, uint8_t *out, size_t out_cap,
+static int drive_handshake(uint8_t *restrict work, DtlsConn *c, const uint8_t *payload, size_t plen, uint8_t *out, size_t out_cap,
                            size_t *out_len)
 {
     size_t p = 0;
@@ -739,7 +739,7 @@ static int drive_handshake(DtlsConn *c, const uint8_t *payload, size_t plen, uin
             c->reasm_buf[1] = (uint8_t)(c->reasm.length >> 16);
             c->reasm_buf[2] = (uint8_t)(c->reasm.length >> 8);
             c->reasm_buf[3] = (uint8_t)c->reasm.length;
-            if (dispatch_message(c, c->reasm_buf, 4 + c->reasm.length, out, out_cap, out_len) < 0)
+            if (dispatch_message(work, c, c->reasm_buf, 4 + c->reasm.length, out, out_cap, out_len) < 0)
             {
                 return -1;
             }
@@ -797,7 +797,7 @@ typedef enum PROTO_ENUM_PACKED
 } DtlsRecStep;
 
 // Process one ciphertext (epoch-2) record at dgram[*off], advancing *off past a well-formed record.
-static DtlsRecStep process_ciphertext_record(DtlsConn *c, const uint8_t *dgram, size_t len, size_t *off, uint8_t *out,
+static DtlsRecStep process_ciphertext_record(uint8_t *restrict work, DtlsConn *c, const uint8_t *dgram, size_t len, size_t *off, uint8_t *out,
                                              size_t out_cap, size_t *out_len)
 {
     size_t rlen = ciphertext_record_len(dgram + *off, len - *off, c->cid_negotiated ? c->local_cid_len : 0);
@@ -854,7 +854,7 @@ static DtlsRecStep process_ciphertext_record(DtlsConn *c, const uint8_t *dgram, 
     {
         process_ack(c, inner, info.pt_len); // the client acknowledged our flight
     }
-    else if (is_hs && drive_handshake(c, inner, info.pt_len, out, out_cap, out_len) < 0)
+    else if (is_hs && drive_handshake(work, c, inner, info.pt_len, out, out_cap, out_len) < 0)
     {
         return DTLS_REC_STEP_FATAL;
     }
@@ -862,7 +862,7 @@ static DtlsRecStep process_ciphertext_record(DtlsConn *c, const uint8_t *dgram, 
 }
 
 // Process one plaintext (epoch-0) record at dgram[*off], advancing *off past a well-formed record.
-static DtlsRecStep process_plaintext_record(DtlsConn *c, const uint8_t *dgram, size_t len, size_t *off, uint8_t *out,
+static DtlsRecStep process_plaintext_record(uint8_t *restrict work, DtlsConn *c, const uint8_t *dgram, size_t len, size_t *off, uint8_t *out,
                                             size_t out_cap, size_t *out_len)
 {
     DtlsPlaintext pt;
@@ -877,7 +877,7 @@ static DtlsRecStep process_plaintext_record(DtlsConn *c, const uint8_t *dgram, s
     }
     *off += rlen;
     if (pt.content_type == PROTOCORE_DTLS_CT_HANDSHAKE &&
-        drive_handshake(c, pt.fragment, pt.frag_len, out, out_cap, out_len) < 0)
+        drive_handshake(work, c, pt.fragment, pt.frag_len, out, out_cap, out_len) < 0)
     {
         return DTLS_REC_STEP_FATAL;
     }
@@ -989,8 +989,8 @@ void protocore_dtls_server_process(uint8_t *restrict work)
     while (off < len)
     {
         DtlsRecStep step = is_ciphertext(dgram[off])
-                               ? process_ciphertext_record(c, dgram, len, &off, out, out_cap, &out_len)
-                               : process_plaintext_record(c, dgram, len, &off, out, out_cap, &out_len);
+                               ? process_ciphertext_record(work, c, dgram, len, &off, out, out_cap, &out_len)
+                               : process_plaintext_record(work, c, dgram, len, &off, out, out_cap, &out_len);
         if (step == DTLS_REC_STEP_FATAL)
         {
             DtlsServerV.n = -1;

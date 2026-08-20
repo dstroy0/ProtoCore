@@ -148,31 +148,36 @@ static void send_our_settings(uint8_t *restrict work)
     uint8_t buf[H2_FRAME_HEADER_LEN + 4 * 6];
     size_t n = (H2FrameV.build_settings_args.buf = buf, H2FrameV.build_settings_args.cap = sizeof buf,
                 H2FrameV.build_settings_args.ids = ids, H2FrameV.build_settings_args.vals = vals,
-                H2FrameV.build_settings_args.n = 4, H2Frame.build_settings(NULL), H2FrameV.n);
+                H2FrameV.build_settings_args.n = 4, H2Frame.build_settings(work), H2FrameV.n);
     printf("DIAG_H2 settings n=%u write=%p\n", (unsigned)n, (void *)(uintptr_t)H2_CONN_CTX(work)->cb.write);
     wr(work, buf, n);
 }
 
 // Builds a RST_STREAM naming stream 0 with error code 0, in the shape send_control takes.
-static size_t build_rst_refuse(uint8_t *b, size_t cap)
+//
+// The borrow is the FIRST parameter, and send_control's builder type carries it, because these two
+// are passed to send_control BY ADDRESS. Threading a borrow into them without widening that type
+// left the pointer mismatched: it compiles with a warning and then reads its arguments from the
+// wrong places, which showed up as two unrelated-looking assertion failures in the h2_conn suite.
+static size_t build_rst_refuse(uint8_t *restrict work, uint8_t *b, size_t cap)
 {
     return (H2FrameV.rst_args.buf = b, H2FrameV.rst_args.cap = cap, H2FrameV.rst_args.stream_id = 0,
-            H2FrameV.rst_args.error = 0, H2Frame.build_rst_stream(NULL), H2FrameV.n);
+            H2FrameV.rst_args.error = 0, H2Frame.build_rst_stream(work), H2FrameV.n);
 }
 
 // send_control takes a plain builder, so the entry is reached through one.
-static size_t build_settings_ack(uint8_t *out, size_t cap)
+static size_t build_settings_ack(uint8_t *restrict work, uint8_t *out, size_t cap)
 {
     H2FrameV.ack_args.buf = out;
     H2FrameV.ack_args.cap = cap;
-    H2Frame.build_settings_ack(NULL);
+    H2Frame.build_settings_ack(work);
     return H2FrameV.n;
 }
 
-static void send_control(uint8_t *restrict work, size_t (*build)(uint8_t *, size_t))
+static void send_control(uint8_t *restrict work, size_t (*build)(uint8_t *restrict, uint8_t *, size_t))
 {
     uint8_t buf[H2_FRAME_HEADER_LEN + 16];
-    size_t n = build(buf, sizeof buf);
+    size_t n = build(work, buf, sizeof buf);
     // Both builders passed here (SETTINGS ACK, 9 bytes; RST_STREAM, 13) fit this 25-byte buffer, so the
     // zero return is unreachable; kept so a future builder that can fail is not silently written short.
     if (n)
@@ -189,7 +194,7 @@ static void send_control(uint8_t *restrict work, size_t (*build)(uint8_t *, size
 static void send_rst(uint8_t *restrict work, uint32_t stream_id, uint32_t err)
 {
     size_t n = (H2FrameV.rst_args.buf = H2_CONN_CTL(work), H2FrameV.rst_args.cap = H2_CTL_FRAME_MAX,
-                H2FrameV.rst_args.stream_id = stream_id, H2FrameV.rst_args.error = err, H2Frame.build_rst_stream(NULL),
+                H2FrameV.rst_args.stream_id = stream_id, H2FrameV.rst_args.error = err, H2Frame.build_rst_stream(work),
                 H2FrameV.n);
     wr(work, H2_CONN_CTL(work), n);
 }
@@ -510,11 +515,11 @@ static proto_bool handle_data(uint8_t *restrict work, const H2FrameHeader *h, co
     {
         size_t n = (H2FrameV.window_args.buf = H2_CONN_CTL(work), H2FrameV.window_args.cap = H2_CTL_FRAME_MAX,
                     H2FrameV.window_args.stream_id = 0, H2FrameV.window_args.increment = h->length,
-                    H2Frame.build_window_update(NULL), H2FrameV.n);
+                    H2Frame.build_window_update(work), H2FrameV.n);
         wr(work, H2_CONN_CTL(work), n);
         n = (H2FrameV.window_args.buf = H2_CONN_CTL(work), H2FrameV.window_args.cap = H2_CTL_FRAME_MAX,
              H2FrameV.window_args.stream_id = h->stream_id, H2FrameV.window_args.increment = h->length,
-             H2Frame.build_window_update(NULL), H2FrameV.n);
+             H2Frame.build_window_update(work), H2FrameV.n);
         wr(work, H2_CONN_CTL(work), n);
     }
     return PROTO_TRUE;
@@ -535,7 +540,7 @@ static proto_bool dispatch_frame(uint8_t *restrict work, H2FrameHeader h, const 
             return h.length == 0; // ACK of our settings
         }
         if (!(H2FrameV.settings_args.payload = payload, H2FrameV.settings_args.len = h.length,
-              H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.parse_settings(NULL), H2FrameV.ok))
+              H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.parse_settings(work), H2FrameV.ok))
         {
             return PROTO_FALSE;
         }
@@ -556,7 +561,7 @@ static proto_bool dispatch_frame(uint8_t *restrict work, H2FrameHeader h, const 
         }
         {
             size_t n = (H2FrameV.ping_args.buf = H2_CONN_CTL(work), H2FrameV.ping_args.cap = H2_CTL_FRAME_MAX,
-                        H2FrameV.ping_args.opaque = payload, H2Frame.build_ping_ack(NULL), H2FrameV.n);
+                        H2FrameV.ping_args.opaque = payload, H2Frame.build_ping_ack(work), H2FrameV.n);
             wr(work, H2_CONN_CTL(work), n);
         }
         return PROTO_TRUE;
@@ -656,7 +661,7 @@ static proto_bool process_frame(uint8_t *restrict work)
 {
     H2FrameHeader h;
     (H2FrameV.parse_args.buf = H2_CONN_FHDR(work), H2FrameV.parse_args.len = H2_FRAME_HEADER_LEN,
-     H2Frame.parse_header(NULL), *(&h) = H2FrameV.header, H2FrameV.ok);
+     H2Frame.parse_header(work), *(&h) = H2FrameV.header, H2FrameV.ok);
     const uint8_t *payload = H2_CONN_FBUF(work);
 
     // A header block must be continued only by CONTINUATION on the same stream (sec 6.10).
@@ -676,7 +681,7 @@ void protocore_h2_conn_init(uint8_t *restrict work)
     mem.set(H2_CONN_CTX(work), 0, sizeof(H2ConnCtx));
     H2_CONN_CTX(work)->cb = *H2ConnV.init_args.cb;
     H2_CONN_CTX(work)->phase = 0;
-    (H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.settings_defaults(NULL));
+    (H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.settings_defaults(work));
     H2_CONN_CTX(work)->conn_send_window = 65535;
     (HpackV.init_args.max_bytes = PROTOCORE_HPACK_TABLE_BYTES, Hpack.dyn_init(H2_CONN_CTX(work)->hdec));
     send_our_settings(work);
@@ -770,7 +775,7 @@ static proto_bool h2_respond_run(uint8_t *restrict work, uint32_t stream_id, int
     int nl = (int)Sb.finish(&sb_num);
     size_t w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
                 HpackV.encode_args.name = ":status", HpackV.encode_args.name_len = 7, HpackV.encode_args.value = num,
-                HpackV.encode_args.value_len = (size_t)nl, Hpack.encode_header(NULL), HpackV.n);
+                HpackV.encode_args.value_len = (size_t)nl, Hpack.encode_header(work), HpackV.n);
     if (!w)
     {
         return PROTO_FALSE;
@@ -784,7 +789,7 @@ static proto_bool h2_respond_run(uint8_t *restrict work, uint32_t stream_id, int
         w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
              HpackV.encode_args.name = "content-type", HpackV.encode_args.name_len = 12,
              HpackV.encode_args.value = content_type,
-             HpackV.encode_args.value_len = str.len(content_type, sizeof block * 2), Hpack.encode_header(NULL),
+             HpackV.encode_args.value_len = str.len(content_type, sizeof block * 2), Hpack.encode_header(work),
              HpackV.n);
         if (!w)
         {
@@ -797,7 +802,7 @@ static proto_bool h2_respond_run(uint8_t *restrict work, uint32_t stream_id, int
     int cl = (int)Sb.finish(&sb_num2);
     w = (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
          HpackV.encode_args.name = "content-length", HpackV.encode_args.name_len = 14, HpackV.encode_args.value = num,
-         HpackV.encode_args.value_len = (size_t)cl, Hpack.encode_header(NULL), HpackV.n);
+         HpackV.encode_args.value_len = (size_t)cl, Hpack.encode_header(work), HpackV.n);
     // Reachable: bo has already been advanced by the caller-supplied content-type, which can consume nearly
     // the whole block, leaving too little room for content-length even though it is only a few octets.
     if (!w)
@@ -810,7 +815,7 @@ static proto_bool h2_respond_run(uint8_t *restrict work, uint32_t stream_id, int
     size_t n = (H2FrameV.headers_args.buf = frame, H2FrameV.headers_args.cap = sizeof frame,
                 H2FrameV.headers_args.stream_id = stream_id, H2FrameV.headers_args.block = block,
                 H2FrameV.headers_args.block_len = bo, H2FrameV.headers_args.end_stream = body_len == 0,
-                H2Frame.build_headers(NULL), H2FrameV.n);
+                H2Frame.build_headers(work), H2FrameV.n);
     if (!n)
     {
         return PROTO_FALSE;
@@ -832,7 +837,7 @@ static proto_bool h2_respond_run(uint8_t *restrict work, uint32_t stream_id, int
         size_t hn = (H2FrameV.write_args.buf = dh, H2FrameV.write_args.cap = sizeof dh,
                      H2FrameV.write_args.length = (uint32_t)chunk, H2FrameV.write_args.type = H2_DATA,
                      H2FrameV.write_args.flags = last ? H2_FLAG_END_STREAM : 0,
-                     H2FrameV.write_args.stream_id = stream_id, H2Frame.write_header(NULL), H2FrameV.n);
+                     H2FrameV.write_args.stream_id = stream_id, H2Frame.write_header(work), H2FrameV.n);
         if (!hn)
         {
             return PROTO_FALSE;
@@ -852,7 +857,7 @@ static void h2_goaway_run(uint8_t *restrict work, uint32_t error)
     uint8_t buf[H2_FRAME_HEADER_LEN + 8];
     size_t n = (H2FrameV.goaway_args.buf = buf, H2FrameV.goaway_args.cap = sizeof buf,
                 H2FrameV.goaway_args.last_stream_id = H2_CONN_CTX(work)->last_peer_stream,
-                H2FrameV.goaway_args.error = error, H2Frame.build_goaway(NULL), H2FrameV.n);
+                H2FrameV.goaway_args.error = error, H2Frame.build_goaway(work), H2FrameV.n);
     wr(work, buf, n);
     H2_CONN_CTX(work)->phase = 2;
 }
