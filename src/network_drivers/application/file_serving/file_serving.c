@@ -126,28 +126,28 @@ static int file_root(uint8_t *restrict work)
 }
 
 // The entries this file calls before reaching their definitions.
-static void file_serving_file_send_pump(uint8_t *restrict work);
-static void file_serving_http_rfc1123(uint8_t *restrict work);
-static void file_serving_serve_file_internal(uint8_t *restrict work);
+void protocore_file_serving_file_send_pump(uint8_t *restrict work);
+void protocore_file_serving_http_rfc1123(uint8_t *restrict work);
+void protocore_file_serving_serve_file_internal(uint8_t *restrict work);
 
-static void file_serving_holds_slot(uint8_t *restrict work)
+void protocore_file_serving_holds_slot(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t slot = FileServing.holds_slot_args.slot;
+    uint8_t slot = FileServingV.holds_slot_args.slot;
 
-    FileServing.ok = file_send[slot].active;
+    FileServingV.ok = file_send[slot].active;
 }
 
 // HTTP-date helpers (shared by file serving's Last-Modified / If-Modified-Since and
 // WebDAV's getlastmodified / creationdate). WEBDAV requires FILE_SERVING, so this is
 // the single home for both. Format a time_t as an RFC 1123 GMT date; leaves @p out
 // empty when the timestamp is zero/unavailable.
-static void file_serving_http_rfc1123(uint8_t *restrict work)
+void protocore_file_serving_http_rfc1123(uint8_t *restrict work)
 {
     (void)work;
-    int64_t epoch = FileServing.http_rfc1123_args.epoch;
-    char *out = FileServing.http_rfc1123_args.out;
-    size_t cap = FileServing.http_rfc1123_args.cap;
+    int64_t epoch = FileServingV.http_rfc1123_args.epoch;
+    char *out = FileServingV.http_rfc1123_args.out;
+    size_t cap = FileServingV.http_rfc1123_args.cap;
 
     out[0] = '\0';
     if (epoch <= 0)
@@ -284,14 +284,14 @@ static proto_bool inm_matches(const char *inm, const char *etag)
     return PROTO_FALSE;
 }
 
-static void file_serving_serve_file_internal(uint8_t *restrict work)
+void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
 {
-    uint8_t slot_id = FileServing.serve_file_internal_args.slot_id;
-    proto_bool head = FileServing.serve_file_internal_args.head;
-    const protocore_mnt_backend *file_sys = FileServing.serve_file_internal_args.file_sys;
-    const char *fs_path = FileServing.serve_file_internal_args.fs_path;
-    const char *content_type = FileServing.serve_file_internal_args.content_type;
-    const char *content_encoding = FileServing.serve_file_internal_args.content_encoding;
+    uint8_t slot_id = FileServingV.serve_file_internal_args.slot_id;
+    proto_bool head = FileServingV.serve_file_internal_args.head;
+    const protocore_mnt_backend *file_sys = FileServingV.serve_file_internal_args.file_sys;
+    const char *fs_path = FileServingV.serve_file_internal_args.fs_path;
+    const char *content_type = FileServingV.serve_file_internal_args.content_type;
+    const char *content_encoding = FileServingV.serve_file_internal_args.content_encoding;
 
     Fs.path.root = file_root(work);
     Fs.path.dir = fs_path;
@@ -372,10 +372,10 @@ static void file_serving_serve_file_internal(uint8_t *restrict work)
     char lm_date[40];
     char lastmod_line[17 + sizeof(lm_date)]; // "Last-Modified: " + date + "\r\n" + NUL
     lastmod_line[0] = '\0';
-    FileServing.http_rfc1123_args.epoch = mtime;
-    FileServing.http_rfc1123_args.out = lm_date;
-    FileServing.http_rfc1123_args.cap = sizeof(lm_date);
-    file_serving_http_rfc1123(work);
+    FileServingV.http_rfc1123_args.epoch = mtime;
+    FileServingV.http_rfc1123_args.out = lm_date;
+    FileServingV.http_rfc1123_args.cap = sizeof(lm_date);
+    protocore_file_serving_http_rfc1123(work);
     if (lm_date[0])
     {
         protocore_sb sb_lastmod_line = {lastmod_line, sizeof(lastmod_line), 0, PROTO_TRUE};
@@ -450,12 +450,12 @@ static void file_serving_serve_file_internal(uint8_t *restrict work)
     HttpParser.get_header_args.req = &http_pool[slot_id];
     HttpParser.get_header_args.key = "Range";
     HttpParser.get_header(protocore_http_parser_span());
-    HttpRange.http_parse_byte_range_args.hdr = HttpParser.text;
-    HttpRange.http_parse_byte_range_args.size = file_size;
-    HttpRange.http_parse_byte_range_args.out_start = &r_start;
-    HttpRange.http_parse_byte_range_args.out_end = &r_end;
+    HttpRangeV.http_parse_byte_range_args.hdr = HttpParser.text;
+    HttpRangeV.http_parse_byte_range_args.size = file_size;
+    HttpRangeV.http_parse_byte_range_args.out_start = &r_start;
+    HttpRangeV.http_parse_byte_range_args.out_end = &r_end;
     HttpRange.http_parse_byte_range(http_range_work);
-    int rr = HttpRange.n;
+    int rr = HttpRangeV.n;
     if (rr < 0)
     {
         // Unsatisfiable range -> 416 with Content-Range: bytes */<size>.
@@ -565,18 +565,18 @@ static void file_serving_serve_file_internal(uint8_t *restrict work)
     s->total = (int)body_len;
     s->keep = keep;
     s->active = PROTO_TRUE;
-    FileServing.file_send_pump_args.slot_id = slot_id;
-    file_serving_file_send_pump(work);
+    FileServingV.file_send_pump_args.slot_id = slot_id;
+    protocore_file_serving_file_send_pump(work);
 }
 
 // Page out a pending file response across worker loops: send up to ConnPool.sndbuf()
 // bytes now and return; the next loop resumes (woken by the sent callback) until the
 // whole body has been queued, then finish the response. Bounded per loop, never
 // truncates, never blocks the worker.
-static void file_serving_file_send_pump(uint8_t *restrict work)
+void protocore_file_serving_file_send_pump(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t slot_id = FileServing.file_send_pump_args.slot_id;
+    uint8_t slot_id = FileServingV.file_send_pump_args.slot_id;
 
     FileSend *s = &file_send[slot_id];
     if (!s->active)
@@ -664,30 +664,30 @@ static void file_serving_file_send_pump(uint8_t *restrict work)
     protocore_resp_end(slot_id, s->status, s->total, s->keep, /*pre_flushed=*/PROTO_FALSE);
 }
 
-static void file_serving_serve_file(uint8_t *restrict work)
+void protocore_file_serving_serve_file(uint8_t *restrict work)
 {
-    uint8_t slot_id = FileServing.serve_file_args.slot_id;
-    const protocore_mnt_backend *file_sys = FileServing.serve_file_args.file_sys;
-    const char *fs_path = FileServing.serve_file_args.fs_path;
-    const char *content_type = FileServing.serve_file_args.content_type;
+    uint8_t slot_id = FileServingV.serve_file_args.slot_id;
+    const protocore_mnt_backend *file_sys = FileServingV.serve_file_args.file_sys;
+    const char *fs_path = FileServingV.serve_file_args.fs_path;
+    const char *content_type = FileServingV.serve_file_args.content_type;
 
     Http.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    FileServing.serve_file_internal_args.slot_id = slot_id;
-    FileServing.serve_file_internal_args.head = Http.ok;
-    FileServing.serve_file_internal_args.file_sys = file_sys;
-    FileServing.serve_file_internal_args.fs_path = fs_path;
-    FileServing.serve_file_internal_args.content_type = content_type;
-    FileServing.serve_file_internal_args.content_encoding = NULL;
-    file_serving_serve_file_internal(work);
+    FileServingV.serve_file_internal_args.slot_id = slot_id;
+    FileServingV.serve_file_internal_args.head = Http.ok;
+    FileServingV.serve_file_internal_args.file_sys = file_sys;
+    FileServingV.serve_file_internal_args.fs_path = fs_path;
+    FileServingV.serve_file_internal_args.content_type = content_type;
+    FileServingV.serve_file_internal_args.content_encoding = NULL;
+    protocore_file_serving_serve_file_internal(work);
 }
 
-static void file_serving_serve_static(uint8_t *restrict work)
+void protocore_file_serving_serve_static(uint8_t *restrict work)
 {
     (void)work;
-    const char *url_prefix = FileServing.serve_static_args.url_prefix;
-    const protocore_mnt_backend *file_sys = FileServing.serve_static_args.file_sys;
-    const char *fs_root = FileServing.serve_static_args.fs_root;
+    const char *url_prefix = FileServingV.serve_static_args.url_prefix;
+    const protocore_mnt_backend *file_sys = FileServingV.serve_static_args.file_sys;
+    const char *fs_root = FileServingV.serve_static_args.fs_root;
 
     HttpRoutes.add(protocore_http_route_span());
     HttpRoute *r = HttpRoutes.ptr;
@@ -724,11 +724,11 @@ static void file_serving_serve_static(uint8_t *restrict work)
     r->mnt_id = Mnt.u8;
 }
 
-static void file_serving_serve_static_request(uint8_t *restrict work)
+void protocore_file_serving_serve_static_request(uint8_t *restrict work)
 {
-    uint8_t slot_id = FileServing.serve_static_request_args.slot_id;
-    HttpReq *req = FileServing.serve_static_request_args.req;
-    const HttpRoute *r = FileServing.serve_static_request_args.r;
+    uint8_t slot_id = FileServingV.serve_static_request_args.slot_id;
+    HttpReq *req = FileServingV.serve_static_request_args.req;
+    const HttpRoute *r = FileServingV.serve_static_request_args.r;
 
     // No null-check on the backend: storage is reached by layer, through the accessor, so a null
     // names a preference and never the path. A null one is what serve_static() documents as legal
@@ -815,36 +815,29 @@ static void file_serving_serve_static_request(uint8_t *restrict work)
         {
             Mnt.args.id = r->mnt_id;
             Mnt.point_of(mnt_work);
-            FileServing.serve_file_internal_args.slot_id = slot_id;
-            FileServing.serve_file_internal_args.head = head;
-            FileServing.serve_file_internal_args.file_sys = Mnt.backend;
-            FileServing.serve_file_internal_args.fs_path = gz;
-            FileServing.serve_file_internal_args.content_type = ctype;
-            FileServing.serve_file_internal_args.content_encoding = "gzip";
-            file_serving_serve_file_internal(work);
+            FileServingV.serve_file_internal_args.slot_id = slot_id;
+            FileServingV.serve_file_internal_args.head = head;
+            FileServingV.serve_file_internal_args.file_sys = Mnt.backend;
+            FileServingV.serve_file_internal_args.fs_path = gz;
+            FileServingV.serve_file_internal_args.content_type = ctype;
+            FileServingV.serve_file_internal_args.content_encoding = "gzip";
+            protocore_file_serving_serve_file_internal(work);
             return;
         }
     }
 
     Mnt.args.id = r->mnt_id;
     Mnt.point_of(mnt_work);
-    FileServing.serve_file_internal_args.slot_id = slot_id;
-    FileServing.serve_file_internal_args.head = head;
-    FileServing.serve_file_internal_args.file_sys = Mnt.backend;
-    FileServing.serve_file_internal_args.fs_path = fs_path;
-    FileServing.serve_file_internal_args.content_type = ctype;
-    FileServing.serve_file_internal_args.content_encoding = NULL;
-    file_serving_serve_file_internal(work);
+    FileServingV.serve_file_internal_args.slot_id = slot_id;
+    FileServingV.serve_file_internal_args.head = head;
+    FileServingV.serve_file_internal_args.file_sys = Mnt.backend;
+    FileServingV.serve_file_internal_args.fs_path = fs_path;
+    FileServingV.serve_file_internal_args.content_type = ctype;
+    FileServingV.serve_file_internal_args.content_encoding = NULL;
+    protocore_file_serving_serve_file_internal(work);
 }
-FileServingNs FileServing = {
-    .http_rfc1123 = file_serving_http_rfc1123,
-    .serve_static_request = file_serving_serve_static_request,
-    .serve_file_internal = file_serving_serve_file_internal,
-    .file_send_pump = file_serving_file_send_pump,
-    .holds_slot = file_serving_holds_slot,
-    .serve_file = file_serving_serve_file,
-    .serve_static = file_serving_serve_static,
-};
+/** @brief The operands and the outcome. */
+FileServingVars FileServingV;
 
 PROTOCORE_END_DECLS
 

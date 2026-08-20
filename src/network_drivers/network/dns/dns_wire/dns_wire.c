@@ -22,25 +22,25 @@ PROTOCORE_BEGIN_DECLS
 
 // Walks the labels at msg.off, writing each one into msg.out with a dot between, and follows a
 // pointer's OFFSET when msg.allow_ptr is set.
-static void dns_name_decode(uint8_t *restrict work)
+void protocore_dns_wire_decode(uint8_t *restrict work)
 {
     (void)work;
-    DnsWire.ok = PROTO_FALSE;
-    DnsWire.next = 0;
+    DnsWireV.ok = PROTO_FALSE;
+    DnsWireV.next = 0;
 
-    const uint8_t *pkt = DnsWire.msg.pkt;
-    const size_t len = DnsWire.msg.len;
-    char *out = DnsWire.msg.out;
-    const size_t out_cap = DnsWire.msg.out_cap;
+    const uint8_t *pkt = DnsWireV.msg.pkt;
+    const size_t len = DnsWireV.msg.len;
+    char *out = DnsWireV.msg.out;
+    const size_t out_cap = DnsWireV.msg.out_cap;
     if (pkt == NULL || out == NULL || out_cap == 0)
     {
         return;
     }
 
-    size_t n = 0;                 // dotted octets written
-    size_t cur = DnsWire.msg.off; // where the next length octet sits
-    size_t after = 0;             // offset just past the name as it sits at msg.off
-    size_t hops = 0;              // pointers followed
+    size_t n = 0;                  // dotted octets written
+    size_t cur = DnsWireV.msg.off; // where the next length octet sits
+    size_t after = 0;              // offset just past the name as it sits at msg.off
+    size_t hops = 0;               // pointers followed
     proto_bool jumped = PROTO_FALSE;
     for (;;)
     {
@@ -51,7 +51,7 @@ static void dns_name_decode(uint8_t *restrict work)
         uint8_t b = pkt[cur];
         if ((b & PROTOCORE_DNS_LABEL_TYPE) == PROTOCORE_DNS_LABEL_PTR)
         {
-            if (!DnsWire.msg.allow_ptr || cur + 1 >= len || hops >= PROTOCORE_DNS_PTR_HOPS)
+            if (!DnsWireV.msg.allow_ptr || cur + 1 >= len || hops >= PROTOCORE_DNS_PTR_HOPS)
             {
                 return;
             }
@@ -101,20 +101,20 @@ static void dns_name_decode(uint8_t *restrict work)
         cur += b;
     }
     out[n] = '\0';
-    DnsWire.next = after;
-    DnsWire.ok = PROTO_TRUE;
+    DnsWireV.next = after;
+    DnsWireV.ok = PROTO_TRUE;
 }
 
 // Splits text.dotted at each dot and writes every run as a length octet followed by its octets,
 // then the null label of the root.
-static void dns_name_encode(uint8_t *restrict work)
+void protocore_dns_wire_encode(uint8_t *restrict work)
 {
     (void)work;
-    DnsWire.n = 0;
+    DnsWireV.n = 0;
 
-    uint8_t *out = DnsWire.text.out;
-    const size_t cap = DnsWire.text.out_cap;
-    const char *dotted = DnsWire.text.dotted;
+    uint8_t *out = DnsWireV.text.out;
+    const size_t cap = DnsWireV.text.out_cap;
+    const char *dotted = DnsWireV.text.dotted;
     if (out == NULL || dotted == NULL)
     {
         return;
@@ -162,17 +162,17 @@ static void dns_name_encode(uint8_t *restrict work)
     }
     out[w] = 0; // the null label of the root
     w++;
-    DnsWire.n = w;
+    DnsWireV.n = w;
 }
 
 // Folds each A-Z to lower case and compares octet by octet, ends included.
-static void dns_name_eq(uint8_t *restrict work)
+void protocore_dns_wire_eq(uint8_t *restrict work)
 {
     (void)work;
-    DnsWire.ok = PROTO_FALSE;
+    DnsWireV.ok = PROTO_FALSE;
 
-    const char *a = DnsWire.cmp.a;
-    const char *b = DnsWire.cmp.b;
+    const char *a = DnsWireV.cmp.a;
+    const char *b = DnsWireV.cmp.b;
     if (a == NULL || b == NULL)
     {
         return;
@@ -196,10 +196,11 @@ static void dns_name_eq(uint8_t *restrict work)
         }
         i++;
     }
-    DnsWire.ok = (a[i] == b[i]) ? PROTO_TRUE : PROTO_FALSE;
+    DnsWireV.ok = (a[i] == b[i]) ? PROTO_TRUE : PROTO_FALSE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-DnsWireNs DnsWire = {.decode = dns_name_decode, .encode = dns_name_encode, .eq = dns_name_eq};
+/** @brief The operands and the outcome. */
+DnsWireVars DnsWireV;
 
 PROTOCORE_END_DECLS

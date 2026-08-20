@@ -173,20 +173,38 @@ typedef struct
     RoamRuleArgs rules; ///< the BTM Request and the local thresholds
     RoamNrArgs nr;      ///< 802.11k: a Neighbor Report element list
     RoamBtmArgs btm;    ///< 802.11v: a BSS Transition Management Request frame
-
     protocore_roam_decision decision;
     protocore_roam_btm hint;
     uint8_t n;
     proto_bool ok;
+} RoamVars;
 
+/** @brief The operands and the outcome. */
+extern RoamVars RoamV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const decide)(uint8_t *restrict work);
     void (*const parse_neighbor_report)(uint8_t *restrict work);
     void (*const parse_btm_request)(uint8_t *restrict work);
-
 } RoamNs;
 
-/** @brief The one symbol this module exports. */
-extern RoamNs Roam;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in RoamV or a region of the borrow at a fixed offset.
+void protocore_roam_decide(uint8_t *restrict work);
+void protocore_roam_parse_neighbor_report(uint8_t *restrict work);
+void protocore_roam_parse_btm_request(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Roam.decide(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const RoamNs Roam __attribute__((unused)) = {
+    .decide = protocore_roam_decide,
+    .parse_neighbor_report = protocore_roam_parse_neighbor_report,
+    .parse_btm_request = protocore_roam_parse_btm_request,
+};
 
 PROTOCORE_END_DECLS
 

@@ -178,12 +178,12 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     }
     const uint8_t *auth = NULL;
     size_t auth_len = 0;
-    Spnego.parse_response_args.blob = msg + sec_off;
-    Spnego.parse_response_args.len = sec_len;
-    Spnego.parse_response_args.protocore_resp_token = &auth;
-    Spnego.parse_response_args.protocore_resp_len = &auth_len;
+    SpnegoV.parse_response_args.blob = msg + sec_off;
+    SpnegoV.parse_response_args.len = sec_len;
+    SpnegoV.parse_response_args.protocore_resp_token = &auth;
+    SpnegoV.parse_response_args.protocore_resp_len = &auth_len;
     Spnego.parse_response(spnego_work);
-    if (!Spnego.ok || auth_len < 28)
+    if (!SpnegoV.ok || auth_len < 28)
     {
         return PROTO_FALSE;
     }
@@ -438,23 +438,23 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                 {
                     uint8_t junk[16];
                     memset(junk, 0x55, sizeof(junk));
-                    Spnego.wrap_authenticate_args.ntlm = junk;
-                    Spnego.wrap_authenticate_args.protocore_ntlm_len = sizeof(junk);
-                    Spnego.wrap_authenticate_args.out = sctok;
-                    Spnego.wrap_authenticate_args.cap = sizeof(sctok);
+                    SpnegoV.wrap_authenticate_args.ntlm = junk;
+                    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = sizeof(junk);
+                    SpnegoV.wrap_authenticate_args.out = sctok;
+                    SpnegoV.wrap_authenticate_args.cap = sizeof(sctok);
                     Spnego.wrap_authenticate(spnego_work);
-                    sc_n = Spnego.n;
+                    sc_n = SpnegoV.n;
                 }
                 else
                 {
                     size_t chal_n = m->chal_ti ? protocore_ntlmssp_challenge_ti(chal, sc, m->chal_ti, m->chal_ti_len)
                                                : protocore_ntlmssp_challenge(chal, sc);
-                    Spnego.wrap_authenticate_args.ntlm = chal;
-                    Spnego.wrap_authenticate_args.protocore_ntlm_len = chal_n;
-                    Spnego.wrap_authenticate_args.out = sctok;
-                    Spnego.wrap_authenticate_args.cap = sizeof(sctok);
+                    SpnegoV.wrap_authenticate_args.ntlm = chal;
+                    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = chal_n;
+                    SpnegoV.wrap_authenticate_args.out = sctok;
+                    SpnegoV.wrap_authenticate_args.cap = sizeof(sctok);
                     Spnego.wrap_authenticate(spnego_work);
-                    sc_n = Spnego.n;
+                    sc_n = SpnegoV.n;
                 }
                 w16(b + 4, 72);
                 w16(b + 6, (uint16_t)sc_n);
@@ -739,13 +739,13 @@ void test_open_close_success()
     SmbHandle h;
     memset(&h, 0, sizeof(h));
 
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_HEX64(m.session_id, h.session_id);
     TEST_ASSERT_EQUAL_HEX32(m.tree_id, h.tree_id);
     TEST_ASSERT_EQUAL_MEMORY(m.file_id, h.file_id, 16);
@@ -754,12 +754,12 @@ void test_open_close_success()
 
     TEST_ASSERT_EQUAL_INT(5, m.req_count);
 
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = mock_send;
-    SmbClient.smb_close_args.recv = mock_recv;
-    SmbClient.smb_close_args.ctx = &m;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = mock_send;
+    SmbClientV.smb_close_args.recv = mock_recv;
+    SmbClientV.smb_close_args.ctx = &m;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT64(6, h.next_message_id);
     TEST_ASSERT_EQUAL_INT(6, m.req_count);
 }
@@ -770,13 +770,13 @@ void test_auth_failure()
     m.auth_status = 0xC000006D;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_AUTH, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_AUTH, SmbClientV.value);
 }
 
 void test_bad_share()
@@ -785,13 +785,13 @@ void test_bad_share()
     m.tc_status = 0xC00000CC;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_create_not_found()
@@ -800,13 +800,13 @@ void test_create_not_found()
     m.create_status = 0xC0000034;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_io_error()
@@ -815,13 +815,13 @@ void test_io_error()
     m.cut_after_negotiate = PROTO_TRUE;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_arg_validation()
@@ -830,34 +830,34 @@ void test_arg_validation()
     SmbConfig cfg = make_cfg();
     SmbHandle h;
     cfg.user = NULL;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
     cfg = make_cfg();
     cfg.path = NULL;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
 }
 
 static SmbResult open_ok(Mock *m, SmbConfig *cfg, SmbHandle *h)
 {
     memset(h, 0, sizeof(*h));
-    SmbClient.smb_open_args.cfg = cfg;
-    SmbClient.smb_open_args.h = h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = m;
+    SmbClientV.smb_open_args.cfg = cfg;
+    SmbClientV.smb_open_args.h = h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = m;
     SmbClient.smb_open(protocore_smb_client_span());
-    return SmbClient.value;
+    return SmbClientV.value;
 }
 
 void test_read_file()
@@ -875,16 +875,16 @@ void test_read_file()
 
     uint8_t buf[2048];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = 2000;
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = mock_send;
-    SmbClient.smb_read_args.recv = mock_recv;
-    SmbClient.smb_read_args.ctx = &m;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = 2000;
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = mock_send;
+    SmbClientV.smb_read_args.recv = mock_recv;
+    SmbClientV.smb_read_args.ctx = &m;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(2000, got);
     TEST_ASSERT_EQUAL_MEMORY(m.file_data, buf, 2000);
 }
@@ -904,16 +904,16 @@ void test_read_past_eof()
 
     uint8_t buf[512];
     size_t got = 999;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = mock_send;
-    SmbClient.smb_read_args.recv = mock_recv;
-    SmbClient.smb_read_args.ctx = &m;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = mock_send;
+    SmbClientV.smb_read_args.recv = mock_recv;
+    SmbClientV.smb_read_args.ctx = &m;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(100, got);
     TEST_ASSERT_EQUAL_MEMORY(m.file_data, buf, 100);
 }
@@ -935,16 +935,16 @@ void test_write_file()
         data[i] = (uint8_t)(i * 13 + 3);
     }
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = mock_send;
-    SmbClient.smb_write_args.recv = mock_recv;
-    SmbClient.smb_write_args.ctx = &m;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = mock_send;
+    SmbClientV.smb_write_args.recv = mock_recv;
+    SmbClientV.smb_write_args.ctx = &m;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(2000, wrote);
     TEST_ASSERT_EQUAL_size_t(2000, m.file_data_len);
     TEST_ASSERT_EQUAL_MEMORY(data, m.file_data, 2000);
@@ -966,27 +966,27 @@ void test_write_then_read_roundtrip()
         data[i] = (uint8_t)(i ^ 0x5A);
     }
     size_t wrote = 0, got = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = mock_send;
-    SmbClient.smb_write_args.recv = mock_recv;
-    SmbClient.smb_write_args.ctx = &m;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = mock_send;
+    SmbClientV.smb_write_args.recv = mock_recv;
+    SmbClientV.smb_write_args.ctx = &m;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     uint8_t back[1500];
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = back;
-    SmbClient.smb_read_args.cap = sizeof(back);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = mock_send;
-    SmbClient.smb_read_args.recv = mock_recv;
-    SmbClient.smb_read_args.ctx = &m;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = back;
+    SmbClientV.smb_read_args.cap = sizeof(back);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = mock_send;
+    SmbClientV.smb_read_args.recv = mock_recv;
+    SmbClientV.smb_read_args.ctx = &m;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(1500, got);
     TEST_ASSERT_EQUAL_MEMORY(data, back, 1500);
 }
@@ -998,13 +998,13 @@ void test_negotiate_malformed()
     m.fault_kind = FAULT_BAD_BODY;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_negotiate_dropped()
@@ -1014,13 +1014,13 @@ void test_negotiate_dropped()
     m.fault_kind = FAULT_DROP;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_session1_bad_header()
@@ -1030,13 +1030,13 @@ void test_session1_bad_header()
     m.fault_kind = FAULT_BAD_HEADER;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_AUTH, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_AUTH, SmbClientV.value);
 }
 
 void test_session1_wrong_status()
@@ -1045,13 +1045,13 @@ void test_session1_wrong_status()
     m.ss1_status = SMB2_STATUS_SUCCESS;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_AUTH, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_AUTH, SmbClientV.value);
 }
 
 void test_session1_bad_body()
@@ -1061,13 +1061,13 @@ void test_session1_bad_body()
     m.fault_kind = FAULT_BAD_BODY;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_session1_no_secbuf()
@@ -1076,13 +1076,13 @@ void test_session1_no_secbuf()
     m.ss1_secbuf_mode = SSBUF_EMPTY;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_session1_bad_spnego()
@@ -1091,13 +1091,13 @@ void test_session1_bad_spnego()
     m.ss1_secbuf_mode = SSBUF_RAW_JUNK;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_session1_bad_ntlmssp()
@@ -1106,13 +1106,13 @@ void test_session1_bad_ntlmssp()
     m.ss1_secbuf_mode = SSBUF_SPNEGO_JUNK;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_session2_dropped()
@@ -1122,13 +1122,13 @@ void test_session2_dropped()
     m.fault_kind = FAULT_DROP;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_session2_bad_header()
@@ -1138,13 +1138,13 @@ void test_session2_bad_header()
     m.fault_kind = FAULT_BAD_HEADER;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_tree_dropped()
@@ -1154,13 +1154,13 @@ void test_tree_dropped()
     m.fault_kind = FAULT_DROP;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_tree_bad_body()
@@ -1170,13 +1170,13 @@ void test_tree_bad_body()
     m.fault_kind = FAULT_BAD_BODY;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_create_dropped()
@@ -1186,13 +1186,13 @@ void test_create_dropped()
     m.fault_kind = FAULT_DROP;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_create_bad_body()
@@ -1202,13 +1202,13 @@ void test_create_bad_body()
     m.fault_kind = FAULT_BAD_BODY;
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_long_share_overflow()
@@ -1220,13 +1220,13 @@ void test_long_share_overflow()
     share[sizeof(share) - 1] = 0;
     cfg.share = share;
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClientV.value);
 }
 
 void test_long_path_overflow()
@@ -1238,13 +1238,13 @@ void test_long_path_overflow()
     path[sizeof(path) - 1] = 0;
     cfg.path = path;
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClientV.value);
 }
 
 void test_long_user_overflow()
@@ -1256,13 +1256,13 @@ void test_long_user_overflow()
     user[sizeof(user) - 1] = 0;
     cfg.user = user;
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClientV.value);
 }
 
 void test_challenge_ti_ntlmv2_overflow()
@@ -1274,13 +1274,13 @@ void test_challenge_ti_ntlmv2_overflow()
     m.chal_ti_len = sizeof(ti);
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClientV.value);
 }
 
 void test_challenge_ti_authenticate_overflow()
@@ -1292,13 +1292,13 @@ void test_challenge_ti_authenticate_overflow()
     m.chal_ti_len = sizeof(ti);
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClientV.value);
 }
 
 void test_challenge_ti_spnego_overflow()
@@ -1310,13 +1310,13 @@ void test_challenge_ti_spnego_overflow()
     m.chal_ti_len = sizeof(ti);
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClientV.value);
 }
 
 void test_av_eol_only()
@@ -1327,13 +1327,13 @@ void test_av_eol_only()
     m.chal_ti_len = sizeof(ti);
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
 }
 
 void test_av_skip_then_find()
@@ -1347,13 +1347,13 @@ void test_av_skip_then_find()
     m.chal_ti_len = sizeof(ti);
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
 }
 
 void test_av_truncated_timestamp()
@@ -1364,13 +1364,13 @@ void test_av_truncated_timestamp()
     m.chal_ti_len = sizeof(ti);
     SmbConfig cfg = make_cfg();
     SmbHandle h;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
 }
 
 typedef struct
@@ -1450,36 +1450,36 @@ void test_read_arg()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = NULL;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = NULL;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = NULL;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = NULL;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_read_args.h = NULL;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_read_args.h = NULL;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
 }
 
 void test_read_send_io()
@@ -1490,16 +1490,16 @@ void test_read_send_io()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_read_recv_io()
@@ -1509,16 +1509,16 @@ void test_read_recv_io()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_read_bad_header()
@@ -1535,16 +1535,16 @@ void test_read_bad_header()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_read_status_error()
@@ -1560,16 +1560,16 @@ void test_read_status_error()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_read_bad_body()
@@ -1585,16 +1585,16 @@ void test_read_bad_body()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_read_data_too_long()
@@ -1611,16 +1611,16 @@ void test_read_data_too_long()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_read_zero_data()
@@ -1636,16 +1636,16 @@ void test_read_zero_data()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 999;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(0, got);
 }
 
@@ -1656,36 +1656,36 @@ void test_write_arg()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = NULL;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = NULL;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = NULL;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = NULL;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_write_args.h = NULL;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_write_args.h = NULL;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
 }
 
 void test_write_send_io()
@@ -1696,16 +1696,16 @@ void test_write_send_io()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_write_recv_io()
@@ -1715,16 +1715,16 @@ void test_write_recv_io()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_write_recv_overflow()
@@ -1739,16 +1739,16 @@ void test_write_recv_overflow()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClientV.value);
 }
 
 void test_write_bad_header()
@@ -1764,16 +1764,16 @@ void test_write_bad_header()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_write_status_error()
@@ -1788,16 +1788,16 @@ void test_write_status_error()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_write_bad_body()
@@ -1812,16 +1812,16 @@ void test_write_bad_body()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_write_zero_count()
@@ -1836,16 +1836,16 @@ void test_write_zero_count()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_write_count_too_big()
@@ -1860,16 +1860,16 @@ void test_write_count_too_big()
     SmbHandle h = make_handle();
     uint8_t data[16] = {0};
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_close_arg()
@@ -1877,24 +1877,24 @@ void test_close_arg()
     Canned cn;
     memset(&cn, 0, sizeof(cn));
     SmbHandle h = make_handle();
-    SmbClient.smb_close_args.h = NULL;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    SmbClientV.smb_close_args.h = NULL;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = NULL;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = NULL;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = NULL;
-    SmbClient.smb_close_args.ctx = &cn;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = NULL;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
 }
 
 void test_close_send_io()
@@ -1903,12 +1903,12 @@ void test_close_send_io()
     memset(&cn, 0, sizeof(cn));
     cn.short_send = PROTO_TRUE;
     SmbHandle h = make_handle();
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_close_recv_overflow()
@@ -1921,12 +1921,12 @@ void test_close_recv_overflow()
     cn.resp[3] = 0xFF;
     cn.protocore_resp_len = 4;
     SmbHandle h = make_handle();
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClientV.value);
 }
 
 void test_close_recv_zero_len()
@@ -1939,12 +1939,12 @@ void test_close_recv_zero_len()
     cn.resp[3] = 0x00;
     cn.protocore_resp_len = 4;
     SmbHandle h = make_handle();
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_close_recv_trunc_body()
@@ -1957,12 +1957,12 @@ void test_close_recv_trunc_body()
     cn.resp[3] = 0x64;
     cn.protocore_resp_len = 4 + 40;
     SmbHandle h = make_handle();
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_close_bad_header()
@@ -1975,12 +1975,12 @@ void test_close_bad_header()
     msg[0] = 0x00;
     canned_frame(&cn, msg, 124);
     SmbHandle h = make_handle();
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_close_status_error()
@@ -1992,12 +1992,12 @@ void test_close_status_error()
     w16(b + 0, 60);
     canned_frame(&cn, msg, 124);
     SmbHandle h = make_handle();
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_close_bad_body()
@@ -2009,12 +2009,12 @@ void test_close_bad_body()
     w16(b + 0, 99);
     canned_frame(&cn, msg, 124);
     SmbHandle h = make_handle();
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_open_arg_remaining_nulls()
@@ -2023,52 +2023,52 @@ void test_open_arg_remaining_nulls()
     SmbConfig cfg = make_cfg();
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = NULL;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = NULL;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = NULL;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = NULL;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = NULL;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = NULL;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = NULL;
-    SmbClient.smb_open_args.ctx = &m;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = NULL;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
     cfg = make_cfg();
     cfg.pass = NULL;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
     cfg = make_cfg();
     cfg.share = NULL;
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
     TEST_ASSERT_EQUAL_INT(0, m.req_count);
 }
 
@@ -2079,13 +2079,13 @@ void test_open_null_domain()
     cfg.domain = NULL;
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_HEX64(m.session_id, h.session_id);
     TEST_ASSERT_EQUAL_HEX32(m.tree_id, h.tree_id);
 }
@@ -2098,13 +2098,13 @@ void test_tree_bad_header()
     SmbConfig cfg = make_cfg();
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_create_bad_header()
@@ -2115,13 +2115,13 @@ void test_create_bad_header()
     SmbConfig cfg = make_cfg();
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_read_write_null_seam()
@@ -2132,46 +2132,46 @@ void test_read_write_null_seam()
     uint8_t buf[16];
     memset(buf, 0, sizeof(buf));
     size_t n = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &n;
-    SmbClient.smb_read_args.send = NULL;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &n;
+    SmbClientV.smb_read_args.send = NULL;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &n;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = NULL;
-    SmbClient.smb_read_args.ctx = &cn;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &n;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = NULL;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = buf;
-    SmbClient.smb_write_args.len = sizeof(buf);
-    SmbClient.smb_write_args.written = &n;
-    SmbClient.smb_write_args.send = NULL;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = buf;
+    SmbClientV.smb_write_args.len = sizeof(buf);
+    SmbClientV.smb_write_args.written = &n;
+    SmbClientV.smb_write_args.send = NULL;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = buf;
-    SmbClient.smb_write_args.len = sizeof(buf);
-    SmbClient.smb_write_args.written = &n;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = NULL;
-    SmbClient.smb_write_args.ctx = &cn;
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = buf;
+    SmbClientV.smb_write_args.len = sizeof(buf);
+    SmbClientV.smb_write_args.written = &n;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = NULL;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_ARG, SmbClientV.value);
 }
 
 void test_read_recv_overflow()
@@ -2186,16 +2186,16 @@ void test_read_recv_overflow()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_OVERFLOW, SmbClientV.value);
 }
 
 void test_read_eof_status()
@@ -2211,16 +2211,16 @@ void test_read_eof_status()
     SmbHandle h = make_handle();
     uint8_t buf[16];
     size_t got = 999;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = canned_send;
-    SmbClient.smb_read_args.recv = canned_recv;
-    SmbClient.smb_read_args.ctx = &cn;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = canned_send;
+    SmbClientV.smb_read_args.recv = canned_recv;
+    SmbClientV.smb_read_args.ctx = &cn;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(0, got);
     TEST_ASSERT_EQUAL_UINT64(6, h.next_message_id);
 }
@@ -2238,16 +2238,16 @@ void test_write_no_extend()
     uint8_t data[16];
     memset(data, 0x5A, sizeof(data));
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = canned_send;
-    SmbClient.smb_write_args.recv = canned_recv;
-    SmbClient.smb_write_args.ctx = &cn;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = canned_send;
+    SmbClientV.smb_write_args.recv = canned_recv;
+    SmbClientV.smb_write_args.ctx = &cn;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(16, wrote);
     TEST_ASSERT_EQUAL_HEX64(4096, h.file_size);
 }
@@ -2262,12 +2262,12 @@ void test_close_bad_transport_prefix()
     cn.resp[3] = 0x50;
     cn.protocore_resp_len = 4;
     SmbHandle h = make_handle();
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = canned_send;
-    SmbClient.smb_close_args.recv = canned_recv;
-    SmbClient.smb_close_args.ctx = &cn;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = canned_send;
+    SmbClientV.smb_close_args.recv = canned_recv;
+    SmbClientV.smb_close_args.ctx = &cn;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_IO, SmbClientV.value);
 }
 
 void test_signed_session_roundtrip()
@@ -2284,28 +2284,28 @@ void test_signed_session_roundtrip()
     m.file_size = 1200;
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_TRUE(h.signing_active);
     TEST_ASSERT_TRUE(m.signing);
 
     uint8_t buf[1200];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = mock_send;
-    SmbClient.smb_read_args.recv = mock_recv;
-    SmbClient.smb_read_args.ctx = &m;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = mock_send;
+    SmbClientV.smb_read_args.recv = mock_recv;
+    SmbClientV.smb_read_args.ctx = &m;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(1200, got);
     TEST_ASSERT_EQUAL_MEMORY(m.file_data, buf, 1200);
 
@@ -2315,25 +2315,25 @@ void test_signed_session_roundtrip()
         wr[i] = (uint8_t)(i ^ 0x3C);
     }
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = wr;
-    SmbClient.smb_write_args.len = sizeof(wr);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = mock_send;
-    SmbClient.smb_write_args.recv = mock_recv;
-    SmbClient.smb_write_args.ctx = &m;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = wr;
+    SmbClientV.smb_write_args.len = sizeof(wr);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = mock_send;
+    SmbClientV.smb_write_args.recv = mock_recv;
+    SmbClientV.smb_write_args.ctx = &m;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(500, wrote);
     TEST_ASSERT_EQUAL_MEMORY(wr, m.file_data, 500);
 
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = mock_send;
-    SmbClient.smb_close_args.recv = mock_recv;
-    SmbClient.smb_close_args.ctx = &m;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = mock_send;
+    SmbClientV.smb_close_args.recv = mock_recv;
+    SmbClientV.smb_close_args.ctx = &m;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_INT(0, m.bad_req_sigs);
 }
 
@@ -2352,25 +2352,25 @@ void test_signed_response_tampered()
     m.file_size = 64;
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     uint8_t buf[64];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = mock_send;
-    SmbClient.smb_read_args.recv = mock_recv;
-    SmbClient.smb_read_args.ctx = &m;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = mock_send;
+    SmbClientV.smb_read_args.recv = mock_recv;
+    SmbClientV.smb_read_args.ctx = &m;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_unsigned_session_when_not_required()
@@ -2379,13 +2379,13 @@ void test_unsigned_session_when_not_required()
     SmbConfig cfg = make_cfg();
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_FALSE(h.signing_active);
     TEST_ASSERT_EQUAL_INT(0, m.bad_req_sigs);
 }
@@ -2404,13 +2404,13 @@ void test_open_signed_311_roundtrip()
     m.file_size = 1400;
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_TRUE(h.signing_active);
     TEST_ASSERT_EQUAL_INT(SMB2_SIGN_ALGO_AES_CMAC, h.signing_algo);
     TEST_ASSERT_TRUE(m.signing);
@@ -2418,16 +2418,16 @@ void test_open_signed_311_roundtrip()
 
     uint8_t buf[1400];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = mock_send;
-    SmbClient.smb_read_args.recv = mock_recv;
-    SmbClient.smb_read_args.ctx = &m;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = mock_send;
+    SmbClientV.smb_read_args.recv = mock_recv;
+    SmbClientV.smb_read_args.ctx = &m;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(1400, got);
     TEST_ASSERT_EQUAL_MEMORY(m.file_data, buf, 1400);
 
@@ -2437,25 +2437,25 @@ void test_open_signed_311_roundtrip()
         wr[i] = (uint8_t)(i ^ 0x5A);
     }
     size_t wrote = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = wr;
-    SmbClient.smb_write_args.len = sizeof(wr);
-    SmbClient.smb_write_args.written = &wrote;
-    SmbClient.smb_write_args.send = mock_send;
-    SmbClient.smb_write_args.recv = mock_recv;
-    SmbClient.smb_write_args.ctx = &m;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = wr;
+    SmbClientV.smb_write_args.len = sizeof(wr);
+    SmbClientV.smb_write_args.written = &wrote;
+    SmbClientV.smb_write_args.send = mock_send;
+    SmbClientV.smb_write_args.recv = mock_recv;
+    SmbClientV.smb_write_args.ctx = &m;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(700, wrote);
     TEST_ASSERT_EQUAL_MEMORY(wr, m.file_data, 700);
 
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = mock_send;
-    SmbClient.smb_close_args.recv = mock_recv;
-    SmbClient.smb_close_args.ctx = &m;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = mock_send;
+    SmbClientV.smb_close_args.recv = mock_recv;
+    SmbClientV.smb_close_args.ctx = &m;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_INT(0, m.bad_req_sigs);
 }
 
@@ -2474,26 +2474,26 @@ void test_signed_311_response_tampered()
     m.file_size = 64;
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_INT(SMB2_SIGN_ALGO_AES_CMAC, h.signing_algo);
     uint8_t buf[64];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(buf);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = mock_send;
-    SmbClient.smb_read_args.recv = mock_recv;
-    SmbClient.smb_read_args.ctx = &m;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(buf);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = mock_send;
+    SmbClientV.smb_read_args.recv = mock_recv;
+    SmbClientV.smb_read_args.ctx = &m;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_open_encrypted_311_roundtrip()
@@ -2509,13 +2509,13 @@ void test_open_encrypted_311_roundtrip()
 
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_TRUE(h.encrypt_active);
     TEST_ASSERT_EQUAL_INT(0, m.bad_req_sigs);
 
@@ -2525,39 +2525,39 @@ void test_open_encrypted_311_roundtrip()
         data[i] = (uint8_t)(0xC0 ^ (i * 7));
     }
     size_t wr = 0;
-    SmbClient.smb_write_args.h = &h;
-    SmbClient.smb_write_args.offset = 0;
-    SmbClient.smb_write_args.data = data;
-    SmbClient.smb_write_args.len = sizeof(data);
-    SmbClient.smb_write_args.written = &wr;
-    SmbClient.smb_write_args.send = mock_send;
-    SmbClient.smb_write_args.recv = mock_recv;
-    SmbClient.smb_write_args.ctx = &m;
+    SmbClientV.smb_write_args.h = &h;
+    SmbClientV.smb_write_args.offset = 0;
+    SmbClientV.smb_write_args.data = data;
+    SmbClientV.smb_write_args.len = sizeof(data);
+    SmbClientV.smb_write_args.written = &wr;
+    SmbClientV.smb_write_args.send = mock_send;
+    SmbClientV.smb_write_args.recv = mock_recv;
+    SmbClientV.smb_write_args.ctx = &m;
     SmbClient.smb_write(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(sizeof(data), wr);
 
     uint8_t buf[256];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = sizeof(data);
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = mock_send;
-    SmbClient.smb_read_args.recv = mock_recv;
-    SmbClient.smb_read_args.ctx = &m;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = sizeof(data);
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = mock_send;
+    SmbClientV.smb_read_args.recv = mock_recv;
+    SmbClientV.smb_read_args.ctx = &m;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_UINT32(sizeof(data), got);
     TEST_ASSERT_EQUAL_MEMORY(data, buf, sizeof(data));
 
-    SmbClient.smb_close_args.h = &h;
-    SmbClient.smb_close_args.send = mock_send;
-    SmbClient.smb_close_args.recv = mock_recv;
-    SmbClient.smb_close_args.ctx = &m;
+    SmbClientV.smb_close_args.h = &h;
+    SmbClientV.smb_close_args.send = mock_send;
+    SmbClientV.smb_close_args.recv = mock_recv;
+    SmbClientV.smb_close_args.ctx = &m;
     SmbClient.smb_close(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_EQUAL_INT(0, m.bad_req_sigs);
 }
 
@@ -2578,26 +2578,26 @@ void test_encrypted_response_tampered()
 
     SmbHandle h;
     memset(&h, 0, sizeof(h));
-    SmbClient.smb_open_args.cfg = &cfg;
-    SmbClient.smb_open_args.h = &h;
-    SmbClient.smb_open_args.send = mock_send;
-    SmbClient.smb_open_args.recv = mock_recv;
-    SmbClient.smb_open_args.ctx = &m;
+    SmbClientV.smb_open_args.cfg = &cfg;
+    SmbClientV.smb_open_args.h = &h;
+    SmbClientV.smb_open_args.send = mock_send;
+    SmbClientV.smb_open_args.recv = mock_recv;
+    SmbClientV.smb_open_args.ctx = &m;
     SmbClient.smb_open(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     TEST_ASSERT_TRUE(h.encrypt_active);
     uint8_t buf[128];
     size_t got = 0;
-    SmbClient.smb_read_args.h = &h;
-    SmbClient.smb_read_args.offset = 0;
-    SmbClient.smb_read_args.out = buf;
-    SmbClient.smb_read_args.cap = 100;
-    SmbClient.smb_read_args.out_len = &got;
-    SmbClient.smb_read_args.send = mock_send;
-    SmbClient.smb_read_args.recv = mock_recv;
-    SmbClient.smb_read_args.ctx = &m;
+    SmbClientV.smb_read_args.h = &h;
+    SmbClientV.smb_read_args.offset = 0;
+    SmbClientV.smb_read_args.out = buf;
+    SmbClientV.smb_read_args.cap = 100;
+    SmbClientV.smb_read_args.out_len = &got;
+    SmbClientV.smb_read_args.send = mock_send;
+    SmbClientV.smb_read_args.recv = mock_recv;
+    SmbClientV.smb_read_args.ctx = &m;
     SmbClient.smb_read(protocore_smb_client_span());
-    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+    TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
 }
 
 void test_open_encrypted_all_ciphers()
@@ -2619,13 +2619,13 @@ void test_open_encrypted_all_ciphers()
         memset(&h, 0, sizeof(h));
         char cmsg[48];
         snprintf(cmsg, sizeof(cmsg), "cipher 0x%04x", ciphers[ci]);
-        SmbClient.smb_open_args.cfg = &cfg;
-        SmbClient.smb_open_args.h = &h;
-        SmbClient.smb_open_args.send = mock_send;
-        SmbClient.smb_open_args.recv = mock_recv;
-        SmbClient.smb_open_args.ctx = &m;
+        SmbClientV.smb_open_args.cfg = &cfg;
+        SmbClientV.smb_open_args.h = &h;
+        SmbClientV.smb_open_args.send = mock_send;
+        SmbClientV.smb_open_args.recv = mock_recv;
+        SmbClientV.smb_open_args.ctx = &m;
         SmbClient.smb_open(protocore_smb_client_span());
-        TEST_ASSERT_EQUAL_INT_MESSAGE(SMB_OK, SmbClient.value, cmsg);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(SMB_OK, SmbClientV.value, cmsg);
         TEST_ASSERT_TRUE(h.encrypt_active);
         TEST_ASSERT_EQUAL_UINT16(ciphers[ci], h.enc_cipher);
         TEST_ASSERT_EQUAL_INT(0, m.bad_req_sigs);
@@ -2636,37 +2636,37 @@ void test_open_encrypted_all_ciphers()
             data[i] = (uint8_t)(0x11 * ci + i * 5);
         }
         size_t wr = 0;
-        SmbClient.smb_write_args.h = &h;
-        SmbClient.smb_write_args.offset = 0;
-        SmbClient.smb_write_args.data = data;
-        SmbClient.smb_write_args.len = sizeof(data);
-        SmbClient.smb_write_args.written = &wr;
-        SmbClient.smb_write_args.send = mock_send;
-        SmbClient.smb_write_args.recv = mock_recv;
-        SmbClient.smb_write_args.ctx = &m;
+        SmbClientV.smb_write_args.h = &h;
+        SmbClientV.smb_write_args.offset = 0;
+        SmbClientV.smb_write_args.data = data;
+        SmbClientV.smb_write_args.len = sizeof(data);
+        SmbClientV.smb_write_args.written = &wr;
+        SmbClientV.smb_write_args.send = mock_send;
+        SmbClientV.smb_write_args.recv = mock_recv;
+        SmbClientV.smb_write_args.ctx = &m;
         SmbClient.smb_write(protocore_smb_client_span());
-        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
         TEST_ASSERT_EQUAL_UINT32(sizeof(data), wr);
         uint8_t buf[256];
         size_t got = 0;
-        SmbClient.smb_read_args.h = &h;
-        SmbClient.smb_read_args.offset = 0;
-        SmbClient.smb_read_args.out = buf;
-        SmbClient.smb_read_args.cap = sizeof(data);
-        SmbClient.smb_read_args.out_len = &got;
-        SmbClient.smb_read_args.send = mock_send;
-        SmbClient.smb_read_args.recv = mock_recv;
-        SmbClient.smb_read_args.ctx = &m;
+        SmbClientV.smb_read_args.h = &h;
+        SmbClientV.smb_read_args.offset = 0;
+        SmbClientV.smb_read_args.out = buf;
+        SmbClientV.smb_read_args.cap = sizeof(data);
+        SmbClientV.smb_read_args.out_len = &got;
+        SmbClientV.smb_read_args.send = mock_send;
+        SmbClientV.smb_read_args.recv = mock_recv;
+        SmbClientV.smb_read_args.ctx = &m;
         SmbClient.smb_read(protocore_smb_client_span());
-        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
         TEST_ASSERT_EQUAL_UINT32(sizeof(data), got);
         TEST_ASSERT_EQUAL_MEMORY(data, buf, sizeof(data));
-        SmbClient.smb_close_args.h = &h;
-        SmbClient.smb_close_args.send = mock_send;
-        SmbClient.smb_close_args.recv = mock_recv;
-        SmbClient.smb_close_args.ctx = &m;
+        SmbClientV.smb_close_args.h = &h;
+        SmbClientV.smb_close_args.send = mock_send;
+        SmbClientV.smb_close_args.recv = mock_recv;
+        SmbClientV.smb_close_args.ctx = &m;
         SmbClient.smb_close(protocore_smb_client_span());
-        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     }
 }
 
@@ -2681,13 +2681,13 @@ void test_open_encrypted_share_requires_client_force()
         m.creds = &cfg;
         SmbHandle h;
         memset(&h, 0, sizeof(h));
-        SmbClient.smb_open_args.cfg = &cfg;
-        SmbClient.smb_open_args.h = &h;
-        SmbClient.smb_open_args.send = mock_send;
-        SmbClient.smb_open_args.recv = mock_recv;
-        SmbClient.smb_open_args.ctx = &m;
+        SmbClientV.smb_open_args.cfg = &cfg;
+        SmbClientV.smb_open_args.h = &h;
+        SmbClientV.smb_open_args.send = mock_send;
+        SmbClientV.smb_open_args.recv = mock_recv;
+        SmbClientV.smb_open_args.ctx = &m;
         SmbClient.smb_open(protocore_smb_client_span());
-        TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClient.value);
+        TEST_ASSERT_EQUAL_INT(SMB_ERR_PROTOCOL, SmbClientV.value);
     }
 
     {
@@ -2706,33 +2706,33 @@ void test_open_encrypted_share_requires_client_force()
         ecfg.encrypt = PROTO_TRUE;
         SmbHandle h;
         memset(&h, 0, sizeof(h));
-        SmbClient.smb_open_args.cfg = &ecfg;
-        SmbClient.smb_open_args.h = &h;
-        SmbClient.smb_open_args.send = mock_send;
-        SmbClient.smb_open_args.recv = mock_recv;
-        SmbClient.smb_open_args.ctx = &m;
+        SmbClientV.smb_open_args.cfg = &ecfg;
+        SmbClientV.smb_open_args.h = &h;
+        SmbClientV.smb_open_args.send = mock_send;
+        SmbClientV.smb_open_args.recv = mock_recv;
+        SmbClientV.smb_open_args.ctx = &m;
         SmbClient.smb_open(protocore_smb_client_span());
-        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
         TEST_ASSERT_TRUE(h.encrypt_active);
         uint8_t buf[64];
         size_t got = 0;
-        SmbClient.smb_read_args.h = &h;
-        SmbClient.smb_read_args.offset = 0;
-        SmbClient.smb_read_args.out = buf;
-        SmbClient.smb_read_args.cap = 60;
-        SmbClient.smb_read_args.out_len = &got;
-        SmbClient.smb_read_args.send = mock_send;
-        SmbClient.smb_read_args.recv = mock_recv;
-        SmbClient.smb_read_args.ctx = &m;
+        SmbClientV.smb_read_args.h = &h;
+        SmbClientV.smb_read_args.offset = 0;
+        SmbClientV.smb_read_args.out = buf;
+        SmbClientV.smb_read_args.cap = 60;
+        SmbClientV.smb_read_args.out_len = &got;
+        SmbClientV.smb_read_args.send = mock_send;
+        SmbClientV.smb_read_args.recv = mock_recv;
+        SmbClientV.smb_read_args.ctx = &m;
         SmbClient.smb_read(protocore_smb_client_span());
-        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
         TEST_ASSERT_EQUAL_UINT32(60, got);
         TEST_ASSERT_EQUAL_MEMORY(m.file_data, buf, 60);
-        SmbClient.smb_close_args.h = &h;
-        SmbClient.smb_close_args.send = mock_send;
-        SmbClient.smb_close_args.recv = mock_recv;
-        SmbClient.smb_close_args.ctx = &m;
+        SmbClientV.smb_close_args.h = &h;
+        SmbClientV.smb_close_args.send = mock_send;
+        SmbClientV.smb_close_args.recv = mock_recv;
+        SmbClientV.smb_close_args.ctx = &m;
         SmbClient.smb_close(protocore_smb_client_span());
-        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClient.value);
+        TEST_ASSERT_EQUAL_INT(SMB_OK, SmbClientV.value);
     }
 }

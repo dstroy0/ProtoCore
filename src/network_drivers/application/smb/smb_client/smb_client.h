@@ -171,18 +171,39 @@ typedef struct
     SmbClientSmbCloseArgs smb_close_args;
     SmbClientSmbReadArgs smb_read_args;
     SmbClientSmbWriteArgs smb_write_args;
-
     proto_bool ok;
     SmbResult value;
+} SmbClientVars;
 
+/** @brief The operands and the outcome. */
+extern SmbClientVars SmbClientV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const smb_open)(uint8_t *restrict work);
     void (*const smb_close)(uint8_t *restrict work);
     void (*const smb_read)(uint8_t *restrict work);
     void (*const smb_write)(uint8_t *restrict work);
 } SmbClientNs;
 
-/** @brief The one symbol this module exports. */
-extern SmbClientNs SmbClient;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SmbClientV or a region of the borrow at a fixed offset.
+void protocore_smb_client_smb_open(uint8_t *restrict work);
+void protocore_smb_client_smb_close(uint8_t *restrict work);
+void protocore_smb_client_smb_read(uint8_t *restrict work);
+void protocore_smb_client_smb_write(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SmbClient.smb_open(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SmbClientNs SmbClient __attribute__((unused)) = {
+    .smb_open = protocore_smb_client_smb_open,
+    .smb_close = protocore_smb_client_smb_close,
+    .smb_read = protocore_smb_client_smb_read,
+    .smb_write = protocore_smb_client_smb_write,
+};
 
 /**
  * @brief The PROTOCORE_SMB_CLIENT_BORROW bytes this module's state lives in.

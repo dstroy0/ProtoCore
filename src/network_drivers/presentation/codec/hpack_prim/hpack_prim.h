@@ -139,10 +139,16 @@ typedef struct
     HpackPrimHuffDecodeArgs huff_decode_args;
     HpackPrimDecodeStrArgs decode_str_args;
     HpackPrimEncodeStrArgs encode_str_args;
-
     proto_bool ok;
     size_t n;
+} HpackPrimVars;
 
+/** @brief The operands and the outcome. */
+extern HpackPrimVars HpackPrimV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const encode_int)(uint8_t *restrict work);
     void (*const decode_int)(uint8_t *restrict work);
     void (*const huff_encode)(uint8_t *restrict work);
@@ -152,8 +158,29 @@ typedef struct
     void (*const encode_str)(uint8_t *restrict work);
 } HpackPrimNs;
 
-/** @brief The one symbol this module exports. */
-extern HpackPrimNs HpackPrim;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HpackPrimV or a region of the borrow at a fixed offset.
+void protocore_hpack_prim_encode_int(uint8_t *restrict work);
+void protocore_hpack_prim_decode_int(uint8_t *restrict work);
+void protocore_hpack_prim_huff_encode(uint8_t *restrict work);
+void protocore_hpack_prim_huff_len(uint8_t *restrict work);
+void protocore_hpack_prim_huff_decode(uint8_t *restrict work);
+void protocore_hpack_prim_decode_str(uint8_t *restrict work);
+void protocore_hpack_prim_encode_str(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HpackPrim.encode_int(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HpackPrimNs HpackPrim __attribute__((unused)) = {
+    .encode_int = protocore_hpack_prim_encode_int,
+    .decode_int = protocore_hpack_prim_decode_int,
+    .huff_encode = protocore_hpack_prim_huff_encode,
+    .huff_len = protocore_hpack_prim_huff_len,
+    .huff_decode = protocore_hpack_prim_huff_decode,
+    .decode_str = protocore_hpack_prim_decode_str,
+    .encode_str = protocore_hpack_prim_encode_str,
+};
 
 PROTOCORE_END_DECLS
 

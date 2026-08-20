@@ -360,11 +360,11 @@ static SmbResult smb_negotiate(uint8_t *restrict work, SmbSendFn send, SmbRecvFn
 {
     uint8_t guid[16];
     uint8_t salt[32];
-    Rng.fill_args.out = guid;
-    Rng.fill_args.len = 16;
+    RngV.fill_args.out = guid;
+    RngV.fill_args.len = 16;
     Rng.fill(protocore_rng_span());
-    Rng.fill_args.out = salt;
-    Rng.fill_args.len = sizeof(salt);
+    RngV.fill_args.out = salt;
+    RngV.fill_args.len = sizeof(salt);
     Rng.fill(protocore_rng_span());
     Smb2.build_negotiate_311_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
     Smb2.build_negotiate_311_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
@@ -453,12 +453,12 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
     Ntlmssp.build_negotiate_args.flags = NTLMSSP_CLIENT_DEFAULT_FLAGS;
     Ntlmssp.build_negotiate(ntlmssp_work);
     size_t ntneg_n = Ntlmssp.n;
-    Spnego.wrap_negotiate_args.ntlm = ntneg;
-    Spnego.wrap_negotiate_args.protocore_ntlm_len = ntneg_n;
-    Spnego.wrap_negotiate_args.out = sp1;
-    Spnego.wrap_negotiate_args.cap = sizeof(sp1);
+    SpnegoV.wrap_negotiate_args.ntlm = ntneg;
+    SpnegoV.wrap_negotiate_args.protocore_ntlm_len = ntneg_n;
+    SpnegoV.wrap_negotiate_args.out = sp1;
+    SpnegoV.wrap_negotiate_args.cap = sizeof(sp1);
     Spnego.wrap_negotiate(spnego_work);
-    size_t sp1_n = Spnego.n;
+    size_t sp1_n = SpnegoV.n;
     Smb2.build_session_setup_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
     Smb2.build_session_setup_args.cap = sizeof(SMB_CLIENT_CTX(work)->tx) - 4;
     Smb2.build_session_setup_args.message_id = 1;
@@ -510,12 +510,12 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
     }
     const uint8_t *chal_tok = NULL;
     size_t chal_len = 0;
-    Spnego.parse_response_args.blob = ss1.sec_buf;
-    Spnego.parse_response_args.len = ss1.sec_buf_len;
-    Spnego.parse_response_args.protocore_resp_token = &chal_tok;
-    Spnego.parse_response_args.protocore_resp_len = &chal_len;
+    SpnegoV.parse_response_args.blob = ss1.sec_buf;
+    SpnegoV.parse_response_args.len = ss1.sec_buf_len;
+    SpnegoV.parse_response_args.protocore_resp_token = &chal_tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &chal_len;
     Spnego.parse_response(spnego_work);
-    if (!Spnego.ok)
+    if (!SpnegoV.ok)
     {
         return SMB_ERR_PROTOCOL;
     }
@@ -547,8 +547,8 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
     uint8_t cli_chal[8];
     uint8_t ts[8];
     uint8_t skey[16];
-    Rng.fill_args.out = cli_chal;
-    Rng.fill_args.len = 8;
+    RngV.fill_args.out = cli_chal;
+    RngV.fill_args.len = 8;
     Rng.fill(protocore_rng_span());
     find_av_timestamp(ch.target_info, ch.target_info_len, ts);
     // Set the MsvAvFlags "MIC provided" bit in the target-info the NTLMv2 response is computed over, so a
@@ -607,12 +607,12 @@ static SmbResult smb_session_setup(uint8_t *restrict work, const SmbConfig *cfg,
     Ntlm.mic_args.out = mic;
     Ntlm.mic(ntlm_work);
     mem.cpy(SMB_CLIENT_CTX(work)->ntauth + PROTOCORE_NTLMSSP_MIC_OFFSET, mic, PROTOCORE_NTLMSSP_MIC_LEN);
-    Spnego.wrap_authenticate_args.ntlm = SMB_CLIENT_CTX(work)->ntauth;
-    Spnego.wrap_authenticate_args.protocore_ntlm_len = ntauth_n;
-    Spnego.wrap_authenticate_args.out = SMB_CLIENT_CTX(work)->sp2;
-    Spnego.wrap_authenticate_args.cap = sizeof(SMB_CLIENT_CTX(work)->sp2);
+    SpnegoV.wrap_authenticate_args.ntlm = SMB_CLIENT_CTX(work)->ntauth;
+    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = ntauth_n;
+    SpnegoV.wrap_authenticate_args.out = SMB_CLIENT_CTX(work)->sp2;
+    SpnegoV.wrap_authenticate_args.cap = sizeof(SMB_CLIENT_CTX(work)->sp2);
     Spnego.wrap_authenticate(spnego_work);
-    size_t sp2_n = Spnego.n;
+    size_t sp2_n = SpnegoV.n;
     if (!sp2_n)
     {
         return SMB_ERR_OVERFLOW;
@@ -865,17 +865,17 @@ static SmbResult smb_create(uint8_t *restrict work, const SmbConfig *cfg, SmbHan
     return SMB_OK;
 }
 
-static void smb_client_smb_open(uint8_t *restrict work)
+void protocore_smb_client_smb_open(uint8_t *restrict work)
 {
-    const SmbConfig *cfg = SmbClient.smb_open_args.cfg;
-    SmbHandle *h = SmbClient.smb_open_args.h;
-    SmbSendFn send = SmbClient.smb_open_args.send;
-    SmbRecvFn recv = SmbClient.smb_open_args.recv;
-    void *ctx = SmbClient.smb_open_args.ctx;
+    const SmbConfig *cfg = SmbClientV.smb_open_args.cfg;
+    SmbHandle *h = SmbClientV.smb_open_args.h;
+    SmbSendFn send = SmbClientV.smb_open_args.send;
+    SmbRecvFn recv = SmbClientV.smb_open_args.recv;
+    void *ctx = SmbClientV.smb_open_args.ctx;
 
     if (!cfg || !h || !send || !recv || !cfg->user || !cfg->pass || !cfg->share || !cfg->path)
     {
-        SmbClient.value = SMB_ERR_ARG;
+        SmbClientV.value = SMB_ERR_ARG;
         return;
     }
 
@@ -910,7 +910,7 @@ static void smb_client_smb_open(uint8_t *restrict work)
                                 PROTOCORE_SMB2_MAX_OFFER_CIPHERS);
     if (r != SMB_OK)
     {
-        SmbClient.value = r;
+        SmbClientV.value = r;
         return;
     }
     // The client advertises SIGNING_ENABLED, so the session is signed exactly when the server requires it.
@@ -923,7 +923,7 @@ static void smb_client_smb_open(uint8_t *restrict work)
                           &sign, &crypt);
     if (r != SMB_OK)
     {
-        SmbClient.value = r;
+        SmbClientV.value = r;
         return;
     }
 
@@ -931,23 +931,23 @@ static void smb_client_smb_open(uint8_t *restrict work)
     r = smb_tree_connect(work, cfg, session_id, &sign, send, recv, ctx, &tree_id, &crypt);
     if (r != SMB_OK)
     {
-        SmbClient.value = r;
+        SmbClientV.value = r;
         return;
     }
 
-    SmbClient.value = smb_create(work, cfg, h, session_id, tree_id, &sign, &crypt, send, recv, ctx);
+    SmbClientV.value = smb_create(work, cfg, h, session_id, tree_id, &sign, &crypt, send, recv, ctx);
 }
 
-static void smb_client_smb_close(uint8_t *restrict work)
+void protocore_smb_client_smb_close(uint8_t *restrict work)
 {
-    SmbHandle *h = SmbClient.smb_close_args.h;
-    SmbSendFn send = SmbClient.smb_close_args.send;
-    SmbRecvFn recv = SmbClient.smb_close_args.recv;
-    void *ctx = SmbClient.smb_close_args.ctx;
+    SmbHandle *h = SmbClientV.smb_close_args.h;
+    SmbSendFn send = SmbClientV.smb_close_args.send;
+    SmbRecvFn recv = SmbClientV.smb_close_args.recv;
+    void *ctx = SmbClientV.smb_close_args.ctx;
 
     if (!h || !send || !recv)
     {
-        SmbClient.value = SMB_ERR_ARG;
+        SmbClientV.value = SMB_ERR_ARG;
         return;
     }
     Smb2.build_close_args.buf = SMB_CLIENT_CTX(work)->tx + 4;
@@ -960,7 +960,7 @@ static void smb_client_smb_close(uint8_t *restrict work)
     size_t mlen = Smb2.n;
     if (!mlen)
     {
-        SmbClient.value = SMB_ERR_OVERFLOW;
+        SmbClientV.value = SMB_ERR_OVERFLOW;
         return;
     }
     SmbSign sign = {h->signing_active, h->signing_algo, {0}};
@@ -973,7 +973,7 @@ static void smb_client_smb_close(uint8_t *restrict work)
     h->enc_nonce = crypt.nonce; // persist the advanced nonce (must never repeat under the same key)
     if (rl < 0)
     {
-        SmbClient.value = rt;
+        SmbClientV.value = rt;
         return;
     }
     Smb2Header hd;
@@ -984,7 +984,7 @@ static void smb_client_smb_close(uint8_t *restrict work)
     Smb2.parse_header(smb2_work);
     if (!Smb2.ok || hd.status != SMB2_STATUS_SUCCESS)
     {
-        SmbClient.value = SMB_ERR_PROTOCOL;
+        SmbClientV.value = SMB_ERR_PROTOCOL;
         return;
     }
     Smb2.parse_close_response_args.msg = SMB_CLIENT_CTX(work)->rx;
@@ -993,27 +993,27 @@ static void smb_client_smb_close(uint8_t *restrict work)
     Smb2.parse_close_response(smb2_work);
     if (!Smb2.ok)
     {
-        SmbClient.value = SMB_ERR_PROTOCOL;
+        SmbClientV.value = SMB_ERR_PROTOCOL;
         return;
     }
     h->next_message_id++;
-    SmbClient.value = SMB_OK;
+    SmbClientV.value = SMB_OK;
 }
 
-static void smb_client_smb_read(uint8_t *restrict work)
+void protocore_smb_client_smb_read(uint8_t *restrict work)
 {
-    SmbHandle *h = SmbClient.smb_read_args.h;
-    uint64_t offset = SmbClient.smb_read_args.offset;
-    uint8_t *out = SmbClient.smb_read_args.out;
-    size_t cap = SmbClient.smb_read_args.cap;
-    size_t *out_len = SmbClient.smb_read_args.out_len;
-    SmbSendFn send = SmbClient.smb_read_args.send;
-    SmbRecvFn recv = SmbClient.smb_read_args.recv;
-    void *ctx = SmbClient.smb_read_args.ctx;
+    SmbHandle *h = SmbClientV.smb_read_args.h;
+    uint64_t offset = SmbClientV.smb_read_args.offset;
+    uint8_t *out = SmbClientV.smb_read_args.out;
+    size_t cap = SmbClientV.smb_read_args.cap;
+    size_t *out_len = SmbClientV.smb_read_args.out_len;
+    SmbSendFn send = SmbClientV.smb_read_args.send;
+    SmbRecvFn recv = SmbClientV.smb_read_args.recv;
+    void *ctx = SmbClientV.smb_read_args.ctx;
 
     if (!h || !out || !out_len || !send || !recv)
     {
-        SmbClient.value = SMB_ERR_ARG;
+        SmbClientV.value = SMB_ERR_ARG;
         return;
     }
     *out_len = 0;
@@ -1043,7 +1043,7 @@ static void smb_client_smb_read(uint8_t *restrict work)
         size_t mlen = Smb2.n;
         if (!mlen)
         {
-            SmbClient.value = SMB_ERR_OVERFLOW;
+            SmbClientV.value = SMB_ERR_OVERFLOW;
             return;
         }
         SmbResult rt = SMB_ERR_IO;
@@ -1051,7 +1051,7 @@ static void smb_client_smb_read(uint8_t *restrict work)
         h->enc_nonce = crypt.nonce; // persist immediately so the nonce never repeats, even on an error return
         if (rl < 0)
         {
-            SmbClient.value = rt;
+            SmbClientV.value = rt;
             return;
         }
         Smb2Header hd;
@@ -1061,7 +1061,7 @@ static void smb_client_smb_read(uint8_t *restrict work)
         Smb2.parse_header(smb2_work);
         if (!Smb2.ok)
         {
-            SmbClient.value = SMB_ERR_PROTOCOL;
+            SmbClientV.value = SMB_ERR_PROTOCOL;
             return;
         }
         h->next_message_id++;
@@ -1071,7 +1071,7 @@ static void smb_client_smb_read(uint8_t *restrict work)
         }
         if (hd.status != SMB2_STATUS_SUCCESS)
         {
-            SmbClient.value = SMB_ERR_PROTOCOL;
+            SmbClientV.value = SMB_ERR_PROTOCOL;
             return;
         }
         Smb2ReadResp r;
@@ -1081,7 +1081,7 @@ static void smb_client_smb_read(uint8_t *restrict work)
         Smb2.parse_read_response(smb2_work);
         if (!Smb2.ok || r.data_len > want)
         {
-            SmbClient.value = SMB_ERR_PROTOCOL;
+            SmbClientV.value = SMB_ERR_PROTOCOL;
             return;
         }
         if (r.data_len == 0)
@@ -1096,23 +1096,23 @@ static void smb_client_smb_read(uint8_t *restrict work)
         }
     }
     *out_len = total;
-    SmbClient.value = SMB_OK;
+    SmbClientV.value = SMB_OK;
 }
 
-static void smb_client_smb_write(uint8_t *restrict work)
+void protocore_smb_client_smb_write(uint8_t *restrict work)
 {
-    SmbHandle *h = SmbClient.smb_write_args.h;
-    uint64_t offset = SmbClient.smb_write_args.offset;
-    const uint8_t *data = SmbClient.smb_write_args.data;
-    size_t len = SmbClient.smb_write_args.len;
-    size_t *written = SmbClient.smb_write_args.written;
-    SmbSendFn send = SmbClient.smb_write_args.send;
-    SmbRecvFn recv = SmbClient.smb_write_args.recv;
-    void *ctx = SmbClient.smb_write_args.ctx;
+    SmbHandle *h = SmbClientV.smb_write_args.h;
+    uint64_t offset = SmbClientV.smb_write_args.offset;
+    const uint8_t *data = SmbClientV.smb_write_args.data;
+    size_t len = SmbClientV.smb_write_args.len;
+    size_t *written = SmbClientV.smb_write_args.written;
+    SmbSendFn send = SmbClientV.smb_write_args.send;
+    SmbRecvFn recv = SmbClientV.smb_write_args.recv;
+    void *ctx = SmbClientV.smb_write_args.ctx;
 
     if (!h || !data || !written || !send || !recv)
     {
-        SmbClient.value = SMB_ERR_ARG;
+        SmbClientV.value = SMB_ERR_ARG;
         return;
     }
     *written = 0;
@@ -1143,7 +1143,7 @@ static void smb_client_smb_write(uint8_t *restrict work)
         size_t mlen = Smb2.n;
         if (!mlen)
         {
-            SmbClient.value = SMB_ERR_OVERFLOW;
+            SmbClientV.value = SMB_ERR_OVERFLOW;
             return;
         }
         SmbResult rt = SMB_ERR_IO;
@@ -1151,7 +1151,7 @@ static void smb_client_smb_write(uint8_t *restrict work)
         h->enc_nonce = crypt.nonce; // persist immediately so the nonce never repeats, even on an error return
         if (rl < 0)
         {
-            SmbClient.value = rt;
+            SmbClientV.value = rt;
             return;
         }
         Smb2Header hd;
@@ -1161,13 +1161,13 @@ static void smb_client_smb_write(uint8_t *restrict work)
         Smb2.parse_header(smb2_work);
         if (!Smb2.ok)
         {
-            SmbClient.value = SMB_ERR_PROTOCOL;
+            SmbClientV.value = SMB_ERR_PROTOCOL;
             return;
         }
         h->next_message_id++;
         if (hd.status != SMB2_STATUS_SUCCESS)
         {
-            SmbClient.value = SMB_ERR_PROTOCOL;
+            SmbClientV.value = SMB_ERR_PROTOCOL;
             return;
         }
         Smb2WriteResp w;
@@ -1177,7 +1177,7 @@ static void smb_client_smb_write(uint8_t *restrict work)
         Smb2.parse_write_response(smb2_work);
         if (!Smb2.ok || w.count == 0 || w.count > want)
         {
-            SmbClient.value = SMB_ERR_PROTOCOL; // no progress or a bogus count
+            SmbClientV.value = SMB_ERR_PROTOCOL; // no progress or a bogus count
             return;
         }
         total += w.count;
@@ -1187,15 +1187,11 @@ static void smb_client_smb_write(uint8_t *restrict work)
         h->file_size = offset + total;
     }
     *written = total;
-    SmbClient.value = SMB_OK;
+    SmbClientV.value = SMB_OK;
 }
 
-SmbClientNs SmbClient = {
-    .smb_open = smb_client_smb_open,
-    .smb_close = smb_client_smb_close,
-    .smb_read = smb_client_smb_read,
-    .smb_write = smb_client_smb_write,
-};
+/** @brief The operands and the outcome. */
+SmbClientVars SmbClientV;
 
 PROTOCORE_END_DECLS
 

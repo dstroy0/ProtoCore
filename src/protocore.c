@@ -241,8 +241,8 @@ int32_t proto_begin(const WebServerConfig *cfg)
         // Seed the CSRF HMAC secret from the generator, which binds and seeds itself on first use
         // and redraws from the platform on its own schedule.
         uint8_t sec[32];
-        Rng.fill_args.out = sec;
-        Rng.fill_args.len = sizeof(sec);
+        RngV.fill_args.out = sec;
+        RngV.fill_args.len = sizeof(sec);
         Rng.fill(protocore_rng_span());
         Csrf.secret_args.secret = sec;
         Csrf.secret_args.len = sizeof(sec);

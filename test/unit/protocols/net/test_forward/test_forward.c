@@ -49,12 +49,12 @@ static proto_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
 
 static proto_bool add_if(uint8_t id)
 {
-    Physical.iface.id = id;
-    Physical.iface.kind = PROTOCORE_IF_ANY;
-    Physical.iface.send = cap_send;
-    Physical.iface.ctx = NULL;
+    PhysicalV.iface.id = id;
+    PhysicalV.iface.kind = PROTOCORE_IF_ANY;
+    PhysicalV.iface.send = cap_send;
+    PhysicalV.iface.ctx = NULL;
     Physical.iface_add(protocore_physical_span());
-    return Physical.ok;
+    return PhysicalV.ok;
 }
 
 static uint8_t ingress(uint8_t src, const char *s)
@@ -215,12 +215,12 @@ void test_add_if_validation_and_table_full()
 {
     TEST_ASSERT_TRUE(add_if(1));
     TEST_ASSERT_FALSE(add_if(1));
-    Physical.iface.id = 9;
-    Physical.iface.kind = PROTOCORE_IF_ANY;
-    Physical.iface.send = NULL;
-    Physical.iface.ctx = NULL;
+    PhysicalV.iface.id = 9;
+    PhysicalV.iface.kind = PROTOCORE_IF_ANY;
+    PhysicalV.iface.send = NULL;
+    PhysicalV.iface.ctx = NULL;
     Physical.iface_add(protocore_physical_span());
-    TEST_ASSERT_FALSE(Physical.ok);
+    TEST_ASSERT_FALSE(PhysicalV.ok);
     TEST_ASSERT_TRUE(add_if(2));
     TEST_ASSERT_TRUE(add_if(3));
     TEST_ASSERT_TRUE(add_if(4));

@@ -63,11 +63,11 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     }
     // RFC 6455 4.2.1: the Sec-WebSocket-Key must base64-decode to exactly 16 bytes.
     uint8_t raw[24];
-    Base64.decode_args.src = client_key;
-    Base64.decode_args.dst = raw;
-    Base64.decode_args.dst_cap = sizeof(raw);
+    Base64V.decode_args.src = client_key;
+    Base64V.decode_args.dst = raw;
+    Base64V.decode_args.dst_cap = sizeof(raw);
     Base64.decode(base64_work);
-    if (Base64.n != 16)
+    if (Base64V.n != 16)
     {
         out[0] = '\0';
         return PROTO_FALSE;
@@ -91,9 +91,9 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     Sha1V.hash_args.out = digest;
     Sha1.hash(w.buf);
     protocore_secure_release(mark);
-    Base64.encode_args.src = digest;
-    Base64.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
-    Base64.encode_args.dst = out;
+    Base64V.encode_args.src = digest;
+    Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
+    Base64V.encode_args.dst = out;
     Base64.encode(base64_work);
     return PROTO_TRUE;
 }

@@ -93,21 +93,43 @@ typedef struct
     DnsMsgArgs msg;    ///< the message pair a response is built from (RFC 1035 sec 4.1)
     DnsAnswerArgs ans; ///< what the answer RR carries (RFC 1035 sec 4.1.3)
     DnsRecordArgs rec; ///< the record a table call names (RFC 1035 sec 3.4.1)
-
     proto_bool ok;
     size_t n;
     uint32_t ip;
+} DnsServerVars;
 
+/** @brief The operands and the outcome. */
+extern DnsServerVars DnsServerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_response)(uint8_t *restrict work);
     void (*const add)(uint8_t *restrict work);
     void (*const clear)(uint8_t *restrict work);
     void (*const begin)(uint8_t *restrict work);
     void (*const lookup)(uint8_t *restrict work);
-
 } DnsServerNs;
 
-/** @brief The one symbol this module exports. */
-extern DnsServerNs DnsServer;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DnsServerV or a region of the borrow at a fixed offset.
+void protocore_dns_server_build_response(uint8_t *restrict work);
+void protocore_dns_server_add(uint8_t *restrict work);
+void protocore_dns_server_clear(uint8_t *restrict work);
+void protocore_dns_server_begin(uint8_t *restrict work);
+void protocore_dns_server_lookup(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `DnsServer.build_response(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DnsServerNs DnsServer __attribute__((unused)) = {
+    .build_response = protocore_dns_server_build_response,
+    .add = protocore_dns_server_add,
+    .clear = protocore_dns_server_clear,
+    .begin = protocore_dns_server_begin,
+    .lookup = protocore_dns_server_lookup,
+};
 
 /**
  * @brief The PROTOCORE_DNS_SERVER_BORROW bytes this module's state lives in.

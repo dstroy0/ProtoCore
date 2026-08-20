@@ -8,7 +8,7 @@
 
 #include "network_drivers/network/dns/dns_server/dns_server.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "mmgr/protostr/protostr.h"  // str.len
+#include "mmgr/protostr/protostr.h"   // str.len
 #include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read: the exact mover, for a destination inside a buffer
 #include "protocore_config.h"
 
@@ -16,8 +16,8 @@ static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never re
 
 #if PROTOCORE_ENABLE_DNS_SERVER
 
-#include "network_drivers/network/dns/dns_wire/dns_wire.h"        // the name codec both DNS halves read and write
-#include "network_drivers/transport/udp/server/server.h" // UdpListener: the port 53 bind and the reply
+#include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves read and write
+#include "network_drivers/transport/udp/server/server.h"   // UdpListener: the port 53 bind and the reply
 
 /**
  * @brief The name table's compile-time storage: the A records and the response stage.
@@ -61,18 +61,18 @@ static proto_bool parse_question(const uint8_t *q, size_t qlen, char *name, size
     {
         return PROTO_FALSE;
     }
-    DnsWire.msg.pkt = q;
-    DnsWire.msg.len = qlen;
-    DnsWire.msg.off = 12;
-    DnsWire.msg.out = name;
-    DnsWire.msg.out_cap = name_cap;
-    DnsWire.msg.allow_ptr = PROTO_FALSE;
+    DnsWireV.msg.pkt = q;
+    DnsWireV.msg.len = qlen;
+    DnsWireV.msg.off = 12;
+    DnsWireV.msg.out = name;
+    DnsWireV.msg.out_cap = name_cap;
+    DnsWireV.msg.allow_ptr = PROTO_FALSE;
     DnsWire.decode(dns_wire_work);
-    if (!DnsWire.ok)
+    if (!DnsWireV.ok)
     {
         return PROTO_FALSE;
     }
-    size_t i = DnsWire.next;
+    size_t i = DnsWireV.next;
     if (i + 4 > qlen)
     {
         return PROTO_FALSE;
@@ -93,10 +93,10 @@ static uint32_t table_find(uint8_t *restrict work, const char *name)
     }
     for (size_t i = 0; i < DNS_SERVER_CTX(work)->count; i++)
     {
-        DnsWire.cmp.a = DNS_SERVER_CTX(work)->names[i];
-        DnsWire.cmp.b = name;
+        DnsWireV.cmp.a = DNS_SERVER_CTX(work)->names[i];
+        DnsWireV.cmp.b = name;
         DnsWire.eq(dns_wire_work);
-        if (DnsWire.ok)
+        if (DnsWireV.ok)
         {
             return DNS_SERVER_CTX(work)->ips[i];
         }
@@ -127,15 +127,15 @@ uint8_t *protocore_dns_server_span(void)
     return s_own.span;
 }
 
-static void dns_build_response(uint8_t *restrict work)
+void protocore_dns_server_build_response(uint8_t *restrict work)
 {
-    const uint8_t *query = DnsServer.msg.query;
-    const size_t qlen = DnsServer.msg.qlen;
-    uint8_t *out = DnsServer.msg.out;
-    const size_t out_cap = DnsServer.msg.out_cap;
+    const uint8_t *query = DnsServerV.msg.query;
+    const size_t qlen = DnsServerV.msg.qlen;
+    uint8_t *out = DnsServerV.msg.out;
+    const size_t out_cap = DnsServerV.msg.out_cap;
 
-    DnsServer.n = 0;
-    if (!query || !out || !DnsServer.ans.resolve || qlen < 12)
+    DnsServerV.n = 0;
+    if (!query || !out || !DnsServerV.ans.resolve || qlen < 12)
     {
         return;
     }
@@ -154,7 +154,7 @@ static void dns_build_response(uint8_t *restrict work)
         out[3] = 0x04;                                // RCODE = 4 Not Implemented
         out[6] = out[7] = 0;                          // ANCOUNT 0
         out[8] = out[9] = out[10] = out[11] = 0;      // NSCOUNT / ARCOUNT 0
-        DnsServer.n = 12;
+        DnsServerV.n = 12;
         return;
     }
 
@@ -177,13 +177,13 @@ static void dns_build_response(uint8_t *restrict work)
     out[5] = 0x01;                           // QDCOUNT = 1
     out[8] = out[9] = out[10] = out[11] = 0; // NSCOUNT / ARCOUNT = 0
 
-    uint32_t ip = (qtype == 1) ? DnsServer.ans.resolve(name) : 0; // QTYPE 1 = A (RFC 1035 sec 3.2.2)
+    uint32_t ip = (qtype == 1) ? DnsServerV.ans.resolve(name) : 0; // QTYPE 1 = A (RFC 1035 sec 3.2.2)
     if (!ip)
     {
         out[6] = 0x00;
         out[7] = 0x00;                    // ANCOUNT = 0
         out[3] = (qtype == 1) ? 0x03 : 0; // an A miss -> RCODE 3 Name Error; another QTYPE -> no error, no answer
-        DnsServer.n = qend;
+        DnsServerV.n = qend;
         return;
     }
 
@@ -200,26 +200,26 @@ static void dns_build_response(uint8_t *restrict work)
     out[n++] = 0x01; // TYPE = A
     out[n++] = 0x00;
     out[n++] = 0x01; // CLASS = IN
-    out[n++] = (uint8_t)(DnsServer.ans.ttl >> 24);
-    out[n++] = (uint8_t)(DnsServer.ans.ttl >> 16);
-    out[n++] = (uint8_t)(DnsServer.ans.ttl >> 8);
-    out[n++] = (uint8_t)DnsServer.ans.ttl;
+    out[n++] = (uint8_t)(DnsServerV.ans.ttl >> 24);
+    out[n++] = (uint8_t)(DnsServerV.ans.ttl >> 16);
+    out[n++] = (uint8_t)(DnsServerV.ans.ttl >> 8);
+    out[n++] = (uint8_t)DnsServerV.ans.ttl;
     out[n++] = 0x00;
     out[n++] = 0x04; // RDLENGTH = 4
     out[n++] = (uint8_t)(ip >> 24);
     out[n++] = (uint8_t)(ip >> 16);
     out[n++] = (uint8_t)(ip >> 8);
     out[n++] = (uint8_t)ip; // RDATA: the ADDRESS (RFC 1035 sec 3.4.1)
-    DnsServer.n = n;
+    DnsServerV.n = n;
 }
 
 // Record rec.name with the ADDRESS rec.a.rec.b.rec.c.rec.d; ok is false for an empty, absent, or
 // over-long name, or a full table.
-static void dns_add(uint8_t *restrict work)
+void protocore_dns_server_add(uint8_t *restrict work)
 {
-    const char *name = DnsServer.rec.name;
+    const char *name = DnsServerV.rec.name;
 
-    DnsServer.ok = PROTO_FALSE;
+    DnsServerV.ok = PROTO_FALSE;
     if (!name || !name[0])
     {
         return;
@@ -235,18 +235,18 @@ static void dns_add(uint8_t *restrict work)
     }
     raw.read(DNS_SERVER_CTX(work)->names[DNS_SERVER_CTX(work)->count], name, nlen + 1);
     DNS_SERVER_CTX(work)->ips[DNS_SERVER_CTX(work)->count] =
-        ((uint32_t)DnsServer.rec.a << 24) | ((uint32_t)DnsServer.rec.b << 16) | ((uint32_t)DnsServer.rec.c << 8) |
-        (uint32_t)DnsServer.rec.d;
+        ((uint32_t)DnsServerV.rec.a << 24) | ((uint32_t)DnsServerV.rec.b << 16) | ((uint32_t)DnsServerV.rec.c << 8) |
+        (uint32_t)DnsServerV.rec.d;
     DNS_SERVER_CTX(work)->count++;
-    DnsServer.ok = PROTO_TRUE;
+    DnsServerV.ok = PROTO_TRUE;
 }
 
-static void dns_lookup(uint8_t *restrict work)
+void protocore_dns_server_lookup(uint8_t *restrict work)
 {
-    DnsServer.ip = table_find(work, DnsServer.rec.name);
+    DnsServerV.ip = table_find(work, DnsServerV.rec.name);
 }
 
-static void dns_clear(uint8_t *restrict work)
+void protocore_dns_server_clear(uint8_t *restrict work)
 {
     DNS_SERVER_CTX(work)->count = 0;
 }
@@ -263,35 +263,35 @@ static void dns_udp_handler(const uint8_t *data, size_t len, const struct protoc
     (void)arg;
     uint8_t *work = protocore_dns_server_span();
 
-    DnsServer.msg.query = data;
-    DnsServer.msg.qlen = len;
-    DnsServer.msg.out = DNS_SERVER_CTX(work)->tx;
-    DnsServer.msg.out_cap = sizeof(DNS_SERVER_CTX(work)->tx);
-    DnsServer.ans.ttl = PROTOCORE_DNS_SERVER_TTL;
-    DnsServer.ans.resolve = protocore_dns_server_resolve;
-    dns_build_response(work);
-    if (DnsServer.n == 0)
+    DnsServerV.msg.query = data;
+    DnsServerV.msg.qlen = len;
+    DnsServerV.msg.out = DNS_SERVER_CTX(work)->tx;
+    DnsServerV.msg.out_cap = sizeof(DNS_SERVER_CTX(work)->tx);
+    DnsServerV.ans.ttl = PROTOCORE_DNS_SERVER_TTL;
+    DnsServerV.ans.resolve = protocore_dns_server_resolve;
+    protocore_dns_server_build_response(work);
+    if (DnsServerV.n == 0)
     {
         return;
     }
     UdpListener.peer_args.peer = peer;
     UdpListener.send_args.data = DNS_SERVER_CTX(work)->tx;
-    UdpListener.send_args.len = DnsServer.n;
+    UdpListener.send_args.len = DnsServerV.n;
     UdpListener.reply(protocore_udp_listener_span());
 }
 
 // Bind UDP port 53, the port a DNS message is carried to (RFC 1035 sec 4.2.1).
-static void dns_begin(uint8_t *restrict work)
+void protocore_dns_server_begin(uint8_t *restrict work)
 {
     UdpListener.port = 53;
     UdpListener.bind.handler = dns_udp_handler;
     UdpListener.bind.handler_ctx = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    DnsServer.ok = UdpListener.ok;
+    DnsServerV.ok = UdpListener.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-DnsServerNs DnsServer = {
-    .build_response = dns_build_response, .add = dns_add, .clear = dns_clear, .begin = dns_begin, .lookup = dns_lookup};
+/** @brief The operands and the outcome. */
+DnsServerVars DnsServerV;
 
 #endif // PROTOCORE_ENABLE_DNS_SERVER

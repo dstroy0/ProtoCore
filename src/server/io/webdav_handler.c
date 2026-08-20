@@ -592,12 +592,12 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         Mnt.point_of(mnt_work);
         Webdav.method_args.m = req->method;
         Webdav.method(webdav_work);
-        FileServing.serve_file_internal_args.slot_id = slot_id;
-        FileServing.serve_file_internal_args.head = Webdav.value == DAV_M_HEAD;
-        FileServing.serve_file_internal_args.file_sys = Mnt.backend;
-        FileServing.serve_file_internal_args.fs_path = fs_path;
-        FileServing.serve_file_internal_args.content_type = mime_type(fs_path);
-        FileServing.serve_file_internal_args.content_encoding = NULL;
+        FileServingV.serve_file_internal_args.slot_id = slot_id;
+        FileServingV.serve_file_internal_args.head = Webdav.value == DAV_M_HEAD;
+        FileServingV.serve_file_internal_args.file_sys = Mnt.backend;
+        FileServingV.serve_file_internal_args.fs_path = fs_path;
+        FileServingV.serve_file_internal_args.content_type = mime_type(fs_path);
+        FileServingV.serve_file_internal_args.content_encoding = NULL;
         FileServing.serve_file_internal(protocore_file_serving_span());
         return;
     }
@@ -915,8 +915,8 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
             depth_inf = Webdav.i32 != 0;
             unsigned long tok = (unsigned long)Clock.ms;
             uint32_t tok_rand = 0;
-            Rng.fill_args.out = (uint8_t *)&tok_rand;
-            Rng.fill_args.len = sizeof(tok_rand);
+            RngV.fill_args.out = (uint8_t *)&tok_rand;
+            RngV.fill_args.len = sizeof(tok_rand);
             Rng.fill(protocore_rng_span()); // boundary: bytes into the scalar
             tok ^= (unsigned long)tok_rand;
             protocore_sb sb_token2 = {token, sizeof(token), 0, PROTO_TRUE};
@@ -1062,9 +1062,9 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
         Webdav.ms_begin(webdav_work);
         len = Webdav.n;
         char mt[40];
-        FileServing.http_rfc1123_args.epoch = mtime;
-        FileServing.http_rfc1123_args.out = mt;
-        FileServing.http_rfc1123_args.cap = sizeof(mt);
+        FileServingV.http_rfc1123_args.epoch = mtime;
+        FileServingV.http_rfc1123_args.out = mt;
+        FileServingV.http_rfc1123_args.cap = sizeof(mt);
         FileServing.http_rfc1123(protocore_file_serving_span());
         Webdav.ms_entry_args.buf = WEBDAV_HANDLER_CTX(work)->buf;
         Webdav.ms_entry_args.cap = cap;
@@ -1118,9 +1118,9 @@ static void serve_dav_request(uint8_t *restrict work, uint8_t slot_id, HttpReq *
                     chref[0] = '\0';
                 }
                 char cmtbuf[40];
-                FileServing.http_rfc1123_args.epoch = (time_t)cst.mtime;
-                FileServing.http_rfc1123_args.out = cmtbuf;
-                FileServing.http_rfc1123_args.cap = sizeof(cmtbuf);
+                FileServingV.http_rfc1123_args.epoch = (time_t)cst.mtime;
+                FileServingV.http_rfc1123_args.out = cmtbuf;
+                FileServingV.http_rfc1123_args.cap = sizeof(cmtbuf);
                 FileServing.http_rfc1123(protocore_file_serving_span());
                 size_t before = len;
                 Webdav.ms_entry_args.buf = WEBDAV_HANDLER_CTX(work)->buf;

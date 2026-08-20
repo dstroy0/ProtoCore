@@ -189,11 +189,11 @@ proto_bool protocore_tls_conn_begin(uint8_t slot)
 
     // Fresh per handshake, from the one generator: the X25519 ephemeral private key (sec 4.2.8) and
     // the Hello random (sec 4.1.2). A repeat of either across connections would be a key reuse.
-    Rng.fill_args.out = TLS_CTX(work)->eph[slot];
-    Rng.fill_args.len = 32u;
+    RngV.fill_args.out = TLS_CTX(work)->eph[slot];
+    RngV.fill_args.len = 32u;
     Rng.fill(protocore_rng_span());
-    Rng.fill_args.out = TLS_CTX(work)->rnd[slot];
-    Rng.fill_args.len = 32u;
+    RngV.fill_args.out = TLS_CTX(work)->rnd[slot];
+    RngV.fill_args.len = 32u;
     Rng.fill(protocore_rng_span());
 
     TlsConnConfig *cfg = &TLS_CTX(work)->cfg[slot];

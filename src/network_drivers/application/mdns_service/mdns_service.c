@@ -60,63 +60,63 @@ uint8_t *protocore_mdns_service_span(void)
 
 // The entries this file calls before reaching their definitions.
 
-static void mdns_service_add_service(uint8_t *restrict work);
+void protocore_mdns_service_add_service(uint8_t *restrict work);
 
-static void mdns_service_begin(uint8_t *restrict work)
+void protocore_mdns_service_begin(uint8_t *restrict work)
 {
     (void)work;
-    const char *hostname = MdnsService.begin_args.hostname;
-    uint16_t http_port = MdnsService.begin_args.http_port;
+    const char *hostname = MdnsServiceV.begin_args.hostname;
+    uint16_t http_port = MdnsServiceV.begin_args.http_port;
 
     if (hostname == NULL || hostname[0] == '\0')
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     if (mdns_init() != ESP_OK)
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     if (mdns_hostname_set(hostname) != ESP_OK)
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     // Advertise an HTTP service so browsers / DNS-SD tools discover the device.
     mdns_service_add(NULL, "_http", "_tcp", http_port, NULL, 0);
-    MdnsService.ok = PROTO_TRUE;
+    MdnsServiceV.ok = PROTO_TRUE;
 }
 
-static void mdns_service_txt(uint8_t *restrict work)
+void protocore_mdns_service_txt(uint8_t *restrict work)
 {
     (void)work;
-    const char *key = MdnsService.txt_args.key;
-    const char *value = MdnsService.txt_args.value;
+    const char *key = MdnsServiceV.txt_args.key;
+    const char *value = MdnsServiceV.txt_args.value;
 
     if (key == NULL || value == NULL)
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     // Attach a TXT key/value to the _http._tcp service (Bonjour browsers show it).
-    MdnsService.ok = mdns_service_txt_item_set("_http", "_tcp", key, value) == ESP_OK;
+    MdnsServiceV.ok = mdns_service_txt_item_set("_http", "_tcp", key, value) == ESP_OK;
 }
 
-static void mdns_service_add_service(uint8_t *restrict work)
+void protocore_mdns_service_add_service(uint8_t *restrict work)
 {
     (void)work;
-    const char *service_type = MdnsService.add_service_args.service_type;
-    const char *proto = MdnsService.add_service_args.proto;
-    uint16_t port = MdnsService.add_service_args.port;
+    const char *service_type = MdnsServiceV.add_service_args.service_type;
+    const char *proto = MdnsServiceV.add_service_args.proto;
+    uint16_t port = MdnsServiceV.add_service_args.port;
 
     if (service_type == NULL || proto == NULL)
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     // Advertise an additional service, e.g. ("_https", "_tcp", 443).
-    MdnsService.ok = mdns_service_add(NULL, service_type, proto, port, NULL, 0) == ESP_OK;
+    MdnsServiceV.ok = mdns_service_add(NULL, service_type, proto, port, NULL, 0) == ESP_OK;
 }
 
 #else // the portable responder
@@ -287,11 +287,11 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
     {
         return PROTO_FALSE;
     }
-    DnsWire.text.dotted = owner;
-    DnsWire.text.out = out + p;
-    DnsWire.text.out_cap = cap - p;
+    DnsWireV.text.dotted = owner;
+    DnsWireV.text.out = out + p;
+    DnsWireV.text.out_cap = cap - p;
     DnsWire.encode(dns_wire_work);
-    size_t w = DnsWire.n;
+    size_t w = DnsWireV.n;
     if (w == 0)
     {
         return PROTO_FALSE;
@@ -335,7 +335,7 @@ static proto_bool rr_put(uint8_t *out, size_t cap, size_t *n, const char *owner,
 static uint16_t put_a(uint8_t *restrict work, size_t *n)
 {
     Physical.egress_ip(protocore_physical_span());
-    uint32_t ip = Physical.u32;
+    uint32_t ip = PhysicalV.u32;
     if (ip == 0)
     {
         return 0;
@@ -360,11 +360,11 @@ static uint16_t put_srv(uint8_t *restrict work, const MdnsSvc *s, size_t *n)
     rd[3] = 0;
     rd[4] = (uint8_t)(s->port >> 8);
     rd[5] = (uint8_t)s->port;
-    DnsWire.text.dotted = mdns_str(MDNS_SERVICE_CTX(work)->fqdn);
-    DnsWire.text.out = rd + 6;
-    DnsWire.text.out_cap = MDNS_SERVICE_CTX(work)->rd.cap - 6;
+    DnsWireV.text.dotted = mdns_str(MDNS_SERVICE_CTX(work)->fqdn);
+    DnsWireV.text.out = rd + 6;
+    DnsWireV.text.out_cap = MDNS_SERVICE_CTX(work)->rd.cap - 6;
     DnsWire.encode(dns_wire_work);
-    size_t w = DnsWire.n;
+    size_t w = DnsWireV.n;
     if (w == 0)
     {
         return 0;
@@ -402,11 +402,11 @@ static uint16_t put_txt(uint8_t *restrict work, size_t *n)
 // A PTR whose rdata is one name.
 static uint16_t put_ptr(uint8_t *restrict work, const char *owner, const char *target, size_t *n)
 {
-    DnsWire.text.dotted = target;
-    DnsWire.text.out = MDNS_SERVICE_CTX(work)->rd.buf;
-    DnsWire.text.out_cap = MDNS_SERVICE_CTX(work)->rd.cap;
+    DnsWireV.text.dotted = target;
+    DnsWireV.text.out = MDNS_SERVICE_CTX(work)->rd.buf;
+    DnsWireV.text.out_cap = MDNS_SERVICE_CTX(work)->rd.cap;
     DnsWire.encode(dns_wire_work);
-    size_t w = DnsWire.n;
+    size_t w = DnsWireV.n;
     if (w == 0)
     {
         return 0;
@@ -430,10 +430,10 @@ static uint16_t answer_for(uint8_t *restrict work, const char *qname, uint16_t q
 {
     uint16_t added = 0;
 
-    DnsWire.cmp.a = qname;
-    DnsWire.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->fqdn);
+    DnsWireV.cmp.a = qname;
+    DnsWireV.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->fqdn);
     DnsWire.eq(dns_wire_work);
-    if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_A))
+    if (DnsWireV.ok && wants(qtype, PROTOCORE_MDNS_T_A))
     {
         added += put_a(work, n);
     }
@@ -453,25 +453,25 @@ static uint16_t answer_for(uint8_t *restrict work, const char *qname, uint16_t q
             continue;
         }
         // The enumeration name lists the types on offer, not the instances.
-        DnsWire.cmp.a = qname;
-        DnsWire.cmp.b = PROTOCORE_MDNS_ENUM_NAME;
+        DnsWireV.cmp.a = qname;
+        DnsWireV.cmp.b = PROTOCORE_MDNS_ENUM_NAME;
         DnsWire.eq(dns_wire_work);
-        if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
+        if (DnsWireV.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
             added += put_ptr(work, PROTOCORE_MDNS_ENUM_NAME, mdns_str(MDNS_SERVICE_CTX(work)->svc_name), n);
         }
-        DnsWire.cmp.a = qname;
-        DnsWire.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->svc_name);
+        DnsWireV.cmp.a = qname;
+        DnsWireV.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->svc_name);
         DnsWire.eq(dns_wire_work);
-        if (DnsWire.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
+        if (DnsWireV.ok && wants(qtype, PROTOCORE_MDNS_T_PTR))
         {
             added += put_ptr(work, mdns_str(MDNS_SERVICE_CTX(work)->svc_name),
                              mdns_str(MDNS_SERVICE_CTX(work)->inst_name), n);
         }
-        DnsWire.cmp.a = qname;
-        DnsWire.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->inst_name);
+        DnsWireV.cmp.a = qname;
+        DnsWireV.cmp.b = mdns_str(MDNS_SERVICE_CTX(work)->inst_name);
         DnsWire.eq(dns_wire_work);
-        if (DnsWire.ok)
+        if (DnsWireV.ok)
         {
             if (wants(qtype, PROTOCORE_MDNS_T_SRV))
             {
@@ -523,18 +523,18 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
     size_t off = 12;
     for (uint16_t q = 0; q < qd; q++)
     {
-        DnsWire.msg.pkt = data;
-        DnsWire.msg.len = len;
-        DnsWire.msg.off = off;
-        DnsWire.msg.out = mdns_str(MDNS_SERVICE_CTX(work)->qname);
-        DnsWire.msg.out_cap = MDNS_SERVICE_CTX(work)->qname.cap;
-        DnsWire.msg.allow_ptr = PROTO_TRUE;
+        DnsWireV.msg.pkt = data;
+        DnsWireV.msg.len = len;
+        DnsWireV.msg.off = off;
+        DnsWireV.msg.out = mdns_str(MDNS_SERVICE_CTX(work)->qname);
+        DnsWireV.msg.out_cap = MDNS_SERVICE_CTX(work)->qname.cap;
+        DnsWireV.msg.allow_ptr = PROTO_TRUE;
         DnsWire.decode(dns_wire_work);
-        if (!DnsWire.ok)
+        if (!DnsWireV.ok)
         {
             return; // a malformed question: the rest of the message cannot be located
         }
-        off = DnsWire.next;
+        off = DnsWireV.next;
         if (off + 4 > len)
         {
             return;
@@ -579,15 +579,15 @@ static proto_bool label_set(char *dst, size_t cap, const char *src)
     return PROTO_TRUE;
 }
 
-static void mdns_service_add_service(uint8_t *restrict work)
+void protocore_mdns_service_add_service(uint8_t *restrict work)
 {
-    const char *service_type = MdnsService.add_service_args.service_type;
-    const char *proto = MdnsService.add_service_args.proto;
-    uint16_t port = MdnsService.add_service_args.port;
+    const char *service_type = MdnsServiceV.add_service_args.service_type;
+    const char *proto = MdnsServiceV.add_service_args.proto;
+    uint16_t port = MdnsServiceV.add_service_args.port;
 
     if (service_type == NULL || proto == NULL || !mdns_mem_bind(work))
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     for (size_t i = 0; i < PROTOCORE_MDNS_MAX_SERVICES; i++)
@@ -599,25 +599,25 @@ static void mdns_service_add_service(uint8_t *restrict work)
         }
         if (!label_set(s->type, sizeof s->type, service_type) || !label_set(s->proto, sizeof s->proto, proto))
         {
-            MdnsService.ok = PROTO_FALSE;
+            MdnsServiceV.ok = PROTO_FALSE;
             return;
         }
         s->port = port;
         s->used = PROTO_TRUE;
-        MdnsService.ok = PROTO_TRUE;
+        MdnsServiceV.ok = PROTO_TRUE;
         return;
     }
-    MdnsService.ok = PROTO_FALSE; // the table is full
+    MdnsServiceV.ok = PROTO_FALSE; // the table is full
 }
 
-static void mdns_service_txt(uint8_t *restrict work)
+void protocore_mdns_service_txt(uint8_t *restrict work)
 {
-    const char *key = MdnsService.txt_args.key;
-    const char *value = MdnsService.txt_args.value;
+    const char *key = MdnsServiceV.txt_args.key;
+    const char *value = MdnsServiceV.txt_args.value;
 
     if (key == NULL || value == NULL || !mdns_mem_bind(work))
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     uint8_t *txt = MDNS_SERVICE_CTX(work)->txt.buf;
@@ -626,7 +626,7 @@ static void mdns_service_txt(uint8_t *restrict work)
     size_t entry = kl + 1 + vl; // "key=value"
     if (kl == 0 || entry > 255 || MDNS_SERVICE_CTX(work)->txt_len + 1 + entry > MDNS_SERVICE_CTX(work)->txt.cap)
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     size_t n = MDNS_SERVICE_CTX(work)->txt_len;
@@ -639,28 +639,28 @@ static void mdns_service_txt(uint8_t *restrict work)
     raw.read(txt + n, value, vl);
     n += vl;
     MDNS_SERVICE_CTX(work)->txt_len = n;
-    MdnsService.ok = PROTO_TRUE;
+    MdnsServiceV.ok = PROTO_TRUE;
 }
 
-static void mdns_service_begin(uint8_t *restrict work)
+void protocore_mdns_service_begin(uint8_t *restrict work)
 {
-    const char *hostname = MdnsService.begin_args.hostname;
-    uint16_t http_port = MdnsService.begin_args.http_port;
+    const char *hostname = MdnsServiceV.begin_args.hostname;
+    uint16_t http_port = MdnsServiceV.begin_args.http_port;
 
     if (hostname == NULL || hostname[0] == '\0' || !mdns_mem_bind(work))
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     if (!label_set(mdns_str(MDNS_SERVICE_CTX(work)->host), MDNS_SERVICE_CTX(work)->host.cap, hostname))
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     if (!name_of(mdns_str(MDNS_SERVICE_CTX(work)->fqdn), MDNS_SERVICE_CTX(work)->fqdn.cap,
                  mdns_str(MDNS_SERVICE_CTX(work)->host), NULL, NULL))
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     for (size_t i = 0; i < PROTOCORE_MDNS_MAX_SERVICES; i++)
@@ -668,13 +668,13 @@ static void mdns_service_begin(uint8_t *restrict work)
         mdns_svc(work, i)->used = PROTO_FALSE;
     }
     MDNS_SERVICE_CTX(work)->txt_len = 0;
-    MdnsService.add_service_args.service_type = "_http";
-    MdnsService.add_service_args.proto = "_tcp";
-    MdnsService.add_service_args.port = http_port;
-    mdns_service_add_service(work);
-    if (!MdnsService.ok)
+    MdnsServiceV.add_service_args.service_type = "_http";
+    MdnsServiceV.add_service_args.proto = "_tcp";
+    MdnsServiceV.add_service_args.port = http_port;
+    protocore_mdns_service_add_service(work);
+    if (!MdnsServiceV.ok)
     {
-        MdnsService.ok = PROTO_FALSE;
+        MdnsServiceV.ok = PROTO_FALSE;
         return;
     }
     UdpListener.port = PROTOCORE_MDNS_PORT;
@@ -683,16 +683,13 @@ static void mdns_service_begin(uint8_t *restrict work)
     UdpListener.bind.group_ip = PROTOCORE_MDNS_GROUP;
     UdpListener.listen_multicast(protocore_udp_listener_span());
     MDNS_SERVICE_CTX(work)->running = UdpListener.ok;
-    MdnsService.ok = MDNS_SERVICE_CTX(work)->running;
+    MdnsServiceV.ok = MDNS_SERVICE_CTX(work)->running;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_MDNS
 
-MdnsServiceNs MdnsService = {
-    .begin = mdns_service_begin,
-    .txt = mdns_service_txt,
-    .add_service = mdns_service_add_service,
-};
+/** @brief The operands and the outcome. */
+MdnsServiceVars MdnsServiceV;
 
 PROTOCORE_END_DECLS
 

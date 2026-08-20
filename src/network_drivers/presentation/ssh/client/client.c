@@ -377,8 +377,8 @@ static proto_bool build_kex_public(void)
     switch (SSH_CLIENT_CTX(protocore_ssh_client_span())->kex)
     {
     case SSH_KEX_CURVE25519:
-        Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Rng.fill_args.len = 32;
+        RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
         Curve25519.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         Curve25519.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
@@ -389,8 +389,8 @@ static proto_bool build_kex_public(void)
         // Draw a valid P-256 scalar (pubkey derivation rejects 0 / >= group order).
         for (int tries = 0; tries < 8; tries++)
         {
-            Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-            Rng.fill_args.len = 32;
+            RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+            RngV.fill_args.len = 32;
             Rng.fill(protocore_rng_span());
             Ecdsa.pubkey_args.priv = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
             Ecdsa.pubkey_args.pub = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
@@ -404,8 +404,8 @@ static proto_bool build_kex_public(void)
         return PROTO_FALSE;
     case SSH_KEX_DH_GROUP14: {
         // e = g^x mod p, g = 2 (RFC 3526 group 14). x is a 256-bit exponent.
-        Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Rng.fill_args.len = 32;
+        RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
         protocore_bignum g, x, e;
         uint8_t two = 2;
@@ -434,11 +434,11 @@ static proto_bool build_kex_public(void)
         // ML-KEM-768 keypair (dk kept for Decaps; ek is embedded in dk) + an X25519 ephemeral. C_INIT
         // (ek || Q_C) is assembled at send time; Q_C lives in qc[0..31].
         uint8_t d[32], z[32], ek[MLKEM768_EK_BYTES];
-        Rng.fill_args.out = d;
-        Rng.fill_args.len = sizeof(d);
+        RngV.fill_args.out = d;
+        RngV.fill_args.len = sizeof(d);
         Rng.fill(protocore_rng_span());
-        Rng.fill_args.out = z;
-        Rng.fill_args.len = sizeof(z);
+        RngV.fill_args.out = z;
+        RngV.fill_args.len = sizeof(z);
         Rng.fill(protocore_rng_span());
         MlKem.keygen_args.d = d;
         MlKem.keygen_args.z = z;
@@ -448,8 +448,8 @@ static proto_bool build_kex_public(void)
         protocore_secure_wipe(d, sizeof(d));
         protocore_secure_wipe(z, sizeof(z));
         protocore_secure_wipe(ek, sizeof(ek)); // ek persists inside mlkem_dk
-        Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Rng.fill_args.len = 32;
+        RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
         Curve25519.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         Curve25519.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
@@ -469,12 +469,12 @@ static proto_bool build_kex_public(void)
         {
             return PROTO_FALSE;
         }
-        Sntrup761.keypair_args.pk = pk;
-        Sntrup761.keypair_args.sk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.sntrup_sk;
+        Sntrup761V.keypair_args.pk = pk;
+        Sntrup761V.keypair_args.sk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.sntrup_sk;
         Sntrup761.keypair(work);
         protocore_plaintext_release(mark); // pk persists inside sntrup_sk at PROTOCORE_SNTRUP761_SK_PK_OFFSET
-        Rng.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Rng.fill_args.len = 32;
+        RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
         Curve25519.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         Curve25519.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;

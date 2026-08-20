@@ -75,8 +75,8 @@ uint8_t *protocore_x509_verify_span(void)
 // Report a verdict and the reason for it, so a caller that fails knows which condition it was.
 static void verdict(protocore_x509_status st)
 {
-    X509Verify.status = st;
-    X509Verify.ok = (st == PROTOCORE_X509_OK);
+    X509VerifyV.status = st;
+    X509VerifyV.ok = (st == PROTOCORE_X509_OK);
 }
 
 // ---------------------------------------------------------------------------
@@ -270,10 +270,10 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
     }
 }
 
-static void x509_signature(uint8_t *restrict work)
+void protocore_x509_verify_signature(uint8_t *restrict work)
 {
-    const X509Cert *cert = X509Verify.link_args.cert;
-    const X509Cert *issuer = X509Verify.link_args.issuer;
+    const X509Cert *cert = X509VerifyV.link_args.cert;
+    const X509Cert *issuer = X509VerifyV.link_args.issuer;
     if (cert == NULL || issuer == NULL || cert->tbs.p == NULL || cert->sig.p == NULL || issuer->key.p == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
@@ -282,24 +282,24 @@ static void x509_signature(uint8_t *restrict work)
     verify_under(issuer, cert->sig_alg, cert->tbs.p, cert->tbs.len, cert->sig.p, cert->sig.len, work);
 }
 
-static void x509_message(uint8_t *restrict work)
+void protocore_x509_verify_message(uint8_t *restrict work)
 {
-    const X509Cert *signer = X509Verify.message_args.signer;
-    const uint8_t *msg = X509Verify.message_args.msg;
-    const uint8_t *sig = X509Verify.message_args.sig;
+    const X509Cert *signer = X509VerifyV.message_args.signer;
+    const uint8_t *msg = X509VerifyV.message_args.msg;
+    const uint8_t *sig = X509VerifyV.message_args.sig;
     if (signer == NULL || signer->key.p == NULL || msg == NULL || sig == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
         return;
     }
-    verify_under(signer, X509Verify.message_args.alg, msg, X509Verify.message_args.msg_len, sig,
-                 X509Verify.message_args.sig_len, work);
+    verify_under(signer, X509VerifyV.message_args.alg, msg, X509VerifyV.message_args.msg_len, sig,
+                 X509VerifyV.message_args.sig_len, work);
 }
 
-static void x509_validity(uint8_t *restrict work)
+void protocore_x509_verify_validity(uint8_t *restrict work)
 {
     (void)work;
-    const X509Cert *cert = X509Verify.time_args.cert;
+    const X509Cert *cert = X509VerifyV.time_args.cert;
     if (cert == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
@@ -307,7 +307,7 @@ static void x509_validity(uint8_t *restrict work)
     }
     // RFC 5280 sec 6.1.3 (a)(2): the period includes the current time. Both ends are inclusive
     // (sec 4.1.2.5 makes them the first and last instant the certificate is valid).
-    const uint64_t now = X509Verify.time_args.now;
+    const uint64_t now = X509VerifyV.time_args.now;
     if (now < cert->not_before)
     {
         verdict(PROTOCORE_X509_ERR_NOT_YET_VALID);
@@ -321,10 +321,10 @@ static void x509_validity(uint8_t *restrict work)
     verdict(PROTOCORE_X509_OK);
 }
 
-static void x509_may_sign(uint8_t *restrict work)
+void protocore_x509_verify_may_sign(uint8_t *restrict work)
 {
     (void)work;
-    const X509Cert *issuer = X509Verify.issuer_args.issuer;
+    const X509Cert *issuer = X509VerifyV.issuer_args.issuer;
     if (issuer == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
@@ -346,7 +346,7 @@ static void x509_may_sign(uint8_t *restrict work)
     }
     // sec 6.1.4 (m): pathLenConstraint is how many non-self-issued certificates may follow this one
     // in the path. depth is how many are below it, so a constraint under that does not reach.
-    if (issuer->has_path_len && issuer->path_len < X509Verify.issuer_args.depth)
+    if (issuer->has_path_len && issuer->path_len < X509VerifyV.issuer_args.depth)
     {
         verdict(PROTOCORE_X509_ERR_PATH_LEN);
         return;
@@ -354,10 +354,10 @@ static void x509_may_sign(uint8_t *restrict work)
     verdict(PROTOCORE_X509_OK);
 }
 
-static void x509_link(uint8_t *restrict work)
+void protocore_x509_verify_link(uint8_t *restrict work)
 {
-    const X509Cert *cert = X509Verify.link_args.cert;
-    const X509Cert *issuer = X509Verify.link_args.issuer;
+    const X509Cert *cert = X509VerifyV.link_args.cert;
+    const X509Cert *issuer = X509VerifyV.link_args.issuer;
     if (cert == NULL || issuer == NULL)
     {
         verdict(PROTOCORE_X509_ERR_ARGS);
@@ -373,26 +373,21 @@ static void x509_link(uint8_t *restrict work)
         return;
     }
 
-    x509_validity(work);
-    if (!X509Verify.ok)
+    protocore_x509_verify_validity(work);
+    if (!X509VerifyV.ok)
     {
         return;
     }
-    x509_may_sign(work);
-    if (!X509Verify.ok)
+    protocore_x509_verify_may_sign(work);
+    if (!X509VerifyV.ok)
     {
         return;
     }
-    x509_signature(work);
+    protocore_x509_verify_signature(work);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-X509VerifyNs X509Verify = {
-    .signature = x509_signature,
-    .validity = x509_validity,
-    .may_sign = x509_may_sign,
-    .link = x509_link,
-    .message = x509_message,
-};
+/** @brief The operands and the outcome. */
+X509VerifyVars X509VerifyV;
 
 PROTOCORE_END_DECLS

@@ -158,9 +158,9 @@ void test_base64_encode_one_byte()
 {
     const uint8_t src[] = {0x4D};
     char out[8] = {0};
-    Base64.encode_args.src = src;
-    Base64.encode_args.src_len = 1;
-    Base64.encode_args.dst = out;
+    Base64V.encode_args.src = src;
+    Base64V.encode_args.src_len = 1;
+    Base64V.encode_args.dst = out;
     Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("TQ==", out);
 }
@@ -169,9 +169,9 @@ void test_base64_encode_two_bytes()
 {
     const uint8_t src[] = {0x4D, 0x61};
     char out[8] = {0};
-    Base64.encode_args.src = src;
-    Base64.encode_args.src_len = 2;
-    Base64.encode_args.dst = out;
+    Base64V.encode_args.src = src;
+    Base64V.encode_args.src_len = 2;
+    Base64V.encode_args.dst = out;
     Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("TWE=", out);
 }
@@ -180,9 +180,9 @@ void test_base64_encode_three_bytes()
 {
     const uint8_t src[] = {0x4D, 0x61, 0x6E};
     char out[8] = {0};
-    Base64.encode_args.src = src;
-    Base64.encode_args.src_len = 3;
-    Base64.encode_args.dst = out;
+    Base64V.encode_args.src = src;
+    Base64V.encode_args.src_len = 3;
+    Base64V.encode_args.dst = out;
     Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("TWFu", out);
 }
@@ -192,9 +192,9 @@ void test_base64_encode_ws_accept_key()
     const uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
                                                        0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
     char out[32] = {0};
-    Base64.encode_args.src = digest;
-    Base64.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
-    Base64.encode_args.dst = out;
+    Base64V.encode_args.src = digest;
+    Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
+    Base64V.encode_args.dst = out;
     Base64.encode(base64_work);
     TEST_ASSERT_EQUAL_STRING("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", out);
 }
@@ -202,11 +202,11 @@ void test_base64_encode_ws_accept_key()
 void test_base64_decode_one_byte()
 {
     uint8_t dst[4] = {0};
-    Base64.decode_args.src = "TQ==";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64V.decode_args.src = "TQ==";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64.n;
+    size_t n = Base64V.n;
     TEST_ASSERT_EQUAL(1, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
 }
@@ -214,11 +214,11 @@ void test_base64_decode_one_byte()
 void test_base64_decode_two_bytes()
 {
     uint8_t dst[4] = {0};
-    Base64.decode_args.src = "TWE=";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64V.decode_args.src = "TWE=";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64.n;
+    size_t n = Base64V.n;
     TEST_ASSERT_EQUAL(2, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
     TEST_ASSERT_EQUAL(0x61, (int)dst[1]);
@@ -227,11 +227,11 @@ void test_base64_decode_two_bytes()
 void test_base64_decode_three_bytes()
 {
     uint8_t dst[4] = {0};
-    Base64.decode_args.src = "TWFu";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64V.decode_args.src = "TWFu";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64.n;
+    size_t n = Base64V.n;
     TEST_ASSERT_EQUAL(3, (int)n);
     TEST_ASSERT_EQUAL(0x4D, (int)dst[0]);
     TEST_ASSERT_EQUAL(0x61, (int)dst[1]);
@@ -241,11 +241,11 @@ void test_base64_decode_three_bytes()
 void test_base64_decode_ws_accept_key()
 {
     uint8_t dst[PROTOCORE_SHA1_DIGEST_LEN + 4] = {0};
-    Base64.decode_args.src = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64V.decode_args.src = "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64.n;
+    size_t n = Base64V.n;
     TEST_ASSERT_EQUAL(PROTOCORE_SHA1_DIGEST_LEN, (int)n);
     const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
                                                          0x46, 0x06, 0xCF, 0x38, 0x59, 0x45, 0xB2, 0xBE, 0xC4, 0xEA};
@@ -257,15 +257,15 @@ void test_base64_round_trip()
     const uint8_t src[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98};
     char encoded[24] = {0};
     uint8_t decoded[16] = {0};
-    Base64.encode_args.src = src;
-    Base64.encode_args.src_len = sizeof(src);
-    Base64.encode_args.dst = encoded;
+    Base64V.encode_args.src = src;
+    Base64V.encode_args.src_len = sizeof(src);
+    Base64V.encode_args.dst = encoded;
     Base64.encode(base64_work);
-    Base64.decode_args.src = encoded;
-    Base64.decode_args.dst = decoded;
-    Base64.decode_args.dst_cap = sizeof(decoded);
+    Base64V.decode_args.src = encoded;
+    Base64V.decode_args.dst = decoded;
+    Base64V.decode_args.dst_cap = sizeof(decoded);
     Base64.decode(base64_work);
-    size_t n = Base64.n;
+    size_t n = Base64V.n;
     TEST_ASSERT_EQUAL((int)sizeof(src), (int)n);
     TEST_ASSERT_EQUAL_MEMORY(src, decoded, sizeof(src));
 }
@@ -273,61 +273,61 @@ void test_base64_round_trip()
 void test_base64_decode_rejects_misplaced_padding()
 {
     uint8_t dst[8] = {0};
-    Base64.decode_args.src = "A=BC";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64V.decode_args.src = "A=BC";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64.n);
-    Base64.decode_args.src = "AB=C";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
+    Base64V.decode_args.src = "AB=C";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64.n);
-    Base64.decode_args.src = "=BCD";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
+    Base64V.decode_args.src = "=BCD";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64.n);
-    Base64.decode_args.src = "TWE=TWFu";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
+    Base64V.decode_args.src = "TWE=TWFu";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64.n);
-    Base64.decode_args.src = "TWF";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
+    Base64V.decode_args.src = "TWF";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(0, (int)Base64.n);
+    TEST_ASSERT_EQUAL(0, (int)Base64V.n);
 
-    Base64.decode_args.src = "TQ==";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64V.decode_args.src = "TQ==";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(1, (int)Base64.n);
-    Base64.decode_args.src = "TWE=";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    TEST_ASSERT_EQUAL(1, (int)Base64V.n);
+    Base64V.decode_args.src = "TWE=";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(2, (int)Base64.n);
+    TEST_ASSERT_EQUAL(2, (int)Base64V.n);
 }
 
 void test_base64_decode_respects_capacity()
 {
 
     uint8_t dst[2] = {0};
-    Base64.decode_args.src = "TWFu";
-    Base64.decode_args.dst = dst;
-    Base64.decode_args.dst_cap = sizeof(dst);
+    Base64V.decode_args.src = "TWFu";
+    Base64V.decode_args.dst = dst;
+    Base64V.decode_args.dst_cap = sizeof(dst);
     Base64.decode(base64_work);
-    size_t n = Base64.n;
+    size_t n = Base64V.n;
     TEST_ASSERT_EQUAL(0, (int)n);
 
     uint8_t dst3[3] = {0};
-    Base64.decode_args.src = "TWFu";
-    Base64.decode_args.dst = dst3;
-    Base64.decode_args.dst_cap = sizeof(dst3);
+    Base64V.decode_args.src = "TWFu";
+    Base64V.decode_args.dst = dst3;
+    Base64V.decode_args.dst_cap = sizeof(dst3);
     Base64.decode(base64_work);
-    TEST_ASSERT_EQUAL(3, (int)Base64.n);
+    TEST_ASSERT_EQUAL(3, (int)Base64V.n);
 }
 
 void test_ws_pool_size()

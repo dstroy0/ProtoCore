@@ -323,11 +323,11 @@ static void provisioning_service_begin(uint8_t *restrict work)
 {
     const char *ap_ssid = Prov.begin_args.ap_ssid;
 
-    Physical.wifi.ssid = ap_ssid;
-    Physical.wifi.password = NULL;
+    PhysicalV.wifi.ssid = ap_ssid;
+    PhysicalV.wifi.password = NULL;
     Physical.wifi_ap_init(protocore_physical_span()); // AP mode is implied by which bring-up you call
     Physical.wifi_ap_ip(protocore_physical_span());
-    uint32_t ip = Physical.u32; // network byte order
+    uint32_t ip = PhysicalV.u32; // network byte order
     PROVISIONING_SERVICE_CTX(work)->ap_ip[0] = (uint8_t)(ip & 0xFF);
     PROVISIONING_SERVICE_CTX(work)->ap_ip[1] = (uint8_t)((ip >> 8) & 0xFF);
     PROVISIONING_SERVICE_CTX(work)->ap_ip[2] = (uint8_t)((ip >> 16) & 0xFF);

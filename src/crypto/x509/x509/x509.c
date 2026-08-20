@@ -8,8 +8,8 @@
 
 #include "crypto/x509/x509/x509.h"
 
-#include "mmgr/protomem/protomem.h"  // mem.set: the view is cleared before a parse fills it
-#include "shared/der/der.h" // Der: the one reader
+#include "mmgr/protomem/protomem.h" // mem.set: the view is cleared before a parse fills it
+#include "shared/der/der.h"         // Der: the one reader
 
 PROTOCORE_BEGIN_DECLS
 
@@ -35,9 +35,9 @@ static const uint8_t OID_ECDSA_SHA384[] = {0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x04, 0
 static const uint8_t OID_ED25519[] = {0x2B, 0x65, 0x70};
 
 // RFC 5280 sec 4.2.1: id-ce is 2.5.29, and each extension is a leaf under it.
-static const uint8_t OID_KEY_USAGE[] = {0x55, 0x1D, 0x0F};          // { id-ce 15 }
-static const uint8_t OID_SUBJECT_ALT_NAME[] = {0x55, 0x1D, 0x11};   // { id-ce 17 }
-static const uint8_t OID_BASIC_CONSTRAINTS[] = {0x55, 0x1D, 0x13};  // { id-ce 19 }
+static const uint8_t OID_KEY_USAGE[] = {0x55, 0x1D, 0x0F};         // { id-ce 15 }
+static const uint8_t OID_SUBJECT_ALT_NAME[] = {0x55, 0x1D, 0x11};  // { id-ce 17 }
+static const uint8_t OID_BASIC_CONSTRAINTS[] = {0x55, 0x1D, 0x13}; // { id-ce 19 }
 
 // ---------------------------------------------------------------------------
 // Reading, one field at a time
@@ -149,10 +149,10 @@ static proto_bool spki_read(const uint8_t *der, size_t len, size_t pos, X509Cert
             return PROTO_FALSE;
         }
         const size_t params = Der.tlv.next;
-        out->key_alg = (params < alg_seq + out->spki.len &&
-                        oid_is(der, len, params, OID_SECP256R1, sizeof(OID_SECP256R1)))
-                           ? PROTOCORE_X509_KEY_EC_P256
-                           : PROTOCORE_X509_KEY_UNKNOWN;
+        out->key_alg =
+            (params < alg_seq + out->spki.len && oid_is(der, len, params, OID_SECP256R1, sizeof(OID_SECP256R1)))
+                ? PROTOCORE_X509_KEY_EC_P256
+                : PROTOCORE_X509_KEY_UNKNOWN;
     }
     else
     {
@@ -274,19 +274,19 @@ static proto_bool extension_read(const uint8_t *der, size_t len, size_t pos, X50
     return PROTO_TRUE;
 }
 
-static void x509_parse(uint8_t *restrict work)
+void protocore_x509_parse(uint8_t *restrict work)
 {
     (void)work;
-    X509.ok = PROTO_FALSE;
-    mem.set(&X509.cert, 0, sizeof(X509.cert));
+    X509V.ok = PROTO_FALSE;
+    mem.set(&X509V.cert, 0, sizeof(X509V.cert));
 
-    const uint8_t *der = X509.parse_args.der;
-    const size_t len = X509.parse_args.len;
+    const uint8_t *der = X509V.parse_args.der;
+    const size_t len = X509V.parse_args.len;
     if (der == NULL || len == 0u)
     {
         return;
     }
-    X509Cert *c = &X509.cert;
+    X509Cert *c = &X509V.cert;
 
     // Certificate ::= SEQUENCE { tbsCertificate, signatureAlgorithm, signatureValue } (sec 4.1)
     if (!at(der, len, 0) || Der.tlv.tag != PROTOCORE_DER_SEQUENCE)
@@ -466,7 +466,7 @@ static void x509_parse(uint8_t *restrict work)
     c->sig.p = Der.tlv.content;
     c->sig.len = Der.tlv.len;
 
-    X509.ok = PROTO_TRUE;
+    X509V.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -611,18 +611,18 @@ static proto_bool dns_match(const uint8_t *pres, size_t pn, const char *ref, siz
     return PROTO_TRUE;
 }
 
-static void x509_name_match(uint8_t *restrict work)
+void protocore_x509_name_match(uint8_t *restrict work)
 {
     (void)work;
-    X509.ok = PROTO_FALSE;
+    X509V.ok = PROTO_FALSE;
 
-    const X509Cert *c = X509.match_args.cert;
-    const char *host = X509.match_args.host;
+    const X509Cert *c = X509V.match_args.cert;
+    const char *host = X509V.match_args.host;
     if (c == NULL || host == NULL)
     {
         return;
     }
-    size_t rn = X509.match_args.host_len;
+    size_t rn = X509V.match_args.host_len;
     if (rn == 0u)
     {
         while (host[rn] != '\0')
@@ -664,7 +664,7 @@ static void x509_name_match(uint8_t *restrict work)
         }
         if (Der.tlv.tag == PROTOCORE_DER_CONTEXT(2) && dns_match(Der.tlv.content, Der.tlv.len, host, rn))
         {
-            X509.ok = PROTO_TRUE;
+            X509V.ok = PROTO_TRUE;
             return;
         }
         p = Der.tlv.next;
@@ -672,9 +672,7 @@ static void x509_name_match(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-X509Ns X509 = {
-    .parse = x509_parse,
-    .name_match = x509_name_match,
-};
+/** @brief The operands and the outcome. */
+X509Vars X509V;
 
 PROTOCORE_END_DECLS

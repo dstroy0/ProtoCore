@@ -325,9 +325,9 @@ static SmtpResult auth_response(uint8_t *restrict work, const char *secret)
     {
         return SMTP_ERR_OVERFLOW; // the encoding plus CRLF plus NUL must fit
     }
-    Base64.encode_args.src = (const uint8_t *)secret;
-    Base64.encode_args.src_len = slen;
-    Base64.encode_args.dst = SMTP_CTX(work)->b64;
+    Base64V.encode_args.src = (const uint8_t *)secret;
+    Base64V.encode_args.src_len = slen;
+    Base64V.encode_args.dst = SMTP_CTX(work)->b64;
     Base64.encode(base64_work);
     SMTP_CTX(work)->b64[elen] = '\r';
     SMTP_CTX(work)->b64[elen + 1] = '\n';

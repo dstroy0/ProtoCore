@@ -179,9 +179,9 @@ static void ws_accept_for_key(uint8_t *restrict work)
     Sha1V.hash_args.out = digest;
     Sha1.hash(w.buf);
     protocore_secure_release(mark);
-    Base64.encode_args.src = digest;
-    Base64.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
-    Base64.encode_args.dst = accept;
+    Base64V.encode_args.src = digest;
+    Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
+    Base64V.encode_args.dst = accept;
     Base64.encode(base64_work);
 }
 
@@ -586,8 +586,8 @@ static proto_bool ws_emit_frame(uint8_t *restrict work, uint8_t opcode, const ui
         return PROTO_FALSE;
     }
     uint8_t mask[4];
-    Rng.fill_args.out = mask;
-    Rng.fill_args.len = sizeof(mask);
+    RngV.fill_args.out = mask;
+    RngV.fill_args.len = sizeof(mask);
     Rng.fill(protocore_rng_span());
     WsClient.frame.opcode = opcode;
     WsClient.frame.payload = payload;
@@ -812,13 +812,13 @@ static void ws_connect(uint8_t *restrict work)
     // |Sec-WebSocket-Key| is 16 fresh random octets, base64-encoded (RFC 6455 sec 4.1); the accept
     // it implies is computed now and compared against the field the server sends back.
     uint8_t key_raw[16];
-    Rng.fill_args.out = key_raw;
-    Rng.fill_args.len = sizeof(key_raw);
+    RngV.fill_args.out = key_raw;
+    RngV.fill_args.len = sizeof(key_raw);
     Rng.fill(protocore_rng_span());
     char key_b64[PROTOCORE_WS_KEY_CAP];
-    Base64.encode_args.src = key_raw;
-    Base64.encode_args.src_len = sizeof(key_raw);
-    Base64.encode_args.dst = key_b64;
+    Base64V.encode_args.src = key_raw;
+    Base64V.encode_args.src_len = sizeof(key_raw);
+    Base64V.encode_args.dst = key_b64;
     Base64.encode(base64_work);
     char accept[PROTOCORE_WS_ACCEPT_CAP];
     WsClient.handshake.key = key_b64;

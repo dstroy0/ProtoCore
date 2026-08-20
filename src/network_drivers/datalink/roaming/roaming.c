@@ -68,27 +68,27 @@ static int find_bssid(const uint8_t *target, const protocore_roam_neighbor *nb, 
 static void pick(uint8_t *restrict work, int idx, protocore_roam_reason reason)
 {
     (void)work;
-    const protocore_roam_neighbor *nb = Roam.cand.list;
+    const protocore_roam_neighbor *nb = RoamV.cand.list;
 
-    Roam.decision.roam = PROTO_TRUE;
-    mem.cpy(Roam.decision.target_bssid, nb[idx].bssid, PROTOCORE_ROAM_BSSID_LEN);
-    Roam.decision.target_channel = nb[idx].channel;
-    Roam.decision.reason = reason;
+    RoamV.decision.roam = PROTO_TRUE;
+    mem.cpy(RoamV.decision.target_bssid, nb[idx].bssid, PROTOCORE_ROAM_BSSID_LEN);
+    RoamV.decision.target_channel = nb[idx].channel;
+    RoamV.decision.reason = reason;
 }
 
-static void roam_decide(uint8_t *restrict work)
+void protocore_roam_decide(uint8_t *restrict work)
 {
-    const uint8_t *serving = Roam.link.bssid;
-    const int8_t serving_rssi = Roam.link.rssi_dbm;
-    const protocore_roam_neighbor *nb = Roam.cand.list;
-    const uint8_t n = Roam.cand.n;
-    const protocore_roam_btm *btm = Roam.rules.request;
-    const protocore_roam_policy *policy = Roam.rules.policy;
+    const uint8_t *serving = RoamV.link.bssid;
+    const int8_t serving_rssi = RoamV.link.rssi_dbm;
+    const protocore_roam_neighbor *nb = RoamV.cand.list;
+    const uint8_t n = RoamV.cand.n;
+    const protocore_roam_btm *btm = RoamV.rules.request;
+    const protocore_roam_policy *policy = RoamV.rules.policy;
 
-    Roam.decision.roam = PROTO_FALSE;
-    mem.zero(Roam.decision.target_bssid, PROTOCORE_ROAM_BSSID_LEN);
-    Roam.decision.target_channel = 0;
-    Roam.decision.reason = PROTOCORE_ROAM_NONE;
+    RoamV.decision.roam = PROTO_FALSE;
+    mem.zero(RoamV.decision.target_bssid, PROTOCORE_ROAM_BSSID_LEN);
+    RoamV.decision.target_channel = 0;
+    RoamV.decision.reason = PROTOCORE_ROAM_NONE;
     if (!serving || (n && !nb))
     {
         return;
@@ -143,14 +143,14 @@ static void roam_decide(uint8_t *restrict work)
     // 4. Otherwise stay put.
 }
 
-static void roam_parse_neighbor_report(uint8_t *restrict work)
+void protocore_roam_parse_neighbor_report(uint8_t *restrict work)
 {
-    const uint8_t *elems = Roam.nr.elems;
-    const size_t len = Roam.nr.len;
-    protocore_roam_neighbor *out = Roam.nr.out;
-    const uint8_t max = Roam.nr.max;
+    const uint8_t *elems = RoamV.nr.elems;
+    const size_t len = RoamV.nr.len;
+    protocore_roam_neighbor *out = RoamV.nr.out;
+    const uint8_t max = RoamV.nr.max;
 
-    Roam.n = 0;
+    RoamV.n = 0;
     if (!elems || !out)
     {
         return;
@@ -175,16 +175,16 @@ static void roam_parse_neighbor_report(uint8_t *restrict work)
         }
         off += (size_t)2 + elen; // step over this element, matched or not
     }
-    Roam.n = count;
+    RoamV.n = count;
 }
 
-static void roam_parse_btm_request(uint8_t *restrict work)
+void protocore_roam_parse_btm_request(uint8_t *restrict work)
 {
-    const uint8_t *frame = Roam.btm.frame;
-    const size_t len = Roam.btm.len;
-    protocore_roam_btm *out = &Roam.hint;
+    const uint8_t *frame = RoamV.btm.frame;
+    const size_t len = RoamV.btm.len;
+    protocore_roam_btm *out = &RoamV.hint;
 
-    Roam.ok = PROTO_FALSE;
+    RoamV.ok = PROTO_FALSE;
     mem.zero(out, sizeof(*out));
     if (!frame || len < PROTOCORE_ROAM_BTM_FIXED_LEN || frame[0] != PROTOCORE_ROAM_WNM_CATEGORY ||
         frame[1] != PROTOCORE_ROAM_BTM_REQ_ACTION)
@@ -194,7 +194,7 @@ static void roam_parse_btm_request(uint8_t *restrict work)
     const uint8_t mode = frame[3]; // Request Mode
     out->present = PROTO_TRUE;
     out->disassoc_imminent = (mode & PROTOCORE_ROAM_BTM_DISASSOC) != 0;
-    Roam.ok = PROTO_TRUE;
+    RoamV.ok = PROTO_TRUE;
 
     // Step past the optional fields to the BSS Transition Candidate List Entries.
     size_t off = PROTOCORE_ROAM_BTM_FIXED_LEN;
@@ -220,8 +220,7 @@ static void roam_parse_btm_request(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-RoamNs Roam = {.decide = roam_decide,
-               .parse_neighbor_report = roam_parse_neighbor_report,
-               .parse_btm_request = roam_parse_btm_request};
+/** @brief The operands and the outcome. */
+RoamVars RoamV;
 
 #endif // PROTOCORE_ENABLE_ROAMING

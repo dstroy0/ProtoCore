@@ -155,13 +155,13 @@ static void ntp_reply(const uint8_t *data, size_t len, const struct protocore_ud
 }
 
 // The entries this file calls before reaching their definitions.
-static void ntp_service_epoch(uint8_t *restrict work);
+void protocore_ntp_service_epoch(uint8_t *restrict work);
 
-static void ntp_service_begin(uint8_t *restrict work)
+void protocore_ntp_service_begin(uint8_t *restrict work)
 {
-    const char *tz = NtpService.begin_args.tz;
-    const char *server1 = NtpService.begin_args.server1;
-    const char *server2 = NtpService.begin_args.server2;
+    const char *tz = NtpServiceV.begin_args.tz;
+    const char *server1 = NtpServiceV.begin_args.server1;
+    const char *server2 = NtpServiceV.begin_args.server2;
 
     (void)tz; // the epoch this client reports is UTC; nothing here formats a local time
     (void)server2;
@@ -173,7 +173,7 @@ static void ntp_service_begin(uint8_t *restrict work)
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
     if (!ntp_mem_bind(work))
     {
-        NtpService.ok = PROTO_FALSE; // no storage
+        NtpServiceV.ok = PROTO_FALSE; // no storage
         return;
     }
     Ip.args.text = host;
@@ -181,7 +181,7 @@ static void ntp_service_begin(uint8_t *restrict work)
     Ip.parse(ip_work);
     if (!Ip.ok)
     {
-        NtpService.ok = PROTO_FALSE; // a name, and this client has no resolver of its own
+        NtpServiceV.ok = PROTO_FALSE; // a name, and this client has no resolver of its own
         return;
     }
     // Bind every time rather than remembering: the listener rebinds a port it already holds, and a
@@ -194,7 +194,7 @@ static void ntp_service_begin(uint8_t *restrict work)
     UdpListener.listen(protocore_udp_listener_span());
     if (!UdpListener.ok)
     {
-        NtpService.ok = PROTO_FALSE;
+        NtpServiceV.ok = PROTO_FALSE;
         return;
     }
     // The transmit stamp doubles as the cookie the reply has to echo. Ticks, not a clock: this runs
@@ -212,29 +212,29 @@ static void ntp_service_begin(uint8_t *restrict work)
     UdpListener.send_args.data = req;
     UdpListener.send_args.len = PROTOCORE_NTP_PACKET_LEN;
     UdpListener.sendto(protocore_udp_listener_span());
-    NtpService.ok = UdpListener.ok;
+    NtpServiceV.ok = UdpListener.ok;
 }
 
-static void ntp_service_synced(uint8_t *restrict work)
+void protocore_ntp_service_synced(uint8_t *restrict work)
 {
-    NtpService.ok = NTP_SERVICE_CTX(work)->epoch != 0;
+    NtpServiceV.ok = NTP_SERVICE_CTX(work)->epoch != 0;
 }
 
-static void ntp_service_epoch(uint8_t *restrict work)
+void protocore_ntp_service_epoch(uint8_t *restrict work)
 {
     if (NTP_SERVICE_CTX(work)->epoch == 0)
     {
-        NtpService.value = 0;
+        NtpServiceV.value = 0;
         return;
     }
     // The reply fixed one instant; the monotonic clock carries it forward from there.
     uint32_t elapsed = ntp_now() - NTP_SERVICE_CTX(work)->sync_ms;
-    NtpService.value = NTP_SERVICE_CTX(work)->epoch + (time_t)(elapsed / 1000u);
+    NtpServiceV.value = NTP_SERVICE_CTX(work)->epoch + (time_t)(elapsed / 1000u);
 }
 
-static void ntp_service_set_test_epoch(uint8_t *restrict work)
+void protocore_ntp_service_set_test_epoch(uint8_t *restrict work)
 {
-    time_t epoch = NtpService.set_test_epoch_args.epoch;
+    time_t epoch = NtpServiceV.set_test_epoch_args.epoch;
 
     NTP_SERVICE_CTX(work)->epoch = epoch;
     NTP_SERVICE_CTX(work)->sync_ms = ntp_now();
@@ -244,7 +244,7 @@ size_t protocore_ntp_http_date(char *out, size_t out_cap)
 {
     // Not an entry, so the borrow comes from the accessor rather than a parameter.
     NtpService.epoch(protocore_ntp_service_span());
-    HttpDate.args.epoch = NtpService.value;
+    HttpDate.args.epoch = NtpServiceV.value;
     HttpDate.args.out = out;
     HttpDate.args.out_cap = (uint32_t)out_cap;
     HttpDate.format(http_date_work);
@@ -268,18 +268,13 @@ size_t protocore_ntp_http_date(char *out, size_t out_cap)
 // NTP as a registry time source (protocore_ntp_epoch is 0 until a reply lands). Register it with
 // protocore_time_source_add() so the aggregated protocore_time_now() - and the HTTP Date header - can be fed by
 // NTP alongside an RTC / GPS.
-static void ntp_service_time_source(uint8_t *restrict work)
+void protocore_ntp_service_time_source(uint8_t *restrict work)
 {
-    ntp_service_epoch(work);
-    NtpService.ms = (uint32_t)NtpService.value;
+    protocore_ntp_service_epoch(work);
+    NtpServiceV.ms = (uint32_t)NtpServiceV.value;
 }
-NtpServiceNs NtpService = {
-    .begin = ntp_service_begin,
-    .synced = ntp_service_synced,
-    .epoch = ntp_service_epoch,
-    .time_source = ntp_service_time_source,
-    .set_test_epoch = ntp_service_set_test_epoch,
-};
+/** @brief The operands and the outcome. */
+NtpServiceVars NtpServiceV;
 
 PROTOCORE_END_DECLS
 

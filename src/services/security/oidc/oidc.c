@@ -301,12 +301,12 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
         return PROTO_FALSE;
     }
     uint8_t tmp[PROTOCORE_OIDC_RSA_BYTES + 8];
-    Base64.url_decode_args.src = b64;
-    Base64.url_decode_args.src_len = str.len(b64, sizeof(b64));
-    Base64.url_decode_args.dst = tmp;
-    Base64.url_decode_args.dst_cap = sizeof(tmp);
+    Base64V.url_decode_args.src = b64;
+    Base64V.url_decode_args.src_len = str.len(b64, sizeof(b64));
+    Base64V.url_decode_args.dst = tmp;
+    Base64V.url_decode_args.dst_cap = sizeof(tmp);
     Base64.url_decode(base64_work);
-    size_t nlen = Base64.n;
+    size_t nlen = Base64V.n;
     if (nlen == 0 || !right_align(tmp, nlen, key->n, PROTOCORE_OIDC_RSA_BYTES))
     {
         return PROTO_FALSE;
@@ -317,12 +317,12 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
         return PROTO_FALSE;
     }
     uint8_t e_tmp[8];
-    Base64.url_decode_args.src = b64;
-    Base64.url_decode_args.src_len = str.len(b64, sizeof(b64));
-    Base64.url_decode_args.dst = e_tmp;
-    Base64.url_decode_args.dst_cap = sizeof(e_tmp);
+    Base64V.url_decode_args.src = b64;
+    Base64V.url_decode_args.src_len = str.len(b64, sizeof(b64));
+    Base64V.url_decode_args.dst = e_tmp;
+    Base64V.url_decode_args.dst_cap = sizeof(e_tmp);
     Base64.url_decode(base64_work);
-    size_t elen = Base64.n;
+    size_t elen = Base64V.n;
     if (elen == 0 || !right_align(e_tmp, elen, key->e, 4))
     {
         return PROTO_FALSE;
@@ -358,12 +358,12 @@ static void token_kid(uint8_t *restrict work)
         return;
     }
     uint8_t hdr[PROTOCORE_OIDC_HDR_LEN];
-    Base64.url_decode_args.src = seg[OIDC_SEG_HEADER];
-    Base64.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
-    Base64.url_decode_args.dst = hdr;
-    Base64.url_decode_args.dst_cap = sizeof(hdr) - 1;
+    Base64V.url_decode_args.src = seg[OIDC_SEG_HEADER];
+    Base64V.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
+    Base64V.url_decode_args.dst = hdr;
+    Base64V.url_decode_args.dst_cap = sizeof(hdr) - 1;
     Base64.url_decode(base64_work);
-    size_t hn = Base64.n;
+    size_t hn = Base64V.n;
     if (hn == 0)
     {
         return;
@@ -484,12 +484,12 @@ static void verify_with_key(uint8_t *restrict work)
 
     // JOSE Header: require `alg` == RS256 (RFC 7515 sec 4.1.1), which rejects alg:none and the
     // MAC-based algorithms of OIDC Core sec 3.1.3.7 step 8.
-    Base64.url_decode_args.src = seg[OIDC_SEG_HEADER];
-    Base64.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
-    Base64.url_decode_args.dst = hdr;
-    Base64.url_decode_args.dst_cap = PROTOCORE_OIDC_HDR_LEN - 1;
+    Base64V.url_decode_args.src = seg[OIDC_SEG_HEADER];
+    Base64V.url_decode_args.src_len = seglen[OIDC_SEG_HEADER];
+    Base64V.url_decode_args.dst = hdr;
+    Base64V.url_decode_args.dst_cap = PROTOCORE_OIDC_HDR_LEN - 1;
     Base64.url_decode(base64_work);
-    size_t hn = Base64.n;
+    size_t hn = Base64V.n;
     if (hn == 0)
     {
         protocore_plaintext_release(scope);
@@ -507,12 +507,12 @@ static void verify_with_key(uint8_t *restrict work)
     }
 
     // JWS Signature: RSA-2048 -> exactly 256 bytes (RFC 7518 sec 3.3).
-    Base64.url_decode_args.src = seg[OIDC_SEG_SIGNATURE];
-    Base64.url_decode_args.src_len = seglen[OIDC_SEG_SIGNATURE];
-    Base64.url_decode_args.dst = sig;
-    Base64.url_decode_args.dst_cap = PROTOCORE_OIDC_RSA_BYTES;
+    Base64V.url_decode_args.src = seg[OIDC_SEG_SIGNATURE];
+    Base64V.url_decode_args.src_len = seglen[OIDC_SEG_SIGNATURE];
+    Base64V.url_decode_args.dst = sig;
+    Base64V.url_decode_args.dst_cap = PROTOCORE_OIDC_RSA_BYTES;
     Base64.url_decode(base64_work);
-    if (Base64.n != PROTOCORE_OIDC_RSA_BYTES)
+    if (Base64V.n != PROTOCORE_OIDC_RSA_BYTES)
     {
         protocore_plaintext_release(scope);
         Oidc.result = PROTOCORE_OIDC_ERR_FORMAT;
@@ -550,12 +550,12 @@ static void verify_with_key(uint8_t *restrict work)
     }
 
     // JWS Payload: the Claims, trusted only now that the signature verifies.
-    Base64.url_decode_args.src = seg[OIDC_SEG_PAYLOAD];
-    Base64.url_decode_args.src_len = seglen[OIDC_SEG_PAYLOAD];
-    Base64.url_decode_args.dst = pl;
-    Base64.url_decode_args.dst_cap = PROTOCORE_OIDC_MAX_LEN - 1;
+    Base64V.url_decode_args.src = seg[OIDC_SEG_PAYLOAD];
+    Base64V.url_decode_args.src_len = seglen[OIDC_SEG_PAYLOAD];
+    Base64V.url_decode_args.dst = pl;
+    Base64V.url_decode_args.dst_cap = PROTOCORE_OIDC_MAX_LEN - 1;
     Base64.url_decode(base64_work);
-    size_t pn = Base64.n;
+    size_t pn = Base64V.n;
     if (pn == 0)
     {
         protocore_plaintext_release(scope);

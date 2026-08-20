@@ -135,9 +135,15 @@ typedef struct
     FileServingHoldsSlotArgs holds_slot_args;
     FileServingServeFileArgs serve_file_args;
     FileServingServeStaticArgs serve_static_args;
-
     proto_bool ok;
+} FileServingVars;
 
+/** @brief The operands and the outcome. */
+extern FileServingVars FileServingV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const http_rfc1123)(uint8_t *restrict work);
     void (*const serve_static_request)(uint8_t *restrict work);
     void (*const serve_file_internal)(uint8_t *restrict work);
@@ -147,8 +153,29 @@ typedef struct
     void (*const serve_static)(uint8_t *restrict work);
 } FileServingNs;
 
-/** @brief The one symbol this module exports. */
-extern FileServingNs FileServing;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in FileServingV or a region of the borrow at a fixed offset.
+void protocore_file_serving_http_rfc1123(uint8_t *restrict work);
+void protocore_file_serving_serve_static_request(uint8_t *restrict work);
+void protocore_file_serving_serve_file_internal(uint8_t *restrict work);
+void protocore_file_serving_file_send_pump(uint8_t *restrict work);
+void protocore_file_serving_holds_slot(uint8_t *restrict work);
+void protocore_file_serving_serve_file(uint8_t *restrict work);
+void protocore_file_serving_serve_static(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `FileServing.http_rfc1123(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const FileServingNs FileServing __attribute__((unused)) = {
+    .http_rfc1123 = protocore_file_serving_http_rfc1123,
+    .serve_static_request = protocore_file_serving_serve_static_request,
+    .serve_file_internal = protocore_file_serving_serve_file_internal,
+    .file_send_pump = protocore_file_serving_file_send_pump,
+    .holds_slot = protocore_file_serving_holds_slot,
+    .serve_file = protocore_file_serving_serve_file,
+    .serve_static = protocore_file_serving_serve_static,
+};
 
 /**
  * @brief The PROTOCORE_FILE_SERVING_BORROW bytes this module's state lives in.

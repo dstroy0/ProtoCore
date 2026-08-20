@@ -92,17 +92,36 @@ typedef struct
     SpnegoWrapNegotiateArgs wrap_negotiate_args;
     SpnegoParseResponseArgs parse_response_args;
     SpnegoWrapAuthenticateArgs wrap_authenticate_args;
-
     proto_bool ok;
     size_t n;
+} SpnegoVars;
 
+/** @brief The operands and the outcome. */
+extern SpnegoVars SpnegoV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const wrap_negotiate)(uint8_t *restrict work);
     void (*const parse_response)(uint8_t *restrict work);
     void (*const wrap_authenticate)(uint8_t *restrict work);
 } SpnegoNs;
 
-/** @brief The one symbol this module exports. */
-extern SpnegoNs Spnego;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SpnegoV or a region of the borrow at a fixed offset.
+void protocore_spnego_wrap_negotiate(uint8_t *restrict work);
+void protocore_spnego_parse_response(uint8_t *restrict work);
+void protocore_spnego_wrap_authenticate(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Spnego.wrap_negotiate(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SpnegoNs Spnego __attribute__((unused)) = {
+    .wrap_negotiate = protocore_spnego_wrap_negotiate,
+    .parse_response = protocore_spnego_parse_response,
+    .wrap_authenticate = protocore_spnego_wrap_authenticate,
+};
 
 PROTOCORE_END_DECLS
 
