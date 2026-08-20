@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3ee6f8e`](https://github.com/dstroy0/ProtoCore/commit/3ee6f8e6f84e3172c88b614a587c48fe0ec0a69b))
 - update CHANGELOG.md [skip ci] ([`8d62e65`](https://github.com/dstroy0/ProtoCore/commit/8d62e659eaa50ee5f9ce420fc7dac7c0f1a9f5c4))
 - update CHANGELOG.md [skip ci] ([`137a0af`](https://github.com/dstroy0/ProtoCore/commit/137a0af04b54fa5105148b317a923b7487c13faf))
 - update CHANGELOG.md [skip ci] ([`b139154`](https://github.com/dstroy0/ProtoCore/commit/b13915458d027d15932bca53491dc581f690d6b3))
@@ -390,6 +391,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- a call does not reserve a name ([`d2256ff`](https://github.com/dstroy0/ProtoCore/commit/d2256ffe3a62b41c20ed0645030934ea335dfdd9))
+- batch 12 of the handle reshape, 24 modules to 304 ([`0b81033`](https://github.com/dstroy0/ProtoCore/commit/0b810336f602d71090d780ca9d61535cf2e895ff))
 - batch 11 of the handle reshape, 29 modules to 280 of 308 ([`6c268ef`](https://github.com/dstroy0/ProtoCore/commit/6c268ef790bcfa77a0b1c79770c21e71cc909e60))
 - ask whether a namespace is reached in one hop, and whether the table binds every entry ([`64ec6d4`](https://github.com/dstroy0/ProtoCore/commit/64ec6d4417456cb5c4dcacbd3bb1c8450ed8d654))
 - bind a wrapped table entry, and refuse a table that leaves one unbound ([`9e6bdf5`](https://github.com/dstroy0/ProtoCore/commit/9e6bdf5b57a4075be2e01b9b78d356b59704f2a1))
