@@ -272,13 +272,19 @@ typedef struct
     MqttPacketArgs packet;     ///< the fixed header a build stamps or a parse reads
     MqttBufArgs buf;           ///< the octets a codec call moves
     MqttDeliveryArgs delivery; ///< where an inbound Application Message is handed on
-
     proto_bool ok;
     size_t n;
     int32_t i32;
     uint8_t u8;
     proto_bool session_present;
+} MqttVars;
 
+/** @brief The operands and the outcome. */
+extern MqttVars MqttV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const encode_remaining_length)(uint8_t *restrict work);
     void (*const decode_remaining_length)(uint8_t *restrict work);
     void (*const build_connect)(uint8_t *restrict work);
@@ -303,8 +309,59 @@ typedef struct
     void (*const disconnect)(uint8_t *restrict work);
 } MqttNs;
 
-/** @brief The one symbol this module exports. */
-extern MqttNs Mqtt;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MqttV or a region of the borrow at a fixed offset.
+void protocore_mqtt_encode_remaining_length(uint8_t *restrict work);
+void protocore_mqtt_decode_remaining_length(uint8_t *restrict work);
+void protocore_mqtt_build_connect(uint8_t *restrict work);
+void protocore_mqtt_build_publish(uint8_t *restrict work);
+void protocore_mqtt_build_subscribe(uint8_t *restrict work);
+void protocore_mqtt_build_unsubscribe(uint8_t *restrict work);
+void protocore_mqtt_build_ack(uint8_t *restrict work);
+void protocore_mqtt_build_pingreq(uint8_t *restrict work);
+void protocore_mqtt_build_disconnect(uint8_t *restrict work);
+void protocore_mqtt_parse_fixed_header(uint8_t *restrict work);
+void protocore_mqtt_parse_publish(uint8_t *restrict work);
+void protocore_mqtt_parse_ack(uint8_t *restrict work);
+void protocore_mqtt_parse_connack(uint8_t *restrict work);
+void protocore_mqtt_parse_suback(uint8_t *restrict work);
+void protocore_mqtt_on_message(uint8_t *restrict work);
+void protocore_mqtt_connect(uint8_t *restrict work);
+void protocore_mqtt_publish(uint8_t *restrict work);
+void protocore_mqtt_subscribe(uint8_t *restrict work);
+void protocore_mqtt_unsubscribe(uint8_t *restrict work);
+void protocore_mqtt_loop(uint8_t *restrict work);
+void protocore_mqtt_connected(uint8_t *restrict work);
+void protocore_mqtt_disconnect(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Mqtt.encode_remaining_length(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MqttNs Mqtt __attribute__((unused)) = {
+    .encode_remaining_length = protocore_mqtt_encode_remaining_length,
+    .decode_remaining_length = protocore_mqtt_decode_remaining_length,
+    .build_connect = protocore_mqtt_build_connect,
+    .build_publish = protocore_mqtt_build_publish,
+    .build_subscribe = protocore_mqtt_build_subscribe,
+    .build_unsubscribe = protocore_mqtt_build_unsubscribe,
+    .build_ack = protocore_mqtt_build_ack,
+    .build_pingreq = protocore_mqtt_build_pingreq,
+    .build_disconnect = protocore_mqtt_build_disconnect,
+    .parse_fixed_header = protocore_mqtt_parse_fixed_header,
+    .parse_publish = protocore_mqtt_parse_publish,
+    .parse_ack = protocore_mqtt_parse_ack,
+    .parse_connack = protocore_mqtt_parse_connack,
+    .parse_suback = protocore_mqtt_parse_suback,
+    .on_message = protocore_mqtt_on_message,
+    .connect = protocore_mqtt_connect,
+    .publish = protocore_mqtt_publish,
+    .subscribe = protocore_mqtt_subscribe,
+    .unsubscribe = protocore_mqtt_unsubscribe,
+    .loop = protocore_mqtt_loop,
+    .connected = protocore_mqtt_connected,
+    .disconnect = protocore_mqtt_disconnect,
+};
 
 /**
  * @brief The PROTOCORE_MQTT_BORROW bytes this module's state lives in.

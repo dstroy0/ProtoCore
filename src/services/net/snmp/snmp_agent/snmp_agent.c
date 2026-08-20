@@ -409,39 +409,39 @@ static void set_system(uint8_t *restrict work)
 
 static void enc_value(BerEnc *e, const SnmpValue *v)
 {
-    SnmpBer.enc = e;
+    SnmpBerV.enc = e;
     switch (v->type)
     {
     case (uint8_t)SNMP_TAG_BER_INTEGER:
-        SnmpBer.tlv.ival = v->ival;
+        SnmpBerV.tlv.ival = v->ival;
         SnmpBer.put_integer(snmp_ber_work);
         break;
     case (uint8_t)SNMP_TAG_BER_OCTET_STRING:
     case (uint8_t)SNMP_TAG_SNMP_OPAQUE:
-        SnmpBer.tlv.tag = v->type;
-        SnmpBer.tlv.bytes = (const uint8_t *)v->str;
-        SnmpBer.tlv.len = v->str_len;
+        SnmpBerV.tlv.tag = v->type;
+        SnmpBerV.tlv.bytes = (const uint8_t *)v->str;
+        SnmpBerV.tlv.len = v->str_len;
         SnmpBer.put_octet_string(snmp_ber_work);
         break;
     case (uint8_t)SNMP_TAG_BER_OID:
-        SnmpBer.tlv.arcs = v->oid;
-        SnmpBer.tlv.arc_count = v->oid_len;
+        SnmpBerV.tlv.arcs = v->oid;
+        SnmpBerV.tlv.arc_count = v->oid_len;
         SnmpBer.put_oid(snmp_ber_work);
         break;
     case (uint8_t)SNMP_TAG_SNMP_TIMETICKS:
     case (uint8_t)SNMP_TAG_SNMP_COUNTER32:
     case (uint8_t)SNMP_TAG_SNMP_GAUGE32:
-        SnmpBer.tlv.tag = v->type;
-        SnmpBer.tlv.uval = v->uval;
+        SnmpBerV.tlv.tag = v->type;
+        SnmpBerV.tlv.uval = v->uval;
         SnmpBer.put_uint(snmp_ber_work);
         break;
     case (uint8_t)SNMP_TAG_SNMP_IPADDRESS: {
         // RFC 2578 sec 7.1.5: an OCTET STRING of length 4, network byte order.
         uint8_t ip[4] = {(uint8_t)(v->uval >> 24), (uint8_t)(v->uval >> 16), (uint8_t)(v->uval >> 8),
                          (uint8_t)(v->uval)};
-        SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_IPADDRESS;
-        SnmpBer.tlv.bytes = ip;
-        SnmpBer.tlv.len = 4;
+        SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_SNMP_IPADDRESS;
+        SnmpBerV.tlv.bytes = ip;
+        SnmpBerV.tlv.len = 4;
         SnmpBer.put_octet_string(snmp_ber_work);
         break;
     }
@@ -450,9 +450,9 @@ static void enc_value(BerEnc *e, const SnmpValue *v)
         break;
     default:
         // A VarBind exception marker (RFC 3416 sec 3): the tag with a zero-length value.
-        SnmpBer.tlv.tag = v->type;
-        SnmpBer.tlv.bytes = NULL;
-        SnmpBer.tlv.len = 0;
+        SnmpBerV.tlv.tag = v->type;
+        SnmpBerV.tlv.bytes = NULL;
+        SnmpBerV.tlv.len = 0;
         SnmpBer.put_tlv(snmp_ber_work);
         break;
     }
@@ -464,22 +464,22 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
 {
     mem.set(v, 0, sizeof(*v));
     size_t save = d->pos;
-    SnmpBer.dec = d;
+    SnmpBerV.dec = d;
     SnmpBer.read_header(snmp_ber_work);
-    if (!SnmpBer.ok)
+    if (!SnmpBerV.ok)
     {
         return PROTO_FALSE;
     }
-    const uint8_t tag = SnmpBer.tag;
-    const size_t len = SnmpBer.vlen;
+    const uint8_t tag = SnmpBerV.tag;
+    const size_t len = SnmpBerV.vlen;
     v->type = tag;
     switch (tag)
     {
     case (uint8_t)SNMP_TAG_BER_INTEGER:
         d->pos = save;
         SnmpBer.read_integer(snmp_ber_work);
-        v->ival = SnmpBer.ival;
-        return SnmpBer.ok;
+        v->ival = SnmpBerV.ival;
+        return SnmpBerV.ok;
     case (uint8_t)SNMP_TAG_SNMP_TIMETICKS:
     case (uint8_t)SNMP_TAG_SNMP_COUNTER32:
     case (uint8_t)SNMP_TAG_SNMP_GAUGE32:
@@ -501,14 +501,14 @@ static proto_bool dec_value(BerDec *d, SnmpValue *v, uint32_t *oidbuf)
         return PROTO_TRUE;
     case (uint8_t)SNMP_TAG_BER_OID:
         d->pos = save;
-        SnmpBer.read_args.arc_out = oidbuf;
-        SnmpBer.read_args.arc_cap = SNMP_MAX_OID_LEN;
+        SnmpBerV.read_args.arc_out = oidbuf;
+        SnmpBerV.read_args.arc_cap = SNMP_MAX_OID_LEN;
         SnmpBer.read_oid(snmp_ber_work);
-        if (!SnmpBer.ok)
+        if (!SnmpBerV.ok)
         {
             return PROTO_FALSE;
         }
-        v->oid_len = SnmpBer.n;
+        v->oid_len = SnmpBerV.n;
         v->oid = oidbuf;
         return PROTO_TRUE;
     default: // NULL, the value a GetRequest-PDU binding carries, and anything else: step past it
@@ -566,40 +566,40 @@ static size_t encode_response(uint8_t *restrict work, long request_id, long err_
                               uint8_t *buf, size_t cap)
 {
     BerEnc e;
-    SnmpBer.enc = &e;
-    SnmpBer.buf.out = buf;
-    SnmpBer.buf.cap = cap;
+    SnmpBerV.enc = &e;
+    SnmpBerV.buf.out = buf;
+    SnmpBerV.buf.cap = cap;
     SnmpBer.enc_init(snmp_ber_work);
-    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_SNMP_PDU_RESPONSE;
+    SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_SNMP_PDU_RESPONSE;
     SnmpBer.seq_begin(snmp_ber_work);
-    const size_t pdu = SnmpBer.tlv.token;
-    SnmpBer.tlv.ival = request_id;
+    const size_t pdu = SnmpBerV.tlv.token;
+    SnmpBerV.tlv.ival = request_id;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBer.tlv.ival = err_status;
+    SnmpBerV.tlv.ival = err_status;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBer.tlv.ival = err_index;
+    SnmpBerV.tlv.ival = err_index;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
     SnmpBer.seq_begin(snmp_ber_work);
-    const size_t vbl = SnmpBer.tlv.token;
+    const size_t vbl = SnmpBerV.tlv.token;
     for (size_t i = 0; i < nout; i++)
     {
-        SnmpBer.enc = &e;
-        SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+        SnmpBerV.enc = &e;
+        SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
         SnmpBer.seq_begin(snmp_ber_work);
-        const size_t vb = SnmpBer.tlv.token;
-        SnmpBer.tlv.arcs = SNMP_AGENT_CTX(work)->out[i].oid;
-        SnmpBer.tlv.arc_count = SNMP_AGENT_CTX(work)->out[i].oid_len;
+        const size_t vb = SnmpBerV.tlv.token;
+        SnmpBerV.tlv.arcs = SNMP_AGENT_CTX(work)->out[i].oid;
+        SnmpBerV.tlv.arc_count = SNMP_AGENT_CTX(work)->out[i].oid_len;
         SnmpBer.put_oid(snmp_ber_work);
         enc_value(&e, &SNMP_AGENT_CTX(work)->out[i].val);
-        SnmpBer.enc = &e;
-        SnmpBer.tlv.token = vb;
+        SnmpBerV.enc = &e;
+        SnmpBerV.tlv.token = vb;
         SnmpBer.seq_end(snmp_ber_work);
     }
-    SnmpBer.enc = &e;
-    SnmpBer.tlv.token = vbl;
+    SnmpBerV.enc = &e;
+    SnmpBerV.tlv.token = vbl;
     SnmpBer.seq_end(snmp_ber_work);
-    SnmpBer.tlv.token = pdu;
+    SnmpBerV.tlv.token = pdu;
     SnmpBer.seq_end(snmp_ber_work);
     return e.ok ? e.len : 0;
 }
@@ -617,20 +617,20 @@ static size_t decode_varbinds(uint8_t *restrict work, BerDec *d, size_t vbl_end)
         {
             return SNMP_MAX_VARBINDS + 1;
         }
-        SnmpBer.dec = d;
+        SnmpBerV.dec = d;
         SnmpBer.read_header(snmp_ber_work);
-        if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+        if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
         {
             return SNMP_MAX_VARBINDS + 1;
         }
-        SnmpBer.read_args.arc_out = SNMP_AGENT_CTX(work)->in[nvb].oid;
-        SnmpBer.read_args.arc_cap = SNMP_MAX_OID_LEN;
+        SnmpBerV.read_args.arc_out = SNMP_AGENT_CTX(work)->in[nvb].oid;
+        SnmpBerV.read_args.arc_cap = SNMP_MAX_OID_LEN;
         SnmpBer.read_oid(snmp_ber_work);
-        if (!SnmpBer.ok)
+        if (!SnmpBerV.ok)
         {
             return SNMP_MAX_VARBINDS + 1;
         }
-        SNMP_AGENT_CTX(work)->in[nvb].oid_len = SnmpBer.n;
+        SNMP_AGENT_CTX(work)->in[nvb].oid_len = SnmpBerV.n;
         if (!dec_value(d, &SNMP_AGENT_CTX(work)->in[nvb].val, SNMP_AGENT_CTX(work)->in[nvb].valoid))
         {
             return SNMP_MAX_VARBINDS + 1;
@@ -796,45 +796,45 @@ static void dispatch_pdu(uint8_t *restrict work)
     SnmpAgent.n = 0;
 
     BerDec d;
-    SnmpBer.dec = &d;
-    SnmpBer.buf.in = pdu;
-    SnmpBer.buf.cap = pdu_len;
+    SnmpBerV.dec = &d;
+    SnmpBerV.buf.in = pdu;
+    SnmpBerV.buf.cap = pdu_len;
     SnmpBer.dec_init(snmp_ber_work);
 
     SnmpBer.read_header(snmp_ber_work);
-    if (!SnmpBer.ok)
+    if (!SnmpBerV.ok)
     {
         return;
     }
-    const uint8_t pdu_tag = SnmpBer.tag;
+    const uint8_t pdu_tag = SnmpBerV.tag;
 
     // Positions 2 and 3: error-status and error-index in a PDU, non-repeaters and max-repetitions
     // in a BulkPDU (RFC 3416 sec 3).
     SnmpBer.read_integer(snmp_ber_work);
-    if (!SnmpBer.ok)
+    if (!SnmpBerV.ok)
     {
         return;
     }
-    const long request_id = SnmpBer.ival;
+    const long request_id = SnmpBerV.ival;
     SnmpBer.read_integer(snmp_ber_work);
-    if (!SnmpBer.ok)
+    if (!SnmpBerV.ok)
     {
         return;
     }
-    const long field2 = SnmpBer.ival;
+    const long field2 = SnmpBerV.ival;
     SnmpBer.read_integer(snmp_ber_work);
-    if (!SnmpBer.ok)
+    if (!SnmpBerV.ok)
     {
         return;
     }
-    const long field3 = SnmpBer.ival;
+    const long field3 = SnmpBerV.ival;
 
     SnmpBer.read_header(snmp_ber_work);
-    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
+    if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE)
     {
         return;
     }
-    const size_t vbl_end = d.pos + SnmpBer.vlen;
+    const size_t vbl_end = d.pos + SnmpBerV.vlen;
 
     const size_t nvb = decode_varbinds(work, &d, vbl_end);
     if (nvb > SNMP_MAX_VARBINDS)
@@ -903,23 +903,23 @@ static void agent_process(uint8_t *restrict work)
     SnmpAgent.n = 0;
 
     BerDec d;
-    SnmpBer.dec = &d;
-    SnmpBer.buf.in = req;
-    SnmpBer.buf.cap = req_len;
+    SnmpBerV.dec = &d;
+    SnmpBerV.buf.in = req;
+    SnmpBerV.buf.cap = req_len;
     SnmpBer.dec_init(snmp_ber_work);
 
     SnmpBer.read_header(snmp_ber_work);
-    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE) // the message wrapper
+    if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_SEQUENCE) // the message wrapper
     {
         return;
     }
 
     SnmpBer.read_integer(snmp_ber_work);
-    if (!SnmpBer.ok)
+    if (!SnmpBerV.ok)
     {
         return;
     }
-    const long version = SnmpBer.ival;
+    const long version = SnmpBerV.ival;
 
     if (version == (int)SNMP_V3)
     {
@@ -939,12 +939,12 @@ static void agent_process(uint8_t *restrict work)
     }
 
     SnmpBer.read_header(snmp_ber_work);
-    if (!SnmpBer.ok || SnmpBer.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
+    if (!SnmpBerV.ok || SnmpBerV.tag != (uint8_t)SNMP_TAG_BER_OCTET_STRING)
     {
         return;
     }
     const char *community = (const char *)(d.buf + d.pos);
-    const size_t community_len = SnmpBer.vlen;
+    const size_t community_len = SnmpBerV.vlen;
     d.pos += community_len;
 
     // RFC 1157 sec 3.2.5: the message is authentic when it names a community it belongs to. The
@@ -974,23 +974,23 @@ static void agent_process(uint8_t *restrict work)
     }
 
     BerEnc e;
-    SnmpBer.enc = &e;
-    SnmpBer.buf.out = resp;
-    SnmpBer.buf.cap = resp_cap;
+    SnmpBerV.enc = &e;
+    SnmpBerV.buf.out = resp;
+    SnmpBerV.buf.cap = resp_cap;
     SnmpBer.enc_init(snmp_ber_work);
-    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
+    SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_SEQUENCE;
     SnmpBer.seq_begin(snmp_ber_work);
-    const size_t msg = SnmpBer.tlv.token;
-    SnmpBer.tlv.ival = version;
+    const size_t msg = SnmpBerV.tlv.token;
+    SnmpBerV.tlv.ival = version;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBer.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
-    SnmpBer.tlv.bytes = (const uint8_t *)community;
-    SnmpBer.tlv.len = community_len;
+    SnmpBerV.tlv.tag = (uint8_t)SNMP_TAG_BER_OCTET_STRING;
+    SnmpBerV.tlv.bytes = (const uint8_t *)community;
+    SnmpBerV.tlv.len = community_len;
     SnmpBer.put_octet_string(snmp_ber_work);
-    SnmpBer.tlv.bytes = SNMP_AGENT_CTX(work)->pdu_stage;
-    SnmpBer.tlv.len = pn;
+    SnmpBerV.tlv.bytes = SNMP_AGENT_CTX(work)->pdu_stage;
+    SnmpBerV.tlv.len = pn;
     SnmpBer.put_raw(snmp_ber_work);
-    SnmpBer.tlv.token = msg;
+    SnmpBerV.tlv.token = msg;
     SnmpBer.seq_end(snmp_ber_work);
     SnmpAgent.n = e.ok ? e.len : 0;
 }

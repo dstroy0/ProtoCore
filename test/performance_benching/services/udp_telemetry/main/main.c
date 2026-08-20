@@ -16,42 +16,42 @@
 /** @brief Bind @p buf as the line buffer and open the line with @p measurement. */
 static void line_open(char *buf, size_t cap, const char *measurement)
 {
-    UdpTelemetry.line.buf = buf;
-    UdpTelemetry.line.cap = cap;
-    UdpTelemetry.line.measurement = measurement;
+    UdpTelemetryV.line.buf = buf;
+    UdpTelemetryV.line.cap = cap;
+    UdpTelemetryV.line.measurement = measurement;
     UdpTelemetry.measurement(protocore_udp_telemetry_span());
 }
 
 /** @brief Append one tag set entry `,key=value`. */
 static void line_tag(const char *key, const char *value)
 {
-    UdpTelemetry.tags.key = key;
-    UdpTelemetry.tags.value = value;
+    UdpTelemetryV.tags.key = key;
+    UdpTelemetryV.tags.value = value;
     UdpTelemetry.tag(protocore_udp_telemetry_span());
 }
 
 /** @brief Append `key=<v>i`. */
 static void line_int(const char *key, int64_t v)
 {
-    UdpTelemetry.fields.key = key;
-    UdpTelemetry.fields.i64 = v;
+    UdpTelemetryV.fields.key = key;
+    UdpTelemetryV.fields.i64 = v;
     UdpTelemetry.field_int(protocore_udp_telemetry_span());
 }
 
 /** @brief Append `key=<v>u`. */
 static void line_uint(const char *key, uint64_t v)
 {
-    UdpTelemetry.fields.key = key;
-    UdpTelemetry.fields.u64 = v;
+    UdpTelemetryV.fields.key = key;
+    UdpTelemetryV.fields.u64 = v;
     UdpTelemetry.field_uint(protocore_udp_telemetry_span());
 }
 
 /** @brief Append `key=<v>` to @p decimals places. */
 static void line_float(const char *key, float v, uint8_t decimals)
 {
-    UdpTelemetry.fields.key = key;
-    UdpTelemetry.fields.f32 = v;
-    UdpTelemetry.fields.decimals = decimals;
+    UdpTelemetryV.fields.key = key;
+    UdpTelemetryV.fields.f32 = v;
+    UdpTelemetryV.fields.decimals = decimals;
     UdpTelemetry.field_float(protocore_udp_telemetry_span());
 }
 
@@ -69,7 +69,7 @@ void dbench_run(void)
             line_float("temp", 21.5f, 1);
             line_int("rssi", -42);
             line_uint("uptime", 1234u);
-            sink += UdpTelemetry.n;
+            sink += UdpTelemetryV.n;
         });
         (void)sink;
         DBENCH_DONE();

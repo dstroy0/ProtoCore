@@ -108,18 +108,39 @@ typedef struct
     SnmpNotifyPduArgs pdu; ///< what the notification PDU carries
     SnmpNotifyDstArgs dst; ///< where a send goes
     SnmpNotifyBufArgs buf; ///< where the message is built
-
     proto_bool ok;
     size_t n;
+} SnmpNotifyVars;
 
+/** @brief The operands and the outcome. */
+extern SnmpNotifyVars SnmpNotifyV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_pdu)(uint8_t *restrict work);
     void (*const build_v2c)(uint8_t *restrict work);
     void (*const trap_v2c)(uint8_t *restrict work);
     void (*const inform_v2c)(uint8_t *restrict work);
 } SnmpNotifyNs;
 
-/** @brief The one symbol this module exports. */
-extern SnmpNotifyNs SnmpNotify;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SnmpNotifyV or a region of the borrow at a fixed offset.
+void protocore_snmp_notify_build_pdu(uint8_t *restrict work);
+void protocore_snmp_notify_build_v2c(uint8_t *restrict work);
+void protocore_snmp_notify_trap_v2c(uint8_t *restrict work);
+void protocore_snmp_notify_inform_v2c(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SnmpNotify.build_pdu(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SnmpNotifyNs SnmpNotify __attribute__((unused)) = {
+    .build_pdu = protocore_snmp_notify_build_pdu,
+    .build_v2c = protocore_snmp_notify_build_v2c,
+    .trap_v2c = protocore_snmp_notify_trap_v2c,
+    .inform_v2c = protocore_snmp_notify_inform_v2c,
+};
 
 /**
  * @brief The PROTOCORE_SNMP_NOTIFY_BORROW bytes this module's state lives in.

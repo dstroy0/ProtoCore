@@ -144,13 +144,19 @@ typedef struct
     WampUriArgs uri;         ///< the URI a message names
     WampPayloadArgs payload; ///< the dicts and the payload lists a message carries
     WampParseArgs parse;     ///< the received message and the element a read names
-
     proto_bool ok;
     size_t n;
     uint64_t u64;
     int32_t i32;
     const char *text;
+} WampVars;
 
+/** @brief The operands and the outcome. */
+extern WampVars WampV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_hello)(uint8_t *restrict work);
     void (*const build_goodbye)(uint8_t *restrict work);
     void (*const build_subscribe)(uint8_t *restrict work);
@@ -160,15 +166,47 @@ typedef struct
     void (*const build_register)(uint8_t *restrict work);
     void (*const build_unregister)(uint8_t *restrict work);
     void (*const build_yield)(uint8_t *restrict work);
-
     void (*const element)(uint8_t *restrict work);
     void (*const get_type)(uint8_t *restrict work);
     void (*const get_id)(uint8_t *restrict work);
     void (*const get_uri)(uint8_t *restrict work);
 } WampNs;
 
-/** @brief The one symbol this module exports. */
-extern WampNs Wamp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WampV or a region of the borrow at a fixed offset.
+void protocore_wamp_build_hello(uint8_t *restrict work);
+void protocore_wamp_build_goodbye(uint8_t *restrict work);
+void protocore_wamp_build_subscribe(uint8_t *restrict work);
+void protocore_wamp_build_unsubscribe(uint8_t *restrict work);
+void protocore_wamp_build_publish(uint8_t *restrict work);
+void protocore_wamp_build_call(uint8_t *restrict work);
+void protocore_wamp_build_register(uint8_t *restrict work);
+void protocore_wamp_build_unregister(uint8_t *restrict work);
+void protocore_wamp_build_yield(uint8_t *restrict work);
+void protocore_wamp_element(uint8_t *restrict work);
+void protocore_wamp_get_type(uint8_t *restrict work);
+void protocore_wamp_get_id(uint8_t *restrict work);
+void protocore_wamp_get_uri(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Wamp.build_hello(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WampNs Wamp __attribute__((unused)) = {
+    .build_hello = protocore_wamp_build_hello,
+    .build_goodbye = protocore_wamp_build_goodbye,
+    .build_subscribe = protocore_wamp_build_subscribe,
+    .build_unsubscribe = protocore_wamp_build_unsubscribe,
+    .build_publish = protocore_wamp_build_publish,
+    .build_call = protocore_wamp_build_call,
+    .build_register = protocore_wamp_build_register,
+    .build_unregister = protocore_wamp_build_unregister,
+    .build_yield = protocore_wamp_build_yield,
+    .element = protocore_wamp_element,
+    .get_type = protocore_wamp_get_type,
+    .get_id = protocore_wamp_get_id,
+    .get_uri = protocore_wamp_get_uri,
+};
 
 PROTOCORE_END_DECLS
 

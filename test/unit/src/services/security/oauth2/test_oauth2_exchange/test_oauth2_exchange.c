@@ -149,8 +149,8 @@ void test_the_exchange_posts_the_body_it_built(void)
     uint8_t *work = protocore_oauth2_span();
     seat_code_grant();
     Oauth2.exchange_code(work);
-    TEST_ASSERT_EQUAL_PTR(OAUTH2_CTX(work)->body, (const char *)HttpClient.request.body);
-    TEST_ASSERT_EQUAL_size_t(strlen(OAUTH2_CTX(work)->body), HttpClient.request.body_len);
-    TEST_ASSERT_EQUAL_STRING("application/x-www-form-urlencoded", HttpClient.request.content_type);
-    TEST_ASSERT_EQUAL_STRING("http://10.0.0.5:8080/token", HttpClient.target.url);
+    TEST_ASSERT_EQUAL_PTR(OAUTH2_CTX(work)->body, (const char *)HttpClientV.request.body);
+    TEST_ASSERT_EQUAL_size_t(strlen(OAUTH2_CTX(work)->body), HttpClientV.request.body_len);
+    TEST_ASSERT_EQUAL_STRING("application/x-www-form-urlencoded", HttpClientV.request.content_type);
+    TEST_ASSERT_EQUAL_STRING("http://10.0.0.5:8080/token", HttpClientV.target.url);
 }

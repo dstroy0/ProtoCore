@@ -162,13 +162,11 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t slot; ///< the encoder or decoder row every call names
-
+    uint8_t slot;              ///< the encoder or decoder row every call names
     ProtobufWriterArgs writer; ///< where an encode lands
     ProtobufTagArgs tag;       ///< what a tag says
     ProtobufValueArgs value;   ///< what a payload carries
     ProtobufSourceArgs source; ///< what a decode walks
-
     proto_bool ok;
     size_t n;
     uint64_t u64;
@@ -177,7 +175,14 @@ typedef struct
     float f32;
     double f64;
     ProtobufRecord record;
+} ProtobufVars;
 
+/** @brief The operands and the outcome. */
+extern ProtobufVars ProtobufV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const writer_open)(uint8_t *restrict work);
     void (*const write_varint)(uint8_t *restrict work);
     void (*const write_tag)(uint8_t *restrict work);
@@ -201,8 +206,57 @@ typedef struct
     void (*const double_bits)(uint8_t *restrict work);
 } ProtobufNs;
 
-/** @brief The one symbol this module exports. */
-extern ProtobufNs Protobuf;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ProtobufV or a region of the borrow at a fixed offset.
+void protocore_protobuf_writer_open(uint8_t *restrict work);
+void protocore_protobuf_write_varint(uint8_t *restrict work);
+void protocore_protobuf_write_tag(uint8_t *restrict work);
+void protocore_protobuf_write_uint64(uint8_t *restrict work);
+void protocore_protobuf_write_int64(uint8_t *restrict work);
+void protocore_protobuf_write_sint64(uint8_t *restrict work);
+void protocore_protobuf_write_bool(uint8_t *restrict work);
+void protocore_protobuf_write_fixed32(uint8_t *restrict work);
+void protocore_protobuf_write_fixed64(uint8_t *restrict work);
+void protocore_protobuf_write_float(uint8_t *restrict work);
+void protocore_protobuf_write_double(uint8_t *restrict work);
+void protocore_protobuf_write_bytes(uint8_t *restrict work);
+void protocore_protobuf_write_string(uint8_t *restrict work);
+void protocore_protobuf_writer_finish(uint8_t *restrict work);
+void protocore_protobuf_reader_open(uint8_t *restrict work);
+void protocore_protobuf_read_varint(uint8_t *restrict work);
+void protocore_protobuf_read_record(uint8_t *restrict work);
+void protocore_protobuf_zigzag64(uint8_t *restrict work);
+void protocore_protobuf_zigzag32(uint8_t *restrict work);
+void protocore_protobuf_float_bits(uint8_t *restrict work);
+void protocore_protobuf_double_bits(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Protobuf.writer_open(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ProtobufNs Protobuf __attribute__((unused)) = {
+    .writer_open = protocore_protobuf_writer_open,
+    .write_varint = protocore_protobuf_write_varint,
+    .write_tag = protocore_protobuf_write_tag,
+    .write_uint64 = protocore_protobuf_write_uint64,
+    .write_int64 = protocore_protobuf_write_int64,
+    .write_sint64 = protocore_protobuf_write_sint64,
+    .write_bool = protocore_protobuf_write_bool,
+    .write_fixed32 = protocore_protobuf_write_fixed32,
+    .write_fixed64 = protocore_protobuf_write_fixed64,
+    .write_float = protocore_protobuf_write_float,
+    .write_double = protocore_protobuf_write_double,
+    .write_bytes = protocore_protobuf_write_bytes,
+    .write_string = protocore_protobuf_write_string,
+    .writer_finish = protocore_protobuf_writer_finish,
+    .reader_open = protocore_protobuf_reader_open,
+    .read_varint = protocore_protobuf_read_varint,
+    .read_record = protocore_protobuf_read_record,
+    .zigzag64 = protocore_protobuf_zigzag64,
+    .zigzag32 = protocore_protobuf_zigzag32,
+    .float_bits = protocore_protobuf_float_bits,
+    .double_bits = protocore_protobuf_double_bits,
+};
 
 /**
  * @brief The PROTOCORE_PROTOBUF_BORROW bytes this module's state lives in.

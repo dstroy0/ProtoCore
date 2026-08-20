@@ -1758,20 +1758,20 @@ void protocore_edge_proxy_map(uint8_t *restrict work)
     }
     char host[PROTOCORE_EDGE_ORIGIN_URL_MAX];
     char ignore_path[256];
-    HttpClient.target.url = origin_base_url;
-    HttpClient.target.host = host;
-    HttpClient.target.host_cap = sizeof(host);
-    HttpClient.target.path = ignore_path;
-    HttpClient.target.path_cap = sizeof(ignore_path);
+    HttpClientV.target.url = origin_base_url;
+    HttpClientV.target.host = host;
+    HttpClientV.target.host_cap = sizeof(host);
+    HttpClientV.target.path = ignore_path;
+    HttpClientV.target.path_cap = sizeof(ignore_path);
     // parse_target_uri reads the caller's buffer and holds nothing, so it takes no borrow.
     HttpClient.parse_target_uri(NULL);
-    if (!HttpClient.ok)
+    if (!HttpClientV.ok)
     {
         EdgeProxyV.ok = PROTO_FALSE;
         return;
     }
-    const proto_bool https = HttpClient.target.https;
-    const uint16_t port = HttpClient.target.port;
+    const proto_bool https = HttpClientV.target.https;
+    const uint16_t port = HttpClientV.target.port;
 #if !PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
     if (https)
     {

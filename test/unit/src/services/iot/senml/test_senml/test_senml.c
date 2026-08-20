@@ -41,35 +41,35 @@ static SenmlResolved g_resolved[8];
 static size_t json_build(const SenmlRecord *records, size_t count, size_t cap)
 {
     memset(g_json, 0, sizeof(g_json));
-    Senml.pack.records = records;
-    Senml.pack.count = count;
-    Senml.json.buf = g_json;
-    Senml.json.cap = cap;
+    SenmlV.pack.records = records;
+    SenmlV.pack.count = count;
+    SenmlV.json.buf = g_json;
+    SenmlV.json.cap = cap;
     Senml.json_build(senml_work);
-    return Senml.n;
+    return SenmlV.n;
 }
 
 static size_t binary_build(const SenmlRecord *records, size_t count, size_t cap)
 {
     memset(g_bin, 0, sizeof(g_bin));
-    Senml.pack.records = records;
-    Senml.pack.count = count;
-    Senml.binary.codec = &Cbor;
-    Senml.binary.buf = g_bin;
-    Senml.binary.cap = cap;
+    SenmlV.pack.records = records;
+    SenmlV.pack.count = count;
+    SenmlV.binary.codec = &Cbor;
+    SenmlV.binary.buf = g_bin;
+    SenmlV.binary.cap = cap;
     Senml.binary_build(senml_work);
-    return Senml.n;
+    return SenmlV.n;
 }
 
 static size_t resolve(const SenmlRecord *records, size_t count)
 {
     memset(g_resolved, 0, sizeof(g_resolved));
-    Senml.pack.records = records;
-    Senml.pack.count = count;
-    Senml.resolved.out = g_resolved;
-    Senml.resolved.max = sizeof(g_resolved) / sizeof(g_resolved[0]);
+    SenmlV.pack.records = records;
+    SenmlV.pack.count = count;
+    SenmlV.resolved.out = g_resolved;
+    SenmlV.resolved.max = sizeof(g_resolved) / sizeof(g_resolved[0]);
     Senml.resolve(senml_work);
-    return Senml.n;
+    return SenmlV.n;
 }
 
 // RFC 8428 sec 5.1.1 "Single Data Point", printed in full:
@@ -86,7 +86,7 @@ void test_rfc8428_section_5_1_1_example(void)
     }};
     static const char WANT[] = "[{\"n\":\"urn:dev:ow:10e2073a01080063\",\"u\":\"Cel\",\"v\":23.1}]";
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT) - 1, json_build(PACK, 1, sizeof(g_json)));
-    TEST_ASSERT_TRUE(Senml.ok);
+    TEST_ASSERT_TRUE(SenmlV.ok);
     TEST_ASSERT_EQUAL_STRING(WANT, g_json);
 }
 
@@ -116,7 +116,7 @@ void test_rfc8428_section_5_1_2_example(void)
     static const char WANT[] = "[{\"bn\":\"urn:dev:ow:10e2073a01080063:\",\"n\":\"voltage\",\"u\":\"V\",\"v\":120.1},"
                                "{\"n\":\"current\",\"u\":\"A\",\"v\":1.2}]";
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT) - 1, json_build(PACK, 2, sizeof(g_json)));
-    TEST_ASSERT_TRUE(Senml.ok);
+    TEST_ASSERT_TRUE(SenmlV.ok);
     TEST_ASSERT_EQUAL_STRING(WANT, g_json);
 }
 
@@ -183,7 +183,7 @@ void test_cbor_table_4_integer_map_keys(void)
         0x06, 0x03,           // 6 (t), unsigned 3
     };
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), binary_build(PACK, 1, sizeof(g_bin)));
-    TEST_ASSERT_TRUE(Senml.ok);
+    TEST_ASSERT_TRUE(SenmlV.ok);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, g_bin, sizeof(WANT));
 
     // String Value 3 and Boolean Value 4, with RFC 8949's true (0xf5) and false (0xf4).
@@ -243,7 +243,7 @@ void test_resolve_folds_base_name_and_base_time(void)
         {.name = "current", .value_kind = SENML_VALUE_NUMBER, .value = 1.3, .has_time = PROTO_TRUE, .time = -4},
     };
     TEST_ASSERT_EQUAL_UINT(3u, resolve(PACK, 3));
-    TEST_ASSERT_TRUE(Senml.ok);
+    TEST_ASSERT_TRUE(SenmlV.ok);
 
     TEST_ASSERT_EQUAL_STRING("urn:dev:ow:10e2073a0108006:voltage", g_resolved[0].name);
     TEST_ASSERT_TRUE(g_resolved[0].has_time);
@@ -286,13 +286,13 @@ void test_resolve_overrides_and_absent_time(void)
     assert_near(107.0, g_resolved[3].time, 1e-9, "g_resolved[3].time");
 
     // A resolve stops at the room the caller lent, and reports how many Records it filled.
-    Senml.pack.records = PACK;
-    Senml.pack.count = 4;
-    Senml.resolved.out = g_resolved;
-    Senml.resolved.max = 2;
+    SenmlV.pack.records = PACK;
+    SenmlV.pack.count = 4;
+    SenmlV.resolved.out = g_resolved;
+    SenmlV.resolved.max = 2;
     Senml.resolve(senml_work);
-    TEST_ASSERT_TRUE(Senml.ok);
-    TEST_ASSERT_EQUAL_UINT(2u, Senml.n);
+    TEST_ASSERT_TRUE(SenmlV.ok);
+    TEST_ASSERT_EQUAL_UINT(2u, SenmlV.n);
 }
 
 // A resolved Name longer than the array it lands in leaves an empty Name rather than a truncated one,
@@ -322,7 +322,7 @@ void test_builders_report_zero_on_a_short_buffer(void)
     for (size_t cap = 1; cap <= whole; cap++)
     {
         TEST_ASSERT_EQUAL_UINT_MESSAGE(0u, json_build(PACK, 1, cap), "a short buffer must report 0");
-        TEST_ASSERT_FALSE(Senml.ok);
+        TEST_ASSERT_FALSE(SenmlV.ok);
     }
     TEST_ASSERT_EQUAL_UINT(whole, json_build(PACK, 1, whole + 1));
 
@@ -331,7 +331,7 @@ void test_builders_report_zero_on_a_short_buffer(void)
     for (size_t cap = 0; cap < bin_whole; cap++)
     {
         TEST_ASSERT_EQUAL_UINT_MESSAGE(0u, binary_build(PACK, 1, cap), "a short buffer must report 0");
-        TEST_ASSERT_FALSE(Senml.ok);
+        TEST_ASSERT_FALSE(SenmlV.ok);
     }
     TEST_ASSERT_EQUAL_UINT(bin_whole, binary_build(PACK, 1, bin_whole));
 }
@@ -342,38 +342,38 @@ void test_missing_arguments_are_refused(void)
 {
     static const SenmlRecord PACK[1] = {{.name = "a", .value_kind = SENML_VALUE_NUMBER, .value = 1}};
 
-    Senml.pack.records = PACK;
-    Senml.pack.count = 1;
-    Senml.json.buf = NULL;
-    Senml.json.cap = sizeof(g_json);
+    SenmlV.pack.records = PACK;
+    SenmlV.pack.count = 1;
+    SenmlV.json.buf = NULL;
+    SenmlV.json.cap = sizeof(g_json);
     Senml.json_build(senml_work);
-    TEST_ASSERT_FALSE(Senml.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Senml.n);
+    TEST_ASSERT_FALSE(SenmlV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, SenmlV.n);
 
-    Senml.json.buf = g_json;
-    Senml.pack.records = NULL;
+    SenmlV.json.buf = g_json;
+    SenmlV.pack.records = NULL;
     Senml.json_build(senml_work);
-    TEST_ASSERT_FALSE(Senml.ok);
+    TEST_ASSERT_FALSE(SenmlV.ok);
 
-    Senml.pack.records = PACK;
-    Senml.binary.codec = NULL;
-    Senml.binary.buf = g_bin;
-    Senml.binary.cap = sizeof(g_bin);
+    SenmlV.pack.records = PACK;
+    SenmlV.binary.codec = NULL;
+    SenmlV.binary.buf = g_bin;
+    SenmlV.binary.cap = sizeof(g_bin);
     Senml.binary_build(senml_work);
-    TEST_ASSERT_FALSE(Senml.ok);
+    TEST_ASSERT_FALSE(SenmlV.ok);
 
-    Senml.binary.codec = &Cbor;
-    Senml.binary.buf = NULL;
+    SenmlV.binary.codec = &Cbor;
+    SenmlV.binary.buf = NULL;
     Senml.binary_build(senml_work);
-    TEST_ASSERT_FALSE(Senml.ok);
+    TEST_ASSERT_FALSE(SenmlV.ok);
 
-    Senml.pack.records = NULL;
-    Senml.resolved.out = g_resolved;
-    Senml.resolved.max = 4;
+    SenmlV.pack.records = NULL;
+    SenmlV.resolved.out = g_resolved;
+    SenmlV.resolved.max = 4;
     Senml.resolve(senml_work);
-    TEST_ASSERT_FALSE(Senml.ok);
-    Senml.pack.records = PACK;
-    Senml.resolved.out = NULL;
+    TEST_ASSERT_FALSE(SenmlV.ok);
+    SenmlV.pack.records = PACK;
+    SenmlV.resolved.out = NULL;
     Senml.resolve(senml_work);
-    TEST_ASSERT_FALSE(Senml.ok);
+    TEST_ASSERT_FALSE(SenmlV.ok);
 }

@@ -29,27 +29,27 @@ static char g_buf[512];
 // Clear every member a build reads, so each case only carries what it sets.
 static void reset(void)
 {
-    Xmpp.out.buf = g_buf;
-    Xmpp.out.cap = sizeof(g_buf);
-    Xmpp.text.in = NULL;
-    Xmpp.text.len = 0;
-    Xmpp.stream.from = NULL;
-    Xmpp.stream.to = NULL;
-    Xmpp.common.to = NULL;
-    Xmpp.common.from = NULL;
-    Xmpp.common.type = NULL;
-    Xmpp.common.id = NULL;
-    Xmpp.child.body = NULL;
-    Xmpp.child.extension = NULL;
+    XmppV.out.buf = g_buf;
+    XmppV.out.cap = sizeof(g_buf);
+    XmppV.text.in = NULL;
+    XmppV.text.len = 0;
+    XmppV.stream.from = NULL;
+    XmppV.stream.to = NULL;
+    XmppV.common.to = NULL;
+    XmppV.common.from = NULL;
+    XmppV.common.type = NULL;
+    XmppV.common.id = NULL;
+    XmppV.child.body = NULL;
+    XmppV.child.extension = NULL;
 }
 
 static void read_stanza(const char *xml, const char *attr)
 {
-    Xmpp.out.buf = g_buf;
-    Xmpp.out.cap = sizeof(g_buf);
-    Xmpp.stanza.xml = xml;
-    Xmpp.stanza.len = xml ? strlen(xml) : 0;
-    Xmpp.stanza.attr = attr;
+    XmppV.out.buf = g_buf;
+    XmppV.out.cap = sizeof(g_buf);
+    XmppV.stanza.xml = xml;
+    XmppV.stanza.len = xml ? strlen(xml) : 0;
+    XmppV.stanza.attr = attr;
 }
 
 // XML 1.0 (Fifth Edition) sec 4.6 defines five predefined entities: amp, lt, gt, apos and quot,
@@ -59,13 +59,13 @@ void test_predefined_entities(void)
 {
     static const char IN[] = "a<b>c&d'e\"f";
     reset();
-    Xmpp.text.in = IN;
-    Xmpp.text.len = sizeof(IN) - 1;
+    XmppV.text.in = IN;
+    XmppV.text.len = sizeof(IN) - 1;
     Xmpp.escape(xmpp_work);
 
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("a&lt;b&gt;c&amp;d&apos;e&quot;f", g_buf);
-    TEST_ASSERT_EQUAL_UINT(strlen(g_buf), Xmpp.n);
+    TEST_ASSERT_EQUAL_UINT(strlen(g_buf), XmppV.n);
 }
 
 // Text carrying none of the five passes through unchanged, octet for octet.
@@ -73,19 +73,19 @@ void test_escape_leaves_ordinary_text_alone(void)
 {
     static const char IN[] = "Wherefore art thou, Romeo?";
     reset();
-    Xmpp.text.in = IN;
-    Xmpp.text.len = sizeof(IN) - 1;
+    XmppV.text.in = IN;
+    XmppV.text.len = sizeof(IN) - 1;
     Xmpp.escape(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING(IN, g_buf);
 
     // An empty run is a valid escape of nothing.
     reset();
-    Xmpp.text.in = IN;
-    Xmpp.text.len = 0;
+    XmppV.text.in = IN;
+    XmppV.text.len = 0;
     Xmpp.escape(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Xmpp.n);
+    TEST_ASSERT_TRUE(XmppV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, XmppV.n);
     TEST_ASSERT_EQUAL_STRING("", g_buf);
 }
 
@@ -96,11 +96,11 @@ void test_escape_leaves_ordinary_text_alone(void)
 void test_stream_header(void)
 {
     reset();
-    Xmpp.stream.from = "juliet@im.example.com";
-    Xmpp.stream.to = "im.example.com";
+    XmppV.stream.from = "juliet@im.example.com";
+    XmppV.stream.to = "im.example.com";
     Xmpp.stream_open(xmpp_work);
 
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("<?xml version='1.0'?><stream:stream"
                              " from=\"juliet@im.example.com\""
                              " to=\"im.example.com\""
@@ -111,9 +111,9 @@ void test_stream_header(void)
 
     // An address the caller left unset leaves its attribute out entirely.
     reset();
-    Xmpp.stream.to = "im.example.com";
+    XmppV.stream.to = "im.example.com";
     Xmpp.stream_open(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_NULL(strstr(g_buf, "from="));
     TEST_ASSERT_NOT_NULL(strstr(g_buf, " to=\"im.example.com\""));
 }
@@ -123,13 +123,13 @@ void test_stream_header(void)
 void test_message_stanza(void)
 {
     reset();
-    Xmpp.common.to = "romeo@example.net";
-    Xmpp.common.from = "juliet@im.example.com/balcony";
-    Xmpp.common.type = "chat";
-    Xmpp.child.body = "Wherefore art thou, Romeo?";
+    XmppV.common.to = "romeo@example.net";
+    XmppV.common.from = "juliet@im.example.com/balcony";
+    XmppV.common.type = "chat";
+    XmppV.child.body = "Wherefore art thou, Romeo?";
     Xmpp.message(xmpp_work);
 
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("<message to=\"romeo@example.net\""
                              " from=\"juliet@im.example.com/balcony\""
                              " type=\"chat\">"
@@ -139,7 +139,7 @@ void test_message_stanza(void)
 
     // No body: the element still closes, with nothing between the tags.
     reset();
-    Xmpp.common.to = "romeo@example.net";
+    XmppV.common.to = "romeo@example.net";
     Xmpp.message(xmpp_work);
     TEST_ASSERT_EQUAL_STRING("<message to=\"romeo@example.net\"></message>", g_buf);
 }
@@ -149,10 +149,10 @@ void test_message_stanza(void)
 void test_message_body_is_escaped(void)
 {
     reset();
-    Xmpp.common.to = "romeo@example.net";
-    Xmpp.child.body = "5 < 6 & \"quoted\"";
+    XmppV.common.to = "romeo@example.net";
+    XmppV.child.body = "5 < 6 & \"quoted\"";
     Xmpp.message(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("<message to=\"romeo@example.net\">"
                              "<body>5 &lt; 6 &amp; &quot;quoted&quot;</body>"
                              "</message>",
@@ -164,10 +164,10 @@ void test_message_body_is_escaped(void)
 void test_attribute_values_are_escaped(void)
 {
     reset();
-    Xmpp.common.to = "a&b";
-    Xmpp.common.type = "a\"b";
+    XmppV.common.to = "a&b";
+    XmppV.common.type = "a\"b";
     Xmpp.message(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("<message to=\"a&amp;b\" type=\"a&quot;b\"></message>", g_buf);
 }
 
@@ -177,11 +177,11 @@ void test_presence_stanza(void)
 {
     reset();
     Xmpp.presence(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("<presence/>", g_buf);
 
     reset();
-    Xmpp.common.type = "unavailable";
+    XmppV.common.type = "unavailable";
     Xmpp.presence(xmpp_work);
     TEST_ASSERT_EQUAL_STRING("<presence type=\"unavailable\"/>", g_buf);
 }
@@ -191,12 +191,12 @@ void test_presence_stanza(void)
 void test_iq_stanza(void)
 {
     reset();
-    Xmpp.common.type = "get";
-    Xmpp.common.id = "info1";
-    Xmpp.child.extension = "<query xmlns='http://jabber.org/protocol/disco#info'/>";
+    XmppV.common.type = "get";
+    XmppV.common.id = "info1";
+    XmppV.child.extension = "<query xmlns='http://jabber.org/protocol/disco#info'/>";
     Xmpp.iq(xmpp_work);
 
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("<iq type=\"get\" id=\"info1\">"
                              "<query xmlns='http://jabber.org/protocol/disco#info'/>"
                              "</iq>",
@@ -204,8 +204,8 @@ void test_iq_stanza(void)
 
     // A result with no payload is the same element with nothing inside it.
     reset();
-    Xmpp.common.type = "result";
-    Xmpp.common.id = "info1";
+    XmppV.common.type = "result";
+    XmppV.common.id = "info1";
     Xmpp.iq(xmpp_work);
     TEST_ASSERT_EQUAL_STRING("<iq type=\"result\" id=\"info1\"></iq>", g_buf);
 }
@@ -216,7 +216,7 @@ void test_stanza_name(void)
 {
     read_stanza("<message to='romeo@example.net' type='chat'><body>hi</body></message>", NULL);
     Xmpp.stanza_name(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("message", g_buf);
 
     read_stanza("<presence/>", NULL);
@@ -234,7 +234,7 @@ void test_stanza_name_skips_non_start_tags(void)
 {
     read_stanza("<?xml version='1.0'?><stream:stream xmlns='jabber:client'>", NULL);
     Xmpp.stanza_name(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("stream:stream", g_buf);
 
     read_stanza("<!-- a comment --><iq type='get' id='1'/>", NULL);
@@ -244,8 +244,8 @@ void test_stanza_name_skips_non_start_tags(void)
     // Nothing but an end-tag: there is no start-tag to name.
     read_stanza("</message>", NULL);
     Xmpp.stanza_name(xmpp_work);
-    TEST_ASSERT_FALSE(Xmpp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Xmpp.n);
+    TEST_ASSERT_FALSE(XmppV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, XmppV.n);
 }
 
 // XML 1.0 production [41] Attribute: `Name Eq AttValue`, and production [10] delimits the value
@@ -254,19 +254,19 @@ void test_attribute_read(void)
 {
     read_stanza("<message to='romeo@example.net' type='chat'>", "type");
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("chat", g_buf);
 
     read_stanza("<message to=\"romeo@example.net\" type=\"chat\">", "to");
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("romeo@example.net", g_buf);
 
     // An empty value is a value.
     read_stanza("<message id=''>", "id");
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Xmpp.n);
+    TEST_ASSERT_TRUE(XmppV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, XmppV.n);
 }
 
 // Production [40] puts S in front of every attribute specification, so a name that is only the tail
@@ -275,7 +275,7 @@ void test_attribute_name_must_start_an_attribute(void)
 {
     read_stanza("<message xto='wrong' to='right'>", "to");
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("right", g_buf);
 }
 
@@ -285,7 +285,7 @@ void test_attribute_value_is_raw(void)
 {
     read_stanza("<message to='a&amp;b'>", "to");
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
     TEST_ASSERT_EQUAL_STRING("a&amp;b", g_buf);
 }
 
@@ -295,8 +295,8 @@ void test_attribute_read_stops_at_the_start_tag(void)
 {
     read_stanza("<message id='1'><body to='not-mine'>hi</body></message>", "to");
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_FALSE(Xmpp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Xmpp.n);
+    TEST_ASSERT_FALSE(XmppV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, XmppV.n);
 }
 
 // A name that is not in the start-tag, a value with no delimiter, and a missing argument are each
@@ -305,19 +305,19 @@ void test_attribute_read_refusals(void)
 {
     read_stanza("<message to='a'>", "type");
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_FALSE(Xmpp.ok);
+    TEST_ASSERT_FALSE(XmppV.ok);
 
     read_stanza("<message to=a>", "to");
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_FALSE(Xmpp.ok);
+    TEST_ASSERT_FALSE(XmppV.ok);
 
     read_stanza(NULL, "to");
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_FALSE(Xmpp.ok);
+    TEST_ASSERT_FALSE(XmppV.ok);
 
     read_stanza("<message to='a'>", NULL);
     Xmpp.attr(xmpp_work);
-    TEST_ASSERT_FALSE(Xmpp.ok);
+    TEST_ASSERT_FALSE(XmppV.ok);
 }
 
 // A buffer that cannot hold the whole stanza reports nothing written: half a start-tag is not XML,
@@ -326,44 +326,44 @@ void test_build_refuses_a_short_buffer(void)
 {
     char small[8];
     reset();
-    Xmpp.out.buf = small;
-    Xmpp.out.cap = sizeof(small);
-    Xmpp.common.to = "romeo@example.net";
+    XmppV.out.buf = small;
+    XmppV.out.cap = sizeof(small);
+    XmppV.common.to = "romeo@example.net";
     Xmpp.message(xmpp_work);
-    TEST_ASSERT_FALSE(Xmpp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Xmpp.n);
+    TEST_ASSERT_FALSE(XmppV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, XmppV.n);
 
     reset();
-    Xmpp.out.buf = NULL;
-    Xmpp.out.cap = 0;
+    XmppV.out.buf = NULL;
+    XmppV.out.cap = 0;
     Xmpp.presence(xmpp_work);
-    TEST_ASSERT_FALSE(Xmpp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Xmpp.n);
+    TEST_ASSERT_FALSE(XmppV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, XmppV.n);
 }
 
 // An escape with no source is reported, not written through.
 void test_escape_refuses_a_null_source(void)
 {
     reset();
-    Xmpp.text.in = NULL;
-    Xmpp.text.len = 4;
+    XmppV.text.in = NULL;
+    XmppV.text.len = 4;
     Xmpp.escape(xmpp_work);
-    TEST_ASSERT_FALSE(Xmpp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Xmpp.n);
+    TEST_ASSERT_FALSE(XmppV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, XmppV.n);
 }
 
 // A built stanza reads back through the two readers: its element name and each attribute it carries.
 void test_build_then_read_round_trip(void)
 {
     reset();
-    Xmpp.common.to = "romeo@example.net";
-    Xmpp.common.from = "juliet@im.example.com/balcony";
-    Xmpp.common.type = "chat";
+    XmppV.common.to = "romeo@example.net";
+    XmppV.common.from = "juliet@im.example.com/balcony";
+    XmppV.common.type = "chat";
     Xmpp.message(xmpp_work);
-    TEST_ASSERT_TRUE(Xmpp.ok);
+    TEST_ASSERT_TRUE(XmppV.ok);
 
     static char stanza[256];
-    memcpy(stanza, g_buf, Xmpp.n + 1);
+    memcpy(stanza, g_buf, XmppV.n + 1);
 
     read_stanza(stanza, NULL);
     Xmpp.stanza_name(xmpp_work);

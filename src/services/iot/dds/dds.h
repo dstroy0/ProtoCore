@@ -131,20 +131,39 @@ typedef struct
     RtpsOutArgs out;        ///< where a build lands
     RtpsMessageArgs msg;    ///< what a parse walks
     RtpsSinkArgs sink;      ///< where a parse reports
-
     proto_bool ok;
     size_t n;
+} RtpsVars;
 
+/** @brief The operands and the outcome. */
+extern RtpsVars RtpsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const header)(uint8_t *restrict work);
     void (*const submessage)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
 } RtpsNs;
 
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in RtpsV or a region of the borrow at a fixed offset.
+void protocore_rtps_header(uint8_t *restrict work);
+void protocore_rtps_submessage(uint8_t *restrict work);
+void protocore_rtps_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Rtps.header(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const RtpsNs Rtps __attribute__((unused)) = {
+    .header = protocore_rtps_header,
+    .submessage = protocore_rtps_submessage,
+    .parse = protocore_rtps_parse,
+};
+
 /** @brief The protocol version a built Header stamps, major then minor (sec 8.3.3.1). */
 extern const uint8_t RTPS_VERSION[2];
-
-/** @brief The one symbol this module exports. */
-extern RtpsNs Rtps;
 
 PROTOCORE_END_DECLS
 

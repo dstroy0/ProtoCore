@@ -219,11 +219,17 @@ typedef struct
     MtConnectLifeArgs life;
     MtConnectErrorArgs err;
     MtConnectQueryArgs query;
-
     proto_bool ok;
     size_t n;
     uint64_t seq;
+} MtConnectVars;
 
+/** @brief The operands and the outcome. */
+extern MtConnectVars MtConnectV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const streams_begin)(uint8_t *restrict work);
     void (*const streams_add)(uint8_t *restrict work);
     void (*const streams_end)(uint8_t *restrict work);
@@ -241,8 +247,45 @@ typedef struct
     void (*const ring_query)(uint8_t *restrict work);
 } MtConnectNs;
 
-/** @brief The one symbol this module exports. */
-extern MtConnectNs MtConnect;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MtConnectV or a region of the borrow at a fixed offset.
+void protocore_mt_connect_streams_begin(uint8_t *restrict work);
+void protocore_mt_connect_streams_add(uint8_t *restrict work);
+void protocore_mt_connect_streams_end(uint8_t *restrict work);
+void protocore_mt_connect_error(uint8_t *restrict work);
+void protocore_mt_connect_devices_begin(uint8_t *restrict work);
+void protocore_mt_connect_devices_add(uint8_t *restrict work);
+void protocore_mt_connect_devices_end(uint8_t *restrict work);
+void protocore_mt_connect_assets_begin(uint8_t *restrict work);
+void protocore_mt_connect_tool_begin(uint8_t *restrict work);
+void protocore_mt_connect_tool_life(uint8_t *restrict work);
+void protocore_mt_connect_tool_end(uint8_t *restrict work);
+void protocore_mt_connect_assets_end(uint8_t *restrict work);
+void protocore_mt_connect_ring_init(uint8_t *restrict work);
+void protocore_mt_connect_ring_add(uint8_t *restrict work);
+void protocore_mt_connect_ring_query(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `MtConnect.streams_begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MtConnectNs MtConnect __attribute__((unused)) = {
+    .streams_begin = protocore_mt_connect_streams_begin,
+    .streams_add = protocore_mt_connect_streams_add,
+    .streams_end = protocore_mt_connect_streams_end,
+    .error = protocore_mt_connect_error,
+    .devices_begin = protocore_mt_connect_devices_begin,
+    .devices_add = protocore_mt_connect_devices_add,
+    .devices_end = protocore_mt_connect_devices_end,
+    .assets_begin = protocore_mt_connect_assets_begin,
+    .tool_begin = protocore_mt_connect_tool_begin,
+    .tool_life = protocore_mt_connect_tool_life,
+    .tool_end = protocore_mt_connect_tool_end,
+    .assets_end = protocore_mt_connect_assets_end,
+    .ring_init = protocore_mt_connect_ring_init,
+    .ring_add = protocore_mt_connect_ring_add,
+    .ring_query = protocore_mt_connect_ring_query,
+};
 
 /**
  * @brief The bytes every entry here runs out of: the running document and the observation ring.

@@ -29,12 +29,12 @@ static uint8_t g_out[256];
 // Join the four sec 4.1 elements and return the buffer.
 static const char *topic(const char *group, const char *type, const char *node, const char *device)
 {
-    Sparkplug.topic.group_id = group;
-    Sparkplug.topic.message_type = type;
-    Sparkplug.topic.edge_node_id = node;
-    Sparkplug.topic.device_id = device;
-    Sparkplug.topic_out.out = g_topic;
-    Sparkplug.topic_out.cap = sizeof(g_topic);
+    SparkplugV.topic.group_id = group;
+    SparkplugV.topic.message_type = type;
+    SparkplugV.topic.edge_node_id = node;
+    SparkplugV.topic.device_id = device;
+    SparkplugV.topic_out.out = g_topic;
+    SparkplugV.topic_out.cap = sizeof(g_topic);
     Sparkplug.build_topic(protocore_sparkplug_span());
     return g_topic;
 }
@@ -42,12 +42,12 @@ static const char *topic(const char *group, const char *type, const char *node, 
 // Serialize one Metric into g_out and return how many octets it took.
 static size_t encode_metric(const SpbMetric *m)
 {
-    Sparkplug.out.buf = g_out;
-    Sparkplug.out.cap = sizeof(g_out);
-    Sparkplug.metrics.list = m;
-    Sparkplug.metrics.count = 1;
+    SparkplugV.out.buf = g_out;
+    SparkplugV.out.cap = sizeof(g_out);
+    SparkplugV.metrics.list = m;
+    SparkplugV.metrics.count = 1;
     Sparkplug.build_metric(protocore_sparkplug_span());
-    return Sparkplug.n;
+    return SparkplugV.n;
 }
 
 // Sparkplug 3.0.0 sec 4.1: "namespace/group_id/message_type/edge_node_id/[device_id]", and sec
@@ -56,13 +56,13 @@ static size_t encode_metric(const SpbMetric *m)
 void test_topic_namespace(void)
 {
     TEST_ASSERT_EQUAL_STRING("spBv1.0/Group1/NBIRTH/EdgeNode1", topic("Group1", SPB_MSG_NBIRTH, "EdgeNode1", NULL));
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(strlen("spBv1.0/Group1/NBIRTH/EdgeNode1"), Sparkplug.n);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(strlen("spBv1.0/Group1/NBIRTH/EdgeNode1"), SparkplugV.n);
 
     // sec 4.1.5: the optional device_id element is the fifth level, so a Device topic carries it.
     TEST_ASSERT_EQUAL_STRING("spBv1.0/Group1/DBIRTH/EdgeNode1/Device1",
                              topic("Group1", SPB_MSG_DBIRTH, "EdgeNode1", "Device1"));
-    TEST_ASSERT_TRUE(Sparkplug.ok);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
 }
 
 // sec 4.1.3 names nine message_type elements; each one joins into its own topic.
@@ -74,11 +74,11 @@ void test_topic_every_message_type(void)
     {
         const char *t = topic("G", TYPE[i], "N", NULL);
         const size_t len = strlen(TYPE[i]);
-        TEST_ASSERT_TRUE_MESSAGE(Sparkplug.ok, TYPE[i]);
+        TEST_ASSERT_TRUE_MESSAGE(SparkplugV.ok, TYPE[i]);
         // "spBv1.0/G/" is 10 octets, then the type, then "/N".
         TEST_ASSERT_EQUAL_MEMORY_MESSAGE(TYPE[i], t + 10, len, TYPE[i]);
         TEST_ASSERT_EQUAL_CHAR_MESSAGE('/', t[10 + len], TYPE[i]);
-        TEST_ASSERT_EQUAL_UINT_MESSAGE(10u + len + 2u, Sparkplug.n, TYPE[i]);
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(10u + len + 2u, SparkplugV.n, TYPE[i]);
     }
 }
 
@@ -86,14 +86,14 @@ void test_topic_every_message_type(void)
 void test_topic_refuses_a_missing_element(void)
 {
     (void)topic(NULL, SPB_MSG_NDATA, "N", NULL);
-    TEST_ASSERT_FALSE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.n);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, SparkplugV.n);
 
     (void)topic("G", NULL, "N", NULL);
-    TEST_ASSERT_FALSE(Sparkplug.ok);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
 
     (void)topic("G", SPB_MSG_NDATA, NULL, NULL);
-    TEST_ASSERT_FALSE(Sparkplug.ok);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
 }
 
 // A buffer one octet short of the topic and its NUL writes nothing, not a truncated topic: a
@@ -101,15 +101,15 @@ void test_topic_refuses_a_missing_element(void)
 void test_topic_refuses_a_short_buffer(void)
 {
     char small[sizeof("spBv1.0/Group1/NBIRTH/EdgeNode1") - 1];
-    Sparkplug.topic.group_id = "Group1";
-    Sparkplug.topic.message_type = SPB_MSG_NBIRTH;
-    Sparkplug.topic.edge_node_id = "EdgeNode1";
-    Sparkplug.topic.device_id = NULL;
-    Sparkplug.topic_out.out = small;
-    Sparkplug.topic_out.cap = sizeof(small);
+    SparkplugV.topic.group_id = "Group1";
+    SparkplugV.topic.message_type = SPB_MSG_NBIRTH;
+    SparkplugV.topic.edge_node_id = "EdgeNode1";
+    SparkplugV.topic.device_id = NULL;
+    SparkplugV.topic_out.out = small;
+    SparkplugV.topic_out.cap = sizeof(small);
     Sparkplug.build_topic(protocore_sparkplug_span());
-    TEST_ASSERT_FALSE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.n);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, SparkplugV.n);
 }
 
 // Sparkplug 3.0.0 sec 6.4.1 Metric: name = 1, datatype = 4, int_value = 10. sec 6.4.16 DataType:
@@ -129,7 +129,7 @@ void test_metric_wire_octets(void)
     m.int_value = 42;
 
     TEST_ASSERT_EQUAL_UINT(sizeof(WANT), encode_metric(&m));
-    TEST_ASSERT_TRUE(Sparkplug.ok);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_out, sizeof(WANT));
 }
 
@@ -219,16 +219,16 @@ void test_payload_wire_octets(void)
     m.kind = SPB_M_INT;
     m.int_value = 42;
 
-    Sparkplug.out.buf = g_out;
-    Sparkplug.out.cap = sizeof(g_out);
-    Sparkplug.payload.timestamp = 1;
-    Sparkplug.payload.seq = 0;
-    Sparkplug.metrics.list = &m;
-    Sparkplug.metrics.count = 1;
+    SparkplugV.out.buf = g_out;
+    SparkplugV.out.cap = sizeof(g_out);
+    SparkplugV.payload.timestamp = 1;
+    SparkplugV.payload.seq = 0;
+    SparkplugV.metrics.list = &m;
+    SparkplugV.metrics.count = 1;
     Sparkplug.build_payload(protocore_sparkplug_span());
 
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Sparkplug.n);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), SparkplugV.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_out, sizeof(WANT));
 }
 
@@ -248,72 +248,72 @@ void test_payload_round_trip(void)
     list[1].kind = SPB_M_STRING;
     list[1].string_value = "hi";
 
-    Sparkplug.out.buf = g_out;
-    Sparkplug.out.cap = sizeof(g_out);
-    Sparkplug.payload.timestamp = 1700000000000ull; // milliseconds since epoch, UTC (sec 6.4.5)
-    Sparkplug.payload.seq = 255;                    // sec 6.4.5: 0..255, wrapping to zero
-    Sparkplug.metrics.list = list;
-    Sparkplug.metrics.count = 2;
+    SparkplugV.out.buf = g_out;
+    SparkplugV.out.cap = sizeof(g_out);
+    SparkplugV.payload.timestamp = 1700000000000ull; // milliseconds since epoch, UTC (sec 6.4.5)
+    SparkplugV.payload.seq = 255;                    // sec 6.4.5: 0..255, wrapping to zero
+    SparkplugV.metrics.list = list;
+    SparkplugV.metrics.count = 2;
     Sparkplug.build_payload(protocore_sparkplug_span());
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    const size_t len = Sparkplug.n;
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    const size_t len = SparkplugV.n;
 
-    Sparkplug.source.buf = g_out;
-    Sparkplug.source.len = len;
-    Sparkplug.source.cursor = 0;
+    SparkplugV.source.buf = g_out;
+    SparkplugV.source.len = len;
+    SparkplugV.source.cursor = 0;
     Sparkplug.parse_payload(protocore_sparkplug_span());
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    TEST_ASSERT_TRUE(Sparkplug.header.has_timestamp);
-    TEST_ASSERT_EQUAL_UINT64(1700000000000ull, Sparkplug.header.timestamp);
-    TEST_ASSERT_TRUE(Sparkplug.header.has_seq);
-    TEST_ASSERT_EQUAL_UINT64(255u, Sparkplug.header.seq);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    TEST_ASSERT_TRUE(SparkplugV.header.has_timestamp);
+    TEST_ASSERT_EQUAL_UINT64(1700000000000ull, SparkplugV.header.timestamp);
+    TEST_ASSERT_TRUE(SparkplugV.header.has_seq);
+    TEST_ASSERT_EQUAL_UINT64(255u, SparkplugV.header.seq);
 
     // metric 0
-    Sparkplug.source.cursor = 0;
+    SparkplugV.source.cursor = 0;
     Sparkplug.next_metric(protocore_sparkplug_span());
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    const uint8_t *m0 = Sparkplug.metric_bytes;
-    const size_t m0len = Sparkplug.metric_len;
-    const size_t after0 = Sparkplug.source.cursor;
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    const uint8_t *m0 = SparkplugV.metric_bytes;
+    const size_t m0len = SparkplugV.metric_len;
+    const size_t after0 = SparkplugV.source.cursor;
 
-    Sparkplug.source.buf = m0;
-    Sparkplug.source.len = m0len;
+    SparkplugV.source.buf = m0;
+    SparkplugV.source.len = m0len;
     Sparkplug.parse_metric(protocore_sparkplug_span());
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(1u, Sparkplug.metric.name_len);
-    TEST_ASSERT_EQUAL_CHAR('a', Sparkplug.metric.name[0]);
-    TEST_ASSERT_EQUAL_UINT32(SPB_DT_INT32, Sparkplug.metric.datatype);
-    TEST_ASSERT_TRUE(Sparkplug.metric.has_value);
-    TEST_ASSERT_EQUAL_INT(SPB_M_INT, Sparkplug.metric.kind);
-    TEST_ASSERT_EQUAL_UINT32(7u, Sparkplug.metric.int_value);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(1u, SparkplugV.metric.name_len);
+    TEST_ASSERT_EQUAL_CHAR('a', SparkplugV.metric.name[0]);
+    TEST_ASSERT_EQUAL_UINT32(SPB_DT_INT32, SparkplugV.metric.datatype);
+    TEST_ASSERT_TRUE(SparkplugV.metric.has_value);
+    TEST_ASSERT_EQUAL_INT(SPB_M_INT, SparkplugV.metric.kind);
+    TEST_ASSERT_EQUAL_UINT32(7u, SparkplugV.metric.int_value);
 
     // metric 1, resuming the walk where the first one left the cursor
-    Sparkplug.source.buf = g_out;
-    Sparkplug.source.len = len;
-    Sparkplug.source.cursor = after0;
+    SparkplugV.source.buf = g_out;
+    SparkplugV.source.len = len;
+    SparkplugV.source.cursor = after0;
     Sparkplug.next_metric(protocore_sparkplug_span());
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    const uint8_t *m1 = Sparkplug.metric_bytes;
-    const size_t m1len = Sparkplug.metric_len;
-    const size_t after1 = Sparkplug.source.cursor;
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    const uint8_t *m1 = SparkplugV.metric_bytes;
+    const size_t m1len = SparkplugV.metric_len;
+    const size_t after1 = SparkplugV.source.cursor;
 
-    Sparkplug.source.buf = m1;
-    Sparkplug.source.len = m1len;
+    SparkplugV.source.buf = m1;
+    SparkplugV.source.len = m1len;
     Sparkplug.parse_metric(protocore_sparkplug_span());
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    TEST_ASSERT_TRUE(Sparkplug.metric.has_alias);
-    TEST_ASSERT_EQUAL_UINT64(9u, Sparkplug.metric.alias);
-    TEST_ASSERT_EQUAL_INT(SPB_M_STRING, Sparkplug.metric.kind);
-    TEST_ASSERT_EQUAL_UINT(2u, Sparkplug.metric.string_value_len);
-    TEST_ASSERT_EQUAL_MEMORY("hi", Sparkplug.metric.string_value, 2);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    TEST_ASSERT_TRUE(SparkplugV.metric.has_alias);
+    TEST_ASSERT_EQUAL_UINT64(9u, SparkplugV.metric.alias);
+    TEST_ASSERT_EQUAL_INT(SPB_M_STRING, SparkplugV.metric.kind);
+    TEST_ASSERT_EQUAL_UINT(2u, SparkplugV.metric.string_value_len);
+    TEST_ASSERT_EQUAL_MEMORY("hi", SparkplugV.metric.string_value, 2);
 
     // Two metrics were written, so the third walk finds none.
-    Sparkplug.source.buf = g_out;
-    Sparkplug.source.len = len;
-    Sparkplug.source.cursor = after1;
+    SparkplugV.source.buf = g_out;
+    SparkplugV.source.len = len;
+    SparkplugV.source.cursor = after1;
     Sparkplug.next_metric(protocore_sparkplug_span());
-    TEST_ASSERT_FALSE(Sparkplug.ok);
-    TEST_ASSERT_NULL(Sparkplug.metric_bytes);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
+    TEST_ASSERT_NULL(SparkplugV.metric_bytes);
 }
 
 // The decoded name and string_value slice the source rather than copying it: sparkplug.h states
@@ -327,12 +327,12 @@ void test_decoded_strings_point_into_the_source(void)
     m.int_value = 42;
     const size_t len = encode_metric(&m);
 
-    Sparkplug.source.buf = g_out;
-    Sparkplug.source.len = len;
+    SparkplugV.source.buf = g_out;
+    SparkplugV.source.len = len;
     Sparkplug.parse_metric(protocore_sparkplug_span());
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    TEST_ASSERT_TRUE(Sparkplug.metric.name >= (const char *)g_out);
-    TEST_ASSERT_TRUE(Sparkplug.metric.name + Sparkplug.metric.name_len <= (const char *)g_out + len);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    TEST_ASSERT_TRUE(SparkplugV.metric.name >= (const char *)g_out);
+    TEST_ASSERT_TRUE(SparkplugV.metric.name + SparkplugV.metric.name_len <= (const char *)g_out + len);
 }
 
 // A Payload with no fields at all decodes: the header reports both optional fields absent rather
@@ -340,13 +340,13 @@ void test_decoded_strings_point_into_the_source(void)
 void test_parse_reports_absent_header_fields(void)
 {
     static const uint8_t EMPTY[1] = {0};
-    Sparkplug.source.buf = EMPTY;
-    Sparkplug.source.len = 0;
+    SparkplugV.source.buf = EMPTY;
+    SparkplugV.source.len = 0;
     Sparkplug.parse_payload(protocore_sparkplug_span());
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    TEST_ASSERT_FALSE(Sparkplug.header.has_timestamp);
-    TEST_ASSERT_FALSE(Sparkplug.header.has_seq);
-    TEST_ASSERT_EQUAL_UINT64(0u, Sparkplug.header.timestamp);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    TEST_ASSERT_FALSE(SparkplugV.header.has_timestamp);
+    TEST_ASSERT_FALSE(SparkplugV.header.has_seq);
+    TEST_ASSERT_EQUAL_UINT64(0u, SparkplugV.header.timestamp);
 }
 
 // A varint whose last octet still carries the continuation bit runs off the end of the buffer, so
@@ -354,10 +354,10 @@ void test_parse_reports_absent_header_fields(void)
 void test_parse_rejects_a_truncated_varint(void)
 {
     static const uint8_t BAD[] = {0x08, 0x80}; // timestamp(1) VARINT, continuation set, nothing after
-    Sparkplug.source.buf = BAD;
-    Sparkplug.source.len = sizeof(BAD);
+    SparkplugV.source.buf = BAD;
+    SparkplugV.source.len = sizeof(BAD);
     Sparkplug.parse_payload(protocore_sparkplug_span());
-    TEST_ASSERT_FALSE(Sparkplug.ok);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
 }
 
 // A LEN record whose length prefix runs past the buffer is refused, so a metrics(2) sub-message can
@@ -365,12 +365,12 @@ void test_parse_rejects_a_truncated_varint(void)
 void test_next_metric_rejects_an_overlong_length(void)
 {
     static const uint8_t BAD[] = {0x12, 0x7F, 0x00}; // metrics(2) LEN, length 127, one octet present
-    Sparkplug.source.buf = BAD;
-    Sparkplug.source.len = sizeof(BAD);
-    Sparkplug.source.cursor = 0;
+    SparkplugV.source.buf = BAD;
+    SparkplugV.source.len = sizeof(BAD);
+    SparkplugV.source.cursor = 0;
     Sparkplug.next_metric(protocore_sparkplug_span());
-    TEST_ASSERT_FALSE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.metric_len);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, SparkplugV.metric_len);
 }
 
 // A buffer too small for the encoded Payload reports nothing written, so a partial protobuf message
@@ -384,15 +384,15 @@ void test_build_refuses_a_short_buffer(void)
     m.int_value = 42;
 
     uint8_t small[8];
-    Sparkplug.out.buf = small;
-    Sparkplug.out.cap = sizeof(small);
-    Sparkplug.payload.timestamp = 1;
-    Sparkplug.payload.seq = 0;
-    Sparkplug.metrics.list = &m;
-    Sparkplug.metrics.count = 1;
+    SparkplugV.out.buf = small;
+    SparkplugV.out.cap = sizeof(small);
+    SparkplugV.payload.timestamp = 1;
+    SparkplugV.payload.seq = 0;
+    SparkplugV.metrics.list = &m;
+    SparkplugV.metrics.count = 1;
     Sparkplug.build_payload(protocore_sparkplug_span());
-    TEST_ASSERT_FALSE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.n);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, SparkplugV.n);
 }
 
 // A null destination is reported, not written through.
@@ -402,31 +402,31 @@ void test_build_refuses_a_null_buffer(void)
     m.datatype = SPB_DT_INT32;
     m.kind = SPB_M_INT;
 
-    Sparkplug.out.buf = NULL;
-    Sparkplug.out.cap = 0;
-    Sparkplug.metrics.list = &m;
-    Sparkplug.metrics.count = 1;
+    SparkplugV.out.buf = NULL;
+    SparkplugV.out.cap = 0;
+    SparkplugV.metrics.list = &m;
+    SparkplugV.metrics.count = 1;
     Sparkplug.build_metric(protocore_sparkplug_span());
-    TEST_ASSERT_FALSE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.n);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, SparkplugV.n);
 
     Sparkplug.build_payload(protocore_sparkplug_span());
-    TEST_ASSERT_FALSE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Sparkplug.n);
+    TEST_ASSERT_FALSE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, SparkplugV.n);
 }
 
 // A Payload with no Metrics still carries its header: timestamp(1) then seq(3), 4 octets.
 void test_payload_with_no_metrics(void)
 {
     static const uint8_t WANT[] = {0x08, 0x02, 0x18, 0x03};
-    Sparkplug.out.buf = g_out;
-    Sparkplug.out.cap = sizeof(g_out);
-    Sparkplug.payload.timestamp = 2;
-    Sparkplug.payload.seq = 3;
-    Sparkplug.metrics.list = NULL;
-    Sparkplug.metrics.count = 0;
+    SparkplugV.out.buf = g_out;
+    SparkplugV.out.cap = sizeof(g_out);
+    SparkplugV.payload.timestamp = 2;
+    SparkplugV.payload.seq = 3;
+    SparkplugV.metrics.list = NULL;
+    SparkplugV.metrics.count = 0;
     Sparkplug.build_payload(protocore_sparkplug_span());
-    TEST_ASSERT_TRUE(Sparkplug.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Sparkplug.n);
+    TEST_ASSERT_TRUE(SparkplugV.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), SparkplugV.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_out, sizeof(WANT));
 }
