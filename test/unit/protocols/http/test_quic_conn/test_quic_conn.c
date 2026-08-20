@@ -56,24 +56,24 @@ static uint8_t tw_tctx[4096];
 static void assert_ctx_match(uint8_t *a, uint8_t *b)
 {
     uint8_t n12[12] = {0}, zpt[16] = {0}, c1[16], t1[16], c2[16], t2[16];
-    Aes128Gcm.seal_args.nonce = n12;
-    Aes128Gcm.seal_args.aad = NULL;
-    Aes128Gcm.seal_args.aad_len = 0;
-    Aes128Gcm.seal_args.pt = zpt;
-    Aes128Gcm.seal_args.pt_len = sizeof zpt;
-    Aes128Gcm.seal_args.ct_out = c1;
-    Aes128Gcm.seal_args.tag_out = t1;
+    Aes128GcmV.seal_args.nonce = n12;
+    Aes128GcmV.seal_args.aad = NULL;
+    Aes128GcmV.seal_args.aad_len = 0;
+    Aes128GcmV.seal_args.pt = zpt;
+    Aes128GcmV.seal_args.pt_len = sizeof zpt;
+    Aes128GcmV.seal_args.ct_out = c1;
+    Aes128GcmV.seal_args.tag_out = t1;
     Aes128Gcm.seal(a);
-    (void)Aes128Gcm.ok;
-    Aes128Gcm.seal_args.nonce = n12;
-    Aes128Gcm.seal_args.aad = NULL;
-    Aes128Gcm.seal_args.aad_len = 0;
-    Aes128Gcm.seal_args.pt = zpt;
-    Aes128Gcm.seal_args.pt_len = sizeof zpt;
-    Aes128Gcm.seal_args.ct_out = c2;
-    Aes128Gcm.seal_args.tag_out = t2;
+    (void)Aes128GcmV.ok;
+    Aes128GcmV.seal_args.nonce = n12;
+    Aes128GcmV.seal_args.aad = NULL;
+    Aes128GcmV.seal_args.aad_len = 0;
+    Aes128GcmV.seal_args.pt = zpt;
+    Aes128GcmV.seal_args.pt_len = sizeof zpt;
+    Aes128GcmV.seal_args.ct_out = c2;
+    Aes128GcmV.seal_args.tag_out = t2;
     Aes128Gcm.seal(b);
-    (void)Aes128Gcm.ok;
+    (void)Aes128GcmV.ok;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(c1, c2, sizeof c1);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(t1, t2, sizeof t1);
 }
@@ -487,14 +487,14 @@ void test_full_handshake_and_stream()
     uint8_t ch_sh[32], ch_sf[32];
     t = tw_t;
     Sha256.init(t);
-    Sha256.update_args.data = ch;
-    Sha256.update_args.len = ch_len;
+    Sha256V.update_args.data = ch;
+    Sha256V.update_args.len = ch_len;
     Sha256.update(t);
-    Sha256.update_args.data = sh;
-    Sha256.update_args.len = sh_len;
+    Sha256V.update_args.data = sh;
+    Sha256V.update_args.len = sh_len;
     Sha256.update(t);
     {
-        Sha256.final_args.out = ch_sh;
+        Sha256V.final_args.out = ch_sh;
         Sha256.final(t);
     }
     Tls13KeySchedule cks;
@@ -525,10 +525,10 @@ void test_full_handshake_and_stream()
     size_t hsflen = extract_crypto(plain, hpt, hsflight);
     TEST_ASSERT_EQUAL_UINT8(TLS_HS_ENCRYPTED_EXTENSIONS, hsflight[0]);
 
-    Sha256.update_args.data = hsflight;
-    Sha256.update_args.len = hsflen;
+    Sha256V.update_args.data = hsflight;
+    Sha256V.update_args.len = hsflen;
     Sha256.update(t);
-    Sha256.final_args.out = ch_sf;
+    Sha256V.final_args.out = ch_sf;
     Sha256.final(t);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ch_sfin_hash = ch_sf;
@@ -997,13 +997,13 @@ void test_connection_close_on_malformed_frame()
     uint8_t ch_sh[32];
     tctx = tw_tctx;
     Sha256.init(tctx);
-    Sha256.update_args.data = ch;
-    Sha256.update_args.len = ch_len;
+    Sha256V.update_args.data = ch;
+    Sha256V.update_args.len = ch_len;
     Sha256.update(tctx);
-    Sha256.update_args.data = sh;
-    Sha256.update_args.len = sh_len;
+    Sha256V.update_args.data = sh;
+    Sha256V.update_args.len = sh_len;
     Sha256.update(tctx);
-    Sha256.final_args.out = ch_sh;
+    Sha256V.final_args.out = ch_sh;
     Sha256.final(tctx);
     Tls13KeySchedule cks;
     static uint8_t ks_store_652[PROTOCORE_TLS13_KS_BORROW];
@@ -1853,14 +1853,14 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     uint8_t ch_sh[32], ch_sf[32];
     t = tw_t;
     Sha256.init(t);
-    Sha256.update_args.data = ch;
-    Sha256.update_args.len = ch_len;
+    Sha256V.update_args.data = ch;
+    Sha256V.update_args.len = ch_len;
     Sha256.update(t);
-    Sha256.update_args.data = sh;
-    Sha256.update_args.len = sh_len;
+    Sha256V.update_args.data = sh;
+    Sha256V.update_args.len = sh_len;
     Sha256.update(t);
     {
-        Sha256.final_args.out = ch_sh;
+        Sha256V.final_args.out = ch_sh;
         Sha256.final(t);
     }
     Tls13KeySchedule cks;
@@ -1887,10 +1887,10 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     uint8_t hstype = 0;
     size_t hpt = open_long(sdg + wire, sl - wire, &hs_server_keys, plain, &hswire, &hstype);
     size_t hsflen = extract_crypto(plain, hpt, hsflight);
-    Sha256.update_args.data = hsflight;
-    Sha256.update_args.len = hsflen;
+    Sha256V.update_args.data = hsflight;
+    Sha256V.update_args.len = hsflen;
     Sha256.update(t);
-    Sha256.final_args.out = ch_sf;
+    Sha256V.final_args.out = ch_sf;
     Sha256.final(t);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ch_sfin_hash = ch_sf;

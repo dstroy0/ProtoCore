@@ -137,11 +137,11 @@ int main(void)
         HBENCH_NS(
             40000,
             {
-                ChachaPoly.encrypt_args.key = key;
-                ChachaPoly.encrypt_args.src = src;
-                ChachaPoly.encrypt_args.dest = dst;
-                ChachaPoly.encrypt_args.seqnr = seq++;
-                ChachaPoly.encrypt_args.payload_len = plen;
+                ChachaPolyV.encrypt_args.key = key;
+                ChachaPolyV.encrypt_args.src = src;
+                ChachaPolyV.encrypt_args.dest = dst;
+                ChachaPolyV.encrypt_args.seqnr = seq++;
+                ChachaPolyV.encrypt_args.payload_len = plen;
                 ChachaPoly.encrypt(tw);
                 sink += dst[0];
             },

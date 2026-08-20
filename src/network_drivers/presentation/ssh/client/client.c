@@ -224,9 +224,9 @@ static proto_bool handle_kexdh_reply(const uint8_t *p, size_t len)
         return PROTO_FALSE;
     }
     uint8_t fp[32];
-    Sha256.hash_args.data = ks;
-    Sha256.hash_args.len = ks_len;
-    Sha256.hash_args.out = fp;
+    Sha256V.hash_args.data = ks;
+    Sha256V.hash_args.len = ks_len;
+    Sha256V.hash_args.out = fp;
     Sha256.hash(fwork);
     if (mem.cmp(fp, SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.host_pin, 32) != 0)
     {
@@ -409,20 +409,20 @@ static proto_bool build_kex_public(void)
         Rng.fill(protocore_rng_span());
         protocore_bignum g, x, e;
         uint8_t two = 2;
-        Bignum.from_bytes_args.out = &g;
-        Bignum.from_bytes_args.bytes = &two;
-        Bignum.from_bytes_args.len = 1;
+        BignumV.from_bytes_args.out = &g;
+        BignumV.from_bytes_args.bytes = &two;
+        BignumV.from_bytes_args.len = 1;
         Bignum.from_bytes(work);
-        Bignum.from_bytes_args.out = &x;
-        Bignum.from_bytes_args.bytes = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Bignum.from_bytes_args.len = 32;
+        BignumV.from_bytes_args.out = &x;
+        BignumV.from_bytes_args.bytes = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        BignumV.from_bytes_args.len = 32;
         Bignum.from_bytes(work);
-        Bignum.expmod_args.out = &e;
-        Bignum.expmod_args.base = &g;
-        Bignum.expmod_args.exp = &x;
+        BignumV.expmod_args.out = &e;
+        BignumV.expmod_args.base = &g;
+        BignumV.expmod_args.exp = &x;
         Bignum.expmod_group14(work);
-        Bignum.to_bytes_args.bytes = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
-        Bignum.to_bytes_args.in = &e;
+        BignumV.to_bytes_args.bytes = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+        BignumV.to_bytes_args.in = &e;
         Bignum.to_bytes(work);
         SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = 256;
         protocore_secure_wipe(&x, sizeof(x));

@@ -98,15 +98,15 @@ static void esp_gcm_encapsulate(uint8_t *restrict work)
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.seal_args.nonce = nonce;
-        AesGcm.seal_args.aad = out;
-        AesGcm.seal_args.aad_len = PROTOCORE_ESP_HDR_LEN;
-        AesGcm.seal_args.pt = pt;
-        AesGcm.seal_args.pt_len = pt_len;
-        AesGcm.seal_args.ct_out = pt;
-        AesGcm.seal_args.tag_out = pt + pt_len;
+        AesGcmV.seal_args.nonce = nonce;
+        AesGcmV.seal_args.aad = out;
+        AesGcmV.seal_args.aad_len = PROTOCORE_ESP_HDR_LEN;
+        AesGcmV.seal_args.pt = pt;
+        AesGcmV.seal_args.pt_len = pt_len;
+        AesGcmV.seal_args.ct_out = pt;
+        AesGcmV.seal_args.tag_out = pt + pt_len;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
@@ -153,17 +153,17 @@ static void esp_gcm_decapsulate(uint8_t *restrict work)
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.open_args.nonce = nonce;
-        AesGcm.open_args.aad = packet; // AAD = SPI | Seq
-        AesGcm.open_args.aad_len = PROTOCORE_ESP_HDR_LEN;
-        AesGcm.open_args.ct = ct;
-        AesGcm.open_args.ct_len = ct_len;
-        AesGcm.open_args.tag = tag;
-        AesGcm.open_args.out = ct;
+        AesGcmV.open_args.nonce = nonce;
+        AesGcmV.open_args.aad = packet; // AAD = SPI | Seq
+        AesGcmV.open_args.aad_len = PROTOCORE_ESP_HDR_LEN;
+        AesGcmV.open_args.ct = ct;
+        AesGcmV.open_args.ct_len = ct_len;
+        AesGcmV.open_args.tag = tag;
+        AesGcmV.open_args.out = ct;
         AesGcm.open(gcm);
-        ok = AesGcm.ok;
+        ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }

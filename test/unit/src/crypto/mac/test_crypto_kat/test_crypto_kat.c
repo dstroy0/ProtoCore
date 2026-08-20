@@ -137,7 +137,7 @@ static uint8_t *gcm(const uint8_t *key)
         Aes128Gcm.key_wipe(g_gcm_ws);
     }
     g_gcm_live = PROTO_TRUE;
-    Aes128Gcm.key_args.key = key;
+    Aes128GcmV.key_args.key = key;
     Aes128Gcm.key_init(g_gcm_ws);
     return g_gcm_ws;
 }
@@ -147,13 +147,13 @@ static void gcm_seal(const uint8_t *key, const uint8_t *iv, const uint8_t *aad, 
                      size_t plen, uint8_t *ct_out, uint8_t *tag_out)
 {
     uint8_t *w = gcm(key);
-    Aes128Gcm.seal_args.nonce = iv;
-    Aes128Gcm.seal_args.aad = aad;
-    Aes128Gcm.seal_args.aad_len = alen;
-    Aes128Gcm.seal_args.pt = pt;
-    Aes128Gcm.seal_args.pt_len = plen;
-    Aes128Gcm.seal_args.ct_out = ct_out;
-    Aes128Gcm.seal_args.tag_out = tag_out;
+    Aes128GcmV.seal_args.nonce = iv;
+    Aes128GcmV.seal_args.aad = aad;
+    Aes128GcmV.seal_args.aad_len = alen;
+    Aes128GcmV.seal_args.pt = pt;
+    Aes128GcmV.seal_args.pt_len = plen;
+    Aes128GcmV.seal_args.ct_out = ct_out;
+    Aes128GcmV.seal_args.tag_out = tag_out;
     Aes128Gcm.seal(w);
 }
 
@@ -162,15 +162,15 @@ static proto_bool gcm_open(const uint8_t *key, const uint8_t *iv, const uint8_t 
                            size_t clen, const uint8_t *tag, uint8_t *out)
 {
     uint8_t *w = gcm(key);
-    Aes128Gcm.open_args.nonce = iv;
-    Aes128Gcm.open_args.aad = aad;
-    Aes128Gcm.open_args.aad_len = alen;
-    Aes128Gcm.open_args.ct = ct;
-    Aes128Gcm.open_args.ct_len = clen;
-    Aes128Gcm.open_args.tag = tag;
-    Aes128Gcm.open_args.out = out;
+    Aes128GcmV.open_args.nonce = iv;
+    Aes128GcmV.open_args.aad = aad;
+    Aes128GcmV.open_args.aad_len = alen;
+    Aes128GcmV.open_args.ct = ct;
+    Aes128GcmV.open_args.ct_len = clen;
+    Aes128GcmV.open_args.tag = tag;
+    Aes128GcmV.open_args.out = out;
     Aes128Gcm.open(w);
-    return Aes128Gcm.ok;
+    return Aes128GcmV.ok;
 }
 
 // ---- HMAC (RFC 4231 / Wycheproof) -----------------------------------------
@@ -448,10 +448,10 @@ void test_chacha20_block(void)
         unhex(v->key, key);
         unhex(v->nonce, nonce);
         unhex(v->keystream, want);
-        Chacha20.block_ietf_args.key = key;
-        Chacha20.block_ietf_args.counter = v->counter;
-        Chacha20.block_ietf_args.nonce = nonce;
-        Chacha20.block_ietf_args.out = got;
+        Chacha20V.block_ietf_args.key = key;
+        Chacha20V.block_ietf_args.counter = v->counter;
+        Chacha20V.block_ietf_args.nonce = nonce;
+        Chacha20V.block_ietf_args.out = got;
         Chacha20.block_ietf(g_work);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, 64, v->keystream);
     }
@@ -489,15 +489,15 @@ void test_a_wiped_gcm_context_keeps_no_key_material(void)
 
     // Key it and seal once, so the schedule and H are really built rather than left zero.
     (void)gcm(KEY);
-    Aes128Gcm.seal_args.nonce = IV;
-    Aes128Gcm.seal_args.aad = NULL;
-    Aes128Gcm.seal_args.aad_len = 0;
-    Aes128Gcm.seal_args.pt = PT;
-    Aes128Gcm.seal_args.pt_len = sizeof(PT);
-    Aes128Gcm.seal_args.ct_out = ct;
-    Aes128Gcm.seal_args.tag_out = tag;
+    Aes128GcmV.seal_args.nonce = IV;
+    Aes128GcmV.seal_args.aad = NULL;
+    Aes128GcmV.seal_args.aad_len = 0;
+    Aes128GcmV.seal_args.pt = PT;
+    Aes128GcmV.seal_args.pt_len = sizeof(PT);
+    Aes128GcmV.seal_args.ct_out = ct;
+    Aes128GcmV.seal_args.tag_out = tag;
     Aes128Gcm.seal(g_gcm_ws);
-    TEST_ASSERT_TRUE(Aes128Gcm.ok);
+    TEST_ASSERT_TRUE(Aes128GcmV.ok);
 
     Aes128Gcm.key_wipe(g_gcm_ws);
 
@@ -511,13 +511,13 @@ void test_a_wiped_gcm_context_keeps_no_key_material(void)
     // And the schedule is gone: a seal on the wiped context does not reproduce the record.
     uint8_t ct2[16];
     uint8_t tag2[16];
-    Aes128Gcm.seal_args.nonce = IV;
-    Aes128Gcm.seal_args.aad = NULL;
-    Aes128Gcm.seal_args.aad_len = 0;
-    Aes128Gcm.seal_args.pt = PT;
-    Aes128Gcm.seal_args.pt_len = sizeof(PT);
-    Aes128Gcm.seal_args.ct_out = ct2;
-    Aes128Gcm.seal_args.tag_out = tag2;
+    Aes128GcmV.seal_args.nonce = IV;
+    Aes128GcmV.seal_args.aad = NULL;
+    Aes128GcmV.seal_args.aad_len = 0;
+    Aes128GcmV.seal_args.pt = PT;
+    Aes128GcmV.seal_args.pt_len = sizeof(PT);
+    Aes128GcmV.seal_args.ct_out = ct2;
+    Aes128GcmV.seal_args.tag_out = tag2;
     Aes128Gcm.seal(g_gcm_ws);
     TEST_ASSERT_FALSE_MESSAGE(memcmp(tag, tag2, sizeof(tag)) == 0,
                               "the wiped context still authenticates under the old key");

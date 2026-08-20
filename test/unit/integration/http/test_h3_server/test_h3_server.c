@@ -513,14 +513,14 @@ void test_h3_request_served_by_route()
     uint8_t chsh[32], chsf[32];
     t = tw_t;
     Sha256.init(t);
-    Sha256.update_args.data = ch;
-    Sha256.update_args.len = chl;
+    Sha256V.update_args.data = ch;
+    Sha256V.update_args.len = chl;
     Sha256.update(t);
-    Sha256.update_args.data = sh;
-    Sha256.update_args.len = shl;
+    Sha256V.update_args.data = sh;
+    Sha256V.update_args.len = shl;
     Sha256.update(t);
     {
-        Sha256.final_args.out = chsh;
+        Sha256V.final_args.out = chsh;
         Sha256.final(t);
     }
     Tls13KeySchedule cks;
@@ -547,10 +547,10 @@ void test_h3_request_served_by_route()
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
     size_t hsfl = extract_crypto(plain, hpt, hsf);
-    Sha256.update_args.data = hsf;
-    Sha256.update_args.len = hsfl;
+    Sha256V.update_args.data = hsf;
+    Sha256V.update_args.len = hsfl;
     Sha256.update(t);
-    Sha256.final_args.out = chsf;
+    Sha256V.final_args.out = chsf;
     Sha256.final(t);
     Tls13Ks.bind.ks = &cks;
     Tls13Ks.step.ch_sfin_hash = chsf;
@@ -732,4 +732,3 @@ void test_h3_dispatch_edges()
     send_text(0, 200, "text/plain", "x");
     send_empty(0, 204);
 }
-

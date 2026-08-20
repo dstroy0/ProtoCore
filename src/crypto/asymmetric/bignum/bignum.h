@@ -174,11 +174,17 @@ typedef struct
     BignumIsZeroArgs is_zero_args;
     BignumExpmodArgs expmod_args;
     BignumValidateArgs validate_args;
-
     proto_bool ok;
     int sign;
     proto_bool zero;
+} BignumVars;
 
+/** @brief The operands and the outcome. */
+extern BignumVars BignumV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const from_bytes)(uint8_t *restrict work);
     void (*const to_bytes)(uint8_t *restrict work);
     void (*const cmp)(uint8_t *restrict work);
@@ -188,8 +194,29 @@ typedef struct
     void (*const dh_validate)(uint8_t *restrict work);
 } BignumNs;
 
-/** @brief The one symbol this module exports. */
-extern BignumNs Bignum;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in BignumV or a region of the borrow at a fixed offset.
+void protocore_bignum_from_bytes(uint8_t *restrict work);
+void protocore_bignum_to_bytes(uint8_t *restrict work);
+void protocore_bignum_cmp(uint8_t *restrict work);
+void protocore_bignum_cmp_raw(uint8_t *restrict work);
+void protocore_bignum_is_zero(uint8_t *restrict work);
+void protocore_bignum_expmod_group14(uint8_t *restrict work);
+void protocore_bignum_dh_validate(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Bignum.from_bytes(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const BignumNs Bignum __attribute__((unused)) = {
+    .from_bytes = protocore_bignum_from_bytes,
+    .to_bytes = protocore_bignum_to_bytes,
+    .cmp = protocore_bignum_cmp,
+    .cmp_raw = protocore_bignum_cmp_raw,
+    .is_zero = protocore_bignum_is_zero,
+    .expmod_group14 = protocore_bignum_expmod_group14,
+    .dh_validate = protocore_bignum_dh_validate,
+};
 
 PROTOCORE_END_DECLS
 

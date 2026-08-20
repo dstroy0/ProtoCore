@@ -95,9 +95,9 @@ static_assert(ECDSA_OFF_HMAC + PROTOCORE_HMAC_SHA256_BORROW <= PROTOCORE_ECDSA_B
 static void ecdsa_hash_msg(uint8_t *restrict work, const uint8_t *msg, size_t mlen,
                            uint8_t out[PROTOCORE_SHA256_DIGEST_LEN])
 {
-    Sha256.hash_args.data = msg;
-    Sha256.hash_args.len = mlen;
-    Sha256.hash_args.out = out;
+    Sha256V.hash_args.data = msg;
+    Sha256V.hash_args.len = mlen;
+    Sha256V.hash_args.out = out;
     Sha256.hash(ECDSA_HASH(work));
 }
 

@@ -67,7 +67,7 @@ static void quic_crypto_keys_from_secret(uint8_t *restrict work)
     Hkdf.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
     Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
     Hkdf.expand_label(keys_work);
-    Aes128Gcm.key_args.key = k;
+    Aes128GcmV.key_args.key = k;
     Aes128Gcm.key_init(out->gcm);
     Hkdf.expand_label_args.secret = secret;
     Hkdf.expand_label_args.label = "quic iv";
@@ -81,7 +81,7 @@ static void quic_crypto_keys_from_secret(uint8_t *restrict work)
     Hkdf.expand_label_args.out_len = PROTOCORE_AES128GCM_KEY_LEN;
     Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
     Hkdf.expand_label(keys_work);
-    Aes128Gcm.block_key_args.key = hpk;
+    Aes128GcmV.block_key_args.key = hpk;
     Aes128Gcm.block_init(out->gcm);
     protocore_secure_wipe(k, 2 * PROTOCORE_AES128GCM_KEY_LEN);
 }
@@ -154,13 +154,13 @@ static void quic_crypto_packet_protect(uint8_t *restrict work)
     // AEAD-seal the payload in place; associated data is the unprotected header.
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
-    Aes128Gcm.seal_args.nonce = nonce;
-    Aes128Gcm.seal_args.aad = pkt;
-    Aes128Gcm.seal_args.aad_len = hdr_len;
-    Aes128Gcm.seal_args.pt = pkt + hdr_len;
-    Aes128Gcm.seal_args.pt_len = payload_len;
-    Aes128Gcm.seal_args.ct_out = pkt + hdr_len;
-    Aes128Gcm.seal_args.tag_out = pkt + hdr_len + payload_len;
+    Aes128GcmV.seal_args.nonce = nonce;
+    Aes128GcmV.seal_args.aad = pkt;
+    Aes128GcmV.seal_args.aad_len = hdr_len;
+    Aes128GcmV.seal_args.pt = pkt + hdr_len;
+    Aes128GcmV.seal_args.pt_len = payload_len;
+    Aes128GcmV.seal_args.ct_out = pkt + hdr_len;
+    Aes128GcmV.seal_args.tag_out = pkt + hdr_len + payload_len;
     Aes128Gcm.seal(keys->gcm);
 
     // Header protection (RFC 9001 sec 5.4): sample 16 bytes at pn_offset + 4 (always inside the
@@ -169,8 +169,8 @@ static void quic_crypto_packet_protect(uint8_t *restrict work)
     // costs ~556 cycles per packet plus a pool borrow and wipe. (The ECB block itself is ~7,842 - a
     // single HW-AES operation is expensive on this die, and that is the bigger target.)
     uint8_t mask[16];
-    Aes128Gcm.block_args.in = pkt + pn_offset + 4;
-    Aes128Gcm.block_args.out = mask;
+    Aes128GcmV.block_args.in = pkt + pn_offset + 4;
+    Aes128GcmV.block_args.out = mask;
     Aes128Gcm.block_encrypt(keys->gcm);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
@@ -205,8 +205,8 @@ static void quic_crypto_packet_unprotect(uint8_t *restrict work)
     // The header-protection context is already keyed and lives in the key material; building one here
     // would cost ~8,400 cycles to encrypt sixteen bytes.
     uint8_t mask[16];
-    Aes128Gcm.block_args.in = pkt + pn_offset + 4;
-    Aes128Gcm.block_args.out = mask;
+    Aes128GcmV.block_args.in = pkt + pn_offset + 4;
+    Aes128GcmV.block_args.out = mask;
     Aes128Gcm.block_encrypt(keys->gcm);
 
     pkt[0] ^= mask[0] & (is_long ? 0x0f : 0x1f);
@@ -242,15 +242,15 @@ static void quic_crypto_packet_unprotect(uint8_t *restrict work)
     uint8_t nonce[12];
     build_nonce(keys->iv, full_pn, nonce);
     const size_t pt_len = ct_len - PROTOCORE_AES128GCM_TAG_LEN;
-    Aes128Gcm.open_args.nonce = nonce;
-    Aes128Gcm.open_args.aad = pkt;
-    Aes128Gcm.open_args.aad_len = hdr_len;
-    Aes128Gcm.open_args.ct = pkt + hdr_len;
-    Aes128Gcm.open_args.ct_len = pt_len;
-    Aes128Gcm.open_args.tag = pkt + hdr_len + pt_len;
-    Aes128Gcm.open_args.out = out;
+    Aes128GcmV.open_args.nonce = nonce;
+    Aes128GcmV.open_args.aad = pkt;
+    Aes128GcmV.open_args.aad_len = hdr_len;
+    Aes128GcmV.open_args.ct = pkt + hdr_len;
+    Aes128GcmV.open_args.ct_len = pt_len;
+    Aes128GcmV.open_args.tag = pkt + hdr_len + pt_len;
+    Aes128GcmV.open_args.out = out;
     Aes128Gcm.open(keys->gcm);
-    if (!Aes128Gcm.ok)
+    if (!Aes128GcmV.ok)
     {
         QuicCrypto.n = (size_t)-1;
         return;
@@ -290,15 +290,15 @@ static void quic_crypto_retry_integrity_tag(uint8_t *restrict work)
     { // fixed RFC 9001 key, once per Retry packet - not worth a resident context
         size_t mark = protocore_secure_mark();
         uint8_t *rk = protocore_secure_alloc(PROTOCORE_AES128GCM_BORROW, 8);
-        Aes128Gcm.key_args.key = RETRY_KEY;
+        Aes128GcmV.key_args.key = RETRY_KEY;
         Aes128Gcm.key_init(rk);
-        Aes128Gcm.seal_args.nonce = RETRY_NONCE;
-        Aes128Gcm.seal_args.aad = aad;
-        Aes128Gcm.seal_args.aad_len = p;
-        Aes128Gcm.seal_args.pt = NULL;
-        Aes128Gcm.seal_args.pt_len = 0;
-        Aes128Gcm.seal_args.ct_out = tag;
-        Aes128Gcm.seal_args.tag_out = tag;
+        Aes128GcmV.seal_args.nonce = RETRY_NONCE;
+        Aes128GcmV.seal_args.aad = aad;
+        Aes128GcmV.seal_args.aad_len = p;
+        Aes128GcmV.seal_args.pt = NULL;
+        Aes128GcmV.seal_args.pt_len = 0;
+        Aes128GcmV.seal_args.ct_out = tag;
+        Aes128GcmV.seal_args.tag_out = tag;
         Aes128Gcm.seal(rk);
         Aes128Gcm.key_wipe(rk);
         protocore_secure_release(mark);

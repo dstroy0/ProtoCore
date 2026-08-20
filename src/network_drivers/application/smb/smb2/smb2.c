@@ -474,13 +474,13 @@ static void preauth_update(uint8_t *restrict work)
     uint8_t prev[PROTOCORE_SMB2_PREAUTH_HASH_LEN];
     mem.cpy(prev, p->hash, sizeof(prev));
     Sha512.init(crypto_work);
-    Sha512.update_args.data = prev;
-    Sha512.update_args.len = sizeof(prev);
+    Sha512V.update_args.data = prev;
+    Sha512V.update_args.len = sizeof(prev);
     Sha512.update(crypto_work);
-    Sha512.update_args.data = msg;
-    Sha512.update_args.len = len;
+    Sha512V.update_args.data = msg;
+    Sha512V.update_args.len = len;
     Sha512.update(crypto_work);
-    Sha512.final_args.out = p->hash;
+    Sha512V.final_args.out = p->hash;
     Sha512.final(crypto_work);
 }
 
@@ -1300,15 +1300,15 @@ static void smb2_encrypt(uint8_t *restrict work)
         // a per-session one, and the lifecycle cost is at least visible here.
         size_t mark = protocore_secure_mark();
         uint8_t *g = protocore_secure_span(PROTOCORE_AES128GCM_BORROW, 8).buf;
-        Aes128Gcm.key_args.key = key;
+        Aes128GcmV.key_args.key = key;
         Aes128Gcm.key_init(g);
-        Aes128Gcm.seal_args.nonce = out + 20;
-        Aes128Gcm.seal_args.aad = aad;
-        Aes128Gcm.seal_args.aad_len = 32;
-        Aes128Gcm.seal_args.pt = msg;
-        Aes128Gcm.seal_args.pt_len = msg_len;
-        Aes128Gcm.seal_args.ct_out = ct;
-        Aes128Gcm.seal_args.tag_out = tag;
+        Aes128GcmV.seal_args.nonce = out + 20;
+        Aes128GcmV.seal_args.aad = aad;
+        Aes128GcmV.seal_args.aad_len = 32;
+        Aes128GcmV.seal_args.pt = msg;
+        Aes128GcmV.seal_args.pt_len = msg_len;
+        Aes128GcmV.seal_args.ct_out = ct;
+        Aes128GcmV.seal_args.tag_out = tag;
         Aes128Gcm.seal(g);
         Aes128Gcm.key_wipe(g);
         protocore_secure_release(mark);
@@ -1321,15 +1321,15 @@ static void smb2_encrypt(uint8_t *restrict work)
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.seal_args.nonce = out + 20;
-        AesGcm.seal_args.aad = aad;
-        AesGcm.seal_args.aad_len = 32;
-        AesGcm.seal_args.pt = msg;
-        AesGcm.seal_args.pt_len = msg_len;
-        AesGcm.seal_args.ct_out = ct;
-        AesGcm.seal_args.tag_out = tag;
+        AesGcmV.seal_args.nonce = out + 20;
+        AesGcmV.seal_args.aad = aad;
+        AesGcmV.seal_args.aad_len = 32;
+        AesGcmV.seal_args.pt = msg;
+        AesGcmV.seal_args.pt_len = msg_len;
+        AesGcmV.seal_args.ct_out = ct;
+        AesGcmV.seal_args.tag_out = tag;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
@@ -1340,18 +1340,18 @@ static void smb2_encrypt(uint8_t *restrict work)
     case SMB2_ENCRYPTION_AES256_CCM: {
         size_t mark = protocore_secure_mark();
         uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
-        AesCcm.seal_args.key = key;
-        AesCcm.seal_args.key_len = key_len;
-        AesCcm.seal_args.nonce = out + 20;
-        AesCcm.seal_args.nonce_len = nonce_len;
-        AesCcm.seal_args.aad = aad;
-        AesCcm.seal_args.aad_len = 32;
-        AesCcm.seal_args.pt = msg;
-        AesCcm.seal_args.pt_len = msg_len;
-        AesCcm.seal_args.ct_out = ct;
-        AesCcm.seal_args.tag_out = tag;
+        AesCcmV.seal_args.key = key;
+        AesCcmV.seal_args.key_len = key_len;
+        AesCcmV.seal_args.nonce = out + 20;
+        AesCcmV.seal_args.nonce_len = nonce_len;
+        AesCcmV.seal_args.aad = aad;
+        AesCcmV.seal_args.aad_len = 32;
+        AesCcmV.seal_args.pt = msg;
+        AesCcmV.seal_args.pt_len = msg_len;
+        AesCcmV.seal_args.ct_out = ct;
+        AesCcmV.seal_args.tag_out = tag;
         AesCcm.seal(c);
-        ok = AesCcm.ok;
+        ok = AesCcmV.ok;
         protocore_secure_release(mark);
     }
     break;
@@ -1415,17 +1415,17 @@ static void smb2_decrypt(uint8_t *restrict work)
         // a per-session one, and the lifecycle cost is at least visible here.
         size_t mark = protocore_secure_mark();
         uint8_t *g = protocore_secure_span(PROTOCORE_AES128GCM_BORROW, 8).buf;
-        Aes128Gcm.key_args.key = key;
+        Aes128GcmV.key_args.key = key;
         Aes128Gcm.key_init(g);
-        Aes128Gcm.open_args.nonce = aad;
-        Aes128Gcm.open_args.aad = aad;
-        Aes128Gcm.open_args.aad_len = 32;
-        Aes128Gcm.open_args.ct = ct;
-        Aes128Gcm.open_args.ct_len = ct_len;
-        Aes128Gcm.open_args.tag = tag;
-        Aes128Gcm.open_args.out = out;
+        Aes128GcmV.open_args.nonce = aad;
+        Aes128GcmV.open_args.aad = aad;
+        Aes128GcmV.open_args.aad_len = 32;
+        Aes128GcmV.open_args.ct = ct;
+        Aes128GcmV.open_args.ct_len = ct_len;
+        Aes128GcmV.open_args.tag = tag;
+        Aes128GcmV.open_args.out = out;
         Aes128Gcm.open(g);
-        ok = Aes128Gcm.ok;
+        ok = Aes128GcmV.ok;
         Aes128Gcm.key_wipe(g);
         protocore_secure_release(mark);
     }
@@ -1436,17 +1436,17 @@ static void smb2_decrypt(uint8_t *restrict work)
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.open_args.nonce = aad;
-        AesGcm.open_args.aad = aad;
-        AesGcm.open_args.aad_len = 32;
-        AesGcm.open_args.ct = ct;
-        AesGcm.open_args.ct_len = ct_len;
-        AesGcm.open_args.tag = tag;
-        AesGcm.open_args.out = out;
+        AesGcmV.open_args.nonce = aad;
+        AesGcmV.open_args.aad = aad;
+        AesGcmV.open_args.aad_len = 32;
+        AesGcmV.open_args.ct = ct;
+        AesGcmV.open_args.ct_len = ct_len;
+        AesGcmV.open_args.tag = tag;
+        AesGcmV.open_args.out = out;
         AesGcm.open(gcm);
-        ok = AesGcm.ok;
+        ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
@@ -1455,18 +1455,18 @@ static void smb2_decrypt(uint8_t *restrict work)
     case SMB2_ENCRYPTION_AES256_CCM: {
         size_t mark = protocore_secure_mark();
         uint8_t *c = protocore_secure_span(PROTOCORE_AESCCM_BORROW, 8).buf;
-        AesCcm.open_args.key = key;
-        AesCcm.open_args.key_len = key_len;
-        AesCcm.open_args.nonce = aad;
-        AesCcm.open_args.nonce_len = nonce_len;
-        AesCcm.open_args.aad = aad;
-        AesCcm.open_args.aad_len = 32;
-        AesCcm.open_args.ct = ct;
-        AesCcm.open_args.ct_len = ct_len;
-        AesCcm.open_args.tag = tag;
-        AesCcm.open_args.out = out;
+        AesCcmV.open_args.key = key;
+        AesCcmV.open_args.key_len = key_len;
+        AesCcmV.open_args.nonce = aad;
+        AesCcmV.open_args.nonce_len = nonce_len;
+        AesCcmV.open_args.aad = aad;
+        AesCcmV.open_args.aad_len = 32;
+        AesCcmV.open_args.ct = ct;
+        AesCcmV.open_args.ct_len = ct_len;
+        AesCcmV.open_args.tag = tag;
+        AesCcmV.open_args.out = out;
         AesCcm.open(c);
-        ok = AesCcm.ok;
+        ok = AesCcmV.ok;
         protocore_secure_release(mark);
     }
     break;

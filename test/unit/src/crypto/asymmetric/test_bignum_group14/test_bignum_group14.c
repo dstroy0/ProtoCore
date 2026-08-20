@@ -76,19 +76,19 @@ static void read_bn(protocore_bignum *out, const char *hex)
     uint8_t raw[BN_BYTES];
     size_t n = unhex(hex, raw);
     TEST_ASSERT_EQUAL_UINT(BN_BYTES, (unsigned)n);
-    Bignum.from_bytes_args.out = out;
-    Bignum.from_bytes_args.bytes = raw;
-    Bignum.from_bytes_args.len = n;
+    BignumV.from_bytes_args.out = out;
+    BignumV.from_bytes_args.bytes = raw;
+    BignumV.from_bytes_args.len = n;
     Bignum.from_bytes(g_work);
-    TEST_ASSERT_TRUE(Bignum.ok);
+    TEST_ASSERT_TRUE(BignumV.ok);
 }
 
 static void write_bn(uint8_t out[BN_BYTES], const protocore_bignum *v)
 {
-    Bignum.to_bytes_args.bytes = out;
-    Bignum.to_bytes_args.in = v;
+    BignumV.to_bytes_args.bytes = out;
+    BignumV.to_bytes_args.in = v;
     Bignum.to_bytes(g_work);
-    TEST_ASSERT_TRUE(Bignum.ok);
+    TEST_ASSERT_TRUE(BignumV.ok);
 }
 
 // ---- the group constants ---------------------------------------------------
@@ -133,11 +133,11 @@ void test_from_bytes_handles_a_short_and_a_long_source(void)
     uint8_t got[BN_BYTES];
     const uint8_t four[4] = {0x01, 0x02, 0x03, 0x04};
 
-    Bignum.from_bytes_args.out = &v;
-    Bignum.from_bytes_args.bytes = four;
-    Bignum.from_bytes_args.len = sizeof(four);
+    BignumV.from_bytes_args.out = &v;
+    BignumV.from_bytes_args.bytes = four;
+    BignumV.from_bytes_args.len = sizeof(four);
     Bignum.from_bytes(g_work);
-    TEST_ASSERT_TRUE(Bignum.ok);
+    TEST_ASSERT_TRUE(BignumV.ok);
     write_bn(got, &v);
     for (size_t i = 0; i < BN_BYTES - 4u; i++)
     {
@@ -148,11 +148,11 @@ void test_from_bytes_handles_a_short_and_a_long_source(void)
     uint8_t wide[BN_BYTES + 8];
     memset(wide, 0xAA, sizeof(wide));
     memset(wide + 8, 0x5A, BN_BYTES);
-    Bignum.from_bytes_args.out = &v;
-    Bignum.from_bytes_args.bytes = wide;
-    Bignum.from_bytes_args.len = sizeof(wide);
+    BignumV.from_bytes_args.out = &v;
+    BignumV.from_bytes_args.bytes = wide;
+    BignumV.from_bytes_args.len = sizeof(wide);
     Bignum.from_bytes(g_work);
-    TEST_ASSERT_TRUE(Bignum.ok);
+    TEST_ASSERT_TRUE(BignumV.ok);
     write_bn(got, &v);
     for (size_t i = 0; i < BN_BYTES; i++)
     {
@@ -169,38 +169,38 @@ void test_cmp_orders_two_values_and_cmp_raw_spans_the_stated_limbs(void)
     read_bn(&a, KAT_GROUP14[0].base); // 2
     read_bn(&b, KAT_GROUP14[2].exp);  // p-1
 
-    Bignum.cmp_args.a = &a;
-    Bignum.cmp_args.b = &b;
+    BignumV.cmp_args.a = &a;
+    BignumV.cmp_args.b = &b;
     Bignum.cmp(g_work);
-    TEST_ASSERT_TRUE(Bignum.ok);
-    TEST_ASSERT_EQUAL_INT(-1, Bignum.sign);
+    TEST_ASSERT_TRUE(BignumV.ok);
+    TEST_ASSERT_EQUAL_INT(-1, BignumV.sign);
 
-    Bignum.cmp_args.a = &b;
-    Bignum.cmp_args.b = &a;
+    BignumV.cmp_args.a = &b;
+    BignumV.cmp_args.b = &a;
     Bignum.cmp(g_work);
-    TEST_ASSERT_EQUAL_INT(1, Bignum.sign);
+    TEST_ASSERT_EQUAL_INT(1, BignumV.sign);
 
-    Bignum.cmp_args.a = &a;
-    Bignum.cmp_args.b = &a;
+    BignumV.cmp_args.a = &a;
+    BignumV.cmp_args.b = &a;
     Bignum.cmp(g_work);
-    TEST_ASSERT_EQUAL_INT(0, Bignum.sign);
+    TEST_ASSERT_EQUAL_INT(0, BignumV.sign);
 
     // over one limb the two agree, because they differ only above it
-    Bignum.cmp_raw_args.a = a.d;
-    Bignum.cmp_raw_args.b = b.d;
-    Bignum.cmp_raw_args.n = PROTOCORE_BN_LIMBS;
+    BignumV.cmp_raw_args.a = a.d;
+    BignumV.cmp_raw_args.b = b.d;
+    BignumV.cmp_raw_args.n = PROTOCORE_BN_LIMBS;
     Bignum.cmp_raw(g_work);
-    TEST_ASSERT_EQUAL_INT(-1, Bignum.sign);
+    TEST_ASSERT_EQUAL_INT(-1, BignumV.sign);
 }
 
 void test_is_zero_finds_every_limb_zero(void)
 {
     protocore_bignum v;
     memset(v.d, 0, sizeof(v.d));
-    Bignum.is_zero_args.a = &v;
+    BignumV.is_zero_args.a = &v;
     Bignum.is_zero(g_work);
-    TEST_ASSERT_TRUE(Bignum.ok);
-    TEST_ASSERT_TRUE(Bignum.zero);
+    TEST_ASSERT_TRUE(BignumV.ok);
+    TEST_ASSERT_TRUE(BignumV.zero);
 
     // one bit anywhere in the width is enough to make it non-zero
     for (int i = 0; i < PROTOCORE_BN_LIMBS; i++)
@@ -208,8 +208,8 @@ void test_is_zero_finds_every_limb_zero(void)
         memset(v.d, 0, sizeof(v.d));
         v.d[i] = 1u;
         Bignum.is_zero(g_work);
-        TEST_ASSERT_TRUE(Bignum.ok);
-        TEST_ASSERT_FALSE(Bignum.zero);
+        TEST_ASSERT_TRUE(BignumV.ok);
+        TEST_ASSERT_FALSE(BignumV.zero);
     }
 }
 
@@ -219,33 +219,33 @@ void test_dh_validate_accepts_only_values_strictly_between_one_and_p_minus_one(v
 {
     protocore_bignum v;
     memset(v.d, 0, sizeof(v.d));
-    Bignum.validate_args.v = &v;
+    BignumV.validate_args.v = &v;
 
     v.d[0] = 0u; // 0
     Bignum.dh_validate(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
     v.d[0] = 1u; // 1
     Bignum.dh_validate(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
     v.d[0] = 2u; // the generator
     Bignum.dh_validate(g_work);
-    TEST_ASSERT_TRUE(Bignum.ok);
+    TEST_ASSERT_TRUE(BignumV.ok);
 
     v = group14_p; // p
     Bignum.dh_validate(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
     v = group14_p;
     v.d[0]--; // p-1
     Bignum.dh_validate(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
     v = group14_p;
     v.d[0] -= 2u; // p-2, the largest accepted value
     Bignum.dh_validate(g_work);
-    TEST_ASSERT_TRUE(Bignum.ok);
+    TEST_ASSERT_TRUE(BignumV.ok);
 }
 
 // ---- the modexp, on whichever backend the build linked ---------------------
@@ -264,11 +264,11 @@ void test_expmod_group14_matches_the_vectors(void)
         read_bn(&exp, v->exp);
         unhex(v->out, want);
 
-        Bignum.expmod_args.out = &out;
-        Bignum.expmod_args.base = &base;
-        Bignum.expmod_args.exp = &exp;
+        BignumV.expmod_args.out = &out;
+        BignumV.expmod_args.base = &base;
+        BignumV.expmod_args.exp = &exp;
         Bignum.expmod_group14(g_work);
-        TEST_ASSERT_TRUE_MESSAGE(Bignum.ok, v->comment);
+        TEST_ASSERT_TRUE_MESSAGE(BignumV.ok, v->comment);
 
         write_bn(got, &out);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, BN_BYTES, v->comment);
@@ -294,41 +294,41 @@ void test_every_entry_refuses_a_null_operand(void)
     memset(v.d, 0, sizeof(v.d));
     uint8_t bytes[BN_BYTES];
 
-    Bignum.from_bytes_args.out = NULL;
-    Bignum.from_bytes_args.bytes = bytes;
-    Bignum.from_bytes_args.len = BN_BYTES;
+    BignumV.from_bytes_args.out = NULL;
+    BignumV.from_bytes_args.bytes = bytes;
+    BignumV.from_bytes_args.len = BN_BYTES;
     Bignum.from_bytes(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
-    Bignum.to_bytes_args.bytes = NULL;
-    Bignum.to_bytes_args.in = &v;
+    BignumV.to_bytes_args.bytes = NULL;
+    BignumV.to_bytes_args.in = &v;
     Bignum.to_bytes(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
-    Bignum.cmp_args.a = NULL;
-    Bignum.cmp_args.b = &v;
+    BignumV.cmp_args.a = NULL;
+    BignumV.cmp_args.b = &v;
     Bignum.cmp(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
-    Bignum.cmp_raw_args.a = NULL;
-    Bignum.cmp_raw_args.b = v.d;
-    Bignum.cmp_raw_args.n = PROTOCORE_BN_LIMBS;
+    BignumV.cmp_raw_args.a = NULL;
+    BignumV.cmp_raw_args.b = v.d;
+    BignumV.cmp_raw_args.n = PROTOCORE_BN_LIMBS;
     Bignum.cmp_raw(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
-    Bignum.is_zero_args.a = NULL;
+    BignumV.is_zero_args.a = NULL;
     Bignum.is_zero(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
-    Bignum.expmod_args.out = NULL;
-    Bignum.expmod_args.base = &v;
-    Bignum.expmod_args.exp = &v;
+    BignumV.expmod_args.out = NULL;
+    BignumV.expmod_args.base = &v;
+    BignumV.expmod_args.exp = &v;
     Bignum.expmod_group14(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 
-    Bignum.validate_args.v = NULL;
+    BignumV.validate_args.v = NULL;
     Bignum.dh_validate(g_work);
-    TEST_ASSERT_FALSE(Bignum.ok);
+    TEST_ASSERT_FALSE(BignumV.ok);
 }
 
 void test_vector_table_is_populated(void)

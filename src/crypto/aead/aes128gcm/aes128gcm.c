@@ -250,7 +250,7 @@ static void gcm_tag(uint8_t *restrict work, const uint8_t *aad, size_t aad_len, 
 static proto_bool aes128gcm_key_load(uint8_t *restrict work)
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
-    blk_init(&w->blk, Aes128Gcm.key_args.key);
+    blk_init(&w->blk, Aes128GcmV.key_args.key);
     mem.zero(w->h, 16);
     aes128_ecb(w, w->h, w->h); // H = E(K, 0^128)
     Ghash.key_args.h = w->h;
@@ -271,41 +271,41 @@ static void aes128gcm_key_release(uint8_t *restrict work)
 static proto_bool aes128gcm_seal_record(uint8_t *restrict work)
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
-    set_j0(w, Aes128Gcm.seal_args.nonce);
+    set_j0(w, Aes128GcmV.seal_args.nonce);
     // Encrypt first (counter starts at inc32(J0)), then GHASH the resulting ciphertext.
     mem.cpy(w->ctr, w->j0, 16);
     inc32(w->ctr);
-    gctr(w, Aes128Gcm.seal_args.pt, Aes128Gcm.seal_args.pt_len, Aes128Gcm.seal_args.ct_out);
-    gcm_tag(work, Aes128Gcm.seal_args.aad, Aes128Gcm.seal_args.aad_len, Aes128Gcm.seal_args.ct_out,
-            Aes128Gcm.seal_args.pt_len, Aes128Gcm.seal_args.tag_out);
+    gctr(w, Aes128GcmV.seal_args.pt, Aes128GcmV.seal_args.pt_len, Aes128GcmV.seal_args.ct_out);
+    gcm_tag(work, Aes128GcmV.seal_args.aad, Aes128GcmV.seal_args.aad_len, Aes128GcmV.seal_args.ct_out,
+            Aes128GcmV.seal_args.pt_len, Aes128GcmV.seal_args.tag_out);
     return PROTO_TRUE;
 }
 
 static proto_bool aes128gcm_open_record(uint8_t *restrict work)
 {
     Aes128GcmWork *w = AES128GCM_GCM(work);
-    set_j0(w, Aes128Gcm.open_args.nonce);
+    set_j0(w, Aes128GcmV.open_args.nonce);
     // Authenticate over the received ciphertext BEFORE producing any plaintext.
-    gcm_tag(work, Aes128Gcm.open_args.aad, Aes128Gcm.open_args.aad_len, Aes128Gcm.open_args.ct,
-            Aes128Gcm.open_args.ct_len, w->tag);
-    if (!protocore_ct_eq(w->tag, Aes128Gcm.open_args.tag, PROTOCORE_AES128GCM_TAG_LEN))
+    gcm_tag(work, Aes128GcmV.open_args.aad, Aes128GcmV.open_args.aad_len, Aes128GcmV.open_args.ct,
+            Aes128GcmV.open_args.ct_len, w->tag);
+    if (!protocore_ct_eq(w->tag, Aes128GcmV.open_args.tag, PROTOCORE_AES128GCM_TAG_LEN))
     {
         return PROTO_FALSE; // tag mismatch: nothing written
     }
     mem.cpy(w->ctr, w->j0, 16);
     inc32(w->ctr);
-    gctr(w, Aes128Gcm.open_args.ct, Aes128Gcm.open_args.ct_len, Aes128Gcm.open_args.out);
+    gctr(w, Aes128GcmV.open_args.ct, Aes128GcmV.open_args.ct_len, Aes128GcmV.open_args.out);
     return PROTO_TRUE;
 }
 
 static void aes128gcm_blk_load(uint8_t *restrict work)
 {
-    blk_init(AES128GCM_BLK(work), Aes128Gcm.block_key_args.key);
+    blk_init(AES128GCM_BLK(work), Aes128GcmV.block_key_args.key);
 }
 
 static void aes128gcm_blk_run(uint8_t *restrict work)
 {
-    blk_enc(AES128GCM_BLK(work), Aes128Gcm.block_args.in, Aes128Gcm.block_args.out);
+    blk_enc(AES128GCM_BLK(work), Aes128GcmV.block_args.in, Aes128GcmV.block_args.out);
 }
 
 static void aes128gcm_blk_release(uint8_t *restrict work)
@@ -315,81 +315,76 @@ static void aes128gcm_blk_release(uint8_t *restrict work)
 
 // --- the entries -----------------------------------------------------------
 
-static void aes128gcm_key_init(uint8_t *restrict work)
+void protocore_aes128_gcm_key_init(uint8_t *restrict work)
 {
-    Aes128Gcm.ok = PROTO_FALSE;
-    if (!Aes128Gcm.key_args.key)
+    Aes128GcmV.ok = PROTO_FALSE;
+    if (!Aes128GcmV.key_args.key)
     {
         return;
     }
-    Aes128Gcm.ok = aes128gcm_key_load(work);
+    Aes128GcmV.ok = aes128gcm_key_load(work);
 }
 
 // Release what the context attached. The bytes themselves are the caller's: it releases the borrow and
 // the pool wipes it.
-static void aes128gcm_key_wipe(uint8_t *restrict work)
+void protocore_aes128_gcm_key_wipe(uint8_t *restrict work)
 {
-    Aes128Gcm.ok = PROTO_FALSE;
+    Aes128GcmV.ok = PROTO_FALSE;
     aes128gcm_key_release(work);
-    Aes128Gcm.ok = PROTO_TRUE;
+    Aes128GcmV.ok = PROTO_TRUE;
 }
 
-static void aes128gcm_seal(uint8_t *restrict work)
+void protocore_aes128_gcm_seal(uint8_t *restrict work)
 {
-    Aes128Gcm.ok = PROTO_FALSE;
-    if (!Aes128Gcm.seal_args.nonce || !Aes128Gcm.seal_args.ct_out || !Aes128Gcm.seal_args.tag_out)
+    Aes128GcmV.ok = PROTO_FALSE;
+    if (!Aes128GcmV.seal_args.nonce || !Aes128GcmV.seal_args.ct_out || !Aes128GcmV.seal_args.tag_out)
     {
         return;
     }
-    Aes128Gcm.ok = aes128gcm_seal_record(work);
+    Aes128GcmV.ok = aes128gcm_seal_record(work);
 }
 
-static void aes128gcm_open(uint8_t *restrict work)
+void protocore_aes128_gcm_open(uint8_t *restrict work)
 {
-    Aes128Gcm.ok = PROTO_FALSE;
-    if (!Aes128Gcm.open_args.nonce || !Aes128Gcm.open_args.tag || !Aes128Gcm.open_args.out)
+    Aes128GcmV.ok = PROTO_FALSE;
+    if (!Aes128GcmV.open_args.nonce || !Aes128GcmV.open_args.tag || !Aes128GcmV.open_args.out)
     {
         return;
     }
-    Aes128Gcm.ok = aes128gcm_open_record(work);
+    Aes128GcmV.ok = aes128gcm_open_record(work);
 }
 
-static void aes128gcm_block_init(uint8_t *restrict work)
+void protocore_aes128_gcm_block_init(uint8_t *restrict work)
 {
-    Aes128Gcm.ok = PROTO_FALSE;
-    if (!Aes128Gcm.block_key_args.key)
+    Aes128GcmV.ok = PROTO_FALSE;
+    if (!Aes128GcmV.block_key_args.key)
     {
         return;
     }
     aes128gcm_blk_load(work);
-    Aes128Gcm.ok = PROTO_TRUE;
+    Aes128GcmV.ok = PROTO_TRUE;
 }
 
-static void aes128gcm_block_encrypt(uint8_t *restrict work)
+void protocore_aes128_gcm_block_encrypt(uint8_t *restrict work)
 {
-    Aes128Gcm.ok = PROTO_FALSE;
-    if (!Aes128Gcm.block_args.in || !Aes128Gcm.block_args.out)
+    Aes128GcmV.ok = PROTO_FALSE;
+    if (!Aes128GcmV.block_args.in || !Aes128GcmV.block_args.out)
     {
         return;
     }
     aes128gcm_blk_run(work);
-    Aes128Gcm.ok = PROTO_TRUE;
+    Aes128GcmV.ok = PROTO_TRUE;
 }
 
-static void aes128gcm_block_wipe(uint8_t *restrict work)
+void protocore_aes128_gcm_block_wipe(uint8_t *restrict work)
 {
-    Aes128Gcm.ok = PROTO_FALSE;
+    Aes128GcmV.ok = PROTO_FALSE;
     aes128gcm_blk_release(work);
-    Aes128Gcm.ok = PROTO_TRUE;
+    Aes128GcmV.ok = PROTO_TRUE;
 }
 
-Aes128GcmNs Aes128Gcm = {.key_init = aes128gcm_key_init,
-                         .key_wipe = aes128gcm_key_wipe,
-                         .seal = aes128gcm_seal,
-                         .open = aes128gcm_open,
-                         .block_init = aes128gcm_block_init,
-                         .block_encrypt = aes128gcm_block_encrypt,
-                         .block_wipe = aes128gcm_block_wipe};
+/** @brief The operands and the outcome. */
+Aes128GcmVars Aes128GcmV;
 
 PROTOCORE_END_DECLS
 
