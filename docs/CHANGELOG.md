@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`fabe8d2`](https://github.com/dstroy0/ProtoCore/commit/fabe8d283e2ef3135e59f8bc3b7d5bbfff56adda))
 - update CHANGELOG.md [skip ci] ([`7e09b17`](https://github.com/dstroy0/ProtoCore/commit/7e09b17f22c6d988221886e46a0dd8bdca249e4d))
 - update CHANGELOG.md [skip ci] ([`320de3b`](https://github.com/dstroy0/ProtoCore/commit/320de3b0346624e2eb2b4ca3304c77ed955bb192))
 - update CHANGELOG.md [skip ci] ([`c29483b`](https://github.com/dstroy0/ProtoCore/commit/c29483bb538236abc6b086a4d9a7f58cf5462698))
@@ -399,6 +400,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- wrap 135 sources in BEGIN_DECLS / END_DECLS ([`b8c4779`](https://github.com/dstroy0/ProtoCore/commit/b8c4779a127c3a6b1824776ba53f2575fdcb6024))
 - thread one down to the last stand-in sites ([`a596c5b`](https://github.com/dstroy0/ProtoCore/commit/a596c5b07d446f4e7f606ac4736202b59d57030a))
 - convert shape: say what it guesses and what it must not move ([`924adb3`](https://github.com/dstroy0/ProtoCore/commit/924adb33a35da4e2b8d715bc9fb95cd9d39a9761))
 - clang-format the vendor HAL headers ([`b30003e`](https://github.com/dstroy0/ProtoCore/commit/b30003e64fae7bf562c4b8d8ad84e4dd7f4caba6))
