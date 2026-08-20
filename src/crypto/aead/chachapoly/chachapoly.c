@@ -75,10 +75,10 @@ static void cp_chacha(uint8_t *restrict work, const uint8_t *key, const uint8_t 
 // One tag through the Poly1305 namespace.
 static void cp_poly(uint8_t *restrict work, const uint8_t *poly_key, const uint8_t *msg, size_t len, uint8_t *out)
 {
-    Poly1305.mac_args.key = poly_key;
-    Poly1305.mac_args.msg = msg;
-    Poly1305.mac_args.len = len;
-    Poly1305.mac_args.out = out;
+    Poly1305V.mac_args.key = poly_key;
+    Poly1305V.mac_args.msg = msg;
+    Poly1305V.mac_args.len = len;
+    Poly1305V.mac_args.out = out;
     Poly1305.mac(CHACHAPOLY_POLY(work));
 }
 

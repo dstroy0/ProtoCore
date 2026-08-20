@@ -71,14 +71,29 @@ typedef struct
 typedef struct
 {
     AesCmacMacArgs mac_args;
-
     proto_bool ok;
+} AesCmacVars;
 
+/** @brief The operands and the outcome. */
+extern AesCmacVars AesCmacV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const mac)(uint8_t *restrict work);
 } AesCmacNs;
 
-/** @brief The one symbol this module exports. */
-extern AesCmacNs AesCmac;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in AesCmacV or a region of the borrow at a fixed offset.
+void protocore_aes_cmac_mac(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `AesCmac.mac(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const AesCmacNs AesCmac __attribute__((unused)) = {
+    .mac = protocore_aes_cmac_mac,
+};
 
 PROTOCORE_END_DECLS
 

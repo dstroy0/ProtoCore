@@ -199,12 +199,12 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
             verdict(PROTOCORE_X509_ERR_KEY_MALFORMED);
             return;
         }
-        Ed25519.verify_args.pub = signer->key.p;
-        Ed25519.verify_args.msg = msg;
-        Ed25519.verify_args.msg_len = msg_len;
-        Ed25519.verify_args.sig = sig;
+        Ed25519V.verify_args.pub = signer->key.p;
+        Ed25519V.verify_args.msg = msg;
+        Ed25519V.verify_args.msg_len = msg_len;
+        Ed25519V.verify_args.sig = sig;
         Ed25519.verify(X509_VERIFY_ALG(work));
-        verdict(Ed25519.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        verdict(Ed25519V.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
         return;
 
     case PROTOCORE_X509_SIG_ECDSA_SHA256: {
@@ -219,12 +219,12 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
             verdict(PROTOCORE_X509_ERR_SIG_MALFORMED);
             return;
         }
-        Ecdsa.verify_args.pub = signer->key.p;
-        Ecdsa.verify_args.msg = msg;
-        Ecdsa.verify_args.mlen = msg_len;
-        Ecdsa.verify_args.sig = rs;
+        EcdsaV.verify_args.pub = signer->key.p;
+        EcdsaV.verify_args.msg = msg;
+        EcdsaV.verify_args.mlen = msg_len;
+        EcdsaV.verify_args.sig = rs;
         Ecdsa.verify(X509_VERIFY_ALG(work));
-        verdict(Ecdsa.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        verdict(EcdsaV.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
         return;
     }
 

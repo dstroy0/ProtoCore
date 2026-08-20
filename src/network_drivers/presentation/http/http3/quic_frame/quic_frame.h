@@ -77,7 +77,6 @@ PROTOCORE_BEGIN_DECLS
 #define QUIC_ERR_APPLICATION 0x0c        ///< the application abandoned the connection (sec 20.1)
 #define QUIC_ERR_CRYPTO_BASE 0x0100      ///< 0x0100 + the TLS alert code (RFC 9001 sec 4.8)
 
-
 /** @brief ACK payload (RFC 9000 sec 19.3). */
 typedef struct
 {
@@ -264,10 +263,16 @@ typedef struct
     QuicFrameBuildStreamArgs build_stream_args;
     QuicFrameBuildMaxDataArgs build_max_data_args;
     QuicFrameBuildConnectionCloseArgs build_connection_close_args;
-
     proto_bool ok;
     size_t n;
+} QuicFrameVars;
 
+/** @brief The operands and the outcome. */
+extern QuicFrameVars QuicFrameV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse)(uint8_t *restrict work);
     void (*const build_padding)(uint8_t *restrict work);
     void (*const build_ping)(uint8_t *restrict work);
@@ -279,8 +284,33 @@ typedef struct
     void (*const build_connection_close)(uint8_t *restrict work);
 } QuicFrameNs;
 
-/** @brief The one symbol this module exports. */
-extern QuicFrameNs QuicFrame;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in QuicFrameV or a region of the borrow at a fixed offset.
+void protocore_quic_frame_parse(uint8_t *restrict work);
+void protocore_quic_frame_build_padding(uint8_t *restrict work);
+void protocore_quic_frame_build_ping(uint8_t *restrict work);
+void protocore_quic_frame_build_handshake_done(uint8_t *restrict work);
+void protocore_quic_frame_build_ack(uint8_t *restrict work);
+void protocore_quic_frame_build_crypto(uint8_t *restrict work);
+void protocore_quic_frame_build_stream(uint8_t *restrict work);
+void protocore_quic_frame_build_max_data(uint8_t *restrict work);
+void protocore_quic_frame_build_connection_close(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `QuicFrame.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const QuicFrameNs QuicFrame __attribute__((unused)) = {
+    .parse = protocore_quic_frame_parse,
+    .build_padding = protocore_quic_frame_build_padding,
+    .build_ping = protocore_quic_frame_build_ping,
+    .build_handshake_done = protocore_quic_frame_build_handshake_done,
+    .build_ack = protocore_quic_frame_build_ack,
+    .build_crypto = protocore_quic_frame_build_crypto,
+    .build_stream = protocore_quic_frame_build_stream,
+    .build_max_data = protocore_quic_frame_build_max_data,
+    .build_connection_close = protocore_quic_frame_build_connection_close,
+};
 
 PROTOCORE_END_DECLS
 

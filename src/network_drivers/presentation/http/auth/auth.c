@@ -186,23 +186,23 @@ static const AuthCred *cred_at(uint8_t *work, uint8_t id)
 
 // Record one credential set and return the id that names it, or PROTOCORE_AUTH_NONE when the table is
 // full. Registration runs at setup, so there is no release path and none is offered.
-static void add(uint8_t *restrict work)
+void protocore_auth_add(uint8_t *restrict work)
 {
     struct AuthStorage *a = AUTH_TABLE(work);
     if (a->count >= MAX_ROUTES)
     {
-        Auth.u8 = PROTOCORE_AUTH_NONE;
+        AuthV.u8 = PROTOCORE_AUTH_NONE;
         return;
     }
     AuthCred *c = &a->cred[a->count];
-    (void)str.copy(c->realm, Auth.cred.realm, MAX_AUTH_LEN);
-    (void)str.copy(c->user, Auth.cred.user, MAX_AUTH_LEN);
-    (void)str.copy(c->pass, Auth.cred.pass, MAX_AUTH_LEN);
-    c->digest = Auth.cred.digest;
-    Auth.u8 = a->count++;
+    (void)str.copy(c->realm, AuthV.cred.realm, MAX_AUTH_LEN);
+    (void)str.copy(c->user, AuthV.cred.user, MAX_AUTH_LEN);
+    (void)str.copy(c->pass, AuthV.cred.pass, MAX_AUTH_LEN);
+    c->digest = AuthV.cred.digest;
+    AuthV.u8 = a->count++;
 }
 
-static void rekey(uint8_t *restrict work)
+void protocore_auth_rekey(uint8_t *restrict work)
 {
     struct AuthStorage *a = AUTH_TABLE(work);
     // Seed a 128-bit keying secret from the hardware CSPRNG (protocore_platform_rand_u32() on
@@ -253,10 +253,10 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     return issue;
 }
 
-static void mint_nonce(uint8_t *restrict work)
+void protocore_auth_mint_nonce(uint8_t *restrict work)
 {
-    char *out = Auth.nonce_args.out;
-    const size_t cap = Auth.nonce_args.cap;
+    char *out = AuthV.nonce_args.out;
+    const size_t cap = AuthV.nonce_args.cap;
     uint32_t issue = Clock.ms;
     char issue_hex[9];
     Hex.io.in = (const uint8_t *)&issue;
@@ -276,11 +276,11 @@ static void mint_nonce(uint8_t *restrict work)
     }
 }
 
-static void verify_nonce(uint8_t *restrict work)
+void protocore_auth_verify_nonce(uint8_t *restrict work)
 {
-    const char *nonce = Auth.nonce_args.nonce;
-    Auth.expired = PROTO_FALSE;
-    Auth.ok = PROTO_FALSE;
+    const char *nonce = AuthV.nonce_args.nonce;
+    AuthV.expired = PROTO_FALSE;
+    AuthV.ok = PROTO_FALSE;
     // Expected shape: 8 hex (issue) + '.' + 32 hex (MAC).
     if (str.len(nonce, 42) != 8 + 1 + 32 || nonce[8] != '.')
     {
@@ -311,15 +311,15 @@ static void verify_nonce(uint8_t *restrict work)
         return; // not a nonce this server minted
     }
     uint32_t age = Clock.ms - issue; // unsigned: tolerant of the 32-bit millis wrap
-    Auth.expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
-    Auth.ok = PROTO_TRUE;
+    AuthV.expired = (age > PROTOCORE_DIGEST_NONCE_LIFETIME_MS);
+    AuthV.ok = PROTO_TRUE;
 }
 
-static void challenge(uint8_t *restrict work)
+void protocore_auth_challenge(uint8_t *restrict work)
 {
-    const uint8_t slot_id = Auth.slot;
-    const proto_bool stale = Auth.nonce_args.stale;
-    const AuthCred *c = cred_at(work, Auth.id);
+    const uint8_t slot_id = AuthV.slot;
+    const proto_bool stale = AuthV.nonce_args.stale;
+    const AuthCred *c = cred_at(work, AuthV.id);
     if (c == NULL)
     {
         HttpConnV.slot = slot_id;
@@ -343,9 +343,9 @@ static void challenge(uint8_t *restrict work)
     if (c->digest)
     {
         char nonce[48];
-        Auth.nonce_args.out = nonce;
-        Auth.nonce_args.cap = sizeof(nonce);
-        mint_nonce(work); // a fresh, timestamped nonce per challenge
+        AuthV.nonce_args.out = nonce;
+        AuthV.nonce_args.cap = sizeof(nonce);
+        protocore_auth_mint_nonce(work); // a fresh, timestamped nonce per challenge
         protocore_sb sb_challenge = {challenge, sizeof(challenge), 0, PROTO_TRUE};
         Sb.put(&sb_challenge, "WWW-Authenticate: Digest realm=\"");
         Sb.put(&sb_challenge, c->realm);
@@ -389,9 +389,9 @@ static void challenge(uint8_t *restrict work)
 
     // The flush rides the final write, so the challenge leaves in one marshal whether or not a body
     // follows the header.
-    Http.slot = slot_id;
+    HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    if (!Http.ok)
+    if (!HttpV.ok)
     {
         ConnPool.slot = slot_id;
         ConnPool.io.data = header;
@@ -497,10 +497,10 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
     // The nonce must be one this server minted (authentic MAC). A stale (expired)
     // nonce is still authentic - we finish the credential check below and let the
     // caller reissue with stale=true rather than rejecting outright (RFC 7616 3.3).
-    Auth.nonce_args.nonce = nonce;
-    verify_nonce(work);
-    const proto_bool nonce_expired = Auth.expired;
-    if (!Auth.ok)
+    AuthV.nonce_args.nonce = nonce;
+    protocore_auth_verify_nonce(work);
+    const proto_bool nonce_expired = AuthV.expired;
+    if (!AuthV.ok)
     {
         return PROTO_FALSE;
     }
@@ -592,37 +592,32 @@ static proto_bool check_digest(uint8_t *work, uint8_t slot_id, HttpReq *req, con
 
 // The scheme belongs to the credential, so the caller states which credential set applies and
 // nothing above this file has to know whether that set is Basic or Digest.
-static void check(uint8_t *restrict work)
+void protocore_auth_check(uint8_t *restrict work)
 {
-    const AuthCred *c = cred_at(work, Auth.id);
+    const AuthCred *c = cred_at(work, AuthV.id);
     if (c == NULL)
     {
-        Auth.ok = PROTO_FALSE;
+        AuthV.ok = PROTO_FALSE;
         return;
     }
     if (c->digest)
     {
-        Auth.ok = check_digest(work, Auth.slot, Auth.req, c, &Auth.nonce_args.stale);
+        AuthV.ok = check_digest(work, AuthV.slot, AuthV.req, c, &AuthV.nonce_args.stale);
         return;
     }
-    Auth.ok = check_basic(Auth.slot, Auth.req, c);
+    AuthV.ok = check_basic(AuthV.slot, AuthV.req, c);
 }
 
 // The count is the table, and a row is wiped on hand-out, so nothing below the count can carry a
 // previous tenant's credential and there is nothing to wipe here. The keying secret survives: it is
 // the server's, not a route's, and rekey() is what replaces it.
-static void reset(uint8_t *restrict work)
+void protocore_auth_reset(uint8_t *restrict work)
 {
     AUTH_TABLE(work)->count = 0;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-AuthNs Auth = {.add = add,
-               .check = check,
-               .challenge = challenge,
-               .rekey = rekey,
-               .mint_nonce = mint_nonce,
-               .verify_nonce = verify_nonce,
-               .reset = reset};
+/** @brief The operands and the outcome. */
+AuthVars AuthV;
 
 #endif // PROTOCORE_ENABLE_AUTH

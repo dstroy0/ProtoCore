@@ -62,7 +62,7 @@ static const uint16_t LAST4[16] = {0x0000, 0x1c20, 0x3840, 0x2460, 0x7080, 0x6ca
 static void gf_key_init(uint8_t *restrict work)
 {
     GhashCtx *t = GHASH_CTX(work);
-    const uint8_t *h = Ghash.key_args.h;
+    const uint8_t *h = GhashV.key_args.h;
     // M[8] = H; M[4]=H/x, M[2]=H/x^2, M[1]=H/x^3 (one GF right-shift each, reducing by R=0xe1<<120).
     uint32_t z0 = protocore_rd32be(h);
     uint32_t z1 = protocore_rd32be(h + 4);
@@ -145,39 +145,39 @@ static void gf_mul(uint8_t *restrict work, uint8_t *acc)
 
 // --- the entries -----------------------------------------------------------
 
-static void ghash_key_init(uint8_t *restrict work)
+void protocore_ghash_key_init(uint8_t *restrict work)
 {
-    Ghash.ok = PROTO_FALSE;
-    if (!Ghash.key_args.h)
+    GhashV.ok = PROTO_FALSE;
+    if (!GhashV.key_args.h)
     {
         return;
     }
     gf_key_init(work);
-    Ghash.ok = PROTO_TRUE;
+    GhashV.ok = PROTO_TRUE;
 }
 
-static void ghash_mul(uint8_t *restrict work)
+void protocore_ghash_mul(uint8_t *restrict work)
 {
-    Ghash.ok = PROTO_FALSE;
-    if (!Ghash.mul_args.acc)
+    GhashV.ok = PROTO_FALSE;
+    if (!GhashV.mul_args.acc)
     {
         return;
     }
-    gf_mul(work, Ghash.mul_args.acc);
-    Ghash.ok = PROTO_TRUE;
+    gf_mul(work, GhashV.mul_args.acc);
+    GhashV.ok = PROTO_TRUE;
 }
 
 // acc = (acc XOR block) * H per 16 bytes, a final short block MSB-zero-padded.
-static void ghash_update(uint8_t *restrict work)
+void protocore_ghash_update(uint8_t *restrict work)
 {
-    Ghash.ok = PROTO_FALSE;
-    if (!Ghash.update_args.acc)
+    GhashV.ok = PROTO_FALSE;
+    if (!GhashV.update_args.acc)
     {
         return;
     }
-    uint8_t *acc = Ghash.update_args.acc;
-    const uint8_t *data = Ghash.update_args.data;
-    const size_t len = Ghash.update_args.len;
+    uint8_t *acc = GhashV.update_args.acc;
+    const uint8_t *data = GhashV.update_args.data;
+    const size_t len = GhashV.update_args.len;
     size_t off = 0;
     while (off < len)
     {
@@ -193,10 +193,11 @@ static void ghash_update(uint8_t *restrict work)
         gf_mul(work, acc);
         off += take;
     }
-    Ghash.ok = PROTO_TRUE;
+    GhashV.ok = PROTO_TRUE;
 }
 
-GhashNs Ghash = {.key_init = ghash_key_init, .mul = ghash_mul, .update = ghash_update};
+/** @brief The operands and the outcome. */
+GhashVars GhashV;
 
 PROTOCORE_END_DECLS
 

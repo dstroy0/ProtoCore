@@ -208,11 +208,11 @@ proto_bool protocore_tls_conn_begin(uint8_t slot)
     ConnPool.pcb_of(protocore_conn_pool_span());
     TLS_CTX(work)->pcb[slot] = ConnPool.pcb;
 
-    TlsConnection.conn = &TLS_CTX(work)->conn[slot];
-    TlsConnection.init_args.role = TLS_ROLE_SERVER;
-    TlsConnection.init_args.cfg = cfg;
+    TlsConnectionV.conn = &TLS_CTX(work)->conn[slot];
+    TlsConnectionV.init_args.role = TLS_ROLE_SERVER;
+    TlsConnectionV.init_args.cfg = cfg;
     TlsConnection.init(protocore_tls_span());
-    return TlsConnection.ok;
+    return TlsConnectionV.ok;
 }
 
 int protocore_tls_handshake(uint8_t slot)
@@ -234,12 +234,12 @@ int protocore_tls_handshake(uint8_t slot)
             break; // nothing whole to feed; ask again when more ciphertext lands
         }
 
-        TlsConnection.conn = c;
-        TlsConnection.io.rx_len = rec;
-        TlsConnection.out_args.out = TLS_CTX(work)->out;
-        TlsConnection.out_args.out_cap = sizeof(TLS_CTX(work)->out);
+        TlsConnectionV.conn = c;
+        TlsConnectionV.io.rx_len = rec;
+        TlsConnectionV.out_args.out = TLS_CTX(work)->out;
+        TlsConnectionV.out_args.out_cap = sizeof(TLS_CTX(work)->out);
         TlsConnection.process(protocore_tls_span());
-        const int wrote = TlsConnection.i32;
+        const int wrote = TlsConnectionV.i32;
         if (wrote < 0)
         {
             return -1; // the driver failed the connection and recorded its alert in TlsConn::alert
@@ -250,9 +250,9 @@ int protocore_tls_handshake(uint8_t slot)
         }
     }
 
-    TlsConnection.conn = c;
+    TlsConnectionV.conn = c;
     TlsConnection.established(protocore_tls_span());
-    return TlsConnection.ok ? 1 : 0;
+    return TlsConnectionV.ok ? 1 : 0;
 }
 
 proto_bool protocore_tls_established(uint8_t slot)
@@ -262,9 +262,9 @@ proto_bool protocore_tls_established(uint8_t slot)
     {
         return PROTO_FALSE;
     }
-    TlsConnection.conn = &TLS_CTX(work)->conn[slot];
+    TlsConnectionV.conn = &TLS_CTX(work)->conn[slot];
     TlsConnection.established(protocore_tls_span());
-    return TlsConnection.ok;
+    return TlsConnectionV.ok;
 }
 
 int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len)
@@ -282,14 +282,14 @@ int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len)
     }
 
     size_t out_len = 0;
-    TlsConnection.conn = c;
-    TlsConnection.io.rec = c->rx;
-    TlsConnection.io.rec_len = rec;
-    TlsConnection.out_args.out = buf;
-    TlsConnection.out_args.out_cap = len;
-    TlsConnection.out_args.out_len = &out_len;
+    TlsConnectionV.conn = c;
+    TlsConnectionV.io.rec = c->rx;
+    TlsConnectionV.io.rec_len = rec;
+    TlsConnectionV.out_args.out = buf;
+    TlsConnectionV.out_args.out_cap = len;
+    TlsConnectionV.out_args.out_len = &out_len;
     TlsConnection.open_app(protocore_tls_span());
-    if (!TlsConnection.ok)
+    if (!TlsConnectionV.ok)
     {
         return -1; // an AEAD failure ends the connection (RFC 8446 sec 5.2)
     }
@@ -303,17 +303,17 @@ int protocore_tls_write(uint8_t slot, const void *data, size_t len)
     {
         return -1;
     }
-    TlsConnection.conn = &TLS_CTX(work)->conn[slot];
-    TlsConnection.io.data = (const uint8_t *)data;
-    TlsConnection.io.len = len;
-    TlsConnection.out_args.out = TLS_CTX(work)->out;
-    TlsConnection.out_args.out_cap = sizeof(TLS_CTX(work)->out);
+    TlsConnectionV.conn = &TLS_CTX(work)->conn[slot];
+    TlsConnectionV.io.data = (const uint8_t *)data;
+    TlsConnectionV.io.len = len;
+    TlsConnectionV.out_args.out = TLS_CTX(work)->out;
+    TlsConnectionV.out_args.out_cap = sizeof(TLS_CTX(work)->out);
     TlsConnection.seal_app(protocore_tls_span());
-    if (TlsConnection.n == 0)
+    if (TlsConnectionV.n == 0)
     {
         return -1; // the fragment did not fit one record
     }
-    if (!emit(work, slot, TlsConnection.n))
+    if (!emit(work, slot, TlsConnectionV.n))
     {
         return -1;
     }
@@ -344,13 +344,13 @@ void protocore_tls_conn_free(uint8_t slot)
 
     // The four key generations this connection installed. The storage is this module's and is
     // reused by the next connection on the slot, so it is wiped rather than merely forgotten.
-    TlsRecord.key.keys = &c->hs_tx;
+    TlsRecordV.key.keys = &c->hs_tx;
     TlsRecord.keys_wipe(protocore_tls_span());
-    TlsRecord.key.keys = &c->hs_rx;
+    TlsRecordV.key.keys = &c->hs_rx;
     TlsRecord.keys_wipe(protocore_tls_span());
-    TlsRecord.key.keys = &c->ap_tx;
+    TlsRecordV.key.keys = &c->ap_tx;
     TlsRecord.keys_wipe(protocore_tls_span());
-    TlsRecord.key.keys = &c->ap_rx;
+    TlsRecordV.key.keys = &c->ap_rx;
     TlsRecord.keys_wipe(protocore_tls_span());
 
     mem.set(&TLS_CTX(work)->cfg[slot], 0, sizeof(TLS_CTX(work)->cfg[slot]));

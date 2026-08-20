@@ -62,24 +62,24 @@ uint8_t *protocore_diffserv_span(void)
 }
 
 // Masked to six bits on write, so a caller cannot spill into the two currently-unused bits.
-static void set_default(uint8_t *restrict work)
+void protocore_diff_serv_set_default(uint8_t *restrict work)
 {
-    DIFFSERV_CTX(work)->tcp_dscp = (uint8_t)(DiffServ.dscp & 0x3F);
+    DIFFSERV_CTX(work)->tcp_dscp = (uint8_t)(DiffServV.dscp & 0x3F);
 }
 
-static void default_dscp(uint8_t *restrict work)
+void protocore_diff_serv_default_dscp(uint8_t *restrict work)
 {
-    DiffServ.u8 = DIFFSERV_CTX(work)->tcp_dscp;
+    DiffServV.u8 = DIFFSERV_CTX(work)->tcp_dscp;
 }
 
-static void set_udp(uint8_t *restrict work)
+void protocore_diff_serv_set_udp(uint8_t *restrict work)
 {
-    DIFFSERV_CTX(work)->udp_dscp = (uint8_t)(DiffServ.dscp & 0x3F);
+    DIFFSERV_CTX(work)->udp_dscp = (uint8_t)(DiffServV.dscp & 0x3F);
 }
 
-static void udp_dscp(uint8_t *restrict work)
+void protocore_diff_serv_udp_dscp(uint8_t *restrict work)
 {
-    DiffServ.u8 = DIFFSERV_CTX(work)->udp_dscp;
+    DiffServV.u8 = DIFFSERV_CTX(work)->udp_dscp;
 }
 
 // Not entries: these take no borrow, so they read the module's own span. A null span is the pool
@@ -97,7 +97,7 @@ uint8_t protocore_diffserv_udp_dscp(void)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-DiffServNs DiffServ = {
-    .set_default = set_default, .default_dscp = default_dscp, .set_udp = set_udp, .udp_dscp = udp_dscp};
+/** @brief The operands and the outcome. */
+DiffServVars DiffServV;
 
 #endif // PROTOCORE_ENABLE_DIFFSERV

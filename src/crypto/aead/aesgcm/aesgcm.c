@@ -179,7 +179,7 @@ static void gcm_key_setup(uint8_t *restrict work)
     GcmWork *w = AESGCM_CTX(work);
     mem.zero(w->ks, 16);        // zero input for H (reuses the keystream slot; overwritten by gctr later)
     aes256_ecb(w, w->ks, w->h); // H = E(K, 0^128)
-    Ghash.key_args.h = w->h;
+    GhashV.key_args.h = w->h;
     Ghash.key_init(AESGCM_GHASH(work));
 }
 
@@ -220,17 +220,17 @@ static void gcm_tag(uint8_t *restrict work, const uint8_t *aad, size_t aad_len, 
 {
     GcmWork *w = AESGCM_CTX(work);
     mem.zero(w->acc, 16);
-    Ghash.update_args.acc = w->acc;
-    Ghash.update_args.data = aad;
-    Ghash.update_args.len = aad_len;
+    GhashV.update_args.acc = w->acc;
+    GhashV.update_args.data = aad;
+    GhashV.update_args.len = aad_len;
     Ghash.update(AESGCM_GHASH(work));
-    Ghash.update_args.data = cipher;
-    Ghash.update_args.len = cipher_len;
+    GhashV.update_args.data = cipher;
+    GhashV.update_args.len = cipher_len;
     Ghash.update(AESGCM_GHASH(work));
     put_be64(w->lb, (uint64_t)aad_len * 8);
     put_be64(w->lb + 8, (uint64_t)cipher_len * 8);
     xor16(w->acc, w->lb);
-    Ghash.mul_args.acc = w->acc;
+    GhashV.mul_args.acc = w->acc;
     Ghash.mul(AESGCM_GHASH(work));
     aes256_ecb(w, w->j0, w->ej0);
     for (int i = 0; i < 16; i++)

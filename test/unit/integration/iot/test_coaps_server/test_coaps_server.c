@@ -212,8 +212,8 @@ void setUp()
     g_rng_ctr = 0;
     out_reset();
 
-    Ed25519.pubkey_args.pub = g_server_cert;
-    Ed25519.pubkey_args.seed = SERVER_ED_SEED;
+    Ed25519V.pubkey_args.pub = g_server_cert;
+    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
     Ed25519.pubkey(tw);
     memset(&CoapsServer.identity, 0, sizeof CoapsServer.identity);
     CoapsServer.identity.cert_der = g_server_cert;
@@ -414,8 +414,8 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
                              const uint8_t *client_cid, size_t client_cid_len, uint8_t *scid_out, size_t *scid_len_out)
 {
     uint8_t client_pub[32];
-    Curve25519.x25519_base_args.out = client_pub;
-    Curve25519.x25519_base_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_base_args.out = client_pub;
+    Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
 
     uint8_t ch[256];
@@ -486,9 +486,9 @@ static void client_handshake(const char *ip, uint16_t port, DtlsRecordKeys *cli_
     }
 
     uint8_t ecdhe[32];
-    Curve25519.x25519_args.out = ecdhe;
-    Curve25519.x25519_args.scalar = CLIENT_X25519_PRIV;
-    Curve25519.x25519_args.point = server_pub;
+    Curve25519V.x25519_args.out = ecdhe;
+    Curve25519V.x25519_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_args.point = server_pub;
     Curve25519.x25519(tw);
     Tls13KeySchedule cks;
     uint8_t hh[32];
@@ -701,8 +701,8 @@ static void test_idle_reap(void)
 static void test_pto_retransmit_driven_by_poll(void)
 {
     uint8_t client_pub[32];
-    Curve25519.x25519_base_args.out = client_pub;
-    Curve25519.x25519_base_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_base_args.out = client_pub;
+    Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);
@@ -775,8 +775,8 @@ static void test_cid_address_migration(void)
 static void ingest_real_client_hello(const char *ip, uint16_t port)
 {
     uint8_t client_pub[32];
-    Curve25519.x25519_base_args.out = client_pub;
-    Curve25519.x25519_base_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_base_args.out = client_pub;
+    Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t ch[256];
     size_t ch_len = build_client_hello(ch, client_pub, NULL, 0);

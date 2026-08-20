@@ -242,11 +242,17 @@ typedef struct
     H2FramePingArgs ping_args;                    ///< the members ::H2FrameNs::build_ping_ack takes
     H2FrameHeadersArgs headers_args;              ///< the members ::H2FrameNs::build_headers takes
     H2FrameDataArgs data_args;                    ///< the members ::H2FrameNs::build_data takes
+    proto_bool ok;                                ///< whether a parse read a well-formed frame
+    size_t n;                                     ///< bytes a build wrote, or 0 on overflow
+    H2FrameHeader header;                         ///< the header a parse read
+} H2FrameVars;
 
-    proto_bool ok;        ///< whether a parse read a well-formed frame
-    size_t n;             ///< bytes a build wrote, or 0 on overflow
-    H2FrameHeader header; ///< the header a parse read
+/** @brief The operands and the outcome. */
+extern H2FrameVars H2FrameV;
 
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse_header)(uint8_t *restrict work);
     void (*const write_header)(uint8_t *restrict work);
     void (*const settings_defaults)(uint8_t *restrict work);
@@ -261,8 +267,39 @@ typedef struct
     void (*const build_data)(uint8_t *restrict work);
 } H2FrameNs;
 
-/** @brief The one symbol this module exports. */
-extern H2FrameNs H2Frame;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in H2FrameV or a region of the borrow at a fixed offset.
+void protocore_h2_frame_parse_header(uint8_t *restrict work);
+void protocore_h2_frame_write_header(uint8_t *restrict work);
+void protocore_h2_frame_settings_defaults(uint8_t *restrict work);
+void protocore_h2_frame_parse_settings(uint8_t *restrict work);
+void protocore_h2_frame_build_settings(uint8_t *restrict work);
+void protocore_h2_frame_build_settings_ack(uint8_t *restrict work);
+void protocore_h2_frame_build_window_update(uint8_t *restrict work);
+void protocore_h2_frame_build_rst_stream(uint8_t *restrict work);
+void protocore_h2_frame_build_goaway(uint8_t *restrict work);
+void protocore_h2_frame_build_ping_ack(uint8_t *restrict work);
+void protocore_h2_frame_build_headers(uint8_t *restrict work);
+void protocore_h2_frame_build_data(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `H2Frame.parse_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const H2FrameNs H2Frame __attribute__((unused)) = {
+    .parse_header = protocore_h2_frame_parse_header,
+    .write_header = protocore_h2_frame_write_header,
+    .settings_defaults = protocore_h2_frame_settings_defaults,
+    .parse_settings = protocore_h2_frame_parse_settings,
+    .build_settings = protocore_h2_frame_build_settings,
+    .build_settings_ack = protocore_h2_frame_build_settings_ack,
+    .build_window_update = protocore_h2_frame_build_window_update,
+    .build_rst_stream = protocore_h2_frame_build_rst_stream,
+    .build_goaway = protocore_h2_frame_build_goaway,
+    .build_ping_ack = protocore_h2_frame_build_ping_ack,
+    .build_headers = protocore_h2_frame_build_headers,
+    .build_data = protocore_h2_frame_build_data,
+};
 
 PROTOCORE_END_DECLS
 

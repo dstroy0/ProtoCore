@@ -279,7 +279,7 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     protocore_sb_lit(&hb, "HTTP/1.1 ");
     Sb.u32(&hb, (uint32_t)code);
     protocore_sb_lit(&hb, " ");
-    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&hb, Http.text);
+    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&hb, HttpV.text);
     protocore_sb_lit(&hb, "\r\nContent-Type: ");
     Sb.put(&hb, content_type);
     protocore_sb_lit(&hb, "\r\nContent-Length: ");
@@ -288,9 +288,9 @@ void send_template(uint8_t slot_id, int code, const char *content_type, const ch
     int hlen = (int)Sb.finish(&hb);
     hlen = proto_append_resp_trailer(header, RESP_HDR_BUF_SIZE, hlen, slot_id, cl);
 
-    Http.slot = slot_id;
+    HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    proto_bool head = Http.ok;
+    proto_bool head = HttpV.ok;
 
     ConnPool.slot = slot_id;
     ConnPool.io.data = header;
@@ -355,7 +355,7 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     }
     Sb.u32(&hb2, (uint32_t)code);
     Sb.put(&hb2, " ");
-    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&hb2, Http.text);
+    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&hb2, HttpV.text);
     Sb.put(&hb2, "\r\nContent-Type: ");
     Sb.put(&hb2, content_type);
     Sb.put(&hb2, raw ? "\r\n" : "\r\nTransfer-Encoding: chunked\r\n");
@@ -368,9 +368,9 @@ void send_chunked(uint8_t slot_id, int code, const char *content_type, ChunkSour
     ConnPool.send(protocore_conn_pool_span());
 
     // HEAD carries the headers but no body or terminator.
-    Http.slot = slot_id;
+    HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    if (Http.ok || !source)
+    if (HttpV.ok || !source)
     {
         protocore_resp_end(slot_id, code, 0, keep, /*pre_flushed=*/PROTO_FALSE);
         return;
@@ -1017,7 +1017,7 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     Sb.put(&sb_header2, "HTTP/1.1 ");
     Sb.i64(&sb_header2, (int64_t)(code));
     Sb.put(&sb_header2, " ");
-    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header2, Http.text);
+    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header2, HttpV.text);
     Sb.put(&sb_header2, "\r\nContent-Type: ");
     Sb.put(&sb_header2, content_type);
     Sb.put(&sb_header2, "\r\nContent-Length: ");
@@ -1042,9 +1042,9 @@ void send_bin(uint8_t slot_id, int code, const char *content_type, const uint8_t
     // The slot stays CONN_ACTIVE through the write for both paths; protocore_resp_end then
     // begins the CONN_CLOSING dwell on the close path (finalized once ACKed).
 
-    Http.slot = slot_id;
+    HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    proto_bool head = Http.ok;
+    proto_bool head = HttpV.ok;
 
     // HEAD responses carry the headers (incl. Content-Length) but no body. For a
     // body that fits the header scratch, coalesce headers+body into a single send
@@ -1120,7 +1120,7 @@ void send_empty(uint8_t slot_id, int code)
     Sb.put(&sb_header3, "HTTP/1.1 ");
     Sb.i64(&sb_header3, (int64_t)(code));
     Sb.put(&sb_header3, " ");
-    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header3, Http.text);
+    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header3, HttpV.text);
     Sb.put(&sb_header3, "\r\nContent-Length: 0\r\n");
     int hlen = (int)Sb.finish(&sb_header3);
     hlen = proto_append_resp_trailer(header, sizeof(header), hlen, slot_id, cl);
@@ -1169,7 +1169,7 @@ void redirect(uint8_t slot_id, int code, const char *location)
     Sb.put(&sb_header4, "HTTP/1.1 ");
     Sb.i64(&sb_header4, (int64_t)(code));
     Sb.put(&sb_header4, " ");
-    Http.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header4, Http.text);
+    HttpV.code = code, Http.status_text(protocore_http_span()), Sb.put(&sb_header4, HttpV.text);
     Sb.put(&sb_header4, "\r\nLocation: ");
     Sb.put(&sb_header4, location);
     Sb.put(&sb_header4, "\r\nContent-Length: 0\r\n");

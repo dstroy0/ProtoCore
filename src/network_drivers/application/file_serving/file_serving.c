@@ -516,9 +516,9 @@ void protocore_file_serving_serve_file_internal(uint8_t *restrict work)
     Sb.put(&sb_header, "HTTP/1.1 ");
     Sb.i64(&sb_header, (int64_t)(status));
     Sb.put(&sb_header, " ");
-    Http.code = status;
+    HttpV.code = status;
     Http.status_text(protocore_http_span());
-    Sb.put(&sb_header, Http.text);
+    Sb.put(&sb_header, HttpV.text);
     Sb.put(&sb_header, "\r\nContent-Type: ");
     Sb.put(&sb_header, content_type);
     Sb.put(&sb_header, "\r\nContent-Length: ");
@@ -671,10 +671,10 @@ void protocore_file_serving_serve_file(uint8_t *restrict work)
     const char *fs_path = FileServingV.serve_file_args.fs_path;
     const char *content_type = FileServingV.serve_file_args.content_type;
 
-    Http.slot = slot_id;
+    HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
     FileServingV.serve_file_internal_args.slot_id = slot_id;
-    FileServingV.serve_file_internal_args.head = Http.ok;
+    FileServingV.serve_file_internal_args.head = HttpV.ok;
     FileServingV.serve_file_internal_args.file_sys = file_sys;
     FileServingV.serve_file_internal_args.fs_path = fs_path;
     FileServingV.serve_file_internal_args.content_type = content_type;
@@ -786,9 +786,9 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
     }
 
     const char *ctype = mime_type(fs_path);
-    Http.slot = slot_id;
+    HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    proto_bool head = Http.ok;
+    proto_bool head = HttpV.ok;
 
     // Pre-compressed variant: serve <path>.gz if the client accepts gzip and it
     // exists. Content-Type stays that of the original (uncompressed) resource.

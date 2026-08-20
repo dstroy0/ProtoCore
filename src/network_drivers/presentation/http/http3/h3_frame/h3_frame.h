@@ -78,7 +78,7 @@ typedef struct
 typedef struct
 {
     uint64_t qpack_max_table_capacity; ///< default 0
-    uint64_t max_field_section_size;             ///< default "unlimited"
+    uint64_t max_field_section_size;   ///< default "unlimited"
     uint64_t qpack_blocked_streams;    ///< default 0
 } H3Settings;
 
@@ -203,10 +203,16 @@ typedef struct
     H3FrameBuildHeadersArgs build_headers_args;
     H3FrameBuildSettingsArgs build_settings_args;
     H3FrameBuildGoawayArgs build_goaway_args;
-
     proto_bool ok;
     size_t n;
+} H3FrameVars;
 
+/** @brief The operands and the outcome. */
+extern H3FrameVars H3FrameV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse_header)(uint8_t *restrict work);
     void (*const write_header)(uint8_t *restrict work);
     void (*const type_reserved)(uint8_t *restrict work);
@@ -218,8 +224,33 @@ typedef struct
     void (*const build_goaway)(uint8_t *restrict work);
 } H3FrameNs;
 
-/** @brief The one symbol this module exports. */
-extern H3FrameNs H3Frame;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in H3FrameV or a region of the borrow at a fixed offset.
+void protocore_h3_frame_parse_header(uint8_t *restrict work);
+void protocore_h3_frame_write_header(uint8_t *restrict work);
+void protocore_h3_frame_type_reserved(uint8_t *restrict work);
+void protocore_h3_frame_settings_defaults(uint8_t *restrict work);
+void protocore_h3_frame_parse_settings(uint8_t *restrict work);
+void protocore_h3_frame_build_data(uint8_t *restrict work);
+void protocore_h3_frame_build_headers(uint8_t *restrict work);
+void protocore_h3_frame_build_settings(uint8_t *restrict work);
+void protocore_h3_frame_build_goaway(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `H3Frame.parse_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const H3FrameNs H3Frame __attribute__((unused)) = {
+    .parse_header = protocore_h3_frame_parse_header,
+    .write_header = protocore_h3_frame_write_header,
+    .type_reserved = protocore_h3_frame_type_reserved,
+    .settings_defaults = protocore_h3_frame_settings_defaults,
+    .parse_settings = protocore_h3_frame_parse_settings,
+    .build_data = protocore_h3_frame_build_data,
+    .build_headers = protocore_h3_frame_build_headers,
+    .build_settings = protocore_h3_frame_build_settings,
+    .build_goaway = protocore_h3_frame_build_goaway,
+};
 
 PROTOCORE_END_DECLS
 

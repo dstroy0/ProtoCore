@@ -498,26 +498,28 @@ static size_t hpack_encode_header_run(uint8_t *out, size_t cap, const char *name
 
 // --- the entries ---
 
-static void hpack_dyn_init(uint8_t *restrict work)
+void protocore_hpack_dyn_init(uint8_t *restrict work)
 {
-    hpack_dyn_init_run(HPACK_CTX(work), Hpack.init_args.max_bytes);
+    hpack_dyn_init_run(HPACK_CTX(work), HpackV.init_args.max_bytes);
 }
 
-static void hpack_decode(uint8_t *restrict work)
+void protocore_hpack_decode(uint8_t *restrict work)
 {
-    Hpack.ok =
-        hpack_decode_run(HPACK_CTX(work), Hpack.decode_args.block, Hpack.decode_args.len, Hpack.decode_args.scratch,
-                         Hpack.decode_args.scratch_cap, Hpack.decode_args.emit, Hpack.decode_args.ctx);
+    HpackV.ok =
+        hpack_decode_run(HPACK_CTX(work), HpackV.decode_args.block, HpackV.decode_args.len, HpackV.decode_args.scratch,
+                         HpackV.decode_args.scratch_cap, HpackV.decode_args.emit, HpackV.decode_args.ctx);
 }
 
-static void hpack_encode_header(uint8_t *restrict work)
+void protocore_hpack_encode_header(uint8_t *restrict work)
 {
     (void)work;
-    Hpack.n = hpack_encode_header_run(Hpack.encode_args.out, Hpack.encode_args.cap, Hpack.encode_args.name,
-                                      Hpack.encode_args.name_len, Hpack.encode_args.value, Hpack.encode_args.value_len);
+    HpackV.n =
+        hpack_encode_header_run(HpackV.encode_args.out, HpackV.encode_args.cap, HpackV.encode_args.name,
+                                HpackV.encode_args.name_len, HpackV.encode_args.value, HpackV.encode_args.value_len);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-HpackNs Hpack = {.dyn_init = hpack_dyn_init, .decode = hpack_decode, .encode_header = hpack_encode_header};
+/** @brief The operands and the outcome. */
+HpackVars HpackV;
 
 #endif // PROTOCORE_ENABLE_HTTP2

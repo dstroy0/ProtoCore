@@ -126,17 +126,38 @@ typedef struct
     HkdfExpandArgs expand_args;
     HkdfExpandLabelArgs expand_label_args;
     HkdfExpandLabelCtxArgs expand_label_ctx_args;
-
     proto_bool ok;
+} HkdfVars;
 
+/** @brief The operands and the outcome. */
+extern HkdfVars HkdfV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const extract)(uint8_t *restrict work);
     void (*const expand)(uint8_t *restrict work);
     void (*const expand_label)(uint8_t *restrict work);
     void (*const expand_label_ctx)(uint8_t *restrict work);
 } HkdfNs;
 
-/** @brief The one symbol this module exports. */
-extern HkdfNs Hkdf;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HkdfV or a region of the borrow at a fixed offset.
+void protocore_hkdf_extract(uint8_t *restrict work);
+void protocore_hkdf_expand(uint8_t *restrict work);
+void protocore_hkdf_expand_label(uint8_t *restrict work);
+void protocore_hkdf_expand_label_ctx(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Hkdf.extract(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HkdfNs Hkdf __attribute__((unused)) = {
+    .extract = protocore_hkdf_extract,
+    .expand = protocore_hkdf_expand,
+    .expand_label = protocore_hkdf_expand_label,
+    .expand_label_ctx = protocore_hkdf_expand_label_ctx,
+};
 
 PROTOCORE_END_DECLS
 

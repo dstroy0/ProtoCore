@@ -243,25 +243,25 @@ void test_rfc9001_a1_initial_secret_chain(void)
     hx("3c199828fd139efd216c155ad844cc81fb82fa8d7446fa7d78be803acdda951b", want_server, 32);
 
     uint8_t initial[32], client[32], server[32];
-    Hkdf.extract_args.salt = salt;
-    Hkdf.extract_args.salt_len = sizeof(salt);
-    Hkdf.extract_args.ikm = dcid;
-    Hkdf.extract_args.ikm_len = sizeof(dcid);
-    Hkdf.extract_args.prk = initial;
+    HkdfV.extract_args.salt = salt;
+    HkdfV.extract_args.salt_len = sizeof(salt);
+    HkdfV.extract_args.ikm = dcid;
+    HkdfV.extract_args.ikm_len = sizeof(dcid);
+    HkdfV.extract_args.prk = initial;
     Hkdf.extract(g_work);
     TEST_ASSERT_EQUAL_MEMORY(want_initial, initial, 32);
 
-    Hkdf.expand_label_args.secret = initial;
-    Hkdf.expand_label_args.label = "client in";
-    Hkdf.expand_label_args.out = client;
-    Hkdf.expand_label_args.out_len = 32;
-    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    HkdfV.expand_label_args.secret = initial;
+    HkdfV.expand_label_args.label = "client in";
+    HkdfV.expand_label_args.out = client;
+    HkdfV.expand_label_args.out_len = 32;
+    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
     Hkdf.expand_label(g_work);
-    Hkdf.expand_label_args.secret = initial;
-    Hkdf.expand_label_args.label = "server in";
-    Hkdf.expand_label_args.out = server;
-    Hkdf.expand_label_args.out_len = 32;
-    Hkdf.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
+    HkdfV.expand_label_args.secret = initial;
+    HkdfV.expand_label_args.label = "server in";
+    HkdfV.expand_label_args.out = server;
+    HkdfV.expand_label_args.out_len = 32;
+    HkdfV.expand_label_args.label_prefix = PROTOCORE_HKDF_LABEL_PREFIX;
     Hkdf.expand_label(g_work);
     TEST_ASSERT_EQUAL_MEMORY(want_client, client, 32);
     TEST_ASSERT_EQUAL_MEMORY(want_server, server, 32);
@@ -281,10 +281,10 @@ void test_rfc9001_a1_packet_keys(void)
     hx("c206b8d9b9f0f37644430b490eeaa314", shp, sizeof(shp));
 
     QuicInitialSecrets s;
-    QuicCrypto.derive_initial_secrets_args.keys_work = g_work;
-    QuicCrypto.derive_initial_secrets_args.dcid = dcid;
-    QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(dcid);
-    QuicCrypto.derive_initial_secrets_args.out = &s;
+    QuicCryptoV.derive_initial_secrets_args.keys_work = g_work;
+    QuicCryptoV.derive_initial_secrets_args.dcid = dcid;
+    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(dcid);
+    QuicCryptoV.derive_initial_secrets_args.out = &s;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
     TEST_ASSERT_EQUAL_MEMORY(civ, s.client.iv, 12);
     TEST_ASSERT_EQUAL_MEMORY(siv, s.server.iv, 12);
@@ -315,10 +315,10 @@ void test_rfc9001_a3_server_initial(void)
     TEST_ASSERT_EQUAL_UINT(135u, want_len);
 
     QuicInitialSecrets s;
-    QuicCrypto.derive_initial_secrets_args.keys_work = g_work;
-    QuicCrypto.derive_initial_secrets_args.dcid = dcid;
-    QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(dcid);
-    QuicCrypto.derive_initial_secrets_args.out = &s;
+    QuicCryptoV.derive_initial_secrets_args.keys_work = g_work;
+    QuicCryptoV.derive_initial_secrets_args.dcid = dcid;
+    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(dcid);
+    QuicCryptoV.derive_initial_secrets_args.out = &s;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     size_t hdr_len = hx(HDR, g_pkt, sizeof(g_pkt));
@@ -328,32 +328,32 @@ void test_rfc9001_a3_server_initial(void)
 
     // the header's Length field is 0x4075, a 2-octet varint holding 117 = 2 packet-number octets +
     // 99 frame octets + the 16-octet tag, so the packet number starts at offset 18
-    QuicCrypto.packet_protect_args.pkt = g_pkt;
-    QuicCrypto.packet_protect_args.cap = sizeof(g_pkt);
-    QuicCrypto.packet_protect_args.pn_offset = 18;
-    QuicCrypto.packet_protect_args.pn_len = 2;
-    QuicCrypto.packet_protect_args.full_pn = 1;
-    QuicCrypto.packet_protect_args.payload_len = frames_len;
-    QuicCrypto.packet_protect_args.keys = &s.server;
-    QuicCrypto.packet_protect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_protect_args.pkt = g_pkt;
+    QuicCryptoV.packet_protect_args.cap = sizeof(g_pkt);
+    QuicCryptoV.packet_protect_args.pn_offset = 18;
+    QuicCryptoV.packet_protect_args.pn_len = 2;
+    QuicCryptoV.packet_protect_args.full_pn = 1;
+    QuicCryptoV.packet_protect_args.payload_len = frames_len;
+    QuicCryptoV.packet_protect_args.keys = &s.server;
+    QuicCryptoV.packet_protect_args.is_long = PROTO_TRUE;
     QuicCrypto.packet_protect(quic_crypto_work);
-    size_t n = QuicCrypto.n;
+    size_t n = QuicCryptoV.n;
     TEST_ASSERT_EQUAL_UINT(135u, n);
     TEST_ASSERT_EQUAL_MEMORY(want, g_pkt, 135);
 
     // and back: the protected packet opens to the same frames under packet number 1
     uint64_t pn = 0;
     memcpy(g_pkt, want, want_len);
-    QuicCrypto.packet_unprotect_args.pkt = g_pkt;
-    QuicCrypto.packet_unprotect_args.pn_offset = 18;
-    QuicCrypto.packet_unprotect_args.length = 0x75;
-    QuicCrypto.packet_unprotect_args.largest_pn = 0;
-    QuicCrypto.packet_unprotect_args.keys = &s.server;
-    QuicCrypto.packet_unprotect_args.is_long = PROTO_TRUE;
-    QuicCrypto.packet_unprotect_args.out = g_plain;
-    QuicCrypto.packet_unprotect_args.out_pn = &pn;
+    QuicCryptoV.packet_unprotect_args.pkt = g_pkt;
+    QuicCryptoV.packet_unprotect_args.pn_offset = 18;
+    QuicCryptoV.packet_unprotect_args.length = 0x75;
+    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
+    QuicCryptoV.packet_unprotect_args.keys = &s.server;
+    QuicCryptoV.packet_unprotect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_unprotect_args.out = g_plain;
+    QuicCryptoV.packet_unprotect_args.out_pn = &pn;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    size_t pt = QuicCrypto.n;
+    size_t pt = QuicCryptoV.n;
     TEST_ASSERT_EQUAL_UINT(99u, pt);
     TEST_ASSERT_EQUAL_HEX64(1u, pn);
     uint8_t frames[128];
@@ -379,10 +379,10 @@ void test_rfc9001_a2_client_initial(void)
     hx("8394c8f03e515708", dcid, sizeof(dcid));
 
     QuicInitialSecrets s;
-    QuicCrypto.derive_initial_secrets_args.keys_work = g_work;
-    QuicCrypto.derive_initial_secrets_args.dcid = dcid;
-    QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(dcid);
-    QuicCrypto.derive_initial_secrets_args.out = &s;
+    QuicCryptoV.derive_initial_secrets_args.keys_work = g_work;
+    QuicCryptoV.derive_initial_secrets_args.dcid = dcid;
+    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(dcid);
+    QuicCryptoV.derive_initial_secrets_args.out = &s;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     size_t hdr_len = hx(HDR, g_pkt, sizeof(g_pkt));
@@ -392,16 +392,16 @@ void test_rfc9001_a2_client_initial(void)
     memset(g_pkt + hdr_len + crypto_len, 0, 1162 - crypto_len); // PADDING frames are zero octets
 
     // Length 0x449e = 1182 = 4 packet-number octets + 1162 payload + 16 tag, so pn_offset is 18
-    QuicCrypto.packet_protect_args.pkt = g_pkt;
-    QuicCrypto.packet_protect_args.cap = sizeof(g_pkt);
-    QuicCrypto.packet_protect_args.pn_offset = 18;
-    QuicCrypto.packet_protect_args.pn_len = 4;
-    QuicCrypto.packet_protect_args.full_pn = 2;
-    QuicCrypto.packet_protect_args.payload_len = 1162;
-    QuicCrypto.packet_protect_args.keys = &s.client;
-    QuicCrypto.packet_protect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_protect_args.pkt = g_pkt;
+    QuicCryptoV.packet_protect_args.cap = sizeof(g_pkt);
+    QuicCryptoV.packet_protect_args.pn_offset = 18;
+    QuicCryptoV.packet_protect_args.pn_len = 4;
+    QuicCryptoV.packet_protect_args.full_pn = 2;
+    QuicCryptoV.packet_protect_args.payload_len = 1162;
+    QuicCryptoV.packet_protect_args.keys = &s.client;
+    QuicCryptoV.packet_protect_args.is_long = PROTO_TRUE;
     QuicCrypto.packet_protect(quic_crypto_work);
-    size_t n = QuicCrypto.n;
+    size_t n = QuicCryptoV.n;
     TEST_ASSERT_EQUAL_UINT(1200u, n);
 
     // "header = c000000001088394c8f03e5157080000449e7b9aec34"
@@ -415,16 +415,16 @@ void test_rfc9001_a2_client_initial(void)
     TEST_ASSERT_EQUAL_MEMORY(want_sample, g_pkt + 22, 16);
 
     uint64_t pn = 0;
-    QuicCrypto.packet_unprotect_args.pkt = g_pkt;
-    QuicCrypto.packet_unprotect_args.pn_offset = 18;
-    QuicCrypto.packet_unprotect_args.length = 0x49e;
-    QuicCrypto.packet_unprotect_args.largest_pn = 0;
-    QuicCrypto.packet_unprotect_args.keys = &s.client;
-    QuicCrypto.packet_unprotect_args.is_long = PROTO_TRUE;
-    QuicCrypto.packet_unprotect_args.out = g_plain;
-    QuicCrypto.packet_unprotect_args.out_pn = &pn;
+    QuicCryptoV.packet_unprotect_args.pkt = g_pkt;
+    QuicCryptoV.packet_unprotect_args.pn_offset = 18;
+    QuicCryptoV.packet_unprotect_args.length = 0x49e;
+    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
+    QuicCryptoV.packet_unprotect_args.keys = &s.client;
+    QuicCryptoV.packet_unprotect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_unprotect_args.out = g_plain;
+    QuicCryptoV.packet_unprotect_args.out_pn = &pn;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    size_t pt = QuicCrypto.n;
+    size_t pt = QuicCryptoV.n;
     TEST_ASSERT_EQUAL_UINT(1162u, pt);
     TEST_ASSERT_EQUAL_HEX64(2u, pn);
     uint8_t frame[256];
@@ -447,11 +447,11 @@ void test_rfc9001_a4_retry_integrity_tag(void)
     TEST_ASSERT_EQUAL_UINT(36u, retry_len);
     hx("8394c8f03e515708", odcid, sizeof(odcid));
 
-    QuicCrypto.retry_integrity_tag_args.odcid = odcid;
-    QuicCrypto.retry_integrity_tag_args.odcid_len = sizeof(odcid);
-    QuicCrypto.retry_integrity_tag_args.retry = retry;
-    QuicCrypto.retry_integrity_tag_args.retry_len = retry_len - 16;
-    QuicCrypto.retry_integrity_tag_args.tag = tag;
+    QuicCryptoV.retry_integrity_tag_args.odcid = odcid;
+    QuicCryptoV.retry_integrity_tag_args.odcid_len = sizeof(odcid);
+    QuicCryptoV.retry_integrity_tag_args.retry = retry;
+    QuicCryptoV.retry_integrity_tag_args.retry_len = retry_len - 16;
+    QuicCryptoV.retry_integrity_tag_args.tag = tag;
     QuicCrypto.retry_integrity_tag(quic_crypto_work);
     TEST_ASSERT_EQUAL_MEMORY(retry + retry_len - 16, tag, 16);
 
@@ -460,11 +460,11 @@ void test_rfc9001_a4_retry_integrity_tag(void)
     memcpy(other, odcid, sizeof(other));
     other[0] ^= 0x01;
     uint8_t tag2[16];
-    QuicCrypto.retry_integrity_tag_args.odcid = other;
-    QuicCrypto.retry_integrity_tag_args.odcid_len = sizeof(other);
-    QuicCrypto.retry_integrity_tag_args.retry = retry;
-    QuicCrypto.retry_integrity_tag_args.retry_len = retry_len - 16;
-    QuicCrypto.retry_integrity_tag_args.tag = tag2;
+    QuicCryptoV.retry_integrity_tag_args.odcid = other;
+    QuicCryptoV.retry_integrity_tag_args.odcid_len = sizeof(other);
+    QuicCryptoV.retry_integrity_tag_args.retry = retry;
+    QuicCryptoV.retry_integrity_tag_args.retry_len = retry_len - 16;
+    QuicCryptoV.retry_integrity_tag_args.tag = tag2;
     QuicCrypto.retry_integrity_tag(quic_crypto_work);
     TEST_ASSERT_TRUE(memcmp(tag, tag2, 16) != 0);
 }
@@ -476,10 +476,10 @@ void test_tampered_packet_fails_authentication(void)
     uint8_t dcid[8], pkt[256];
     hx("8394c8f03e515708", dcid, sizeof(dcid));
     QuicInitialSecrets s;
-    QuicCrypto.derive_initial_secrets_args.keys_work = g_work;
-    QuicCrypto.derive_initial_secrets_args.dcid = dcid;
-    QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(dcid);
-    QuicCrypto.derive_initial_secrets_args.out = &s;
+    QuicCryptoV.derive_initial_secrets_args.keys_work = g_work;
+    QuicCryptoV.derive_initial_secrets_args.dcid = dcid;
+    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(dcid);
+    QuicCryptoV.derive_initial_secrets_args.out = &s;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     size_t want_len = hx("cf000000010008f067a5502a4262b5004075c0d95a482cd0991cd25b0aac406a"
@@ -493,44 +493,44 @@ void test_tampered_packet_fails_authentication(void)
     // a flipped octet in the connection ID, which is associated data
     memcpy(g_pkt, pkt, want_len);
     g_pkt[10] ^= 0x01;
-    QuicCrypto.packet_unprotect_args.pkt = g_pkt;
-    QuicCrypto.packet_unprotect_args.pn_offset = 18;
-    QuicCrypto.packet_unprotect_args.length = 0x75;
-    QuicCrypto.packet_unprotect_args.largest_pn = 0;
-    QuicCrypto.packet_unprotect_args.keys = &s.server;
-    QuicCrypto.packet_unprotect_args.is_long = PROTO_TRUE;
-    QuicCrypto.packet_unprotect_args.out = g_plain;
-    QuicCrypto.packet_unprotect_args.out_pn = NULL;
+    QuicCryptoV.packet_unprotect_args.pkt = g_pkt;
+    QuicCryptoV.packet_unprotect_args.pn_offset = 18;
+    QuicCryptoV.packet_unprotect_args.length = 0x75;
+    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
+    QuicCryptoV.packet_unprotect_args.keys = &s.server;
+    QuicCryptoV.packet_unprotect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_unprotect_args.out = g_plain;
+    QuicCryptoV.packet_unprotect_args.out_pn = NULL;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    TEST_ASSERT_EQUAL_UINT((size_t)-1, QuicCrypto.n);
+    TEST_ASSERT_EQUAL_UINT((size_t)-1, QuicCryptoV.n);
 
     // a flipped octet in the ciphertext
     memcpy(g_pkt, pkt, want_len);
     g_pkt[40] ^= 0x01;
-    QuicCrypto.packet_unprotect_args.pkt = g_pkt;
-    QuicCrypto.packet_unprotect_args.pn_offset = 18;
-    QuicCrypto.packet_unprotect_args.length = 0x75;
-    QuicCrypto.packet_unprotect_args.largest_pn = 0;
-    QuicCrypto.packet_unprotect_args.keys = &s.server;
-    QuicCrypto.packet_unprotect_args.is_long = PROTO_TRUE;
-    QuicCrypto.packet_unprotect_args.out = g_plain;
-    QuicCrypto.packet_unprotect_args.out_pn = NULL;
+    QuicCryptoV.packet_unprotect_args.pkt = g_pkt;
+    QuicCryptoV.packet_unprotect_args.pn_offset = 18;
+    QuicCryptoV.packet_unprotect_args.length = 0x75;
+    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
+    QuicCryptoV.packet_unprotect_args.keys = &s.server;
+    QuicCryptoV.packet_unprotect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_unprotect_args.out = g_plain;
+    QuicCryptoV.packet_unprotect_args.out_pn = NULL;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    TEST_ASSERT_EQUAL_UINT((size_t)-1, QuicCrypto.n);
+    TEST_ASSERT_EQUAL_UINT((size_t)-1, QuicCryptoV.n);
 
     // a flipped octet in the authentication tag
     memcpy(g_pkt, pkt, want_len);
     g_pkt[want_len - 1] ^= 0x01;
-    QuicCrypto.packet_unprotect_args.pkt = g_pkt;
-    QuicCrypto.packet_unprotect_args.pn_offset = 18;
-    QuicCrypto.packet_unprotect_args.length = 0x75;
-    QuicCrypto.packet_unprotect_args.largest_pn = 0;
-    QuicCrypto.packet_unprotect_args.keys = &s.server;
-    QuicCrypto.packet_unprotect_args.is_long = PROTO_TRUE;
-    QuicCrypto.packet_unprotect_args.out = g_plain;
-    QuicCrypto.packet_unprotect_args.out_pn = NULL;
+    QuicCryptoV.packet_unprotect_args.pkt = g_pkt;
+    QuicCryptoV.packet_unprotect_args.pn_offset = 18;
+    QuicCryptoV.packet_unprotect_args.length = 0x75;
+    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
+    QuicCryptoV.packet_unprotect_args.keys = &s.server;
+    QuicCryptoV.packet_unprotect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_unprotect_args.out = g_plain;
+    QuicCryptoV.packet_unprotect_args.out_pn = NULL;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    TEST_ASSERT_EQUAL_UINT((size_t)-1, QuicCrypto.n);
+    TEST_ASSERT_EQUAL_UINT((size_t)-1, QuicCryptoV.n);
 }
 
 // Bounds: a packet number outside the 1..4 octets RFC 9000 sec 17.2 allows has no encoding, a
@@ -541,65 +541,65 @@ void test_parameter_bounds(void)
     uint8_t dcid[8];
     hx("8394c8f03e515708", dcid, sizeof(dcid));
     QuicInitialSecrets s;
-    QuicCrypto.derive_initial_secrets_args.keys_work = g_work;
-    QuicCrypto.derive_initial_secrets_args.dcid = dcid;
-    QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(dcid);
-    QuicCrypto.derive_initial_secrets_args.out = &s;
+    QuicCryptoV.derive_initial_secrets_args.keys_work = g_work;
+    QuicCryptoV.derive_initial_secrets_args.dcid = dcid;
+    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(dcid);
+    QuicCryptoV.derive_initial_secrets_args.out = &s;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     memset(g_pkt, 0, 64);
-    QuicCrypto.packet_protect_args.pkt = g_pkt;
-    QuicCrypto.packet_protect_args.cap = sizeof(g_pkt);
-    QuicCrypto.packet_protect_args.pn_offset = 18;
-    QuicCrypto.packet_protect_args.pn_len = 0;
-    QuicCrypto.packet_protect_args.full_pn = 1;
-    QuicCrypto.packet_protect_args.payload_len = 8;
-    QuicCrypto.packet_protect_args.keys = &s.server;
-    QuicCrypto.packet_protect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_protect_args.pkt = g_pkt;
+    QuicCryptoV.packet_protect_args.cap = sizeof(g_pkt);
+    QuicCryptoV.packet_protect_args.pn_offset = 18;
+    QuicCryptoV.packet_protect_args.pn_len = 0;
+    QuicCryptoV.packet_protect_args.full_pn = 1;
+    QuicCryptoV.packet_protect_args.payload_len = 8;
+    QuicCryptoV.packet_protect_args.keys = &s.server;
+    QuicCryptoV.packet_protect_args.is_long = PROTO_TRUE;
     QuicCrypto.packet_protect(quic_crypto_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicCrypto.n);
-    QuicCrypto.packet_protect_args.pkt = g_pkt;
-    QuicCrypto.packet_protect_args.cap = sizeof(g_pkt);
-    QuicCrypto.packet_protect_args.pn_offset = 18;
-    QuicCrypto.packet_protect_args.pn_len = 5;
-    QuicCrypto.packet_protect_args.full_pn = 1;
-    QuicCrypto.packet_protect_args.payload_len = 8;
-    QuicCrypto.packet_protect_args.keys = &s.server;
-    QuicCrypto.packet_protect_args.is_long = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_UINT(0u, QuicCryptoV.n);
+    QuicCryptoV.packet_protect_args.pkt = g_pkt;
+    QuicCryptoV.packet_protect_args.cap = sizeof(g_pkt);
+    QuicCryptoV.packet_protect_args.pn_offset = 18;
+    QuicCryptoV.packet_protect_args.pn_len = 5;
+    QuicCryptoV.packet_protect_args.full_pn = 1;
+    QuicCryptoV.packet_protect_args.payload_len = 8;
+    QuicCryptoV.packet_protect_args.keys = &s.server;
+    QuicCryptoV.packet_protect_args.is_long = PROTO_TRUE;
     QuicCrypto.packet_protect(quic_crypto_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicCrypto.n);
+    TEST_ASSERT_EQUAL_UINT(0u, QuicCryptoV.n);
     // 18 + 2 + 8 + 16 = 44 octets needed
-    QuicCrypto.packet_protect_args.pkt = g_pkt;
-    QuicCrypto.packet_protect_args.cap = 43;
-    QuicCrypto.packet_protect_args.pn_offset = 18;
-    QuicCrypto.packet_protect_args.pn_len = 2;
-    QuicCrypto.packet_protect_args.full_pn = 1;
-    QuicCrypto.packet_protect_args.payload_len = 8;
-    QuicCrypto.packet_protect_args.keys = &s.server;
-    QuicCrypto.packet_protect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_protect_args.pkt = g_pkt;
+    QuicCryptoV.packet_protect_args.cap = 43;
+    QuicCryptoV.packet_protect_args.pn_offset = 18;
+    QuicCryptoV.packet_protect_args.pn_len = 2;
+    QuicCryptoV.packet_protect_args.full_pn = 1;
+    QuicCryptoV.packet_protect_args.payload_len = 8;
+    QuicCryptoV.packet_protect_args.keys = &s.server;
+    QuicCryptoV.packet_protect_args.is_long = PROTO_TRUE;
     QuicCrypto.packet_protect(quic_crypto_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicCrypto.n);
-    QuicCrypto.packet_protect_args.pkt = g_pkt;
-    QuicCrypto.packet_protect_args.cap = 44;
-    QuicCrypto.packet_protect_args.pn_offset = 18;
-    QuicCrypto.packet_protect_args.pn_len = 2;
-    QuicCrypto.packet_protect_args.full_pn = 1;
-    QuicCrypto.packet_protect_args.payload_len = 8;
-    QuicCrypto.packet_protect_args.keys = &s.server;
-    QuicCrypto.packet_protect_args.is_long = PROTO_TRUE;
+    TEST_ASSERT_EQUAL_UINT(0u, QuicCryptoV.n);
+    QuicCryptoV.packet_protect_args.pkt = g_pkt;
+    QuicCryptoV.packet_protect_args.cap = 44;
+    QuicCryptoV.packet_protect_args.pn_offset = 18;
+    QuicCryptoV.packet_protect_args.pn_len = 2;
+    QuicCryptoV.packet_protect_args.full_pn = 1;
+    QuicCryptoV.packet_protect_args.payload_len = 8;
+    QuicCryptoV.packet_protect_args.keys = &s.server;
+    QuicCryptoV.packet_protect_args.is_long = PROTO_TRUE;
     QuicCrypto.packet_protect(quic_crypto_work);
-    TEST_ASSERT_EQUAL_UINT(44u, QuicCrypto.n);
+    TEST_ASSERT_EQUAL_UINT(44u, QuicCryptoV.n);
 
-    QuicCrypto.packet_unprotect_args.pkt = g_pkt;
-    QuicCrypto.packet_unprotect_args.pn_offset = 18;
-    QuicCrypto.packet_unprotect_args.length = 19;
-    QuicCrypto.packet_unprotect_args.largest_pn = 0;
-    QuicCrypto.packet_unprotect_args.keys = &s.server;
-    QuicCrypto.packet_unprotect_args.is_long = PROTO_TRUE;
-    QuicCrypto.packet_unprotect_args.out = g_plain;
-    QuicCrypto.packet_unprotect_args.out_pn = NULL;
+    QuicCryptoV.packet_unprotect_args.pkt = g_pkt;
+    QuicCryptoV.packet_unprotect_args.pn_offset = 18;
+    QuicCryptoV.packet_unprotect_args.length = 19;
+    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
+    QuicCryptoV.packet_unprotect_args.keys = &s.server;
+    QuicCryptoV.packet_unprotect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_unprotect_args.out = g_plain;
+    QuicCryptoV.packet_unprotect_args.out_pn = NULL;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    TEST_ASSERT_EQUAL_UINT((size_t)-1, QuicCrypto.n);
+    TEST_ASSERT_EQUAL_UINT((size_t)-1, QuicCryptoV.n);
 }
 
 // A 1-RTT short header masks five bits of the first octet rather than four (RFC 9001 sec 5.4.1),
@@ -611,10 +611,10 @@ void test_short_header_round_trip(void)
     hx("8394c8f03e515708", dcid, sizeof(dcid));
     memset(payload, 0xA5, sizeof(payload));
     QuicInitialSecrets s;
-    QuicCrypto.derive_initial_secrets_args.keys_work = g_work;
-    QuicCrypto.derive_initial_secrets_args.dcid = dcid;
-    QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(dcid);
-    QuicCrypto.derive_initial_secrets_args.out = &s;
+    QuicCryptoV.derive_initial_secrets_args.keys_work = g_work;
+    QuicCryptoV.derive_initial_secrets_args.dcid = dcid;
+    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(dcid);
+    QuicCryptoV.derive_initial_secrets_args.out = &s;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     // 0x42: short form, Fixed Bit, 3-octet packet number; then a 4-octet connection id
@@ -625,30 +625,30 @@ void test_short_header_round_trip(void)
     g_pkt[7] = 0xf4;
     memcpy(g_pkt + 8, payload, sizeof(payload));
 
-    QuicCrypto.packet_protect_args.pkt = g_pkt;
-    QuicCrypto.packet_protect_args.cap = sizeof(g_pkt);
-    QuicCrypto.packet_protect_args.pn_offset = 5;
-    QuicCrypto.packet_protect_args.pn_len = 3;
-    QuicCrypto.packet_protect_args.full_pn = 0x2700bff4ULL;
-    QuicCrypto.packet_protect_args.payload_len = sizeof(payload);
-    QuicCrypto.packet_protect_args.keys = &s.server;
-    QuicCrypto.packet_protect_args.is_long = PROTO_FALSE;
+    QuicCryptoV.packet_protect_args.pkt = g_pkt;
+    QuicCryptoV.packet_protect_args.cap = sizeof(g_pkt);
+    QuicCryptoV.packet_protect_args.pn_offset = 5;
+    QuicCryptoV.packet_protect_args.pn_len = 3;
+    QuicCryptoV.packet_protect_args.full_pn = 0x2700bff4ULL;
+    QuicCryptoV.packet_protect_args.payload_len = sizeof(payload);
+    QuicCryptoV.packet_protect_args.keys = &s.server;
+    QuicCryptoV.packet_protect_args.is_long = PROTO_FALSE;
     QuicCrypto.packet_protect(quic_crypto_work);
-    size_t n = QuicCrypto.n;
+    size_t n = QuicCryptoV.n;
     TEST_ASSERT_EQUAL_UINT(8u + 16u + 16u, n);
     TEST_ASSERT_TRUE(g_pkt[0] != 0x42); // the first octet is masked
 
     uint64_t pn = 0;
-    QuicCrypto.packet_unprotect_args.pkt = g_pkt;
-    QuicCrypto.packet_unprotect_args.pn_offset = 5;
-    QuicCrypto.packet_unprotect_args.length = 3 + 16 + 16;
-    QuicCrypto.packet_unprotect_args.largest_pn = 0x2700bff3ULL;
-    QuicCrypto.packet_unprotect_args.keys = &s.server;
-    QuicCrypto.packet_unprotect_args.is_long = PROTO_FALSE;
-    QuicCrypto.packet_unprotect_args.out = g_plain;
-    QuicCrypto.packet_unprotect_args.out_pn = &pn;
+    QuicCryptoV.packet_unprotect_args.pkt = g_pkt;
+    QuicCryptoV.packet_unprotect_args.pn_offset = 5;
+    QuicCryptoV.packet_unprotect_args.length = 3 + 16 + 16;
+    QuicCryptoV.packet_unprotect_args.largest_pn = 0x2700bff3ULL;
+    QuicCryptoV.packet_unprotect_args.keys = &s.server;
+    QuicCryptoV.packet_unprotect_args.is_long = PROTO_FALSE;
+    QuicCryptoV.packet_unprotect_args.out = g_plain;
+    QuicCryptoV.packet_unprotect_args.out_pn = &pn;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    size_t pt = QuicCrypto.n;
+    size_t pt = QuicCryptoV.n;
     TEST_ASSERT_EQUAL_UINT(16u, pt);
     TEST_ASSERT_EQUAL_HEX64(0x2700bff4ULL, pn);
     TEST_ASSERT_EQUAL_MEMORY(payload, g_plain, sizeof(payload));

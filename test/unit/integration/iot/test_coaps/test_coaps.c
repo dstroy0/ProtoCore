@@ -200,12 +200,12 @@ static DtlsConn g_dtls2;
 static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordKeys *cli_app_read)
 {
     uint8_t client_pub[32];
-    Curve25519.x25519_base_args.out = client_pub;
-    Curve25519.x25519_base_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_base_args.out = client_pub;
+    Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519.pubkey_args.pub = server_ed_pub;
-    Ed25519.pubkey_args.seed = SERVER_ED_SEED;
+    Ed25519V.pubkey_args.pub = server_ed_pub;
+    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
     Ed25519.pubkey(tw);
 
     DtlsServerConfig cfg;
@@ -281,9 +281,9 @@ static void handshake(DtlsConn *conn, DtlsRecordKeys *cli_app_write, DtlsRecordK
     TEST_ASSERT_TRUE(sh_keyshare(sh, sh_len, server_pub));
 
     uint8_t ecdhe[32];
-    Curve25519.x25519_args.out = ecdhe;
-    Curve25519.x25519_args.scalar = CLIENT_X25519_PRIV;
-    Curve25519.x25519_args.point = server_pub;
+    Curve25519V.x25519_args.out = ecdhe;
+    Curve25519V.x25519_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_args.point = server_pub;
     Curve25519.x25519(tw);
     Tls13KeySchedule cks;
     uint8_t h[32];
@@ -573,12 +573,12 @@ void test_coaps_wrong_epoch_record(void)
 void test_coaps_forwards_handshake(void)
 {
     uint8_t client_pub[32];
-    Curve25519.x25519_base_args.out = client_pub;
-    Curve25519.x25519_base_args.scalar = CLIENT_X25519_PRIV;
+    Curve25519V.x25519_base_args.out = client_pub;
+    Curve25519V.x25519_base_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t server_ed_pub[32];
-    Ed25519.pubkey_args.pub = server_ed_pub;
-    Ed25519.pubkey_args.seed = SERVER_ED_SEED;
+    Ed25519V.pubkey_args.pub = server_ed_pub;
+    Ed25519V.pubkey_args.seed = SERVER_ED_SEED;
     Ed25519.pubkey(tw);
 
     DtlsServerConfig cfg;

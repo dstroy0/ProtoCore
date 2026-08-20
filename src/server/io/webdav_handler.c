@@ -293,11 +293,11 @@ static proto_bool dav_stream_put_begin(HttpReq *req)
         {
             continue;
         }
-        Http.route_args.route = r->path;
-        Http.route_args.is_wildcard = r->is_wildcard;
-        Http.route_args.path = req->path;
+        HttpV.route_args.route = r->path;
+        HttpV.route_args.is_wildcard = r->is_wildcard;
+        HttpV.route_args.path = req->path;
         Http.path_matches(protocore_http_span());
-        if (!Http.ok)
+        if (!HttpV.ok)
         {
             continue;
         }
@@ -455,9 +455,9 @@ static void dav_send_status(uint8_t slot_id, int code, const char *extra_headers
     Sb.put(&sb_header, "HTTP/1.1 ");
     Sb.i64(&sb_header, (int64_t)(code));
     Sb.put(&sb_header, " ");
-    Http.code = code;
+    HttpV.code = code;
     Http.status_text(protocore_http_span());
-    Sb.put(&sb_header, Http.text);
+    Sb.put(&sb_header, HttpV.text);
     Sb.put(&sb_header, "\r\n");
     Sb.put(&sb_header, extra_headers ? extra_headers : "");
     Sb.put(&sb_header, "Content-Length: 0\r\n");
@@ -508,11 +508,11 @@ static void webdav_handler_try_serve_dav(uint8_t *restrict work)
         {
             continue;
         }
-        Http.route_args.route = r->path;
-        Http.route_args.is_wildcard = r->is_wildcard;
-        Http.route_args.path = req->path;
+        HttpV.route_args.route = r->path;
+        HttpV.route_args.is_wildcard = r->is_wildcard;
+        HttpV.route_args.path = req->path;
         Http.path_matches(protocore_http_span());
-        if (!Http.ok)
+        if (!HttpV.ok)
         {
             continue;
         }

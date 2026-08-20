@@ -380,8 +380,8 @@ static proto_bool build_kex_public(void)
         RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
-        Curve25519.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Curve25519.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+        Curve25519V.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        Curve25519V.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
         Curve25519.x25519_base(work);
         SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = 32;
         return PROTO_TRUE;
@@ -392,10 +392,10 @@ static proto_bool build_kex_public(void)
             RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
             RngV.fill_args.len = 32;
             Rng.fill(protocore_rng_span());
-            Ecdsa.pubkey_args.priv = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-            Ecdsa.pubkey_args.pub = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+            EcdsaV.pubkey_args.priv = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+            EcdsaV.pubkey_args.pub = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
             Ecdsa.pubkey(work);
-            if (Ecdsa.ok)
+            if (EcdsaV.ok)
             {
                 SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = PROTOCORE_ECDSA_P256_PUB_LEN; // 65
                 return PROTO_TRUE;
@@ -440,10 +440,10 @@ static proto_bool build_kex_public(void)
         RngV.fill_args.out = z;
         RngV.fill_args.len = sizeof(z);
         Rng.fill(protocore_rng_span());
-        MlKem.keygen_args.d = d;
-        MlKem.keygen_args.z = z;
-        MlKem.keygen_args.ek = ek;
-        MlKem.keygen_args.dk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.mlkem_dk;
+        MlKemV.keygen_args.d = d;
+        MlKemV.keygen_args.z = z;
+        MlKemV.keygen_args.ek = ek;
+        MlKemV.keygen_args.dk = SSH_CLIENT_CTX(protocore_ssh_client_span())->hyb.mlkem_dk;
         MlKem.keygen(work);
         protocore_secure_wipe(d, sizeof(d));
         protocore_secure_wipe(z, sizeof(z));
@@ -451,8 +451,8 @@ static proto_bool build_kex_public(void)
         RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
-        Curve25519.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Curve25519.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+        Curve25519V.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        Curve25519V.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
         Curve25519.x25519_base(work);
         SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = 32;
         return PROTO_TRUE;
@@ -476,8 +476,8 @@ static proto_bool build_kex_public(void)
         RngV.fill_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
         RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
-        Curve25519.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
-        Curve25519.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
+        Curve25519V.x25519_base_args.scalar = SSH_CLIENT_CTX(protocore_ssh_client_span())->kex_priv;
+        Curve25519V.x25519_base_args.out = SSH_CLIENT_CTX(protocore_ssh_client_span())->qc;
         Curve25519.x25519_base(work);
         SSH_CLIENT_CTX(protocore_ssh_client_span())->qc_len = 32;
         return PROTO_TRUE;
@@ -701,8 +701,8 @@ static proto_bool send_userauth_publickey(void)
     const char *user = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.user;
     uint8_t *work = (SshClient.crypto_work(protocore_ssh_client_span()), SshClient.work);
     uint8_t pub[32];
-    Ed25519.pubkey_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
-    Ed25519.pubkey_args.pub = pub;
+    Ed25519V.pubkey_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
+    Ed25519V.pubkey_args.pub = pub;
     Ed25519.pubkey(work);
 
     // The device's public-key blob: string("ssh-ed25519") || string(pub32).
@@ -741,10 +741,10 @@ static proto_bool send_userauth_publickey(void)
     }
 
     uint8_t sig[64];
-    Ed25519.sign_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
-    Ed25519.sign_args.msg = signed_data;
-    Ed25519.sign_args.msg_len = sd.pos;
-    Ed25519.sign_args.sig = sig;
+    Ed25519V.sign_args.seed = SSH_CLIENT_CTX(protocore_ssh_client_span())->cfg.auth_seed;
+    Ed25519V.sign_args.msg = signed_data;
+    Ed25519V.sign_args.msg_len = sd.pos;
+    Ed25519V.sign_args.sig = sig;
     Ed25519.sign(work);
 
     // Signature blob: string("ssh-ed25519") || string(sig64).

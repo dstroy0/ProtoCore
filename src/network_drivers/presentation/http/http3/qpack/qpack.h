@@ -94,17 +94,36 @@ typedef struct
     QpackEncodePrefixArgs encode_prefix_args;
     QpackEncodeHeaderArgs encode_header_args;
     QpackDecodeArgs decode_args;
-
     proto_bool ok;
     size_t n;
+} QpackVars;
 
+/** @brief The operands and the outcome. */
+extern QpackVars QpackV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const encode_prefix)(uint8_t *restrict work);
     void (*const encode_header)(uint8_t *restrict work);
     void (*const decode)(uint8_t *restrict work);
 } QpackNs;
 
-/** @brief The one symbol this module exports. */
-extern QpackNs Qpack;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in QpackV or a region of the borrow at a fixed offset.
+void protocore_qpack_encode_prefix(uint8_t *restrict work);
+void protocore_qpack_encode_header(uint8_t *restrict work);
+void protocore_qpack_decode(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Qpack.encode_prefix(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const QpackNs Qpack __attribute__((unused)) = {
+    .encode_prefix = protocore_qpack_encode_prefix,
+    .encode_header = protocore_qpack_encode_header,
+    .decode = protocore_qpack_decode,
+};
 
 PROTOCORE_END_DECLS
 

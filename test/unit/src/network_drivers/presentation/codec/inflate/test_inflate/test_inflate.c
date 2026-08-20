@@ -34,15 +34,15 @@ void tearDown(void)
 static void expect_inflates_to(const uint8_t *src, size_t src_len, const char *exp, size_t exp_len)
 {
     size_t out_len = 0;
-    Inflate.raw_args.src = src;
-    Inflate.raw_args.src_len = src_len;
-    Inflate.raw_args.dst = g_out;
-    Inflate.raw_args.dst_cap = sizeof(g_out);
-    Inflate.raw_args.out_len = &out_len;
-    Inflate.raw_args.scratch = g_scratch;
-    Inflate.raw_args.scratch_len = sizeof(g_scratch);
+    InflateV.raw_args.src = src;
+    InflateV.raw_args.src_len = src_len;
+    InflateV.raw_args.dst = g_out;
+    InflateV.raw_args.dst_cap = sizeof(g_out);
+    InflateV.raw_args.out_len = &out_len;
+    InflateV.raw_args.scratch = g_scratch;
+    InflateV.raw_args.scratch_len = sizeof(g_scratch);
     Inflate.raw(inflate_work);
-    TEST_ASSERT_EQUAL_INT(INFLATE_OK, Inflate.value);
+    TEST_ASSERT_EQUAL_INT(INFLATE_OK, InflateV.value);
     TEST_ASSERT_EQUAL_size_t(exp_len, out_len);
     if (exp_len)
     {
@@ -53,15 +53,15 @@ static void expect_inflates_to(const uint8_t *src, size_t src_len, const char *e
 static void expect_malformed(const uint8_t *src, size_t src_len)
 {
     size_t out_len = 0;
-    Inflate.raw_args.src = src;
-    Inflate.raw_args.src_len = src_len;
-    Inflate.raw_args.dst = g_out;
-    Inflate.raw_args.dst_cap = sizeof(g_out);
-    Inflate.raw_args.out_len = &out_len;
-    Inflate.raw_args.scratch = g_scratch;
-    Inflate.raw_args.scratch_len = sizeof(g_scratch);
+    InflateV.raw_args.src = src;
+    InflateV.raw_args.src_len = src_len;
+    InflateV.raw_args.dst = g_out;
+    InflateV.raw_args.dst_cap = sizeof(g_out);
+    InflateV.raw_args.out_len = &out_len;
+    InflateV.raw_args.scratch = g_scratch;
+    InflateV.raw_args.scratch_len = sizeof(g_scratch);
     Inflate.raw(inflate_work);
-    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_MALFORMED, Inflate.value);
+    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_MALFORMED, InflateV.value);
 }
 
 // Four streams, each written out from the RFC's own tables.
@@ -223,28 +223,28 @@ void test_output_overflow_fails_closed(void)
     static const uint8_t FIXED_BACKREF[] = {0x73, 0x04, 0x02, 0x00};
     uint8_t tiny[2];
     size_t out_len = 0;
-    Inflate.raw_args.src = FIXED_BACKREF;
-    Inflate.raw_args.src_len = sizeof(FIXED_BACKREF);
-    Inflate.raw_args.dst = tiny;
-    Inflate.raw_args.dst_cap = sizeof(tiny);
-    Inflate.raw_args.out_len = &out_len;
-    Inflate.raw_args.scratch = g_scratch;
-    Inflate.raw_args.scratch_len = sizeof(g_scratch);
+    InflateV.raw_args.src = FIXED_BACKREF;
+    InflateV.raw_args.src_len = sizeof(FIXED_BACKREF);
+    InflateV.raw_args.dst = tiny;
+    InflateV.raw_args.dst_cap = sizeof(tiny);
+    InflateV.raw_args.out_len = &out_len;
+    InflateV.raw_args.scratch = g_scratch;
+    InflateV.raw_args.scratch_len = sizeof(g_scratch);
     Inflate.raw(inflate_work);
-    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_OVERFLOW, Inflate.value);
+    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_OVERFLOW, InflateV.value);
 
     // A stored block whose octets do not fit either.
     static const uint8_t STORED_HI[] = {0x01, 0x02, 0x00, 0xfd, 0xff, 0x48, 0x69};
     uint8_t one[1];
-    Inflate.raw_args.src = STORED_HI;
-    Inflate.raw_args.src_len = sizeof(STORED_HI);
-    Inflate.raw_args.dst = one;
-    Inflate.raw_args.dst_cap = sizeof(one);
-    Inflate.raw_args.out_len = &out_len;
-    Inflate.raw_args.scratch = g_scratch;
-    Inflate.raw_args.scratch_len = sizeof(g_scratch);
+    InflateV.raw_args.src = STORED_HI;
+    InflateV.raw_args.src_len = sizeof(STORED_HI);
+    InflateV.raw_args.dst = one;
+    InflateV.raw_args.dst_cap = sizeof(one);
+    InflateV.raw_args.out_len = &out_len;
+    InflateV.raw_args.scratch = g_scratch;
+    InflateV.raw_args.scratch_len = sizeof(g_scratch);
     Inflate.raw(inflate_work);
-    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_OVERFLOW, Inflate.value);
+    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_OVERFLOW, InflateV.value);
 }
 
 // Working memory one octet short of the Huffman tables is refused before anything is decoded.
@@ -253,15 +253,15 @@ void test_scratch_too_small_fails_closed(void)
     static const uint8_t FIXED_A[] = {0x73, 0x04, 0x00};
     uint8_t small[INFLATE_SCRATCH_SIZE - 1];
     size_t out_len = 0;
-    Inflate.raw_args.src = FIXED_A;
-    Inflate.raw_args.src_len = sizeof(FIXED_A);
-    Inflate.raw_args.dst = g_out;
-    Inflate.raw_args.dst_cap = sizeof(g_out);
-    Inflate.raw_args.out_len = &out_len;
-    Inflate.raw_args.scratch = small;
-    Inflate.raw_args.scratch_len = sizeof(small);
+    InflateV.raw_args.src = FIXED_A;
+    InflateV.raw_args.src_len = sizeof(FIXED_A);
+    InflateV.raw_args.dst = g_out;
+    InflateV.raw_args.dst_cap = sizeof(g_out);
+    InflateV.raw_args.out_len = &out_len;
+    InflateV.raw_args.scratch = small;
+    InflateV.raw_args.scratch_len = sizeof(small);
     Inflate.raw(inflate_work);
-    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_SCRATCH, Inflate.value);
+    TEST_ASSERT_EQUAL_INT(INFLATE_ERR_SCRATCH, InflateV.value);
 }
 
 // Two blocks back to back in one stream: sec 3.2.3 lets a stream carry any number, and only the last

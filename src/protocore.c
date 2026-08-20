@@ -212,7 +212,7 @@ static void protocore_pump_trampoline(int worker_id)
 // is no per-server context to thread through.
 static void protocore_http_on_poll(uint8_t slot)
 {
-    Http.slot = slot;
+    HttpV.slot = slot;
     Http.poll_slot(protocore_http_span());
 }
 
@@ -513,12 +513,12 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
     r->method = method;
     r->callback = callback;
     // The credential goes to the module that checks it; the route keeps only the id naming it.
-    Auth.cred.realm = realm;
-    Auth.cred.user = user;
-    Auth.cred.pass = pass;
-    Auth.cred.digest = digest;
+    AuthV.cred.realm = realm;
+    AuthV.cred.user = user;
+    AuthV.cred.pass = pass;
+    AuthV.cred.digest = digest;
     Auth.add(protocore_http_auth_span());
-    r->auth_id = Auth.u8;
+    r->auth_id = AuthV.u8;
 }
 #endif // PROTOCORE_ENABLE_AUTH
 
@@ -562,7 +562,7 @@ void on_sse(const char *path, SseConnectHandler on_connect)
 
 void on_not_found(Handler callback)
 {
-    Http.cb = callback;
+    HttpV.cb = callback;
     Http.set_not_found(protocore_http_span());
 }
 

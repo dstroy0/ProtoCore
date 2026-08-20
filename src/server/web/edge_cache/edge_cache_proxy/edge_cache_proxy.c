@@ -1723,7 +1723,7 @@ static void edge_cache_proxy_enable(uint8_t *restrict work)
     if (!EDGE_CACHE_PROXY_CTX(work)->registered)
     {
         use(edge_cache_mw);
-        Http.edge_poll = edge_cache_poll;
+        HttpV.edge_poll = edge_cache_poll;
         Http.set_edge_poll(protocore_http_span());
         EDGE_CACHE_PROXY_CTX(work)->registered = PROTO_TRUE;
     }

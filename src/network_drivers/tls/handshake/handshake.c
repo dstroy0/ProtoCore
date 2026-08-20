@@ -87,34 +87,34 @@ static_assert(PROTOCORE_ENABLE_TLS_RPK,
 // Fail the connection with an alert and report it as a driver error.
 static void fail(uint8_t alert)
 {
-    TlsConnection.conn->state = TLS_CONN_FAILED;
-    TlsConnection.conn->alert = alert;
-    TlsConnection.i32 = -1;
+    TlsConnectionV.conn->state = TLS_CONN_FAILED;
+    TlsConnectionV.conn->alert = alert;
+    TlsConnectionV.i32 = -1;
 }
 
 // Start the Transcript-Hash, under whichever hash the connection's suite binds.
 static void transcript_start(void)
 {
-    Tls13KsV.bind.ks = &TlsConnection.conn->ks;
-    Tls13Ks.transcript_init(TlsConnection.conn->transcript);
+    Tls13KsV.bind.ks = &TlsConnectionV.conn->ks;
+    Tls13Ks.transcript_init(TlsConnectionV.conn->transcript);
 }
 
 // Fold a whole handshake message (header included) into the running Transcript-Hash.
 static void transcript_add(const uint8_t *msg, size_t len)
 {
-    Tls13KsV.bind.ks = &TlsConnection.conn->ks;
+    Tls13KsV.bind.ks = &TlsConnectionV.conn->ks;
     Tls13KsV.transcript_args.data = msg;
     Tls13KsV.transcript_args.len = len;
-    Tls13Ks.transcript_update(TlsConnection.conn->transcript);
+    Tls13Ks.transcript_update(TlsConnectionV.conn->transcript);
 }
 
 // The Transcript-Hash so far into terms[off]. Finalizing compresses the padded blocks into a copy of
 // the state, so the running context is untouched and keeps taking messages.
 static void transcript_peek(size_t off)
 {
-    Tls13KsV.bind.ks = &TlsConnection.conn->ks;
-    Tls13KsV.transcript_args.out = TlsConnection.conn->terms + off;
-    Tls13Ks.transcript_peek(TlsConnection.conn->transcript);
+    Tls13KsV.bind.ks = &TlsConnectionV.conn->ks;
+    Tls13KsV.transcript_args.out = TlsConnectionV.conn->terms + off;
+    Tls13Ks.transcript_peek(TlsConnectionV.conn->transcript);
 }
 
 // The body length a handshake message header declares.
@@ -126,9 +126,9 @@ static size_t hs_body_len(const uint8_t *msg)
 // Derive one direction's record keys from a traffic secret.
 static void keys_derive(TlsRecordKeys *keys, const uint8_t *secret)
 {
-    TlsRecord.key.keys = keys;
-    TlsRecord.key.cipher = TlsConnection.conn->cfg->cipher;
-    TlsRecord.key.secret = secret;
+    TlsRecordV.key.keys = keys;
+    TlsRecordV.key.cipher = TlsConnectionV.conn->cfg->cipher;
+    TlsRecordV.key.secret = secret;
     TlsRecord.keys_derive(NULL);
 }
 
@@ -136,37 +136,37 @@ static void keys_derive(TlsRecordKeys *keys, const uint8_t *secret)
 static size_t record_seal(TlsRecordKeys *keys, uint8_t content_type, const uint8_t *pt, size_t pt_len, uint8_t *out,
                           size_t out_cap)
 {
-    TlsRecord.key.keys = keys;
-    TlsRecord.content_type = content_type;
-    TlsRecord.sealed.pt = pt;
-    TlsRecord.sealed.pt_len = pt_len;
-    TlsRecord.out_args.out = out;
-    TlsRecord.out_args.out_cap = out_cap;
+    TlsRecordV.key.keys = keys;
+    TlsRecordV.content_type = content_type;
+    TlsRecordV.sealed.pt = pt;
+    TlsRecordV.sealed.pt_len = pt_len;
+    TlsRecordV.out_args.out = out;
+    TlsRecordV.out_args.out_cap = out_cap;
     TlsRecord.protect(NULL);
-    return TlsRecord.n;
+    return TlsRecordV.n;
 }
 
 // Open one received record under keys into out; false on an AEAD failure.
 static proto_bool record_open(TlsRecordKeys *keys, const uint8_t *rec, size_t rec_len, uint8_t *out, size_t out_cap,
                               TlsCiphertext *info)
 {
-    TlsRecord.key.keys = keys;
-    TlsRecord.sealed.rec = rec;
-    TlsRecord.sealed.rec_len = rec_len;
-    TlsRecord.sealed.info = info;
-    TlsRecord.out_args.out = out;
-    TlsRecord.out_args.out_cap = out_cap;
+    TlsRecordV.key.keys = keys;
+    TlsRecordV.sealed.rec = rec;
+    TlsRecordV.sealed.rec_len = rec_len;
+    TlsRecordV.sealed.info = info;
+    TlsRecordV.out_args.out = out;
+    TlsRecordV.out_args.out_cap = out_cap;
     TlsRecord.unprotect(NULL);
-    return TlsRecord.ok;
+    return TlsRecordV.ok;
 }
 
 // The Finished verify_data over base_secret and the transcript hash at off, into terms[TLS_TERM_MAC].
 static void finished_mac(const uint8_t *base_secret, size_t off)
 {
-    Tls13KsV.bind.ks = &TlsConnection.conn->ks;
+    Tls13KsV.bind.ks = &TlsConnectionV.conn->ks;
     Tls13KsV.finished_args.base_secret = base_secret;
-    Tls13KsV.finished_args.transcript_hash = TlsConnection.conn->terms + off;
-    Tls13KsV.finished_args.out = TlsConnection.conn->terms + TLS_TERM_MAC;
+    Tls13KsV.finished_args.transcript_hash = TlsConnectionV.conn->terms + off;
+    Tls13KsV.finished_args.out = TlsConnectionV.conn->terms + TLS_TERM_MAC;
     Tls13Ks.finished_mac(NULL);
 }
 
@@ -178,8 +178,8 @@ static size_t emit_encrypted(size_t msg_len, uint8_t *out, size_t out_cap)
     {
         return 0;
     }
-    transcript_add(TlsConnection.conn->tx, msg_len);
-    return record_seal(&TlsConnection.conn->hs_tx, PROTOCORE_TLS_CT_HANDSHAKE, TlsConnection.conn->tx, msg_len, out,
+    transcript_add(TlsConnectionV.conn->tx, msg_len);
+    return record_seal(&TlsConnectionV.conn->hs_tx, PROTOCORE_TLS_CT_HANDSHAKE, TlsConnectionV.conn->tx, msg_len, out,
                        out_cap);
 }
 
@@ -191,18 +191,18 @@ static size_t emit_encrypted(size_t msg_len, uint8_t *out, size_t out_cap)
 // Bytes written to out, or a negative alert-bearing failure, in ns->i32.
 static void server_flight(uint8_t *restrict work)
 {
-    TlsConn *c = TlsConnection.conn;
-    uint8_t *out = TlsConnection.out_args.out;
-    const size_t out_cap = TlsConnection.out_args.out_cap;
+    TlsConn *c = TlsConnectionV.conn;
+    uint8_t *out = TlsConnectionV.out_args.out;
+    const size_t out_cap = TlsConnectionV.out_args.out_cap;
 
-    Curve25519.x25519_base_args.scalar = c->cfg->ephemeral_priv;
-    Curve25519.x25519_base_args.out = c->terms + TLS_TERM_SHARE;
+    Curve25519V.x25519_base_args.scalar = c->cfg->ephemeral_priv;
+    Curve25519V.x25519_base_args.out = c->terms + TLS_TERM_SHARE;
     Curve25519.x25519_base(c->sign_work);
-    Curve25519.x25519_args.scalar = c->cfg->ephemeral_priv;
-    Curve25519.x25519_args.point = c->hello->client_x25519;
-    Curve25519.x25519_args.out = c->terms + TLS_TERM_SECRET;
+    Curve25519V.x25519_args.scalar = c->cfg->ephemeral_priv;
+    Curve25519V.x25519_args.point = c->hello->client_x25519;
+    Curve25519V.x25519_args.out = c->terms + TLS_TERM_SECRET;
     Curve25519.x25519(c->sign_work);
-    if (!Curve25519.ok)
+    if (!Curve25519V.ok)
     {
         // RFC 8446 sec 7.4.2: the shared secret came out all-zero, so the client's key share was a
         // point of small order and the secret is a constant it chose. Abort (RFC 7748 sec 6.1).
@@ -233,13 +233,13 @@ static void server_flight(uint8_t *restrict work)
         return;
     }
     transcript_add(c->tx, n);
-    TlsRecord.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
-    TlsRecord.plain.fragment = c->tx;
-    TlsRecord.plain.frag_len = n;
-    TlsRecord.out_args.out = out + off;
-    TlsRecord.out_args.out_cap = out_cap - off;
+    TlsRecordV.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
+    TlsRecordV.plain.fragment = c->tx;
+    TlsRecordV.plain.frag_len = n;
+    TlsRecordV.out_args.out = out + off;
+    TlsRecordV.out_args.out_cap = out_cap - off;
     TlsRecord.plaintext_build(NULL);
-    size_t w = TlsRecord.n;
+    size_t w = TlsRecordV.n;
     if (w == 0)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
@@ -345,7 +345,7 @@ static void server_flight(uint8_t *restrict work)
     c->ap_keys_ready = PROTO_TRUE;
 
     c->state = TLS_CONN_WAIT_FINISHED;
-    TlsConnection.i32 = (int)off;
+    TlsConnectionV.i32 = (int)off;
 }
 
 // The first configured protocol that also appears in the client's ProtocolNameList, or NULL. The
@@ -385,7 +385,7 @@ static const char *alpn_select(const TlsConnConfig *cfg, const uint8_t *list, si
 // that stand-in before the HelloRetryRequest is folded in.
 static void server_hello_retry(const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnection.conn;
+    TlsConn *c = TlsConnectionV.conn;
 
     transcript_add(msg, len);
     transcript_peek(TLS_TERM_HASH);
@@ -423,25 +423,25 @@ static void server_hello_retry(const uint8_t *msg, size_t len)
     transcript_add(c->tx, n);
 
     // A HelloRetryRequest travels as TLSPlaintext, like the ServerHello it shares its format with.
-    TlsRecord.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
-    TlsRecord.plain.fragment = c->tx;
-    TlsRecord.plain.frag_len = n;
-    TlsRecord.out_args.out = TlsConnection.out_args.out;
-    TlsRecord.out_args.out_cap = TlsConnection.out_args.out_cap;
+    TlsRecordV.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
+    TlsRecordV.plain.fragment = c->tx;
+    TlsRecordV.plain.frag_len = n;
+    TlsRecordV.out_args.out = TlsConnectionV.out_args.out;
+    TlsRecordV.out_args.out_cap = TlsConnectionV.out_args.out_cap;
     TlsRecord.plaintext_build(NULL);
-    if (TlsRecord.n == 0)
+    if (TlsRecordV.n == 0)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
     c->hrr_sent = PROTO_TRUE;
-    TlsConnection.i32 = (int)TlsRecord.n;
+    TlsConnectionV.i32 = (int)TlsRecordV.n;
 }
 
 // A ClientHello arrived whole. Check it against the profile and answer it.
 static void server_on_client_hello(const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnection.conn;
+    TlsConn *c = TlsConnectionV.conn;
     Tls13MsgV.parse_client_hello_args.msg = msg;
     Tls13MsgV.parse_client_hello_args.len = len;
     Tls13MsgV.parse_client_hello_args.out = c->hello;
@@ -490,7 +490,7 @@ static void server_on_client_hello(const uint8_t *msg, size_t len)
 // The client Finished closes the handshake: its MAC covers the transcript through server Finished.
 static void server_on_finished(const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnection.conn;
+    TlsConn *c = TlsConnectionV.conn;
     // sec 4.4.4: verify_data is Hash.length octets, so its width is the suite's, not a constant.
     if (msg[0] != TLS_HS_FINISHED || hs_body_len(msg) != c->ks.len || len != TLS_HS_HDR_LEN + c->ks.len)
     {
@@ -505,7 +505,7 @@ static void server_on_finished(const uint8_t *msg, size_t len)
     }
     transcript_add(msg, len);
     c->state = TLS_CONN_DONE;
-    TlsConnection.i32 = 0;
+    TlsConnectionV.i32 = 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -517,7 +517,7 @@ static void server_on_finished(const uint8_t *msg, size_t len)
 // again reuses the bytes it already holds.
 static proto_bool slot_storage(uint8_t *restrict work)
 {
-    TlsConn *c = TlsConnection.conn;
+    TlsConn *c = TlsConnectionV.conn;
     if (c->tx != NULL)
     {
         return PROTO_TRUE;
@@ -537,12 +537,12 @@ static proto_bool slot_storage(uint8_t *restrict work)
     return PROTO_TRUE;
 }
 
-static void conn_init(uint8_t *restrict work)
+void protocore_tls_connection_init(uint8_t *restrict work)
 {
-    TlsConn *c = TlsConnection.conn;
+    TlsConn *c = TlsConnectionV.conn;
     if (!slot_storage(work))
     {
-        TlsConnection.ok = PROTO_FALSE;
+        TlsConnectionV.ok = PROTO_FALSE;
         return;
     }
     // The bytes carry the previous tenant's key material; the pointers to them stay, or the next
@@ -556,8 +556,8 @@ static void conn_init(uint8_t *restrict work)
     c->hs_keys_ready = PROTO_FALSE;
     c->ap_keys_ready = PROTO_FALSE;
     c->alert = 0;
-    c->cfg = TlsConnection.init_args.cfg;
-    c->role = TlsConnection.init_args.role;
+    c->cfg = TlsConnectionV.init_args.cfg;
+    c->role = TlsConnectionV.init_args.role;
     c->state = TLS_CONN_START;
     c->transcript = c->hash_work;
 
@@ -570,7 +570,7 @@ static void conn_init(uint8_t *restrict work)
     Tls13KsV.bind.is384 = protocore_tls_cipher_is384(c->cfg->cipher);
     Tls13Ks.early(NULL);
     transcript_start();
-    TlsConnection.ok = Tls13KsV.ok;
+    TlsConnectionV.ok = Tls13KsV.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -582,7 +582,7 @@ static void conn_init(uint8_t *restrict work)
 // server's - the mirror of what server_flight derives.
 static void client_on_server_hello(const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnection.conn;
+    TlsConn *c = TlsConnectionV.conn;
     Tls13ServerHello sh;
     Tls13MsgV.parse_server_hello_args.msg = msg;
     Tls13MsgV.parse_server_hello_args.len = len;
@@ -610,11 +610,11 @@ static void client_on_server_hello(const uint8_t *msg, size_t len)
         return;
     }
 
-    Curve25519.x25519_args.scalar = c->cfg->ephemeral_priv;
-    Curve25519.x25519_args.point = sh.share;
-    Curve25519.x25519_args.out = c->terms + TLS_TERM_SECRET;
+    Curve25519V.x25519_args.scalar = c->cfg->ephemeral_priv;
+    Curve25519V.x25519_args.point = sh.share;
+    Curve25519V.x25519_args.out = c->terms + TLS_TERM_SECRET;
     Curve25519.x25519(c->sign_work);
-    if (!Curve25519.ok)
+    if (!Curve25519V.ok)
     {
         // sec 7.4.2 / RFC 7748 sec 6.1: an all-zero secret means a small-order share.
         fail(TLS_ALERT_ILLEGAL_PARAMETER);
@@ -633,14 +633,14 @@ static void client_on_server_hello(const uint8_t *msg, size_t len)
     c->hs_keys_ready = PROTO_TRUE;
 
     c->state = TLS_CONN_WAIT_FLIGHT;
-    TlsConnection.i32 = 0;
+    TlsConnectionV.i32 = 0;
 }
 
 // Keep the peer's subjectPublicKey past the message it arrived in. c->tx is the borrow's base, so
 // the region is far beyond the buffer the next handshake message overwrites.
 static proto_bool peer_key_keep(protocore_x509_key_alg alg, const uint8_t *key, size_t key_len)
 {
-    uint8_t *w = TlsConnection.conn->tx;
+    uint8_t *w = TlsConnectionV.conn->tx;
     if (key_len > TLS_PEERKEY_MAX)
     {
         return PROTO_FALSE;
@@ -657,7 +657,7 @@ static proto_bool peer_key_keep(protocore_x509_key_alg alg, const uint8_t *key, 
 // public key. Either way the key it carries is kept, because CertificateVerify is checked under it.
 static void client_on_certificate(const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnection.conn;
+    TlsConn *c = TlsConnectionV.conn;
     const uint8_t *entry = NULL;
     size_t entry_len = 0;
     Tls13MsgV.parse_certificate_args.msg = msg;
@@ -726,7 +726,7 @@ static void client_on_certificate(const uint8_t *msg, size_t len)
             return;
         }
         transcript_add(msg, len);
-        TlsConnection.i32 = 0;
+        TlsConnectionV.i32 = 0;
         return;
     }
 
@@ -753,7 +753,7 @@ static void client_on_certificate(const uint8_t *msg, size_t len)
         return;
     }
     transcript_add(msg, len);
-    TlsConnection.i32 = 0;
+    TlsConnectionV.i32 = 0;
 }
 
 // The scheme a CertificateVerify names, as the algorithm the verifier knows it by. An unmapped
@@ -778,7 +778,7 @@ static protocore_x509_sig_alg sig_alg_of(uint16_t scheme)
 // message joins it (sec 4.4.3).
 static void client_on_cert_verify(const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnection.conn;
+    TlsConn *c = TlsConnectionV.conn;
     uint16_t scheme = 0;
     const uint8_t *sig = NULL;
     size_t sig_len = 0;
@@ -833,14 +833,14 @@ static void client_on_cert_verify(const uint8_t *msg, size_t len)
         return;
     }
     transcript_add(msg, len);
-    TlsConnection.i32 = 0;
+    TlsConnectionV.i32 = 0;
 }
 
 // The server Finished closes its flight. Checking it fixes the transcript the application keys are
 // taken over, and this end answers with its own Finished under the handshake write keys.
 static void client_on_server_finished(const uint8_t *msg, size_t len)
 {
-    TlsConn *c = TlsConnection.conn;
+    TlsConn *c = TlsConnectionV.conn;
     const uint8_t *vd = NULL;
     Tls13MsgV.parse_finished_args.msg = msg;
     Tls13MsgV.parse_finished_args.len = len;
@@ -878,14 +878,14 @@ static void client_on_server_finished(const uint8_t *msg, size_t len)
     Tls13MsgV.build_finished_args.verify_len = c->ks.len;
     Tls13Msg.build_finished(tls13_msg_work);
     size_t n = Tls13MsgV.n;
-    size_t w = emit_encrypted(n, TlsConnection.out_args.out, TlsConnection.out_args.out_cap);
+    size_t w = emit_encrypted(n, TlsConnectionV.out_args.out, TlsConnectionV.out_args.out_cap);
     if (w == 0)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
     c->state = TLS_CONN_DONE;
-    TlsConnection.i32 = (int)w;
+    TlsConnectionV.i32 = (int)w;
 }
 
 // One message of the server's encrypted flight. The order is EncryptedExtensions, Certificate,
@@ -896,7 +896,7 @@ static void client_on_flight(const uint8_t *msg, size_t len)
     {
     case TLS_HS_ENCRYPTED_EXTENSIONS:
         transcript_add(msg, len);
-        TlsConnection.i32 = 0;
+        TlsConnectionV.i32 = 0;
         return;
     case TLS_HS_CERTIFICATE:
         client_on_certificate(msg, len);
@@ -915,18 +915,18 @@ static void client_on_flight(const uint8_t *msg, size_t len)
 
 // The ClientHello opens the handshake: this end's key_share, the one suite and group it offers, and
 // the SNI and first ALPN name its configuration names. It travels as TLSPlaintext.
-static void conn_start(uint8_t *restrict work)
+void protocore_tls_connection_start(uint8_t *restrict work)
 {
-    TlsConn *c = TlsConnection.conn;
-    TlsConnection.n = 0;
+    TlsConn *c = TlsConnectionV.conn;
+    TlsConnectionV.n = 0;
     if (c->role != TLS_ROLE_CLIENT || c->state != TLS_CONN_START)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
 
-    Curve25519.x25519_base_args.scalar = c->cfg->ephemeral_priv;
-    Curve25519.x25519_base_args.out = c->terms + TLS_TERM_SHARE;
+    Curve25519V.x25519_base_args.scalar = c->cfg->ephemeral_priv;
+    Curve25519V.x25519_base_args.out = c->terms + TLS_TERM_SHARE;
     Curve25519.x25519_base(c->sign_work);
 
     const char *alpn = (c->cfg->alpn && c->cfg->alpn_count) ? c->cfg->alpn[0] : NULL;
@@ -954,40 +954,40 @@ static void conn_start(uint8_t *restrict work)
     }
     transcript_add(c->tx, n);
 
-    TlsRecord.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
-    TlsRecord.plain.fragment = c->tx;
-    TlsRecord.plain.frag_len = n;
-    TlsRecord.out_args.out = TlsConnection.out_args.out;
-    TlsRecord.out_args.out_cap = TlsConnection.out_args.out_cap;
+    TlsRecordV.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
+    TlsRecordV.plain.fragment = c->tx;
+    TlsRecordV.plain.frag_len = n;
+    TlsRecordV.out_args.out = TlsConnectionV.out_args.out;
+    TlsRecordV.out_args.out_cap = TlsConnectionV.out_args.out_cap;
     TlsRecord.plaintext_build(NULL);
-    if (TlsRecord.n == 0)
+    if (TlsRecordV.n == 0)
     {
         fail(TLS_ALERT_INTERNAL_ERROR);
         return;
     }
     c->state = TLS_CONN_WAIT_SH;
-    TlsConnection.n = TlsRecord.n;
+    TlsConnectionV.n = TlsRecordV.n;
 }
 
 // The worker filled RX with one record and says how much. A ClientHello is in the clear, so it is
 // read where it lies; everything after it opens into TX, which builds nothing while a received
 // message stands in it.
-static void conn_process(uint8_t *restrict work)
+void protocore_tls_connection_process(uint8_t *restrict work)
 {
-    TlsConn *c = TlsConnection.conn;
-    const size_t rx_len = TlsConnection.io.rx_len;
+    TlsConn *c = TlsConnectionV.conn;
+    const size_t rx_len = TlsConnectionV.io.rx_len;
 
     if (c->state == TLS_CONN_FAILED)
     {
-        TlsConnection.i32 = -1;
+        TlsConnectionV.i32 = -1;
         return;
     }
     TlsPlaintext pt = {0};
-    TlsRecord.sealed.rec = c->rx;
-    TlsRecord.sealed.rec_len = rx_len;
-    TlsRecord.plain.view = &pt;
+    TlsRecordV.sealed.rec = c->rx;
+    TlsRecordV.sealed.rec_len = rx_len;
+    TlsRecordV.plain.view = &pt;
     TlsRecord.plaintext_parse(NULL);
-    if (TlsRecord.n == 0)
+    if (TlsRecordV.n == 0)
     {
         fail(TLS_ALERT_DECODE_ERROR);
         return;
@@ -1011,7 +1011,7 @@ static void conn_process(uint8_t *restrict work)
 
     if (inner_type == PROTOCORE_TLS_CT_CHANGE_CIPHER_SPEC)
     {
-        TlsConnection.i32 = 0; // middlebox compatibility record, outside the transcript (sec 5)
+        TlsConnectionV.i32 = 0; // middlebox compatibility record, outside the transcript (sec 5)
         return;
     }
     // sec 6.2: a record that is not a handshake record here is premature application data or an
@@ -1056,54 +1056,50 @@ static void conn_process(uint8_t *restrict work)
     fail(TLS_ALERT_UNEXPECTED_MESSAGE);
 }
 
-static void conn_established(uint8_t *restrict work)
+void protocore_tls_connection_established(uint8_t *restrict work)
 {
-    TlsConnection.ok = (TlsConnection.conn->state == TLS_CONN_DONE);
+    TlsConnectionV.ok = (TlsConnectionV.conn->state == TLS_CONN_DONE);
 }
 
-static void conn_alert(uint8_t *restrict work)
+void protocore_tls_connection_alert(uint8_t *restrict work)
 {
-    TlsConnection.u8 = TlsConnection.conn->alert;
+    TlsConnectionV.u8 = TlsConnectionV.conn->alert;
 }
 
-static void conn_seal_app(uint8_t *restrict work)
+void protocore_tls_connection_seal_app(uint8_t *restrict work)
 {
-    TlsConnection.n = 0;
-    if (!TlsConnection.conn->ap_keys_ready)
+    TlsConnectionV.n = 0;
+    if (!TlsConnectionV.conn->ap_keys_ready)
     {
         return;
     }
-    TlsConnection.n = record_seal(&TlsConnection.conn->ap_tx, PROTOCORE_TLS_CT_APPLICATION_DATA, TlsConnection.io.data,
-                                  TlsConnection.io.len, TlsConnection.out_args.out, TlsConnection.out_args.out_cap);
+    TlsConnectionV.n =
+        record_seal(&TlsConnectionV.conn->ap_tx, PROTOCORE_TLS_CT_APPLICATION_DATA, TlsConnectionV.io.data,
+                    TlsConnectionV.io.len, TlsConnectionV.out_args.out, TlsConnectionV.out_args.out_cap);
 }
 
-static void conn_open_app(uint8_t *restrict work)
+void protocore_tls_connection_open_app(uint8_t *restrict work)
 {
-    TlsConnection.ok = PROTO_FALSE;
-    if (!TlsConnection.conn->ap_keys_ready)
+    TlsConnectionV.ok = PROTO_FALSE;
+    if (!TlsConnectionV.conn->ap_keys_ready)
     {
         return;
     }
     TlsCiphertext info = {0};
-    if (!record_open(&TlsConnection.conn->ap_rx, TlsConnection.io.rec, TlsConnection.io.rec_len,
-                     TlsConnection.out_args.out, TlsConnection.out_args.out_cap, &info))
+    if (!record_open(&TlsConnectionV.conn->ap_rx, TlsConnectionV.io.rec, TlsConnectionV.io.rec_len,
+                     TlsConnectionV.out_args.out, TlsConnectionV.out_args.out_cap, &info))
     {
         return;
     }
-    if (TlsConnection.out_args.out_len)
+    if (TlsConnectionV.out_args.out_len)
     {
-        *TlsConnection.out_args.out_len = info.pt_len;
+        *TlsConnectionV.out_args.out_len = info.pt_len;
     }
-    TlsConnection.ok = (info.content_type == PROTOCORE_TLS_CT_APPLICATION_DATA);
+    TlsConnectionV.ok = (info.content_type == PROTOCORE_TLS_CT_APPLICATION_DATA);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-TlsConnNs TlsConnection = {.init = conn_init,
-                           .start = conn_start,
-                           .process = conn_process,
-                           .established = conn_established,
-                           .alert = conn_alert,
-                           .seal_app = conn_seal_app,
-                           .open_app = conn_open_app};
+/** @brief The operands and the outcome. */
+TlsConnectionVars TlsConnectionV;
 
 #endif // PROTOCORE_TLS_SOFTWARE

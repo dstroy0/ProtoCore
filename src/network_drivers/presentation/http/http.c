@@ -76,14 +76,14 @@ uint8_t *protocore_http_span(void)
     return s_own.span;
 }
 
-static void set_not_found(uint8_t *restrict work)
+void protocore_http_set_not_found(uint8_t *restrict work)
 {
-    HTTP_CTX(work)->not_found = Http.cb;
+    HTTP_CTX(work)->not_found = HttpV.cb;
 }
 
 // Every other owner protocore_server_reset() calls exposes this; without it a handler registered here
 // outlives the reset and answers requests the route table no longer knows about.
-static void reset(uint8_t *restrict work)
+void protocore_http_reset(uint8_t *restrict work)
 {
     static const struct HttpStorage blank = {0};
     *HTTP_CTX(work) = blank;
@@ -92,9 +92,9 @@ static void reset(uint8_t *restrict work)
 #if PROTOCORE_ENABLE_EDGE_CACHE
 // Edge-cache async-fetch pump seam (see server/web/edge_cache/edge_cache_proxy): a cache miss
 // suspends the client request and drives the non-blocking origin fetch from this slot's poll.
-static void set_edge_poll(uint8_t *restrict work)
+void protocore_http_set_edge_poll(uint8_t *restrict work)
 {
-    HTTP_CTX(work)->edge_poll = Http.edge_poll;
+    HTTP_CTX(work)->edge_poll = HttpV.edge_poll;
 }
 #endif
 
@@ -107,102 +107,102 @@ static void set_edge_poll(uint8_t *restrict work)
  * @param code HTTP status integer.
  * @return Pointer to a string-literal reason phrase; never null.
  */
-static void status_text(uint8_t *restrict work)
+void protocore_http_status_text(uint8_t *restrict work)
 {
     (void)work;
-    const int code = Http.code;
+    const int code = HttpV.code;
     switch (code)
     {
     case 200:
-        Http.text = "OK";
+        HttpV.text = "OK";
         return;
     case 201:
-        Http.text = "Created";
+        HttpV.text = "Created";
         return;
     case 204:
-        Http.text = "No Content";
+        HttpV.text = "No Content";
         return;
     case 206:
-        Http.text = "Partial Content";
+        HttpV.text = "Partial Content";
         return;
 #if PROTOCORE_ENABLE_WEBDAV
     case 207:
-        Http.text = "Multi-Status";
+        HttpV.text = "Multi-Status";
         return;
 #endif
     case 301:
-        Http.text = "Moved Permanently";
+        HttpV.text = "Moved Permanently";
         return;
     case 302:
-        Http.text = "Found";
+        HttpV.text = "Found";
         return;
     case 303:
-        Http.text = "See Other";
+        HttpV.text = "See Other";
         return;
     case 304:
-        Http.text = "Not Modified";
+        HttpV.text = "Not Modified";
         return;
     case 307:
-        Http.text = "Temporary Redirect";
+        HttpV.text = "Temporary Redirect";
         return;
     case 308:
-        Http.text = "Permanent Redirect";
+        HttpV.text = "Permanent Redirect";
         return;
     case 400:
-        Http.text = "Bad Request";
+        HttpV.text = "Bad Request";
         return;
     case 401:
-        Http.text = "Unauthorized";
+        HttpV.text = "Unauthorized";
         return;
     case 403:
-        Http.text = "Forbidden";
+        HttpV.text = "Forbidden";
         return;
     case 404:
-        Http.text = "Not Found";
+        HttpV.text = "Not Found";
         return;
     case 405:
-        Http.text = "Method Not Allowed";
+        HttpV.text = "Method Not Allowed";
         return;
     case 408:
-        Http.text = "Request Timeout";
+        HttpV.text = "Request Timeout";
         return;
     case 409:
-        Http.text = "Conflict";
+        HttpV.text = "Conflict";
         return;
 #if PROTOCORE_ENABLE_WEBDAV
     case 412:
-        Http.text = "Precondition Failed";
+        HttpV.text = "Precondition Failed";
         return;
     case 423:
-        Http.text = "Locked";
+        HttpV.text = "Locked";
         return;
     case 502:
-        Http.text = "Bad Gateway";
+        HttpV.text = "Bad Gateway";
         return;
 #endif
     case 413:
-        Http.text = "Payload Too Large";
+        HttpV.text = "Payload Too Large";
         return;
     case 414:
-        Http.text = "URI Too Long";
+        HttpV.text = "URI Too Long";
         return;
     case 416:
-        Http.text = "Range Not Satisfiable";
+        HttpV.text = "Range Not Satisfiable";
         return;
     case 429:
-        Http.text = "Too Many Requests";
+        HttpV.text = "Too Many Requests";
         return;
     case 500:
-        Http.text = "Internal Server Error";
+        HttpV.text = "Internal Server Error";
         return;
     case 501:
-        Http.text = "Not Implemented";
+        HttpV.text = "Not Implemented";
         return;
     case 503:
-        Http.text = "Service Unavailable";
+        HttpV.text = "Service Unavailable";
         return;
     default:
-        Http.text = "Unknown";
+        HttpV.text = "Unknown";
         return;
     }
 }
@@ -217,85 +217,85 @@ static void status_text(uint8_t *restrict work)
  * @param m Null-terminated method string, e.g. "POST".
  * @return Matching HttpMethod enum value, or HTTP_METHOD_UNKNOWN.
  */
-static void parse_method(uint8_t *restrict work)
+void protocore_http_parse_method(uint8_t *restrict work)
 {
     (void)work;
-    const char *m = Http.method_args.token;
+    const char *m = HttpV.method_args.token;
     // Each compare is bounded by the token it is comparing against, not by the buffer @p m came
     // from: one more byte than the literal is already enough to decide, because a longer method
     // scans to the bound without finding its terminator and fails on length before any byte is
     // compared. That keeps this function honest about a caller it does not otherwise constrain.
     if (str.eq(m, "GET", sizeof("GET"), PROTO_FALSE))
     {
-        Http.method_of = HTTP_GET;
+        HttpV.method_of = HTTP_GET;
         return;
     }
     if (str.eq(m, "POST", sizeof("POST"), PROTO_FALSE))
     {
-        Http.method_of = HTTP_POST;
+        HttpV.method_of = HTTP_POST;
         return;
     }
     if (str.eq(m, "PUT", sizeof("PUT"), PROTO_FALSE))
     {
-        Http.method_of = HTTP_PUT;
+        HttpV.method_of = HTTP_PUT;
         return;
     }
     if (str.eq(m, "DELETE", sizeof("DELETE"), PROTO_FALSE))
     {
-        Http.method_of = HTTP_DELETE;
+        HttpV.method_of = HTTP_DELETE;
         return;
     }
     if (str.eq(m, "PATCH", sizeof("PATCH"), PROTO_FALSE))
     {
-        Http.method_of = HTTP_PATCH;
+        HttpV.method_of = HTTP_PATCH;
         return;
     }
     if (str.eq(m, "HEAD", sizeof("HEAD"), PROTO_FALSE))
     {
-        Http.method_of = HTTP_HEAD;
+        HttpV.method_of = HTTP_HEAD;
         return;
     }
     if (str.eq(m, "OPTIONS", sizeof("OPTIONS"), PROTO_FALSE))
     {
-        Http.method_of = HTTP_OPTIONS;
+        HttpV.method_of = HTTP_OPTIONS;
         return;
     }
-    Http.method_of = HTTP_METHOD_UNKNOWN;
+    HttpV.method_of = HTTP_METHOD_UNKNOWN;
     return;
 }
 
 /**
  * @brief Canonical method token for an HttpMethod (for the Allow header).
  */
-static void method_name(uint8_t *restrict work)
+void protocore_http_method_name(uint8_t *restrict work)
 {
     (void)work;
-    const HttpMethod m = Http.method_args.method;
+    const HttpMethod m = HttpV.method_args.method;
     switch (m)
     {
     case HTTP_GET:
-        Http.text = "GET";
+        HttpV.text = "GET";
         return;
     case HTTP_POST:
-        Http.text = "POST";
+        HttpV.text = "POST";
         return;
     case HTTP_PUT:
-        Http.text = "PUT";
+        HttpV.text = "PUT";
         return;
     case HTTP_DELETE:
-        Http.text = "DELETE";
+        HttpV.text = "DELETE";
         return;
     case HTTP_PATCH:
-        Http.text = "PATCH";
+        HttpV.text = "PATCH";
         return;
     case HTTP_HEAD:
-        Http.text = "HEAD";
+        HttpV.text = "HEAD";
         return;
     case HTTP_OPTIONS:
-        Http.text = "OPTIONS";
+        HttpV.text = "OPTIONS";
         return;
     default:
-        Http.text = "";
+        HttpV.text = "";
         return;
     }
 }
@@ -311,22 +311,22 @@ static void method_name(uint8_t *restrict work)
  * @param req_path    Incoming request path from the parsed HTTP request line.
  * @return True if the route matches the request path.
  */
-static void path_matches(uint8_t *restrict work)
+void protocore_http_path_matches(uint8_t *restrict work)
 {
     (void)work;
-    const char *route = Http.route_args.route;
-    const proto_bool is_wildcard = Http.route_args.is_wildcard;
-    const char *req_path = Http.route_args.path;
+    const char *route = HttpV.route_args.route;
+    const proto_bool is_wildcard = HttpV.route_args.is_wildcard;
+    const char *req_path = HttpV.route_args.path;
     if (!is_wildcard)
     {
-        Http.ok = str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
+        HttpV.ok = str.eq(route, req_path, MAX_PATH_LEN, PROTO_FALSE);
         return;
     }
 
     // Prefix match: compare everything up to (but not including) the '*'. A first difference AT the
     // bound is the whole prefix agreeing, which is what the scan returns when it never parts.
     size_t prefix_len = str.len(route, MAX_PATH_LEN) - 1;
-    Http.ok = str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
+    HttpV.ok = str.diff(route, req_path, prefix_len, PROTO_FALSE) == prefix_len;
 }
 
 // Record one `:name` path parameter (key from the route segment, value from the path segment).
@@ -363,12 +363,12 @@ static void capture_path_param(HttpReq *req, const char *key, size_t klen, const
  *
  * @return True on a full match (params captured); false otherwise.
  */
-static void match_path_params(uint8_t *restrict work)
+void protocore_http_match_path_params(uint8_t *restrict work)
 {
     (void)work;
-    const char *route = Http.route_args.route;
-    const char *path = Http.route_args.path;
-    HttpReq *req = Http.route_args.req;
+    const char *route = HttpV.route_args.route;
+    const char *path = HttpV.route_args.path;
+    HttpReq *req = HttpV.route_args.req;
     req->path_param_count = 0;
     const char *r = route;
     const char *p = path;
@@ -394,38 +394,38 @@ static void match_path_params(uint8_t *restrict work)
         {
             if (plen == 0)
             {
-                Http.ok = PROTO_FALSE;
+                HttpV.ok = PROTO_FALSE;
                 return; // a `:name` segment must capture a non-empty value
             }
             capture_path_param(req, rseg + 1, rlen - 1, pseg, plen);
         }
         else if (rlen != plen || str.diff(rseg, pseg, rlen, PROTO_FALSE) != rlen)
         {
-            Http.ok = PROTO_FALSE;
+            HttpV.ok = PROTO_FALSE;
             return; // literal segment mismatch
         }
     }
 
     // Both strings must be fully consumed (identical segment counts).
-    Http.ok = (*r == '\0' && *p == '\0');
+    HttpV.ok = (*r == '\0' && *p == '\0');
 }
 
 // True when the request on this slot used the HEAD method, whose response must
 // carry the same headers as GET but no message body (RFC 7231 §4.3.2). External
 // linkage (declared in protocore.h): the split handler TUs call it.
-static void req_is_head(uint8_t *restrict work)
+void protocore_http_req_is_head(uint8_t *restrict work)
 {
     (void)work;
-    Http.ok = str.eq(http_pool[Http.slot].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
+    HttpV.ok = str.eq(http_pool[HttpV.slot].method, "HEAD", sizeof("HEAD"), PROTO_FALSE);
 }
 
 // Append a method token to a comma-separated Allow list, de-duplicating.
-static void allow_append(uint8_t *restrict work)
+void protocore_http_allow_append(uint8_t *restrict work)
 {
     (void)work;
-    char *buf = Http.allow.buf;
-    const size_t cap = Http.allow.cap;
-    const char *m = Http.method_args.token;
+    char *buf = HttpV.allow.buf;
+    const size_t cap = HttpV.allow.cap;
+    const char *m = HttpV.method_args.token;
     // method_name() hands back one of the seven method literals, so the longest of them is the
     // bound on @p m - the Allow buffer's capacity is the bound on `buf` and says nothing about it.
     //
@@ -491,9 +491,9 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
 
     // The last write carries the flush: send_flush is write+output in one marshal, so
     // the response leaves in a single trip whether or not a body follows the header.
-    Http.slot = slot_id;
+    HttpV.slot = slot_id;
     Http.req_is_head(protocore_http_span());
-    if (blen > 0 && !Http.ok)
+    if (blen > 0 && !HttpV.ok)
     {
         ConnPool.slot = slot_id;
         ConnPool.io.data = header;
@@ -569,11 +569,11 @@ static proto_bool route_admits(const HttpRoute *r, uint8_t slot_id, HttpReq *req
         return PROTO_FALSE;
     }
     proto_bool matched = r->is_regex ? regex_match(r->path, req->path)
-                                     : (Http.route_args.route = r->path, Http.route_args.path = req->path,
-                                        Http.route_args.req = req, Http.route_args.is_wildcard = r->is_wildcard,
+                                     : (HttpV.route_args.route = r->path, HttpV.route_args.path = req->path,
+                                        HttpV.route_args.req = req, HttpV.route_args.is_wildcard = r->is_wildcard,
                                         r->is_param ? Http.match_path_params(protocore_http_span())
                                                     : Http.path_matches(protocore_http_span()),
-                                        Http.ok);
+                                        HttpV.ok);
     if (!matched)
     {
         return PROTO_FALSE;
@@ -735,13 +735,13 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     {
         return PROTO_FALSE; // pool exhausted: fail closed
     }
-    Auth.slot = slot_id;
-    Auth.req = req;
-    Auth.id = r->auth_id;
-    Auth.nonce_args.stale = PROTO_FALSE;
+    AuthV.slot = slot_id;
+    AuthV.req = req;
+    AuthV.id = r->auth_id;
+    AuthV.nonce_args.stale = PROTO_FALSE;
     Auth.check(auth_ws);
-    proto_bool stale = Auth.nonce_args.stale;
-    proto_bool ok = Auth.ok;
+    proto_bool stale = AuthV.nonce_args.stale;
+    proto_bool ok = AuthV.ok;
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
     // A stale-nonce retry carries valid credentials, so it is not a failed
     // attempt: don't count it toward the lockout (nor reset the counter).
@@ -759,9 +759,9 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
 #endif
     if (!ok)
     {
-        Auth.slot = slot_id;
-        Auth.id = r->auth_id;
-        Auth.nonce_args.stale = stale;
+        AuthV.slot = slot_id;
+        AuthV.id = r->auth_id;
+        AuthV.nonce_args.stale = stale;
         Auth.challenge(auth_ws);
         return PROTO_FALSE;
     }
@@ -798,11 +798,11 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
         if (method != HTTP_GET && method != HTTP_HEAD)
         {
             *path_matched = PROTO_TRUE;
-            Http.allow.buf = allow_buf;
-            Http.allow.cap = allow_cap;
-            Http.method_args.token = "GET";
+            HttpV.allow.buf = allow_buf;
+            HttpV.allow.cap = allow_cap;
+            HttpV.method_args.token = "GET";
             Http.allow_append(protocore_http_span());
-            Http.method_args.token = "HEAD";
+            HttpV.method_args.token = "HEAD";
             Http.allow_append(protocore_http_span());
             return PROTO_FALSE;
         }
@@ -821,18 +821,18 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
     {
         // Path matches but method differs - record it for a 405 + Allow.
         *path_matched = PROTO_TRUE;
-        Http.method_args.method = r->method;
+        HttpV.method_args.method = r->method;
         Http.method_name(protocore_http_span());
-        Http.allow.buf = allow_buf;
-        Http.allow.cap = allow_cap;
-        Http.method_args.token = Http.text;
+        HttpV.allow.buf = allow_buf;
+        HttpV.allow.cap = allow_cap;
+        HttpV.method_args.token = HttpV.text;
         Http.allow_append(protocore_http_span());
         // A GET route also answers HEAD, so advertise it in Allow.
         if (r->method == HTTP_GET)
         {
-            Http.allow.buf = allow_buf;
-            Http.allow.cap = allow_cap;
-            Http.method_args.token = "HEAD";
+            HttpV.allow.buf = allow_buf;
+            HttpV.allow.cap = allow_cap;
+            HttpV.method_args.token = "HEAD";
             Http.allow_append(protocore_http_span());
         }
         return PROTO_FALSE;
@@ -847,13 +847,13 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
     return PROTO_TRUE;
 }
 
-static void match_and_execute(uint8_t *restrict work)
+void protocore_http_match_and_execute(uint8_t *restrict work)
 {
-    const uint8_t slot_id = Http.slot;
+    const uint8_t slot_id = HttpV.slot;
     HttpReq *req = &http_pool[slot_id];
-    Http.method_args.token = req->method;
+    HttpV.method_args.token = req->method;
     Http.parse_method(work);
-    HttpMethod method = Http.method_of;
+    HttpMethod method = HttpV.method_of;
 
     // Start each request with no carried-over custom response headers or
     // captured path parameters.
@@ -958,9 +958,9 @@ static void match_and_execute(uint8_t *restrict work)
 // HTTP through the same uniform seam as every other protocol, with no HTTP special case in the
 // loop. Runs the file/chunk send pumps, the WebSocket and SSE drains, the keep-alive re-parse, and
 // dispatches a completed request into the route table.
-static void poll_slot(uint8_t *restrict work)
+void protocore_http_poll_slot(uint8_t *restrict work)
 {
-    const uint8_t i = Http.slot;
+    const uint8_t i = HttpV.slot;
 #if PROTOCORE_ENABLE_EDGE_CACHE
     // An edge-cache origin fetch in flight for this slot owns it: pump the fetch and skip the rest of the
     // HTTP pipeline until it completes (and hands off to send_chunked for the cached response).
@@ -1123,7 +1123,7 @@ static void poll_slot(uint8_t *restrict work)
     if (http_pool[i].parse_state == PARSE_COMPLETE)
     {
         http_req_start_ms[i] = 0; // request complete: disarm; the next keep-alive request re-arms on its 1st byte
-        Http.slot = i;
+        HttpV.slot = i;
         Http.match_and_execute(work);
         if (http_pool[i].parse_state == PARSE_COMPLETE)
         {
@@ -1146,19 +1146,5 @@ static void poll_slot(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-HttpNs Http = {
-    .status_text = status_text,
-    .parse_method = parse_method,
-    .method_name = method_name,
-    .path_matches = path_matches,
-    .match_path_params = match_path_params,
-    .req_is_head = req_is_head,
-    .allow_append = allow_append,
-    .match_and_execute = match_and_execute,
-    .set_not_found = set_not_found,
-    .poll_slot = poll_slot,
-    .reset = reset,
-#if PROTOCORE_ENABLE_EDGE_CACHE
-    .set_edge_poll = set_edge_poll,
-#endif
-};
+/** @brief The operands and the outcome. */
+HttpVars HttpV;
