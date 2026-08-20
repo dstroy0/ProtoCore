@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`b139154`](https://github.com/dstroy0/ProtoCore/commit/b13915458d027d15932bca53491dc581f690d6b3))
 - update CHANGELOG.md [skip ci] ([`f8ddc1f`](https://github.com/dstroy0/ProtoCore/commit/f8ddc1fd1a9a7e8696256e3c4f6ca85c74896ac8))
 - update CHANGELOG.md [skip ci] ([`b847f5a`](https://github.com/dstroy0/ProtoCore/commit/b847f5aa853f4968dc701783b4691b6a6a04e12b))
 - update CHANGELOG.md [skip ci] ([`c3f187f`](https://github.com/dstroy0/ProtoCore/commit/c3f187fe215b5e2fa9690d765c1beb531837fe57))
@@ -387,6 +388,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- (housekeeping): shape audit, region alignment asserts, dead borrow null-checks out ([`bed4956`](https://github.com/dstroy0/ProtoCore/commit/bed49562a8841dbcaaa2d99980965c7fe777075b))
 - (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`a899b96`](https://github.com/dstroy0/ProtoCore/commit/a899b965393c31278c60987bf2b1efa076274ff6))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`d587617`](https://github.com/dstroy0/ProtoCore/commit/d58761756932205b45406895414a68f8d6ee65f7))
 - (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`06f023b`](https://github.com/dstroy0/ProtoCore/commit/06f023bc313d3b2a801ad4a1226570dbaaa3ce50))
