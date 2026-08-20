@@ -16,8 +16,8 @@
 
 #if PROTOCORE_ENABLE_RCWL0516
 
-#include "mmgr/plaintext/plaintext.h"     // the persistent end this module's state is taken from
-#include "server/clock/clock.h" // Clock.millis
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/clock/clock.h"       // Clock.millis
 #include "server/peripherals/rcwl0516/rcwl0516.h"
 
 PROTOCORE_BEGIN_DECLS
@@ -184,6 +184,14 @@ typedef struct
 static_assert(RCWL0516_OFF_CTX + sizeof(Rcwl0516Ctx) <= PROTOCORE_RCWL0516_BORROW,
               "PROTOCORE_RCWL0516_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(RCWL0516_OFF_CTX % _Alignof(Rcwl0516Ctx) == 0,
+              "RCWL0516_OFF_CTX is not a multiple of alignof(Rcwl0516Ctx) - RCWL0516_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
 #define RCWL0516_CTX(w) ((Rcwl0516Ctx *)(void *)((w) + RCWL0516_OFF_CTX))

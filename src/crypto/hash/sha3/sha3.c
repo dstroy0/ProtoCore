@@ -34,6 +34,14 @@ static_assert(SHA3_OFF_CTX + sizeof(struct KeccakCtx) <= PROTOCORE_SHA3_BORROW,
               "PROTOCORE_SHA3_BORROW is short of the sponge - raise it in protocore_config.h, "
               "which sums it into the secure arena");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(SHA3_OFF_CTX % _Alignof(KeccakCtx) == 0,
+              "SHA3_OFF_CTX is not a multiple of alignof(KeccakCtx) - SHA3_SPONGE() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The sponge, at its offset in the caller's borrow.
 #define SHA3_SPONGE(w) ((KeccakCtx *)(void *)((w) + SHA3_OFF_CTX))
 
@@ -178,7 +186,7 @@ static void sha3_absorb(uint8_t *restrict work)
 
 static void sha3_squeeze(uint8_t *restrict work)
 {
-    if (!work || !SHA3_SPONGE(work)->absorbed || !Sha3.squeeze_args.out)
+    if (!SHA3_SPONGE(work)->absorbed || !Sha3.squeeze_args.out)
     {
         Sha3.ok = PROTO_FALSE;
         return;
@@ -190,7 +198,7 @@ static void sha3_squeeze(uint8_t *restrict work)
 // One-shot digest: absorb the message at @p rate with the SHA3 domain byte, squeeze @p outlen octets.
 static void sha3_digest(uint8_t *restrict work, uint32_t rate, size_t outlen)
 {
-    if (!work || !Sha3.digest_args.out)
+    if (!Sha3.digest_args.out)
     {
         Sha3.ok = PROTO_FALSE;
         return;
@@ -215,7 +223,7 @@ static void sha3_sha3_512(uint8_t *restrict work)
 // One-shot XOF: absorb the message at @p rate with the SHAKE domain byte, squeeze the requested run.
 static void sha3_xof(uint8_t *restrict work, uint32_t rate)
 {
-    if (!work || !Sha3.xof_args.out)
+    if (!Sha3.xof_args.out)
     {
         Sha3.ok = PROTO_FALSE;
         return;

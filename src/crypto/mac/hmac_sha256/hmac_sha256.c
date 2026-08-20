@@ -49,6 +49,14 @@ static_assert(HMAC_OFF_HASH + PROTOCORE_SHA256_BORROW <= PROTOCORE_HMAC_SHA256_B
               "PROTOCORE_HMAC_SHA256_BORROW is short of the split - raise it in protocore_config.h, which "
               "sums it into the secure arena");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(HMAC_OFF_WORK % _Alignof(HmacWork) == 0,
+              "HMAC_OFF_WORK is not a multiple of alignof(HmacWork) - HMAC_WORK() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define HMAC_INNER(w) ((w) + HMAC_OFF_INNER)
 #define HMAC_OKEY(w) ((w) + HMAC_OFF_OKEY)
@@ -84,7 +92,6 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[64
 
 static void hmac_init(uint8_t *restrict work)
 {
-    HmacSha256.ok = PROTO_FALSE;
     HmacWork *w = HMAC_WORK(work);
     // ipad -> scratch (opad slot holds the padded key), opad -> the slot final reads it back from
     build_key_block(HmacSha256.key_args.key, HmacSha256.key_args.key_len, w->ipad, 0x36u, w->opad, HMAC_HASH(work));
@@ -103,11 +110,12 @@ static void hmac_update(uint8_t *restrict work)
     Sha256.update_args.data = HmacSha256.update_args.data;
     Sha256.update_args.len = HmacSha256.update_args.len;
     Sha256.update(HMAC_INNER(work));
+    HmacSha256.ok = PROTO_TRUE;
 }
 
 static void hmac_final(uint8_t *restrict work)
 {
-    if (!work || !HmacSha256.final_args.out)
+    if (!HmacSha256.final_args.out)
     {
         HmacSha256.ok = PROTO_FALSE;
         return;
@@ -132,7 +140,7 @@ static void hmac_final(uint8_t *restrict work)
 static void hmac_mac(uint8_t *restrict work)
 {
     HmacSha256.ok = PROTO_FALSE;
-    if (!work || !HmacSha256.mac_args.out)
+    if (!HmacSha256.mac_args.out)
     {
         return;
     }

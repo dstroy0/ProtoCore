@@ -197,6 +197,15 @@ static_assert(MDNS_ADAPTIVE_OFF_CTX + sizeof(MdnsAdaptiveCtx) <= PROTOCORE_MDNS_
               "PROTOCORE_MDNS_ADAPTIVE_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(MDNS_ADAPTIVE_OFF_CTX % _Alignof(MdnsAdaptiveCtx) == 0,
+              "MDNS_ADAPTIVE_OFF_CTX is not a multiple of alignof(MdnsAdaptiveCtx) - MDNS_ADAPTIVE_CTX() would return "
+              "a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The region, at its offset in the caller's borrow.
 #define MDNS_ADAPTIVE_CTX(w) ((MdnsAdaptiveCtx *)(void *)((w) + MDNS_ADAPTIVE_OFF_CTX))
 
@@ -219,7 +228,6 @@ uint8_t *protocore_mdns_adaptive_span(void)
     }
     return s_own.span;
 }
-
 
 // Promiscuous sink: the whole job is to count. Runs in the WiFi driver's callback context, so it
 // only touches the running total - no parsing, no allocation, no blocking.

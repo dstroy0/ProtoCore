@@ -53,6 +53,17 @@ static_assert(SHA384_OFF_STATE + sizeof(uint64_t) * 8 <= PROTOCORE_SHA384_BORROW
               "PROTOCORE_SHA384_BORROW is short of the context, the two blocks and the state copy - "
               "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(SHA384_OFF_CTX % _Alignof(Sha384Ctx) == 0,
+              "SHA384_OFF_CTX is not a multiple of alignof(Sha384Ctx) - SHA384_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+static_assert(SHA384_OFF_STATE % _Alignof(uint64_t) == 0,
+              "SHA384_OFF_STATE is not a multiple of alignof(uint64_t) - SHA384_FS() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define SHA384_CTX(w) ((Sha384Ctx *)(void *)((w) + SHA384_OFF_CTX))
 #define SHA384_RX(w) ((w) + SHA384_OFF_RX)
@@ -386,11 +397,12 @@ static void sha384_init(uint8_t *restrict work)
 static void sha384_update(uint8_t *restrict work)
 {
     sha384_absorb(work, Sha384.update_args.data, Sha384.update_args.len);
+    Sha384.ok = PROTO_TRUE;
 }
 
 static void sha384_final(uint8_t *restrict work)
 {
-    if (!work || !Sha384.final_args.out)
+    if (!Sha384.final_args.out)
     {
         Sha384.ok = PROTO_FALSE;
         return;
@@ -403,7 +415,7 @@ static void sha384_final(uint8_t *restrict work)
 static void sha384_hash(uint8_t *restrict work)
 {
     Sha384.ok = PROTO_FALSE;
-    if (!work || !Sha384.hash_args.out)
+    if (!Sha384.hash_args.out)
     {
         return;
     }

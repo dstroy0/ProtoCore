@@ -43,6 +43,14 @@ static_assert(GHASH_OFF_END <= PROTOCORE_GHASH_BORROW,
               "PROTOCORE_GHASH_BORROW is short of the 4-bit table - raise it in protocore_config.h, "
               "which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(GHASH_OFF_CTX % _Alignof(GhashCtx) == 0,
+              "GHASH_OFF_CTX is not a multiple of alignof(GhashCtx) - GHASH_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The region, at its offset in the caller's borrow.
 #define GHASH_CTX(w) ((GhashCtx *)(void *)((w) + GHASH_OFF_CTX))
 
@@ -140,7 +148,7 @@ static void gf_mul(uint8_t *restrict work, uint8_t *acc)
 static void ghash_key_init(uint8_t *restrict work)
 {
     Ghash.ok = PROTO_FALSE;
-    if (!work || !Ghash.key_args.h)
+    if (!Ghash.key_args.h)
     {
         return;
     }
@@ -151,7 +159,7 @@ static void ghash_key_init(uint8_t *restrict work)
 static void ghash_mul(uint8_t *restrict work)
 {
     Ghash.ok = PROTO_FALSE;
-    if (!work || !Ghash.mul_args.acc)
+    if (!Ghash.mul_args.acc)
     {
         return;
     }
@@ -163,7 +171,7 @@ static void ghash_mul(uint8_t *restrict work)
 static void ghash_update(uint8_t *restrict work)
 {
     Ghash.ok = PROTO_FALSE;
-    if (!work || !Ghash.update_args.acc)
+    if (!Ghash.update_args.acc)
     {
         return;
     }

@@ -6,8 +6,8 @@
  * @brief MTConnect agent response codec (PROTOCORE_ENABLE_MTCONNECT).
  *
  * MTConnect (ANSI/MTC1.4) is the manufacturing-equipment read standard: an HTTP agent answers `probe`,
- * `current`, `sample`, and `asset` requests with XML documents. This builds the two most-used response
- * documents into a caller buffer, so the web server is an MTConnect agent over the existing HTTP stack:
+ * `current`, `sample`, and `asset` requests with XML documents. This builds those response documents
+ * into a caller buffer, so the web server is an MTConnect agent over the existing HTTP stack:
  *
  *  - **MTConnectStreams** (the `current` / `sample` response): a header carrying the agent
  *    instanceId + nextSequence, then per-DataItem `<Samples>/<Events>/<Condition>` values.
@@ -22,16 +22,23 @@
  * A streams document is assembled incrementally: open it, add each observation, close it. The instanceId
  * (an agent-boot id) + a monotonically increasing sequence number give a subscriber the from/count
  * long-poll semantics. Pure text framing, zero heap, no stdlib, host-testable; values are XML-escaped.
+ *
+ * @author  Douglas Quigg (dstroy0)
+ * @date    2026
  */
 
 #ifndef PROTOCORE_MTCONNECT_H
 #define PROTOCORE_MTCONNECT_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_MTCONNECT
 
 PROTOCORE_BEGIN_DECLS
+
+// PROTOCORE_MTCONNECT_BORROW - the bytes a document runs out of - is stated in protocore_config.h,
+// which sums it into the plaintext arena. A caller takes them once and passes the pointer to every
+// call. The borrow IS the document, so two documents are two borrows and never collide.
 
 /** @brief The MTConnect DataItem category (which stream element wraps the value). */
 typedef enum PROTO_ENUM_PACKED
@@ -41,165 +48,212 @@ typedef enum PROTO_ENUM_PACKED
     PROTOCORE_MTC_CONDITION ///< a condition (<Condition>): value is the sub-element name (Normal/Warning/Fault).
 } protocore_mtc_category;
 
-/** @brief Incremental MTConnectStreams builder over a caller buffer. */
+/** @brief The buffer a document is built into, and the agent identity its Header carries. */
 typedef struct
 {
-    char *buf;
-    size_t cap;
-    size_t len;         ///< bytes written so far (excl NUL).
-    proto_bool ok;      ///< cleared on any overflow; the final length is 0 when not ok.
-    proto_bool in_comp; ///< a <ComponentStream> is open.
-} protocore_mtc_streams;
+    char *out;            ///< where the document lands
+    size_t cap;           ///< how many bytes of it there are
+    uint64_t instance_id; ///< the agent's boot id (the Header instanceId)
+    const char *sender;   ///< the agent's own name (the Header sender, MTC1.4 HeaderType)
+} MtConnectDocArgs;
 
-/**
- * @brief Begin an MTConnectStreams document: XML declaration + header + open <Streams>.
- * @param instance_id agent instanceId (boot id).
- * @param next_seq    the nextSequence the agent will assign.
- * @param device_name the single device's name/uuid for the ComponentStream.
- */
-void protocore_mtc_streams_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id,
-                                 uint64_t next_seq, const char *device_name);
-
-/**
- * @brief Add one observation.
- * @param cat        the DataItem category.
- * @param type       the DataItem type element name (e.g. "Position", "Execution", "Availability").
- * @param data_id    the DataItem id attribute.
- * @param seq        this observation's sequence number.
- * @param timestamp  ISO-8601 timestamp string.
- * @param value      the value text (XML-escaped); for a CONDITION it is the sub-element (Normal/Fault/...).
- */
-void protocore_mtc_streams_add(protocore_mtc_streams *s, protocore_mtc_category cat, const char *type,
-                               const char *data_id, uint64_t seq, const char *timestamp, const char *value);
-
-/** @brief Finish the document (close any open component + <Streams> + root). @return length, or 0 on overflow. */
-size_t protocore_mtc_streams_end(protocore_mtc_streams *s);
-
-/**
- * @brief Build a complete MTConnectError document.
- * @return length written, or 0 on overflow.
- */
-size_t protocore_mtc_error(uint64_t instance_id, const char *error_code, const char *message, char *out, size_t cap);
-
-/**
- * @brief Begin an MTConnectDevices (`probe`) document: XML declaration + header + open one `<Device>`.
- * @param instance_id agent instanceId (boot id).
- * @param device_id   the Device `id` attribute.
- * @param device_name the Device `name` attribute.
- * @param uuid        the Device `uuid` attribute.
- *
- * Reuses ::protocore_mtc_streams as the incremental buffer builder (as ::protocore_mtc_error does).
- */
-void protocore_mtc_devices_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id,
-                                 const char *device_id, const char *device_name, const char *uuid);
-
-/**
- * @brief Add one `<DataItem>` to the device model.
- * @param cat   the DataItem category (SAMPLE / EVENT / CONDITION).
- * @param id    the DataItem `id` attribute.
- * @param type  the DataItem `type` attribute (e.g. "Position", "Execution", "Availability").
- * @param name  optional `name` attribute (omitted when null/empty).
- * @param units optional `units` attribute (omitted when null/empty).
- */
-void protocore_mtc_devices_add_item(protocore_mtc_streams *s, protocore_mtc_category cat, const char *id,
-                                    const char *type, const char *name, const char *units);
-
-/** @brief Finish the probe document (close `<DataItems>` + `<Device>` + root). @return length, or 0 on overflow. */
-size_t protocore_mtc_devices_end(protocore_mtc_streams *s);
-
-/**
- * @brief Begin an MTConnectAssets (`asset`) document: XML declaration + header + open `<Assets>`.
- * @param instance_id       agent instanceId (boot id).
- * @param asset_count       the number of assets in this response (the Header `assetCount`).
- * @param asset_buffer_size the agent's total asset capacity (the Header `assetBufferSize`).
- *
- * Reuses ::protocore_mtc_streams as the incremental buffer builder (as ::protocore_mtc_devices_begin does).
- */
-void protocore_mtc_assets_begin(protocore_mtc_streams *s, char *buf, size_t cap, uint64_t instance_id,
-                                uint32_t asset_count, uint32_t asset_buffer_size);
-
-/**
- * @brief Open one `<CuttingTool>` asset and its `<CuttingToolLifeCycle>`.
- * @param asset_id      the CuttingTool `assetId` (required).
- * @param serial_number optional `serialNumber` attribute (omitted when null/empty).
- * @param tool_id       optional `toolId` attribute (omitted when null/empty).
- * @param device_uuid   optional `deviceUuid` attribute (omitted when null/empty).
- * @param timestamp     optional ISO-8601 `timestamp` attribute (omitted when null/empty).
- */
-void protocore_mtc_assets_cutting_tool_begin(protocore_mtc_streams *s, const char *asset_id, const char *serial_number,
-                                             const char *tool_id, const char *device_uuid, const char *timestamp);
-
-/**
- * @brief Add one `<ToolLife>` element to the open cutting tool's life cycle.
- * @param type            the life kind: "MINUTES", "PART_COUNT", or "WEAR".
- * @param count_direction "UP" (accumulating) or "DOWN" (remaining).
- * @param limit           optional `limit` attribute (the max/threshold; omitted when null/empty).
- * @param value           the current life value text (XML-escaped).
- */
-void protocore_mtc_assets_tool_life(protocore_mtc_streams *s, const char *type, const char *count_direction,
-                                    const char *limit, const char *value);
-
-/** @brief Close the open `<CuttingToolLifeCycle>` + `<CuttingTool>`. */
-void protocore_mtc_assets_cutting_tool_end(protocore_mtc_streams *s);
-
-/** @brief Finish the asset document (close `<Assets>` + root). @return length, or 0 on overflow. */
-size_t protocore_mtc_assets_end(protocore_mtc_streams *s);
-
-// --- sample sequence cursor: a rolling observation buffer for the `sample` from/count long-poll ---
-
-/** @brief One buffered observation (a value at a sequence number), stored in fixed fields. */
+/** @brief What opening a streams document takes beyond the document itself. */
 typedef struct
 {
-    protocore_mtc_category cat;
-    uint64_t seq;                         ///< the monotonic sequence number assigned when it was recorded.
-    char type[PROTOCORE_MTC_STR_MAX + 1]; ///< DataItem type element name (e.g. "Position").
-    char data_id[PROTOCORE_MTC_STR_MAX + 1];
-    char timestamp[PROTOCORE_MTC_TS_MAX + 1];
-    char value[PROTOCORE_MTC_VAL_MAX + 1];
-} protocore_mtc_observation;
+    uint64_t next_seq;        ///< the sequence the next observation will carry
+    const char *device_name;  ///< the DeviceStream name
+    const char *device_uuid;  ///< its uuid, which DeviceStreamType marks required
+    const char *component;    ///< the ComponentStream component name
+    const char *component_id; ///< its id, which ComponentStreamType marks required
+} MtConnectStreamsArgs;
+
+/** @brief One observation added to the open component. */
+typedef struct
+{
+    protocore_mtc_category cat; ///< which container it belongs in
+    const char *type;           ///< the DataItem type element name
+    const char *data_id;        ///< its dataItemId
+    uint64_t seq;               ///< its sequence number
+    const char *timestamp;      ///< its ISO-8601 timestamp
+    const char *value;          ///< its value, or the Condition sub-element name
+} MtConnectObsArgs;
+
+/** @brief The window a sample response reports, beyond the streams members. */
+typedef struct
+{
+    uint64_t first_seq;   ///< the oldest sequence still retained
+    uint64_t last_seq;    ///< the newest one written
+    uint32_t buffer_size; ///< how many observations the agent retains
+} MtConnectWindowArgs;
+
+/** @brief What opening a probe document takes. */
+typedef struct
+{
+    const char *device_id;   ///< the Device id
+    const char *device_name; ///< its name
+    const char *uuid;        ///< its uuid
+} MtConnectDeviceArgs;
+
+/** @brief One DataItem in the probe document. */
+typedef struct
+{
+    protocore_mtc_category cat; ///< its category attribute
+    const char *id;             ///< its id
+    const char *type;           ///< its type
+    const char *name;           ///< optional name (omitted when null/empty)
+    const char *units;          ///< optional units (omitted when null/empty)
+} MtConnectItemArgs;
+
+/** @brief What opening an asset document takes. */
+typedef struct
+{
+    uint32_t asset_count;       ///< assets in this response (the Header assetCount)
+    uint32_t asset_buffer_size; ///< the agent's asset capacity (the Header assetBufferSize)
+} MtConnectAssetsArgs;
+
+/** @brief One CuttingTool and the status its life cycle opens with. */
+typedef struct
+{
+    const char *asset_id;      ///< the CuttingTool assetId
+    const char *serial_number; ///< optional serialNumber
+    const char *tool_id;       ///< optional toolId
+    const char *device_uuid;   ///< optional deviceUuid
+    const char *timestamp;     ///< optional ISO-8601 timestamp
+    const char *cutter_status; ///< the CutterStatus the life cycle opens with (minOccurs=1)
+} MtConnectToolArgs;
+
+/** @brief One ToolLife element. LifeType marks all four attributes required. */
+typedef struct
+{
+    const char *type;            ///< "MINUTES", "PART_COUNT" or "WEAR"
+    const char *count_direction; ///< "UP" or "DOWN"
+    const char *initial;         ///< the life the tool started with
+    const char *limit;           ///< the threshold the count runs to
+    const char *value;           ///< the current life
+} MtConnectLifeArgs;
+
+/** @brief The error an MTConnectError document reports. */
+typedef struct
+{
+    const char *error_code; ///< the errorCode attribute
+    const char *message;    ///< the element text
+} MtConnectErrorArgs;
+
+/** @brief The sub-window a sample replay asks the ring for. */
+typedef struct
+{
+    uint64_t from;  ///< the first sequence wanted
+    uint32_t count; ///< how many at most
+} MtConnectQueryArgs;
 
 /**
- * @brief A fixed-size ring of the most recent observations, with the agent's sequence bookkeeping.
+ * @brief MTConnect (ANSI/MTC1.4) agent responses.
  *
- * Holds up to ::PROTOCORE_MTC_SAMPLE_BUFFER observations. Each ::protocore_mtc_sample_buffer_add assigns the
- * next sequence number; when the ring is full the oldest is evicted and `first_seq` advances, so the
- * retained window is always `[first_seq, next_seq)`. ::protocore_mtc_sample_query then replays a requested
- * sub-window as an MTConnectStreams document whose header carries firstSequence / lastSequence /
- * nextSequence (MTC1.4 §6.7). Zero heap, single-owner (the caller serializes access).
+ * A caller sets the members a call takes, invokes it through ::MtConnect with the bytes it runs out
+ * of, and reads the outcome off the same handle. How those bytes are carved is this module's and is
+ * never named here.
+ *
+ *   MtConnect.doc.out = buf;
+ *   MtConnect.doc.cap = sizeof(buf);
+ *   MtConnect.doc.instance_id = 7;
+ *   MtConnect.doc.sender = "agent-1";
+ *   MtConnect.streams.next_seq = 100;
+ *   MtConnect.streams.device_name = "VF2";
+ *   MtConnect.streams.device_uuid = "uuid-1";
+ *   MtConnect.streams_begin(work);
+ *   MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+ *   ...
+ *   MtConnect.streams_add(work);
+ *   MtConnect.streams_end(work);
+ *   // MtConnect.n is the document length
+ *
+ * @var MtConnectNs::doc       the buffer a document is built into, and the agent identity
+ * @var MtConnectNs::streams   what opening a streams document takes
+ * @var MtConnectNs::obs       one observation added to the open component
+ * @var MtConnectNs::window    the window a sample response reports
+ * @var MtConnectNs::device    what opening a probe document takes
+ * @var MtConnectNs::item      one DataItem in the probe document
+ * @var MtConnectNs::assets    what opening an asset document takes
+ * @var MtConnectNs::tool      one CuttingTool and its opening status
+ * @var MtConnectNs::life      one ToolLife element
+ * @var MtConnectNs::err       the error an MTConnectError document reports
+ * @var MtConnectNs::query     the sub-window a sample replay asks the ring for
+ * @var MtConnectNs::ok        a call's true/false outcome
+ * @var MtConnectNs::n         a finished document's length, or 0 when it did not fit
+ * @var MtConnectNs::seq       the sequence number the last ring add assigned
+ * @var MtConnectNs::streams_begin  open a streams document and its device + component
+ * @var MtConnectNs::streams_add    add one observation to the open component
+ * @var MtConnectNs::streams_end    close the component, the device and the document
+ * @var MtConnectNs::error          build a whole MTConnectError document
+ * @var MtConnectNs::devices_begin  open a probe document and its device
+ * @var MtConnectNs::devices_add    add one DataItem to it
+ * @var MtConnectNs::devices_end    close the probe document
+ * @var MtConnectNs::assets_begin   open an asset document
+ * @var MtConnectNs::tool_begin     open one CuttingTool and its life cycle
+ * @var MtConnectNs::tool_life      add one ToolLife to the open life cycle
+ * @var MtConnectNs::tool_end       close the life cycle and the tool
+ * @var MtConnectNs::assets_end     close the asset document
+ * @var MtConnectNs::ring_init      empty the observation ring and seat its first sequence
+ * @var MtConnectNs::ring_add       record one observation, assigning it the next sequence
+ * @var MtConnectNs::ring_query     replay a window of the ring as a streams document
+ *
+ * A ComponentStream is an xs:sequence of Samples, Events and Condition, each maxOccurs="1", so an
+ * observation is accumulated in the region its category owns and the three are written out in that
+ * order when the component closes. The containers are therefore never opened in arrival order, and a
+ * caller adds observations in whatever order it has them.
+ *
+ * @c work is PROTOCORE_MTCONNECT_BORROW plaintext bytes the CALLER took, at an address it knows. It
+ * arrives @c restrict and is not held past the call. The borrow IS the document and the ring, so two
+ * agents are two borrows and never collide.
  */
 typedef struct
 {
-    protocore_mtc_observation obs[PROTOCORE_MTC_SAMPLE_BUFFER];
-    uint32_t count;     ///< valid entries (<= PROTOCORE_MTC_SAMPLE_BUFFER).
-    uint32_t head;      ///< ring write index (next slot to fill).
-    uint64_t next_seq;  ///< sequence the next add will assign (one past the newest).
-    uint64_t first_seq; ///< sequence of the oldest retained observation.
-} protocore_mtc_sample_buffer;
+    MtConnectDocArgs doc;
+    MtConnectStreamsArgs streams;
+    MtConnectObsArgs obs;
+    MtConnectWindowArgs window;
+    MtConnectDeviceArgs device;
+    MtConnectItemArgs item;
+    MtConnectAssetsArgs assets;
+    MtConnectToolArgs tool;
+    MtConnectLifeArgs life;
+    MtConnectErrorArgs err;
+    MtConnectQueryArgs query;
+
+    proto_bool ok;
+    size_t n;
+    uint64_t seq;
+
+    void (*const streams_begin)(uint8_t *restrict work);
+    void (*const streams_add)(uint8_t *restrict work);
+    void (*const streams_end)(uint8_t *restrict work);
+    void (*const error)(uint8_t *restrict work);
+    void (*const devices_begin)(uint8_t *restrict work);
+    void (*const devices_add)(uint8_t *restrict work);
+    void (*const devices_end)(uint8_t *restrict work);
+    void (*const assets_begin)(uint8_t *restrict work);
+    void (*const tool_begin)(uint8_t *restrict work);
+    void (*const tool_life)(uint8_t *restrict work);
+    void (*const tool_end)(uint8_t *restrict work);
+    void (*const assets_end)(uint8_t *restrict work);
+    void (*const ring_init)(uint8_t *restrict work);
+    void (*const ring_add)(uint8_t *restrict work);
+    void (*const ring_query)(uint8_t *restrict work);
+} MtConnectNs;
+
+/** @brief The one symbol this module exports. */
+extern MtConnectNs MtConnect;
 
 /**
- * @brief Initialize an empty sample buffer.
- * @param start_seq the first sequence number the agent will assign (0 is treated as 1).
- */
-void protocore_mtc_sample_buffer_init(protocore_mtc_sample_buffer *b, uint64_t start_seq);
-
-/**
- * @brief Record one observation, assigning it the next sequence number (evicting the oldest if full).
- * @return the sequence number assigned to this observation.
- */
-uint64_t protocore_mtc_sample_buffer_add(protocore_mtc_sample_buffer *b, protocore_mtc_category cat, const char *type,
-                                         const char *data_id, const char *timestamp, const char *value);
-
-/**
- * @brief Build the `sample` MTConnectStreams response for the window starting at @p from.
+ * @brief The bytes every entry here runs out of: the running document and the observation ring.
  *
- * Emits up to @p count observations from sequence @p from onward (a @p from below the retained
- * firstSequence is clamped up to it - a stale subscriber catches up from the oldest kept, and the header
- * firstSequence tells it data was dropped). The header reports firstSequence / lastSequence and a
- * nextSequence the client uses to resume (the sequence past the last one returned, or the buffer's
- * nextSequence when @p from is already at/after the newest). @return document length, or 0 on overflow.
+ * Stated beside the namespace rather than on it: an entry takes a borrow, and this is where that
+ * borrow comes from. Taken once from the end of the plaintext pool, which no mark and no release
+ * walks, because the ring outlives the documents replayed out of it.
+ *
+ * @return the span.
  */
-size_t protocore_mtc_sample_query(const protocore_mtc_sample_buffer *b, char *buf, size_t cap, uint64_t instance_id,
-                                  const char *device_name, uint64_t from, uint32_t count);
+uint8_t *protocore_mtconnect_span(void);
 
 PROTOCORE_END_DECLS
 

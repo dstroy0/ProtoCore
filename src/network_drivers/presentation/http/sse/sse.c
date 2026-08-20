@@ -12,8 +12,8 @@
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-#include "mmgr/secure/secure.h"                                     // the persistent end this module's state is taken from
-#include "mmgr/span/span.h"                                       // span.ok: whether the pool had the bytes
+#include "mmgr/secure/secure.h"                              // the persistent end this module's state is taken from
+#include "mmgr/span/span.h"                                  // span.ok: whether the pool had the bytes
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a stream sends on
 #include "sse.h"
 
@@ -38,6 +38,14 @@ typedef struct
 static_assert(SSE_OFF_CTX + sizeof(SseCtx) <= PROTOCORE_SSE_BORROW,
               "PROTOCORE_SSE_BORROW is short of the module context - raise it in protocore_config.h,"
               " which sums it into its arena");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(SSE_OFF_CTX % _Alignof(SseCtx) == 0,
+              "SSE_OFF_CTX is not a multiple of alignof(SseCtx) - SSE_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
 #define SSE_CTX(w) ((SseCtx *)(void *)((w) + SSE_OFF_CTX))

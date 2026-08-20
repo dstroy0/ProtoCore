@@ -134,7 +134,7 @@ static proto_bool hkdf_label_derive(uint8_t *restrict work, const uint8_t *secre
 static void hkdf_extract(uint8_t *restrict work)
 {
     Hkdf.ok = PROTO_FALSE;
-    if (!work || !Hkdf.extract_args.prk)
+    if (!Hkdf.extract_args.prk)
     {
         return;
     }
@@ -150,7 +150,7 @@ static void hkdf_extract(uint8_t *restrict work)
 static void hkdf_expand(uint8_t *restrict work)
 {
     Hkdf.ok = PROTO_FALSE;
-    if (!work || !Hkdf.expand_args.prk || !Hkdf.expand_args.out)
+    if (!Hkdf.expand_args.prk || !Hkdf.expand_args.out)
     {
         return;
     }
@@ -161,8 +161,8 @@ static void hkdf_expand(uint8_t *restrict work)
 static void hkdf_expand_label(uint8_t *restrict work)
 {
     Hkdf.ok = PROTO_FALSE;
-    if (!work || !Hkdf.expand_label_args.secret || !Hkdf.expand_label_args.label ||
-        !Hkdf.expand_label_args.label_prefix || !Hkdf.expand_label_args.out)
+    if (!Hkdf.expand_label_args.secret || !Hkdf.expand_label_args.label || !Hkdf.expand_label_args.label_prefix ||
+        !Hkdf.expand_label_args.out)
     {
         return;
     }
@@ -174,7 +174,7 @@ static void hkdf_expand_label(uint8_t *restrict work)
 static void hkdf_expand_label_ctx(uint8_t *restrict work)
 {
     Hkdf.ok = PROTO_FALSE;
-    if (!work || !Hkdf.expand_label_ctx_args.secret || !Hkdf.expand_label_ctx_args.label ||
+    if (!Hkdf.expand_label_ctx_args.secret || !Hkdf.expand_label_ctx_args.label ||
         !Hkdf.expand_label_ctx_args.label_prefix || !Hkdf.expand_label_ctx_args.out)
     {
         return;

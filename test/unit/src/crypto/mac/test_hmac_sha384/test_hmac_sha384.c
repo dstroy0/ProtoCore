@@ -247,24 +247,3 @@ void test_a_changed_key_or_message_changes_the_mac(void)
     TEST_ASSERT_TRUE(memcmp(base, other, sizeof(base)) != 0);
 }
 
-// A null borrow leaves ok false and writes nothing.
-void test_a_null_borrow_is_refused(void)
-{
-    uint8_t d[PROTOCORE_HMAC_SHA384_LEN];
-    memset(d, 0xA5, sizeof(d));
-
-    HmacSha384.mac_args.key = fill_key(0x0bu, 20u);
-    HmacSha384.mac_args.key_len = 20u;
-    HmacSha384.mac_args.data = (const uint8_t *)"Hi There";
-    HmacSha384.mac_args.len = 8u;
-    HmacSha384.mac_args.out = d;
-    HmacSha384.mac(NULL);
-    TEST_ASSERT_FALSE(HmacSha384.ok);
-    for (size_t i = 0; i < sizeof(d); i++)
-    {
-        TEST_ASSERT_EQUAL_UINT8(0xA5, d[i]);
-    }
-
-    HmacSha384.init(NULL);
-    TEST_ASSERT_FALSE(HmacSha384.ok);
-}

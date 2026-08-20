@@ -134,7 +134,7 @@ static proto_bool hkdf_sha384_label_derive(uint8_t *restrict work, const uint8_t
 static void hkdf_sha384_extract(uint8_t *restrict work)
 {
     HkdfSha384.ok = PROTO_FALSE;
-    if (!work || !HkdfSha384.extract_args.prk)
+    if (!HkdfSha384.extract_args.prk)
     {
         return;
     }
@@ -150,7 +150,7 @@ static void hkdf_sha384_extract(uint8_t *restrict work)
 static void hkdf_sha384_expand(uint8_t *restrict work)
 {
     HkdfSha384.ok = PROTO_FALSE;
-    if (!work || !HkdfSha384.expand_args.prk || !HkdfSha384.expand_args.out)
+    if (!HkdfSha384.expand_args.prk || !HkdfSha384.expand_args.out)
     {
         return;
     }
@@ -162,7 +162,7 @@ static void hkdf_sha384_expand(uint8_t *restrict work)
 static void hkdf_sha384_expand_label(uint8_t *restrict work)
 {
     HkdfSha384.ok = PROTO_FALSE;
-    if (!work || !HkdfSha384.expand_label_args.secret || !HkdfSha384.expand_label_args.label ||
+    if (!HkdfSha384.expand_label_args.secret || !HkdfSha384.expand_label_args.label ||
         !HkdfSha384.expand_label_args.label_prefix || !HkdfSha384.expand_label_args.out)
     {
         return;
@@ -176,7 +176,7 @@ static void hkdf_sha384_expand_label(uint8_t *restrict work)
 static void hkdf_sha384_expand_label_ctx(uint8_t *restrict work)
 {
     HkdfSha384.ok = PROTO_FALSE;
-    if (!work || !HkdfSha384.expand_label_ctx_args.secret || !HkdfSha384.expand_label_ctx_args.label ||
+    if (!HkdfSha384.expand_label_ctx_args.secret || !HkdfSha384.expand_label_ctx_args.label ||
         !HkdfSha384.expand_label_ctx_args.label_prefix || !HkdfSha384.expand_label_ctx_args.out)
     {
         return;

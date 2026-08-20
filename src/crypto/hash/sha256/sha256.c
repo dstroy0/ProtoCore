@@ -17,9 +17,9 @@
 
 #if PROTOCORE_ENABLE_SHA256
 
-#include "mmgr/endian/endian.h" // the big-endian reads and writes both arms' padding and digest use
 #include "crypto/crypto_opt.h"
 #include "crypto/hash/sha256/sha256.h"
+#include "mmgr/endian/endian.h" // the big-endian reads and writes both arms' padding and digest use
 #include "mmgr/protomem/protomem.h"
 
 PROTOCORE_CRYPTO_HOT
@@ -47,6 +47,24 @@ typedef struct
 static_assert(SHA256_OFF_STATE + sizeof(uint32_t) * 8 <= PROTOCORE_SHA256_BORROW,
               "PROTOCORE_SHA256_BORROW is short of the context, the two blocks and the state copy - "
               "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so - in arena.c's own words - a borrow is "met by aligning its offset
+// alone". The offset is a compile-time constant, so that is a compile-time claim and it belongs
+// here rather than in a runtime branch. Both sides are constants; nothing is checked at run time.
+//
+// The size assert above cannot stand in for these. It bounds the far end of the chain and says
+// nothing about where any region begins, so inserting one odd-sized region earlier leaves every
+// later cast misaligned while the total still fits - undefined behaviour on a part that traps it,
+// a silent slow path on one that does not, and no diagnostic on either.
+//
+// Only the cast regions need one. SHA256_RX and SHA256_TX stay uint8_t*, which has no requirement.
+static_assert(SHA256_OFF_CTX % _Alignof(Sha256Ctx) == 0,
+              "SHA256_OFF_CTX is not a multiple of alignof(Sha256Ctx) - SHA256_CTX() would return a "
+              "misaligned pointer; pad the region ahead of it");
+static_assert(SHA256_OFF_STATE % _Alignof(uint32_t) == 0,
+              "SHA256_OFF_STATE is not a multiple of alignof(uint32_t) - SHA256_FS() would return a "
+              "misaligned pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
 #define SHA256_CTX(w) ((Sha256Ctx *)(void *)((w) + SHA256_OFF_CTX))
@@ -361,11 +379,12 @@ static void sha256_init(uint8_t *restrict work)
 static void sha256_update(uint8_t *restrict work)
 {
     sha256_absorb(work, Sha256.update_args.data, Sha256.update_args.len);
+    Sha256.ok = PROTO_TRUE;
 }
 
 static void sha256_final(uint8_t *restrict work)
 {
-    if (!work || !Sha256.final_args.out)
+    if (!Sha256.final_args.out)
     {
         Sha256.ok = PROTO_FALSE;
         return;
@@ -378,7 +397,7 @@ static void sha256_final(uint8_t *restrict work)
 static void sha256_hash(uint8_t *restrict work)
 {
     Sha256.ok = PROTO_FALSE;
-    if (!work || !Sha256.hash_args.out)
+    if (!Sha256.hash_args.out)
     {
         return;
     }

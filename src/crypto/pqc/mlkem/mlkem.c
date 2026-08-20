@@ -590,7 +590,7 @@ static void k_pke_decrypt(uint8_t m[32], const uint8_t dk_pke[MK_K * MK_POLYBYTE
 static void mlkem_keygen(uint8_t *restrict work)
 {
     MlKem.ok = PROTO_FALSE;
-    if (!work || !MlKem.keygen_args.d || !MlKem.keygen_args.z || !MlKem.keygen_args.ek || !MlKem.keygen_args.dk)
+    if (!MlKem.keygen_args.d || !MlKem.keygen_args.z || !MlKem.keygen_args.ek || !MlKem.keygen_args.dk)
     {
         return;
     }
@@ -608,7 +608,7 @@ static void mlkem_keygen(uint8_t *restrict work)
 static void mlkem_encaps(uint8_t *restrict work)
 {
     MlKem.ok = PROTO_FALSE;
-    if (!work || !MlKem.encaps_args.ek || !MlKem.encaps_args.m || !MlKem.encaps_args.ct || !MlKem.encaps_args.ss)
+    if (!MlKem.encaps_args.ek || !MlKem.encaps_args.m || !MlKem.encaps_args.ct || !MlKem.encaps_args.ss)
     {
         return;
     }
@@ -634,7 +634,7 @@ static void mlkem_encaps(uint8_t *restrict work)
 static void mlkem_decaps(uint8_t *restrict work)
 {
     MlKem.ok = PROTO_FALSE;
-    if (!work || !MlKem.decaps_args.dk || !MlKem.decaps_args.ct || !MlKem.decaps_args.ss)
+    if (!MlKem.decaps_args.dk || !MlKem.decaps_args.ct || !MlKem.decaps_args.ss)
     {
         return;
     }

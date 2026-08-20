@@ -329,11 +329,6 @@ void test_every_entry_refuses_a_null_operand(void)
     Bignum.validate_args.v = NULL;
     Bignum.dh_validate(g_work);
     TEST_ASSERT_FALSE(Bignum.ok);
-
-    // and a null borrow, which no entry may touch
-    Bignum.is_zero_args.a = &v;
-    Bignum.is_zero(NULL);
-    TEST_ASSERT_FALSE(Bignum.ok);
 }
 
 void test_vector_table_is_populated(void)

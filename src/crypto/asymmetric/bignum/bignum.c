@@ -48,6 +48,14 @@ static_assert(BIGNUM_OFF_PM1 + sizeof(protocore_bignum) <= PROTOCORE_BIGNUM_BORR
               "PROTOCORE_BIGNUM_BORROW is short of the staged operands and p-1 - raise it in "
               "protocore_config.h, which sums it into the secure arena");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(BIGNUM_OFF_PM1 % _Alignof(protocore_bignum) == 0,
+              "BIGNUM_OFF_PM1 is not a multiple of alignof(protocore_bignum) - BIGNUM_PM1() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define BIGNUM_CTX(w) ((struct BignumCtx *)(void *)((w) + BIGNUM_OFF_CTX))
 #define BIGNUM_PM1(w) ((protocore_bignum *)(void *)((w) + BIGNUM_OFF_PM1))
@@ -116,7 +124,7 @@ static void bignum_expmod(uint8_t *restrict work)
 static void bignum_from_bytes(uint8_t *restrict work)
 {
     Bignum.ok = PROTO_FALSE;
-    if (!work || !Bignum.from_bytes_args.out || !Bignum.from_bytes_args.bytes)
+    if (!Bignum.from_bytes_args.out || !Bignum.from_bytes_args.bytes)
     {
         return;
     }
@@ -138,7 +146,7 @@ static void bignum_from_bytes(uint8_t *restrict work)
 static void bignum_to_bytes(uint8_t *restrict work)
 {
     Bignum.ok = PROTO_FALSE;
-    if (!work || !Bignum.to_bytes_args.bytes || !Bignum.to_bytes_args.in)
+    if (!Bignum.to_bytes_args.bytes || !Bignum.to_bytes_args.in)
     {
         return;
     }
@@ -159,7 +167,7 @@ static void bignum_to_bytes(uint8_t *restrict work)
 static void bignum_cmp(uint8_t *restrict work)
 {
     Bignum.ok = PROTO_FALSE;
-    if (!work || !Bignum.cmp_args.a || !Bignum.cmp_args.b)
+    if (!Bignum.cmp_args.a || !Bignum.cmp_args.b)
     {
         return;
     }
@@ -175,7 +183,7 @@ static void bignum_cmp(uint8_t *restrict work)
 static void bignum_cmp_raw(uint8_t *restrict work)
 {
     Bignum.ok = PROTO_FALSE;
-    if (!work || !Bignum.cmp_raw_args.a || !Bignum.cmp_raw_args.b)
+    if (!Bignum.cmp_raw_args.a || !Bignum.cmp_raw_args.b)
     {
         return;
     }
@@ -192,7 +200,7 @@ static void bignum_is_zero(uint8_t *restrict work)
 {
     Bignum.ok = PROTO_FALSE;
     Bignum.zero = PROTO_FALSE;
-    if (!work || !Bignum.is_zero_args.a)
+    if (!Bignum.is_zero_args.a)
     {
         return;
     }
@@ -213,7 +221,7 @@ static void bignum_is_zero(uint8_t *restrict work)
 static void bignum_expmod_group14(uint8_t *restrict work)
 {
     Bignum.ok = PROTO_FALSE;
-    if (!work || !Bignum.expmod_args.out || !Bignum.expmod_args.base || !Bignum.expmod_args.exp)
+    if (!Bignum.expmod_args.out || !Bignum.expmod_args.base || !Bignum.expmod_args.exp)
     {
         return;
     }
@@ -229,7 +237,7 @@ static void bignum_expmod_group14(uint8_t *restrict work)
 static void bignum_dh_validate(uint8_t *restrict work)
 {
     Bignum.ok = PROTO_FALSE;
-    if (!work || !Bignum.validate_args.v)
+    if (!Bignum.validate_args.v)
     {
         return;
     }

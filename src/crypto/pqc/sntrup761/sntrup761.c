@@ -839,7 +839,7 @@ static int Ciphertexts_diff_mask(const uint8_t *c, const uint8_t *c2)
 static void sntrup761_enc(uint8_t *restrict work)
 {
     Sntrup761.ok = PROTO_FALSE;
-    if (!work || !Sntrup761.enc_args.pk || !Sntrup761.enc_args.ct || !Sntrup761.enc_args.ss)
+    if (!Sntrup761.enc_args.pk || !Sntrup761.enc_args.ct || !Sntrup761.enc_args.ss)
     {
         return;
     }
@@ -863,7 +863,7 @@ static void sntrup761_enc(uint8_t *restrict work)
 static void sntrup761_keypair(uint8_t *restrict work)
 {
     Sntrup761.ok = PROTO_FALSE;
-    if (!work || !Sntrup761.keypair_args.pk || !Sntrup761.keypair_args.sk)
+    if (!Sntrup761.keypair_args.pk || !Sntrup761.keypair_args.sk)
     {
         return;
     }
@@ -892,7 +892,7 @@ static void sntrup761_keypair(uint8_t *restrict work)
 static void sntrup761_dec(uint8_t *restrict work)
 {
     Sntrup761.ok = PROTO_FALSE;
-    if (!work || !Sntrup761.dec_args.sk || !Sntrup761.dec_args.ct || !Sntrup761.dec_args.ss)
+    if (!Sntrup761.dec_args.sk || !Sntrup761.dec_args.ct || !Sntrup761.dec_args.ss)
     {
         return;
     }

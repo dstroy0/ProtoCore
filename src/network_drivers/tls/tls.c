@@ -21,9 +21,9 @@
 
 #include "network_drivers/tls/tls.h"
 
-#include "crypto/rng/rng.h"                                 // Rng.fill: the per-handshake ephemeral and random
-#include "mmgr/secure/secure.h"                                    // the persistent end this module's state is taken from
-#include "network_drivers/tls/record/record.h"              // PROTOCORE_TLS_PLAINTEXT_HDR_LEN: the frame this reads
+#include "crypto/rng/rng.h"                                  // Rng.fill: the per-handshake ephemeral and random
+#include "mmgr/secure/secure.h"                              // the persistent end this module's state is taken from
+#include "network_drivers/tls/record/record.h"               // PROTOCORE_TLS_PLAINTEXT_HDR_LEN: the frame this reads
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the ring and the raw write
 
 PROTOCORE_BEGIN_DECLS
@@ -37,14 +37,14 @@ PROTOCORE_BEGIN_DECLS
 struct TlsStorage
 {
     TlsConn conn[MAX_CONNS];
-    TlsConnConfig cfg[MAX_CONNS];    ///< per connection: the shared credential plus its own randomness
-    protocore_pcb *pcb[MAX_CONNS];   ///< captured at begin; a response sender nulls TcpConn::pcb
-    uint8_t eph[MAX_CONNS][32];      ///< X25519 ephemeral private key, fresh per handshake (RFC 8446 sec 4.2.8)
-    uint8_t rnd[MAX_CONNS][32];      ///< Hello random, fresh per handshake (sec 4.1.2)
+    TlsConnConfig cfg[MAX_CONNS];            ///< per connection: the shared credential plus its own randomness
+    protocore_pcb *pcb[MAX_CONNS];           ///< captured at begin; a response sender nulls TcpConn::pcb
+    uint8_t eph[MAX_CONNS][32];              ///< X25519 ephemeral private key, fresh per handshake (RFC 8446 sec 4.2.8)
+    uint8_t rnd[MAX_CONNS][32];              ///< Hello random, fresh per handshake (sec 4.1.2)
     uint8_t out[PROTOCORE_TLS_SEAM_OUT_CAP]; ///< what one pump owes the wire, built then sent
-    uint8_t ed_seed[32];             ///< the Ed25519 signing seed this end presents (RFC 7250)
-    uint8_t ed_pub[32];              ///< the raw public key that matches it
-    proto_bool ready;                ///< a credential is installed
+    uint8_t ed_seed[32];                     ///< the Ed25519 signing seed this end presents (RFC 7250)
+    uint8_t ed_pub[32];                      ///< the raw public key that matches it
+    proto_bool ready;                        ///< a credential is installed
 };
 
 // The caller's borrow, split: the context at its offset. One pointer arrives and every region is
@@ -182,7 +182,7 @@ proto_bool protocore_tls_ready(void)
 proto_bool protocore_tls_conn_begin(uint8_t slot)
 {
     uint8_t *work = protocore_tls_span();
-    if (!work || slot >= MAX_CONNS || !TLS_CTX(work)->ready)
+    if (slot >= MAX_CONNS || !TLS_CTX(work)->ready)
     {
         return PROTO_FALSE;
     }
@@ -218,7 +218,7 @@ proto_bool protocore_tls_conn_begin(uint8_t slot)
 int protocore_tls_handshake(uint8_t slot)
 {
     uint8_t *work = protocore_tls_span();
-    if (!work || slot >= MAX_CONNS)
+    if (slot >= MAX_CONNS)
     {
         return -1;
     }
@@ -258,7 +258,7 @@ int protocore_tls_handshake(uint8_t slot)
 proto_bool protocore_tls_established(uint8_t slot)
 {
     uint8_t *work = protocore_tls_span();
-    if (!work || slot >= MAX_CONNS)
+    if (slot >= MAX_CONNS)
     {
         return PROTO_FALSE;
     }
@@ -270,7 +270,7 @@ proto_bool protocore_tls_established(uint8_t slot)
 int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len)
 {
     uint8_t *work = protocore_tls_span();
-    if (!work || slot >= MAX_CONNS || buf == NULL)
+    if (slot >= MAX_CONNS || buf == NULL)
     {
         return -1;
     }
@@ -299,7 +299,7 @@ int protocore_tls_read(uint8_t slot, uint8_t *buf, size_t len)
 int protocore_tls_write(uint8_t slot, const void *data, size_t len)
 {
     uint8_t *work = protocore_tls_span();
-    if (!work || slot >= MAX_CONNS || data == NULL)
+    if (slot >= MAX_CONNS || data == NULL)
     {
         return -1;
     }
@@ -323,7 +323,7 @@ int protocore_tls_write(uint8_t slot, const void *data, size_t len)
 void protocore_tls_conn_end(uint8_t slot)
 {
     uint8_t *work = protocore_tls_span();
-    if (!work || slot >= MAX_CONNS)
+    if (slot >= MAX_CONNS)
     {
         return;
     }
@@ -336,7 +336,7 @@ void protocore_tls_conn_end(uint8_t slot)
 void protocore_tls_conn_free(uint8_t slot)
 {
     uint8_t *work = protocore_tls_span();
-    if (!work || slot >= MAX_CONNS)
+    if (slot >= MAX_CONNS)
     {
         return;
     }

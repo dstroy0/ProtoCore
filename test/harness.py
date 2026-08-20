@@ -15,6 +15,22 @@ three are the same thing spelled out, and are what to reach for when reading a b
     cmake --build build/native -j -- -k    `-k` is load bearing: without it make stops at the
                                            first failing target and the other 30 stay hidden
 
+BUILD WHAT YOU CHANGED, NOT THE MATRIX. A whole-matrix build is 9556 objects and about twelve
+minutes; a handful of targets is seconds. While a change is still being iterated on, name them:
+
+    cmake --build build/native -j --target native_sha384_kat native_x509_verify -- -k 0
+    ctest --test-dir build/native -R "^(native_sha384_kat|native_x509_verify)$"
+
+The full sweep is the ACCEPTANCE GATE at the end of a change, run once - not the edit loop. Reach
+for it when a shared header moved (protocore_config.h, buffer_sizing.h, feature_en_error.h) or when
+the change is finished and needs proving.
+
+A TEST THAT ASSERTS A REMOVED CONTRACT IS THE STALE HALF OF THE CHANGE. When a suite fails because
+src/ no longer does something, read git log for the commit that stopped doing it before "fixing"
+src/ back. The borrow null-checks are the worked example: 350 `if (!work)` branches were deleted in
+one commit, and the cases still asserting a null borrow is refused segfaulted because of it. The
+answer was to delete those cases, not to restore 350 dead branches.
+
 `run --direct` is the old path - it compiles each env by itself and never reads the CMake, so one
 env through it costs more than building and running the whole matrix. --debug, --coverage and
 --report-out imply it because each reads one env's own build or its own Unity output.

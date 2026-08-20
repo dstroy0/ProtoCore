@@ -10,12 +10,12 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-#include "network_drivers/presentation/http/http2/h2_conn/h2_conn.h"
-#include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h" // H2Settings, the SETTINGS ids
-#include "network_drivers/presentation/http/http2/hpack/hpack.h"    // the dynamic table this context carries
-#include "mmgr/membuild/membuild.h"  // protocore_sb frame builder
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "network_drivers/presentation/http/http2/h2_conn/h2_conn.h"
+#include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h" // H2Settings, the SETTINGS ids
+#include "network_drivers/presentation/http/http2/hpack/hpack.h"       // the dynamic table this context carries
 
 /** @brief Per-stream state (RFC 9113 sec 5.1, server side of a client-initiated stream). A
  *  mutually-exclusive internal lifecycle state, not a wire value. */
@@ -80,6 +80,14 @@ typedef struct
 static_assert(H2_CONN_OFF_CTL + H2_CTL_FRAME_MAX <= PROTOCORE_H2_CONN_BORROW,
               "PROTOCORE_H2_CONN_BORROW is short of one connection - raise PROTOCORE_H2_CONN_RECORD"
               " in protocore_config.h, which sums it into its arena");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(H2_CONN_OFF_CTX % _Alignof(H2ConnCtx) == 0,
+              "H2_CONN_OFF_CTX is not a multiple of alignof(H2ConnCtx) - H2_CONN_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
 #define H2_CONN_CTX(w) ((H2ConnCtx *)(void *)((w) + H2_CONN_OFF_CTX))
@@ -180,8 +188,9 @@ static void send_control(uint8_t *restrict work, size_t (*build)(uint8_t *, size
 // frame is built in the dispatcher's borrow, which is where every outbound control frame is staged.
 static void send_rst(uint8_t *restrict work, uint32_t stream_id, uint32_t err)
 {
-    size_t n = (H2Frame.rst_args.buf = H2_CONN_CTL(work), H2Frame.rst_args.cap = H2_CTL_FRAME_MAX, H2Frame.rst_args.stream_id = stream_id,
-                H2Frame.rst_args.error = err, H2Frame.build_rst_stream(NULL), H2Frame.n);
+    size_t n = (H2Frame.rst_args.buf = H2_CONN_CTL(work), H2Frame.rst_args.cap = H2_CTL_FRAME_MAX,
+                H2Frame.rst_args.stream_id = stream_id, H2Frame.rst_args.error = err, H2Frame.build_rst_stream(NULL),
+                H2Frame.n);
     wr(work, H2_CONN_CTL(work), n);
 }
 
@@ -432,11 +441,8 @@ static proto_bool handle_continuation(uint8_t *restrict work, const H2FrameHeade
     if (h->flags & H2_FLAG_END_HEADERS)
     {
         H2_CONN_CTX(work)->in_header_block = PROTO_FALSE;
-        H2Block b = {work,
-                     H2_CONN_CTX(work)->hblock_stream,
-                     H2_CONN_CTX(work)->hblock_end_stream,
-                     H2_CONN_CTX(work)->hblock_trailers,
-                     PROTO_FALSE};
+        H2Block b = {work, H2_CONN_CTX(work)->hblock_stream, H2_CONN_CTX(work)->hblock_end_stream,
+                     H2_CONN_CTX(work)->hblock_trailers, PROTO_FALSE};
         return decode_block(&b, H2_CONN_HBLOCK(work), H2_CONN_CTX(work)->hblock_len);
     }
     return PROTO_TRUE;
@@ -502,8 +508,9 @@ static proto_bool handle_data(uint8_t *restrict work, const H2FrameHeader *h, co
     // Replenish flow-control windows for the bytes we consumed (whole frame length).
     if (h->length > 0)
     {
-        size_t n = (H2Frame.window_args.buf = H2_CONN_CTL(work), H2Frame.window_args.cap = H2_CTL_FRAME_MAX, H2Frame.window_args.stream_id = 0,
-                    H2Frame.window_args.increment = h->length, H2Frame.build_window_update(NULL), H2Frame.n);
+        size_t n = (H2Frame.window_args.buf = H2_CONN_CTL(work), H2Frame.window_args.cap = H2_CTL_FRAME_MAX,
+                    H2Frame.window_args.stream_id = 0, H2Frame.window_args.increment = h->length,
+                    H2Frame.build_window_update(NULL), H2Frame.n);
         wr(work, H2_CONN_CTL(work), n);
         n = (H2Frame.window_args.buf = H2_CONN_CTL(work), H2Frame.window_args.cap = H2_CTL_FRAME_MAX,
              H2Frame.window_args.stream_id = h->stream_id, H2Frame.window_args.increment = h->length,

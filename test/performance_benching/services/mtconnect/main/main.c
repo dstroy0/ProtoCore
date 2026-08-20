@@ -11,7 +11,7 @@
 //   - MTConnectDevices (the `probe` response): the device model - a <Device> with its <DataItems>.
 //   - MTConnectAssets (the `asset` response): a <CuttingTool> with its <CuttingToolLifeCycle>.
 //   - MTConnectError (a request error): header + <Errors><Error errorCode=..>.
-//   - protocore_mtc_sample_query: replay a from/count sub-window out of the rolling observation ring
+//   - MtConnect.ring_query: replay a from/count sub-window out of the rolling observation ring
 //     into an MTConnectStreams document (the long-poll `sample` cursor).
 // Out of scope: the HTTP transport (sockets/AsyncWebServer) that carries these documents - only the
 // deterministic CPU-side document framing is timed. Sample data is copied verbatim from the
@@ -31,14 +31,33 @@
 void dbench_run(void)
 {
     static char buf[1024];
-    protocore_mtc_streams s;
+    uint8_t *const w = protocore_mtconnect_span();
 
     // A populated rolling observation ring for the `sample` long-poll query (built once).
-    static protocore_mtc_sample_buffer ring;
-    protocore_mtc_sample_buffer_init(&ring, 1);
-    protocore_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T1", "1.0");
-    protocore_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_SAMPLE, "Position", "xpos", "T2", "2.0");
-    protocore_mtc_sample_buffer_add(&ring, PROTOCORE_MTC_EVENT, "Execution", "exec", "T3", "ACTIVE");
+    MtConnect.streams.next_seq = 1;
+    MtConnect.ring_init(w);
+    MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE;
+    MtConnect.obs.type = "Position";
+    MtConnect.obs.data_id = "xpos";
+    MtConnect.obs.timestamp = "T1";
+    MtConnect.obs.value = "1.0";
+    MtConnect.ring_add(w);
+    MtConnect.obs.timestamp = "T2";
+    MtConnect.obs.value = "2.0";
+    MtConnect.ring_add(w);
+    MtConnect.obs.cat = PROTOCORE_MTC_EVENT;
+    MtConnect.obs.type = "Execution";
+    MtConnect.obs.data_id = "exec";
+    MtConnect.obs.timestamp = "T3";
+    MtConnect.obs.value = "ACTIVE";
+    MtConnect.ring_add(w);
+
+    // What every timed document carries. Staged once above the loop: none of it varies across
+    // iterations, so hoisting it keeps the macro timing the framing and not the assignments.
+    MtConnect.doc.out = buf;
+    MtConnect.doc.cap = sizeof(buf);
+    MtConnect.doc.instance_id = 1500;
+    MtConnect.doc.sender = "agent-1";
 
     for (;;)
     {
@@ -46,37 +65,67 @@ void dbench_run(void)
         volatile size_t sink = 0;
 
         // MTConnectStreams (`current`/`sample`): header + one Event, one Sample, one Condition.
+        MtConnect.streams.next_seq = 42;
+        MtConnect.streams.device_name = "cnc1";
+        MtConnect.streams.device_uuid = "uuid-abc";
+        MtConnect.streams.component = "Device";
+        MtConnect.streams.component_id = "dev1";
+        MtConnect.window.first_seq = 1;
+        MtConnect.window.last_seq = 41;
+        MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
         DBENCH_OP(
-            "protocore_mtc_streams build", 20000, protocore_mtc_streams_begin(&s, buf, sizeof(buf), 1500, 42, "cnc1");
-            protocore_mtc_streams_add(&s, PROTOCORE_MTC_EVENT, "Availability", "avail", 40, "2026-07-06T00:00:00Z",
-                                      "AVAILABLE");
-            protocore_mtc_streams_add(&s, PROTOCORE_MTC_SAMPLE, "Position", "xpos", 41, "2026-07-06T00:00:01Z", "12.5");
-            protocore_mtc_streams_add(&s, PROTOCORE_MTC_CONDITION, "SystemCondition", "sys", 42, "2026-07-06T00:00:02Z",
-                                      "Fault");
-            sink += protocore_mtc_streams_end(&s));
+            "MtConnect.streams build", 20000, MtConnect.streams_begin(w); MtConnect.obs.cat = PROTOCORE_MTC_EVENT;
+            MtConnect.obs.type = "Availability"; MtConnect.obs.data_id = "avail"; MtConnect.obs.seq = 40;
+            MtConnect.obs.timestamp = "2026-07-06T00:00:00Z"; MtConnect.obs.value = "AVAILABLE";
+            MtConnect.streams_add(w); MtConnect.obs.cat = PROTOCORE_MTC_SAMPLE; MtConnect.obs.type = "Position";
+            MtConnect.obs.data_id = "xpos"; MtConnect.obs.seq = 41;
+            MtConnect.obs.timestamp = "2026-07-06T00:00:01Z"; MtConnect.obs.value = "12.5";
+            MtConnect.streams_add(w); MtConnect.obs.cat = PROTOCORE_MTC_CONDITION;
+            MtConnect.obs.type = "SystemCondition"; MtConnect.obs.data_id = "sys"; MtConnect.obs.seq = 42;
+            MtConnect.obs.timestamp = "2026-07-06T00:00:02Z"; MtConnect.obs.value = "Fault";
+            MtConnect.streams_add(w); MtConnect.streams_end(w); sink += MtConnect.n);
 
         // MTConnectDevices (`probe`): the device model with three DataItems.
-        DBENCH_OP("pc_mtc_devices probe build", 20000,
-                  protocore_mtc_devices_begin(&s, buf, sizeof(buf), 1500, "dev1", "cnc1", "uuid-abc");
-                  protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_EVENT, "avail", "Availability", NULL, NULL);
-                  protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_SAMPLE, "xpos", "Position", "Xabs", "MILLIMETER");
-                  protocore_mtc_devices_add_item(&s, PROTOCORE_MTC_CONDITION, "sys", "SystemCondition", NULL, NULL);
-                  sink += protocore_mtc_devices_end(&s));
+        MtConnect.device.device_id = "dev1";
+        MtConnect.device.device_name = "cnc1";
+        MtConnect.device.uuid = "uuid-abc";
+        MtConnect.assets.asset_count = 2;
+        MtConnect.assets.asset_buffer_size = 1024;
+        DBENCH_OP("MtConnect.devices probe build", 20000, MtConnect.devices_begin(w);
+                  MtConnect.item.cat = PROTOCORE_MTC_EVENT; MtConnect.item.id = "avail";
+                  MtConnect.item.type = "Availability"; MtConnect.item.name = NULL; MtConnect.item.units = NULL;
+                  MtConnect.devices_add(w); MtConnect.item.cat = PROTOCORE_MTC_SAMPLE; MtConnect.item.id = "xpos";
+                  MtConnect.item.type = "Position"; MtConnect.item.name = "Xabs";
+                  MtConnect.item.units = "MILLIMETER"; MtConnect.devices_add(w);
+                  MtConnect.item.cat = PROTOCORE_MTC_CONDITION; MtConnect.item.id = "sys";
+                  MtConnect.item.type = "SystemCondition"; MtConnect.item.name = NULL; MtConnect.item.units = NULL;
+                  MtConnect.devices_add(w); MtConnect.devices_end(w); sink += MtConnect.n);
 
         // MTConnectAssets (`asset`): one CuttingTool with a ToolLife.
-        DBENCH_OP(
-            "pc_mtc_assets build", 20000, protocore_mtc_assets_begin(&s, buf, sizeof(buf), 1500, 2, 1024);
-            protocore_mtc_assets_cutting_tool_begin(&s, "tool-1", "SN-42", "T17", "uuid-abc", "2026-07-09T00:00:00Z");
-            protocore_mtc_assets_tool_life(&s, "MINUTES", "DOWN", "100", "42");
-            protocore_mtc_assets_cutting_tool_end(&s); sink += protocore_mtc_assets_end(&s));
+        MtConnect.tool.asset_id = "tool-1";
+        MtConnect.tool.serial_number = "SN-42";
+        MtConnect.tool.tool_id = "T17";
+        MtConnect.tool.device_uuid = "uuid-abc";
+        MtConnect.tool.timestamp = "2026-07-09T00:00:00Z";
+        MtConnect.tool.cutter_status = "AVAILABLE";
+        MtConnect.life.type = "MINUTES";
+        MtConnect.life.count_direction = "DOWN";
+        MtConnect.life.initial = "100";
+        MtConnect.life.limit = "0";
+        MtConnect.life.value = "42";
+        DBENCH_OP("MtConnect.assets build", 20000, MtConnect.assets_begin(w); MtConnect.tool_begin(w);
+                  MtConnect.tool_life(w); MtConnect.tool_end(w); MtConnect.assets_end(w); sink += MtConnect.n);
 
         // MTConnectError: header + one Error element.
-        DBENCH_OP("protocore_mtc_error build", 50000,
-                  sink += protocore_mtc_error(1500, "UNSUPPORTED", "bad path", buf, sizeof(buf)));
+        MtConnect.err.error_code = "UNSUPPORTED";
+        MtConnect.err.message = "bad path";
+        DBENCH_OP("MtConnect.error build", 50000, sink += (MtConnect.error(w), MtConnect.n));
 
         // Long-poll `sample` cursor: replay the whole retained window as an MTConnectStreams document.
-        DBENCH_OP("protocore_mtc_sample_query", 20000,
-                  sink += protocore_mtc_sample_query(&ring, buf, sizeof(buf), 1500, "cnc1", 1, 10));
+        MtConnect.streams.device_name = "cnc1";
+        MtConnect.query.from = 1;
+        MtConnect.query.count = 10;
+        DBENCH_OP("MtConnect.ring_query", 20000, sink += (MtConnect.ring_query(w), MtConnect.n));
 
         (void)sink;
         DBENCH_DONE();

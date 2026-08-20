@@ -46,6 +46,11 @@ found by any of those, so the column is a floor, not a ceiling.
 | refresh the dependency graph after a rename     | `test/harness.py env deps`                                        |
 | run the whole native suite and write the report | `test/harness.py run --report-out test/TEST_REPORT.md`            |
 | regenerate coverage for Sonar                   | `test/harness.py run --coverage`                                  |
+| see which modules are not the golden yet        | `tools/harness.py convert audit families`                         |
+| know which checks ONE module fails, and why     | `tools/harness.py convert audit check <module.h>`                 |
+| prove a shape check against the golden itself   | `tools/harness.py convert audit selfcheck`                        |
+| assert a cast region's offset is aligned        | `tools/harness.py convert align --dry` (no paths = all of src/)   |
+| delete a dead `if (!work)` borrow null-check    | `tools/harness.py convert unnull --dry`                           |
 | convert a flat module to the golden             | `tools/harness.py convert scan`, then `convert gen --dry`         |
 | convert an Internal-handle module               | `tools/harness.py convert pimpl <module.h> --dry`                 |
 | move a file-static context into the borrow      | `tools/harness.py convert funnel <module.c> --dry`                |
@@ -75,6 +80,7 @@ found by any of those, so the column is a floor, not a ceiling.
 | tune a PID loop from a run log                  | `tools/harness.py measure pid`                                    |
 | regenerate crypto KAT headers                   | `tools/harness.py crypto kat`                                     |
 | mint SSH test keys                              | `tools/harness.py crypto sshkeys --if-absent`                     |
+| commit a long message without a temp file       | `tools/harness.py hooks commit "subject" "para" ...` (`--dry`)    |
 | point git at the tracked hooks                  | `tools/harness.py hooks install`                                  |
 | check a converter still works after touching it | `tools/harness.py selftest`                                       |
 | refresh the tables below                        | `tools/harness.py doc gen` (CI: `ci gen --check tools_inventory`) |
@@ -196,7 +202,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | Script             | W | Flags                                | Shells out to |
 | ------------------ | - | ------------------------------------ | ------------- |
 | `ccache_wrap.sh`   | W |                                      | ccache, pio   |
-| `gen_cmake.py`     | W | `--check --quiet`                    |               |
+| `gen_cmake.py`     | W | `--check --quiet`                    | python        |
 | `gen_modules.py`   | W | `--check --cycles --graph --unowned` |               |
 | `split_modules.py` | W | `--go --list`                        |               |
 
@@ -221,6 +227,7 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | --------------------- | - | ------------------------------------------------------------------------------------------------------------------------ | --------------- |
 | `build_envs.sh`       |   |                                                                                                                          | pio             |
 | `codemask.py`         |   |                                                                                                                          |                 |
+| `commit.py`           |   | `--amend --dry --no-signoff`                                                                                             | git             |
 | `funnel.py`           |   |                                                                                                                          |                 |
 | `funnel_test.py`      |   |                                                                                                                          |                 |
 | `gen_x509_fixture.py` | W |                                                                                                                          | openssl         |
@@ -236,6 +243,8 @@ Every one takes `--check` to assert the tracked file already matches, which is h
 | `opcua_conform.py`    |   |                                                                                                                          |                 |
 | `pimpl.py`            | W |                                                                                                                          |                 |
 | `pimpl_test.py`       |   |                                                                                                                          |                 |
+| `shapeaudit.py`       |   | `--quiet`                                                                                                                |                 |
+| `shapeaudit_test.py`  | W |                                                                                                                          |                 |
 | `src2png.py`          |   |                                                                                                                          |                 |
 | `strip_comments.py`   | W | `--exclude --ext --go --no-header`                                                                                       |                 |
 | `uaspace.py`          |   |                                                                                                                          |                 |

@@ -59,15 +59,6 @@ void test_the_span_is_taken_once(void)
     TEST_ASSERT_EQUAL_PTR(protocore_ssh_scp_span(), protocore_ssh_scp_span());
 }
 
-// NULL is what a short pool hands over, and begin writes through the context, so it does nothing.
-void test_begin_refuses_a_null_borrow(void)
-{
-    SshConnection.scp_open_cb = NULL;
-    SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
-    SshScp.begin(NULL);
-    TEST_ASSERT_NULL(SshConnection.scp_open_cb);
-}
-
 // ---------------------------------------------------------------------------
 // What begin binds
 // ---------------------------------------------------------------------------

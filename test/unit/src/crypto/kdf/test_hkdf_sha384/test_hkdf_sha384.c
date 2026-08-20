@@ -244,7 +244,8 @@ void test_the_expand_cap_is_at_the_sha384_block(void)
     TEST_ASSERT_TRUE(HkdfSha384.ok);
 }
 
-// A null borrow, and the null operands each entry names, leave ok false.
+// The null operands each entry names leave ok false. The BORROW is not among them: it comes from
+// the arena and is never null, so the branch that refused one was dead and has been deleted.
 void test_null_operands_are_refused(void)
 {
     uint8_t prk[PROTOCORE_HKDF_SHA384_HASH_LEN], out[32];
@@ -254,10 +255,6 @@ void test_null_operands_are_refused(void)
     HkdfSha384.extract_args.salt_len = 0;
     HkdfSha384.extract_args.ikm = prk;
     HkdfSha384.extract_args.ikm_len = sizeof(prk);
-    HkdfSha384.extract_args.prk = out;
-    HkdfSha384.extract(NULL);
-    TEST_ASSERT_FALSE(HkdfSha384.ok);
-
     HkdfSha384.extract_args.prk = NULL;
     HkdfSha384.extract(g_work);
     TEST_ASSERT_FALSE(HkdfSha384.ok);

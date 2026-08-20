@@ -2237,7 +2237,11 @@
         "src/mmgr/rawmemcpy/rawmemcpy.c",
         "src/mmgr/swar/swar.c",
         "src/server/clock/clock.c",
-        "src/services/machine_tool/mtconnect/mtconnect.c"
+        "src/services/machine_tool/mtconnect/mtconnect.c",
+        "src/mmgr/plaintext/plaintext.c",
+        "src/mmgr/arena/arena.c",
+        "src/mmgr/span/span.c",
+        "src/shared/time_compat/time_compat.c"
       ]
     },
     "services_nats": {

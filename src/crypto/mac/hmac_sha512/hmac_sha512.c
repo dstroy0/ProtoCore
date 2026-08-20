@@ -50,6 +50,14 @@ static_assert(HMAC512_OFF_HASH + PROTOCORE_SHA512_BORROW <= PROTOCORE_HMAC_SHA51
               "PROTOCORE_HMAC_SHA512_BORROW is short of the split - raise it in protocore_config.h, which "
               "sums it into the secure arena");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(HMAC512_OFF_WORK % _Alignof(Hmac512Work) == 0,
+              "HMAC512_OFF_WORK is not a multiple of alignof(Hmac512Work) - HMAC512_WORK() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define HMAC512_INNER(w) ((w) + HMAC512_OFF_INNER)
 #define HMAC512_OKEY(w) ((w) + HMAC512_OFF_OKEY)
@@ -85,7 +93,6 @@ static void build_key_block(const uint8_t *key, size_t key_len, uint8_t block[PR
 
 static void hmac_init(uint8_t *restrict work)
 {
-    HmacSha512.ok = PROTO_FALSE;
     Hmac512Work *w = HMAC512_WORK(work);
     // ipad -> scratch (opad slot holds the padded key), opad -> the slot final reads it back from
     build_key_block(HmacSha512.key_args.key, HmacSha512.key_args.key_len, w->ipad, 0x36u, w->opad, HMAC512_HASH(work));
@@ -104,11 +111,12 @@ static void hmac_update(uint8_t *restrict work)
     Sha512.update_args.data = HmacSha512.update_args.data;
     Sha512.update_args.len = HmacSha512.update_args.len;
     Sha512.update(HMAC512_INNER(work));
+    HmacSha512.ok = PROTO_TRUE;
 }
 
 static void hmac_final(uint8_t *restrict work)
 {
-    if (!work || !HmacSha512.final_args.out)
+    if (!HmacSha512.final_args.out)
     {
         HmacSha512.ok = PROTO_FALSE;
         return;
@@ -133,7 +141,7 @@ static void hmac_final(uint8_t *restrict work)
 static void hmac_mac(uint8_t *restrict work)
 {
     HmacSha512.ok = PROTO_FALSE;
-    if (!work || !HmacSha512.mac_args.out)
+    if (!HmacSha512.mac_args.out)
     {
         return;
     }

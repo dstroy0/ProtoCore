@@ -18,8 +18,8 @@
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protostr/protostr.h"
-#include "services/opcua/opcua.h"
 #include "services/opcua/models/euromap77/euromap77.h"
+#include "services/opcua/opcua.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -90,6 +90,15 @@ typedef struct
 static_assert(EUROMAP77_OFF_CTX + sizeof(EuroMap77Ctx) <= PROTOCORE_EUROMAP77_BORROW,
               "PROTOCORE_EUROMAP77_BORROW is short of the module context - raise it in protocore_config.h, which"
               " sums it into its arena");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(
+    EUROMAP77_OFF_CTX % _Alignof(EuroMap77Ctx) == 0,
+    "EUROMAP77_OFF_CTX is not a multiple of alignof(EuroMap77Ctx) - EUROMAP77_CTX() would return a misaligned "
+    "pointer; pad the region ahead of it");
 
 // The region, at its offset in the caller's borrow.
 #define EUROMAP77_CTX(w) ((EuroMap77Ctx *)(void *)((w) + EUROMAP77_OFF_CTX))
@@ -212,11 +221,6 @@ static void euromap77_bind(uint8_t *restrict work)
 {
     const EmImm *imm = Euromap77.bind_args.imm;
 
-    Euromap77.ok = work != NULL;
-    if (!Euromap77.ok)
-    {
-        return;
-    }
     EuroMap77Ctx *c = EUROMAP77_CTX(work);
     c->imm = imm;
     // The NamespaceArray is the server's (Part 3 sec 8.2.2), so the indices these nodes are served
@@ -224,6 +228,7 @@ static void euromap77_bind(uint8_t *restrict work)
     c->ns = protocore_opcua_namespace_index(EUROMAP77_NS_URI);
     c->ns_gt = protocore_opcua_namespace_index(EUROMAP83_NS_URI);
     Euromap77.ns = c->ns;
+    Euromap77.ok = PROTO_TRUE;
 }
 
 // OPC UA Part 4 sec 5.11.2: Read is a Server service over the Server's AddressSpace, so this is the

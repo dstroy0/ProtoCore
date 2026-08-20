@@ -8,12 +8,12 @@
 
 #include "crypto/x509/x509_verify/x509_verify.h"
 
-#include "crypto/asymmetric/ecdsa/ecdsa.h"   // Ecdsa.verify: P-256 over the TBS
+#include "crypto/asymmetric/ecdsa/ecdsa.h"     // Ecdsa.verify: P-256 over the TBS
 #include "crypto/asymmetric/ed25519/ed25519.h" // Ed25519.verify: likewise
-#include "crypto/asymmetric/rsa/rsa.h"     // Rsa.verify: PKCS#1 v1.5 over the TBS
-#include "mmgr/protomem/protomem.h"             // mem.cmp / mem.set
-#include "mmgr/secure/secure.h"               // the persistent end a verification's bytes come from
-#include "shared/der/der.h"            // the reader the key and the signature are decoded with
+#include "crypto/asymmetric/rsa/rsa.h"         // Rsa.verify: PKCS#1 v1.5 over the TBS
+#include "mmgr/protomem/protomem.h"            // mem.cmp / mem.set
+#include "mmgr/secure/secure.h"                // the persistent end a verification's bytes come from
+#include "shared/der/der.h"                    // the reader the key and the signature are decoded with
 
 PROTOCORE_BEGIN_DECLS
 
@@ -38,6 +38,15 @@ typedef struct
 static_assert(X509_VERIFY_OFF_ALG + PROTOCORE_RSA_BORROW <= PROTOCORE_X509_VERIFY_BORROW,
               "PROTOCORE_X509_VERIFY_BORROW is short of the context and an RSA verification - raise it in"
               " protocore_config.h, which sums it into its arena");
+
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(
+    X509_VERIFY_OFF_CTX % _Alignof(X509VerifyCtx) == 0,
+    "X509_VERIFY_OFF_CTX is not a multiple of alignof(X509VerifyCtx) - X509_VERIFY_CTX() would return a misaligned "
+    "pointer; pad the region ahead of it");
 
 // The regions, at their offsets in the caller's borrow.
 #define X509_VERIFY_CTX(w) ((X509VerifyCtx *)(void *)((w) + X509_VERIFY_OFF_CTX))
@@ -245,9 +254,9 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
         Rsa.verify_args.msg_len = msg_len;
         Rsa.verify_args.sig = sig;
         Rsa.verify_args.sig_len = sig_len;
-        Rsa.verify_args.hash = (alg == PROTOCORE_X509_SIG_RSA_SHA512)  ? PROTOCORE_RSA_HASH_SHA512
-                               : (alg == PROTOCORE_X509_SIG_RSA_PSS) ? PROTOCORE_RSA_HASH_PSS_SHA256
-                                                                     : PROTOCORE_RSA_HASH_SHA256;
+        Rsa.verify_args.hash = (alg == PROTOCORE_X509_SIG_RSA_SHA512) ? PROTOCORE_RSA_HASH_SHA512
+                               : (alg == PROTOCORE_X509_SIG_RSA_PSS)  ? PROTOCORE_RSA_HASH_PSS_SHA256
+                                                                      : PROTOCORE_RSA_HASH_SHA256;
         Rsa.verify(X509_VERIFY_ALG(work));
         verdict(Rsa.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
         return;

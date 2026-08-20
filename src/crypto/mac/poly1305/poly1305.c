@@ -45,6 +45,14 @@ static_assert(POLY1305_OFF_BUF + 16u <= PROTOCORE_POLY1305_BORROW,
               "PROTOCORE_POLY1305_BORROW is short of the limbs and the padded final block - raise it in "
               "protocore_config.h, which sums it into the secure arena");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(POLY1305_OFF_CTX % _Alignof(Poly1305Ctx) == 0,
+              "POLY1305_OFF_CTX is not a multiple of alignof(Poly1305Ctx) - POLY1305_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define POLY1305_CTX(w) ((Poly1305Ctx *)(void *)((w) + POLY1305_OFF_CTX))
 #define POLY1305_BUF(w) ((w) + POLY1305_OFF_BUF)
@@ -242,7 +250,7 @@ static void poly1305_finish(uint8_t *restrict work, const uint8_t *key, uint8_t 
 static void poly1305_mac(uint8_t *restrict work)
 {
     Poly1305.ok = PROTO_FALSE;
-    if (!work || !Poly1305.mac_args.key || !Poly1305.mac_args.out)
+    if (!Poly1305.mac_args.key || !Poly1305.mac_args.out)
     {
         return;
     }

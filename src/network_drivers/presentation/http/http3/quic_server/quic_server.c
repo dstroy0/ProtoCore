@@ -113,6 +113,20 @@ static_assert(QSRV_OFF_RING + (size_t)PROTOCORE_QUIC_INGEST_RING * sizeof(QuicIn
               "PROTOCORE_QUIC_SERVER_BORROW is short of the server - raise it in protocore_config.h, which"
               " sums it into its arena");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(QSRV_OFF_CTX % _Alignof(QuicServerCtx) == 0,
+              "QSRV_OFF_CTX is not a multiple of alignof(QuicServerCtx) - QSRV_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+static_assert(QSRV_OFF_POOL % _Alignof(QuicSlot) == 0,
+              "QSRV_OFF_POOL is not a multiple of alignof(QuicSlot) - QSRV_POOL() would return a misaligned "
+              "pointer; pad the region ahead of it");
+static_assert(QSRV_OFF_RING % _Alignof(QuicIngest) == 0,
+              "QSRV_OFF_RING is not a multiple of alignof(QuicIngest) - QSRV_RING() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define QSRV_CTX(w) ((QuicServerCtx *)(void *)((w) + QSRV_OFF_CTX))
 #define QSRV_POOL(w) ((QuicSlot *)(void *)((w) + QSRV_OFF_POOL))
@@ -331,7 +345,8 @@ static QuicSlot *open_conn(uint8_t *restrict work, const QuicLongHeader *lh, con
 
 // HttpRoute a datagram to its connection by Destination Connection ID. Sets *is_initial when it is an
 // unmatched Initial (the caller opens a new connection) and copies the parsed long header out.
-static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, proto_bool *is_initial, QuicLongHeader *lh_out)
+static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, proto_bool *is_initial,
+                       QuicLongHeader *lh_out)
 {
     *is_initial = PROTO_FALSE;
     if (len < 1)

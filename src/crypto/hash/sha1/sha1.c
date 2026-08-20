@@ -177,7 +177,7 @@ static void sha1_run(uint8_t *restrict work, const uint8_t *data, size_t len, ui
 
 static void sha1_hash(uint8_t *restrict work)
 {
-    if (!work || !Sha1.hash_args.out)
+    if (!Sha1.hash_args.out)
     {
         Sha1.ok = PROTO_FALSE;
         return;

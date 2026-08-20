@@ -66,6 +66,14 @@ static_assert(ED25519_OFF_SHA + PROTOCORE_SHA512_BORROW <= PROTOCORE_ED25519_BOR
               "PROTOCORE_ED25519_BORROW is short of the working set and the nested SHA-512 borrow - "
               "raise it in protocore_config.h, which derives PROTOCORE_SECURE_ARENA_SIZE from it");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(ED25519_OFF_CTX % _Alignof(Ed25519Ctx) == 0,
+              "ED25519_OFF_CTX is not a multiple of alignof(Ed25519Ctx) - ED25519_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The regions, at their offsets in the caller's borrow.
 #define ED25519_CTX(w) ((Ed25519Ctx *)(void *)((w) + ED25519_OFF_CTX))
 #define ED25519_SHA(w) ((w) + ED25519_OFF_SHA)
@@ -661,7 +669,7 @@ static void ed_challenge(uint8_t *restrict work, const uint8_t *sig_r, const uin
 static void ed25519_pubkey(uint8_t *restrict work)
 {
     Ed25519.ok = PROTO_FALSE;
-    if (!work || !Ed25519.pubkey_args.seed || !Ed25519.pubkey_args.pub)
+    if (!Ed25519.pubkey_args.seed || !Ed25519.pubkey_args.pub)
     {
         return;
     }
@@ -673,7 +681,7 @@ static void ed25519_pubkey(uint8_t *restrict work)
 static void ed25519_sign(uint8_t *restrict work)
 {
     Ed25519.ok = PROTO_FALSE;
-    if (!work || !Ed25519.sign_args.seed || !Ed25519.sign_args.sig)
+    if (!Ed25519.sign_args.seed || !Ed25519.sign_args.sig)
     {
         return;
     }
@@ -729,7 +737,7 @@ static void ed25519_sign(uint8_t *restrict work)
 static void ed25519_verify(uint8_t *restrict work)
 {
     Ed25519.ok = PROTO_FALSE;
-    if (!work || !Ed25519.verify_args.pub || !Ed25519.verify_args.sig)
+    if (!Ed25519.verify_args.pub || !Ed25519.verify_args.sig)
     {
         return;
     }

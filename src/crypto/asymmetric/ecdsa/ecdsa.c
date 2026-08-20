@@ -758,7 +758,7 @@ static proto_bool ecdsa_sign_core(uint8_t *restrict work, uint8_t sig[64], const
 static void ecdsa_pubkey(uint8_t *restrict work)
 {
     Ecdsa.ok = PROTO_FALSE;
-    if (!work || !Ecdsa.pubkey_args.pub || !Ecdsa.pubkey_args.priv)
+    if (!Ecdsa.pubkey_args.pub || !Ecdsa.pubkey_args.priv)
     {
         return;
     }
@@ -794,7 +794,7 @@ static void ecdsa_pubkey(uint8_t *restrict work)
 static void ecdsa_sign(uint8_t *restrict work)
 {
     Ecdsa.ok = PROTO_FALSE;
-    if (!work || !Ecdsa.sign_args.sig || !Ecdsa.sign_args.priv)
+    if (!Ecdsa.sign_args.sig || !Ecdsa.sign_args.priv)
     {
         return;
     }
@@ -819,7 +819,7 @@ static void ecdsa_sign(uint8_t *restrict work)
 static void ecdsa_verify(uint8_t *restrict work)
 {
     Ecdsa.ok = PROTO_FALSE;
-    if (!work || !Ecdsa.verify_args.pub || !Ecdsa.verify_args.sig)
+    if (!Ecdsa.verify_args.pub || !Ecdsa.verify_args.sig)
     {
         return;
     }
@@ -891,7 +891,7 @@ static void ecdsa_verify(uint8_t *restrict work)
 static void ecdsa_ecdh(uint8_t *restrict work)
 {
     Ecdsa.ok = PROTO_FALSE;
-    if (!work || !Ecdsa.ecdh_args.shared_x || !Ecdsa.ecdh_args.peer_pub || !Ecdsa.ecdh_args.priv)
+    if (!Ecdsa.ecdh_args.shared_x || !Ecdsa.ecdh_args.peer_pub || !Ecdsa.ecdh_args.priv)
     {
         return;
     }

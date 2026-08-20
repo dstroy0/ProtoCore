@@ -1758,6 +1758,7 @@
 #ifndef PROTOCORE_MTC_SAMPLE_BUFFER
 #define PROTOCORE_MTC_SAMPLE_BUFFER 32 // observations retained for `sample` replay
 #endif
+
 #ifndef PROTOCORE_MTC_STR_MAX
 #define PROTOCORE_MTC_STR_MAX 24 // max stored type / dataItemId length (excl NUL)
 #endif
@@ -1766,6 +1767,28 @@
 #endif
 #ifndef PROTOCORE_MTC_VAL_MAX
 #define PROTOCORE_MTC_VAL_MAX 32 // max stored observation value length (excl NUL)
+#endif
+
+/**
+ * @brief The bytes an MTConnect document runs out of: the running context and the observation ring.
+ *
+ * One retained observation is its four strings, its sequence and its category, and the slack covers
+ * the padding the compiler puts between them plus the context in front of the ring. The exact layout
+ * is mtconnect.c's, and that translation unit includes both and proves this covers it - the same
+ * arrangement PROTOCORE_SSH_SLOT_BYTES has with the SSH offsets.
+ */
+#ifndef PROTOCORE_MTCONNECT_BORROW
+#define PROTOCORE_MTCONNECT_BORROW                                                                                     \
+    ((size_t)PROTOCORE_MTC_SAMPLE_BUFFER *                                                                             \
+         (2u * (PROTOCORE_MTC_STR_MAX + 1u) + (PROTOCORE_MTC_TS_MAX + 1u) + (PROTOCORE_MTC_VAL_MAX + 1u) + 16u) +      \
+     128u)
+#endif
+
+// The agent is a gated module, so a build without it reserves nothing for the ring.
+#if PROTOCORE_ENABLE_MTCONNECT
+#define PROTOCORE_PLAINTEXT_WORK_MTCONNECT PROTOCORE_MTCONNECT_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_MTCONNECT 0
 #endif
 
 /**
@@ -3686,7 +3709,8 @@
      PROTOCORE_PLAINTEXT_WORK_NTPSERVER + PROTOCORE_PLAINTEXT_WORK_NTPSERVICE +                                        \
      PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE + PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE +                                  \
      PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + PROTOCORE_PLAINTEXT_WORK_SSHSFTP +                                          \
-     PROTOCORE_PLAINTEXT_WORK_SSHCOMP + PROTOCORE_PLAINTEXT_WORK_FILESERVING + 256)
+     PROTOCORE_PLAINTEXT_WORK_SSHCOMP + PROTOCORE_PLAINTEXT_WORK_MTCONNECT +                                           \
+     PROTOCORE_PLAINTEXT_WORK_FILESERVING + 256)
 #endif
 
 /**

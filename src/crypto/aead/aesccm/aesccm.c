@@ -107,6 +107,14 @@ static_assert(AESCCM_OFF_END <= PROTOCORE_AESCCM_BORROW,
               "PROTOCORE_AESCCM_BORROW is short of the record context - raise it in protocore_config.h, "
               "which sums it into the secure arena");
 
+// A region reached through a cast is only aligned if its OFFSET is: the arena aligns the base up to
+// PROTOCORE_ARENA_MAX_ALIGN, so a borrow is met by aligning its offset alone. Both sides are
+// compile-time constants, so this is a compile-time claim rather than a runtime branch. The size
+// assert above bounds the far end of the chain and says nothing about where a region begins.
+static_assert(AESCCM_OFF_CTX % _Alignof(CcmWork) == 0,
+              "AESCCM_OFF_CTX is not a multiple of alignof(CcmWork) - AESCCM_CTX() would return a misaligned "
+              "pointer; pad the region ahead of it");
+
 // The region, at its offset in the caller's borrow.
 #define AESCCM_CTX(w) ((CcmWork *)(void *)((w) + AESCCM_OFF_CTX))
 
@@ -286,8 +294,8 @@ static proto_bool aesccm_open_record(uint8_t *restrict work, const uint8_t *key,
 static void aesccm_seal(uint8_t *restrict work)
 {
     AesCcm.ok = PROTO_FALSE;
-    if (!work || !AesCcm.seal_args.key || !AesCcm.seal_args.nonce || !AesCcm.seal_args.ct_out ||
-        !AesCcm.seal_args.tag_out || (AesCcm.seal_args.key_len != 16 && AesCcm.seal_args.key_len != 32))
+    if (!AesCcm.seal_args.key || !AesCcm.seal_args.nonce || !AesCcm.seal_args.ct_out || !AesCcm.seal_args.tag_out ||
+        (AesCcm.seal_args.key_len != 16 && AesCcm.seal_args.key_len != 32))
     {
         return;
     }
@@ -300,7 +308,7 @@ static void aesccm_seal(uint8_t *restrict work)
 static void aesccm_open(uint8_t *restrict work)
 {
     AesCcm.ok = PROTO_FALSE;
-    if (!work || !AesCcm.open_args.key || !AesCcm.open_args.nonce || !AesCcm.open_args.ct || !AesCcm.open_args.out ||
+    if (!AesCcm.open_args.key || !AesCcm.open_args.nonce || !AesCcm.open_args.ct || !AesCcm.open_args.out ||
         !AesCcm.open_args.tag || (AesCcm.open_args.key_len != 16 && AesCcm.open_args.key_len != 32))
     {
         return;
