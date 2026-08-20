@@ -1670,10 +1670,16 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
     """
     obj = spec["object"]
     vtable = spec.get("from") == "vtable"
-    byname = {(e.get("call") if vtable else e["flat"]): e for e in spec["entries"]}
+    byname = {k: e for e in spec["entries"] for k in [(e.get("call") if vtable else e.get("flat"))] if k}
     lead = "" if vtable else r"(?<![\w.>])"
-    pat = re.compile(r"%s(%s)\s*\(" % (lead, "|".join(re.escape(k) for k in byname)))
     total, skipped = 0, []
+    # No flat names to look for means no call sites to rewrite. Guarded rather than assumed:
+    # "|".join over an empty set is the EMPTY STRING, so the alternation becomes `()`, which matches
+    # at every `(` in every file under every root, and the lookup below raises KeyError on ''. A
+    # module already on the Ns shape scans to zero entries and hits exactly that.
+    if not byname:
+        return total, skipped
+    pat = re.compile(r"%s(%s)\s*\(" % (lead, "|".join(re.escape(k) for k in byname)))
     for root in roots:
         for dp, _, fns in os.walk(os.path.join(R, root)):
             if ".pio" in dp:
@@ -2140,12 +2146,17 @@ def restructure_source(spec):
 
     # a module that called its own flat names now stages the args and calls the static entry: the
     # borrow is already in hand, so there is no span to fetch.
-    byname = {e["flat"]: e for e in spec["entries"]}
-    pat = re.compile(r"(?<![\w.>])(%s)\s*\(" % "|".join(re.escape(k) for k in byname))
+    # A module with no flat entries left has no self-calls to rewrite. The guard is not cosmetic:
+    # "|".join over an empty set is the EMPTY STRING, so the alternation below becomes `()` - which
+    # matches at every `(` in the file with an empty group - and the first lookup raises KeyError on
+    # ''. That is what a module already on the Ns shape produces, and it took out 51 of the 79
+    # families this was run over. Such a module needs `convert shape`, not `gen`.
+    byname = {e["flat"]: e for e in spec["entries"] if e.get("flat")}
     mask = code_mask(s)
     selfcalls = set()
+    pat = re.compile(r"(?<![\w.>])(%s)\s*\(" % "|".join(re.escape(k) for k in byname)) if byname else None
     at = 0
-    while True:
+    while pat is not None:
         m = pat.search(s, at)
         if not m:
             break
