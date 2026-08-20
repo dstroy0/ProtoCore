@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`dd93a4a`](https://github.com/dstroy0/ProtoCore/commit/dd93a4a1bbea1a45863c5031f7263a3b83bb8d75))
 - update CHANGELOG.md [skip ci] ([`7aa5c13`](https://github.com/dstroy0/ProtoCore/commit/7aa5c13e1ee381beab7a9768ab0a4a2616fc642b))
 - update CHANGELOG.md [skip ci] ([`cdea70c`](https://github.com/dstroy0/ProtoCore/commit/cdea70c6e1144e0478d6a8556f913fb333429411))
 - update CHANGELOG.md [skip ci] ([`fabe8d2`](https://github.com/dstroy0/ProtoCore/commit/fabe8d283e2ef3135e59f8bc3b7d5bbfff56adda))
@@ -402,6 +403,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- stop two TUs reaching in, gate the module over its whole body ([`423eb31`](https://github.com/dstroy0/ProtoCore/commit/423eb31fd3f39d26266a203651dea92baafa287e))
 - isolate the Date header's clock, gate both clocks ([`4caa2b8`](https://github.com/dstroy0/ProtoCore/commit/4caa2b8914755e3fab2495035323344bc86625bd))
 - drop PROTOCORE_NEED_*, state the dependency instead ([`b17178c`](https://github.com/dstroy0/ProtoCore/commit/b17178cc0d312d55d1c7aaee38ce15a0fc3c26e0))
 - one gate rule, not two ([`d2ea5f8`](https://github.com/dstroy0/ProtoCore/commit/d2ea5f8e6c74e640d9542c20e2463caf61f84d75))
