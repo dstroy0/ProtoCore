@@ -142,11 +142,17 @@ typedef struct
     LonworksSnvtTempDecodeArgs snvt_temp_decode_args;
     LonworksSnvtSwitchEncodeArgs snvt_switch_encode_args;
     LonworksSnvtSwitchDecodeArgs snvt_switch_decode_args;
-
     proto_bool ok;
     size_t n;
     double value;
+} LonworksVars;
 
+/** @brief The operands and the outcome. */
+extern LonworksVars LonworksV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_nv)(uint8_t *restrict work);
     void (*const parse_nv)(uint8_t *restrict work);
     void (*const snvt_temp_encode)(uint8_t *restrict work);
@@ -155,8 +161,27 @@ typedef struct
     void (*const snvt_switch_decode)(uint8_t *restrict work);
 } LonworksNs;
 
-/** @brief The one symbol this module exports. */
-extern LonworksNs Lonworks;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in LonworksV or a region of the borrow at a fixed offset.
+void protocore_lonworks_build_nv(uint8_t *restrict work);
+void protocore_lonworks_parse_nv(uint8_t *restrict work);
+void protocore_lonworks_snvt_temp_encode(uint8_t *restrict work);
+void protocore_lonworks_snvt_temp_decode(uint8_t *restrict work);
+void protocore_lonworks_snvt_switch_encode(uint8_t *restrict work);
+void protocore_lonworks_snvt_switch_decode(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Lonworks.build_nv(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const LonworksNs Lonworks __attribute__((unused)) = {
+    .build_nv = protocore_lonworks_build_nv,
+    .parse_nv = protocore_lonworks_parse_nv,
+    .snvt_temp_encode = protocore_lonworks_snvt_temp_encode,
+    .snvt_temp_decode = protocore_lonworks_snvt_temp_decode,
+    .snvt_switch_encode = protocore_lonworks_snvt_switch_encode,
+    .snvt_switch_decode = protocore_lonworks_snvt_switch_decode,
+};
 
 PROTOCORE_END_DECLS
 

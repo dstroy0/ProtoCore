@@ -20,60 +20,60 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void iolink_checksum6(uint8_t *restrict work);
+void protocore_iolink_checksum6(uint8_t *restrict work);
 
-static void iolink_mc(uint8_t *restrict work)
+void protocore_iolink_mc(uint8_t *restrict work)
 {
     (void)work;
-    proto_bool read = Iolink.mc_args.read;
-    uint8_t channel = Iolink.mc_args.channel;
-    uint8_t address = Iolink.mc_args.address;
+    proto_bool read = IolinkV.mc_args.read;
+    uint8_t channel = IolinkV.mc_args.channel;
+    uint8_t address = IolinkV.mc_args.address;
 
-    Iolink.value = (uint8_t)((read ? IOL_MC_READ : 0u) | ((channel & 0x03u) << 5) | (address & 0x1Fu));
+    IolinkV.value = (uint8_t)((read ? IOL_MC_READ : 0u) | ((channel & 0x03u) << 5) | (address & 0x1Fu));
 }
 
-static void iolink_mc_is_read(uint8_t *restrict work)
+void protocore_iolink_mc_is_read(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t mc = Iolink.mc_is_read_args.mc;
+    uint8_t mc = IolinkV.mc_is_read_args.mc;
 
-    Iolink.ok = (mc & IOL_MC_READ) != 0;
+    IolinkV.ok = (mc & IOL_MC_READ) != 0;
 }
 
-static void iolink_mc_channel(uint8_t *restrict work)
+void protocore_iolink_mc_channel(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t mc = Iolink.mc_channel_args.mc;
+    uint8_t mc = IolinkV.mc_channel_args.mc;
 
-    Iolink.value = (uint8_t)((mc >> 5) & 0x03u);
+    IolinkV.value = (uint8_t)((mc >> 5) & 0x03u);
 }
 
-static void iolink_mc_address(uint8_t *restrict work)
+void protocore_iolink_mc_address(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t mc = Iolink.mc_address_args.mc;
+    uint8_t mc = IolinkV.mc_address_args.mc;
 
-    Iolink.value = (uint8_t)(mc & 0x1Fu);
+    IolinkV.value = (uint8_t)(mc & 0x1Fu);
 }
 
-static void iolink_ckt(uint8_t *restrict work)
+void protocore_iolink_ckt(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t mseq_type = Iolink.ckt_args.mseq_type;
-    uint8_t checksum6 = Iolink.ckt_args.checksum6;
+    uint8_t mseq_type = IolinkV.ckt_args.mseq_type;
+    uint8_t checksum6 = IolinkV.ckt_args.checksum6;
 
-    Iolink.value = (uint8_t)(((mseq_type & 0x03u) << 6) | (checksum6 & IOL_CHECK_SUM_MASK));
+    IolinkV.value = (uint8_t)(((mseq_type & 0x03u) << 6) | (checksum6 & IOL_CHECK_SUM_MASK));
 }
 
-static void iolink_cks(uint8_t *restrict work)
+void protocore_iolink_cks(uint8_t *restrict work)
 {
     (void)work;
-    proto_bool event = Iolink.cks_args.event;
-    proto_bool pd_invalid = Iolink.cks_args.pd_invalid;
-    uint8_t checksum6 = Iolink.cks_args.checksum6;
+    proto_bool event = IolinkV.cks_args.event;
+    proto_bool pd_invalid = IolinkV.cks_args.pd_invalid;
+    uint8_t checksum6 = IolinkV.cks_args.checksum6;
 
-    Iolink.value = (uint8_t)((event ? IOL_CKS_EVENT : 0u) | (pd_invalid ? IOL_CKS_PD_INVALID : 0u) |
-                             (checksum6 & IOL_CHECK_SUM_MASK));
+    IolinkV.value = (uint8_t)((event ? IOL_CKS_EVENT : 0u) | (pd_invalid ? IOL_CKS_PD_INVALID : 0u) |
+                              (checksum6 & IOL_CHECK_SUM_MASK));
 }
 
 // Compress the 8-bit XOR result to 6 bits per IO-Link spec v1.1.4 Annex A.1.6 equation (A.1).
@@ -90,50 +90,50 @@ static uint8_t compress6(uint8_t b)
     return (uint8_t)((d5 << 5) | (d4 << 4) | (d3 << 3) | (d2 << 2) | (d1 << 1) | d0);
 }
 
-static void iolink_checksum6(uint8_t *restrict work)
+void protocore_iolink_checksum6(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *msg = Iolink.checksum6_args.msg;
-    size_t len = Iolink.checksum6_args.len;
+    const uint8_t *msg = IolinkV.checksum6_args.msg;
+    size_t len = IolinkV.checksum6_args.len;
 
     uint8_t x = IOL_CHECKSUM_SEED; // seed XORed with the first octet, then every octet
     for (size_t i = 0; i < len; i++)
     {
         x ^= msg[i];
     }
-    Iolink.value = compress6(x);
+    IolinkV.value = compress6(x);
 }
 
-static void iolink_finalize(uint8_t *restrict work)
+void protocore_iolink_finalize(uint8_t *restrict work)
 {
-    uint8_t *msg = Iolink.finalize_args.msg;
-    size_t len = Iolink.finalize_args.len;
-    size_t check_idx = Iolink.finalize_args.check_idx;
+    uint8_t *msg = IolinkV.finalize_args.msg;
+    size_t len = IolinkV.finalize_args.len;
+    size_t check_idx = IolinkV.finalize_args.check_idx;
 
     if (!msg || check_idx >= len)
     {
-        Iolink.value = 0;
+        IolinkV.value = 0;
         return;
     }
     msg[check_idx] = (uint8_t)(msg[check_idx] & IOL_CHECK_HIGH_MASK); // zero the checksum field
-    Iolink.checksum6_args.msg = msg;
-    Iolink.checksum6_args.len = len;
-    iolink_checksum6(work);
-    uint8_t c6 = Iolink.value;
+    IolinkV.checksum6_args.msg = msg;
+    IolinkV.checksum6_args.len = len;
+    protocore_iolink_checksum6(work);
+    uint8_t c6 = IolinkV.value;
     msg[check_idx] = (uint8_t)(msg[check_idx] | (c6 & IOL_CHECK_SUM_MASK));
-    Iolink.value = msg[check_idx];
+    IolinkV.value = msg[check_idx];
 }
 
-static void iolink_verify(uint8_t *restrict work)
+void protocore_iolink_verify(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *msg = Iolink.verify_args.msg;
-    size_t len = Iolink.verify_args.len;
-    size_t check_idx = Iolink.verify_args.check_idx;
+    const uint8_t *msg = IolinkV.verify_args.msg;
+    size_t len = IolinkV.verify_args.len;
+    size_t check_idx = IolinkV.verify_args.check_idx;
 
     if (!msg || check_idx >= len)
     {
-        Iolink.ok = PROTO_FALSE;
+        IolinkV.ok = PROTO_FALSE;
         return;
     }
     uint8_t x = IOL_CHECKSUM_SEED;
@@ -141,18 +141,11 @@ static void iolink_verify(uint8_t *restrict work)
     {
         x ^= (i == check_idx) ? (uint8_t)(msg[i] & IOL_CHECK_HIGH_MASK) : msg[i];
     }
-    Iolink.ok = compress6(x) == (uint8_t)(msg[check_idx] & IOL_CHECK_SUM_MASK);
+    IolinkV.ok = compress6(x) == (uint8_t)(msg[check_idx] & IOL_CHECK_SUM_MASK);
 }
 
-IolinkNs Iolink = {.mc = iolink_mc,
-                   .mc_is_read = iolink_mc_is_read,
-                   .mc_channel = iolink_mc_channel,
-                   .mc_address = iolink_mc_address,
-                   .ckt = iolink_ckt,
-                   .cks = iolink_cks,
-                   .checksum6 = iolink_checksum6,
-                   .finalize = iolink_finalize,
-                   .verify = iolink_verify};
+/** @brief The operands and the outcome. */
+IolinkVars IolinkV;
 
 PROTOCORE_END_DECLS
 

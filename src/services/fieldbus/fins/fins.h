@@ -214,10 +214,16 @@ typedef struct
     FinsBuildStopArgs build_stop_args;
     FinsParseCommandArgs parse_command_args;
     FinsParseResponseArgs parse_response_args;
-
     proto_bool ok;
     size_t n;
+} FinsVars;
 
+/** @brief The operands and the outcome. */
+extern FinsVars FinsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_command)(uint8_t *restrict work);
     void (*const build_memory_area_read)(uint8_t *restrict work);
     void (*const build_memory_area_write)(uint8_t *restrict work);
@@ -227,8 +233,29 @@ typedef struct
     void (*const parse_response)(uint8_t *restrict work);
 } FinsNs;
 
-/** @brief The one symbol this module exports. */
-extern FinsNs Fins;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in FinsV or a region of the borrow at a fixed offset.
+void protocore_fins_build_command(uint8_t *restrict work);
+void protocore_fins_build_memory_area_read(uint8_t *restrict work);
+void protocore_fins_build_memory_area_write(uint8_t *restrict work);
+void protocore_fins_build_run(uint8_t *restrict work);
+void protocore_fins_build_stop(uint8_t *restrict work);
+void protocore_fins_parse_command(uint8_t *restrict work);
+void protocore_fins_parse_response(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Fins.build_command(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const FinsNs Fins __attribute__((unused)) = {
+    .build_command = protocore_fins_build_command,
+    .build_memory_area_read = protocore_fins_build_memory_area_read,
+    .build_memory_area_write = protocore_fins_build_memory_area_write,
+    .build_run = protocore_fins_build_run,
+    .build_stop = protocore_fins_build_stop,
+    .parse_command = protocore_fins_parse_command,
+    .parse_response = protocore_fins_parse_response,
+};
 
 PROTOCORE_END_DECLS
 

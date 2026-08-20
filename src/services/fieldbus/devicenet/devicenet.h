@@ -224,11 +224,17 @@ typedef struct
     DevicenetBuildFragmentArgs build_fragment_args;
     DevicenetFragResetArgs frag_reset_args;
     DevicenetFragFeedArgs frag_feed_args;
-
     proto_bool ok;
     uint8_t value;
     DeviceNetFragResult frag;
+} DevicenetVars;
 
+/** @brief The operands and the outcome. */
+extern DevicenetVars DevicenetV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const encode_id)(uint8_t *restrict work);
     void (*const decode_id)(uint8_t *restrict work);
     void (*const msg_header)(uint8_t *restrict work);
@@ -239,8 +245,31 @@ typedef struct
     void (*const frag_feed)(uint8_t *restrict work);
 } DevicenetNs;
 
-/** @brief The one symbol this module exports. */
-extern DevicenetNs Devicenet;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DevicenetV or a region of the borrow at a fixed offset.
+void protocore_devicenet_encode_id(uint8_t *restrict work);
+void protocore_devicenet_decode_id(uint8_t *restrict work);
+void protocore_devicenet_msg_header(uint8_t *restrict work);
+void protocore_devicenet_frag_octet(uint8_t *restrict work);
+void protocore_devicenet_build_explicit(uint8_t *restrict work);
+void protocore_devicenet_build_fragment(uint8_t *restrict work);
+void protocore_devicenet_frag_reset(uint8_t *restrict work);
+void protocore_devicenet_frag_feed(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Devicenet.encode_id(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DevicenetNs Devicenet __attribute__((unused)) = {
+    .encode_id = protocore_devicenet_encode_id,
+    .decode_id = protocore_devicenet_decode_id,
+    .msg_header = protocore_devicenet_msg_header,
+    .frag_octet = protocore_devicenet_frag_octet,
+    .build_explicit = protocore_devicenet_build_explicit,
+    .build_fragment = protocore_devicenet_build_fragment,
+    .frag_reset = protocore_devicenet_frag_reset,
+    .frag_feed = protocore_devicenet_frag_feed,
+};
 
 PROTOCORE_END_DECLS
 

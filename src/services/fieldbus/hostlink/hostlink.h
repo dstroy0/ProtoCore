@@ -150,11 +150,17 @@ typedef struct
     HostlinkBuildReadArgs build_read_args;
     HostlinkReadWordArgs read_word_args;
     HostlinkBuildWriteArgs build_write_args;
-
     proto_bool ok;
     uint8_t value;
     size_t n;
+} HostlinkVars;
 
+/** @brief The operands and the outcome. */
+extern HostlinkVars HostlinkV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const fcs)(uint8_t *restrict work);
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
@@ -164,8 +170,29 @@ typedef struct
     void (*const build_write)(uint8_t *restrict work);
 } HostlinkNs;
 
-/** @brief The one symbol this module exports. */
-extern HostlinkNs Hostlink;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HostlinkV or a region of the borrow at a fixed offset.
+void protocore_hostlink_fcs(uint8_t *restrict work);
+void protocore_hostlink_build(uint8_t *restrict work);
+void protocore_hostlink_parse(uint8_t *restrict work);
+void protocore_hostlink_end_code(uint8_t *restrict work);
+void protocore_hostlink_build_read(uint8_t *restrict work);
+void protocore_hostlink_read_word(uint8_t *restrict work);
+void protocore_hostlink_build_write(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Hostlink.fcs(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HostlinkNs Hostlink __attribute__((unused)) = {
+    .fcs = protocore_hostlink_fcs,
+    .build = protocore_hostlink_build,
+    .parse = protocore_hostlink_parse,
+    .end_code = protocore_hostlink_end_code,
+    .build_read = protocore_hostlink_build_read,
+    .read_word = protocore_hostlink_read_word,
+    .build_write = protocore_hostlink_build_write,
+};
 
 PROTOCORE_END_DECLS
 

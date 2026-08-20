@@ -45,30 +45,30 @@ void dbench_run(void)
 
         // Freshness verdict: a single branch + one uint64 add, the per-request hot path. Cheap -> large N.
         DBENCH_OP("HttpDelivery.swr (stale)", 200000, {
-            HttpDelivery.swr_args.age_s = 75;
-            HttpDelivery.swr_args.max_age_s = 60;
-            HttpDelivery.swr_args.swr_s = 30;
+            HttpDeliveryV.swr_args.age_s = 75;
+            HttpDeliveryV.swr_args.max_age_s = 60;
+            HttpDeliveryV.swr_args.swr_s = 30;
             HttpDelivery.swr(delivery_work);
-            sinkv += (int)HttpDelivery.value;
+            sinkv += (int)HttpDeliveryV.value;
         });
         // Cache-Control builder: hand-rolled decimal format of two windows into a small buffer.
         DBENCH_OP("HttpDelivery.cache_control", 100000, {
-            HttpDelivery.cache_control_args.max_age_s = 60;
-            HttpDelivery.cache_control_args.swr_s = 30;
-            HttpDelivery.cache_control_args.out = cc;
-            HttpDelivery.cache_control_args.cap = sizeof(cc);
+            HttpDeliveryV.cache_control_args.max_age_s = 60;
+            HttpDeliveryV.cache_control_args.swr_s = 30;
+            HttpDeliveryV.cache_control_args.out = cc;
+            HttpDeliveryV.cache_control_args.cap = sizeof(cc);
             HttpDelivery.cache_control(delivery_work);
-            sinkn += HttpDelivery.n;
+            sinkn += HttpDeliveryV.n;
         });
         // SW precache manifest: JSON-escaped serialization of the versioned path list (per /precache.json request).
         DBENCH_OP("HttpDelivery.sw_manifest x3", 50000, {
-            HttpDelivery.sw_manifest_args.paths = paths;
-            HttpDelivery.sw_manifest_args.n = 3;
-            HttpDelivery.sw_manifest_args.version = "v42";
-            HttpDelivery.sw_manifest_args.out = mf;
-            HttpDelivery.sw_manifest_args.cap = sizeof(mf);
+            HttpDeliveryV.sw_manifest_args.paths = paths;
+            HttpDeliveryV.sw_manifest_args.n = 3;
+            HttpDeliveryV.sw_manifest_args.version = "v42";
+            HttpDeliveryV.sw_manifest_args.out = mf;
+            HttpDeliveryV.sw_manifest_args.cap = sizeof(mf);
             HttpDelivery.sw_manifest(delivery_work);
-            sinkn += HttpDelivery.n;
+            sinkn += HttpDeliveryV.n;
         });
 
         (void)sinkv;

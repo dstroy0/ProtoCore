@@ -20,21 +20,21 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void profinet_dcp_header(uint8_t *restrict work)
+void protocore_profinet_dcp_header(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t frame_id = Profinet.dcp_header_args.frame_id;
-    uint8_t service_id = Profinet.dcp_header_args.service_id;
-    uint8_t service_type = Profinet.dcp_header_args.service_type;
-    uint32_t xid = Profinet.dcp_header_args.xid;
-    uint16_t response_delay = Profinet.dcp_header_args.response_delay;
-    uint16_t data_length = Profinet.dcp_header_args.data_length;
-    uint8_t *out = Profinet.dcp_header_args.out;
-    size_t cap = Profinet.dcp_header_args.cap;
+    uint16_t frame_id = ProfinetV.dcp_header_args.frame_id;
+    uint8_t service_id = ProfinetV.dcp_header_args.service_id;
+    uint8_t service_type = ProfinetV.dcp_header_args.service_type;
+    uint32_t xid = ProfinetV.dcp_header_args.xid;
+    uint16_t response_delay = ProfinetV.dcp_header_args.response_delay;
+    uint16_t data_length = ProfinetV.dcp_header_args.data_length;
+    uint8_t *out = ProfinetV.dcp_header_args.out;
+    size_t cap = ProfinetV.dcp_header_args.cap;
 
     if (!out || cap < PN_DCP_HDR_LEN)
     {
-        Profinet.n = 0;
+        ProfinetV.n = 0;
         return;
     }
     out[0] = (uint8_t)(frame_id >> 8);
@@ -49,29 +49,29 @@ static void profinet_dcp_header(uint8_t *restrict work)
     out[9] = (uint8_t)response_delay;
     out[10] = (uint8_t)(data_length >> 8);
     out[11] = (uint8_t)data_length;
-    Profinet.n = PN_DCP_HDR_LEN;
+    ProfinetV.n = PN_DCP_HDR_LEN;
 }
 
-static void profinet_dcp_block(uint8_t *restrict work)
+void protocore_profinet_dcp_block(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t option = Profinet.dcp_block_args.option;
-    uint8_t suboption = Profinet.dcp_block_args.suboption;
-    const uint8_t *value = Profinet.dcp_block_args.value;
-    size_t value_len = Profinet.dcp_block_args.value_len;
-    uint8_t *out = Profinet.dcp_block_args.out;
-    size_t cap = Profinet.dcp_block_args.cap;
+    uint8_t option = ProfinetV.dcp_block_args.option;
+    uint8_t suboption = ProfinetV.dcp_block_args.suboption;
+    const uint8_t *value = ProfinetV.dcp_block_args.value;
+    size_t value_len = ProfinetV.dcp_block_args.value_len;
+    uint8_t *out = ProfinetV.dcp_block_args.out;
+    size_t cap = ProfinetV.dcp_block_args.cap;
 
     if (!out || (value_len && !value) || value_len > 0xFFFF)
     {
-        Profinet.n = 0;
+        ProfinetV.n = 0;
         return;
     }
     proto_bool pad = (value_len & 1) != 0; // pad to an even total length
     size_t n = 4 + value_len + (pad ? 1 : 0);
     if (n > cap)
     {
-        Profinet.n = 0;
+        ProfinetV.n = 0;
         return;
     }
     out[0] = option;
@@ -86,19 +86,19 @@ static void profinet_dcp_block(uint8_t *restrict work)
     {
         out[4 + value_len] = 0x00;
     }
-    Profinet.n = n;
+    ProfinetV.n = n;
 }
 
-static void profinet_dcp_parse_header(uint8_t *restrict work)
+void protocore_profinet_dcp_parse_header(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *frame = Profinet.dcp_parse_header_args.frame;
-    size_t len = Profinet.dcp_parse_header_args.len;
-    PnDcpHeader *out = Profinet.dcp_parse_header_args.out;
+    const uint8_t *frame = ProfinetV.dcp_parse_header_args.frame;
+    size_t len = ProfinetV.dcp_parse_header_args.len;
+    PnDcpHeader *out = ProfinetV.dcp_parse_header_args.out;
 
     if (!frame || !out || len < PN_DCP_HDR_LEN)
     {
-        Profinet.ok = PROTO_FALSE;
+        ProfinetV.ok = PROTO_FALSE;
         return;
     }
     out->frame_id = (uint16_t)((frame[0] << 8) | frame[1]);
@@ -107,16 +107,16 @@ static void profinet_dcp_parse_header(uint8_t *restrict work)
     out->xid = ((uint32_t)frame[4] << 24) | ((uint32_t)frame[5] << 16) | ((uint32_t)frame[6] << 8) | frame[7];
     out->response_delay = (uint16_t)((frame[8] << 8) | frame[9]);
     out->data_length = (uint16_t)((frame[10] << 8) | frame[11]);
-    Profinet.ok = PROTO_TRUE;
+    ProfinetV.ok = PROTO_TRUE;
 }
 
-static void profinet_dcp_walk(uint8_t *restrict work)
+void protocore_profinet_dcp_walk(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *blocks = Profinet.dcp_walk_args.blocks;
-    size_t len = Profinet.dcp_walk_args.len;
-    protocore_pn_dcp_block_cb cb = Profinet.dcp_walk_args.cb;
-    void *arg = Profinet.dcp_walk_args.arg;
+    const uint8_t *blocks = ProfinetV.dcp_walk_args.blocks;
+    size_t len = ProfinetV.dcp_walk_args.len;
+    protocore_pn_dcp_block_cb cb = ProfinetV.dcp_walk_args.cb;
+    void *arg = ProfinetV.dcp_walk_args.arg;
 
     size_t off = 0;
     while (off + 4 <= len)
@@ -126,7 +126,7 @@ static void profinet_dcp_walk(uint8_t *restrict work)
         uint16_t blen = (uint16_t)((blocks[off + 2] << 8) | blocks[off + 3]);
         if (off + 4 + blen > len)
         {
-            Profinet.ok = PROTO_FALSE;
+            ProfinetV.ok = PROTO_FALSE;
             return;
         }
         if (cb)
@@ -136,13 +136,11 @@ static void profinet_dcp_walk(uint8_t *restrict work)
         size_t adv = 4 + blen + ((blen & 1) ? 1 : 0); // skip the even-pad filler
         off += adv;
     }
-    Profinet.ok = PROTO_TRUE;
+    ProfinetV.ok = PROTO_TRUE;
 }
 
-ProfinetNs Profinet = {.dcp_header = profinet_dcp_header,
-                       .dcp_block = profinet_dcp_block,
-                       .dcp_parse_header = profinet_dcp_parse_header,
-                       .dcp_walk = profinet_dcp_walk};
+/** @brief The operands and the outcome. */
+ProfinetVars ProfinetV;
 
 PROTOCORE_END_DECLS
 

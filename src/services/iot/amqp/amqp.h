@@ -151,11 +151,17 @@ typedef struct
     AmqpPayloadArgs payload; ///< the framed octets
     AmqpMethodArgs method;   ///< a method payload's fields
     AmqpContentArgs content; ///< a content header payload's fields
-
     proto_bool ok;
     size_t n;
     size_t consumed;
+} AmqpVars;
 
+/** @brief The operands and the outcome. */
+extern AmqpVars AmqpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const protocol_header)(uint8_t *restrict work);
     void (*const build_frame)(uint8_t *restrict work);
     void (*const build_method)(uint8_t *restrict work);
@@ -165,8 +171,29 @@ typedef struct
     void (*const parse_method)(uint8_t *restrict work);
 } AmqpNs;
 
-/** @brief The one symbol this module exports. */
-extern AmqpNs Amqp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in AmqpV or a region of the borrow at a fixed offset.
+void protocore_amqp_protocol_header(uint8_t *restrict work);
+void protocore_amqp_build_frame(uint8_t *restrict work);
+void protocore_amqp_build_method(uint8_t *restrict work);
+void protocore_amqp_build_content_header(uint8_t *restrict work);
+void protocore_amqp_build_heartbeat(uint8_t *restrict work);
+void protocore_amqp_parse_frame(uint8_t *restrict work);
+void protocore_amqp_parse_method(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Amqp.protocol_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const AmqpNs Amqp __attribute__((unused)) = {
+    .protocol_header = protocore_amqp_protocol_header,
+    .build_frame = protocore_amqp_build_frame,
+    .build_method = protocore_amqp_build_method,
+    .build_content_header = protocore_amqp_build_content_header,
+    .build_heartbeat = protocore_amqp_build_heartbeat,
+    .parse_frame = protocore_amqp_parse_frame,
+    .parse_method = protocore_amqp_parse_method,
+};
 
 PROTOCORE_END_DECLS
 

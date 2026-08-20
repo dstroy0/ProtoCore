@@ -303,12 +303,18 @@ typedef struct
     Cia402SdoGetI32Args sdo_get_i32_args;
     Cia402PackCommandArgs pack_command_args;
     Cia402UnpackStatusArgs unpack_status_args;
-
     proto_bool ok;
     Cia402State value;
     uint16_t u16;
     size_t n;
+} Cia402Vars;
 
+/** @brief The operands and the outcome. */
+extern Cia402Vars Cia402V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const state)(uint8_t *restrict work);
     void (*const controlword)(uint8_t *restrict work);
     void (*const enable_sequence)(uint8_t *restrict work);
@@ -324,8 +330,41 @@ typedef struct
     void (*const unpack_status)(uint8_t *restrict work);
 } Cia402Ns;
 
-/** @brief The one symbol this module exports. */
-extern Cia402Ns Cia402;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Cia402V or a region of the borrow at a fixed offset.
+void protocore_cia402_state(uint8_t *restrict work);
+void protocore_cia402_controlword(uint8_t *restrict work);
+void protocore_cia402_enable_sequence(uint8_t *restrict work);
+void protocore_cia402_sdo_set_controlword(uint8_t *restrict work);
+void protocore_cia402_sdo_set_mode(uint8_t *restrict work);
+void protocore_cia402_sdo_set_target_position(uint8_t *restrict work);
+void protocore_cia402_sdo_set_target_velocity(uint8_t *restrict work);
+void protocore_cia402_sdo_set_target_torque(uint8_t *restrict work);
+void protocore_cia402_sdo_read(uint8_t *restrict work);
+void protocore_cia402_sdo_get_u16(uint8_t *restrict work);
+void protocore_cia402_sdo_get_i32(uint8_t *restrict work);
+void protocore_cia402_pack_command(uint8_t *restrict work);
+void protocore_cia402_unpack_status(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Cia402.state(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Cia402Ns Cia402 __attribute__((unused)) = {
+    .state = protocore_cia402_state,
+    .controlword = protocore_cia402_controlword,
+    .enable_sequence = protocore_cia402_enable_sequence,
+    .sdo_set_controlword = protocore_cia402_sdo_set_controlword,
+    .sdo_set_mode = protocore_cia402_sdo_set_mode,
+    .sdo_set_target_position = protocore_cia402_sdo_set_target_position,
+    .sdo_set_target_velocity = protocore_cia402_sdo_set_target_velocity,
+    .sdo_set_target_torque = protocore_cia402_sdo_set_target_torque,
+    .sdo_read = protocore_cia402_sdo_read,
+    .sdo_get_u16 = protocore_cia402_sdo_get_u16,
+    .sdo_get_i32 = protocore_cia402_sdo_get_i32,
+    .pack_command = protocore_cia402_pack_command,
+    .unpack_status = protocore_cia402_unpack_status,
+};
 
 PROTOCORE_END_DECLS
 

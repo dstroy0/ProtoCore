@@ -63,33 +63,28 @@ void dbench_run(void)
         volatile bool sinkb = false;
         CanFrame f = {0};
 
-        Cia402.state_args.statusword = sw_op_enabled;
-        DBENCH_OP("Cia402.state", 200000, sink8 += (uint8_t)(Cia402.state(cia402_work), Cia402.value));
-        Cia402.enable_sequence_args.state = CIA402_STATE_SWITCHED_ON;
-        DBENCH_OP("Cia402.enable_sequence", 200000,
-                  sink16 += (Cia402.enable_sequence(cia402_work), Cia402.u16));
-        Cia402.sdo_set_controlword_args.out = &f;
-        Cia402.sdo_set_controlword_args.node = 5;
-        Cia402.sdo_set_controlword_args.controlword = 0x000F;
-        DBENCH_OP("Cia402.sdo_set_controlword", 100000,
-                  sinkb |= (Cia402.sdo_set_controlword(cia402_work), Cia402.ok));
-        Cia402.sdo_get_u16_args.f = &sdo_resp;
-        Cia402.sdo_get_u16_args.want_index = CIA402_OD_STATUSWORD;
-        Cia402.sdo_get_u16_args.value = &sdo_val;
-        DBENCH_OP("Cia402.sdo_get_u16", 100000,
-                  sinkb |= (Cia402.sdo_get_u16(cia402_work), Cia402.ok));
-        Cia402.pack_command_args.buf = pdo_out;
-        Cia402.pack_command_args.cap = sizeof(pdo_out);
-        Cia402.pack_command_args.controlword = 0x000F;
-        Cia402.pack_command_args.target = -12345;
-        DBENCH_BULK("Cia402.pack_command", 100000, 6,
-                    sinksz += (Cia402.pack_command(cia402_work), Cia402.n));
-        Cia402.unpack_status_args.buf = tpdo;
-        Cia402.unpack_status_args.len = sizeof(tpdo);
-        Cia402.unpack_status_args.statusword = &pdo_sw;
-        Cia402.unpack_status_args.actual = &pdo_actual;
-        DBENCH_BULK("Cia402.unpack_status", 100000, 6,
-                    sinkb |= (Cia402.unpack_status(cia402_work), Cia402.ok));
+        Cia402V.state_args.statusword = sw_op_enabled;
+        DBENCH_OP("Cia402.state", 200000, sink8 += (uint8_t)(Cia402.state(cia402_work), Cia402V.value));
+        Cia402V.enable_sequence_args.state = CIA402_STATE_SWITCHED_ON;
+        DBENCH_OP("Cia402.enable_sequence", 200000, sink16 += (Cia402.enable_sequence(cia402_work), Cia402V.u16));
+        Cia402V.sdo_set_controlword_args.out = &f;
+        Cia402V.sdo_set_controlword_args.node = 5;
+        Cia402V.sdo_set_controlword_args.controlword = 0x000F;
+        DBENCH_OP("Cia402.sdo_set_controlword", 100000, sinkb |= (Cia402.sdo_set_controlword(cia402_work), Cia402V.ok));
+        Cia402V.sdo_get_u16_args.f = &sdo_resp;
+        Cia402V.sdo_get_u16_args.want_index = CIA402_OD_STATUSWORD;
+        Cia402V.sdo_get_u16_args.value = &sdo_val;
+        DBENCH_OP("Cia402.sdo_get_u16", 100000, sinkb |= (Cia402.sdo_get_u16(cia402_work), Cia402V.ok));
+        Cia402V.pack_command_args.buf = pdo_out;
+        Cia402V.pack_command_args.cap = sizeof(pdo_out);
+        Cia402V.pack_command_args.controlword = 0x000F;
+        Cia402V.pack_command_args.target = -12345;
+        DBENCH_BULK("Cia402.pack_command", 100000, 6, sinksz += (Cia402.pack_command(cia402_work), Cia402V.n));
+        Cia402V.unpack_status_args.buf = tpdo;
+        Cia402V.unpack_status_args.len = sizeof(tpdo);
+        Cia402V.unpack_status_args.statusword = &pdo_sw;
+        Cia402V.unpack_status_args.actual = &pdo_actual;
+        DBENCH_BULK("Cia402.unpack_status", 100000, 6, sinkb |= (Cia402.unpack_status(cia402_work), Cia402V.ok));
 
         (void)sink8;
         (void)sink16;

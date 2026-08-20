@@ -48,26 +48,26 @@ static uint32_t get32(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void enip_build(uint8_t *restrict work);
+void protocore_enip_build(uint8_t *restrict work);
 
-static void enip_build(uint8_t *restrict work)
+void protocore_enip_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Enip.build_args.buf;
-    size_t cap = Enip.build_args.cap;
-    const EipHeader *h = Enip.build_args.h;
-    const uint8_t *data = Enip.build_args.data;
-    size_t data_len = Enip.build_args.data_len;
+    uint8_t *buf = EnipV.build_args.buf;
+    size_t cap = EnipV.build_args.cap;
+    const EipHeader *h = EnipV.build_args.h;
+    const uint8_t *data = EnipV.build_args.data;
+    size_t data_len = EnipV.build_args.data_len;
 
     if (!buf || !h || (data_len && !data) || data_len > 0xFFFF)
     {
-        Enip.n = 0;
+        EnipV.n = 0;
         return;
     }
     size_t total = EIP_HEADER_SIZE + data_len;
     if (total > cap)
     {
-        Enip.n = 0;
+        EnipV.n = 0;
         return;
     }
     size_t p = 0;
@@ -83,21 +83,21 @@ static void enip_build(uint8_t *restrict work)
         mem.cpy(buf + p, data, data_len);
         p += data_len;
     }
-    Enip.n = p;
+    EnipV.n = p;
 }
 
-static void enip_parse(uint8_t *restrict work)
+void protocore_enip_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = Enip.parse_args.buf;
-    size_t len = Enip.parse_args.len;
-    EipHeader *out = Enip.parse_args.out;
-    const uint8_t **data = Enip.parse_args.data;
-    size_t *data_len = Enip.parse_args.data_len;
+    const uint8_t *buf = EnipV.parse_args.buf;
+    size_t len = EnipV.parse_args.len;
+    EipHeader *out = EnipV.parse_args.out;
+    const uint8_t **data = EnipV.parse_args.data;
+    size_t *data_len = EnipV.parse_args.data_len;
 
     if (!buf || !out || len < EIP_HEADER_SIZE)
     {
-        Enip.ok = PROTO_FALSE;
+        EnipV.ok = PROTO_FALSE;
         return;
     }
     out->command = get16(buf);
@@ -108,7 +108,7 @@ static void enip_parse(uint8_t *restrict work)
     out->options = get32(buf + 20);
     if ((size_t)EIP_HEADER_SIZE + out->length > len) // declared data not fully buffered
     {
-        Enip.ok = PROTO_FALSE;
+        EnipV.ok = PROTO_FALSE;
         return;
     }
     if (data)
@@ -119,14 +119,14 @@ static void enip_parse(uint8_t *restrict work)
     {
         *data_len = out->length;
     }
-    Enip.ok = PROTO_TRUE;
+    EnipV.ok = PROTO_TRUE;
 }
 
-static void enip_build_register_session(uint8_t *restrict work)
+void protocore_enip_build_register_session(uint8_t *restrict work)
 {
-    uint8_t *buf = Enip.build_register_session_args.buf;
-    size_t cap = Enip.build_register_session_args.cap;
-    const uint8_t *sender_context = Enip.build_register_session_args.sender_context;
+    uint8_t *buf = EnipV.build_register_session_args.buf;
+    size_t cap = EnipV.build_register_session_args.cap;
+    const uint8_t *sender_context = EnipV.build_register_session_args.sender_context;
 
     EipHeader h;
     mem.set(&h, 0, sizeof(h));
@@ -138,20 +138,20 @@ static void enip_build_register_session(uint8_t *restrict work)
     uint8_t data[4];
     put16(data, 1);     // protocol version
     put16(data + 2, 0); // options flags
-    Enip.build_args.buf = buf;
-    Enip.build_args.cap = cap;
-    Enip.build_args.h = &h;
-    Enip.build_args.data = data;
-    Enip.build_args.data_len = sizeof(data);
-    enip_build(work);
+    EnipV.build_args.buf = buf;
+    EnipV.build_args.cap = cap;
+    EnipV.build_args.h = &h;
+    EnipV.build_args.data = data;
+    EnipV.build_args.data_len = sizeof(data);
+    protocore_enip_build(work);
 }
 
-static void enip_build_unregister_session(uint8_t *restrict work)
+void protocore_enip_build_unregister_session(uint8_t *restrict work)
 {
-    uint8_t *buf = Enip.build_unregister_session_args.buf;
-    size_t cap = Enip.build_unregister_session_args.cap;
-    uint32_t session_handle = Enip.build_unregister_session_args.session_handle;
-    const uint8_t *sender_context = Enip.build_unregister_session_args.sender_context;
+    uint8_t *buf = EnipV.build_unregister_session_args.buf;
+    size_t cap = EnipV.build_unregister_session_args.cap;
+    uint32_t session_handle = EnipV.build_unregister_session_args.session_handle;
+    const uint8_t *sender_context = EnipV.build_unregister_session_args.sender_context;
 
     EipHeader h;
     mem.set(&h, 0, sizeof(h));
@@ -161,27 +161,27 @@ static void enip_build_unregister_session(uint8_t *restrict work)
     {
         mem.cpy(h.sender_context, sender_context, 8);
     }
-    Enip.build_args.buf = buf;
-    Enip.build_args.cap = cap;
-    Enip.build_args.h = &h;
-    Enip.build_args.data = NULL;
-    Enip.build_args.data_len = 0;
-    enip_build(work); // no command-specific data
+    EnipV.build_args.buf = buf;
+    EnipV.build_args.cap = cap;
+    EnipV.build_args.h = &h;
+    EnipV.build_args.data = NULL;
+    EnipV.build_args.data_len = 0;
+    protocore_enip_build(work); // no command-specific data
 }
 
-static void enip_build_send_rr_data(uint8_t *restrict work)
+void protocore_enip_build_send_rr_data(uint8_t *restrict work)
 {
-    uint8_t *buf = Enip.build_send_rr_data_args.buf;
-    size_t cap = Enip.build_send_rr_data_args.cap;
-    uint32_t session_handle = Enip.build_send_rr_data_args.session_handle;
-    const uint8_t *sender_context = Enip.build_send_rr_data_args.sender_context;
-    uint16_t timeout = Enip.build_send_rr_data_args.timeout;
-    const uint8_t *cip = Enip.build_send_rr_data_args.cip;
-    size_t cip_len = Enip.build_send_rr_data_args.cip_len;
+    uint8_t *buf = EnipV.build_send_rr_data_args.buf;
+    size_t cap = EnipV.build_send_rr_data_args.cap;
+    uint32_t session_handle = EnipV.build_send_rr_data_args.session_handle;
+    const uint8_t *sender_context = EnipV.build_send_rr_data_args.sender_context;
+    uint16_t timeout = EnipV.build_send_rr_data_args.timeout;
+    const uint8_t *cip = EnipV.build_send_rr_data_args.cip;
+    size_t cip_len = EnipV.build_send_rr_data_args.cip_len;
 
     if (!buf || (cip_len && !cip) || cip_len > 0xFFFF)
     {
-        Enip.n = 0;
+        EnipV.n = 0;
         return;
     }
     // command data: interface handle(4) + timeout(2) + CPF{ count(2) + null item(4) + unconn item(4+cip) }
@@ -189,7 +189,7 @@ static void enip_build_send_rr_data(uint8_t *restrict work)
     size_t total = EIP_HEADER_SIZE + data_len;
     if (total > cap || data_len > 0xFFFF)
     {
-        Enip.n = 0;
+        EnipV.n = 0;
         return;
     }
 
@@ -203,15 +203,15 @@ static void enip_build_send_rr_data(uint8_t *restrict work)
     {
         mem.cpy(h.sender_context, sender_context, 8);
     }
-    Enip.build_args.buf = buf;
-    Enip.build_args.cap = cap;
-    Enip.build_args.h = &h;
-    Enip.build_args.data = NULL;
-    Enip.build_args.data_len = 0;
-    enip_build(work);
-    if (Enip.n == 0) // writes only the 24-octet header, length 0
+    EnipV.build_args.buf = buf;
+    EnipV.build_args.cap = cap;
+    EnipV.build_args.h = &h;
+    EnipV.build_args.data = NULL;
+    EnipV.build_args.data_len = 0;
+    protocore_enip_build(work);
+    if (EnipV.n == 0) // writes only the 24-octet header, length 0
     {
-        Enip.n = 0;
+        EnipV.n = 0;
         return;
     }
     // Patch the length field (offset 2) to the real command-data length.
@@ -230,14 +230,14 @@ static void enip_build_send_rr_data(uint8_t *restrict work)
         mem.cpy(buf + p, cip, cip_len);
         p += cip_len;
     }
-    Enip.n = p;
+    EnipV.n = p;
 }
 
-static void enip_build_list_identity(uint8_t *restrict work)
+void protocore_enip_build_list_identity(uint8_t *restrict work)
 {
-    uint8_t *buf = Enip.build_list_identity_args.buf;
-    size_t cap = Enip.build_list_identity_args.cap;
-    const uint8_t *sender_context = Enip.build_list_identity_args.sender_context;
+    uint8_t *buf = EnipV.build_list_identity_args.buf;
+    size_t cap = EnipV.build_list_identity_args.cap;
+    const uint8_t *sender_context = EnipV.build_list_identity_args.sender_context;
 
     EipHeader h;
     mem.set(&h, 0, sizeof(h));
@@ -246,24 +246,24 @@ static void enip_build_list_identity(uint8_t *restrict work)
     {
         mem.cpy(h.sender_context, sender_context, 8);
     }
-    Enip.build_args.buf = buf;
-    Enip.build_args.cap = cap;
-    Enip.build_args.h = &h;
-    Enip.build_args.data = NULL;
-    Enip.build_args.data_len = 0;
-    enip_build(work); // no command-specific data
+    EnipV.build_args.buf = buf;
+    EnipV.build_args.cap = cap;
+    EnipV.build_args.h = &h;
+    EnipV.build_args.data = NULL;
+    EnipV.build_args.data_len = 0;
+    protocore_enip_build(work); // no command-specific data
 }
 
-static void enip_parse_list_identity(uint8_t *restrict work)
+void protocore_enip_parse_list_identity(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = Enip.parse_list_identity_args.data;
-    size_t data_len = Enip.parse_list_identity_args.data_len;
-    EipIdentity *out = Enip.parse_list_identity_args.out;
+    const uint8_t *data = EnipV.parse_list_identity_args.data;
+    size_t data_len = EnipV.parse_list_identity_args.data_len;
+    EipIdentity *out = EnipV.parse_list_identity_args.out;
 
     if (!data || !out || data_len < 2) // item count
     {
-        Enip.ok = PROTO_FALSE;
+        EnipV.ok = PROTO_FALSE;
         return;
     }
     uint16_t item_count = get16(data);
@@ -272,7 +272,7 @@ static void enip_parse_list_identity(uint8_t *restrict work)
     {
         if (pos + 4 > data_len)
         {
-            Enip.ok = PROTO_FALSE;
+            EnipV.ok = PROTO_FALSE;
             return;
         }
         uint16_t type = get16(data + pos);
@@ -280,7 +280,7 @@ static void enip_parse_list_identity(uint8_t *restrict work)
         pos += 4;
         if (pos + ilen > data_len)
         {
-            Enip.ok = PROTO_FALSE;
+            EnipV.ok = PROTO_FALSE;
             return;
         }
         if (type == EIP_CPF_LIST_IDENTITY)
@@ -289,13 +289,13 @@ static void enip_parse_list_identity(uint8_t *restrict work)
             if (ilen <
                 33) // proto(2) + sockaddr(16) + vendor/type/code(6) + rev(2) + status(2) + serial(4) + namelen(1)
             {
-                Enip.ok = PROTO_FALSE;
+                EnipV.ok = PROTO_FALSE;
                 return;
             }
             uint8_t name_len = it[32];
             if ((size_t)ilen < (size_t)34 + name_len) // + the name + the trailing state octet
             {
-                Enip.ok = PROTO_FALSE;
+                EnipV.ok = PROTO_FALSE;
                 return;
             }
             out->protocol_version = get16(it);
@@ -310,25 +310,25 @@ static void enip_parse_list_identity(uint8_t *restrict work)
             out->product_name_len = name_len;
             out->product_name = (const char *)(it + 33);
             out->state = it[33 + name_len];
-            Enip.ok = PROTO_TRUE;
+            EnipV.ok = PROTO_TRUE;
             return;
         }
         pos += ilen;
     }
-    Enip.ok = PROTO_FALSE; // no List Identity item
+    EnipV.ok = PROTO_FALSE; // no List Identity item
 }
 
-static void enip_parse_send_rr_data(uint8_t *restrict work)
+void protocore_enip_parse_send_rr_data(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = Enip.parse_send_rr_data_args.data;
-    size_t data_len = Enip.parse_send_rr_data_args.data_len;
-    const uint8_t **cip = Enip.parse_send_rr_data_args.cip;
-    size_t *cip_len = Enip.parse_send_rr_data_args.cip_len;
+    const uint8_t *data = EnipV.parse_send_rr_data_args.data;
+    size_t data_len = EnipV.parse_send_rr_data_args.data_len;
+    const uint8_t **cip = EnipV.parse_send_rr_data_args.cip;
+    size_t *cip_len = EnipV.parse_send_rr_data_args.cip_len;
 
     if (!data || data_len < 8) // interface handle(4) + timeout(2) + item count(2)
     {
-        Enip.ok = PROTO_FALSE;
+        EnipV.ok = PROTO_FALSE;
         return;
     }
     size_t pos = 6; // skip interface handle + timeout
@@ -338,7 +338,7 @@ static void enip_parse_send_rr_data(uint8_t *restrict work)
     {
         if (pos + 4 > data_len)
         {
-            Enip.ok = PROTO_FALSE;
+            EnipV.ok = PROTO_FALSE;
             return;
         }
         uint16_t type = get16(data + pos);
@@ -346,7 +346,7 @@ static void enip_parse_send_rr_data(uint8_t *restrict work)
         pos += 4;
         if (pos + ilen > data_len)
         {
-            Enip.ok = PROTO_FALSE;
+            EnipV.ok = PROTO_FALSE;
             return;
         }
         if (type == EIP_CPF_UNCONNECTED_DATA)
@@ -359,22 +359,16 @@ static void enip_parse_send_rr_data(uint8_t *restrict work)
             {
                 *cip_len = ilen;
             }
-            Enip.ok = PROTO_TRUE;
+            EnipV.ok = PROTO_TRUE;
             return;
         }
         pos += ilen;
     }
-    Enip.ok = PROTO_FALSE; // no unconnected data item
+    EnipV.ok = PROTO_FALSE; // no unconnected data item
 }
 
-EnipNs Enip = {.build = enip_build,
-               .parse = enip_parse,
-               .build_register_session = enip_build_register_session,
-               .build_unregister_session = enip_build_unregister_session,
-               .build_send_rr_data = enip_build_send_rr_data,
-               .parse_send_rr_data = enip_parse_send_rr_data,
-               .build_list_identity = enip_build_list_identity,
-               .parse_list_identity = enip_parse_list_identity};
+/** @brief The operands and the outcome. */
+EnipVars EnipV;
 
 PROTOCORE_END_DECLS
 

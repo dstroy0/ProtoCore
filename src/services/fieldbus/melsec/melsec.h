@@ -157,17 +157,36 @@ typedef struct
     MelsecBuildReadArgs build_read_args;
     MelsecBuildWriteArgs build_write_args;
     MelsecParseResponseArgs parse_response_args;
-
     proto_bool ok;
     size_t n;
+} MelsecVars;
 
+/** @brief The operands and the outcome. */
+extern MelsecVars MelsecV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_read)(uint8_t *restrict work);
     void (*const build_write)(uint8_t *restrict work);
     void (*const parse_response)(uint8_t *restrict work);
 } MelsecNs;
 
-/** @brief The one symbol this module exports. */
-extern MelsecNs Melsec;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MelsecV or a region of the borrow at a fixed offset.
+void protocore_melsec_build_read(uint8_t *restrict work);
+void protocore_melsec_build_write(uint8_t *restrict work);
+void protocore_melsec_parse_response(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Melsec.build_read(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MelsecNs Melsec __attribute__((unused)) = {
+    .build_read = protocore_melsec_build_read,
+    .build_write = protocore_melsec_build_write,
+    .parse_response = protocore_melsec_parse_response,
+};
 
 PROTOCORE_END_DECLS
 

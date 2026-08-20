@@ -23,26 +23,26 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void rawl2_build(uint8_t *restrict work)
+void protocore_rawl2_build(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *dst = Rawl2.build_args.dst;
-    const uint8_t *src = Rawl2.build_args.src;
-    uint16_t ethertype = Rawl2.build_args.ethertype;
-    const uint8_t *payload = Rawl2.build_args.payload;
-    size_t payload_len = Rawl2.build_args.payload_len;
-    uint8_t *out = Rawl2.build_args.out;
-    size_t cap = Rawl2.build_args.cap;
+    const uint8_t *dst = Rawl2V.build_args.dst;
+    const uint8_t *src = Rawl2V.build_args.src;
+    uint16_t ethertype = Rawl2V.build_args.ethertype;
+    const uint8_t *payload = Rawl2V.build_args.payload;
+    size_t payload_len = Rawl2V.build_args.payload_len;
+    uint8_t *out = Rawl2V.build_args.out;
+    size_t cap = Rawl2V.build_args.cap;
 
     if (!dst || !src || !out || (payload_len && !payload))
     {
-        Rawl2.n = 0;
+        Rawl2V.n = 0;
         return;
     }
     size_t n = ETH_HDR_LEN + payload_len;
     if (n > cap)
     {
-        Rawl2.n = 0;
+        Rawl2V.n = 0;
         return;
     }
     mem.cpy(out, dst, ETH_ALEN);
@@ -53,32 +53,32 @@ static void rawl2_build(uint8_t *restrict work)
     {
         mem.cpy(out + ETH_HDR_LEN, payload, payload_len);
     }
-    Rawl2.n = n;
+    Rawl2V.n = n;
 }
 
-static void rawl2_build_vlan(uint8_t *restrict work)
+void protocore_rawl2_build_vlan(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *dst = Rawl2.build_vlan_args.dst;
-    const uint8_t *src = Rawl2.build_vlan_args.src;
-    uint8_t pcp = Rawl2.build_vlan_args.pcp;
-    proto_bool dei = Rawl2.build_vlan_args.dei;
-    uint16_t vid = Rawl2.build_vlan_args.vid;
-    uint16_t ethertype = Rawl2.build_vlan_args.ethertype;
-    const uint8_t *payload = Rawl2.build_vlan_args.payload;
-    size_t payload_len = Rawl2.build_vlan_args.payload_len;
-    uint8_t *out = Rawl2.build_vlan_args.out;
-    size_t cap = Rawl2.build_vlan_args.cap;
+    const uint8_t *dst = Rawl2V.build_vlan_args.dst;
+    const uint8_t *src = Rawl2V.build_vlan_args.src;
+    uint8_t pcp = Rawl2V.build_vlan_args.pcp;
+    proto_bool dei = Rawl2V.build_vlan_args.dei;
+    uint16_t vid = Rawl2V.build_vlan_args.vid;
+    uint16_t ethertype = Rawl2V.build_vlan_args.ethertype;
+    const uint8_t *payload = Rawl2V.build_vlan_args.payload;
+    size_t payload_len = Rawl2V.build_vlan_args.payload_len;
+    uint8_t *out = Rawl2V.build_vlan_args.out;
+    size_t cap = Rawl2V.build_vlan_args.cap;
 
     if (!dst || !src || !out || (payload_len && !payload))
     {
-        Rawl2.n = 0;
+        Rawl2V.n = 0;
         return;
     }
     size_t n = ETH_VLAN_HDR_LEN + payload_len;
     if (n > cap)
     {
-        Rawl2.n = 0;
+        Rawl2V.n = 0;
         return;
     }
     mem.cpy(out, dst, ETH_ALEN);
@@ -94,19 +94,19 @@ static void rawl2_build_vlan(uint8_t *restrict work)
     {
         mem.cpy(out + ETH_VLAN_HDR_LEN, payload, payload_len);
     }
-    Rawl2.n = n;
+    Rawl2V.n = n;
 }
 
-static void rawl2_parse(uint8_t *restrict work)
+void protocore_rawl2_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *frame = Rawl2.parse_args.frame;
-    size_t len = Rawl2.parse_args.len;
-    EthFrame *out = Rawl2.parse_args.out;
+    const uint8_t *frame = Rawl2V.parse_args.frame;
+    size_t len = Rawl2V.parse_args.len;
+    EthFrame *out = Rawl2V.parse_args.out;
 
     if (!frame || !out || len < ETH_HDR_LEN)
     {
-        Rawl2.ok = PROTO_FALSE;
+        Rawl2V.ok = PROTO_FALSE;
         return;
     }
     out->dst = frame;
@@ -116,7 +116,7 @@ static void rawl2_parse(uint8_t *restrict work)
     {
         if (len < ETH_VLAN_HDR_LEN)
         {
-            Rawl2.ok = PROTO_FALSE;
+            Rawl2V.ok = PROTO_FALSE;
             return;
         }
         uint16_t tci = (uint16_t)((frame[14] << 8) | frame[15]);
@@ -136,24 +136,25 @@ static void rawl2_parse(uint8_t *restrict work)
         out->payload = frame + ETH_HDR_LEN;
         out->payload_len = len - ETH_HDR_LEN;
     }
-    Rawl2.ok = PROTO_TRUE;
+    Rawl2V.ok = PROTO_TRUE;
 }
 
-static void rawl2_fcs(uint8_t *restrict work)
+void protocore_rawl2_fcs(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *bytes = Rawl2.fcs_args.bytes;
-    size_t len = Rawl2.fcs_args.len;
+    const uint8_t *bytes = Rawl2V.fcs_args.bytes;
+    size_t len = Rawl2V.fcs_args.len;
 
     // CRC-32/ISO-HDLC (the Ethernet FCS): reflected poly 0xEDB88320, init/xorout 0xFFFFFFFF.
     Crc.args.params = &PROTOCORE_CRC32_ISO_HDLC;
     Crc.args.data = bytes;
     Crc.args.len = len;
     Crc.compute(crc_work);
-    Rawl2.u32 = Crc.value;
+    Rawl2V.u32 = Crc.value;
 }
 
-Rawl2Ns Rawl2 = {.build = rawl2_build, .build_vlan = rawl2_build_vlan, .parse = rawl2_parse, .fcs = rawl2_fcs};
+/** @brief The operands and the outcome. */
+Rawl2Vars Rawl2V;
 
 PROTOCORE_END_DECLS
 

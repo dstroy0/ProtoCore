@@ -101,18 +101,37 @@ typedef struct
     SnpBccArgs bcc_args;
     SnpBuildArgs build_args;
     SnpParseArgs parse_args;
-
     proto_bool ok;
     uint8_t value;
     size_t n;
+} SnpVars;
 
+/** @brief The operands and the outcome. */
+extern SnpVars SnpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const bcc)(uint8_t *restrict work);
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
 } SnpNs;
 
-/** @brief The one symbol this module exports. */
-extern SnpNs Snp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SnpV or a region of the borrow at a fixed offset.
+void protocore_snp_bcc(uint8_t *restrict work);
+void protocore_snp_build(uint8_t *restrict work);
+void protocore_snp_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Snp.bcc(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SnpNs Snp __attribute__((unused)) = {
+    .bcc = protocore_snp_bcc,
+    .build = protocore_snp_build,
+    .parse = protocore_snp_parse,
+};
 
 PROTOCORE_END_DECLS
 

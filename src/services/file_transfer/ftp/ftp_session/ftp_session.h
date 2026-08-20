@@ -99,15 +99,30 @@ typedef struct
 typedef struct
 {
     FtpSessionStoreArgs store_args;
-
     proto_bool ok;
     protocore_ftp_state value;
+} FtpSessionVars;
 
+/** @brief The operands and the outcome. */
+extern FtpSessionVars FtpSessionV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const store)(uint8_t *restrict work);
 } FtpSessionNs;
 
-/** @brief The one symbol this module exports. */
-extern FtpSessionNs FtpSession;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in FtpSessionV or a region of the borrow at a fixed offset.
+void protocore_ftp_session_store(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `FtpSession.store(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const FtpSessionNs FtpSession __attribute__((unused)) = {
+    .store = protocore_ftp_session_store,
+};
 
 /**
  * @brief The PROTOCORE_FTP_SESSION_BORROW bytes this module's state lives in.

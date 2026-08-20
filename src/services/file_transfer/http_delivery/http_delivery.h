@@ -114,19 +114,40 @@ typedef struct
     HttpDeliveryCacheControlArgs cache_control_args;
     HttpDeliverySwManifestArgs sw_manifest_args;
     HttpDeliveryServeSwArgs serve_sw_args;
-
     proto_bool ok;
     DeliveryVerdict value;
     size_t n;
+} HttpDeliveryVars;
 
+/** @brief The operands and the outcome. */
+extern HttpDeliveryVars HttpDeliveryV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const swr)(uint8_t *restrict work);
     void (*const cache_control)(uint8_t *restrict work);
     void (*const sw_manifest)(uint8_t *restrict work);
     void (*const serve_sw)(uint8_t *restrict work);
 } HttpDeliveryNs;
 
-/** @brief The one symbol this module exports. */
-extern HttpDeliveryNs HttpDelivery;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HttpDeliveryV or a region of the borrow at a fixed offset.
+void protocore_http_delivery_swr(uint8_t *restrict work);
+void protocore_http_delivery_cache_control(uint8_t *restrict work);
+void protocore_http_delivery_sw_manifest(uint8_t *restrict work);
+void protocore_http_delivery_serve_sw(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HttpDelivery.swr(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HttpDeliveryNs HttpDelivery __attribute__((unused)) = {
+    .swr = protocore_http_delivery_swr,
+    .cache_control = protocore_http_delivery_cache_control,
+    .sw_manifest = protocore_http_delivery_sw_manifest,
+    .serve_sw = protocore_http_delivery_serve_sw,
+};
 
 PROTOCORE_END_DECLS
 

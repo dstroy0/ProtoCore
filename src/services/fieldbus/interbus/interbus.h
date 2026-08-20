@@ -91,18 +91,37 @@ typedef struct
     InterbusFcsArgs fcs_args;
     InterbusBuildArgs build_args;
     InterbusParseArgs parse_args;
-
     proto_bool ok;
     uint16_t value;
     size_t n;
+} InterbusVars;
 
+/** @brief The operands and the outcome. */
+extern InterbusVars InterbusV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const fcs)(uint8_t *restrict work);
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
 } InterbusNs;
 
-/** @brief The one symbol this module exports. */
-extern InterbusNs Interbus;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in InterbusV or a region of the borrow at a fixed offset.
+void protocore_interbus_fcs(uint8_t *restrict work);
+void protocore_interbus_build(uint8_t *restrict work);
+void protocore_interbus_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Interbus.fcs(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const InterbusNs Interbus __attribute__((unused)) = {
+    .fcs = protocore_interbus_fcs,
+    .build = protocore_interbus_build,
+    .parse = protocore_interbus_parse,
+};
 
 PROTOCORE_END_DECLS
 

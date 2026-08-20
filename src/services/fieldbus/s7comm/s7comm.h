@@ -216,10 +216,16 @@ typedef struct
     S7commBuildWriteRequestArgs build_write_request_args;
     S7commParseHeaderArgs parse_header_args;
     S7commReadNextItemArgs read_next_item_args;
-
     proto_bool ok;
     size_t n;
+} S7commVars;
 
+/** @brief The operands and the outcome. */
+extern S7commVars S7commV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_setup)(uint8_t *restrict work);
     void (*const build_read_request)(uint8_t *restrict work);
     void (*const build_write_request)(uint8_t *restrict work);
@@ -227,8 +233,25 @@ typedef struct
     void (*const read_next_item)(uint8_t *restrict work);
 } S7commNs;
 
-/** @brief The one symbol this module exports. */
-extern S7commNs S7comm;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in S7commV or a region of the borrow at a fixed offset.
+void protocore_s7comm_build_setup(uint8_t *restrict work);
+void protocore_s7comm_build_read_request(uint8_t *restrict work);
+void protocore_s7comm_build_write_request(uint8_t *restrict work);
+void protocore_s7comm_parse_header(uint8_t *restrict work);
+void protocore_s7comm_read_next_item(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `S7comm.build_setup(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const S7commNs S7comm __attribute__((unused)) = {
+    .build_setup = protocore_s7comm_build_setup,
+    .build_read_request = protocore_s7comm_build_read_request,
+    .build_write_request = protocore_s7comm_build_write_request,
+    .parse_header = protocore_s7comm_parse_header,
+    .read_next_item = protocore_s7comm_read_next_item,
+};
 
 PROTOCORE_END_DECLS
 
