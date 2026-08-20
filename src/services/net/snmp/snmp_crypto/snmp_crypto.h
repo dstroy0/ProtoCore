@@ -82,19 +82,35 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t *work; ///< PROTOCORE_HMAC_SHA256_BORROW octets, aligned for uint32_t, alive across the call
-
+    uint8_t *work;        ///< PROTOCORE_HMAC_SHA256_BORROW octets, aligned for uint32_t, alive across the call
     SnmpUsmKeyArgs key;   ///< what a derivation reads and writes
     SnmpUsmPrivArgs priv; ///< what the privacy transform reads and writes
-
     proto_bool ok;
+} SnmpCryptoVars;
 
+/** @brief The operands and the outcome. */
+extern SnmpCryptoVars SnmpCryptoV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const localize_key)(uint8_t *restrict work);
     void (*const aes_cfb128)(uint8_t *restrict work);
 } SnmpCryptoNs;
 
-/** @brief The one symbol this module exports. */
-extern SnmpCryptoNs SnmpCrypto;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SnmpCryptoV or a region of the borrow at a fixed offset.
+void protocore_snmp_crypto_localize_key(uint8_t *restrict work);
+void protocore_snmp_crypto_aes_cfb128(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SnmpCrypto.localize_key(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SnmpCryptoNs SnmpCrypto __attribute__((unused)) = {
+    .localize_key = protocore_snmp_crypto_localize_key,
+    .aes_cfb128 = protocore_snmp_crypto_aes_cfb128,
+};
 
 PROTOCORE_END_DECLS
 

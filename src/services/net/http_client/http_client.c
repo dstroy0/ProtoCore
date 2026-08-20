@@ -116,10 +116,10 @@ uint8_t *protocore_http_client_span(void)
 // Split the target URI into the authority to dial and the origin-form request target to send.
 // Scheme defaults are RFC 9110 sec 4.2.1 (http, port 80) and sec 4.2.2 (https, port 443); an empty
 // path component sends "/" (RFC 9112 sec 3.2.1).
-static void parse_target_uri(uint8_t *restrict work)
+void protocore_http_client_parse_target_uri(uint8_t *restrict work)
 {
     (void)work;
-    HttpClientNs *ns = &HttpClient;
+    HttpClientVars *ns = &HttpClientV;
     ns->ok = PROTO_FALSE;
     if (!ns->target.url || !ns->target.host || !ns->target.path)
     {
@@ -206,10 +206,10 @@ static void parse_target_uri(uint8_t *restrict work)
 
 // Write "method SP request-target SP HTTP/1.1" and the field lines, then the content. Host carries
 // the port only when it is not the scheme's default (RFC 9110 sec 7.2, sec 4.2.1 / 4.2.2).
-static void build_request(uint8_t *restrict work)
+void protocore_http_client_build_request(uint8_t *restrict work)
 {
     (void)work;
-    HttpClientNs *ns = &HttpClient;
+    HttpClientVars *ns = &HttpClientV;
     ns->n = 0;
     if (!ns->request.method || !ns->target.host || !ns->target.path || !ns->request.out || ns->request.cap == 0)
     {
@@ -395,10 +395,10 @@ static size_t decode_chunked(uint8_t *buf, size_t len, size_t off)
 
 // Read the status-line and frame the message body: chunked when it is the final coding, else
 // Content-Length, else the octets received before the close (RFC 9112 sec 6.3 items 4, 6 and 8).
-static void parse_response(uint8_t *restrict work)
+void protocore_http_client_parse_response(uint8_t *restrict work)
 {
     (void)work;
-    HttpClientNs *ns = &HttpClient;
+    HttpClientVars *ns = &HttpClientV;
     ns->body_off = 0;
     ns->body_len = 0;
     uint8_t *buf = ns->message.buf;
@@ -480,25 +480,25 @@ static void parse_response(uint8_t *restrict work)
 // Without a trust anchor or a pin the exchange is encrypted and the peer unauthenticated. Both are
 // no-ops on a build without client TLS.
 
-static void set_ca(uint8_t *restrict work)
+void protocore_http_client_set_ca(uint8_t *restrict work)
 {
     (void)work;
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
-    protocore_tls_client_set_ca(HttpClient.verify.ca, HttpClient.verify.ca_len);
+    protocore_tls_client_set_ca(HttpClientV.verify.ca, HttpClientV.verify.ca_len);
 #else
 #endif
 }
 
-static void set_pin(uint8_t *restrict work)
+void protocore_http_client_set_pin(uint8_t *restrict work)
 {
     (void)work;
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
-    protocore_tls_client_set_pin(HttpClient.verify.pin);
+    protocore_tls_client_set_pin(HttpClientV.verify.pin);
 #else
 #endif
 }
 
-static void clear_verify(uint8_t *restrict work)
+void protocore_http_client_clear_verify(uint8_t *restrict work)
 {
     (void)work;
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
@@ -580,7 +580,7 @@ static void close_conn(uint8_t *restrict work)
 // read until the body is framed or the deadline passes. Fills status, body and body_len.
 static void exchange(uint8_t *restrict work)
 {
-    HttpClientNs *ns = &HttpClient;
+    HttpClientVars *ns = &HttpClientV;
     ns->status = 0;
     ns->body = NULL;
     ns->body_len = 0;
@@ -590,7 +590,7 @@ static void exchange(uint8_t *restrict work)
     ns->target.host_cap = sizeof(HTTP_CLIENT_CTX(work)->host);
     ns->target.path = HTTP_CLIENT_CTX(work)->path;
     ns->target.path_cap = sizeof(HTTP_CLIENT_CTX(work)->path);
-    parse_target_uri(work);
+    protocore_http_client_parse_target_uri(work);
     if (!ns->ok)
     {
         ns->status = (int32_t)HTTP_CLIENT_ERR_URL;
@@ -608,7 +608,7 @@ static void exchange(uint8_t *restrict work)
 
     ns->request.out = HTTP_CLIENT_CTX(work)->req;
     ns->request.cap = sizeof(HTTP_CLIENT_CTX(work)->req);
-    build_request(work);
+    protocore_http_client_build_request(work);
     const size_t reqlen = ns->n;
     if (reqlen == 0)
     {
@@ -763,7 +763,7 @@ static void exchange(uint8_t *restrict work)
 
     ns->message.buf = HTTP_CLIENT_CTX(work)->rx;
     ns->message.len = msg_len;
-    parse_response(work);
+    protocore_http_client_parse_response(work);
     if (ns->status < 0)
     {
         return;
@@ -773,50 +773,44 @@ static void exchange(uint8_t *restrict work)
 
 // RFC 9110 sec 9.3.1: GET requests a transfer of the target resource's selected representation, so
 // the request encloses no content.
-static void get(uint8_t *restrict work)
+void protocore_http_client_get(uint8_t *restrict work)
 {
-    HttpClient.request.method = "GET";
-    HttpClient.request.content_type = NULL;
-    HttpClient.request.body = NULL;
-    HttpClient.request.body_len = 0;
+    HttpClientV.request.method = "GET";
+    HttpClientV.request.content_type = NULL;
+    HttpClientV.request.body = NULL;
+    HttpClientV.request.body_len = 0;
     exchange(work);
 }
 
 // RFC 9110 sec 9.3.3: POST asks the target resource to process the enclosed representation.
-static void post(uint8_t *restrict work)
+void protocore_http_client_post(uint8_t *restrict work)
 {
-    HttpClient.request.method = "POST";
+    HttpClientV.request.method = "POST";
     exchange(work);
 }
 
 #else // no network stack: the exchange refuses and the pure calls stand alone
 
-static void get(uint8_t *restrict work)
+void protocore_http_client_get(uint8_t *restrict work)
 {
     (void)work;
-    HttpClient.status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
-    HttpClient.body = NULL;
-    HttpClient.body_len = 0;
+    HttpClientV.status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
+    HttpClientV.body = NULL;
+    HttpClientV.body_len = 0;
 }
 
-static void post(uint8_t *restrict work)
+void protocore_http_client_post(uint8_t *restrict work)
 {
     (void)work;
-    HttpClient.status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
-    HttpClient.body = NULL;
-    HttpClient.body_len = 0;
+    HttpClientV.status = (int32_t)HTTP_CLIENT_ERR_CONNECT;
+    HttpClientV.body = NULL;
+    HttpClientV.body_len = 0;
 }
 
 #endif // PROTOCORE_HAS_NET_STACK
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-HttpClientNs HttpClient = {.parse_target_uri = parse_target_uri,
-                           .build_request = build_request,
-                           .parse_response = parse_response,
-                           .get = get,
-                           .post = post,
-                           .set_ca = set_ca,
-                           .set_pin = set_pin,
-                           .clear_verify = clear_verify};
+/** @brief The operands and the outcome. */
+HttpClientVars HttpClientV;
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT

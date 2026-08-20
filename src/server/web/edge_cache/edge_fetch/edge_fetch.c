@@ -287,11 +287,11 @@ void protocore_edge_fetcher_pump(uint8_t *restrict work)
     protocore_edge_fetcher_edge_resp_complete(work);
     if (EdgeFetcherV.ok)
     {
-        HttpClient.message.buf = f->buf;
-        HttpClient.message.len = f->got;
+        HttpClientV.message.buf = f->buf;
+        HttpClientV.message.len = f->got;
         // parse_response reads the caller's buffer and holds nothing, so it takes no borrow.
         HttpClient.parse_response(NULL);
-        int status = (int)HttpClient.status;
+        int status = (int)HttpClientV.status;
         if (status < 0)
         {
             f->st = EDGE_FETCH_STATUS_FAILED;
@@ -300,8 +300,8 @@ void protocore_edge_fetcher_pump(uint8_t *restrict work)
         }
         f->status = status;
         f->head_len = hl;
-        f->body_off = HttpClient.body_off;
-        f->body_len = HttpClient.body_len;
+        f->body_off = HttpClientV.body_off;
+        f->body_len = HttpClientV.body_len;
         f->st = EDGE_FETCH_STATUS_DONE;
         EdgeFetcherV.status = f->st;
         return;

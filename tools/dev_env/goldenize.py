@@ -2730,6 +2730,9 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     """
     vars_t, objv = obj + "Vars", obj + "V"
     impl = ["protocore_%s_%s" % (mod, e) for e in entries]
+    # Filled in below once the bindings are read: two entries can share ONE implementation, and then
+    # they must share the generated name too.
+    entry_name = {}
 
     bind, data_init, entry_order = {}, [], []
     init = re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), csrc, re.S)
@@ -2785,11 +2788,29 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
         "// What the table binds, defined once in the .c and taking one parameter each: everything",
         "// else an entry needs is an operand in %s or a region of the borrow at a fixed offset." % objv,
     ]
+    # One implementation, one generated name. telemetry.c binds BOTH .totalizer_init and
+    # .totalizer_reset to telemetry_totalizer_init: giving each entry its own generated name
+    # declares two functions where the .c can only define one, and the second goes undefined at
+    # link. Entries sharing an implementation share the name it is renamed to.
+    seen_impl = {}
+    for e in entries:
+        old = bind.get(e)
+        entry_name[e] = seen_impl.setdefault(old, "protocore_%s_%s" % (mod, e)) if old else "protocore_%s_%s" % (mod, e)
+    impl = [entry_name[e] for e in entries]
+
     # The declarations carry the guards the bindings had, so a declaration never outlives the
     # definition it names.
     if any(n for n, _ in entry_order):
+        emitted = set()  # two entries sharing an implementation need the declaration once
         for n, v in entry_order:
-            block.append(v if n is None else "void protocore_%s_%s(uint8_t *restrict work);" % (mod, n))
+            if n is None:
+                block.append(v)
+                continue
+            name = entry_name.get(n, "protocore_%s_%s" % (mod, n))
+            if name in emitted:
+                continue
+            emitted.add(name)
+            block.append("void %s(uint8_t *restrict work);" % name)
     else:
         block += ["void %s(uint8_t *restrict work);" % f for f in impl]
     block += [
@@ -2802,7 +2823,7 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     ]
     if any(n for n, _ in entry_order):
         for n, v in entry_order:
-            block.append(v if n is None else "    .%s = protocore_%s_%s," % (n, mod, n))
+            block.append(v if n is None else "    .%s = %s," % (n, entry_name.get(n, "protocore_%s_%s" % (mod, n))))
     else:
         block += ["    .%s = %s," % (e, f) for e, f in zip(entries, impl)]
     block += ["};"]
@@ -2888,6 +2909,27 @@ def sub_code_only(text, pattern, repl):
         last = m.end()
     out.append(text[last:])
     return "".join(out)
+
+
+def move_alias(text, ns, obj, vars_t, objv):
+    """`<X>Ns *p = &<X>;` -> `<X>Vars *p = &<X>V;`, when p only ever reaches OPERANDS.
+
+    http_client.c takes `HttpClientNs *ns = &HttpClient;` four times and then writes `ns->ok` and
+    `ns->target` - 79 operand reads and not one entry call. The operands moved to the Vars object, so
+    an alias still pointing at the table cannot reach them.
+
+    Refused when the alias is used to CALL something (`p->entry(`), because then it needs the table
+    and the two halves cannot both be reached through one pointer. Reported rather than guessed.
+    """
+    pat = re.compile(r"\b%s\s*\*\s*(\w+)\s*=\s*&\s*%s\s*;" % (re.escape(ns), re.escape(obj)))
+    names = {m.group(1) for m in pat.finditer(text)}
+    if not names:
+        return text, 0, []
+    refused = [n for n in names if re.search(r"\b%s\s*->\s*\w+\s*\(" % re.escape(n), text)]
+    if refused:
+        return text, 0, refused
+    out = pat.sub(lambda m: "%s *%s = &%s;" % (vars_t, m.group(1), objv), text)
+    return out, len(names), []
 
 
 def move_operands(text, obj, objv, members):
@@ -3137,6 +3179,10 @@ def main():
                 continue
             hout, cout, objv, members = reshape_handle(hsrc, csrc, mod, ns, obj, data, entries)
             cout, own = move_operands(cout, obj, objv, members)
+            # A local alias of the table has to follow the operands it is used to reach.
+            cout, naliased, refused = move_alias(cout, ns, obj, obj + "Vars", objv)
+            for r in refused:
+                print("   NOTE %s: alias `%s` calls an entry AND reads an operand; split it by hand" % (rel, r))
             # The module's OWN header carries operand sites too, outside the Ns struct: log.h sets
             # Log.frame.level inside the PROTOCORE_LOG_EMIT macro, preempt_queue.h reaches
             # PreemptQueue.lane from an inline. Moving only the .c and the tree left those pointing

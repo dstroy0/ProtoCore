@@ -130,26 +130,46 @@ typedef struct
  */
 typedef struct
 {
-    StompFrame *frame; ///< the frame a parse fills and a lookup searches
-
+    StompFrame *frame;         ///< the frame a parse fills and a lookup searches
     StompBufArgs buf;          ///< the caller buffer a codec runs over
     StompBuildArgs build_args; ///< what a build emits
     StompLookupArgs lookup;    ///< what a lookup matches
-
     proto_bool ok;
     size_t n;
     size_t consumed;
     const char *value;
     size_t value_len;
+} StompVars;
 
+/** @brief The operands and the outcome. */
+extern StompVars StompV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
     void (*const header)(uint8_t *restrict work);
     void (*const unescape)(uint8_t *restrict work);
 } StompNs;
 
-/** @brief The one symbol this module exports. */
-extern StompNs Stomp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in StompV or a region of the borrow at a fixed offset.
+void protocore_stomp_build(uint8_t *restrict work);
+void protocore_stomp_parse(uint8_t *restrict work);
+void protocore_stomp_header(uint8_t *restrict work);
+void protocore_stomp_unescape(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Stomp.build(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const StompNs Stomp __attribute__((unused)) = {
+    .build = protocore_stomp_build,
+    .parse = protocore_stomp_parse,
+    .header = protocore_stomp_header,
+    .unescape = protocore_stomp_unescape,
+};
 
 PROTOCORE_END_DECLS
 

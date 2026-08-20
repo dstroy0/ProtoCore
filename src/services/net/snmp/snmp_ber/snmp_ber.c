@@ -102,26 +102,26 @@ static void oid_emit_arc(uint8_t *tmp, size_t cap, size_t *t, uint32_t v, BerEnc
 // Encoder calls
 // ---------------------------------------------------------------------------
 
-static void enc_init(uint8_t *restrict work)
+void protocore_snmp_ber_enc_init(uint8_t *restrict work)
 {
     (void)work;
-    BerEnc *e = SnmpBer.enc;
-    e->buf = SnmpBer.buf.out;
-    e->cap = SnmpBer.buf.cap;
+    BerEnc *e = SnmpBerV.enc;
+    e->buf = SnmpBerV.buf.out;
+    e->cap = SnmpBerV.buf.cap;
     e->len = 0;
-    e->ok = (SnmpBer.buf.out != NULL && SnmpBer.buf.cap > 0);
-    SnmpBer.ok = e->ok;
+    e->ok = (SnmpBerV.buf.out != NULL && SnmpBerV.buf.cap > 0);
+    SnmpBerV.ok = e->ok;
 }
 
 // INTEGER in two's complement, minimal: drop leading 0x00 and 0xFF octets that the next octet's
 // sign bit already carries.
-static void put_integer(uint8_t *restrict work)
+void protocore_snmp_ber_put_integer(uint8_t *restrict work)
 {
     (void)work;
-    BerEnc *e = SnmpBer.enc;
+    BerEnc *e = SnmpBerV.enc;
     uint8_t tmp[8];
     int k = 0;
-    long val = SnmpBer.tlv.ival;
+    long val = SnmpBerV.tlv.ival;
     do
     {
         tmp[k++] = (uint8_t)(val & 0xFF);
@@ -134,18 +134,18 @@ static void put_integer(uint8_t *restrict work)
     {
         enc_byte(e, tmp[i]);
     }
-    SnmpBer.ok = e->ok;
+    SnmpBerV.ok = e->ok;
 }
 
 // A non-negative application-type value (RFC 2578 sec 7.1.6 through 7.1.8): big-endian, minimal,
 // with a leading 0x00 when the top bit would otherwise read as a sign.
-static void put_uint(uint8_t *restrict work)
+void protocore_snmp_ber_put_uint(uint8_t *restrict work)
 {
     (void)work;
-    BerEnc *e = SnmpBer.enc;
+    BerEnc *e = SnmpBerV.enc;
     uint8_t tmp[5];
     int k = 0;
-    uint32_t val = SnmpBer.tlv.uval;
+    uint32_t val = SnmpBerV.tlv.uval;
     do
     {
         tmp[k++] = (uint8_t)(val & 0xFF);
@@ -157,45 +157,45 @@ static void put_uint(uint8_t *restrict work)
         tmp[k++] = 0x00;
     }
 
-    enc_byte(e, SnmpBer.tlv.tag);
+    enc_byte(e, SnmpBerV.tlv.tag);
     enc_len(e, (size_t)k);
     for (int i = k - 1; i >= 0; i--)
     {
         enc_byte(e, tmp[i]);
     }
-    SnmpBer.ok = e->ok;
+    SnmpBerV.ok = e->ok;
 }
 
 // One primitive TLV from tlv.tag and tlv.bytes. An OCTET STRING, an IpAddress, an Opaque and a
 // bare exception marker are all this same encoding, so both calls bind here.
-static void put_tlv(uint8_t *restrict work)
+void protocore_snmp_ber_put_octet_string(uint8_t *restrict work)
 {
     (void)work;
-    enc_tlv(SnmpBer.enc, SnmpBer.tlv.tag, SnmpBer.tlv.bytes, SnmpBer.tlv.len);
-    SnmpBer.ok = SnmpBer.enc->ok;
+    enc_tlv(SnmpBerV.enc, SnmpBerV.tlv.tag, SnmpBerV.tlv.bytes, SnmpBerV.tlv.len);
+    SnmpBerV.ok = SnmpBerV.enc->ok;
 }
 
-static void put_null(uint8_t *restrict work)
+void protocore_snmp_ber_put_null(uint8_t *restrict work)
 {
     (void)work;
-    BerEnc *e = SnmpBer.enc;
+    BerEnc *e = SnmpBerV.enc;
     enc_byte(e, (uint8_t)SNMP_TAG_BER_NULL);
     enc_byte(e, 0x00);
-    SnmpBer.ok = e->ok;
+    SnmpBerV.ok = e->ok;
 }
 
 // OBJECT IDENTIFIER: the first two subidentifiers combine as 40 * arc0 + arc1, the rest follow
 // one base-128 group each.
-static void put_oid(uint8_t *restrict work)
+void protocore_snmp_ber_put_oid(uint8_t *restrict work)
 {
     (void)work;
-    BerEnc *e = SnmpBer.enc;
-    const uint32_t *arcs = SnmpBer.tlv.arcs;
-    const size_t n = SnmpBer.tlv.arc_count;
+    BerEnc *e = SnmpBerV.enc;
+    const uint32_t *arcs = SnmpBerV.tlv.arcs;
+    const size_t n = SnmpBerV.tlv.arc_count;
     if (n < 2)
     {
         e->ok = PROTO_FALSE;
-        SnmpBer.ok = PROTO_FALSE;
+        SnmpBerV.ok = PROTO_FALSE;
         return;
     }
     uint8_t tmp[SNMP_MAX_OID_LEN * 5];
@@ -206,67 +206,67 @@ static void put_oid(uint8_t *restrict work)
         oid_emit_arc(tmp, sizeof(tmp), &t, arcs[i], e);
     }
     enc_tlv(e, (uint8_t)SNMP_TAG_BER_OID, tmp, t);
-    SnmpBer.ok = e->ok;
+    SnmpBerV.ok = e->ok;
 }
 
-static void put_raw(uint8_t *restrict work)
+void protocore_snmp_ber_put_raw(uint8_t *restrict work)
 {
     (void)work;
-    enc_bytes(SnmpBer.enc, SnmpBer.tlv.bytes, SnmpBer.tlv.len);
-    SnmpBer.ok = SnmpBer.enc->ok;
+    enc_bytes(SnmpBerV.enc, SnmpBerV.tlv.bytes, SnmpBerV.tlv.len);
+    SnmpBerV.ok = SnmpBerV.enc->ok;
 }
 
 // Open a constructed type: identifier octet, then a definite-long length of two octets reserved at
 // tlv.token. RFC 3417 sec 8 item 1 permits more length octets than the minimum, so the reservation
 // is a valid encoding whatever the content turns out to measure.
-static void seq_begin(uint8_t *restrict work)
+void protocore_snmp_ber_seq_begin(uint8_t *restrict work)
 {
     (void)work;
-    BerEnc *e = SnmpBer.enc;
-    enc_byte(e, SnmpBer.tlv.tag);
-    SnmpBer.tlv.token = e->len;
+    BerEnc *e = SnmpBerV.enc;
+    enc_byte(e, SnmpBerV.tlv.tag);
+    SnmpBerV.tlv.token = e->len;
     enc_byte(e, 0x82);
     enc_byte(e, 0x00);
     enc_byte(e, 0x00);
-    SnmpBer.ok = e->ok;
+    SnmpBerV.ok = e->ok;
 }
 
-static void seq_end(uint8_t *restrict work)
+void protocore_snmp_ber_seq_end(uint8_t *restrict work)
 {
     (void)work;
-    BerEnc *e = SnmpBer.enc;
-    const size_t token = SnmpBer.tlv.token;
+    BerEnc *e = SnmpBerV.enc;
+    const size_t token = SnmpBerV.tlv.token;
     if (!e->ok)
     {
-        SnmpBer.ok = PROTO_FALSE;
+        SnmpBerV.ok = PROTO_FALSE;
         return;
     }
     size_t content = e->len - (token + 3);
     if (content > 0xFFFF)
     {
         e->ok = PROTO_FALSE;
-        SnmpBer.ok = PROTO_FALSE;
+        SnmpBerV.ok = PROTO_FALSE;
         return;
     }
     e->buf[token] = 0x82;
     e->buf[token + 1] = (uint8_t)((content >> 8) & 0xFF);
     e->buf[token + 2] = (uint8_t)(content & 0xFF);
-    SnmpBer.ok = PROTO_TRUE;
+    SnmpBerV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
 // Decoder
 // ---------------------------------------------------------------------------
 
-static void dec_init(uint8_t *restrict work)
+void protocore_snmp_ber_dec_init(uint8_t *restrict work)
 {
     (void)work;
-    BerDec *d = SnmpBer.dec;
-    d->buf = SnmpBer.buf.in;
-    d->len = SnmpBer.buf.cap;
+    BerDec *d = SnmpBerV.dec;
+    d->buf = SnmpBerV.buf.in;
+    d->len = SnmpBerV.buf.cap;
     d->pos = 0;
-    d->ok = (SnmpBer.buf.in != NULL);
-    SnmpBer.ok = d->ok;
+    d->ok = (SnmpBerV.buf.in != NULL);
+    SnmpBerV.ok = d->ok;
 }
 
 // Identifier octet then definite length, leaving the cursor at the value. Runs over the caller's
@@ -317,28 +317,28 @@ static proto_bool dec_header(BerDec *d, uint8_t *tag, size_t *length)
     return PROTO_TRUE;
 }
 
-static void read_header(uint8_t *restrict work)
+void protocore_snmp_ber_read_header(uint8_t *restrict work)
 {
     (void)work;
     uint8_t tag = 0;
     size_t length = 0;
-    SnmpBer.ok = dec_header(SnmpBer.dec, &tag, &length);
-    SnmpBer.tag = tag;
-    SnmpBer.vlen = length;
+    SnmpBerV.ok = dec_header(SnmpBerV.dec, &tag, &length);
+    SnmpBerV.tag = tag;
+    SnmpBerV.vlen = length;
 }
 
 // INTEGER, sign-extended from the first octet. The accumulator is unsigned because shifting a
 // negative signed value left is undefined; the final cast yields the two's-complement value.
-static void read_integer(uint8_t *restrict work)
+void protocore_snmp_ber_read_integer(uint8_t *restrict work)
 {
     (void)work;
-    BerDec *d = SnmpBer.dec;
+    BerDec *d = SnmpBerV.dec;
     uint8_t tag;
     size_t len;
     if (!dec_header(d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_INTEGER || len == 0 || len > 8)
     {
         d->ok = PROTO_FALSE;
-        SnmpBer.ok = PROTO_FALSE;
+        SnmpBerV.ok = PROTO_FALSE;
         return;
     }
     uint64_t uv = (d->buf[d->pos] & 0x80) ? ~(uint64_t)0 : 0;
@@ -347,25 +347,25 @@ static void read_integer(uint8_t *restrict work)
         uv = (uv << 8) | d->buf[d->pos + i];
     }
     d->pos += len;
-    SnmpBer.ival = (long)uv;
-    SnmpBer.ok = PROTO_TRUE;
+    SnmpBerV.ival = (long)uv;
+    SnmpBerV.ok = PROTO_TRUE;
 }
 
 // OBJECT IDENTIFIER: each subidentifier is base 128 with the high bit as a continuation flag. The
 // first subidentifier is itself multi-octet capable and encodes 40 * arc0 + arc1, where arc0 is
 // 0 through 2 and the remainder is arc1, which may exceed 39.
-static void read_oid(uint8_t *restrict work)
+void protocore_snmp_ber_read_oid(uint8_t *restrict work)
 {
     (void)work;
-    BerDec *d = SnmpBer.dec;
-    uint32_t *arcs = SnmpBer.read_args.arc_out;
-    const size_t max = SnmpBer.read_args.arc_cap;
+    BerDec *d = SnmpBerV.dec;
+    uint32_t *arcs = SnmpBerV.read_args.arc_out;
+    const size_t max = SnmpBerV.read_args.arc_cap;
     uint8_t tag;
     size_t len;
     if (!dec_header(d, &tag, &len) || tag != (uint8_t)SNMP_TAG_BER_OID || len == 0 || max < 2)
     {
         d->ok = PROTO_FALSE;
-        SnmpBer.ok = PROTO_FALSE;
+        SnmpBerV.ok = PROTO_FALSE;
         return;
     }
     const uint8_t *p = d->buf + d->pos;
@@ -395,7 +395,7 @@ static void read_oid(uint8_t *restrict work)
             if (count >= max)
             {
                 d->ok = PROTO_FALSE;
-                SnmpBer.ok = PROTO_FALSE;
+                SnmpBerV.ok = PROTO_FALSE;
                 return;
             }
             arcs[count++] = acc;
@@ -403,40 +403,27 @@ static void read_oid(uint8_t *restrict work)
         acc = 0;
     }
     d->pos += len;
-    SnmpBer.n = count;
-    SnmpBer.ok = PROTO_TRUE;
+    SnmpBerV.n = count;
+    SnmpBerV.ok = PROTO_TRUE;
 }
 
-static void skip(uint8_t *restrict work)
+void protocore_snmp_ber_skip(uint8_t *restrict work)
 {
     (void)work;
-    BerDec *d = SnmpBer.dec;
-    const size_t length = SnmpBer.read_args.skip;
+    BerDec *d = SnmpBerV.dec;
+    const size_t length = SnmpBerV.read_args.skip;
     if (!d->ok || d->pos > d->len || length > d->len - d->pos) // wrap-safe, as in dec_header
     {
         d->ok = PROTO_FALSE;
-        SnmpBer.ok = PROTO_FALSE;
+        SnmpBerV.ok = PROTO_FALSE;
         return;
     }
     d->pos += length;
-    SnmpBer.ok = PROTO_TRUE;
+    SnmpBerV.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SnmpBerNs SnmpBer = {.enc_init = enc_init,
-                     .put_integer = put_integer,
-                     .put_uint = put_uint,
-                     .put_octet_string = put_tlv,
-                     .put_null = put_null,
-                     .put_oid = put_oid,
-                     .put_tlv = put_tlv,
-                     .put_raw = put_raw,
-                     .seq_begin = seq_begin,
-                     .seq_end = seq_end,
-                     .dec_init = dec_init,
-                     .read_header = read_header,
-                     .read_integer = read_integer,
-                     .read_oid = read_oid,
-                     .skip = skip};
+/** @brief The operands and the outcome. */
+SnmpBerVars SnmpBerV;
 
 #endif // PROTOCORE_ENABLE_SNMP

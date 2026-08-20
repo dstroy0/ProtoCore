@@ -148,22 +148,43 @@ typedef struct
     GraphQLRequestArgs request;   ///< what an execute runs
     GraphQLResponseArgs response; ///< where its response lands
     GraphQLArgumentArgs argument; ///< what an accessor reads
-
     proto_bool ok;
     size_t n;
     protocore_gql_result result;
     long long i64;
     const char *text;
     proto_bool b;
+} GraphQLVars;
 
+/** @brief The operands and the outcome. */
+extern GraphQLVars GraphQLV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const execute)(uint8_t *restrict work);
     void (*const arg_int)(uint8_t *restrict work);
     void (*const arg_str)(uint8_t *restrict work);
     void (*const arg_bool)(uint8_t *restrict work);
 } GraphQLNs;
 
-/** @brief The one symbol this module exports. */
-extern GraphQLNs GraphQL;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in GraphQLV or a region of the borrow at a fixed offset.
+void protocore_graph_ql_execute(uint8_t *restrict work);
+void protocore_graph_ql_arg_int(uint8_t *restrict work);
+void protocore_graph_ql_arg_str(uint8_t *restrict work);
+void protocore_graph_ql_arg_bool(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `GraphQL.execute(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const GraphQLNs GraphQL __attribute__((unused)) = {
+    .execute = protocore_graph_ql_execute,
+    .arg_int = protocore_graph_ql_arg_int,
+    .arg_str = protocore_graph_ql_arg_str,
+    .arg_bool = protocore_graph_ql_arg_bool,
+};
 
 /**
  * @brief The PROTOCORE_GRAPHQL_BORROW bytes this module's state lives in.

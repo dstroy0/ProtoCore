@@ -77,37 +77,37 @@ static void on_submessage(uint8_t id, uint8_t flags, const uint8_t *contents, si
 
 static size_t build_header(uint8_t *buf, size_t cap)
 {
-    Rtps.hdr.guid_prefix = GUID;
-    Rtps.hdr.vendor_id = VENDOR;
-    Rtps.out.buf = buf;
-    Rtps.out.cap = cap;
+    RtpsV.hdr.guid_prefix = GUID;
+    RtpsV.hdr.vendor_id = VENDOR;
+    RtpsV.out.buf = buf;
+    RtpsV.out.cap = cap;
     Rtps.header(dds_work);
-    return Rtps.n;
+    return RtpsV.n;
 }
 
 static size_t build_submessage(uint8_t *buf, size_t cap, uint8_t id, uint8_t flags, const uint8_t *contents,
                                uint16_t len)
 {
-    Rtps.sub.submessage_id = id;
-    Rtps.sub.flags = flags;
-    Rtps.sub.contents = contents;
-    Rtps.sub.contents_len = len;
-    Rtps.out.buf = buf;
-    Rtps.out.cap = cap;
+    RtpsV.sub.submessage_id = id;
+    RtpsV.sub.flags = flags;
+    RtpsV.sub.contents = contents;
+    RtpsV.sub.contents_len = len;
+    RtpsV.out.buf = buf;
+    RtpsV.out.cap = cap;
     Rtps.submessage(dds_work);
-    return Rtps.n;
+    return RtpsV.n;
 }
 
 static proto_bool walk(const uint8_t *msg, size_t len)
 {
     g_seen_n = 0;
     g_seen_arg = NULL;
-    Rtps.msg.msg = msg;
-    Rtps.msg.len = len;
-    Rtps.sink.on_submessage = on_submessage;
-    Rtps.sink.arg = g_seen;
+    RtpsV.msg.msg = msg;
+    RtpsV.msg.len = len;
+    RtpsV.sink.on_submessage = on_submessage;
+    RtpsV.sink.arg = g_seen;
     Rtps.parse(dds_work);
-    return Rtps.ok;
+    return RtpsV.ok;
 }
 
 // sec 9.4.4 lays the Header out as
@@ -466,15 +466,15 @@ void test_parse_without_a_sink_still_validates(void)
     size_t n = build_header(msg, sizeof(msg));
     n += build_submessage(msg + n, sizeof(msg) - n, RTPS_SM_DATA, 0x00, BODY, 2);
 
-    Rtps.msg.msg = msg;
-    Rtps.msg.len = n;
-    Rtps.sink.on_submessage = NULL;
-    Rtps.sink.arg = NULL;
+    RtpsV.msg.msg = msg;
+    RtpsV.msg.len = n;
+    RtpsV.sink.on_submessage = NULL;
+    RtpsV.sink.arg = NULL;
     Rtps.parse(dds_work);
-    TEST_ASSERT_TRUE(Rtps.ok);
+    TEST_ASSERT_TRUE(RtpsV.ok);
 
-    Rtps.msg.msg = msg;
-    Rtps.msg.len = n - 1;
+    RtpsV.msg.msg = msg;
+    RtpsV.msg.len = n - 1;
     Rtps.parse(dds_work);
-    TEST_ASSERT_FALSE(Rtps.ok);
+    TEST_ASSERT_FALSE(RtpsV.ok);
 }

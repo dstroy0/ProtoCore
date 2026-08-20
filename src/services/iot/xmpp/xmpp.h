@@ -130,10 +130,16 @@ typedef struct
     XmppCommonArgs common; ///< what a stanza's start-tag says
     XmppChildArgs child;   ///< what a stanza carries below it
     XmppStanzaArgs stanza; ///< what a read walks
-
     proto_bool ok;
     size_t n;
+} XmppVars;
 
+/** @brief The operands and the outcome. */
+extern XmppVars XmppV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const escape)(uint8_t *restrict work);
     void (*const stream_open)(uint8_t *restrict work);
     void (*const message)(uint8_t *restrict work);
@@ -143,8 +149,29 @@ typedef struct
     void (*const attr)(uint8_t *restrict work);
 } XmppNs;
 
-/** @brief The one symbol this module exports. */
-extern XmppNs Xmpp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in XmppV or a region of the borrow at a fixed offset.
+void protocore_xmpp_escape(uint8_t *restrict work);
+void protocore_xmpp_stream_open(uint8_t *restrict work);
+void protocore_xmpp_message(uint8_t *restrict work);
+void protocore_xmpp_presence(uint8_t *restrict work);
+void protocore_xmpp_iq(uint8_t *restrict work);
+void protocore_xmpp_stanza_name(uint8_t *restrict work);
+void protocore_xmpp_attr(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Xmpp.escape(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const XmppNs Xmpp __attribute__((unused)) = {
+    .escape = protocore_xmpp_escape,
+    .stream_open = protocore_xmpp_stream_open,
+    .message = protocore_xmpp_message,
+    .presence = protocore_xmpp_presence,
+    .iq = protocore_xmpp_iq,
+    .stanza_name = protocore_xmpp_stanza_name,
+    .attr = protocore_xmpp_attr,
+};
 
 PROTOCORE_END_DECLS
 

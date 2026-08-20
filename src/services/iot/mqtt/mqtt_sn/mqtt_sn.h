@@ -233,10 +233,16 @@ typedef struct
     MqttsnDataArgs data;     ///< the Data a PUBLISH carries
     MqttsnHeaderArgs header; ///< the Length and MsgType header a parse read
     MqttsnBufArgs buf;       ///< the octets a call moves
-
     proto_bool ok;
     size_t n;
+} MqttsnVars;
 
+/** @brief The operands and the outcome. */
+extern MqttsnVars MqttsnV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const make_flags)(uint8_t *restrict work);
     void (*const build_connect)(uint8_t *restrict work);
     void (*const build_register)(uint8_t *restrict work);
@@ -257,8 +263,51 @@ typedef struct
     void (*const parse_register)(uint8_t *restrict work);
 } MqttsnNs;
 
-/** @brief The one symbol this module exports. */
-extern MqttsnNs Mqttsn;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MqttsnV or a region of the borrow at a fixed offset.
+void protocore_mqttsn_make_flags(uint8_t *restrict work);
+void protocore_mqttsn_build_connect(uint8_t *restrict work);
+void protocore_mqttsn_build_register(uint8_t *restrict work);
+void protocore_mqttsn_build_regack(uint8_t *restrict work);
+void protocore_mqttsn_build_publish(uint8_t *restrict work);
+void protocore_mqttsn_build_puback(uint8_t *restrict work);
+void protocore_mqttsn_build_subscribe_name(uint8_t *restrict work);
+void protocore_mqttsn_build_subscribe_id(uint8_t *restrict work);
+void protocore_mqttsn_build_pingreq(uint8_t *restrict work);
+void protocore_mqttsn_build_disconnect(uint8_t *restrict work);
+void protocore_mqttsn_build_searchgw(uint8_t *restrict work);
+void protocore_mqttsn_parse_header(uint8_t *restrict work);
+void protocore_mqttsn_parse_connack(uint8_t *restrict work);
+void protocore_mqttsn_parse_regack(uint8_t *restrict work);
+void protocore_mqttsn_parse_puback(uint8_t *restrict work);
+void protocore_mqttsn_parse_suback(uint8_t *restrict work);
+void protocore_mqttsn_parse_publish(uint8_t *restrict work);
+void protocore_mqttsn_parse_register(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Mqttsn.make_flags(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MqttsnNs Mqttsn __attribute__((unused)) = {
+    .make_flags = protocore_mqttsn_make_flags,
+    .build_connect = protocore_mqttsn_build_connect,
+    .build_register = protocore_mqttsn_build_register,
+    .build_regack = protocore_mqttsn_build_regack,
+    .build_publish = protocore_mqttsn_build_publish,
+    .build_puback = protocore_mqttsn_build_puback,
+    .build_subscribe_name = protocore_mqttsn_build_subscribe_name,
+    .build_subscribe_id = protocore_mqttsn_build_subscribe_id,
+    .build_pingreq = protocore_mqttsn_build_pingreq,
+    .build_disconnect = protocore_mqttsn_build_disconnect,
+    .build_searchgw = protocore_mqttsn_build_searchgw,
+    .parse_header = protocore_mqttsn_parse_header,
+    .parse_connack = protocore_mqttsn_parse_connack,
+    .parse_regack = protocore_mqttsn_parse_regack,
+    .parse_puback = protocore_mqttsn_parse_puback,
+    .parse_suback = protocore_mqttsn_parse_suback,
+    .parse_publish = protocore_mqttsn_parse_publish,
+    .parse_register = protocore_mqttsn_parse_register,
+};
 
 PROTOCORE_END_DECLS
 

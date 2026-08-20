@@ -26,44 +26,44 @@ static char g_line[256];
 
 static void open_line(const char *m, size_t cap)
 {
-    UdpTelemetry.line.buf = g_line;
-    UdpTelemetry.line.cap = cap;
-    UdpTelemetry.line.measurement = m;
+    UdpTelemetryV.line.buf = g_line;
+    UdpTelemetryV.line.cap = cap;
+    UdpTelemetryV.line.measurement = m;
     UdpTelemetry.measurement(protocore_udp_telemetry_span());
 }
 
 static void tag(const char *k, const char *v)
 {
-    UdpTelemetry.tags.key = k;
-    UdpTelemetry.tags.value = v;
+    UdpTelemetryV.tags.key = k;
+    UdpTelemetryV.tags.value = v;
     UdpTelemetry.tag(protocore_udp_telemetry_span());
 }
 
 static void field_int(const char *k, int64_t v)
 {
-    UdpTelemetry.fields.key = k;
-    UdpTelemetry.fields.i64 = v;
+    UdpTelemetryV.fields.key = k;
+    UdpTelemetryV.fields.i64 = v;
     UdpTelemetry.field_int(protocore_udp_telemetry_span());
 }
 
 static void field_uint(const char *k, uint64_t v)
 {
-    UdpTelemetry.fields.key = k;
-    UdpTelemetry.fields.u64 = v;
+    UdpTelemetryV.fields.key = k;
+    UdpTelemetryV.fields.u64 = v;
     UdpTelemetry.field_uint(protocore_udp_telemetry_span());
 }
 
 static void field_float(const char *k, float v, uint8_t decimals)
 {
-    UdpTelemetry.fields.key = k;
-    UdpTelemetry.fields.f32 = v;
-    UdpTelemetry.fields.decimals = decimals;
+    UdpTelemetryV.fields.key = k;
+    UdpTelemetryV.fields.f32 = v;
+    UdpTelemetryV.fields.decimals = decimals;
     UdpTelemetry.field_float(protocore_udp_telemetry_span());
 }
 
 static void stamp(int64_t unix_ns)
 {
-    UdpTelemetry.time.unix_ns = unix_ns;
+    UdpTelemetryV.time.unix_ns = unix_ns;
     UdpTelemetry.timestamp(protocore_udp_telemetry_span());
 }
 
@@ -81,10 +81,10 @@ void test_published_point(void)
     field_float("temperature", 82.0f, 0);
     stamp(1465839830100400200LL);
 
-    TEST_ASSERT_TRUE(UdpTelemetry.ok);
-    TEST_ASSERT_FALSE(UdpTelemetry.overflow);
+    TEST_ASSERT_TRUE(UdpTelemetryV.ok);
+    TEST_ASSERT_FALSE(UdpTelemetryV.overflow);
     TEST_ASSERT_EQUAL_STRING(WANT, g_line);
-    TEST_ASSERT_EQUAL_UINT(strlen(WANT), UdpTelemetry.n);
+    TEST_ASSERT_EQUAL_UINT(strlen(WANT), UdpTelemetryV.n);
 }
 
 // The v2 reference's "Special characters" example, rebuilt: a tag key and a tag value each carrying
@@ -99,7 +99,7 @@ void test_published_tag_escaping(void)
     tag("tag Key2", "tag Value2");
     field_float("fieldKey", 100.0f, 0);
 
-    TEST_ASSERT_TRUE(UdpTelemetry.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.ok);
     TEST_ASSERT_EQUAL_STRING(WANT, g_line);
 }
 
@@ -110,7 +110,7 @@ void test_tag_escapes_comma_and_equals(void)
     open_line("m", sizeof(g_line));
     tag("a,b=c", "x,y=z");
     field_int("fieldKey", 1);
-    TEST_ASSERT_TRUE(UdpTelemetry.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.ok);
     TEST_ASSERT_EQUAL_STRING(WANT, g_line);
 }
 
@@ -186,7 +186,7 @@ void test_field_set_separators(void)
     field_uint("b", 2u);
     field_float("c", 3.5f, 1);
     stamp(7);
-    TEST_ASSERT_TRUE(UdpTelemetry.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.ok);
     TEST_ASSERT_EQUAL_STRING(WANT, g_line);
 
     // Exactly two unescaped spaces in the finished line.
@@ -206,14 +206,14 @@ void test_field_set_separators(void)
 void test_a_point_needs_a_field(void)
 {
     open_line("m", sizeof(g_line));
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
-    TEST_ASSERT_FALSE(UdpTelemetry.overflow);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
+    TEST_ASSERT_FALSE(UdpTelemetryV.overflow);
 
     tag("t", "v");
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
 
     field_int("a", 1);
-    TEST_ASSERT_TRUE(UdpTelemetry.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.ok);
 }
 
 // The tag set sits between the measurement and the space that opens the field set, so a tag
@@ -222,11 +222,11 @@ void test_tag_after_a_field_is_refused(void)
 {
     open_line("m", sizeof(g_line));
     field_int("a", 1);
-    TEST_ASSERT_TRUE(UdpTelemetry.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.ok);
 
     tag("t", "v");
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
-    TEST_ASSERT_TRUE(UdpTelemetry.overflow);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.overflow);
     TEST_ASSERT_EQUAL_STRING("m a=1i", g_line); // nothing was appended
 }
 
@@ -236,8 +236,8 @@ void test_timestamp_before_any_field_is_refused(void)
     open_line("m", sizeof(g_line));
     tag("t", "v");
     stamp(1);
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
-    TEST_ASSERT_TRUE(UdpTelemetry.overflow);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.overflow);
     TEST_ASSERT_EQUAL_STRING("m,t=v", g_line);
 }
 
@@ -246,16 +246,16 @@ void test_timestamp_before_any_field_is_refused(void)
 void test_overflow_latches(void)
 {
     open_line("abc", 8);
-    TEST_ASSERT_FALSE(UdpTelemetry.overflow);
+    TEST_ASSERT_FALSE(UdpTelemetryV.overflow);
 
     field_int("k", 1); // " k=1i" needs 5 more octets; 3 + 5 leaves no room for the NUL
-    TEST_ASSERT_TRUE(UdpTelemetry.overflow);
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
-    const size_t stuck = UdpTelemetry.n;
+    TEST_ASSERT_TRUE(UdpTelemetryV.overflow);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
+    const size_t stuck = UdpTelemetryV.n;
 
     field_int("k2", 2);
-    TEST_ASSERT_TRUE(UdpTelemetry.overflow);
-    TEST_ASSERT_EQUAL_UINT(stuck, UdpTelemetry.n);
+    TEST_ASSERT_TRUE(UdpTelemetryV.overflow);
+    TEST_ASSERT_EQUAL_UINT(stuck, UdpTelemetryV.n);
 }
 
 // A fresh measurement rebinds the buffer and clears the position, the field flag and the overflow
@@ -264,12 +264,12 @@ void test_measurement_reopens_the_line(void)
 {
     open_line("abc", 8);
     field_int("k", 1);
-    TEST_ASSERT_TRUE(UdpTelemetry.overflow);
+    TEST_ASSERT_TRUE(UdpTelemetryV.overflow);
 
     open_line("m", sizeof(g_line));
-    TEST_ASSERT_FALSE(UdpTelemetry.overflow);
+    TEST_ASSERT_FALSE(UdpTelemetryV.overflow);
     field_int("a", 1);
-    TEST_ASSERT_TRUE(UdpTelemetry.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.ok);
     TEST_ASSERT_EQUAL_STRING("m a=1i", g_line);
 }
 
@@ -278,22 +278,22 @@ void test_length_excludes_the_terminator(void)
 {
     open_line("m", sizeof(g_line));
     field_int("a", 1);
-    TEST_ASSERT_EQUAL_UINT(6u, UdpTelemetry.n); // "m a=1i"
-    TEST_ASSERT_EQUAL_CHAR('\0', g_line[UdpTelemetry.n]);
+    TEST_ASSERT_EQUAL_UINT(6u, UdpTelemetryV.n); // "m a=1i"
+    TEST_ASSERT_EQUAL_CHAR('\0', g_line[UdpTelemetryV.n]);
 }
 
 // A null buffer has nowhere to build, so the line opens already overflowed.
 void test_null_buffer_is_refused(void)
 {
-    UdpTelemetry.line.buf = NULL;
-    UdpTelemetry.line.cap = 0;
-    UdpTelemetry.line.measurement = "m";
+    UdpTelemetryV.line.buf = NULL;
+    UdpTelemetryV.line.cap = 0;
+    UdpTelemetryV.line.measurement = "m";
     UdpTelemetry.measurement(protocore_udp_telemetry_span());
-    TEST_ASSERT_TRUE(UdpTelemetry.overflow);
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.overflow);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
 
     field_int("a", 1);
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
 }
 
 // A NULL measurement opens the line with nothing, so the point starts at its field set.
@@ -301,7 +301,7 @@ void test_null_measurement_opens_an_empty_line(void)
 {
     open_line(NULL, sizeof(g_line));
     field_int("a", 1);
-    TEST_ASSERT_TRUE(UdpTelemetry.ok);
+    TEST_ASSERT_TRUE(UdpTelemetryV.ok);
     TEST_ASSERT_EQUAL_STRING(" a=1i", g_line);
 }
 
@@ -310,22 +310,22 @@ void test_null_measurement_opens_an_empty_line(void)
 // took the octets - and here there is no stack to take them.
 void test_send_refuses_without_a_network_stack(void)
 {
-    UdpTelemetry.collector.addr = "10.0.0.1";
-    UdpTelemetry.collector.port = 8089;
+    UdpTelemetryV.collector.addr = "10.0.0.1";
+    UdpTelemetryV.collector.port = 8089;
     UdpTelemetry.begin(protocore_udp_telemetry_span());
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
 
     open_line("m", sizeof(g_line));
     field_int("a", 1);
-    TEST_ASSERT_TRUE(UdpTelemetry.ok); // the line itself is a complete point
+    TEST_ASSERT_TRUE(UdpTelemetryV.ok); // the line itself is a complete point
 
     UdpTelemetry.write(protocore_udp_telemetry_span());
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
 
-    UdpTelemetry.payload.data = g_line;
-    UdpTelemetry.payload.len = 6;
+    UdpTelemetryV.payload.data = g_line;
+    UdpTelemetryV.payload.len = 6;
     UdpTelemetry.send(protocore_udp_telemetry_span());
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
 }
 
 // A line that is not a point sends nothing, whether or not a stack is underneath.
@@ -333,5 +333,5 @@ void test_write_refuses_an_incomplete_line(void)
 {
     open_line("m", sizeof(g_line));
     UdpTelemetry.write(protocore_udp_telemetry_span()); // no field set
-    TEST_ASSERT_FALSE(UdpTelemetry.ok);
+    TEST_ASSERT_FALSE(UdpTelemetryV.ok);
 }

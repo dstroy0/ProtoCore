@@ -131,14 +131,20 @@ typedef struct
     GrpcWebMessageArgs msg;       ///< what a data frame carries
     GrpcWebTrailersArgs trailers; ///< what a trailers frame carries
     GrpcWebInArgs in;             ///< what a read consumes
-
     proto_bool ok;
     size_t n;
     GrpcWebFrame parsed;
     int32_t i32;
     const char *text;
     size_t text_len;
+} GrpcWebVars;
 
+/** @brief The operands and the outcome. */
+extern GrpcWebVars GrpcWebV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const frame)(uint8_t *restrict work);
     void (*const frame_message)(uint8_t *restrict work);
     void (*const frame_trailers)(uint8_t *restrict work);
@@ -147,8 +153,27 @@ typedef struct
     void (*const trailers_message)(uint8_t *restrict work);
 } GrpcWebNs;
 
-/** @brief The one symbol this module exports. */
-extern GrpcWebNs GrpcWeb;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in GrpcWebV or a region of the borrow at a fixed offset.
+void protocore_grpc_web_frame(uint8_t *restrict work);
+void protocore_grpc_web_frame_message(uint8_t *restrict work);
+void protocore_grpc_web_frame_trailers(uint8_t *restrict work);
+void protocore_grpc_web_parse(uint8_t *restrict work);
+void protocore_grpc_web_trailers_status(uint8_t *restrict work);
+void protocore_grpc_web_trailers_message(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `GrpcWeb.frame(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const GrpcWebNs GrpcWeb __attribute__((unused)) = {
+    .frame = protocore_grpc_web_frame,
+    .frame_message = protocore_grpc_web_frame_message,
+    .frame_trailers = protocore_grpc_web_frame_trailers,
+    .parse = protocore_grpc_web_parse,
+    .trailers_status = protocore_grpc_web_trailers_status,
+    .trailers_message = protocore_grpc_web_trailers_message,
+};
 
 PROTOCORE_END_DECLS
 

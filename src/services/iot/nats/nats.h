@@ -182,12 +182,18 @@ typedef struct
     NatsHeadersArgs headers;           ///< the header section an HPUB carries
     NatsSubscriptionArgs subscription; ///< what a SUB opens or an UNSUB ends
     NatsInboundArgs in;                ///< what a parse reads
-
     proto_bool ok;
     size_t n;
     size_t consumed;
     NatsMsg msg;
+} NatsVars;
 
+/** @brief The operands and the outcome. */
+extern NatsVars NatsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const connect)(uint8_t *restrict work);
     void (*const pub)(uint8_t *restrict work);
     void (*const hpub)(uint8_t *restrict work);
@@ -198,8 +204,31 @@ typedef struct
     void (*const parse)(uint8_t *restrict work);
 } NatsNs;
 
-/** @brief The one symbol this module exports. */
-extern NatsNs Nats;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in NatsV or a region of the borrow at a fixed offset.
+void protocore_nats_connect(uint8_t *restrict work);
+void protocore_nats_pub(uint8_t *restrict work);
+void protocore_nats_hpub(uint8_t *restrict work);
+void protocore_nats_sub(uint8_t *restrict work);
+void protocore_nats_unsub(uint8_t *restrict work);
+void protocore_nats_ping(uint8_t *restrict work);
+void protocore_nats_pong(uint8_t *restrict work);
+void protocore_nats_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Nats.connect(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const NatsNs Nats __attribute__((unused)) = {
+    .connect = protocore_nats_connect,
+    .pub = protocore_nats_pub,
+    .hpub = protocore_nats_hpub,
+    .sub = protocore_nats_sub,
+    .unsub = protocore_nats_unsub,
+    .ping = protocore_nats_ping,
+    .pong = protocore_nats_pong,
+    .parse = protocore_nats_parse,
+};
 
 PROTOCORE_END_DECLS
 

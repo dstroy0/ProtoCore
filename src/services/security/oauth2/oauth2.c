@@ -232,26 +232,26 @@ static void post_and_parse(uint8_t *restrict work, int body_len)
         Oauth2V.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_BUILD;
         return;
     }
-    HttpClient.target.url = Oauth2V.request.token_endpoint;
-    HttpClient.request.content_type = "application/x-www-form-urlencoded";
-    HttpClient.request.body = (const uint8_t *)OAUTH2_CTX(work)->body;
-    HttpClient.request.body_len = (size_t)body_len;
+    HttpClientV.target.url = Oauth2V.request.token_endpoint;
+    HttpClientV.request.content_type = "application/x-www-form-urlencoded";
+    HttpClientV.request.body = (const uint8_t *)OAUTH2_CTX(work)->body;
+    HttpClientV.request.body_len = (size_t)body_len;
 #if PROTOCORE_HAS_NET_STACK
     HttpClient.post(protocore_http_client_span());
 #else
     HttpClient.post(NULL);
 #endif
-    const int32_t st = HttpClient.status;
+    const int32_t st = HttpClientV.status;
     if (st <= 0)
     {
         Oauth2V.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT;
         return;
     }
     const size_t room = sizeof(OAUTH2_CTX(work)->resp) - 1;
-    const size_t k = HttpClient.body_len < room ? HttpClient.body_len : room;
-    if (HttpClient.body && k)
+    const size_t k = HttpClientV.body_len < room ? HttpClientV.body_len : room;
+    if (HttpClientV.body && k)
     {
-        mem.cpy(OAUTH2_CTX(work)->resp, HttpClient.body, k);
+        mem.cpy(OAUTH2_CTX(work)->resp, HttpClientV.body, k);
     }
     OAUTH2_CTX(work)->resp[k] = '\0';
     Oauth2V.response.json = OAUTH2_CTX(work)->resp;

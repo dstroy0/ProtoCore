@@ -138,14 +138,20 @@ typedef struct
     HttpRequestArgs request; ///< what a request-line and its field lines carry (RFC 9112 sec 3)
     HttpMessageArgs message; ///< the received message a parse frames (RFC 9112 sec 2.1)
     HttpVerifyArgs verify;   ///< what authenticates an https origin server (RFC 9110 sec 4.2.2)
-
     proto_bool ok;
     int32_t status;
     size_t n;
     size_t body_off;
     size_t body_len;
     const uint8_t *body;
+} HttpClientVars;
 
+/** @brief The operands and the outcome. */
+extern HttpClientVars HttpClientV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse_target_uri)(uint8_t *restrict work);
     void (*const build_request)(uint8_t *restrict work);
     void (*const parse_response)(uint8_t *restrict work);
@@ -156,8 +162,31 @@ typedef struct
     void (*const clear_verify)(uint8_t *restrict work);
 } HttpClientNs;
 
-/** @brief The one symbol this module exports. */
-extern HttpClientNs HttpClient;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HttpClientV or a region of the borrow at a fixed offset.
+void protocore_http_client_parse_target_uri(uint8_t *restrict work);
+void protocore_http_client_build_request(uint8_t *restrict work);
+void protocore_http_client_parse_response(uint8_t *restrict work);
+void protocore_http_client_get(uint8_t *restrict work);
+void protocore_http_client_post(uint8_t *restrict work);
+void protocore_http_client_set_ca(uint8_t *restrict work);
+void protocore_http_client_set_pin(uint8_t *restrict work);
+void protocore_http_client_clear_verify(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HttpClient.parse_target_uri(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HttpClientNs HttpClient __attribute__((unused)) = {
+    .parse_target_uri = protocore_http_client_parse_target_uri,
+    .build_request = protocore_http_client_build_request,
+    .parse_response = protocore_http_client_parse_response,
+    .get = protocore_http_client_get,
+    .post = protocore_http_client_post,
+    .set_ca = protocore_http_client_set_ca,
+    .set_pin = protocore_http_client_set_pin,
+    .clear_verify = protocore_http_client_clear_verify,
+};
 
 /**
  * @brief The PROTOCORE_HTTP_CLIENT_BORROW bytes this module's state lives in.

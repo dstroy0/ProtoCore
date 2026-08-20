@@ -241,14 +241,20 @@ typedef struct
     SpbPayloadArgs payload;    ///< what a Payload header says
     SpbMetricsArgs metrics;    ///< what a build serializes
     SpbSourceArgs source;      ///< what a decode reads
-
     proto_bool ok;
     size_t n;
     SpbPayloadHeader header;
     SpbMetricDecoded metric;
     const uint8_t *metric_bytes;
     size_t metric_len;
+} SparkplugVars;
 
+/** @brief The operands and the outcome. */
+extern SparkplugVars SparkplugV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_topic)(uint8_t *restrict work);
     void (*const build_metric)(uint8_t *restrict work);
     void (*const build_payload)(uint8_t *restrict work);
@@ -257,8 +263,27 @@ typedef struct
     void (*const parse_metric)(uint8_t *restrict work);
 } SparkplugNs;
 
-/** @brief The one symbol this module exports. */
-extern SparkplugNs Sparkplug;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SparkplugV or a region of the borrow at a fixed offset.
+void protocore_sparkplug_build_topic(uint8_t *restrict work);
+void protocore_sparkplug_build_metric(uint8_t *restrict work);
+void protocore_sparkplug_build_payload(uint8_t *restrict work);
+void protocore_sparkplug_parse_payload(uint8_t *restrict work);
+void protocore_sparkplug_next_metric(uint8_t *restrict work);
+void protocore_sparkplug_parse_metric(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sparkplug.build_topic(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SparkplugNs Sparkplug __attribute__((unused)) = {
+    .build_topic = protocore_sparkplug_build_topic,
+    .build_metric = protocore_sparkplug_build_metric,
+    .build_payload = protocore_sparkplug_build_payload,
+    .parse_payload = protocore_sparkplug_parse_payload,
+    .next_metric = protocore_sparkplug_next_metric,
+    .parse_metric = protocore_sparkplug_parse_metric,
+};
 
 /**
  * @brief The PROTOCORE_SPARKPLUG_BORROW bytes this module's state lives in.

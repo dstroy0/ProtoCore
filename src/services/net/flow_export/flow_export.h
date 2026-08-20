@@ -159,17 +159,22 @@ typedef struct
  */
 typedef struct
 {
-    uint16_t template_id; ///< the Template ID a Template Set or a Data Set names
-
+    uint16_t template_id;    ///< the Template ID a Template Set or a Data Set names
     FlowOutArgs out;         ///< where a builder writes
     FlowV5Args v5;           ///< the vendor Version 5 structures a fixed write emits
     FlowMessageArgs message; ///< the Message Header fields a begin writes
     FlowTemplateArgs tmpl;   ///< the Field Specifiers a Template Record lists
     FlowDataArgs data;       ///< one encoded Data Record
-
     proto_bool ok;
     size_t n;
+} FlowExportVars;
 
+/** @brief The operands and the outcome. */
+extern FlowExportVars FlowExportV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const v5_header)(uint8_t *restrict work);
     void (*const v5_record)(uint8_t *restrict work);
     void (*const ipfix_begin)(uint8_t *restrict work);
@@ -181,8 +186,33 @@ typedef struct
     void (*const message_finish)(uint8_t *restrict work);
 } FlowExportNs;
 
-/** @brief The one symbol this module exports. */
-extern FlowExportNs FlowExport;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in FlowExportV or a region of the borrow at a fixed offset.
+void protocore_flow_export_v5_header(uint8_t *restrict work);
+void protocore_flow_export_v5_record(uint8_t *restrict work);
+void protocore_flow_export_ipfix_begin(uint8_t *restrict work);
+void protocore_flow_export_v9_begin(uint8_t *restrict work);
+void protocore_flow_export_template_set(uint8_t *restrict work);
+void protocore_flow_export_data_set_begin(uint8_t *restrict work);
+void protocore_flow_export_data_record(uint8_t *restrict work);
+void protocore_flow_export_data_set_end(uint8_t *restrict work);
+void protocore_flow_export_message_finish(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `FlowExport.v5_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const FlowExportNs FlowExport __attribute__((unused)) = {
+    .v5_header = protocore_flow_export_v5_header,
+    .v5_record = protocore_flow_export_v5_record,
+    .ipfix_begin = protocore_flow_export_ipfix_begin,
+    .v9_begin = protocore_flow_export_v9_begin,
+    .template_set = protocore_flow_export_template_set,
+    .data_set_begin = protocore_flow_export_data_set_begin,
+    .data_record = protocore_flow_export_data_record,
+    .data_set_end = protocore_flow_export_data_set_end,
+    .message_finish = protocore_flow_export_message_finish,
+};
 
 /**
  * @brief The PROTOCORE_FLOW_EXPORT_BORROW bytes this module's state lives in.
