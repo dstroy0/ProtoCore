@@ -9,17 +9,16 @@
 #ifndef PROTOCORE_SSH_COMMON_H
 #define PROTOCORE_SSH_COMMON_H
 
-#include "mmgr/bytes/bytes.h"       // protocore_span, bytes.* writers, bytes.rd_str / bytes.rd_u32 readers
-#include "mmgr/protostr/protostr.h"    // str.len: the length prefix on a written string
-#include "crypto/aead/chachapoly/chachapoly.h"   // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
-#include "crypto/asymmetric/bignum/bignum.h" // protocore_bignum - the DH ephemeral in the memory map
+#include "crypto/aead/chachapoly/chachapoly.h"  // PROTOCORE_CHACHAPOLY_KEY_LEN - the chacha keys in the memory map
+#include "crypto/asymmetric/bignum/bignum.h"    // protocore_bignum - the DH ephemeral in the memory map
 #include "crypto/cipher/aes256ctr/aes256ctr.h"  // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the aes keys and IVs
-#include "crypto/mac/hmac_sha256/hmac_sha256.h"   // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
+#include "crypto/mac/hmac_sha256/hmac_sha256.h" // PROTOCORE_HMAC_SHA256_BORROW - the packet MAC scratch
 #include "crypto/pqc/sntrup761/sntrup761.h"     // PROTOCORE_SNTRUP761_PK_BYTES - the PQC public key in the memory map
+#include "mmgr/bytes/bytes.h"                   // protocore_span, bytes.* writers, bytes.rd_str / bytes.rd_u32 readers
+#include "mmgr/protostr/protostr.h"             // str.len: the length prefix on a written string
 #include "network_drivers/presentation/ssh/transport/ssh_kexhash/ssh_kexhash.h" // SSH_KEXHASH_MAX_LEN - the session id span
 
 #include "protocore_config.h" // protocore_types.h for the fixed widths, PROTOCORE_INLINE, the SSH sizing constants
-
 
 // ---------------------------------------------------------------------------
 // Sizing

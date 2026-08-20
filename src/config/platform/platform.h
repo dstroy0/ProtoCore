@@ -32,8 +32,8 @@
 #include "vendor/vendor_detect.h"
 // Per-variant default sizing (chip / PSRAM / flash profiles). Reached before the widths so a board
 // profile can state PROTOCORE_HW_WORD_BITS; a -D override still wins (every default is #ifndef).
-#include "vendor/board_profiles/board_profile.h"
 #include "config/platform/compiler_directives.h" // PROTOCORE_INLINE, settled before any body is parsed
+#include "vendor/board_profiles/board_profile.h"
 
 // ---------------------------------------------------------------------------
 // Platform widths
@@ -85,7 +85,6 @@
 #define PROTO_SWAR_BITS PROTO_WORD_BITS
 #endif
 
-
 // The widths are settled above, so the types built from them come next. types.h is the one file in
 // the library that includes a standard header.
 #include "config/platform/types.h"
@@ -95,9 +94,9 @@
 #include "config/hardware_capabilities/hw_caps_en_error.h"
 
 // The library's own constants, and the seams each capability promises.
+#include "config/hardware_capabilities/hw_caps_prototypes.h"
 #include "config/platform/platform_defines.h"
 #include "config/platform/platform_prototypes.h"
-#include "config/hardware_capabilities/hw_caps_prototypes.h"
 
 // Every width and ordering rule the above had to satisfy.
 // The accelerator HALs the selected arm answers with, in the types settled above.

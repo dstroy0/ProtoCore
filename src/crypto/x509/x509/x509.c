@@ -54,7 +54,8 @@ static proto_bool at(uint8_t *restrict work, const uint8_t *der, size_t len, siz
 }
 
 // Whether the OID value at @p pos is @p oid.
-static proto_bool oid_is(uint8_t *restrict work, const uint8_t *der, size_t len, size_t pos, const uint8_t *oid, size_t oid_len)
+static proto_bool oid_is(uint8_t *restrict work, const uint8_t *der, size_t len, size_t pos, const uint8_t *oid,
+                         size_t oid_len)
 {
     DerV.read_args.buf = der;
     DerV.read_args.len = len;

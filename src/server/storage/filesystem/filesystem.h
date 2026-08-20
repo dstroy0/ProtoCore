@@ -36,7 +36,6 @@
 
 #include "protocore_config.h"
 
-
 PROTOCORE_BEGIN_DECLS
 
 // root, dir, name. A whole path is these three pieces, so it is ONE build: a caller that assembled

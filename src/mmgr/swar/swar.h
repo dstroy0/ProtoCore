@@ -38,7 +38,7 @@
 #ifndef PROTOCORE_SWAR_H
 #define PROTOCORE_SWAR_H
 
-#include "mmgr/rawmemcpy/rawmemcpy.h"   // proto_raw_load: the one owner of an unaligned wider load
+#include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_load: the one owner of an unaligned wider load
 
 #include "protocore_config.h" // PROTO_SWAR_BITS: the platform's lane-carrier width
 

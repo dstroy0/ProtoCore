@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_HW_HEALTH
 
-#include "server/signaling/hw_health/hw_health.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "server/signaling/hw_health/hw_health.h"
 
 void protocore_hw_health_rail_init(uint8_t *restrict work)
 {

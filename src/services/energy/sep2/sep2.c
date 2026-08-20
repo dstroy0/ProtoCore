@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_SEP2
 
-#include "services/energy/sep2/sep2.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "services/energy/sep2/sep2.h"
 
 static void put_i64(protocore_sb *b, int64_t v)
 {

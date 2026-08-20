@@ -10,11 +10,11 @@
 
 #if PROTOCORE_ENABLE_TELNET
 
-#include "network_drivers/presentation/telnet/telnet.h"
 #include "mmgr/plaintext/plaintext.h"   // the persistent end this module's state is taken from
 #include "mmgr/protoframe/protoframe.h" // frame.build: a console line is a spec, not a format string
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str: the bounded-run walks
+#include "network_drivers/presentation/telnet/telnet.h"
 
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a call acts on
 #include "server/core/proto_handler.h"

@@ -82,7 +82,6 @@ static const ProtoRegistryNs Protocols __attribute__((unused)) = {
     .get = protocore_protocols_get,
 };
 
-
 /**
  * @brief Per-connection state, keyed on the transport slot index.
  *

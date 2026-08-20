@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_GPIB
 
-#include "services/instrumentation/gpib/gpib.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
+#include "services/instrumentation/gpib/gpib.h"
 
 size_t protocore_gpib_command(char *buf, size_t cap, const char *cmd)
 {

@@ -12,9 +12,9 @@
 
 #if PROTOCORE_ENABLE_OPCUA_CLIENT
 
-#include "services/opcua/opcua_client/opcua_client.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "services/opcua/opcua_client/opcua_client.h"
 
 void protocore_opcua_client_init(OpcUaClient *c)
 {

@@ -17,9 +17,9 @@
 
 #if PROTOCORE_ENABLE_FLOW_EXPORT
 
-#include "services/net/flow_export/flow_export.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
+#include "services/net/flow_export/flow_export.h"
 
 #include "mmgr/endian/endian.h"
 

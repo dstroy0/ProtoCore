@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_UBX
 
-#include "services/timing_position/ubx/ubx.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/timing_position/ubx/ubx.h"
 
 void protocore_ubx_checksum(const uint8_t *body, size_t len, uint8_t *ck_a, uint8_t *ck_b)
 {

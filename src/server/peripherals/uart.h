@@ -29,7 +29,6 @@
 
 #if PROTOCORE_HAS_BUS
 
-
 /** @brief Read timeout in milliseconds, for a driver that takes whatever has arrived. */
 #ifndef PROTOCORE_UART_TIMEOUT_MS
 #define PROTOCORE_UART_TIMEOUT_MS 20u

@@ -15,9 +15,9 @@
 
 #include "mmgr/membuild/membuild.h"
 #include "mmgr/float_bits/float_bits.h" // proto_dbl_sign / proto_dbl_exp / proto_dbl_mant - the field reads
-#include "mmgr/protostr/protostr.h"   // str.len - a word per test, bounded by a known width
-#include "mmgr/rawmemcpy/rawmemcpy.h"  // proto_raw_read - the span move protocore_sb_put_n is built on
-#include "shared/hex/hex.h"  // PROTOCORE_HEX: the shared digit tables
+#include "mmgr/protostr/protostr.h"     // str.len - a word per test, bounded by a known width
+#include "mmgr/rawmemcpy/rawmemcpy.h"   // proto_raw_read - the span move protocore_sb_put_n is built on
+#include "shared/hex/hex.h"             // PROTOCORE_HEX: the shared digit tables
 
 /// @brief Working width of the `n * 2^s` pair below: four bits clear of the top so a decade fits.
 #define PROTOCORE_G_WORK_BITS 58u

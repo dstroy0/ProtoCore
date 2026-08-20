@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_WAVE
 
-#include "services/transportation/wave/wave.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/transportation/wave/wave.h"
 
 size_t protocore_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap)
 {

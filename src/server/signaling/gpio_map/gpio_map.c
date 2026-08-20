@@ -15,10 +15,10 @@
 
 #if PROTOCORE_ENABLE_GPIO_MAP
 
-#include "server/signaling/gpio_map/gpio_map.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
 #include "server/clock/clock.h" // protocore_millis()
+#include "server/signaling/gpio_map/gpio_map.h"
 
 #include "mmgr/protoframe/protoframe.h"
 

@@ -10,11 +10,11 @@
 
 #if PROTOCORE_ENABLE_LOGBUF
 
-#include "server/core/logbuf/logbuf.h"
 #include "mmgr/plaintext/plaintext.h"   // the persistent end this module's state is taken from
 #include "mmgr/protoframe/protoframe.h" // the one frame engine
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "server/core/logbuf/logbuf.h"
 
 // A log line is its severity letter, a space, then the message.
 static const protocore_field LOG_LINE[] = {PROTOCORE_CH, {PROTOCORE_FK_LIT, 0, 1, " "}, PROTOCORE_STR, PROTOCORE_END};

@@ -33,7 +33,6 @@
 
 #include "mmgr/membuild/membuild.h"
 
-
 /**
  * @brief Field kinds. The value is an opcode, so the enum is the name for a byte, not a type gate.
  *

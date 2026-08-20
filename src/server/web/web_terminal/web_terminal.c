@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_WEB_TERMINAL
 
-#include "server/web/web_terminal/web_terminal.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/secure/secure.h"     // the persistent end this module's state is taken from
 #include "protocore.h"              // MAX_PATH_LEN, MAX_WS_CONNS, HttpReq, send_text
+#include "server/web/web_terminal/web_terminal.h"
 
 PROTOCORE_BEGIN_DECLS
 

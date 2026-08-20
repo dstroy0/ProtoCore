@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include "services/timing_position/gnss/ntrip_caster/ntrip_caster.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
+#include "services/timing_position/gnss/ntrip_caster/ntrip_caster.h"
 
 static char lower(char c)
 {
@@ -332,7 +332,8 @@ size_t protocore_ntrip_build_sourcetable(char *out, size_t cap, NtripVersion ver
     else
     {
         protocore_sb sb_out10 = {out, cap, 0, PROTO_TRUE};
-        Sb.put(&sb_out10, "SOURCETABLE 200 OK\r\nServer: ProtoCore/1.0\r\nContent-Type: text/plain\r\nContent-Length: ");
+        Sb.put(&sb_out10,
+               "SOURCETABLE 200 OK\r\nServer: ProtoCore/1.0\r\nContent-Type: text/plain\r\nContent-Length: ");
         Sb.u32(&sb_out10, (uint32_t)((unsigned)body_len));
         Sb.put(&sb_out10, "\r\n\r\n");
         hn = (int)Sb.finish(&sb_out10);

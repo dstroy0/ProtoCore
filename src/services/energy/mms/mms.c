@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_MMS
 
-#include "services/energy/mms/mms.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "services/energy/mms/mms.h"
 
 // BER definite-length octet count for a length value < 64 KiB.
 static size_t len_octets(size_t len)

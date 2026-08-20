@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/timing_position/gnss/gnss_survey/gnss_survey.h"
 
 #if PROTOCORE_NEED_NMEA0183
 #include "mmgr/protostr/protostr.h"

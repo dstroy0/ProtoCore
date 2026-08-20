@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 
-#include "services/timing_position/gnss/rtcm3/rtcm3.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/timing_position/gnss/rtcm3/rtcm3.h"
 
 // ---------------------------------------------------------------------------------------------
 // CRC-24Q (poly 0x1864CFB, init 0). Computed over the preamble + header + payload of a frame.

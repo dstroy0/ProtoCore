@@ -642,7 +642,8 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
 #endif // PROTOCORE_ENABLE_CSRF
 
 #if PROTOCORE_ENABLE_WEBSOCKET
-static void handle_ws_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
+static void handle_ws_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, HttpMethod method,
+                            const HttpRoute *r)
 {
     HttpParserV.get_header_args.req = req;
     HttpParserV.get_header_args.key = "Upgrade";
@@ -769,8 +770,8 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
 }
 #endif // PROTOCORE_ENABLE_AUTH
 
-static proto_bool dispatch_matched_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, HttpMethod method, HttpRoute *r,
-                                         proto_bool *path_matched, char *allow_buf, size_t allow_cap)
+static proto_bool dispatch_matched_route(uint8_t *restrict work, uint8_t slot_id, HttpReq *req, HttpMethod method,
+                                         HttpRoute *r, proto_bool *path_matched, char *allow_buf, size_t allow_cap)
 {
 #if PROTOCORE_ENABLE_WEBSOCKET
     if (r->type == ROUTE_WS)

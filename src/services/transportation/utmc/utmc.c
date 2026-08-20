@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_UTMC
 
-#include "services/transportation/utmc/utmc.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
+#include "services/transportation/utmc/utmc.h"
 
 static void put_u(protocore_sb *b, uint32_t v)
 {

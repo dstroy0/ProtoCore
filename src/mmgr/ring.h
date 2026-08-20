@@ -4,8 +4,8 @@
 #define PROTOCORE_RING_H
 
 #include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_read: the producer span move
-#include "mmgr/span/span.h"      // protocore_cspan: the region a held slot keeps out
-#include <stdatomic.h>      // _Atomic, atomic_load_explicit, atomic_store_explicit, memory_order_*
+#include "mmgr/span/span.h"           // protocore_cspan: the region a held slot keeps out
+#include <stdatomic.h>                // _Atomic, atomic_load_explicit, atomic_store_explicit, memory_order_*
 
 /**
  * @file ring.h
@@ -21,7 +21,6 @@
  * before the consumer observes the advanced index (acquire/release), correct across
  * the tcpip_thread <-> worker/caller boundary on either core. No locks, no RMW.
  */
-
 
 // ---------------------------------------------------------------------------
 // Cross-thread field access

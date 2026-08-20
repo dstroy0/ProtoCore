@@ -11,8 +11,8 @@
 
 #if PROTOCORE_ENABLE_DNC
 
-#include "services/machine_tool/dnc/dnc_stream/dnc_stream.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/machine_tool/dnc/dnc_stream/dnc_stream.h"
 
 // Drain any reverse-channel bytes into the flow state (non-blocking); false on a recv error.
 static proto_bool flow_drain(DncFlow *flow, DncRecvFn recv, void *ctx)

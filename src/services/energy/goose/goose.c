@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_GOOSE
 
-#include "services/energy/goose/goose.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "services/energy/goose/goose.h"
 
 // Number of octets to encode a BER definite length.
 static size_t len_octets(size_t len)

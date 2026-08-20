@@ -15,8 +15,8 @@
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
-#include "services/net/http_client/http_client.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
+#include "services/net/http_client/http_client.h"
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // ::TcpClient, the shared outbound transport

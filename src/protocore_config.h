@@ -1,17 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-
 #ifndef PROTOCORE_CONFIG_H
 #define PROTOCORE_CONFIG_H
-
 
 // The platform: the vendor axis, the board profile, the widths, the primitive types built from
 // them, and the capability questions the target had to answer. Reached first because every knob
 // below is stated in those types and gated on those capabilities.
 #include "config/platform/platform.h"
-
-
 
 #ifndef PROTOCORE_ENABLE_DIFFSERV
 #define PROTOCORE_ENABLE_DIFFSERV 0

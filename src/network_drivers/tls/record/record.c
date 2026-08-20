@@ -157,8 +157,8 @@ static void hdr_write(uint8_t *out, uint8_t content_type, size_t body_len)
 }
 
 // HKDF-Expand-Label of the traffic secret under the "tls13 " prefix, into out.
-static void expand_label(uint8_t *restrict work, TlsCipher cipher, uint8_t *scratch, const uint8_t *secret, const char *label, uint8_t *out,
-                         size_t out_len)
+static void expand_label(uint8_t *restrict work, TlsCipher cipher, uint8_t *scratch, const uint8_t *secret,
+                         const char *label, uint8_t *out, size_t out_len)
 {
     Tls13KsV.bind.kdf = &TLS13_KDF;
     Tls13KsV.bind.is384 = protocore_tls_cipher_is384(cipher);
