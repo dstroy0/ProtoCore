@@ -615,6 +615,11 @@ HOOKS = {
     "commit": T(
         "tools/dev_env/commit.py",
         'commit "subject" "para" ["para" ...] [--amend] [--no-signoff] [--dry] [-- <git args>]',
+        "QUOTE EACH PARAGRAPH WITH SINGLE QUOTES. A message is prose about code, so it carries "
+        "backticks and $ signs, and inside a double-quoted shell argument the shell runs them before "
+        "this tool sees anything: a paragraph naming `work` and `scratch` was committed with both "
+        "words replaced by nothing and 'command not found' on stderr. Single quotes pass the bytes "
+        "through. "
         "Commits a multi-paragraph message with no file to hold it: each argument after the subject "
         "is one paragraph, and the assembled message goes to `git commit -F -` down a PIPE. That is "
         "the whole point - a `-m` carrying embedded newlines is a heredoc, and a message written to "
