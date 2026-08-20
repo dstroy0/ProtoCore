@@ -2742,16 +2742,36 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
         # with `#if PROTOCORE_ENABLE_DNS`, and a regex over the whole body drops the directives - so
         # the member came out unset, NULL at run time, with nothing to say so at compile time.
         # A directive line is carried through verbatim; only a `.name = value` line is classified.
+        # A binding can WRAP. forwarded_trust.c writes `.protocore_forwarded_effective_ip =` with
+        # the implementation name alone on the next line: classified line by line the first half has
+        # no value and the second has no `.name`, so BOTH fell through the `if not m: continue`
+        # below. The member kept its slot in the Ns struct with nothing bound to it - a NULL in a
+        # `static const` table, which compiles, links, and segfaults on the first call through it.
+        # Consecutive non-directive lines are ONE chunk; a directive still breaks the chunk, so the
+        # guarded arms stay guarded.
+        chunks, buf = [], []
         for line in init.group(1).splitlines():
-            bare = line.strip().rstrip(",")
-            if bare.startswith("#"):
+            if line.strip().startswith("#"):
+                if buf:
+                    chunks.append((False, " ".join(buf)))
+                    buf = []
+                chunks.append((True, line.rstrip()))
+                continue
+            if line.strip():
+                buf.append(line.strip())
+        if buf:
+            chunks.append((False, " ".join(buf)))
+
+        for is_directive, chunk in chunks:
+            bare = chunk.strip().rstrip(",")
+            if is_directive:
                 # A directive belongs to BOTH halves: the entries under it and the data under it are
                 # equally conditional. protocol.c binds .on_event only under
                 # #if PROTOCORE_ENABLE_OBSERVABILITY, and dropping the guard from the entry half
                 # made the header's table name a function that only exists when the flag is on -
                 # every env with it off failed to link, while the source compiled clean.
-                data_init.append((None, line.rstrip()))
-                entry_order.append((None, line.rstrip()))
+                data_init.append((None, chunk))
+                entry_order.append((None, chunk))
                 continue
             # One line can carry several members: rng.c writes
             # `RngNs Rng = {.fill = rng_fill, .reseed = rng_reseed};` on a single line, and matching
@@ -2772,11 +2792,22 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
                 # table with a bare `<X>Vars <X>V;` zero-initialises them, so the pointers come out
                 # NULL - it compiles, links, and segfaults on first use with no diagnostic.
                 data_init.append((name, val))
-        # A block of directives with no member left under it says nothing; drop trailing ones.
-        while data_init and data_init[-1][0] is None:
-            data_init.pop()
+        # Do NOT drop trailing directives. They came from a balanced region, so the last one is
+        # usually the #endif that closes an #if earlier in the same initializer: worker.c ends with
+        # `#if PROTOCORE_ENABLE_PREEMPT_QUEUE / .queue = &PreemptQueue / #endif`, and popping the
+        # tail took the #endif and left the #if unterminated - 139 errors from one pop.
         if not any(n for n, _ in data_init):
             data_init = []
+        # EVERY entry must be bound. An entry the parse failed to see keeps its member in the Ns
+        # struct and gets nothing in the table's brace, and a `static const` table zero-fills what
+        # its initializer omits - so the miss is a NULL function pointer with no diagnostic at any
+        # optimisation level. Refusing the module is a line of output; shipping it is a SIGSEGV.
+        unbound = [e for e in entries if e not in bind]
+        if unbound:
+            raise ValueError(
+                "initializer binds %d of %d entries; unbound: %s"
+                % (len(bind), len(entries), ", ".join(unbound))
+            )
 
 
     block = ["typedef struct", "{"] + data + ["} %s;" % vars_t, ""]
@@ -2930,6 +2961,74 @@ def move_alias(text, ns, obj, vars_t, objv):
         return text, 0, refused
     out = pat.sub(lambda m: "%s *%s = &%s;" % (vars_t, m.group(1), objv), text)
     return out, len(names), []
+
+
+def move_ptr_operands(text, ns, objv, members, ptr_names):
+    """`p->operand` -> `<X>V.operand`, where p is a pointer to this namespace.
+
+    A module can hold another module's table as an injected dependency - session.h declares
+    `WorkerNs *workers` - and reach BOTH halves through it: protocore.c calls
+    SessionV.workers->start(...) and writes SessionV.workers->pump. After the split one pointer
+    cannot do both, because the operands are no longer in the object it points at.
+
+    Only the OPERAND half moves. The entry calls keep the pointer, which still names the table, so
+    the injection itself is untouched.
+    """
+    if not members or not ptr_names:
+        return text, 0
+    # Anchored on the POINTER, with the qualifier walked back afterwards. Writing the chain into the
+    # pattern as `(ident(\.|->))*ptr->member` makes it greedy across newlines, so it starts at a word
+    # in the COMMENT above - "...own processing." + newline + "SessionV." parses as two more links -
+    # and the match then begins on a comment byte, which the mask check drops. The site is left
+    # behind while its neighbours convert.
+    # The qualifier must be a Vars object: `<X>V.<ptr>->member`. A pointer is matched BY NAME, and a
+    # name is not unique - tcp.h declares `ConnPoolNs *conn` while client.c has an unrelated
+    # `ClientConn *conn`, so a bare `conn->pcb` rewrote a plain data access into
+    # `TCP_CLIENT_CTX(work)->ConnPoolV.pcb`. Requiring the `<X>V.` in front is what tells the two
+    # apart without resolving types, and it is the only shape the reshape actually creates: a
+    # namespace pointer is reached as a member of some module's Vars.
+    pat = re.compile(
+        r"\b\w+V\s*\.\s*(?:%s)\s*->\s*(%s)\b(?!\s*\()"
+        % ("|".join(re.escape(p) for p in ptr_names), "|".join(re.escape(m) for m in members))
+    )
+    mask = code_mask(text)
+    out, last, n = [], 0, 0
+    for m in pat.finditer(text):
+        if not mask[m.start()]:
+            continue
+        # Walk back over `ident.` / `ident->` links, staying inside code. `SessionV.workers->pump`
+        # is ONE access: leaving `SessionV.` in front produces `SessionV.WorkersV.pump`, a lookup
+        # on the wrong struct.
+        start = m.start()
+        while True:
+            j = start
+            while j > 0 and text[j - 1] in " \t" and mask[j - 1]:
+                j -= 1
+            if j >= 2 and mask[j - 1] and text[j - 2 : j] == "->":
+                j -= 2
+            elif j >= 1 and mask[j - 1] and text[j - 1] == ".":
+                j -= 1
+            else:
+                break
+            k = j
+            while k > 0 and mask[k - 1] and (text[k - 1].isalnum() or text[k - 1] == "_"):
+                k -= 1
+            if k == j:
+                break
+            start = k
+        if start < last:
+            continue
+        out.append(text[last:start])
+        out.append("%s.%s" % (objv, m.group(1)))
+        last = m.end()
+        n += 1
+    out.append(text[last:])
+    return "".join(out), n
+
+
+def ns_pointer_names(tree_text, ns):
+    """Every identifier declared as `<ns> *name`, so its `->operand` uses can be found."""
+    return {m.group(1) for m in re.finditer(r"\b%s\s*\*\s*(?:const\s+)?(\w+)\s*[;,)=]" % re.escape(ns), tree_text)}
 
 
 def move_operands(text, obj, objv, members):
@@ -3123,8 +3222,66 @@ def main():
         for p in tree:
             s = io.open(p, encoding="utf-8", errors="replace").read()
             cache[p] = s
-            for m in re.finditer(r"\b(protocore_\w+)\s*\(", s):
-                declared.setdefault(m.group(1), p)
+            # Only CODE declares anything. Built from the raw text, this map registered every
+            # function a COMMENT happened to mention - ssh_sftp.c's prose says
+            # "before protocore_ssh_sftp_begin() ran" - and the module was skipped for clashing
+            # with a sentence about itself.
+            pmask = code_mask(s)
+            # A TYPE of the same name is a clash too. ssh/client/client.h ends a typedef with
+            # `} protocore_ssh_client_state;`, and the entry `state` on SshClient generates exactly
+            # that - the header then declared a function where a type was expected and every
+            # consumer failed on `expected specifier-qualifier-list`. A type has no parameter list,
+            # so a scan for `name(` cannot see it.
+            for m in re.finditer(r"^\}\s*(protocore_\w+)\s*;|^typedef\s[^;{]*?\b(protocore_\w+)\s*;", s, re.M):
+                if pmask[m.start()]:
+                    declared.setdefault(m.group(1) or m.group(2), (p, False))
+            for m in re.finditer(r"\b(protocore_\w+)\s*\(([^)]*)\)", s):
+                if not pmask[m.start()]:
+                    continue
+                # Record the SHAPE, not just the name. A declaration that is already
+                # `void f(uint8_t *restrict work)` is an entry - very often this module's own
+                # implementation, already carrying the name the reshape would give it - so treating
+                # it as a clash skipped modules that had nothing wrong with them.
+                args = " ".join(m.group(2).split())
+                entryish = args == "uint8_t *restrict work"
+                declared.setdefault(m.group(1), (p, entryish))
+
+        # REPAIR PASS over modules already converted. A batch only touches the modules it converts,
+        # so a fix written after an earlier batch never reaches what that batch produced: worker.h
+        # was reshaped three batches before move_ptr_operands existed, and protocore.c kept reaching
+        # WorkersV's operands through SessionV.workers-> until this ran. Every run heals what came
+        # before it, which is what keeps the batches from each carrying their own era's bugs.
+        repaired = 0
+        for p in tree:
+            if not p.endswith(".h"):
+                continue
+            s = cache[p]
+            m = re.search(r"^\}\s*(\w+)Vars\s*;", s, re.M)
+            if not m or ("extern %sVars %sV;" % (m.group(1), m.group(1))) not in s:
+                continue
+            robj = m.group(1)
+            # BRACE MATCH, not a non-greedy regex. `typedef struct {.*?} <X>Vars;` starts at the
+            # FIRST typedef struct in the file and swallows every struct before the Vars one, so the
+            # member list came back as the fields of unrelated types and the real operands were
+            # missing. Exactly the bug ns_struct_span was written for.
+            rspan = ns_struct_span(s, robj + "Vars")
+            if not rspan:
+                continue
+            rmembers = handle_members([ln for ln in s[rspan[1] : rspan[2]].splitlines() if ln.strip()])
+            rns = re.search(r"static const (\w+Ns) %s\b" % re.escape(robj), s)
+            if not rns or not rmembers:
+                continue
+            rptrs = ns_pointer_names("\n".join(cache.values()), rns.group(1))
+            if not rptrs:
+                continue
+            for q in tree:
+                out, n = move_ptr_operands(cache[q], rns.group(1), robj + "V", rmembers, rptrs)
+                if n:
+                    cache[q] = out
+                    emit(q, out)
+                    repaired += n
+        if repaired:
+            print("repair: %d operand site(s) reached through a namespace pointer" % repaired)
 
         done, moved, skipped, seen = 0, 0, [], 0
         for rel in rels:
@@ -3165,20 +3322,37 @@ def main():
             taken = []
             for e in entries:
                 f = "protocore_%s_%s" % (mod, e)
-                where = declared.get(f)
-                # The module's OWN header counts. net_addr publishes
+                found = declared.get(f)
+                if not found:
+                    continue
+                where, entryish = found
+                # An existing declaration of the SAME shape is not a clash: it is an entry, and in
+                # this module's own files it is the implementation already carrying the name the
+                # reshape would give it, so the rename is a no-op.
+                if entryish and where in (hp, cp):
+                    continue
+                # The module's OWN header still counts when the shape differs. net_addr publishes
                 # protocore_net_addr_to_ip(const protocore_net_ip *, protocore_ip *) in net_addr.h
                 # itself, and an entry named `to_ip` generates that exact name - excluding hp/cp
-                # from the check let the clash through and it landed as "conflicting types" in every
-                # consumer.
-                if where:
-                    taken.append("%s (in %s)" % (f, os.path.relpath(where, R).replace("\\", "/")))
+                # from the check let the clash through as "conflicting types" in every consumer.
+                taken.append("%s (in %s)" % (f, os.path.relpath(where, R).replace("\\", "/")))
             if taken:
                 print("SKIPPED %-50s name already taken: %s" % (rel, "; ".join(taken[:2])))
                 skipped.append(rel)
                 continue
-            hout, cout, objv, members = reshape_handle(hsrc, csrc, mod, ns, obj, data, entries)
+            try:
+                hout, cout, objv, members = reshape_handle(hsrc, csrc, mod, ns, obj, data, entries)
+            except ValueError as ex:
+                print("SKIPPED %-50s %s" % (rel, ex))
+                skipped.append(rel)
+                continue
+            # Every name declared as `<Ns> *p` anywhere, so `p->operand` can be found wherever it is
+            # written. session.h declares WorkerNs *workers and protocore.c reaches operands through
+            # it; the declaration and the use are in different files.
+            ptr_names = ns_pointer_names("\n".join(cache.values()), ns)
             cout, own = move_operands(cout, obj, objv, members)
+            cout, ownp = move_ptr_operands(cout, ns, objv, members, ptr_names)
+            own += ownp
             # A local alias of the table has to follow the operands it is used to reach.
             cout, naliased, refused = move_alias(cout, ns, obj, obj + "Vars", objv)
             for r in refused:
@@ -3199,6 +3373,9 @@ def main():
                 if obj + "." not in s:
                     continue
                 out, n = move_operands(s, obj, objv, members)
+                # A pointer to this namespace reaches the operands too, and they have moved.
+                out, n2 = move_ptr_operands(out, ns, objv, members, ptr_names)
+                n += n2
                 if n:
                     files.append((p, out))
                     cache[p] = out  # the next module reads what this one wrote, not the file on disk
