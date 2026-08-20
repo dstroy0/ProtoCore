@@ -31,7 +31,7 @@ PROTOCORE_BEGIN_DECLS
 // Built-in type codec
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/tcp/common/common.h"            // TcpConn: the slot's ring the reader walks
+#include "network_drivers/transport/tcp/common/common.h"     // TcpConn: the slot's ring the reader walks
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
 #include <time.h>

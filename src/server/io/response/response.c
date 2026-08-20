@@ -17,7 +17,7 @@
 #include "mmgr/protostr/protostr.h" // str.len: send_text measures the body it was handed
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/session/session.h"                 // the per-connection tables this reads
-#include "network_drivers/transport/tcp/common/common.h"            // conn_pool, TcpConn/ConnState
+#include "network_drivers/transport/tcp/common/common.h"     // conn_pool, TcpConn/ConnState
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.send: the bytes a response writes
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h" // PROTOCORE_ENABLE_STATS, PROTOCORE_ENABLE_METRICS, PROTOCORE_ENABLE_LOGBUF

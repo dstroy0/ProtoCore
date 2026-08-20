@@ -25,8 +25,8 @@
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_BUS
-#include "server/peripherals/i2c/i2c.h"  // the shared I2C bus owner
-#include "server/peripherals/spi/spi.h"  // the shared SPI bus owner, and chip select
+#include "server/peripherals/i2c/i2c.h"   // the shared I2C bus owner
+#include "server/peripherals/spi/spi.h"   // the shared SPI bus owner, and chip select
 #include "server/peripherals/uart/uart.h" // the shared UART owner
 #endif
 

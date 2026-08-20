@@ -805,25 +805,36 @@ def render_env(name, e, bases=frozenset()):
 
 
 def render_block(table):
+    """The generated region of platformio.ini - now empty of native envs.
+
+    Every native env in test_matrix.json is built and run by test/CMakeLists.txt, rendered from the
+    same table. Rendering them here as well produced a second build system for the same tests: 412
+    env sections, 5,594 lines of `+<...>` source filters spelling out dependencies the module
+    declarations now state, and a `build_src_filter` per env that had to be kept in step by hand.
+
+    PlatformIO is still what builds the board target and what `pio ci` compiles the examples with,
+    so the region stays - it just carries nothing that CMake already covers.
+    """
     envs = table["envs"]
-    # An entry that names no suite is a stack base: a section others extend, never a target.
     bases = frozenset(n for n, e in envs.items() if not e.get("tests"))
-    parts = [
-        BEGIN,
-        "; Single source of truth: test/test_matrix.json  ("
-        + str(len(envs) - len(bases))
-        + " native envs, "
-        + str(len(bases))
-        + " stack bases)",
-        "",
-        NATIVE_BASE,
-    ]
-    for name, e in envs.items():
-        parts.append("")
-        parts.append(render_env(name, e, bases))
-    parts.append("")
-    parts.append(END)
-    return "\n".join(parts) + "\n"
+    return (
+        "\n".join(
+            [
+                BEGIN,
+                "; Native envs are defined in test/test_matrix.json and BUILT BY CMAKE " "(test/CMakeLists.txt).",
+                "; "
+                + str(len(envs) - len(bases))
+                + " native envs and "
+                + str(len(bases))
+                + " stack bases live there; none of them are rendered here.",
+                ";",
+                "; PlatformIO builds the board target and compiles the examples (pio ci). It does not",
+                "; build the host test suite, so it does not need a section per suite.",
+                END,
+            ]
+        )
+        + "\n"
+    )
 
 
 def strip_native_base(head):
@@ -870,7 +881,7 @@ def cmd_env_gen(a):
         return 0
     with open(INI, "w", encoding="utf-8", newline="\n") as f:
         f.write(new)
-    print(f"Wrote {len(table['envs'])} native envs to platformio.ini")
+    print("platformio.ini: native envs are CMake's; %d in the matrix, none rendered here" % len(table["envs"]))
     return 0
 
 

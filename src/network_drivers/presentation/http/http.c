@@ -15,11 +15,11 @@
 #include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read: a captured segment moves into our own buffer
 #include "network_drivers/presentation/http/auth/auth.h"
 #include "network_drivers/presentation/http/route/http_route/http_route.h" // HttpRoutes
-#include "network_drivers/session/session.h"                    // the per-connection tables this reads
-#include "network_drivers/transport/tcp/common/common.h"               // TcpConn, conn_pool: the slots a response writes on
-#include "network_drivers/transport/tcp/protocol/protocol.h"    // ConnPool: the slot a response writes on
-#include "protocore.h"                                          // http_pool, and the request and route widths
-#include "server/io/webdav_handler/webdav_handler.h"                           // Dav: a DAV mount is intercepted before the route loop
+#include "network_drivers/session/session.h"                               // the per-connection tables this reads
+#include "network_drivers/transport/tcp/common/common.h"     // TcpConn, conn_pool: the slots a response writes on
+#include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a response writes on
+#include "protocore.h"                                       // http_pool, and the request and route widths
+#include "server/io/webdav_handler/webdav_handler.h"         // Dav: a DAV mount is intercepted before the route loop
 #if PROTOCORE_ENABLE_AUTH_LOCKOUT
 #include "server/clock/clock.h" // protocore_millis() stamps the attempt the lockout counts
 #include "server/security/auth_lockout/auth_lockout.h"

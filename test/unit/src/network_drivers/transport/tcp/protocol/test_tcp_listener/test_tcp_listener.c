@@ -18,7 +18,7 @@
 // event to drive it, so a test calls it with a fabricated control block.
 
 #include "network_drivers/transport/diffserv/diffserv.h" // the DSCP code points the marking tests name
-#include "network_drivers/transport/tcp/common/common.h"        // conn_pool, listener_pool, protocore_ap_ip
+#include "network_drivers/transport/tcp/common/common.h" // conn_pool, listener_pool, protocore_ap_ip
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"

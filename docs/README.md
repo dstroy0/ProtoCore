@@ -146,6 +146,9 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── ed25519.c
 │   │   │   └── ed25519.h
+│   │   ├── ed25519_comb_table/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── ed25519_comb_table.h
 │   │   ├── fe25519/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── fe25519.c
@@ -154,8 +157,7 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── rsa.c
 │   │   │   └── rsa.h
-│   │   ├── CMakeLists.txt
-│   │   └── ed25519_comb_table.h
+│   │   └── CMakeLists.txt
 │   ├── cipher/
 │   │   ├── aes256ctr/
 │   │   │   ├── aes256ctr.c
@@ -165,12 +167,21 @@ src/
 │   │   │   ├── aes_block.c
 │   │   │   ├── aes_block.h
 │   │   │   └── CMakeLists.txt
+│   │   ├── aes_sbox/
+│   │   │   ├── aes_sbox.h
+│   │   │   └── CMakeLists.txt
 │   │   ├── chacha20/
 │   │   │   ├── chacha20.c
 │   │   │   ├── chacha20.h
 │   │   │   └── CMakeLists.txt
-│   │   ├── aes_sbox.h
 │   │   └── CMakeLists.txt
+│   ├── crypto_opt/
+│   │   ├── CMakeLists.txt
+│   │   └── crypto_opt.h
+│   ├── ct_eq/
+│   │   ├── CMakeLists.txt
+│   │   ├── ct_eq.c
+│   │   └── ct_eq.h
 │   ├── hash/
 │   │   ├── md/
 │   │   │   ├── CMakeLists.txt
@@ -264,10 +275,7 @@ src/
 │   │   │   ├── x509_verify.c
 │   │   │   └── x509_verify.h
 │   │   └── CMakeLists.txt
-│   ├── CMakeLists.txt
-│   ├── crypto_opt.h
-│   ├── ct_eq.c
-│   └── ct_eq.h
+│   └── CMakeLists.txt
 ├── mmgr/
 │   ├── arena/
 │   │   ├── arena.c
@@ -321,6 +329,9 @@ src/
 │   │   ├── CMakeLists.txt
 │   │   ├── rawmemcpy.c
 │   │   └── rawmemcpy.h
+│   ├── ring/
+│   │   ├── CMakeLists.txt
+│   │   └── ring.h
 │   ├── secure/
 │   │   ├── CMakeLists.txt
 │   │   ├── secure.c
@@ -333,8 +344,7 @@ src/
 │   │   ├── CMakeLists.txt
 │   │   ├── swar.c
 │   │   └── swar.h
-│   ├── CMakeLists.txt
-│   └── ring.h
+│   └── CMakeLists.txt
 ├── network_drivers/
 │   ├── application/
 │   │   ├── binary_asset_blobs/
@@ -599,9 +609,11 @@ src/
 │   │   │   │   ├── httpcache.c
 │   │   │   │   └── httpcache.h
 │   │   │   ├── route/
-│   │   │   │   ├── CMakeLists.txt
-│   │   │   │   ├── http_route.c
-│   │   │   │   └── http_route.h
+│   │   │   │   ├── http_route/
+│   │   │   │   │   ├── CMakeLists.txt
+│   │   │   │   │   ├── http_route.c
+│   │   │   │   │   └── http_route.h
+│   │   │   │   └── CMakeLists.txt
 │   │   │   ├── sse/
 │   │   │   │   ├── CMakeLists.txt
 │   │   │   │   ├── sse.c
@@ -648,6 +660,9 @@ src/
 │   │   │   │   ├── client.c
 │   │   │   │   ├── client.h
 │   │   │   │   └── CMakeLists.txt
+│   │   │   ├── common/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   └── common.h
 │   │   │   ├── connection/
 │   │   │   │   ├── CMakeLists.txt
 │   │   │   │   ├── connection.c
@@ -695,7 +710,6 @@ src/
 │   │   │   │   │   └── zlib.h
 │   │   │   │   └── CMakeLists.txt
 │   │   │   ├── CMakeLists.txt
-│   │   │   ├── common.h
 │   │   │   ├── ssh.c
 │   │   │   └── ssh.h
 │   │   ├── telnet/
@@ -764,6 +778,12 @@ src/
 │   │   │   │   ├── client.c
 │   │   │   │   ├── client.h
 │   │   │   │   └── CMakeLists.txt
+│   │   │   ├── common/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   └── common.h
+│   │   │   ├── evt/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   └── evt.h
 │   │   │   ├── lower/
 │   │   │   │   ├── CMakeLists.txt
 │   │   │   │   ├── lower.c
@@ -777,8 +797,6 @@ src/
 │   │   │   │   ├── server.c
 │   │   │   │   └── server.h
 │   │   │   ├── CMakeLists.txt
-│   │   │   ├── common.h
-│   │   │   ├── evt.h
 │   │   │   ├── tcp.c
 │   │   │   └── tcp.h
 │   │   ├── udp/
@@ -786,22 +804,30 @@ src/
 │   │   │   │   ├── client.c
 │   │   │   │   ├── client.h
 │   │   │   │   └── CMakeLists.txt
+│   │   │   ├── common/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   └── common.h
 │   │   │   ├── server/
 │   │   │   │   ├── CMakeLists.txt
 │   │   │   │   ├── server.c
 │   │   │   │   └── server.h
 │   │   │   ├── CMakeLists.txt
-│   │   │   ├── common.h
 │   │   │   ├── udp.c
 │   │   │   └── udp.h
 │   │   └── CMakeLists.txt
 │   └── CMakeLists.txt
+├── protocore/
+│   ├── CMakeLists.txt
+│   └── protocore.c
 ├── server/
 │   ├── clock/
 │   │   ├── clock.c
 │   │   ├── clock.h
 │   │   └── CMakeLists.txt
 │   ├── core/
+│   │   ├── exc_coredump/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── exc_coredump.c
 │   │   ├── exc_decoder/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── exc_decoder.c
@@ -826,6 +852,9 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── preempt_queue.c
 │   │   │   └── preempt_queue.h
+│   │   ├── proto_handler/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── proto_handler.h
 │   │   ├── provisioning_service/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── provisioning_service.c
@@ -838,20 +867,26 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── worker.c
 │   │   │   └── worker.h
-│   │   ├── CMakeLists.txt
-│   │   ├── exc_coredump.c
-│   │   └── proto_handler.h
+│   │   └── CMakeLists.txt
 │   ├── io/
 │   │   ├── http_clock/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── http_clock.c
 │   │   │   └── http_clock.h
-│   │   ├── CMakeLists.txt
-│   │   ├── middleware.c
-│   │   ├── response.c
-│   │   ├── webdav_handler.c
-│   │   ├── webdav_handler.h
-│   │   └── websocket_sse.c
+│   │   ├── middleware/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── middleware.c
+│   │   ├── response/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── response.c
+│   │   ├── webdav_handler/
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── webdav_handler.c
+│   │   │   └── webdav_handler.h
+│   │   ├── websocket_sse/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── websocket_sse.c
+│   │   └── CMakeLists.txt
 │   ├── net/
 │   │   ├── gateway/
 │   │   │   ├── CMakeLists.txt
@@ -911,6 +946,9 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── hmmd.c
 │   │   │   └── hmmd.h
+│   │   ├── i2c/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── i2c.h
 │   │   ├── ina219/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── ina219.c
@@ -963,14 +1001,23 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── smbus.c
 │   │   │   └── smbus.h
+│   │   ├── spi/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── spi.h
+│   │   ├── uart/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── uart.h
 │   │   ├── vl53l0x/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── vl53l0x.c
 │   │   │   └── vl53l0x.h
+│   │   └── CMakeLists.txt
+│   ├── protocore_builtins/
 │   │   ├── CMakeLists.txt
-│   │   ├── i2c.h
-│   │   ├── spi.h
-│   │   └── uart.h
+│   │   └── protocore_builtins.c
+│   ├── regex/
+│   │   ├── CMakeLists.txt
+│   │   └── regex.c
 │   ├── security/
 │   │   ├── audit_log/
 │   │   │   ├── audit_log.c
@@ -1006,6 +1053,9 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── gpio_map.c
 │   │   │   └── gpio_map.h
+│   │   ├── gpio_map_routes/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── gpio_map_routes.c
 │   │   ├── hw_health/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── hw_health.c
@@ -1022,8 +1072,7 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── trace_capture.c
 │   │   │   └── trace_capture.h
-│   │   ├── CMakeLists.txt
-│   │   └── gpio_map_routes.c
+│   │   └── CMakeLists.txt
 │   ├── storage/
 │   │   ├── config_io/
 │   │   │   ├── CMakeLists.txt
@@ -1050,10 +1099,12 @@ src/
 │   │   │   ├── mnt_ram.c
 │   │   │   └── mnt_ram.h
 │   │   ├── partition_monitor/
+│   │   │   ├── partition_monitor_routes/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   └── partition_monitor_routes.c
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── partition_monitor.c
-│   │   │   ├── partition_monitor.h
-│   │   │   └── partition_monitor_routes.c
+│   │   │   └── partition_monitor.h
 │   │   ├── wearlevel/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── wearlevel.c
@@ -1071,10 +1122,12 @@ src/
 │   │   └── CMakeLists.txt
 │   ├── web/
 │   │   ├── dashboard/
+│   │   │   ├── dashboard_routes/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   └── dashboard_routes.c
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── dashboard.c
-│   │   │   ├── dashboard.h
-│   │   │   └── dashboard_routes.c
+│   │   │   └── dashboard.h
 │   │   ├── edge_cache/
 │   │   │   ├── edge_cache/
 │   │   │   │   ├── CMakeLists.txt
@@ -1106,9 +1159,7 @@ src/
 │   │   │   ├── web_terminal.c
 │   │   │   └── web_terminal.h
 │   │   └── CMakeLists.txt
-│   ├── CMakeLists.txt
-│   ├── protocore_builtins.c
-│   └── regex.c
+│   └── CMakeLists.txt
 ├── services/
 │   ├── energy/
 │   │   ├── c37118/
@@ -1288,10 +1339,12 @@ src/
 │   │   │   │   └── ftp_session.h
 │   │   │   └── CMakeLists.txt
 │   │   ├── http_delivery/
+│   │   │   ├── http_delivery_routes/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   └── http_delivery_routes.c
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── http_delivery.c
-│   │   │   ├── http_delivery.h
-│   │   │   └── http_delivery_routes.c
+│   │   │   └── http_delivery.h
 │   │   └── CMakeLists.txt
 │   ├── instrumentation/
 │   │   ├── gpib/
@@ -1347,9 +1400,11 @@ src/
 │   │   │   ├── grpcweb.c
 │   │   │   └── grpcweb.h
 │   │   ├── lwm2m/
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── lwm2m_tlv.c
-│   │   │   └── lwm2m_tlv.h
+│   │   │   ├── lwm2m_tlv/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   ├── lwm2m_tlv.c
+│   │   │   │   └── lwm2m_tlv.h
+│   │   │   └── CMakeLists.txt
 │   │   ├── mqtt/
 │   │   │   ├── mqtt/
 │   │   │   │   ├── CMakeLists.txt
@@ -1625,20 +1680,24 @@ src/
 │   │   │   ├── docstore.c
 │   │   │   └── docstore.h
 │   │   ├── sqlite/
-│   │   │   ├── CMakeLists.txt
-│   │   │   ├── sqlite_format.c
-│   │   │   └── sqlite_format.h
+│   │   │   ├── sqlite_format/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   ├── sqlite_format.c
+│   │   │   │   └── sqlite_format.h
+│   │   │   └── CMakeLists.txt
 │   │   ├── wal/
 │   │   │   ├── wal/
 │   │   │   │   ├── CMakeLists.txt
 │   │   │   │   ├── wal.c
 │   │   │   │   └── wal.h
+│   │   │   ├── wal_fs/
+│   │   │   │   ├── CMakeLists.txt
+│   │   │   │   └── wal_fs.h
 │   │   │   ├── wal_store/
 │   │   │   │   ├── CMakeLists.txt
 │   │   │   │   ├── wal_store.c
 │   │   │   │   └── wal_store.h
-│   │   │   ├── CMakeLists.txt
-│   │   │   └── wal_fs.h
+│   │   │   └── CMakeLists.txt
 │   │   └── CMakeLists.txt
 │   ├── system/
 │   │   ├── control/
@@ -1787,7 +1846,6 @@ src/
 │   └── README.md
 ├── CMakeLists.txt
 ├── derived_sizing.h
-├── protocore.c
 └── protocore_config.h
 ```
 

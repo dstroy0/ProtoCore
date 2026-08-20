@@ -5,6 +5,7 @@ teaches hwcap_orphaned what the env's base already carries, so the four cases ar
 with no base (still refused), the same removal where the base supplies the arm (allowed), a swap
 (allowed, as before), and a removal of something that is not a capability arm at all (allowed).
 """
+
 import os
 import sys
 

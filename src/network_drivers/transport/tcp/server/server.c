@@ -18,17 +18,17 @@
  */
 
 #include "server.h"
-#include "../../diffserv/diffserv.h"   // DiffServ DSCP marking for accepted connections (compiles out when off)
-#include "../../net_addr/net_addr.h"   // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
-#include "network_drivers/transport/tcp/common/common.h"                 // TcpConn, conn_pool: the slots an accept claims
-#include "../lower/lower.h"            // TcpLower.apply_ttl: the TTL a new pcb is stamped with
-#include "../protocol/protocol.h"      // ConnPool: the slots an accept claims
-#include "../tcp.h"                    // the aggregate the halves hang off
-#include "config/platform/platform.h"  // the stack's queues, under our names
-#include "mmgr/plaintext/plaintext.h"  // the persistent end this module's state is taken from
-#include "network_drivers/tls/tls.h"   // TLS handshake begin (self-stubbing)
-#include "server/clock/clock.h"        // protocore_millis() pluggable monotonic clock
-#include "server/core/worker/worker.h" // Workers.wake() - nudge the owning worker task
+#include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for accepted connections (compiles out when off)
+#include "../../net_addr/net_addr.h"  // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
+#include "../lower/lower.h"           // TcpLower.apply_ttl: the TTL a new pcb is stamped with
+#include "../protocol/protocol.h"     // ConnPool: the slots an accept claims
+#include "../tcp.h"                   // the aggregate the halves hang off
+#include "config/platform/platform.h" // the stack's queues, under our names
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "network_drivers/tls/tls.h"  // TLS handshake begin (self-stubbing)
+#include "network_drivers/transport/tcp/common/common.h" // TcpConn, conn_pool: the slots an accept claims
+#include "server/clock/clock.h"                          // protocore_millis() pluggable monotonic clock
+#include "server/core/worker/worker.h"                   // Workers.wake() - nudge the owning worker task
 
 // Listener pool - all storage in BSS.
 Listener listener_pool[MAX_LISTENERS];

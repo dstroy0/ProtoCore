@@ -14,7 +14,7 @@
 #include "network_drivers/presentation/http/http3/quic_server/quic_server.h"
 
 #include "mmgr/plaintext/plaintext.h" // the two engines' byte spans
-#include "mmgr/ring/ring.h"                // protocore_atomic
+#include "mmgr/ring/ring.h"           // protocore_atomic
 #include "mmgr/secure/secure.h"       // the QUIC context span is key material
 #include "network_drivers/presentation/http/http3/quic_packet/quic_packet.h"
 #include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h" // QuicTlsConfig
