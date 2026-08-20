@@ -2624,6 +2624,36 @@ def drop_null_borrow(src, notes):
 HANDLE_STRUCT = re.compile(r"typedef struct\s*\{(?P<body>.*?)\}\s*(?P<ns>\w+Ns)\s*;", re.S)
 
 
+# A control keyword before a name means what follows is a call, not a declaration. `return
+# protocore_x(a);` reads exactly like `void protocore_x(...)` to a pattern that only looks at the
+# character class of the preceding byte.
+_NOT_A_TYPE = {"return", "if", "while", "for", "switch", "sizeof", "case", "do", "else", "typedef"}
+
+
+def is_declaration(src, start, end):
+    """Is the `name(args)` spanning [start, end) a declaration or definition, rather than a call?
+
+    Followed by `;` or `{`, and preceded by a type. Both halves are needed: `foo(protocore_x(a));`
+    is followed by `)` and `x = protocore_x(a);` is followed by `;` but preceded by `=`.
+    """
+    j = end
+    while j < len(src) and src[j] in " \t\r\n":
+        j += 1
+    if j >= len(src) or src[j] not in ";{":
+        return False
+    i = start - 1
+    while i >= 0 and src[i] in " \t\r\n":  # newlines too: a wrapped return type is still a type
+        i -= 1
+    if i < 0 or not (src[i].isalnum() or src[i] in "_*"):
+        return False
+    if src[i] == "*":
+        return True
+    k = i
+    while k >= 0 and (src[k].isalnum() or src[k] == "_"):
+        k -= 1
+    return src[k + 1 : i + 1] not in _NOT_A_TYPE
+
+
 def ns_struct_span(hsrc, ns):
     """(start, body_start, body_end, end) of `typedef struct { ... } <ns>;`, by BRACE MATCHING.
 
@@ -3237,6 +3267,13 @@ def main():
                     declared.setdefault(m.group(1) or m.group(2), (p, False))
             for m in re.finditer(r"\b(protocore_\w+)\s*\(([^)]*)\)", s):
                 if not pmask[m.start()]:
+                    continue
+                # A CALL does not reserve a name. This pattern cannot tell one from a declaration,
+                # and 33 modules were skipped over names nothing declares: nrf24's bench main calls
+                # protocore_nrf24_init(&g_bus, &cfg), which exists nowhere in src - the bench kept
+                # calling it after the API moved - and that call held the name against the module
+                # that would have defined it.
+                if not is_declaration(s, m.start(), m.end()):
                     continue
                 # Record the SHAPE, not just the name. A declaration that is already
                 # `void f(uint8_t *restrict work)` is an entry - very often this module's own
