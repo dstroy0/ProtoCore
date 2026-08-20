@@ -33,11 +33,11 @@ void protocore_interbus_fcs(uint8_t *restrict work)
     size_t len = InterbusV.fcs_args.len;
 
     // CRC-16/CCITT-FALSE: poly 0x1021, init 0xFFFF, no reflection, xorout 0 - cataloged as CRC-16/IBM-3740.
-    Crc.args.params = &PROTOCORE_CRC16_IBM_3740;
-    Crc.args.data = bytes;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC16_IBM_3740;
+    CrcV.args.data = bytes;
+    CrcV.args.len = len;
     Crc.compute(crc_work);
-    InterbusV.value = (uint16_t)Crc.value;
+    InterbusV.value = (uint16_t)CrcV.value;
 }
 
 void protocore_interbus_build(uint8_t *restrict work)

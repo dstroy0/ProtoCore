@@ -23,14 +23,14 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void control_pid_reset(uint8_t *restrict work);
+void protocore_control_pid_reset(uint8_t *restrict work);
 
-static void control_pid_init(uint8_t *restrict work)
+void protocore_control_pid_init(uint8_t *restrict work)
 {
-    Pid *p = Control.pid_init_args.p;
-    float kp = Control.pid_init_args.kp;
-    float ki = Control.pid_init_args.ki;
-    float kd = Control.pid_init_args.kd;
+    Pid *p = ControlV.pid_init_args.p;
+    float kp = ControlV.pid_init_args.kp;
+    float ki = ControlV.pid_init_args.ki;
+    float kd = ControlV.pid_init_args.kd;
 
     if (!p)
     {
@@ -47,15 +47,15 @@ static void control_pid_init(uint8_t *restrict work)
     p->d_alpha = 0.0f;
     p->dt = 0.0f;
     p->inv_dt = 0.0f;
-    Control.pid_reset_args.p = p;
-    control_pid_reset(work);
+    ControlV.pid_reset_args.p = p;
+    protocore_control_pid_reset(work);
 }
 
-static void control_pid_set_rate(uint8_t *restrict work)
+void protocore_control_pid_set_rate(uint8_t *restrict work)
 {
     (void)work;
-    Pid *p = Control.pid_set_rate_args.p;
-    float dt = Control.pid_set_rate_args.dt;
+    Pid *p = ControlV.pid_set_rate_args.p;
+    float dt = ControlV.pid_set_rate_args.dt;
 
     if (p && dt > 0.0f)
     {
@@ -64,12 +64,12 @@ static void control_pid_set_rate(uint8_t *restrict work)
     }
 }
 
-static void control_pid_set_output_limits(uint8_t *restrict work)
+void protocore_control_pid_set_output_limits(uint8_t *restrict work)
 {
     (void)work;
-    Pid *p = Control.pid_set_output_limits_args.p;
-    float lo = Control.pid_set_output_limits_args.lo;
-    float hi = Control.pid_set_output_limits_args.hi;
+    Pid *p = ControlV.pid_set_output_limits_args.p;
+    float lo = ControlV.pid_set_output_limits_args.lo;
+    float hi = ControlV.pid_set_output_limits_args.hi;
 
     if (p)
     {
@@ -78,12 +78,12 @@ static void control_pid_set_output_limits(uint8_t *restrict work)
     }
 }
 
-static void control_pid_set_integral_limits(uint8_t *restrict work)
+void protocore_control_pid_set_integral_limits(uint8_t *restrict work)
 {
     (void)work;
-    Pid *p = Control.pid_set_integral_limits_args.p;
-    float lo = Control.pid_set_integral_limits_args.lo;
-    float hi = Control.pid_set_integral_limits_args.hi;
+    Pid *p = ControlV.pid_set_integral_limits_args.p;
+    float lo = ControlV.pid_set_integral_limits_args.lo;
+    float hi = ControlV.pid_set_integral_limits_args.hi;
 
     if (p)
     {
@@ -92,11 +92,11 @@ static void control_pid_set_integral_limits(uint8_t *restrict work)
     }
 }
 
-static void control_pid_set_derivative_filter(uint8_t *restrict work)
+void protocore_control_pid_set_derivative_filter(uint8_t *restrict work)
 {
     (void)work;
-    Pid *p = Control.pid_set_derivative_filter_args.p;
-    float alpha = Control.pid_set_derivative_filter_args.alpha;
+    Pid *p = ControlV.pid_set_derivative_filter_args.p;
+    float alpha = ControlV.pid_set_derivative_filter_args.alpha;
 
     if (p)
     {
@@ -104,11 +104,11 @@ static void control_pid_set_derivative_filter(uint8_t *restrict work)
     }
 }
 
-static void control_pid_set_feedforward(uint8_t *restrict work)
+void protocore_control_pid_set_feedforward(uint8_t *restrict work)
 {
     (void)work;
-    Pid *p = Control.pid_set_feedforward_args.p;
-    float kff = Control.pid_set_feedforward_args.kff;
+    Pid *p = ControlV.pid_set_feedforward_args.p;
+    float kff = ControlV.pid_set_feedforward_args.kff;
 
     if (p)
     {
@@ -116,10 +116,10 @@ static void control_pid_set_feedforward(uint8_t *restrict work)
     }
 }
 
-static void control_pid_reset(uint8_t *restrict work)
+void protocore_control_pid_reset(uint8_t *restrict work)
 {
     (void)work;
-    Pid *p = Control.pid_reset_args.p;
+    Pid *p = ControlV.pid_reset_args.p;
 
     if (!p)
     {
@@ -133,15 +133,15 @@ static void control_pid_reset(uint8_t *restrict work)
 
 // pid_update() is defined inline in control.h (zero call overhead); this TU just uses it below.
 
-static void control_pid_update_n(uint8_t *restrict work)
+void protocore_control_pid_update_n(uint8_t *restrict work)
 {
     (void)work;
-    Pid *p = Control.pid_update_n_args.p;
-    const float *setpoint = Control.pid_update_n_args.setpoint;
-    const float *measurement = Control.pid_update_n_args.measurement;
-    float dt = Control.pid_update_n_args.dt;
-    float *out = Control.pid_update_n_args.out;
-    uint8_t n = Control.pid_update_n_args.n;
+    Pid *p = ControlV.pid_update_n_args.p;
+    const float *setpoint = ControlV.pid_update_n_args.setpoint;
+    const float *measurement = ControlV.pid_update_n_args.measurement;
+    float dt = ControlV.pid_update_n_args.dt;
+    float *out = ControlV.pid_update_n_args.out;
+    uint8_t n = ControlV.pid_update_n_args.n;
 
     if (!p || !setpoint || !measurement || !out)
     {
@@ -178,17 +178,17 @@ static size_t put_f32le(uint8_t *p, float v)
     return put_u32le(p, u);
 }
 
-static void control_pid_log_header(uint8_t *restrict work)
+void protocore_control_pid_log_header(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Control.pid_log_header_args.buf;
-    size_t cap = Control.pid_log_header_args.cap;
-    const Pid *p = Control.pid_log_header_args.p;
-    float dt = Control.pid_log_header_args.dt;
+    uint8_t *buf = ControlV.pid_log_header_args.buf;
+    size_t cap = ControlV.pid_log_header_args.cap;
+    const Pid *p = ControlV.pid_log_header_args.p;
+    float dt = ControlV.pid_log_header_args.dt;
 
     if (!buf || !p || cap < PID_LOG_HEADER_LEN)
     {
-        Control.n = 0;
+        ControlV.n = 0;
         return;
     }
     size_t o = 0;
@@ -204,22 +204,22 @@ static void control_pid_log_header(uint8_t *restrict work)
     o += put_f32le(buf + o, p->kff);
     o += put_f32le(buf + o, p->out_min);
     o += put_f32le(buf + o, p->out_max);
-    Control.n = o; // == PID_LOG_HEADER_LEN
+    ControlV.n = o; // == PID_LOG_HEADER_LEN
 }
 
-static void control_pid_log_record(uint8_t *restrict work)
+void protocore_control_pid_log_record(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Control.pid_log_record_args.buf;
-    size_t cap = Control.pid_log_record_args.cap;
-    float setpoint = Control.pid_log_record_args.setpoint;
-    float measurement = Control.pid_log_record_args.measurement;
-    float output = Control.pid_log_record_args.output;
-    proto_bool saturated = Control.pid_log_record_args.saturated;
+    uint8_t *buf = ControlV.pid_log_record_args.buf;
+    size_t cap = ControlV.pid_log_record_args.cap;
+    float setpoint = ControlV.pid_log_record_args.setpoint;
+    float measurement = ControlV.pid_log_record_args.measurement;
+    float output = ControlV.pid_log_record_args.output;
+    proto_bool saturated = ControlV.pid_log_record_args.saturated;
 
     if (!buf || cap < PID_LOG_RECORD_LEN)
     {
-        Control.n = 0;
+        ControlV.n = 0;
         return;
     }
     size_t o = 0;
@@ -227,21 +227,11 @@ static void control_pid_log_record(uint8_t *restrict work)
     o += put_f32le(buf + o, measurement);
     o += put_f32le(buf + o, output);
     o += put_u32le(buf + o, saturated ? PID_LOG_STATUS_SATURATED : 0u);
-    Control.n = o; // == PID_LOG_RECORD_LEN
+    ControlV.n = o; // == PID_LOG_RECORD_LEN
 }
 
-ControlNs Control = {
-    .pid_init = control_pid_init,
-    .pid_set_output_limits = control_pid_set_output_limits,
-    .pid_set_integral_limits = control_pid_set_integral_limits,
-    .pid_set_derivative_filter = control_pid_set_derivative_filter,
-    .pid_set_feedforward = control_pid_set_feedforward,
-    .pid_set_rate = control_pid_set_rate,
-    .pid_reset = control_pid_reset,
-    .pid_update_n = control_pid_update_n,
-    .pid_log_header = control_pid_log_header,
-    .pid_log_record = control_pid_log_record,
-};
+/** @brief The operands and the outcome. */
+ControlVars ControlV;
 
 PROTOCORE_END_DECLS
 

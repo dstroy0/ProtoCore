@@ -64,11 +64,11 @@ static void use_pec(proto_bool on)
 // CRC-8/SMBUS over one contiguous span, through the shared engine.
 static uint8_t crc8_smbus(const uint8_t *data, size_t len)
 {
-    Crc.args.params = &PROTOCORE_CRC8_SMBUS;
-    Crc.args.data = data;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC8_SMBUS;
+    CrcV.args.data = data;
+    CrcV.args.len = len;
     Crc.compute(crc_work);
-    return (uint8_t)Crc.value;
+    return (uint8_t)CrcV.value;
 }
 
 // SMBus 3.1 sec 5.5.1: the transaction opens with the 7-bit slave address in bits 7:1 and the

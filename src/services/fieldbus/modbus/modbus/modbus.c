@@ -540,11 +540,11 @@ static void modbus_process_adu(uint8_t *restrict work)
 // CRC16-Modbus (init 0xFFFF, reflected poly 0xA001); transmitted low byte first.
 static uint16_t protocore_modbus_crc16(const uint8_t *data, size_t len)
 {
-    Crc.args.params = &PROTOCORE_CRC16_MODBUS;
-    Crc.args.data = data;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC16_MODBUS;
+    CrcV.args.data = data;
+    CrcV.args.len = len;
     Crc.compute(crc_work);
-    return (uint16_t)Crc.value;
+    return (uint16_t)CrcV.value;
 }
 
 static void modbus_rtu_process_adu(uint8_t *restrict work)

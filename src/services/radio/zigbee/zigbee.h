@@ -103,18 +103,37 @@ typedef struct
     ZigbeeAshCrc16Args ash_crc16_args;
     ZigbeeAshFrameEncodeArgs ash_frame_encode_args;
     ZigbeeAshFrameDecodeArgs ash_frame_decode_args;
-
     proto_bool ok;
     uint16_t value;
     int n;
+} ZigbeeVars;
 
+/** @brief The operands and the outcome. */
+extern ZigbeeVars ZigbeeV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const ash_crc16)(uint8_t *restrict work);
     void (*const ash_frame_encode)(uint8_t *restrict work);
     void (*const ash_frame_decode)(uint8_t *restrict work);
 } ZigbeeNs;
 
-/** @brief The one symbol this module exports. */
-extern ZigbeeNs Zigbee;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ZigbeeV or a region of the borrow at a fixed offset.
+void protocore_zigbee_ash_crc16(uint8_t *restrict work);
+void protocore_zigbee_ash_frame_encode(uint8_t *restrict work);
+void protocore_zigbee_ash_frame_decode(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Zigbee.ash_crc16(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ZigbeeNs Zigbee __attribute__((unused)) = {
+    .ash_crc16 = protocore_zigbee_ash_crc16,
+    .ash_frame_encode = protocore_zigbee_ash_frame_encode,
+    .ash_frame_decode = protocore_zigbee_ash_frame_decode,
+};
 
 PROTOCORE_END_DECLS
 

@@ -157,10 +157,10 @@ void protocore_file_serving_http_rfc1123(uint8_t *restrict work)
     // The API states its own width; time_t is whatever the toolchain picked (32 or 64 bit) and
     // only the conversion seam is allowed to name it.
     struct tm tmv;
-    TimeCompat.args.epoch = epoch;
-    TimeCompat.args.out = &tmv;
+    TimeCompatV.args.epoch = epoch;
+    TimeCompatV.args.out = &tmv;
     TimeCompat.gmtime(time_compat_work); // reentrant: never the shared static buffer (worker-safe)
-    if (!TimeCompat.tm_out)
+    if (!TimeCompatV.tm_out)
     {
         return;
     }
@@ -201,10 +201,10 @@ static proto_bool http_not_modified_since(time_t mtime, const char *ims)
     int imon = (int)(mp - MONTHS) / 3; // 0-based, matches struct tm tm_mon
 
     struct tm tf;
-    TimeCompat.args.epoch = (uint32_t)mtime;
-    TimeCompat.args.out = &tf;
+    TimeCompatV.args.epoch = (uint32_t)mtime;
+    TimeCompatV.args.out = &tf;
     TimeCompat.gmtime(time_compat_work); // reentrant: never the shared static buffer (worker-safe)
-    if (!TimeCompat.tm_out)
+    if (!TimeCompatV.tm_out)
     {
         return PROTO_FALSE;
     }

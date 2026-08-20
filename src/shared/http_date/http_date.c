@@ -30,27 +30,27 @@ static const char PROTOCORE_HTTP_DATE_MON[12][3] = {{'J', 'a', 'n'}, {'F', 'e', 
 #define PROTOCORE_HTTP_DATE_YEAR_BASE 1900 // tm_year counts from here
 #define PROTOCORE_HTTP_DATE_YEAR_MAX 9999  // the widest year 4DIGIT holds
 
-static void http_date_format(uint8_t *restrict work)
+void protocore_http_date_format(uint8_t *restrict work)
 {
     (void)work;
-    char *out = HttpDate.args.out;
-    const uint32_t out_cap = HttpDate.args.out_cap;
+    char *out = HttpDateV.args.out;
+    const uint32_t out_cap = HttpDateV.args.out_cap;
 
-    HttpDate.n = 0;
+    HttpDateV.n = 0;
     if (!out || out_cap == 0)
     {
         return;
     }
-    if (HttpDate.args.epoch == 0)
+    if (HttpDateV.args.epoch == 0)
     {
         out[0] = '\0';
         return;
     }
     struct tm broken_down;
-    TimeCompat.args.epoch = HttpDate.args.epoch;
-    TimeCompat.args.out = &broken_down;
+    TimeCompatV.args.epoch = HttpDateV.args.epoch;
+    TimeCompatV.args.out = &broken_down;
     TimeCompat.gmtime(time_compat_work);
-    if (!TimeCompat.tm_out)
+    if (!TimeCompatV.tm_out)
     {
         out[0] = '\0';
         return;
@@ -82,8 +82,8 @@ static void http_date_format(uint8_t *restrict work)
     Sb.ch(&b, ':');
     Sb.u32w(&b, (uint32_t)broken_down.tm_sec, PROTOCORE_HTTP_DATE_2DIGIT);
     Sb.put_n(&b, " GMT", 4);
-    HttpDate.n = (uint8_t)Sb.finish(&b);
-    if (HttpDate.n == 0)
+    HttpDateV.n = (uint8_t)Sb.finish(&b);
+    if (HttpDateV.n == 0)
     {
         // The builder appends as it goes, so an overflow leaves the octets it managed to write.
         // Half an IMF-fixdate is a different instant, so the destination is emptied.
@@ -91,4 +91,5 @@ static void http_date_format(uint8_t *restrict work)
     }
 }
 
-HttpDateNs HttpDate = {.format = http_date_format};
+/** @brief The operands and the outcome. */
+HttpDateVars HttpDateV;

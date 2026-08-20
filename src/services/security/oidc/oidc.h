@@ -132,25 +132,45 @@ typedef struct
  */
 typedef struct
 {
-    const char *token; ///< the ID Token every call but a find names
-    size_t token_len;  ///< how many characters of it there are
-
+    const char *token;     ///< the ID Token every call but a find names
+    size_t token_len;      ///< how many characters of it there are
     OidcKeyArgs key;       ///< the JWK Set and the key it yields (RFC 7517 sec 5)
     OidcExpectArgs expect; ///< what the Claims are checked against (OIDC Core sec 3.1.3.7)
-
     proto_bool ok;
     protocore_oidc_result result;
     char text[PROTOCORE_OIDC_KID_LEN];
     protocore_oidc_claims claims;
+} OidcVars;
 
+/** @brief The operands and the outcome. */
+extern OidcVars OidcV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const token_kid)(uint8_t *restrict work);
     void (*const jwks_find)(uint8_t *restrict work);
     void (*const verify_with_key)(uint8_t *restrict work);
     void (*const verify)(uint8_t *restrict work);
 } OidcNs;
 
-/** @brief The one symbol this module exports. */
-extern OidcNs Oidc;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in OidcV or a region of the borrow at a fixed offset.
+void protocore_oidc_token_kid(uint8_t *restrict work);
+void protocore_oidc_jwks_find(uint8_t *restrict work);
+void protocore_oidc_verify_with_key(uint8_t *restrict work);
+void protocore_oidc_verify(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Oidc.token_kid(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const OidcNs Oidc __attribute__((unused)) = {
+    .token_kid = protocore_oidc_token_kid,
+    .jwks_find = protocore_oidc_jwks_find,
+    .verify_with_key = protocore_oidc_verify_with_key,
+    .verify = protocore_oidc_verify,
+};
 
 PROTOCORE_END_DECLS
 

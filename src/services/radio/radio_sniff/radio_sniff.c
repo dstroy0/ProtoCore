@@ -24,16 +24,16 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void radio_sniff_i2f32(uint8_t *restrict work);
+void protocore_radio_sniff_i2f32(uint8_t *restrict work);
 
-static void radio_sniff_i2f32(uint8_t *restrict work)
+void protocore_radio_sniff_i2f32(uint8_t *restrict work)
 {
     (void)work;
-    int32_t dbm = RadioSniff.i2f32_args.dbm;
+    int32_t dbm = RadioSniffV.i2f32_args.dbm;
 
     if (dbm == 0)
     {
-        RadioSniff.u32 = 0;
+        RadioSniffV.u32 = 0;
         return;
     }
     uint32_t sign = 0;
@@ -54,43 +54,43 @@ static void radio_sniff_i2f32(uint8_t *restrict work)
     }
     uint32_t exp = (uint32_t)(127 + e);
     uint32_t mant = (e >= 23) ? ((mag >> (e - 23)) & 0x7FFFFFu) : ((mag << (23 - e)) & 0x7FFFFFu);
-    RadioSniff.u32 = sign | (exp << 23) | mant;
+    RadioSniffV.u32 = sign | (exp << 23) | mant;
 }
 
-static void radio_sniff_global_header(uint8_t *restrict work)
+void protocore_radio_sniff_global_header(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = RadioSniff.global_header_args.out;
-    size_t cap = RadioSniff.global_header_args.cap;
+    uint8_t *out = RadioSniffV.global_header_args.out;
+    size_t cap = RadioSniffV.global_header_args.cap;
 
     Pcap.args.out = out;
     Pcap.args.cap = cap;
     Pcap.args.linktype = PROTOCORE_DLT_IEEE802_15_4_TAP;
     Pcap.global_header(pcap_work);
-    RadioSniff.n = Pcap.n;
+    RadioSniffV.n = Pcap.n;
 }
 
-static void radio_sniff_tap_record(uint8_t *restrict work)
+void protocore_radio_sniff_tap_record(uint8_t *restrict work)
 {
-    uint8_t *out = RadioSniff.tap_record_args.out;
-    size_t cap = RadioSniff.tap_record_args.cap;
-    const uint8_t *frame = RadioSniff.tap_record_args.frame;
-    size_t flen = RadioSniff.tap_record_args.flen;
-    int32_t rssi_dbm = RadioSniff.tap_record_args.rssi_dbm;
-    uint16_t channel = RadioSniff.tap_record_args.channel;
-    uint32_t ts_sec = RadioSniff.tap_record_args.ts_sec;
-    uint32_t ts_usec = RadioSniff.tap_record_args.ts_usec;
+    uint8_t *out = RadioSniffV.tap_record_args.out;
+    size_t cap = RadioSniffV.tap_record_args.cap;
+    const uint8_t *frame = RadioSniffV.tap_record_args.frame;
+    size_t flen = RadioSniffV.tap_record_args.flen;
+    int32_t rssi_dbm = RadioSniffV.tap_record_args.rssi_dbm;
+    uint16_t channel = RadioSniffV.tap_record_args.channel;
+    uint32_t ts_sec = RadioSniffV.tap_record_args.ts_sec;
+    uint32_t ts_usec = RadioSniffV.tap_record_args.ts_usec;
 
     if (!out || !frame || flen == 0)
     {
-        RadioSniff.n = 0;
+        RadioSniffV.n = 0;
         return;
     }
     size_t caplen = RADIO_SNIFF_TAP_LEN + flen;
     size_t total = PROTOCORE_PCAP_REC_HDR_LEN + caplen;
     if (cap < total)
     {
-        RadioSniff.n = 0;
+        RadioSniffV.n = 0;
         return;
     }
 
@@ -111,9 +111,9 @@ static void radio_sniff_tap_record(uint8_t *restrict work)
     // TLV: Received Signal Strength (type 1, len 4), float32 dBm.
     endian.wr16le(p + 4, 1);
     endian.wr16le(p + 6, 4);
-    RadioSniff.i2f32_args.dbm = rssi_dbm;
-    radio_sniff_i2f32(work);
-    endian.wr32le(p + 8, RadioSniff.u32);
+    RadioSniffV.i2f32_args.dbm = rssi_dbm;
+    protocore_radio_sniff_i2f32(work);
+    endian.wr32le(p + 8, RadioSniffV.u32);
     // TLV: Channel Assignment (type 3, len 3 -> padded to 4): channel number(2 LE) + page(1).
     endian.wr16le(p + 12, 3);
     endian.wr16le(p + 14, 3);
@@ -127,11 +127,11 @@ static void radio_sniff_tap_record(uint8_t *restrict work)
     {
         f[i] = frame[i];
     }
-    RadioSniff.n = total;
+    RadioSniffV.n = total;
 }
 
-RadioSniffNs RadioSniff = {
-    .global_header = radio_sniff_global_header, .i2f32 = radio_sniff_i2f32, .tap_record = radio_sniff_tap_record};
+/** @brief The operands and the outcome. */
+RadioSniffVars RadioSniffV;
 
 PROTOCORE_END_DECLS
 

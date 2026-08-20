@@ -79,15 +79,15 @@ static proto_bool json_append_escaped(char *out, size_t cap, size_t *pos, const 
 
 // Build "https://maker.ifttt.com/trigger/<event>/with/key/<key>" into the build region: an https
 // URI (RFC 9110 sec 4.2.2) whose last two segments are the event and the key.
-static void ifttt_url(uint8_t *restrict work)
+void protocore_webhook_ifttt_url(uint8_t *restrict work)
 {
     (void)work;
-    char *out = Webhook.build.out;
-    const size_t cap = Webhook.build.cap;
-    const char *event = Webhook.ifttt.event;
-    const char *key = Webhook.ifttt.key;
+    char *out = WebhookV.build.out;
+    const size_t cap = WebhookV.build.cap;
+    const char *event = WebhookV.ifttt.event;
+    const char *key = WebhookV.ifttt.key;
 
-    Webhook.n = 0;
+    WebhookV.n = 0;
     if (!out || cap == 0 || !event || !key)
     {
         if (out && cap)
@@ -109,21 +109,21 @@ static void ifttt_url(uint8_t *restrict work)
         out[0] = '\0';
         return;
     }
-    Webhook.n = w;
+    WebhookV.n = w;
 }
 
 // Build the object {"value1":..,"value2":..,"value3":..} into the build region: begin-object,
 // members separated by a value-separator, end-object (RFC 8259 sec 4). A NULL value omits its
 // member, so three NULLs yield {}.
-static void ifttt_payload(uint8_t *restrict work)
+void protocore_webhook_ifttt_payload(uint8_t *restrict work)
 {
     (void)work;
-    char *out = Webhook.build.out;
-    const size_t cap = Webhook.build.cap;
+    char *out = WebhookV.build.out;
+    const size_t cap = WebhookV.build.cap;
     const char *const names[3] = {"value1", "value2", "value3"};
-    const char *const vals[3] = {Webhook.ifttt.value1, Webhook.ifttt.value2, Webhook.ifttt.value3};
+    const char *const vals[3] = {WebhookV.ifttt.value1, WebhookV.ifttt.value2, WebhookV.ifttt.value3};
 
-    Webhook.n = 0;
+    WebhookV.n = 0;
     if (!out || cap == 0)
     {
         return;
@@ -157,7 +157,7 @@ static void ifttt_payload(uint8_t *restrict work)
         out[0] = '\0';
         return;
     }
-    Webhook.n = (int)pos;
+    WebhookV.n = (int)pos;
 }
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
@@ -165,28 +165,28 @@ static void ifttt_payload(uint8_t *restrict work)
 // POST the content to the target URI (RFC 9110 sec 9.3.3), typed application/json
 // (RFC 9110 sec 8.3), its length measured for the Content-Length the client sends
 // (RFC 9110 sec 8.6). Reports the status code (RFC 9110 sec 15.1) or a negative transport error.
-static void post(uint8_t *restrict work)
+void protocore_webhook_post(uint8_t *restrict work)
 {
     (void)work;
-    const char *target_uri = Webhook.request.target_uri;
-    const char *content = Webhook.request.content;
+    const char *target_uri = WebhookV.request.target_uri;
+    const char *content = WebhookV.request.content;
     if (!target_uri || !content)
     {
-        Webhook.i32 = (int)HTTP_CLIENT_ERR_URL;
+        WebhookV.i32 = (int)HTTP_CLIENT_ERR_URL;
         return;
     }
     HttpClientResult r;
-    Webhook.i32 = http_post(target_uri, PROTOCORE_MIME_JSON, (const uint8_t *)content,
-                            str.len(content, PROTOCORE_HTTP_CLIENT_BUF_SIZE), &r);
+    WebhookV.i32 = http_post(target_uri, PROTOCORE_MIME_JSON, (const uint8_t *)content,
+                             str.len(content, PROTOCORE_HTTP_CLIENT_BUF_SIZE), &r);
 }
 
 #else // no outbound HTTP client in this build
 
 // Nothing can be sent, so every POST reports -1 and no request is formed.
-static void post(uint8_t *restrict work)
+void protocore_webhook_post(uint8_t *restrict work)
 {
     (void)work;
-    Webhook.i32 = -1;
+    WebhookV.i32 = -1;
 }
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT
@@ -194,39 +194,39 @@ static void post(uint8_t *restrict work)
 // Build the target URI and the object into this call's own frames, then POST them. A build that
 // does not fit reports -1 and sends nothing. The frames die at return, so the handle stops naming
 // them before the call ends.
-static void ifttt_trigger(uint8_t *restrict work)
+void protocore_webhook_ifttt_trigger(uint8_t *restrict work)
 {
     char uri[PROTOCORE_WEBHOOK_URI_CAP];
     char content[PROTOCORE_WEBHOOK_CONTENT_CAP];
 
-    Webhook.build.out = uri;
-    Webhook.build.cap = sizeof(uri);
-    ifttt_url(work);
-    if (Webhook.n == 0)
+    WebhookV.build.out = uri;
+    WebhookV.build.cap = sizeof(uri);
+    protocore_webhook_ifttt_url(work);
+    if (WebhookV.n == 0)
     {
-        Webhook.build.out = NULL;
-        Webhook.i32 = -1;
+        WebhookV.build.out = NULL;
+        WebhookV.i32 = -1;
         return;
     }
-    Webhook.build.out = content;
-    Webhook.build.cap = sizeof(content);
-    ifttt_payload(work);
-    if (Webhook.n == 0)
+    WebhookV.build.out = content;
+    WebhookV.build.cap = sizeof(content);
+    protocore_webhook_ifttt_payload(work);
+    if (WebhookV.n == 0)
     {
-        Webhook.build.out = NULL;
-        Webhook.i32 = -1;
+        WebhookV.build.out = NULL;
+        WebhookV.i32 = -1;
         return;
     }
-    Webhook.request.target_uri = uri;
-    Webhook.request.content = content;
-    post(work);
-    Webhook.request.target_uri = NULL;
-    Webhook.request.content = NULL;
-    Webhook.build.out = NULL;
+    WebhookV.request.target_uri = uri;
+    WebhookV.request.content = content;
+    protocore_webhook_post(work);
+    WebhookV.request.target_uri = NULL;
+    WebhookV.request.content = NULL;
+    WebhookV.build.out = NULL;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-WebhookNs Webhook = {
-    .ifttt_url = ifttt_url, .ifttt_payload = ifttt_payload, .post = post, .ifttt_trigger = ifttt_trigger};
+/** @brief The operands and the outcome. */
+WebhookVars WebhookV;
 
 #endif // PROTOCORE_ENABLE_WEBHOOK

@@ -53,103 +53,103 @@ static const char JWKS[] = "{\"keys\":[{\"kty\":\"RSA\",\"kid\":\"rfc7515-a2\",\
 
 static protocore_oidc_result verify_a2(const char *token, const char *iss, const char *aud, uint32_t now)
 {
-    Oidc.key.jwks = JWKS;
-    Oidc.key.kid = NULL;
+    OidcV.key.jwks = JWKS;
+    OidcV.key.kid = NULL;
     Oidc.jwks_find(oidc_work);
-    TEST_ASSERT_TRUE(Oidc.ok);
+    TEST_ASSERT_TRUE(OidcV.ok);
 
-    Oidc.token = token;
-    Oidc.token_len = strlen(token);
-    Oidc.expect.iss = iss;
-    Oidc.expect.aud = aud;
-    Oidc.expect.now_unix = now;
+    OidcV.token = token;
+    OidcV.token_len = strlen(token);
+    OidcV.expect.iss = iss;
+    OidcV.expect.aud = aud;
+    OidcV.expect.now_unix = now;
     Oidc.verify_with_key(oidc_work);
-    return Oidc.result;
+    return OidcV.result;
 }
 
 // The RFC's token against the RFC's key. Nothing else in this file proves the RSA verification.
 void test_rfc7515_a2_signature(void)
 {
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_OK, verify_a2(RFC7515_A2, "joe", NULL, BEFORE_EXP));
-    TEST_ASSERT_EQUAL_INT64(1300819380LL, Oidc.claims.exp);
+    TEST_ASSERT_EQUAL_INT64(1300819380LL, OidcV.claims.exp);
 }
 
 // RFC 7517 sec 5.1: the JWK Set is a "keys" array. A find loads `n` and `e` as big-endian octets,
 // right-aligned; the appendix's `e` is AQAB, the three octets 01 00 01.
 void test_jwks_find_loads_the_rsa_key(void)
 {
-    Oidc.key.jwks = JWKS;
-    Oidc.key.kid = "rfc7515-a2";
+    OidcV.key.jwks = JWKS;
+    OidcV.key.kid = "rfc7515-a2";
     Oidc.jwks_find(oidc_work);
-    TEST_ASSERT_TRUE(Oidc.ok);
-    TEST_ASSERT_TRUE(Oidc.key.rsa.loaded);
+    TEST_ASSERT_TRUE(OidcV.ok);
+    TEST_ASSERT_TRUE(OidcV.key.rsa.loaded);
     static const uint8_t E[4] = {0x00, 0x01, 0x00, 0x01};
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(E, Oidc.key.rsa.e, 4);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(E, OidcV.key.rsa.e, 4);
     // The modulus of a 2048-bit key has its top bit set, so the leading octet is not zero.
-    TEST_ASSERT_TRUE(Oidc.key.rsa.n[0] >= 0x80);
+    TEST_ASSERT_TRUE(OidcV.key.rsa.n[0] >= 0x80);
 
     // A `kid` that is in no JWK selects nothing, and the key is left unloaded.
-    Oidc.key.kid = "not-this-one";
+    OidcV.key.kid = "not-this-one";
     Oidc.jwks_find(oidc_work);
-    TEST_ASSERT_FALSE(Oidc.ok);
-    TEST_ASSERT_FALSE(Oidc.key.rsa.loaded);
+    TEST_ASSERT_FALSE(OidcV.ok);
+    TEST_ASSERT_FALSE(OidcV.key.rsa.loaded);
 
     // An empty `kid` takes the first RSA JWK, which is what a token with no `kid` header falls to.
-    Oidc.key.kid = "";
+    OidcV.key.kid = "";
     Oidc.jwks_find(oidc_work);
-    TEST_ASSERT_TRUE(Oidc.ok);
+    TEST_ASSERT_TRUE(OidcV.ok);
 
-    Oidc.key.jwks = NULL;
+    OidcV.key.jwks = NULL;
     Oidc.jwks_find(oidc_work);
-    TEST_ASSERT_FALSE(Oidc.ok);
+    TEST_ASSERT_FALSE(OidcV.ok);
 
-    Oidc.key.jwks = "{\"keys\":[]}";
-    Oidc.key.kid = NULL;
+    OidcV.key.jwks = "{\"keys\":[]}";
+    OidcV.key.kid = NULL;
     Oidc.jwks_find(oidc_work);
-    TEST_ASSERT_FALSE(Oidc.ok);
+    TEST_ASSERT_FALSE(OidcV.ok);
 }
 
 // RFC 7515 sec 4.1.4: `kid` in the JOSE Header names the key that signed. Appendix A.2's header
 // carries none.
 void test_token_kid(void)
 {
-    Oidc.token = RFC7515_A2;
-    Oidc.token_len = strlen(RFC7515_A2);
+    OidcV.token = RFC7515_A2;
+    OidcV.token_len = strlen(RFC7515_A2);
     Oidc.token_kid(oidc_work);
-    TEST_ASSERT_FALSE(Oidc.ok);
-    TEST_ASSERT_EQUAL_STRING("", Oidc.text);
+    TEST_ASSERT_FALSE(OidcV.ok);
+    TEST_ASSERT_EQUAL_STRING("", OidcV.text);
 
     // {"alg":"RS256","kid":"2011-04-29"} - the `kid` value RFC 7517 Appendix A.1 uses.
     static const char WITH_KID[] = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjIwMTEtMDQtMjkifQ.eyJpc3MiOiJqb2UifQ.AAAA";
-    Oidc.token = WITH_KID;
-    Oidc.token_len = strlen(WITH_KID);
+    OidcV.token = WITH_KID;
+    OidcV.token_len = strlen(WITH_KID);
     Oidc.token_kid(oidc_work);
-    TEST_ASSERT_TRUE(Oidc.ok);
-    TEST_ASSERT_EQUAL_STRING("2011-04-29", Oidc.text);
+    TEST_ASSERT_TRUE(OidcV.ok);
+    TEST_ASSERT_EQUAL_STRING("2011-04-29", OidcV.text);
 
-    Oidc.token = NULL;
-    Oidc.token_len = 0;
+    OidcV.token = NULL;
+    OidcV.token_len = 0;
     Oidc.token_kid(oidc_work);
-    TEST_ASSERT_FALSE(Oidc.ok);
+    TEST_ASSERT_FALSE(OidcV.ok);
 }
 
 // A full verify resolves the key from the token's own `kid` and then validates. Appendix A.2's
 // header carries no `kid`, so the sole RSA JWK of the set is used.
 void test_verify_resolves_the_key_itself(void)
 {
-    Oidc.key.jwks = JWKS;
-    Oidc.token = RFC7515_A2;
-    Oidc.token_len = strlen(RFC7515_A2);
-    Oidc.expect.iss = "joe";
-    Oidc.expect.aud = NULL;
-    Oidc.expect.now_unix = BEFORE_EXP;
+    OidcV.key.jwks = JWKS;
+    OidcV.token = RFC7515_A2;
+    OidcV.token_len = strlen(RFC7515_A2);
+    OidcV.expect.iss = "joe";
+    OidcV.expect.aud = NULL;
+    OidcV.expect.now_unix = BEFORE_EXP;
     Oidc.verify(oidc_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_OK, Oidc.result);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_OK, OidcV.result);
 
     // A JWK Set that does not carry the key is a key failure, not a signature failure.
-    Oidc.key.jwks = "{\"keys\":[]}";
+    OidcV.key.jwks = "{\"keys\":[]}";
     Oidc.verify(oidc_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_KEY, Oidc.result);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_KEY, OidcV.result);
 }
 
 // Any change to the signing input or the signature breaks the RSASSA-PKCS1-v1_5 check.
@@ -170,18 +170,18 @@ void test_tampered_token_fails_the_signature(void)
 
     // A signature verified under a different modulus is not this signature. One flipped bit in the
     // modulus is enough, and the key is restored by the next find.
-    Oidc.key.jwks = JWKS;
-    Oidc.key.kid = NULL;
+    OidcV.key.jwks = JWKS;
+    OidcV.key.kid = NULL;
     Oidc.jwks_find(oidc_work);
-    TEST_ASSERT_TRUE(Oidc.ok);
-    Oidc.key.rsa.n[255] = (uint8_t)(Oidc.key.rsa.n[255] ^ 0x01);
-    Oidc.token = RFC7515_A2;
-    Oidc.token_len = n;
-    Oidc.expect.iss = "joe";
-    Oidc.expect.aud = NULL;
-    Oidc.expect.now_unix = BEFORE_EXP;
+    TEST_ASSERT_TRUE(OidcV.ok);
+    OidcV.key.rsa.n[255] = (uint8_t)(OidcV.key.rsa.n[255] ^ 0x01);
+    OidcV.token = RFC7515_A2;
+    OidcV.token_len = n;
+    OidcV.expect.iss = "joe";
+    OidcV.expect.aud = NULL;
+    OidcV.expect.now_unix = BEFORE_EXP;
     Oidc.verify_with_key(oidc_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_SIGNATURE, Oidc.result);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_SIGNATURE, OidcV.result);
 }
 
 // OIDC Core sec 3.1.3.7 step 7 makes RS256 the default `alg`, and step 8 sends a MAC-based one
@@ -222,17 +222,17 @@ void test_malformed_tokens(void)
     }
 
     // A token longer than the module accepts is refused on its length alone.
-    Oidc.token = RFC7515_A2;
-    Oidc.token_len = PROTOCORE_OIDC_MAX_LEN + 1;
+    OidcV.token = RFC7515_A2;
+    OidcV.token_len = PROTOCORE_OIDC_MAX_LEN + 1;
     Oidc.verify_with_key(oidc_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_FORMAT, Oidc.result);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_FORMAT, OidcV.result);
 
     // No key loaded is a format refusal before anything is read.
-    Oidc.key.rsa.loaded = PROTO_FALSE;
-    Oidc.token = RFC7515_A2;
-    Oidc.token_len = strlen(RFC7515_A2);
+    OidcV.key.rsa.loaded = PROTO_FALSE;
+    OidcV.token = RFC7515_A2;
+    OidcV.token_len = strlen(RFC7515_A2);
     Oidc.verify_with_key(oidc_work);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_FORMAT, Oidc.result);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_FORMAT, OidcV.result);
 }
 
 // OIDC Core sec 3.1.3.7 step 2: `iss` must equal the Issuer Identifier. The claim here is "joe".
@@ -271,12 +271,12 @@ void test_expiry(void)
 void test_claims_are_cleared_before_each_validation(void)
 {
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_OK, verify_a2(RFC7515_A2, "joe", NULL, BEFORE_EXP));
-    TEST_ASSERT_EQUAL_INT64(1300819380LL, Oidc.claims.exp);
-    TEST_ASSERT_EQUAL_STRING("", Oidc.claims.sub);   // the appendix's payload carries no `sub`
-    TEST_ASSERT_EQUAL_STRING("", Oidc.claims.email); // nor an `email`
-    TEST_ASSERT_EQUAL_INT64(0LL, Oidc.claims.iat);   // nor an `iat`
+    TEST_ASSERT_EQUAL_INT64(1300819380LL, OidcV.claims.exp);
+    TEST_ASSERT_EQUAL_STRING("", OidcV.claims.sub);   // the appendix's payload carries no `sub`
+    TEST_ASSERT_EQUAL_STRING("", OidcV.claims.email); // nor an `email`
+    TEST_ASSERT_EQUAL_INT64(0LL, OidcV.claims.iat);   // nor an `iat`
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_OIDC_ERR_EXPIRED, verify_a2(RFC7515_A2, "joe", NULL, 1300819381u));
-    TEST_ASSERT_EQUAL_INT64(0LL, Oidc.claims.exp);
-    TEST_ASSERT_EQUAL_STRING("", Oidc.claims.sub);
+    TEST_ASSERT_EQUAL_INT64(0LL, OidcV.claims.exp);
+    TEST_ASSERT_EQUAL_STRING("", OidcV.claims.sub);
 }

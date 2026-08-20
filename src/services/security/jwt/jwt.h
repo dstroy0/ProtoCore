@@ -133,10 +133,16 @@ typedef struct
     JwtTimeArgs time;   ///< the clock the time claims are judged against
     JwtClaimArgs claim; ///< the claim a read names
     JwtScopeArgs scope; ///< the scope claim and the scope demanded of it
-
     proto_bool ok;
     long num;
+} JwtVars;
 
+/** @brief The operands and the outcome. */
+extern JwtVars JwtV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const verify_mac)(uint8_t *restrict work);
     void (*const verify_bearer)(uint8_t *restrict work);
     void (*const time_claims_valid)(uint8_t *restrict work);
@@ -147,8 +153,31 @@ typedef struct
     void (*const scope_allows)(uint8_t *restrict work);
 } JwtNs;
 
-/** @brief The one symbol this module exports. */
-extern JwtNs Jwt;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in JwtV or a region of the borrow at a fixed offset.
+void protocore_jwt_verify_mac(uint8_t *restrict work);
+void protocore_jwt_verify_bearer(uint8_t *restrict work);
+void protocore_jwt_time_claims_valid(uint8_t *restrict work);
+void protocore_jwt_verify_mac_at(uint8_t *restrict work);
+void protocore_jwt_verify_bearer_at(uint8_t *restrict work);
+void protocore_jwt_claim_int(uint8_t *restrict work);
+void protocore_jwt_claim_str(uint8_t *restrict work);
+void protocore_jwt_scope_allows(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Jwt.verify_mac(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const JwtNs Jwt __attribute__((unused)) = {
+    .verify_mac = protocore_jwt_verify_mac,
+    .verify_bearer = protocore_jwt_verify_bearer,
+    .time_claims_valid = protocore_jwt_time_claims_valid,
+    .verify_mac_at = protocore_jwt_verify_mac_at,
+    .verify_bearer_at = protocore_jwt_verify_bearer_at,
+    .claim_int = protocore_jwt_claim_int,
+    .claim_str = protocore_jwt_claim_str,
+    .scope_allows = protocore_jwt_scope_allows,
+};
 
 PROTOCORE_END_DECLS
 

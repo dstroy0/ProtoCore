@@ -244,22 +244,22 @@ size_t protocore_ntp_http_date(char *out, size_t out_cap)
 {
     // Not an entry, so the borrow comes from the accessor rather than a parameter.
     NtpService.epoch(protocore_ntp_service_span());
-    HttpDate.args.epoch = NtpServiceV.value;
-    HttpDate.args.out = out;
-    HttpDate.args.out_cap = (uint32_t)out_cap;
+    HttpDateV.args.epoch = NtpServiceV.value;
+    HttpDateV.args.out = out;
+    HttpDateV.args.out_cap = (uint32_t)out_cap;
     HttpDate.format(http_date_work);
-    return HttpDate.n;
+    return HttpDateV.n;
 }
 
 #else // PROTOCORE_ENABLE_NTP == 0
 
 size_t protocore_ntp_http_date(char *out, size_t out_cap)
 {
-    HttpDate.args.epoch = 0;
-    HttpDate.args.out = out;
-    HttpDate.args.out_cap = out_cap;
+    HttpDateV.args.epoch = 0;
+    HttpDateV.args.out = out;
+    HttpDateV.args.out_cap = out_cap;
     HttpDate.format(http_date_work);
-    return HttpDate.n;
+    return HttpDateV.n;
 }
 
 #endif // PROTOCORE_ENABLE_NTP

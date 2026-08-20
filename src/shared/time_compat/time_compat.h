@@ -19,7 +19,6 @@
 
 #include <time.h> // struct tm and the gmtime_r / gmtime_s the seam picks between
 
-
 #include "protocore_config.h" // the entry point
 
 /** @brief The instant a conversion reads, and the storage it fills. */
@@ -44,13 +43,28 @@ typedef struct
 typedef struct
 {
     TimeCompatArgs args;
-
     struct tm *tm_out;
+} TimeCompatVars;
 
+/** @brief The operands and the outcome. */
+extern TimeCompatVars TimeCompatV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const gmtime)(uint8_t *restrict work);
 } TimeCompatNs;
 
-/** @brief The one symbol this module exports. */
-extern TimeCompatNs TimeCompat;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TimeCompatV or a region of the borrow at a fixed offset.
+void protocore_time_compat_gmtime(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `TimeCompat.gmtime(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TimeCompatNs TimeCompat __attribute__((unused)) = {
+    .gmtime = protocore_time_compat_gmtime,
+};
 
 #endif // PROTOCORE_TIME_COMPAT_H

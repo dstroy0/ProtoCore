@@ -610,14 +610,20 @@ typedef struct
     ThreadSpinelStatusNameArgs spinel_status_name_args;
     ThreadSpinelFrameEncodeArgs spinel_frame_encode_args;
     ThreadSpinelFrameDecodeArgs spinel_frame_decode_args;
-
     proto_bool ok;
     uint16_t value;
     uint8_t u8;
     int n;
     const SpinelPropInfo *ptr;
     const char *text;
+} ThreadVars;
 
+/** @brief The operands and the outcome. */
+extern ThreadVars ThreadV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const spinel_fcs)(uint8_t *restrict work);
     void (*const spinel_pack_uint)(uint8_t *restrict work);
     void (*const spinel_unpack_uint)(uint8_t *restrict work);
@@ -660,8 +666,95 @@ typedef struct
     void (*const spinel_frame_decode)(uint8_t *restrict work);
 } ThreadNs;
 
-/** @brief The one symbol this module exports. */
-extern ThreadNs Thread;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ThreadV or a region of the borrow at a fixed offset.
+void protocore_thread_spinel_fcs(uint8_t *restrict work);
+void protocore_thread_spinel_pack_uint(uint8_t *restrict work);
+void protocore_thread_spinel_unpack_uint(uint8_t *restrict work);
+void protocore_thread_spinel_command_build(uint8_t *restrict work);
+void protocore_thread_spinel_command_parse(uint8_t *restrict work);
+void protocore_thread_spinel_reader_init(uint8_t *restrict work);
+void protocore_thread_spinel_get_bool(uint8_t *restrict work);
+void protocore_thread_spinel_get_u8(uint8_t *restrict work);
+void protocore_thread_spinel_get_i8(uint8_t *restrict work);
+void protocore_thread_spinel_get_u16(uint8_t *restrict work);
+void protocore_thread_spinel_get_i16(uint8_t *restrict work);
+void protocore_thread_spinel_get_u32(uint8_t *restrict work);
+void protocore_thread_spinel_get_i32(uint8_t *restrict work);
+void protocore_thread_spinel_get_uint(uint8_t *restrict work);
+void protocore_thread_spinel_get_eui64(uint8_t *restrict work);
+void protocore_thread_spinel_get_ipv6(uint8_t *restrict work);
+void protocore_thread_spinel_get_utf8(uint8_t *restrict work);
+void protocore_thread_spinel_get_data(uint8_t *restrict work);
+void protocore_thread_spinel_get_data_wlen(uint8_t *restrict work);
+void protocore_thread_spinel_reader_ok(uint8_t *restrict work);
+void protocore_thread_spinel_writer_init(uint8_t *restrict work);
+void protocore_thread_spinel_put_bool(uint8_t *restrict work);
+void protocore_thread_spinel_put_u8(uint8_t *restrict work);
+void protocore_thread_spinel_put_i8(uint8_t *restrict work);
+void protocore_thread_spinel_put_u16(uint8_t *restrict work);
+void protocore_thread_spinel_put_i16(uint8_t *restrict work);
+void protocore_thread_spinel_put_u32(uint8_t *restrict work);
+void protocore_thread_spinel_put_i32(uint8_t *restrict work);
+void protocore_thread_spinel_put_uint(uint8_t *restrict work);
+void protocore_thread_spinel_put_eui64(uint8_t *restrict work);
+void protocore_thread_spinel_put_ipv6(uint8_t *restrict work);
+void protocore_thread_spinel_put_utf8(uint8_t *restrict work);
+void protocore_thread_spinel_put_data(uint8_t *restrict work);
+void protocore_thread_spinel_put_data_wlen(uint8_t *restrict work);
+void protocore_thread_spinel_writer_len(uint8_t *restrict work);
+void protocore_thread_spinel_prop_lookup(uint8_t *restrict work);
+void protocore_thread_spinel_prop_name(uint8_t *restrict work);
+void protocore_thread_spinel_status_name(uint8_t *restrict work);
+void protocore_thread_spinel_frame_encode(uint8_t *restrict work);
+void protocore_thread_spinel_frame_decode(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Thread.spinel_fcs(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ThreadNs Thread __attribute__((unused)) = {
+    .spinel_fcs = protocore_thread_spinel_fcs,
+    .spinel_pack_uint = protocore_thread_spinel_pack_uint,
+    .spinel_unpack_uint = protocore_thread_spinel_unpack_uint,
+    .spinel_command_build = protocore_thread_spinel_command_build,
+    .spinel_command_parse = protocore_thread_spinel_command_parse,
+    .spinel_reader_init = protocore_thread_spinel_reader_init,
+    .spinel_get_bool = protocore_thread_spinel_get_bool,
+    .spinel_get_u8 = protocore_thread_spinel_get_u8,
+    .spinel_get_i8 = protocore_thread_spinel_get_i8,
+    .spinel_get_u16 = protocore_thread_spinel_get_u16,
+    .spinel_get_i16 = protocore_thread_spinel_get_i16,
+    .spinel_get_u32 = protocore_thread_spinel_get_u32,
+    .spinel_get_i32 = protocore_thread_spinel_get_i32,
+    .spinel_get_uint = protocore_thread_spinel_get_uint,
+    .spinel_get_eui64 = protocore_thread_spinel_get_eui64,
+    .spinel_get_ipv6 = protocore_thread_spinel_get_ipv6,
+    .spinel_get_utf8 = protocore_thread_spinel_get_utf8,
+    .spinel_get_data = protocore_thread_spinel_get_data,
+    .spinel_get_data_wlen = protocore_thread_spinel_get_data_wlen,
+    .spinel_reader_ok = protocore_thread_spinel_reader_ok,
+    .spinel_writer_init = protocore_thread_spinel_writer_init,
+    .spinel_put_bool = protocore_thread_spinel_put_bool,
+    .spinel_put_u8 = protocore_thread_spinel_put_u8,
+    .spinel_put_i8 = protocore_thread_spinel_put_i8,
+    .spinel_put_u16 = protocore_thread_spinel_put_u16,
+    .spinel_put_i16 = protocore_thread_spinel_put_i16,
+    .spinel_put_u32 = protocore_thread_spinel_put_u32,
+    .spinel_put_i32 = protocore_thread_spinel_put_i32,
+    .spinel_put_uint = protocore_thread_spinel_put_uint,
+    .spinel_put_eui64 = protocore_thread_spinel_put_eui64,
+    .spinel_put_ipv6 = protocore_thread_spinel_put_ipv6,
+    .spinel_put_utf8 = protocore_thread_spinel_put_utf8,
+    .spinel_put_data = protocore_thread_spinel_put_data,
+    .spinel_put_data_wlen = protocore_thread_spinel_put_data_wlen,
+    .spinel_writer_len = protocore_thread_spinel_writer_len,
+    .spinel_prop_lookup = protocore_thread_spinel_prop_lookup,
+    .spinel_prop_name = protocore_thread_spinel_prop_name,
+    .spinel_status_name = protocore_thread_spinel_status_name,
+    .spinel_frame_encode = protocore_thread_spinel_frame_encode,
+    .spinel_frame_decode = protocore_thread_spinel_frame_decode,
+};
 
 PROTOCORE_END_DECLS
 

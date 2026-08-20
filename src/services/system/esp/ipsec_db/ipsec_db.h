@@ -29,9 +29,9 @@
 #define PROTOCORE_IPSEC_DB_H
 
 #include "services/security/ikev2/ikev2/ikev2.h" // the complete type a public struct below holds by value
-#include "services/system/esp/esp/esp.h"       // the complete type a public struct below holds by value
+#include "services/system/esp/esp/esp.h"         // the complete type a public struct below holds by value
 
-#include "protocore_config.h"              // the entry point: protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_IKEV2
 
@@ -124,7 +124,6 @@ typedef struct
     IpsecSaEntry entries[PROTOCORE_IPSEC_SAD_MAX];
     size_t count;
 } IpsecSad;
-
 
 /** @brief What protocore_ipsec_spd_init takes: spd. */
 typedef struct
@@ -252,11 +251,17 @@ typedef struct
     IpsecDbProtocoreIpsecSadFindArgs protocore_ipsec_sad_find_args;
     IpsecDbProtocoreIpsecSadRemoveArgs protocore_ipsec_sad_remove_args;
     IpsecDbProtocoreIpsecSadNextSeqArgs protocore_ipsec_sad_next_seq_args;
-
     proto_bool ok;
     const IpsecPolicy *ptr;
     IpsecSaEntry *sa;
+} IpsecDbVars;
 
+/** @brief The operands and the outcome. */
+extern IpsecDbVars IpsecDbV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const protocore_ipsec_spd_init)(uint8_t *restrict work);
     void (*const protocore_ipsec_spd_add)(uint8_t *restrict work);
     void (*const protocore_ipsec_spd_lookup)(uint8_t *restrict work);
@@ -269,8 +274,35 @@ typedef struct
     void (*const protocore_ipsec_sad_next_seq)(uint8_t *restrict work);
 } IpsecDbNs;
 
-/** @brief The one symbol this module exports. */
-extern IpsecDbNs IpsecDb;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in IpsecDbV or a region of the borrow at a fixed offset.
+void protocore_ipsec_db_protocore_ipsec_spd_init(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_spd_add(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_spd_lookup(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_selector_match(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_selector_from_ts(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_sad_init(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_sad_add(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_sad_find(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_sad_remove(uint8_t *restrict work);
+void protocore_ipsec_db_protocore_ipsec_sad_next_seq(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `IpsecDb.protocore_ipsec_spd_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const IpsecDbNs IpsecDb __attribute__((unused)) = {
+    .protocore_ipsec_spd_init = protocore_ipsec_db_protocore_ipsec_spd_init,
+    .protocore_ipsec_spd_add = protocore_ipsec_db_protocore_ipsec_spd_add,
+    .protocore_ipsec_spd_lookup = protocore_ipsec_db_protocore_ipsec_spd_lookup,
+    .protocore_ipsec_selector_match = protocore_ipsec_db_protocore_ipsec_selector_match,
+    .protocore_ipsec_selector_from_ts = protocore_ipsec_db_protocore_ipsec_selector_from_ts,
+    .protocore_ipsec_sad_init = protocore_ipsec_db_protocore_ipsec_sad_init,
+    .protocore_ipsec_sad_add = protocore_ipsec_db_protocore_ipsec_sad_add,
+    .protocore_ipsec_sad_find = protocore_ipsec_db_protocore_ipsec_sad_find,
+    .protocore_ipsec_sad_remove = protocore_ipsec_db_protocore_ipsec_sad_remove,
+    .protocore_ipsec_sad_next_seq = protocore_ipsec_db_protocore_ipsec_sad_next_seq,
+};
 
 PROTOCORE_END_DECLS
 

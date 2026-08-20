@@ -7,10 +7,10 @@
  */
 
 #include "services/net/snmp/snmp_agent/snmp_agent.h"
-#include "services/net/snmp/snmp_v3/snmp_v3.h"
 #include "mmgr/protomem/protomem.h" // mem.set / mem.cmp: the fixed-width compares and clears
 #include "mmgr/protostr/protostr.h" // str.len / str.copy: the bounded community and string handling
-#include "mmgr/secure/secure.h"   // the persistent end this module's key material is taken from
+#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
+#include "services/net/snmp/snmp_v3/snmp_v3.h"
 
 static uint8_t snmp_ber_work[16]; // the borrow an entry takes; SnmpBer never reads it
 
@@ -924,12 +924,12 @@ static void agent_process(uint8_t *restrict work)
     if (version == (int)SNMP_V3)
     {
 #if PROTOCORE_ENABLE_SNMP_V3
-        SnmpV3.msg.req = req;
-        SnmpV3.msg.req_len = req_len;
-        SnmpV3.msg.resp = resp;
-        SnmpV3.msg.resp_cap = resp_cap;
+        SnmpV3V.msg.req = req;
+        SnmpV3V.msg.req_len = req_len;
+        SnmpV3V.msg.resp = resp;
+        SnmpV3V.msg.resp_cap = resp_cap;
         SnmpV3.process(protocore_snmp_v3_span());
-        SnmpAgent.n = SnmpV3.n;
+        SnmpAgent.n = SnmpV3V.n;
 #endif
         return; // without the USM layer a v3 message is answered with nothing
     }

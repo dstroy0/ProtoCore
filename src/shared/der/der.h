@@ -104,11 +104,17 @@ typedef struct
 {
     DerReadArgs read_args;
     DerOidArgs oid_args;
-
     DerTlv tlv;
     proto_bool ok;
     uint64_t u64;
+} DerVars;
 
+/** @brief The operands and the outcome. */
+extern DerVars DerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const read)(uint8_t *restrict work);
     void (*const enter)(uint8_t *restrict work);
     void (*const uint)(uint8_t *restrict work);
@@ -117,8 +123,27 @@ typedef struct
     void (*const time)(uint8_t *restrict work);
 } DerNs;
 
-/** @brief The one symbol this module exports. */
-extern DerNs Der;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DerV or a region of the borrow at a fixed offset.
+void protocore_der_read(uint8_t *restrict work);
+void protocore_der_enter(uint8_t *restrict work);
+void protocore_der_uint(uint8_t *restrict work);
+void protocore_der_bitstring(uint8_t *restrict work);
+void protocore_der_oid_eq(uint8_t *restrict work);
+void protocore_der_time(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Der.read(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DerNs Der __attribute__((unused)) = {
+    .read = protocore_der_read,
+    .enter = protocore_der_enter,
+    .uint = protocore_der_uint,
+    .bitstring = protocore_der_bitstring,
+    .oid_eq = protocore_der_oid_eq,
+    .time = protocore_der_time,
+};
 
 PROTOCORE_END_DECLS
 

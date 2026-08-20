@@ -9,7 +9,7 @@
 #include "services/net/snmp/snmp_v3/snmp_v3.h"
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.set / mem.cmp
 #include "mmgr/protostr/protostr.h" // str.len / str.copy
-#include "mmgr/secure/secure.h"   // the persistent end this module's key material is taken from
+#include "mmgr/secure/secure.h"     // the persistent end this module's key material is taken from
 
 static uint8_t snmp_crypto_work[16]; // the borrow an entry takes; SnmpCrypto never reads it
 
@@ -27,7 +27,7 @@ static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
 #include "network_drivers/transport/udp/client/client.h" // UdpClient: the notification out
-#include "services/net/snmp/snmp_notify/snmp_notify.h"               // SnmpNotify.build_pdu: the notification PDU
+#include "services/net/snmp/snmp_notify/snmp_notify.h"   // SnmpNotify.build_pdu: the notification PDU
 #include "shared/ip/ip.h"                                // Ip.parse: the receiver's address, once
 #endif
 
@@ -167,10 +167,10 @@ static uint32_t v3_uptime_s(void)
 #endif
 }
 
-static void v3_init(uint8_t *restrict work)
+void protocore_snmp_v3_init(uint8_t *restrict work)
 {
-    const uint8_t *engine_id = SnmpV3.engine.engine_id;
-    const size_t engine_id_len = SnmpV3.engine.engine_id_len;
+    const uint8_t *engine_id = SnmpV3V.engine.engine_id;
+    const size_t engine_id_len = SnmpV3V.engine.engine_id_len;
     if (engine_id && engine_id_len >= 5 && engine_id_len <= SNMP_V3_ENGINEID_MAX)
     {
         mem.cpy(SNMP_V3_CTX(work)->engine_id, engine_id, engine_id_len);
@@ -179,16 +179,16 @@ static void v3_init(uint8_t *restrict work)
     SNMP_V3_CTX(work)->user[0] = '\0';
     SNMP_V3_CTX(work)->auth_set = PROTO_FALSE;
     SNMP_V3_CTX(work)->priv_set = PROTO_FALSE;
-    SnmpV3.ok = PROTO_TRUE;
+    SnmpV3V.ok = PROTO_TRUE;
 }
 
 // The localized keys depend on the snmpEngineID, so they are derived here, once, rather than per
 // message (RFC 3414 sec 2.6, derivation per RFC 7860 sec 9.3).
-static void v3_set_user(uint8_t *restrict work)
+void protocore_snmp_v3_set_user(uint8_t *restrict work)
 {
-    const char *user = SnmpV3.user.user;
-    const char *auth_pass = SnmpV3.user.auth_pass;
-    const char *priv_pass = SnmpV3.user.priv_pass;
+    const char *user = SnmpV3V.user.user;
+    const char *auth_pass = SnmpV3V.user.auth_pass;
+    const char *priv_pass = SnmpV3V.user.priv_pass;
 
     (void)str.copy(SNMP_V3_CTX(work)->user, user ? user : "", sizeof(SNMP_V3_CTX(work)->user));
     SNMP_V3_CTX(work)->auth_set = auth_pass && auth_pass[0];
@@ -209,19 +209,19 @@ static void v3_set_user(uint8_t *restrict work)
         SnmpCrypto.key.out = SNMP_V3_CTX(work)->priv_key;
         SnmpCrypto.localize_key(snmp_crypto_work);
     }
-    SnmpV3.ok = SNMP_V3_CTX(work)->auth_set;
+    SnmpV3V.ok = SNMP_V3_CTX(work)->auth_set;
 }
 
-static void v3_set_boots(uint8_t *restrict work)
+void protocore_snmp_v3_set_boots(uint8_t *restrict work)
 {
-    SNMP_V3_CTX(work)->boots = SnmpV3.engine.boots;
-    SnmpV3.ok = PROTO_TRUE;
+    SNMP_V3_CTX(work)->boots = SnmpV3V.engine.boots;
+    SnmpV3V.ok = PROTO_TRUE;
 }
 
-static void v3_get_boots(uint8_t *restrict work)
+void protocore_snmp_v3_get_boots(uint8_t *restrict work)
 {
-    SnmpV3.u32 = SNMP_V3_CTX(work)->boots;
-    SnmpV3.ok = PROTO_TRUE;
+    SnmpV3V.u32 = SNMP_V3_CTX(work)->boots;
+    SnmpV3V.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -556,14 +556,14 @@ static size_t build_report(uint8_t *restrict work, long msg_id, proto_bool auth,
 // Message processing
 // ---------------------------------------------------------------------------
 
-static void v3_process(uint8_t *restrict work)
+void protocore_snmp_v3_process(uint8_t *restrict work)
 {
-    const uint8_t *req = SnmpV3.msg.req;
-    const size_t req_len = SnmpV3.msg.req_len;
-    uint8_t *resp = SnmpV3.msg.resp;
-    const size_t resp_cap = SnmpV3.msg.resp_cap;
-    SnmpV3.n = 0;
-    SnmpV3.ok = PROTO_FALSE;
+    const uint8_t *req = SnmpV3V.msg.req;
+    const size_t req_len = SnmpV3V.msg.req_len;
+    uint8_t *resp = SnmpV3V.msg.resp;
+    const size_t resp_cap = SnmpV3V.msg.resp_cap;
+    SnmpV3V.n = 0;
+    SnmpV3V.ok = PROTO_FALSE;
 
     BerDec d;
     SnmpBer.dec = &d;
@@ -697,9 +697,9 @@ static void v3_process(uint8_t *restrict work)
     if (!engine_match)
     {
         SNMP_V3_CTX(work)->stat_unknown_engine++;
-        SnmpV3.n = build_report(work, msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_ENGINE,
-                                SNMP_V3_CTX(work)->stat_unknown_engine, inner_request_id(mdata, mdata_len, req_priv),
-                                resp, resp_cap);
+        SnmpV3V.n = build_report(work, msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_ENGINE,
+                                 SNMP_V3_CTX(work)->stat_unknown_engine, inner_request_id(mdata, mdata_len, req_priv),
+                                 resp, resp_cap);
         return;
     }
 
@@ -714,8 +714,8 @@ static void v3_process(uint8_t *restrict work)
           mem.cmp(uname, SNMP_V3_CTX(work)->user, uname_len) == 0))
     {
         SNMP_V3_CTX(work)->stat_unknown_user++;
-        SnmpV3.n = build_report(work, msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_USER,
-                                SNMP_V3_CTX(work)->stat_unknown_user, 0, resp, resp_cap);
+        SnmpV3V.n = build_report(work, msg_id, PROTO_FALSE, (int)USM_STAT_UNKNOWN_USER,
+                                 SNMP_V3_CTX(work)->stat_unknown_user, 0, resp, resp_cap);
         return;
     }
 
@@ -724,8 +724,8 @@ static void v3_process(uint8_t *restrict work)
     if (aparm_len != SNMP_V3_AUTH_PARAM_LEN || req_len > sizeof(SNMP_V3_CTX(work)->v3_a))
     {
         SNMP_V3_CTX(work)->stat_wrong_digest++;
-        SnmpV3.n = build_report(work, msg_id, PROTO_FALSE, (int)USM_STAT_WRONG_DIGEST,
-                                SNMP_V3_CTX(work)->stat_wrong_digest, 0, resp, resp_cap);
+        SnmpV3V.n = build_report(work, msg_id, PROTO_FALSE, (int)USM_STAT_WRONG_DIGEST,
+                                 SNMP_V3_CTX(work)->stat_wrong_digest, 0, resp, resp_cap);
         return;
     }
     mem.cpy(SNMP_V3_CTX(work)->v3_a, req, req_len);
@@ -740,8 +740,8 @@ static void v3_process(uint8_t *restrict work)
     if (!ct_eq(mac, aparm, SNMP_V3_AUTH_PARAM_LEN))
     {
         SNMP_V3_CTX(work)->stat_wrong_digest++;
-        SnmpV3.n = build_report(work, msg_id, PROTO_FALSE, (int)USM_STAT_WRONG_DIGEST,
-                                SNMP_V3_CTX(work)->stat_wrong_digest, 0, resp, resp_cap);
+        SnmpV3V.n = build_report(work, msg_id, PROTO_FALSE, (int)USM_STAT_WRONG_DIGEST,
+                                 SNMP_V3_CTX(work)->stat_wrong_digest, 0, resp, resp_cap);
         return;
     }
 
@@ -756,8 +756,8 @@ static void v3_process(uint8_t *restrict work)
     if ((uint32_t)req_boots != SNMP_V3_CTX(work)->boots || dt > 150)
     {
         SNMP_V3_CTX(work)->stat_not_in_time++;
-        SnmpV3.n = build_report(work, msg_id, PROTO_TRUE, (int)USM_STAT_NOT_IN_TIME,
-                                SNMP_V3_CTX(work)->stat_not_in_time, 0, resp, resp_cap);
+        SnmpV3V.n = build_report(work, msg_id, PROTO_TRUE, (int)USM_STAT_NOT_IN_TIME,
+                                 SNMP_V3_CTX(work)->stat_not_in_time, 0, resp, resp_cap);
         return;
     }
 
@@ -770,8 +770,8 @@ static void v3_process(uint8_t *restrict work)
         if (!SNMP_V3_CTX(work)->priv_set || pparm_len != SNMP_V3_PRIV_PARAM_LEN)
         {
             SNMP_V3_CTX(work)->stat_decrypt++;
-            SnmpV3.n = build_report(work, msg_id, PROTO_TRUE, (int)USM_STAT_DECRYPT, SNMP_V3_CTX(work)->stat_decrypt, 0,
-                                    resp, resp_cap);
+            SnmpV3V.n = build_report(work, msg_id, PROTO_TRUE, (int)USM_STAT_DECRYPT, SNMP_V3_CTX(work)->stat_decrypt,
+                                     0, resp, resp_cap);
             return;
         }
         BerDec md;
@@ -859,8 +859,8 @@ static void v3_process(uint8_t *restrict work)
         return;
     }
 
-    SnmpV3.n = build_message(work, msg_id, PROTO_TRUE, req_priv, SNMP_V3_CTX(work)->v3_c, sc.len, resp, resp_cap);
-    SnmpV3.ok = (SnmpV3.n != 0);
+    SnmpV3V.n = build_message(work, msg_id, PROTO_TRUE, req_priv, SNMP_V3_CTX(work)->v3_c, sc.len, resp, resp_cap);
+    SnmpV3V.ok = (SnmpV3V.n != 0);
 }
 
 #if PROTOCORE_ENABLE_SNMP_TRAP
@@ -870,8 +870,8 @@ static void v3_process(uint8_t *restrict work)
 // SNMPv2-Trap-PDU or the InformRequest-PDU.
 static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
 {
-    SnmpV3.ok = PROTO_FALSE;
-    SnmpV3.n = 0;
+    SnmpV3V.ok = PROTO_FALSE;
+    SnmpV3V.n = 0;
     if (!SNMP_V3_CTX(work)->auth_set)
     {
         return; // a v3 notification carries a digest or it does not leave
@@ -885,12 +885,12 @@ static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
     SnmpBer.enc_init(snmp_ber_work);
     SnmpNotify.buf.enc = &e;
     SnmpNotify.pdu.pdu_tag = pdu_tag;
-    SnmpNotify.pdu.request_id = SnmpV3.notify.request_id;
-    SnmpNotify.pdu.trap_oid = SnmpV3.notify.trap_oid;
-    SnmpNotify.pdu.trap_oid_len = SnmpV3.notify.trap_oid_len;
+    SnmpNotify.pdu.request_id = SnmpV3V.notify.request_id;
+    SnmpNotify.pdu.trap_oid = SnmpV3V.notify.trap_oid;
+    SnmpNotify.pdu.trap_oid_len = SnmpV3V.notify.trap_oid_len;
     SnmpNotify.pdu.uptime_ticks = v3_uptime_s() * 100; // TimeTicks: hundredths of a second
-    SnmpNotify.pdu.vbs = SnmpV3.notify.vbs;
-    SnmpNotify.pdu.vb_count = SnmpV3.notify.vb_count;
+    SnmpNotify.pdu.vbs = SnmpV3V.notify.vbs;
+    SnmpNotify.pdu.vb_count = SnmpV3V.notify.vb_count;
     SnmpNotify.build_pdu(protocore_snmp_notify_span());
     if (!e.ok)
     {
@@ -925,15 +925,15 @@ static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
     }
 
     const size_t len =
-        build_message(work, (long)SnmpV3.notify.request_id, SNMP_V3_CTX(work)->auth_set, SNMP_V3_CTX(work)->priv_set,
+        build_message(work, (long)SnmpV3V.notify.request_id, SNMP_V3_CTX(work)->auth_set, SNMP_V3_CTX(work)->priv_set,
                       SNMP_V3_CTX(work)->v3_c, sc.len, SNMP_V3_CTX(work)->v3_tx, sizeof(SNMP_V3_CTX(work)->v3_tx));
-    SnmpV3.n = len;
+    SnmpV3V.n = len;
     if (len == 0)
     {
         return;
     }
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = SnmpV3.notify.dst_ip;
+    Ip.args.text = SnmpV3V.notify.dst_ip;
     Ip.args.out = &dst;
     Ip.parse(ip_work);
     if (!Ip.ok)
@@ -941,23 +941,23 @@ static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
         return;
     }
     UdpClient.dst = &dst;
-    UdpClient.dst_port = SnmpV3.notify.port;
+    UdpClient.dst_port = SnmpV3V.notify.port;
     UdpClient.data = SNMP_V3_CTX(work)->v3_tx;
     UdpClient.len = len;
     UdpClient.sendto(protocore_udp_client_span());
-    SnmpV3.ok = UdpClient.ok;
+    SnmpV3V.ok = UdpClient.ok;
 }
 
 // SNMPv2-Trap-PDU in a v3 message (RFC 3416 sec 4.2.6): unacknowledged, so the request-id is
 // informational and the caller may leave it at whatever it last set.
-static void v3_trap(uint8_t *restrict work)
+void protocore_snmp_v3_trap(uint8_t *restrict work)
 {
     send_notify(work, (uint8_t)SNMP_TAG_SNMP_PDU_TRAPV2);
 }
 
 // InformRequest-PDU in a v3 message (RFC 3416 sec 4.2.7): confirmed, so the caller owns the
 // request-id the receiver's Response-PDU echoes and retransmits until that Response arrives.
-static void v3_inform(uint8_t *restrict work)
+void protocore_snmp_v3_inform(uint8_t *restrict work)
 {
     send_notify(work, (uint8_t)SNMP_TAG_SNMP_PDU_INFORM);
 }
@@ -965,15 +965,7 @@ static void v3_inform(uint8_t *restrict work)
 #endif // PROTOCORE_ENABLE_SNMP_TRAP
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SnmpV3Ns SnmpV3 = {.init = v3_init,
-                   .set_user = v3_set_user,
-                   .set_boots = v3_set_boots,
-                   .get_boots = v3_get_boots,
-                   .process = v3_process,
-#if PROTOCORE_ENABLE_SNMP_TRAP
-                   .trap = v3_trap,
-                   .inform = v3_inform,
-#endif
-};
+/** @brief The operands and the outcome. */
+SnmpV3Vars SnmpV3V;
 
 #endif // PROTOCORE_ENABLE_SNMP_V3

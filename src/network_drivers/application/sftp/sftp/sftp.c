@@ -593,8 +593,8 @@ void protocore_sftp_format_longname(uint8_t *restrict work)
 
     struct tm tmv;
     mem.set(&tmv, 0, sizeof(tmv));
-    TimeCompat.args.epoch = (time_t)mtime; // mtime==0 -> epoch, a harmless placeholder date
-    TimeCompat.args.out = &tmv;
+    TimeCompatV.args.epoch = (time_t)mtime; // mtime==0 -> epoch, a harmless placeholder date
+    TimeCompatV.args.out = &tmv;
     TimeCompat.gmtime(time_compat_work);
     // mtime is a uint32_t, so t is always inside the range every gmtime implementation accepts and the
     // conversion yields tm_mon in [0,11] by definition; tmv is zeroed above, so even a failed conversion

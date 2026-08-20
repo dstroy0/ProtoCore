@@ -195,16 +195,33 @@ typedef struct
 {
     Euromap77BindArgs bind_args;
     Euromap77InstallArgs install_args;
-
     proto_bool ok;
     uint16_t ns;
+} Euromap77Vars;
 
+/** @brief The operands and the outcome. */
+extern Euromap77Vars Euromap77V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const bind)(uint8_t *restrict work);
     void (*const install)(uint8_t *restrict work);
 } Euromap77Ns;
 
-/** @brief The one symbol this module exports. */
-extern Euromap77Ns Euromap77;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Euromap77V or a region of the borrow at a fixed offset.
+void protocore_euromap77_bind(uint8_t *restrict work);
+void protocore_euromap77_install(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Euromap77.bind(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Euromap77Ns Euromap77 __attribute__((unused)) = {
+    .bind = protocore_euromap77_bind,
+    .install = protocore_euromap77_install,
+};
 
 /**
  * @brief The PROTOCORE_EUROMAP77_BORROW bytes this module's state lives in.

@@ -43,37 +43,37 @@ static int drv_read_block(void *, uint32_t first, int32_t *out, size_t n)
 
 static int32_t sb_read(const char *name, uint32_t point, int32_t *value_out)
 {
-    Southbound.name = name;
-    Southbound.point.point = point;
-    Southbound.point.value_out = value_out;
+    SouthboundV.name = name;
+    SouthboundV.point.point = point;
+    SouthboundV.point.value_out = value_out;
     Southbound.read(protocore_southbound_span());
-    return Southbound.i32;
+    return SouthboundV.i32;
 }
 
 static int32_t sb_write(const char *name, uint32_t point, int32_t value)
 {
-    Southbound.name = name;
-    Southbound.point.point = point;
-    Southbound.point.value = value;
+    SouthboundV.name = name;
+    SouthboundV.point.point = point;
+    SouthboundV.point.value = value;
     Southbound.write(protocore_southbound_span());
-    return Southbound.i32;
+    return SouthboundV.i32;
 }
 
 static int32_t sb_read_block(const char *name, uint32_t first, int32_t *out, size_t n)
 {
-    Southbound.name = name;
-    Southbound.block.first = first;
-    Southbound.block.out = out;
-    Southbound.block.n = n;
+    SouthboundV.name = name;
+    SouthboundV.block.first = first;
+    SouthboundV.block.out = out;
+    SouthboundV.block.n = n;
     Southbound.read_block(protocore_southbound_span());
-    return Southbound.i32;
+    return SouthboundV.i32;
 }
 
 void dbench_run(void)
 {
     static const SouthboundDriver drv = {"plc1", drv_read, drv_write, drv_read_block, NULL, NULL};
     Southbound.clear(protocore_southbound_span());
-    Southbound.drv = &drv;
+    SouthboundV.drv = &drv;
     Southbound.add(protocore_southbound_span());
 
     for (;;)

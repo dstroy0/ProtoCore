@@ -93,26 +93,46 @@ typedef struct
  */
 typedef struct
 {
-    const uint8_t *k; ///< K: the shared secret every OTP is keyed by (RFC 4226 sec 5.1)
-    size_t keylen;    ///< how many bytes K holds
-    uint8_t digit;    ///< Digit: how many digits the OTP carries (RFC 4226 sec 5.1)
-
+    const uint8_t *k;       ///< K: the shared secret every OTP is keyed by (RFC 4226 sec 5.1)
+    size_t keylen;          ///< how many bytes K holds
+    uint8_t digit;          ///< Digit: how many digits the OTP carries (RFC 4226 sec 5.1)
     TotpStepArgs step;      ///< the moving factor an OTP is computed for
     TotpValidateArgs check; ///< what a validation judges, and the drift around it
     TotpSecretArgs secret;  ///< the base32 secret and where a decode writes K
-
     proto_bool ok;
     uint32_t u32;
     int32_t i32;
+} TotpVars;
 
+/** @brief The operands and the outcome. */
+extern TotpVars TotpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const hotp)(uint8_t *restrict work);
     void (*const totp)(uint8_t *restrict work);
     void (*const verify)(uint8_t *restrict work);
     void (*const base32_decode)(uint8_t *restrict work);
 } TotpNs;
 
-/** @brief The one symbol this module exports. */
-extern TotpNs Totp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TotpV or a region of the borrow at a fixed offset.
+void protocore_totp_hotp(uint8_t *restrict work);
+void protocore_totp_totp(uint8_t *restrict work);
+void protocore_totp_verify(uint8_t *restrict work);
+void protocore_totp_base32_decode(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Totp.hotp(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TotpNs Totp __attribute__((unused)) = {
+    .hotp = protocore_totp_hotp,
+    .totp = protocore_totp_totp,
+    .verify = protocore_totp_verify,
+    .base32_decode = protocore_totp_base32_decode,
+};
 
 PROTOCORE_END_DECLS
 

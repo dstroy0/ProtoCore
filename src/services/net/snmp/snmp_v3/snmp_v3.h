@@ -121,25 +121,51 @@ typedef struct
 #if PROTOCORE_ENABLE_SNMP_TRAP
     SnmpV3NotifyArgs notify; ///< what an outgoing notification carries
 #endif
-
     proto_bool ok;
     size_t n;
     uint32_t u32;
+#if PROTOCORE_ENABLE_SNMP_TRAP
+#endif
+} SnmpV3Vars;
 
+/** @brief The operands and the outcome. */
+extern SnmpV3Vars SnmpV3V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const set_user)(uint8_t *restrict work);
     void (*const set_boots)(uint8_t *restrict work);
     void (*const get_boots)(uint8_t *restrict work);
     void (*const process)(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_SNMP_TRAP
     void (*const trap)(uint8_t *restrict work);
     void (*const inform)(uint8_t *restrict work);
-#endif
 } SnmpV3Ns;
 
-/** @brief The one symbol this module exports. */
-extern SnmpV3Ns SnmpV3;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SnmpV3V or a region of the borrow at a fixed offset.
+void protocore_snmp_v3_init(uint8_t *restrict work);
+void protocore_snmp_v3_set_user(uint8_t *restrict work);
+void protocore_snmp_v3_set_boots(uint8_t *restrict work);
+void protocore_snmp_v3_get_boots(uint8_t *restrict work);
+void protocore_snmp_v3_process(uint8_t *restrict work);
+void protocore_snmp_v3_trap(uint8_t *restrict work);
+void protocore_snmp_v3_inform(uint8_t *restrict work);
 
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SnmpV3.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SnmpV3Ns SnmpV3 __attribute__((unused)) = {
+    .init = protocore_snmp_v3_init,
+    .set_user = protocore_snmp_v3_set_user,
+    .set_boots = protocore_snmp_v3_set_boots,
+    .get_boots = protocore_snmp_v3_get_boots,
+    .process = protocore_snmp_v3_process,
+    .trap = protocore_snmp_v3_trap,
+    .inform = protocore_snmp_v3_inform,
+};
 
 /**
  * @brief The PROTOCORE_SNMP_V3_BORROW bytes this module's state lives in.

@@ -88,18 +88,37 @@ typedef struct
     RadioSniffGlobalHeaderArgs global_header_args;
     RadioSniffI2f32Args i2f32_args;
     RadioSniffTapRecordArgs tap_record_args;
-
     proto_bool ok;
     size_t n;
     uint32_t u32;
+} RadioSniffVars;
 
+/** @brief The operands and the outcome. */
+extern RadioSniffVars RadioSniffV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const global_header)(uint8_t *restrict work);
     void (*const i2f32)(uint8_t *restrict work);
     void (*const tap_record)(uint8_t *restrict work);
 } RadioSniffNs;
 
-/** @brief The one symbol this module exports. */
-extern RadioSniffNs RadioSniff;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in RadioSniffV or a region of the borrow at a fixed offset.
+void protocore_radio_sniff_global_header(uint8_t *restrict work);
+void protocore_radio_sniff_i2f32(uint8_t *restrict work);
+void protocore_radio_sniff_tap_record(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `RadioSniff.global_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const RadioSniffNs RadioSniff __attribute__((unused)) = {
+    .global_header = protocore_radio_sniff_global_header,
+    .i2f32 = protocore_radio_sniff_i2f32,
+    .tap_record = protocore_radio_sniff_tap_record,
+};
 
 PROTOCORE_END_DECLS
 
