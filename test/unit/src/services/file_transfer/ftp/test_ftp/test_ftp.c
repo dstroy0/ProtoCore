@@ -44,12 +44,12 @@ void test_rfc959_multiline_reply_example(void)
                                 "123 The last line\r\n";
     int code = 0;
     size_t consumed = 0;
-    Ftp.parse_reply_args.buf = REPLY;
-    Ftp.parse_reply_args.len = sizeof(REPLY) - 1;
-    Ftp.parse_reply_args.code = &code;
-    Ftp.parse_reply_args.consumed = &consumed;
+    FtpV.parse_reply_args.buf = REPLY;
+    FtpV.parse_reply_args.len = sizeof(REPLY) - 1;
+    FtpV.parse_reply_args.code = &code;
+    FtpV.parse_reply_args.consumed = &consumed;
     Ftp.parse_reply(ftp_work);
-    TEST_ASSERT_TRUE(Ftp.ok);
+    TEST_ASSERT_TRUE(FtpV.ok);
     TEST_ASSERT_EQUAL_INT(123, code);
     TEST_ASSERT_EQUAL_UINT(sizeof(REPLY) - 1, consumed); // the whole reply, terminator line included
 }
@@ -67,12 +67,12 @@ void test_partial_multiline_reply_needs_more(void)
     {
         int code = 0;
         size_t consumed = 0;
-        Ftp.parse_reply_args.buf = REPLY;
-        Ftp.parse_reply_args.len = n;
-        Ftp.parse_reply_args.code = &code;
-        Ftp.parse_reply_args.consumed = &consumed;
+        FtpV.parse_reply_args.buf = REPLY;
+        FtpV.parse_reply_args.len = n;
+        FtpV.parse_reply_args.code = &code;
+        FtpV.parse_reply_args.consumed = &consumed;
         Ftp.parse_reply(ftp_work);
-        TEST_ASSERT_FALSE_MESSAGE(Ftp.ok, REPLY);
+        TEST_ASSERT_FALSE_MESSAGE(FtpV.ok, REPLY);
     }
 }
 
@@ -83,21 +83,21 @@ void test_single_line_reply_and_pipelining(void)
     static const char TWO[] = "220 Service ready\r\n331 User name okay\r\n";
     int code = 0;
     size_t consumed = 0;
-    Ftp.parse_reply_args.buf = TWO;
-    Ftp.parse_reply_args.len = sizeof(TWO) - 1;
-    Ftp.parse_reply_args.code = &code;
-    Ftp.parse_reply_args.consumed = &consumed;
+    FtpV.parse_reply_args.buf = TWO;
+    FtpV.parse_reply_args.len = sizeof(TWO) - 1;
+    FtpV.parse_reply_args.code = &code;
+    FtpV.parse_reply_args.consumed = &consumed;
     Ftp.parse_reply(ftp_work);
-    TEST_ASSERT_TRUE(Ftp.ok);
+    TEST_ASSERT_TRUE(FtpV.ok);
     TEST_ASSERT_EQUAL_INT(220, code);
     TEST_ASSERT_EQUAL_UINT(19u, consumed); // "220 Service ready\r\n"
 
-    Ftp.parse_reply_args.buf = TWO + consumed;
-    Ftp.parse_reply_args.len = sizeof(TWO) - 1 - consumed;
-    Ftp.parse_reply_args.code = &code;
-    Ftp.parse_reply_args.consumed = &consumed;
+    FtpV.parse_reply_args.buf = TWO + consumed;
+    FtpV.parse_reply_args.len = sizeof(TWO) - 1 - consumed;
+    FtpV.parse_reply_args.code = &code;
+    FtpV.parse_reply_args.consumed = &consumed;
     Ftp.parse_reply(ftp_work);
-    TEST_ASSERT_TRUE(Ftp.ok);
+    TEST_ASSERT_TRUE(FtpV.ok);
     TEST_ASSERT_EQUAL_INT(331, code);
 }
 
@@ -116,12 +116,12 @@ void test_malformed_reply_heads_are_refused(void)
     {
         int code = 0;
         size_t consumed = 0;
-        Ftp.parse_reply_args.buf = BAD[i];
-        Ftp.parse_reply_args.len = strlen(BAD[i]);
-        Ftp.parse_reply_args.code = &code;
-        Ftp.parse_reply_args.consumed = &consumed;
+        FtpV.parse_reply_args.buf = BAD[i];
+        FtpV.parse_reply_args.len = strlen(BAD[i]);
+        FtpV.parse_reply_args.code = &code;
+        FtpV.parse_reply_args.consumed = &consumed;
         Ftp.parse_reply(ftp_work);
-        TEST_ASSERT_FALSE_MESSAGE(Ftp.ok, BAD[i]);
+        TEST_ASSERT_FALSE_MESSAGE(FtpV.ok, BAD[i]);
     }
 }
 
@@ -132,12 +132,12 @@ void test_a_different_code_does_not_terminate(void)
     static const char REPLY[] = "211-Features:\r\n MDTM\r\n215 UNIX Type: L8\r\n";
     int code = 0;
     size_t consumed = 0;
-    Ftp.parse_reply_args.buf = REPLY;
-    Ftp.parse_reply_args.len = sizeof(REPLY) - 1;
-    Ftp.parse_reply_args.code = &code;
-    Ftp.parse_reply_args.consumed = &consumed;
+    FtpV.parse_reply_args.buf = REPLY;
+    FtpV.parse_reply_args.len = sizeof(REPLY) - 1;
+    FtpV.parse_reply_args.code = &code;
+    FtpV.parse_reply_args.consumed = &consumed;
     Ftp.parse_reply(ftp_work);
-    TEST_ASSERT_FALSE(Ftp.ok);
+    TEST_ASSERT_FALSE(FtpV.ok);
 }
 
 // RFC 2428 sec 2, "The following are sample EPRT commands", printed verbatim, plus the trailing
@@ -145,22 +145,22 @@ void test_a_different_code_does_not_terminate(void)
 void test_rfc2428_published_eprt_examples(void)
 {
     char buf[64];
-    Ftp.build_eprt_args.buf = buf;
-    Ftp.build_eprt_args.cap = sizeof(buf);
-    Ftp.build_eprt_args.ip_str = "132.235.1.2";
-    Ftp.build_eprt_args.ipv6 = PROTO_FALSE;
-    Ftp.build_eprt_args.port = 6275;
+    FtpV.build_eprt_args.buf = buf;
+    FtpV.build_eprt_args.cap = sizeof(buf);
+    FtpV.build_eprt_args.ip_str = "132.235.1.2";
+    FtpV.build_eprt_args.ipv6 = PROTO_FALSE;
+    FtpV.build_eprt_args.port = 6275;
     Ftp.build_eprt(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(27u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(27u, FtpV.n);
     TEST_ASSERT_EQUAL_STRING("EPRT |1|132.235.1.2|6275|\r\n", buf);
 
-    Ftp.build_eprt_args.buf = buf;
-    Ftp.build_eprt_args.cap = sizeof(buf);
-    Ftp.build_eprt_args.ip_str = "1080::8:800:200C:417A";
-    Ftp.build_eprt_args.ipv6 = PROTO_TRUE;
-    Ftp.build_eprt_args.port = 5282;
+    FtpV.build_eprt_args.buf = buf;
+    FtpV.build_eprt_args.cap = sizeof(buf);
+    FtpV.build_eprt_args.ip_str = "1080::8:800:200C:417A";
+    FtpV.build_eprt_args.ipv6 = PROTO_TRUE;
+    FtpV.build_eprt_args.port = 5282;
     Ftp.build_eprt(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(37u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(37u, FtpV.n);
     TEST_ASSERT_EQUAL_STRING("EPRT |2|1080::8:800:200C:417A|5282|\r\n", buf);
 }
 
@@ -174,31 +174,31 @@ void test_port_command_splits_into_eight_bit_fields(void)
 {
     static const uint8_t IP[4] = {132, 235, 1, 2};
     char buf[64];
-    Ftp.build_port_args.buf = buf;
-    Ftp.build_port_args.cap = sizeof(buf);
-    Ftp.build_port_args.ip = IP;
-    Ftp.build_port_args.port = 6275;
+    FtpV.build_port_args.buf = buf;
+    FtpV.build_port_args.cap = sizeof(buf);
+    FtpV.build_port_args.ip = IP;
+    FtpV.build_port_args.port = 6275;
     Ftp.build_port(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(25u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(25u, FtpV.n);
     TEST_ASSERT_EQUAL_STRING("PORT 132,235,1,2,24,131\r\n", buf);
 
     // the extremes of both fields, from the same definition
     static const uint8_t ZERO[4] = {0, 0, 0, 0};
-    Ftp.build_port_args.buf = buf;
-    Ftp.build_port_args.cap = sizeof(buf);
-    Ftp.build_port_args.ip = ZERO;
-    Ftp.build_port_args.port = 0;
+    FtpV.build_port_args.buf = buf;
+    FtpV.build_port_args.cap = sizeof(buf);
+    FtpV.build_port_args.ip = ZERO;
+    FtpV.build_port_args.port = 0;
     Ftp.build_port(ftp_work);
-    TEST_ASSERT_TRUE(Ftp.n > 0);
+    TEST_ASSERT_TRUE(FtpV.n > 0);
     TEST_ASSERT_EQUAL_STRING("PORT 0,0,0,0,0,0\r\n", buf);
 
     static const uint8_t FULL[4] = {255, 255, 255, 255};
-    Ftp.build_port_args.buf = buf;
-    Ftp.build_port_args.cap = sizeof(buf);
-    Ftp.build_port_args.ip = FULL;
-    Ftp.build_port_args.port = 65535;
+    FtpV.build_port_args.buf = buf;
+    FtpV.build_port_args.cap = sizeof(buf);
+    FtpV.build_port_args.ip = FULL;
+    FtpV.build_port_args.port = 65535;
     Ftp.build_port(ftp_work);
-    TEST_ASSERT_TRUE(Ftp.n > 0);
+    TEST_ASSERT_TRUE(FtpV.n > 0);
     TEST_ASSERT_EQUAL_STRING("PORT 255,255,255,255,255,255\r\n", buf);
 }
 
@@ -209,12 +209,12 @@ void test_pasv_tuple_decodes_to_the_same_pair(void)
     static const char REPLY[] = "227 Entering Passive Mode (132,235,1,2,24,131)\r\n";
     uint8_t ip[4] = {0, 0, 0, 0};
     uint16_t port = 0;
-    Ftp.parse_pasv_args.buf = REPLY;
-    Ftp.parse_pasv_args.len = sizeof(REPLY) - 1;
-    Ftp.parse_pasv_args.ip = ip;
-    Ftp.parse_pasv_args.port = &port;
+    FtpV.parse_pasv_args.buf = REPLY;
+    FtpV.parse_pasv_args.len = sizeof(REPLY) - 1;
+    FtpV.parse_pasv_args.ip = ip;
+    FtpV.parse_pasv_args.port = &port;
     Ftp.parse_pasv(ftp_work);
-    TEST_ASSERT_TRUE(Ftp.ok);
+    TEST_ASSERT_TRUE(FtpV.ok);
     TEST_ASSERT_EQUAL_UINT8(132, ip[0]);
     TEST_ASSERT_EQUAL_UINT8(235, ip[1]);
     TEST_ASSERT_EQUAL_UINT8(1, ip[2]);
@@ -239,12 +239,12 @@ void test_pasv_refuses_out_of_range_and_malformed_tuples(void)
     {
         uint8_t ip[4];
         uint16_t port = 0;
-        Ftp.parse_pasv_args.buf = BAD[i];
-        Ftp.parse_pasv_args.len = strlen(BAD[i]);
-        Ftp.parse_pasv_args.ip = ip;
-        Ftp.parse_pasv_args.port = &port;
+        FtpV.parse_pasv_args.buf = BAD[i];
+        FtpV.parse_pasv_args.len = strlen(BAD[i]);
+        FtpV.parse_pasv_args.ip = ip;
+        FtpV.parse_pasv_args.port = &port;
         Ftp.parse_pasv(ftp_work);
-        TEST_ASSERT_FALSE_MESSAGE(Ftp.ok, BAD[i]);
+        TEST_ASSERT_FALSE_MESSAGE(FtpV.ok, BAD[i]);
     }
 }
 
@@ -257,18 +257,18 @@ void test_rfc2428_published_epsv_example(void)
     uint16_t port = 0;
     int code = 0;
     size_t consumed = 0;
-    Ftp.parse_epsv_args.buf = REPLY;
-    Ftp.parse_epsv_args.len = sizeof(REPLY) - 1;
-    Ftp.parse_epsv_args.port = &port;
+    FtpV.parse_epsv_args.buf = REPLY;
+    FtpV.parse_epsv_args.len = sizeof(REPLY) - 1;
+    FtpV.parse_epsv_args.port = &port;
     Ftp.parse_epsv(ftp_work);
-    TEST_ASSERT_TRUE(Ftp.ok);
+    TEST_ASSERT_TRUE(FtpV.ok);
     TEST_ASSERT_EQUAL_UINT16(6446, port);
-    Ftp.parse_reply_args.buf = REPLY;
-    Ftp.parse_reply_args.len = sizeof(REPLY) - 1;
-    Ftp.parse_reply_args.code = &code;
-    Ftp.parse_reply_args.consumed = &consumed;
+    FtpV.parse_reply_args.buf = REPLY;
+    FtpV.parse_reply_args.len = sizeof(REPLY) - 1;
+    FtpV.parse_reply_args.code = &code;
+    FtpV.parse_reply_args.consumed = &consumed;
     Ftp.parse_reply(ftp_work);
-    TEST_ASSERT_TRUE(Ftp.ok);
+    TEST_ASSERT_TRUE(FtpV.ok);
     TEST_ASSERT_EQUAL_INT(229, code);
 }
 
@@ -285,11 +285,11 @@ void test_epsv_accepts_any_legal_delimiter(void)
     for (size_t i = 0; i < sizeof(FORMS) / sizeof(FORMS[0]); i++)
     {
         uint16_t port = 0;
-        Ftp.parse_epsv_args.buf = FORMS[i];
-        Ftp.parse_epsv_args.len = strlen(FORMS[i]);
-        Ftp.parse_epsv_args.port = &port;
+        FtpV.parse_epsv_args.buf = FORMS[i];
+        FtpV.parse_epsv_args.len = strlen(FORMS[i]);
+        FtpV.parse_epsv_args.port = &port;
         Ftp.parse_epsv(ftp_work);
-        TEST_ASSERT_TRUE_MESSAGE(Ftp.ok, FORMS[i]);
+        TEST_ASSERT_TRUE_MESSAGE(FtpV.ok, FORMS[i]);
         TEST_ASSERT_EQUAL_UINT16(6446, port);
     }
 }
@@ -305,11 +305,11 @@ void test_epsv_refuses_malformed_replies(void)
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
         uint16_t port = 0;
-        Ftp.parse_epsv_args.buf = BAD[i];
-        Ftp.parse_epsv_args.len = strlen(BAD[i]);
-        Ftp.parse_epsv_args.port = &port;
+        FtpV.parse_epsv_args.buf = BAD[i];
+        FtpV.parse_epsv_args.len = strlen(BAD[i]);
+        FtpV.parse_epsv_args.port = &port;
         Ftp.parse_epsv(ftp_work);
-        TEST_ASSERT_FALSE_MESSAGE(Ftp.ok, BAD[i]);
+        TEST_ASSERT_FALSE_MESSAGE(FtpV.ok, BAD[i]);
     }
 }
 
@@ -318,36 +318,36 @@ void test_epsv_refuses_malformed_replies(void)
 void test_command_line_form(void)
 {
     char buf[64];
-    Ftp.build_command_args.buf = buf;
-    Ftp.build_command_args.cap = sizeof(buf);
-    Ftp.build_command_args.verb = "PASV";
-    Ftp.build_command_args.arg = NULL;
+    FtpV.build_command_args.buf = buf;
+    FtpV.build_command_args.cap = sizeof(buf);
+    FtpV.build_command_args.verb = "PASV";
+    FtpV.build_command_args.arg = NULL;
     Ftp.build_command(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(6u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(6u, FtpV.n);
     TEST_ASSERT_EQUAL_STRING("PASV\r\n", buf);
-    Ftp.build_command_args.buf = buf;
-    Ftp.build_command_args.cap = sizeof(buf);
-    Ftp.build_command_args.verb = "PASV";
-    Ftp.build_command_args.arg = "";
+    FtpV.build_command_args.buf = buf;
+    FtpV.build_command_args.cap = sizeof(buf);
+    FtpV.build_command_args.verb = "PASV";
+    FtpV.build_command_args.arg = "";
     Ftp.build_command(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(6u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(6u, FtpV.n);
     TEST_ASSERT_EQUAL_STRING("PASV\r\n", buf);
 
-    Ftp.build_command_args.buf = buf;
-    Ftp.build_command_args.cap = sizeof(buf);
-    Ftp.build_command_args.verb = "USER";
-    Ftp.build_command_args.arg = "anonymous";
+    FtpV.build_command_args.buf = buf;
+    FtpV.build_command_args.cap = sizeof(buf);
+    FtpV.build_command_args.verb = "USER";
+    FtpV.build_command_args.arg = "anonymous";
     Ftp.build_command(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(16u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(16u, FtpV.n);
     TEST_ASSERT_EQUAL_STRING("USER anonymous\r\n", buf);
 
     // an argument may itself contain spaces; sec 5.3 makes the whole tail the argument
-    Ftp.build_command_args.buf = buf;
-    Ftp.build_command_args.cap = sizeof(buf);
-    Ftp.build_command_args.verb = "STOR";
-    Ftp.build_command_args.arg = "my program.nc";
+    FtpV.build_command_args.buf = buf;
+    FtpV.build_command_args.cap = sizeof(buf);
+    FtpV.build_command_args.verb = "STOR";
+    FtpV.build_command_args.arg = "my program.nc";
     Ftp.build_command(ftp_work);
-    TEST_ASSERT_TRUE(Ftp.n > 0);
+    TEST_ASSERT_TRUE(FtpV.n > 0);
     TEST_ASSERT_EQUAL_STRING("STOR my program.nc\r\n", buf);
 }
 
@@ -384,46 +384,46 @@ void test_builders_refuse_a_short_buffer(void)
     static const uint8_t IP[4] = {132, 235, 1, 2};
     char buf[64];
 
-    Ftp.build_command_args.buf = buf;
-    Ftp.build_command_args.cap = 7;
-    Ftp.build_command_args.verb = "PASV";
-    Ftp.build_command_args.arg = NULL;
+    FtpV.build_command_args.buf = buf;
+    FtpV.build_command_args.cap = 7;
+    FtpV.build_command_args.verb = "PASV";
+    FtpV.build_command_args.arg = NULL;
     Ftp.build_command(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(6u, Ftp.n); // 6 + NUL
-    Ftp.build_command_args.buf = buf;
-    Ftp.build_command_args.cap = 6;
-    Ftp.build_command_args.verb = "PASV";
-    Ftp.build_command_args.arg = NULL;
+    TEST_ASSERT_EQUAL_UINT(6u, FtpV.n); // 6 + NUL
+    FtpV.build_command_args.buf = buf;
+    FtpV.build_command_args.cap = 6;
+    FtpV.build_command_args.verb = "PASV";
+    FtpV.build_command_args.arg = NULL;
     Ftp.build_command(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
 
-    Ftp.build_port_args.buf = buf;
-    Ftp.build_port_args.cap = 26;
-    Ftp.build_port_args.ip = IP;
-    Ftp.build_port_args.port = 6275;
+    FtpV.build_port_args.buf = buf;
+    FtpV.build_port_args.cap = 26;
+    FtpV.build_port_args.ip = IP;
+    FtpV.build_port_args.port = 6275;
     Ftp.build_port(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(25u, Ftp.n);
-    Ftp.build_port_args.buf = buf;
-    Ftp.build_port_args.cap = 25;
-    Ftp.build_port_args.ip = IP;
-    Ftp.build_port_args.port = 6275;
+    TEST_ASSERT_EQUAL_UINT(25u, FtpV.n);
+    FtpV.build_port_args.buf = buf;
+    FtpV.build_port_args.cap = 25;
+    FtpV.build_port_args.ip = IP;
+    FtpV.build_port_args.port = 6275;
     Ftp.build_port(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
 
-    Ftp.build_eprt_args.buf = buf;
-    Ftp.build_eprt_args.cap = 28;
-    Ftp.build_eprt_args.ip_str = "132.235.1.2";
-    Ftp.build_eprt_args.ipv6 = PROTO_FALSE;
-    Ftp.build_eprt_args.port = 6275;
+    FtpV.build_eprt_args.buf = buf;
+    FtpV.build_eprt_args.cap = 28;
+    FtpV.build_eprt_args.ip_str = "132.235.1.2";
+    FtpV.build_eprt_args.ipv6 = PROTO_FALSE;
+    FtpV.build_eprt_args.port = 6275;
     Ftp.build_eprt(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(27u, Ftp.n);
-    Ftp.build_eprt_args.buf = buf;
-    Ftp.build_eprt_args.cap = 27;
-    Ftp.build_eprt_args.ip_str = "132.235.1.2";
-    Ftp.build_eprt_args.ipv6 = PROTO_FALSE;
-    Ftp.build_eprt_args.port = 6275;
+    TEST_ASSERT_EQUAL_UINT(27u, FtpV.n);
+    FtpV.build_eprt_args.buf = buf;
+    FtpV.build_eprt_args.cap = 27;
+    FtpV.build_eprt_args.ip_str = "132.235.1.2";
+    FtpV.build_eprt_args.ipv6 = PROTO_FALSE;
+    FtpV.build_eprt_args.port = 6275;
     Ftp.build_eprt(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
 }
 
 // Null and empty inputs are refused rather than written through.
@@ -431,57 +431,57 @@ void test_builders_refuse_bad_arguments(void)
 {
     static const uint8_t IP[4] = {10, 0, 0, 1};
     char buf[64];
-    Ftp.build_command_args.buf = NULL;
-    Ftp.build_command_args.cap = 64;
-    Ftp.build_command_args.verb = "PASV";
-    Ftp.build_command_args.arg = NULL;
+    FtpV.build_command_args.buf = NULL;
+    FtpV.build_command_args.cap = 64;
+    FtpV.build_command_args.verb = "PASV";
+    FtpV.build_command_args.arg = NULL;
     Ftp.build_command(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
-    Ftp.build_command_args.buf = buf;
-    Ftp.build_command_args.cap = sizeof(buf);
-    Ftp.build_command_args.verb = NULL;
-    Ftp.build_command_args.arg = NULL;
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
+    FtpV.build_command_args.buf = buf;
+    FtpV.build_command_args.cap = sizeof(buf);
+    FtpV.build_command_args.verb = NULL;
+    FtpV.build_command_args.arg = NULL;
     Ftp.build_command(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
-    Ftp.build_command_args.buf = buf;
-    Ftp.build_command_args.cap = sizeof(buf);
-    Ftp.build_command_args.verb = "";
-    Ftp.build_command_args.arg = NULL;
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
+    FtpV.build_command_args.buf = buf;
+    FtpV.build_command_args.cap = sizeof(buf);
+    FtpV.build_command_args.verb = "";
+    FtpV.build_command_args.arg = NULL;
     Ftp.build_command(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
-    Ftp.build_port_args.buf = NULL;
-    Ftp.build_port_args.cap = 64;
-    Ftp.build_port_args.ip = IP;
-    Ftp.build_port_args.port = 21;
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
+    FtpV.build_port_args.buf = NULL;
+    FtpV.build_port_args.cap = 64;
+    FtpV.build_port_args.ip = IP;
+    FtpV.build_port_args.port = 21;
     Ftp.build_port(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
-    Ftp.build_port_args.buf = buf;
-    Ftp.build_port_args.cap = sizeof(buf);
-    Ftp.build_port_args.ip = NULL;
-    Ftp.build_port_args.port = 21;
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
+    FtpV.build_port_args.buf = buf;
+    FtpV.build_port_args.cap = sizeof(buf);
+    FtpV.build_port_args.ip = NULL;
+    FtpV.build_port_args.port = 21;
     Ftp.build_port(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
-    Ftp.build_eprt_args.buf = NULL;
-    Ftp.build_eprt_args.cap = 64;
-    Ftp.build_eprt_args.ip_str = "10.0.0.1";
-    Ftp.build_eprt_args.ipv6 = PROTO_FALSE;
-    Ftp.build_eprt_args.port = 21;
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
+    FtpV.build_eprt_args.buf = NULL;
+    FtpV.build_eprt_args.cap = 64;
+    FtpV.build_eprt_args.ip_str = "10.0.0.1";
+    FtpV.build_eprt_args.ipv6 = PROTO_FALSE;
+    FtpV.build_eprt_args.port = 21;
     Ftp.build_eprt(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
-    Ftp.build_eprt_args.buf = buf;
-    Ftp.build_eprt_args.cap = sizeof(buf);
-    Ftp.build_eprt_args.ip_str = NULL;
-    Ftp.build_eprt_args.ipv6 = PROTO_FALSE;
-    Ftp.build_eprt_args.port = 21;
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
+    FtpV.build_eprt_args.buf = buf;
+    FtpV.build_eprt_args.cap = sizeof(buf);
+    FtpV.build_eprt_args.ip_str = NULL;
+    FtpV.build_eprt_args.ipv6 = PROTO_FALSE;
+    FtpV.build_eprt_args.port = 21;
     Ftp.build_eprt(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
-    Ftp.build_eprt_args.buf = buf;
-    Ftp.build_eprt_args.cap = sizeof(buf);
-    Ftp.build_eprt_args.ip_str = "";
-    Ftp.build_eprt_args.ipv6 = PROTO_FALSE;
-    Ftp.build_eprt_args.port = 21;
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
+    FtpV.build_eprt_args.buf = buf;
+    FtpV.build_eprt_args.cap = sizeof(buf);
+    FtpV.build_eprt_args.ip_str = "";
+    FtpV.build_eprt_args.ipv6 = PROTO_FALSE;
+    FtpV.build_eprt_args.port = 21;
     Ftp.build_eprt(ftp_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Ftp.n);
+    TEST_ASSERT_EQUAL_UINT(0u, FtpV.n);
 }
 
 // The parsers refuse null arguments rather than dereferencing them.
@@ -492,38 +492,38 @@ void test_parsers_refuse_null_arguments(void)
     uint16_t port = 0;
     int code = 0;
     size_t consumed = 0;
-    Ftp.parse_reply_args.buf = NULL;
-    Ftp.parse_reply_args.len = 10;
-    Ftp.parse_reply_args.code = &code;
-    Ftp.parse_reply_args.consumed = &consumed;
+    FtpV.parse_reply_args.buf = NULL;
+    FtpV.parse_reply_args.len = 10;
+    FtpV.parse_reply_args.code = &code;
+    FtpV.parse_reply_args.consumed = &consumed;
     Ftp.parse_reply(ftp_work);
-    TEST_ASSERT_FALSE(Ftp.ok);
-    Ftp.parse_pasv_args.buf = NULL;
-    Ftp.parse_pasv_args.len = 10;
-    Ftp.parse_pasv_args.ip = ip;
-    Ftp.parse_pasv_args.port = &port;
+    TEST_ASSERT_FALSE(FtpV.ok);
+    FtpV.parse_pasv_args.buf = NULL;
+    FtpV.parse_pasv_args.len = 10;
+    FtpV.parse_pasv_args.ip = ip;
+    FtpV.parse_pasv_args.port = &port;
     Ftp.parse_pasv(ftp_work);
-    TEST_ASSERT_FALSE(Ftp.ok);
-    Ftp.parse_pasv_args.buf = REPLY;
-    Ftp.parse_pasv_args.len = sizeof(REPLY) - 1;
-    Ftp.parse_pasv_args.ip = NULL;
-    Ftp.parse_pasv_args.port = &port;
+    TEST_ASSERT_FALSE(FtpV.ok);
+    FtpV.parse_pasv_args.buf = REPLY;
+    FtpV.parse_pasv_args.len = sizeof(REPLY) - 1;
+    FtpV.parse_pasv_args.ip = NULL;
+    FtpV.parse_pasv_args.port = &port;
     Ftp.parse_pasv(ftp_work);
-    TEST_ASSERT_FALSE(Ftp.ok);
-    Ftp.parse_pasv_args.buf = REPLY;
-    Ftp.parse_pasv_args.len = sizeof(REPLY) - 1;
-    Ftp.parse_pasv_args.ip = ip;
-    Ftp.parse_pasv_args.port = NULL;
+    TEST_ASSERT_FALSE(FtpV.ok);
+    FtpV.parse_pasv_args.buf = REPLY;
+    FtpV.parse_pasv_args.len = sizeof(REPLY) - 1;
+    FtpV.parse_pasv_args.ip = ip;
+    FtpV.parse_pasv_args.port = NULL;
     Ftp.parse_pasv(ftp_work);
-    TEST_ASSERT_FALSE(Ftp.ok);
-    Ftp.parse_epsv_args.buf = NULL;
-    Ftp.parse_epsv_args.len = 10;
-    Ftp.parse_epsv_args.port = &port;
+    TEST_ASSERT_FALSE(FtpV.ok);
+    FtpV.parse_epsv_args.buf = NULL;
+    FtpV.parse_epsv_args.len = 10;
+    FtpV.parse_epsv_args.port = &port;
     Ftp.parse_epsv(ftp_work);
-    TEST_ASSERT_FALSE(Ftp.ok);
-    Ftp.parse_epsv_args.buf = REPLY;
-    Ftp.parse_epsv_args.len = sizeof(REPLY) - 1;
-    Ftp.parse_epsv_args.port = NULL;
+    TEST_ASSERT_FALSE(FtpV.ok);
+    FtpV.parse_epsv_args.buf = REPLY;
+    FtpV.parse_epsv_args.len = sizeof(REPLY) - 1;
+    FtpV.parse_epsv_args.port = NULL;
     Ftp.parse_epsv(ftp_work);
-    TEST_ASSERT_FALSE(Ftp.ok);
+    TEST_ASSERT_FALSE(FtpV.ok);
 }

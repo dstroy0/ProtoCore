@@ -174,7 +174,7 @@ void protocore_ssh_network_emit(uint8_t *restrict work)
 #endif
         ConnPoolV.slot = SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i];
         ConnPool.owner(protocore_conn_pool_span());
-        Workers.worker_id = ConnPoolV.u8;
+        WorkersV.worker_id = ConnPoolV.u8;
         Workers.wake(protocore_worker_span());
     }
 }

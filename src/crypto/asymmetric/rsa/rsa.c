@@ -453,28 +453,28 @@ static proto_bool rsa_pss_consistent(uint8_t *restrict work)
 
 // --- the entries -----------------------------------------------------------
 
-static void rsa_verify(uint8_t *restrict work)
+void protocore_rsa_verify(uint8_t *restrict work)
 {
-    Rsa.ok = PROTO_FALSE;
-    if (!Rsa.verify_args.n || !Rsa.verify_args.e || !Rsa.verify_args.sig ||
-        Rsa.verify_args.sig_len != PROTOCORE_RSA_KEY_BYTES)
+    RsaV.ok = PROTO_FALSE;
+    if (!RsaV.verify_args.n || !RsaV.verify_args.e || !RsaV.verify_args.sig ||
+        RsaV.verify_args.sig_len != PROTOCORE_RSA_KEY_BYTES)
     {
         return;
     }
     RsaCtx *ctx = RSA_CTX(work);
 
     BignumV.from_bytes_args.out = &ctx->n;
-    BignumV.from_bytes_args.bytes = Rsa.verify_args.n;
+    BignumV.from_bytes_args.bytes = RsaV.verify_args.n;
     BignumV.from_bytes_args.len = PROTOCORE_RSA_KEY_BYTES;
     Bignum.from_bytes(RSA_BIGNUM(work));
 
     BignumV.from_bytes_args.out = &ctx->base;
-    BignumV.from_bytes_args.bytes = Rsa.verify_args.sig;
+    BignumV.from_bytes_args.bytes = RsaV.verify_args.sig;
     BignumV.from_bytes_args.len = PROTOCORE_RSA_KEY_BYTES;
     Bignum.from_bytes(RSA_BIGNUM(work));
 
     BignumV.from_bytes_args.out = &ctx->exp;
-    BignumV.from_bytes_args.bytes = Rsa.verify_args.e;
+    BignumV.from_bytes_args.bytes = RsaV.verify_args.e;
     BignumV.from_bytes_args.len = 4u;
     Bignum.from_bytes(RSA_BIGNUM(work));
 
@@ -493,46 +493,46 @@ static void rsa_verify(uint8_t *restrict work)
     BignumV.to_bytes_args.in = &ctx->acc;
     Bignum.to_bytes(RSA_BIGNUM(work));
 
-    ctx->msg = Rsa.verify_args.msg;
-    ctx->msg_len = Rsa.verify_args.msg_len;
-    ctx->hash = Rsa.verify_args.hash;
+    ctx->msg = RsaV.verify_args.msg;
+    ctx->msg_len = RsaV.verify_args.msg_len;
+    ctx->hash = RsaV.verify_args.hash;
 
     // PSS recovers a salt out of the block rather than rebuilding a deterministic one, so there is
     // nothing to compare the block against and the check is its own.
     if (ctx->hash == PROTOCORE_RSA_HASH_PSS_SHA256)
     {
-        Rsa.ok = rsa_pss_consistent(work);
+        RsaV.ok = rsa_pss_consistent(work);
         return;
     }
 
     rsa_encode(work);
     if (protocore_ct_eq(ctx->recovered, ctx->em, PROTOCORE_RSA_KEY_BYTES))
     {
-        Rsa.ok = PROTO_TRUE;
+        RsaV.ok = PROTO_TRUE;
     }
 }
 
-static void rsa_sign(uint8_t *restrict work)
+void protocore_rsa_sign(uint8_t *restrict work)
 {
-    Rsa.ok = PROTO_FALSE;
-    if (!Rsa.sign_args.n || !Rsa.sign_args.d || !Rsa.sign_args.sig)
+    RsaV.ok = PROTO_FALSE;
+    if (!RsaV.sign_args.n || !RsaV.sign_args.d || !RsaV.sign_args.sig)
     {
         return;
     }
     RsaCtx *ctx = RSA_CTX(work);
 
-    ctx->msg = Rsa.sign_args.msg;
-    ctx->msg_len = Rsa.sign_args.msg_len;
-    ctx->hash = Rsa.sign_args.hash;
+    ctx->msg = RsaV.sign_args.msg;
+    ctx->msg_len = RsaV.sign_args.msg_len;
+    ctx->hash = RsaV.sign_args.hash;
     rsa_encode(work);
 
     BignumV.from_bytes_args.out = &ctx->n;
-    BignumV.from_bytes_args.bytes = Rsa.sign_args.n;
+    BignumV.from_bytes_args.bytes = RsaV.sign_args.n;
     BignumV.from_bytes_args.len = PROTOCORE_RSA_KEY_BYTES;
     Bignum.from_bytes(RSA_BIGNUM(work));
 
     BignumV.from_bytes_args.out = &ctx->exp;
-    BignumV.from_bytes_args.bytes = Rsa.sign_args.d;
+    BignumV.from_bytes_args.bytes = RsaV.sign_args.d;
     BignumV.from_bytes_args.len = PROTOCORE_RSA_KEY_BYTES;
     Bignum.from_bytes(RSA_BIGNUM(work));
 
@@ -552,13 +552,14 @@ static void rsa_sign(uint8_t *restrict work)
 
     rsa_modexp(work);
 
-    BignumV.to_bytes_args.bytes = Rsa.sign_args.sig;
+    BignumV.to_bytes_args.bytes = RsaV.sign_args.sig;
     BignumV.to_bytes_args.in = &ctx->acc;
     Bignum.to_bytes(RSA_BIGNUM(work));
-    Rsa.ok = PROTO_TRUE;
+    RsaV.ok = PROTO_TRUE;
 }
 
-RsaNs Rsa = {.verify = rsa_verify, .sign = rsa_sign};
+/** @brief The operands and the outcome. */
+RsaVars RsaV;
 
 PROTOCORE_END_DECLS
 

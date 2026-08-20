@@ -57,13 +57,13 @@ void setUp()
     tcp_capture_reset();
     g_cmd[0] = '\0';
     g_cmd_client = 0xFF;
-    WebTerminal.begin_args.path = "/terminal";
+    WebTerminalV.begin_args.path = "/terminal";
     WebTerminal.begin(protocore_web_terminal_span());
     if (g_skip_begin)
     {
         return;
     }
-    WebTerminal.on_command_args.cb = on_cmd;
+    WebTerminalV.on_command_args.cb = on_cmd;
     WebTerminal.on_command(protocore_web_terminal_span());
 }
 
@@ -103,13 +103,13 @@ void test_serves_terminal_page()
 void test_ws_upgrade_tracks_client()
 {
     WebTerminal.client_count(protocore_web_terminal_span());
-    TEST_ASSERT_EQUAL_UINT(0, WebTerminal.value);
+    TEST_ASSERT_EQUAL_UINT(0, WebTerminalV.value);
     uint8_t wid = do_handshake(0);
     TEST_ASSERT_NOT_EQUAL(0xFF, wid);
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "101 Switching Protocols"));
     WebTerminal.client_count(protocore_web_terminal_span());
-    TEST_ASSERT_EQUAL_UINT(1, WebTerminal.value);
+    TEST_ASSERT_EQUAL_UINT(1, WebTerminalV.value);
 }
 
 void test_ws_upgrade_requires_connection_token()
@@ -155,7 +155,7 @@ void test_broadcast_reaches_client()
 {
     do_handshake(0);
     tcp_capture_reset();
-    WebTerminal.print_args.s = "hello browser";
+    WebTerminalV.print_args.s = "hello browser";
     WebTerminal.print(protocore_web_terminal_span());
     const char *r = tcp_captured();
     TEST_ASSERT_NOT_NULL(strstr(r, "hello browser"));
@@ -168,7 +168,7 @@ void test_printf_broadcast()
     static const protocore_field COUNT[] = {{PROTOCORE_FK_LIT, 0, 6, "count="}, PROTOCORE_U32, PROTOCORE_END};
     char out[32];
     frame.build(out, sizeof(out), COUNT, (const protocore_fval[]){PROTOCORE_VU32(7u)}, 1);
-    WebTerminal.print_args.s = out;
+    WebTerminalV.print_args.s = out;
     WebTerminal.print(protocore_web_terminal_span());
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "count=7"));
 }
@@ -177,10 +177,10 @@ void test_no_broadcast_without_clients()
 {
 
     tcp_capture_reset();
-    WebTerminal.print_args.s = "nobody home";
+    WebTerminalV.print_args.s = "nobody home";
     WebTerminal.print(protocore_web_terminal_span());
     WebTerminal.client_count(protocore_web_terminal_span());
-    TEST_ASSERT_EQUAL_UINT(0, WebTerminal.value);
+    TEST_ASSERT_EQUAL_UINT(0, WebTerminalV.value);
     TEST_ASSERT_NULL(strstr(tcp_captured(), "nobody home"));
 }
 
@@ -188,14 +188,14 @@ void test_close_clears_client()
 {
     do_handshake(0);
     WebTerminal.client_count(protocore_web_terminal_span());
-    TEST_ASSERT_EQUAL_UINT(1, WebTerminal.value);
+    TEST_ASSERT_EQUAL_UINT(1, WebTerminalV.value);
     WsV.slot = 0;
     Ws.find(protocore_ws_span());
     WsConn *ws = WsV.found;
     ws->parse_state = WS_CLOSED;
     handle();
     WebTerminal.client_count(protocore_web_terminal_span());
-    TEST_ASSERT_EQUAL_UINT(0, WebTerminal.value);
+    TEST_ASSERT_EQUAL_UINT(0, WebTerminalV.value);
 }
 
 static const char *get_path(uint8_t slot, const char *path)
@@ -212,16 +212,16 @@ static const char *get_path(uint8_t slot, const char *path)
 void test_api_inert_before_begin()
 {
     WebTerminal.client_count(protocore_web_terminal_span());
-    TEST_ASSERT_EQUAL_UINT(0, WebTerminal.value);
+    TEST_ASSERT_EQUAL_UINT(0, WebTerminalV.value);
     tcp_capture_reset();
-    WebTerminal.print_args.s = "early";
+    WebTerminalV.print_args.s = "early";
     WebTerminal.print(protocore_web_terminal_span());
-    WebTerminal.println_args.s = "early";
+    WebTerminalV.println_args.s = "early";
     WebTerminal.println(protocore_web_terminal_span());
     static const protocore_field EARLY[] = {{PROTOCORE_FK_LIT, 0, 6, "early "}, PROTOCORE_U32, PROTOCORE_END};
     char out[32];
     frame.build(out, sizeof(out), EARLY, (const protocore_fval[]){PROTOCORE_VU32(1u)}, 1);
-    WebTerminal.print_args.s = out;
+    WebTerminalV.print_args.s = out;
     WebTerminal.print(protocore_web_terminal_span());
     TEST_ASSERT_EQUAL_size_t(0, strlen(tcp_captured()));
 }
@@ -230,12 +230,12 @@ void test_println_appends_newline()
 {
     do_handshake(0);
     tcp_capture_reset();
-    WebTerminal.println_args.s = "line one";
+    WebTerminalV.println_args.s = "line one";
     WebTerminal.println(protocore_web_terminal_span());
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "line one\n"));
 
     tcp_capture_reset();
-    WebTerminal.println_args.s = NULL;
+    WebTerminalV.println_args.s = NULL;
     WebTerminal.println(protocore_web_terminal_span());
     const char *r = tcp_captured();
     size_t n = strlen(r);
@@ -247,7 +247,7 @@ void test_print_null_is_ignored()
 {
     do_handshake(0);
     tcp_capture_reset();
-    WebTerminal.print_args.s = NULL;
+    WebTerminalV.print_args.s = NULL;
     WebTerminal.print(protocore_web_terminal_span());
     TEST_ASSERT_EQUAL_size_t(0, strlen(tcp_captured()));
 }
@@ -255,13 +255,13 @@ void test_print_null_is_ignored()
 void test_begin_defaults_path_when_missing()
 {
     protocore_server_reset();
-    WebTerminal.begin_args.path = NULL;
+    WebTerminalV.begin_args.path = NULL;
     WebTerminal.begin(protocore_web_terminal_span());
     tcp_capture_reset();
     TEST_ASSERT_NOT_NULL(strstr(get_path(0, "/terminal"), "PC Terminal"));
 
     protocore_server_reset();
-    WebTerminal.begin_args.path = "";
+    WebTerminalV.begin_args.path = "";
     WebTerminal.begin(protocore_web_terminal_span());
     tcp_capture_reset();
     TEST_ASSERT_NOT_NULL(strstr(get_path(1, "/terminal"), "PC Terminal"));
@@ -270,7 +270,7 @@ void test_begin_defaults_path_when_missing()
 void test_message_without_callback()
 {
     do_handshake(0);
-    WebTerminal.on_command_args.cb = NULL;
+    WebTerminalV.on_command_args.cb = NULL;
     WebTerminal.on_command(protocore_web_terminal_span());
     uint8_t frame[32];
     size_t n = build_frame(frame, WS_OP_TEXT, (const uint8_t *)"ignored", 7);
@@ -283,16 +283,16 @@ void test_stale_client_slot_is_skipped()
 {
     do_handshake(0);
     WebTerminal.client_count(protocore_web_terminal_span());
-    TEST_ASSERT_EQUAL_UINT(1, WebTerminal.value);
+    TEST_ASSERT_EQUAL_UINT(1, WebTerminalV.value);
     WsV.slot = 0;
     Ws.find(protocore_ws_span());
     WsConn *ws = WsV.found;
     TEST_ASSERT_NOT_NULL(ws);
     ws->active = PROTO_FALSE;
     WebTerminal.client_count(protocore_web_terminal_span());
-    TEST_ASSERT_EQUAL_UINT(0, WebTerminal.value);
+    TEST_ASSERT_EQUAL_UINT(0, WebTerminalV.value);
     tcp_capture_reset();
-    WebTerminal.print_args.s = "ghost";
+    WebTerminalV.print_args.s = "ghost";
     WebTerminal.print(protocore_web_terminal_span());
     TEST_ASSERT_NULL(strstr(tcp_captured(), "ghost"));
 }

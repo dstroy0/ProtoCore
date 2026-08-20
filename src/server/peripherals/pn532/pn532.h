@@ -112,19 +112,40 @@ typedef struct
     Pn532ParseFrameArgs parse_frame_args;
     Pn532IsAckArgs is_ack_args;
     Pn532BuildAckArgs build_ack_args;
-
     proto_bool ok;
     uint16_t len;
     int n;
+} Pn532Vars;
 
+/** @brief The operands and the outcome. */
+extern Pn532Vars Pn532V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_frame)(uint8_t *restrict work);
     void (*const parse_frame)(uint8_t *restrict work);
     void (*const is_ack)(uint8_t *restrict work);
     void (*const build_ack)(uint8_t *restrict work);
 } Pn532Ns;
 
-/** @brief The one symbol this module exports. */
-extern Pn532Ns Pn532;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Pn532V or a region of the borrow at a fixed offset.
+void protocore_pn532_build_frame(uint8_t *restrict work);
+void protocore_pn532_parse_frame(uint8_t *restrict work);
+void protocore_pn532_is_ack(uint8_t *restrict work);
+void protocore_pn532_build_ack(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Pn532.build_frame(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Pn532Ns Pn532 __attribute__((unused)) = {
+    .build_frame = protocore_pn532_build_frame,
+    .parse_frame = protocore_pn532_parse_frame,
+    .is_ack = protocore_pn532_is_ack,
+    .build_ack = protocore_pn532_build_ack,
+};
 
 PROTOCORE_END_DECLS
 

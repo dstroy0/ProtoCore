@@ -1034,7 +1034,7 @@ static void protocore_sftp_on_data(uint8_t slot, uint32_t channel, const uint8_t
 }
 
 // --- public API -----------------------------------------------------------------------------------
-static void ssh_sftp_begin(uint8_t *restrict work)
+void protocore_ssh_sftp_begin(uint8_t *restrict work)
 {
     // Bind the root this server answers from. The name is what the accessor maps; two servers naming
     // the same one share it and cost one entry, and naming different ones is how they end up over
@@ -1060,9 +1060,8 @@ static void ssh_sftp_begin(uint8_t *restrict work)
     }
 }
 
-SshSftpNs SshSftp = {
-    .begin = ssh_sftp_begin,
-};
+/** @brief The operands and the outcome. */
+SshSftpVars SshSftpV;
 
 PROTOCORE_END_DECLS
 

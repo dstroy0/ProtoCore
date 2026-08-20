@@ -1378,9 +1378,9 @@ proto_bool ssh_hostkey_verify(uint8_t i, const uint8_t *ks, size_t ks_len, const
             rh = PROTOCORE_RSA_HASH_SHA512;
         }
         ok = parse_rsa_pubkey(ks, (uint32_t)ks_len, n_be.buf, e_be.buf) &&
-             (Rsa.verify_args.n = n_be.buf, Rsa.verify_args.e = e_be.buf, Rsa.verify_args.msg = h,
-              Rsa.verify_args.msg_len = h_len, Rsa.verify_args.sig = raw, Rsa.verify_args.sig_len = raw_len,
-              Rsa.verify_args.hash = rh, Rsa.verify(work), Rsa.ok);
+             (RsaV.verify_args.n = n_be.buf, RsaV.verify_args.e = e_be.buf, RsaV.verify_args.msg = h,
+              RsaV.verify_args.msg_len = h_len, RsaV.verify_args.sig = raw, RsaV.verify_args.sig_len = raw_len,
+              RsaV.verify_args.hash = rh, Rsa.verify(work), RsaV.ok);
         break;
     }
     }
@@ -1491,11 +1491,11 @@ static int encode_hostkey(uint8_t i, uint8_t *ks, size_t *ks_len, size_t cap)
         *ks_len = w.pos;
         return 0;
     }
-    SshRsa.encode_pubkey_args.out = ks;
-    SshRsa.encode_pubkey_args.out_len = ks_len;
-    SshRsa.encode_pubkey_args.out_cap = cap;
+    SshRsaV.encode_pubkey_args.out = ks;
+    SshRsaV.encode_pubkey_args.out_len = ks_len;
+    SshRsaV.encode_pubkey_args.out_cap = cap;
     SshRsa.encode_pubkey(protocore_ssh_rsa_span());
-    return SshRsa.n;
+    return SshRsaV.n;
 }
 
 // Sign the exchange hash H with the negotiated host key. Writes the raw signature (no
@@ -1564,13 +1564,13 @@ static int sign_hash(uint8_t i, const uint8_t *H, size_t h_len, uint8_t *sig, si
     {
         return -1;
     }
-    SshRsa.sign_args.crypto_work = ssh_pkt[i].crypto_work;
-    SshRsa.sign_args.msg = H;
-    SshRsa.sign_args.msg_len = h_len;
-    SshRsa.sign_args.hash = rh;
-    SshRsa.sign_args.sig = sig;
+    SshRsaV.sign_args.crypto_work = ssh_pkt[i].crypto_work;
+    SshRsaV.sign_args.msg = H;
+    SshRsaV.sign_args.msg_len = h_len;
+    SshRsaV.sign_args.hash = rh;
+    SshRsaV.sign_args.sig = sig;
     SshRsa.sign(protocore_ssh_rsa_span());
-    if (SshRsa.n != 0)
+    if (SshRsaV.n != 0)
     {
         return -1;
     }
@@ -3825,12 +3825,12 @@ int ssh_transport_dispatch(uint8_t i, uint8_t msg_type, const uint8_t *payload, 
     }
     protocore_plaintext_release(mark);
     // 50 and above are not ours: sec 6 hands them to the authentication protocol.
-    SshAuth.slot = i;
-    SshAuth.msg_type = msg_type;
-    SshAuth.msg.payload = payload;
-    SshAuth.msg.len = len;
+    SshAuthV.slot = i;
+    SshAuthV.msg_type = msg_type;
+    SshAuthV.msg.payload = payload;
+    SshAuthV.msg.len = len;
     SshAuth.dispatch(protocore_ssh_auth_span());
-    return SshAuth.i32;
+    return SshAuthV.i32;
 }
 
 // ---------------------------------------------------------------------------
@@ -4200,15 +4200,15 @@ proto_bool ssh_pubkey_verify(uint8_t i, const char *pk_algo, const uint8_t *blob
     }
     else
     {
-        Rsa.verify_args.n = n_be.buf;
-        Rsa.verify_args.e = e_be.buf;
-        Rsa.verify_args.msg = signed_data;
-        Rsa.verify_args.msg_len = signed_len;
-        Rsa.verify_args.sig = sig;
-        Rsa.verify_args.sig_len = sig_len;
-        Rsa.verify_args.hash = rh;
+        RsaV.verify_args.n = n_be.buf;
+        RsaV.verify_args.e = e_be.buf;
+        RsaV.verify_args.msg = signed_data;
+        RsaV.verify_args.msg_len = signed_len;
+        RsaV.verify_args.sig = sig;
+        RsaV.verify_args.sig_len = sig_len;
+        RsaV.verify_args.hash = rh;
         Rsa.verify(work);
-        sig_ok = Rsa.ok;
+        sig_ok = RsaV.ok;
     }
     protocore_plaintext_release(mark);
     return sig_ok;

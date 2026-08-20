@@ -54,14 +54,29 @@ PROTOCORE_BEGIN_DECLS
  */
 typedef struct
 {
-
     proto_bool ok;
+} SshSftpVars;
 
+/** @brief The operands and the outcome. */
+extern SshSftpVars SshSftpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
 } SshSftpNs;
 
-/** @brief The one symbol this module exports. */
-extern SshSftpNs SshSftp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SshSftpV or a region of the borrow at a fixed offset.
+void protocore_ssh_sftp_begin(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SshSftp.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SshSftpNs SshSftp __attribute__((unused)) = {
+    .begin = protocore_ssh_sftp_begin,
+};
 
 /**
  * @brief The PROTOCORE_SSH_SFTP_BORROW bytes this module's state lives in.

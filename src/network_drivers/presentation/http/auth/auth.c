@@ -149,10 +149,10 @@ static void sha256_hex(uint8_t *work, const uint8_t *data, size_t len, char out[
     Sha256V.hash_args.len = len;
     Sha256V.hash_args.out = d;
     Sha256.hash(AUTH_SHA(work));
-    Hex.io.in = d;
-    Hex.io.n = PROTOCORE_SHA256_DIGEST_LEN;
-    Hex.io.out = out;
-    Hex.args.upper = PROTO_FALSE;
+    HexV.io.in = d;
+    HexV.io.n = PROTOCORE_SHA256_DIGEST_LEN;
+    HexV.io.out = out;
+    HexV.args.upper = PROTO_FALSE;
     Hex.encode(hex_work);
 }
 
@@ -245,10 +245,10 @@ static uint32_t digest_nonce_mac(uint8_t *work, const uint8_t *secret, uint32_t 
     Sha256V.hash_args.len = sizeof(material);
     Sha256V.hash_args.out = d;
     Sha256.hash(AUTH_SHA(work));
-    Hex.io.in = d;
-    Hex.io.n = 16;
-    Hex.io.out = mac_hex;
-    Hex.args.upper = PROTO_FALSE;
+    HexV.io.in = d;
+    HexV.io.n = 16;
+    HexV.io.out = mac_hex;
+    HexV.args.upper = PROTO_FALSE;
     Hex.encode(hex_work); // 16 bytes -> 32 hex chars + NUL
     return issue;
 }
@@ -259,10 +259,10 @@ void protocore_auth_mint_nonce(uint8_t *restrict work)
     const size_t cap = AuthV.nonce_args.cap;
     uint32_t issue = Clock.ms;
     char issue_hex[9];
-    Hex.io.in = (const uint8_t *)&issue;
-    Hex.io.n = 4;
-    Hex.io.out = issue_hex;
-    Hex.args.upper = PROTO_FALSE;
+    HexV.io.in = (const uint8_t *)&issue;
+    HexV.io.n = 4;
+    HexV.io.out = issue_hex;
+    HexV.args.upper = PROTO_FALSE;
     Hex.encode(hex_work); // 4 bytes -> 8 hex chars
     char mac_hex[33];
     digest_nonce_mac(work, AUTH_TABLE(work)->digest_secret, issue, mac_hex);
@@ -287,12 +287,12 @@ void protocore_auth_verify_nonce(uint8_t *restrict work)
         return;
     }
     uint32_t issue;
-    Hex.io.text = nonce;
-    Hex.io.n = 8;
-    Hex.io.bytes = (uint8_t *)&issue;
-    Hex.io.cap = 4;
+    HexV.io.text = nonce;
+    HexV.io.n = 8;
+    HexV.io.bytes = (uint8_t *)&issue;
+    HexV.io.cap = 4;
     Hex.decode(hex_work);
-    if (Hex.i32 != 4)
+    if (HexV.i32 != 4)
     {
         return;
     }

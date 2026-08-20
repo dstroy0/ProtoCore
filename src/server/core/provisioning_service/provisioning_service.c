@@ -109,15 +109,15 @@ static void provisioning_service_form_field(uint8_t *restrict work)
         }
         else if (c == '%')
         {
-            Hex.args.ch = q[1];
+            HexV.args.ch = q[1];
             Hex.val(hex_work);
-            int h = Hex.i8;
+            int h = HexV.i8;
             int l = -1;
             if (h >= 0)
             {
-                Hex.args.ch = q[2];
+                HexV.args.ch = q[2];
                 Hex.val(hex_work);
-                l = Hex.i8;
+                l = HexV.i8;
             }
             if (h >= 0 && l >= 0)
             {

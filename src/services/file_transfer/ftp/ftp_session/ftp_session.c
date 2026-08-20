@@ -115,12 +115,12 @@ static const protocore_field LOG_CTRL_CONNECT_FAILED[] = {{PROTOCORE_FK_LIT, 0, 
 /** @brief Send one command line on the control connection and arm its reply deadline. */
 static proto_bool ftp_send(uint8_t *restrict work, const char *verb, const char *arg)
 {
-    Ftp.build_command_args.buf = FTP_SESSION_CTX(work)->cmd;
-    Ftp.build_command_args.cap = sizeof(FTP_SESSION_CTX(work)->cmd);
-    Ftp.build_command_args.verb = verb;
-    Ftp.build_command_args.arg = arg;
+    FtpV.build_command_args.buf = FTP_SESSION_CTX(work)->cmd;
+    FtpV.build_command_args.cap = sizeof(FTP_SESSION_CTX(work)->cmd);
+    FtpV.build_command_args.verb = verb;
+    FtpV.build_command_args.arg = arg;
     Ftp.build_command(ftp_work);
-    size_t n = Ftp.n;
+    size_t n = FtpV.n;
     if (n == 0)
     {
         PROTOCORE_LOGW(LOG_BUILD_FAILED, ((const protocore_fval[]){PROTOCORE_VSTR(verb)}), 1);
@@ -172,12 +172,12 @@ static protocore_ftp_state ftp_await(uint8_t *restrict work, int *code, size_t *
     }
 
     size_t consumed = 0;
-    Ftp.parse_reply_args.buf = FTP_SESSION_CTX(work)->rx;
-    Ftp.parse_reply_args.len = FTP_SESSION_CTX(work)->rx_len;
-    Ftp.parse_reply_args.code = code;
-    Ftp.parse_reply_args.consumed = &consumed;
+    FtpV.parse_reply_args.buf = FTP_SESSION_CTX(work)->rx;
+    FtpV.parse_reply_args.len = FTP_SESSION_CTX(work)->rx_len;
+    FtpV.parse_reply_args.code = code;
+    FtpV.parse_reply_args.consumed = &consumed;
     Ftp.parse_reply(ftp_work);
-    if (Ftp.ok)
+    if (FtpV.ok)
     {
         FTP_SESSION_CTX(work)->rx_consumed = consumed;
         if (rlen)
@@ -446,15 +446,15 @@ void protocore_ftp_session_store(uint8_t *restrict work)
             {
                 break;
             }
-            Ftp.ok = PROTO_FALSE;
+            FtpV.ok = PROTO_FALSE;
             if (code == 229)
             {
-                Ftp.parse_epsv_args.buf = FTP_SESSION_CTX(work)->rx;
-                Ftp.parse_epsv_args.len = rlen;
-                Ftp.parse_epsv_args.port = &port;
+                FtpV.parse_epsv_args.buf = FTP_SESSION_CTX(work)->rx;
+                FtpV.parse_epsv_args.len = rlen;
+                FtpV.parse_epsv_args.port = &port;
                 Ftp.parse_epsv(ftp_work);
             }
-            if (Ftp.ok)
+            if (FtpV.ok)
             {
                 // Extended passive mode reuses the control connection's host.
                 str.copy(host, target->host, sizeof(host));
@@ -481,16 +481,16 @@ void protocore_ftp_session_store(uint8_t *restrict work)
                 FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
-            Ftp.ok = PROTO_FALSE;
+            FtpV.ok = PROTO_FALSE;
             if (st != PROTOCORE_FTP_FAILED && code == 227)
             {
-                Ftp.parse_pasv_args.buf = FTP_SESSION_CTX(work)->rx;
-                Ftp.parse_pasv_args.len = rlen;
-                Ftp.parse_pasv_args.ip = ip;
-                Ftp.parse_pasv_args.port = &port;
+                FtpV.parse_pasv_args.buf = FTP_SESSION_CTX(work)->rx;
+                FtpV.parse_pasv_args.len = rlen;
+                FtpV.parse_pasv_args.ip = ip;
+                FtpV.parse_pasv_args.port = &port;
                 Ftp.parse_pasv(ftp_work);
             }
-            if (!Ftp.ok)
+            if (!FtpV.ok)
             {
                 break;
             }

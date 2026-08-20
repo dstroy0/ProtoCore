@@ -129,17 +129,36 @@ typedef struct
     SyslogHeaderArgs header;       ///< what every line's HEADER says
     SyslogRecordArgs record;       ///< what one record says
     SyslogLineArgs line;           ///< where the formatted line lands
-
     proto_bool ok;
     size_t n;
+} SyslogVars;
 
+/** @brief The operands and the outcome. */
+extern SyslogVars SyslogV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const format)(uint8_t *restrict work);
     void (*const log)(uint8_t *restrict work);
 } SyslogNs;
 
-/** @brief The one symbol this module exports. */
-extern SyslogNs Syslog;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SyslogV or a region of the borrow at a fixed offset.
+void protocore_syslog_init(uint8_t *restrict work);
+void protocore_syslog_format(uint8_t *restrict work);
+void protocore_syslog_log(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Syslog.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SyslogNs Syslog __attribute__((unused)) = {
+    .init = protocore_syslog_init,
+    .format = protocore_syslog_format,
+    .log = protocore_syslog_log,
+};
 
 /**
  * @brief The PROTOCORE_SYSLOG_BORROW bytes this module's state lives in.

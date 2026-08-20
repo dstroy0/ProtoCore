@@ -248,17 +248,17 @@ static void verify_under(const X509Cert *signer, protocore_x509_sig_alg alg, con
             verdict(PROTOCORE_X509_ERR_SIG_MALFORMED);
             return;
         }
-        Rsa.verify_args.n = n;
-        Rsa.verify_args.e = e;
-        Rsa.verify_args.msg = msg;
-        Rsa.verify_args.msg_len = msg_len;
-        Rsa.verify_args.sig = sig;
-        Rsa.verify_args.sig_len = sig_len;
-        Rsa.verify_args.hash = (alg == PROTOCORE_X509_SIG_RSA_SHA512) ? PROTOCORE_RSA_HASH_SHA512
-                               : (alg == PROTOCORE_X509_SIG_RSA_PSS)  ? PROTOCORE_RSA_HASH_PSS_SHA256
-                                                                      : PROTOCORE_RSA_HASH_SHA256;
+        RsaV.verify_args.n = n;
+        RsaV.verify_args.e = e;
+        RsaV.verify_args.msg = msg;
+        RsaV.verify_args.msg_len = msg_len;
+        RsaV.verify_args.sig = sig;
+        RsaV.verify_args.sig_len = sig_len;
+        RsaV.verify_args.hash = (alg == PROTOCORE_X509_SIG_RSA_SHA512) ? PROTOCORE_RSA_HASH_SHA512
+                                : (alg == PROTOCORE_X509_SIG_RSA_PSS)  ? PROTOCORE_RSA_HASH_PSS_SHA256
+                                                                       : PROTOCORE_RSA_HASH_SHA256;
         Rsa.verify(X509_VERIFY_ALG(work));
-        verdict(Rsa.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
+        verdict(RsaV.ok ? PROTOCORE_X509_OK : PROTOCORE_X509_ERR_BAD_SIGNATURE);
         return;
     }
 

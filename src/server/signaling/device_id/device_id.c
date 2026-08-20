@@ -24,10 +24,10 @@ static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd
 // The lowercase hex character for one nibble.
 static char hex_digit(uint8_t nibble)
 {
-    Hex.args.nibble = nibble;
-    Hex.args.upper = PROTO_FALSE;
+    HexV.args.nibble = nibble;
+    HexV.args.upper = PROTO_FALSE;
     Hex.digit(hex_work);
-    return Hex.ch;
+    return HexV.ch;
 }
 
 void protocore_device_id_from_mac(uint8_t *restrict work)

@@ -123,17 +123,38 @@ typedef struct
     PromiscWifiFrameParseArgs wifi_frame_parse_args;
     PromiscBeginArgs begin_args;
     PromiscSetChannelArgs set_channel_args;
-
     proto_bool ok;
+} PromiscVars;
 
+/** @brief The operands and the outcome. */
+extern PromiscVars PromiscV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const wifi_frame_parse)(uint8_t *restrict work);
     void (*const begin)(uint8_t *restrict work);
     void (*const set_channel)(uint8_t *restrict work);
     void (*const end)(uint8_t *restrict work);
 } PromiscNs;
 
-/** @brief The one symbol this module exports. */
-extern PromiscNs Promisc;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in PromiscV or a region of the borrow at a fixed offset.
+void protocore_promisc_wifi_frame_parse(uint8_t *restrict work);
+void protocore_promisc_begin(uint8_t *restrict work);
+void protocore_promisc_set_channel(uint8_t *restrict work);
+void protocore_promisc_end(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Promisc.wifi_frame_parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const PromiscNs Promisc __attribute__((unused)) = {
+    .wifi_frame_parse = protocore_promisc_wifi_frame_parse,
+    .begin = protocore_promisc_begin,
+    .set_channel = protocore_promisc_set_channel,
+    .end = protocore_promisc_end,
+};
 
 /**
  * @brief The PROTOCORE_PROMISC_BORROW bytes this module's state lives in.

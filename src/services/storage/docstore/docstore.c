@@ -89,12 +89,12 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     proto_bool match = PROTO_FALSE;
     if (f->kind == FIND_STR)
     {
-        Json.get_str_args.json = json;
-        Json.get_str_args.key = f->field;
-        Json.get_str_args.out = f->fieldtmp;
-        Json.get_str_args.out_cap = sizeof(f->fieldtmp);
+        JsonV.get_str_args.json = json;
+        JsonV.get_str_args.key = f->field;
+        JsonV.get_str_args.out = f->fieldtmp;
+        JsonV.get_str_args.out_cap = sizeof(f->fieldtmp);
         Json.get_str(json_work);
-        if (Json.ok)
+        if (JsonV.ok)
         {
             match = str.eq(f->fieldtmp, f->sval, sizeof(f->fieldtmp), PROTO_FALSE);
         }
@@ -102,11 +102,11 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     else if (f->kind == FIND_INT)
     {
         long v = 0;
-        Json.get_int_args.json = json;
-        Json.get_int_args.key = f->field;
-        Json.get_int_args.out = &v;
+        JsonV.get_int_args.json = json;
+        JsonV.get_int_args.key = f->field;
+        JsonV.get_int_args.out = &v;
         Json.get_int(json_work);
-        if (Json.ok)
+        if (JsonV.ok)
         {
             match = (v == f->ival);
         }
@@ -114,11 +114,11 @@ static proto_bool find_cb(const char *key, uint16_t key_len, void *vctx)
     else
     {
         proto_bool b = PROTO_FALSE;
-        Json.get_bool_args.json = json;
-        Json.get_bool_args.key = f->field;
-        Json.get_bool_args.out = &b;
+        JsonV.get_bool_args.json = json;
+        JsonV.get_bool_args.key = f->field;
+        JsonV.get_bool_args.out = &b;
         Json.get_bool(json_work);
-        if (Json.ok)
+        if (JsonV.ok)
         {
             match = (b == f->bval);
         }

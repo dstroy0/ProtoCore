@@ -68,10 +68,10 @@ static_assert(CSRF_OFF_CTX % _Alignof(CsrfCtx) == 0,
 // Lowercase hex of @p n bytes at @p in, plus a NUL, into @p out.
 static void hex_of(const uint8_t *in, uint32_t n, char *out)
 {
-    Hex.args.upper = PROTO_FALSE;
-    Hex.io.in = in;
-    Hex.io.n = n;
-    Hex.io.out = out;
+    HexV.args.upper = PROTO_FALSE;
+    HexV.io.in = in;
+    HexV.io.n = n;
+    HexV.io.out = out;
     Hex.encode(hex_work);
 }
 
@@ -190,12 +190,12 @@ void protocore_csrf_verify(uint8_t *restrict work)
     }
 
     uint8_t nonce[CSRF_NONCE_BYTES];
-    Hex.io.text = token;
-    Hex.io.n = (uint32_t)nhexlen;
-    Hex.io.bytes = nonce;
-    Hex.io.cap = (uint32_t)sizeof(nonce);
+    HexV.io.text = token;
+    HexV.io.n = (uint32_t)nhexlen;
+    HexV.io.bytes = nonce;
+    HexV.io.cap = (uint32_t)sizeof(nonce);
     Hex.decode(hex_work);
-    if (Hex.i32 != CSRF_NONCE_BYTES)
+    if (HexV.i32 != CSRF_NONCE_BYTES)
     {
         return;
     }

@@ -324,9 +324,15 @@ typedef struct
     JsonGetStrArgs get_str_args;
     JsonGetIntArgs get_int_args;
     JsonGetBoolArgs get_bool_args;
-
     proto_bool ok;
+} JsonVars;
 
+/** @brief The operands and the outcome. */
+extern JsonVars JsonV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const begin_object)(uint8_t *restrict work);
     void (*const end_object)(uint8_t *restrict work);
@@ -350,8 +356,57 @@ typedef struct
     void (*const get_bool)(uint8_t *restrict work);
 } JsonNs;
 
-/** @brief The one symbol this module exports. */
-extern JsonNs Json;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in JsonV or a region of the borrow at a fixed offset.
+void protocore_json_init(uint8_t *restrict work);
+void protocore_json_begin_object(uint8_t *restrict work);
+void protocore_json_end_object(uint8_t *restrict work);
+void protocore_json_begin_array(uint8_t *restrict work);
+void protocore_json_end_array(uint8_t *restrict work);
+void protocore_json_key(uint8_t *restrict work);
+void protocore_json_put_str(uint8_t *restrict work);
+void protocore_json_put_int(uint8_t *restrict work);
+void protocore_json_put_uint(uint8_t *restrict work);
+void protocore_json_put_bool(uint8_t *restrict work);
+void protocore_json_put_null(uint8_t *restrict work);
+void protocore_json_put_raw(uint8_t *restrict work);
+void protocore_json_kv_str(uint8_t *restrict work);
+void protocore_json_kv_int(uint8_t *restrict work);
+void protocore_json_kv_uint(uint8_t *restrict work);
+void protocore_json_kv_bool(uint8_t *restrict work);
+void protocore_json_kv_null(uint8_t *restrict work);
+void protocore_json_kv_raw(uint8_t *restrict work);
+void protocore_json_get_str(uint8_t *restrict work);
+void protocore_json_get_int(uint8_t *restrict work);
+void protocore_json_get_bool(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Json.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const JsonNs Json __attribute__((unused)) = {
+    .init = protocore_json_init,
+    .begin_object = protocore_json_begin_object,
+    .end_object = protocore_json_end_object,
+    .begin_array = protocore_json_begin_array,
+    .end_array = protocore_json_end_array,
+    .key = protocore_json_key,
+    .put_str = protocore_json_put_str,
+    .put_int = protocore_json_put_int,
+    .put_uint = protocore_json_put_uint,
+    .put_bool = protocore_json_put_bool,
+    .put_null = protocore_json_put_null,
+    .put_raw = protocore_json_put_raw,
+    .kv_str = protocore_json_kv_str,
+    .kv_int = protocore_json_kv_int,
+    .kv_uint = protocore_json_kv_uint,
+    .kv_bool = protocore_json_kv_bool,
+    .kv_null = protocore_json_kv_null,
+    .kv_raw = protocore_json_kv_raw,
+    .get_str = protocore_json_get_str,
+    .get_int = protocore_json_get_int,
+    .get_bool = protocore_json_get_bool,
+};
 
 PROTOCORE_END_DECLS
 

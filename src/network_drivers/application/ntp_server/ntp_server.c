@@ -23,21 +23,21 @@ PROTOCORE_BEGIN_DECLS
 #include "server/clock/clock.h"                               // Clock.millis: the sub-second fraction
 #include "services/timing_position/time_source/time_source.h" // protocore_time_now: the seconds we serve
 
-static void ntp_server_build_response(uint8_t *restrict work)
+void protocore_ntp_server_build_response(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *req = NtpServer.build_response_args.req;
-    size_t req_len = NtpServer.build_response_args.req_len;
-    uint8_t stratum = NtpServer.build_response_args.stratum;
-    uint32_t refid = NtpServer.build_response_args.refid;
-    uint32_t protocore_ntp_secs = NtpServer.build_response_args.protocore_ntp_secs;
-    uint32_t protocore_ntp_frac = NtpServer.build_response_args.protocore_ntp_frac;
-    uint8_t *out = NtpServer.build_response_args.out;
-    size_t out_cap = NtpServer.build_response_args.out_cap;
+    const uint8_t *req = NtpServerV.build_response_args.req;
+    size_t req_len = NtpServerV.build_response_args.req_len;
+    uint8_t stratum = NtpServerV.build_response_args.stratum;
+    uint32_t refid = NtpServerV.build_response_args.refid;
+    uint32_t protocore_ntp_secs = NtpServerV.build_response_args.protocore_ntp_secs;
+    uint32_t protocore_ntp_frac = NtpServerV.build_response_args.protocore_ntp_frac;
+    uint8_t *out = NtpServerV.build_response_args.out;
+    size_t out_cap = NtpServerV.build_response_args.out_cap;
 
     if (req == NULL || out == NULL || req_len < PROTOCORE_NTP_PACKET_LEN || out_cap < PROTOCORE_NTP_PACKET_LEN)
     {
-        NtpServer.n = 0;
+        NtpServerV.n = 0;
         return;
     }
 
@@ -56,7 +56,7 @@ static void ntp_server_build_response(uint8_t *restrict work)
     }
     else
     {
-        NtpServer.n = 0;
+        NtpServerV.n = 0;
         return;
     }
     mem.set(out, 0, PROTOCORE_NTP_PACKET_LEN);
@@ -78,7 +78,7 @@ static void ntp_server_build_response(uint8_t *restrict work)
     endian.wr32be(out + 36, protocore_ntp_frac);
     endian.wr32be(out + 40, protocore_ntp_secs); // transmit timestamp
     endian.wr32be(out + 44, protocore_ntp_frac);
-    NtpServer.n = PROTOCORE_NTP_PACKET_LEN;
+    NtpServerV.n = PROTOCORE_NTP_PACKET_LEN;
 }
 
 // All NTP-server binding state, owned by one instance (internal linkage): the advertised
@@ -150,16 +150,16 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
     uint32_t frac = (uint32_t)(((uint64_t)(Clock.ms % 1000u) << 32) / 1000u);
 
     uint8_t resp[PROTOCORE_NTP_PACKET_LEN];
-    NtpServer.build_response_args.req = data;
-    NtpServer.build_response_args.req_len = len;
-    NtpServer.build_response_args.stratum = NTP_SERVER_CTX(work)->stratum;
-    NtpServer.build_response_args.refid = NTP_SERVER_CTX(work)->refid;
-    NtpServer.build_response_args.protocore_ntp_secs = unix_secs + PROTOCORE_NTP_UNIX_OFFSET;
-    NtpServer.build_response_args.protocore_ntp_frac = frac;
-    NtpServer.build_response_args.out = resp;
-    NtpServer.build_response_args.out_cap = sizeof(resp);
+    NtpServerV.build_response_args.req = data;
+    NtpServerV.build_response_args.req_len = len;
+    NtpServerV.build_response_args.stratum = NTP_SERVER_CTX(work)->stratum;
+    NtpServerV.build_response_args.refid = NTP_SERVER_CTX(work)->refid;
+    NtpServerV.build_response_args.protocore_ntp_secs = unix_secs + PROTOCORE_NTP_UNIX_OFFSET;
+    NtpServerV.build_response_args.protocore_ntp_frac = frac;
+    NtpServerV.build_response_args.out = resp;
+    NtpServerV.build_response_args.out_cap = sizeof(resp);
     NtpServer.build_response(work);
-    const size_t n = NtpServer.n;
+    const size_t n = NtpServerV.n;
     if (n)
     {
         UdpListenerV.peer_args.peer = peer;
@@ -169,10 +169,10 @@ static void protocore_ntp_server_udp_handler(const uint8_t *data, size_t len, co
     }
 }
 
-static void ntp_server_begin(uint8_t *restrict work)
+void protocore_ntp_server_begin(uint8_t *restrict work)
 {
-    uint8_t stratum = NtpServer.begin_args.stratum;
-    uint32_t refid = NtpServer.begin_args.refid;
+    uint8_t stratum = NtpServerV.begin_args.stratum;
+    uint32_t refid = NtpServerV.begin_args.refid;
 
     NTP_SERVER_CTX(work)->stratum = stratum;
     NTP_SERVER_CTX(work)->refid = refid;
@@ -181,13 +181,11 @@ static void ntp_server_begin(uint8_t *restrict work)
     UdpListenerV.bind.handler_ctx = NULL;
     UdpListenerV.bind.group_ip = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    NtpServer.ok = UdpListenerV.ok;
+    NtpServerV.ok = UdpListenerV.ok;
 }
 
-NtpServerNs NtpServer = {
-    .build_response = ntp_server_build_response,
-    .begin = ntp_server_begin,
-};
+/** @brief The operands and the outcome. */
+NtpServerVars NtpServerV;
 
 PROTOCORE_END_DECLS
 

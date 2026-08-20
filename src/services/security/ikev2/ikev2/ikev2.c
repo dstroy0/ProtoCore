@@ -1901,15 +1901,15 @@ static void auth_verify_rsa_sha256(uint8_t *restrict work)
     {
         return;
     }
-    Rsa.verify_args.n = Ike.auth.rsa_n;
-    Rsa.verify_args.e = Ike.auth.rsa_e;
-    Rsa.verify_args.msg = Ike.auth.scratch;
-    Rsa.verify_args.msg_len = n;
-    Rsa.verify_args.sig = Ike.auth.sig;
-    Rsa.verify_args.sig_len = Ike.auth.sig_len;
-    Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
+    RsaV.verify_args.n = Ike.auth.rsa_n;
+    RsaV.verify_args.e = Ike.auth.rsa_e;
+    RsaV.verify_args.msg = Ike.auth.scratch;
+    RsaV.verify_args.msg_len = n;
+    RsaV.verify_args.sig = Ike.auth.sig;
+    RsaV.verify_args.sig_len = Ike.auth.sig_len;
+    RsaV.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
     Rsa.verify(Ike.work);
-    Ike.ok = Rsa.ok;
+    Ike.ok = RsaV.ok;
 }
 
 // ---------------------------------------------------------------------------

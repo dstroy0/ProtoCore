@@ -63,8 +63,8 @@ static void json_number(protocore_json_writer *w, double d)
     {
         tmp[0] = '\0';
     }
-    Json.put_raw_args.w = w;
-    Json.put_raw_args.literal = tmp;
+    JsonV.put_raw_args.w = w;
+    JsonV.put_raw_args.literal = tmp;
     Json.put_raw(json_work);
 }
 
@@ -126,43 +126,43 @@ void protocore_senml_json_build(uint8_t *restrict work)
         return;
     }
     protocore_json_writer w = {0};
-    Json.init_args.w = &w;
-    Json.init_args.buf = SenmlV.json.buf;
-    Json.init_args.cap = SenmlV.json.cap;
+    JsonV.init_args.w = &w;
+    JsonV.init_args.buf = SenmlV.json.buf;
+    JsonV.init_args.cap = SenmlV.json.cap;
     Json.init(json_work);
-    Json.begin_array_args.w = &w;
+    JsonV.begin_array_args.w = &w;
     Json.begin_array(json_work);
     for (size_t i = 0; i < count; i++)
     {
         const SenmlRecord *r = &records[i];
-        Json.begin_object_args.w = &w;
+        JsonV.begin_object_args.w = &w;
         Json.begin_object(json_work);
         if (r->base_name)
         {
-            Json.kv_str_args.w = &w;
-            Json.kv_str_args.k = "bn";
-            Json.kv_str_args.v = r->base_name;
+            JsonV.kv_str_args.w = &w;
+            JsonV.kv_str_args.k = "bn";
+            JsonV.kv_str_args.v = r->base_name;
             Json.kv_str(json_work);
         }
         if (r->has_base_time)
         {
-            Json.key_args.w = &w;
-            Json.key_args.k = "bt";
+            JsonV.key_args.w = &w;
+            JsonV.key_args.k = "bt";
             Json.key(json_work);
             json_number(&w, r->base_time);
         }
         if (r->name)
         {
-            Json.kv_str_args.w = &w;
-            Json.kv_str_args.k = "n";
-            Json.kv_str_args.v = r->name;
+            JsonV.kv_str_args.w = &w;
+            JsonV.kv_str_args.k = "n";
+            JsonV.kv_str_args.v = r->name;
             Json.kv_str(json_work);
         }
         if (r->unit)
         {
-            Json.kv_str_args.w = &w;
-            Json.kv_str_args.k = "u";
-            Json.kv_str_args.v = r->unit;
+            JsonV.kv_str_args.w = &w;
+            JsonV.kv_str_args.k = "u";
+            JsonV.kv_str_args.v = r->unit;
             Json.kv_str(json_work);
         }
         // Every SenmlValueKind enumerator has a case below, so the default edge the compiler emits
@@ -170,24 +170,24 @@ void protocore_senml_json_build(uint8_t *restrict work)
         switch (r->value_kind)
         {
         case SENML_VALUE_NUMBER:
-            Json.key_args.w = &w;
-            Json.key_args.k = "v";
+            JsonV.key_args.w = &w;
+            JsonV.key_args.k = "v";
             Json.key(json_work);
             json_number(&w, r->value);
             break;
         case SENML_VALUE_STRING:
             if (r->string_value)
             {
-                Json.kv_str_args.w = &w;
-                Json.kv_str_args.k = "vs";
-                Json.kv_str_args.v = r->string_value;
+                JsonV.kv_str_args.w = &w;
+                JsonV.kv_str_args.k = "vs";
+                JsonV.kv_str_args.v = r->string_value;
                 Json.kv_str(json_work);
             }
             break;
         case SENML_VALUE_BOOLEAN:
-            Json.kv_bool_args.w = &w;
-            Json.kv_bool_args.k = "vb";
-            Json.kv_bool_args.v = r->boolean_value;
+            JsonV.kv_bool_args.w = &w;
+            JsonV.kv_bool_args.k = "vb";
+            JsonV.kv_bool_args.v = r->boolean_value;
             Json.kv_bool(json_work);
             break;
         case SENML_VALUE_NONE:
@@ -195,15 +195,15 @@ void protocore_senml_json_build(uint8_t *restrict work)
         }
         if (r->has_time)
         {
-            Json.key_args.w = &w;
-            Json.key_args.k = "t";
+            JsonV.key_args.w = &w;
+            JsonV.key_args.k = "t";
             Json.key(json_work);
             json_number(&w, r->time);
         }
-        Json.end_object_args.w = &w;
+        JsonV.end_object_args.w = &w;
         Json.end_object(json_work);
     }
-    Json.end_array_args.w = &w;
+    JsonV.end_array_args.w = &w;
     Json.end_array(json_work);
     if (!protocore_json_ok(&w))
     {

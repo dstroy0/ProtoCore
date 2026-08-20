@@ -134,10 +134,16 @@ typedef struct
     StatsdMetricArgs metric; ///< what one line names
     StatsdValueArgs value;   ///< what one line carries
     StatsdLineArgs line;     ///< where the formatted line lands
-
     proto_bool ok;
     size_t n;
+} StatsdVars;
 
+/** @brief The operands and the outcome. */
+extern StatsdVars StatsdV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const format)(uint8_t *restrict work);
     void (*const count)(uint8_t *restrict work);
@@ -147,8 +153,29 @@ typedef struct
     void (*const set)(uint8_t *restrict work);
 } StatsdNs;
 
-/** @brief The one symbol this module exports. */
-extern StatsdNs Statsd;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in StatsdV or a region of the borrow at a fixed offset.
+void protocore_statsd_init(uint8_t *restrict work);
+void protocore_statsd_format(uint8_t *restrict work);
+void protocore_statsd_count(uint8_t *restrict work);
+void protocore_statsd_gauge(uint8_t *restrict work);
+void protocore_statsd_gauge_delta(uint8_t *restrict work);
+void protocore_statsd_timing(uint8_t *restrict work);
+void protocore_statsd_set(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Statsd.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const StatsdNs Statsd __attribute__((unused)) = {
+    .init = protocore_statsd_init,
+    .format = protocore_statsd_format,
+    .count = protocore_statsd_count,
+    .gauge = protocore_statsd_gauge,
+    .gauge_delta = protocore_statsd_gauge_delta,
+    .timing = protocore_statsd_timing,
+    .set = protocore_statsd_set,
+};
 
 /**
  * @brief The PROTOCORE_STATSD_BORROW bytes this module's state lives in.

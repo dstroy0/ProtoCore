@@ -103,15 +103,15 @@ static proto_bool verify_row(const KatRsaVerify *v, protocore_rsa_hash alg, cons
     unhex_exponent(v->e, e);
     size_t sig_len = unhex(v->sig, sig);
 
-    Rsa.verify_args.n = n;
-    Rsa.verify_args.e = e;
-    Rsa.verify_args.msg = msg;
-    Rsa.verify_args.msg_len = msg_len;
-    Rsa.verify_args.sig = sig;
-    Rsa.verify_args.sig_len = sig_len;
-    Rsa.verify_args.hash = alg;
+    RsaV.verify_args.n = n;
+    RsaV.verify_args.e = e;
+    RsaV.verify_args.msg = msg;
+    RsaV.verify_args.msg_len = msg_len;
+    RsaV.verify_args.sig = sig;
+    RsaV.verify_args.sig_len = sig_len;
+    RsaV.verify_args.hash = alg;
     Rsa.verify(g_work);
-    return Rsa.ok;
+    return RsaV.ok;
 }
 
 // ---- verify (Project Wycheproof) ------------------------------------------
@@ -259,15 +259,15 @@ void test_rsa_verify_rejects_a_signature_at_or_above_the_modulus(void)
             continue;
         }
 
-        Rsa.verify_args.n = n;
-        Rsa.verify_args.e = e;
-        Rsa.verify_args.msg = msg;
-        Rsa.verify_args.msg_len = msg_len;
-        Rsa.verify_args.sig = sig;
-        Rsa.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES;
-        Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
+        RsaV.verify_args.n = n;
+        RsaV.verify_args.e = e;
+        RsaV.verify_args.msg = msg;
+        RsaV.verify_args.msg_len = msg_len;
+        RsaV.verify_args.sig = sig;
+        RsaV.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES;
+        RsaV.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
         Rsa.verify(g_work);
-        TEST_ASSERT_FALSE_MESSAGE(Rsa.ok, v->sig);
+        TEST_ASSERT_FALSE_MESSAGE(RsaV.ok, v->sig);
         checked++;
     }
     TEST_ASSERT_GREATER_THAN_UINT(0u, (unsigned)checked);
@@ -285,36 +285,36 @@ void test_rsa_verify_refuses_a_short_signature_and_null_operands(void)
     unhex_exponent(v->e, e);
     unhex(v->sig, sig);
 
-    Rsa.verify_args.n = n;
-    Rsa.verify_args.e = e;
-    Rsa.verify_args.msg = (const uint8_t *)"x";
-    Rsa.verify_args.msg_len = 1;
-    Rsa.verify_args.sig = sig;
-    Rsa.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
+    RsaV.verify_args.n = n;
+    RsaV.verify_args.e = e;
+    RsaV.verify_args.msg = (const uint8_t *)"x";
+    RsaV.verify_args.msg_len = 1;
+    RsaV.verify_args.sig = sig;
+    RsaV.verify_args.hash = PROTOCORE_RSA_HASH_SHA256;
 
-    Rsa.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES - 1;
+    RsaV.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES - 1;
     Rsa.verify(g_work);
-    TEST_ASSERT_FALSE(Rsa.ok);
+    TEST_ASSERT_FALSE(RsaV.ok);
 
-    Rsa.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES + 1;
+    RsaV.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES + 1;
     Rsa.verify(g_work);
-    TEST_ASSERT_FALSE(Rsa.ok);
+    TEST_ASSERT_FALSE(RsaV.ok);
 
-    Rsa.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES;
+    RsaV.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES;
 
-    Rsa.verify_args.n = NULL;
+    RsaV.verify_args.n = NULL;
     Rsa.verify(g_work);
-    TEST_ASSERT_FALSE(Rsa.ok);
-    Rsa.verify_args.n = n;
+    TEST_ASSERT_FALSE(RsaV.ok);
+    RsaV.verify_args.n = n;
 
-    Rsa.verify_args.e = NULL;
+    RsaV.verify_args.e = NULL;
     Rsa.verify(g_work);
-    TEST_ASSERT_FALSE(Rsa.ok);
-    Rsa.verify_args.e = e;
+    TEST_ASSERT_FALSE(RsaV.ok);
+    RsaV.verify_args.e = e;
 
-    Rsa.verify_args.sig = NULL;
+    RsaV.verify_args.sig = NULL;
     Rsa.verify(g_work);
-    TEST_ASSERT_FALSE(Rsa.ok);
+    TEST_ASSERT_FALSE(RsaV.ok);
 }
 
 // ---- sign (openssl) --------------------------------------------------------
@@ -335,14 +335,14 @@ void test_rsa_sign_matches_openssl(void)
         unhex(v->sig, want);
         size_t msg_len = unhex(v->msg, msg);
 
-        Rsa.sign_args.n = n;
-        Rsa.sign_args.d = d;
-        Rsa.sign_args.msg = msg;
-        Rsa.sign_args.msg_len = msg_len;
-        Rsa.sign_args.hash = (strcmp(v->hash, "SHA-512") == 0) ? PROTOCORE_RSA_HASH_SHA512 : PROTOCORE_RSA_HASH_SHA256;
-        Rsa.sign_args.sig = got;
+        RsaV.sign_args.n = n;
+        RsaV.sign_args.d = d;
+        RsaV.sign_args.msg = msg;
+        RsaV.sign_args.msg_len = msg_len;
+        RsaV.sign_args.hash = (strcmp(v->hash, "SHA-512") == 0) ? PROTOCORE_RSA_HASH_SHA512 : PROTOCORE_RSA_HASH_SHA256;
+        RsaV.sign_args.sig = got;
         Rsa.sign(g_work);
-        TEST_ASSERT_TRUE_MESSAGE(Rsa.ok, v->hash);
+        TEST_ASSERT_TRUE_MESSAGE(RsaV.ok, v->hash);
         TEST_ASSERT_EQUAL_HEX8_ARRAY_MESSAGE(want, got, PROTOCORE_RSA_KEY_BYTES, v->sig);
     }
 }
@@ -365,29 +365,29 @@ void test_rsa_sign_then_verify_round_trips(void)
         const protocore_rsa_hash alg =
             (strcmp(v->hash, "SHA-512") == 0) ? PROTOCORE_RSA_HASH_SHA512 : PROTOCORE_RSA_HASH_SHA256;
 
-        Rsa.sign_args.n = n;
-        Rsa.sign_args.d = d;
-        Rsa.sign_args.msg = msg;
-        Rsa.sign_args.msg_len = msg_len;
-        Rsa.sign_args.hash = alg;
-        Rsa.sign_args.sig = sig;
+        RsaV.sign_args.n = n;
+        RsaV.sign_args.d = d;
+        RsaV.sign_args.msg = msg;
+        RsaV.sign_args.msg_len = msg_len;
+        RsaV.sign_args.hash = alg;
+        RsaV.sign_args.sig = sig;
         Rsa.sign(g_work);
-        TEST_ASSERT_TRUE(Rsa.ok);
+        TEST_ASSERT_TRUE(RsaV.ok);
 
-        Rsa.verify_args.n = n;
-        Rsa.verify_args.e = e;
-        Rsa.verify_args.msg = msg;
-        Rsa.verify_args.msg_len = msg_len;
-        Rsa.verify_args.sig = sig;
-        Rsa.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES;
-        Rsa.verify_args.hash = alg;
+        RsaV.verify_args.n = n;
+        RsaV.verify_args.e = e;
+        RsaV.verify_args.msg = msg;
+        RsaV.verify_args.msg_len = msg_len;
+        RsaV.verify_args.sig = sig;
+        RsaV.verify_args.sig_len = PROTOCORE_RSA_KEY_BYTES;
+        RsaV.verify_args.hash = alg;
         Rsa.verify(g_work);
-        TEST_ASSERT_TRUE(Rsa.ok);
+        TEST_ASSERT_TRUE(RsaV.ok);
 
         // and one flipped signature octet must break it
         sig[PROTOCORE_RSA_KEY_BYTES - 1] ^= 0x01;
         Rsa.verify(g_work);
-        TEST_ASSERT_FALSE(Rsa.ok);
+        TEST_ASSERT_FALSE(RsaV.ok);
     }
 }
 
@@ -400,26 +400,26 @@ void test_rsa_sign_refuses_null_operands(void)
     unhex_modulus(v->n, n);
     unhex(v->d, d);
 
-    Rsa.sign_args.n = n;
-    Rsa.sign_args.d = d;
-    Rsa.sign_args.msg = (const uint8_t *)"x";
-    Rsa.sign_args.msg_len = 1;
-    Rsa.sign_args.hash = PROTOCORE_RSA_HASH_SHA256;
-    Rsa.sign_args.sig = sig;
+    RsaV.sign_args.n = n;
+    RsaV.sign_args.d = d;
+    RsaV.sign_args.msg = (const uint8_t *)"x";
+    RsaV.sign_args.msg_len = 1;
+    RsaV.sign_args.hash = PROTOCORE_RSA_HASH_SHA256;
+    RsaV.sign_args.sig = sig;
 
-    Rsa.sign_args.n = NULL;
+    RsaV.sign_args.n = NULL;
     Rsa.sign(g_work);
-    TEST_ASSERT_FALSE(Rsa.ok);
-    Rsa.sign_args.n = n;
+    TEST_ASSERT_FALSE(RsaV.ok);
+    RsaV.sign_args.n = n;
 
-    Rsa.sign_args.d = NULL;
+    RsaV.sign_args.d = NULL;
     Rsa.sign(g_work);
-    TEST_ASSERT_FALSE(Rsa.ok);
-    Rsa.sign_args.d = d;
+    TEST_ASSERT_FALSE(RsaV.ok);
+    RsaV.sign_args.d = d;
 
-    Rsa.sign_args.sig = NULL;
+    RsaV.sign_args.sig = NULL;
     Rsa.sign(g_work);
-    TEST_ASSERT_FALSE(Rsa.ok);
+    TEST_ASSERT_FALSE(RsaV.ok);
 }
 
 // The tables are the point of this suite: an empty one would make every case above pass while

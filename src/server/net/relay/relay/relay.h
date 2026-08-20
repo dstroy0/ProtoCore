@@ -143,17 +143,36 @@ typedef struct
     RelayInitArgs init_args;
     RelayStepArgs step_args;
     RelayNoteEofArgs note_eof_args;
-
     proto_bool ok;
     protocore_relay_status status;
+} RelayVars;
 
+/** @brief The operands and the outcome. */
+extern RelayVars RelayV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const step)(uint8_t *restrict work);
     void (*const note_eof)(uint8_t *restrict work);
 } RelayNs;
 
-/** @brief The one symbol this module exports. */
-extern RelayNs Relay;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in RelayV or a region of the borrow at a fixed offset.
+void protocore_relay_init(uint8_t *restrict work);
+void protocore_relay_step(uint8_t *restrict work);
+void protocore_relay_note_eof(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Relay.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const RelayNs Relay __attribute__((unused)) = {
+    .init = protocore_relay_init,
+    .step = protocore_relay_step,
+    .note_eof = protocore_relay_note_eof,
+};
 
 PROTOCORE_END_DECLS
 

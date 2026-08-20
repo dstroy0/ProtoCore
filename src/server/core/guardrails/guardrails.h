@@ -86,10 +86,16 @@ typedef struct
     GuardrailFloorArgs floors;
     GuardrailOutArgs out;
     protocore_breach_fn cb;
-
     uint8_t breaches;
     int n;
+} GuardrailsVars;
 
+/** @brief The operands and the outcome. */
+extern GuardrailsVars GuardrailsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const eval)(uint8_t *restrict work);
     void (*const json)(uint8_t *restrict work);
     void (*const sample)(uint8_t *restrict work);
@@ -97,8 +103,25 @@ typedef struct
     void (*const check)(uint8_t *restrict work);
 } GuardrailsNs;
 
-/** @brief The one symbol this module exports. */
-extern GuardrailsNs Guardrails;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in GuardrailsV or a region of the borrow at a fixed offset.
+void protocore_guardrails_eval(uint8_t *restrict work);
+void protocore_guardrails_json(uint8_t *restrict work);
+void protocore_guardrails_sample(uint8_t *restrict work);
+void protocore_guardrails_begin(uint8_t *restrict work);
+void protocore_guardrails_check(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Guardrails.eval(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const GuardrailsNs Guardrails __attribute__((unused)) = {
+    .eval = protocore_guardrails_eval,
+    .json = protocore_guardrails_json,
+    .sample = protocore_guardrails_sample,
+    .begin = protocore_guardrails_begin,
+    .check = protocore_guardrails_check,
+};
 
 /**
  * @brief The PROTOCORE_GUARDRAILS_BORROW bytes this module's state lives in.

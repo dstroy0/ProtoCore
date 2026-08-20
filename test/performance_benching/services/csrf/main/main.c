@@ -35,22 +35,22 @@ static const uint8_t SECRET[32] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x7
 /** @brief Render @p raw as CSRF_NONCE_BYTES * 2 lowercase hex characters plus a NUL at @p out. */
 static void hex_encode_nonce(const uint8_t *raw, char *out)
 {
-    Hex.io.in = raw;
-    Hex.io.n = CSRF_NONCE_BYTES;
-    Hex.io.out = out;
-    Hex.args.upper = PROTO_FALSE;
+    HexV.io.in = raw;
+    HexV.io.n = CSRF_NONCE_BYTES;
+    HexV.io.out = out;
+    HexV.args.upper = PROTO_FALSE;
     Hex.encode(hex_work);
 }
 
 /** @brief Read CSRF_NONCE_BYTES * 2 hex characters at @p text back into @p out; bytes written. */
 static int32_t hex_decode_nonce(const char *text, uint8_t *out)
 {
-    Hex.io.text = text;
-    Hex.io.n = CSRF_NONCE_BYTES * 2;
-    Hex.io.bytes = out;
-    Hex.io.cap = CSRF_NONCE_BYTES;
+    HexV.io.text = text;
+    HexV.io.n = CSRF_NONCE_BYTES * 2;
+    HexV.io.bytes = out;
+    HexV.io.cap = CSRF_NONCE_BYTES;
     Hex.decode(hex_work);
-    return Hex.i32;
+    return HexV.i32;
 }
 
 void dbench_run(void)

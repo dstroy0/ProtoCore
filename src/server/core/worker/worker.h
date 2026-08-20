@@ -98,25 +98,53 @@ typedef struct
 {
     int worker_id;                 ///< the worker every call names
     protocore_worker_pump_fn pump; ///< what a started worker runs each time it wakes
-
-    WorkerDeferArgs defer_args; ///< the call handed to a worker to run in its own context
-
+    WorkerDeferArgs defer_args;    ///< the call handed to a worker to run in its own context
     proto_bool ok;
+#if PROTOCORE_ENABLE_PREEMPT_QUEUE
+    // The lane the workers jump. They run without it; it only changes what runs first.
+    PreemptQueueNs *queue;
+#endif
+} WorkersVars;
 
+/** @brief The operands and the outcome. */
+extern WorkersVars WorkersV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const run_deferred)(uint8_t *restrict work);
     void (*const running)(uint8_t *restrict work);
     void (*const start)(uint8_t *restrict work);
     void (*const stop)(uint8_t *restrict work);
     void (*const wake)(uint8_t *restrict work);
     void (*const defer)(uint8_t *restrict work);
-#if PROTOCORE_ENABLE_PREEMPT_QUEUE
-    // The lane the workers jump. They run without it; it only changes what runs first.
-    PreemptQueueNs *queue;
-#endif
 } WorkerNs;
 
-/** @brief The one symbol this module exports. */
-extern WorkerNs Workers;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WorkersV or a region of the borrow at a fixed offset.
+void protocore_workers_run_deferred(uint8_t *restrict work);
+void protocore_workers_running(uint8_t *restrict work);
+void protocore_workers_start(uint8_t *restrict work);
+void protocore_workers_stop(uint8_t *restrict work);
+void protocore_workers_wake(uint8_t *restrict work);
+void protocore_workers_defer(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_PREEMPT_QUEUE
+#endif
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Workers.run_deferred(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WorkerNs Workers __attribute__((unused)) = {
+    .run_deferred = protocore_workers_run_deferred,
+    .running = protocore_workers_running,
+    .start = protocore_workers_start,
+    .stop = protocore_workers_stop,
+    .wake = protocore_workers_wake,
+    .defer = protocore_workers_defer,
+#if PROTOCORE_ENABLE_PREEMPT_QUEUE
+#endif
+};
 
 /**
  * @brief The PROTOCORE_WORKER_BORROW bytes this module's state lives in.

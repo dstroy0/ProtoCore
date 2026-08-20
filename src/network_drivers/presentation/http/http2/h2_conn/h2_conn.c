@@ -671,10 +671,10 @@ static proto_bool process_frame(uint8_t *restrict work)
     return ok;
 }
 
-static void h2_conn_init(uint8_t *restrict work)
+void protocore_h2_conn_init(uint8_t *restrict work)
 {
     mem.set(H2_CONN_CTX(work), 0, sizeof(H2ConnCtx));
-    H2_CONN_CTX(work)->cb = *H2Conn.init_args.cb;
+    H2_CONN_CTX(work)->cb = *H2ConnV.init_args.cb;
     H2_CONN_CTX(work)->phase = 0;
     (H2FrameV.settings_args.s = &H2_CONN_CTX(work)->peer, H2Frame.settings_defaults(NULL));
     H2_CONN_CTX(work)->conn_send_window = 65535;
@@ -859,25 +859,26 @@ static void h2_goaway_run(uint8_t *restrict work, uint32_t error)
 
 // --- the entries ---
 
-static void h2_conn_recv(uint8_t *restrict work)
+void protocore_h2_conn_recv(uint8_t *restrict work)
 {
-    H2Conn.ok = h2_recv_run(work, H2Conn.recv_args.data, H2Conn.recv_args.len);
+    H2ConnV.ok = h2_recv_run(work, H2ConnV.recv_args.data, H2ConnV.recv_args.len);
 }
 
-static void h2_conn_respond(uint8_t *restrict work)
+void protocore_h2_conn_respond(uint8_t *restrict work)
 {
-    H2Conn.ok =
-        h2_respond_run(work, H2Conn.respond_args.stream_id, H2Conn.respond_args.status,
-                       H2Conn.respond_args.content_type, H2Conn.respond_args.body, H2Conn.respond_args.body_len);
+    H2ConnV.ok =
+        h2_respond_run(work, H2ConnV.respond_args.stream_id, H2ConnV.respond_args.status,
+                       H2ConnV.respond_args.content_type, H2ConnV.respond_args.body, H2ConnV.respond_args.body_len);
 }
 
-static void h2_conn_goaway(uint8_t *restrict work)
+void protocore_h2_conn_goaway(uint8_t *restrict work)
 {
-    h2_goaway_run(work, H2Conn.goaway_args.error);
-    H2Conn.ok = PROTO_TRUE;
+    h2_goaway_run(work, H2ConnV.goaway_args.error);
+    H2ConnV.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-H2ConnNs H2Conn = {.init = h2_conn_init, .recv = h2_conn_recv, .respond = h2_conn_respond, .goaway = h2_conn_goaway};
+/** @brief The operands and the outcome. */
+H2ConnVars H2ConnV;
 
 #endif // PROTOCORE_ENABLE_HTTP2

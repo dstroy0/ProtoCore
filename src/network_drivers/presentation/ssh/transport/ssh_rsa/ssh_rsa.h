@@ -119,17 +119,36 @@ typedef struct
 {
     SshRsaSignArgs sign_args;
     SshRsaEncodePubkeyArgs encode_pubkey_args;
-
     proto_bool ok;
     int n;
+} SshRsaVars;
 
+/** @brief The operands and the outcome. */
+extern SshRsaVars SshRsaV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const load_pubkey)(uint8_t *restrict work);
     void (*const sign)(uint8_t *restrict work);
     void (*const encode_pubkey)(uint8_t *restrict work);
 } SshRsaNs;
 
-/** @brief The one symbol this module exports. */
-extern SshRsaNs SshRsa;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SshRsaV or a region of the borrow at a fixed offset.
+void protocore_ssh_rsa_load_pubkey(uint8_t *restrict work);
+void protocore_ssh_rsa_sign(uint8_t *restrict work);
+void protocore_ssh_rsa_encode_pubkey(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SshRsa.load_pubkey(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SshRsaNs SshRsa __attribute__((unused)) = {
+    .load_pubkey = protocore_ssh_rsa_load_pubkey,
+    .sign = protocore_ssh_rsa_sign,
+    .encode_pubkey = protocore_ssh_rsa_encode_pubkey,
+};
 
 /**
  * @brief The RSA host key's public half: modulus and exponent, and whether they are loaded.
