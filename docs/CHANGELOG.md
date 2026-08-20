@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`320de3b`](https://github.com/dstroy0/ProtoCore/commit/320de3b0346624e2eb2b4ca3304c77ed955bb192))
 - update CHANGELOG.md [skip ci] ([`c29483b`](https://github.com/dstroy0/ProtoCore/commit/c29483bb538236abc6b086a4d9a7f58cf5462698))
 - update CHANGELOG.md [skip ci] ([`6c9d173`](https://github.com/dstroy0/ProtoCore/commit/6c9d1737bde0c23f9a31226153f842247c6f5c10))
 - update CHANGELOG.md [skip ci] ([`c68d6ab`](https://github.com/dstroy0/ProtoCore/commit/c68d6abca215db4d7e53b070ed99d8871b0be27b))
@@ -397,6 +398,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- clang-format the vendor HAL headers ([`b30003e`](https://github.com/dstroy0/ProtoCore/commit/b30003e64fae7bf562c4b8d8ad84e4dd7f4caba6))
+- black over tools/ ([`dbfa67e`](https://github.com/dstroy0/ProtoCore/commit/dbfa67e3fcc378bdf1938872272ac5acca0620a5))
+- clang-format the 77 files that had drifted ([`a164ee8`](https://github.com/dstroy0/ProtoCore/commit/a164ee883c6f73cf20ac9f91dad341e2e8dbf407))
+- retire the stand-in arrays, 663 sites ([`e9cc5f6`](https://github.com/dstroy0/ProtoCore/commit/e9cc5f6e65bc9e6c52ee8cd61b92aaa35d4ef677))
 - only the config include above the gate, 195 files ([`5928732`](https://github.com/dstroy0/ProtoCore/commit/5928732eea8dad9f21825c4412faa224f7f54d84))
 - read the gate, and see a static with no initializer ([`ccd315a`](https://github.com/dstroy0/ProtoCore/commit/ccd315a90f3d90602232906b8cf2d29178b9bf04))
 - compare the golden's shape, not its size ([`ec36cd7`](https://github.com/dstroy0/ProtoCore/commit/ec36cd7e236932eda3d0089ef78fd4a287eaf26b))
@@ -529,6 +534,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Documentation
 
+- take the conflict markers out of the changelog, format test/ ([`0d62656`](https://github.com/dstroy0/ProtoCore/commit/0d62656ee72ce76fe29f4b8a502a0927ac5b79f1))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`82d5884`](https://github.com/dstroy0/ProtoCore/commit/82d5884747085beedf01344761b3d0035bc15152))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`c976fea`](https://github.com/dstroy0/ProtoCore/commit/c976fea85fb1e80ffce463119253f38dc3fc5dfb))
 - regenerate feature tables + configurator + build_opt.h + example index [skip ci] ([`4b0073f`](https://github.com/dstroy0/ProtoCore/commit/4b0073f00f7999fb71820ea846538a101c53c4eb))
