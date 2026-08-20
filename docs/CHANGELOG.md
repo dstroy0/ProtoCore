@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`3223726`](https://github.com/dstroy0/ProtoCore/commit/32237269062dcc620ef5eb30a9e0f185a9fe1455))
 - update CHANGELOG.md [skip ci] ([`430d5c7`](https://github.com/dstroy0/ProtoCore/commit/430d5c70c4e3fbe27e5b7a11d9ad0a0b6ed51d6d))
 - update CHANGELOG.md [skip ci] ([`3ee6f8e`](https://github.com/dstroy0/ProtoCore/commit/3ee6f8e6f84e3172c88b614a587c48fe0ec0a69b))
 - update CHANGELOG.md [skip ci] ([`8d62e65`](https://github.com/dstroy0/ProtoCore/commit/8d62e659eaa50ee5f9ce420fc7dac7c0f1a9f5c4))
@@ -392,6 +393,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- the no-bus arms of hmmd, ld2410 and pmbus never compiled ([`2965ad1`](https://github.com/dstroy0/ProtoCore/commit/2965ad1dee204142f2ae3c884fb600e39bba0dc7))
 - read a module blind before judging it ([`ce2dfa9`](https://github.com/dstroy0/ProtoCore/commit/ce2dfa9b94311ba6f9c3024572f809ae1dd2c8f5))
 - the protocol registry moves to the layer that owns the connection ([`9095d18`](https://github.com/dstroy0/ProtoCore/commit/9095d18c87103868b6d428c6fa69033b539bec5c))
 - a doc comment on an entry line hid six modules, and a header need not have a sibling .c ([`8a2e702`](https://github.com/dstroy0/ProtoCore/commit/8a2e70292602a4abb915b67296264f110c5582d1))
