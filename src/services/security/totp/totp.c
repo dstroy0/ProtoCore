@@ -18,7 +18,7 @@
 
 #include "crypto/hash/sha1/sha1.h"
 #include "mmgr/secure/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span/span.h"   // protocore_span, span.ok
+#include "mmgr/span/span.h"     // protocore_span, span.ok
 
 /** @brief B: the block length HMAC pads K out to for SHA-1 (RFC 2104 sec 2). */
 #define PROTOCORE_TOTP_HMAC_B 64
@@ -44,9 +44,9 @@ static void sha1_of(const uint8_t *data, size_t len, uint8_t out[PROTOCORE_SHA1_
     protocore_span w = protocore_secure_span(PROTOCORE_SHA1_BORROW, 8);
     if (span.ok(w))
     {
-        Sha1.hash_args.data = data;
-        Sha1.hash_args.len = len;
-        Sha1.hash_args.out = out;
+        Sha1V.hash_args.data = data;
+        Sha1V.hash_args.len = len;
+        Sha1V.hash_args.out = out;
         Sha1.hash(w.buf);
     }
     protocore_secure_release(mark);

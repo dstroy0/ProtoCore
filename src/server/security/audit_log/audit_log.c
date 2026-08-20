@@ -82,29 +82,29 @@ static void chain_hash(uint8_t *work, const uint8_t prev[PROTOCORE_AUDIT_HASH_LE
     uint8_t *c;
     c = work;
     Sha256.init(c);
-    Sha256.update_args.data = prev;
-    Sha256.update_args.len = PROTOCORE_AUDIT_HASH_LEN;
+    Sha256V.update_args.data = prev;
+    Sha256V.update_args.len = PROTOCORE_AUDIT_HASH_LEN;
     Sha256.update(c);
     uint8_t le[4];
     put_le32(le, e->seq);
-    Sha256.update_args.data = le;
-    Sha256.update_args.len = 4;
+    Sha256V.update_args.data = le;
+    Sha256V.update_args.len = 4;
     Sha256.update(c);
     put_le32(le, e->ts);
-    Sha256.update_args.data = le;
-    Sha256.update_args.len = 4;
+    Sha256V.update_args.data = le;
+    Sha256V.update_args.len = 4;
     Sha256.update(c);
-    Sha256.update_args.data = (const uint8_t *)&e->category;
-    Sha256.update_args.len = 1;
+    Sha256V.update_args.data = (const uint8_t *)&e->category;
+    Sha256V.update_args.len = 1;
     Sha256.update(c); // hash the raw category byte
     uint8_t mlen = (uint8_t)str.len(e->msg, PROTOCORE_AUDIT_MSG_LEN - 1);
-    Sha256.update_args.data = &mlen;
-    Sha256.update_args.len = 1;
+    Sha256V.update_args.data = &mlen;
+    Sha256V.update_args.len = 1;
     Sha256.update(c);
-    Sha256.update_args.data = (const uint8_t *)e->msg;
-    Sha256.update_args.len = mlen;
+    Sha256V.update_args.data = (const uint8_t *)e->msg;
+    Sha256V.update_args.len = mlen;
     Sha256.update(c);
-    Sha256.final_args.out = out;
+    Sha256V.final_args.out = out;
     Sha256.final(c);
 }
 

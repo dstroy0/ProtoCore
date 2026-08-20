@@ -86,12 +86,12 @@ static RngOwnCtx s_rng;
 static void rng_chacha(uint8_t *restrict work, const uint8_t *key, const uint8_t *iv, uint64_t counter,
                        const uint8_t *in, uint8_t *out, size_t len)
 {
-    Chacha20.xor_args.key = key;
-    Chacha20.xor_args.iv = iv;
-    Chacha20.xor_args.counter = counter;
-    Chacha20.xor_args.in = in;
-    Chacha20.xor_args.out = out;
-    Chacha20.xor_args.len = len;
+    Chacha20V.xor_args.key = key;
+    Chacha20V.xor_args.iv = iv;
+    Chacha20V.xor_args.counter = counter;
+    Chacha20V.xor_args.in = in;
+    Chacha20V.xor_args.out = out;
+    Chacha20V.xor_args.len = len;
     Chacha20.xor_(RNG_CHACHA(work));
 }
 

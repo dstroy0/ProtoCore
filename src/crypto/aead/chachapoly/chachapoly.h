@@ -102,17 +102,36 @@ typedef struct
     ChachaPolyLengthArgs length_args;
     ChachaPolyEncryptArgs encrypt_args;
     ChachaPolyDecryptArgs decrypt_args;
-
     proto_bool ok;
     uint32_t length;
+} ChachaPolyVars;
 
+/** @brief The operands and the outcome. */
+extern ChachaPolyVars ChachaPolyV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const get_length)(uint8_t *restrict work);
     void (*const encrypt)(uint8_t *restrict work);
     void (*const decrypt)(uint8_t *restrict work);
 } ChachaPolyNs;
 
-/** @brief The one symbol this module exports. */
-extern ChachaPolyNs ChachaPoly;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ChachaPolyV or a region of the borrow at a fixed offset.
+void protocore_chacha_poly_get_length(uint8_t *restrict work);
+void protocore_chacha_poly_encrypt(uint8_t *restrict work);
+void protocore_chacha_poly_decrypt(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `ChachaPoly.get_length(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ChachaPolyNs ChachaPoly __attribute__((unused)) = {
+    .get_length = protocore_chacha_poly_get_length,
+    .encrypt = protocore_chacha_poly_encrypt,
+    .decrypt = protocore_chacha_poly_decrypt,
+};
 
 PROTOCORE_END_DECLS
 

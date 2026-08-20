@@ -428,13 +428,13 @@ static void Hash_prefix(uint8_t *restrict work, uint8_t *out, int b, const uint8
     uint8_t bb = (uint8_t)b;
     uint8_t *hw = SNTRUP761_SHA512(work);
     Sha512.init(hw);
-    Sha512.update_args.data = &bb;
-    Sha512.update_args.len = 1;
+    Sha512V.update_args.data = &bb;
+    Sha512V.update_args.len = 1;
     Sha512.update(hw);
-    Sha512.update_args.data = in;
-    Sha512.update_args.len = inlen;
+    Sha512V.update_args.data = in;
+    Sha512V.update_args.len = inlen;
     Sha512.update(hw);
-    Sha512.final_args.out = h;
+    Sha512V.final_args.out = h;
     Sha512.final(hw);
     mem.cpy(out, h, PROTOCORE_HASH_BYTES);
 }

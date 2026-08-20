@@ -15,7 +15,7 @@ static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
 #include "crypto/hash/sha1/sha1.h"
 #include "mmgr/secure/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span/span.h"   // protocore_span, span.ok
+#include "mmgr/span/span.h"     // protocore_span, span.ok
 
 // RFC 4122 DNS namespace UUID (6ba7b810-9dad-11d1-80b4-00c04fd430c8).
 static const uint8_t NS_DNS[16] = {0x6b, 0xa7, 0xb8, 0x10, 0x9d, 0xad, 0x11, 0xd1,
@@ -57,9 +57,9 @@ static void devid_from_mac(uint8_t *restrict work)
         out[0] = '\0';
         return;
     }
-    Sha1.hash_args.data = input;
-    Sha1.hash_args.len = sizeof(input);
-    Sha1.hash_args.out = h;
+    Sha1V.hash_args.data = input;
+    Sha1V.hash_args.len = sizeof(input);
+    Sha1V.hash_args.out = h;
     Sha1.hash(w.buf);
     protocore_secure_release(mark);
     h[6] = (uint8_t)((h[6] & 0x0F) | 0x50); // version 5

@@ -122,9 +122,15 @@ typedef struct
     Sha3DigestArgs digest_args;
     Sha3XofArgs xof_args;
     Sha3Shake128AbsorbArgs shake128_absorb_args;
-
     proto_bool ok;
+} Sha3Vars;
 
+/** @brief The operands and the outcome. */
+extern Sha3Vars Sha3V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const absorb)(uint8_t *restrict work);
     void (*const squeeze)(uint8_t *restrict work);
     void (*const sha3_256)(uint8_t *restrict work);
@@ -134,8 +140,29 @@ typedef struct
     void (*const shake128_absorb)(uint8_t *restrict work);
 } Sha3Ns;
 
-/** @brief The one symbol this module exports. */
-extern Sha3Ns Sha3;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Sha3V or a region of the borrow at a fixed offset.
+void protocore_sha3_absorb(uint8_t *restrict work);
+void protocore_sha3_squeeze(uint8_t *restrict work);
+void protocore_sha3_sha3_256(uint8_t *restrict work);
+void protocore_sha3_sha3_512(uint8_t *restrict work);
+void protocore_sha3_shake128(uint8_t *restrict work);
+void protocore_sha3_shake256(uint8_t *restrict work);
+void protocore_sha3_shake128_absorb(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sha3.absorb(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Sha3Ns Sha3 __attribute__((unused)) = {
+    .absorb = protocore_sha3_absorb,
+    .squeeze = protocore_sha3_squeeze,
+    .sha3_256 = protocore_sha3_sha3_256,
+    .sha3_512 = protocore_sha3_sha3_512,
+    .shake128 = protocore_sha3_shake128,
+    .shake256 = protocore_sha3_shake256,
+    .shake128_absorb = protocore_sha3_shake128_absorb,
+};
 
 PROTOCORE_END_DECLS
 

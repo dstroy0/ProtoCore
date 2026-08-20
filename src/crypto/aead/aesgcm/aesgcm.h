@@ -133,9 +133,15 @@ typedef struct
     AesGcmSealArgs seal_args;
     AesGcmOpenArgs open_args;
     AesGcmIvArgs iv_args;
-
     proto_bool ok;
+} AesGcmVars;
 
+/** @brief The operands and the outcome. */
+extern AesGcmVars AesGcmV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const key_init)(uint8_t *restrict work);
     void (*const key_wipe)(uint8_t *restrict work);
     void (*const seal)(uint8_t *restrict work);
@@ -143,8 +149,25 @@ typedef struct
     void (*const iv_increment)(uint8_t *restrict work);
 } AesGcmNs;
 
-/** @brief The one symbol this module exports. */
-extern AesGcmNs AesGcm;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in AesGcmV or a region of the borrow at a fixed offset.
+void protocore_aes_gcm_key_init(uint8_t *restrict work);
+void protocore_aes_gcm_key_wipe(uint8_t *restrict work);
+void protocore_aes_gcm_seal(uint8_t *restrict work);
+void protocore_aes_gcm_open(uint8_t *restrict work);
+void protocore_aes_gcm_iv_increment(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `AesGcm.key_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const AesGcmNs AesGcm __attribute__((unused)) = {
+    .key_init = protocore_aes_gcm_key_init,
+    .key_wipe = protocore_aes_gcm_key_wipe,
+    .seal = protocore_aes_gcm_seal,
+    .open = protocore_aes_gcm_open,
+    .iv_increment = protocore_aes_gcm_iv_increment,
+};
 
 PROTOCORE_END_DECLS
 

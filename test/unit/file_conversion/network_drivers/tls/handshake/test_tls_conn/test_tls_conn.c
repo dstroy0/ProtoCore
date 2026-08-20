@@ -376,8 +376,8 @@ void test_full_handshake_on_rfc8448_key_material(void)
     Sha256.init(g_cli_transcript);
 
     size_t ch_len = build_client_hello(ch, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
-    Sha256.update_args.data = ch;
-    Sha256.update_args.len = ch_len;
+    Sha256V.update_args.data = ch;
+    Sha256V.update_args.len = ch_len;
     Sha256.update(g_cli_transcript);
 
     int wrote = feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec));
@@ -397,8 +397,8 @@ void test_full_handshake_on_rfc8448_key_material(void)
     size_t off = TlsRecord.n;
     TEST_ASSERT_TRUE(off > 0);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_TLS_CT_HANDSHAKE, view.content_type);
-    Sha256.update_args.data = view.fragment;
-    Sha256.update_args.len = view.frag_len;
+    Sha256V.update_args.data = view.fragment;
+    Sha256V.update_args.len = view.frag_len;
     Sha256.update(g_cli_transcript);
 
     // ServerHello, sec 4.1.3: msg_type(1) legacy_version(2) random(32) legacy_session_id_echo<0..32>
@@ -440,7 +440,7 @@ void test_full_handshake_on_rfc8448_key_material(void)
     TEST_ASSERT_EQUAL_UINT8_ARRAY(RFC8448_ECDHE, ecdhe, 32);
 
     uint8_t ch_sh_hash[32];
-    Sha256.final_args.out = ch_sh_hash;
+    Sha256V.final_args.out = ch_sh_hash;
     Sha256.final(g_cli_transcript);
 
     Tls13Ks.bind.kdf = &TLS13_KDF;
@@ -518,7 +518,7 @@ void test_full_handshake_on_rfc8448_key_material(void)
             // sec 4.4.3: algorithm(2) then signature<0..2^16-1>, over
             // Transcript-Hash(Handshake Context, Certificate). ed25519 = 0x0807 (sec 4.2.3) and
             // RFC 8032 sec 5.1.6 makes an Ed25519 signature 64 octets.
-            Sha256.final_args.out = cert_verify_hash;
+            Sha256V.final_args.out = cert_verify_hash;
             Sha256.final(g_cli_transcript);
             TEST_ASSERT_EQUAL_HEX16(TLS_SIG_ED25519, be16(msg + 4));
             TEST_ASSERT_EQUAL_UINT(64u, (size_t)be16(msg + 6));
@@ -530,7 +530,7 @@ void test_full_handshake_on_rfc8448_key_material(void)
             // sec 4.4.4: "struct { opaque verify_data[Hash.length]; } Finished", Hash = SHA-256.
             uint8_t hash[32];
             uint8_t expect[32];
-            Sha256.final_args.out = hash;
+            Sha256V.final_args.out = hash;
             Sha256.final(g_cli_transcript);
             Tls13Ks.bind.ks = &g_cli_ks;
             Tls13Ks.finished_args.base_secret = g_cli_ks.s + TLS13_KS_SERVER_HS;
@@ -540,8 +540,8 @@ void test_full_handshake_on_rfc8448_key_material(void)
             TEST_ASSERT_EQUAL_UINT(32u, body_len);
             TEST_ASSERT_EQUAL_UINT8_ARRAY(expect, msg + 4, 32);
         }
-        Sha256.update_args.data = msg;
-        Sha256.update_args.len = info.pt_len;
+        Sha256V.update_args.data = msg;
+        Sha256V.update_args.len = info.pt_len;
         Sha256.update(g_cli_transcript);
         seen++;
     }
@@ -564,7 +564,7 @@ void test_full_handshake_on_rfc8448_key_material(void)
     TEST_ASSERT_TRUE_MESSAGE(Ed25519.ok, "the server's CertificateVerify did not verify under the key it presented");
 
     uint8_t ch_sfin_hash[32];
-    Sha256.final_args.out = ch_sfin_hash;
+    Sha256V.final_args.out = ch_sfin_hash;
     Sha256.final(g_cli_transcript);
     Tls13Ks.bind.ks = &g_cli_ks;
     Tls13Ks.step.ch_sfin_hash = ch_sfin_hash;
@@ -787,8 +787,8 @@ void test_a_wrong_client_finished_is_decrypt_error(void)
     g_cli_transcript = g_cli_hash_work;
     Sha256.init(g_cli_transcript);
     size_t ch_len = build_client_hello(ch, PROTO_TRUE, PROTO_TRUE, PROTO_TRUE, PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256);
-    Sha256.update_args.data = ch;
-    Sha256.update_args.len = ch_len;
+    Sha256V.update_args.data = ch;
+    Sha256V.update_args.len = ch_len;
     Sha256.update(g_cli_transcript);
     int wrote = feed_plaintext(PROTOCORE_TLS_CT_HANDSHAKE, ch, ch_len, rec, sizeof(rec));
     TEST_ASSERT_TRUE(wrote > 0);
@@ -798,8 +798,8 @@ void test_a_wrong_client_finished_is_decrypt_error(void)
     TlsRecord.sealed.rec_len = (size_t)wrote;
     TlsRecord.plain.view = &view;
     TlsRecord.plaintext_parse(NULL);
-    Sha256.update_args.data = view.fragment;
-    Sha256.update_args.len = view.frag_len;
+    Sha256V.update_args.data = view.fragment;
+    Sha256V.update_args.len = view.frag_len;
     Sha256.update(g_cli_transcript);
     const uint8_t *server_share = view.fragment + 52;
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SERVER_X25519_PUB, server_share, 32);
@@ -810,7 +810,7 @@ void test_a_wrong_client_finished_is_decrypt_error(void)
     Curve25519.x25519_args.scalar = CLIENT_X25519_PRIV;
     Curve25519.x25519_args.point = server_share;
     Curve25519.x25519(g_sign_work);
-    Sha256.final_args.out = ch_sh_hash;
+    Sha256V.final_args.out = ch_sh_hash;
     Sha256.final(g_cli_transcript);
     Tls13Ks.bind.kdf = &TLS13_KDF;
     Tls13Ks.bind.ks = &g_cli_ks;

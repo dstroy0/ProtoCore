@@ -15,7 +15,7 @@ static uint8_t ikev2_work[16]; // the borrow an entry takes; Ike never reads it
 
 #include "crypto/hash/sha1/sha1.h"
 #include "mmgr/secure/secure.h" // the pool the digest borrow comes from
-#include "mmgr/span/span.h"   // protocore_span, span.ok
+#include "mmgr/span/span.h"     // protocore_span, span.ok
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -72,9 +72,9 @@ static size_t natd_hash(const uint8_t *init_spi, const uint8_t *resp_spi, const 
         protocore_secure_release(mark);
         return 0;
     }
-    Sha1.hash_args.data = in;
-    Sha1.hash_args.len = n;
-    Sha1.hash_args.out = out;
+    Sha1V.hash_args.data = in;
+    Sha1V.hash_args.len = n;
+    Sha1V.hash_args.out = out;
     Sha1.hash(w.buf);
     protocore_secure_release(mark);
     return PROTOCORE_IKE_NATD_HASH_LEN;

@@ -81,14 +81,14 @@ static void kexhash_update(uint8_t *restrict work)
     SshKexHashCtx *ctx = KEXHASH_CTX(work);
     if (ctx->is512)
     {
-        Sha512.update_args.data = SshKexHash.update_args.data;
-        Sha512.update_args.len = SshKexHash.update_args.len;
+        Sha512V.update_args.data = SshKexHash.update_args.data;
+        Sha512V.update_args.len = SshKexHash.update_args.len;
         Sha512.update(KEXHASH_HASH(work));
     }
     else
     {
-        Sha256.update_args.data = SshKexHash.update_args.data;
-        Sha256.update_args.len = SshKexHash.update_args.len;
+        Sha256V.update_args.data = SshKexHash.update_args.data;
+        Sha256V.update_args.len = SshKexHash.update_args.len;
         Sha256.update(KEXHASH_HASH(work));
     }
     SshKexHash.ok = PROTO_TRUE;
@@ -104,13 +104,13 @@ static void kexhash_final(uint8_t *restrict work)
     SshKexHashCtx *ctx = KEXHASH_CTX(work);
     if (ctx->is512)
     {
-        Sha512.final_args.out = SshKexHash.final_args.out;
+        Sha512V.final_args.out = SshKexHash.final_args.out;
         Sha512.final(KEXHASH_HASH(work));
         SshKexHash.len = PROTOCORE_SHA512_DIGEST_LEN;
     }
     else
     {
-        Sha256.final_args.out = SshKexHash.final_args.out;
+        Sha256V.final_args.out = SshKexHash.final_args.out;
         Sha256.final(KEXHASH_HASH(work));
         SshKexHash.len = PROTOCORE_SHA256_DIGEST_LEN;
     }

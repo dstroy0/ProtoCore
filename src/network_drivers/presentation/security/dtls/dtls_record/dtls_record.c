@@ -104,11 +104,11 @@ static void dtls_record_keys_derive(uint8_t *restrict work)
         return; // unkeyed: every protect/unprotect over these keys refuses
     }
     expand_label(ws.buf, secret, "key", k.buf, PROTOCORE_AES128GCM_KEY_LEN);
-    Aes128Gcm.key_args.key = k.buf;
+    Aes128GcmV.key_args.key = k.buf;
     Aes128Gcm.key_init(out->gcm);
     expand_label(ws.buf, secret, "iv", out->iv, sizeof(out->iv));
     expand_label(ws.buf, secret, "sn", snk.buf, PROTOCORE_AES128GCM_KEY_LEN);
-    Aes128Gcm.block_key_args.key = snk.buf;
+    Aes128GcmV.block_key_args.key = snk.buf;
     Aes128Gcm.block_init(out->gcm);
     protocore_secure_release(mark);
 }
@@ -247,13 +247,13 @@ static void dtls_record_protect(uint8_t *restrict work)
     build_nonce(keys->iv, seq, nonce);
     // AAD = the whole unified header (including any connection id) carrying the plaintext sequence
     // number (before §4.2.3 encryption).
-    Aes128Gcm.seal_args.nonce = nonce;
-    Aes128Gcm.seal_args.aad = out;
-    Aes128Gcm.seal_args.aad_len = hdr_len;
-    Aes128Gcm.seal_args.pt = out + hdr_len;
-    Aes128Gcm.seal_args.pt_len = inner_len;
-    Aes128Gcm.seal_args.ct_out = out + hdr_len;
-    Aes128Gcm.seal_args.tag_out = out + hdr_len + inner_len;
+    Aes128GcmV.seal_args.nonce = nonce;
+    Aes128GcmV.seal_args.aad = out;
+    Aes128GcmV.seal_args.aad_len = hdr_len;
+    Aes128GcmV.seal_args.pt = out + hdr_len;
+    Aes128GcmV.seal_args.pt_len = inner_len;
+    Aes128GcmV.seal_args.ct_out = out + hdr_len;
+    Aes128GcmV.seal_args.tag_out = out + hdr_len + inner_len;
     Aes128Gcm.seal(keys->gcm);
 
     // Encrypt the sequence number (RFC 9147 §4.2.3): mask = AES-ECB(sn_key, ciphertext[0..15]).
@@ -261,8 +261,8 @@ static void dtls_record_protect(uint8_t *restrict work)
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here
     // costs ~556 cycles per record plus a pool borrow and wipe, independent of record size.
     uint8_t mask[16];
-    Aes128Gcm.block_args.in = out + hdr_len;
-    Aes128Gcm.block_args.out = mask;
+    Aes128GcmV.block_args.in = out + hdr_len;
+    Aes128GcmV.block_args.out = mask;
     Aes128Gcm.block_encrypt(keys->gcm);
     out[seq_off] ^= mask[0];
     out[seq_off + 1] ^= mask[1];
@@ -364,8 +364,8 @@ static void dtls_record_unprotect(uint8_t *restrict work)
     // The sequence-number context is already keyed and lives in the key material; rebuilding it here
     // costs ~556 cycles per record plus a pool borrow and wipe, independent of record size.
     uint8_t mask[16];
-    Aes128Gcm.block_args.in = enc;
-    Aes128Gcm.block_args.out = mask;
+    Aes128GcmV.block_args.in = enc;
+    Aes128GcmV.block_args.out = mask;
     Aes128Gcm.block_encrypt(keys->gcm);
     uint64_t trunc = 0;
     for (size_t i = 0; i < seq_len; i++)
@@ -394,15 +394,15 @@ static void dtls_record_unprotect(uint8_t *restrict work)
     uint8_t nonce[12];
     build_nonce(keys->iv, full_seq, nonce);
     const size_t pt_len = inner_len;
-    Aes128Gcm.open_args.nonce = nonce;
-    Aes128Gcm.open_args.aad = hdr;
-    Aes128Gcm.open_args.aad_len = hdr_len;
-    Aes128Gcm.open_args.ct = enc;
-    Aes128Gcm.open_args.ct_len = pt_len;
-    Aes128Gcm.open_args.tag = enc + pt_len;
-    Aes128Gcm.open_args.out = out;
+    Aes128GcmV.open_args.nonce = nonce;
+    Aes128GcmV.open_args.aad = hdr;
+    Aes128GcmV.open_args.aad_len = hdr_len;
+    Aes128GcmV.open_args.ct = enc;
+    Aes128GcmV.open_args.ct_len = pt_len;
+    Aes128GcmV.open_args.tag = enc + pt_len;
+    Aes128GcmV.open_args.out = out;
     Aes128Gcm.open(keys->gcm);
-    if (!Aes128Gcm.ok)
+    if (!Aes128GcmV.ok)
     {
         DtlsRecord.ok = PROTO_FALSE;
         return;

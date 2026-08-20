@@ -85,7 +85,6 @@ static size_t build_frame(uint8_t *dst, WsOpcode opcode, proto_bool fin, const u
     return pos;
 }
 
-
 void setUp()
 {
     Ws.init(protocore_ws_span());
@@ -105,9 +104,9 @@ void tearDown()
 void test_sha1_empty_string()
 {
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1.hash_args.data = (const uint8_t *)"";
-    Sha1.hash_args.len = 0;
-    Sha1.hash_args.out = digest;
+    Sha1V.hash_args.data = (const uint8_t *)"";
+    Sha1V.hash_args.len = 0;
+    Sha1V.hash_args.out = digest;
     Sha1.hash(tw);
     const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xDA, 0x39, 0xA3, 0xEE, 0x5E, 0x6B, 0x4B, 0x0D, 0x32, 0x55,
                                                          0xBF, 0xEF, 0x95, 0x60, 0x18, 0x90, 0xAF, 0xD8, 0x07, 0x09};
@@ -117,9 +116,9 @@ void test_sha1_empty_string()
 void test_sha1_abc()
 {
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1.hash_args.data = (const uint8_t *)"abc";
-    Sha1.hash_args.len = 3;
-    Sha1.hash_args.out = digest;
+    Sha1V.hash_args.data = (const uint8_t *)"abc";
+    Sha1V.hash_args.len = 3;
+    Sha1V.hash_args.out = digest;
     Sha1.hash(tw);
     const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xA9, 0x99, 0x3E, 0x36, 0x47, 0x06, 0x81, 0x6A, 0xBA, 0x3E,
                                                          0x25, 0x71, 0x78, 0x50, 0xC2, 0x6C, 0x9C, 0xD0, 0xD8, 0x9D};
@@ -131,9 +130,9 @@ void test_sha1_rfc6455_handshake_key()
 
     const char *input = "dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     uint8_t digest[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1.hash_args.data = (const uint8_t *)input;
-    Sha1.hash_args.len = strlen(input);
-    Sha1.hash_args.out = digest;
+    Sha1V.hash_args.data = (const uint8_t *)input;
+    Sha1V.hash_args.len = strlen(input);
+    Sha1V.hash_args.out = digest;
     Sha1.hash(tw);
 
     const uint8_t expected[PROTOCORE_SHA1_DIGEST_LEN] = {0xB3, 0x7A, 0x4F, 0x2C, 0xC0, 0x62, 0x4F, 0x16, 0x90, 0xF6,
@@ -144,13 +143,13 @@ void test_sha1_rfc6455_handshake_key()
 void test_sha1_different_inputs_different_digests()
 {
     uint8_t d1[PROTOCORE_SHA1_DIGEST_LEN], d2[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1.hash_args.data = (const uint8_t *)"abc";
-    Sha1.hash_args.len = 3;
-    Sha1.hash_args.out = d1;
+    Sha1V.hash_args.data = (const uint8_t *)"abc";
+    Sha1V.hash_args.len = 3;
+    Sha1V.hash_args.out = d1;
     Sha1.hash(tw);
-    Sha1.hash_args.data = (const uint8_t *)"abd";
-    Sha1.hash_args.len = 3;
-    Sha1.hash_args.out = d2;
+    Sha1V.hash_args.data = (const uint8_t *)"abd";
+    Sha1V.hash_args.len = 3;
+    Sha1V.hash_args.out = d2;
     Sha1.hash(tw);
     TEST_ASSERT_NOT_EQUAL(0, memcmp(d1, d2, PROTOCORE_SHA1_DIGEST_LEN));
 }

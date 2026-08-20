@@ -50,44 +50,44 @@ static_assert(MLKEM_OFF_SHA3 + PROTOCORE_SHA3_BORROW <= PROTOCORE_MLKEM_BORROW,
 // H: one SHA3-256 through the Sha3 namespace.
 static void mk_sha3_256(uint8_t *restrict work, uint8_t *out, const uint8_t *in, size_t inlen)
 {
-    Sha3.digest_args.out = out;
-    Sha3.digest_args.in = in;
-    Sha3.digest_args.inlen = inlen;
+    Sha3V.digest_args.out = out;
+    Sha3V.digest_args.in = in;
+    Sha3V.digest_args.inlen = inlen;
     Sha3.sha3_256(MLKEM_SHA3(work));
 }
 
 // G: one SHA3-512 through the Sha3 namespace.
 static void mk_sha3_512(uint8_t *restrict work, uint8_t *out, const uint8_t *in, size_t inlen)
 {
-    Sha3.digest_args.out = out;
-    Sha3.digest_args.in = in;
-    Sha3.digest_args.inlen = inlen;
+    Sha3V.digest_args.out = out;
+    Sha3V.digest_args.in = in;
+    Sha3V.digest_args.inlen = inlen;
     Sha3.sha3_512(MLKEM_SHA3(work));
 }
 
 // PRF / J: one SHAKE256 run through the Sha3 namespace.
 static void mk_shake256(uint8_t *restrict work, uint8_t *out, size_t outlen, const uint8_t *in, size_t inlen)
 {
-    Sha3.xof_args.out = out;
-    Sha3.xof_args.outlen = outlen;
-    Sha3.xof_args.in = in;
-    Sha3.xof_args.inlen = inlen;
+    Sha3V.xof_args.out = out;
+    Sha3V.xof_args.outlen = outlen;
+    Sha3V.xof_args.in = in;
+    Sha3V.xof_args.inlen = inlen;
     Sha3.shake256(MLKEM_SHA3(work));
 }
 
 // The matrix XOF: absorb the seed once, then squeeze repeatedly out of the same region.
 static void mk_shake128_absorb(uint8_t *restrict work, const uint8_t *in, size_t inlen)
 {
-    Sha3.shake128_absorb_args.in = in;
-    Sha3.shake128_absorb_args.inlen = inlen;
+    Sha3V.shake128_absorb_args.in = in;
+    Sha3V.shake128_absorb_args.inlen = inlen;
     Sha3.shake128_absorb(MLKEM_SHA3(work));
 }
 
 // One pull from the running XOF, permuting between blocks.
 static void mk_squeeze(uint8_t *restrict work, uint8_t *out, size_t outlen)
 {
-    Sha3.squeeze_args.out = out;
-    Sha3.squeeze_args.outlen = outlen;
+    Sha3V.squeeze_args.out = out;
+    Sha3V.squeeze_args.outlen = outlen;
     Sha3.squeeze(MLKEM_SHA3(work));
 }
 

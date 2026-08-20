@@ -115,15 +115,15 @@ static void empty_hash(proto_bool is384, uint8_t *work, uint8_t *out)
 {
     if (is384)
     {
-        Sha384.hash_args.data = NULL;
-        Sha384.hash_args.len = 0;
-        Sha384.hash_args.out = out;
+        Sha384V.hash_args.data = NULL;
+        Sha384V.hash_args.len = 0;
+        Sha384V.hash_args.out = out;
         Sha384.hash(work);
         return;
     }
-    Sha256.hash_args.data = NULL;
-    Sha256.hash_args.len = 0;
-    Sha256.hash_args.out = out;
+    Sha256V.hash_args.data = NULL;
+    Sha256V.hash_args.len = 0;
+    Sha256V.hash_args.out = out;
     Sha256.hash(work);
 }
 
@@ -254,13 +254,13 @@ static void ks_transcript_update(uint8_t *restrict work)
 {
     if (Tls13Ks.bind.ks->is384)
     {
-        Sha384.update_args.data = Tls13Ks.transcript_args.data;
-        Sha384.update_args.len = Tls13Ks.transcript_args.len;
+        Sha384V.update_args.data = Tls13Ks.transcript_args.data;
+        Sha384V.update_args.len = Tls13Ks.transcript_args.len;
         Sha384.update(work);
         return;
     }
-    Sha256.update_args.data = Tls13Ks.transcript_args.data;
-    Sha256.update_args.len = Tls13Ks.transcript_args.len;
+    Sha256V.update_args.data = Tls13Ks.transcript_args.data;
+    Sha256V.update_args.len = Tls13Ks.transcript_args.len;
     Sha256.update(work);
 }
 
@@ -270,11 +270,11 @@ static void ks_transcript_peek(uint8_t *restrict work)
 {
     if (Tls13Ks.bind.ks->is384)
     {
-        Sha384.final_args.out = Tls13Ks.transcript_args.out;
+        Sha384V.final_args.out = Tls13Ks.transcript_args.out;
         Sha384.final(work);
         return;
     }
-    Sha256.final_args.out = Tls13Ks.transcript_args.out;
+    Sha256V.final_args.out = Tls13Ks.transcript_args.out;
     Sha256.final(work);
 }
 

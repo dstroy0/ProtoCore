@@ -175,18 +175,19 @@ static void sha1_run(uint8_t *restrict work, const uint8_t *data, size_t len, ui
     }
 }
 
-static void sha1_hash(uint8_t *restrict work)
+void protocore_sha1_hash(uint8_t *restrict work)
 {
-    if (!Sha1.hash_args.out)
+    if (!Sha1V.hash_args.out)
     {
-        Sha1.ok = PROTO_FALSE;
+        Sha1V.ok = PROTO_FALSE;
         return;
     }
-    sha1_run(work, Sha1.hash_args.data, Sha1.hash_args.len, Sha1.hash_args.out);
-    Sha1.ok = PROTO_TRUE;
+    sha1_run(work, Sha1V.hash_args.data, Sha1V.hash_args.len, Sha1V.hash_args.out);
+    Sha1V.ok = PROTO_TRUE;
 }
 
-Sha1Ns Sha1 = {.hash = sha1_hash};
+/** @brief The operands and the outcome. */
+Sha1Vars Sha1V;
 
 PROTOCORE_END_DECLS
 

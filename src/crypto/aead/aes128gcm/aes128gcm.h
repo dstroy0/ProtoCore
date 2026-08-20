@@ -148,9 +148,15 @@ typedef struct
     Aes128GcmOpenArgs open_args;
     Aes128GcmBlockKeyArgs block_key_args;
     Aes128GcmBlockArgs block_args;
-
     proto_bool ok;
+} Aes128GcmVars;
 
+/** @brief The operands and the outcome. */
+extern Aes128GcmVars Aes128GcmV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const key_init)(uint8_t *restrict work);
     void (*const key_wipe)(uint8_t *restrict work);
     void (*const seal)(uint8_t *restrict work);
@@ -160,8 +166,29 @@ typedef struct
     void (*const block_wipe)(uint8_t *restrict work);
 } Aes128GcmNs;
 
-/** @brief The one symbol this module exports. */
-extern Aes128GcmNs Aes128Gcm;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Aes128GcmV or a region of the borrow at a fixed offset.
+void protocore_aes128_gcm_key_init(uint8_t *restrict work);
+void protocore_aes128_gcm_key_wipe(uint8_t *restrict work);
+void protocore_aes128_gcm_seal(uint8_t *restrict work);
+void protocore_aes128_gcm_open(uint8_t *restrict work);
+void protocore_aes128_gcm_block_init(uint8_t *restrict work);
+void protocore_aes128_gcm_block_encrypt(uint8_t *restrict work);
+void protocore_aes128_gcm_block_wipe(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Aes128Gcm.key_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Aes128GcmNs Aes128Gcm __attribute__((unused)) = {
+    .key_init = protocore_aes128_gcm_key_init,
+    .key_wipe = protocore_aes128_gcm_key_wipe,
+    .seal = protocore_aes128_gcm_seal,
+    .open = protocore_aes128_gcm_open,
+    .block_init = protocore_aes128_gcm_block_init,
+    .block_encrypt = protocore_aes128_gcm_block_encrypt,
+    .block_wipe = protocore_aes128_gcm_block_wipe,
+};
 
 PROTOCORE_END_DECLS
 

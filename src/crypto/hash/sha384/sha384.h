@@ -93,17 +93,38 @@ typedef struct
     Sha384UpdateArgs update_args;
     Sha384FinalArgs final_args;
     Sha384HashArgs hash_args;
-
     proto_bool ok;
+} Sha384Vars;
 
+/** @brief The operands and the outcome. */
+extern Sha384Vars Sha384V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
     void (*const final)(uint8_t *restrict work);
     void (*const hash)(uint8_t *restrict work);
 } Sha384Ns;
 
-/** @brief The one symbol this module exports. */
-extern Sha384Ns Sha384;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Sha384V or a region of the borrow at a fixed offset.
+void protocore_sha384_init(uint8_t *restrict work);
+void protocore_sha384_update(uint8_t *restrict work);
+void protocore_sha384_final(uint8_t *restrict work);
+void protocore_sha384_hash(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sha384.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Sha384Ns Sha384 __attribute__((unused)) = {
+    .init = protocore_sha384_init,
+    .update = protocore_sha384_update,
+    .final = protocore_sha384_final,
+    .hash = protocore_sha384_hash,
+};
 
 PROTOCORE_END_DECLS
 

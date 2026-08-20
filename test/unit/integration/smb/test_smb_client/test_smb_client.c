@@ -207,11 +207,11 @@ static proto_bool mock_derive_key(const uint8_t *msg, size_t mlen, const SmbConf
     {
         return PROTO_FALSE;
     }
-    Md.hmac_args.key = owf;
-    Md.hmac_args.key_len = 16;
-    Md.hmac_args.msg = auth + nt_off;
-    Md.hmac_args.msg_len = 16;
-    Md.hmac_args.out = key;
+    MdV.hmac_args.key = owf;
+    MdV.hmac_args.key_len = 16;
+    MdV.hmac_args.msg = auth + nt_off;
+    MdV.hmac_args.msg_len = 16;
+    MdV.hmac_args.out = key;
     Md.hmac_md5(tw);
     return PROTO_TRUE;
 }
@@ -483,8 +483,7 @@ static int mock_send(void *c, const uint8_t *d, size_t n)
                         Smb2.derive_encryption_keys_args.session_key = base_key;
                         Smb2.derive_encryption_keys_args.dialect = (uint16_t)SMB2_DIALECT_0311;
                         Smb2.derive_encryption_keys_args.preauth = m->preauth.hash;
-                        Smb2.derive_encryption_keys_args.key_len =
-                            protocore_smb2_cipher_key_len(m->cipher);
+                        Smb2.derive_encryption_keys_args.key_len = protocore_smb2_cipher_key_len(m->cipher);
                         Smb2.derive_encryption_keys_args.out_c2s = m->enc_c2s;
                         Smb2.derive_encryption_keys_args.out_s2c = m->enc_s2c;
                         Smb2.derive_encryption_keys(smb2_work);

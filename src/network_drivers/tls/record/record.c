@@ -13,9 +13,9 @@
 #include "network_drivers/tls/record/record.h"
 
 #include "crypto/aead/aes128gcm/aes128gcm.h" // Aes128Gcm - the 0x1301 record AEAD
-#include "crypto/aead/aesgcm/aesgcm.h"    // AesGcm - the 0x1302 record AEAD
-#include "mmgr/protomem/protomem.h"         // mem.cpy / mem.zero
-#include "mmgr/secure/secure.h"           // the secure pool: key/iv material during derivation
+#include "crypto/aead/aesgcm/aesgcm.h"       // AesGcm - the 0x1302 record AEAD
+#include "mmgr/protomem/protomem.h"          // mem.cpy / mem.zero
+#include "mmgr/secure/secure.h"              // the secure pool: key/iv material during derivation
 #include "network_drivers/tls/key_schedule/key_schedule.h"
 
 /**
@@ -73,13 +73,13 @@ static proto_bool aead_key_init(TlsCipher c, uint8_t *ctx, const uint8_t *key)
 {
     if (c == TLS_CIPHER_AES_256_GCM_SHA384)
     {
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(ctx);
-        return AesGcm.ok;
+        return AesGcmV.ok;
     }
-    Aes128Gcm.key_args.key = key;
+    Aes128GcmV.key_args.key = key;
     Aes128Gcm.key_init(ctx);
-    return Aes128Gcm.ok;
+    return Aes128GcmV.ok;
 }
 
 static void aead_key_wipe(TlsCipher c, uint8_t *ctx)
@@ -98,25 +98,25 @@ static proto_bool aead_open(TlsRecordKeys *keys, const uint8_t *aad, size_t aad_
 {
     if (keys->cipher == TLS_CIPHER_AES_256_GCM_SHA384)
     {
-        AesGcm.open_args.nonce = keys->nonce;
-        AesGcm.open_args.aad = aad;
-        AesGcm.open_args.aad_len = aad_len;
-        AesGcm.open_args.ct = ct;
-        AesGcm.open_args.ct_len = ct_len;
-        AesGcm.open_args.tag = tag;
-        AesGcm.open_args.out = out;
+        AesGcmV.open_args.nonce = keys->nonce;
+        AesGcmV.open_args.aad = aad;
+        AesGcmV.open_args.aad_len = aad_len;
+        AesGcmV.open_args.ct = ct;
+        AesGcmV.open_args.ct_len = ct_len;
+        AesGcmV.open_args.tag = tag;
+        AesGcmV.open_args.out = out;
         AesGcm.open(keys->gcm);
-        return AesGcm.ok;
+        return AesGcmV.ok;
     }
-    Aes128Gcm.open_args.nonce = keys->nonce;
-    Aes128Gcm.open_args.aad = aad;
-    Aes128Gcm.open_args.aad_len = aad_len;
-    Aes128Gcm.open_args.ct = ct;
-    Aes128Gcm.open_args.ct_len = ct_len;
-    Aes128Gcm.open_args.tag = tag;
-    Aes128Gcm.open_args.out = out;
+    Aes128GcmV.open_args.nonce = keys->nonce;
+    Aes128GcmV.open_args.aad = aad;
+    Aes128GcmV.open_args.aad_len = aad_len;
+    Aes128GcmV.open_args.ct = ct;
+    Aes128GcmV.open_args.ct_len = ct_len;
+    Aes128GcmV.open_args.tag = tag;
+    Aes128GcmV.open_args.out = out;
     Aes128Gcm.open(keys->gcm);
-    return Aes128Gcm.ok;
+    return Aes128GcmV.ok;
 }
 
 // Seal pt_len octets in place under the bound key, tag detached.
@@ -125,25 +125,25 @@ static proto_bool aead_seal(TlsRecordKeys *keys, const uint8_t *aad, size_t aad_
 {
     if (keys->cipher == TLS_CIPHER_AES_256_GCM_SHA384)
     {
-        AesGcm.seal_args.nonce = keys->nonce;
-        AesGcm.seal_args.aad = aad;
-        AesGcm.seal_args.aad_len = aad_len;
-        AesGcm.seal_args.pt = pt;
-        AesGcm.seal_args.pt_len = pt_len;
-        AesGcm.seal_args.ct_out = pt;
-        AesGcm.seal_args.tag_out = tag_out;
+        AesGcmV.seal_args.nonce = keys->nonce;
+        AesGcmV.seal_args.aad = aad;
+        AesGcmV.seal_args.aad_len = aad_len;
+        AesGcmV.seal_args.pt = pt;
+        AesGcmV.seal_args.pt_len = pt_len;
+        AesGcmV.seal_args.ct_out = pt;
+        AesGcmV.seal_args.tag_out = tag_out;
         AesGcm.seal(keys->gcm);
-        return AesGcm.ok;
+        return AesGcmV.ok;
     }
-    Aes128Gcm.seal_args.nonce = keys->nonce;
-    Aes128Gcm.seal_args.aad = aad;
-    Aes128Gcm.seal_args.aad_len = aad_len;
-    Aes128Gcm.seal_args.pt = pt;
-    Aes128Gcm.seal_args.pt_len = pt_len;
-    Aes128Gcm.seal_args.ct_out = pt;
-    Aes128Gcm.seal_args.tag_out = tag_out;
+    Aes128GcmV.seal_args.nonce = keys->nonce;
+    Aes128GcmV.seal_args.aad = aad;
+    Aes128GcmV.seal_args.aad_len = aad_len;
+    Aes128GcmV.seal_args.pt = pt;
+    Aes128GcmV.seal_args.pt_len = pt_len;
+    Aes128GcmV.seal_args.ct_out = pt;
+    Aes128GcmV.seal_args.tag_out = tag_out;
     Aes128Gcm.seal(keys->gcm);
-    return Aes128Gcm.ok;
+    return Aes128GcmV.ok;
 }
 
 // Write the 5-byte record header: type, legacy_record_version, and the body length.

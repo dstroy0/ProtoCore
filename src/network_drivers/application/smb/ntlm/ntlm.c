@@ -13,9 +13,9 @@
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/application/smb/ntlm/ntlm.h"
 
-#include "crypto/hash/md/md.h" // Md: MD4, MD5 and HMAC-MD5
-#include "mmgr/secure/secure.h"    // the pool the digest borrow comes from
-#include "mmgr/span/span.h"      // protocore_span, span.ok
+#include "crypto/hash/md/md.h"  // Md: MD4, MD5 and HMAC-MD5
+#include "mmgr/secure/secure.h" // the pool the digest borrow comes from
+#include "mmgr/span/span.h"     // protocore_span, span.ok
 
 PROTOCORE_BEGIN_DECLS
 
@@ -41,11 +41,11 @@ static void ntlm_nt_hash(uint8_t *restrict work)
     for (const char *p = password; *p; p++)
     {
         uint8_t pair[2] = {(uint8_t)*p, 0}; // UTF-16LE (ASCII/UTF-8 code unit + high byte 0)
-        Md.update_args.data = pair;
-        Md.update_args.len = 2;
+        MdV.update_args.data = pair;
+        MdV.update_args.len = 2;
         Md.update(w.buf);
     }
-    Md.final_args.out = nt_hash;
+    MdV.final_args.out = nt_hash;
     Md.final(w.buf);
     protocore_secure_release(mark);
 }
@@ -93,11 +93,11 @@ static void ntlm_ntowfv2(uint8_t *restrict work)
         Ntlm.ok = PROTO_FALSE;
         return;
     }
-    Md.hmac_args.key = nt_hash;
-    Md.hmac_args.key_len = 16;
-    Md.hmac_args.msg = buf;
-    Md.hmac_args.msg_len = n;
-    Md.hmac_args.out = owf;
+    MdV.hmac_args.key = nt_hash;
+    MdV.hmac_args.key_len = 16;
+    MdV.hmac_args.msg = buf;
+    MdV.hmac_args.msg_len = n;
+    MdV.hmac_args.out = owf;
     Md.hmac_md5(w.buf);
     protocore_secure_release(mark);
     Ntlm.ok = PROTO_TRUE;
@@ -125,28 +125,28 @@ static void protocore_hmac_md5_2(const uint8_t key[16], const uint8_t *m1, size_
         return;
     }
     Md.md5_init(w.buf);
-    Md.update_args.data = ipad;
-    Md.update_args.len = 64;
+    MdV.update_args.data = ipad;
+    MdV.update_args.len = 64;
     Md.update(w.buf);
-    Md.update_args.data = m1;
-    Md.update_args.len = l1;
+    MdV.update_args.data = m1;
+    MdV.update_args.len = l1;
     Md.update(w.buf);
     if (m2 && l2)
     {
-        Md.update_args.data = m2;
-        Md.update_args.len = l2;
+        MdV.update_args.data = m2;
+        MdV.update_args.len = l2;
         Md.update(w.buf);
     }
-    Md.final_args.out = inner;
+    MdV.final_args.out = inner;
     Md.final(w.buf);
     Md.md5_init(w.buf);
-    Md.update_args.data = opad;
-    Md.update_args.len = 64;
+    MdV.update_args.data = opad;
+    MdV.update_args.len = 64;
     Md.update(w.buf);
-    Md.update_args.data = inner;
-    Md.update_args.len = 16;
+    MdV.update_args.data = inner;
+    MdV.update_args.len = 16;
     Md.update(w.buf);
-    Md.final_args.out = out;
+    MdV.final_args.out = out;
     Md.final(w.buf);
     protocore_secure_release(mark);
 }
@@ -198,11 +198,11 @@ static void ntlm_v2_response(uint8_t *restrict work)
         protocore_span w = protocore_secure_span(PROTOCORE_MD_BORROW, 0);
         if (span.ok(w))
         {
-            Md.hmac_args.key = owf;
-            Md.hmac_args.key_len = 16;
-            Md.hmac_args.msg = ntproof;
-            Md.hmac_args.msg_len = 16;
-            Md.hmac_args.out = session_key;
+            MdV.hmac_args.key = owf;
+            MdV.hmac_args.key_len = 16;
+            MdV.hmac_args.msg = ntproof;
+            MdV.hmac_args.msg_len = 16;
+            MdV.hmac_args.out = session_key;
             Md.hmac_md5(w.buf);
         }
         protocore_secure_release(mark);
@@ -315,28 +315,28 @@ static void ntlm_mic(uint8_t *restrict work)
     }
     uint8_t inner[16];
     Md.md5_init(w.buf);
-    Md.update_args.data = ipad;
-    Md.update_args.len = 64;
+    MdV.update_args.data = ipad;
+    MdV.update_args.len = 64;
     Md.update(w.buf);
-    Md.update_args.data = neg;
-    Md.update_args.len = neg_len;
+    MdV.update_args.data = neg;
+    MdV.update_args.len = neg_len;
     Md.update(w.buf);
-    Md.update_args.data = chal;
-    Md.update_args.len = chal_len;
+    MdV.update_args.data = chal;
+    MdV.update_args.len = chal_len;
     Md.update(w.buf);
-    Md.update_args.data = auth;
-    Md.update_args.len = auth_len;
+    MdV.update_args.data = auth;
+    MdV.update_args.len = auth_len;
     Md.update(w.buf);
-    Md.final_args.out = inner;
+    MdV.final_args.out = inner;
     Md.final(w.buf);
     Md.md5_init(w.buf);
-    Md.update_args.data = opad;
-    Md.update_args.len = 64;
+    MdV.update_args.data = opad;
+    MdV.update_args.len = 64;
     Md.update(w.buf);
-    Md.update_args.data = inner;
-    Md.update_args.len = 16;
+    MdV.update_args.data = inner;
+    MdV.update_args.len = 16;
     Md.update(w.buf);
-    Md.final_args.out = out;
+    MdV.final_args.out = out;
     Md.final(w.buf);
     protocore_secure_release(mark);
 }

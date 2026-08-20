@@ -15,13 +15,13 @@
 
 #if PROTOCORE_ENABLE_IKEV2
 
-#include "crypto/aead/aesgcm/aesgcm.h"           // the Encrypted payload's AEAD (RFC 5282)
+#include "crypto/aead/aesgcm/aesgcm.h"               // the Encrypted payload's AEAD (RFC 5282)
 #include "crypto/asymmetric/curve25519/curve25519.h" // Diffie-Hellman Group Num 31 (RFC 8031)
-#include "crypto/asymmetric/ecdsa/ecdsa.h"      // ECDSA-P256 AUTH (RFC 7427 sec 3)
-#include "crypto/asymmetric/rsa/rsa.h"        // RSA AUTH verify (RFC 7296 sec 3.8)
-#include "crypto/hash/sha256/sha256.h"           // the COOKIE hash (RFC 7296 sec 2.6)
-#include "crypto/mac/hmac_sha256/hmac_sha256.h"       // the PRF: PRF_HMAC_SHA2_256 (RFC 4868 sec 4)
-#include "mmgr/secure/secure.h"                  // the per-call AEAD context borrow
+#include "crypto/asymmetric/ecdsa/ecdsa.h"           // ECDSA-P256 AUTH (RFC 7427 sec 3)
+#include "crypto/asymmetric/rsa/rsa.h"               // RSA AUTH verify (RFC 7296 sec 3.8)
+#include "crypto/hash/sha256/sha256.h"               // the COOKIE hash (RFC 7296 sec 2.6)
+#include "crypto/mac/hmac_sha256/hmac_sha256.h"      // the PRF: PRF_HMAC_SHA2_256 (RFC 4868 sec 4)
+#include "mmgr/secure/secure.h"                      // the per-call AEAD context borrow
 
 // ---------------------------------------------------------------------------
 // Literals
@@ -864,27 +864,27 @@ static size_t ike_cookie_compute(uint8_t *work, uint8_t version, const uint8_t *
     Sha256.init(work);
     if (ni_len)
     {
-        Sha256.update_args.data = ni;
-        Sha256.update_args.len = ni_len;
+        Sha256V.update_args.data = ni;
+        Sha256V.update_args.len = ni_len;
         Sha256.update(work);
     }
     if (ipi_len)
     {
-        Sha256.update_args.data = ipi;
-        Sha256.update_args.len = ipi_len;
+        Sha256V.update_args.data = ipi;
+        Sha256V.update_args.len = ipi_len;
         Sha256.update(work);
     }
-    Sha256.update_args.data = spii;
-    Sha256.update_args.len = PROTOCORE_IKE_SPI_LEN;
+    Sha256V.update_args.data = spii;
+    Sha256V.update_args.len = PROTOCORE_IKE_SPI_LEN;
     Sha256.update(work);
     if (secret_len)
     {
-        Sha256.update_args.data = secret;
-        Sha256.update_args.len = secret_len;
+        Sha256V.update_args.data = secret;
+        Sha256V.update_args.len = secret_len;
         Sha256.update(work);
     }
     out[0] = version;
-    Sha256.final_args.out = out + 1;
+    Sha256V.final_args.out = out + 1;
     Sha256.final(work);
     return PROTOCORE_IKE_COOKIE_LEN;
 }
@@ -1596,15 +1596,15 @@ static proto_bool ike_sk_aead_seal(const uint8_t *key, const uint8_t *salt, cons
     {
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.seal_args.nonce = nonce;
-        AesGcm.seal_args.aad = aad;
-        AesGcm.seal_args.aad_len = aad_len;
-        AesGcm.seal_args.pt = pt;
-        AesGcm.seal_args.pt_len = pt_len;
-        AesGcm.seal_args.ct_out = out;
-        AesGcm.seal_args.tag_out = out + pt_len;
+        AesGcmV.seal_args.nonce = nonce;
+        AesGcmV.seal_args.aad = aad;
+        AesGcmV.seal_args.aad_len = aad_len;
+        AesGcmV.seal_args.pt = pt;
+        AesGcmV.seal_args.pt_len = pt_len;
+        AesGcmV.seal_args.ct_out = out;
+        AesGcmV.seal_args.tag_out = out + pt_len;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
@@ -1625,17 +1625,17 @@ static proto_bool ike_sk_aead_open(const uint8_t *key, const uint8_t *salt, cons
     {
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.open_args.nonce = nonce;
-        AesGcm.open_args.aad = aad;
-        AesGcm.open_args.aad_len = aad_len;
-        AesGcm.open_args.ct = ct;
-        AesGcm.open_args.ct_len = ct_len;
-        AesGcm.open_args.tag = icv;
-        AesGcm.open_args.out = out;
+        AesGcmV.open_args.nonce = nonce;
+        AesGcmV.open_args.aad = aad;
+        AesGcmV.open_args.aad_len = aad_len;
+        AesGcmV.open_args.ct = ct;
+        AesGcmV.open_args.ct_len = ct_len;
+        AesGcmV.open_args.tag = icv;
+        AesGcmV.open_args.out = out;
         AesGcm.open(gcm);
-        ok = AesGcm.ok;
+        ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }

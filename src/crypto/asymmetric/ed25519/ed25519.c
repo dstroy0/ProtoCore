@@ -634,9 +634,9 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
 static void ed_expand_seed(uint8_t *restrict work, const uint8_t *seed)
 {
     Ed25519Ctx *ctx = ED25519_CTX(work);
-    Sha512.hash_args.data = seed;
-    Sha512.hash_args.len = PROTOCORE_ED25519_SEED_LEN;
-    Sha512.hash_args.out = ctx->d;
+    Sha512V.hash_args.data = seed;
+    Sha512V.hash_args.len = PROTOCORE_ED25519_SEED_LEN;
+    Sha512V.hash_args.out = ctx->d;
     Sha512.hash(ED25519_SHA(work));
     ctx->d[0] &= 248;
     ctx->d[31] &= 127;
@@ -650,16 +650,16 @@ static void ed_challenge(uint8_t *restrict work, const uint8_t *sig_r, const uin
     Ed25519Ctx *ctx = ED25519_CTX(work);
     uint8_t *sha = ED25519_SHA(work);
     Sha512.init(sha);
-    Sha512.update_args.data = sig_r; // R
-    Sha512.update_args.len = 32;
+    Sha512V.update_args.data = sig_r; // R
+    Sha512V.update_args.len = 32;
     Sha512.update(sha);
-    Sha512.update_args.data = pub; // A
-    Sha512.update_args.len = 32;
+    Sha512V.update_args.data = pub; // A
+    Sha512V.update_args.len = 32;
     Sha512.update(sha);
-    Sha512.update_args.data = msg;
-    Sha512.update_args.len = msg_len;
+    Sha512V.update_args.data = msg;
+    Sha512V.update_args.len = msg_len;
     Sha512.update(sha);
-    Sha512.final_args.out = ctx->h;
+    Sha512V.final_args.out = ctx->h;
     Sha512.final(sha);
     ed_reduce(ctx->h);
 }
@@ -698,13 +698,13 @@ static void ed25519_sign(uint8_t *restrict work)
 
     // r = SHA-512(prefix || M) mod L
     Sha512.init(sha);
-    Sha512.update_args.data = ctx->d + 32;
-    Sha512.update_args.len = 32;
+    Sha512V.update_args.data = ctx->d + 32;
+    Sha512V.update_args.len = 32;
     Sha512.update(sha);
-    Sha512.update_args.data = msg;
-    Sha512.update_args.len = msg_len;
+    Sha512V.update_args.data = msg;
+    Sha512V.update_args.len = msg_len;
     Sha512.update(sha);
-    Sha512.final_args.out = ctx->r;
+    Sha512V.final_args.out = ctx->r;
     Sha512.final(sha);
     ed_reduce(ctx->r);
 

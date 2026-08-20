@@ -516,9 +516,9 @@ static void edge_cache_key_digest(uint8_t *restrict work)
     size_t len = EdgeCache.key_digest_args.len;
     uint8_t *digest = EdgeCache.key_digest_args.digest;
 
-    Sha256.hash_args.data = (const uint8_t *)canon;
-    Sha256.hash_args.len = len;
-    Sha256.hash_args.out = digest;
+    Sha256V.hash_args.data = (const uint8_t *)canon;
+    Sha256V.hash_args.len = len;
+    Sha256V.hash_args.out = digest;
     Sha256.hash(digest_work); // the caller's SHA-256 borrow, PROTOCORE_SHA256_BORROW bytes
 }
 
