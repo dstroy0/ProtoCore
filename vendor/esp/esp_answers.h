@@ -68,7 +68,6 @@
 #define PROTOCORE_HAS_PSRAM 1
 #endif
 
-
 #include "driver/gpio.h"     // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 #include "driver/uart.h"     // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
 #include "esp_cpu.h"         // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - see above
@@ -350,7 +349,6 @@ typedef ip_addr_t protocore_net_ip;
 
 #define protocore_net_igmp_join igmp_joingroup
 #define protocore_net_igmp_leave igmp_leavegroup
-
 
 #ifndef PROTOCORE_HAS_BUS
 #define PROTOCORE_HAS_BUS 1
