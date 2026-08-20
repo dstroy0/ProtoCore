@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`7e09b17`](https://github.com/dstroy0/ProtoCore/commit/7e09b17f22c6d988221886e46a0dd8bdca249e4d))
 - update CHANGELOG.md [skip ci] ([`320de3b`](https://github.com/dstroy0/ProtoCore/commit/320de3b0346624e2eb2b4ca3304c77ed955bb192))
 - update CHANGELOG.md [skip ci] ([`c29483b`](https://github.com/dstroy0/ProtoCore/commit/c29483bb538236abc6b086a4d9a7f58cf5462698))
 - update CHANGELOG.md [skip ci] ([`6c9d173`](https://github.com/dstroy0/ProtoCore/commit/6c9d1737bde0c23f9a31226153f842247c6f5c10))
@@ -398,6 +399,8 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- thread one down to the last stand-in sites ([`a596c5b`](https://github.com/dstroy0/ProtoCore/commit/a596c5b07d446f4e7f606ac4736202b59d57030a))
+- convert shape: say what it guesses and what it must not move ([`924adb3`](https://github.com/dstroy0/ProtoCore/commit/924adb33a35da4e2b8d715bc9fb95cd9d39a9761))
 - clang-format the vendor HAL headers ([`b30003e`](https://github.com/dstroy0/ProtoCore/commit/b30003e64fae7bf562c4b8d8ad84e4dd7f4caba6))
 - black over tools/ ([`dbfa67e`](https://github.com/dstroy0/ProtoCore/commit/dbfa67e3fcc378bdf1938872272ac5acca0620a5))
 - clang-format the 77 files that had drifted ([`a164ee8`](https://github.com/dstroy0/ProtoCore/commit/a164ee883c6f73cf20ac9f91dad341e2e8dbf407))
