@@ -49,35 +49,35 @@ static proto_bool begin(uint16_t pre, uint16_t post, void *ctx)
     cfg.posttrigger_samples = post;
     cfg.sink = on_window;
     cfg.ctx = ctx;
-    TraceCapture.cfg = &cfg;
+    TraceCaptureV.cfg = &cfg;
     TraceCapture.begin(protocore_trace_capture_span());
-    return TraceCapture.ok;
+    return TraceCaptureV.ok;
 }
 
 static uint16_t feed(const uint16_t *s, uint16_t n)
 {
-    TraceCapture.feed.samples = s;
-    TraceCapture.feed.n = n;
+    TraceCaptureV.feed.samples = s;
+    TraceCaptureV.feed.n = n;
     TraceCapture.feed_in(protocore_trace_capture_span());
-    return TraceCapture.accepted;
+    return TraceCaptureV.accepted;
 }
 
 static proto_bool trigger(void)
 {
     TraceCapture.trigger(protocore_trace_capture_span());
-    return TraceCapture.ok;
+    return TraceCaptureV.ok;
 }
 
 static proto_bool capturing(void)
 {
     TraceCapture.capturing(protocore_trace_capture_span());
-    return TraceCapture.ok;
+    return TraceCaptureV.ok;
 }
 
 static protocore_tc_stats stats(void)
 {
     protocore_tc_stats st;
-    TraceCapture.feed.stats = &st;
+    TraceCaptureV.feed.stats = &st;
     TraceCapture.get_stats(protocore_trace_capture_span());
     return st;
 }
@@ -209,18 +209,18 @@ void test_trace_id_counts_completed_windows(void)
 // wider than the static storage.
 void test_arming_is_refused_when_it_cannot_be_honored(void)
 {
-    TraceCapture.cfg = NULL;
+    TraceCaptureV.cfg = NULL;
     TraceCapture.begin(protocore_trace_capture_span());
-    TEST_ASSERT_FALSE(TraceCapture.ok);
+    TEST_ASSERT_FALSE(TraceCaptureV.ok);
 
     static protocore_tc_config cfg;
     cfg.pretrigger_samples = 4;
     cfg.posttrigger_samples = 4;
     cfg.sink = NULL;
     cfg.ctx = NULL;
-    TraceCapture.cfg = &cfg;
+    TraceCaptureV.cfg = &cfg;
     TraceCapture.begin(protocore_trace_capture_span());
-    TEST_ASSERT_FALSE(TraceCapture.ok);
+    TEST_ASSERT_FALSE(TraceCaptureV.ok);
 
     TEST_ASSERT_FALSE(begin(0, 0, NULL)); // no samples on either side of the trigger
 
@@ -330,7 +330,7 @@ void test_a_stats_read_with_no_destination_is_refused(void)
     static const uint16_t s[] = {1, 2};
     (void)feed(s, 2); // nothing armed: two samples dropped
 
-    TraceCapture.feed.stats = NULL;
+    TraceCaptureV.feed.stats = NULL;
     TraceCapture.get_stats(protocore_trace_capture_span());
     TEST_ASSERT_EQUAL_UINT32(2u, stats().samples_dropped);
 }

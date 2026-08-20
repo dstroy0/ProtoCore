@@ -98,19 +98,40 @@ typedef struct
     CsrfSecretArgs secret_args;
     CsrfIssueArgs issue_args;
     CsrfVerifyArgs verify_args;
-
     proto_bool ok;
     int n;
     proto_bool valid;
+} CsrfVars;
 
+/** @brief The operands and the outcome. */
+extern CsrfVars CsrfV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const set_secret)(uint8_t *restrict work);
     void (*const issue)(uint8_t *restrict work);
     void (*const verify)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
 } CsrfNs;
 
-/** @brief The one symbol this module exports. */
-extern CsrfNs Csrf;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CsrfV or a region of the borrow at a fixed offset.
+void protocore_csrf_set_secret(uint8_t *restrict work);
+void protocore_csrf_issue(uint8_t *restrict work);
+void protocore_csrf_verify(uint8_t *restrict work);
+void protocore_csrf_reset(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Csrf.set_secret(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CsrfNs Csrf __attribute__((unused)) = {
+    .set_secret = protocore_csrf_set_secret,
+    .issue = protocore_csrf_issue,
+    .verify = protocore_csrf_verify,
+    .reset = protocore_csrf_reset,
+};
 
 /**
  * @brief The PROTOCORE_CSRF_BORROW bytes the program's issuer runs out of.

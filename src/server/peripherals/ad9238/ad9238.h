@@ -171,18 +171,39 @@ typedef struct
     Ad9238BuildWriteArgs build_write_args;
     Ad9238BuildReadArgs build_read_args;
     Ad9238BuildTransferArgs build_transfer_args;
-
     proto_bool ok;
     size_t n;
+} Ad9238Vars;
 
+/** @brief The operands and the outcome. */
+extern Ad9238Vars Ad9238V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_instruction)(uint8_t *restrict work);
     void (*const build_write)(uint8_t *restrict work);
     void (*const build_read)(uint8_t *restrict work);
     void (*const build_transfer)(uint8_t *restrict work);
 } Ad9238Ns;
 
-/** @brief The one symbol this module exports. */
-extern Ad9238Ns Ad9238;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Ad9238V or a region of the borrow at a fixed offset.
+void protocore_ad9238_build_instruction(uint8_t *restrict work);
+void protocore_ad9238_build_write(uint8_t *restrict work);
+void protocore_ad9238_build_read(uint8_t *restrict work);
+void protocore_ad9238_build_transfer(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ad9238.build_instruction(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Ad9238Ns Ad9238 __attribute__((unused)) = {
+    .build_instruction = protocore_ad9238_build_instruction,
+    .build_write = protocore_ad9238_build_write,
+    .build_read = protocore_ad9238_build_read,
+    .build_transfer = protocore_ad9238_build_transfer,
+};
 
 PROTOCORE_END_DECLS
 

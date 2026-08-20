@@ -41,114 +41,114 @@ void tearDown(void)
 void test_datasheet_status_register_bit_positions(void)
 {
     // every electrode, and nothing else in the two registers.
-    Mpr121.touched_args.status_lo = 0xFF;
-    Mpr121.touched_args.status_hi = 0x0F;
+    Mpr121V.touched_args.status_lo = 0xFF;
+    Mpr121V.touched_args.status_hi = 0x0F;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0FFF, Mpr121.value);
-    Mpr121.touched_args.status_lo = 0x00;
-    Mpr121.touched_args.status_hi = 0x00;
+    TEST_ASSERT_EQUAL_HEX16(0x0FFF, Mpr121V.value);
+    Mpr121V.touched_args.status_lo = 0x00;
+    Mpr121V.touched_args.status_hi = 0x00;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121V.value);
 
     // one electrode at a time, low register.
-    Mpr121.touched_args.status_lo = 0x01;
-    Mpr121.touched_args.status_hi = 0x00;
+    Mpr121V.touched_args.status_lo = 0x01;
+    Mpr121V.touched_args.status_hi = 0x00;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0001, Mpr121.value); // ELE0
-    Mpr121.touched_args.status_lo = 0x80;
-    Mpr121.touched_args.status_hi = 0x00;
+    TEST_ASSERT_EQUAL_HEX16(0x0001, Mpr121V.value); // ELE0
+    Mpr121V.touched_args.status_lo = 0x80;
+    Mpr121V.touched_args.status_hi = 0x00;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0080, Mpr121.value); // ELE7
+    TEST_ASSERT_EQUAL_HEX16(0x0080, Mpr121V.value); // ELE7
     // and high register: ELE8 is D0 of 0x01, so bit 8 of the mask.
-    Mpr121.touched_args.status_lo = 0x00;
-    Mpr121.touched_args.status_hi = 0x01;
+    Mpr121V.touched_args.status_lo = 0x00;
+    Mpr121V.touched_args.status_hi = 0x01;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0100, Mpr121.value); // ELE8
-    Mpr121.touched_args.status_lo = 0x00;
-    Mpr121.touched_args.status_hi = 0x08;
+    TEST_ASSERT_EQUAL_HEX16(0x0100, Mpr121V.value); // ELE8
+    Mpr121V.touched_args.status_lo = 0x00;
+    Mpr121V.touched_args.status_hi = 0x08;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0800, Mpr121.value); // ELE11
+    TEST_ASSERT_EQUAL_HEX16(0x0800, Mpr121V.value); // ELE11
 
     // ELEPROX (D4) and OVCF (D7) are not electrodes and never appear in the mask.
-    Mpr121.touched_args.status_lo = 0x00;
-    Mpr121.touched_args.status_hi = 0x10;
+    Mpr121V.touched_args.status_lo = 0x00;
+    Mpr121V.touched_args.status_hi = 0x10;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121.value);
-    Mpr121.touched_args.status_lo = 0x00;
-    Mpr121.touched_args.status_hi = 0x80;
+    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121V.value);
+    Mpr121V.touched_args.status_lo = 0x00;
+    Mpr121V.touched_args.status_hi = 0x80;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121.value);
-    Mpr121.touched_args.status_lo = 0x00;
-    Mpr121.touched_args.status_hi = 0x90;
+    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121V.value);
+    Mpr121V.touched_args.status_lo = 0x00;
+    Mpr121V.touched_args.status_hi = 0x90;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121V.value);
     // the unused D6 / D5 do not leak in either.
-    Mpr121.touched_args.status_lo = 0x00;
-    Mpr121.touched_args.status_hi = 0x60;
+    Mpr121V.touched_args.status_lo = 0x00;
+    Mpr121V.touched_args.status_hi = 0x60;
     Mpr121.touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000, Mpr121V.value);
 }
 
 // The same two bits, read as their own flags.
 void test_proximity_and_overcurrent_flags(void)
 {
-    Mpr121.proximity_args.status_hi = 0x10;
+    Mpr121V.proximity_args.status_hi = 0x10;
     Mpr121.proximity(protocore_mpr121_span());
-    TEST_ASSERT_TRUE(Mpr121.ok);
-    Mpr121.proximity_args.status_hi = 0x0F;
+    TEST_ASSERT_TRUE(Mpr121V.ok);
+    Mpr121V.proximity_args.status_hi = 0x0F;
     Mpr121.proximity(protocore_mpr121_span());
-    TEST_ASSERT_FALSE(Mpr121.ok); // the four electrode bits are not proximity
-    Mpr121.proximity_args.status_hi = 0x80;
+    TEST_ASSERT_FALSE(Mpr121V.ok); // the four electrode bits are not proximity
+    Mpr121V.proximity_args.status_hi = 0x80;
     Mpr121.proximity(protocore_mpr121_span());
-    TEST_ASSERT_FALSE(Mpr121.ok); // nor is the over-current flag
+    TEST_ASSERT_FALSE(Mpr121V.ok); // nor is the over-current flag
 
-    Mpr121.overcurrent_args.status_hi = 0x80;
+    Mpr121V.overcurrent_args.status_hi = 0x80;
     Mpr121.overcurrent(protocore_mpr121_span());
-    TEST_ASSERT_TRUE(Mpr121.ok);
-    Mpr121.overcurrent_args.status_hi = 0x7F;
+    TEST_ASSERT_TRUE(Mpr121V.ok);
+    Mpr121V.overcurrent_args.status_hi = 0x7F;
     Mpr121.overcurrent(protocore_mpr121_span());
-    TEST_ASSERT_FALSE(Mpr121.ok);
+    TEST_ASSERT_FALSE(Mpr121V.ok);
     // section 5.2: an over-current also clears the electrode bits, so both can be read from one byte
-    Mpr121.overcurrent_args.status_hi = 0x90;
+    Mpr121V.overcurrent_args.status_hi = 0x90;
     Mpr121.overcurrent(protocore_mpr121_span());
-    TEST_ASSERT_TRUE(Mpr121.ok);
-    Mpr121.proximity_args.status_hi = 0x90;
+    TEST_ASSERT_TRUE(Mpr121V.ok);
+    Mpr121V.proximity_args.status_hi = 0x90;
     Mpr121.proximity(protocore_mpr121_span());
-    TEST_ASSERT_TRUE(Mpr121.ok);
+    TEST_ASSERT_TRUE(Mpr121V.ok);
 }
 
 // Bit i of a mask from protocore_mpr121_touched is electrode i, for the twelve the part has.
 void test_is_touched_is_bounded_to_twelve_electrodes(void)
 {
-    Mpr121.touched_args.status_lo = 0xFF;
-    Mpr121.touched_args.status_hi = 0x0F;
+    Mpr121V.touched_args.status_lo = 0xFF;
+    Mpr121V.touched_args.status_hi = 0x0F;
     Mpr121.touched(protocore_mpr121_span());
-    const uint16_t all = Mpr121.value;
+    const uint16_t all = Mpr121V.value;
     for (uint8_t e = 0; e < MPR121_ELECTRODES; e++)
     {
-        Mpr121.is_touched_args.mask = all;
-        Mpr121.is_touched_args.e = e;
+        Mpr121V.is_touched_args.mask = all;
+        Mpr121V.is_touched_args.e = e;
         Mpr121.is_touched(protocore_mpr121_span());
-        TEST_ASSERT_TRUE(Mpr121.ok);
-        Mpr121.is_touched_args.mask = 0x0000;
-        Mpr121.is_touched_args.e = e;
+        TEST_ASSERT_TRUE(Mpr121V.ok);
+        Mpr121V.is_touched_args.mask = 0x0000;
+        Mpr121V.is_touched_args.e = e;
         Mpr121.is_touched(protocore_mpr121_span());
-        TEST_ASSERT_FALSE(Mpr121.ok);
+        TEST_ASSERT_FALSE(Mpr121V.ok);
     }
     // 12 and 15 are the proximity and over-current bit positions of the raw status word: not
     // electrodes, and refused rather than answered from whatever the mask happens to hold.
-    Mpr121.is_touched_args.mask = 0xFFFF;
-    Mpr121.is_touched_args.e = 12;
+    Mpr121V.is_touched_args.mask = 0xFFFF;
+    Mpr121V.is_touched_args.e = 12;
     Mpr121.is_touched(protocore_mpr121_span());
-    TEST_ASSERT_FALSE(Mpr121.ok);
-    Mpr121.is_touched_args.mask = 0xFFFF;
-    Mpr121.is_touched_args.e = 15;
+    TEST_ASSERT_FALSE(Mpr121V.ok);
+    Mpr121V.is_touched_args.mask = 0xFFFF;
+    Mpr121V.is_touched_args.e = 15;
     Mpr121.is_touched(protocore_mpr121_span());
-    TEST_ASSERT_FALSE(Mpr121.ok);
-    Mpr121.is_touched_args.mask = 0xFFFF;
-    Mpr121.is_touched_args.e = 255;
+    TEST_ASSERT_FALSE(Mpr121V.ok);
+    Mpr121V.is_touched_args.mask = 0xFFFF;
+    Mpr121V.is_touched_args.e = 255;
     Mpr121.is_touched(protocore_mpr121_span());
-    TEST_ASSERT_FALSE(Mpr121.ok);
+    TEST_ASSERT_FALSE(Mpr121V.ok);
 
     TEST_ASSERT_EQUAL_INT(12, MPR121_ELECTRODES);
 }
@@ -157,27 +157,27 @@ void test_is_touched_is_bounded_to_twelve_electrodes(void)
 // two bits above it in the MSB register are not part of the reading.
 void test_filtered_data_is_ten_bits(void)
 {
-    Mpr121.word10_args.lsb = 0xFF;
-    Mpr121.word10_args.msb = 0x03;
+    Mpr121V.word10_args.lsb = 0xFF;
+    Mpr121V.word10_args.msb = 0x03;
     Mpr121.word10(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_UINT16(0x03FF, Mpr121.value);
-    Mpr121.word10_args.lsb = 0x00;
-    Mpr121.word10_args.msb = 0x00;
+    TEST_ASSERT_EQUAL_UINT16(0x03FF, Mpr121V.value);
+    Mpr121V.word10_args.lsb = 0x00;
+    Mpr121V.word10_args.msb = 0x00;
     Mpr121.word10(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_UINT16(0x0000, Mpr121.value);
-    Mpr121.word10_args.lsb = 0x00;
-    Mpr121.word10_args.msb = 0x01;
+    TEST_ASSERT_EQUAL_UINT16(0x0000, Mpr121V.value);
+    Mpr121V.word10_args.lsb = 0x00;
+    Mpr121V.word10_args.msb = 0x01;
     Mpr121.word10(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_UINT16(0x0100, Mpr121.value);
-    Mpr121.word10_args.lsb = 0xAB;
-    Mpr121.word10_args.msb = 0x00;
+    TEST_ASSERT_EQUAL_UINT16(0x0100, Mpr121V.value);
+    Mpr121V.word10_args.lsb = 0xAB;
+    Mpr121V.word10_args.msb = 0x00;
     Mpr121.word10(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_UINT16(0x00AB, Mpr121.value);
+    TEST_ASSERT_EQUAL_UINT16(0x00AB, Mpr121V.value);
     // anything above bit 9 belongs to no field and is dropped.
-    Mpr121.word10_args.lsb = 0xFF;
-    Mpr121.word10_args.msb = 0xFF;
+    Mpr121V.word10_args.lsb = 0xFF;
+    Mpr121V.word10_args.msb = 0xFF;
     Mpr121.word10(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_UINT16(0x03FF, Mpr121.value);
+    TEST_ASSERT_EQUAL_UINT16(0x03FF, Mpr121V.value);
 }
 
 // The bring-up writes the registers Table 2 names, at their own addresses. Section 5.13 fixes the
@@ -186,13 +186,13 @@ void test_filtered_data_is_ten_bits(void)
 void test_build_init_writes_the_datasheet_registers(void)
 {
     uint8_t buf[MPR121_INIT_MAX];
-    Mpr121.build_init_args.buf = buf;
-    Mpr121.build_init_args.cap = sizeof(buf);
-    Mpr121.build_init_args.n_electrodes = MPR121_ELECTRODES;
-    Mpr121.build_init_args.touch_thr = 12;
-    Mpr121.build_init_args.release_thr = 6;
+    Mpr121V.build_init_args.buf = buf;
+    Mpr121V.build_init_args.cap = sizeof(buf);
+    Mpr121V.build_init_args.n_electrodes = MPR121_ELECTRODES;
+    Mpr121V.build_init_args.touch_thr = 12;
+    Mpr121V.build_init_args.release_thr = 6;
     Mpr121.build_init(protocore_mpr121_span());
-    const size_t n = Mpr121.n;
+    const size_t n = Mpr121V.n;
     TEST_ASSERT_EQUAL_size_t(MPR121_INIT_MAX, n);
     TEST_ASSERT_EQUAL_size_t(0, n % 2); // (register, value) pairs
 
@@ -238,13 +238,13 @@ void test_ecr_encodes_the_datasheet_fields(void)
     for (size_t i = 0; i < 3; i++)
     {
         uint8_t buf[MPR121_INIT_MAX];
-        Mpr121.build_init_args.buf = buf;
-        Mpr121.build_init_args.cap = sizeof(buf);
-        Mpr121.build_init_args.n_electrodes = COUNTS[i];
-        Mpr121.build_init_args.touch_thr = 12;
-        Mpr121.build_init_args.release_thr = 6;
+        Mpr121V.build_init_args.buf = buf;
+        Mpr121V.build_init_args.cap = sizeof(buf);
+        Mpr121V.build_init_args.n_electrodes = COUNTS[i];
+        Mpr121V.build_init_args.touch_thr = 12;
+        Mpr121V.build_init_args.release_thr = 6;
         Mpr121.build_init(protocore_mpr121_span());
-        const size_t n = Mpr121.n;
+        const size_t n = Mpr121V.n;
         TEST_ASSERT_TRUE(n > 0);
         const uint8_t ecr = buf[n - 1];
         TEST_ASSERT_EQUAL_UINT8(0x02, (ecr >> 6) & 0x03u); // CL = b10
@@ -259,20 +259,20 @@ void test_build_init_length_tracks_the_electrode_count(void)
 {
     uint8_t full[MPR121_INIT_MAX];
     uint8_t four[MPR121_INIT_MAX];
-    Mpr121.build_init_args.buf = full;
-    Mpr121.build_init_args.cap = sizeof(full);
-    Mpr121.build_init_args.n_electrodes = 12;
-    Mpr121.build_init_args.touch_thr = 12;
-    Mpr121.build_init_args.release_thr = 6;
+    Mpr121V.build_init_args.buf = full;
+    Mpr121V.build_init_args.cap = sizeof(full);
+    Mpr121V.build_init_args.n_electrodes = 12;
+    Mpr121V.build_init_args.touch_thr = 12;
+    Mpr121V.build_init_args.release_thr = 6;
     Mpr121.build_init(protocore_mpr121_span());
-    const size_t n12 = Mpr121.n;
-    Mpr121.build_init_args.buf = four;
-    Mpr121.build_init_args.cap = sizeof(four);
-    Mpr121.build_init_args.n_electrodes = 4;
-    Mpr121.build_init_args.touch_thr = 12;
-    Mpr121.build_init_args.release_thr = 6;
+    const size_t n12 = Mpr121V.n;
+    Mpr121V.build_init_args.buf = four;
+    Mpr121V.build_init_args.cap = sizeof(four);
+    Mpr121V.build_init_args.n_electrodes = 4;
+    Mpr121V.build_init_args.touch_thr = 12;
+    Mpr121V.build_init_args.release_thr = 6;
     Mpr121.build_init(protocore_mpr121_span());
-    const size_t n4 = Mpr121.n;
+    const size_t n4 = Mpr121V.n;
     TEST_ASSERT_EQUAL_size_t(n12 - 8 * 4, n4);
 }
 
@@ -281,41 +281,41 @@ void test_build_init_length_tracks_the_electrode_count(void)
 void test_build_init_refuses_bad_arguments(void)
 {
     uint8_t buf[MPR121_INIT_MAX];
-    Mpr121.build_init_args.buf = NULL;
-    Mpr121.build_init_args.cap = MPR121_INIT_MAX;
-    Mpr121.build_init_args.n_electrodes = 12;
-    Mpr121.build_init_args.touch_thr = 12;
-    Mpr121.build_init_args.release_thr = 6;
+    Mpr121V.build_init_args.buf = NULL;
+    Mpr121V.build_init_args.cap = MPR121_INIT_MAX;
+    Mpr121V.build_init_args.n_electrodes = 12;
+    Mpr121V.build_init_args.touch_thr = 12;
+    Mpr121V.build_init_args.release_thr = 6;
     Mpr121.build_init(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_size_t(0, Mpr121.n);
-    Mpr121.build_init_args.buf = buf;
-    Mpr121.build_init_args.cap = sizeof(buf);
-    Mpr121.build_init_args.n_electrodes = 0;
-    Mpr121.build_init_args.touch_thr = 12;
-    Mpr121.build_init_args.release_thr = 6;
+    TEST_ASSERT_EQUAL_size_t(0, Mpr121V.n);
+    Mpr121V.build_init_args.buf = buf;
+    Mpr121V.build_init_args.cap = sizeof(buf);
+    Mpr121V.build_init_args.n_electrodes = 0;
+    Mpr121V.build_init_args.touch_thr = 12;
+    Mpr121V.build_init_args.release_thr = 6;
     Mpr121.build_init(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_size_t(0, Mpr121.n);
-    Mpr121.build_init_args.buf = buf;
-    Mpr121.build_init_args.cap = sizeof(buf);
-    Mpr121.build_init_args.n_electrodes = MPR121_ELECTRODES + 1;
-    Mpr121.build_init_args.touch_thr = 12;
-    Mpr121.build_init_args.release_thr = 6;
+    TEST_ASSERT_EQUAL_size_t(0, Mpr121V.n);
+    Mpr121V.build_init_args.buf = buf;
+    Mpr121V.build_init_args.cap = sizeof(buf);
+    Mpr121V.build_init_args.n_electrodes = MPR121_ELECTRODES + 1;
+    Mpr121V.build_init_args.touch_thr = 12;
+    Mpr121V.build_init_args.release_thr = 6;
     Mpr121.build_init(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_size_t(0, Mpr121.n);
-    Mpr121.build_init_args.buf = buf;
-    Mpr121.build_init_args.cap = MPR121_INIT_MAX - 1;
-    Mpr121.build_init_args.n_electrodes = 12;
-    Mpr121.build_init_args.touch_thr = 12;
-    Mpr121.build_init_args.release_thr = 6;
+    TEST_ASSERT_EQUAL_size_t(0, Mpr121V.n);
+    Mpr121V.build_init_args.buf = buf;
+    Mpr121V.build_init_args.cap = MPR121_INIT_MAX - 1;
+    Mpr121V.build_init_args.n_electrodes = 12;
+    Mpr121V.build_init_args.touch_thr = 12;
+    Mpr121V.build_init_args.release_thr = 6;
     Mpr121.build_init(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_size_t(0, Mpr121.n);
-    Mpr121.build_init_args.buf = buf;
-    Mpr121.build_init_args.cap = 0;
-    Mpr121.build_init_args.n_electrodes = 12;
-    Mpr121.build_init_args.touch_thr = 12;
-    Mpr121.build_init_args.release_thr = 6;
+    TEST_ASSERT_EQUAL_size_t(0, Mpr121V.n);
+    Mpr121V.build_init_args.buf = buf;
+    Mpr121V.build_init_args.cap = 0;
+    Mpr121V.build_init_args.n_electrodes = 12;
+    Mpr121V.build_init_args.touch_thr = 12;
+    Mpr121V.build_init_args.release_thr = 6;
     Mpr121.build_init(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_size_t(0, Mpr121.n);
+    TEST_ASSERT_EQUAL_size_t(0, Mpr121V.n);
 }
 
 // ---------------------------------------------------------------------------
@@ -357,9 +357,9 @@ void test_datasheet_a_config_write_in_run_mode_is_discarded(void)
 // the case a byte-capture assertion cannot make - it would pass on a driver that never stopped.
 void test_datasheet_begin_leaves_every_configuration_register_written(void)
 {
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
-    TEST_ASSERT_TRUE(Mpr121.ok);
+    TEST_ASSERT_TRUE(Mpr121V.ok);
 
     // the rising / falling / touched baseline filter defaults (AN3944)
     TEST_ASSERT_EQUAL_HEX8(0x01u, s_part.reg[0x2Bu]); // MHDR
@@ -390,44 +390,44 @@ void test_datasheet_begin_leaves_every_configuration_register_written(void)
 // driver's own two-byte read and decode.
 void test_datasheet_a_touch_on_the_pads_reads_back(void)
 {
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
 
     s_part.touch = 0x0000u;
     Mpr121.read_touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121V.value);
 
     s_part.touch = (uint16_t)(1u << 0);
     Mpr121.read_touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0001u, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0001u, Mpr121V.value);
 
     // one in each status byte at once, so a decoder that drops the high byte fails here
     s_part.touch = (uint16_t)((1u << 3) | (1u << 11));
     Mpr121.read_touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0808u, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0808u, Mpr121V.value);
 
     // every electrode
     s_part.touch = 0x0FFFu;
     Mpr121.read_touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0FFFu, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0FFFu, Mpr121V.value);
 }
 
 // Section 5.2 puts ELEPROX at D4 and OVCF at D7 of register 01h, above the twelve electrodes, and
 // the decode masks to 0x0FFF - so neither is ever reported as a touched electrode.
 void test_datasheet_proximity_and_overcurrent_are_not_electrodes(void)
 {
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
 
     s_part.touch = PROTOCORE_MPR121_DEV_ELEPROX; // the 13th channel only
     Mpr121.read_touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121V.value);
     // and it is visible where the datasheet puts it
     TEST_ASSERT_EQUAL_HEX8(0x10u, (uint8_t)(s_part.reg[0x01u] & 0x10u));
 
     s_part.reg[0x01u] |= 0x80u; // OVCF, as an over-current fault would set it
     Mpr121.read_touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121V.value);
 }
 
 // Section 5.1: in Stop Mode there is no measurement on any channel, so a touch present on the pads
@@ -436,26 +436,26 @@ void test_datasheet_nothing_is_measured_in_stop_mode(void)
 {
     s_part.touch = 0x0FFFu;
     Mpr121.read_touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121.value);
-    Mpr121.read_filtered_args.e = 0u;
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121V.value);
+    Mpr121V.read_filtered_args.e = 0u;
     Mpr121.read_filtered(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121V.value);
 }
 
 // Section 5.3: the filtered output is 10 bits, its low eight in the register at 04h + 2e and bits
 // 9:8 in the byte above it, so a reading past 255 needs both bytes to come back correctly.
 void test_datasheet_filtered_data_is_ten_bits_across_two_registers(void)
 {
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
 
     static const uint16_t APPLIED[4] = {0u, 255u, 256u, 1023u};
     for (uint32_t i = 0; i < 4u; i++)
     {
         s_part.filtered[0] = APPLIED[i];
-        Mpr121.read_filtered_args.e = 0u;
+        Mpr121V.read_filtered_args.e = 0u;
         Mpr121.read_filtered(protocore_mpr121_span());
-        TEST_ASSERT_EQUAL_HEX16(APPLIED[i], Mpr121.value);
+        TEST_ASSERT_EQUAL_HEX16(APPLIED[i], Mpr121V.value);
     }
 }
 
@@ -463,7 +463,7 @@ void test_datasheet_filtered_data_is_ten_bits_across_two_registers(void)
 // reads its own measurement and not its neighbour's.
 void test_datasheet_each_electrode_reads_its_own_filtered_data(void)
 {
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
 
     for (uint8_t e = 0u; e < MPR121_ELECTRODES; e++)
@@ -472,9 +472,9 @@ void test_datasheet_each_electrode_reads_its_own_filtered_data(void)
     }
     for (uint8_t e = 0u; e < MPR121_ELECTRODES; e++)
     {
-        Mpr121.read_filtered_args.e = e;
+        Mpr121V.read_filtered_args.e = e;
         Mpr121.read_filtered(protocore_mpr121_span());
-        TEST_ASSERT_EQUAL_HEX16((uint16_t)(300u + 17u * e), Mpr121.value);
+        TEST_ASSERT_EQUAL_HEX16((uint16_t)(300u + 17u * e), Mpr121V.value);
     }
 }
 
@@ -482,7 +482,7 @@ void test_datasheet_each_electrode_reads_its_own_filtered_data(void)
 // was running comes back stopped and unconfigured - which is what begin() does first.
 void test_datasheet_the_soft_reset_returns_the_part_to_its_power_up_state(void)
 {
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
     TEST_ASSERT_TRUE(protocore_mpr121_dev_running(&s_part));
 
@@ -493,9 +493,9 @@ void test_datasheet_the_soft_reset_returns_the_part_to_its_power_up_state(void)
     TEST_ASSERT_EQUAL_HEX8(0x00u, s_part.reg[0x41u]); // and the thresholds with it
 
     // and begin() brings it all back
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
-    TEST_ASSERT_TRUE(Mpr121.ok);
+    TEST_ASSERT_TRUE(Mpr121V.ok);
     TEST_ASSERT_TRUE(protocore_mpr121_dev_running(&s_part));
     TEST_ASSERT_EQUAL_HEX8(0x10u, s_part.reg[0x5Cu]);
 }
@@ -503,12 +503,12 @@ void test_datasheet_the_soft_reset_returns_the_part_to_its_power_up_state(void)
 // An out-of-range electrode is refused before anything reaches the bus.
 void test_read_filtered_refuses_an_out_of_range_electrode(void)
 {
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
     const uint32_t before = protocore_bus_host_log_len;
-    Mpr121.read_filtered_args.e = MPR121_ELECTRODES;
+    Mpr121V.read_filtered_args.e = MPR121_ELECTRODES;
     Mpr121.read_filtered(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121V.value);
     TEST_ASSERT_EQUAL_UINT32(before, protocore_bus_host_log_len);
 }
 
@@ -518,34 +518,33 @@ void test_begin_sends_later_transfers_to_the_address_it_was_given(void)
 {
     protocore_bus_host_detach_all();
     protocore_mpr121_dev_place(&s_part, 0x5Bu);
-    Mpr121.begin_args.addr = 0x5Bu;
+    Mpr121V.begin_args.addr = 0x5Bu;
     Mpr121.begin(protocore_mpr121_span());
-    TEST_ASSERT_TRUE(Mpr121.ok);
+    TEST_ASSERT_TRUE(Mpr121V.ok);
     TEST_ASSERT_TRUE(protocore_mpr121_dev_running(&s_part));
     TEST_ASSERT_EQUAL_HEX16(0x5Bu, protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
-    Mpr121.begin_args.addr = 0u;
+    Mpr121V.begin_args.addr = 0u;
     Mpr121.begin(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_MPR121_I2C_ADDR,
-                            protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
+    TEST_ASSERT_EQUAL_HEX16(PROTOCORE_MPR121_I2C_ADDR, protocore_bus_host_log[protocore_bus_host_log_len - 1u].target);
 }
 
 // A refused transfer is reported rather than passed off as a configured part.
 void test_a_refused_transfer_fails_begin(void)
 {
     protocore_bus_host_fail = 1u;
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
-    TEST_ASSERT_FALSE(Mpr121.ok);
+    TEST_ASSERT_FALSE(Mpr121V.ok);
     TEST_ASSERT_FALSE(protocore_mpr121_dev_running(&s_part));
 }
 
 // A read that fails reports nothing touched rather than a stale mask.
 void test_a_refused_read_reports_nothing_touched(void)
 {
-    Mpr121.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
+    Mpr121V.begin_args.addr = (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     Mpr121.begin(protocore_mpr121_span());
     s_part.touch = 0x0FFFu;
     protocore_bus_host_fail = 1u;
     Mpr121.read_touched(protocore_mpr121_span());
-    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121.value);
+    TEST_ASSERT_EQUAL_HEX16(0x0000u, Mpr121V.value);
 }

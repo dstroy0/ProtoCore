@@ -30,11 +30,11 @@ static char hex_digit(uint8_t nibble)
     return Hex.ch;
 }
 
-static void devid_from_mac(uint8_t *restrict work)
+void protocore_device_id_from_mac(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *mac = DeviceId.args.mac;
-    char *out = DeviceId.args.out;
+    const uint8_t *mac = DeviceIdV.args.mac;
+    char *out = DeviceIdV.args.out;
 
     // UUIDv5 name = lowercase MAC hex (12 chars, no separators).
     uint8_t input[16 + 12];
@@ -86,20 +86,16 @@ static void devid_from_mac(uint8_t *restrict work)
 }
 
 #if PROTOCORE_HAS_VENDOR_MAC
-static void devid_uuid(uint8_t *restrict work)
+void protocore_device_id_uuid(uint8_t *restrict work)
 {
     uint8_t mac[6] = {0};
     (void)protocore_platform_mac_read(mac); // the stable factory address; leaves zeros when it has none
-    DeviceId.args.mac = mac;
-    devid_from_mac(work);
+    DeviceIdV.args.mac = mac;
+    protocore_device_id_from_mac(work);
 }
 #endif
 
-DeviceIdNs DeviceId = {
-    .from_mac = devid_from_mac,
-#if PROTOCORE_HAS_VENDOR_MAC
-    .uuid = devid_uuid,
-#endif
-};
+/** @brief The operands and the outcome. */
+DeviceIdVars DeviceIdV;
 
 #endif // PROTOCORE_ENABLE_DEVICE_ID

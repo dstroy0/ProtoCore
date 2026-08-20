@@ -42,36 +42,36 @@ void dbench_run(void)
         volatile bool sinkb = false;
         volatile uint32_t sink32 = 0;
 
-        ConfigStore.get_str_args.key = "k";
-        ConfigStore.get_str_args.out = out_str;
-        ConfigStore.get_str_args.out_cap = sizeof(out_str);
-        ConfigStore.get_str_args.def = "123456789";
+        ConfigStoreV.get_str_args.key = "k";
+        ConfigStoreV.get_str_args.out = out_str;
+        ConfigStoreV.get_str_args.out_cap = sizeof(out_str);
+        ConfigStoreV.get_str_args.def = "123456789";
         // Missing-key default fallback: strnlen(def) + capacity clamp + memcpy + null-terminate.
         // out_cap=4 truncates the 9-char default to 3 chars - the same clamp path exercised by
         // test_str_truncates_to_capacity (same literal "123456789" / 4-byte buffer).
         DBENCH_OP("protocore_config_get_str (default, trunc)", 50000,
-                  (ConfigStore.get_str(protocore_config_store_span()), sink_sz += ConfigStore.n));
+                  (ConfigStore.get_str(protocore_config_store_span()), sink_sz += ConfigStoreV.n));
 
-        ConfigStore.set_str_args.key = "ssid";
-        ConfigStore.set_str_args.val = "myssid";
+        ConfigStoreV.set_str_args.key = "ssid";
+        ConfigStoreV.set_str_args.val = "myssid";
         // Setter's guarded path: strnlen(val, PROTOCORE_CONFIG_VAL_MAX+1) is computed and compared
         // against Preferences::putString's (guarded, no-op) return - the real per-call cost of a
         // set() before NVS has ever been opened. Key/value from test_str_round_trip.
         DBENCH_OP("protocore_config_set_str (guarded)", 50000,
-                  (ConfigStore.set_str(protocore_config_store_span()), sinkb |= ConfigStore.ok));
+                  (ConfigStore.set_str(protocore_config_store_span()), sinkb |= ConfigStoreV.ok));
 
-        ConfigStore.get_u32_args.key = "ip";
-        ConfigStore.get_u32_args.def = 0xC0A80164u;
+        ConfigStoreV.get_u32_args.key = "ip";
+        ConfigStoreV.get_u32_args.def = 0xC0A80164u;
         // Missing-key u32 default (key/default from test_u32_round_trip's sample IP, 192.168.1.100).
         DBENCH_OP("protocore_config_get_u32 (default)", 100000,
-                  (ConfigStore.get_u32(protocore_config_store_span()), sink32 += ConfigStore.ms));
+                  (ConfigStore.get_u32(protocore_config_store_span()), sink32 += ConfigStoreV.ms));
 
-        ConfigStore.get_blob_args.key = "psk";
-        ConfigStore.get_blob_args.out = out_blob;
-        ConfigStore.get_blob_args.out_cap = sizeof(out_blob);
+        ConfigStoreV.get_blob_args.key = "psk";
+        ConfigStoreV.get_blob_args.out = out_blob;
+        ConfigStoreV.get_blob_args.out_cap = sizeof(out_blob);
         // Missing-key blob lookup (key from test_blob_missing_returns_zero / test_blob_round_trip).
         DBENCH_OP("protocore_config_get_blob (missing)", 100000,
-                  (ConfigStore.get_blob(protocore_config_store_span()), sink_sz += ConfigStore.n));
+                  (ConfigStore.get_blob(protocore_config_store_span()), sink_sz += ConfigStoreV.n));
 
         (void)sink_sz;
         (void)sinkb;

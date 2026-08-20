@@ -51,8 +51,8 @@ static void fail_n(const protocore_ip *ip, int n, uint32_t now_ms)
 {
     for (int i = 0; i < n; i++)
     {
-        AuthLockout.args.ip = ip;
-        AuthLockout.args.now_ms = now_ms;
+        AuthLockoutV.args.ip = ip;
+        AuthLockoutV.args.now_ms = now_ms;
         AuthLockout.fail(auth_work);
     }
 }
@@ -61,14 +61,14 @@ static void fail_n(const protocore_ip *ip, int n, uint32_t now_ms)
 void test_an_unseen_address_is_not_locked(void)
 {
     const protocore_ip ip = v4(203, 0, 113, 7);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 1000000u;
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 1000000u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 }
 
 // Failures below the threshold do not lock: the machine tolerates a mistyped password.
@@ -77,22 +77,22 @@ void test_below_the_threshold_nothing_locks(void)
     const protocore_ip ip = v4(198, 51, 100, 4);
     for (int i = 1; i < PROTOCORE_AUTH_LOCKOUT_THRESHOLD; i++)
     {
-        AuthLockout.args.ip = &ip;
-        AuthLockout.args.now_ms = 100u;
+        AuthLockoutV.args.ip = &ip;
+        AuthLockoutV.args.now_ms = 100u;
         AuthLockout.fail(auth_work);
-        AuthLockout.args.ip = &ip;
-        AuthLockout.args.now_ms = 100u;
+        AuthLockoutV.args.ip = &ip;
+        AuthLockoutV.args.now_ms = 100u;
         AuthLockout.remaining(auth_work);
-        TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+        TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
     }
     // the threshold'th failure is the one that locks
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 100u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 100u;
     AuthLockout.fail(auth_work);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 100u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 100u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockoutV.ms);
 }
 
 // The documented rule: lock for BASE_MS at the threshold, doubling on each further failure, capped
@@ -108,27 +108,27 @@ void test_backoff_doubles_then_caps(void)
 
     uint32_t want = PROTOCORE_AUTH_LOCKOUT_BASE_MS;
     fail_n(&ip, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, 0u);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(want, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(want, AuthLockoutV.ms);
 
     for (int extra = 1; extra <= 20; extra++)
     {
         want = (want >= (uint32_t)PROTOCORE_AUTH_LOCKOUT_MAX_MS / 2u) ? (uint32_t)PROTOCORE_AUTH_LOCKOUT_MAX_MS
                                                                       : want * 2u;
-        AuthLockout.args.ip = &ip;
-        AuthLockout.args.now_ms = 0u;
+        AuthLockoutV.args.ip = &ip;
+        AuthLockoutV.args.now_ms = 0u;
         AuthLockout.fail(auth_work);
-        AuthLockout.args.ip = &ip;
-        AuthLockout.args.now_ms = 0u;
+        AuthLockoutV.args.ip = &ip;
+        AuthLockoutV.args.now_ms = 0u;
         AuthLockout.remaining(auth_work);
-        TEST_ASSERT_EQUAL_UINT32(want, AuthLockout.ms);
+        TEST_ASSERT_EQUAL_UINT32(want, AuthLockoutV.ms);
     }
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_MAX_MS, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_MAX_MS, AuthLockoutV.ms);
 }
 
 // The remaining time counts down with the clock and reaches zero exactly at the end of the window,
@@ -140,26 +140,26 @@ void test_the_window_counts_down_and_expires(void)
     const uint32_t base = PROTOCORE_AUTH_LOCKOUT_BASE_MS;
 
     fail_n(&ip, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, start);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = start;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = start;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(base, AuthLockout.ms);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = start + 1u;
+    TEST_ASSERT_EQUAL_UINT32(base, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = start + 1u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(base - 1u, AuthLockout.ms);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = start + base - 1u;
+    TEST_ASSERT_EQUAL_UINT32(base - 1u, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = start + base - 1u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(1u, AuthLockout.ms);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = start + base;
+    TEST_ASSERT_EQUAL_UINT32(1u, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = start + base;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = start + base + 1u;
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = start + base + 1u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 }
 
 // A failure after the window closed restarts the window from that instant rather than leaving it
@@ -170,22 +170,22 @@ void test_a_later_failure_restarts_the_window(void)
     const uint32_t base = PROTOCORE_AUTH_LOCKOUT_BASE_MS;
 
     fail_n(&ip, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, 1000u);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 1000u + base;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 1000u + base;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 90000u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 90000u;
     AuthLockout.fail(auth_work);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 90000u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 90000u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(base * 2u, AuthLockout.ms);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 90000u + base * 2u;
+    TEST_ASSERT_EQUAL_UINT32(base * 2u, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 90000u + base * 2u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 }
 
 // The window math is unsigned, so a lockout started just before the millisecond counter wraps still
@@ -197,24 +197,24 @@ void test_the_window_survives_the_millisecond_rollover(void)
     const uint32_t start = 0xFFFFFFFFu - (base / 2u); // half the window is left before the wrap
 
     fail_n(&ip, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, start);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = start;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = start;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(base, AuthLockout.ms);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = (uint32_t)(start + base / 2u);
+    TEST_ASSERT_EQUAL_UINT32(base, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = (uint32_t)(start + base / 2u);
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(base / 2u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(base / 2u, AuthLockoutV.ms);
     // start + base has wrapped past zero, so an implementation that compared the two instants
     // directly instead of subtracting them would report the window as already over
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = (uint32_t)(start + base - base / 4u);
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = (uint32_t)(start + base - base / 4u);
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(base / 4u, AuthLockout.ms);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = (uint32_t)(start + base);
+    TEST_ASSERT_EQUAL_UINT32(base / 4u, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = (uint32_t)(start + base);
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 }
 
 // A successful authentication clears the address: the counter starts again from zero, so the next
@@ -223,23 +223,23 @@ void test_success_clears_the_address(void)
 {
     const protocore_ip ip = v4(192, 0, 2, 13);
     fail_n(&ip, PROTOCORE_AUTH_LOCKOUT_THRESHOLD + 2, 0u);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_TRUE(AuthLockout.ms > (uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS);
+    TEST_ASSERT_TRUE(AuthLockoutV.ms > (uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS);
 
-    AuthLockout.args.ip = &ip;
+    AuthLockoutV.args.ip = &ip;
     AuthLockout.succeed(auth_work);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 
     fail_n(&ip, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, 0u);
-    AuthLockout.args.ip = &ip;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &ip;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockoutV.ms);
 }
 
 // Clearing an address nobody has failed from is a no-op, not a corruption of another bucket.
@@ -249,12 +249,12 @@ void test_success_from_an_unseen_address_touches_nothing(void)
     const protocore_ip other = v4(192, 0, 2, 15);
     fail_n(&locked, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, 0u);
 
-    AuthLockout.args.ip = &other;
+    AuthLockoutV.args.ip = &other;
     AuthLockout.succeed(auth_work);
-    AuthLockout.args.ip = &locked;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &locked;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockoutV.ms);
 }
 
 // Each address is its own bucket: one peer's failures never lock another.
@@ -263,25 +263,25 @@ void test_addresses_do_not_share_state(void)
     const protocore_ip a = v4(10, 0, 0, 1);
     const protocore_ip b = v4(10, 0, 0, 2);
     fail_n(&a, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, 0u);
-    AuthLockout.args.ip = &a;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &a;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_TRUE(AuthLockout.ms > 0u);
-    AuthLockout.args.ip = &b;
-    AuthLockout.args.now_ms = 0u;
+    TEST_ASSERT_TRUE(AuthLockoutV.ms > 0u);
+    AuthLockoutV.args.ip = &b;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 
     // ... and a success from one does not release the other
-    AuthLockout.args.ip = &b;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &b;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.fail(auth_work);
-    AuthLockout.args.ip = &b;
+    AuthLockoutV.args.ip = &b;
     AuthLockout.succeed(auth_work);
-    AuthLockout.args.ip = &a;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &a;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_TRUE(AuthLockout.ms > 0u);
+    TEST_ASSERT_TRUE(AuthLockoutV.ms > 0u);
 }
 
 // The key is the full family-tagged address, so a v4 address and the v6 address that embeds the
@@ -294,25 +294,25 @@ void test_v4_and_v6_are_different_peers(void)
     const protocore_ip six2 = parsed("2001:db8::2");
 
     fail_n(&four, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, 0u);
-    AuthLockout.args.ip = &four;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &four;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_TRUE(AuthLockout.ms > 0u);
-    AuthLockout.args.ip = &mapped;
-    AuthLockout.args.now_ms = 0u;
+    TEST_ASSERT_TRUE(AuthLockoutV.ms > 0u);
+    AuthLockoutV.args.ip = &mapped;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 
     fail_n(&six, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, 0u);
-    AuthLockout.args.ip = &six;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &six;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_TRUE(AuthLockout.ms > 0u);
+    TEST_ASSERT_TRUE(AuthLockoutV.ms > 0u);
     // a v6 address differing in its last octet is a different peer
-    AuthLockout.args.ip = &six2;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &six2;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 }
 
 // An address that names nothing is untrackable, so it is never locked and never consumes a bucket:
@@ -331,28 +331,28 @@ void test_an_unspecified_address_is_never_locked(void)
     fail_n(&none, 50, 0u);
     fail_n(&zero4, 50, 0u);
     fail_n(&zero6, 50, 0u);
-    AuthLockout.args.ip = &none;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &none;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
-    AuthLockout.args.ip = &zero4;
-    AuthLockout.args.now_ms = 0u;
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &zero4;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
-    AuthLockout.args.ip = &zero6;
-    AuthLockout.args.now_ms = 0u;
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
+    AuthLockoutV.args.ip = &zero6;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
 
     // and the table is still empty, so a real peer still locks normally
     const protocore_ip real = v4(10, 1, 1, 1);
     fail_n(&real, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, 0u);
-    AuthLockout.args.ip = &real;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &real;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockoutV.ms);
 
-    AuthLockout.args.ip = &none;
+    AuthLockoutV.args.ip = &none;
     AuthLockout.succeed(auth_work); // no-op rather than a walk off the table
 }
 
@@ -367,10 +367,10 @@ void test_every_slot_holds_its_own_lockout(void)
     for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
     {
         const protocore_ip ip = v4(10, 2, 0, (uint8_t)(i + 1));
-        AuthLockout.args.ip = &ip;
-        AuthLockout.args.now_ms = 0u;
+        AuthLockoutV.args.ip = &ip;
+        AuthLockoutV.args.now_ms = 0u;
         AuthLockout.remaining(auth_work);
-        TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockout.ms);
+        TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockoutV.ms);
     }
 }
 
@@ -380,23 +380,23 @@ void test_a_flood_of_new_addresses_does_not_release_a_lockout(void)
 {
     const protocore_ip locked = v4(10, 3, 0, 1);
     fail_n(&locked, PROTOCORE_AUTH_LOCKOUT_THRESHOLD, 0u);
-    AuthLockout.args.ip = &locked;
-    AuthLockout.args.now_ms = 0u;
+    AuthLockoutV.args.ip = &locked;
+    AuthLockoutV.args.now_ms = 0u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS, AuthLockoutV.ms);
 
     for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS * 4; i++)
     {
         const protocore_ip noise = v4(10, 4, (uint8_t)(i >> 8), (uint8_t)(i + 1));
-        AuthLockout.args.ip = &noise;
-        AuthLockout.args.now_ms = 1u;
+        AuthLockoutV.args.ip = &noise;
+        AuthLockoutV.args.now_ms = 1u;
         AuthLockout.fail(auth_work);
     }
     // one millisecond into the window, so the remaining time is the base wait less that millisecond
-    AuthLockout.args.ip = &locked;
-    AuthLockout.args.now_ms = 1u;
+    AuthLockoutV.args.ip = &locked;
+    AuthLockoutV.args.now_ms = 1u;
     AuthLockout.remaining(auth_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS - 1u, AuthLockout.ms);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)PROTOCORE_AUTH_LOCKOUT_BASE_MS - 1u, AuthLockoutV.ms);
 }
 
 // Reset empties the whole table: every locked address is released.
@@ -411,10 +411,10 @@ void test_reset_releases_every_address(void)
     for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
     {
         const protocore_ip ip = v4(10, 5, 0, (uint8_t)(i + 1));
-        AuthLockout.args.ip = &ip;
-        AuthLockout.args.now_ms = 0u;
+        AuthLockoutV.args.ip = &ip;
+        AuthLockoutV.args.now_ms = 0u;
         AuthLockout.remaining(auth_work);
-        TEST_ASSERT_EQUAL_UINT32(0u, AuthLockout.ms);
+        TEST_ASSERT_EQUAL_UINT32(0u, AuthLockoutV.ms);
     }
 }
 

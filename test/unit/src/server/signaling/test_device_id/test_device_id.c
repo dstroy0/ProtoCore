@@ -77,8 +77,8 @@ static void uuid5(const uint8_t ns[16], const char *name, size_t name_len, char 
 static void uuid_of(const uint8_t mac[6], char out[PROTOCORE_UUID_STR_LEN])
 {
     memset(out, '#', PROTOCORE_UUID_STR_LEN);
-    DeviceId.args.mac = mac;
-    DeviceId.args.out = out;
+    DeviceIdV.args.mac = mac;
+    DeviceIdV.args.out = out;
     DeviceId.from_mac(device_id_work);
 }
 

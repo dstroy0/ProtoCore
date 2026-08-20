@@ -141,11 +141,17 @@ typedef struct
     Mpr121BuildInitArgs build_init_args;
     Mpr121BeginArgs begin_args;
     Mpr121ReadFilteredArgs read_filtered_args;
-
     proto_bool ok;
     uint16_t value;
     size_t n;
+} Mpr121Vars;
 
+/** @brief The operands and the outcome. */
+extern Mpr121Vars Mpr121V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const touched)(uint8_t *restrict work);
     void (*const is_touched)(uint8_t *restrict work);
     void (*const proximity)(uint8_t *restrict work);
@@ -157,8 +163,33 @@ typedef struct
     void (*const read_filtered)(uint8_t *restrict work);
 } Mpr121Ns;
 
-/** @brief The one symbol this module exports. */
-extern Mpr121Ns Mpr121;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Mpr121V or a region of the borrow at a fixed offset.
+void protocore_mpr121_touched(uint8_t *restrict work);
+void protocore_mpr121_is_touched(uint8_t *restrict work);
+void protocore_mpr121_proximity(uint8_t *restrict work);
+void protocore_mpr121_overcurrent(uint8_t *restrict work);
+void protocore_mpr121_word10(uint8_t *restrict work);
+void protocore_mpr121_build_init(uint8_t *restrict work);
+void protocore_mpr121_begin(uint8_t *restrict work);
+void protocore_mpr121_read_touched(uint8_t *restrict work);
+void protocore_mpr121_read_filtered(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Mpr121.touched(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Mpr121Ns Mpr121 __attribute__((unused)) = {
+    .touched = protocore_mpr121_touched,
+    .is_touched = protocore_mpr121_is_touched,
+    .proximity = protocore_mpr121_proximity,
+    .overcurrent = protocore_mpr121_overcurrent,
+    .word10 = protocore_mpr121_word10,
+    .build_init = protocore_mpr121_build_init,
+    .begin = protocore_mpr121_begin,
+    .read_touched = protocore_mpr121_read_touched,
+    .read_filtered = protocore_mpr121_read_filtered,
+};
 
 /**
  * @brief The PROTOCORE_MPR121_BORROW bytes this module's state lives in.

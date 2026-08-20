@@ -108,10 +108,16 @@ typedef struct
 {
     const protocore_tc_config *cfg;
     TcFeedArgs feed;
-
     proto_bool ok;
     uint16_t accepted;
+} TraceCaptureVars;
 
+/** @brief The operands and the outcome. */
+extern TraceCaptureVars TraceCaptureV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const feed_in)(uint8_t *restrict work);
     void (*const trigger)(uint8_t *restrict work);
@@ -120,8 +126,27 @@ typedef struct
     void (*const end)(uint8_t *restrict work);
 } TraceCaptureNs;
 
-/** @brief The one symbol this module exports. */
-extern TraceCaptureNs TraceCapture;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TraceCaptureV or a region of the borrow at a fixed offset.
+void protocore_trace_capture_begin(uint8_t *restrict work);
+void protocore_trace_capture_feed_in(uint8_t *restrict work);
+void protocore_trace_capture_trigger(uint8_t *restrict work);
+void protocore_trace_capture_get_stats(uint8_t *restrict work);
+void protocore_trace_capture_capturing(uint8_t *restrict work);
+void protocore_trace_capture_end(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `TraceCapture.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TraceCaptureNs TraceCapture __attribute__((unused)) = {
+    .begin = protocore_trace_capture_begin,
+    .feed_in = protocore_trace_capture_feed_in,
+    .trigger = protocore_trace_capture_trigger,
+    .get_stats = protocore_trace_capture_get_stats,
+    .capturing = protocore_trace_capture_capturing,
+    .end = protocore_trace_capture_end,
+};
 
 /**
  * @brief The PROTOCORE_TRACE_CAPTURE_BORROW bytes this module's state lives in.

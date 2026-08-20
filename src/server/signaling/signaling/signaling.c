@@ -10,7 +10,7 @@
  */
 
 #include "server/signaling/signaling/signaling.h"
-#include "mmgr/plaintext/plaintext.h"                                  // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h"                        // the persistent end this module's state is taken from
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a close names
 #include "network_drivers/transport/tcp/tcp.h"
 
@@ -53,9 +53,9 @@ uint8_t *protocore_signaling_span(void)
     return s_own.span;
 }
 
-static void signal_put_response(uint8_t *restrict work)
+void protocore_signal_put_response(uint8_t *restrict work)
 {
-    const int code = Signal.put.code;
+    const int code = SignalV.put.code;
 
     SIGNALING_CTX(work)->state.requests_total++;
     if (code >= 200 && code < 300)
@@ -72,25 +72,25 @@ static void signal_put_response(uint8_t *restrict work)
     }
 }
 
-static void signal_put_tick(uint8_t *restrict work)
+void protocore_signal_put_tick(uint8_t *restrict work)
 {
-    SIGNALING_CTX(work)->state.uptime_ms = Signal.put.uptime_ms;
-    SIGNALING_CTX(work)->state.conns_active = Signal.put.conns_active;
-    SIGNALING_CTX(work)->state.listeners_up = Signal.put.listeners_up;
+    SIGNALING_CTX(work)->state.uptime_ms = SignalV.put.uptime_ms;
+    SIGNALING_CTX(work)->state.conns_active = SignalV.put.conns_active;
+    SIGNALING_CTX(work)->state.listeners_up = SignalV.put.listeners_up;
 }
 
-static void signal_know(uint8_t *restrict work)
+void protocore_signal_know(uint8_t *restrict work)
 {
-    if (Signal.out == NULL)
+    if (SignalV.out == NULL)
     {
         return;
     }
     // A copy, not a pointer into the bucket. A reader formats several fields and the loop deposits
     // between its reads, so handing out the storage would let one report mix two server states.
-    *Signal.out = SIGNALING_CTX(work)->state;
+    *SignalV.out = SIGNALING_CTX(work)->state;
 }
 
-static void signal_reset(uint8_t *restrict work)
+void protocore_signal_reset(uint8_t *restrict work)
 {
     // The tallies are per-run: a server that has started over has answered no requests. Zero is the
     // bucket's initial state, so the reset is the same store the static initialization performs.
@@ -98,19 +98,16 @@ static void signal_reset(uint8_t *restrict work)
     *SIGNALING_CTX(work) = blank;
 }
 
-static void signal_kill(uint8_t *restrict work)
+void protocore_signal_kill(uint8_t *restrict work)
 {
     (void)work;
     // A plain forward: no liveness test, no result. Transport owns the slot's lifetime and its idle
     // sweep reaps a stale one regardless, so a check here would answer a question transport has
     // already answered, and the answer could be stale before the caller read it.
-    ConnPool.slot = Signal.slot;
+    ConnPool.slot = SignalV.slot;
     ConnPool.close(protocore_conn_pool_span());
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SignalingNs Signal = {.know = signal_know,
-                      .reset = signal_reset,
-                      .put_response = signal_put_response,
-                      .put_tick = signal_put_tick,
-                      .kill = signal_kill};
+/** @brief The operands and the outcome. */
+SignalVars SignalV;

@@ -31,13 +31,13 @@ static GpioRoutesCtx s_gpior;
 static void gpio_get_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    GpioMap.args.pins_rw = s_gpior.pins;
-    GpioMap.args.count = s_gpior.count;
+    GpioMapV.args.pins_rw = s_gpior.pins;
+    GpioMapV.args.count = s_gpior.count;
     GpioMap.sample(gpio_map_work);
     char buf[PROTOCORE_GPIO_JSON_BUF];
-    GpioMap.args.pins = s_gpior.pins;
-    GpioMap.out_args.out = buf;
-    GpioMap.out_args.cap = sizeof(buf);
+    GpioMapV.args.pins = s_gpior.pins;
+    GpioMapV.out_args.out = buf;
+    GpioMapV.out_args.cap = sizeof(buf);
     GpioMap.json(gpio_map_work);
     // No instance test: a handler only runs because this service registered the route, and the
     // response goes out through the server's own entry point rather than a pointer to it.
@@ -48,35 +48,35 @@ static void gpio_post_handler(uint8_t slot_id, HttpReq *req)
 {
     uint8_t pin;
     uint8_t level;
-    GpioMap.parse_args.body = (const char *)req->body;
-    GpioMap.parse_args.len = req->body_len;
-    GpioMap.parse_args.pin_out = &pin;
-    GpioMap.parse_args.level_out = &level;
+    GpioMapV.parse_args.body = (const char *)req->body;
+    GpioMapV.parse_args.len = req->body_len;
+    GpioMapV.parse_args.pin_out = &pin;
+    GpioMapV.parse_args.level_out = &level;
     GpioMap.parse_set(gpio_map_work);
-    if (!GpioMap.ok)
+    if (!GpioMapV.ok)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "bad request");
         return;
     }
-    GpioMap.args.pins = s_gpior.pins;
-    GpioMap.args.count = s_gpior.count;
-    GpioMap.args.pin = pin;
+    GpioMapV.args.pins = s_gpior.pins;
+    GpioMapV.args.count = s_gpior.count;
+    GpioMapV.args.pin = pin;
     GpioMap.is_output(gpio_map_work);
-    if (!GpioMap.ok)
+    if (!GpioMapV.ok)
     {
         send_text(slot_id, 403, PROTOCORE_MIME_TEXT_PLAIN, "pin not a mapped output");
         return;
     }
-    GpioMap.args.pin = pin;
-    GpioMap.args.level = level;
+    GpioMapV.args.pin = pin;
+    GpioMapV.args.level = level;
     GpioMap.write(gpio_map_work);
-    GpioMap.args.pins_rw = s_gpior.pins;
-    GpioMap.args.count = s_gpior.count;
+    GpioMapV.args.pins_rw = s_gpior.pins;
+    GpioMapV.args.count = s_gpior.count;
     GpioMap.sample(gpio_map_work);
     char buf[PROTOCORE_GPIO_JSON_BUF];
-    GpioMap.args.pins = s_gpior.pins;
-    GpioMap.out_args.out = buf;
-    GpioMap.out_args.cap = sizeof(buf);
+    GpioMapV.args.pins = s_gpior.pins;
+    GpioMapV.out_args.out = buf;
+    GpioMapV.out_args.cap = sizeof(buf);
     GpioMap.json(gpio_map_work);
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
@@ -84,13 +84,13 @@ static void gpio_post_handler(uint8_t slot_id, HttpReq *req)
 void protocore_gpio_route_begin(uint8_t *restrict work)
 {
     (void)work;
-    protocore_gpio_pin *pins = GpioMap.args.pins_rw;
-    const uint8_t count = GpioMap.args.count;
-    const char *path = GpioMap.args.path;
+    protocore_gpio_pin *pins = GpioMapV.args.pins_rw;
+    const uint8_t count = GpioMapV.args.count;
+    const char *path = GpioMapV.args.path;
 
     s_gpior.pins = pins;
     s_gpior.count = count;
-    GpioMap.args.pins = pins;
+    GpioMapV.args.pins = pins;
     GpioMap.begin_pins(gpio_map_work);
     const char *p = (path && path[0]) ? path : "/gpio";
     on_http(p, HTTP_GET, gpio_get_handler);

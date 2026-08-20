@@ -54,13 +54,31 @@ typedef struct
 typedef struct
 {
     DeviceIdArgs args;
+} DeviceIdVars;
 
+/** @brief The operands and the outcome. */
+extern DeviceIdVars DeviceIdV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const from_mac)(uint8_t *restrict work);
     void (*const uuid)(uint8_t *restrict work);
 } DeviceIdNs;
 
-/** @brief The one symbol this module exports. */
-extern DeviceIdNs DeviceId;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DeviceIdV or a region of the borrow at a fixed offset.
+void protocore_device_id_from_mac(uint8_t *restrict work);
+void protocore_device_id_uuid(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `DeviceId.from_mac(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DeviceIdNs DeviceId __attribute__((unused)) = {
+    .from_mac = protocore_device_id_from_mac,
+    .uuid = protocore_device_id_uuid,
+};
 
 #if PROTOCORE_HAS_VENDOR_MAC
 /**

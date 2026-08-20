@@ -168,7 +168,7 @@ void note_response(uint8_t slot_id, int code, int body_len)
     // Deposited, not tallied here. The loop knows the status at the instant it goes out, and
     // signaling is where a reader finds it; counting it here as well would be a second tally beside
     // the one every reader already consults.
-    Signal.put.code = code;
+    SignalV.put.code = code;
     Signal.put_response(protocore_signaling_span());
     if (s_inst.log_cb)
     {
@@ -244,8 +244,8 @@ int32_t proto_begin(const WebServerConfig *cfg)
         RngV.fill_args.out = sec;
         RngV.fill_args.len = sizeof(sec);
         Rng.fill(protocore_rng_span());
-        Csrf.secret_args.secret = sec;
-        Csrf.secret_args.len = sizeof(sec);
+        CsrfV.secret_args.secret = sec;
+        CsrfV.secret_args.len = sizeof(sec);
         Csrf.set_secret(protocore_csrf_span());
     }
 #endif

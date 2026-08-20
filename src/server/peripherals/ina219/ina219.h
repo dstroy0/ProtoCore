@@ -162,11 +162,17 @@ typedef struct
     Ina219ReadShuntUvArgs read_shunt_uv_args;
     Ina219ReadCurrentUaArgs read_current_ua_args;
     Ina219ReadPowerUwArgs read_power_uw_args;
-
     proto_bool ok;
     int32_t value;
     uint16_t cal;
+} Ina219Vars;
 
+/** @brief The operands and the outcome. */
+extern Ina219Vars Ina219V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const bus_mv)(uint8_t *restrict work);
     void (*const shunt_uv)(uint8_t *restrict work);
     void (*const calibration)(uint8_t *restrict work);
@@ -179,8 +185,35 @@ typedef struct
     void (*const read_power_uw)(uint8_t *restrict work);
 } Ina219Ns;
 
-/** @brief The one symbol this module exports. */
-extern Ina219Ns Ina219;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Ina219V or a region of the borrow at a fixed offset.
+void protocore_ina219_bus_mv(uint8_t *restrict work);
+void protocore_ina219_shunt_uv(uint8_t *restrict work);
+void protocore_ina219_calibration(uint8_t *restrict work);
+void protocore_ina219_current_ua(uint8_t *restrict work);
+void protocore_ina219_power_uw(uint8_t *restrict work);
+void protocore_ina219_begin(uint8_t *restrict work);
+void protocore_ina219_read_bus_mv(uint8_t *restrict work);
+void protocore_ina219_read_shunt_uv(uint8_t *restrict work);
+void protocore_ina219_read_current_ua(uint8_t *restrict work);
+void protocore_ina219_read_power_uw(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ina219.bus_mv(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Ina219Ns Ina219 __attribute__((unused)) = {
+    .bus_mv = protocore_ina219_bus_mv,
+    .shunt_uv = protocore_ina219_shunt_uv,
+    .calibration = protocore_ina219_calibration,
+    .current_ua = protocore_ina219_current_ua,
+    .power_uw = protocore_ina219_power_uw,
+    .begin = protocore_ina219_begin,
+    .read_bus_mv = protocore_ina219_read_bus_mv,
+    .read_shunt_uv = protocore_ina219_read_shunt_uv,
+    .read_current_ua = protocore_ina219_read_current_ua,
+    .read_power_uw = protocore_ina219_read_power_uw,
+};
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

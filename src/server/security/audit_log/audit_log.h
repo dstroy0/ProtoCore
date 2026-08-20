@@ -122,14 +122,20 @@ typedef struct
     AuditLogCatNameArgs cat_name_args;
     AuditLogFormatArgs format_args;
     AuditLogDumpJsonArgs dump_json_args;
-
     proto_bool ok;
     uint32_t ms;
     uint16_t value;
     const protocore_audit_entry *ptr;
     const char *text;
     int n;
+} AuditLogVars;
 
+/** @brief The operands and the outcome. */
+extern AuditLogVars AuditLogV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const reset)(uint8_t *restrict work);
     void (*const set_sink)(uint8_t *restrict work);
     void (*const append)(uint8_t *restrict work);
@@ -141,8 +147,33 @@ typedef struct
     void (*const dump_json)(uint8_t *restrict work);
 } AuditLogNs;
 
-/** @brief The one symbol this module exports. */
-extern AuditLogNs AuditLog;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in AuditLogV or a region of the borrow at a fixed offset.
+void protocore_audit_log_reset(uint8_t *restrict work);
+void protocore_audit_log_set_sink(uint8_t *restrict work);
+void protocore_audit_log_append(uint8_t *restrict work);
+void protocore_audit_log_count(uint8_t *restrict work);
+void protocore_audit_log_at(uint8_t *restrict work);
+void protocore_audit_log_verify(uint8_t *restrict work);
+void protocore_audit_log_cat_name(uint8_t *restrict work);
+void protocore_audit_log_format(uint8_t *restrict work);
+void protocore_audit_log_dump_json(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `AuditLog.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const AuditLogNs AuditLog __attribute__((unused)) = {
+    .reset = protocore_audit_log_reset,
+    .set_sink = protocore_audit_log_set_sink,
+    .append = protocore_audit_log_append,
+    .count = protocore_audit_log_count,
+    .at = protocore_audit_log_at,
+    .verify = protocore_audit_log_verify,
+    .cat_name = protocore_audit_log_cat_name,
+    .format = protocore_audit_log_format,
+    .dump_json = protocore_audit_log_dump_json,
+};
 
 /**
  * @brief The PROTOCORE_AUDIT_LOG_BORROW bytes this module's state lives in.
