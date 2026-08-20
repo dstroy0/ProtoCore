@@ -267,5 +267,119 @@ check("and the offsets question with it", na["offsets chain"] is None)
 check("but the namespace question still applies", na["namespace"] is True)
 print()
 
+print("a check compares the golden's SHAPE, not its SIZE")
+# The golden has four entries. Three checks compared a module's count to that four, so a module
+# with twelve entries - the same design, a bigger module - answered no. That reported 328 modules
+# for `no flat decls` and 334 for `functions placed`, and every one of them routed to a conversion
+# tool with nothing to convert. What is wrong is a declaration NO table binds, whatever the count.
+SIX_H = """#ifndef P_H
+#define P_H
+#include "protocore_config.h"
+#if PROTOCORE_ENABLE_P
+PROTOCORE_BEGIN_DECLS
+typedef struct { %s } PNs;
+%s
+static const PNs P __attribute__((unused)) = {
+%s
+};
+PROTOCORE_END_DECLS
+#endif
+#endif
+"""
+SIX_C = """#include "protocore_config.h"
+#if PROTOCORE_ENABLE_P
+#include "p/p.h"
+PROTOCORE_BEGIN_DECLS
+%s
+PROTOCORE_END_DECLS
+#endif
+"""
+NAMES = ["a", "b", "c", "d", "e", "f"]
+
+
+def sized(names, extra_decl="", extra_def=""):
+    """A golden-shaped module with `names` entries, plus anything else to declare and define."""
+    h = SIX_H % (
+        " ".join("void (*const %s)(uint8_t *restrict work);" % n for n in names),
+        "\n".join("void protocore_p_%s(uint8_t *restrict work);" % n for n in names) + "\n" + extra_decl,
+        "\n".join("    .%s = protocore_p_%s," % (n, n) for n in names),
+    )
+    c = SIX_C % (
+        "\n".join("void protocore_p_%s(uint8_t *restrict work) { (void)work; }" % n for n in names) + "\n" + extra_def
+    )
+    th = S.traits(design(h, ".h"), "header")
+    tc = S.traits(design(c, ".c"), "source")
+    S._cross(th, tc)
+    return th, tc
+
+
+def ask(name, th, tc, ident=None):
+    return dict((n, a) for n, a, _ in S.answers(th, tc, gh, gc, ident or gid)).get(name)
+
+
+th, tc = sized(NAMES)
+check("six entries is the same design as four, not a divergence", ask("no flat decls", th, tc) is True)
+check("and the six definitions behind them are placed", ask("functions placed", th, tc) is True)
+th, tc = sized(NAMES[:2])
+check("two entries is the same design too", ask("no flat decls", th, tc) is True)
+
+# What the check is actually for.
+th, tc = sized(NAMES, "void protocore_p_reset(uint8_t *restrict work);", "void protocore_p_reset(uint8_t *restrict work) { (void)work; }")
+check("a declaration no table binds IS flat", ask("no flat decls", th, tc) is False)
+check("and its definition is unplaced", ask("functions placed", th, tc) is False)
+print()
+
+print("an accessor for the module's own borrow is not a flat declaration")
+# `uint8_t *protocore_<x>_span(void)` cannot be a table entry - an entry takes the borrow and
+# returns void, this returns the borrow and takes nothing - and 114 modules publish one so a caller
+# with no borrow of its own can still pass a real one. Reading them as flat sent 95 modules to
+# `convert gen`, which had nothing it could do with them.
+th, tc = sized(NAMES, "uint8_t *protocore_p_span(void);", "uint8_t *protocore_p_span(void) { return 0; }")
+check("the accessor is recognised", th["borrow_accessors"] == ["protocore_p_span"])
+check("so the header is not flat", ask("no flat decls", th, tc) is True)
+check("and the definition is placed", ask("functions placed", th, tc) is True)
+# By SIGNATURE, not by name: mmgr's `protocore_span protocore_secure_span(size_t, size_t)` is an
+# arena allocator and shares nothing with a borrow accessor but the word.
+th, tc = sized(NAMES, "protocore_span protocore_p_span(size_t n, size_t align);", "protocore_span protocore_p_span(size_t n, size_t align) { (void)n; (void)align; }")
+check("a function merely NAMED _span is not one", th["borrow_accessors"] == [])
+check("so it is still flat", ask("no flat decls", th, tc) is False)
+print()
+
+print("the include placement check reads paths, and reads them from the raw text")
+# The code mask blanks string literals along with comments, so every include recorded its path as
+# "" and the two clauses reading them compared one list of empty strings to another. Both answered
+# yes for every module, which is why nothing looked wrong: what they verified was a count.
+check("the golden's config include has a path", gh["includes_above_gate"] == ["protocore_config.h"])
+check("and the trailing comment is not part of it", all("//" not in p for p in gc["includes_below_gate"]))
+
+
+def placed(above, below):
+    txt = SIX_H % (
+        "void (*const a)(uint8_t *restrict work);",
+        "void protocore_p_a(uint8_t *restrict work);",
+        "    .a = protocore_p_a,",
+    )
+    txt = txt.replace('#include "protocore_config.h"\n', "".join('#include "%s"\n' % p for p in above))
+    txt = txt.replace("PROTOCORE_BEGIN_DECLS", "".join('#include "%s"\n' % p for p in below) + "PROTOCORE_BEGIN_DECLS")
+    th_ = S.traits(design(txt, ".h"), "header")
+    S._cross(th_, gc)
+    return ask("includes placed", th_, gc)
+
+
+# The gate exists so a disabled module costs nothing. What sits BELOW it is the module's dependency
+# list and its length is the module's own business - the golden's header needs no other header,
+# fe25519's needs ct_eq.h, and that is the same placement. A clause comparing the two below-gate
+# lists for emptiness contradicted the question the check asks, and reported 11 modules for it.
+check("a dependency below the gate is placed correctly", placed(["protocore_config.h"], ["crypto/ct_eq.h"]) is True)
+check("a header hoisted above the gate is not", placed(["shared/ip/ip.h", "protocore_config.h"], []) is False)
+check("nor is a different header standing in for the config", placed(["mmgr/span/span.h"], []) is False)
+# With no gate, `above` is the whole file and the question has no subject. `guarded` is the check
+# that reports a missing gate, and reporting it here as well makes one defect look like two.
+ng = dict(gh, gate_present=False)
+ngc = dict(gc, gate_present=False)
+check("no gate at all is n/a, not no", ask("includes placed", ng, ngc) is None)
+check("and `guarded` still says no", ask("guarded", ng, ngc) is False)
+print()
+
 print("FAILURES: %d" % FAIL)
 sys.exit(1 if FAIL else 0)

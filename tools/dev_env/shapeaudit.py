@@ -258,7 +258,18 @@ def read_design(path):
         word, rest = m.group(1), m.group(2).strip()
         s = m.start()
         if word == "include":
-            take(s, "include", path=rest.strip("\"<>"), system=rest.startswith("<"))
+            # From RAW, not from the masked text. The mask blanks string literals along with
+            # comments, so the path in `code` is a run of spaces and every include recorded its
+            # path as "". Nothing caught it because the only checks reading these compared the
+            # lists to each other, and a list of empty strings compares equal to another one -
+            # `includes placed` was reading nothing but a count while claiming to name the config.
+            m2 = re.match(r"\s*#\s*include\s*(?:\"([^\"]*)\"|<([^>]*)>)", raw[s : m.end()])
+            take(
+                s,
+                "include",
+                path=((m2.group(1) or m2.group(2)) if m2 else rest.strip("\"<>")).strip(),
+                system=bool(m2 and m2.group(2) is not None),
+            )
         elif word == "ifndef" and re.match(r"^\w+_H$", rest):
             take(s, "guard_open", name=rest)
         elif word == "define":
@@ -391,6 +402,12 @@ def read_design(path):
             ns=m.group("ns"),
             obj=m.group("obj"),
             bound=sorted(set(re.findall(r"\.(\w+)\s*=", init))),
+            # The VALUES, in file order, so a prototype can be matched against what the table
+            # actually names. A designated initializer states the function per slot; a positional
+            # one states it by position, and the reader that resolves them is the one holding the
+            # Ns record.
+            values=[v.strip() for v in _top_level_split(init) if v.strip()],
+            binds=dict(re.findall(r"\.(\w+)\s*=\s*&?\s*([A-Za-z_]\w*)", init)),
             count=len([v for v in _top_level_split(init) if v.strip()]),
         )
 
@@ -583,6 +600,27 @@ def traits(design, which):
     t["prototypes"] = sorted(d["name"] for d in design if d["kind"] == "prototype")
     t["prototype_param_shapes"] = sorted({tuple(d["params"]) for d in design if d["kind"] == "prototype"})
 
+    # An accessor for the module's OWN borrow: `uint8_t *protocore_<x>_span(void)`. Recognised by
+    # that signature rather than by the name, so a function merely called `_span` that takes
+    # operands is not one - mmgr's `protocore_span protocore_secure_span(size_t, size_t)` is an
+    # arena allocator and shares nothing with this but the word.
+    #
+    # It is NOT an entry and cannot become one: an entry takes the borrow and returns void, and
+    # this returns the borrow and takes nothing. It exists so a caller with no borrow of its own
+    # can still keep the guarantee that a borrow is never null - `HttpClient.post(
+    # protocore_http_client_span())` is what a null argument at that site was replaced with. The
+    # golden has none because sha256's caller supplies the borrow; 114 modules that own an arena
+    # region do, and counting those as flat declarations routed them at `convert gen`, which would
+    # have tried to fold a function of the wrong shape into the table.
+    t["borrow_accessors"] = sorted(
+        d["name"]
+        for d in design
+        if d["kind"] in ("prototype", "function")
+        and not d.get("static")
+        and d.get("ret", "").replace(" ", "") == "uint8_t*"
+        and not [p for p in d.get("params", []) if p.strip() not in ("", "void")]
+    )
+
     t["static_asserts_citing_borrow"] = sum(1 for d in design if d["kind"] == "static_assert" and d.get("cites_borrow"))
     offs = [d for d in design if d["kind"] == "define" and "_OFF_" in d.get("name", "")]
     t["offset_defines"] = sorted(d["name"] for d in offs)
@@ -623,8 +661,21 @@ def traits(design, which):
     # optimisation level and no warning flag will mention until something calls it.
     table = next((d for d in design if d["kind"] == "handle_table"), None)
     t["unbound_entries"] = []
+    # The FUNCTIONS the table names, however it spells them. This is what separates a declaration
+    # the shape requires from a flat one it does not: the golden declares four functions in its
+    # header and defines four with external linkage in its .c, and every one of them is a value in
+    # the table. A module with twelve entries declares twelve, and that is the same design - the
+    # count is the module's size, not its shape.
+    t["table_functions"] = []
     if table and ns:
         declared = [m["name"] for m in ns["members"] if m["fnptr"]]
+        if table["binds"]:
+            t["table_functions"] = sorted(set(table["binds"].values()))
+        else:
+            # POSITIONAL: the value at index i binds the i'th declared entry.
+            t["table_functions"] = sorted(
+                {re.sub(r"^&\s*", "", v) for v in table.get("values", []) if re.fullmatch(r"&?\s*[A-Za-z_]\w*", v)}
+            )
         if table["bound"]:
             t["unbound_entries"] = sorted(e for e in declared if e not in table["bound"])
         else:
@@ -801,7 +852,28 @@ def design_of(hrel):
     ident = identity(htext, ctext, hp)
     h = traits(read_design(hp), "header")
     c = traits(read_design(cp), "source") if ctext else None
+    _cross(h, c)
     return ident, h, c
+
+
+def _cross(h, c):
+    """The traits that need BOTH files: what the header declares against what its table binds.
+
+    The table lives in the header and the functions live in the .c, so neither file alone can say
+    whether a declaration is one the shape asks for. Read together they can, and the answer is a
+    NAME rather than a count: `protocore_sha256_update` is declared, defined and bound, while a
+    `protocore_foo_reset` that no table names is flat however many entries sit beside it.
+
+    A module with no table gets no answer here rather than a wrong one - every name would look
+    unbound, which would report the absence of a table twice. `namespace` is the check that sees it.
+    """
+    named = set(h.get("table_functions") or [])
+    for t in (h, c):
+        if t is None:
+            continue
+        ok = named | set(t.get("borrow_accessors") or [])
+        t["unbound_prototypes"] = sorted(p for p in t.get("prototypes", []) if p not in ok) if named else []
+        t["unbound_functions"] = sorted(f for f in t.get("nonstatic_functions", []) if f not in ok) if named else []
 
 
 def golden_designs():
@@ -875,9 +947,13 @@ CHECKS = [
         "convert gen",
     ),
     (
+        # NOT a count against the golden's four. The golden DECLARES four functions - the table
+        # binds them by name, so they need external linkage and a declaration to bind against - and
+        # comparing that four to a module's twelve reported 328 modules divergent for the crime of
+        # having more entries than sha256. What is flat is a declaration NO table names.
         "no flat decls",
-        "is the header free of free-function declarations?",
-        lambda h, c, gh, gc: len(h["prototypes"]) == len(gh["prototypes"]),
+        "is every function the header declares one the table binds?",
+        lambda h, c, gh, gc: len(h["unbound_prototypes"]) == len(gh["unbound_prototypes"]),
         "convert gen",
     ),
     (
@@ -987,17 +1063,34 @@ CHECKS = [
         "convert shape",
     ),
     (
+        # The gate exists so a disabled module costs nothing, and an include above it is pulled in
+        # whether the module is built or not. So the rule is about what sits ABOVE: the config, and
+        # nothing else. What sits below is the module's dependency list, and its length is the
+        # module's business - the golden's header needs no other header and fe25519's needs
+        # ct_eq.h, which is the same placement, not a divergence. The clause comparing the two
+        # BELOW-gate lists for emptiness contradicted the question this check asks.
+        #
+        # The paths are compared, not counted: the golden's one include above the gate is
+        # protocore_config.h by name, and a module that hoisted a different header would otherwise
+        # answer yes for hoisting exactly one.
+        # Asked only of a file that HAS a gate. With none, `includes_above_gate` is the whole file
+        # and every module answers no to a question it has no subject for - which is `guarded`'s
+        # finding, reported once there rather than twice here.
         "includes placed",
         "does only the config include sit above the gate, and everything else below?",
-        lambda h, c, gh, gc: h["includes_above_gate"] == gh["includes_above_gate"]
-        and c["includes_above_gate"] == gc["includes_above_gate"]
-        and bool(h["includes_below_gate"]) == bool(gh["includes_below_gate"]),
+        lambda h, c, gh, gc: (not h["gate_present"] or h["includes_above_gate"] == gh["includes_above_gate"])
+        and (not c["gate_present"] or c["includes_above_gate"] == gc["includes_above_gate"]),
         "convert shape",
     ),
     (
+        # Same correction as `no flat decls`, from the other side. The golden's .c defines four
+        # functions with external linkage, and they are the four the table binds; everything else
+        # it defines is static. So the question is not how many are non-static but whether any
+        # non-static one is unaccounted for - plus the header, which should define none at all, and
+        # the gate, which nothing may sit above.
         "functions placed",
-        "is every function in the .c static, below the gate, inside the decls?",
-        lambda h, c, gh, gc: len(c["nonstatic_functions"]) == len(gc["nonstatic_functions"])
+        "is every function the .c defines either static or bound by the table, and nothing above the gate?",
+        lambda h, c, gh, gc: len(c["unbound_functions"]) == len(gc["unbound_functions"])
         and len(h["nonstatic_functions"]) == len(gh["nonstatic_functions"])
         and c["constructs_above_gate"] == gc["constructs_above_gate"],
         "convert shape",
@@ -1023,12 +1116,23 @@ CHECKS = [
 #                  namespace and operand checks above already catch it.
 BORROW_CHECKS = ("borrow carved", "offsets chain", "assert covers last", "no local arrays")
 
+#   no gate      - `includes_above_gate` with no gate to be above is the whole file, so a module
+#                  without one answers no to a question it has no subject for. That module's
+#                  finding is the MISSING GATE, which `guarded` reports; saying it twice makes one
+#                  defect look like two. A module gated in one file and not the other still answers
+#                  for the file that has one - the predicate skips only the ungated half.
+GATE_CHECKS = ("includes placed",)
+
 
 def answers(h, c, gh, gc, ident=None):
     """Every check's answer for one module, in order: True yes, False no, None not applicable."""
     out = []
     for name, q, test, verb in CHECKS:
-        if c is None or (name in BORROW_CHECKS and ident is not None and not ident.get("borrow")):
+        if (
+            c is None
+            or (name in BORROW_CHECKS and ident is not None and not ident.get("borrow"))
+            or (name in GATE_CHECKS and not h.get("gate_present") and not c.get("gate_present"))
+        ):
             out.append((name, None, verb))
             continue
         try:
