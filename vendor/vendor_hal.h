@@ -21,13 +21,13 @@
 #define PROTOCORE_VENDOR_HAL_H
 
 #if PROTOCORE_VENDOR_ESP
-#include "test/core_setup/hal/esp/esp_aes_hal.h"    // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_AES
+#include "test/core_setup/hal/esp/esp_aes_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_AES
 #include "test/core_setup/hal/esp/esp_crypto_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_RSA_MODMUL_HW
-#include "test/core_setup/hal/esp/esp_sha_hal.h"    // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_SHA
+#include "test/core_setup/hal/esp/esp_sha_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_SHA
 #elif PROTOCORE_HOST
 #include "test/core_setup/hal/host/host_aes_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_AES
 #include "test/core_setup/hal/host/host_crypto_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_RSA_MODMUL_HW
-#include "test/core_setup/hal/host/host_hw_reg.h"     // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - the modelled register bus
+#include "test/core_setup/hal/host/host_hw_reg.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - the modelled register bus
 #include "test/core_setup/hal/host/host_sha_hal.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - gated on PROTOCORE_HAS_HW_SHA
 #endif
 
