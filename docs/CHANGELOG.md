@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`c68d6ab`](https://github.com/dstroy0/ProtoCore/commit/c68d6abca215db4d7e53b070ed99d8871b0be27b))
 - update CHANGELOG.md [skip ci] ([`af66200`](https://github.com/dstroy0/ProtoCore/commit/af662000dfcb6889ffaca4c2a8c9542b7589f588))
 - update CHANGELOG.md [skip ci] ([`3223726`](https://github.com/dstroy0/ProtoCore/commit/32237269062dcc620ef5eb30a9e0f185a9fe1455))
 - update CHANGELOG.md [skip ci] ([`430d5c7`](https://github.com/dstroy0/ProtoCore/commit/430d5c70c4e3fbe27e5b7a11d9ad0a0b6ed51d6d))
@@ -394,6 +395,7 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- no call spells one as null, 63 sites ([`b03a90a`](https://github.com/dstroy0/ProtoCore/commit/b03a90aed7364cfd3034464b523926d6ae2ad9c3))
 - measure cap-sweep: compile the arm the host never answers ([`4b12dfa`](https://github.com/dstroy0/ProtoCore/commit/4b12dfabfc94af755a1fdab0bdd6c3f9ddc897ed))
 - the no-bus arms of hmmd, ld2410 and pmbus never compiled ([`2965ad1`](https://github.com/dstroy0/ProtoCore/commit/2965ad1dee204142f2ae3c884fb600e39bba0dc7))
 - read a module blind before judging it ([`ce2dfa9`](https://github.com/dstroy0/ProtoCore/commit/ce2dfa9b94311ba6f9c3024572f809ae1dd2c8f5))
