@@ -292,12 +292,12 @@ void test_control_stream_settings_sent()
 
     uint64_t type = 0;
     size_t c = 0;
-    QuicVarint.decode_args.in = ctrl->tx;
-    QuicVarint.decode_args.len = ctrl->tx_have;
-    QuicVarint.decode_args.value = &type;
-    QuicVarint.decode_args.consumed = &c;
+    QuicVarintV.decode_args.in = ctrl->tx;
+    QuicVarintV.decode_args.len = ctrl->tx_have;
+    QuicVarintV.decode_args.value = &type;
+    QuicVarintV.decode_args.consumed = &c;
     QuicVarint.decode(quic_varint_work);
-    TEST_ASSERT_TRUE(QuicVarint.ok);
+    TEST_ASSERT_TRUE(QuicVarintV.ok);
     TEST_ASSERT_EQUAL_UINT64(0x00, type);
     H3FrameHeader fr;
     H3Frame.parse_header_args.buf = ctrl->tx + c;
@@ -321,11 +321,11 @@ void test_client_control_stream_settings()
     H3Conn.init(g_h3_b);
 
     uint8_t s[64];
-    QuicVarint.encode_args.out = s;
-    QuicVarint.encode_args.cap = sizeof(s);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = s;
+    QuicVarintV.encode_args.cap = sizeof(s);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t sp = QuicVarint.n;
+    size_t sp = QuicVarintV.n;
     const uint64_t ids[] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
     const uint64_t vals[] = {12345};
     H3Frame.build_settings_args.out = s + sp;
@@ -353,23 +353,23 @@ void test_client_uni_stream_types()
     H3Conn.init(g_h3_b);
 
     uint8_t t;
-    QuicVarint.encode_args.out = &t;
-    QuicVarint.encode_args.cap = 1;
-    QuicVarint.encode_args.value = 0x02;
+    QuicVarintV.encode_args.out = &t;
+    QuicVarintV.encode_args.cap = 1;
+    QuicVarintV.encode_args.value = 0x02;
     QuicVarint.encode(quic_varint_work);
-    size_t n = QuicVarint.n;
+    size_t n = QuicVarintV.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 6, &t, n, PROTO_FALSE);
-    QuicVarint.encode_args.out = &t;
-    QuicVarint.encode_args.cap = 1;
-    QuicVarint.encode_args.value = 0x03;
+    QuicVarintV.encode_args.out = &t;
+    QuicVarintV.encode_args.cap = 1;
+    QuicVarintV.encode_args.value = 0x03;
     QuicVarint.encode(quic_varint_work);
-    n = QuicVarint.n;
+    n = QuicVarintV.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 10, &t, n, PROTO_FALSE);
-    QuicVarint.encode_args.out = &t;
-    QuicVarint.encode_args.cap = 1;
-    QuicVarint.encode_args.value = 0x1f;
+    QuicVarintV.encode_args.out = &t;
+    QuicVarintV.encode_args.cap = 1;
+    QuicVarintV.encode_args.value = 0x1f;
     QuicVarint.encode(quic_varint_work);
-    n = QuicVarint.n;
+    n = QuicVarintV.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 14, &t, n, PROTO_FALSE);
 
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_QPACK_ENC, find_h3(&g_h3, 6)->role);
@@ -802,11 +802,11 @@ void test_h3_second_control_stream()
     H3Conn.init(g_h3_b);
 
     uint8_t s1[64];
-    QuicVarint.encode_args.out = s1;
-    QuicVarint.encode_args.cap = sizeof(s1);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = s1;
+    QuicVarintV.encode_args.cap = sizeof(s1);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t p1 = QuicVarint.n;
+    size_t p1 = QuicVarintV.n;
     H3Frame.build_settings_args.out = s1 + p1;
     H3Frame.build_settings_args.cap = sizeof(s1) - p1;
     H3Frame.build_settings_args.ids = NULL;
@@ -818,11 +818,11 @@ void test_h3_second_control_stream()
     TEST_ASSERT_FALSE(g_qc.close_queued);
 
     uint8_t s2[64];
-    QuicVarint.encode_args.out = s2;
-    QuicVarint.encode_args.cap = sizeof(s2);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = s2;
+    QuicVarintV.encode_args.cap = sizeof(s2);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t p2 = QuicVarint.n;
+    size_t p2 = QuicVarintV.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 6, s2, p2, PROTO_FALSE);
     TEST_ASSERT_TRUE(g_qc.close_queued);
     TEST_ASSERT_TRUE(g_qc.close_is_app);
@@ -839,11 +839,11 @@ void test_h3_second_settings_frame()
     H3Conn.init(g_h3_b);
 
     uint8_t s[128];
-    QuicVarint.encode_args.out = s;
-    QuicVarint.encode_args.cap = sizeof(s);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = s;
+    QuicVarintV.encode_args.cap = sizeof(s);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t p = QuicVarint.n;
+    size_t p = QuicVarintV.n;
     H3Frame.build_settings_args.out = s + p;
     H3Frame.build_settings_args.cap = sizeof(s) - p;
     H3Frame.build_settings_args.ids = NULL;
@@ -946,11 +946,11 @@ void test_h3_control_stream_frame_guards()
     H3Frame.settings_defaults(h3_frame_work);
 
     uint8_t s[64];
-    QuicVarint.encode_args.out = s;
-    QuicVarint.encode_args.cap = sizeof(s);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = s;
+    QuicVarintV.encode_args.cap = sizeof(s);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t sp = QuicVarint.n;
+    size_t sp = QuicVarintV.n;
     s[sp++] = 0xC0;
     g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, s, sp, PROTO_FALSE);
     H3Stream *st = find_h3(&g_h3, 2);
@@ -965,11 +965,11 @@ void test_h3_control_stream_frame_guards()
     H3Conn.app_args.app = NULL;
     H3Conn.init(g_h3b_b);
     uint8_t s2[64];
-    QuicVarint.encode_args.out = s2;
-    QuicVarint.encode_args.cap = sizeof(s2);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = s2;
+    QuicVarintV.encode_args.cap = sizeof(s2);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t sp2 = QuicVarint.n;
+    size_t sp2 = QuicVarintV.n;
     H3Frame.write_header_args.out = s2 + sp2;
     H3Frame.write_header_args.cap = sizeof(s2) - sp2;
     H3Frame.write_header_args.type = H3_SETTINGS;
@@ -986,11 +986,11 @@ void test_h3_control_stream_frame_guards()
     H3Conn.app_args.app = NULL;
     H3Conn.init(g_h3b_b);
     uint8_t s3[64];
-    QuicVarint.encode_args.out = s3;
-    QuicVarint.encode_args.cap = sizeof(s3);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = s3;
+    QuicVarintV.encode_args.cap = sizeof(s3);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t sp3 = QuicVarint.n;
+    size_t sp3 = QuicVarintV.n;
     H3Frame.write_header_args.out = s3 + sp3;
     H3Frame.write_header_args.cap = sizeof(s3) - sp3;
     H3Frame.write_header_args.type = 0x07;
@@ -1010,11 +1010,11 @@ void test_h3_control_stream_frame_guards()
     H3Conn.app_args.app = NULL;
     H3Conn.init(g_h3b_b);
     uint8_t s4[64];
-    QuicVarint.encode_args.out = s4;
-    QuicVarint.encode_args.cap = sizeof(s4);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = s4;
+    QuicVarintV.encode_args.cap = sizeof(s4);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t sp4 = QuicVarint.n;
+    size_t sp4 = QuicVarintV.n;
     H3Frame.build_settings_args.out = s4 + sp4;
     H3Frame.build_settings_args.cap = sizeof(s4) - sp4;
     H3Frame.build_settings_args.ids = NULL;
@@ -1053,11 +1053,11 @@ void test_h3_uni_stream_empty_and_repeat_delivery()
     TEST_ASSERT_EQUAL_UINT(0, st->buf_len);
 
     uint8_t t[16];
-    QuicVarint.encode_args.out = t;
-    QuicVarint.encode_args.cap = sizeof(t);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = t;
+    QuicVarintV.encode_args.cap = sizeof(t);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t tn = QuicVarint.n;
+    size_t tn = QuicVarintV.n;
     g_qc.cb.on_stream_data(g_qc.cb.app, g_qc_ctx, 2, t, tn, PROTO_FALSE);
     TEST_ASSERT_TRUE(st->type_read);
     TEST_ASSERT_EQUAL_UINT8(H3_ROLE_CONTROL, st->role);

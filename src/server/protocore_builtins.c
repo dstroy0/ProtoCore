@@ -39,17 +39,17 @@ static inline void register_if(ProtoConn proto, const ProtoHandler *h)
 void protocore_register_builtins(void)
 {
     HttpConn.proto_handler(protocore_http_conn_span()); // always present
-    register_if(PROTO_HTTP, HttpConn.handler);
+    register_if(PROTO_HTTP, HttpConnV.handler);
 #if PROTOCORE_ENABLE_TELNET
     Telnet.proto_handler(protocore_telnet_span());
     register_if(PROTO_TELNET, Telnet.handler);
 #endif
 #if PROTOCORE_ENABLE_SSH
     SshServer.proto_handler(protocore_ssh_server_span());
-    register_if(PROTO_SSH, SshServer.handler);
+    register_if(PROTO_SSH, SshServerV.handler);
 #if PROTOCORE_SSH_PORT_FORWARD
     SshServer.rfwd_proto_handler(protocore_ssh_server_span());
-    register_if(PROTO_SSH_RFWD, SshServer.handler);
+    register_if(PROTO_SSH_RFWD, SshServerV.handler);
 #endif
 #endif
 #if PROTOCORE_NEED_MODBUS

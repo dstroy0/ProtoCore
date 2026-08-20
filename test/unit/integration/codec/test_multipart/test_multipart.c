@@ -1,9 +1,9 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "network_drivers/presentation/presentation.h" // HttpConn: the per-slot request the parser fills
 #include "network_drivers/presentation/codec/multipart/multipart.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
+#include "network_drivers/presentation/presentation.h" // HttpConn: the per-slot request the parser fills
 #include "network_drivers/transport/tcp/common.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include <stdio.h>
@@ -20,7 +20,7 @@ static void reset_slot(uint8_t slot)
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.reset(protocore_http_conn_span());
 }
 
@@ -55,7 +55,7 @@ static HttpReq *build_multipart_req(uint8_t slot, const char *boundary, const ch
     push_rx(c, hdr, strlen(hdr));
     push_rx(c, body_buf, blen);
 
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     return &http_pool[slot];
 }
@@ -73,7 +73,7 @@ static HttpReq *build_multipart_req_bin(uint8_t slot, const char *boundary, cons
     TcpConn *c = &conn_pool[slot];
     push_rx(c, hdr, strlen(hdr));
     push_rx(c, body, blen);
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     return &http_pool[slot];
 }
@@ -105,7 +105,7 @@ void test_no_content_type_returns_false()
         c->rx_buffer[c->rx_head] = (uint8_t)*p;
         c->rx_head = next;
     }
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
 
     MultipartBody mp;
@@ -131,7 +131,7 @@ void test_no_boundary_in_content_type_returns_false()
         c->rx_buffer[c->rx_head] = (uint8_t)*p;
         c->rx_head = next;
     }
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
 
     MultipartBody mp;

@@ -468,7 +468,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     TcpConn *conn = &conn_pool[slot_id];
     if (conn->state != CONN_ACTIVE || conn->pcb == NULL)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
@@ -512,7 +512,7 @@ static void send_error_close(uint8_t slot_id, const char *status, const char *ex
     }
     ConnPool.slot = slot_id;
     ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
-    HttpConn.slot = slot_id;
+    HttpConnV.slot = slot_id;
     HttpConn.reset(protocore_http_conn_span());
 }
 
@@ -625,10 +625,10 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
     // X-CSRF-Token header (GET / HEAD / OPTIONS are exempt - not state-changing).
     if (method == HTTP_POST || method == HTTP_PUT || method == HTTP_PATCH || method == HTTP_DELETE)
     {
-        HttpParser.get_header_args.req = req;
-        HttpParser.get_header_args.key = "X-CSRF-Token";
+        HttpParserV.get_header_args.req = req;
+        HttpParserV.get_header_args.key = "X-CSRF-Token";
         HttpParser.get_header(protocore_http_parser_span());
-        const char *tok = HttpParser.text;
+        const char *tok = HttpParserV.text;
         Csrf.verify_args.token = tok;
         Csrf.verify(protocore_csrf_span());
         if (!tok || !Csrf.valid)
@@ -644,30 +644,30 @@ static proto_bool protocore_csrf_gate(uint8_t slot_id, HttpReq *req, HttpMethod 
 #if PROTOCORE_ENABLE_WEBSOCKET
 static void handle_ws_route(uint8_t slot_id, HttpReq *req, HttpMethod method, const HttpRoute *r)
 {
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Upgrade";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Upgrade";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *upgrade_hdr = HttpParser.text;
+    const char *upgrade_hdr = HttpParserV.text;
     // RFC 6455 4.2.1: a valid handshake needs Upgrade: websocket AND a Connection
     // header that includes the "Upgrade" token.
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Connection";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Connection";
     HttpParser.get_header(protocore_http_parser_span());
-    HttpConn.hdr_args.hdr = HttpParser.text;
-    HttpConn.hdr_args.token = "upgrade";
+    HttpConnV.hdr_args.hdr = HttpParserV.text;
+    HttpConnV.hdr_args.token = "upgrade";
     HttpConn.has_token(protocore_http_conn_span());
     proto_bool is_ws_upgrade = (method == HTTP_GET) && (upgrade_hdr != NULL) &&
-                               str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) && HttpConn.ok;
+                               str.eq(upgrade_hdr, "websocket", sizeof("websocket"), PROTO_TRUE) && HttpConnV.ok;
     if (!is_ws_upgrade)
     {
         send_text(slot_id, 400, PROTOCORE_MIME_TEXT_PLAIN, "WebSocket upgrade required");
         return;
     }
     // RFC 6455 §4.2.1: only version 13 is supported; otherwise 426.
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Sec-WebSocket-Version";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Sec-WebSocket-Version";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *ws_ver = HttpParser.text;
+    const char *ws_ver = HttpParserV.text;
     if (ws_ver == NULL || !str.eq(ws_ver, "13", sizeof("13"), PROTO_FALSE))
     {
         ws_send_version_required(slot_id);
@@ -701,12 +701,12 @@ static proto_bool proto_authorize_request(uint8_t slot_id, HttpReq *req, const H
     // spoofed header can neither evade a lockout nor frame another address.
     {
         char fbuf[PROTOCORE_IP_STR_MAX];
-        HttpParser.forwarded_client_args.req = req;
-        HttpParser.forwarded_client_args.ip_out = fbuf;
-        HttpParser.forwarded_client_args.ip_cap = sizeof(fbuf);
-        HttpParser.forwarded_client_args.is_https = NULL;
+        HttpParserV.forwarded_client_args.req = req;
+        HttpParserV.forwarded_client_args.ip_out = fbuf;
+        HttpParserV.forwarded_client_args.ip_cap = sizeof(fbuf);
+        HttpParserV.forwarded_client_args.is_https = NULL;
         HttpParser.forwarded_client(protocore_http_parser_span());
-        const char *fwd = HttpParser.ok ? fbuf : NULL;
+        const char *fwd = HttpParserV.ok ? fbuf : NULL;
         protocore_ip eff;
         ForwardedTrust.effective_ip_args.peer = &cip;
         ForwardedTrust.effective_ip_args.fwd_ip_str = fwd;
@@ -899,10 +899,10 @@ static void match_and_execute(uint8_t *restrict work)
 #endif
 
     // RFC 7230 §3.3.1: reject Transfer-Encoding
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Transfer-Encoding";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Transfer-Encoding";
     HttpParser.get_header(protocore_http_parser_span());
-    if (HttpParser.text != NULL)
+    if (HttpParserV.text != NULL)
     {
         send_text(slot_id, 501, PROTOCORE_MIME_TEXT_PLAIN, "Not Implemented");
         return;
@@ -922,11 +922,11 @@ static void match_and_execute(uint8_t *restrict work)
     allow_buf[0] = '\0';
 
     HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t i = 0; i < HttpRoutes.value; i++)
+    for (uint8_t i = 0; i < HttpRoutesV.value; i++)
     {
-        HttpRoutes.at_args.i = i;
+        HttpRoutesV.at_args.i = i;
         HttpRoutes.at(protocore_http_route_span());
-        HttpRoute *r = HttpRoutes.ptr;
+        HttpRoute *r = HttpRoutesV.ptr;
         if (!route_admits(r, slot_id, req))
         {
             continue;
@@ -990,9 +990,9 @@ static void poll_slot(uint8_t *restrict work)
 
 #if PROTOCORE_ENABLE_WEBSOCKET
     // WebSocket slot - drain ring buffer and dispatch ready frames
-    Ws.slot = i;
+    WsV.slot = i;
     Ws.find(protocore_ws_span());
-    WsConn *ws = Ws.found;
+    WsConn *ws = WsV.found;
     if (ws)
     {
 #if PROTOCORE_ENABLE_TLS
@@ -1009,13 +1009,13 @@ static void poll_slot(uint8_t *restrict work)
             {
                 for (int k = 0; k < n; k++)
                 {
-                    Ws.conn = ws;
-                    Ws.byte = tbuf[k];
+                    WsV.conn = ws;
+                    WsV.byte = tbuf[k];
                     Ws.feed_byte(protocore_ws_span());
                     if (ws->parse_state == WS_FRAME_READY)
                     {
                         ws_dispatch_message(ws);
-                        Ws.conn = ws;
+                        WsV.conn = ws;
                         Ws.reset_frame(protocore_ws_span());
                     }
                     else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
@@ -1031,30 +1031,30 @@ static void poll_slot(uint8_t *restrict work)
             if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR || n < 0)
             {
                 ws_dispatch_close(ws);
-                Ws.slot = i;
+                WsV.slot = i;
                 Ws.free(protocore_ws_span());
                 ConnPool.slot = i;
                 ConnPool.abort_slot(protocore_conn_pool_span()); // transport owns TLS-free + detach + reset + RST
-                HttpConn.slot = i;
+                HttpConnV.slot = i;
                 HttpConn.reset(protocore_http_conn_span());
             }
             return;
         }
 #endif // PROTOCORE_ENABLE_TLS
 
-        Ws.conn = ws;
+        WsV.conn = ws;
         Ws.parse(protocore_ws_span());
 
         if (ws->parse_state == WS_FRAME_READY)
         {
             ws_dispatch_message(ws);
-            Ws.conn = ws;
+            WsV.conn = ws;
             Ws.reset_frame(protocore_ws_span());
         }
         else if (ws->parse_state == WS_CLOSED || ws->parse_state == WS_ERROR)
         {
             ws_dispatch_close(ws);
-            Ws.slot = i;
+            WsV.slot = i;
             Ws.free(protocore_ws_span());
             // RFC 6455 5.5.1: close the underlying TCP connection after the close
             // handshake. begin_close moves the slot out of CONN_ACTIVE so the
@@ -1062,7 +1062,7 @@ static void poll_slot(uint8_t *restrict work)
             // close-frame the WS layer queued still flushes during the dwell).
             ConnPool.slot = i;
             ConnPool.begin_close(protocore_conn_pool_span());
-            HttpConn.slot = i;
+            HttpConnV.slot = i;
             HttpConn.reset(protocore_http_conn_span());
         }
         return; // slot is owned by WS; skip HTTP dispatch
@@ -1093,7 +1093,7 @@ static void poll_slot(uint8_t *restrict work)
 #endif
     if (live && http_pool[i].parse_state != PARSE_COMPLETE)
     {
-        HttpConn.slot = i;
+        HttpConnV.slot = i;
         HttpConn.parse(protocore_http_conn_span());
     }
 #endif
@@ -1127,7 +1127,7 @@ static void poll_slot(uint8_t *restrict work)
         Http.match_and_execute(work);
         if (http_pool[i].parse_state == PARSE_COMPLETE)
         {
-            HttpConn.slot = i;
+            HttpConnV.slot = i;
             HttpConn.reset(protocore_http_conn_span());
         }
     }

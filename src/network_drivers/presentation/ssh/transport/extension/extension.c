@@ -20,20 +20,20 @@ static const char EXT_INFO_S[] = "ext-info-s";
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void extension_info_indicator(uint8_t *restrict work)
+void protocore_extension_info_indicator(uint8_t *restrict work)
 {
     (void)work;
-    proto_bool client_role = Extension.info_indicator_args.client_role;
+    proto_bool client_role = ExtensionV.info_indicator_args.client_role;
 
-    Extension.text = client_role ? EXT_INFO_C : EXT_INFO_S;
+    ExtensionV.text = client_role ? EXT_INFO_C : EXT_INFO_S;
 }
 
-static void extension_build(uint8_t *restrict work)
+void protocore_extension_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = Extension.build_args.out;
-    size_t *len = Extension.build_args.len;
-    size_t cap = Extension.build_args.cap;
+    uint8_t *out = ExtensionV.build_args.out;
+    size_t *len = ExtensionV.build_args.len;
+    size_t cap = ExtensionV.build_args.cap;
 
     // byte SSH_MSG_EXT_INFO || uint32 nr-extensions || (string name, string value)*
     protocore_span w = span.from(out, cap);
@@ -49,15 +49,13 @@ static void extension_build(uint8_t *restrict work)
     protocore_ssh_wr_cstr(&w, siglist); // value: accepted client-sig algorithms
     if (!span.ok(w))
     {
-        Extension.n = -1;
+        ExtensionV.n = -1;
         return;
     }
     *len = w.pos;
-    Extension.n = 0;
+    ExtensionV.n = 0;
 }
-ExtensionNs Extension = {
-    .info_indicator = extension_info_indicator,
-    .build = extension_build,
-};
+/** @brief The operands and the outcome. */
+ExtensionVars ExtensionV;
 
 PROTOCORE_END_DECLS

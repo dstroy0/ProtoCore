@@ -160,13 +160,13 @@ static void hdr_write(uint8_t *out, uint8_t content_type, size_t body_len)
 static void expand_label(TlsCipher cipher, uint8_t *work, const uint8_t *secret, const char *label, uint8_t *out,
                          size_t out_len)
 {
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.is384 = protocore_tls_cipher_is384(cipher);
-    Tls13Ks.derive_args.work = work;
-    Tls13Ks.derive_args.secret = secret;
-    Tls13Ks.derive_args.label = label;
-    Tls13Ks.derive_args.out = out;
-    Tls13Ks.derive_args.out_len = out_len;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.is384 = protocore_tls_cipher_is384(cipher);
+    Tls13KsV.derive_args.work = work;
+    Tls13KsV.derive_args.secret = secret;
+    Tls13KsV.derive_args.label = label;
+    Tls13KsV.derive_args.out = out;
+    Tls13KsV.derive_args.out_len = out_len;
     Tls13Ks.expand_label(NULL);
 }
 

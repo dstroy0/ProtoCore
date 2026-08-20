@@ -66,7 +66,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConn.slot = i;
+        HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -88,7 +88,7 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -285,7 +285,7 @@ void test_multiple_content_types()
         conn_pool[0].state = CONN_ACTIVE;
         conn_pool[0].proto = PROTO_HTTP;
         conn_pool[0].pcb = protocore_net_host_pcb();
-        HttpConn.slot = 0;
+        HttpConnV.slot = 0;
         HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
 
@@ -308,7 +308,7 @@ static void rearm(uint8_t slot)
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 }
@@ -513,13 +513,13 @@ void stress_serve_file_50_requests()
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
-        HttpConn.slot = slot;
+        HttpConnV.slot = slot;
         HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
         handler_called = PROTO_FALSE;
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
-        HttpConn.slot = slot;
+        HttpConnV.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
         handle();
 
@@ -541,7 +541,7 @@ void stress_alternate_missing_and_found()
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
-        HttpConn.slot = slot;
+        HttpConnV.slot = slot;
         HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
 
@@ -555,7 +555,7 @@ void stress_alternate_missing_and_found()
         }
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
-        HttpConn.slot = slot;
+        HttpConnV.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
         handle();
 
@@ -589,7 +589,7 @@ void test_inm_leading_ows_still_matches()
     FileServing.serve_static(protocore_file_serving_span());
 
     push_str(0, "GET /p.html HTTP/1.1\r\nHost: x\r\n\r\n");
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     inject_header(0, "If-None-Match", " \t\"f-3e8\"");
     handle();

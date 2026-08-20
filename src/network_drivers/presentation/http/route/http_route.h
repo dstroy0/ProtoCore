@@ -124,19 +124,40 @@ typedef struct
 typedef struct
 {
     HttpRoutesAtArgs at_args;
-
     proto_bool ok;
     HttpRoute *ptr;
     uint8_t value;
+} HttpRoutesVars;
 
+/** @brief The operands and the outcome. */
+extern HttpRoutesVars HttpRoutesV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const add)(uint8_t *restrict work);
     void (*const count)(uint8_t *restrict work);
     void (*const at)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
 } HttpRouteNs;
 
-/** @brief The one symbol this module exports. */
-extern HttpRouteNs HttpRoutes;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HttpRoutesV or a region of the borrow at a fixed offset.
+void protocore_http_routes_add(uint8_t *restrict work);
+void protocore_http_routes_count(uint8_t *restrict work);
+void protocore_http_routes_at(uint8_t *restrict work);
+void protocore_http_routes_reset(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HttpRoutes.add(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HttpRouteNs HttpRoutes __attribute__((unused)) = {
+    .add = protocore_http_routes_add,
+    .count = protocore_http_routes_count,
+    .at = protocore_http_routes_at,
+    .reset = protocore_http_routes_reset,
+};
 
 /**
  * @brief The bytes every entry here runs out of: the one route table.

@@ -322,7 +322,7 @@ static void challenge(uint8_t *restrict work)
     const AuthCred *c = cred_at(work, Auth.id);
     if (c == NULL)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
@@ -330,7 +330,7 @@ static void challenge(uint8_t *restrict work)
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
-        HttpConn.slot = slot_id;
+        HttpConnV.slot = slot_id;
         HttpConn.reset(protocore_http_conn_span());
         return;
     }
@@ -415,10 +415,10 @@ static void challenge(uint8_t *restrict work)
 static proto_bool check_basic(uint8_t slot_id, HttpReq *req, const AuthCred *c)
 {
     (void)slot_id;
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Authorization";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Authorization";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *auth_hdr = HttpParser.text;
+    const char *auth_hdr = HttpParserV.text;
     if (!auth_hdr || !str.starts(auth_hdr, "Basic ", sizeof("Basic "), PROTO_FALSE))
     {
         return PROTO_FALSE;

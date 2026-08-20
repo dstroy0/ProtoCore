@@ -209,18 +209,18 @@ static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *
     size_t p = QuicPacket.n;
     if (type == QUIC_LP_INITIAL)
     {
-        QuicVarint.encode_args.out = out + p;
-        QuicVarint.encode_args.cap = cap - p;
-        QuicVarint.encode_args.value = 0;
+        QuicVarintV.encode_args.out = out + p;
+        QuicVarintV.encode_args.cap = cap - p;
+        QuicVarintV.encode_args.value = 0;
         QuicVarint.encode(quic_varint_work);
-        p += QuicVarint.n;
+        p += QuicVarintV.n;
     }
     uint64_t length = (uint64_t)pn_len + frame_len + 16;
-    QuicVarint.encode_args.out = out + p;
-    QuicVarint.encode_args.cap = cap - p;
-    QuicVarint.encode_args.value = length;
+    QuicVarintV.encode_args.out = out + p;
+    QuicVarintV.encode_args.cap = cap - p;
+    QuicVarintV.encode_args.value = length;
     QuicVarint.encode(quic_varint_work);
-    p += QuicVarint.n;
+    p += QuicVarintV.n;
     size_t pn_off = p;
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
@@ -276,19 +276,19 @@ static size_t open_long(const uint8_t *dg, size_t len, QuicPacketKeys *keys, uin
     {
         uint64_t tl = 0;
         size_t c = 0;
-        QuicVarint.decode_args.in = dg + off;
-        QuicVarint.decode_args.len = len - off;
-        QuicVarint.decode_args.value = &tl;
-        QuicVarint.decode_args.consumed = &c;
+        QuicVarintV.decode_args.in = dg + off;
+        QuicVarintV.decode_args.len = len - off;
+        QuicVarintV.decode_args.value = &tl;
+        QuicVarintV.decode_args.consumed = &c;
         QuicVarint.decode(quic_varint_work);
         off += c + (size_t)tl;
     }
     uint64_t length = 0;
     size_t c = 0;
-    QuicVarint.decode_args.in = dg + off;
-    QuicVarint.decode_args.len = len - off;
-    QuicVarint.decode_args.value = &length;
-    QuicVarint.decode_args.consumed = &c;
+    QuicVarintV.decode_args.in = dg + off;
+    QuicVarintV.decode_args.len = len - off;
+    QuicVarintV.decode_args.value = &length;
+    QuicVarintV.decode_args.consumed = &c;
     QuicVarint.decode(quic_varint_work);
     off += c;
     *wire_len = off + (size_t)length;
@@ -391,7 +391,7 @@ static void make_cfg(QuicTlsConfig *cfg)
     memcpy(cfg->ed25519_seed, SERVER_SEED, 32);
     memcpy(cfg->ephemeral_priv, SERVER_PRIV, 32);
     memcpy(cfg->random, SERVER_RANDOM, 32);
-    QuicTp.defaults_args.tp = &cfg->params;
+    QuicTpV.defaults_args.tp = &cfg->params;
     QuicTp.defaults(quic_tp_work);
     cfg->params.initial_max_data = 1048576;
     cfg->params.initial_max_sd_bidi_remote = 262144;
@@ -423,16 +423,16 @@ void test_full_handshake_and_stream()
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     QuicTransportParams ctp;
-    QuicTp.defaults_args.tp = &ctp;
+    QuicTpV.defaults_args.tp = &ctp;
     QuicTp.defaults(quic_tp_work);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctp_enc[128];
-    QuicTp.encode_args.tp = &ctp;
-    QuicTp.encode_args.out = ctp_enc;
-    QuicTp.encode_args.cap = sizeof(ctp_enc);
+    QuicTpV.encode_args.tp = &ctp;
+    QuicTpV.encode_args.out = ctp_enc;
+    QuicTpV.encode_args.cap = sizeof(ctp_enc);
     QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTp.n;
+    size_t ctp_len = QuicTpV.n;
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
     Curve25519.x25519_base_args.scalar = CLIENT_PRIV;
@@ -499,14 +499,14 @@ void test_full_handshake_and_stream()
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_340[PROTOCORE_TLS13_KS_BORROW];
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.bind.s = ks_store_340;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.bind.s = ks_store_340;
     Tls13Ks.early(NULL);
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
-    Tls13Ks.step.ch_sh_hash = ch_sh;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = sizeof(ecdhe);
+    Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_server_keys, hs_client_keys;
     QuicCrypto.keys_from_secret_args.keys_work = tw;
@@ -530,8 +530,8 @@ void test_full_handshake_and_stream()
     Sha256.update(t);
     Sha256V.final_args.out = ch_sf;
     Sha256.final(t);
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.step.ch_sfin_hash = ch_sf;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.step.ch_sfin_hash = ch_sf;
     Tls13Ks.master(NULL);
     QuicPacketKeys ap_server_keys, ap_client_keys;
     QuicCrypto.keys_from_secret_args.keys_work = tw;
@@ -559,10 +559,10 @@ void test_full_handshake_and_stream()
                             1, &init.client, ifr, ifl);
 
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
-    Tls13Ks.finished_args.transcript_hash = ch_sf;
-    Tls13Ks.finished_args.out = cfin + 4;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
+    Tls13KsV.finished_args.transcript_hash = ch_sf;
+    Tls13KsV.finished_args.out = cfin + 4;
     Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
     QuicFrame.build_ack_args.out = hfr;
@@ -788,14 +788,14 @@ void test_pto_retransmits_flight()
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     QuicTransportParams ctp;
-    QuicTp.defaults_args.tp = &ctp;
+    QuicTpV.defaults_args.tp = &ctp;
     QuicTp.defaults(quic_tp_work);
     uint8_t ctp_enc[128];
-    QuicTp.encode_args.tp = &ctp;
-    QuicTp.encode_args.out = ctp_enc;
-    QuicTp.encode_args.cap = sizeof(ctp_enc);
+    QuicTpV.encode_args.tp = &ctp;
+    QuicTpV.encode_args.out = ctp_enc;
+    QuicTpV.encode_args.cap = sizeof(ctp_enc);
     QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTp.n;
+    size_t ctp_len = QuicTpV.n;
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
     Curve25519.x25519_base_args.scalar = CLIENT_PRIV;
@@ -904,14 +904,14 @@ static void feed_client_initial(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicInit
     QuicCrypto.derive_initial_secrets_args.out = init;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
     QuicTransportParams ctp;
-    QuicTp.defaults_args.tp = &ctp;
+    QuicTpV.defaults_args.tp = &ctp;
     QuicTp.defaults(quic_tp_work);
     uint8_t ctp_enc[128];
-    QuicTp.encode_args.tp = &ctp;
-    QuicTp.encode_args.out = ctp_enc;
-    QuicTp.encode_args.cap = sizeof(ctp_enc);
+    QuicTpV.encode_args.tp = &ctp;
+    QuicTpV.encode_args.out = ctp_enc;
+    QuicTpV.encode_args.cap = sizeof(ctp_enc);
     QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTp.n;
+    size_t ctp_len = QuicTpV.n;
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
     Curve25519.x25519_base_args.scalar = CLIENT_PRIV;
@@ -1007,14 +1007,14 @@ void test_connection_close_on_malformed_frame()
     Sha256.final(tctx);
     Tls13KeySchedule cks;
     static uint8_t ks_store_652[PROTOCORE_TLS13_KS_BORROW];
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.bind.s = ks_store_652;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.bind.s = ks_store_652;
     Tls13Ks.early(NULL);
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
-    Tls13Ks.step.ch_sh_hash = ch_sh;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = sizeof(ecdhe);
+    Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_server_keys, hs_client_keys;
     QuicCrypto.keys_from_secret_args.keys_work = tw;
@@ -1476,11 +1476,11 @@ void test_quic_recv_malformed_initial_headers()
     TEST_ASSERT_FALSE(QuicConn.ok);
 
     dg[hn] = 0x00;
-    QuicVarint.encode_args.out = dg + hn + 1;
-    QuicVarint.encode_args.cap = sizeof(dg) - hn - 1;
-    QuicVarint.encode_args.value = 1400;
+    QuicVarintV.encode_args.out = dg + hn + 1;
+    QuicVarintV.encode_args.cap = sizeof(dg) - hn - 1;
+    QuicVarintV.encode_args.value = 1400;
     QuicVarint.encode(quic_varint_work);
-    size_t c = QuicVarint.n;
+    size_t c = QuicVarintV.n;
     memset(dg + hn + 1 + c, 0, 1450 - (hn + 1 + c));
     QuicConn.bind.b = g_qc_b;
     QuicConn.recv_args.datagram = dg;
@@ -1795,16 +1795,16 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     QuicTransportParams ctp;
-    QuicTp.defaults_args.tp = &ctp;
+    QuicTpV.defaults_args.tp = &ctp;
     QuicTp.defaults(quic_tp_work);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctp_enc[128];
-    QuicTp.encode_args.tp = &ctp;
-    QuicTp.encode_args.out = ctp_enc;
-    QuicTp.encode_args.cap = sizeof(ctp_enc);
+    QuicTpV.encode_args.tp = &ctp;
+    QuicTpV.encode_args.out = ctp_enc;
+    QuicTpV.encode_args.cap = sizeof(ctp_enc);
     QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTp.n;
+    size_t ctp_len = QuicTpV.n;
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
     Curve25519.x25519_base_args.scalar = CLIENT_PRIV;
@@ -1865,14 +1865,14 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_1181[PROTOCORE_TLS13_KS_BORROW];
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.bind.s = ks_store_1181;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.bind.s = ks_store_1181;
     Tls13Ks.early(NULL);
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
-    Tls13Ks.step.ch_sh_hash = ch_sh;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = sizeof(ecdhe);
+    Tls13KsV.step.ch_sh_hash = ch_sh;
     Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_server_keys, hs_client_keys;
     QuicCrypto.keys_from_secret_args.keys_work = tw;
@@ -1892,8 +1892,8 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     Sha256.update(t);
     Sha256V.final_args.out = ch_sf;
     Sha256.final(t);
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.step.ch_sfin_hash = ch_sf;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.step.ch_sfin_hash = ch_sf;
     Tls13Ks.master(NULL);
     QuicCrypto.keys_from_secret_args.keys_work = tw;
     QuicCrypto.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_AP;
@@ -1916,10 +1916,10 @@ static void complete_handshake(QuicConnCtx *qc, QuicConnCallbacks *cb, QuicIniti
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init->client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
-    Tls13Ks.finished_args.transcript_hash = ch_sf;
-    Tls13Ks.finished_args.out = cfin + 4;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
+    Tls13KsV.finished_args.transcript_hash = ch_sf;
+    Tls13KsV.finished_args.out = cfin + 4;
     Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
     QuicFrame.build_ack_args.out = hfr;
@@ -2605,14 +2605,14 @@ void test_quic_conn_crypto_flight_fragmented()
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     QuicTransportParams ctp;
-    QuicTp.defaults_args.tp = &ctp;
+    QuicTpV.defaults_args.tp = &ctp;
     QuicTp.defaults(quic_tp_work);
     uint8_t ctp_enc[128];
-    QuicTp.encode_args.tp = &ctp;
-    QuicTp.encode_args.out = ctp_enc;
-    QuicTp.encode_args.cap = sizeof(ctp_enc);
+    QuicTpV.encode_args.tp = &ctp;
+    QuicTpV.encode_args.out = ctp_enc;
+    QuicTpV.encode_args.cap = sizeof(ctp_enc);
     QuicTp.encode(quic_tp_work);
-    size_t ctp_len = QuicTp.n;
+    size_t ctp_len = QuicTpV.n;
     uint8_t client_pub[32];
     Curve25519.x25519_base_args.out = client_pub;
     Curve25519.x25519_base_args.scalar = CLIENT_PRIV;
@@ -2640,11 +2640,11 @@ void test_quic_conn_crypto_flight_fragmented()
     TEST_ASSERT_EQUAL_UINT8(QTLS_WAIT_FINISHED, g_qc.tls.state);
 
     size_t hs_flight_len = 0;
-    QuicTlsServer.flight_args.qt = &g_qc.tls;
-    QuicTlsServer.flight_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.flight_args.len = &hs_flight_len;
+    QuicTlsServerV.flight_args.qt = &g_qc.tls;
+    QuicTlsServerV.flight_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.flight_args.len = &hs_flight_len;
     QuicTlsServer.flight(quic_tls_work);
-    (void)QuicTlsServer.bytes;
+    (void)QuicTlsServerV.bytes;
     TEST_ASSERT_TRUE(hs_flight_len > PROTOCORE_QUIC_MAX_DATAGRAM);
 
     uint8_t out[PROTOCORE_QUIC_MAX_DATAGRAM];

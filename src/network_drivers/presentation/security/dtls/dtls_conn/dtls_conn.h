@@ -328,12 +328,18 @@ typedef struct
     DtlsServerLocalCidArgs local_cid_args;
     DtlsServerOpenAppArgs open_app_args;
     DtlsServerSealAppArgs seal_app_args;
-
     proto_bool ok;
     int n;
     uint8_t value;
     DtlsRecordKeys *ptr;
+} DtlsServerVars;
 
+/** @brief The operands and the outcome. */
+extern DtlsServerVars DtlsServerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const process)(uint8_t *restrict work);
     void (*const timeout_ms)(uint8_t *restrict work);
@@ -347,8 +353,37 @@ typedef struct
     void (*const seal_app)(uint8_t *restrict work);
 } DtlsConnNs;
 
-/** @brief The one symbol this module exports. */
-extern DtlsConnNs DtlsServer;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DtlsServerV or a region of the borrow at a fixed offset.
+void protocore_dtls_server_init(uint8_t *restrict work);
+void protocore_dtls_server_process(uint8_t *restrict work);
+void protocore_dtls_server_timeout_ms(uint8_t *restrict work);
+void protocore_dtls_server_on_timeout(uint8_t *restrict work);
+void protocore_dtls_server_established(uint8_t *restrict work);
+void protocore_dtls_server_alert(uint8_t *restrict work);
+void protocore_dtls_server_app_write_keys(uint8_t *restrict work);
+void protocore_dtls_server_app_read_keys(uint8_t *restrict work);
+void protocore_dtls_server_local_cid(uint8_t *restrict work);
+void protocore_dtls_server_open_app(uint8_t *restrict work);
+void protocore_dtls_server_seal_app(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `DtlsServer.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DtlsConnNs DtlsServer __attribute__((unused)) = {
+    .init = protocore_dtls_server_init,
+    .process = protocore_dtls_server_process,
+    .timeout_ms = protocore_dtls_server_timeout_ms,
+    .on_timeout = protocore_dtls_server_on_timeout,
+    .established = protocore_dtls_server_established,
+    .alert = protocore_dtls_server_alert,
+    .app_write_keys = protocore_dtls_server_app_write_keys,
+    .app_read_keys = protocore_dtls_server_app_read_keys,
+    .local_cid = protocore_dtls_server_local_cid,
+    .open_app = protocore_dtls_server_open_app,
+    .seal_app = protocore_dtls_server_seal_app,
+};
 
 PROTOCORE_END_DECLS
 

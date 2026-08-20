@@ -61,7 +61,7 @@ static void request(uint8_t *restrict work)
     const size_t body_len = H3Server.req.body_len;
     const uint8_t slot = PROTOCORE_H3_DISPATCH_SLOT;
     HttpReq *r = &http_pool[slot];
-    HttpParser.reset_args.req = &http_pool[slot];
+    HttpParserV.reset_args.req = &http_pool[slot];
     HttpParser.reset(protocore_http_parser_span());
 
     // Map the semantic request fields into the shared HttpReq (as protocore_h2_server does per stream).
@@ -143,7 +143,7 @@ static void request(uint8_t *restrict work)
     ConnPool.slot = slot;
     ConnPool.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span()); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
-    HttpParser.reset_args.req = &http_pool[slot];
+    HttpParserV.reset_args.req = &http_pool[slot];
     HttpParser.reset(protocore_http_parser_span());
 }
 

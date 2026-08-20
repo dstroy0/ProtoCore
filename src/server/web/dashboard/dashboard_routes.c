@@ -63,9 +63,9 @@ void dash_ws_message(uint8_t ws_id)
     // Control widgets send {"k":"<key>","v":<num>}; parse + dispatch to the callback.
     if (ws_id < MAX_WS_CONNS)
     {
-        Ws.ws_id = ws_id;
+        WsV.ws_id = ws_id;
         Ws.payload_of(protocore_ws_span());
-        Dashboard.dispatch_control_args.msg = Ws.text;
+        Dashboard.dispatch_control_args.msg = WsV.text;
         Dashboard.dispatch_control(protocore_dashboard_span());
     }
 }

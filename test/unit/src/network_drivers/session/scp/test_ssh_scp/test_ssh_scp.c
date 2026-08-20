@@ -92,14 +92,14 @@ void test_begin_registers_the_channel_callbacks_once(void)
 {
     uint8_t *work = protocore_ssh_scp_span();
     SshScp.begin(work);
-    TEST_ASSERT_NOT_NULL(SshConnection.scp_open_cb);
-    TEST_ASSERT_NOT_NULL(SshConnection.scp_data_cb);
+    TEST_ASSERT_NOT_NULL(SshConnectionV.scp_open_cb);
+    TEST_ASSERT_NOT_NULL(SshConnectionV.scp_data_cb);
     TEST_ASSERT_TRUE(SSH_SCP_CTX(work)->registered);
 
-    SshConnection.scp_open_cb = NULL;
+    SshConnectionV.scp_open_cb = NULL;
     SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
     SshScp.begin(work);
-    TEST_ASSERT_NULL(SshConnection.scp_open_cb);
+    TEST_ASSERT_NULL(SshConnectionV.scp_open_cb);
 }
 
 // ---------------------------------------------------------------------------

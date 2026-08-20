@@ -336,9 +336,9 @@ proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMoun
     m->auth_b64 = auth_b64;
     if (!s_ctx.registered)
     {
-        Session.proto->proto = PROTO_NTRIP_CASTER;
-        Session.proto->h = &s_caster_handler;
-        Session.proto->add(protocore_session_span());
+        SessionV.proto->proto = PROTO_NTRIP_CASTER;
+        SessionV.proto->h = &s_caster_handler;
+        SessionV.proto->add(protocore_session_span());
         s_ctx.registered = PROTO_TRUE;
     }
     return PROTO_TRUE;

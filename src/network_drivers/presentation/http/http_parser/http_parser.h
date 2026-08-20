@@ -225,10 +225,16 @@ typedef struct
     HttpParserGetQueryArgs get_query_args;
     HttpParserGetFormArgs get_form_args;
     HttpParserGetParamArgs get_param_args;
-
     proto_bool ok;
     const char *text;
+} HttpParserVars;
 
+/** @brief The operands and the outcome. */
+extern HttpParserVars HttpParserV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const set_stream_hooks)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
     void (*const feed)(uint8_t *restrict work);
@@ -240,8 +246,33 @@ typedef struct
     void (*const get_param)(uint8_t *restrict work);
 } HttpParserNs;
 
-/** @brief The one symbol this module exports. */
-extern HttpParserNs HttpParser;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HttpParserV or a region of the borrow at a fixed offset.
+void protocore_http_parser_set_stream_hooks(uint8_t *restrict work);
+void protocore_http_parser_reset(uint8_t *restrict work);
+void protocore_http_parser_feed(uint8_t *restrict work);
+void protocore_http_parser_get_header(uint8_t *restrict work);
+void protocore_http_parser_get_cookie(uint8_t *restrict work);
+void protocore_http_parser_forwarded_client(uint8_t *restrict work);
+void protocore_http_parser_get_query(uint8_t *restrict work);
+void protocore_http_parser_get_form(uint8_t *restrict work);
+void protocore_http_parser_get_param(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HttpParser.set_stream_hooks(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HttpParserNs HttpParser __attribute__((unused)) = {
+    .set_stream_hooks = protocore_http_parser_set_stream_hooks,
+    .reset = protocore_http_parser_reset,
+    .feed = protocore_http_parser_feed,
+    .get_header = protocore_http_parser_get_header,
+    .get_cookie = protocore_http_parser_get_cookie,
+    .forwarded_client = protocore_http_parser_forwarded_client,
+    .get_query = protocore_http_parser_get_query,
+    .get_form = protocore_http_parser_get_form,
+    .get_param = protocore_http_parser_get_param,
+};
 
 /**
  * @brief The PROTOCORE_HTTP_PARSER_BORROW bytes this module's state lives in.

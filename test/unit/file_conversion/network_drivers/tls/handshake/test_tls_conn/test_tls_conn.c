@@ -326,25 +326,25 @@ void test_rfc8446_cert_verify_content_worked_example(void)
     want[97] = 0x00;
     memset(want + 98, 0x01, 32);
 
-    Tls13Msg.cert_verify_content_args.out = out;
-    Tls13Msg.cert_verify_content_args.cap = sizeof(out);
-    Tls13Msg.cert_verify_content_args.transcript_hash = hash;
-    Tls13Msg.cert_verify_content_args.hash_len = 32;
-    Tls13Msg.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.out = out;
+    Tls13MsgV.cert_verify_content_args.cap = sizeof(out);
+    Tls13MsgV.cert_verify_content_args.transcript_hash = hash;
+    Tls13MsgV.cert_verify_content_args.hash_len = 32;
+    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
-    TEST_ASSERT_EQUAL_UINT(130u, Tls13Msg.n);
+    TEST_ASSERT_EQUAL_UINT(130u, Tls13MsgV.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
 
     // Same section: the client's context string differs by one word, so the two contents must not
     // be equal - that separation is the whole point of the string.
     memcpy(want + 64, CLIENT_CTX, 33);
-    Tls13Msg.cert_verify_content_args.out = out;
-    Tls13Msg.cert_verify_content_args.cap = sizeof(out);
-    Tls13Msg.cert_verify_content_args.transcript_hash = hash;
-    Tls13Msg.cert_verify_content_args.hash_len = 32;
-    Tls13Msg.cert_verify_content_args.is_server = PROTO_FALSE;
+    Tls13MsgV.cert_verify_content_args.out = out;
+    Tls13MsgV.cert_verify_content_args.cap = sizeof(out);
+    Tls13MsgV.cert_verify_content_args.transcript_hash = hash;
+    Tls13MsgV.cert_verify_content_args.hash_len = 32;
+    Tls13MsgV.cert_verify_content_args.is_server = PROTO_FALSE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
-    TEST_ASSERT_EQUAL_UINT(130u, Tls13Msg.n);
+    TEST_ASSERT_EQUAL_UINT(130u, Tls13MsgV.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(want, out, 130);
 }
 
@@ -443,15 +443,15 @@ void test_full_handshake_on_rfc8448_key_material(void)
     Sha256V.final_args.out = ch_sh_hash;
     Sha256.final(g_cli_transcript);
 
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.bind.s = g_cli_ks_bytes;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.bind.s = g_cli_ks_bytes;
     Tls13Ks.early(NULL);
-    TEST_ASSERT_TRUE(Tls13Ks.ok);
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
-    Tls13Ks.step.ch_sh_hash = ch_sh_hash;
+    TEST_ASSERT_TRUE(Tls13KsV.ok);
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = sizeof(ecdhe);
+    Tls13KsV.step.ch_sh_hash = ch_sh_hash;
     Tls13Ks.handshake(NULL);
 
     cli_keys(&g_cli_hs_rx, g_cli_ks.s + TLS13_KS_SERVER_HS);
@@ -532,10 +532,10 @@ void test_full_handshake_on_rfc8448_key_material(void)
             uint8_t expect[32];
             Sha256V.final_args.out = hash;
             Sha256.final(g_cli_transcript);
-            Tls13Ks.bind.ks = &g_cli_ks;
-            Tls13Ks.finished_args.base_secret = g_cli_ks.s + TLS13_KS_SERVER_HS;
-            Tls13Ks.finished_args.transcript_hash = hash;
-            Tls13Ks.finished_args.out = expect;
+            Tls13KsV.bind.ks = &g_cli_ks;
+            Tls13KsV.finished_args.base_secret = g_cli_ks.s + TLS13_KS_SERVER_HS;
+            Tls13KsV.finished_args.transcript_hash = hash;
+            Tls13KsV.finished_args.out = expect;
             Tls13Ks.finished_mac(NULL);
             TEST_ASSERT_EQUAL_UINT(32u, body_len);
             TEST_ASSERT_EQUAL_UINT8_ARRAY(expect, msg + 4, 32);
@@ -548,13 +548,13 @@ void test_full_handshake_on_rfc8448_key_material(void)
     TEST_ASSERT_EQUAL_UINT(sizeof(FLIGHT), seen);
 
     uint8_t content[160];
-    Tls13Msg.cert_verify_content_args.out = content;
-    Tls13Msg.cert_verify_content_args.cap = sizeof(content);
-    Tls13Msg.cert_verify_content_args.transcript_hash = cert_verify_hash;
-    Tls13Msg.cert_verify_content_args.hash_len = 32;
-    Tls13Msg.cert_verify_content_args.is_server = PROTO_TRUE;
+    Tls13MsgV.cert_verify_content_args.out = content;
+    Tls13MsgV.cert_verify_content_args.cap = sizeof(content);
+    Tls13MsgV.cert_verify_content_args.transcript_hash = cert_verify_hash;
+    Tls13MsgV.cert_verify_content_args.hash_len = 32;
+    Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
     Tls13Msg.cert_verify_content(tls13_msg_work);
-    size_t clen = Tls13Msg.n;
+    size_t clen = Tls13MsgV.n;
     TEST_ASSERT_EQUAL_UINT(130u, clen);
     Ed25519.verify_args.pub = peer_pub;
     Ed25519.verify_args.msg = content;
@@ -566,17 +566,17 @@ void test_full_handshake_on_rfc8448_key_material(void)
     uint8_t ch_sfin_hash[32];
     Sha256V.final_args.out = ch_sfin_hash;
     Sha256.final(g_cli_transcript);
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.step.ch_sfin_hash = ch_sfin_hash;
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.step.ch_sfin_hash = ch_sfin_hash;
     Tls13Ks.master(NULL);
     cli_keys(&g_cli_ap_rx, g_cli_ks.s + TLS13_KS_SERVER_AP);
     cli_keys(&g_cli_ap_tx, g_cli_ks.s + TLS13_KS_CLIENT_AP);
 
     uint8_t verify[32];
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.finished_args.base_secret = g_cli_ks.s + TLS13_KS_CLIENT_HS;
-    Tls13Ks.finished_args.transcript_hash = ch_sfin_hash;
-    Tls13Ks.finished_args.out = verify;
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.finished_args.base_secret = g_cli_ks.s + TLS13_KS_CLIENT_HS;
+    Tls13KsV.finished_args.transcript_hash = ch_sfin_hash;
+    Tls13KsV.finished_args.out = verify;
     Tls13Ks.finished_mac(NULL);
 
     uint8_t fin_msg[4 + 32];
@@ -812,14 +812,14 @@ void test_a_wrong_client_finished_is_decrypt_error(void)
     Curve25519.x25519(g_sign_work);
     Sha256V.final_args.out = ch_sh_hash;
     Sha256.final(g_cli_transcript);
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.bind.s = g_cli_ks_bytes;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.bind.s = g_cli_ks_bytes;
     Tls13Ks.early(NULL);
-    Tls13Ks.bind.ks = &g_cli_ks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
-    Tls13Ks.step.ch_sh_hash = ch_sh_hash;
+    Tls13KsV.bind.ks = &g_cli_ks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = sizeof(ecdhe);
+    Tls13KsV.step.ch_sh_hash = ch_sh_hash;
     Tls13Ks.handshake(NULL);
     cli_keys(&g_cli_hs_tx, g_cli_ks.s + TLS13_KS_CLIENT_HS);
 

@@ -46,7 +46,7 @@ void setUp()
     {
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
-        HttpConn.slot = (uint8_t)i;
+        HttpConnV.slot = (uint8_t)i;
         HttpConn.reset(protocore_http_conn_span());
     }
 }
@@ -57,7 +57,7 @@ void tearDown()
 
 void test_empty_queue_does_not_crash()
 {
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_PASS();
 }
@@ -74,7 +74,7 @@ void test_reset_clears_mid_parse_state()
 {
     http_pool[0].parse_state = PARSE_HEADER_KEY;
     http_pool[0].header_count = 3;
-    HttpConn.slot = (uint8_t)0;
+    HttpConnV.slot = (uint8_t)0;
     HttpConn.reset(protocore_http_conn_span());
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
     TEST_ASSERT_EQUAL(0, http_pool[0].header_count);
@@ -84,7 +84,7 @@ void test_tick_fires_check_timeouts_stale_slot_freed()
 {
     conn_pool[0].last_activity_ms = 0;
     set_now_ms(CONN_TIMEOUT_MS);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
@@ -93,7 +93,7 @@ void test_tick_does_not_free_fresh_connection()
 {
     conn_pool[0].last_activity_ms = 0;
     set_now_ms(CONN_TIMEOUT_MS - 1);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -102,7 +102,7 @@ void test_fn_tick_timeout_before_event_drain_ordering()
 {
     conn_pool[1].last_activity_ms = 0;
     set_now_ms(CONN_TIMEOUT_MS);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
 
@@ -119,7 +119,7 @@ void test_fn_tick_only_active_slots_expire()
     conn_pool[3].last_activity_ms = CONN_TIMEOUT_MS;
 
     set_now_ms(CONN_TIMEOUT_MS);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -133,7 +133,7 @@ void test_stress_1000_idle_ticks_stable()
     set_now_ms(0);
     for (int i = 0; i < 1000; i++)
     {
-        Session.worker_id = 0;
+        SessionV.worker_id = 0;
         Session.tick(protocore_session_span());
     }
     for (int i = 0; i < MAX_CONNS; i++)
@@ -153,7 +153,7 @@ void test_stress_timeout_all_slots_10_cycles()
             conn_pool[i].last_activity_ms = 0;
         }
         set_now_ms((uint32_t)(CONN_TIMEOUT_MS * (cycle + 1)));
-        Session.worker_id = 0;
+        SessionV.worker_id = 0;
         Session.tick(protocore_session_span());
         for (int i = 0; i < MAX_CONNS; i++)
         {
@@ -176,7 +176,7 @@ void test_stress_mixed_fresh_stale_slots_many_ticks()
     set_now_ms(CONN_TIMEOUT_MS);
     for (int tick = 0; tick < 200; tick++)
     {
-        Session.worker_id = 0;
+        SessionV.worker_id = 0;
         Session.tick(protocore_session_span());
     }
 
@@ -196,7 +196,7 @@ void test_evt_connect_calls_http_reset()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[1].parse_state);
@@ -213,7 +213,7 @@ void test_evt_disconnect_calls_http_reset()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[0].parse_state);
@@ -229,7 +229,7 @@ void test_evt_error_calls_http_reset()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
     TEST_ASSERT_EQUAL(PARSE_METHOD, http_pool[2].parse_state);
@@ -244,7 +244,7 @@ void test_evt_data_calls_http_parse()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
@@ -276,7 +276,7 @@ void test_multiple_events_drained_in_one_tick()
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
 
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
 
     Session.tick(protocore_session_span());
 
@@ -347,7 +347,7 @@ void test_dispatch_drops_unregistered_protocol_event()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
@@ -368,7 +368,7 @@ void test_dispatch_skips_null_callback_fields()
     TcpListener.q.evt = &e0;
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
@@ -377,7 +377,7 @@ void test_dispatch_skips_null_callback_fields()
     TcpListener.q.evt = &e1;
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
@@ -386,7 +386,7 @@ void test_dispatch_skips_null_callback_fields()
     TcpListener.q.evt = &e2;
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
@@ -402,7 +402,7 @@ void test_dispatch_ignores_unknown_evt_type()
     TcpListener.q.evt = &evt;
     TcpListener.enqueue(protocore_tcp_listener_span());
     (void)TcpListener.ok;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
     TEST_ASSERT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
@@ -412,7 +412,7 @@ void test_tick_skips_active_listener_with_null_queue()
 {
     listener_pool[1].active = PROTO_TRUE;
     listener_pool[1].queue = NULL;
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     listener_pool[1].active = PROTO_FALSE;
     TEST_PASS();
@@ -423,11 +423,11 @@ void test_race_external_free_between_ticks()
     conn_pool[0].last_activity_ms = 0;
 
     set_now_ms(CONN_TIMEOUT_MS);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
 
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
@@ -438,7 +438,7 @@ void test_race_activity_update_saves_slot_from_timeout()
     conn_pool[0].last_activity_ms = 0;
     set_now_ms(CONN_TIMEOUT_MS - 1);
 
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
 
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
@@ -446,7 +446,7 @@ void test_race_activity_update_saves_slot_from_timeout()
     conn_pool[0].last_activity_ms = CONN_TIMEOUT_MS - 1;
 
     set_now_ms(CONN_TIMEOUT_MS);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -459,14 +459,14 @@ void test_race_all_expire_then_idle_tick()
         conn_pool[i].last_activity_ms = 0;
     }
     set_now_ms(CONN_TIMEOUT_MS);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     for (int i = 0; i < MAX_CONNS; i++)
     {
         TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[i].state);
     }
 
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
 
     Session.tick(protocore_session_span());
     for (int i = 0; i < MAX_CONNS; i++)
@@ -482,7 +482,7 @@ void test_race_millis_wraparound_no_spurious_timeout()
     conn_pool[0].last_activity_ms = 0xFFFFFFFF - 100u;
 
     set_now_ms((uint32_t)(CONN_TIMEOUT_MS - 200));
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
@@ -501,7 +501,7 @@ void test_first_data_event_arms_the_request_deadline()
     http_req_start_ms[0] = 0;
     set_now_ms(4242);
     stage_data_evt(0);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL_UINT32(4242, http_req_start_ms[0]);
 }
@@ -511,7 +511,7 @@ void test_a_request_already_under_way_keeps_its_arm()
     http_req_start_ms[0] = 0;
     set_now_ms(4242);
     stage_data_evt(0);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
 
     // A live connection, the way one carrying a second segment is. server_tick sweeps BEFORE it
@@ -521,7 +521,7 @@ void test_a_request_already_under_way_keeps_its_arm()
     conn_pool[0].last_activity_ms = 9999;
     set_now_ms(9999);
     stage_data_evt(0);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL_UINT32(4242, http_req_start_ms[0]);
 }
@@ -531,7 +531,7 @@ void test_a_zero_stamp_still_reads_as_armed()
     http_req_start_ms[0] = 0;
     set_now_ms(0);
     stage_data_evt(0);
-    Session.worker_id = 0;
+    SessionV.worker_id = 0;
     Session.tick(protocore_session_span());
     TEST_ASSERT_EQUAL_UINT32(1, http_req_start_ms[0]);
 }

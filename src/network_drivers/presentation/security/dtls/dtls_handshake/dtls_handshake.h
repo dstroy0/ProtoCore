@@ -227,10 +227,16 @@ typedef struct
     DtlsHandshakeAckParseArgs ack_parse_args;
     DtlsHandshakeCookieMakeArgs cookie_make_args;
     DtlsHandshakeCookieVerifyArgs cookie_verify_args;
-
     proto_bool ok;
     size_t n;
+} DtlsHandshakeVars;
 
+/** @brief The operands and the outcome. */
+extern DtlsHandshakeVars DtlsHandshakeV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const header_parse)(uint8_t *restrict work);
     void (*const frag_build)(uint8_t *restrict work);
     void (*const reasm_init)(uint8_t *restrict work);
@@ -241,8 +247,31 @@ typedef struct
     void (*const cookie_verify)(uint8_t *restrict work);
 } DtlsHandshakeNs;
 
-/** @brief The one symbol this module exports. */
-extern DtlsHandshakeNs DtlsHandshake;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DtlsHandshakeV or a region of the borrow at a fixed offset.
+void protocore_dtls_handshake_header_parse(uint8_t *restrict work);
+void protocore_dtls_handshake_frag_build(uint8_t *restrict work);
+void protocore_dtls_handshake_reasm_init(uint8_t *restrict work);
+void protocore_dtls_handshake_reasm_add(uint8_t *restrict work);
+void protocore_dtls_handshake_ack_build(uint8_t *restrict work);
+void protocore_dtls_handshake_ack_parse(uint8_t *restrict work);
+void protocore_dtls_handshake_cookie_make(uint8_t *restrict work);
+void protocore_dtls_handshake_cookie_verify(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `DtlsHandshake.header_parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DtlsHandshakeNs DtlsHandshake __attribute__((unused)) = {
+    .header_parse = protocore_dtls_handshake_header_parse,
+    .frag_build = protocore_dtls_handshake_frag_build,
+    .reasm_init = protocore_dtls_handshake_reasm_init,
+    .reasm_add = protocore_dtls_handshake_reasm_add,
+    .ack_build = protocore_dtls_handshake_ack_build,
+    .ack_parse = protocore_dtls_handshake_ack_parse,
+    .cookie_make = protocore_dtls_handshake_cookie_make,
+    .cookie_verify = protocore_dtls_handshake_cookie_verify,
+};
 
 PROTOCORE_END_DECLS
 

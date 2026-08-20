@@ -28,7 +28,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConn.slot = (uint8_t)i;
+        HttpConnV.slot = (uint8_t)i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -62,7 +62,7 @@ void test_upload_streams_body_to_file()
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: %u\r\n\r\n", (unsigned)blen);
     push_bytes(0, req, (size_t)hn);
     push_bytes(0, body, blen);
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 
@@ -87,7 +87,7 @@ void test_small_body_single_chunk()
     char req[128];
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: 4\r\n\r\n%s", body);
     push_bytes(0, req, (size_t)hn);
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     TEST_ASSERT_EQUAL_UINT(4, mock_mnt_written());
@@ -103,7 +103,7 @@ void test_empty_body_not_streamed()
     char req[128];
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: 0\r\n\r\n");
     push_bytes(0, req, (size_t)hn);
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 
@@ -119,7 +119,7 @@ void test_non_post_body_rejected_by_begin()
     char req[128];
     int hn = snprintf(req, sizeof(req), "PUT /upload HTTP/1.1\r\nContent-Length: 4\r\n\r\ndata");
     push_bytes(0, req, (size_t)hn);
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     TEST_ASSERT_EQUAL_UINT(0, mock_mnt_written());
@@ -133,7 +133,7 @@ void test_wrong_path_rejected_by_begin()
     char req[128];
     int hn = snprintf(req, sizeof(req), "POST /nope HTTP/1.1\r\nContent-Length: 4\r\n\r\ndata");
     push_bytes(0, req, (size_t)hn);
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     TEST_ASSERT_EQUAL_UINT(0, mock_mnt_written());
@@ -148,7 +148,7 @@ void test_open_failure_replies_500()
     char req[128];
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: 5\r\n\r\nhello");
     push_bytes(0, req, (size_t)hn);
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     TEST_ASSERT_EQUAL_UINT(0, mock_mnt_written());
@@ -165,7 +165,7 @@ void test_null_dest_replies_500()
     char req[128];
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: 5\r\n\r\nhello");
     push_bytes(0, req, (size_t)hn);
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     TEST_ASSERT_EQUAL_UINT(0, mock_mnt_written());
@@ -188,7 +188,7 @@ void test_write_failure_replies_500()
     int hn = snprintf(req, sizeof(req), "POST /upload HTTP/1.1\r\nContent-Length: 128\r\n\r\n");
     push_bytes(0, req, (size_t)hn);
     push_bytes(0, body, sizeof(body));
-    HttpConn.slot = 0;
+    HttpConnV.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 

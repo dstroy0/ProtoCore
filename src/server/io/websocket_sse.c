@@ -111,7 +111,7 @@ void ws_send_version_required(uint8_t slot_id)
     ConnPool.active(protocore_conn_pool_span());
     if (!ConnPool.ok)
     {
-        HttpParser.reset_args.req = &http_pool[slot_id];
+        HttpParserV.reset_args.req = &http_pool[slot_id];
         HttpParser.reset(protocore_http_parser_span());
         return;
     }
@@ -128,7 +128,7 @@ void ws_send_version_required(uint8_t slot_id)
     ConnPool.flush(protocore_conn_pool_span());
     ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
 
-    HttpParser.reset_args.req = &http_pool[slot_id];
+    HttpParserV.reset_args.req = &http_pool[slot_id];
     HttpParser.reset(protocore_http_parser_span());
 }
 
@@ -140,10 +140,10 @@ void ws_send_version_required(uint8_t slot_id)
  */
 proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Sec-WebSocket-Key";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Sec-WebSocket-Key";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *client_key = HttpParser.text;
+    const char *client_key = HttpParserV.text;
     if (!client_key)
     {
         return PROTO_FALSE;
@@ -168,10 +168,10 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
     // Negotiate permessage-deflate (RFC 7692) if the client offered it. We force
     // no_context_takeover in both directions so each message decompresses
     // independently (the INFLATE window is the message buffer, not a kept window).
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Sec-WebSocket-Extensions";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Sec-WebSocket-Extensions";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *ws_ext = HttpParser.text;
+    const char *ws_ext = HttpParserV.text;
     proto_bool pmd =
         ws_ext && str.has(ws_ext, MAX_VAL_LEN, "permessage-deflate", sizeof("permessage-deflate"), PROTO_FALSE);
     protocore_sb sb_hdr = {hdr, sizeof(hdr), 0, PROTO_TRUE};
@@ -201,18 +201,18 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
     ConnPool.flush(protocore_conn_pool_span());
 
     // Reset HTTP parser but keep the TCP slot -- WS owns it now
-    HttpParser.reset_args.req = &http_pool[slot_id];
+    HttpParserV.reset_args.req = &http_pool[slot_id];
     HttpParser.reset(protocore_http_parser_span());
 
     // The channel is the session layer's: it takes the number, binds it to this slot and runs the
     // route's connect. This layer sent the handshake bytes.
-    Ws.slot = slot_id;
-    Ws.id = route_id;
+    WsV.slot = slot_id;
+    WsV.id = route_id;
 #if PROTOCORE_ENABLE_WS_DEFLATE
-    Ws.pmd = pmd;
+    WsV.pmd = pmd;
 #endif
     SessionWs.open(NULL);
-    if (!SessionWs.ok)
+    if (!SessionWsV.ok)
     {
         // No channel available -- abort the connection (transport owns the teardown)
         ConnPool.slot = slot_id;
@@ -258,7 +258,7 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route
     // path is what protocore_sse_broadcast() matches against.
     char path[MAX_PATH_LEN];
     str.copy(path, req->path, sizeof(path));
-    HttpParser.reset_args.req = &http_pool[slot_id];
+    HttpParserV.reset_args.req = &http_pool[slot_id];
     HttpParser.reset(protocore_http_parser_span());
 
     // The stream is the session layer's: it takes the number, binds it to this connection and runs
@@ -267,7 +267,7 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route
     Sse.route.path = path;
     Sse.id = route_id;
     SessionSse.open(NULL);
-    if (!SessionSse.ok)
+    if (!SessionSseV.ok)
     {
         ConnPool.slot = slot_id;
         ConnPool.abort_slot(protocore_conn_pool_span()); // transport owns detach + reset + RST
@@ -295,12 +295,12 @@ void ws_send_text(uint8_t ws_id, const char *text)
         return;
     }
     uint16_t len = (uint16_t)str.len(text, 0xFFFF);
-    Ws.conn = ws;
-    Ws.frame.opcode = WS_OP_TEXT;
-    Ws.frame.payload = (const uint8_t *)text;
-    Ws.frame.len = len;
+    WsV.conn = ws;
+    WsV.frame.opcode = WS_OP_TEXT;
+    WsV.frame.payload = (const uint8_t *)text;
+    WsV.frame.len = len;
     Ws.send_frame(protocore_ws_span());
-    if (Ws.ok)
+    if (WsV.ok)
     {
         // has itself checked protocore_conn_active(), and nothing between the two can tear the slot down
         // on a single-threaded run. It is a re-check for the marshalled send path.
@@ -325,12 +325,12 @@ void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
     {
         return;
     }
-    Ws.conn = ws;
-    Ws.frame.opcode = WS_OP_BINARY;
-    Ws.frame.payload = data;
-    Ws.frame.len = len;
+    WsV.conn = ws;
+    WsV.frame.opcode = WS_OP_BINARY;
+    WsV.frame.payload = data;
+    WsV.frame.len = len;
     Ws.send_frame(protocore_ws_span());
-    if (Ws.ok)
+    if (WsV.ok)
     {
         // connection, so the false half of this re-check is unreachable from a host test.
         ConnPool.slot = ws->slot_id;
@@ -350,8 +350,8 @@ void ws_disconnect(uint8_t ws_id)
         return;
     }
     WsConn *ws = &ws_pool[ws_id];
-    Ws.conn = ws;
-    Ws.frame.code = WS_CLOSE_NORMAL;
+    WsV.conn = ws;
+    WsV.frame.code = WS_CLOSE_NORMAL;
     Ws.close(protocore_ws_span());
     ConnPool.slot = ws->slot_id;
     ConnPool.active(protocore_conn_pool_span());

@@ -149,52 +149,52 @@ static void finished_hmac(proto_bool is384, uint8_t *work, const uint8_t *key, c
     HmacSha256.mac(work);
 }
 
-static void ks_expand_label(uint8_t *restrict work)
+void protocore_tls13_ks_expand_label(uint8_t *restrict work)
 {
-    expand(Tls13Ks.bind.kdf, Tls13Ks.bind.is384, Tls13Ks.derive_args.work, Tls13Ks.derive_args.secret,
-           Tls13Ks.derive_args.label, Tls13Ks.derive_args.out, Tls13Ks.derive_args.out_len);
+    expand(Tls13KsV.bind.kdf, Tls13KsV.bind.is384, Tls13KsV.derive_args.work, Tls13KsV.derive_args.secret,
+           Tls13KsV.derive_args.label, Tls13KsV.derive_args.out, Tls13KsV.derive_args.out_len);
 }
 
-static void ks_derive_secret(uint8_t *restrict work)
+void protocore_tls13_ks_derive_secret(uint8_t *restrict work)
 {
-    derive(Tls13Ks.bind.kdf, Tls13Ks.bind.is384, Tls13Ks.derive_args.work, Tls13Ks.derive_args.secret,
-           Tls13Ks.derive_args.label, Tls13Ks.derive_args.transcript_hash, Tls13Ks.derive_args.out);
+    derive(Tls13KsV.bind.kdf, Tls13KsV.bind.is384, Tls13KsV.derive_args.work, Tls13KsV.derive_args.secret,
+           Tls13KsV.derive_args.label, Tls13KsV.derive_args.transcript_hash, Tls13KsV.derive_args.out);
 }
 
-static void ks_early(uint8_t *restrict work)
+void protocore_tls13_ks_early(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
-    ks->kdf = Tls13Ks.bind.kdf;
-    ks->s = Tls13Ks.bind.s;
-    ks->is384 = Tls13Ks.bind.is384;
+    Tls13KeySchedule *ks = Tls13KsV.bind.ks;
+    ks->kdf = Tls13KsV.bind.kdf;
+    ks->s = Tls13KsV.bind.s;
+    ks->is384 = Tls13KsV.bind.is384;
     ks->len = hash_len(ks->is384);
-    Tls13Ks.len = ks->len;
+    Tls13KsV.len = ks->len;
     if (ks->s == NULL)
     {
-        Tls13Ks.ok = PROTO_FALSE;
+        Tls13KsV.ok = PROTO_FALSE;
         return;
     }
     // No PSK: Early Secret = HKDF-Extract(salt=0, IKM=0^Hash.length). HMAC zero-pads a short/absent
     // key, so an empty salt and a run of Hash.length zero bytes reproduce the RFC 8448 early secret
     // exactly.
     extract(ks->is384, ks->s + TLS13_KS_WORK, NULL, 0, ks->s + TLS13_KS_ZEROS, ks->len, ks->s + TLS13_KS_EARLY);
-    Tls13Ks.ok = PROTO_TRUE;
+    Tls13KsV.ok = PROTO_TRUE;
 }
 
-static void ks_handshake(uint8_t *restrict work)
+void protocore_tls13_ks_handshake(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
+    Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
     {
         return;
     }
-    const uint8_t *ch_sh_hash = Tls13Ks.step.ch_sh_hash;
+    const uint8_t *ch_sh_hash = Tls13KsV.step.ch_sh_hash;
     // Handshake Secret = HKDF-Extract(Derive-Secret(Early, "derived", ""), (EC)DHE).
     empty_hash(ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_EMPTY_HASH);
     derive(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_EARLY, "derived", ks->s + TLS13_KS_EMPTY_HASH,
            ks->s + TLS13_KS_DERIVED);
-    extract(ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_DERIVED, ks->len, Tls13Ks.step.ecdhe,
-            Tls13Ks.step.ecdhe_len, ks->s + TLS13_KS_HANDSHAKE);
+    extract(ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_DERIVED, ks->len, Tls13KsV.step.ecdhe,
+            Tls13KsV.step.ecdhe_len, ks->s + TLS13_KS_HANDSHAKE);
 
     derive(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_HANDSHAKE, "c hs traffic", ch_sh_hash,
            ks->s + TLS13_KS_CLIENT_HS);
@@ -202,14 +202,14 @@ static void ks_handshake(uint8_t *restrict work)
            ks->s + TLS13_KS_SERVER_HS);
 }
 
-static void ks_master(uint8_t *restrict work)
+void protocore_tls13_ks_master(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
+    Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
     {
         return;
     }
-    const uint8_t *ch_sfin_hash = Tls13Ks.step.ch_sfin_hash;
+    const uint8_t *ch_sfin_hash = Tls13KsV.step.ch_sfin_hash;
     // Master Secret = HKDF-Extract(Derive-Secret(Handshake, "derived", ""), 0^Hash.length).
     empty_hash(ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_EMPTY_HASH);
     derive(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_HANDSHAKE, "derived",
@@ -223,26 +223,26 @@ static void ks_master(uint8_t *restrict work)
            ks->s + TLS13_KS_SERVER_AP);
 }
 
-static void ks_finished_mac(uint8_t *restrict work)
+void protocore_tls13_ks_finished_mac(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
+    Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
     {
         return;
     }
     // finished_key = HKDF-Expand-Label(base_secret, "finished", "", L); verify_data = HMAC(fk, Hash).
     uint8_t *fk = ks->s + TLS13_KS_FINISHED_KEY;
-    expand(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, Tls13Ks.finished_args.base_secret, "finished", fk, ks->len);
-    finished_hmac(ks->is384, ks->s + TLS13_KS_WORK, fk, Tls13Ks.finished_args.transcript_hash,
-                  Tls13Ks.finished_args.out);
+    expand(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, Tls13KsV.finished_args.base_secret, "finished", fk, ks->len);
+    finished_hmac(ks->is384, ks->s + TLS13_KS_WORK, fk, Tls13KsV.finished_args.transcript_hash,
+                  Tls13KsV.finished_args.out);
 }
 
 // RFC 8446 sec 4.4.1: the Transcript-Hash runs under the same suite hash as the schedule, so it
 // dispatches on the bound flag rather than on a hash the caller names.
 
-static void ks_transcript_init(uint8_t *restrict work)
+void protocore_tls13_ks_transcript_init(uint8_t *restrict work)
 {
-    if (Tls13Ks.bind.ks->is384)
+    if (Tls13KsV.bind.ks->is384)
     {
         Sha384.init(work);
         return;
@@ -250,42 +250,35 @@ static void ks_transcript_init(uint8_t *restrict work)
     Sha256.init(work);
 }
 
-static void ks_transcript_update(uint8_t *restrict work)
+void protocore_tls13_ks_transcript_update(uint8_t *restrict work)
 {
-    if (Tls13Ks.bind.ks->is384)
+    if (Tls13KsV.bind.ks->is384)
     {
-        Sha384V.update_args.data = Tls13Ks.transcript_args.data;
-        Sha384V.update_args.len = Tls13Ks.transcript_args.len;
+        Sha384V.update_args.data = Tls13KsV.transcript_args.data;
+        Sha384V.update_args.len = Tls13KsV.transcript_args.len;
         Sha384.update(work);
         return;
     }
-    Sha256V.update_args.data = Tls13Ks.transcript_args.data;
-    Sha256V.update_args.len = Tls13Ks.transcript_args.len;
+    Sha256V.update_args.data = Tls13KsV.transcript_args.data;
+    Sha256V.update_args.len = Tls13KsV.transcript_args.len;
     Sha256.update(work);
 }
 
 // Finalizing compresses the padded blocks into a copy of the state, so the running context is
 // untouched and keeps taking messages.
-static void ks_transcript_peek(uint8_t *restrict work)
+void protocore_tls13_ks_transcript_peek(uint8_t *restrict work)
 {
-    if (Tls13Ks.bind.ks->is384)
+    if (Tls13KsV.bind.ks->is384)
     {
-        Sha384V.final_args.out = Tls13Ks.transcript_args.out;
+        Sha384V.final_args.out = Tls13KsV.transcript_args.out;
         Sha384.final(work);
         return;
     }
-    Sha256V.final_args.out = Tls13Ks.transcript_args.out;
+    Sha256V.final_args.out = Tls13KsV.transcript_args.out;
     Sha256.final(work);
 }
 
-Tls13KsNs Tls13Ks = {.expand_label = ks_expand_label,
-                     .derive_secret = ks_derive_secret,
-                     .early = ks_early,
-                     .handshake = ks_handshake,
-                     .master = ks_master,
-                     .finished_mac = ks_finished_mac,
-                     .transcript_init = ks_transcript_init,
-                     .transcript_update = ks_transcript_update,
-                     .transcript_peek = ks_transcript_peek};
+/** @brief The operands and the outcome. */
+Tls13KsVars Tls13KsV;
 
 #endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE

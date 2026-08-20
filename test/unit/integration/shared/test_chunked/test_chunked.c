@@ -190,7 +190,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConn.slot = i;
+        HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -210,7 +210,7 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -385,4 +385,3 @@ void test_hex_u32_size_line()
         TEST_ASSERT_EQUAL_MEMORY(ref, out, (size_t)Hex.u8);
     }
 }
-

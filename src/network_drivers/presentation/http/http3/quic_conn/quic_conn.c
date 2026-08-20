@@ -161,11 +161,11 @@ static QuicPacketKeys *open_keys(QuicConnCtx *qc, int level)
     {
         return &qc->initial.client;
     }
-    QuicTlsServer.keys_args.qt = &qc->tls;
-    QuicTlsServer.keys_args.level = level;
-    QuicTlsServer.keys_args.is_server = /*is_server=*/PROTO_FALSE;
+    QuicTlsServerV.keys_args.qt = &qc->tls;
+    QuicTlsServerV.keys_args.level = level;
+    QuicTlsServerV.keys_args.is_server = /*is_server=*/PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
-    return QuicTlsServer.pkt_keys;
+    return QuicTlsServerV.pkt_keys;
 }
 static QuicPacketKeys *seal_keys(QuicConnCtx *qc, int level)
 {
@@ -173,11 +173,11 @@ static QuicPacketKeys *seal_keys(QuicConnCtx *qc, int level)
     {
         return &qc->initial.server;
     }
-    QuicTlsServer.keys_args.qt = &qc->tls;
-    QuicTlsServer.keys_args.level = level;
-    QuicTlsServer.keys_args.is_server = /*is_server=*/PROTO_TRUE;
+    QuicTlsServerV.keys_args.qt = &qc->tls;
+    QuicTlsServerV.keys_args.level = level;
+    QuicTlsServerV.keys_args.is_server = /*is_server=*/PROTO_TRUE;
     QuicTlsServer.keys(quic_tls_work);
-    return QuicTlsServer.pkt_keys;
+    return QuicTlsServerV.pkt_keys;
 }
 
 // The engine is one translation unit; these are defined below in dependency order.
@@ -288,8 +288,8 @@ static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint
     c.params.has_initial_scid = PROTO_TRUE;
     mem.cpy(c.params.initial_scid, our_scid, our_scid_len);
     c.params.initial_scid_len = our_scid_len;
-    QuicTlsServer.server_init_args.qt = &qc->tls;
-    QuicTlsServer.server_init_args.cfg = &c;
+    QuicTlsServerV.server_init_args.qt = &qc->tls;
+    QuicTlsServerV.server_init_args.cfg = &c;
     QuicTlsServer.server_init(quic_tls_work);
 }
 
@@ -332,12 +332,12 @@ static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrameHeader *f)
     s->crypto_rx_have += nl;
     s->crypto_rx_off += nl;
 
-    QuicTlsServer.recv_crypto_args.qt = &qc->tls;
-    QuicTlsServer.recv_crypto_args.level = level;
-    QuicTlsServer.recv_crypto_args.data = s->crypto_rx;
-    QuicTlsServer.recv_crypto_args.len = s->crypto_rx_have;
+    QuicTlsServerV.recv_crypto_args.qt = &qc->tls;
+    QuicTlsServerV.recv_crypto_args.level = level;
+    QuicTlsServerV.recv_crypto_args.data = s->crypto_rx;
+    QuicTlsServerV.recv_crypto_args.len = s->crypto_rx_have;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    size_t used = QuicTlsServer.n;
+    size_t used = QuicTlsServerV.n;
     if (used)
     {
         mem.move(s->crypto_rx, s->crypto_rx + used, s->crypto_rx_have - used);
@@ -479,12 +479,12 @@ static proto_bool skip_initial_token(const uint8_t *dg, size_t len, size_t *off)
 {
     uint64_t tok_len = 0;
     size_t c = 0;
-    QuicVarint.decode_args.in = dg + *off;
-    QuicVarint.decode_args.len = len - *off;
-    QuicVarint.decode_args.value = &tok_len;
-    QuicVarint.decode_args.consumed = &c;
+    QuicVarintV.decode_args.in = dg + *off;
+    QuicVarintV.decode_args.len = len - *off;
+    QuicVarintV.decode_args.value = &tok_len;
+    QuicVarintV.decode_args.consumed = &c;
     QuicVarint.decode(quic_varint_work);
-    if (!QuicVarint.ok)
+    if (!QuicVarintV.ok)
     {
         return PROTO_FALSE;
     }
@@ -543,12 +543,12 @@ static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, 
         return PROTO_FALSE;
     }
     size_t c = 0;
-    QuicVarint.decode_args.in = dg + off;
-    QuicVarint.decode_args.len = len - off;
-    QuicVarint.decode_args.value = payload_length;
-    QuicVarint.decode_args.consumed = &c;
+    QuicVarintV.decode_args.in = dg + off;
+    QuicVarintV.decode_args.len = len - off;
+    QuicVarintV.decode_args.value = payload_length;
+    QuicVarintV.decode_args.consumed = &c;
     QuicVarint.decode(quic_varint_work);
-    if (!QuicVarint.ok)
+    if (!QuicVarintV.ok)
     {
         return PROTO_FALSE;
     }
@@ -701,11 +701,11 @@ static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *
         return 0;
     }
     size_t flen = 0;
-    QuicTlsServer.flight_args.qt = &qc->tls;
-    QuicTlsServer.flight_args.level = level;
-    QuicTlsServer.flight_args.len = &flen;
+    QuicTlsServerV.flight_args.qt = &qc->tls;
+    QuicTlsServerV.flight_args.level = level;
+    QuicTlsServerV.flight_args.len = &flen;
     QuicTlsServer.flight(quic_tls_work);
-    const uint8_t *flight = QuicTlsServer.bytes;
+    const uint8_t *flight = QuicTlsServerV.bytes;
     if (!flight || s->crypto_tx_off >= flen)
     {
         return 0; // other than INITIAL/HANDSHAKE, which the guard above already excluded
@@ -937,11 +937,11 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
         p = hn;
         if (level == QUIC_ENC_INITIAL)
         {
-            QuicVarint.encode_args.out = out + p;
-            QuicVarint.encode_args.cap = cap - p;
-            QuicVarint.encode_args.value = 0;
+            QuicVarintV.encode_args.out = out + p;
+            QuicVarintV.encode_args.cap = cap - p;
+            QuicVarintV.encode_args.value = 0;
             QuicVarint.encode(quic_varint_work);
-            size_t n = QuicVarint.n; // empty token
+            size_t n = QuicVarintV.n; // empty token
             if (!n)
             {
                 return 0;
@@ -949,11 +949,11 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
             p += n;
         }
         uint64_t length = (uint64_t)pn_len + frame_len + PROTOCORE_AES128GCM_TAG_LEN;
-        QuicVarint.encode_args.out = out + p;
-        QuicVarint.encode_args.cap = cap - p;
-        QuicVarint.encode_args.value = length;
+        QuicVarintV.encode_args.out = out + p;
+        QuicVarintV.encode_args.cap = cap - p;
+        QuicVarintV.encode_args.value = length;
         QuicVarint.encode(quic_varint_work);
-        size_t n = QuicVarint.n;
+        size_t n = QuicVarintV.n;
         if (!n)
         {
             return 0;

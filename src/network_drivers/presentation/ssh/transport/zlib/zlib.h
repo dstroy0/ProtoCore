@@ -112,16 +112,33 @@ typedef struct
 {
     ZlibInitArgs init_args;
     ZlibPacketArgs packet_args;
-
     proto_bool ok;
     int n;
+} ZlibVars;
 
+/** @brief The operands and the outcome. */
+extern ZlibVars ZlibV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const packet)(uint8_t *restrict work);
 } ZlibNs;
 
-/** @brief The one symbol this module exports. */
-extern ZlibNs Zlib;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ZlibV or a region of the borrow at a fixed offset.
+void protocore_zlib_init(uint8_t *restrict work);
+void protocore_zlib_packet(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Zlib.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ZlibNs Zlib __attribute__((unused)) = {
+    .init = protocore_zlib_init,
+    .packet = protocore_zlib_packet,
+};
 
 PROTOCORE_END_DECLS
 

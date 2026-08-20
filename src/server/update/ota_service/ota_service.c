@@ -38,10 +38,10 @@ static OtaCtx s_ota;
 /// @brief Validate the request's HTTP Basic credentials against s_ota.user/s_ota.pass.
 static proto_bool ota_check_auth(HttpReq *req)
 {
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Authorization";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Authorization";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *h = HttpParser.text;
+    const char *h = HttpParserV.text;
     if (!h || !str.starts(h, "Basic ", 6, PROTO_FALSE))
     {
         return PROTO_FALSE;
@@ -155,9 +155,9 @@ static void ota_service_begin(uint8_t *restrict work)
     str.copy(s_ota.pass, pass ? pass : "", sizeof(s_ota.pass));
     s_ota.pass[sizeof(s_ota.pass) - 1] = '\0';
 
-    HttpParser.set_stream_hooks_args.begin = ota_stream_begin;
-    HttpParser.set_stream_hooks_args.data = ota_stream_data;
-    HttpParser.set_stream_hooks_args.abort = NULL;
+    HttpParserV.set_stream_hooks_args.begin = ota_stream_begin;
+    HttpParserV.set_stream_hooks_args.data = ota_stream_data;
+    HttpParserV.set_stream_hooks_args.abort = NULL;
     HttpParser.set_stream_hooks(protocore_http_parser_span());
     on_http(path, HTTP_POST, ota_handle);
 }

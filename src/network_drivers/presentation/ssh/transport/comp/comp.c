@@ -90,22 +90,22 @@ uint8_t *protocore_ssh_comp_span(void)
 
 static void start_s2c(SshCompState *c)
 {
-    Zlib.init_args.z = &c->z;
-    Zlib.init_args.win = c->work;
-    Zlib.init_args.head = c->head;
-    Zlib.init_args.prev = c->prev;
-    Zlib.init_args.ll_code = c->ll_code;
-    Zlib.init_args.ll_len = c->ll_len;
-    Zlib.init_args.d_code = c->d_code;
-    Zlib.init_args.d_len = c->d_len;
+    ZlibV.init_args.z = &c->z;
+    ZlibV.init_args.win = c->work;
+    ZlibV.init_args.head = c->head;
+    ZlibV.init_args.prev = c->prev;
+    ZlibV.init_args.ll_code = c->ll_code;
+    ZlibV.init_args.ll_len = c->ll_len;
+    ZlibV.init_args.d_code = c->d_code;
+    ZlibV.init_args.d_len = c->d_len;
     Zlib.init(zlib_work);
     c->s2c_active = PROTO_TRUE;
 }
 
 static void start_c2s(SshCompState *c)
 {
-    Inflate.init_args.z = &c->inf;
-    Inflate.init_args.window = c->inf_window;
+    InflateV.init_args.z = &c->inf;
+    InflateV.init_args.window = c->inf_window;
     Inflate.init(inflate_work);
     c->c2s_active = PROTO_TRUE;
 }
@@ -115,9 +115,9 @@ static void start_c2s(SshCompState *c)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void comp_reset(uint8_t *restrict work)
+void protocore_comp_reset(uint8_t *restrict work)
 {
-    uint8_t i = Comp.reset_args.i;
+    uint8_t i = CompV.reset_args.i;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -133,10 +133,10 @@ static void comp_reset(uint8_t *restrict work)
     protocore_secure_wipe(c->inf_window, sizeof(c->inf_window));
 }
 
-static void comp_set_s2c(uint8_t *restrict work)
+void protocore_comp_set_s2c(uint8_t *restrict work)
 {
-    uint8_t i = Comp.set_s2c_args.i;
-    SshCompAlg alg = Comp.set_s2c_args.alg;
+    uint8_t i = CompV.set_s2c_args.i;
+    SshCompAlg alg = CompV.set_s2c_args.alg;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -145,10 +145,10 @@ static void comp_set_s2c(uint8_t *restrict work)
     COMP_CTX(work)->comp[i].s2c_alg = alg;
 }
 
-static void comp_set_c2s(uint8_t *restrict work)
+void protocore_comp_set_c2s(uint8_t *restrict work)
 {
-    uint8_t i = Comp.set_c2s_args.i;
-    SshCompAlg alg = Comp.set_c2s_args.alg;
+    uint8_t i = CompV.set_c2s_args.i;
+    SshCompAlg alg = CompV.set_c2s_args.alg;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -158,9 +158,9 @@ static void comp_set_c2s(uint8_t *restrict work)
 }
 
 // "zlib" (non-delayed) starts both directions at NEWKEYS; "zlib@openssh.com" waits for auth success.
-static void comp_on_newkeys(uint8_t *restrict work)
+void protocore_comp_on_newkeys(uint8_t *restrict work)
 {
-    uint8_t i = Comp.on_newkeys_args.i;
+    uint8_t i = CompV.on_newkeys_args.i;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -179,9 +179,9 @@ static void comp_on_newkeys(uint8_t *restrict work)
     }
 }
 
-static void comp_on_auth_success(uint8_t *restrict work)
+void protocore_comp_on_auth_success(uint8_t *restrict work)
 {
-    uint8_t i = Comp.on_auth_success_args.i;
+    uint8_t i = CompV.on_auth_success_args.i;
 
     if (i >= MAX_SSH_CONNS)
     {
@@ -198,79 +198,70 @@ static void comp_on_auth_success(uint8_t *restrict work)
     }
 }
 
-static void comp_s2c_active(uint8_t *restrict work)
+void protocore_comp_s2c_active(uint8_t *restrict work)
 {
-    uint8_t i = Comp.s2c_active_args.i;
+    uint8_t i = CompV.s2c_active_args.i;
 
-    Comp.ok = i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].s2c_active;
+    CompV.ok = i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].s2c_active;
 }
 
-static void comp_s2c(uint8_t *restrict work)
+void protocore_comp_s2c(uint8_t *restrict work)
 {
-    uint8_t i = Comp.s2c_args.i;
-    const uint8_t *src = Comp.s2c_args.src;
-    size_t src_len = Comp.s2c_args.src_len;
-    uint8_t *dst = Comp.s2c_args.dst;
-    size_t dst_cap = Comp.s2c_args.dst_cap;
-    size_t *out_len = Comp.s2c_args.out_len;
+    uint8_t i = CompV.s2c_args.i;
+    const uint8_t *src = CompV.s2c_args.src;
+    size_t src_len = CompV.s2c_args.src_len;
+    uint8_t *dst = CompV.s2c_args.dst;
+    size_t dst_cap = CompV.s2c_args.dst_cap;
+    size_t *out_len = CompV.s2c_args.out_len;
 
     if (i >= MAX_SSH_CONNS || !COMP_CTX(work)->comp[i].s2c_active)
     {
-        Comp.n = -1;
+        CompV.n = -1;
         return;
     }
-    Zlib.packet_args.z = &COMP_CTX(work)->comp[i].z;
-    Zlib.packet_args.src = src;
-    Zlib.packet_args.src_len = src_len;
-    Zlib.packet_args.dst = dst;
-    Zlib.packet_args.dst_cap = dst_cap;
-    Zlib.packet_args.out_len = out_len;
+    ZlibV.packet_args.z = &COMP_CTX(work)->comp[i].z;
+    ZlibV.packet_args.src = src;
+    ZlibV.packet_args.src_len = src_len;
+    ZlibV.packet_args.dst = dst;
+    ZlibV.packet_args.dst_cap = dst_cap;
+    ZlibV.packet_args.out_len = out_len;
     Zlib.packet(zlib_work);
-    Comp.n = Zlib.n;
+    CompV.n = ZlibV.n;
 }
 
-static void comp_c2s_active(uint8_t *restrict work)
+void protocore_comp_c2s_active(uint8_t *restrict work)
 {
-    uint8_t i = Comp.c2s_active_args.i;
+    uint8_t i = CompV.c2s_active_args.i;
 
-    Comp.ok = i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].c2s_active;
+    CompV.ok = i < MAX_SSH_CONNS && COMP_CTX(work)->comp[i].c2s_active;
 }
 
-static void comp_c2s(uint8_t *restrict work)
+void protocore_comp_c2s(uint8_t *restrict work)
 {
-    uint8_t i = Comp.c2s_args.i;
-    const uint8_t *src = Comp.c2s_args.src;
-    size_t src_len = Comp.c2s_args.src_len;
-    uint8_t *dst = Comp.c2s_args.dst;
-    size_t dst_cap = Comp.c2s_args.dst_cap;
-    size_t *out_len = Comp.c2s_args.out_len;
+    uint8_t i = CompV.c2s_args.i;
+    const uint8_t *src = CompV.c2s_args.src;
+    size_t src_len = CompV.c2s_args.src_len;
+    uint8_t *dst = CompV.c2s_args.dst;
+    size_t dst_cap = CompV.c2s_args.dst_cap;
+    size_t *out_len = CompV.c2s_args.out_len;
 
     if (i >= MAX_SSH_CONNS || !COMP_CTX(work)->comp[i].c2s_active)
     {
-        Comp.n = -1;
+        CompV.n = -1;
         return;
     }
-    Inflate.packet_args.z = &COMP_CTX(work)->comp[i].inf;
-    Inflate.packet_args.src = src;
-    Inflate.packet_args.src_len = src_len;
-    Inflate.packet_args.dst = dst;
-    Inflate.packet_args.dst_cap = dst_cap;
-    Inflate.packet_args.out_len = out_len;
+    InflateV.packet_args.z = &COMP_CTX(work)->comp[i].inf;
+    InflateV.packet_args.src = src;
+    InflateV.packet_args.src_len = src_len;
+    InflateV.packet_args.dst = dst;
+    InflateV.packet_args.dst_cap = dst_cap;
+    InflateV.packet_args.out_len = out_len;
     Inflate.packet(inflate_work);
-    Comp.n = Inflate.n;
+    CompV.n = InflateV.n;
 }
 
-CompNs Comp = {
-    .reset = comp_reset,
-    .set_s2c = comp_set_s2c,
-    .on_newkeys = comp_on_newkeys,
-    .on_auth_success = comp_on_auth_success,
-    .s2c_active = comp_s2c_active,
-    .s2c = comp_s2c,
-    .set_c2s = comp_set_c2s,
-    .c2s_active = comp_c2s_active,
-    .c2s = comp_c2s,
-};
+/** @brief The operands and the outcome. */
+CompVars CompV;
 
 PROTOCORE_END_DECLS
 

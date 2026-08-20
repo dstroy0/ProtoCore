@@ -83,17 +83,36 @@ typedef struct
     QuicVarintLenArgs len_args;
     QuicVarintEncodeArgs encode_args;
     QuicVarintDecodeArgs decode_args;
-
     proto_bool ok;
     size_t n;
+} QuicVarintVars;
 
+/** @brief The operands and the outcome. */
+extern QuicVarintVars QuicVarintV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const len)(uint8_t *restrict work);
     void (*const encode)(uint8_t *restrict work);
     void (*const decode)(uint8_t *restrict work);
 } QuicVarintNs;
 
-/** @brief The one symbol this module exports. */
-extern QuicVarintNs QuicVarint;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in QuicVarintV or a region of the borrow at a fixed offset.
+void protocore_quic_varint_len(uint8_t *restrict work);
+void protocore_quic_varint_encode(uint8_t *restrict work);
+void protocore_quic_varint_decode(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `QuicVarint.len(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const QuicVarintNs QuicVarint __attribute__((unused)) = {
+    .len = protocore_quic_varint_len,
+    .encode = protocore_quic_varint_encode,
+    .decode = protocore_quic_varint_decode,
+};
 
 PROTOCORE_END_DECLS
 

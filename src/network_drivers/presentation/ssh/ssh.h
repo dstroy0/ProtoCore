@@ -47,15 +47,30 @@ typedef struct
 typedef struct
 {
     SshConnSlotArgs conn_slot_args;
-
     proto_bool ok;
     uint8_t *ptr;
+} SshVars;
 
+/** @brief The operands and the outcome. */
+extern SshVars SshV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const conn_slot)(uint8_t *restrict work);
 } SshNs;
 
-/** @brief The one symbol this module exports. */
-extern SshNs Ssh;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SshV or a region of the borrow at a fixed offset.
+void protocore_ssh_conn_slot(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ssh.conn_slot(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SshNs Ssh __attribute__((unused)) = {
+    .conn_slot = protocore_ssh_conn_slot,
+};
 
 /**
  * @brief The PROTOCORE_SSH_BORROW bytes this module's state lives in.

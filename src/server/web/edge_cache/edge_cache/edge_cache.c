@@ -395,11 +395,11 @@ static void edge_cache_freshness_lifetime(uint8_t *restrict work)
     int64_t date_epoch = EdgeCache.freshness_lifetime_args.date_epoch;
     int64_t expires_epoch = EdgeCache.freshness_lifetime_args.expires_epoch;
 
-    Httpcache.freshness_lifetime_args.cc = cc;
-    Httpcache.freshness_lifetime_args.shared = shared;
-    Httpcache.freshness_lifetime_args.expires_minus_date = -1;
+    HttpcacheV.freshness_lifetime_args.cc = cc;
+    HttpcacheV.freshness_lifetime_args.shared = shared;
+    HttpcacheV.freshness_lifetime_args.expires_minus_date = -1;
     Httpcache.freshness_lifetime(httpcache_work);
-    long lifetime = Httpcache.value; // s-maxage / max-age, or -1
+    long lifetime = HttpcacheV.value; // s-maxage / max-age, or -1
     if (lifetime >= 0)
     {
         EdgeCache.secs = lifetime;
@@ -1092,14 +1092,14 @@ static void edge_cache_apply_304(uint8_t *restrict work)
     edge_cache_header_value(work);
     if (EdgeCache.ok)
     {
-        Httpcache.control_parse_args.s = v;
-        Httpcache.control_parse_args.len = str.len(v, sizeof(v));
-        Httpcache.control_parse_args.cc = &cc;
+        HttpcacheV.control_parse_args.s = v;
+        HttpcacheV.control_parse_args.len = str.len(v, sizeof(v));
+        HttpcacheV.control_parse_args.cc = &cc;
         Httpcache.control_parse(httpcache_work);
     }
     else
     {
-        Httpcache.control_init_args.cc = &cc;
+        HttpcacheV.control_init_args.cc = &cc;
         Httpcache.control_init(httpcache_work);
     }
 

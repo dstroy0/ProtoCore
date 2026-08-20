@@ -43,17 +43,32 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t slot;      ///< the SSH slot the request arrived on
-    uint32_t channel;  ///< the channel it names
-    proto_bool accept; ///< in/out: set when an accepted SFTP subsystem flips acceptance
-
+    uint8_t slot;       ///< the SSH slot the request arrived on
+    uint32_t channel;   ///< the channel it names
+    proto_bool accept;  ///< in/out: set when an accepted SFTP subsystem flips acceptance
     SshChanReqArgs req; ///< what one channel request names and carries
+} SshAppServerVars;
 
+/** @brief The operands and the outcome. */
+extern SshAppServerVars SshAppServerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const classify)(uint8_t *restrict work);
 } SshAppServerNs;
 
-/** @brief The one symbol this module exports. */
-extern SshAppServerNs SshAppServer;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SshAppServerV or a region of the borrow at a fixed offset.
+void protocore_ssh_app_server_classify(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SshAppServer.classify(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SshAppServerNs SshAppServer __attribute__((unused)) = {
+    .classify = protocore_ssh_app_server_classify,
+};
 
 PROTOCORE_END_DECLS
 

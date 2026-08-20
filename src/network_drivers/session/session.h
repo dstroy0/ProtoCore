@@ -22,11 +22,10 @@
 #define PROTOCORE_SESSION_H
 
 #include "network_drivers/transport/tcp/evt.h" // EvtType, TcpEvt: the events this layer drains
-#include "server/core/proto_handler.h" // ProtoRegistryNs: carried below as Session.proto
-#include "server/core/worker/worker.h"        // WorkerNs: carried below as Session.workers
+#include "server/core/proto_handler.h"         // ProtoRegistryNs: carried below as Session.proto
+#include "server/core/worker/worker.h"         // WorkerNs: carried below as Session.workers
 
-#include "protocore_config.h"                  // CONN_POOL_SLOTS, proto_bool: the tables below
-
+#include "protocore_config.h" // CONN_POOL_SLOTS, proto_bool: the tables below
 
 /**
  * @brief Per-connection state, keyed on the transport slot index.
@@ -191,14 +190,30 @@ typedef struct
 {
     int worker_id;
     proto_u32 conn_timeout_ms;
-
-    void (*const tick)(uint8_t *restrict work);
     ProtoRegistryNs *proto;
     WorkerNs *workers;
+} SessionVars;
+
+/** @brief The operands and the outcome. */
+extern SessionVars SessionV;
+
+/** @brief The entries. */
+typedef struct
+{
+    void (*const tick)(uint8_t *restrict work);
 } SessionNs;
 
-/** @brief The one symbol this module exports. */
-extern SessionNs Session;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SessionV or a region of the borrow at a fixed offset.
+void protocore_session_tick(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Session.tick(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SessionNs Session __attribute__((unused)) = {
+    .tick = protocore_session_tick,
+};
 
 /**
  * @brief The PROTOCORE_SESSION_BORROW bytes this module's state lives in.

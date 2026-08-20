@@ -63,21 +63,21 @@ static void fail(QuicTls *qt, uint8_t alert)
 // reads them off the handle, so the binding is set before each call.
 static void ks_bind(QuicTls *qt)
 {
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &qt->ks;
-    Tls13Ks.bind.s = qt->ks_store;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &qt->ks;
+    Tls13KsV.bind.s = qt->ks_store;
     // RFC 9001 sec 5.1: this handshake offers TLS_AES_128_GCM_SHA256 only, so the schedule's hash is
     // SHA-256. It is stated rather than assumed because the schedule binds either.
-    Tls13Ks.bind.is384 = PROTO_FALSE;
+    Tls13KsV.bind.is384 = PROTO_FALSE;
 }
 
 // verify_data over @p transcript_hash under @p base_secret (RFC 8446 sec 4.4.4).
 static void ks_finished(QuicTls *qt, const uint8_t *base_secret, const uint8_t *transcript_hash, uint8_t *out)
 {
     ks_bind(qt);
-    Tls13Ks.finished_args.base_secret = base_secret;
-    Tls13Ks.finished_args.transcript_hash = transcript_hash;
-    Tls13Ks.finished_args.out = out;
+    Tls13KsV.finished_args.base_secret = base_secret;
+    Tls13KsV.finished_args.transcript_hash = transcript_hash;
+    Tls13KsV.finished_args.out = out;
     Tls13Ks.finished_mac(NULL);
 }
 
@@ -87,16 +87,16 @@ static void ks_finished(QuicTls *qt, const uint8_t *base_secret, const uint8_t *
 // Start a Transcript-Hash in @p ctx.
 static void transcript_start(QuicTls *qt, uint8_t *ctx)
 {
-    Tls13Ks.bind.ks = &qt->ks;
+    Tls13KsV.bind.ks = &qt->ks;
     Tls13Ks.transcript_init(ctx);
 }
 
 // Fold @p len bytes of @p data into the transcript in @p ctx.
 static void transcript_add(QuicTls *qt, uint8_t *ctx, const uint8_t *data, size_t len)
 {
-    Tls13Ks.bind.ks = &qt->ks;
-    Tls13Ks.transcript_args.data = data;
-    Tls13Ks.transcript_args.len = len;
+    Tls13KsV.bind.ks = &qt->ks;
+    Tls13KsV.transcript_args.data = data;
+    Tls13KsV.transcript_args.len = len;
     Tls13Ks.transcript_update(ctx);
 }
 
@@ -104,8 +104,8 @@ static void transcript_add(QuicTls *qt, uint8_t *ctx, const uint8_t *data, size_
 // state, so the context comes out untouched and keeps taking messages.
 static void snapshot_hash(QuicTls *qt, uint8_t *ctx, uint8_t *out)
 {
-    Tls13Ks.bind.ks = &qt->ks;
-    Tls13Ks.transcript_args.out = out;
+    Tls13KsV.bind.ks = &qt->ks;
+    Tls13KsV.transcript_args.out = out;
     Tls13Ks.transcript_peek(ctx);
 }
 
@@ -143,11 +143,11 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     qt->transcript = qt->hash_work;
     transcript_start(qt, qt->transcript);
     uint8_t mh[40];
-    Tls13Msg.build_message_hash_args.out = mh;
-    Tls13Msg.build_message_hash_args.cap = sizeof(mh);
-    Tls13Msg.build_message_hash_args.ch1_hash = ch1_hash;
+    Tls13MsgV.build_message_hash_args.out = mh;
+    Tls13MsgV.build_message_hash_args.cap = sizeof(mh);
+    Tls13MsgV.build_message_hash_args.ch1_hash = ch1_hash;
     Tls13Msg.build_message_hash(tls13_msg_work);
-    size_t mhn = Tls13Msg.n;
+    size_t mhn = Tls13MsgV.n;
     if (!mhn)
     {
         fail(qt, TLS_ALERT_INTERNAL_ERROR);
@@ -156,17 +156,17 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
     transcript_add(qt, qt->transcript, mh, mhn); // message_hash is transcript-only, never sent
 
     qt->flight_initial_len = 0;
-    Tls13Msg.build_hello_retry_request_args.out = qt->flight_initial;
-    Tls13Msg.build_hello_retry_request_args.cap = sizeof(qt->flight_initial);
-    Tls13Msg.build_hello_retry_request_args.session_id = ch->session_id;
-    Tls13Msg.build_hello_retry_request_args.session_id_len = ch->session_id_len;
-    Tls13Msg.build_hello_retry_request_args.selected_group = TLS_GROUP_X25519MLKEM768;
-    Tls13Msg.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
-    Tls13Msg.build_hello_retry_request_args.cookie = NULL;
-    Tls13Msg.build_hello_retry_request_args.cookie_len = 0;
-    Tls13Msg.build_hello_retry_request_args.dtls = /*dtls=*/PROTO_FALSE;
+    Tls13MsgV.build_hello_retry_request_args.out = qt->flight_initial;
+    Tls13MsgV.build_hello_retry_request_args.cap = sizeof(qt->flight_initial);
+    Tls13MsgV.build_hello_retry_request_args.session_id = ch->session_id;
+    Tls13MsgV.build_hello_retry_request_args.session_id_len = ch->session_id_len;
+    Tls13MsgV.build_hello_retry_request_args.selected_group = TLS_GROUP_X25519MLKEM768;
+    Tls13MsgV.build_hello_retry_request_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
+    Tls13MsgV.build_hello_retry_request_args.cookie = NULL;
+    Tls13MsgV.build_hello_retry_request_args.cookie_len = 0;
+    Tls13MsgV.build_hello_retry_request_args.dtls = /*dtls=*/PROTO_FALSE;
     Tls13Msg.build_hello_retry_request(tls13_msg_work);
-    size_t n = Tls13Msg.n;
+    size_t n = Tls13MsgV.n;
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
         return PROTO_FALSE;
@@ -179,12 +179,12 @@ static proto_bool send_hello_retry(QuicTls *qt, const uint8_t *msg, size_t msg_l
 static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t msg_len)
 {
     Tls13ClientHello ch;
-    Tls13Msg.parse_client_hello_args.msg = msg;
-    Tls13Msg.parse_client_hello_args.len = msg_len;
-    Tls13Msg.parse_client_hello_args.out = &ch;
-    Tls13Msg.parse_client_hello_args.dtls = /*dtls=*/PROTO_FALSE;
+    Tls13MsgV.parse_client_hello_args.msg = msg;
+    Tls13MsgV.parse_client_hello_args.len = msg_len;
+    Tls13MsgV.parse_client_hello_args.out = &ch;
+    Tls13MsgV.parse_client_hello_args.dtls = /*dtls=*/PROTO_FALSE;
     Tls13Msg.parse_client_hello(tls13_msg_work);
-    if (!Tls13Msg.ok)
+    if (!Tls13MsgV.ok)
     {
         fail(qt, TLS_ALERT_DECODE_ERROR);
         return PROTO_FALSE;
@@ -233,11 +233,11 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
         fail(qt, TLS_ALERT_MISSING_EXTENSION);
         return PROTO_FALSE;
     }
-    QuicTp.parse_args.buf = ch.quic_tp;
-    QuicTp.parse_args.len = ch.quic_tp_len;
-    QuicTp.parse_args.tp = &qt->peer;
+    QuicTpV.parse_args.buf = ch.quic_tp;
+    QuicTpV.parse_args.len = ch.quic_tp_len;
+    QuicTpV.parse_args.tp = &qt->peer;
     QuicTp.parse(quic_tp_work);
-    if (!QuicTp.ok)
+    if (!QuicTpV.ok)
     {
         fail(qt, TLS_ALERT_ILLEGAL_PARAMETER);
         return PROTO_FALSE;
@@ -315,20 +315,20 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // ServerHello (Initial-level flight). The Initial CRYPTO is one contiguous byte stream, so after a
     // HelloRetryRequest the ServerHello is appended after the HRR already in flight_initial - build at the
     // current offset (0 on the happy path, the HRR's end on a retry) and do not reset the length.
-    Tls13Msg.build_server_hello_args.out = qt->flight_initial + qt->flight_initial_len;
-    Tls13Msg.build_server_hello_args.cap = sizeof(qt->flight_initial) - qt->flight_initial_len;
-    Tls13Msg.build_server_hello_args.random = qt->cfg.random;
-    Tls13Msg.build_server_hello_args.session_id = ch.session_id;
-    Tls13Msg.build_server_hello_args.session_id_len = ch.session_id_len;
-    Tls13Msg.build_server_hello_args.share = server_share;
-    Tls13Msg.build_server_hello_args.share_len = share_len;
-    Tls13Msg.build_server_hello_args.group = group;
-    Tls13Msg.build_server_hello_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
-    Tls13Msg.build_server_hello_args.dtls = /*dtls=*/PROTO_FALSE;
-    Tls13Msg.build_server_hello_args.conn_id = /*conn_id=*/NULL;
-    Tls13Msg.build_server_hello_args.conn_id_len = /*conn_id_len=*/0;
+    Tls13MsgV.build_server_hello_args.out = qt->flight_initial + qt->flight_initial_len;
+    Tls13MsgV.build_server_hello_args.cap = sizeof(qt->flight_initial) - qt->flight_initial_len;
+    Tls13MsgV.build_server_hello_args.random = qt->cfg.random;
+    Tls13MsgV.build_server_hello_args.session_id = ch.session_id;
+    Tls13MsgV.build_server_hello_args.session_id_len = ch.session_id_len;
+    Tls13MsgV.build_server_hello_args.share = server_share;
+    Tls13MsgV.build_server_hello_args.share_len = share_len;
+    Tls13MsgV.build_server_hello_args.group = group;
+    Tls13MsgV.build_server_hello_args.suite = PROTOCORE_TLS_SUITE_AES_128_GCM_SHA256;
+    Tls13MsgV.build_server_hello_args.dtls = /*dtls=*/PROTO_FALSE;
+    Tls13MsgV.build_server_hello_args.conn_id = /*conn_id=*/NULL;
+    Tls13MsgV.build_server_hello_args.conn_id_len = /*conn_id_len=*/0;
     Tls13Msg.build_server_hello(tls13_msg_work);
-    size_t n = Tls13Msg.n;
+    size_t n = Tls13MsgV.n;
     if (!emit(qt, qt->flight_initial, sizeof(qt->flight_initial), &qt->flight_initial_len, n))
     {
         return PROTO_FALSE;
@@ -340,9 +340,9 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     snapshot_hash(qt, qt->transcript, hash);
     ks_bind(qt);
     Tls13Ks.early(NULL);
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = ecdhe_len;
-    Tls13Ks.step.ch_sh_hash = hash;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = ecdhe_len;
+    Tls13KsV.step.ch_sh_hash = hash;
     Tls13Ks.handshake(NULL);
     QuicCrypto.keys_from_secret_args.keys_work = qt->keys_work;
     QuicCrypto.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_HS;
@@ -357,31 +357,31 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // Handshake-level flight: EncryptedExtensions, Certificate, CertificateVerify, Finished.
     qt->flight_hs_len = 0;
     uint8_t tp_enc[PROTOCORE_QUIC_TLS_TP_ENC_CAP];
-    QuicTp.encode_args.tp = &qt->cfg.params;
-    QuicTp.encode_args.out = tp_enc;
-    QuicTp.encode_args.cap = sizeof(tp_enc);
+    QuicTpV.encode_args.tp = &qt->cfg.params;
+    QuicTpV.encode_args.out = tp_enc;
+    QuicTpV.encode_args.cap = sizeof(tp_enc);
     QuicTp.encode(quic_tp_work);
-    size_t tp_len = QuicTp.n;
+    size_t tp_len = QuicTpV.n;
 
-    Tls13Msg.build_encrypted_extensions_args.out = qt->flight_hs + qt->flight_hs_len;
-    Tls13Msg.build_encrypted_extensions_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
-    Tls13Msg.build_encrypted_extensions_args.quic_tp = tp_enc;
-    Tls13Msg.build_encrypted_extensions_args.quic_tp_len = tp_len;
-    Tls13Msg.build_encrypted_extensions_args.rpk_server_cert = /*rpk_server_cert=*/PROTO_FALSE;
+    Tls13MsgV.build_encrypted_extensions_args.out = qt->flight_hs + qt->flight_hs_len;
+    Tls13MsgV.build_encrypted_extensions_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
+    Tls13MsgV.build_encrypted_extensions_args.quic_tp = tp_enc;
+    Tls13MsgV.build_encrypted_extensions_args.quic_tp_len = tp_len;
+    Tls13MsgV.build_encrypted_extensions_args.rpk_server_cert = /*rpk_server_cert=*/PROTO_FALSE;
     Tls13Msg.build_encrypted_extensions(tls13_msg_work);
-    n = Tls13Msg.n;
+    n = Tls13MsgV.n;
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
         // PROTOCORE_H3_CRYPTO_BUF >= PROTOCORE_QUIC_TLS_EE_MAX is pinned by the static_assert above
     }
 
-    Tls13Msg.build_certificate_args.out = qt->flight_hs + qt->flight_hs_len;
-    Tls13Msg.build_certificate_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
-    Tls13Msg.build_certificate_args.cert_der = qt->cfg.cert_der;
-    Tls13Msg.build_certificate_args.cert_len = qt->cfg.cert_len;
+    Tls13MsgV.build_certificate_args.out = qt->flight_hs + qt->flight_hs_len;
+    Tls13MsgV.build_certificate_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
+    Tls13MsgV.build_certificate_args.cert_der = qt->cfg.cert_der;
+    Tls13MsgV.build_certificate_args.cert_len = qt->cfg.cert_len;
     Tls13Msg.build_certificate(tls13_msg_work);
-    n = Tls13Msg.n;
+    n = Tls13MsgV.n;
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -389,14 +389,14 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
 
     // CertificateVerify signs Transcript-Hash(ClientHello..Certificate).
     snapshot_hash(qt, qt->transcript, hash);
-    Tls13Msg.build_cert_verify_args.sign_work = qt->sign_work;
-    Tls13Msg.build_cert_verify_args.out = qt->flight_hs + qt->flight_hs_len;
-    Tls13Msg.build_cert_verify_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
-    Tls13Msg.build_cert_verify_args.transcript_hash = hash;
-    Tls13Msg.build_cert_verify_args.hash_len = qt->ks.len;
-    Tls13Msg.build_cert_verify_args.seed = qt->cfg.ed25519_seed;
+    Tls13MsgV.build_cert_verify_args.sign_work = qt->sign_work;
+    Tls13MsgV.build_cert_verify_args.out = qt->flight_hs + qt->flight_hs_len;
+    Tls13MsgV.build_cert_verify_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
+    Tls13MsgV.build_cert_verify_args.transcript_hash = hash;
+    Tls13MsgV.build_cert_verify_args.hash_len = qt->ks.len;
+    Tls13MsgV.build_cert_verify_args.seed = qt->cfg.ed25519_seed;
     Tls13Msg.build_cert_verify(tls13_msg_work);
-    n = Tls13Msg.n;
+    n = Tls13MsgV.n;
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -406,12 +406,12 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     snapshot_hash(qt, qt->transcript, hash);
     uint8_t verify[TLS13_SECRET_MAX];
     ks_finished(qt, qt->ks.s + TLS13_KS_SERVER_HS, hash, verify);
-    Tls13Msg.build_finished_args.out = qt->flight_hs + qt->flight_hs_len;
-    Tls13Msg.build_finished_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
-    Tls13Msg.build_finished_args.verify_data = verify;
-    Tls13Msg.build_finished_args.verify_len = qt->ks.len;
+    Tls13MsgV.build_finished_args.out = qt->flight_hs + qt->flight_hs_len;
+    Tls13MsgV.build_finished_args.cap = sizeof(qt->flight_hs) - qt->flight_hs_len;
+    Tls13MsgV.build_finished_args.verify_data = verify;
+    Tls13MsgV.build_finished_args.verify_len = qt->ks.len;
     Tls13Msg.build_finished(tls13_msg_work);
-    n = Tls13Msg.n;
+    n = Tls13MsgV.n;
     if (!emit(qt, qt->flight_hs, sizeof(qt->flight_hs), &qt->flight_hs_len, n))
     {
         return PROTO_FALSE;
@@ -421,7 +421,7 @@ static proto_bool process_client_hello(QuicTls *qt, const uint8_t *msg, size_t m
     // client Finished against.
     snapshot_hash(qt, qt->transcript, qt->hs_finished_hash);
     ks_bind(qt);
-    Tls13Ks.step.ch_sfin_hash = qt->hs_finished_hash;
+    Tls13KsV.step.ch_sfin_hash = qt->hs_finished_hash;
     Tls13Ks.master(NULL);
     QuicCrypto.keys_from_secret_args.keys_work = qt->keys_work;
     QuicCrypto.keys_from_secret_args.secret = qt->ks.s + TLS13_KS_CLIENT_AP;
@@ -475,11 +475,11 @@ static proto_bool process_message(QuicTls *qt, int level, const uint8_t *msg, si
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void quic_tls_server_init(uint8_t *restrict work)
+void protocore_quic_tls_server_server_init(uint8_t *restrict work)
 {
     (void)work;
-    QuicTls *qt = QuicTlsServer.server_init_args.qt;
-    const QuicTlsConfig *cfg = QuicTlsServer.server_init_args.cfg;
+    QuicTls *qt = QuicTlsServerV.server_init_args.qt;
+    const QuicTlsConfig *cfg = QuicTlsServerV.server_init_args.cfg;
 
     mem.zero(qt, sizeof(*qt));
     qt->cfg = *cfg;
@@ -488,17 +488,17 @@ static void quic_tls_server_init(uint8_t *restrict work)
     qt->state = QTLS_START;
 }
 
-static void quic_tls_recv_crypto(uint8_t *restrict work)
+void protocore_quic_tls_server_recv_crypto(uint8_t *restrict work)
 {
     (void)work;
-    QuicTls *qt = QuicTlsServer.recv_crypto_args.qt;
-    int level = QuicTlsServer.recv_crypto_args.level;
-    const uint8_t *data = QuicTlsServer.recv_crypto_args.data;
-    size_t len = QuicTlsServer.recv_crypto_args.len;
+    QuicTls *qt = QuicTlsServerV.recv_crypto_args.qt;
+    int level = QuicTlsServerV.recv_crypto_args.level;
+    const uint8_t *data = QuicTlsServerV.recv_crypto_args.data;
+    size_t len = QuicTlsServerV.recv_crypto_args.len;
 
     if (qt->state == QTLS_FAILED)
     {
-        QuicTlsServer.n = len; // drain; the connection is closing
+        QuicTlsServerV.n = len; // drain; the connection is closing
         return;
     }
     size_t off = 0;
@@ -512,7 +512,7 @@ static void quic_tls_recv_crypto(uint8_t *restrict work)
         }
         if (!process_message(qt, level, data + off, total))
         {
-            QuicTlsServer.n = off + total; // consumed through the offending message; state is FAILED/handled
+            QuicTlsServerV.n = off + total; // consumed through the offending message; state is FAILED/handled
             return;
         }
         off += total;
@@ -521,67 +521,62 @@ static void quic_tls_recv_crypto(uint8_t *restrict work)
             break;
         }
     }
-    QuicTlsServer.n = off;
+    QuicTlsServerV.n = off;
 }
 
-static void quic_tls_flight(uint8_t *restrict work)
+void protocore_quic_tls_server_flight(uint8_t *restrict work)
 {
     (void)work;
-    const QuicTls *qt = QuicTlsServer.flight_args.qt;
-    int level = QuicTlsServer.flight_args.level;
-    size_t *len = QuicTlsServer.flight_args.len;
+    const QuicTls *qt = QuicTlsServerV.flight_args.qt;
+    int level = QuicTlsServerV.flight_args.level;
+    size_t *len = QuicTlsServerV.flight_args.len;
 
     if (level == QUIC_ENC_INITIAL)
     {
         *len = qt->flight_initial_len;
-        QuicTlsServer.bytes = qt->flight_initial;
+        QuicTlsServerV.bytes = qt->flight_initial;
         return;
     }
     if (level == QUIC_ENC_HANDSHAKE)
     {
         *len = qt->flight_hs_len;
-        QuicTlsServer.bytes = qt->flight_hs;
+        QuicTlsServerV.bytes = qt->flight_hs;
         return;
     }
     *len = 0;
-    QuicTlsServer.bytes = NULL;
+    QuicTlsServerV.bytes = NULL;
 }
 
-static void quic_tls_keys(uint8_t *restrict work)
+void protocore_quic_tls_server_keys(uint8_t *restrict work)
 {
     (void)work;
-    QuicTls *qt = QuicTlsServer.keys_args.qt;
-    int level = QuicTlsServer.keys_args.level;
-    proto_bool is_server = QuicTlsServer.keys_args.is_server;
+    QuicTls *qt = QuicTlsServerV.keys_args.qt;
+    int level = QuicTlsServerV.keys_args.level;
+    proto_bool is_server = QuicTlsServerV.keys_args.is_server;
 
     if (level == QUIC_ENC_HANDSHAKE && qt->hs_keys_ready)
     {
-        QuicTlsServer.pkt_keys = is_server ? &qt->hs_server : &qt->hs_client;
+        QuicTlsServerV.pkt_keys = is_server ? &qt->hs_server : &qt->hs_client;
         return;
     }
     if (level == QUIC_ENC_APP && qt->ap_keys_ready)
     {
-        QuicTlsServer.pkt_keys = is_server ? &qt->ap_server : &qt->ap_client;
+        QuicTlsServerV.pkt_keys = is_server ? &qt->ap_server : &qt->ap_client;
         return;
     }
-    QuicTlsServer.pkt_keys = NULL;
+    QuicTlsServerV.pkt_keys = NULL;
 }
 
-static void quic_tls_peer_params(uint8_t *restrict work)
+void protocore_quic_tls_server_peer_params(uint8_t *restrict work)
 {
     (void)work;
-    const QuicTls *qt = QuicTlsServer.peer_params_args.qt;
+    const QuicTls *qt = QuicTlsServerV.peer_params_args.qt;
 
-    QuicTlsServer.peer = qt->have_peer ? &qt->peer : NULL;
+    QuicTlsServerV.peer = qt->have_peer ? &qt->peer : NULL;
 }
 
-QuicTlsServerNs QuicTlsServer = {
-    .server_init = quic_tls_server_init,
-    .recv_crypto = quic_tls_recv_crypto,
-    .flight = quic_tls_flight,
-    .keys = quic_tls_keys,
-    .peer_params = quic_tls_peer_params,
-};
+/** @brief The operands and the outcome. */
+QuicTlsServerVars QuicTlsServerV;
 
 PROTOCORE_END_DECLS
 

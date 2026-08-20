@@ -645,13 +645,37 @@ typedef struct
     SshPtyArgs pty;
     SshFwdArgs fwd;
     uint8_t msg_type;
-
     proto_bool ok;
     int i32;
     uint32_t u32;
     SshChannel *found;
-
     // sec 5.2 window
+    // sec 5 channels
+    // sec 6.2 / 6.7 terminal
+    // sec 7 forwarding
+    // the application handlers this layer calls back into
+    // the handler a setter installs, read by the setter it belongs to
+    SshChannelDataCb data_cb;
+    SshPtyReqCb pty_req_cb;
+    SshWindowChangeCb window_change_cb;
+    SshForwardOpenCb forward_open_cb;
+    SshForwardDataCb forward_data_cb;
+    SshForwardConfirmCb forward_confirm_cb;
+    SshForwardPolicyCb forward_policy_cb;
+    SshRemoteForwardOpenCb rforward_open_cb;
+    SshRemoteForwardCancelCb rforward_cancel_cb;
+    SshSftpOpenCb sftp_open_cb;
+    SshSftpDataCb sftp_data_cb;
+    SshScpOpenCb scp_open_cb;
+    SshScpDataCb scp_data_cb;
+} SshConnectionVars;
+
+/** @brief The operands and the outcome. */
+extern SshConnectionVars SshConnectionV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const flow_init)(uint8_t *restrict work);
     void (*const flow_recv_take)(uint8_t *restrict work);
     void (*const flow_replenish_due)(uint8_t *restrict work);
@@ -660,8 +684,6 @@ typedef struct
     void (*const flow_send_cap)(uint8_t *restrict work);
     void (*const flow_send_take)(uint8_t *restrict work);
     void (*const flow_peer_add)(uint8_t *restrict work);
-
-    // sec 5 channels
     void (*const channel_init)(uint8_t *restrict work);
     void (*const chan_alloc)(uint8_t *restrict work);
     void (*const chan_by_id)(uint8_t *restrict work);
@@ -686,23 +708,17 @@ typedef struct
     void (*const channel_open_forwarded)(uint8_t *restrict work);
     void (*const channel_send_open_forwarded)(uint8_t *restrict work);
     void (*const channel_pty)(uint8_t *restrict work);
-
-    // sec 6.2 / 6.7 terminal
     void (*const req_strings_present)(uint8_t *restrict work);
     void (*const pty_req_fields_present)(uint8_t *restrict work);
     void (*const pty_modes_valid)(uint8_t *restrict work);
     void (*const pty_req_parse)(uint8_t *restrict work);
     void (*const window_change_parse)(uint8_t *restrict work);
-
-    // sec 7 forwarding
     void (*const forward_begin)(uint8_t *restrict work);
     void (*const forward_pump)(uint8_t *restrict work);
     void (*const forward_binding)(uint8_t *restrict work);
     void (*const forward_reset)(uint8_t *restrict work);
     void (*const global_request_handle)(uint8_t *restrict work);
     void (*const dispatch)(uint8_t *restrict work);
-
-    // the application handlers this layer calls back into
     void (*const set_data_cb)(uint8_t *restrict work);
     void (*const set_pty_req_cb)(uint8_t *restrict work);
     void (*const set_window_change_cb)(uint8_t *restrict work);
@@ -716,25 +732,129 @@ typedef struct
     void (*const set_sftp_data_cb)(uint8_t *restrict work);
     void (*const set_scp_open_cb)(uint8_t *restrict work);
     void (*const set_scp_data_cb)(uint8_t *restrict work);
-
-    // the handler a setter installs, read by the setter it belongs to
-    SshChannelDataCb data_cb;
-    SshPtyReqCb pty_req_cb;
-    SshWindowChangeCb window_change_cb;
-    SshForwardOpenCb forward_open_cb;
-    SshForwardDataCb forward_data_cb;
-    SshForwardConfirmCb forward_confirm_cb;
-    SshForwardPolicyCb forward_policy_cb;
-    SshRemoteForwardOpenCb rforward_open_cb;
-    SshRemoteForwardCancelCb rforward_cancel_cb;
-    SshSftpOpenCb sftp_open_cb;
-    SshSftpDataCb sftp_data_cb;
-    SshScpOpenCb scp_open_cb;
-    SshScpDataCb scp_data_cb;
 } SshConnectionNs;
 
-/** @brief The one symbol this module exports. */
-extern SshConnectionNs SshConnection;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SshConnectionV or a region of the borrow at a fixed offset.
+void protocore_ssh_connection_flow_init(uint8_t *restrict work);
+void protocore_ssh_connection_flow_recv_take(uint8_t *restrict work);
+void protocore_ssh_connection_flow_replenish_due(uint8_t *restrict work);
+void protocore_ssh_connection_flow_local_credit(uint8_t *restrict work);
+void protocore_ssh_connection_flow_send_allows(uint8_t *restrict work);
+void protocore_ssh_connection_flow_send_cap(uint8_t *restrict work);
+void protocore_ssh_connection_flow_send_take(uint8_t *restrict work);
+void protocore_ssh_connection_flow_peer_add(uint8_t *restrict work);
+void protocore_ssh_connection_channel_init(uint8_t *restrict work);
+void protocore_ssh_connection_chan_alloc(uint8_t *restrict work);
+void protocore_ssh_connection_chan_by_id(uint8_t *restrict work);
+void protocore_ssh_connection_channel_bind_service(uint8_t *restrict work);
+void protocore_ssh_connection_channel_handle_open(uint8_t *restrict work);
+void protocore_ssh_connection_channel_handle_open_confirm(uint8_t *restrict work);
+void protocore_ssh_connection_channel_handle_open_failure(uint8_t *restrict work);
+void protocore_ssh_connection_channel_handle_request(uint8_t *restrict work);
+void protocore_ssh_connection_channel_handle_data(uint8_t *restrict work);
+void protocore_ssh_connection_channel_handle_extended_data(uint8_t *restrict work);
+void protocore_ssh_connection_channel_handle_window_adjust(uint8_t *restrict work);
+void protocore_ssh_connection_channel_handle_eof(uint8_t *restrict work);
+void protocore_ssh_connection_channel_handle_close(uint8_t *restrict work);
+void protocore_ssh_connection_channel_build_data(uint8_t *restrict work);
+void protocore_ssh_connection_channel_build_eof(uint8_t *restrict work);
+void protocore_ssh_connection_channel_build_close(uint8_t *restrict work);
+void protocore_ssh_connection_channel_send_data(uint8_t *restrict work);
+void protocore_ssh_connection_channel_send_eof(uint8_t *restrict work);
+void protocore_ssh_connection_channel_send_close(uint8_t *restrict work);
+void protocore_ssh_connection_channel_send_exit_status(uint8_t *restrict work);
+void protocore_ssh_connection_channel_send_exit_signal(uint8_t *restrict work);
+void protocore_ssh_connection_channel_open_forwarded(uint8_t *restrict work);
+void protocore_ssh_connection_channel_send_open_forwarded(uint8_t *restrict work);
+void protocore_ssh_connection_channel_pty(uint8_t *restrict work);
+void protocore_ssh_connection_req_strings_present(uint8_t *restrict work);
+void protocore_ssh_connection_pty_req_fields_present(uint8_t *restrict work);
+void protocore_ssh_connection_pty_modes_valid(uint8_t *restrict work);
+void protocore_ssh_connection_pty_req_parse(uint8_t *restrict work);
+void protocore_ssh_connection_window_change_parse(uint8_t *restrict work);
+void protocore_ssh_connection_forward_begin(uint8_t *restrict work);
+void protocore_ssh_connection_forward_pump(uint8_t *restrict work);
+void protocore_ssh_connection_forward_binding(uint8_t *restrict work);
+void protocore_ssh_connection_forward_reset(uint8_t *restrict work);
+void protocore_ssh_connection_global_request_handle(uint8_t *restrict work);
+void protocore_ssh_connection_dispatch(uint8_t *restrict work);
+void protocore_ssh_connection_set_data_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_pty_req_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_window_change_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_forward_open_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_forward_data_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_forward_confirm_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_forward_policy_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_rforward_open_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_rforward_cancel_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_sftp_open_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_sftp_data_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_scp_open_cb(uint8_t *restrict work);
+void protocore_ssh_connection_set_scp_data_cb(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SshConnection.flow_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SshConnectionNs SshConnection __attribute__((unused)) = {
+    .flow_init = protocore_ssh_connection_flow_init,
+    .flow_recv_take = protocore_ssh_connection_flow_recv_take,
+    .flow_replenish_due = protocore_ssh_connection_flow_replenish_due,
+    .flow_local_credit = protocore_ssh_connection_flow_local_credit,
+    .flow_send_allows = protocore_ssh_connection_flow_send_allows,
+    .flow_send_cap = protocore_ssh_connection_flow_send_cap,
+    .flow_send_take = protocore_ssh_connection_flow_send_take,
+    .flow_peer_add = protocore_ssh_connection_flow_peer_add,
+    .channel_init = protocore_ssh_connection_channel_init,
+    .chan_alloc = protocore_ssh_connection_chan_alloc,
+    .chan_by_id = protocore_ssh_connection_chan_by_id,
+    .channel_bind_service = protocore_ssh_connection_channel_bind_service,
+    .channel_handle_open = protocore_ssh_connection_channel_handle_open,
+    .channel_handle_open_confirm = protocore_ssh_connection_channel_handle_open_confirm,
+    .channel_handle_open_failure = protocore_ssh_connection_channel_handle_open_failure,
+    .channel_handle_request = protocore_ssh_connection_channel_handle_request,
+    .channel_handle_data = protocore_ssh_connection_channel_handle_data,
+    .channel_handle_extended_data = protocore_ssh_connection_channel_handle_extended_data,
+    .channel_handle_window_adjust = protocore_ssh_connection_channel_handle_window_adjust,
+    .channel_handle_eof = protocore_ssh_connection_channel_handle_eof,
+    .channel_handle_close = protocore_ssh_connection_channel_handle_close,
+    .channel_build_data = protocore_ssh_connection_channel_build_data,
+    .channel_build_eof = protocore_ssh_connection_channel_build_eof,
+    .channel_build_close = protocore_ssh_connection_channel_build_close,
+    .channel_send_data = protocore_ssh_connection_channel_send_data,
+    .channel_send_eof = protocore_ssh_connection_channel_send_eof,
+    .channel_send_close = protocore_ssh_connection_channel_send_close,
+    .channel_send_exit_status = protocore_ssh_connection_channel_send_exit_status,
+    .channel_send_exit_signal = protocore_ssh_connection_channel_send_exit_signal,
+    .channel_open_forwarded = protocore_ssh_connection_channel_open_forwarded,
+    .channel_send_open_forwarded = protocore_ssh_connection_channel_send_open_forwarded,
+    .channel_pty = protocore_ssh_connection_channel_pty,
+    .req_strings_present = protocore_ssh_connection_req_strings_present,
+    .pty_req_fields_present = protocore_ssh_connection_pty_req_fields_present,
+    .pty_modes_valid = protocore_ssh_connection_pty_modes_valid,
+    .pty_req_parse = protocore_ssh_connection_pty_req_parse,
+    .window_change_parse = protocore_ssh_connection_window_change_parse,
+    .forward_begin = protocore_ssh_connection_forward_begin,
+    .forward_pump = protocore_ssh_connection_forward_pump,
+    .forward_binding = protocore_ssh_connection_forward_binding,
+    .forward_reset = protocore_ssh_connection_forward_reset,
+    .global_request_handle = protocore_ssh_connection_global_request_handle,
+    .dispatch = protocore_ssh_connection_dispatch,
+    .set_data_cb = protocore_ssh_connection_set_data_cb,
+    .set_pty_req_cb = protocore_ssh_connection_set_pty_req_cb,
+    .set_window_change_cb = protocore_ssh_connection_set_window_change_cb,
+    .set_forward_open_cb = protocore_ssh_connection_set_forward_open_cb,
+    .set_forward_data_cb = protocore_ssh_connection_set_forward_data_cb,
+    .set_forward_confirm_cb = protocore_ssh_connection_set_forward_confirm_cb,
+    .set_forward_policy_cb = protocore_ssh_connection_set_forward_policy_cb,
+    .set_rforward_open_cb = protocore_ssh_connection_set_rforward_open_cb,
+    .set_rforward_cancel_cb = protocore_ssh_connection_set_rforward_cancel_cb,
+    .set_sftp_open_cb = protocore_ssh_connection_set_sftp_open_cb,
+    .set_sftp_data_cb = protocore_ssh_connection_set_sftp_data_cb,
+    .set_scp_open_cb = protocore_ssh_connection_set_scp_open_cb,
+    .set_scp_data_cb = protocore_ssh_connection_set_scp_data_cb,
+};
 
 /**
  * @brief The PROTOCORE_SSH_CONNECTION_BORROW bytes this module's state lives in.

@@ -90,15 +90,15 @@ static size_t build_client_hello(uint8_t *out, const ChOpts *o)
 {
     uint8_t tp[256];
     QuicTransportParams params;
-    QuicTp.defaults_args.tp = &params;
+    QuicTpV.defaults_args.tp = &params;
     QuicTp.defaults(quic_tp_work);
     params.initial_max_data = 1048576;
     params.initial_max_streams_bidi = 8;
-    QuicTp.encode_args.tp = &params;
-    QuicTp.encode_args.out = tp;
-    QuicTp.encode_args.cap = sizeof(tp);
+    QuicTpV.encode_args.tp = &params;
+    QuicTpV.encode_args.out = tp;
+    QuicTpV.encode_args.cap = sizeof(tp);
     QuicTp.encode(quic_tp_work);
-    size_t tp_len = QuicTp.n;
+    size_t tp_len = QuicTpV.n;
 
     W w = {out, 0};
     w8(&w, TLS_HS_CLIENT_HELLO);
@@ -179,11 +179,11 @@ static void server_start(void)
     memset(g_cfg.ed25519_seed, 0x42, sizeof(g_cfg.ed25519_seed));
     memset(g_cfg.ephemeral_priv, 0x77, sizeof(g_cfg.ephemeral_priv));
     memset(g_cfg.random, 0x5A, sizeof(g_cfg.random));
-    QuicTp.defaults_args.tp = &g_cfg.params;
+    QuicTpV.defaults_args.tp = &g_cfg.params;
     QuicTp.defaults(quic_tp_work);
     g_cfg.params.initial_max_data = 65536;
-    QuicTlsServer.server_init_args.qt = &g_qt;
-    QuicTlsServer.server_init_args.cfg = &g_cfg;
+    QuicTlsServerV.server_init_args.qt = &g_qt;
+    QuicTlsServerV.server_init_args.cfg = &g_cfg;
     QuicTlsServer.server_init(quic_tls_work);
 
     memset(g_client_priv, 0x33, sizeof(g_client_priv));
@@ -196,12 +196,12 @@ static size_t feed_client_hello(const ChOpts *o)
 {
     server_start();
     g_ch_len = build_client_hello(g_ch, o);
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.recv_crypto_args.data = g_ch;
-    QuicTlsServer.recv_crypto_args.len = g_ch_len;
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.recv_crypto_args.data = g_ch;
+    QuicTlsServerV.recv_crypto_args.len = g_ch_len;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    return QuicTlsServer.n;
+    return QuicTlsServerV.n;
 }
 
 // The length of the handshake message at @p p (4-octet header + 24-bit body length).
@@ -219,20 +219,20 @@ void test_rfc8446_server_flight_order(void)
     TEST_ASSERT_EQUAL_INT(QTLS_WAIT_FINISHED, g_qt.state);
 
     size_t n = 0;
-    QuicTlsServer.flight_args.qt = &g_qt;
-    QuicTlsServer.flight_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.flight_args.len = &n;
+    QuicTlsServerV.flight_args.qt = &g_qt;
+    QuicTlsServerV.flight_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.flight_args.len = &n;
     QuicTlsServer.flight(quic_tls_work);
-    const uint8_t *initial = QuicTlsServer.bytes;
+    const uint8_t *initial = QuicTlsServerV.bytes;
     TEST_ASSERT_TRUE(n > 4);
     TEST_ASSERT_EQUAL_HEX8(TLS_HS_SERVER_HELLO, initial[0]);
     TEST_ASSERT_EQUAL_UINT(n, msg_len(initial)); // exactly one message at this level
 
-    QuicTlsServer.flight_args.qt = &g_qt;
-    QuicTlsServer.flight_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.flight_args.len = &n;
+    QuicTlsServerV.flight_args.qt = &g_qt;
+    QuicTlsServerV.flight_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.flight_args.len = &n;
     QuicTlsServer.flight(quic_tls_work);
-    const uint8_t *hs = QuicTlsServer.bytes;
+    const uint8_t *hs = QuicTlsServerV.bytes;
     static const uint8_t ORDER[4] = {TLS_HS_ENCRYPTED_EXTENSIONS, TLS_HS_CERTIFICATE, TLS_HS_CERTIFICATE_VERIFY,
                                      TLS_HS_FINISHED};
     size_t off = 0;
@@ -249,31 +249,31 @@ void test_rfc8446_server_flight_order(void)
     TEST_ASSERT_EQUAL_UINT(4u + 32u, msg_len(hs + off - 36));
 
     // RFC 9001 sec 4.1: Initial keys are not derived here; Handshake and 1-RTT keys are, both ways
-    QuicTlsServer.keys_args.qt = &g_qt;
-    QuicTlsServer.keys_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.keys_args.is_server = PROTO_TRUE;
+    QuicTlsServerV.keys_args.qt = &g_qt;
+    QuicTlsServerV.keys_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
     QuicTlsServer.keys(quic_tls_work);
-    TEST_ASSERT_NULL(QuicTlsServer.pkt_keys);
-    QuicTlsServer.keys_args.qt = &g_qt;
-    QuicTlsServer.keys_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.keys_args.is_server = PROTO_TRUE;
+    TEST_ASSERT_NULL(QuicTlsServerV.pkt_keys);
+    QuicTlsServerV.keys_args.qt = &g_qt;
+    QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
     QuicTlsServer.keys(quic_tls_work);
-    TEST_ASSERT_NOT_NULL(QuicTlsServer.pkt_keys);
-    QuicTlsServer.keys_args.qt = &g_qt;
-    QuicTlsServer.keys_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.keys_args.is_server = PROTO_FALSE;
+    TEST_ASSERT_NOT_NULL(QuicTlsServerV.pkt_keys);
+    QuicTlsServerV.keys_args.qt = &g_qt;
+    QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
-    TEST_ASSERT_NOT_NULL(QuicTlsServer.pkt_keys);
-    QuicTlsServer.keys_args.qt = &g_qt;
-    QuicTlsServer.keys_args.level = QUIC_ENC_APP;
-    QuicTlsServer.keys_args.is_server = PROTO_TRUE;
+    TEST_ASSERT_NOT_NULL(QuicTlsServerV.pkt_keys);
+    QuicTlsServerV.keys_args.qt = &g_qt;
+    QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
+    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
     QuicTlsServer.keys(quic_tls_work);
-    TEST_ASSERT_NOT_NULL(QuicTlsServer.pkt_keys);
-    QuicTlsServer.keys_args.qt = &g_qt;
-    QuicTlsServer.keys_args.level = QUIC_ENC_APP;
-    QuicTlsServer.keys_args.is_server = PROTO_FALSE;
+    TEST_ASSERT_NOT_NULL(QuicTlsServerV.pkt_keys);
+    QuicTlsServerV.keys_args.qt = &g_qt;
+    QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
+    QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
-    TEST_ASSERT_NOT_NULL(QuicTlsServer.pkt_keys);
+    TEST_ASSERT_NOT_NULL(QuicTlsServerV.pkt_keys);
 }
 
 // RFC 8446 sec 4.1.3: the ServerHello names the suite and the key_share group the server selected,
@@ -286,11 +286,11 @@ void test_rfc8446_server_hello_fields(void)
 {
     TEST_ASSERT_EQUAL_UINT(g_ch_len, feed_client_hello(&CH_FULL));
     size_t n = 0;
-    QuicTlsServer.flight_args.qt = &g_qt;
-    QuicTlsServer.flight_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.flight_args.len = &n;
+    QuicTlsServerV.flight_args.qt = &g_qt;
+    QuicTlsServerV.flight_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.flight_args.len = &n;
     QuicTlsServer.flight(quic_tls_work);
-    const uint8_t *sh = QuicTlsServer.bytes;
+    const uint8_t *sh = QuicTlsServerV.bytes;
     TEST_ASSERT_EQUAL_UINT(90u, n);
     TEST_ASSERT_EQUAL_HEX8(0x03, sh[4]); // legacy_version 0x0303
     TEST_ASSERT_EQUAL_HEX8(0x03, sh[5]);
@@ -332,17 +332,17 @@ void test_handshake_interop_round_trip(void)
     TEST_ASSERT_EQUAL_INT(QTLS_WAIT_FINISHED, g_qt.state);
 
     size_t sh_len = 0;
-    QuicTlsServer.flight_args.qt = &g_qt;
-    QuicTlsServer.flight_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.flight_args.len = &sh_len;
+    QuicTlsServerV.flight_args.qt = &g_qt;
+    QuicTlsServerV.flight_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.flight_args.len = &sh_len;
     QuicTlsServer.flight(quic_tls_work);
-    const uint8_t *sh = QuicTlsServer.bytes;
+    const uint8_t *sh = QuicTlsServerV.bytes;
     size_t hs_len = 0;
-    QuicTlsServer.flight_args.qt = &g_qt;
-    QuicTlsServer.flight_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.flight_args.len = &hs_len;
+    QuicTlsServerV.flight_args.qt = &g_qt;
+    QuicTlsServerV.flight_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.flight_args.len = &hs_len;
     QuicTlsServer.flight(quic_tls_work);
-    const uint8_t *hs = QuicTlsServer.bytes;
+    const uint8_t *hs = QuicTlsServerV.bytes;
 
     // the client's (EC)DHE secret, from its own private key and the server's share
     uint8_t ecdhe[32];
@@ -364,14 +364,14 @@ void test_handshake_interop_round_trip(void)
     Sha256V.final_args.out = hash;
     Sha256.final(tr);
 
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &ks;
-    Tls13Ks.bind.s = ks_store;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &ks;
+    Tls13KsV.bind.s = ks_store;
     Tls13Ks.early(NULL);
-    TEST_ASSERT_TRUE(Tls13Ks.ok);
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = sizeof(ecdhe);
-    Tls13Ks.step.ch_sh_hash = hash;
+    TEST_ASSERT_TRUE(Tls13KsV.ok);
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = sizeof(ecdhe);
+    Tls13KsV.step.ch_sh_hash = hash;
     Tls13Ks.handshake(NULL);
 
     // the Handshake-level packet keys both ends derive from those secrets must agree
@@ -380,20 +380,20 @@ void test_handshake_interop_round_trip(void)
     QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_HS;
     QuicCrypto.keys_from_secret_args.out = &mine;
     QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicTlsServer.keys_args.qt = &g_qt;
-    QuicTlsServer.keys_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.keys_args.is_server = PROTO_FALSE;
+    QuicTlsServerV.keys_args.qt = &g_qt;
+    QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
-    TEST_ASSERT_EQUAL_MEMORY(QuicTlsServer.pkt_keys->iv, mine.iv, 12);
+    TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
     QuicCrypto.keys_from_secret_args.keys_work = keys_work;
     QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_HS;
     QuicCrypto.keys_from_secret_args.out = &mine;
     QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicTlsServer.keys_args.qt = &g_qt;
-    QuicTlsServer.keys_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.keys_args.is_server = PROTO_TRUE;
+    QuicTlsServerV.keys_args.qt = &g_qt;
+    QuicTlsServerV.keys_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
     QuicTlsServer.keys(quic_tls_work);
-    TEST_ASSERT_EQUAL_MEMORY(QuicTlsServer.pkt_keys->iv, mine.iv, 12);
+    TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
 
     // the server's Finished, checked against a verify_data computed here over
     // Transcript-Hash(ClientHello .. CertificateVerify) - RFC 8446 sec 4.4.4
@@ -408,11 +408,11 @@ void test_handshake_interop_round_trip(void)
     Sha256V.final_args.out = hash;
     Sha256.final(tr);
     uint8_t verify[32];
-    Tls13Ks.bind.ks = &ks;
-    Tls13Ks.bind.s = ks_store;
-    Tls13Ks.finished_args.base_secret = ks.s + TLS13_KS_SERVER_HS;
-    Tls13Ks.finished_args.transcript_hash = hash;
-    Tls13Ks.finished_args.out = verify;
+    Tls13KsV.bind.ks = &ks;
+    Tls13KsV.bind.s = ks_store;
+    Tls13KsV.finished_args.base_secret = ks.s + TLS13_KS_SERVER_HS;
+    Tls13KsV.finished_args.transcript_hash = hash;
+    Tls13KsV.finished_args.out = verify;
     Tls13Ks.finished_mac(NULL);
     TEST_ASSERT_EQUAL_HEX8(TLS_HS_FINISHED, hs[fin_at]);
     TEST_ASSERT_EQUAL_UINT(4u + 32u, msg_len(hs + fin_at));
@@ -424,65 +424,65 @@ void test_handshake_interop_round_trip(void)
     Sha256.update(tr);
     Sha256V.final_args.out = hash;
     Sha256.final(tr);
-    Tls13Ks.bind.ks = &ks;
-    Tls13Ks.bind.s = ks_store;
-    Tls13Ks.step.ch_sfin_hash = hash;
+    Tls13KsV.bind.ks = &ks;
+    Tls13KsV.bind.s = ks_store;
+    Tls13KsV.step.ch_sfin_hash = hash;
     Tls13Ks.master(NULL);
     QuicCrypto.keys_from_secret_args.keys_work = keys_work;
     QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_CLIENT_AP;
     QuicCrypto.keys_from_secret_args.out = &mine;
     QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicTlsServer.keys_args.qt = &g_qt;
-    QuicTlsServer.keys_args.level = QUIC_ENC_APP;
-    QuicTlsServer.keys_args.is_server = PROTO_FALSE;
+    QuicTlsServerV.keys_args.qt = &g_qt;
+    QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
+    QuicTlsServerV.keys_args.is_server = PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
-    TEST_ASSERT_EQUAL_MEMORY(QuicTlsServer.pkt_keys->iv, mine.iv, 12);
+    TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
     QuicCrypto.keys_from_secret_args.keys_work = keys_work;
     QuicCrypto.keys_from_secret_args.secret = ks.s + TLS13_KS_SERVER_AP;
     QuicCrypto.keys_from_secret_args.out = &mine;
     QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicTlsServer.keys_args.qt = &g_qt;
-    QuicTlsServer.keys_args.level = QUIC_ENC_APP;
-    QuicTlsServer.keys_args.is_server = PROTO_TRUE;
+    QuicTlsServerV.keys_args.qt = &g_qt;
+    QuicTlsServerV.keys_args.level = QUIC_ENC_APP;
+    QuicTlsServerV.keys_args.is_server = PROTO_TRUE;
     QuicTlsServer.keys(quic_tls_work);
-    TEST_ASSERT_EQUAL_MEMORY(QuicTlsServer.pkt_keys->iv, mine.iv, 12);
+    TEST_ASSERT_EQUAL_MEMORY(QuicTlsServerV.pkt_keys->iv, mine.iv, 12);
 
     // the client Finished is taken over the same transcript under the client's handshake secret
     uint8_t cfin[36];
-    Tls13Ks.bind.ks = &ks;
-    Tls13Ks.bind.s = ks_store;
-    Tls13Ks.finished_args.base_secret = ks.s + TLS13_KS_CLIENT_HS;
-    Tls13Ks.finished_args.transcript_hash = hash;
-    Tls13Ks.finished_args.out = cfin + 4;
+    Tls13KsV.bind.ks = &ks;
+    Tls13KsV.bind.s = ks_store;
+    Tls13KsV.finished_args.base_secret = ks.s + TLS13_KS_CLIENT_HS;
+    Tls13KsV.finished_args.transcript_hash = hash;
+    Tls13KsV.finished_args.out = cfin + 4;
     Tls13Ks.finished_mac(NULL);
     cfin[0] = TLS_HS_FINISHED;
     cfin[1] = 0;
     cfin[2] = 0;
     cfin[3] = 32;
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.recv_crypto_args.data = cfin;
-    QuicTlsServer.recv_crypto_args.len = sizeof(cfin);
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.recv_crypto_args.data = cfin;
+    QuicTlsServerV.recv_crypto_args.len = sizeof(cfin);
     QuicTlsServer.recv_crypto(quic_tls_work);
-    TEST_ASSERT_EQUAL_UINT(sizeof(cfin), QuicTlsServer.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(cfin), QuicTlsServerV.n);
     TEST_ASSERT_EQUAL_INT(QTLS_DONE, g_qt.state);
     TEST_ASSERT_TRUE(g_qt.complete);
 
     // and one flipped octet in it is a decrypt_error rather than a completed handshake
     server_start();
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.recv_crypto_args.data = g_ch;
-    QuicTlsServer.recv_crypto_args.len = g_ch_len;
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.recv_crypto_args.data = g_ch;
+    QuicTlsServerV.recv_crypto_args.len = g_ch_len;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    (void)QuicTlsServer.n;
+    (void)QuicTlsServerV.n;
     cfin[4] ^= 0x01;
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.recv_crypto_args.data = cfin;
-    QuicTlsServer.recv_crypto_args.len = sizeof(cfin);
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.recv_crypto_args.data = cfin;
+    QuicTlsServerV.recv_crypto_args.len = sizeof(cfin);
     QuicTlsServer.recv_crypto(quic_tls_work);
-    (void)QuicTlsServer.n;
+    (void)QuicTlsServerV.n;
     TEST_ASSERT_EQUAL_INT(QTLS_FAILED, g_qt.state);
     TEST_ASSERT_EQUAL_UINT8(51, g_qt.alert); // decrypt_error, RFC 8446 sec 6.2
 }
@@ -491,9 +491,9 @@ void test_handshake_interop_round_trip(void)
 void test_rfc9001_peer_transport_parameters(void)
 {
     TEST_ASSERT_EQUAL_UINT(g_ch_len, feed_client_hello(&CH_FULL));
-    QuicTlsServer.peer_params_args.qt = &g_qt;
+    QuicTlsServerV.peer_params_args.qt = &g_qt;
     QuicTlsServer.peer_params(quic_tls_work);
-    const QuicTransportParams *p = QuicTlsServer.peer;
+    const QuicTransportParams *p = QuicTlsServerV.peer;
     TEST_ASSERT_NOT_NULL(p);
     TEST_ASSERT_EQUAL_UINT64(1048576u, p->initial_max_data);
     TEST_ASSERT_EQUAL_UINT64(8u, p->initial_max_streams_bidi);
@@ -537,11 +537,11 @@ void test_negotiation_failures(void)
         TEST_ASSERT_EQUAL_INT_MESSAGE(QTLS_FAILED, g_qt.state, WHY[i]);
         TEST_ASSERT_EQUAL_UINT8_MESSAGE(CASES[i].alert, g_qt.alert, WHY[i]);
         size_t n = 1;
-        QuicTlsServer.flight_args.qt = &g_qt;
-        QuicTlsServer.flight_args.level = QUIC_ENC_HANDSHAKE;
-        QuicTlsServer.flight_args.len = &n;
+        QuicTlsServerV.flight_args.qt = &g_qt;
+        QuicTlsServerV.flight_args.level = QUIC_ENC_HANDSHAKE;
+        QuicTlsServerV.flight_args.len = &n;
         QuicTlsServer.flight(quic_tls_work);
-        (void)QuicTlsServer.bytes;
+        (void)QuicTlsServerV.bytes;
         TEST_ASSERT_EQUAL_UINT_MESSAGE(0u, n, WHY[i]); // nothing is sent after a failure
     }
 }
@@ -564,25 +564,25 @@ void test_partial_crypto_is_not_consumed(void)
 {
     server_start();
     g_ch_len = build_client_hello(g_ch, &CH_FULL);
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.recv_crypto_args.data = g_ch;
-    QuicTlsServer.recv_crypto_args.len = 3;
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.recv_crypto_args.data = g_ch;
+    QuicTlsServerV.recv_crypto_args.len = 3;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicTlsServer.n);
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.recv_crypto_args.data = g_ch;
-    QuicTlsServer.recv_crypto_args.len = g_ch_len - 1;
+    TEST_ASSERT_EQUAL_UINT(0u, QuicTlsServerV.n);
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.recv_crypto_args.data = g_ch;
+    QuicTlsServerV.recv_crypto_args.len = g_ch_len - 1;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicTlsServer.n);
+    TEST_ASSERT_EQUAL_UINT(0u, QuicTlsServerV.n);
     TEST_ASSERT_EQUAL_INT(QTLS_START, g_qt.state);
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.recv_crypto_args.data = g_ch;
-    QuicTlsServer.recv_crypto_args.len = g_ch_len;
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.recv_crypto_args.data = g_ch;
+    QuicTlsServerV.recv_crypto_args.len = g_ch_len;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    TEST_ASSERT_EQUAL_UINT(g_ch_len, QuicTlsServer.n);
+    TEST_ASSERT_EQUAL_UINT(g_ch_len, QuicTlsServerV.n);
     TEST_ASSERT_EQUAL_INT(QTLS_WAIT_FINISHED, g_qt.state);
 }
 
@@ -593,22 +593,22 @@ void test_message_at_the_wrong_level_or_state(void)
 {
     server_start();
     g_ch_len = build_client_hello(g_ch, &CH_FULL);
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_HANDSHAKE;
-    QuicTlsServer.recv_crypto_args.data = g_ch;
-    QuicTlsServer.recv_crypto_args.len = g_ch_len;
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_HANDSHAKE;
+    QuicTlsServerV.recv_crypto_args.data = g_ch;
+    QuicTlsServerV.recv_crypto_args.len = g_ch_len;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    (void)QuicTlsServer.n;
+    (void)QuicTlsServerV.n;
     TEST_ASSERT_EQUAL_INT(QTLS_FAILED, g_qt.state);
     TEST_ASSERT_EQUAL_UINT8(10, g_qt.alert); // unexpected_message
 
     TEST_ASSERT_EQUAL_UINT(g_ch_len, feed_client_hello(&CH_FULL));
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.recv_crypto_args.data = g_ch;
-    QuicTlsServer.recv_crypto_args.len = g_ch_len;
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.recv_crypto_args.data = g_ch;
+    QuicTlsServerV.recv_crypto_args.len = g_ch_len;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    (void)QuicTlsServer.n;
+    (void)QuicTlsServerV.n;
     TEST_ASSERT_EQUAL_INT(QTLS_FAILED, g_qt.state);
     TEST_ASSERT_EQUAL_UINT8(10, g_qt.alert);
 }
@@ -618,20 +618,20 @@ void test_malformed_client_hello(void)
 {
     static const uint8_t TRUNCATED[8] = {TLS_HS_CLIENT_HELLO, 0x00, 0x00, 0x04, 0x03, 0x03, 0x00, 0x00};
     server_start();
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.recv_crypto_args.data = TRUNCATED;
-    QuicTlsServer.recv_crypto_args.len = sizeof(TRUNCATED);
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.recv_crypto_args.data = TRUNCATED;
+    QuicTlsServerV.recv_crypto_args.len = sizeof(TRUNCATED);
     QuicTlsServer.recv_crypto(quic_tls_work);
-    TEST_ASSERT_EQUAL_UINT(8u, QuicTlsServer.n);
+    TEST_ASSERT_EQUAL_UINT(8u, QuicTlsServerV.n);
     TEST_ASSERT_EQUAL_INT(QTLS_FAILED, g_qt.state);
     TEST_ASSERT_EQUAL_UINT8(50, g_qt.alert); // decode_error
 
     // and once failed, later bytes are drained rather than reprocessed
-    QuicTlsServer.recv_crypto_args.qt = &g_qt;
-    QuicTlsServer.recv_crypto_args.level = QUIC_ENC_INITIAL;
-    QuicTlsServer.recv_crypto_args.data = TRUNCATED;
-    QuicTlsServer.recv_crypto_args.len = 4;
+    QuicTlsServerV.recv_crypto_args.qt = &g_qt;
+    QuicTlsServerV.recv_crypto_args.level = QUIC_ENC_INITIAL;
+    QuicTlsServerV.recv_crypto_args.data = TRUNCATED;
+    QuicTlsServerV.recv_crypto_args.len = 4;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    TEST_ASSERT_EQUAL_UINT(4u, QuicTlsServer.n);
+    TEST_ASSERT_EQUAL_UINT(4u, QuicTlsServerV.n);
 }

@@ -155,10 +155,10 @@ static void conn_release(uint8_t slot)
     // whole pool, so the walk is bounded by the pool and not by the arrival rate.
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        SshNetwork.ssh_slot = i;
-        SshNetwork.conn_slot = slot;
+        SshNetworkV.ssh_slot = i;
+        SshNetworkV.conn_slot = slot;
         SshNetwork.owns(protocore_ssh_network_span());
-        if (!SshNetwork.ok)
+        if (!SshNetworkV.ok)
         {
             continue;
         }
@@ -251,7 +251,7 @@ static inline void dispatch_event(const TcpEvt *evt)
     }
 }
 
-static void server_tick(uint8_t *restrict work)
+void protocore_session_tick(uint8_t *restrict work)
 {
     (void)work;
     /*
@@ -261,15 +261,15 @@ static void server_tick(uint8_t *restrict work)
      * http_reset() call for that event is then a clean no-op. Each worker
      * sweeps only the slots it owns.
      */
-    ConnPool.life.worker_id = Session.worker_id;
-    ConnPool.life.conn_timeout_ms = Session.conn_timeout_ms;
+    ConnPool.life.worker_id = SessionV.worker_id;
+    ConnPool.life.conn_timeout_ms = SessionV.conn_timeout_ms;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
 #if PROTOCORE_NEED_UDP
     // One set of datagram rings serves the whole server rather than one per worker, so worker 0
     // drains them: the receive side runs each bound port's handler, the send side moves queued
     // frames to the wire.
-    if (Session.worker_id == 0)
+    if (SessionV.worker_id == 0)
     {
         UdpListener.poll(protocore_udp_listener_span());
     }
@@ -277,7 +277,7 @@ static void server_tick(uint8_t *restrict work)
 
 #if PROTOCORE_WORKER_COUNT > 1
     // Drain only this worker's queue: it is the sole consumer of its slots.
-    TcpListener.q.worker_id = Session.worker_id;
+    TcpListener.q.worker_id = SessionV.worker_id;
     TcpListener.worker_queue(protocore_tcp_listener_span());
     if (!TcpListener.queue)
     {
@@ -312,4 +312,8 @@ static void server_tick(uint8_t *restrict work)
 ProtoRegistryNs Protocols = {.register_builtins = proto_builtins, .add = proto_register, .get = proto_get};
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SessionNs Session = {.tick = server_tick, .proto = &Protocols, .workers = &Workers};
+/** @brief The operands and the outcome. */
+SessionVars SessionV = {
+    .proto = &Protocols,
+    .workers = &Workers,
+};

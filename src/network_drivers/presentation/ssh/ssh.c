@@ -59,20 +59,19 @@ uint8_t *protocore_ssh_span(void)
     return s_own.span;
 }
 
-static void ssh_conn_slot(uint8_t *restrict work)
+void protocore_ssh_conn_slot(uint8_t *restrict work)
 {
-    uint8_t i = Ssh.conn_slot_args.i;
+    uint8_t i = SshV.conn_slot_args.i;
 
     if (i >= MAX_SSH_CONNS)
     {
-        Ssh.ptr = NULL;
+        SshV.ptr = NULL;
         return;
     }
-    Ssh.ptr = SSH_CTX(work)->mem[i];
+    SshV.ptr = SSH_CTX(work)->mem[i];
 }
-SshNs Ssh = {
-    .conn_slot = ssh_conn_slot,
-};
+/** @brief The operands and the outcome. */
+SshVars SshV;
 
 PROTOCORE_END_DECLS
 

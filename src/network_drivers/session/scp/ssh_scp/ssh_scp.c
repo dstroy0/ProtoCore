@@ -90,12 +90,12 @@ static void protocore_scp_end(ScpConn *c); // called above its definition; stati
 // rather than writing further records into a channel nobody reads.
 static void ack(ScpConn *c, uint8_t byte)
 {
-    SshConnection.chan.slot = c->slot;
-    SshConnection.chan.channel = c->channel;
-    SshConnection.chan.data = &byte;
-    SshConnection.chan.len = 1;
+    SshConnectionV.chan.slot = c->slot;
+    SshConnectionV.chan.channel = c->channel;
+    SshConnectionV.chan.data = &byte;
+    SshConnectionV.chan.len = 1;
     SshConnection.channel_send_data(protocore_ssh_connection_span());
-    if (SshConnection.i32 < 0)
+    if (SshConnectionV.i32 < 0)
     {
         protocore_scp_end(c);
     }
@@ -103,12 +103,12 @@ static void ack(ScpConn *c, uint8_t byte)
 /** @brief Send one complete error record. @p len is `sizeof(record) - 1`, resolved at compile time. */
 static void err_ack(ScpConn *c, const char *rec, size_t len)
 {
-    SshConnection.chan.slot = c->slot;
-    SshConnection.chan.channel = c->channel;
-    SshConnection.chan.data = (const uint8_t *)(rec);
-    SshConnection.chan.len = len;
+    SshConnectionV.chan.slot = c->slot;
+    SshConnectionV.chan.channel = c->channel;
+    SshConnectionV.chan.data = (const uint8_t *)(rec);
+    SshConnectionV.chan.len = len;
     SshConnection.channel_send_data(protocore_ssh_connection_span());
-    if (SshConnection.i32 < 0)
+    if (SshConnectionV.i32 < 0)
     {
         protocore_scp_end(c);
     }
@@ -126,8 +126,8 @@ static void protocore_scp_end(ScpConn *c)
 {
     close_file(c);
     c->active = PROTO_FALSE;
-    SshConnection.chan.slot = c->slot;
-    SshConnection.chan.channel = c->channel;
+    SshConnectionV.chan.slot = c->slot;
+    SshConnectionV.chan.channel = c->channel;
     SshConnection.channel_send_close(protocore_ssh_connection_span());
 }
 
@@ -331,9 +331,9 @@ static void ssh_scp_begin(uint8_t *restrict work)
     }
     if (!SSH_SCP_CTX(work)->registered)
     {
-        SshConnection.scp_open_cb = protocore_scp_on_open;
+        SshConnectionV.scp_open_cb = protocore_scp_on_open;
         SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
-        SshConnection.scp_data_cb = protocore_scp_on_data;
+        SshConnectionV.scp_data_cb = protocore_scp_on_data;
         SshConnection.set_scp_data_cb(protocore_ssh_connection_span());
         SSH_SCP_CTX(work)->registered = PROTO_TRUE;
     }

@@ -308,12 +308,12 @@ static proto_bool protocore_h3_classify_uni_stream(H3ConnCtx *h3, H3Stream *st)
 {
     uint64_t type = 0;
     size_t c = 0;
-    QuicVarint.decode_args.in = st->buf;
-    QuicVarint.decode_args.len = st->buf_len;
-    QuicVarint.decode_args.value = &type;
-    QuicVarint.decode_args.consumed = &c;
+    QuicVarintV.decode_args.in = st->buf;
+    QuicVarintV.decode_args.len = st->buf_len;
+    QuicVarintV.decode_args.value = &type;
+    QuicVarintV.decode_args.consumed = &c;
     QuicVarint.decode(quic_varint_work);
-    if (!QuicVarint.ok)
+    if (!QuicVarintV.ok)
     {
         return PROTO_FALSE; // need more bytes for the varint
     }
@@ -450,11 +450,11 @@ static void on_handshake_done(void *app, uint8_t *qc)
 
     // Server control stream (id 3): stream type 0x00 + SETTINGS.
     uint8_t buf[64];
-    QuicVarint.encode_args.out = buf;
-    QuicVarint.encode_args.cap = sizeof(buf);
-    QuicVarint.encode_args.value = 0x00;
+    QuicVarintV.encode_args.out = buf;
+    QuicVarintV.encode_args.cap = sizeof(buf);
+    QuicVarintV.encode_args.value = 0x00;
     QuicVarint.encode(quic_varint_work);
-    size_t p = QuicVarint.n;
+    size_t p = QuicVarintV.n;
     static const uint64_t ids[] = {H3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, H3_SETTINGS_QPACK_BLOCKED_STREAMS};
     static const uint64_t vals[] = {0, 0};
     H3Frame.build_settings_args.out = buf + p;
@@ -472,21 +472,21 @@ static void on_handshake_done(void *app, uint8_t *qc)
 
     // QPACK encoder (id 7, type 0x02) and decoder (id 11, type 0x03) streams: type byte only.
     uint8_t t;
-    QuicVarint.encode_args.out = &t;
-    QuicVarint.encode_args.cap = 1;
-    QuicVarint.encode_args.value = 0x02;
+    QuicVarintV.encode_args.out = &t;
+    QuicVarintV.encode_args.cap = 1;
+    QuicVarintV.encode_args.value = 0x02;
     QuicVarint.encode(quic_varint_work);
-    size_t n = QuicVarint.n;
+    size_t n = QuicVarintV.n;
     QuicConn.stream_send_args.stream_id = 7;
     QuicConn.stream_send_args.data = &t;
     QuicConn.stream_send_args.len = n;
     QuicConn.stream_send_args.fin = PROTO_FALSE;
     QuicConn.stream_send(qc);
-    QuicVarint.encode_args.out = &t;
-    QuicVarint.encode_args.cap = 1;
-    QuicVarint.encode_args.value = 0x03;
+    QuicVarintV.encode_args.out = &t;
+    QuicVarintV.encode_args.cap = 1;
+    QuicVarintV.encode_args.value = 0x03;
     QuicVarint.encode(quic_varint_work);
-    n = QuicVarint.n;
+    n = QuicVarintV.n;
     QuicConn.stream_send_args.stream_id = 11;
     QuicConn.stream_send_args.data = &t;
     QuicConn.stream_send_args.len = n;

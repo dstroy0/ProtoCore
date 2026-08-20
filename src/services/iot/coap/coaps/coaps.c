@@ -41,17 +41,17 @@ static void coaps_process(uint8_t *restrict work)
         return;
     }
 
-    DtlsServer.established_args.c = c;
+    DtlsServerV.established_args.c = c;
     DtlsServer.established(dtls_server_work);
-    if (!DtlsServer.ok)
+    if (!DtlsServerV.ok)
     {
-        DtlsServer.process_args.c = c;
-        DtlsServer.process_args.dgram = dgram;
-        DtlsServer.process_args.len = len;
-        DtlsServer.process_args.out = out;
-        DtlsServer.process_args.out_cap = out_cap;
+        DtlsServerV.process_args.c = c;
+        DtlsServerV.process_args.dgram = dgram;
+        DtlsServerV.process_args.len = len;
+        DtlsServerV.process_args.out = out;
+        DtlsServerV.process_args.out_cap = out_cap;
         DtlsServer.process(dtls_server_work);
-        Coaps.i32 = DtlsServer.n; // still handshaking, or -1 fatal
+        Coaps.i32 = DtlsServerV.n; // still handshaking, or -1 fatal
         return;
     }
 
@@ -62,14 +62,14 @@ static void coaps_process(uint8_t *restrict work)
     {
         uint8_t req[PROTOCORE_COAPS_MSG_CAP];
         size_t req_len = 0;
-        DtlsServer.open_app_args.c = c;
-        DtlsServer.open_app_args.rec = dgram;
-        DtlsServer.open_app_args.rec_len = len;
-        DtlsServer.open_app_args.out = req;
-        DtlsServer.open_app_args.out_cap = sizeof(req);
-        DtlsServer.open_app_args.out_len = &req_len;
+        DtlsServerV.open_app_args.c = c;
+        DtlsServerV.open_app_args.rec = dgram;
+        DtlsServerV.open_app_args.rec_len = len;
+        DtlsServerV.open_app_args.out = req;
+        DtlsServerV.open_app_args.out_cap = sizeof(req);
+        DtlsServerV.open_app_args.out_len = &req_len;
         DtlsServer.open_app(dtls_server_work);
-        if (!DtlsServer.ok)
+        if (!DtlsServerV.ok)
         {
             return; // replayed, truncated, or not application data
         }
@@ -83,22 +83,22 @@ static void coaps_process(uint8_t *restrict work)
         {
             return; // nothing to send, as for a Non-confirmable message the server does not answer
         }
-        DtlsServer.seal_app_args.c = c;
-        DtlsServer.seal_app_args.data = resp;
-        DtlsServer.seal_app_args.len = Coap.n;
-        DtlsServer.seal_app_args.out = out;
-        DtlsServer.seal_app_args.out_cap = out_cap;
+        DtlsServerV.seal_app_args.c = c;
+        DtlsServerV.seal_app_args.data = resp;
+        DtlsServerV.seal_app_args.len = Coap.n;
+        DtlsServerV.seal_app_args.out = out;
+        DtlsServerV.seal_app_args.out_cap = out_cap;
         DtlsServer.seal_app(dtls_server_work);
-        Coaps.i32 = (int32_t)DtlsServer.n;
+        Coaps.i32 = (int32_t)DtlsServerV.n;
         return;
     }
-    DtlsServer.process_args.c = c;
-    DtlsServer.process_args.dgram = dgram;
-    DtlsServer.process_args.len = len;
-    DtlsServer.process_args.out = out;
-    DtlsServer.process_args.out_cap = out_cap;
+    DtlsServerV.process_args.c = c;
+    DtlsServerV.process_args.dgram = dgram;
+    DtlsServerV.process_args.len = len;
+    DtlsServerV.process_args.out = out;
+    DtlsServerV.process_args.out_cap = out_cap;
     DtlsServer.process(dtls_server_work);
-    Coaps.i32 = DtlsServer.n;
+    Coaps.i32 = DtlsServerV.n;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.

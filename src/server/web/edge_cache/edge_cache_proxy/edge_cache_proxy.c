@@ -406,10 +406,10 @@ static void t_tls_close(void *c, int cid)
 // Request-header lookup used to (re)serialize the Vary secondary key; ctx is the client HttpReq.
 static const char *req_lookup(void *ctx, const char *name)
 {
-    HttpParser.get_header_args.req = (const HttpReq *)ctx;
-    HttpParser.get_header_args.key = name;
+    HttpParserV.get_header_args.req = (const HttpReq *)ctx;
+    HttpParserV.get_header_args.key = name;
     HttpParser.get_header(protocore_http_parser_span());
-    return HttpParser.text;
+    return HttpParserV.text;
 }
 
 static EdgeRouteMap *map_match(uint8_t *restrict work, const char *path)
@@ -785,7 +785,7 @@ static void on_fetch_done(uint8_t *restrict work, uint8_t slot, EdgeFetchSlot *f
     if (f->status == 200)
     {
         protocore_cache_control cc;
-        Httpcache.control_init_args.cc = &cc;
+        HttpcacheV.control_init_args.cc = &cc;
         Httpcache.control_init(httpcache_work);
         char v[128];
         EdgeCache.header_value_args.hdrs = head;
@@ -796,9 +796,9 @@ static void on_fetch_done(uint8_t *restrict work, uint8_t slot, EdgeFetchSlot *f
         EdgeCache.header_value(edge_cache_work);
         if (EdgeCache.ok)
         {
-            Httpcache.control_parse_args.s = v;
-            Httpcache.control_parse_args.len = str.len(v, sizeof(v));
-            Httpcache.control_parse_args.cc = &cc;
+            HttpcacheV.control_parse_args.s = v;
+            HttpcacheV.control_parse_args.len = str.len(v, sizeof(v));
+            HttpcacheV.control_parse_args.cc = &cc;
             Httpcache.control_parse(httpcache_work);
         }
         char vary_hdr[PROTOCORE_EDGE_VARY_MAX];
@@ -1154,10 +1154,10 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
     {
         return MW_NEXT; // only cache safe methods
     }
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Authorization";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Authorization";
     HttpParser.get_header(protocore_http_parser_span());
-    if (HttpParser.text)
+    if (HttpParserV.text)
     {
         return MW_NEXT; // never cache authorized/private requests
     }
@@ -1167,10 +1167,10 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
         return MW_NEXT; // not a mapped origin
     }
 
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Host";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Host";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *host = HttpParser.text;
+    const char *host = HttpParserV.text;
     if (!host)
     {
         host = "";
@@ -1192,10 +1192,10 @@ static MwResult edge_cache_mw(uint8_t slot, HttpReq *req)
 #if PROTOCORE_ENABLE_RANGE
     // Capture the Range header now, while http_pool[slot] is the client request: a miss serves from the
     // poll after the async fetch has reused that buffer, so serve_hit resolves the window against this copy.
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Range";
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Range";
     HttpParser.get_header(protocore_http_parser_span());
-    const char *rh = HttpParser.text;
+    const char *rh = HttpParserV.text;
     str.copy(EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot], rh ? rh : "",
              sizeof(EDGE_CACHE_PROXY_CTX(work)->range_hdr[slot]));
 #endif
@@ -1851,9 +1851,9 @@ static void edge_cache_proxy_mesh_serve(uint8_t *restrict work)
 {
     if (!EDGE_CACHE_PROXY_CTX(work)->mesh_registered)
     {
-        Session.proto->proto = PROTO_MESH;
-        Session.proto->h = &s_mesh_handler;
-        Session.proto->add(protocore_session_span());
+        SessionV.proto->proto = PROTO_MESH;
+        SessionV.proto->h = &s_mesh_handler;
+        SessionV.proto->add(protocore_session_span());
         EDGE_CACHE_PROXY_CTX(work)->mesh_registered = PROTO_TRUE;
     }
 }
