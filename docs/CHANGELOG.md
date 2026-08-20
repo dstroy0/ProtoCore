@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`137a0af`](https://github.com/dstroy0/ProtoCore/commit/137a0af04b54fa5105148b317a923b7487c13faf))
 - update CHANGELOG.md [skip ci] ([`b139154`](https://github.com/dstroy0/ProtoCore/commit/b13915458d027d15932bca53491dc581f690d6b3))
 - update CHANGELOG.md [skip ci] ([`f8ddc1f`](https://github.com/dstroy0/ProtoCore/commit/f8ddc1fd1a9a7e8696256e3c4f6ca85c74896ac8))
 - update CHANGELOG.md [skip ci] ([`b847f5a`](https://github.com/dstroy0/ProtoCore/commit/b847f5aa853f4968dc701783b4691b6a6a04e12b))
@@ -388,6 +389,11 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- (housekeeping): regenerate the three CMakeLists the module graph moved ([`b6f1c44`](https://github.com/dstroy0/ProtoCore/commit/b6f1c44641bd403188da3bd4e60c9a302554352d))
+- (housekeeping): convert handle - extern table becomes a static const one ([`4452162`](https://github.com/dstroy0/ProtoCore/commit/445216219ba1a07e1dee565f967536d5b03ec6a8))
+- (housekeeping): scan_vtable - the last entry of every table was dropped, and a header-defined table was not seen at all ([`1ee0725`](https://github.com/dstroy0/ProtoCore/commit/1ee0725f5fed86027b3b775d59ef00ec7a8ebe4e))
+- (housekeeping): goldenize - a macro or type the preprocessor CHOOSES is one arm, not one item ([`6d3ad74`](https://github.com/dstroy0/ProtoCore/commit/6d3ad741a0cc56e9b9275c8122f1d2dcf88f3fac))
+- (housekeeping): goldenize - an empty entry set built a regex that matched everything ([`4227d8e`](https://github.com/dstroy0/ProtoCore/commit/4227d8eed0c345e8270d16c47d56397cce8b21d8))
 - (housekeeping): shape audit, region alignment asserts, dead borrow null-checks out ([`bed4956`](https://github.com/dstroy0/ProtoCore/commit/bed49562a8841dbcaaa2d99980965c7fe777075b))
 - (housekeeping): pimpl phase 3, public handles, internal ctx, fix tests ([`a899b96`](https://github.com/dstroy0/ProtoCore/commit/a899b965393c31278c60987bf2b1efa076274ff6))
 - Merge branch 'main' of https://github.com/dstroy0/ProtoCore ([`d587617`](https://github.com/dstroy0/ProtoCore/commit/d58761756932205b45406895414a68f8d6ee65f7))
