@@ -35,7 +35,6 @@ typedef struct
     uint8_t slot_id;
     struct HttpReq *req;
 } DavTryServeDavArgs;
-
 /**
  * @brief WebDAV request handling against a mounted filesystem (RFC 4918).
  *
@@ -58,14 +57,29 @@ typedef struct
 typedef struct
 {
     DavTryServeDavArgs try_serve_dav_args;
-
     proto_bool ok;
+} DavVars;
 
+/** @brief The operands and the outcome. */
+extern DavVars DavV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const try_serve_dav)(uint8_t *restrict work);
 } DavNs;
 
-/** @brief The one symbol this module exports. */
-extern DavNs Dav;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in DavV or a region of the borrow at a fixed offset.
+void protocore_webdav_handler_try_serve_dav(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Dav.try_serve_dav(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const DavNs Dav __attribute__((unused)) = {
+    .try_serve_dav = protocore_webdav_handler_try_serve_dav,
+};
 
 /**
  * @brief The PROTOCORE_WEBDAV_BORROW bytes this module's state lives in.

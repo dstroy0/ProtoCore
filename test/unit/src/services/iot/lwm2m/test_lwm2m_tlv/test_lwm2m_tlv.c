@@ -38,62 +38,62 @@ typedef struct
 
 static void open_sink(size_t cap)
 {
-    Lwm2mTlv.sink.buf = g_buf;
-    Lwm2mTlv.sink.cap = cap;
-    Lwm2mTlv.open(protocore_lwm2m_tlv_span());
+    Lwm2mTlvV.sink.buf = g_buf;
+    Lwm2mTlvV.sink.cap = cap;
+    Lwm2mTlvV.open(protocore_lwm2m_tlv_span());
 }
 
 static void write_opaque(Lwm2mTlvIdType id_type, uint16_t id, const void *value, size_t len)
 {
-    Lwm2mTlv.hdr.id_type = id_type;
-    Lwm2mTlv.hdr.id = id;
-    Lwm2mTlv.val.opaque = (const uint8_t *)value;
-    Lwm2mTlv.val.len = len;
+    Lwm2mTlvV.hdr.id_type = id_type;
+    Lwm2mTlvV.hdr.id = id;
+    Lwm2mTlvV.val.opaque = (const uint8_t *)value;
+    Lwm2mTlvV.val.len = len;
     Lwm2mTlv.write(protocore_lwm2m_tlv_span());
 }
 
 static void write_string(Lwm2mTlvIdType id_type, uint16_t id, const char *s)
 {
-    Lwm2mTlv.hdr.id_type = id_type;
-    Lwm2mTlv.hdr.id = id;
-    Lwm2mTlv.val.string_value = s;
+    Lwm2mTlvV.hdr.id_type = id_type;
+    Lwm2mTlvV.hdr.id = id;
+    Lwm2mTlvV.val.string_value = s;
     Lwm2mTlv.write_string(protocore_lwm2m_tlv_span());
 }
 
 static void write_integer(Lwm2mTlvIdType id_type, uint16_t id, int64_t v)
 {
-    Lwm2mTlv.hdr.id_type = id_type;
-    Lwm2mTlv.hdr.id = id;
-    Lwm2mTlv.val.integer_value = v;
+    Lwm2mTlvV.hdr.id_type = id_type;
+    Lwm2mTlvV.hdr.id = id;
+    Lwm2mTlvV.val.integer_value = v;
     Lwm2mTlv.write_integer(protocore_lwm2m_tlv_span());
 }
 
 static size_t finish(void)
 {
     Lwm2mTlv.finish(protocore_lwm2m_tlv_span());
-    return Lwm2mTlv.n;
+    return Lwm2mTlvV.n;
 }
 
 // Decode every entry of [buf, buf+len) into out, and report how many there were.
 static size_t walk(const uint8_t *buf, size_t len, Entry *out, size_t max)
 {
-    Lwm2mTlv.source.buf = buf;
-    Lwm2mTlv.source.len = len;
-    Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
-    TEST_ASSERT_TRUE(Lwm2mTlv.ok);
+    Lwm2mTlvV.source.buf = buf;
+    Lwm2mTlvV.source.len = len;
+    Lwm2mTlvV.parse(protocore_lwm2m_tlv_span());
+    TEST_ASSERT_TRUE(Lwm2mTlvV.ok);
     size_t n = 0;
     for (;;)
     {
-        Lwm2mTlv.next(protocore_lwm2m_tlv_span());
-        if (!Lwm2mTlv.ok)
+        Lwm2mTlvV.next(protocore_lwm2m_tlv_span());
+        if (!Lwm2mTlvV.ok)
         {
             break;
         }
         TEST_ASSERT_TRUE(n < max);
-        out[n].id_type = Lwm2mTlv.hdr.id_type;
-        out[n].id = Lwm2mTlv.hdr.id;
-        out[n].value = Lwm2mTlv.val.opaque;
-        out[n].len = Lwm2mTlv.val.len;
+        out[n].id_type = Lwm2mTlvV.hdr.id_type;
+        out[n].id = Lwm2mTlvV.hdr.id;
+        out[n].value = Lwm2mTlvV.val.opaque;
+        out[n].len = Lwm2mTlvV.val.len;
         n++;
     }
     return n;
@@ -101,11 +101,11 @@ static size_t walk(const uint8_t *buf, size_t len, Entry *out, size_t max)
 
 static int64_t as_integer(const Entry *e)
 {
-    Lwm2mTlv.val.opaque = e->value;
-    Lwm2mTlv.val.len = e->len;
+    Lwm2mTlvV.val.opaque = e->value;
+    Lwm2mTlvV.val.len = e->len;
     Lwm2mTlv.value_integer(protocore_lwm2m_tlv_span());
-    TEST_ASSERT_TRUE(Lwm2mTlv.ok);
-    return Lwm2mTlv.val.integer_value;
+    TEST_ASSERT_TRUE(Lwm2mTlvV.ok);
+    return Lwm2mTlvV.val.integer_value;
 }
 
 // LwM2M Core sec 7.4.5.1, the "Read /3/0" Device Object payload. Each expected octet string below is
@@ -115,7 +115,7 @@ void test_published_device_object_entries(void)
     // Manufacturer: 0b11 0 01 000 = 0xC8, ID 0x00, Length 0x14, "Open Mobile Alliance".
     open_sink(sizeof(g_buf));
     write_string(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x00, "Open Mobile Alliance");
-    TEST_ASSERT_TRUE(Lwm2mTlv.ok);
+    TEST_ASSERT_TRUE(Lwm2mTlvV.ok);
     TEST_ASSERT_EQUAL_UINT(23u, finish());
     TEST_ASSERT_EQUAL_MEMORY("\xC8\x00\x14"
                              "Open Mobile Alliance",
@@ -311,11 +311,11 @@ void test_length_field_widths(void)
 
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
-        Lwm2mTlv.sink.buf = g_big;
-        Lwm2mTlv.sink.cap = sizeof(g_big);
-        Lwm2mTlv.open(protocore_lwm2m_tlv_span());
+        Lwm2mTlvV.sink.buf = g_big;
+        Lwm2mTlvV.sink.cap = sizeof(g_big);
+        Lwm2mTlvV.open(protocore_lwm2m_tlv_span());
         write_opaque(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x05, g_value, CASES[i].len);
-        TEST_ASSERT_TRUE(Lwm2mTlv.ok);
+        TEST_ASSERT_TRUE(Lwm2mTlvV.ok);
         TEST_ASSERT_EQUAL_UINT(CASES[i].header + CASES[i].len, finish());
         TEST_ASSERT_EQUAL_HEX8(CASES[i].type, g_big[0]);
         TEST_ASSERT_EQUAL_HEX8(0x05, g_big[1]);
@@ -327,17 +327,17 @@ void test_length_field_widths(void)
 
     // The Length field is an unsigned integer in network byte order: 256 is 0x01 0x00 over two
     // octets and 65536 is 0x01 0x00 0x00 over three.
-    Lwm2mTlv.sink.buf = g_big;
-    Lwm2mTlv.sink.cap = sizeof(g_big);
-    Lwm2mTlv.open(protocore_lwm2m_tlv_span());
+    Lwm2mTlvV.sink.buf = g_big;
+    Lwm2mTlvV.sink.cap = sizeof(g_big);
+    Lwm2mTlvV.open(protocore_lwm2m_tlv_span());
     write_opaque(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x05, g_value, 256);
     TEST_ASSERT_EQUAL_UINT(4u + 256u, finish());
     TEST_ASSERT_EQUAL_HEX8(0x01, g_big[2]);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_big[3]);
 
-    Lwm2mTlv.sink.buf = g_big;
-    Lwm2mTlv.sink.cap = sizeof(g_big);
-    Lwm2mTlv.open(protocore_lwm2m_tlv_span());
+    Lwm2mTlvV.sink.buf = g_big;
+    Lwm2mTlvV.sink.cap = sizeof(g_big);
+    Lwm2mTlvV.open(protocore_lwm2m_tlv_span());
     write_opaque(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x05, g_value, 65536);
     TEST_ASSERT_EQUAL_UINT(5u + 65536u, finish());
     TEST_ASSERT_EQUAL_HEX8(0x01, g_big[2]);
@@ -403,12 +403,12 @@ void test_integer_takes_the_shortest_signed_width(void)
 void test_boolean_is_one_octet(void)
 {
     open_sink(sizeof(g_buf));
-    Lwm2mTlv.hdr.id_type = LWM2M_TLV_RESOURCE_WITH_VALUE;
-    Lwm2mTlv.hdr.id = 0x0B;
-    Lwm2mTlv.val.boolean_value = PROTO_TRUE;
+    Lwm2mTlvV.hdr.id_type = LWM2M_TLV_RESOURCE_WITH_VALUE;
+    Lwm2mTlvV.hdr.id = 0x0B;
+    Lwm2mTlvV.val.boolean_value = PROTO_TRUE;
     Lwm2mTlv.write_boolean(protocore_lwm2m_tlv_span());
-    Lwm2mTlv.hdr.id = 0x0C;
-    Lwm2mTlv.val.boolean_value = PROTO_FALSE;
+    Lwm2mTlvV.hdr.id = 0x0C;
+    Lwm2mTlvV.val.boolean_value = PROTO_FALSE;
     Lwm2mTlv.write_boolean(protocore_lwm2m_tlv_span());
     TEST_ASSERT_EQUAL_UINT(6u, finish());
     TEST_ASSERT_EQUAL_MEMORY("\xC1\x0B\x01\xC1\x0C\x00", g_buf, 6);
@@ -420,16 +420,16 @@ void test_boolean_is_one_octet(void)
 void test_float_is_binary64_in_network_byte_order(void)
 {
     open_sink(sizeof(g_buf));
-    Lwm2mTlv.hdr.id_type = LWM2M_TLV_RESOURCE_WITH_VALUE;
-    Lwm2mTlv.hdr.id = 0x01;
-    Lwm2mTlv.val.float_value = 1.0;
+    Lwm2mTlvV.hdr.id_type = LWM2M_TLV_RESOURCE_WITH_VALUE;
+    Lwm2mTlvV.hdr.id = 0x01;
+    Lwm2mTlvV.val.float_value = 1.0;
     Lwm2mTlv.write_float(protocore_lwm2m_tlv_span());
     TEST_ASSERT_EQUAL_UINT(11u, finish());
     TEST_ASSERT_EQUAL_MEMORY("\xC8\x01\x08\x3F\xF0\x00\x00\x00\x00\x00\x00", g_buf, 11);
 
     open_sink(sizeof(g_buf));
-    Lwm2mTlv.hdr.id = 0x02;
-    Lwm2mTlv.val.float_value = -2.0;
+    Lwm2mTlvV.hdr.id = 0x02;
+    Lwm2mTlvV.val.float_value = -2.0;
     Lwm2mTlv.write_float(protocore_lwm2m_tlv_span());
     TEST_ASSERT_EQUAL_UINT(11u, finish());
     TEST_ASSERT_EQUAL_MEMORY("\xC8\x02\x08\xC0\x00\x00\x00\x00\x00\x00\x00", g_buf, 11);
@@ -441,32 +441,32 @@ void test_writer_fails_closed(void)
 {
     open_sink(4); // room for one 3-octet entry and nothing more
     write_integer(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x01, 0x11);
-    TEST_ASSERT_TRUE(Lwm2mTlv.ok);
+    TEST_ASSERT_TRUE(Lwm2mTlvV.ok);
     write_integer(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x02, 0x22);
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
     // A later write that would have fit is refused too: the cursor stays poisoned.
     write_opaque(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x03, "", 0);
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
     Lwm2mTlv.finish(protocore_lwm2m_tlv_span());
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Lwm2mTlv.n);
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, Lwm2mTlvV.n);
 
     // A sink with no buffer starts poisoned.
-    Lwm2mTlv.sink.buf = NULL;
-    Lwm2mTlv.sink.cap = 64;
-    Lwm2mTlv.open(protocore_lwm2m_tlv_span());
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    Lwm2mTlvV.sink.buf = NULL;
+    Lwm2mTlvV.sink.cap = 64;
+    Lwm2mTlvV.open(protocore_lwm2m_tlv_span());
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
     write_integer(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x01, 1);
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
     TEST_ASSERT_EQUAL_UINT(0u, finish());
 
     // A write with a Value length but no Value is refused rather than read through.
     open_sink(sizeof(g_buf));
     write_opaque(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x01, NULL, 4);
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
     // A string write with no string is refused as well.
     write_string(LWM2M_TLV_RESOURCE_WITH_VALUE, 0x01, NULL);
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
 }
 
 // An entry the source cuts short is refused instead of pointing a Value past the end of the buffer.
@@ -477,37 +477,37 @@ void test_reader_refuses_a_truncated_entry(void)
     TEST_ASSERT_EQUAL_UINT(1u, walk(GOOD, sizeof(GOOD), e, 2));
     for (size_t len = 1; len < sizeof(GOOD); len++)
     {
-        Lwm2mTlv.source.buf = GOOD;
-        Lwm2mTlv.source.len = len;
-        Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
-        TEST_ASSERT_TRUE(Lwm2mTlv.ok);
-        Lwm2mTlv.next(protocore_lwm2m_tlv_span());
-        TEST_ASSERT_FALSE_MESSAGE(Lwm2mTlv.ok, "a cut-short entry must not decode");
+        Lwm2mTlvV.source.buf = GOOD;
+        Lwm2mTlvV.source.len = len;
+        Lwm2mTlvV.parse(protocore_lwm2m_tlv_span());
+        TEST_ASSERT_TRUE(Lwm2mTlvV.ok);
+        Lwm2mTlvV.next(protocore_lwm2m_tlv_span());
+        TEST_ASSERT_FALSE_MESSAGE(Lwm2mTlvV.ok, "a cut-short entry must not decode");
     }
 
     // A 16-bit Identifier with only one octet behind it.
     static const uint8_t SHORT_ID[2] = {0x61, 0x01};
-    Lwm2mTlv.source.buf = SHORT_ID;
-    Lwm2mTlv.source.len = sizeof(SHORT_ID);
-    Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
-    Lwm2mTlv.next(protocore_lwm2m_tlv_span());
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    Lwm2mTlvV.source.buf = SHORT_ID;
+    Lwm2mTlvV.source.len = sizeof(SHORT_ID);
+    Lwm2mTlvV.parse(protocore_lwm2m_tlv_span());
+    Lwm2mTlvV.next(protocore_lwm2m_tlv_span());
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
 
     // An 8-bit Length field with no octet behind it.
     static const uint8_t SHORT_LEN[2] = {0xC8, 0x01};
-    Lwm2mTlv.source.buf = SHORT_LEN;
-    Lwm2mTlv.source.len = sizeof(SHORT_LEN);
-    Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
-    Lwm2mTlv.next(protocore_lwm2m_tlv_span());
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    Lwm2mTlvV.source.buf = SHORT_LEN;
+    Lwm2mTlvV.source.len = sizeof(SHORT_LEN);
+    Lwm2mTlvV.parse(protocore_lwm2m_tlv_span());
+    Lwm2mTlvV.next(protocore_lwm2m_tlv_span());
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
 
     // A source with no buffer decodes nothing.
-    Lwm2mTlv.source.buf = NULL;
-    Lwm2mTlv.source.len = 8;
-    Lwm2mTlv.parse(protocore_lwm2m_tlv_span());
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
-    Lwm2mTlv.next(protocore_lwm2m_tlv_span());
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    Lwm2mTlvV.source.buf = NULL;
+    Lwm2mTlvV.source.len = 8;
+    Lwm2mTlvV.parse(protocore_lwm2m_tlv_span());
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
+    Lwm2mTlvV.next(protocore_lwm2m_tlv_span());
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
 }
 
 // value_integer only accepts the 1, 2, 4 and 8 octet widths Appendix C Table C.-2 lists.
@@ -518,22 +518,22 @@ void test_value_integer_refuses_other_widths(void)
     static const size_t BAD[] = {0, 3, 5, 6, 7};
     for (size_t i = 0; i < sizeof(GOOD) / sizeof(GOOD[0]); i++)
     {
-        Lwm2mTlv.val.opaque = V;
-        Lwm2mTlv.val.len = GOOD[i];
+        Lwm2mTlvV.val.opaque = V;
+        Lwm2mTlvV.val.len = GOOD[i];
         Lwm2mTlv.value_integer(protocore_lwm2m_tlv_span());
-        TEST_ASSERT_TRUE(Lwm2mTlv.ok);
+        TEST_ASSERT_TRUE(Lwm2mTlvV.ok);
     }
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
-        Lwm2mTlv.val.opaque = V;
-        Lwm2mTlv.val.len = BAD[i];
+        Lwm2mTlvV.val.opaque = V;
+        Lwm2mTlvV.val.len = BAD[i];
         Lwm2mTlv.value_integer(protocore_lwm2m_tlv_span());
-        TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+        TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
     }
-    Lwm2mTlv.val.opaque = NULL;
-    Lwm2mTlv.val.len = 4;
+    Lwm2mTlvV.val.opaque = NULL;
+    Lwm2mTlvV.val.len = 4;
     Lwm2mTlv.value_integer(protocore_lwm2m_tlv_span());
-    TEST_ASSERT_FALSE(Lwm2mTlv.ok);
+    TEST_ASSERT_FALSE(Lwm2mTlvV.ok);
 }
 
 // A written payload reads back as the entries that went in, and the reader stops at the end.

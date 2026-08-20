@@ -32,11 +32,11 @@ static char g_last_path[128];
 // Read the named Int argument out of the values in scope (spec sec 6.4.1).
 static proto_bool arg_int(const struct protocore_gql_args *args, const char *name, long long *out)
 {
-    GraphQL.argument.values = args;
-    GraphQL.argument.name = name;
+    GraphQLV.argument.values = args;
+    GraphQLV.argument.name = name;
     GraphQL.arg_int(protocore_graphql_span());
-    *out = GraphQL.i64;
-    return GraphQL.ok;
+    *out = GraphQLV.i64;
+    return GraphQLV.ok;
 }
 
 // ResolveFieldValue (spec sec 6.4.2) for the Examples this suite executes.
@@ -174,11 +174,11 @@ static const char *run(const char *doc)
 {
     g_last_path[0] = '\0';
     g_out[0] = '\0';
-    GraphQL.request.document = doc;
-    GraphQL.request.len = strlen(doc);
-    GraphQL.request.resolver = resolver;
-    GraphQL.response.out = g_out;
-    GraphQL.response.cap = sizeof(g_out);
+    GraphQLV.request.document = doc;
+    GraphQLV.request.len = strlen(doc);
+    GraphQLV.request.resolver = resolver;
+    GraphQLV.response.out = g_out;
+    GraphQLV.response.cap = sizeof(g_out);
     GraphQL.execute(protocore_graphql_span());
     return g_out;
 }
@@ -193,9 +193,9 @@ void test_spec_example_3_produces_example_4(void)
                                                                                          "    name\n"
                                                                                          "  }\n"
                                                                                          "}\n"));
-    TEST_ASSERT_TRUE(GraphQL.ok);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_OK, GraphQL.result);
-    TEST_ASSERT_EQUAL_UINT(strlen(g_out), GraphQL.n);
+    TEST_ASSERT_TRUE(GraphQLV.ok);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_OK, GraphQLV.result);
+    TEST_ASSERT_EQUAL_UINT(strlen(g_out), GraphQLV.n);
     // sec 6.4.2 hands the resolver the field, reached here as the dotted path from the root.
     TEST_ASSERT_EQUAL_STRING("user.name", g_last_path);
 }
@@ -271,36 +271,36 @@ static struct
 static proto_bool probe_resolver(const char *path, const struct protocore_gql_args *args, protocore_gql_value *out)
 {
     (void)path;
-    GraphQL.argument.values = args;
+    GraphQLV.argument.values = args;
 
-    GraphQL.argument.name = "count";
+    GraphQLV.argument.name = "count";
     GraphQL.arg_int(protocore_graphql_span());
-    g_probe.int_ok = GraphQL.ok;
-    g_probe.i = GraphQL.i64;
+    g_probe.int_ok = GraphQLV.ok;
+    g_probe.i = GraphQLV.i64;
 
-    GraphQL.argument.name = "label";
+    GraphQLV.argument.name = "label";
     GraphQL.arg_str(protocore_graphql_span());
-    g_probe.str_ok = GraphQL.ok;
-    g_probe.s = GraphQL.text;
+    g_probe.str_ok = GraphQLV.ok;
+    g_probe.s = GraphQLV.text;
 
-    GraphQL.argument.name = "flag";
+    GraphQLV.argument.name = "flag";
     GraphQL.arg_bool(protocore_graphql_span());
-    g_probe.bool_ok = GraphQL.ok;
-    g_probe.b = GraphQL.b;
+    g_probe.bool_ok = GraphQLV.ok;
+    g_probe.b = GraphQLV.b;
 
     // sec 2.1.9: Names are case-sensitive, so "Count" is not "count".
-    GraphQL.argument.name = "Count";
+    GraphQLV.argument.name = "Count";
     GraphQL.arg_int(protocore_graphql_span());
-    g_probe.wrong_case_ok = GraphQL.ok;
+    g_probe.wrong_case_ok = GraphQLV.ok;
 
     // "label" is a String, so reading it as an Int reports absence.
-    GraphQL.argument.name = "label";
+    GraphQLV.argument.name = "label";
     GraphQL.arg_int(protocore_graphql_span());
-    g_probe.wrong_type_ok = GraphQL.ok;
+    g_probe.wrong_type_ok = GraphQLV.ok;
 
-    GraphQL.argument.name = "absent";
+    GraphQLV.argument.name = "absent";
     GraphQL.arg_str(protocore_graphql_span());
-    g_probe.missing_ok = GraphQL.ok;
+    g_probe.missing_ok = GraphQLV.ok;
 
     out->type = PROTOCORE_GQL_NULL;
     return PROTO_TRUE;
@@ -311,11 +311,11 @@ static proto_bool probe_resolver(const char *path, const struct protocore_gql_ar
 void test_argument_accessors_are_named_and_typed(void)
 {
     memset(&g_probe, 0, sizeof(g_probe));
-    GraphQL.request.document = "{ probe(count: 7, label: \"kw\", flag: true) }";
-    GraphQL.request.len = strlen(GraphQL.request.document);
-    GraphQL.request.resolver = probe_resolver;
-    GraphQL.response.out = g_out;
-    GraphQL.response.cap = sizeof(g_out);
+    GraphQLV.request.document = "{ probe(count: 7, label: \"kw\", flag: true) }";
+    GraphQLV.request.len = strlen(GraphQLV.request.document);
+    GraphQLV.request.resolver = probe_resolver;
+    GraphQLV.response.out = g_out;
+    GraphQLV.response.cap = sizeof(g_out);
     GraphQL.execute(protocore_graphql_span());
     TEST_ASSERT_EQUAL_STRING("{\"data\":{\"probe\":null}}", g_out);
 
@@ -333,13 +333,13 @@ void test_argument_accessors_are_named_and_typed(void)
 // With no resolver every leaf completes as null (sec 6.4.3 on a failed value resolution).
 void test_no_resolver_completes_every_leaf_as_null(void)
 {
-    GraphQL.request.document = "{ user(id: 4) { name } id }";
-    GraphQL.request.len = strlen(GraphQL.request.document);
-    GraphQL.request.resolver = NULL;
-    GraphQL.response.out = g_out;
-    GraphQL.response.cap = sizeof(g_out);
+    GraphQLV.request.document = "{ user(id: 4) { name } id }";
+    GraphQLV.request.len = strlen(GraphQLV.request.document);
+    GraphQLV.request.resolver = NULL;
+    GraphQLV.response.out = g_out;
+    GraphQLV.response.cap = sizeof(g_out);
     GraphQL.execute(protocore_graphql_span());
-    TEST_ASSERT_TRUE(GraphQL.ok);
+    TEST_ASSERT_TRUE(GraphQLV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"data\":{\"user\":{\"name\":null},\"id\":null}}", g_out);
 }
 
@@ -378,8 +378,8 @@ void test_request_error_carries_errors_and_no_data(void)
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
         const char *got = run(BAD[i]);
-        TEST_ASSERT_FALSE_MESSAGE(GraphQL.ok, BAD[i]);
-        TEST_ASSERT_NOT_EQUAL_MESSAGE(PROTOCORE_GQL_OK, GraphQL.result, BAD[i]);
+        TEST_ASSERT_FALSE_MESSAGE(GraphQLV.ok, BAD[i]);
+        TEST_ASSERT_NOT_EQUAL_MESSAGE(PROTOCORE_GQL_OK, GraphQLV.result, BAD[i]);
         TEST_ASSERT_NULL_MESSAGE(strstr(got, "\"data\""), BAD[i]);
         TEST_ASSERT_NOT_NULL_MESSAGE(strstr(got, "\"errors\""), BAD[i]);
         TEST_ASSERT_NOT_NULL_MESSAGE(strstr(got, "\"message\""), BAD[i]);
@@ -403,8 +403,8 @@ void test_out_of_scope_grammar_is_a_request_error(void)
     for (size_t i = 0; i < sizeof(OUT) / sizeof(OUT[0]); i++)
     {
         const char *got = run(OUT[i]);
-        TEST_ASSERT_FALSE_MESSAGE(GraphQL.ok, OUT[i]);
-        TEST_ASSERT_EQUAL_INT_MESSAGE(PROTOCORE_GQL_ERR_PARSE, GraphQL.result, OUT[i]);
+        TEST_ASSERT_FALSE_MESSAGE(GraphQLV.ok, OUT[i]);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(PROTOCORE_GQL_ERR_PARSE, GraphQLV.result, OUT[i]);
         TEST_ASSERT_NULL_MESSAGE(strstr(got, "\"data\""), OUT[i]);
     }
 }
@@ -424,7 +424,7 @@ void test_comments_and_commas_are_ignored(void)
 void test_unresolved_leaf_completes_as_null(void)
 {
     TEST_ASSERT_EQUAL_STRING("{\"data\":{\"id\":4,\"unknownField\":null}}", run("{ id unknownField }"));
-    TEST_ASSERT_TRUE(GraphQL.ok);
+    TEST_ASSERT_TRUE(GraphQLV.ok);
 }
 
 // The compile-time bounds are request errors (sec 7.1.2), not truncated results.
@@ -444,7 +444,7 @@ void test_bounds_are_request_errors(void)
     }
     deep[n] = '\0';
     (void)run(deep);
-    TEST_ASSERT_TRUE_MESSAGE(GraphQL.ok, deep);
+    TEST_ASSERT_TRUE_MESSAGE(GraphQLV.ok, deep);
 
     n = 0;
     for (int d = 0; d <= PROTOCORE_GQL_MAX_DEPTH; d++)
@@ -458,8 +458,8 @@ void test_bounds_are_request_errors(void)
     }
     deep[n] = '\0';
     (void)run(deep);
-    TEST_ASSERT_FALSE_MESSAGE(GraphQL.ok, deep);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_LIMIT, GraphQL.result);
+    TEST_ASSERT_FALSE_MESSAGE(GraphQLV.ok, deep);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_LIMIT, GraphQLV.result);
 
     // More fields than the node pool holds.
     char wide[4 * PROTOCORE_GQL_MAX_NODES + 8];
@@ -475,64 +475,64 @@ void test_bounds_are_request_errors(void)
     wide[n++] = '}';
     wide[n] = '\0';
     (void)run(wide);
-    TEST_ASSERT_FALSE(GraphQL.ok);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_LIMIT, GraphQL.result);
+    TEST_ASSERT_FALSE(GraphQLV.ok);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_LIMIT, GraphQLV.result);
 }
 
 // A response that does not fit reports the overflow instead of emitting a truncated map.
 void test_short_buffer_reports_overflow(void)
 {
     char small[8];
-    GraphQL.request.document = "{ user(id: 4) { name } }";
-    GraphQL.request.len = strlen(GraphQL.request.document);
-    GraphQL.request.resolver = resolver;
-    GraphQL.response.out = small;
-    GraphQL.response.cap = sizeof(small);
+    GraphQLV.request.document = "{ user(id: 4) { name } }";
+    GraphQLV.request.len = strlen(GraphQLV.request.document);
+    GraphQLV.request.resolver = resolver;
+    GraphQLV.response.out = small;
+    GraphQLV.response.cap = sizeof(small);
     GraphQL.execute(protocore_graphql_span());
-    TEST_ASSERT_FALSE(GraphQL.ok);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_OVERFLOW, GraphQL.result);
-    TEST_ASSERT_EQUAL_UINT(0u, GraphQL.n);
+    TEST_ASSERT_FALSE(GraphQLV.ok);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_OVERFLOW, GraphQLV.result);
+    TEST_ASSERT_EQUAL_UINT(0u, GraphQLV.n);
 }
 
 // A missing document or a missing response buffer is refused rather than written through.
 void test_null_inputs_are_refused(void)
 {
-    GraphQL.request.document = NULL;
-    GraphQL.request.len = 0;
-    GraphQL.request.resolver = resolver;
-    GraphQL.response.out = g_out;
-    GraphQL.response.cap = sizeof(g_out);
+    GraphQLV.request.document = NULL;
+    GraphQLV.request.len = 0;
+    GraphQLV.request.resolver = resolver;
+    GraphQLV.response.out = g_out;
+    GraphQLV.response.cap = sizeof(g_out);
     GraphQL.execute(protocore_graphql_span());
-    TEST_ASSERT_FALSE(GraphQL.ok);
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_PARSE, GraphQL.result);
+    TEST_ASSERT_FALSE(GraphQLV.ok);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_GQL_ERR_PARSE, GraphQLV.result);
 
-    GraphQL.request.document = "{ id }";
-    GraphQL.request.len = 6;
-    GraphQL.response.out = NULL;
-    GraphQL.response.cap = sizeof(g_out);
+    GraphQLV.request.document = "{ id }";
+    GraphQLV.request.len = 6;
+    GraphQLV.response.out = NULL;
+    GraphQLV.response.cap = sizeof(g_out);
     GraphQL.execute(protocore_graphql_span());
-    TEST_ASSERT_FALSE(GraphQL.ok);
+    TEST_ASSERT_FALSE(GraphQLV.ok);
 
-    GraphQL.response.out = g_out;
-    GraphQL.response.cap = 0;
+    GraphQLV.response.out = g_out;
+    GraphQLV.response.cap = 0;
     GraphQL.execute(protocore_graphql_span());
-    TEST_ASSERT_FALSE(GraphQL.ok);
+    TEST_ASSERT_FALSE(GraphQLV.ok);
 }
 
 // An accessor asked about arguments it was never handed reports absence with a zeroed result.
 void test_argument_accessor_without_values_reports_absence(void)
 {
-    GraphQL.argument.values = NULL;
-    GraphQL.argument.name = "id";
+    GraphQLV.argument.values = NULL;
+    GraphQLV.argument.name = "id";
     GraphQL.arg_int(protocore_graphql_span());
-    TEST_ASSERT_FALSE(GraphQL.ok);
-    TEST_ASSERT_EQUAL_INT64(0, GraphQL.i64);
+    TEST_ASSERT_FALSE(GraphQLV.ok);
+    TEST_ASSERT_EQUAL_INT64(0, GraphQLV.i64);
 
     GraphQL.arg_str(protocore_graphql_span());
-    TEST_ASSERT_FALSE(GraphQL.ok);
-    TEST_ASSERT_NULL(GraphQL.text);
+    TEST_ASSERT_FALSE(GraphQLV.ok);
+    TEST_ASSERT_NULL(GraphQLV.text);
 
     GraphQL.arg_bool(protocore_graphql_span());
-    TEST_ASSERT_FALSE(GraphQL.ok);
-    TEST_ASSERT_FALSE(GraphQL.b);
+    TEST_ASSERT_FALSE(GraphQLV.ok);
+    TEST_ASSERT_FALSE(GraphQLV.b);
 }

@@ -28,25 +28,25 @@
 static PowerPlan power_decide(const PowerCfg *cfg, uint8_t load_pct, int16_t temp_c, proto_bool brownout_boot,
                               uint32_t since_boot_ms, proto_bool was_throttled)
 {
-    Power.plan_args.cfg = cfg;
-    Power.plan_args.load_pct = load_pct;
-    Power.plan_args.temp_c = temp_c;
-    Power.plan_args.brownout_boot = brownout_boot;
-    Power.plan_args.since_boot_ms = since_boot_ms;
-    Power.plan_args.was_throttled = was_throttled;
+    PowerV.plan_args.cfg = cfg;
+    PowerV.plan_args.load_pct = load_pct;
+    PowerV.plan_args.temp_c = temp_c;
+    PowerV.plan_args.brownout_boot = brownout_boot;
+    PowerV.plan_args.since_boot_ms = since_boot_ms;
+    PowerV.plan_args.was_throttled = was_throttled;
     Power.decide(protocore_power_mgmt_span());
-    return Power.plan;
+    return PowerV.plan;
 }
 
 /** @brief Serialize @p plan and @p temp_c as JSON into @p out; the bytes written. */
 static size_t power_json(const PowerPlan *plan, int16_t temp_c, char *out, size_t cap)
 {
-    Power.out_args.plan = plan;
-    Power.out_args.temp_c = temp_c;
-    Power.out_args.out = out;
-    Power.out_args.cap = cap;
+    PowerV.out_args.plan = plan;
+    PowerV.out_args.temp_c = temp_c;
+    PowerV.out_args.out = out;
+    PowerV.out_args.cap = cap;
     Power.json(protocore_power_mgmt_span());
-    return Power.n;
+    return PowerV.n;
 }
 
 void dbench_run(void)
@@ -54,7 +54,7 @@ void dbench_run(void)
     // Governor limits pinned to the same values test/test_power_mgmt reasons about (which also match
     // the shipped PROTOCORE_POWER_* defaults), so these numbers describe the real decision.
     PowerCfg cfg;
-    Power.cfg_out = &cfg;
+    PowerV.cfg_out = &cfg;
     Power.defaults(protocore_power_mgmt_span());
     cfg.mhz_max = 240;
     cfg.mhz_min = 80;

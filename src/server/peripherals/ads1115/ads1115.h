@@ -75,20 +75,17 @@ typedef struct
     uint8_t gain;
     uint8_t dr;
 } Ads1115ConfigSingleArgs;
-
 /** @brief What raw_to_uv takes: raw, gain. */
 typedef struct
 {
     int16_t raw;
     uint8_t gain;
 } Ads1115RawToUvArgs;
-
 /** @brief What begin takes: addr. */
 typedef struct
 {
     uint8_t addr;
 } Ads1115BeginArgs;
-
 /** @brief What read_raw takes: channel, gain, raw. */
 typedef struct
 {
@@ -96,7 +93,6 @@ typedef struct
     uint8_t gain;
     int16_t *raw;
 } Ads1115ReadRawArgs;
-
 /** @brief What read_uv takes: channel, gain, microvolts. */
 typedef struct
 {
@@ -104,7 +100,6 @@ typedef struct
     uint8_t gain;
     int32_t *microvolts;
 } Ads1115ReadUvArgs;
-
 /**
  * @brief TI ADS1115 16-bit ADC codec (PROTOCORE_ENABLE_ADS1115). The ADS1115 is a 4-channel 16-bit analog-to-digital
  * ...
@@ -143,11 +138,17 @@ typedef struct
     Ads1115BeginArgs begin_args;
     Ads1115ReadRawArgs read_raw_args;
     Ads1115ReadUvArgs read_uv_args;
-
     proto_bool ok;
     uint16_t word;
     int32_t uv;
+} Ads1115Vars;
 
+/** @brief The operands and the outcome. */
+extern Ads1115Vars Ads1115V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const config_single)(uint8_t *restrict work);
     void (*const raw_to_uv)(uint8_t *restrict work);
     void (*const begin)(uint8_t *restrict work);
@@ -155,8 +156,25 @@ typedef struct
     void (*const read_uv)(uint8_t *restrict work);
 } Ads1115Ns;
 
-/** @brief The one symbol this module exports. */
-extern Ads1115Ns Ads1115;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Ads1115V or a region of the borrow at a fixed offset.
+void protocore_ads1115_config_single(uint8_t *restrict work);
+void protocore_ads1115_raw_to_uv(uint8_t *restrict work);
+void protocore_ads1115_begin(uint8_t *restrict work);
+void protocore_ads1115_read_raw(uint8_t *restrict work);
+void protocore_ads1115_read_uv(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ads1115.config_single(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Ads1115Ns Ads1115 __attribute__((unused)) = {
+    .config_single = protocore_ads1115_config_single,
+    .raw_to_uv = protocore_ads1115_raw_to_uv,
+    .begin = protocore_ads1115_begin,
+    .read_raw = protocore_ads1115_read_raw,
+    .read_uv = protocore_ads1115_read_uv,
+};
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

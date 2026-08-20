@@ -14,15 +14,15 @@
 static void rail_init(uint8_t *restrict work)
 {
     (void)work;
-    HwRailMonitor *m = HwHealth.rail.m;
+    HwRailMonitor *m = HwHealthV.rail.m;
     if (!m)
     {
         return;
     }
-    m->nominal_mv = HwHealth.rail.nominal_mv;
-    m->warn_mv = HwHealth.rail.warn_mv;
-    m->crit_mv = HwHealth.rail.crit_mv;
-    m->min_mv = HwHealth.rail.nominal_mv;
+    m->nominal_mv = HwHealthV.rail.nominal_mv;
+    m->warn_mv = HwHealthV.rail.warn_mv;
+    m->crit_mv = HwHealthV.rail.crit_mv;
+    m->min_mv = HwHealthV.rail.nominal_mv;
     m->sag_events = 0;
     m->brownout_events = 0;
 }
@@ -30,10 +30,10 @@ static void rail_init(uint8_t *restrict work)
 static void rail_sample(uint8_t *restrict work)
 {
     (void)work;
-    HwRailMonitor *m = HwHealth.rail.m;
-    const uint32_t mv = HwHealth.rail.mv;
+    HwRailMonitor *m = HwHealthV.rail.m;
+    const uint32_t mv = HwHealthV.rail.mv;
 
-    HwHealth.rail_verdict = HW_RAIL_OK;
+    HwHealthV.rail_verdict = HW_RAIL_OK;
     if (!m)
     {
         return;
@@ -45,24 +45,24 @@ static void rail_sample(uint8_t *restrict work)
     if (mv < m->crit_mv)
     {
         m->brownout_events++;
-        HwHealth.rail_verdict = HW_RAIL_BROWNOUT;
+        HwHealthV.rail_verdict = HW_RAIL_BROWNOUT;
         return;
     }
     if (mv < m->warn_mv)
     {
         m->sag_events++;
-        HwHealth.rail_verdict = HW_RAIL_SAG;
+        HwHealthV.rail_verdict = HW_RAIL_SAG;
     }
 }
 
 static void rail_json(uint8_t *restrict work)
 {
     (void)work;
-    const HwRailMonitor *m = HwHealth.rail.m_ro;
-    char *out = HwHealth.out_args.out;
-    const size_t cap = HwHealth.out_args.cap;
+    const HwRailMonitor *m = HwHealthV.rail.m_ro;
+    char *out = HwHealthV.out_args.out;
+    const size_t cap = HwHealthV.out_args.cap;
 
-    HwHealth.n = 0;
+    HwHealthV.n = 0;
     if (!m || !out || cap == 0)
     {
         return;
@@ -82,48 +82,48 @@ static void rail_json(uint8_t *restrict work)
         return;
     }
     out[b.len] = '\0';
-    HwHealth.n = b.len;
+    HwHealthV.n = b.len;
 }
 
 static void spi_init(uint8_t *restrict work)
 {
     (void)work;
-    HwSpiBackoff *s = HwHealth.spi.s;
+    HwSpiBackoff *s = HwHealthV.spi.s;
     if (!s)
     {
         return;
     }
-    s->min_hz = HwHealth.spi.min_hz;
-    s->max_hz = HwHealth.spi.max_hz;
-    if (HwHealth.spi.start_hz < HwHealth.spi.min_hz)
+    s->min_hz = HwHealthV.spi.min_hz;
+    s->max_hz = HwHealthV.spi.max_hz;
+    if (HwHealthV.spi.start_hz < HwHealthV.spi.min_hz)
     {
-        s->hz = HwHealth.spi.min_hz;
+        s->hz = HwHealthV.spi.min_hz;
     }
-    else if (HwHealth.spi.start_hz > HwHealth.spi.max_hz)
+    else if (HwHealthV.spi.start_hz > HwHealthV.spi.max_hz)
     {
-        s->hz = HwHealth.spi.max_hz;
+        s->hz = HwHealthV.spi.max_hz;
     }
     else
     {
-        s->hz = HwHealth.spi.start_hz;
+        s->hz = HwHealthV.spi.start_hz;
     }
     s->fail_streak = 0;
     s->ok_streak = 0;
-    s->fail_trip = HwHealth.spi.fail_trip ? HwHealth.spi.fail_trip : 1;
-    s->ok_trip = HwHealth.spi.ok_trip ? HwHealth.spi.ok_trip : 1;
+    s->fail_trip = HwHealthV.spi.fail_trip ? HwHealthV.spi.fail_trip : 1;
+    s->ok_trip = HwHealthV.spi.ok_trip ? HwHealthV.spi.ok_trip : 1;
 }
 
 static void spi_result(uint8_t *restrict work)
 {
     (void)work;
-    HwSpiBackoff *s = HwHealth.spi.s;
+    HwSpiBackoff *s = HwHealthV.spi.s;
 
-    HwHealth.hz = 0;
+    HwHealthV.hz = 0;
     if (!s)
     {
         return;
     }
-    if (HwHealth.spi.crc_ok)
+    if (HwHealthV.spi.crc_ok)
     {
         s->fail_streak = 0;
         if (++s->ok_streak >= s->ok_trip)
@@ -151,58 +151,53 @@ static void spi_result(uint8_t *restrict work)
             s->hz = down;
         }
     }
-    HwHealth.hz = s->hz;
+    HwHealthV.hz = s->hz;
 }
 
 static void gpio_short(uint8_t *restrict work)
 {
     (void)work;
-    if (HwHealth.probe.driven_high && !HwHealth.probe.read_high)
+    if (HwHealthV.probe.driven_high && !HwHealthV.probe.read_high)
     {
-        HwHealth.gpio_verdict = HW_GPIO_SHORT_GND;
+        HwHealthV.gpio_verdict = HW_GPIO_SHORT_GND;
         return;
     }
-    if (!HwHealth.probe.driven_high && HwHealth.probe.read_high)
+    if (!HwHealthV.probe.driven_high && HwHealthV.probe.read_high)
     {
-        HwHealth.gpio_verdict = HW_GPIO_SHORT_VCC;
+        HwHealthV.gpio_verdict = HW_GPIO_SHORT_VCC;
         return;
     }
-    HwHealth.gpio_verdict = HW_GPIO_OK;
+    HwHealthV.gpio_verdict = HW_GPIO_OK;
 }
 
 static void cap_leak(uint8_t *restrict work)
 {
     (void)work;
-    const uint32_t measured_ms = HwHealth.probe.measured_ms;
-    const uint32_t expected_ms = HwHealth.probe.expected_ms;
+    const uint32_t measured_ms = HwHealthV.probe.measured_ms;
+    const uint32_t expected_ms = HwHealthV.probe.expected_ms;
 
-    HwHealth.cap_verdict = HW_CAP_OK;
+    HwHealthV.cap_verdict = HW_CAP_OK;
     if (expected_ms == 0)
     {
         return;
     }
     // Tolerance band around expected, computed in 64-bit to avoid overflow.
-    uint64_t band = (uint64_t)expected_ms * HwHealth.probe.tol_pct / 100;
+    uint64_t band = (uint64_t)expected_ms * HwHealthV.probe.tol_pct / 100;
     uint64_t lo = (uint64_t)expected_ms > band ? (uint64_t)expected_ms - band : 0;
     uint64_t hi = (uint64_t)expected_ms + band;
     if (measured_ms < lo)
     {
-        HwHealth.cap_verdict = HW_CAP_LEAK; // discharges too fast
+        HwHealthV.cap_verdict = HW_CAP_LEAK; // discharges too fast
         return;
     }
     if (measured_ms > hi)
     {
-        HwHealth.cap_verdict = HW_CAP_HIGH_ESR; // discharges too slow
+        HwHealthV.cap_verdict = HW_CAP_HIGH_ESR; // discharges too slow
     }
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-HwHealthNs HwHealth = {.rail_init = rail_init,
-                       .rail_sample = rail_sample,
-                       .rail_json = rail_json,
-                       .spi_init = spi_init,
-                       .spi_result = spi_result,
-                       .gpio_short = gpio_short,
-                       .cap_leak = cap_leak};
+/** @brief The operands and the outcome. */
+HwHealthVars HwHealthV;
 
 #endif // PROTOCORE_ENABLE_HW_HEALTH

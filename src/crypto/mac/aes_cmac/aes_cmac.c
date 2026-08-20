@@ -143,19 +143,19 @@ static void subkeys(uint8_t *restrict work)
 // --- the entry -------------------------------------------------------------
 
 // One-shot over the members already set: expand the key, derive the subkeys, CBC-MAC the message.
-static void aes_cmac_mac(uint8_t *restrict work)
+void protocore_aes_cmac_mac(uint8_t *restrict work)
 {
-    AesCmac.ok = PROTO_FALSE;
-    if (!AesCmac.mac_args.key || !AesCmac.mac_args.out)
+    AesCmacV.ok = PROTO_FALSE;
+    if (!AesCmacV.mac_args.key || !AesCmacV.mac_args.out)
     {
         return;
     }
-    const uint8_t *msg = AesCmac.mac_args.msg;
-    const size_t msg_len = AesCmac.mac_args.msg_len;
-    uint8_t *mac = AesCmac.mac_args.out;
+    const uint8_t *msg = AesCmacV.mac_args.msg;
+    const size_t msg_len = AesCmacV.mac_args.msg_len;
+    uint8_t *mac = AesCmacV.mac_args.out;
 
     struct AesCmacCtx *ctx = AES_CMAC_CTX(work);
-    blk_init(&ctx->blk, AesCmac.mac_args.key);
+    blk_init(&ctx->blk, AesCmacV.mac_args.key);
     subkeys(work);
 
     // n = number of blocks; the message is a whole number of blocks iff msg_len > 0 && msg_len % 16 == 0.
@@ -200,10 +200,11 @@ static void aes_cmac_mac(uint8_t *restrict work)
     blk_enc(&ctx->blk, y, mac);
 
     blk_free(&ctx->blk);
-    AesCmac.ok = PROTO_TRUE;
+    AesCmacV.ok = PROTO_TRUE;
 }
 
-AesCmacNs AesCmac = {.mac = aes_cmac_mac};
+/** @brief The operands and the outcome. */
+AesCmacVars AesCmacV;
 
 PROTOCORE_END_DECLS
 

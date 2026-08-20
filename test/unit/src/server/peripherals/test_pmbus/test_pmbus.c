@@ -35,43 +35,43 @@ void tearDown(void)
 //   0x03FF -> Y = 1023, the largest positive mantissa
 void test_linear11_field_layout(void)
 {
-    Pmbus.l11_mantissa_args.word = 0xD300;
+    PmbusV.l11_mantissa_args.word = 0xD300;
     Pmbus.l11_mantissa(pmbus_work);
-    TEST_ASSERT_EQUAL_INT16(768, Pmbus.mantissa);
-    Pmbus.l11_exponent_args.word = 0xD300;
+    TEST_ASSERT_EQUAL_INT16(768, PmbusV.mantissa);
+    PmbusV.l11_exponent_args.word = 0xD300;
     Pmbus.l11_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(-6, Pmbus.exp);
+    TEST_ASSERT_EQUAL_INT8(-6, PmbusV.exp);
 
-    Pmbus.l11_mantissa_args.word = 0x07FF;
+    PmbusV.l11_mantissa_args.word = 0x07FF;
     Pmbus.l11_mantissa(pmbus_work);
-    TEST_ASSERT_EQUAL_INT16(-1, Pmbus.mantissa);
-    Pmbus.l11_exponent_args.word = 0x07FF;
+    TEST_ASSERT_EQUAL_INT16(-1, PmbusV.mantissa);
+    PmbusV.l11_exponent_args.word = 0x07FF;
     Pmbus.l11_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(0, Pmbus.exp);
+    TEST_ASSERT_EQUAL_INT8(0, PmbusV.exp);
 
-    Pmbus.l11_mantissa_args.word = 0x0400;
+    PmbusV.l11_mantissa_args.word = 0x0400;
     Pmbus.l11_mantissa(pmbus_work);
-    TEST_ASSERT_EQUAL_INT16(-1024, Pmbus.mantissa);
-    Pmbus.l11_mantissa_args.word = 0x03FF;
+    TEST_ASSERT_EQUAL_INT16(-1024, PmbusV.mantissa);
+    PmbusV.l11_mantissa_args.word = 0x03FF;
     Pmbus.l11_mantissa(pmbus_work);
-    TEST_ASSERT_EQUAL_INT16(1023, Pmbus.mantissa);
-    Pmbus.l11_mantissa_args.word = 0xF800;
+    TEST_ASSERT_EQUAL_INT16(1023, PmbusV.mantissa);
+    PmbusV.l11_mantissa_args.word = 0xF800;
     Pmbus.l11_mantissa(pmbus_work);
-    TEST_ASSERT_EQUAL_INT16(0, Pmbus.mantissa); // exponent bits only
+    TEST_ASSERT_EQUAL_INT16(0, PmbusV.mantissa); // exponent bits only
 
     // the exponent's own two's complement range, at both ends and either side of the sign bit
-    Pmbus.l11_exponent_args.word = 0x0000;
+    PmbusV.l11_exponent_args.word = 0x0000;
     Pmbus.l11_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(0, Pmbus.exp);
-    Pmbus.l11_exponent_args.word = (uint16_t)(15u << 11);
+    TEST_ASSERT_EQUAL_INT8(0, PmbusV.exp);
+    PmbusV.l11_exponent_args.word = (uint16_t)(15u << 11);
     Pmbus.l11_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(15, Pmbus.exp); // b01111
-    Pmbus.l11_exponent_args.word = (uint16_t)(16u << 11);
+    TEST_ASSERT_EQUAL_INT8(15, PmbusV.exp); // b01111
+    PmbusV.l11_exponent_args.word = (uint16_t)(16u << 11);
     Pmbus.l11_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(-16, Pmbus.exp); // b10000
-    Pmbus.l11_exponent_args.word = (uint16_t)(31u << 11);
+    TEST_ASSERT_EQUAL_INT8(-16, PmbusV.exp); // b10000
+    PmbusV.l11_exponent_args.word = (uint16_t)(31u << 11);
     Pmbus.l11_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(-1, Pmbus.exp); // b11111
+    TEST_ASSERT_EQUAL_INT8(-1, PmbusV.exp); // b11111
 }
 
 // Section 7.3: X = Y * 2^N, returned in micro-units.
@@ -82,24 +82,24 @@ void test_linear11_field_layout(void)
 //   0xE802 ->   2 * 2^-3 = 0.25        ->    250 000  (N = 0b11101 = 29, 29 - 32 = -3)
 void test_linear11_decode(void)
 {
-    Pmbus.linear11_micro_args.word = 0xD300;
+    PmbusV.linear11_micro_args.word = 0xD300;
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(12000000, Pmbus.micro);
-    Pmbus.linear11_micro_args.word = 0x07FF;
+    TEST_ASSERT_EQUAL_INT32(12000000, PmbusV.micro);
+    PmbusV.linear11_micro_args.word = 0x07FF;
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(-1000000, Pmbus.micro);
-    Pmbus.linear11_micro_args.word = 0x0019;
+    TEST_ASSERT_EQUAL_INT32(-1000000, PmbusV.micro);
+    PmbusV.linear11_micro_args.word = 0x0019;
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(25000000, Pmbus.micro);
-    Pmbus.linear11_micro_args.word = 0x07D8;
+    TEST_ASSERT_EQUAL_INT32(25000000, PmbusV.micro);
+    PmbusV.linear11_micro_args.word = 0x07D8;
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(-40000000, Pmbus.micro);
-    Pmbus.linear11_micro_args.word = 0xE802;
+    TEST_ASSERT_EQUAL_INT32(-40000000, PmbusV.micro);
+    PmbusV.linear11_micro_args.word = 0xE802;
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(250000, Pmbus.micro);
-    Pmbus.linear11_micro_args.word = 0x0000;
+    TEST_ASSERT_EQUAL_INT32(250000, PmbusV.micro);
+    PmbusV.linear11_micro_args.word = 0x0000;
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(0, Pmbus.micro);
+    TEST_ASSERT_EQUAL_INT32(0, PmbusV.micro);
 }
 
 // Section 7.3 says devices "must accept and be able to process any value of N", so a word whose
@@ -108,17 +108,17 @@ void test_linear11_decode(void)
 void test_linear11_out_of_range_is_refused(void)
 {
     // Y = 1023 at N = 15 is 1023 * 32768 = 33 521 664, which past the micro scaling is ~3.35e13.
-    Pmbus.linear11_micro_args.word = (uint16_t)((15u << 11) | 1023u);
+    PmbusV.linear11_micro_args.word = (uint16_t)((15u << 11) | 1023u);
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(PROTOCORE_PMBUS_INVALID, Pmbus.micro);
+    TEST_ASSERT_EQUAL_INT32(PROTOCORE_PMBUS_INVALID, PmbusV.micro);
     // and the same at the negative end
-    Pmbus.linear11_micro_args.word = (uint16_t)((15u << 11) | 0x400u);
+    PmbusV.linear11_micro_args.word = (uint16_t)((15u << 11) | 0x400u);
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(PROTOCORE_PMBUS_INVALID, Pmbus.micro);
+    TEST_ASSERT_EQUAL_INT32(PROTOCORE_PMBUS_INVALID, PmbusV.micro);
     // 2147 A would fit; 2148 A would not, so the boundary is real rather than a blanket refusal
-    Pmbus.linear11_micro_args.word = (uint16_t)((1u << 11) | 1023u);
+    PmbusV.linear11_micro_args.word = (uint16_t)((1u << 11) | 1023u);
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(2046000000, Pmbus.micro);
+    TEST_ASSERT_EQUAL_INT32(2046000000, PmbusV.micro);
 }
 
 // The encoder picks the exponent that keeps the most significant mantissa bits, so a round trip
@@ -128,48 +128,48 @@ void test_linear11_round_trip_keeps_the_mantissa_resolution(void)
     static const int32_t VALS[8] = {12000000, 1000000, 3300000, -5000000, 250000, 0, 48000000, -125000};
     for (size_t i = 0; i < 8; i++)
     {
-        Pmbus.linear11_encode_args.micro = VALS[i];
+        PmbusV.linear11_encode_args.micro = VALS[i];
         Pmbus.linear11_encode(pmbus_work);
-        const uint16_t w = Pmbus.word;
-        Pmbus.linear11_micro_args.word = w;
+        const uint16_t w = PmbusV.word;
+        PmbusV.linear11_micro_args.word = w;
         Pmbus.linear11_micro(pmbus_work);
-        const int32_t back = Pmbus.micro;
+        const int32_t back = PmbusV.micro;
         const int32_t err = back > VALS[i] ? back - VALS[i] : VALS[i] - back;
         const int32_t mag = VALS[i] < 0 ? -VALS[i] : VALS[i];
         TEST_ASSERT_TRUE_MESSAGE(err <= mag / 512 + 1, "round trip lost more than the mantissa resolution");
     }
     // exactly representable values come back exactly: 12 = 768 * 2^-6 is one of them. The encoded
     // word is captured first: both calls report through the one namespace.
-    Pmbus.linear11_encode_args.micro = 12000000;
+    PmbusV.linear11_encode_args.micro = 12000000;
     Pmbus.linear11_encode(pmbus_work);
-    const uint16_t exact = Pmbus.word;
-    Pmbus.linear11_micro_args.word = exact;
+    const uint16_t exact = PmbusV.word;
+    PmbusV.linear11_micro_args.word = exact;
     Pmbus.linear11_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(12000000, Pmbus.micro);
-    Pmbus.linear11_encode_args.micro = 0;
+    TEST_ASSERT_EQUAL_INT32(12000000, PmbusV.micro);
+    PmbusV.linear11_encode_args.micro = 0;
     Pmbus.linear11_encode(pmbus_work);
-    TEST_ASSERT_EQUAL_HEX16(0, Pmbus.word);
+    TEST_ASSERT_EQUAL_HEX16(0, PmbusV.word);
 }
 
 // Section 8.3.1, Table 2 with Figures 7 to 10: VOUT_MODE is a 3-bit Mode in bits [7:5] over a
 // 5-bit Parameter. Mode 000b is ULINEAR16, 001b VID, 010b DIRECT and 011b IEEE half precision.
 void test_vout_mode_selector(void)
 {
-    Pmbus.vout_mode_kind_args.vout_mode = 0x00;
+    PmbusV.vout_mode_kind_args.vout_mode = 0x00;
     Pmbus.vout_mode_kind(pmbus_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_LINEAR, Pmbus.kind);
-    Pmbus.vout_mode_kind_args.vout_mode = 0x17;
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_LINEAR, PmbusV.kind);
+    PmbusV.vout_mode_kind_args.vout_mode = 0x17;
     Pmbus.vout_mode_kind(pmbus_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_LINEAR, Pmbus.kind);
-    Pmbus.vout_mode_kind_args.vout_mode = 0x20;
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_LINEAR, PmbusV.kind);
+    PmbusV.vout_mode_kind_args.vout_mode = 0x20;
     Pmbus.vout_mode_kind(pmbus_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_VID, Pmbus.kind);
-    Pmbus.vout_mode_kind_args.vout_mode = 0x40;
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_VID, PmbusV.kind);
+    PmbusV.vout_mode_kind_args.vout_mode = 0x40;
     Pmbus.vout_mode_kind(pmbus_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_DIRECT, Pmbus.kind);
-    Pmbus.vout_mode_kind_args.vout_mode = 0x60;
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_DIRECT, PmbusV.kind);
+    PmbusV.vout_mode_kind_args.vout_mode = 0x60;
     Pmbus.vout_mode_kind(pmbus_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_IEEE, Pmbus.kind);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PMBUS_MODE_IEEE, PmbusV.kind);
     TEST_ASSERT_EQUAL_UINT8(0, PROTOCORE_PMBUS_MODE_LINEAR);
     TEST_ASSERT_EQUAL_UINT8(1, PROTOCORE_PMBUS_MODE_VID);
     TEST_ASSERT_EQUAL_UINT8(2, PROTOCORE_PMBUS_MODE_DIRECT);
@@ -180,25 +180,25 @@ void test_vout_mode_selector(void)
 // value a part using 1.953125 mV steps reports: bits [4:0] = 0b10111 = 23, and 23 - 32 = -9.
 void test_vout_mode_exponent(void)
 {
-    Pmbus.vout_exponent_args.vout_mode = 0x17;
+    PmbusV.vout_exponent_args.vout_mode = 0x17;
     Pmbus.vout_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(-9, Pmbus.exp);
-    Pmbus.vout_exponent_args.vout_mode = 0x00;
+    TEST_ASSERT_EQUAL_INT8(-9, PmbusV.exp);
+    PmbusV.vout_exponent_args.vout_mode = 0x00;
     Pmbus.vout_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(0, Pmbus.exp);
-    Pmbus.vout_exponent_args.vout_mode = 0x0F;
+    TEST_ASSERT_EQUAL_INT8(0, PmbusV.exp);
+    PmbusV.vout_exponent_args.vout_mode = 0x0F;
     Pmbus.vout_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(15, Pmbus.exp); // b01111, the largest positive
-    Pmbus.vout_exponent_args.vout_mode = 0x10;
+    TEST_ASSERT_EQUAL_INT8(15, PmbusV.exp); // b01111, the largest positive
+    PmbusV.vout_exponent_args.vout_mode = 0x10;
     Pmbus.vout_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(-16, Pmbus.exp); // b10000, the most negative
-    Pmbus.vout_exponent_args.vout_mode = 0x1F;
+    TEST_ASSERT_EQUAL_INT8(-16, PmbusV.exp); // b10000, the most negative
+    PmbusV.vout_exponent_args.vout_mode = 0x1F;
     Pmbus.vout_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(-1, Pmbus.exp); // b11111
+    TEST_ASSERT_EQUAL_INT8(-1, PmbusV.exp); // b11111
     // the Mode bits above it are not part of the exponent
-    Pmbus.vout_exponent_args.vout_mode = 0xF7;
+    PmbusV.vout_exponent_args.vout_mode = 0xF7;
     Pmbus.vout_exponent(pmbus_work);
-    TEST_ASSERT_EQUAL_INT8(-9, Pmbus.exp);
+    TEST_ASSERT_EQUAL_INT8(-9, PmbusV.exp);
 }
 
 // Section 8.4.1.1: Voltage = V * 2^N, V a 16-bit unsigned integer and N from VOUT_MODE.
@@ -207,29 +207,29 @@ void test_vout_mode_exponent(void)
 //     2 at 2^1  = 4.0 V                    -> 4 000 000
 void test_ulinear16_decode(void)
 {
-    Pmbus.linear16_micro_args.word = 614;
-    Pmbus.linear16_micro_args.exponent = -9;
+    PmbusV.linear16_micro_args.word = 614;
+    PmbusV.linear16_micro_args.exponent = -9;
     Pmbus.linear16_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(1199218, Pmbus.micro);
-    Pmbus.linear16_micro_args.word = 512;
-    Pmbus.linear16_micro_args.exponent = -9;
+    TEST_ASSERT_EQUAL_INT32(1199218, PmbusV.micro);
+    PmbusV.linear16_micro_args.word = 512;
+    PmbusV.linear16_micro_args.exponent = -9;
     Pmbus.linear16_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(1000000, Pmbus.micro);
-    Pmbus.linear16_micro_args.word = 2;
-    Pmbus.linear16_micro_args.exponent = 1;
+    TEST_ASSERT_EQUAL_INT32(1000000, PmbusV.micro);
+    PmbusV.linear16_micro_args.word = 2;
+    PmbusV.linear16_micro_args.exponent = 1;
     Pmbus.linear16_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(4000000, Pmbus.micro);
-    Pmbus.linear16_micro_args.word = 0;
-    Pmbus.linear16_micro_args.exponent = -9;
+    TEST_ASSERT_EQUAL_INT32(4000000, PmbusV.micro);
+    PmbusV.linear16_micro_args.word = 0;
+    PmbusV.linear16_micro_args.exponent = -9;
     Pmbus.linear16_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(0, Pmbus.micro);
+    TEST_ASSERT_EQUAL_INT32(0, PmbusV.micro);
     // section 8.1.1 restricts ULINEAR16 to positive values, so the mantissa is unsigned throughout.
     // Full scale is one step short of 2^16 * 2^-9 = 128 V: 65535 / 512 = 128 - 1/512 = 127.998046875,
     // which truncates to 127 998 046 micro-volts.
-    Pmbus.linear16_micro_args.word = 65535;
-    Pmbus.linear16_micro_args.exponent = -9;
+    PmbusV.linear16_micro_args.word = 65535;
+    PmbusV.linear16_micro_args.exponent = -9;
     Pmbus.linear16_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(127998046, Pmbus.micro);
+    TEST_ASSERT_EQUAL_INT32(127998046, PmbusV.micro);
 }
 
 // Encode then decode returns the commanded voltage to within one mantissa step at the part's own
@@ -239,22 +239,22 @@ void test_ulinear16_round_trip(void)
     static const int32_t VALS[5] = {1000000, 1200000, 3300000, 5000000, 12000000};
     for (size_t i = 0; i < 5; i++)
     {
-        Pmbus.linear16_encode_args.micro = VALS[i];
-        Pmbus.linear16_encode_args.exponent = -9;
+        PmbusV.linear16_encode_args.micro = VALS[i];
+        PmbusV.linear16_encode_args.exponent = -9;
         Pmbus.linear16_encode(pmbus_work);
-        const uint16_t w = Pmbus.word;
-        Pmbus.linear16_micro_args.word = w;
-        Pmbus.linear16_micro_args.exponent = -9;
+        const uint16_t w = PmbusV.word;
+        PmbusV.linear16_micro_args.word = w;
+        PmbusV.linear16_micro_args.exponent = -9;
         Pmbus.linear16_micro(pmbus_work);
-        const int32_t back = Pmbus.micro;
+        const int32_t back = PmbusV.micro;
         const int32_t err = back > VALS[i] ? back - VALS[i] : VALS[i] - back;
         TEST_ASSERT_TRUE_MESSAGE(err <= 1953, "round trip lost more than one mantissa step");
     }
     // 1.0 V at 2^-9 is exactly mantissa 512
-    Pmbus.linear16_encode_args.micro = 1000000;
-    Pmbus.linear16_encode_args.exponent = -9;
+    PmbusV.linear16_encode_args.micro = 1000000;
+    PmbusV.linear16_encode_args.exponent = -9;
     Pmbus.linear16_encode(pmbus_work);
-    TEST_ASSERT_EQUAL_HEX16(512, Pmbus.word);
+    TEST_ASSERT_EQUAL_HEX16(512, PmbusV.word);
 }
 
 // Section 7.4.1: X = (1/m) * (Y * 10^-R - b), with m, Y and b two's complement integers and R the
@@ -266,50 +266,50 @@ void test_ulinear16_round_trip(void)
 //   Y=50, m=1, b=0, R=-1 -> 50 * 10^1         =  500  (a negative R scales up)
 void test_direct_format(void)
 {
-    Pmbus.direct_micro_args.word = 5;
-    Pmbus.direct_micro_args.m = 1;
-    Pmbus.direct_micro_args.b = 0;
-    Pmbus.direct_micro_args.r = 0;
+    PmbusV.direct_micro_args.word = 5;
+    PmbusV.direct_micro_args.m = 1;
+    PmbusV.direct_micro_args.b = 0;
+    PmbusV.direct_micro_args.r = 0;
     Pmbus.direct_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(5000000, Pmbus.micro);
-    Pmbus.direct_micro_args.word = 4;
-    Pmbus.direct_micro_args.m = 2;
-    Pmbus.direct_micro_args.b = 0;
-    Pmbus.direct_micro_args.r = 0;
+    TEST_ASSERT_EQUAL_INT32(5000000, PmbusV.micro);
+    PmbusV.direct_micro_args.word = 4;
+    PmbusV.direct_micro_args.m = 2;
+    PmbusV.direct_micro_args.b = 0;
+    PmbusV.direct_micro_args.r = 0;
     Pmbus.direct_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(2000000, Pmbus.micro);
-    Pmbus.direct_micro_args.word = 5;
-    Pmbus.direct_micro_args.m = 1;
-    Pmbus.direct_micro_args.b = 0;
-    Pmbus.direct_micro_args.r = 1;
+    TEST_ASSERT_EQUAL_INT32(2000000, PmbusV.micro);
+    PmbusV.direct_micro_args.word = 5;
+    PmbusV.direct_micro_args.m = 1;
+    PmbusV.direct_micro_args.b = 0;
+    PmbusV.direct_micro_args.r = 1;
     Pmbus.direct_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(500000, Pmbus.micro);
-    Pmbus.direct_micro_args.word = 5;
-    Pmbus.direct_micro_args.m = 1;
-    Pmbus.direct_micro_args.b = 1;
-    Pmbus.direct_micro_args.r = 0;
+    TEST_ASSERT_EQUAL_INT32(500000, PmbusV.micro);
+    PmbusV.direct_micro_args.word = 5;
+    PmbusV.direct_micro_args.m = 1;
+    PmbusV.direct_micro_args.b = 1;
+    PmbusV.direct_micro_args.r = 0;
     Pmbus.direct_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(4000000, Pmbus.micro);
-    Pmbus.direct_micro_args.word = 50;
-    Pmbus.direct_micro_args.m = 1;
-    Pmbus.direct_micro_args.b = 0;
-    Pmbus.direct_micro_args.r = -1;
+    TEST_ASSERT_EQUAL_INT32(4000000, PmbusV.micro);
+    PmbusV.direct_micro_args.word = 50;
+    PmbusV.direct_micro_args.m = 1;
+    PmbusV.direct_micro_args.b = 0;
+    PmbusV.direct_micro_args.r = -1;
     Pmbus.direct_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(500000000, Pmbus.micro);
+    TEST_ASSERT_EQUAL_INT32(500000000, PmbusV.micro);
     // Y is two's complement, so a word above 0x7FFF is a negative reading
-    Pmbus.direct_micro_args.word = 0xFFFB;
-    Pmbus.direct_micro_args.m = 1;
-    Pmbus.direct_micro_args.b = 0;
-    Pmbus.direct_micro_args.r = 0;
+    PmbusV.direct_micro_args.word = 0xFFFB;
+    PmbusV.direct_micro_args.m = 1;
+    PmbusV.direct_micro_args.b = 0;
+    PmbusV.direct_micro_args.r = 0;
     Pmbus.direct_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(-5000000, Pmbus.micro);
+    TEST_ASSERT_EQUAL_INT32(-5000000, PmbusV.micro);
     // a zero slope has no inverse
-    Pmbus.direct_micro_args.word = 5;
-    Pmbus.direct_micro_args.m = 0;
-    Pmbus.direct_micro_args.b = 0;
-    Pmbus.direct_micro_args.r = 0;
+    PmbusV.direct_micro_args.word = 5;
+    PmbusV.direct_micro_args.m = 0;
+    PmbusV.direct_micro_args.b = 0;
+    PmbusV.direct_micro_args.r = 0;
     Pmbus.direct_micro(pmbus_work);
-    TEST_ASSERT_EQUAL_INT32(PROTOCORE_PMBUS_INVALID, Pmbus.micro);
+    TEST_ASSERT_EQUAL_INT32(PROTOCORE_PMBUS_INVALID, PmbusV.micro);
 }
 
 // Table 15: STATUS_BYTE bit 7 BUSY, 6 OFF, 5 VOUT_OV_FAULT, 4 IOUT_OC_FAULT, 3 VIN_UV_FAULT,

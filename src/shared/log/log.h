@@ -62,7 +62,6 @@ typedef struct
     const struct protocore_fval *v;     ///< the values that fill it
     size_t nv;                          ///< how many
 } LogFrameArgs;
-
 /**
  * @brief The frame logger.
  *
@@ -83,13 +82,31 @@ typedef struct
 {
     LogFrameArgs frame;
     protocore_log_sink_fn sink;
+} LogVars;
 
+/** @brief The operands and the outcome. */
+extern LogVars LogV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const emit)(uint8_t *restrict work);
     void (*const set_sink)(uint8_t *restrict work);
 } LogNs;
 
-/** @brief The one symbol this module exports. */
-extern LogNs Log;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in LogV or a region of the borrow at a fixed offset.
+void protocore_log_emit(uint8_t *restrict work);
+void protocore_log_set_sink(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Log.emit(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const LogNs Log __attribute__((unused)) = {
+    .emit = protocore_log_emit,
+    .set_sink = protocore_log_set_sink,
+};
 
 /**
  * @brief The PROTOCORE_LOG_BORROW bytes this module's state lives in.

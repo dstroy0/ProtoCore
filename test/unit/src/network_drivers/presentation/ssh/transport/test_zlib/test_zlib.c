@@ -32,14 +32,14 @@ static SshInflate s_inf;
 static size_t compress_one(const uint8_t *src, size_t len, uint8_t *dst, size_t cap)
 {
     size_t out = 0;
-    Zlib.packet_args.z = &s_def;
-    Zlib.packet_args.src = src;
-    Zlib.packet_args.src_len = len;
-    Zlib.packet_args.dst = dst;
-    Zlib.packet_args.dst_cap = cap;
-    Zlib.packet_args.out_len = &out;
+    ZlibV.packet_args.z = &s_def;
+    ZlibV.packet_args.src = src;
+    ZlibV.packet_args.src_len = len;
+    ZlibV.packet_args.dst = dst;
+    ZlibV.packet_args.dst_cap = cap;
+    ZlibV.packet_args.out_len = &out;
     Zlib.packet(zlib_work);
-    TEST_ASSERT_EQUAL_INT(0, Zlib.n);
+    TEST_ASSERT_EQUAL_INT(0, ZlibV.n);
     return out;
 }
 
@@ -47,31 +47,31 @@ static size_t compress_one(const uint8_t *src, size_t len, uint8_t *dst, size_t 
 static size_t expand_one(const uint8_t *src, size_t len, uint8_t *dst, size_t cap)
 {
     size_t out = 0;
-    Inflate.packet_args.z = &s_inf;
-    Inflate.packet_args.src = src;
-    Inflate.packet_args.src_len = len;
-    Inflate.packet_args.dst = dst;
-    Inflate.packet_args.dst_cap = cap;
-    Inflate.packet_args.out_len = &out;
+    InflateV.packet_args.z = &s_inf;
+    InflateV.packet_args.src = src;
+    InflateV.packet_args.src_len = len;
+    InflateV.packet_args.dst = dst;
+    InflateV.packet_args.dst_cap = cap;
+    InflateV.packet_args.out_len = &out;
     Inflate.packet(inflate_work);
-    TEST_ASSERT_EQUAL_INT(0, Inflate.n);
+    TEST_ASSERT_EQUAL_INT(0, InflateV.n);
     return out;
 }
 
 void setUp(void)
 {
 
-    Zlib.init_args.z = &s_def;
-    Zlib.init_args.win = s_work;
-    Zlib.init_args.head = s_head;
-    Zlib.init_args.prev = s_prev;
-    Zlib.init_args.ll_code = s_ll_code;
-    Zlib.init_args.ll_len = s_ll_len;
-    Zlib.init_args.d_code = s_d_code;
-    Zlib.init_args.d_len = s_d_len;
+    ZlibV.init_args.z = &s_def;
+    ZlibV.init_args.win = s_work;
+    ZlibV.init_args.head = s_head;
+    ZlibV.init_args.prev = s_prev;
+    ZlibV.init_args.ll_code = s_ll_code;
+    ZlibV.init_args.ll_len = s_ll_len;
+    ZlibV.init_args.d_code = s_d_code;
+    ZlibV.init_args.d_len = s_d_len;
     Zlib.init(zlib_work);
-    Inflate.init_args.z = &s_inf;
-    Inflate.init_args.window = s_window;
+    InflateV.init_args.z = &s_inf;
+    InflateV.init_args.window = s_window;
     Inflate.init(inflate_work);
 }
 void tearDown(void)
@@ -167,14 +167,14 @@ static void test_undersized_destination_is_refused(void)
     const uint8_t msg[] = "something that will not fit in four bytes";
     uint8_t comp[4];
     size_t out = 0;
-    Zlib.packet_args.z = &s_def;
-    Zlib.packet_args.src = msg;
-    Zlib.packet_args.src_len = sizeof(msg) - 1;
-    Zlib.packet_args.dst = comp;
-    Zlib.packet_args.dst_cap = sizeof(comp);
-    Zlib.packet_args.out_len = &out;
+    ZlibV.packet_args.z = &s_def;
+    ZlibV.packet_args.src = msg;
+    ZlibV.packet_args.src_len = sizeof(msg) - 1;
+    ZlibV.packet_args.dst = comp;
+    ZlibV.packet_args.dst_cap = sizeof(comp);
+    ZlibV.packet_args.out_len = &out;
     Zlib.packet(zlib_work);
-    TEST_ASSERT_NOT_EQUAL(0, Zlib.n);
+    TEST_ASSERT_NOT_EQUAL(0, ZlibV.n);
 }
 
 int main(void)

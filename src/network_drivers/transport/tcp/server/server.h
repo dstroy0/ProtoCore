@@ -34,7 +34,7 @@
 
 #include "../evt.h" // TcpEvt: the event an enqueue posts. The listener rows themselves are common.h's.
 #include "config/platform/platform.h" // the target's queues and TCP, under our names
-#include "shared/ip/ip.h" // protocore_ip: the peer address an allowlist matches
+#include "shared/ip/ip.h"             // protocore_ip: the peer address an allowlist matches
 
 #include "protocore_config.h"
 
@@ -57,7 +57,6 @@ typedef struct
     proto_bool tls;  ///< connections accepted here begin a handshake
     uint8_t dscp;    ///< the code point a port marks with
 } TcpBindArgs;
-
 /** @brief The accept-time gates: what a throttle or an allowlist judges. Nothing a bind reads. */
 typedef struct
 {
@@ -66,7 +65,6 @@ typedef struct
     uint8_t prefix_len;       ///< its CIDR prefix length (RFC 4632)
     const char *cidr;         ///< the same rule as text
 } TcpGateArgs;
-
 /** @brief Event routing: whose queue an event goes to, and what it names. */
 typedef struct
 {
@@ -74,7 +72,6 @@ typedef struct
     const TcpEvt *evt; ///< the event an enqueue posts
     uint8_t conn_slot; ///< the slot that event names
 } TcpQueueArgs;
-
 /**
  * @brief The accepting side of TCP: bound ports, their worker queues, and the accept-time gates.
  *
@@ -117,16 +114,26 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t idx; ///< the listener row every call names
-
+    uint8_t idx;      ///< the listener row every call names
     TcpBindArgs bind; ///< what a passive OPEN binds (RFC 9293 sec 3.9.1.1)
     TcpGateArgs gate; ///< what an accept-time gate judges
     TcpQueueArgs q;   ///< where an event goes
-
     proto_bool ok;
     int32_t i32;
     protocore_platform_queue queue;
+#if PROTOCORE_WORKER_COUNT > 1
+    // One worker owns every slot at N=1, so there are no per-worker queues to name.
+#else
+    // Above one worker an event routes to its slot owner's queue, so a listener row has none.
+#endif
+} TcpListenerVars;
 
+/** @brief The operands and the outcome. */
+extern TcpListenerVars TcpListenerV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const stop)(uint8_t *restrict work);
     void (*const stop_all)(uint8_t *restrict work);
     void (*const stop_dynamic)(uint8_t *restrict work);
@@ -134,14 +141,9 @@ typedef struct
     void (*const add_dynamic)(uint8_t *restrict work);
     void (*const enqueue)(uint8_t *restrict work);
     void (*const set_dscp)(uint8_t *restrict work);
-#if PROTOCORE_WORKER_COUNT > 1
-    // One worker owns every slot at N=1, so there are no per-worker queues to name.
     void (*const worker_queues_init)(uint8_t *restrict work);
     void (*const worker_queue)(uint8_t *restrict work);
-#else
-    // Above one worker an event routes to its slot owner's queue, so a listener row has none.
     void (*const listener_queue)(uint8_t *restrict work);
-#endif
     void (*const accept_allowed)(uint8_t *restrict work);
     void (*const accept_throttle_reset)(uint8_t *restrict work);
     void (*const accept_allowed_ip)(uint8_t *restrict work);
@@ -152,8 +154,51 @@ typedef struct
     void (*const ip_allowlist_reset)(uint8_t *restrict work);
 } TcpListenerNs;
 
-/** @brief The one symbol this module exports. */
-extern TcpListenerNs TcpListener;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TcpListenerV or a region of the borrow at a fixed offset.
+void protocore_server_stop(uint8_t *restrict work);
+void protocore_server_stop_all(uint8_t *restrict work);
+void protocore_server_stop_dynamic(uint8_t *restrict work);
+void protocore_server_add(uint8_t *restrict work);
+void protocore_server_add_dynamic(uint8_t *restrict work);
+void protocore_server_enqueue(uint8_t *restrict work);
+void protocore_server_set_dscp(uint8_t *restrict work);
+void protocore_server_worker_queues_init(uint8_t *restrict work);
+void protocore_server_worker_queue(uint8_t *restrict work);
+void protocore_server_listener_queue(uint8_t *restrict work);
+void protocore_server_accept_allowed(uint8_t *restrict work);
+void protocore_server_accept_throttle_reset(uint8_t *restrict work);
+void protocore_server_accept_allowed_ip(uint8_t *restrict work);
+void protocore_server_per_ip_throttle_reset(uint8_t *restrict work);
+void protocore_server_ip_allow_add(uint8_t *restrict work);
+void protocore_server_ip_allow_add_cidr(uint8_t *restrict work);
+void protocore_server_ip_allowed(uint8_t *restrict work);
+void protocore_server_ip_allowlist_reset(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `TcpListener.stop(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TcpListenerNs TcpListener __attribute__((unused)) = {
+    .stop = protocore_server_stop,
+    .stop_all = protocore_server_stop_all,
+    .stop_dynamic = protocore_server_stop_dynamic,
+    .add = protocore_server_add,
+    .add_dynamic = protocore_server_add_dynamic,
+    .enqueue = protocore_server_enqueue,
+    .set_dscp = protocore_server_set_dscp,
+    .worker_queues_init = protocore_server_worker_queues_init,
+    .worker_queue = protocore_server_worker_queue,
+    .listener_queue = protocore_server_listener_queue,
+    .accept_allowed = protocore_server_accept_allowed,
+    .accept_throttle_reset = protocore_server_accept_throttle_reset,
+    .accept_allowed_ip = protocore_server_accept_allowed_ip,
+    .per_ip_throttle_reset = protocore_server_per_ip_throttle_reset,
+    .ip_allow_add = protocore_server_ip_allow_add,
+    .ip_allow_add_cidr = protocore_server_ip_allow_add_cidr,
+    .ip_allowed = protocore_server_ip_allowed,
+    .ip_allowlist_reset = protocore_server_ip_allowlist_reset,
+};
 
 /**
  * @brief The PROTOCORE_TCP_LISTENER_BORROW bytes this module's state lives in.

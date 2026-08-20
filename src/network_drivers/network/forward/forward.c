@@ -103,27 +103,27 @@ static uint32_t fwd_now(void)
 // Whether layer 1 holds interface @p id.
 static proto_bool fwd_iface_present(uint8_t id)
 {
-    Physical.iface.id = id;
+    PhysicalV.iface.id = id;
     Physical.iface_present(protocore_physical_span());
-    return Physical.ok;
+    return PhysicalV.ok;
 }
 
 // The interface id held in layer 1 registry row @p i, or PROTOCORE_IF_NONE.
 static int16_t fwd_iface_at(uint8_t i)
 {
-    Physical.iface.i = i;
+    PhysicalV.iface.i = i;
     Physical.iface_at(protocore_physical_span());
-    return Physical.i16;
+    return PhysicalV.i16;
 }
 
 // Hand the held frame to layer 1 for interface @p id.
 static proto_bool fwd_iface_send(uint8_t *restrict work, uint8_t id)
 {
-    Physical.iface.id = id;
-    Physical.iface.data = Forward.frame.data;
-    Physical.iface.len = Forward.frame.len;
+    PhysicalV.iface.id = id;
+    PhysicalV.iface.data = ForwardV.frame.data;
+    PhysicalV.iface.len = ForwardV.frame.len;
     Physical.iface_send(protocore_physical_span());
-    return Physical.ok;
+    return PhysicalV.ok;
 }
 
 // What the controls on forwarding say about one (src, dst) pair. RFC 1812 sec 5.3.11.
@@ -138,7 +138,7 @@ typedef enum PROTO_ENUM_PACKED
 // ALLOW governs and its index lands in @p allow_idx; otherwise nothing matched.
 static resolve_result fwd_resolve(uint8_t *restrict work, uint8_t dst, int *allow_idx)
 {
-    const uint8_t src = Forward.src_if;
+    const uint8_t src = ForwardV.src_if;
     int allow = -1;
     proto_bool deny = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_RULES; i++)
@@ -237,7 +237,7 @@ static proto_bool fwd_acl_permits(uint8_t *restrict work)
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ACL; i++)
     {
         const acl_entry *a = &FORWARD_CTX(work)->acl[i];
-        if (a->used && acl_match(a, Forward.src_if, Forward.frame.data, Forward.frame.len))
+        if (a->used && acl_match(a, ForwardV.src_if, ForwardV.frame.data, ForwardV.frame.len))
         {
             return a->action == PROTOCORE_FWD_ALLOW;
         }
@@ -292,7 +292,7 @@ uint8_t *protocore_forward_span(void)
     return s_own.span;
 }
 
-static void forward_reset(uint8_t *restrict work)
+void protocore_forward_reset(uint8_t *restrict work)
 {
     // The interfaces are layer 1's; emptying this plane leaves them registered.
     mem.set(FORWARD_CTX(work)->rules, 0, sizeof(FORWARD_CTX(work)->rules));
@@ -306,15 +306,15 @@ static void forward_reset(uint8_t *restrict work)
     mem.set(&FORWARD_CTX(work)->stats, 0, sizeof(FORWARD_CTX(work)->stats));
 }
 
-static void forward_acl_set_default(uint8_t *restrict work)
+void protocore_forward_acl_set_default(uint8_t *restrict work)
 {
-    FORWARD_CTX(work)->acl_default = Forward.acl.fallback;
+    FORWARD_CTX(work)->acl_default = ForwardV.acl.fallback;
 }
 
-static void forward_acl_add(uint8_t *restrict work)
+void protocore_forward_acl_add(uint8_t *restrict work)
 {
-    Forward.ok = PROTO_FALSE;
-    if (!pat_args_valid(&Forward.match))
+    ForwardV.ok = PROTO_FALSE;
+    if (!pat_args_valid(&ForwardV.match))
     {
         return;
     }
@@ -325,22 +325,22 @@ static void forward_acl_add(uint8_t *restrict work)
         {
             continue;
         }
-        pat_store(a->pattern, a->mask, Forward.match.pattern, Forward.match.mask, Forward.match.patlen);
-        a->offset = Forward.match.offset;
-        a->src = Forward.src_if;
-        a->patlen = Forward.match.patlen;
-        a->action = Forward.acl.action;
+        pat_store(a->pattern, a->mask, ForwardV.match.pattern, ForwardV.match.mask, ForwardV.match.patlen);
+        a->offset = ForwardV.match.offset;
+        a->src = ForwardV.src_if;
+        a->patlen = ForwardV.match.patlen;
+        a->action = ForwardV.acl.action;
         a->used = PROTO_TRUE;
-        Forward.ok = PROTO_TRUE;
+        ForwardV.ok = PROTO_TRUE;
         return;
     }
     // table full
 }
 
-static void forward_route_add(uint8_t *restrict work)
+void protocore_forward_route_add(uint8_t *restrict work)
 {
-    Forward.ok = PROTO_FALSE;
-    if (!pat_args_valid(&Forward.match))
+    ForwardV.ok = PROTO_FALSE;
+    if (!pat_args_valid(&ForwardV.match))
     {
         return;
     }
@@ -351,24 +351,24 @@ static void forward_route_add(uint8_t *restrict work)
         {
             continue;
         }
-        pat_store(rt->pattern, rt->mask, Forward.match.pattern, Forward.match.mask, Forward.match.patlen);
+        pat_store(rt->pattern, rt->mask, ForwardV.match.pattern, ForwardV.match.mask, ForwardV.match.patlen);
         rt->window_start = 0;
-        rt->offset = Forward.match.offset;
-        rt->rate_cap = Forward.route.rate_cap_per_sec;
+        rt->offset = ForwardV.match.offset;
+        rt->rate_cap = ForwardV.route.rate_cap_per_sec;
         rt->count = 0;
-        rt->src = Forward.src_if;
-        rt->patlen = Forward.match.patlen;
-        rt->egress = Forward.route.egress_if;
+        rt->src = ForwardV.src_if;
+        rt->patlen = ForwardV.match.patlen;
+        rt->egress = ForwardV.route.egress_if;
         rt->used = PROTO_TRUE;
-        Forward.ok = PROTO_TRUE;
+        ForwardV.ok = PROTO_TRUE;
         return;
     }
     // table full
 }
 
-static void forward_add_rule(uint8_t *restrict work)
+void protocore_forward_add_rule(uint8_t *restrict work)
 {
-    Forward.ok = PROTO_FALSE;
+    ForwardV.ok = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_RULES; i++)
     {
         rule *r = &FORWARD_CTX(work)->rules[i];
@@ -377,13 +377,13 @@ static void forward_add_rule(uint8_t *restrict work)
             continue;
         }
         r->window_start = 0;
-        r->rate_cap = Forward.rule.rate_cap_per_sec;
+        r->rate_cap = ForwardV.rule.rate_cap_per_sec;
         r->count = 0;
-        r->src = Forward.src_if;
-        r->dst = Forward.rule.dst_if;
-        r->action = Forward.rule.action;
+        r->src = ForwardV.src_if;
+        r->dst = ForwardV.rule.dst_if;
+        r->action = ForwardV.rule.action;
         r->used = PROTO_TRUE;
-        Forward.ok = PROTO_TRUE;
+        ForwardV.ok = PROTO_TRUE;
         return;
     }
     // table full
@@ -397,16 +397,16 @@ static proto_bool fwd_policy_route(uint8_t *restrict work)
     for (uint8_t i = 0; i < PROTOCORE_FWD_MAX_ROUTES; i++)
     {
         route *rt = &FORWARD_CTX(work)->routes[i];
-        if (!rt->used || (rt->src != PROTOCORE_FWD_IF_ANY && rt->src != Forward.src_if))
+        if (!rt->used || (rt->src != PROTOCORE_FWD_IF_ANY && rt->src != ForwardV.src_if))
         {
             continue;
         }
-        if (!pat_match(rt->offset, rt->pattern, rt->mask, rt->patlen, Forward.frame.data, Forward.frame.len))
+        if (!pat_match(rt->offset, rt->pattern, rt->mask, rt->patlen, ForwardV.frame.data, ForwardV.frame.len))
         {
             continue;
         }
         FORWARD_CTX(work)->stats.policy_routed++;
-        if (rt->egress == Forward.src_if) // a frame never leaves on the interface it arrived on
+        if (rt->egress == ForwardV.src_if) // a frame never leaves on the interface it arrived on
         {
             return PROTO_TRUE;
         }
@@ -423,7 +423,7 @@ static proto_bool fwd_policy_route(uint8_t *restrict work)
         if (fwd_iface_send(work, rt->egress))
         {
             FORWARD_CTX(work)->stats.forwarded++;
-            Forward.n = 1;
+            ForwardV.n = 1;
             return PROTO_TRUE;
         }
         FORWARD_CTX(work)->stats.send_fail++;
@@ -432,9 +432,9 @@ static proto_bool fwd_policy_route(uint8_t *restrict work)
     return PROTO_FALSE;
 }
 
-static void forward_ingress(uint8_t *restrict work)
+void protocore_forward_ingress(uint8_t *restrict work)
 {
-    Forward.n = 0;
+    ForwardV.n = 0;
     FORWARD_CTX(work)->stats.frames_in++;
     if (!fwd_acl_permits(work)) // the access list runs before any control on forwarding
     {
@@ -444,7 +444,7 @@ static void forward_ingress(uint8_t *restrict work)
 #if PROTOCORE_FWD_INSPECT
     // The inspection hook reads the frame between the access list and the route lookup.
     if (FORWARD_CTX(work)->inspector &&
-        FORWARD_CTX(work)->inspector(Forward.src_if, Forward.frame.data, Forward.frame.len,
+        FORWARD_CTX(work)->inspector(ForwardV.src_if, ForwardV.frame.data, ForwardV.frame.len,
                                      FORWARD_CTX(work)->inspect_ctx) == PROTOCORE_FWD_INSPECT_DROP)
     {
         FORWARD_CTX(work)->stats.inspect_dropped++;
@@ -461,7 +461,7 @@ static void forward_ingress(uint8_t *restrict work)
     for (uint8_t i = 0; i < PROTOCORE_PHY_MAX_IFACES; i++)
     {
         int16_t dst = fwd_iface_at(i);
-        if (dst == PROTOCORE_IF_NONE || (uint8_t)dst == Forward.src_if) // never back out the source
+        if (dst == PROTOCORE_IF_NONE || (uint8_t)dst == ForwardV.src_if) // never back out the source
         {
             continue;
         }
@@ -491,33 +491,25 @@ static void forward_ingress(uint8_t *restrict work)
             FORWARD_CTX(work)->stats.send_fail++;
         }
     }
-    Forward.n = n;
+    ForwardV.n = n;
 }
 
-static void forward_get_stats(uint8_t *restrict work)
+void protocore_forward_get_stats(uint8_t *restrict work)
 {
-    Forward.stats = FORWARD_CTX(work)->stats;
+    ForwardV.stats = FORWARD_CTX(work)->stats;
 }
 
 #if PROTOCORE_FWD_INSPECT
-static void forward_set_inspector(uint8_t *restrict work)
+void protocore_forward_set_inspector(uint8_t *restrict work)
 {
-    FORWARD_CTX(work)->inspector = Forward.inspect.fn;
-    FORWARD_CTX(work)->inspect_ctx = Forward.inspect.ctx;
+    FORWARD_CTX(work)->inspector = ForwardV.inspect.fn;
+    FORWARD_CTX(work)->inspect_ctx = ForwardV.inspect.ctx;
 }
 #endif
 
 // Designated, so a member's position in the struct does not decide what it binds to - the table is
 // split by a feature flag, where a positional list shifts every member below the arm at once.
-ForwardNs Forward = {.reset = forward_reset,
-                     .add_rule = forward_add_rule,
-                     .acl_set_default = forward_acl_set_default,
-                     .acl_add = forward_acl_add,
-                     .route_add = forward_route_add,
-#if PROTOCORE_FWD_INSPECT
-                     .set_inspector = forward_set_inspector,
-#endif
-                     .ingress = forward_ingress,
-                     .get_stats = forward_get_stats};
+/** @brief The operands and the outcome. */
+ForwardVars ForwardV;
 
 #endif // PROTOCORE_ENABLE_FORWARD

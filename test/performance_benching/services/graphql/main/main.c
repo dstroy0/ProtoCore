@@ -69,19 +69,19 @@ static bool gql_resolver(const char *path, const struct protocore_gql_args *args
     }
     if (!strcmp(path, "sensor.value"))
     {
-        GraphQL.argument.values = args;
-        GraphQL.argument.name = "id";
+        GraphQLV.argument.values = args;
+        GraphQLV.argument.name = "id";
         GraphQL.arg_int(protocore_graphql_span());
         out->type = PROTOCORE_GQL_INT;
-        out->i = GraphQL.ok ? GraphQL.i64 * 10 : -1;
+        out->i = GraphQLV.ok ? GraphQLV.i64 * 10 : -1;
         return true;
     }
     if (!strcmp(path, "greet"))
     {
-        GraphQL.argument.values = args;
-        GraphQL.argument.name = "name";
+        GraphQLV.argument.values = args;
+        GraphQLV.argument.name = "name";
         GraphQL.arg_str(protocore_graphql_span());
-        const char *who = GraphQL.ok ? GraphQL.text : "?";
+        const char *who = GraphQLV.ok ? GraphQLV.text : "?";
         static char b[64];
         snprintf(b, sizeof(b), "hi %s", who);
         out->type = PROTOCORE_GQL_STR;
@@ -94,13 +94,13 @@ static bool gql_resolver(const char *path, const struct protocore_gql_args *args
 /** @brief Execute @p doc through gql_resolver into @p out; the outcome code. */
 static protocore_gql_result gql_execute(const char *doc, size_t len, char *out, size_t cap)
 {
-    GraphQL.request.document = doc;
-    GraphQL.request.len = len;
-    GraphQL.request.resolver = gql_resolver;
-    GraphQL.response.out = out;
-    GraphQL.response.cap = cap;
+    GraphQLV.request.document = doc;
+    GraphQLV.request.len = len;
+    GraphQLV.request.resolver = gql_resolver;
+    GraphQLV.response.out = out;
+    GraphQLV.response.cap = cap;
     GraphQL.execute(protocore_graphql_span());
-    return GraphQL.result;
+    return GraphQLV.result;
 }
 
 void dbench_run(void)

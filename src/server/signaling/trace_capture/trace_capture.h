@@ -55,10 +55,8 @@ typedef struct
     uint32_t trace_id;           ///< monotonic capture sequence (wraps), one per completed window
     uint32_t assembly_cycles;    ///< protocore_cycles() delta from trigger() to this callback
 } protocore_tc_window;
-
 /** @brief Sink for one completed window. Called inline from protocore_tc_feed() / protocore_tc_trigger(). */
 typedef void (*protocore_tc_sink_fn)(const protocore_tc_window *win, void *ctx);
-
 /** @brief Capture configuration passed to protocore_tc_begin(). */
 typedef struct
 {
@@ -67,7 +65,6 @@ typedef struct
     protocore_tc_sink_fn sink;    ///< completed-window callback (required)
     void *ctx;                    ///< opaque, forwarded to @ref sink
 } protocore_tc_config;
-
 /** @brief Rolling telemetry: never inferred from state, always the ground truth counters. */
 typedef struct
 {
@@ -75,7 +72,6 @@ typedef struct
     uint32_t triggers_dropped;  ///< trigger() calls rejected because a window was already filling
     uint32_t samples_dropped;   ///< feed() samples rejected because the window buffer was full
 } protocore_tc_stats;
-
 /** @brief The samples one feed carries, and where a stats read lands. */
 typedef struct
 {
@@ -83,7 +79,6 @@ typedef struct
     uint16_t n;                ///< how many
     protocore_tc_stats *stats; ///< where a stats read copies the tallies
 } TcFeedArgs;
-
 /**
  * @brief The pre/post-trigger sample capture.
  *
@@ -108,10 +103,16 @@ typedef struct
 {
     const protocore_tc_config *cfg;
     TcFeedArgs feed;
-
     proto_bool ok;
     uint16_t accepted;
+} TraceCaptureVars;
 
+/** @brief The operands and the outcome. */
+extern TraceCaptureVars TraceCaptureV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const feed_in)(uint8_t *restrict work);
     void (*const trigger)(uint8_t *restrict work);
@@ -120,8 +121,27 @@ typedef struct
     void (*const end)(uint8_t *restrict work);
 } TraceCaptureNs;
 
-/** @brief The one symbol this module exports. */
-extern TraceCaptureNs TraceCapture;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TraceCaptureV or a region of the borrow at a fixed offset.
+void protocore_trace_capture_begin(uint8_t *restrict work);
+void protocore_trace_capture_feed_in(uint8_t *restrict work);
+void protocore_trace_capture_trigger(uint8_t *restrict work);
+void protocore_trace_capture_get_stats(uint8_t *restrict work);
+void protocore_trace_capture_capturing(uint8_t *restrict work);
+void protocore_trace_capture_end(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `TraceCapture.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TraceCaptureNs TraceCapture __attribute__((unused)) = {
+    .begin = protocore_trace_capture_begin,
+    .feed_in = protocore_trace_capture_feed_in,
+    .trigger = protocore_trace_capture_trigger,
+    .get_stats = protocore_trace_capture_get_stats,
+    .capturing = protocore_trace_capture_capturing,
+    .end = protocore_trace_capture_end,
+};
 
 /**
  * @brief The PROTOCORE_TRACE_CAPTURE_BORROW bytes this module's state lives in.

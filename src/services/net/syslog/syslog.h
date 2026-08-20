@@ -81,7 +81,6 @@ typedef struct
     const char *addr; ///< the collector's address as text, v4 or v6, parsed once by an init
     uint16_t port;    ///< its UDP port; 514 is the well-known one
 } SyslogCollectorArgs;
-
 /** @brief RFC 5424 sec 6.2: the HEADER fields a line carries, less the per-record Severity. */
 typedef struct
 {
@@ -89,21 +88,18 @@ typedef struct
     const char *app_name;    ///< APP-NAME (sec 6.2.5); NULL or "" emits the NILVALUE "-"
     SyslogFacility facility; ///< the Facility half of PRIVAL (sec 6.2.1)
 } SyslogHeaderArgs;
-
 /** @brief One record: the Severity half of PRIVAL (RFC 5424 sec 6.2.1) and its MSG (sec 6.4). */
 typedef struct
 {
     SyslogSeverity severity; ///< the Severity half of PRIVAL
     const char *msg;         ///< MSG-ANY, free-form octets; NULL emits an empty MSG
 } SyslogRecordArgs;
-
 /** @brief Where a formatted SYSLOG-MSG lands. */
 typedef struct
 {
     char *out;  ///< the buffer a format writes the line into
     size_t cap; ///< how much room it has, the NUL included
 } SyslogLineArgs;
-
 /**
  * @brief The syslog originator.
  *
@@ -129,17 +125,36 @@ typedef struct
     SyslogHeaderArgs header;       ///< what every line's HEADER says
     SyslogRecordArgs record;       ///< what one record says
     SyslogLineArgs line;           ///< where the formatted line lands
-
     proto_bool ok;
     size_t n;
+} SyslogVars;
 
+/** @brief The operands and the outcome. */
+extern SyslogVars SyslogV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const format)(uint8_t *restrict work);
     void (*const log)(uint8_t *restrict work);
 } SyslogNs;
 
-/** @brief The one symbol this module exports. */
-extern SyslogNs Syslog;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SyslogV or a region of the borrow at a fixed offset.
+void protocore_syslog_init(uint8_t *restrict work);
+void protocore_syslog_format(uint8_t *restrict work);
+void protocore_syslog_log(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Syslog.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SyslogNs Syslog __attribute__((unused)) = {
+    .init = protocore_syslog_init,
+    .format = protocore_syslog_format,
+    .log = protocore_syslog_log,
+};
 
 /**
  * @brief The PROTOCORE_SYSLOG_BORROW bytes this module's state lives in.

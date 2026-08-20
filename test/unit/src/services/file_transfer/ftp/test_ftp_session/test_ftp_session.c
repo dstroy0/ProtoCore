@@ -41,7 +41,7 @@ void setUp(void)
     }
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        TcpClient.cid = i;
+        TcpClientV.cid = i;
         TcpClient.close(protocore_tcp_client_span());
     }
     uint8_t *work = protocore_ftp_session_span();
@@ -97,13 +97,13 @@ static protocore_ftp_state step(void)
     g_target.port = 21;
     g_target.user = "anonymous";
     g_target.pass = "guest@";
-    FtpSession.store_args.target = &g_target;
-    FtpSession.store_args.remote_path = "/upload/O1234.nc";
-    FtpSession.store_args.total = sizeof(g_payload);
-    FtpSession.store_args.src = src_bytes;
-    FtpSession.store_args.ctx = NULL;
+    FtpSessionV.store_args.target = &g_target;
+    FtpSessionV.store_args.remote_path = "/upload/O1234.nc";
+    FtpSessionV.store_args.total = sizeof(g_payload);
+    FtpSessionV.store_args.src = src_bytes;
+    FtpSessionV.store_args.ctx = NULL;
     FtpSession.store(protocore_ftp_session_span());
-    return FtpSession.value;
+    return FtpSessionV.value;
 }
 
 // The octets the session put on the wire, NUL terminated for a substring search.
@@ -142,24 +142,24 @@ void test_an_incomplete_request_opens_nothing(void)
 {
     uint8_t *work = protocore_ftp_session_span();
 
-    FtpSession.store_args.target = NULL;
-    FtpSession.store_args.remote_path = "/x";
-    FtpSession.store_args.total = 4;
-    FtpSession.store_args.src = src_bytes;
+    FtpSessionV.store_args.target = NULL;
+    FtpSessionV.store_args.remote_path = "/x";
+    FtpSessionV.store_args.total = 4;
+    FtpSessionV.store_args.src = src_bytes;
     FtpSession.store(work);
-    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_FTP_FAILED, (int)FtpSession.value);
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_FTP_FAILED, (int)FtpSessionV.value);
 
     g_target.host = "10.0.0.9";
     g_target.port = 21;
-    FtpSession.store_args.target = &g_target;
-    FtpSession.store_args.remote_path = "";
+    FtpSessionV.store_args.target = &g_target;
+    FtpSessionV.store_args.remote_path = "";
     FtpSession.store(work);
-    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_FTP_FAILED, (int)FtpSession.value);
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_FTP_FAILED, (int)FtpSessionV.value);
 
-    FtpSession.store_args.remote_path = "/x";
-    FtpSession.store_args.src = NULL;
+    FtpSessionV.store_args.remote_path = "/x";
+    FtpSessionV.store_args.src = NULL;
     FtpSession.store(work);
-    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_FTP_FAILED, (int)FtpSession.value);
+    TEST_ASSERT_EQUAL_INT((int)PROTOCORE_FTP_FAILED, (int)FtpSessionV.value);
 
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 }

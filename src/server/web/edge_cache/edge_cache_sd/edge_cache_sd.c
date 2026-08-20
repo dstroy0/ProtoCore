@@ -82,19 +82,19 @@ static proto_bool get_str(const uint8_t *buf, size_t len, size_t *pos, char *out
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void edge_cache_sd_deserialize(uint8_t *restrict work);
-static void edge_cache_sd_serialize(uint8_t *restrict work);
+void protocore_edge_cache_sd_deserialize(uint8_t *restrict work);
+void protocore_edge_cache_sd_serialize(uint8_t *restrict work);
 
-static void edge_cache_sd_serialize(uint8_t *restrict work)
+void protocore_edge_cache_sd_serialize(uint8_t *restrict work)
 {
     (void)work;
-    const EdgeEntry *e = EdgeCacheSd.serialize_args.e;
-    uint8_t *out = EdgeCacheSd.serialize_args.out;
-    size_t cap = EdgeCacheSd.serialize_args.cap;
+    const EdgeEntry *e = EdgeCacheSdV.serialize_args.e;
+    uint8_t *out = EdgeCacheSdV.serialize_args.out;
+    size_t cap = EdgeCacheSdV.serialize_args.cap;
 
     if (!e || !out || cap < 3)
     {
-        EdgeCacheSd.n = 0;
+        EdgeCacheSdV.n = 0;
         return;
     }
     size_t pos = 0;
@@ -106,32 +106,32 @@ static void edge_cache_sd_serialize(uint8_t *restrict work)
         !put_str(out, cap, &pos, e->content_encoding) || !put_str(out, cap, &pos, e->vary_names) ||
         !put_str(out, cap, &pos, e->vary_vals))
     {
-        EdgeCacheSd.n = 0;
+        EdgeCacheSdV.n = 0;
         return;
     }
     if (pos + 2 + e->body_len > cap)
     {
-        EdgeCacheSd.n = 0;
+        EdgeCacheSdV.n = 0;
         return;
     }
     put_u16(out + pos, e->body_len);
     pos += 2;
     mem.cpy(out + pos, e->body, e->body_len);
     pos += e->body_len;
-    EdgeCacheSd.n = pos;
+    EdgeCacheSdV.n = pos;
 }
 
-static void edge_cache_sd_deserialize(uint8_t *restrict work)
+void protocore_edge_cache_sd_deserialize(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *entry_buf = EdgeCacheSd.deserialize_args.entry_buf;
-    const uint8_t *buf = EdgeCacheSd.deserialize_args.buf;
-    size_t len = EdgeCacheSd.deserialize_args.len;
-    EdgeEntry *e = EdgeCacheSd.deserialize_args.e;
+    uint8_t *entry_buf = EdgeCacheSdV.deserialize_args.entry_buf;
+    const uint8_t *buf = EdgeCacheSdV.deserialize_args.buf;
+    size_t len = EdgeCacheSdV.deserialize_args.len;
+    EdgeEntry *e = EdgeCacheSdV.deserialize_args.e;
 
     if (!buf || !e || len < 3 || buf[0] != PROTOCORE_EDGE_SD_VERSION)
     {
-        EdgeCacheSd.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = PROTO_FALSE;
         return;
     }
     size_t pos = 1;
@@ -145,31 +145,31 @@ static void edge_cache_sd_deserialize(uint8_t *restrict work)
         !get_str(buf, len, &pos, e->vary_names, sizeof(e->vary_names)) ||
         !get_str(buf, len, &pos, e->vary_vals, sizeof(e->vary_vals)))
     {
-        EdgeCacheSd.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = PROTO_FALSE;
         return;
     }
     if (pos + 2 > len)
     {
-        EdgeCacheSd.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = PROTO_FALSE;
         return;
     }
     uint16_t bl = get_u16(buf + pos);
     pos += 2;
     if (bl > PROTOCORE_EDGE_BODY_MAX || pos + bl > len)
     {
-        EdgeCacheSd.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = PROTO_FALSE;
         return;
     }
     mem.cpy(e->body, buf + pos, bl);
     e->body_len = bl;
     // The digest is hashed in the caller's entry buffer, not in the borrow: the borrow is nominal
     // here and a SHA-256 workspace written into it would run off the end of it.
-    EdgeCache.key_digest_args.digest_work = entry_buf;
-    EdgeCache.key_digest_args.canon = e->key;
-    EdgeCache.key_digest_args.len = str.len(e->key, sizeof(e->key));
-    EdgeCache.key_digest_args.digest = e->digest;
+    EdgeCacheV.key_digest_args.digest_work = entry_buf;
+    EdgeCacheV.key_digest_args.canon = e->key;
+    EdgeCacheV.key_digest_args.len = str.len(e->key, sizeof(e->key));
+    EdgeCacheV.key_digest_args.digest = e->digest;
     EdgeCache.key_digest(edge_cache_work);
-    EdgeCacheSd.ok = PROTO_TRUE;
+    EdgeCacheSdV.ok = PROTO_TRUE;
 }
 
 #if PROTOCORE_ENABLE_DBM
@@ -283,122 +283,114 @@ static uint32_t purge_matching(struct protocore_dbm *db, const char *prefix, uin
     return total;
 }
 
-static void edge_cache_sd_put(uint8_t *restrict work)
+void protocore_edge_cache_sd_put(uint8_t *restrict work)
 {
     (void)work;
-    struct protocore_dbm *db = EdgeCacheSd.put_args.db;
-    const EdgeEntry *e = EdgeCacheSd.put_args.e;
-    uint8_t *scratch = EdgeCacheSd.put_args.scratch;
-    size_t scratch_cap = EdgeCacheSd.put_args.scratch_cap;
+    struct protocore_dbm *db = EdgeCacheSdV.put_args.db;
+    const EdgeEntry *e = EdgeCacheSdV.put_args.e;
+    uint8_t *scratch = EdgeCacheSdV.put_args.scratch;
+    size_t scratch_cap = EdgeCacheSdV.put_args.scratch_cap;
 
     if (!db || !e || !scratch)
     {
-        EdgeCacheSd.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = PROTO_FALSE;
         return;
     }
-    EdgeCache.entry_has_validator_args.e = e;
+    EdgeCacheV.entry_has_validator_args.e = e;
     EdgeCache.entry_has_validator(edge_cache_work);
-    if (!EdgeCache.ok)
+    if (!EdgeCacheV.ok)
     {
-        EdgeCacheSd.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = PROTO_FALSE;
         return; // only spill what a cheap 304 can refresh after a reboot
     }
-    EdgeCacheSd.serialize_args.e = e;
-    EdgeCacheSd.serialize_args.out = scratch;
-    EdgeCacheSd.serialize_args.cap = scratch_cap;
-    edge_cache_sd_serialize(work);
-    size_t n = EdgeCacheSd.n;
+    EdgeCacheSdV.serialize_args.e = e;
+    EdgeCacheSdV.serialize_args.out = scratch;
+    EdgeCacheSdV.serialize_args.cap = scratch_cap;
+    protocore_edge_cache_sd_serialize(work);
+    size_t n = EdgeCacheSdV.n;
     if (n == 0 || n > PROTOCORE_DBM_VAL_MAX)
     {
-        EdgeCacheSd.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = PROTO_FALSE;
         return; // too large for the L2 value bound -> stays L1-only
     }
-    EdgeCacheSd.ok = protocore_dbm_put(db, (const char *)e->digest, 32, scratch, (uint32_t)n);
+    EdgeCacheSdV.ok = protocore_dbm_put(db, (const char *)e->digest, 32, scratch, (uint32_t)n);
 }
 
-static void edge_cache_sd_get(uint8_t *restrict work)
+void protocore_edge_cache_sd_get(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *entry_buf = EdgeCacheSd.get_args.entry_buf;
-    struct protocore_dbm *db = EdgeCacheSd.get_args.db;
-    const uint8_t *digest = EdgeCacheSd.get_args.digest;
-    EdgeEntry *e = EdgeCacheSd.get_args.e;
-    uint8_t *scratch = EdgeCacheSd.get_args.scratch;
-    size_t scratch_cap = EdgeCacheSd.get_args.scratch_cap;
+    uint8_t *entry_buf = EdgeCacheSdV.get_args.entry_buf;
+    struct protocore_dbm *db = EdgeCacheSdV.get_args.db;
+    const uint8_t *digest = EdgeCacheSdV.get_args.digest;
+    EdgeEntry *e = EdgeCacheSdV.get_args.e;
+    uint8_t *scratch = EdgeCacheSdV.get_args.scratch;
+    size_t scratch_cap = EdgeCacheSdV.get_args.scratch_cap;
 
     if (!db || !digest || !e || !scratch)
     {
-        EdgeCacheSd.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = PROTO_FALSE;
         return;
     }
     long n = protocore_dbm_get(db, (const char *)digest, 32, scratch, scratch_cap);
     if (n < 0)
     {
-        EdgeCacheSd.ok = PROTO_FALSE;
+        EdgeCacheSdV.ok = PROTO_FALSE;
         return;
     }
-    EdgeCacheSd.deserialize_args.entry_buf = entry_buf;
-    EdgeCacheSd.deserialize_args.buf = scratch;
-    EdgeCacheSd.deserialize_args.len = (size_t)n;
-    EdgeCacheSd.deserialize_args.e = e;
-    edge_cache_sd_deserialize(work);
+    EdgeCacheSdV.deserialize_args.entry_buf = entry_buf;
+    EdgeCacheSdV.deserialize_args.buf = scratch;
+    EdgeCacheSdV.deserialize_args.len = (size_t)n;
+    EdgeCacheSdV.deserialize_args.e = e;
+    protocore_edge_cache_sd_deserialize(work);
 }
 
-static void edge_cache_sd_del(uint8_t *restrict work)
+void protocore_edge_cache_sd_del(uint8_t *restrict work)
 {
     (void)work;
-    struct protocore_dbm *db = EdgeCacheSd.del_args.db;
-    const uint8_t *digest = EdgeCacheSd.del_args.digest;
+    struct protocore_dbm *db = EdgeCacheSdV.del_args.db;
+    const uint8_t *digest = EdgeCacheSdV.del_args.digest;
 
-    EdgeCacheSd.ok = db && digest && protocore_dbm_del(db, (const char *)digest, 32);
+    EdgeCacheSdV.ok = db && digest && protocore_dbm_del(db, (const char *)digest, 32);
 }
 
-static void edge_cache_sd_purge_prefix(uint8_t *restrict work)
+void protocore_edge_cache_sd_purge_prefix(uint8_t *restrict work)
 {
     (void)work;
-    struct protocore_dbm *db = EdgeCacheSd.purge_prefix_args.db;
-    const char *path_prefix = EdgeCacheSd.purge_prefix_args.path_prefix;
-    uint8_t *scratch = EdgeCacheSd.purge_prefix_args.scratch;
-    size_t scratch_cap = EdgeCacheSd.purge_prefix_args.scratch_cap;
+    struct protocore_dbm *db = EdgeCacheSdV.purge_prefix_args.db;
+    const char *path_prefix = EdgeCacheSdV.purge_prefix_args.path_prefix;
+    uint8_t *scratch = EdgeCacheSdV.purge_prefix_args.scratch;
+    size_t scratch_cap = EdgeCacheSdV.purge_prefix_args.scratch_cap;
 
     if (!db || !path_prefix || !scratch)
     {
-        EdgeCacheSd.count = 0;
+        EdgeCacheSdV.count = 0;
         return;
     }
-    EdgeCacheSd.count = purge_matching(db, path_prefix, scratch, scratch_cap);
+    EdgeCacheSdV.count = purge_matching(db, path_prefix, scratch, scratch_cap);
 }
 
-static void edge_cache_sd_purge_all(uint8_t *restrict work)
+void protocore_edge_cache_sd_purge_all(uint8_t *restrict work)
 {
     (void)work;
-    struct protocore_dbm *db = EdgeCacheSd.purge_all_args.db;
+    struct protocore_dbm *db = EdgeCacheSdV.purge_all_args.db;
 
     if (!db)
     {
-        EdgeCacheSd.count = 0;
+        EdgeCacheSdV.count = 0;
         return;
     }
     // purge_all still verifies each value is an edge serialization before deleting, so a shared dbm is safe;
     // that needs a scratch buffer to read each value into.
     uint8_t scratch[PROTOCORE_EDGE_SD_VALUE_MAX];
-    EdgeCacheSd.count = purge_matching(db, NULL, scratch, sizeof(scratch));
+    EdgeCacheSdV.count = purge_matching(db, NULL, scratch, sizeof(scratch));
 }
 
 #endif // PROTOCORE_ENABLE_DBM
 
 // Designated, so a member's position in the struct does not decide what it binds to. The five
 // store operations exist only where the flag compiled the database backend in.
-EdgeCacheSdNs EdgeCacheSd = {.serialize = edge_cache_sd_serialize,
-                             .deserialize = edge_cache_sd_deserialize,
-#if PROTOCORE_ENABLE_DBM
-                             .put = edge_cache_sd_put,
-                             .get = edge_cache_sd_get,
-                             .del = edge_cache_sd_del,
-                             .purge_prefix = edge_cache_sd_purge_prefix,
-                             .purge_all = edge_cache_sd_purge_all
-#endif
-};
+/** @brief The operands and the outcome. */
+EdgeCacheSdVars EdgeCacheSdV;
 
 PROTOCORE_END_DECLS
 

@@ -47,9 +47,9 @@ static void uuid5(const uint8_t ns[16], const char *name, size_t name_len, char 
     memcpy(in + 16, name, name_len);
 
     uint8_t h[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1.hash_args.data = in;
-    Sha1.hash_args.len = 16 + name_len;
-    Sha1.hash_args.out = h;
+    Sha1V.hash_args.data = in;
+    Sha1V.hash_args.len = 16 + name_len;
+    Sha1V.hash_args.out = h;
     Sha1.hash(tw);
     h[6] = (uint8_t)((h[6] & 0x0Fu) | 0x50u);
     h[8] = (uint8_t)((h[8] & 0x3Fu) | 0x80u);
@@ -77,8 +77,8 @@ static void uuid5(const uint8_t ns[16], const char *name, size_t name_len, char 
 static void uuid_of(const uint8_t mac[6], char out[PROTOCORE_UUID_STR_LEN])
 {
     memset(out, '#', PROTOCORE_UUID_STR_LEN);
-    DeviceId.args.mac = mac;
-    DeviceId.args.out = out;
+    DeviceIdV.args.mac = mac;
+    DeviceIdV.args.out = out;
     DeviceId.from_mac(device_id_work);
 }
 
@@ -104,9 +104,9 @@ void test_rfc9562_published_uuidv5_vector(void)
     memcpy(in, NS_DNS, 16);
     memcpy(in + 16, "www.example.com", 15);
     uint8_t got[PROTOCORE_SHA1_DIGEST_LEN];
-    Sha1.hash_args.data = in;
-    Sha1.hash_args.len = sizeof(in);
-    Sha1.hash_args.out = got;
+    Sha1V.hash_args.data = in;
+    Sha1V.hash_args.len = sizeof(in);
+    Sha1V.hash_args.out = got;
     Sha1.hash(tw);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT_SHA1, got, sizeof(WANT_SHA1));
 

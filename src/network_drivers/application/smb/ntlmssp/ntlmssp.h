@@ -63,7 +63,6 @@ typedef struct
     const uint8_t *target_info; ///< the AV_PAIR blob, or nullptr if absent
     uint16_t target_info_len;
 } NtlmChallenge;
-
 /** @brief What build_negotiate takes: buf, cap, flags. */
 typedef struct
 {
@@ -71,7 +70,6 @@ typedef struct
     size_t cap;
     uint32_t flags;
 } NtlmsspBuildNegotiateArgs;
-
 /** @brief What parse_challenge takes: msg, len, out. */
 typedef struct
 {
@@ -79,7 +77,6 @@ typedef struct
     size_t len;
     NtlmChallenge *out;
 } NtlmsspParseChallengeArgs;
-
 /** @brief What build_authenticate takes: buf, cap, lm_resp, lm_len, ... */
 typedef struct
 {
@@ -97,7 +94,6 @@ typedef struct
     proto_bool
         with_mic; ///< when true, reserve the 8-byte Version + 16-byte MIC fields between the fixed header and the ...
 } NtlmsspBuildAuthenticateArgs;
-
 /**
  * @brief NTLMSSP message codec (MS-NLMP §2.2.1) for the SMB2 client (PROTOCORE_ENABLE_SMB).
  *
@@ -128,17 +124,36 @@ typedef struct
     NtlmsspBuildNegotiateArgs build_negotiate_args;
     NtlmsspParseChallengeArgs parse_challenge_args;
     NtlmsspBuildAuthenticateArgs build_authenticate_args;
-
     proto_bool ok;
     size_t n;
+} NtlmsspVars;
 
+/** @brief The operands and the outcome. */
+extern NtlmsspVars NtlmsspV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_negotiate)(uint8_t *restrict work);
     void (*const parse_challenge)(uint8_t *restrict work);
     void (*const build_authenticate)(uint8_t *restrict work);
 } NtlmsspNs;
 
-/** @brief The one symbol this module exports. */
-extern NtlmsspNs Ntlmssp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in NtlmsspV or a region of the borrow at a fixed offset.
+void protocore_ntlmssp_build_negotiate(uint8_t *restrict work);
+void protocore_ntlmssp_parse_challenge(uint8_t *restrict work);
+void protocore_ntlmssp_build_authenticate(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ntlmssp.build_negotiate(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const NtlmsspNs Ntlmssp __attribute__((unused)) = {
+    .build_negotiate = protocore_ntlmssp_build_negotiate,
+    .parse_challenge = protocore_ntlmssp_parse_challenge,
+    .build_authenticate = protocore_ntlmssp_build_authenticate,
+};
 
 PROTOCORE_END_DECLS
 

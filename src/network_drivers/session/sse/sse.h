@@ -40,13 +40,31 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     proto_bool ok; ///< whether the stream opened, or whether a close had one to release
+} SessionSseVars;
 
+/** @brief The operands and the outcome. */
+extern SessionSseVars SessionSseV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const open)(uint8_t *restrict work);
     void (*const close)(uint8_t *restrict work);
 } SessionSseNs;
 
-/** @brief The one symbol this module exports. */
-extern SessionSseNs SessionSse;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SessionSseV or a region of the borrow at a fixed offset.
+void protocore_sse_open(uint8_t *restrict work);
+void protocore_sse_close(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SessionSse.open(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SessionSseNs SessionSse __attribute__((unused)) = {
+    .open = protocore_sse_open,
+    .close = protocore_sse_close,
+};
 
 PROTOCORE_END_DECLS
 

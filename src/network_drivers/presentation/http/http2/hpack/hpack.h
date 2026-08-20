@@ -37,7 +37,6 @@ typedef struct
 {
     uint32_t max_bytes; ///< the negotiated maximum, 0 = PROTOCORE_HPACK_TABLE_BYTES
 } HpackInitArgs;
-
 /** @brief RFC 7541 sec 3: the block a decode walks, and where each field is handed on. */
 typedef struct
 {
@@ -48,7 +47,6 @@ typedef struct
     HpackEmitFn emit;     ///< run for each decoded field
     void *ctx;            ///< passed to emit
 } HpackDecodeArgs;
-
 /** @brief RFC 7541 sec 6: the field an encode emits. */
 typedef struct
 {
@@ -59,7 +57,6 @@ typedef struct
     const char *value; ///< the field value
     size_t value_len;  ///< how many bytes
 } HpackEncodeArgs;
-
 /**
  * @brief HPACK (RFC 7541): the peer encoder's dynamic table, and one field at a time.
  *
@@ -83,17 +80,36 @@ typedef struct
     HpackInitArgs init_args;     ///< the members ::HpackNs::dyn_init takes
     HpackDecodeArgs decode_args; ///< the members ::HpackNs::decode takes
     HpackEncodeArgs encode_args; ///< the members ::HpackNs::encode_header takes
+    proto_bool ok;               ///< whether the whole block decoded cleanly
+    size_t n;                    ///< bytes an encode wrote, or 0 on overflow
+} HpackVars;
 
-    proto_bool ok; ///< whether the whole block decoded cleanly
-    size_t n;      ///< bytes an encode wrote, or 0 on overflow
+/** @brief The operands and the outcome. */
+extern HpackVars HpackV;
 
+/** @brief The entries. */
+typedef struct
+{
     void (*const dyn_init)(uint8_t *restrict work);
     void (*const decode)(uint8_t *restrict work);
     void (*const encode_header)(uint8_t *restrict work);
 } HpackNs;
 
-/** @brief The one symbol this module exports. */
-extern HpackNs Hpack;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HpackV or a region of the borrow at a fixed offset.
+void protocore_hpack_dyn_init(uint8_t *restrict work);
+void protocore_hpack_decode(uint8_t *restrict work);
+void protocore_hpack_encode_header(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Hpack.dyn_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HpackNs Hpack __attribute__((unused)) = {
+    .dyn_init = protocore_hpack_dyn_init,
+    .decode = protocore_hpack_decode,
+    .encode_header = protocore_hpack_encode_header,
+};
 
 // The prefix-integer and Huffman primitives moved to protocore_hpack_prim.h (shared with QPACK).
 

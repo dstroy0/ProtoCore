@@ -31,7 +31,6 @@ typedef struct
 {
     proto_bool client_role; ///< True for the client's indicator, false for the server's
 } ExtensionInfoIndicatorArgs;
-
 /** @brief What build takes: out, len, cap. */
 typedef struct
 {
@@ -39,7 +38,6 @@ typedef struct
     size_t *len;
     size_t cap;
 } ExtensionBuildArgs;
-
 /**
  * @brief RFC 8308 extension negotiation.
  *
@@ -66,17 +64,34 @@ typedef struct
 {
     ExtensionInfoIndicatorArgs info_indicator_args;
     ExtensionBuildArgs build_args;
-
     proto_bool ok;
     const char *text;
     int n;
+} ExtensionVars;
 
+/** @brief The operands and the outcome. */
+extern ExtensionVars ExtensionV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const info_indicator)(uint8_t *restrict work);
     void (*const build)(uint8_t *restrict work);
 } ExtensionNs;
 
-/** @brief The one symbol this module exports. */
-extern ExtensionNs Extension;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ExtensionV or a region of the borrow at a fixed offset.
+void protocore_extension_info_indicator(uint8_t *restrict work);
+void protocore_extension_build(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Extension.info_indicator(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ExtensionNs Extension __attribute__((unused)) = {
+    .info_indicator = protocore_extension_info_indicator,
+    .build = protocore_extension_build,
+};
 
 PROTOCORE_END_DECLS
 

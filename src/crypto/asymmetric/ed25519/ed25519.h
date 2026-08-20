@@ -43,7 +43,6 @@ typedef struct
     const uint8_t *seed; ///< PROTOCORE_ED25519_SEED_LEN bytes
     uint8_t *pub;        ///< PROTOCORE_ED25519_PUBKEY_LEN bytes
 } Ed25519PubkeyArgs;
-
 /** @brief The message a signature covers. */
 typedef struct
 {
@@ -52,7 +51,6 @@ typedef struct
     size_t msg_len;      ///< its length
     uint8_t *sig;        ///< PROTOCORE_ED25519_SIG_LEN bytes, R || S
 } Ed25519SignArgs;
-
 /** @brief The signature a verification checks. */
 typedef struct
 {
@@ -61,7 +59,6 @@ typedef struct
     size_t msg_len;     ///< its length
     const uint8_t *sig; ///< PROTOCORE_ED25519_SIG_LEN bytes, R || S
 } Ed25519VerifyArgs;
-
 /**
  * @brief Ed25519 (RFC 8032).
  *
@@ -98,16 +95,35 @@ typedef struct
     Ed25519PubkeyArgs pubkey_args;
     Ed25519SignArgs sign_args;
     Ed25519VerifyArgs verify_args;
-
     proto_bool ok;
+} Ed25519Vars;
 
+/** @brief The operands and the outcome. */
+extern Ed25519Vars Ed25519V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const pubkey)(uint8_t *restrict work);
     void (*const sign)(uint8_t *restrict work);
     void (*const verify)(uint8_t *restrict work);
 } Ed25519Ns;
 
-/** @brief The one symbol this module exports. */
-extern Ed25519Ns Ed25519;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Ed25519V or a region of the borrow at a fixed offset.
+void protocore_ed25519_pubkey(uint8_t *restrict work);
+void protocore_ed25519_sign(uint8_t *restrict work);
+void protocore_ed25519_verify(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ed25519.pubkey(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Ed25519Ns Ed25519 __attribute__((unused)) = {
+    .pubkey = protocore_ed25519_pubkey,
+    .sign = protocore_ed25519_sign,
+    .verify = protocore_ed25519_verify,
+};
 
 PROTOCORE_END_DECLS
 

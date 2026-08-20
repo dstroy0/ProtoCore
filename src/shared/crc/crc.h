@@ -47,7 +47,6 @@ typedef struct
     proto_bool refout; ///< reflect the final register before the XOR.
     uint32_t xorout;   ///< XORed into the final register.
 } protocore_crc_params;
-
 /** @brief What one CRC step runs over: the definition, the running register, and the octets. */
 typedef struct
 {
@@ -56,7 +55,6 @@ typedef struct
     const uint8_t *data;                ///< the octets a fold takes
     size_t len;                         ///< how many
 } CrcArgs;
-
 /**
  * @brief The Rocksoft CRC model.
  *
@@ -81,17 +79,38 @@ typedef struct
 typedef struct
 {
     CrcArgs args;
-
     uint32_t value;
+} CrcVars;
 
+/** @brief The operands and the outcome. */
+extern CrcVars CrcV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
     void (*const final)(uint8_t *restrict work);
     void (*const compute)(uint8_t *restrict work);
 } CrcNs;
 
-/** @brief The one symbol this module exports. */
-extern CrcNs Crc;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CrcV or a region of the borrow at a fixed offset.
+void protocore_crc_begin(uint8_t *restrict work);
+void protocore_crc_update(uint8_t *restrict work);
+void protocore_crc_final(uint8_t *restrict work);
+void protocore_crc_compute(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Crc.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CrcNs Crc __attribute__((unused)) = {
+    .begin = protocore_crc_begin,
+    .update = protocore_crc_update,
+    .final = protocore_crc_final,
+    .compute = protocore_crc_compute,
+};
 
 // --- Catalogue presets ------------------------------------------------------------------------
 // Each carries its published check value: the CRC of the ASCII octets "123456789". test_crc asserts

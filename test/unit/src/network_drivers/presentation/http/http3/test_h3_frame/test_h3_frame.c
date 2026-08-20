@@ -46,22 +46,22 @@ void test_rfc9000_sample_varints_as_frame_lengths(void)
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
-        H3Frame.write_header_args.out = g_out;
-        H3Frame.write_header_args.cap = sizeof(g_out);
-        H3Frame.write_header_args.type = H3_DATA;
-        H3Frame.write_header_args.length = CASES[i].length;
+        H3FrameV.write_header_args.out = g_out;
+        H3FrameV.write_header_args.cap = sizeof(g_out);
+        H3FrameV.write_header_args.type = H3_DATA;
+        H3FrameV.write_header_args.length = CASES[i].length;
         H3Frame.write_header(h3_frame_work);
-        size_t n = H3Frame.n;
+        size_t n = H3FrameV.n;
         TEST_ASSERT_EQUAL_UINT(1u + CASES[i].n, n);
         TEST_ASSERT_EQUAL_HEX8(0x00, g_out[0]);
         TEST_ASSERT_EQUAL_MEMORY(CASES[i].bytes, g_out + 1, CASES[i].n);
 
         H3FrameHeader f;
-        H3Frame.parse_header_args.buf = g_out;
-        H3Frame.parse_header_args.len = n;
-        H3Frame.parse_header_args.out = &f;
+        H3FrameV.parse_header_args.buf = g_out;
+        H3FrameV.parse_header_args.len = n;
+        H3FrameV.parse_header_args.out = &f;
         H3Frame.parse_header(h3_frame_work);
-        TEST_ASSERT_TRUE(H3Frame.ok);
+        TEST_ASSERT_TRUE(H3FrameV.ok);
         TEST_ASSERT_EQUAL_HEX64(H3_DATA, f.type);
         TEST_ASSERT_EQUAL_HEX64(CASES[i].length, f.length);
         TEST_ASSERT_EQUAL_UINT(n, f.header_len);
@@ -75,20 +75,20 @@ void test_rfc9000_long_spelling_decodes_but_is_not_emitted(void)
 {
     static const uint8_t LONG_FORM[3] = {0x00, 0x40, 0x25};
     H3FrameHeader f;
-    H3Frame.parse_header_args.buf = LONG_FORM;
-    H3Frame.parse_header_args.len = sizeof(LONG_FORM);
-    H3Frame.parse_header_args.out = &f;
+    H3FrameV.parse_header_args.buf = LONG_FORM;
+    H3FrameV.parse_header_args.len = sizeof(LONG_FORM);
+    H3FrameV.parse_header_args.out = &f;
     H3Frame.parse_header(h3_frame_work);
-    TEST_ASSERT_TRUE(H3Frame.ok);
+    TEST_ASSERT_TRUE(H3FrameV.ok);
     TEST_ASSERT_EQUAL_HEX64(37u, f.length);
     TEST_ASSERT_EQUAL_UINT(3u, f.header_len);
 
-    H3Frame.write_header_args.out = g_out;
-    H3Frame.write_header_args.cap = sizeof(g_out);
-    H3Frame.write_header_args.type = H3_DATA;
-    H3Frame.write_header_args.length = 37;
+    H3FrameV.write_header_args.out = g_out;
+    H3FrameV.write_header_args.cap = sizeof(g_out);
+    H3FrameV.write_header_args.type = H3_DATA;
+    H3FrameV.write_header_args.length = 37;
     H3Frame.write_header(h3_frame_work);
-    TEST_ASSERT_EQUAL_UINT(2u, H3Frame.n);
+    TEST_ASSERT_EQUAL_UINT(2u, H3FrameV.n);
     TEST_ASSERT_EQUAL_HEX8(0x25, g_out[1]);
 }
 
@@ -113,23 +113,23 @@ void test_rfc9114_reserved_http2_frame_types(void)
     static const uint64_t ASSIGNED[7] = {0x00, 0x01, 0x03, 0x04, 0x05, 0x07, 0x0d};
     for (size_t i = 0; i < 4; i++)
     {
-        H3Frame.type_reserved_args.type = RESERVED[i];
+        H3FrameV.type_reserved_args.type = RESERVED[i];
         H3Frame.type_reserved(h3_frame_work);
-        TEST_ASSERT_TRUE(H3Frame.ok);
+        TEST_ASSERT_TRUE(H3FrameV.ok);
     }
     for (size_t i = 0; i < 7; i++)
     {
-        H3Frame.type_reserved_args.type = ASSIGNED[i];
+        H3FrameV.type_reserved_args.type = ASSIGNED[i];
         H3Frame.type_reserved(h3_frame_work);
-        TEST_ASSERT_FALSE(H3Frame.ok);
+        TEST_ASSERT_FALSE(H3FrameV.ok);
     }
     // sec 7.2.8 grease: 0x1f * N + 0x21, here N = 0 and N = 1
-    H3Frame.type_reserved_args.type = 0x21;
+    H3FrameV.type_reserved_args.type = 0x21;
     H3Frame.type_reserved(h3_frame_work);
-    TEST_ASSERT_FALSE(H3Frame.ok);
-    H3Frame.type_reserved_args.type = 0x40;
+    TEST_ASSERT_FALSE(H3FrameV.ok);
+    H3FrameV.type_reserved_args.type = 0x40;
     H3Frame.type_reserved(h3_frame_work);
-    TEST_ASSERT_FALSE(H3Frame.ok);
+    TEST_ASSERT_FALSE(H3FrameV.ok);
 }
 
 // RFC 9114 sec 7.2.4.1: SETTINGS_MAX_FIELD_SECTION_SIZE (0x06) defaults to unlimited, which this
@@ -138,7 +138,7 @@ void test_rfc9114_reserved_http2_frame_types(void)
 void test_rfc9114_settings_defaults(void)
 {
     H3Settings s;
-    H3Frame.settings_defaults_args.s = &s;
+    H3FrameV.settings_defaults_args.s = &s;
     H3Frame.settings_defaults(h3_frame_work);
     TEST_ASSERT_EQUAL_HEX64(0u, s.qpack_max_table_capacity);
     TEST_ASSERT_EQUAL_HEX64(0xFFFFFFFFFFFFFFFFULL, s.max_field_section_size);
@@ -159,33 +159,33 @@ void test_rfc9114_settings_round_trip(void)
     static const uint64_t VALS[4] = {4096u, 16384u, 100u, 0u};
     // varint widths: 1+2 (id 0x01, 4096) + 1+4 (id 0x06, 16384 exceeds the 14-bit form)
     //              + 1+2 (id 0x07, 100)  + 1+1 (id 0x21, 0)  = 13 payload octets
-    H3Frame.build_settings_args.out = g_out;
-    H3Frame.build_settings_args.cap = sizeof(g_out);
-    H3Frame.build_settings_args.ids = IDS;
-    H3Frame.build_settings_args.vals = VALS;
-    H3Frame.build_settings_args.n = 4;
+    H3FrameV.build_settings_args.out = g_out;
+    H3FrameV.build_settings_args.cap = sizeof(g_out);
+    H3FrameV.build_settings_args.ids = IDS;
+    H3FrameV.build_settings_args.vals = VALS;
+    H3FrameV.build_settings_args.n = 4;
     H3Frame.build_settings(h3_frame_work);
-    size_t n = H3Frame.n;
+    size_t n = H3FrameV.n;
     TEST_ASSERT_EQUAL_UINT(2u + 13u, n);
 
     H3FrameHeader f;
-    H3Frame.parse_header_args.buf = g_out;
-    H3Frame.parse_header_args.len = n;
-    H3Frame.parse_header_args.out = &f;
+    H3FrameV.parse_header_args.buf = g_out;
+    H3FrameV.parse_header_args.len = n;
+    H3FrameV.parse_header_args.out = &f;
     H3Frame.parse_header(h3_frame_work);
-    TEST_ASSERT_TRUE(H3Frame.ok);
+    TEST_ASSERT_TRUE(H3FrameV.ok);
     TEST_ASSERT_EQUAL_HEX64(H3_SETTINGS, f.type);
     TEST_ASSERT_EQUAL_HEX64(13u, f.length);
     TEST_ASSERT_EQUAL_UINT(2u, f.header_len);
 
     H3Settings s;
-    H3Frame.settings_defaults_args.s = &s;
+    H3FrameV.settings_defaults_args.s = &s;
     H3Frame.settings_defaults(h3_frame_work);
-    H3Frame.parse_settings_args.payload = g_out + f.header_len;
-    H3Frame.parse_settings_args.len = (size_t)f.length;
-    H3Frame.parse_settings_args.s = &s;
+    H3FrameV.parse_settings_args.payload = g_out + f.header_len;
+    H3FrameV.parse_settings_args.len = (size_t)f.length;
+    H3FrameV.parse_settings_args.s = &s;
     H3Frame.parse_settings(h3_frame_work);
-    TEST_ASSERT_TRUE(H3Frame.ok);
+    TEST_ASSERT_TRUE(H3FrameV.ok);
     TEST_ASSERT_EQUAL_HEX64(4096u, s.qpack_max_table_capacity);
     TEST_ASSERT_EQUAL_HEX64(16384u, s.max_field_section_size);
     TEST_ASSERT_EQUAL_HEX64(100u, s.qpack_blocked_streams);
@@ -199,23 +199,23 @@ void test_rfc9114_reserved_settings_identifiers(void)
     {
         uint8_t pay[2] = {id, 0x00};
         H3Settings s;
-        H3Frame.settings_defaults_args.s = &s;
+        H3FrameV.settings_defaults_args.s = &s;
         H3Frame.settings_defaults(h3_frame_work);
-        H3Frame.parse_settings_args.payload = pay;
-        H3Frame.parse_settings_args.len = sizeof(pay);
-        H3Frame.parse_settings_args.s = &s;
+        H3FrameV.parse_settings_args.payload = pay;
+        H3FrameV.parse_settings_args.len = sizeof(pay);
+        H3FrameV.parse_settings_args.s = &s;
         H3Frame.parse_settings(h3_frame_work);
-        TEST_ASSERT_FALSE(H3Frame.ok);
+        TEST_ASSERT_FALSE(H3FrameV.ok);
     }
     // an empty SETTINGS payload is legal and changes nothing
     H3Settings s;
-    H3Frame.settings_defaults_args.s = &s;
+    H3FrameV.settings_defaults_args.s = &s;
     H3Frame.settings_defaults(h3_frame_work);
-    H3Frame.parse_settings_args.payload = g_out;
-    H3Frame.parse_settings_args.len = 0;
-    H3Frame.parse_settings_args.s = &s;
+    H3FrameV.parse_settings_args.payload = g_out;
+    H3FrameV.parse_settings_args.len = 0;
+    H3FrameV.parse_settings_args.s = &s;
     H3Frame.parse_settings(h3_frame_work);
-    TEST_ASSERT_TRUE(H3Frame.ok);
+    TEST_ASSERT_TRUE(H3FrameV.ok);
     TEST_ASSERT_EQUAL_HEX64(0xFFFFFFFFFFFFFFFFULL, s.max_field_section_size);
 }
 
@@ -224,22 +224,22 @@ void test_rfc9114_settings_truncated_pair(void)
 {
     static const uint8_t ODD[1] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE}; // an id with no value
     H3Settings s;
-    H3Frame.settings_defaults_args.s = &s;
+    H3FrameV.settings_defaults_args.s = &s;
     H3Frame.settings_defaults(h3_frame_work);
-    H3Frame.parse_settings_args.payload = ODD;
-    H3Frame.parse_settings_args.len = sizeof(ODD);
-    H3Frame.parse_settings_args.s = &s;
+    H3FrameV.parse_settings_args.payload = ODD;
+    H3FrameV.parse_settings_args.len = sizeof(ODD);
+    H3FrameV.parse_settings_args.s = &s;
     H3Frame.parse_settings(h3_frame_work);
-    TEST_ASSERT_FALSE(H3Frame.ok);
+    TEST_ASSERT_FALSE(H3FrameV.ok);
 
     static const uint8_t SHORT_VAL[2] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE, 0x40}; // 2-byte value, 1 present
-    H3Frame.settings_defaults_args.s = &s;
+    H3FrameV.settings_defaults_args.s = &s;
     H3Frame.settings_defaults(h3_frame_work);
-    H3Frame.parse_settings_args.payload = SHORT_VAL;
-    H3Frame.parse_settings_args.len = sizeof(SHORT_VAL);
-    H3Frame.parse_settings_args.s = &s;
+    H3FrameV.parse_settings_args.payload = SHORT_VAL;
+    H3FrameV.parse_settings_args.len = sizeof(SHORT_VAL);
+    H3FrameV.parse_settings_args.s = &s;
     H3Frame.parse_settings(h3_frame_work);
-    TEST_ASSERT_FALSE(H3Frame.ok);
+    TEST_ASSERT_FALSE(H3FrameV.ok);
 }
 
 // sec 7.2.1 / 7.2.2: DATA (0x00) and HEADERS (0x01) each wrap their payload behind the type and a
@@ -249,44 +249,44 @@ void test_rfc9114_data_and_headers_builders(void)
     static const uint8_t BODY[5] = {'h', 'e', 'l', 'l', 'o'};
     H3FrameHeader f;
 
-    H3Frame.build_data_args.out = g_out;
-    H3Frame.build_data_args.cap = sizeof(g_out);
-    H3Frame.build_data_args.data = BODY;
-    H3Frame.build_data_args.len = sizeof(BODY);
+    H3FrameV.build_data_args.out = g_out;
+    H3FrameV.build_data_args.cap = sizeof(g_out);
+    H3FrameV.build_data_args.data = BODY;
+    H3FrameV.build_data_args.len = sizeof(BODY);
     H3Frame.build_data(h3_frame_work);
-    size_t n = H3Frame.n;
+    size_t n = H3FrameV.n;
     TEST_ASSERT_EQUAL_UINT(2u + 5u, n);
-    H3Frame.parse_header_args.buf = g_out;
-    H3Frame.parse_header_args.len = n;
-    H3Frame.parse_header_args.out = &f;
+    H3FrameV.parse_header_args.buf = g_out;
+    H3FrameV.parse_header_args.len = n;
+    H3FrameV.parse_header_args.out = &f;
     H3Frame.parse_header(h3_frame_work);
-    TEST_ASSERT_TRUE(H3Frame.ok);
+    TEST_ASSERT_TRUE(H3FrameV.ok);
     TEST_ASSERT_EQUAL_HEX64(H3_DATA, f.type);
     TEST_ASSERT_EQUAL_HEX64(5u, f.length);
     TEST_ASSERT_EQUAL_MEMORY(BODY, g_out + f.header_len, 5);
 
-    H3Frame.build_headers_args.out = g_out;
-    H3Frame.build_headers_args.cap = sizeof(g_out);
-    H3Frame.build_headers_args.block = BODY;
-    H3Frame.build_headers_args.len = sizeof(BODY);
+    H3FrameV.build_headers_args.out = g_out;
+    H3FrameV.build_headers_args.cap = sizeof(g_out);
+    H3FrameV.build_headers_args.block = BODY;
+    H3FrameV.build_headers_args.len = sizeof(BODY);
     H3Frame.build_headers(h3_frame_work);
-    n = H3Frame.n;
+    n = H3FrameV.n;
     TEST_ASSERT_EQUAL_UINT(2u + 5u, n);
-    H3Frame.parse_header_args.buf = g_out;
-    H3Frame.parse_header_args.len = n;
-    H3Frame.parse_header_args.out = &f;
+    H3FrameV.parse_header_args.buf = g_out;
+    H3FrameV.parse_header_args.len = n;
+    H3FrameV.parse_header_args.out = &f;
     H3Frame.parse_header(h3_frame_work);
-    TEST_ASSERT_TRUE(H3Frame.ok);
+    TEST_ASSERT_TRUE(H3FrameV.ok);
     TEST_ASSERT_EQUAL_HEX64(H3_HEADERS, f.type);
     TEST_ASSERT_EQUAL_HEX64(5u, f.length);
 
     // a zero-length DATA frame is the two header varints and nothing else
-    H3Frame.build_data_args.out = g_out;
-    H3Frame.build_data_args.cap = sizeof(g_out);
-    H3Frame.build_data_args.data = NULL;
-    H3Frame.build_data_args.len = 0;
+    H3FrameV.build_data_args.out = g_out;
+    H3FrameV.build_data_args.cap = sizeof(g_out);
+    H3FrameV.build_data_args.data = NULL;
+    H3FrameV.build_data_args.len = 0;
     H3Frame.build_data(h3_frame_work);
-    n = H3Frame.n;
+    n = H3FrameV.n;
     TEST_ASSERT_EQUAL_UINT(2u, n);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[1]);
@@ -295,11 +295,11 @@ void test_rfc9114_data_and_headers_builders(void)
 // sec 7.2.6: GOAWAY (0x07) carries one varint, so its Length is that varint's own width.
 void test_rfc9114_goaway_builder(void)
 {
-    H3Frame.build_goaway_args.out = g_out;
-    H3Frame.build_goaway_args.cap = sizeof(g_out);
-    H3Frame.build_goaway_args.stream_id = 15293u;
+    H3FrameV.build_goaway_args.out = g_out;
+    H3FrameV.build_goaway_args.cap = sizeof(g_out);
+    H3FrameV.build_goaway_args.stream_id = 15293u;
     H3Frame.build_goaway(h3_frame_work);
-    size_t n = H3Frame.n;
+    size_t n = H3FrameV.n;
     TEST_ASSERT_EQUAL_UINT(2u + 2u, n);
     TEST_ASSERT_EQUAL_HEX8(0x07, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x02, g_out[1]); // Length: the stream id encodes to two octets
@@ -307,11 +307,11 @@ void test_rfc9114_goaway_builder(void)
     TEST_ASSERT_EQUAL_HEX8(0xbd, g_out[3]);
 
     H3FrameHeader f;
-    H3Frame.parse_header_args.buf = g_out;
-    H3Frame.parse_header_args.len = n;
-    H3Frame.parse_header_args.out = &f;
+    H3FrameV.parse_header_args.buf = g_out;
+    H3FrameV.parse_header_args.len = n;
+    H3FrameV.parse_header_args.out = &f;
     H3Frame.parse_header(h3_frame_work);
-    TEST_ASSERT_TRUE(H3Frame.ok);
+    TEST_ASSERT_TRUE(H3FrameV.ok);
     TEST_ASSERT_EQUAL_HEX64(H3_GOAWAY, f.type);
     TEST_ASSERT_EQUAL_HEX64(2u, f.length);
 }
@@ -324,26 +324,26 @@ void test_truncated_header_is_refused(void)
     static const uint8_t TYPE_ONLY[1] = {0x00};       // a type with no length
     static const uint8_t SHORT_LEN[2] = {0x00, 0x40}; // length announces 2 octets, 1 present
     static const uint8_t SHORT_TYPE[1] = {0x9d};      // type announces 4 octets, 1 present
-    H3Frame.parse_header_args.buf = TYPE_ONLY;
-    H3Frame.parse_header_args.len = sizeof(TYPE_ONLY);
-    H3Frame.parse_header_args.out = &f;
+    H3FrameV.parse_header_args.buf = TYPE_ONLY;
+    H3FrameV.parse_header_args.len = sizeof(TYPE_ONLY);
+    H3FrameV.parse_header_args.out = &f;
     H3Frame.parse_header(h3_frame_work);
-    TEST_ASSERT_FALSE(H3Frame.ok);
-    H3Frame.parse_header_args.buf = SHORT_LEN;
-    H3Frame.parse_header_args.len = sizeof(SHORT_LEN);
-    H3Frame.parse_header_args.out = &f;
+    TEST_ASSERT_FALSE(H3FrameV.ok);
+    H3FrameV.parse_header_args.buf = SHORT_LEN;
+    H3FrameV.parse_header_args.len = sizeof(SHORT_LEN);
+    H3FrameV.parse_header_args.out = &f;
     H3Frame.parse_header(h3_frame_work);
-    TEST_ASSERT_FALSE(H3Frame.ok);
-    H3Frame.parse_header_args.buf = SHORT_TYPE;
-    H3Frame.parse_header_args.len = sizeof(SHORT_TYPE);
-    H3Frame.parse_header_args.out = &f;
+    TEST_ASSERT_FALSE(H3FrameV.ok);
+    H3FrameV.parse_header_args.buf = SHORT_TYPE;
+    H3FrameV.parse_header_args.len = sizeof(SHORT_TYPE);
+    H3FrameV.parse_header_args.out = &f;
     H3Frame.parse_header(h3_frame_work);
-    TEST_ASSERT_FALSE(H3Frame.ok);
-    H3Frame.parse_header_args.buf = TYPE_ONLY;
-    H3Frame.parse_header_args.len = 0;
-    H3Frame.parse_header_args.out = &f;
+    TEST_ASSERT_FALSE(H3FrameV.ok);
+    H3FrameV.parse_header_args.buf = TYPE_ONLY;
+    H3FrameV.parse_header_args.len = 0;
+    H3FrameV.parse_header_args.out = &f;
     H3Frame.parse_header(h3_frame_work);
-    TEST_ASSERT_FALSE(H3Frame.ok);
+    TEST_ASSERT_FALSE(H3FrameV.ok);
 }
 
 // A destination too small for the whole frame yields 0 rather than a frame the peer cannot finish
@@ -353,40 +353,40 @@ void test_builders_refuse_a_short_destination(void)
     static const uint8_t BODY[5] = {'h', 'e', 'l', 'l', 'o'};
     static const uint64_t IDS[1] = {H3_SETTINGS_MAX_FIELD_SECTION_SIZE};
     static const uint64_t VALS[1] = {16384u};
-    H3Frame.write_header_args.out = g_out;
-    H3Frame.write_header_args.cap = 0;
-    H3Frame.write_header_args.type = H3_DATA;
-    H3Frame.write_header_args.length = 5;
+    H3FrameV.write_header_args.out = g_out;
+    H3FrameV.write_header_args.cap = 0;
+    H3FrameV.write_header_args.type = H3_DATA;
+    H3FrameV.write_header_args.length = 5;
     H3Frame.write_header(h3_frame_work);
-    TEST_ASSERT_EQUAL_UINT(0u, H3Frame.n);
-    H3Frame.write_header_args.out = g_out;
-    H3Frame.write_header_args.cap = 1;
-    H3Frame.write_header_args.type = H3_DATA;
-    H3Frame.write_header_args.length = 15293;
+    TEST_ASSERT_EQUAL_UINT(0u, H3FrameV.n);
+    H3FrameV.write_header_args.out = g_out;
+    H3FrameV.write_header_args.cap = 1;
+    H3FrameV.write_header_args.type = H3_DATA;
+    H3FrameV.write_header_args.length = 15293;
     H3Frame.write_header(h3_frame_work);
-    TEST_ASSERT_EQUAL_UINT(0u, H3Frame.n);
-    H3Frame.build_data_args.out = g_out;
-    H3Frame.build_data_args.cap = 6;
-    H3Frame.build_data_args.data = BODY;
-    H3Frame.build_data_args.len = sizeof(BODY);
+    TEST_ASSERT_EQUAL_UINT(0u, H3FrameV.n);
+    H3FrameV.build_data_args.out = g_out;
+    H3FrameV.build_data_args.cap = 6;
+    H3FrameV.build_data_args.data = BODY;
+    H3FrameV.build_data_args.len = sizeof(BODY);
     H3Frame.build_data(h3_frame_work);
-    TEST_ASSERT_EQUAL_UINT(0u, H3Frame.n);
-    H3Frame.build_headers_args.out = g_out;
-    H3Frame.build_headers_args.cap = 6;
-    H3Frame.build_headers_args.block = BODY;
-    H3Frame.build_headers_args.len = sizeof(BODY);
+    TEST_ASSERT_EQUAL_UINT(0u, H3FrameV.n);
+    H3FrameV.build_headers_args.out = g_out;
+    H3FrameV.build_headers_args.cap = 6;
+    H3FrameV.build_headers_args.block = BODY;
+    H3FrameV.build_headers_args.len = sizeof(BODY);
     H3Frame.build_headers(h3_frame_work);
-    TEST_ASSERT_EQUAL_UINT(0u, H3Frame.n);
-    H3Frame.build_settings_args.out = g_out;
-    H3Frame.build_settings_args.cap = 4;
-    H3Frame.build_settings_args.ids = IDS;
-    H3Frame.build_settings_args.vals = VALS;
-    H3Frame.build_settings_args.n = 1;
+    TEST_ASSERT_EQUAL_UINT(0u, H3FrameV.n);
+    H3FrameV.build_settings_args.out = g_out;
+    H3FrameV.build_settings_args.cap = 4;
+    H3FrameV.build_settings_args.ids = IDS;
+    H3FrameV.build_settings_args.vals = VALS;
+    H3FrameV.build_settings_args.n = 1;
     H3Frame.build_settings(h3_frame_work);
-    TEST_ASSERT_EQUAL_UINT(0u, H3Frame.n);
-    H3Frame.build_goaway_args.out = g_out;
-    H3Frame.build_goaway_args.cap = 2;
-    H3Frame.build_goaway_args.stream_id = 15293u;
+    TEST_ASSERT_EQUAL_UINT(0u, H3FrameV.n);
+    H3FrameV.build_goaway_args.out = g_out;
+    H3FrameV.build_goaway_args.cap = 2;
+    H3FrameV.build_goaway_args.stream_id = 15293u;
     H3Frame.build_goaway(h3_frame_work);
-    TEST_ASSERT_EQUAL_UINT(0u, H3Frame.n);
+    TEST_ASSERT_EQUAL_UINT(0u, H3FrameV.n);
 }

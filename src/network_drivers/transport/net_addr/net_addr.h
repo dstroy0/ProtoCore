@@ -27,10 +27,9 @@
 #define PROTOCORE_NET_ADDR_H
 
 #include "config/platform/platform.h" // protocore_net_ip: the stack's own address type
-#include "shared/ip/ip.h"                                 // protocore_ip: the address everything above carries
+#include "shared/ip/ip.h"             // protocore_ip: the address everything above carries
 
 #include "protocore_config.h"
-
 
 PROTOCORE_BEGIN_DECLS
 
@@ -40,14 +39,12 @@ typedef struct
     const protocore_net_ip *addr; ///< the stack's address a read starts from
     protocore_ip *out_ip;         ///< where a read lands
 } NetAddrInArgs;
-
 /** @brief Outbound: the library address, and the stack address it lands in. */
 typedef struct
 {
     const protocore_ip *ip;     ///< the library address a write starts from
     protocore_net_ip *out_addr; ///< where a write lands
 } NetAddrOutArgs;
-
 /**
  * @brief The stack's address, as the library's address.
  *
@@ -70,15 +67,32 @@ typedef struct
 {
     NetAddrInArgs in;   ///< what a read carries across
     NetAddrOutArgs out; ///< what a write carries across
-
     proto_bool ok;
+} NetAddrVars;
 
+/** @brief The operands and the outcome. */
+extern NetAddrVars NetAddrV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const to_ip)(uint8_t *restrict work);
     void (*const from_ip)(uint8_t *restrict work);
 } NetAddrNs;
 
-/** @brief The one symbol this module exports. */
-extern NetAddrNs NetAddr;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in NetAddrV or a region of the borrow at a fixed offset.
+void protocore_net_addr_to_ip(uint8_t *restrict work);
+void protocore_net_addr_from_ip(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `NetAddr.to_ip(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const NetAddrNs NetAddr __attribute__((unused)) = {
+    .to_ip = protocore_net_addr_to_ip,
+    .from_ip = protocore_net_addr_from_ip,
+};
 
 /** @brief Read the stack's address into @p out, network-order bytes preserved. */
 void protocore_net_addr_to_ip(const protocore_net_ip *a, protocore_ip *out);

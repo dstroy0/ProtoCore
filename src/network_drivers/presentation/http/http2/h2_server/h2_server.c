@@ -332,9 +332,9 @@ static proto_bool cb_headers_end(void *app, uint32_t sid, proto_bool end_stream)
     // against the required set is zero exactly when none of the three is missing.
     if (((mask & H2_PH_REQUIRED) ^ H2_PH_REQUIRED) != 0 || (mask & H2_HDR_BAD) != 0)
     {
-        HttpParser.reset_args.req = &http_pool[slot];
-        HttpParser.reset(protocore_http_parser_span()); // never dispatch a malformed request
-        return PROTO_FALSE;                             // the engine resets the stream
+        HttpParserV.reset_args.req = &http_pool[slot];
+        HttpParserV.reset(protocore_http_parser_span()); // never dispatch a malformed request
+        return PROTO_FALSE;                              // the engine resets the stream
     }
     http_h2_stream[slot] = sid;
     http_pool[slot].parse_state = PARSE_COMPLETE; // the worker's handle() loop dispatches it
@@ -357,7 +357,7 @@ static void cb_data(void *app, uint32_t stream_id, const uint8_t *data, size_t l
 static void open_conn(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t slot = H2Server.slot;
+    const uint8_t slot = H2ServerV.slot;
     H2Callbacks cb;
     mem.set(&cb, 0, sizeof cb);
     cb.write = cb_write;
@@ -367,26 +367,26 @@ static void open_conn(uint8_t *restrict work)
     cb.io = (void *)(uintptr_t)slot;
     cb.app = (void *)(uintptr_t)slot;
     H2_SERVER_CTX(work)->slot[slot].hmask = 0;
-    H2Conn.init_args.cb = &cb;
+    H2ConnV.init_args.cb = &cb;
     H2Conn.init(s_conn[slot]); // emits our SETTINGS through cb_write
-    HttpParser.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParserV.reset_args.req = &http_pool[slot];
+    HttpParserV.reset(protocore_http_parser_span());
 }
 
 static void data(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t slot = H2Server.slot;
+    const uint8_t slot = H2ServerV.slot;
     uint8_t buf[512];
     int n;
     while ((n = protocore_tls_read(slot, buf, sizeof buf)) > 0)
     {
-        H2Conn.recv_args.data = buf;
-        H2Conn.recv_args.len = (size_t)n;
+        H2ConnV.recv_args.data = buf;
+        H2ConnV.recv_args.len = (size_t)n;
         H2Conn.recv(s_conn[slot]);
-        if (!H2Conn.ok)
+        if (!H2ConnV.ok)
         {
-            H2Conn.goaway_args.error = 1; // PROTOCOL_ERROR
+            H2ConnV.goaway_args.error = 1; // PROTOCOL_ERROR
             H2Conn.goaway(s_conn[slot]);
             return;
         }
@@ -395,22 +395,22 @@ static void data(uint8_t *restrict work)
 
 static void respond(uint8_t *restrict work)
 {
-    const uint8_t slot = H2Server.slot;
-    H2Conn.respond_args.stream_id = http_h2_stream[slot];
-    H2Conn.respond_args.status = H2Server.resp.code;
-    H2Conn.respond_args.content_type = H2Server.resp.content_type;
-    H2Conn.respond_args.body = H2Server.resp.body;
-    H2Conn.respond_args.body_len = H2Server.resp.len;
+    const uint8_t slot = H2ServerV.slot;
+    H2ConnV.respond_args.stream_id = http_h2_stream[slot];
+    H2ConnV.respond_args.status = H2ServerV.resp.code;
+    H2ConnV.respond_args.content_type = H2ServerV.resp.content_type;
+    H2ConnV.respond_args.body = H2ServerV.resp.body;
+    H2ConnV.respond_args.body_len = H2ServerV.resp.len;
     H2Conn.respond(s_conn[slot]);
-    H2Server.ok = H2Conn.ok;
-    HttpParser.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span()); // ready for the next stream; keep the connection open
+    H2ServerV.ok = H2ConnV.ok;
+    HttpParserV.reset_args.req = &http_pool[slot];
+    HttpParserV.reset(protocore_http_parser_span()); // ready for the next stream; keep the connection open
 }
 
 static void close_conn(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t slot = H2Server.slot;
+    const uint8_t slot = H2ServerV.slot;
     http_h2[slot] = 0;
     http_h2_checked[slot] = 0;
     http_resp_sink[slot] = NULL;
@@ -419,13 +419,13 @@ static void close_conn(uint8_t *restrict work)
 // The presentation layer installs this at ALPN; its shape is the seam's, not this module's.
 proto_bool protocore_h2_server_respond(uint8_t slot, int code, const char *content_type, const char *body, size_t len)
 {
-    H2Server.slot = slot;
-    H2Server.resp.code = code;
-    H2Server.resp.content_type = content_type;
-    H2Server.resp.body = body;
-    H2Server.resp.len = len;
+    H2ServerV.slot = slot;
+    H2ServerV.resp.code = code;
+    H2ServerV.resp.content_type = content_type;
+    H2ServerV.resp.body = body;
+    H2ServerV.resp.len = len;
     respond(protocore_h2_server_span());
-    return H2Server.ok;
+    return H2ServerV.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -436,6 +436,7 @@ uint8_t *protocore_h2_server_span(void)
     return s_work;
 }
 
-H2ServerNs H2Server = {.open = open_conn, .data = data, .respond = respond, .close = close_conn};
+/** @brief The operands and the outcome. */
+H2ServerVars H2ServerV;
 
 #endif // PROTOCORE_ENABLE_HTTP2 && PROTOCORE_ENABLE_TLS

@@ -34,8 +34,8 @@ static protocore_ip v6(const char *s)
 {
     protocore_ip ip;
     ip.family = PROTOCORE_IP_NONE;
-    Ip.args.text = s;
-    Ip.args.out = &ip;
+    IpV.args.text = s;
+    IpV.args.out = &ip;
     Ip.parse(ip_work);
     return ip;
 }
@@ -50,43 +50,43 @@ void tearDown()
 void test_accept_throttle_window()
 {
     TcpListener.accept_throttle_reset(protocore_tcp_listener_span());
-    TcpListener.gate.now_ms = 0;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.now_ms = 10;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.now_ms = 10;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.now_ms = 20;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.now_ms = 20;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.now_ms = 30;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.now_ms = 30;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 
-    TcpListener.gate.now_ms = 1000;
+    TcpListenerV.gate.now_ms = 1000;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.now_ms = 1100;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.now_ms = 1100;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_accept_throttle_rollover()
 {
     TcpListener.accept_throttle_reset(protocore_tcp_listener_span());
     uint32_t base = 0xFFFFFE00u;
-    TcpListener.gate.now_ms = base;
+    TcpListenerV.gate.now_ms = base;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.now_ms = base + 100;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.now_ms = base + 100;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.now_ms = 5;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.now_ms = 5;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.now_ms = 10;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.now_ms = 10;
     TcpListener.accept_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_per_ip_independent_budgets()
@@ -94,30 +94,30 @@ void test_per_ip_independent_budgets()
     TcpListener.per_ip_throttle_reset(protocore_tcp_listener_span());
     protocore_ip a = v4(10, 0, 0, 1);
     protocore_ip b = v4(10, 0, 0, 2);
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 0;
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 1;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 1;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 2;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 2;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
-    TcpListener.gate.now_ms = 2;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
+    TcpListenerV.gate.now_ms = 2;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
-    TcpListener.gate.now_ms = 3;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
+    TcpListenerV.gate.now_ms = 3;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
-    TcpListener.gate.now_ms = 4;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
+    TcpListenerV.gate.now_ms = 4;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_per_ip_v6_distinct_buckets()
@@ -125,52 +125,52 @@ void test_per_ip_v6_distinct_buckets()
     TcpListener.per_ip_throttle_reset(protocore_tcp_listener_span());
     protocore_ip a = v6("2001:db8::1");
     protocore_ip b = v6("2001:db8::2");
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 0;
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 1;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 1;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 2;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 2;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
-    TcpListener.gate.now_ms = 2;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
+    TcpListenerV.gate.now_ms = 2;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
-    TcpListener.gate.now_ms = 3;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
+    TcpListenerV.gate.now_ms = 3;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &b;
-    TcpListener.gate.now_ms = 4;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &b;
+    TcpListenerV.gate.now_ms = 4;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_per_ip_window_rollover()
 {
     TcpListener.per_ip_throttle_reset(protocore_tcp_listener_span());
     protocore_ip a = v4(192, 168, 1, 5);
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 0;
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 0;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 10;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 10;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 20;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 20;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.addr = &a;
-    TcpListener.gate.now_ms = 1000;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &a;
+    TcpListenerV.gate.now_ms = 1000;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_per_ip_unspecified_defers()
@@ -180,10 +180,10 @@ void test_per_ip_unspecified_defers()
     none.family = PROTOCORE_IP_NONE;
     for (uint32_t i = 0; i < 10; i++)
     {
-        TcpListener.gate.addr = &none;
-        TcpListener.gate.now_ms = i;
+        TcpListenerV.gate.addr = &none;
+        TcpListenerV.gate.now_ms = i;
         TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
 }
 
@@ -194,172 +194,172 @@ void test_per_ip_eviction_bounded()
     for (uint32_t i = 0; i < 4; i++)
     {
         protocore_ip ip = v4(10, 0, 0, (uint8_t)(i + 1));
-        TcpListener.gate.addr = &ip;
-        TcpListener.gate.now_ms = i * 100;
+        TcpListenerV.gate.addr = &ip;
+        TcpListenerV.gate.now_ms = i * 100;
         TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
 
     protocore_ip fresh = v4(10, 0, 0, 99);
-    TcpListener.gate.addr = &fresh;
-    TcpListener.gate.now_ms = 500;
+    TcpListenerV.gate.addr = &fresh;
+    TcpListenerV.gate.now_ms = 500;
     TcpListener.accept_allowed_ip(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_empty_allows_all()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip any = v4(8, 8, 8, 8);
-    TcpListener.gate.addr = &any;
+    TcpListenerV.gate.addr = &any;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_cidr()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip net = v4(192, 168, 1, 0);
-    TcpListener.gate.addr = &net;
-    TcpListener.gate.prefix_len = 24;
+    TcpListenerV.gate.addr = &net;
+    TcpListenerV.gate.prefix_len = 24;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip in = v4(192, 168, 1, 55);
     protocore_ip out = v4(192, 168, 2, 55);
-    TcpListener.gate.addr = &in;
+    TcpListenerV.gate.addr = &in;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &out;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &out;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip net8 = v4(10, 1, 2, 3);
-    TcpListener.gate.addr = &net8;
-    TcpListener.gate.prefix_len = 8;
+    TcpListenerV.gate.addr = &net8;
+    TcpListenerV.gate.prefix_len = 8;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip in8 = v4(10, 255, 255, 255);
     protocore_ip out8 = v4(11, 0, 0, 1);
-    TcpListener.gate.addr = &in8;
+    TcpListenerV.gate.addr = &in8;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &out8;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &out8;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_cidr_string()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
-    TcpListener.gate.cidr = "192.168.1.0/24";
+    TcpListenerV.gate.cidr = "192.168.1.0/24";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.cidr = "2001:db8::/32";
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.cidr = "2001:db8::/32";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.cidr = "10.0.0.5";
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.cidr = "10.0.0.5";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 
     protocore_ip v4in = v4(192, 168, 1, 200);
     protocore_ip v4host = v4(10, 0, 0, 5);
     protocore_ip v4no = v4(10, 0, 0, 6);
     protocore_ip v6in = v6("2001:db8:0:0:1234::abcd");
     protocore_ip v6no = v6("2001:db9::1");
-    TcpListener.gate.addr = &v4in;
+    TcpListenerV.gate.addr = &v4in;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &v4host;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &v4host;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &v4no;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &v4no;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.addr = &v6in;
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &v6in;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &v6no;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &v6no;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 
-    TcpListener.gate.cidr = "not-an-ip";
+    TcpListenerV.gate.cidr = "not-an-ip";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.cidr = "192.168.1.0/33";
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.cidr = "192.168.1.0/33";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.cidr = "2001:db8::/129";
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.cidr = "2001:db8::/129";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
-    TcpListener.gate.cidr = "192.168.1.0/";
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
+    TcpListenerV.gate.cidr = "192.168.1.0/";
     TcpListener.ip_allow_add_cidr(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_family_isolation()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip v4net = v4(192, 168, 1, 0);
-    TcpListener.gate.addr = &v4net;
-    TcpListener.gate.prefix_len = 24;
+    TcpListenerV.gate.addr = &v4net;
+    TcpListenerV.gate.prefix_len = 24;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip v6peer = v6("2001:db8::1");
-    TcpListener.gate.addr = &v6peer;
+    TcpListenerV.gate.addr = &v6peer;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_host_and_zero_prefix()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip host = v4(203, 0, 113, 7);
-    TcpListener.gate.addr = &host;
-    TcpListener.gate.prefix_len = 32;
+    TcpListenerV.gate.addr = &host;
+    TcpListenerV.gate.prefix_len = 32;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip other = v4(203, 0, 113, 8);
-    TcpListener.gate.addr = &host;
+    TcpListenerV.gate.addr = &host;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
-    TcpListener.gate.addr = &other;
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
+    TcpListenerV.gate.addr = &other;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip z = v4(0, 0, 0, 0);
-    TcpListener.gate.addr = &z;
-    TcpListener.gate.prefix_len = 0;
+    TcpListenerV.gate.addr = &z;
+    TcpListenerV.gate.prefix_len = 0;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     protocore_ip anyone = v4(1, 2, 3, 4);
-    TcpListener.gate.addr = &anyone;
+    TcpListenerV.gate.addr = &anyone;
     TcpListener.ip_allowed(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 }
 
 void test_ip_allowlist_rejects_bad_and_full()
 {
     TcpListener.ip_allowlist_reset(protocore_tcp_listener_span());
     protocore_ip bad = v4(1, 0, 0, 0);
-    TcpListener.gate.addr = &bad;
-    TcpListener.gate.prefix_len = 33;
+    TcpListenerV.gate.addr = &bad;
+    TcpListenerV.gate.prefix_len = 33;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
     for (int i = 0; i < 4; i++)
     {
         protocore_ip r = v4(10, 0, 0, (uint8_t)i);
-        TcpListener.gate.addr = &r;
-        TcpListener.gate.prefix_len = 32;
+        TcpListenerV.gate.addr = &r;
+        TcpListenerV.gate.prefix_len = 32;
         TcpListener.ip_allow_add(protocore_tcp_listener_span());
-        TEST_ASSERT_TRUE(TcpListener.ok);
+        TEST_ASSERT_TRUE(TcpListenerV.ok);
     }
     protocore_ip overflow = v4(10, 0, 0, 9);
-    TcpListener.gate.addr = &overflow;
-    TcpListener.gate.prefix_len = 32;
+    TcpListenerV.gate.addr = &overflow;
+    TcpListenerV.gate.prefix_len = 32;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
-    TEST_ASSERT_FALSE(TcpListener.ok);
+    TEST_ASSERT_FALSE(TcpListenerV.ok);
 }
 
 void test_protocore_register_builtins_installs_http(void)
@@ -401,7 +401,7 @@ void test_clock_custom_and_revert(void)
 
 void test_accept_cb_global_throttle_rejects_over_budget()
 {
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
     TcpListener.accept_throttle_reset(protocore_tcp_listener_span());
     TcpListener.per_ip_throttle_reset(protocore_tcp_listener_span());
@@ -422,7 +422,7 @@ void test_accept_cb_global_throttle_rejects_over_budget()
 
 void test_accept_cb_ip_allowlist_allows_when_empty()
 {
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
     TcpListener.accept_throttle_reset(protocore_tcp_listener_span());
     TcpListener.per_ip_throttle_reset(protocore_tcp_listener_span());
@@ -436,7 +436,7 @@ void test_accept_cb_ip_allowlist_allows_when_empty()
 
 void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
 {
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     ConnPool.init(protocore_conn_pool_span());
     TcpListener.accept_throttle_reset(protocore_tcp_listener_span());
     TcpListener.per_ip_throttle_reset(protocore_tcp_listener_span());
@@ -444,10 +444,10 @@ void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
     set_millis(0);
 
     protocore_ip rule_net = v4(192, 168, 1, 0);
-    TcpListener.gate.addr = &rule_net;
-    TcpListener.gate.prefix_len = 24;
+    TcpListenerV.gate.addr = &rule_net;
+    TcpListenerV.gate.prefix_len = 24;
     TcpListener.ip_allow_add(protocore_tcp_listener_span());
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
 
     protocore_pcb pcb = {0};
     int before_aborts = mock_abort_call_count();
@@ -455,4 +455,3 @@ void test_accept_cb_ip_allowlist_rejects_once_a_rule_exists()
     TEST_ASSERT_EQUAL_INT(before_aborts + 1, mock_abort_call_count());
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
-

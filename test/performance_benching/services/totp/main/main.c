@@ -18,35 +18,35 @@ static uint8_t totp_work[16]; // the borrow an entry takes; Totp never reads it
 /** @brief HOTP(K,C) over @p k for counter @p c, @p digit digits wide. */
 static uint32_t hotp_of(const uint8_t *k, size_t keylen, uint64_t c, uint8_t digit)
 {
-    Totp.k = k;
-    Totp.keylen = keylen;
-    Totp.digit = digit;
-    Totp.step.counter = c;
+    TotpV.k = k;
+    TotpV.keylen = keylen;
+    TotpV.digit = digit;
+    TotpV.step.counter = c;
     Totp.hotp(totp_work);
-    return Totp.u32;
+    return TotpV.u32;
 }
 
 /** @brief HOTP(K,T) over @p k at Unix time @p t, time step @p x, @p digit digits wide. */
 static uint32_t totp_of(const uint8_t *k, size_t keylen, uint64_t t, uint32_t x, uint8_t digit)
 {
-    Totp.k = k;
-    Totp.keylen = keylen;
-    Totp.digit = digit;
-    Totp.step.unix_time = t;
-    Totp.step.t0 = 0;
-    Totp.step.x = x;
+    TotpV.k = k;
+    TotpV.keylen = keylen;
+    TotpV.digit = digit;
+    TotpV.step.unix_time = t;
+    TotpV.step.t0 = 0;
+    TotpV.step.x = x;
     Totp.totp(totp_work);
-    return Totp.u32;
+    return TotpV.u32;
 }
 
 /** @brief Decode the base32 text @p b32 into @p out; the K bytes written, -1 on a refusal. */
 static int32_t base32_of(const char *b32, uint8_t *out, size_t cap)
 {
-    Totp.secret.b32 = b32;
-    Totp.secret.out = out;
-    Totp.secret.cap = cap;
+    TotpV.secret.b32 = b32;
+    TotpV.secret.out = out;
+    TotpV.secret.cap = cap;
     Totp.base32_decode(totp_work);
-    return Totp.i32;
+    return TotpV.i32;
 }
 
 void dbench_run(void)

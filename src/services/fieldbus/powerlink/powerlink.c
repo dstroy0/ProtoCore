@@ -21,28 +21,28 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void powerlink_build(uint8_t *restrict work);
+void protocore_powerlink_build(uint8_t *restrict work);
 
-static void powerlink_build(uint8_t *restrict work)
+void protocore_powerlink_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t msg_type = Powerlink.build_args.msg_type;
-    uint8_t dest = Powerlink.build_args.dest;
-    uint8_t source = Powerlink.build_args.source;
-    const uint8_t *payload = Powerlink.build_args.payload;
-    size_t payload_len = Powerlink.build_args.payload_len;
-    uint8_t *out = Powerlink.build_args.out;
-    size_t cap = Powerlink.build_args.cap;
+    uint8_t msg_type = PowerlinkV.build_args.msg_type;
+    uint8_t dest = PowerlinkV.build_args.dest;
+    uint8_t source = PowerlinkV.build_args.source;
+    const uint8_t *payload = PowerlinkV.build_args.payload;
+    size_t payload_len = PowerlinkV.build_args.payload_len;
+    uint8_t *out = PowerlinkV.build_args.out;
+    size_t cap = PowerlinkV.build_args.cap;
 
     if (!out || (payload_len && !payload))
     {
-        Powerlink.n = 0;
+        PowerlinkV.n = 0;
         return;
     }
     size_t n = 3 + payload_len;
     if (n > cap)
     {
-        Powerlink.n = 0;
+        PowerlinkV.n = 0;
         return;
     }
     out[0] = msg_type;
@@ -52,115 +52,115 @@ static void powerlink_build(uint8_t *restrict work)
     {
         mem.cpy(out + 3, payload, payload_len);
     }
-    Powerlink.n = n;
+    PowerlinkV.n = n;
 }
 
-static void powerlink_soc(uint8_t *restrict work)
+void protocore_powerlink_soc(uint8_t *restrict work)
 {
-    uint8_t source = Powerlink.soc_args.source;
-    uint8_t *out = Powerlink.soc_args.out;
-    size_t cap = Powerlink.soc_args.cap;
+    uint8_t source = PowerlinkV.soc_args.source;
+    uint8_t *out = PowerlinkV.soc_args.out;
+    size_t cap = PowerlinkV.soc_args.cap;
 
-    Powerlink.build_args.msg_type = EPL_MSG_SOC;
-    Powerlink.build_args.dest = EPL_NODE_BROADCAST;
-    Powerlink.build_args.source = source;
-    Powerlink.build_args.payload = NULL;
-    Powerlink.build_args.payload_len = 0;
-    Powerlink.build_args.out = out;
-    Powerlink.build_args.cap = cap;
-    powerlink_build(work);
+    PowerlinkV.build_args.msg_type = EPL_MSG_SOC;
+    PowerlinkV.build_args.dest = EPL_NODE_BROADCAST;
+    PowerlinkV.build_args.source = source;
+    PowerlinkV.build_args.payload = NULL;
+    PowerlinkV.build_args.payload_len = 0;
+    PowerlinkV.build_args.out = out;
+    PowerlinkV.build_args.cap = cap;
+    protocore_powerlink_build(work);
 }
 
-static void powerlink_preq(uint8_t *restrict work)
+void protocore_powerlink_preq(uint8_t *restrict work)
 {
-    uint8_t dest_cn = Powerlink.preq_args.dest_cn;
-    uint8_t source = Powerlink.preq_args.source;
-    const uint8_t *pdo = Powerlink.preq_args.pdo;
-    size_t pdo_len = Powerlink.preq_args.pdo_len;
-    uint8_t *out = Powerlink.preq_args.out;
-    size_t cap = Powerlink.preq_args.cap;
+    uint8_t dest_cn = PowerlinkV.preq_args.dest_cn;
+    uint8_t source = PowerlinkV.preq_args.source;
+    const uint8_t *pdo = PowerlinkV.preq_args.pdo;
+    size_t pdo_len = PowerlinkV.preq_args.pdo_len;
+    uint8_t *out = PowerlinkV.preq_args.out;
+    size_t cap = PowerlinkV.preq_args.cap;
 
-    Powerlink.build_args.msg_type = EPL_MSG_PREQ;
-    Powerlink.build_args.dest = dest_cn;
-    Powerlink.build_args.source = source;
-    Powerlink.build_args.payload = pdo;
-    Powerlink.build_args.payload_len = pdo_len;
-    Powerlink.build_args.out = out;
-    Powerlink.build_args.cap = cap;
-    powerlink_build(work);
+    PowerlinkV.build_args.msg_type = EPL_MSG_PREQ;
+    PowerlinkV.build_args.dest = dest_cn;
+    PowerlinkV.build_args.source = source;
+    PowerlinkV.build_args.payload = pdo;
+    PowerlinkV.build_args.payload_len = pdo_len;
+    PowerlinkV.build_args.out = out;
+    PowerlinkV.build_args.cap = cap;
+    protocore_powerlink_build(work);
 }
 
-static void powerlink_pres(uint8_t *restrict work)
+void protocore_powerlink_pres(uint8_t *restrict work)
 {
-    uint8_t source_cn = Powerlink.pres_args.source_cn;
-    const uint8_t *pdo = Powerlink.pres_args.pdo;
-    size_t pdo_len = Powerlink.pres_args.pdo_len;
-    uint8_t *out = Powerlink.pres_args.out;
-    size_t cap = Powerlink.pres_args.cap;
+    uint8_t source_cn = PowerlinkV.pres_args.source_cn;
+    const uint8_t *pdo = PowerlinkV.pres_args.pdo;
+    size_t pdo_len = PowerlinkV.pres_args.pdo_len;
+    uint8_t *out = PowerlinkV.pres_args.out;
+    size_t cap = PowerlinkV.pres_args.cap;
 
-    Powerlink.build_args.msg_type = EPL_MSG_PRES;
-    Powerlink.build_args.dest = EPL_NODE_BROADCAST;
-    Powerlink.build_args.source = source_cn;
-    Powerlink.build_args.payload = pdo;
-    Powerlink.build_args.payload_len = pdo_len;
-    Powerlink.build_args.out = out;
-    Powerlink.build_args.cap = cap;
-    powerlink_build(work);
+    PowerlinkV.build_args.msg_type = EPL_MSG_PRES;
+    PowerlinkV.build_args.dest = EPL_NODE_BROADCAST;
+    PowerlinkV.build_args.source = source_cn;
+    PowerlinkV.build_args.payload = pdo;
+    PowerlinkV.build_args.payload_len = pdo_len;
+    PowerlinkV.build_args.out = out;
+    PowerlinkV.build_args.cap = cap;
+    protocore_powerlink_build(work);
 }
 
-static void powerlink_soa(uint8_t *restrict work)
+void protocore_powerlink_soa(uint8_t *restrict work)
 {
-    uint8_t source = Powerlink.soa_args.source;
-    const uint8_t *payload = Powerlink.soa_args.payload;
-    size_t payload_len = Powerlink.soa_args.payload_len;
-    uint8_t *out = Powerlink.soa_args.out;
-    size_t cap = Powerlink.soa_args.cap;
+    uint8_t source = PowerlinkV.soa_args.source;
+    const uint8_t *payload = PowerlinkV.soa_args.payload;
+    size_t payload_len = PowerlinkV.soa_args.payload_len;
+    uint8_t *out = PowerlinkV.soa_args.out;
+    size_t cap = PowerlinkV.soa_args.cap;
 
-    Powerlink.build_args.msg_type = EPL_MSG_SOA;
-    Powerlink.build_args.dest = EPL_NODE_BROADCAST;
-    Powerlink.build_args.source = source;
-    Powerlink.build_args.payload = payload;
-    Powerlink.build_args.payload_len = payload_len;
-    Powerlink.build_args.out = out;
-    Powerlink.build_args.cap = cap;
-    powerlink_build(work);
+    PowerlinkV.build_args.msg_type = EPL_MSG_SOA;
+    PowerlinkV.build_args.dest = EPL_NODE_BROADCAST;
+    PowerlinkV.build_args.source = source;
+    PowerlinkV.build_args.payload = payload;
+    PowerlinkV.build_args.payload_len = payload_len;
+    PowerlinkV.build_args.out = out;
+    PowerlinkV.build_args.cap = cap;
+    protocore_powerlink_build(work);
 }
 
-static void powerlink_asnd(uint8_t *restrict work)
+void protocore_powerlink_asnd(uint8_t *restrict work)
 {
-    uint8_t dest = Powerlink.asnd_args.dest;
-    uint8_t source = Powerlink.asnd_args.source;
-    const uint8_t *payload = Powerlink.asnd_args.payload;
-    size_t payload_len = Powerlink.asnd_args.payload_len;
-    uint8_t *out = Powerlink.asnd_args.out;
-    size_t cap = Powerlink.asnd_args.cap;
+    uint8_t dest = PowerlinkV.asnd_args.dest;
+    uint8_t source = PowerlinkV.asnd_args.source;
+    const uint8_t *payload = PowerlinkV.asnd_args.payload;
+    size_t payload_len = PowerlinkV.asnd_args.payload_len;
+    uint8_t *out = PowerlinkV.asnd_args.out;
+    size_t cap = PowerlinkV.asnd_args.cap;
 
-    Powerlink.build_args.msg_type = EPL_MSG_ASND;
-    Powerlink.build_args.dest = dest;
-    Powerlink.build_args.source = source;
-    Powerlink.build_args.payload = payload;
-    Powerlink.build_args.payload_len = payload_len;
-    Powerlink.build_args.out = out;
-    Powerlink.build_args.cap = cap;
-    powerlink_build(work);
+    PowerlinkV.build_args.msg_type = EPL_MSG_ASND;
+    PowerlinkV.build_args.dest = dest;
+    PowerlinkV.build_args.source = source;
+    PowerlinkV.build_args.payload = payload;
+    PowerlinkV.build_args.payload_len = payload_len;
+    PowerlinkV.build_args.out = out;
+    PowerlinkV.build_args.cap = cap;
+    protocore_powerlink_build(work);
 }
 
-static void powerlink_parse(uint8_t *restrict work)
+void protocore_powerlink_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *frame = Powerlink.parse_args.frame;
-    size_t len = Powerlink.parse_args.len;
-    EplFrame *out = Powerlink.parse_args.out;
+    const uint8_t *frame = PowerlinkV.parse_args.frame;
+    size_t len = PowerlinkV.parse_args.len;
+    EplFrame *out = PowerlinkV.parse_args.out;
 
     if (!frame || !out || len < 3)
     {
-        Powerlink.ok = PROTO_FALSE;
+        PowerlinkV.ok = PROTO_FALSE;
         return;
     }
     uint8_t mt = frame[0];
     if (mt != EPL_MSG_SOC && mt != EPL_MSG_PREQ && mt != EPL_MSG_PRES && mt != EPL_MSG_SOA && mt != EPL_MSG_ASND)
     {
-        Powerlink.ok = PROTO_FALSE;
+        PowerlinkV.ok = PROTO_FALSE;
         return;
     }
     out->msg_type = mt;
@@ -168,16 +168,11 @@ static void powerlink_parse(uint8_t *restrict work)
     out->source = frame[2];
     out->payload = (len > 3) ? (frame + 3) : NULL;
     out->payload_len = len - 3;
-    Powerlink.ok = PROTO_TRUE;
+    PowerlinkV.ok = PROTO_TRUE;
 }
 
-PowerlinkNs Powerlink = {.build = powerlink_build,
-                         .soc = powerlink_soc,
-                         .preq = powerlink_preq,
-                         .pres = powerlink_pres,
-                         .soa = powerlink_soa,
-                         .asnd = powerlink_asnd,
-                         .parse = powerlink_parse};
+/** @brief The operands and the outcome. */
+PowerlinkVars PowerlinkV;
 
 PROTOCORE_END_DECLS
 

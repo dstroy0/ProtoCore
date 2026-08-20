@@ -78,7 +78,6 @@ typedef struct
     uint8_t ps;       ///< PDU specific (DA for PDU1, group extension for PDU2)
     proto_bool pdu1;  ///< true => peer-to-peer (PF < 240); false => broadcast
 } J1939Id;
-
 /** @brief Result of feeding a frame to the TP reassembler. */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -88,7 +87,6 @@ typedef enum PROTO_ENUM_PACKED
     J1939_TP_COMPLETE,    ///< the message is fully reassembled (see fields below)
     J1939_TP_ERROR,       ///< malformed / out-of-sequence / too large
 } J1939TpResult;
-
 /** @brief Transport-Protocol reassembly context (one in-flight message). */
 typedef struct
 {
@@ -101,7 +99,6 @@ typedef struct
     uint16_t received;   ///< octets stored so far
     uint8_t buf[PROTOCORE_J1939_TP_MAX];
 } J1939TpRx;
-
 /** @brief Decoded EEC1 (PGN 61444). Percent-torque fields are @ref J1939_TORQUE_NA when not available. */
 typedef struct
 {
@@ -111,7 +108,6 @@ typedef struct
     proto_bool engine_speed_valid;     ///< false when the raw speed is in the not-available range
     float engine_speed_rpm;            ///< engine speed (rpm, 0.125 rpm/bit)
 } J1939Eec1;
-
 /** @brief Decoded ET1 (PGN 65262). Each temperature has its own validity flag. */
 typedef struct
 {
@@ -122,7 +118,6 @@ typedef struct
     proto_bool oil_valid;
     float oil_temp_c; ///< engine oil temperature (degC, 0.03125 degC/bit, -273 offset)
 } J1939Et1;
-
 /** @brief Decoded LFE (PGN 65266). Each value has its own validity flag (cleared for a not-available raw). */
 typedef struct
 {
@@ -135,7 +130,6 @@ typedef struct
     proto_bool throttle_valid;
     float throttle_pct; ///< throttle valve 1 position (percent, 0.4 %/bit)
 } J1939Lfe;
-
 /** @brief Decoded AMB (PGN 65269). Each measurement has its own validity flag (cleared for a
  *  not-available raw). Barometric pressure is a 1-octet SPN; the temperatures are 2-octet except the
  *  air inlet, which is a 1-octet SPN. */
@@ -152,7 +146,6 @@ typedef struct
     proto_bool road_temp_valid;
     float road_temp_c; ///< road surface temperature (degC, 0.03125 degC/bit, -273 offset) - SPN 79
 } J1939Amb;
-
 /** @brief Decoded IC1 (PGN 65270). Each measurement has its own validity flag (cleared for a
  *  not-available raw). Exhaust gas temperature is a 2-octet SPN; the rest are 1-octet. */
 typedef struct
@@ -172,7 +165,6 @@ typedef struct
     proto_bool coolant_filter_valid;
     float coolant_filter_kpa; ///< coolant filter differential pressure (kPa, 0.5 kPa/bit) - SPN 112
 } J1939Ic1;
-
 /** @brief Decoded VD (PGN 65248). The distances are held as double: at 0.125 km/bit a 32-bit odometer
  *  spans hundreds of millions of km, beyond float's ~7-digit precision. */
 typedef struct
@@ -182,7 +174,6 @@ typedef struct
     proto_bool total_valid;
     double total_km; ///< total vehicle distance (km, 0.125 km/bit) - SPN 245
 } J1939Vd;
-
 /** @brief Decoded CCVS (PGN 65265): the wheel-based vehicle speed plus the cruise-control-active state.
  *  Only the two signals with cross-source-verified positions are decoded; the many discrete switches in
  *  this PGN are left to the caller (their bit positions vary between vendor definitions). */
@@ -193,7 +184,6 @@ typedef struct
     uint8_t
         cruise_active; ///< cruise control active state, a 2-bit value (0 off / 1 active / 2 error / 3 n/a) - SPN 595
 } J1939Ccvs;
-
 /** @brief One decoded Diagnostic Trouble Code (J1939-73 SPN conversion method 4). */
 typedef struct
 {
@@ -202,7 +192,6 @@ typedef struct
     uint8_t cm;   ///< SPN conversion method (1-bit)
     uint8_t oc;   ///< occurrence count (7-bit)
 } J1939Dtc;
-
 /** @brief Decoded DM1 lamp status (each field 0 = off, 1 = on; 2/3 reserved / not available). */
 typedef struct
 {
@@ -212,9 +201,7 @@ typedef struct
     uint8_t protect;       ///< protect lamp
     uint8_t dtc_count;     ///< number of active DTCs decoded into the caller's array
 } J1939Dm1;
-
 #include "shared/can/can.h" // CanFrame: the type a parameter points at
-
 /** @brief What encode_id takes: id, priority, pgn, sa, da. */
 typedef struct
 {
@@ -224,14 +211,12 @@ typedef struct
     uint8_t sa;
     uint8_t da;
 } J1939EncodeIdArgs;
-
 /** @brief What decode_id takes: id, out. */
 typedef struct
 {
     uint32_t id;
     J1939Id *out;
 } J1939DecodeIdArgs;
-
 /** @brief What build_message takes: out, priority, pgn, sa, da, data, ... */
 typedef struct
 {
@@ -243,7 +228,6 @@ typedef struct
     const uint8_t *data;
     uint8_t len;
 } J1939BuildMessageArgs;
-
 /** @brief What build_request takes: out, sa, da, requested_pgn. */
 typedef struct
 {
@@ -252,7 +236,6 @@ typedef struct
     uint8_t da;
     uint32_t requested_pgn;
 } J1939BuildRequestArgs;
-
 /** @brief What build_address_claim takes: out, sa, name. */
 typedef struct
 {
@@ -260,7 +243,6 @@ typedef struct
     uint8_t sa;
     uint64_t name;
 } J1939BuildAddressClaimArgs;
-
 /** @brief What build_name takes: arbitrary_address_capable, ... */
 typedef struct
 {
@@ -274,13 +256,11 @@ typedef struct
     uint16_t manufacturer_code;
     uint32_t identity_number;
 } J1939BuildNameArgs;
-
 /** @brief What tp_num_packets takes: total_size. */
 typedef struct
 {
     uint16_t total_size;
 } J1939TpNumPacketsArgs;
-
 /** @brief What build_bam_cm takes: out, sa, pgn, total_size. */
 typedef struct
 {
@@ -289,7 +269,6 @@ typedef struct
     uint32_t pgn;
     uint16_t total_size;
 } J1939BuildBamCmArgs;
-
 /** @brief What build_tp_dt takes: out, sa, da, seq, chunk, chunk_len. */
 typedef struct
 {
@@ -300,69 +279,59 @@ typedef struct
     const uint8_t *chunk;
     uint8_t chunk_len;
 } J1939BuildTpDtArgs;
-
 /** @brief What tp_reset takes: rx. */
 typedef struct
 {
     J1939TpRx *rx;
 } J1939TpResetArgs;
-
 /** @brief What tp_feed takes: rx, f. */
 typedef struct
 {
     J1939TpRx *rx;
     const CanFrame *f;
 } J1939TpFeedArgs;
-
 /** @brief What decode_eec1 takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     J1939Eec1 *out;
 } J1939DecodeEec1Args;
-
 /** @brief What decode_et1 takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     J1939Et1 *out;
 } J1939DecodeEt1Args;
-
 /** @brief What decode_lfe takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     J1939Lfe *out;
 } J1939DecodeLfeArgs;
-
 /** @brief What decode_amb takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     J1939Amb *out;
 } J1939DecodeAmbArgs;
-
 /** @brief What decode_ic1 takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     J1939Ic1 *out;
 } J1939DecodeIc1Args;
-
 /** @brief What decode_vd takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     J1939Vd *out;
 } J1939DecodeVdArgs;
-
 /** @brief What decode_ccvs takes: f, out. */
 typedef struct
 {
     const CanFrame *f;
     J1939Ccvs *out;
 } J1939DecodeCcvsArgs;
-
 /** @brief What decode_dm1 takes: body, len, out, out_dtcs, max. */
 typedef struct
 {
@@ -372,7 +341,6 @@ typedef struct
     J1939Dtc *out_dtcs; ///< caller array receiving up to max decoded DTCs (may be null to only read the lamps)
     size_t max;
 } J1939DecodeDm1Args;
-
 /**
  * @brief SAE J1939 message codec (PROTOCORE_ENABLE_J1939) - the heavy-duty-vehicle / agriculture / marine / genset CAN
  * higher-layer protocol, over 29-bit extended CAN frames.
@@ -456,12 +424,18 @@ typedef struct
     J1939DecodeVdArgs decode_vd_args;
     J1939DecodeCcvsArgs decode_ccvs_args;
     J1939DecodeDm1Args decode_dm1_args;
-
     proto_bool ok;
     uint64_t value;
     uint8_t u8;
     J1939TpResult tp;
+} J1939Vars;
 
+/** @brief The operands and the outcome. */
+extern J1939Vars J1939V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const encode_id)(uint8_t *restrict work);
     void (*const decode_id)(uint8_t *restrict work);
     void (*const build_message)(uint8_t *restrict work);
@@ -483,8 +457,53 @@ typedef struct
     void (*const decode_dm1)(uint8_t *restrict work);
 } J1939Ns;
 
-/** @brief The one symbol this module exports. */
-extern J1939Ns J1939;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in J1939V or a region of the borrow at a fixed offset.
+void protocore_j1939_encode_id(uint8_t *restrict work);
+void protocore_j1939_decode_id(uint8_t *restrict work);
+void protocore_j1939_build_message(uint8_t *restrict work);
+void protocore_j1939_build_request(uint8_t *restrict work);
+void protocore_j1939_build_address_claim(uint8_t *restrict work);
+void protocore_j1939_build_name(uint8_t *restrict work);
+void protocore_j1939_tp_num_packets(uint8_t *restrict work);
+void protocore_j1939_build_bam_cm(uint8_t *restrict work);
+void protocore_j1939_build_tp_dt(uint8_t *restrict work);
+void protocore_j1939_tp_reset(uint8_t *restrict work);
+void protocore_j1939_tp_feed(uint8_t *restrict work);
+void protocore_j1939_decode_eec1(uint8_t *restrict work);
+void protocore_j1939_decode_et1(uint8_t *restrict work);
+void protocore_j1939_decode_lfe(uint8_t *restrict work);
+void protocore_j1939_decode_amb(uint8_t *restrict work);
+void protocore_j1939_decode_ic1(uint8_t *restrict work);
+void protocore_j1939_decode_vd(uint8_t *restrict work);
+void protocore_j1939_decode_ccvs(uint8_t *restrict work);
+void protocore_j1939_decode_dm1(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `J1939.encode_id(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const J1939Ns J1939 __attribute__((unused)) = {
+    .encode_id = protocore_j1939_encode_id,
+    .decode_id = protocore_j1939_decode_id,
+    .build_message = protocore_j1939_build_message,
+    .build_request = protocore_j1939_build_request,
+    .build_address_claim = protocore_j1939_build_address_claim,
+    .build_name = protocore_j1939_build_name,
+    .tp_num_packets = protocore_j1939_tp_num_packets,
+    .build_bam_cm = protocore_j1939_build_bam_cm,
+    .build_tp_dt = protocore_j1939_build_tp_dt,
+    .tp_reset = protocore_j1939_tp_reset,
+    .tp_feed = protocore_j1939_tp_feed,
+    .decode_eec1 = protocore_j1939_decode_eec1,
+    .decode_et1 = protocore_j1939_decode_et1,
+    .decode_lfe = protocore_j1939_decode_lfe,
+    .decode_amb = protocore_j1939_decode_amb,
+    .decode_ic1 = protocore_j1939_decode_ic1,
+    .decode_vd = protocore_j1939_decode_vd,
+    .decode_ccvs = protocore_j1939_decode_ccvs,
+    .decode_dm1 = protocore_j1939_decode_dm1,
+};
 
 /**
  * @brief The PROTOCORE_J1939_BORROW bytes this module's state lives in.

@@ -58,7 +58,6 @@ typedef struct
     const uint32_t *oid_val; ///< an OBJECT IDENTIFIER value's subidentifiers
     size_t oid_val_len;      ///< how many
 } SnmpVarbind;
-
 /** @brief RFC 3416 sec 4.2.6 and sec 4.2.7: what a notification PDU carries. */
 typedef struct
 {
@@ -70,7 +69,6 @@ typedef struct
     const SnmpVarbind *vbs;   ///< the caller bindings that follow the mandatory two
     size_t vb_count;          ///< how many
 } SnmpNotifyPduArgs;
-
 /** @brief RFC 3417 sec 3.2: the notification receiver a send addresses. */
 typedef struct
 {
@@ -78,7 +76,6 @@ typedef struct
     uint16_t port;         ///< its port, 162 by convention
     const char *community; ///< the community the message carries (RFC 1157 sec 3.2.5)
 } SnmpNotifyDstArgs;
-
 /** @brief Where a notification is built: an open encoder, or a bare buffer. */
 typedef struct
 {
@@ -86,7 +83,6 @@ typedef struct
     uint8_t *out; ///< where a complete message is built
     size_t cap;   ///< how many octets that holds
 } SnmpNotifyBufArgs;
-
 /**
  * @brief The notification originator (RFC 3416 sec 4.2.6, sec 4.2.7).
  *
@@ -108,18 +104,39 @@ typedef struct
     SnmpNotifyPduArgs pdu; ///< what the notification PDU carries
     SnmpNotifyDstArgs dst; ///< where a send goes
     SnmpNotifyBufArgs buf; ///< where the message is built
-
     proto_bool ok;
     size_t n;
+} SnmpNotifyVars;
 
+/** @brief The operands and the outcome. */
+extern SnmpNotifyVars SnmpNotifyV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_pdu)(uint8_t *restrict work);
     void (*const build_v2c)(uint8_t *restrict work);
     void (*const trap_v2c)(uint8_t *restrict work);
     void (*const inform_v2c)(uint8_t *restrict work);
 } SnmpNotifyNs;
 
-/** @brief The one symbol this module exports. */
-extern SnmpNotifyNs SnmpNotify;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SnmpNotifyV or a region of the borrow at a fixed offset.
+void protocore_snmp_notify_build_pdu(uint8_t *restrict work);
+void protocore_snmp_notify_build_v2c(uint8_t *restrict work);
+void protocore_snmp_notify_trap_v2c(uint8_t *restrict work);
+void protocore_snmp_notify_inform_v2c(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SnmpNotify.build_pdu(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SnmpNotifyNs SnmpNotify __attribute__((unused)) = {
+    .build_pdu = protocore_snmp_notify_build_pdu,
+    .build_v2c = protocore_snmp_notify_build_v2c,
+    .trap_v2c = protocore_snmp_notify_trap_v2c,
+    .inform_v2c = protocore_snmp_notify_inform_v2c,
+};
 
 /**
  * @brief The PROTOCORE_SNMP_NOTIFY_BORROW bytes this module's state lives in.

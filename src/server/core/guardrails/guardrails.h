@@ -36,17 +36,14 @@ typedef struct
     uint32_t largest_free_block; ///< largest allocatable block (fragmentation, bytes).
     uint32_t stack_free;         ///< calling task's remaining stack (bytes).
 } protocore_health;
-
 /** @brief Guardrail breach flags: a bitmask OR'd together, so integer constants in a namespacing
  *  struct (cast-free at every | / &). */
 #define PROTOCORE_BREACH_NONE 0
 #define PROTOCORE_BREACH_HEAP 1  ///< free heap below PROTOCORE_GUARDRAIL_HEAP_MIN.
 #define PROTOCORE_BREACH_FRAG 2  ///< largest block below PROTOCORE_GUARDRAIL_FRAG_MIN_BLOCK.
 #define PROTOCORE_BREACH_STACK 4 ///< task stack remaining below PROTOCORE_GUARDRAIL_STACK_MIN.
-
 /** @brief Breach callback: @p breaches is a PROTOCORE_BREACH_* bitmask, @p h the snapshot. */
 typedef void (*protocore_breach_fn)(uint8_t breaches, const protocore_health *h);
-
 /** @brief The floors an evaluation judges a snapshot against. */
 typedef struct
 {
@@ -54,14 +51,12 @@ typedef struct
     uint32_t frag_min_block; ///< largest block under this trips PROTOCORE_BREACH_FRAG
     uint32_t stack_min;      ///< stack remaining under this trips PROTOCORE_BREACH_STACK
 } GuardrailFloorArgs;
-
 /** @brief Where a serialize writes. */
 typedef struct
 {
     char *out;  ///< the buffer the JSON lands in
     size_t cap; ///< how much room it has
 } GuardrailOutArgs;
-
 /**
  * @brief The device's live health, and the floors it is judged against.
  *
@@ -86,10 +81,16 @@ typedef struct
     GuardrailFloorArgs floors;
     GuardrailOutArgs out;
     protocore_breach_fn cb;
-
     uint8_t breaches;
     int n;
+} GuardrailsVars;
 
+/** @brief The operands and the outcome. */
+extern GuardrailsVars GuardrailsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const eval)(uint8_t *restrict work);
     void (*const json)(uint8_t *restrict work);
     void (*const sample)(uint8_t *restrict work);
@@ -97,8 +98,25 @@ typedef struct
     void (*const check)(uint8_t *restrict work);
 } GuardrailsNs;
 
-/** @brief The one symbol this module exports. */
-extern GuardrailsNs Guardrails;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in GuardrailsV or a region of the borrow at a fixed offset.
+void protocore_guardrails_eval(uint8_t *restrict work);
+void protocore_guardrails_json(uint8_t *restrict work);
+void protocore_guardrails_sample(uint8_t *restrict work);
+void protocore_guardrails_begin(uint8_t *restrict work);
+void protocore_guardrails_check(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Guardrails.eval(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const GuardrailsNs Guardrails __attribute__((unused)) = {
+    .eval = protocore_guardrails_eval,
+    .json = protocore_guardrails_json,
+    .sample = protocore_guardrails_sample,
+    .begin = protocore_guardrails_begin,
+    .check = protocore_guardrails_check,
+};
 
 /**
  * @brief The PROTOCORE_GUARDRAILS_BORROW bytes this module's state lives in.

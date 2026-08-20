@@ -42,7 +42,6 @@ typedef struct
     const char *key;         ///< config-store key (<= 15 chars).
     protocore_cfg_type type; ///< the field's value type.
 } protocore_cfg_field;
-
 /** @brief What export takes: ns, fields, n, out, cap. */
 typedef struct
 {
@@ -52,7 +51,6 @@ typedef struct
     char *out;
     size_t cap;
 } ConfigIoExportArgs;
-
 /** @brief What import takes: ns, fields, n, text, len. */
 typedef struct
 {
@@ -62,7 +60,6 @@ typedef struct
     const char *text;
     size_t len;
 } ConfigIoImportArgs;
-
 /**
  * @brief Schema-driven config export / restore (PROTOCORE_ENABLE_CONFIG_IO). The app declares a fixed schema - an ...
  *
@@ -92,16 +89,33 @@ typedef struct
 {
     ConfigIoExportArgs export_args;
     ConfigIoImportArgs import_args;
-
     proto_bool ok;
     int n;
+} ConfigIoVars;
 
+/** @brief The operands and the outcome. */
+extern ConfigIoVars ConfigIoV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const export)(uint8_t *restrict work);
     void (*const import)(uint8_t *restrict work);
 } ConfigIoNs;
 
-/** @brief The one symbol this module exports. */
-extern ConfigIoNs ConfigIo;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ConfigIoV or a region of the borrow at a fixed offset.
+void protocore_config_io_export(uint8_t *restrict work);
+void protocore_config_io_import(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `ConfigIo.export(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ConfigIoNs ConfigIo __attribute__((unused)) = {
+    .export = protocore_config_io_export,
+    .import = protocore_config_io_import,
+};
 
 PROTOCORE_END_DECLS
 

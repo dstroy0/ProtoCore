@@ -94,7 +94,6 @@ typedef struct
     const uint8_t *data; ///< user data (long only), or nullptr
     uint8_t data_len;    ///< user-data length (long only)
 } MbusFrame;
-
 typedef enum PROTO_ENUM_PACKED
 {
     MBUS_DIF_NONE = 0x0,     ///< no data
@@ -114,7 +113,6 @@ typedef enum PROTO_ENUM_PACKED
     MBUS_DIF_BCD12 = 0xE,    ///< 12-digit BCD (6 octets)
     MBUS_DIF_SPECIAL = 0xF,  ///< special functions (no data)
 } MbusDifCoding;
-
 /** @brief One decoded EN 13757-3 data record. */
 typedef struct
 {
@@ -124,7 +122,6 @@ typedef struct
     const uint8_t *data; ///< value octets (points into the caller buffer)
     uint8_t data_len;    ///< value length in octets
 } MbusRecord;
-
 /** @brief Physical unit a VIF decodes to (the common EN 13757-3 measurement ranges). */
 typedef enum PROTO_ENUM_PACKED
 {
@@ -140,7 +137,6 @@ typedef enum PROTO_ENUM_PACKED
     MBUS_UNIT_K,        ///< temperature difference, kelvin
     MBUS_UNIT_BAR,      ///< pressure, bar
 } MbusUnit;
-
 /** @brief The decoded EN 13757-3 variable-data-structure fixed header. */
 typedef struct
 {
@@ -153,14 +149,12 @@ typedef struct
     uint8_t status;            ///< status octet (error / alarm bits)
     uint16_t signature;        ///< signature word (usually 0)
 } MbusVarHeader;
-
 /** @brief What build_ack takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } MbusBuildAckArgs;
-
 /** @brief What build_short takes: buf, cap, c, a. */
 typedef struct
 {
@@ -169,7 +163,6 @@ typedef struct
     uint8_t c;
     uint8_t a;
 } MbusBuildShortArgs;
-
 /** @brief What build_long takes: buf, cap, c, a, ci, data, data_len. */
 typedef struct
 {
@@ -181,7 +174,6 @@ typedef struct
     const uint8_t *data;
     uint8_t data_len;
 } MbusBuildLongArgs;
-
 /** @brief What build_snd_nke takes: buf, cap, a. */
 typedef struct
 {
@@ -189,7 +181,6 @@ typedef struct
     size_t cap;
     uint8_t a;
 } MbusBuildSndNkeArgs;
-
 /** @brief What build_req_ud2 takes: buf, cap, a, fcb. */
 typedef struct
 {
@@ -198,7 +189,6 @@ typedef struct
     uint8_t a;
     proto_bool fcb;
 } MbusBuildReqUd2Args;
-
 /** @brief What build_req_ud1 takes: buf, cap, a, fcb. */
 typedef struct
 {
@@ -207,7 +197,6 @@ typedef struct
     uint8_t a;
     proto_bool fcb;
 } MbusBuildReqUd1Args;
-
 /** @brief What parse takes: buf, len, out, consumed. */
 typedef struct
 {
@@ -216,13 +205,11 @@ typedef struct
     MbusFrame *out;
     size_t *consumed;
 } MbusParseArgs;
-
 /** @brief What dif_data_len takes: coding. */
 typedef struct
 {
     uint8_t coding;
 } MbusDifDataLenArgs;
-
 /** @brief What record_next takes: body, len, pos, out. */
 typedef struct
 {
@@ -231,21 +218,18 @@ typedef struct
     size_t *pos;
     MbusRecord *out;
 } MbusRecordNextArgs;
-
 /** @brief What record_value_int takes: r, out. */
 typedef struct
 {
     const MbusRecord *r;
     int64_t *out;
 } MbusRecordValueIntArgs;
-
 /** @brief What record_value_real takes: r, out. */
 typedef struct
 {
     const MbusRecord *r;
     float *out;
 } MbusRecordValueRealArgs;
-
 /** @brief What vif_decode takes: vif, unit, exp10. */
 typedef struct
 {
@@ -253,7 +237,6 @@ typedef struct
     MbusUnit *unit;
     int8_t *exp10;
 } MbusVifDecodeArgs;
-
 /** @brief What parse_var_header takes: body, len, out. */
 typedef struct
 {
@@ -261,7 +244,6 @@ typedef struct
     size_t len;
     MbusVarHeader *out;
 } MbusParseVarHeaderArgs;
-
 /**
  * @brief Wired M-Bus (Meter-Bus, EN 13757-2/-3) frame codec (PROTOCORE_ENABLE_MBUS).
  *
@@ -322,11 +304,17 @@ typedef struct
     MbusRecordValueRealArgs record_value_real_args;
     MbusVifDecodeArgs vif_decode_args;
     MbusParseVarHeaderArgs parse_var_header_args;
-
     proto_bool ok;
     size_t n;
     uint8_t value;
+} MbusVars;
 
+/** @brief The operands and the outcome. */
+extern MbusVars MbusV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_ack)(uint8_t *restrict work);
     void (*const build_short)(uint8_t *restrict work);
     void (*const build_long)(uint8_t *restrict work);
@@ -342,8 +330,41 @@ typedef struct
     void (*const parse_var_header)(uint8_t *restrict work);
 } MbusNs;
 
-/** @brief The one symbol this module exports. */
-extern MbusNs Mbus;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MbusV or a region of the borrow at a fixed offset.
+void protocore_mbus_build_ack(uint8_t *restrict work);
+void protocore_mbus_build_short(uint8_t *restrict work);
+void protocore_mbus_build_long(uint8_t *restrict work);
+void protocore_mbus_build_snd_nke(uint8_t *restrict work);
+void protocore_mbus_build_req_ud2(uint8_t *restrict work);
+void protocore_mbus_build_req_ud1(uint8_t *restrict work);
+void protocore_mbus_parse(uint8_t *restrict work);
+void protocore_mbus_dif_data_len(uint8_t *restrict work);
+void protocore_mbus_record_next(uint8_t *restrict work);
+void protocore_mbus_record_value_int(uint8_t *restrict work);
+void protocore_mbus_record_value_real(uint8_t *restrict work);
+void protocore_mbus_vif_decode(uint8_t *restrict work);
+void protocore_mbus_parse_var_header(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Mbus.build_ack(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MbusNs Mbus __attribute__((unused)) = {
+    .build_ack = protocore_mbus_build_ack,
+    .build_short = protocore_mbus_build_short,
+    .build_long = protocore_mbus_build_long,
+    .build_snd_nke = protocore_mbus_build_snd_nke,
+    .build_req_ud2 = protocore_mbus_build_req_ud2,
+    .build_req_ud1 = protocore_mbus_build_req_ud1,
+    .parse = protocore_mbus_parse,
+    .dif_data_len = protocore_mbus_dif_data_len,
+    .record_next = protocore_mbus_record_next,
+    .record_value_int = protocore_mbus_record_value_int,
+    .record_value_real = protocore_mbus_record_value_real,
+    .vif_decode = protocore_mbus_vif_decode,
+    .parse_var_header = protocore_mbus_parse_var_header,
+};
 
 PROTOCORE_END_DECLS
 

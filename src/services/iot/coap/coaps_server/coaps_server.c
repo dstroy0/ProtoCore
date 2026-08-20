@@ -253,10 +253,10 @@ static CoapsSlot *slot_by_cid(uint8_t *restrict work, const uint8_t *cid, size_t
         {
             continue;
         }
-        DtlsServer.local_cid_args.c = &s->conn;
-        DtlsServer.local_cid_args.out = sc;
-        DtlsServer.local_cid(dtls_server_work);
-        size_t sl = DtlsServer.n;
+        DtlsServerV.local_cid_args.c = &s->conn;
+        DtlsServerV.local_cid_args.out = sc;
+        DtlsServerV.local_cid(dtls_server_work);
+        size_t sl = DtlsServerV.n;
         if (sl && sl <= avail && mem.cmp(cid, sc, sl) == 0)
         {
             return s;
@@ -299,10 +299,10 @@ static CoapsSlot *open_conn(uint8_t *restrict work, const char *ip, uint16_t por
     s->cfg.cookie_key = COAPS_SERVER_CTX(work)->cookie_key;
     uint8_t paddr[PROTOCORE_COAPS_PEER_SER];
     proto_bool bound = serialize_peer(ip, port, paddr);
-    DtlsServer.init_args.c = &s->conn;
-    DtlsServer.init_args.cfg = &s->cfg;
-    DtlsServer.init_args.peer_addr = bound ? paddr : NULL;
-    DtlsServer.init_args.peer_addr_len = bound ? sizeof(paddr) : 0;
+    DtlsServerV.init_args.c = &s->conn;
+    DtlsServerV.init_args.cfg = &s->cfg;
+    DtlsServerV.init_args.peer_addr = bound ? paddr : NULL;
+    DtlsServerV.init_args.peer_addr_len = bound ? sizeof(paddr) : 0;
     DtlsServer.init(dtls_server_work);
     (void)str.copy(s->peer_ip, ip, sizeof(s->peer_ip));
     s->peer_port = port;
@@ -318,18 +318,18 @@ static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, c
 {
 #if PROTOCORE_HAS_NET_STACK
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = ip;
-    Ip.args.out = &dst;
+    IpV.args.text = ip;
+    IpV.args.out = &dst;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         return;
     }
-    UdpListener.port = COAPS_SERVER_CTX(work)->port;
-    UdpListener.send_args.dst = &dst;
-    UdpListener.send_args.dst_port = port;
-    UdpListener.send_args.data = data;
-    UdpListener.send_args.len = len;
+    UdpListenerV.port = COAPS_SERVER_CTX(work)->port;
+    UdpListenerV.send_args.dst = &dst;
+    UdpListenerV.send_args.dst_port = port;
+    UdpListenerV.send_args.data = data;
+    UdpListenerV.send_args.len = len;
     UdpListener.sendto(protocore_udp_listener_span());
 #else
     if (COAPS_SERVER_CTX(work)->out_sink)
@@ -368,17 +368,17 @@ static void route_datagram(uint8_t *restrict work, const CoapsIngest *ig, uint32
         s->peer_port = ig->port;
     }
     s->last_ms = now;
-    Coaps.conn = &s->conn;
-    Coaps.dgram.data = ig->data;
-    Coaps.dgram.len = ig->len;
-    Coaps.dgram.out = out;
-    Coaps.dgram.out_cap = out_cap;
+    CoapsV.conn = &s->conn;
+    CoapsV.dgram.data = ig->data;
+    CoapsV.dgram.len = ig->len;
+    CoapsV.dgram.out = out;
+    CoapsV.dgram.out_cap = out_cap;
     Coaps.process(coaps_work);
-    if (Coaps.i32 > 0)
+    if (CoapsV.i32 > 0)
     {
-        server_send(work, s->peer_ip, s->peer_port, out, (size_t)Coaps.i32);
+        server_send(work, s->peer_ip, s->peer_port, out, (size_t)CoapsV.i32);
     }
-    else if (Coaps.i32 < 0)
+    else if (CoapsV.i32 < 0)
     {
         s->used = PROTO_FALSE; // the handshake failed, so the slot goes back
     }
@@ -392,15 +392,15 @@ static void service_slot(uint8_t *restrict work, CoapsSlot *s, uint32_t now, uin
     {
         return;
     }
-    DtlsServer.timeout_ms_args.c = &s->conn;
+    DtlsServerV.timeout_ms_args.c = &s->conn;
     DtlsServer.timeout_ms(dtls_server_work);
-    if (DtlsServer.n == 0) // 0 is due now, -1 is no timer, above 0 is still pending
+    if (DtlsServerV.n == 0) // 0 is due now, -1 is no timer, above 0 is still pending
     {
-        DtlsServer.on_timeout_args.c = &s->conn;
-        DtlsServer.on_timeout_args.out = out;
-        DtlsServer.on_timeout_args.out_cap = out_cap;
+        DtlsServerV.on_timeout_args.c = &s->conn;
+        DtlsServerV.on_timeout_args.out = out;
+        DtlsServerV.on_timeout_args.out_cap = out_cap;
         DtlsServer.on_timeout(dtls_server_work);
-        int n = DtlsServer.n;
+        int n = DtlsServerV.n;
         if (n > 0)
         {
             server_send(work, s->peer_ip, s->peer_port, out, (size_t)n);
@@ -423,12 +423,12 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
     (void)user;
     char ip[COAPS_PEER_TEXT] = {0};
     uint16_t port = 0;
-    UdpListener.peer_args.peer = peer;
-    UdpListener.peer_args.ip_out = ip;
-    UdpListener.peer_args.ip_cap = sizeof(ip);
-    UdpListener.peer_args.port_out = &port;
+    UdpListenerV.peer_args.peer = peer;
+    UdpListenerV.peer_args.ip_out = ip;
+    UdpListenerV.peer_args.ip_cap = sizeof(ip);
+    UdpListenerV.peer_args.port_out = &port;
     UdpListener.peer_addr(protocore_udp_listener_span());
-    if (!UdpListener.ok)
+    if (!UdpListenerV.ok)
     {
         return;
     }
@@ -441,21 +441,21 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
 // ---------------------------------------------------------------------------
 
 // Install ns->identity, bind ns->bind.port, and route its datagrams into the pool.
-static void coaps_server_begin(uint8_t *restrict work)
+void protocore_coaps_server_begin(uint8_t *restrict work)
 {
-    CoapsServer.ok = PROTO_FALSE;
-    if (!CoapsServer.identity.rng || !CoapsServer.identity.cert_der || CoapsServer.identity.cert_len == 0)
+    CoapsServerV.ok = PROTO_FALSE;
+    if (!CoapsServerV.identity.rng || !CoapsServerV.identity.cert_der || CoapsServerV.identity.cert_len == 0)
     {
         return;
     }
-    COAPS_SERVER_CTX(work)->cert_der = CoapsServer.identity.cert_der;
-    COAPS_SERVER_CTX(work)->cert_len = CoapsServer.identity.cert_len;
-    mem.cpy(COAPS_SERVER_CTX(work)->ed25519_seed, CoapsServer.identity.ed25519_seed,
+    COAPS_SERVER_CTX(work)->cert_der = CoapsServerV.identity.cert_der;
+    COAPS_SERVER_CTX(work)->cert_len = CoapsServerV.identity.cert_len;
+    mem.cpy(COAPS_SERVER_CTX(work)->ed25519_seed, CoapsServerV.identity.ed25519_seed,
             sizeof(COAPS_SERVER_CTX(work)->ed25519_seed));
-    mem.cpy(COAPS_SERVER_CTX(work)->cookie_key, CoapsServer.identity.cookie_key,
+    mem.cpy(COAPS_SERVER_CTX(work)->cookie_key, CoapsServerV.identity.cookie_key,
             sizeof(COAPS_SERVER_CTX(work)->cookie_key));
-    COAPS_SERVER_CTX(work)->rng = CoapsServer.identity.rng;
-    COAPS_SERVER_CTX(work)->port = CoapsServer.bind.port ? CoapsServer.bind.port : PROTOCORE_COAPS_PORT;
+    COAPS_SERVER_CTX(work)->rng = CoapsServerV.identity.rng;
+    COAPS_SERVER_CTX(work)->port = CoapsServerV.bind.port ? CoapsServerV.bind.port : PROTOCORE_COAPS_PORT;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
     {
         COAPS_SERVER_CTX(work)->pool[i].used = PROTO_FALSE;
@@ -464,20 +464,20 @@ static void coaps_server_begin(uint8_t *restrict work)
     COAPS_SERVER_CTX(work)->ring_tail = 0;
     COAPS_SERVER_CTX(work)->running = PROTO_TRUE;
 #if PROTOCORE_HAS_NET_STACK
-    UdpListener.port = COAPS_SERVER_CTX(work)->port;
-    UdpListener.bind.handler = udp_ingest_cb;
-    UdpListener.bind.handler_ctx = NULL;
+    UdpListenerV.port = COAPS_SERVER_CTX(work)->port;
+    UdpListenerV.bind.handler = udp_ingest_cb;
+    UdpListenerV.bind.handler_ctx = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    CoapsServer.ok = UdpListener.ok;
+    CoapsServerV.ok = UdpListenerV.ok;
 #else
-    CoapsServer.ok = PROTO_TRUE; // fed through ingest instead
+    CoapsServerV.ok = PROTO_TRUE; // fed through ingest instead
 #endif
 }
 
 // Drain the queued datagrams, then service every slot.
-static void coaps_server_poll(uint8_t *restrict work)
+void protocore_coaps_server_poll(uint8_t *restrict work)
 {
-    CoapsServer.ok = PROTO_FALSE;
+    CoapsServerV.ok = PROTO_FALSE;
     if (!COAPS_SERVER_CTX(work)->running)
     {
         return;
@@ -495,11 +495,11 @@ static void coaps_server_poll(uint8_t *restrict work)
     {
         service_slot(work, &COAPS_SERVER_CTX(work)->pool[i], now, out, sizeof(out));
     }
-    CoapsServer.ok = PROTO_TRUE;
+    CoapsServerV.ok = PROTO_TRUE;
 }
 
 // The pool slots in use.
-static void coaps_server_active_conns(uint8_t *restrict work)
+void protocore_coaps_server_active_conns(uint8_t *restrict work)
 {
     uint8_t n = 0;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
@@ -509,12 +509,12 @@ static void coaps_server_active_conns(uint8_t *restrict work)
             n++;
         }
     }
-    CoapsServer.u8 = n;
-    CoapsServer.ok = PROTO_TRUE;
+    CoapsServerV.u8 = n;
+    CoapsServerV.ok = PROTO_TRUE;
 }
 
 // Stop polling, release every slot, and empty the ingest ring. The port stays bound.
-static void coaps_server_stop(uint8_t *restrict work)
+void protocore_coaps_server_stop(uint8_t *restrict work)
 {
     COAPS_SERVER_CTX(work)->running = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_COAPS_MAX_CONNS; i++)
@@ -523,36 +523,28 @@ static void coaps_server_stop(uint8_t *restrict work)
     }
     COAPS_SERVER_CTX(work)->ring_head = 0;
     COAPS_SERVER_CTX(work)->ring_tail = 0;
-    CoapsServer.ok = PROTO_TRUE;
+    CoapsServerV.ok = PROTO_TRUE;
 }
 
 #if !PROTOCORE_HAS_NET_STACK
 // Install ns->sink as where every outbound datagram goes.
-static void coaps_server_set_out_sink(uint8_t *restrict work)
+void protocore_coaps_server_set_out_sink(uint8_t *restrict work)
 {
-    COAPS_SERVER_CTX(work)->out_sink = CoapsServer.sink.fn;
-    COAPS_SERVER_CTX(work)->out_ctx = CoapsServer.sink.ctx;
-    CoapsServer.ok = PROTO_TRUE;
+    COAPS_SERVER_CTX(work)->out_sink = CoapsServerV.sink.fn;
+    COAPS_SERVER_CTX(work)->out_ctx = CoapsServerV.sink.ctx;
+    CoapsServerV.ok = PROTO_TRUE;
 }
 
 // Queue ns->dgram as though it had been received, for the next poll to route.
-static void coaps_server_ingest(uint8_t *restrict work)
+void protocore_coaps_server_ingest(uint8_t *restrict work)
 {
-    CoapsServer.ok =
-        ring_push(work, CoapsServer.dgram.data, CoapsServer.dgram.len, CoapsServer.dgram.ip, CoapsServer.dgram.port);
+    CoapsServerV.ok = ring_push(work, CoapsServerV.dgram.data, CoapsServerV.dgram.len, CoapsServerV.dgram.ip,
+                                CoapsServerV.dgram.port);
 }
 #endif
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-CoapsServerNs CoapsServer = {
-    .begin = coaps_server_begin,
-    .poll = coaps_server_poll,
-    .active_conns = coaps_server_active_conns,
-    .stop = coaps_server_stop,
-#if !PROTOCORE_HAS_NET_STACK
-    .set_out_sink = coaps_server_set_out_sink,
-    .ingest = coaps_server_ingest,
-#endif
-};
+/** @brief The operands and the outcome. */
+CoapsServerVars CoapsServerV;
 
 #endif // PROTOCORE_ENABLE_DTLS && PROTOCORE_ENABLE_COAP

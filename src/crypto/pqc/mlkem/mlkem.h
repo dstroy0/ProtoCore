@@ -59,7 +59,6 @@ typedef struct
     uint8_t *ek;      ///< MLKEM768_EK_BYTES encapsulation key
     uint8_t *dk;      ///< MLKEM768_DK_BYTES decapsulation key, embedding ek, H(ek) and z
 } MlKemKeygenArgs;
-
 /** @brief The peer key and message an Encaps runs on, and where its outputs land. */
 typedef struct
 {
@@ -68,7 +67,6 @@ typedef struct
     uint8_t *ct;       ///< MLKEM768_CT_BYTES ciphertext
     uint8_t *ss;       ///< MLKEM768_SS_BYTES shared secret
 } MlKemEncapsArgs;
-
 /** @brief The key and ciphertext a Decaps runs on, and where the secret lands. */
 typedef struct
 {
@@ -76,7 +74,6 @@ typedef struct
     const uint8_t *ct; ///< MLKEM768_CT_BYTES ciphertext from the peer's Encaps
     uint8_t *ss;       ///< MLKEM768_SS_BYTES shared secret
 } MlKemDecapsArgs;
-
 /**
  * @brief ML-KEM-768 (FIPS 203).
  *
@@ -117,16 +114,35 @@ typedef struct
     MlKemKeygenArgs keygen_args;
     MlKemEncapsArgs encaps_args;
     MlKemDecapsArgs decaps_args;
-
     proto_bool ok;
+} MlKemVars;
 
+/** @brief The operands and the outcome. */
+extern MlKemVars MlKemV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const keygen)(uint8_t *restrict work);
     void (*const encaps)(uint8_t *restrict work);
     void (*const decaps)(uint8_t *restrict work);
 } MlKemNs;
 
-/** @brief The one symbol this module exports. */
-extern MlKemNs MlKem;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MlKemV or a region of the borrow at a fixed offset.
+void protocore_mlkem_keygen(uint8_t *restrict work);
+void protocore_mlkem_encaps(uint8_t *restrict work);
+void protocore_mlkem_decaps(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `MlKem.keygen(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MlKemNs MlKem __attribute__((unused)) = {
+    .keygen = protocore_mlkem_keygen,
+    .encaps = protocore_mlkem_encaps,
+    .decaps = protocore_mlkem_decaps,
+};
 
 PROTOCORE_END_DECLS
 

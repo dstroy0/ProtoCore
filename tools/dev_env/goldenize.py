@@ -2619,6 +2619,147 @@ def drop_null_borrow(src, notes):
     return "".join(out), changed
 
 
+# The extern-table handle shape. Named HANDLE_* rather than NS_*: NS_ENTRY above already means the
+# pimpl shape's `void (*f)(struct XInternal *)`, and reusing the name would shadow it.
+HANDLE_STRUCT = re.compile(r"typedef struct\s*\{(?P<body>.*?)\}\s*(?P<ns>\w+Ns)\s*;", re.S)
+HANDLE_EXTERN = re.compile(r"^[ \t]*extern[ \t]+(?P<ns>\w+Ns)[ \t]+(?P<obj>\w+)[ \t]*;[ \t]*$", re.M)
+HANDLE_FN = re.compile(
+    r"^[ \t]*void[ \t]*\([ \t]*\*[ \t]*const[ \t]+(?P<name>\w+)[ \t]*\)[ \t]*"
+    r"\([ \t]*uint8_t[ \t]*\*[ \t]*restrict[ \t]+work[ \t]*\)[ \t]*;[ \t]*$",
+    re.M,
+)
+
+
+def split_handle(hsrc):
+    """The namespace struct's members, split into the DATA a caller writes and the ENTRIES it calls.
+
+    A const table cannot carry a writable member, so the two have to become two objects. Returns
+    (ns, obj, data_lines, entry_names), or None when the header is not on the extern-table shape.
+    """
+    m = HANDLE_EXTERN.search(hsrc)
+    if not m:
+        return None
+    ns, obj = m.group("ns"), m.group("obj")
+    st = None
+    for s in HANDLE_STRUCT.finditer(hsrc):
+        if s.group("ns") == ns:
+            st = s
+    if not st:
+        return None
+    data, entries = [], []
+    for line in st.group("body").splitlines():
+        e = HANDLE_FN.match(line)
+        if e:
+            entries.append(e.group("name"))
+        elif line.strip():
+            data.append(line.rstrip())
+    if not entries:
+        return None
+    while data and not data[-1].strip():
+        data.pop()
+    return ns, obj, data, entries
+
+
+def handle_members(data_lines):
+    """The member NAMES a caller writes, so its call sites can be moved onto the vars object."""
+    out = []
+    for line in data_lines:
+        line = re.sub(r"//.*|/\*.*?\*/", "", line).strip().rstrip(";")
+        if not line:
+            continue
+        m = re.search(r"([A-Za-z_]\w*)[ \t]*(?:\[[^\]]*\])?$", line)
+        if m:
+            out.append(m.group(1))
+    return out
+
+
+def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
+    """The extern table becomes a `static const` one, and the operands move to `<Obj>V`.
+
+    An extern table's definition is in another translation unit, so a call through it is INDIRECT and
+    the compiler cannot read the pointer. Measured on sha256 against the RFC 6234 vectors: the extern
+    form keeps one indirect call and one live symbol PER ENTRY at every optimisation level, -O2 -flto
+    included. Initialising the table in the HEADER makes it a compile-time fact - the call resolves to
+    a named function and becomes direct - and neither the call nor the symbol reaches the image.
+    """
+    vars_t, objv = obj + "Vars", obj + "V"
+    impl = ["protocore_%s_%s" % (mod, e) for e in entries]
+
+    block = ["typedef struct", "{"] + data + ["} %s;" % vars_t, ""]
+    block += ["/** @brief The operands and the outcome. */", "extern %s %s;" % (vars_t, objv), ""]
+    block += ["/** @brief The entries. */", "typedef struct", "{"]
+    block += ["    void (*const %s)(uint8_t *restrict work);" % e for e in entries]
+    block += ["} %s;" % ns, ""]
+    block += [
+        "// What the table binds, defined once in the .c and taking one parameter each: everything",
+        "// else an entry needs is an operand in %s or a region of the borrow at a fixed offset." % objv,
+    ]
+    block += ["void %s(uint8_t *restrict work);" % f for f in impl]
+    block += [
+        "",
+        "// `static const`, initialised HERE rather than `extern` against a definition in the .c: a",
+        "// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so",
+        "// `%s.%s(work)` resolves to a named function and becomes a DIRECT call. An extern table" % (obj, entries[0]),
+        "// leaves the call indirect and the symbol live at every level, -O2 -flto included.",
+        "static const %s %s __attribute__((unused)) = {" % (ns, obj),
+    ]
+    block += ["    .%s = %s," % (e, f) for e, f in zip(entries, impl)]
+    block += ["};"]
+
+    old = None
+    for s in HANDLE_STRUCT.finditer(hsrc):
+        if s.group("ns") == ns:
+            old = s
+    hout = hsrc[: old.start()] + "\n".join(block) + hsrc[old.end() :]
+    # The declaration goes with the comment that introduces it: removing the line alone leaves
+    # `/** @brief The one symbol this module exports. */` standing over whatever follows it.
+    hout = re.sub(
+        r"(?:^[ \t]*(?:/\*\*(?:(?!\*/).)*?\*/|///[^\n]*)[ \t]*\n)?^[ \t]*extern[ \t]+%s[ \t]+%s[ \t]*;[ \t]*\n"
+        % (re.escape(ns), re.escape(obj)),
+        "",
+        hout,
+        count=1,
+        flags=re.M | re.S,
+    )
+    hout = re.sub(r"\n{3,}", "\n\n", hout)
+
+    cout = csrc
+    for e, f in zip(entries, impl):
+        cout = re.sub(r"\bstatic[ \t]+void[ \t]+%s_%s[ \t]*\(" % (re.escape(mod), re.escape(e)), "void %s(" % f, cout)
+        cout = re.sub(r"\b%s_%s\b" % (re.escape(mod), re.escape(e)), f, cout)
+    cout = re.sub(
+        r"^[ \t]*%s[ \t]+%s[ \t]*=[ \t]*\{.*?\};" % (re.escape(ns), re.escape(obj)),
+        "/** @brief The operands and the outcome. */\n%s %s;" % (vars_t, objv),
+        cout,
+        count=1,
+        flags=re.S | re.M,
+    )
+    return hout, cout, objv, handle_members(data)
+
+
+def move_operands(text, obj, objv, members):
+    """`<Obj>.<data member>` -> `<Obj>V.<data member>`, leaving `<Obj>.<entry>(` alone.
+
+    Told apart by member NAME rather than by what follows, so a data member read without a call and
+    an entry taken by address are both handled. Comment and literal bytes are skipped: prose naming
+    the old spelling is not a call site.
+    """
+    if not members:
+        return text, 0
+    pat = re.compile(r"\b%s\.(%s)\b" % (re.escape(obj), "|".join(re.escape(m) for m in members)))
+    mask = code_mask(text)
+    out, last, n = [], 0, 0
+    for m in pat.finditer(text):
+        if not mask[m.start()]:
+            continue
+        out.append(text[last : m.start()])
+        out.append("%s.%s" % (objv, m.group(1)))
+        last = m.end()
+        n += 1
+    out.append(text[last:])
+    return "".join(out), n
+
+
 def insert_align_asserts(src, regions):
     """Add one alignment static_assert per unasserted cast region, after the offsets they read.
 
@@ -2674,7 +2815,7 @@ def main():
     argv = [a for a in sys.argv if a != "--dry"]
     DRY = len(argv) != len(sys.argv)
     # `align` takes no operand: with no paths it sweeps src/, which is the usual way to run it.
-    if len(argv) < 3 and not (len(argv) == 2 and argv[1] in ("align", "unnull")):
+    if len(argv) < 3 and not (len(argv) == 2 and argv[1] in ("align", "unnull", "handle")):
         print(__doc__)
         return 2
     sys.argv = argv
@@ -2750,6 +2891,63 @@ def main():
         print("%d branch%s in %d file%s" % (total, "es"[: 2 * (total != 1)], files, "s"[: files != 1]))
         for x in notes:
             print("   NOTE " + x)
+        return 0
+
+    if cmd == "handle":
+        # An extern table's calls are indirect and never fold; a static const table's are direct and
+        # leave nothing behind. See reshape_handle for the measurement.
+        rels = [a for a in sys.argv[2:] if not a.startswith("-")]
+        if not rels:
+            import shapeaudit as SA
+
+            rels = [r for r in SA.modules(["src"]) if r.endswith(".h")]
+        roots = ("src", "test", "examples", "include")
+        tree = []
+        for root in roots:
+            base = os.path.join(R, root)
+            if not os.path.isdir(base):
+                continue
+            for dp, _, fns in os.walk(base):
+                if ".pio" in dp:
+                    continue
+                tree += [os.path.join(dp, fn) for fn in fns if fn.endswith((".c", ".h"))]
+
+        done, moved = 0, 0
+        for rel in rels:
+            hp = os.path.join(R, rel.replace("/", os.sep))
+            cp = hp[:-2] + ".c"
+            if not os.path.exists(cp):
+                continue
+            hsrc = io.open(hp, encoding="utf-8").read()
+            split = split_handle(hsrc)
+            if not split:
+                continue
+            ns, obj, data, entries = split
+            mod = os.path.basename(hp)[:-2]
+            csrc = io.open(cp, encoding="utf-8").read()
+            hout, cout, objv, members = reshape_handle(hsrc, csrc, mod, ns, obj, data, entries)
+            cout, own = move_operands(cout, obj, objv, members)
+            # A caller writing an operand moves with it, or it writes the const table and will not
+            # compile. The header and its call sites HAVE to land together.
+            total, files = 0, []
+            for p in tree:
+                if p in (hp, cp):
+                    continue
+                s = io.open(p, encoding="utf-8", errors="replace").read()
+                if obj + "." not in s:
+                    continue
+                out, n = move_operands(s, obj, objv, members)
+                if n:
+                    files.append((p, out))
+                    total += n
+            print("handle: %-56s %s -> %s  entries=%d operands=%d(+%d own)" % (rel, obj, objv, len(entries), total, own))
+            emit(hp, hout)
+            emit(cp, cout)
+            for p, out in files:
+                emit(p, out)
+            done += 1
+            moved += total + own
+        print("%d module%s, %d operand site%s" % (done, "s"[: done != 1], moved, "s"[: moved != 1]))
         return 0
 
     if cmd == "align":

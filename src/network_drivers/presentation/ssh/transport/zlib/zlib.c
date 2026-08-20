@@ -81,16 +81,16 @@ static void zlib_chain_match(const SshDeflate *z, const uint8_t *buf, size_t i, 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void zlib_init(uint8_t *restrict work)
+void protocore_zlib_init(uint8_t *restrict work)
 {
-    SshDeflate *z = Zlib.init_args.z;
-    uint8_t *win = Zlib.init_args.win;
-    uint16_t *head = Zlib.init_args.head;
-    uint16_t *prev = Zlib.init_args.prev;
-    uint16_t *ll_code = Zlib.init_args.ll_code;
-    uint8_t *ll_len = Zlib.init_args.ll_len;
-    uint16_t *d_code = Zlib.init_args.d_code;
-    uint8_t *d_len = Zlib.init_args.d_len;
+    SshDeflate *z = ZlibV.init_args.z;
+    uint8_t *win = ZlibV.init_args.win;
+    uint16_t *head = ZlibV.init_args.head;
+    uint16_t *prev = ZlibV.init_args.prev;
+    uint16_t *ll_code = ZlibV.init_args.ll_code;
+    uint8_t *ll_len = ZlibV.init_args.ll_len;
+    uint16_t *d_code = ZlibV.init_args.d_code;
+    uint8_t *d_len = ZlibV.init_args.d_len;
 
     z->work = win;
     z->head = head;
@@ -101,25 +101,25 @@ static void zlib_init(uint8_t *restrict work)
     z->d_len = d_len;
     z->hist = 0;
     z->header_sent = PROTO_FALSE;
-    Rfc1951.build_fixed_args.ll_code = z->ll_code;
-    Rfc1951.build_fixed_args.ll_len = z->ll_len;
-    Rfc1951.build_fixed_args.d_code = z->d_code;
-    Rfc1951.build_fixed_args.d_len = z->d_len;
+    Rfc1951V.build_fixed_args.ll_code = z->ll_code;
+    Rfc1951V.build_fixed_args.ll_len = z->ll_len;
+    Rfc1951V.build_fixed_args.d_code = z->d_code;
+    Rfc1951V.build_fixed_args.d_len = z->d_len;
     Rfc1951.build_fixed(work);
 }
 
-static void zlib_packet(uint8_t *restrict work)
+void protocore_zlib_packet(uint8_t *restrict work)
 {
-    SshDeflate *z = Zlib.packet_args.z;
-    const uint8_t *src = Zlib.packet_args.src;
-    size_t src_len = Zlib.packet_args.src_len;
-    uint8_t *dst = Zlib.packet_args.dst;
-    size_t dst_cap = Zlib.packet_args.dst_cap;
-    size_t *out_len = Zlib.packet_args.out_len;
+    SshDeflate *z = ZlibV.packet_args.z;
+    const uint8_t *src = ZlibV.packet_args.src;
+    size_t src_len = ZlibV.packet_args.src_len;
+    uint8_t *dst = ZlibV.packet_args.dst;
+    size_t dst_cap = ZlibV.packet_args.dst_cap;
+    size_t *out_len = ZlibV.packet_args.out_len;
 
     if (src_len > (size_t)PROTOCORE_SSH_ZLIB_MAX_IN)
     {
-        Zlib.n = -1;
+        ZlibV.n = -1;
         return;
     }
 
@@ -127,7 +127,7 @@ static void zlib_packet(uint8_t *restrict work)
     size_t hist = z->hist;
     if (hist + src_len > SSH_ZLIB_WORK_SIZE)
     {
-        Zlib.n = -1; // sizing invariant (hist <= PROTOCORE_WINDOW, src_len <= MAX_IN) should prevent this
+        ZlibV.n = -1; // sizing invariant (hist <= PROTOCORE_WINDOW, src_len <= MAX_IN) should prevent this
         return;
     }
     mem.cpy(z->work + hist, src, src_len);
@@ -188,22 +188,22 @@ static void zlib_packet(uint8_t *restrict work)
         size_t advance;
         if (best_len >= PROTOCORE_MIN_MATCH)
         {
-            Rfc1951.emit_match_args.w = &w;
-            Rfc1951.emit_match_args.ll_code = z->ll_code;
-            Rfc1951.emit_match_args.ll_len = z->ll_len;
-            Rfc1951.emit_match_args.d_code = z->d_code;
-            Rfc1951.emit_match_args.d_len = z->d_len;
-            Rfc1951.emit_match_args.len = best_len;
-            Rfc1951.emit_match_args.dist = best_dist;
+            Rfc1951V.emit_match_args.w = &w;
+            Rfc1951V.emit_match_args.ll_code = z->ll_code;
+            Rfc1951V.emit_match_args.ll_len = z->ll_len;
+            Rfc1951V.emit_match_args.d_code = z->d_code;
+            Rfc1951V.emit_match_args.d_len = z->d_len;
+            Rfc1951V.emit_match_args.len = best_len;
+            Rfc1951V.emit_match_args.dist = best_dist;
             Rfc1951.emit_match(work);
             advance = (size_t)best_len;
         }
         else
         {
-            Rfc1951.emit_literal_args.w = &w;
-            Rfc1951.emit_literal_args.ll_code = z->ll_code;
-            Rfc1951.emit_literal_args.ll_len = z->ll_len;
-            Rfc1951.emit_literal_args.b = buf[i];
+            Rfc1951V.emit_literal_args.w = &w;
+            Rfc1951V.emit_literal_args.ll_code = z->ll_code;
+            Rfc1951V.emit_literal_args.ll_len = z->ll_len;
+            Rfc1951V.emit_literal_args.b = buf[i];
             Rfc1951.emit_literal(work);
             advance = 1;
         }
@@ -236,7 +236,7 @@ static void zlib_packet(uint8_t *restrict work)
 
     if (w.overflow)
     {
-        Zlib.n = -1;
+        ZlibV.n = -1;
         return;
     }
 
@@ -253,13 +253,11 @@ static void zlib_packet(uint8_t *restrict work)
     z->hist = keep;
 
     *out_len = w.cnt;
-    Zlib.n = 0;
+    ZlibV.n = 0;
 }
 
-ZlibNs Zlib = {
-    .init = zlib_init,
-    .packet = zlib_packet,
-};
+/** @brief The operands and the outcome. */
+ZlibVars ZlibV;
 
 PROTOCORE_END_DECLS
 

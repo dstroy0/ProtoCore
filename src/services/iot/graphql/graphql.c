@@ -762,15 +762,15 @@ static void execute_selection_set(uint8_t *restrict work, GqlWriter *w, int firs
 // case-sensitively (spec sec 2.1.9).
 static const GqlArgument *arg_lookup(uint8_t *restrict work)
 {
-    const protocore_gql_args *view = GraphQL.argument.values;
-    if (!view || !GraphQL.argument.name)
+    const protocore_gql_args *view = GraphQLV.argument.values;
+    if (!view || !GraphQLV.argument.name)
     {
         return NULL;
     }
     for (int k = 0; k < view->count; k++)
     {
         const GqlArgument *a = &GRAPHQL_CTX(work)->doc.args[view->idx[k]];
-        if (str.eq(a->name, GraphQL.argument.name, sizeof(a->name), PROTO_FALSE))
+        if (str.eq(a->name, GraphQLV.argument.name, sizeof(a->name), PROTO_FALSE))
         {
             return a;
         }
@@ -799,47 +799,47 @@ uint8_t *protocore_graphql_span(void)
 }
 
 // Read the named argument as an Int (spec sec 3.5.1).
-static void graphql_arg_int(uint8_t *restrict work)
+void protocore_graphql_arg_int(uint8_t *restrict work)
 {
     const GqlArgument *a = arg_lookup(work);
-    GraphQL.i64 = 0;
-    GraphQL.ok = PROTO_FALSE;
+    GraphQLV.i64 = 0;
+    GraphQLV.ok = PROTO_FALSE;
     if (a && a->val.type == PROTOCORE_GQL_INT)
     {
-        GraphQL.i64 = a->val.i;
-        GraphQL.ok = PROTO_TRUE;
+        GraphQLV.i64 = a->val.i;
+        GraphQLV.ok = PROTO_TRUE;
     }
 }
 
 // Read the named argument as a String (spec sec 3.5.3).
-static void graphql_arg_str(uint8_t *restrict work)
+void protocore_graphql_arg_str(uint8_t *restrict work)
 {
     const GqlArgument *a = arg_lookup(work);
-    GraphQL.text = NULL;
-    GraphQL.ok = PROTO_FALSE;
+    GraphQLV.text = NULL;
+    GraphQLV.ok = PROTO_FALSE;
     if (a && a->val.type == PROTOCORE_GQL_STR)
     {
-        GraphQL.text = a->val.s;
-        GraphQL.ok = PROTO_TRUE;
+        GraphQLV.text = a->val.s;
+        GraphQLV.ok = PROTO_TRUE;
     }
 }
 
 // Read the named argument as a Boolean (spec sec 3.5.4).
-static void graphql_arg_bool(uint8_t *restrict work)
+void protocore_graphql_arg_bool(uint8_t *restrict work)
 {
     const GqlArgument *a = arg_lookup(work);
-    GraphQL.b = PROTO_FALSE;
-    GraphQL.ok = PROTO_FALSE;
+    GraphQLV.b = PROTO_FALSE;
+    GraphQLV.ok = PROTO_FALSE;
     if (a && a->val.type == PROTOCORE_GQL_BOOL)
     {
-        GraphQL.b = a->val.b;
-        GraphQL.ok = PROTO_TRUE;
+        GraphQLV.b = a->val.b;
+        GraphQLV.ok = PROTO_TRUE;
     }
 }
 
 // ExecuteRequest (spec sec 6.1): parse the document, execute its query operation (sec 6.2.1), and
 // serialize the response map (sec 7.1) into ns->response.
-static void graphql_execute(uint8_t *restrict work)
+void protocore_graphql_execute(uint8_t *restrict work)
 {
     GqlDocument *doc = &GRAPHQL_CTX(work)->doc;
     GqlExecution *ex = &GRAPHQL_CTX(work)->exec;
@@ -851,22 +851,22 @@ static void graphql_execute(uint8_t *restrict work)
     doc->err = PROTOCORE_GQL_OK;
     ex->scope_n = 0;
     // Latched here, so a resolver may set the argument members mid-walk without disturbing the walk.
-    ex->resolver = GraphQL.request.resolver;
+    ex->resolver = GraphQLV.request.resolver;
     ex->path[0] = '\0';
 
-    const char *query = GraphQL.request.document;
-    char *out = GraphQL.response.out;
-    const size_t cap = GraphQL.response.cap;
-    GraphQL.n = 0;
-    GraphQL.ok = PROTO_FALSE;
+    const char *query = GraphQLV.request.document;
+    char *out = GraphQLV.response.out;
+    const size_t cap = GraphQLV.response.cap;
+    GraphQLV.n = 0;
+    GraphQLV.ok = PROTO_FALSE;
 
     if (!query || !out || cap == 0)
     {
-        GraphQL.result = PROTOCORE_GQL_ERR_PARSE;
+        GraphQLV.result = PROTOCORE_GQL_ERR_PARSE;
         return;
     }
 
-    GqlLexer lx = {query, query + GraphQL.request.len};
+    GqlLexer lx = {query, query + GraphQLV.request.len};
 
     if (!parse_document(work, &lx))
     {
@@ -881,11 +881,11 @@ static void graphql_execute(uint8_t *restrict work)
         if (!w.ovf && w.n < cap)
         {
             out[w.n] = '\0';
-            GraphQL.n = w.n;
+            GraphQLV.n = w.n;
         }
         // every path that makes parse_document() return false has already set doc->err, so the
         // PROTOCORE_GQL_OK side of this test is unreachable
-        GraphQL.result = doc->err != PROTOCORE_GQL_OK ? doc->err : PROTOCORE_GQL_ERR_PARSE;
+        GraphQLV.result = doc->err != PROTOCORE_GQL_OK ? doc->err : PROTOCORE_GQL_ERR_PARSE;
         return;
     }
 
@@ -897,18 +897,18 @@ static void graphql_execute(uint8_t *restrict work)
     {
         // A resolver reads its arguments through this same handle, so ok carries the last accessor's
         // verdict by the time the walk ends. The execute states its own here.
-        GraphQL.ok = PROTO_FALSE;
-        GraphQL.result = PROTOCORE_GQL_ERR_OVERFLOW;
+        GraphQLV.ok = PROTO_FALSE;
+        GraphQLV.result = PROTOCORE_GQL_ERR_OVERFLOW;
         return;
     }
     out[w.n] = '\0';
-    GraphQL.n = w.n;
-    GraphQL.result = PROTOCORE_GQL_OK;
-    GraphQL.ok = PROTO_TRUE;
+    GraphQLV.n = w.n;
+    GraphQLV.result = PROTOCORE_GQL_OK;
+    GraphQLV.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-GraphQLNs GraphQL = {
-    .execute = graphql_execute, .arg_int = graphql_arg_int, .arg_str = graphql_arg_str, .arg_bool = graphql_arg_bool};
+/** @brief The operands and the outcome. */
+GraphQLVars GraphQLV;
 
 #endif // PROTOCORE_ENABLE_GRAPHQL

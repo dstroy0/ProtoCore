@@ -66,7 +66,6 @@ typedef struct
     char *buf;  ///< the buffer a build writes the message list into
     size_t cap; ///< how much room it has, the NUL included
 } WampOutArgs;
-
 /** @brief The ids a message names: integers in 1..2^53 (WAMP sec 2.1.2). */
 typedef struct
 {
@@ -74,7 +73,6 @@ typedef struct
     uint64_t subscription; ///< SUBSCRIBED.Subscription|id, what an UNSUBSCRIBE drops (sec 3.4.2.5)
     uint64_t registration; ///< REGISTERED.Registration|id, what an UNREGISTER drops (sec 3.4.3.5)
 } WampIdArgs;
-
 /** @brief The URI element a message names (WAMP sec 2.1.1). */
 typedef struct
 {
@@ -83,7 +81,6 @@ typedef struct
     const char *topic;     ///< Topic|uri, what a SUBSCRIBE or a PUBLISH names (sec 3.4.2.1, 3.4.2.3)
     const char *procedure; ///< Procedure|uri, what a CALL or a REGISTER names (sec 3.4.3.1, 3.4.3.3)
 } WampUriArgs;
-
 /** @brief The dict and list elements a message carries, each a pre-formatted JSON literal. */
 typedef struct
 {
@@ -92,7 +89,6 @@ typedef struct
     const char *arguments;    ///< Arguments|list, the payload's positional half; NULL leaves the element off
     const char *arguments_kw; ///< ArgumentsKw|dict, its keyword half; NULL leaves the element off
 } WampPayloadArgs;
-
 /** @brief One received message list and the element position a read names (WAMP sec 3.3). */
 typedef struct
 {
@@ -101,7 +97,6 @@ typedef struct
     char *uri_out;   ///< where a URI read copies the element, quotes stripped
     size_t uri_cap;  ///< how much room that has, the NUL included
 } WampParseArgs;
-
 /**
  * @brief The WAMP message codec: the builders and the positional element reader.
  *
@@ -144,13 +139,19 @@ typedef struct
     WampUriArgs uri;         ///< the URI a message names
     WampPayloadArgs payload; ///< the dicts and the payload lists a message carries
     WampParseArgs parse;     ///< the received message and the element a read names
-
     proto_bool ok;
     size_t n;
     uint64_t u64;
     int32_t i32;
     const char *text;
+} WampVars;
 
+/** @brief The operands and the outcome. */
+extern WampVars WampV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_hello)(uint8_t *restrict work);
     void (*const build_goodbye)(uint8_t *restrict work);
     void (*const build_subscribe)(uint8_t *restrict work);
@@ -160,15 +161,47 @@ typedef struct
     void (*const build_register)(uint8_t *restrict work);
     void (*const build_unregister)(uint8_t *restrict work);
     void (*const build_yield)(uint8_t *restrict work);
-
     void (*const element)(uint8_t *restrict work);
     void (*const get_type)(uint8_t *restrict work);
     void (*const get_id)(uint8_t *restrict work);
     void (*const get_uri)(uint8_t *restrict work);
 } WampNs;
 
-/** @brief The one symbol this module exports. */
-extern WampNs Wamp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WampV or a region of the borrow at a fixed offset.
+void protocore_wamp_build_hello(uint8_t *restrict work);
+void protocore_wamp_build_goodbye(uint8_t *restrict work);
+void protocore_wamp_build_subscribe(uint8_t *restrict work);
+void protocore_wamp_build_unsubscribe(uint8_t *restrict work);
+void protocore_wamp_build_publish(uint8_t *restrict work);
+void protocore_wamp_build_call(uint8_t *restrict work);
+void protocore_wamp_build_register(uint8_t *restrict work);
+void protocore_wamp_build_unregister(uint8_t *restrict work);
+void protocore_wamp_build_yield(uint8_t *restrict work);
+void protocore_wamp_element(uint8_t *restrict work);
+void protocore_wamp_get_type(uint8_t *restrict work);
+void protocore_wamp_get_id(uint8_t *restrict work);
+void protocore_wamp_get_uri(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Wamp.build_hello(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WampNs Wamp __attribute__((unused)) = {
+    .build_hello = protocore_wamp_build_hello,
+    .build_goodbye = protocore_wamp_build_goodbye,
+    .build_subscribe = protocore_wamp_build_subscribe,
+    .build_unsubscribe = protocore_wamp_build_unsubscribe,
+    .build_publish = protocore_wamp_build_publish,
+    .build_call = protocore_wamp_build_call,
+    .build_register = protocore_wamp_build_register,
+    .build_unregister = protocore_wamp_build_unregister,
+    .build_yield = protocore_wamp_build_yield,
+    .element = protocore_wamp_element,
+    .get_type = protocore_wamp_get_type,
+    .get_id = protocore_wamp_get_id,
+    .get_uri = protocore_wamp_get_uri,
+};
 
 PROTOCORE_END_DECLS
 

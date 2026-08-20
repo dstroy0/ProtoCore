@@ -45,19 +45,19 @@ static void expand(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const u
 {
     if (is384)
     {
-        HkdfSha384.expand_label_args.secret = secret;
-        HkdfSha384.expand_label_args.label = label;
-        HkdfSha384.expand_label_args.out = out;
-        HkdfSha384.expand_label_args.out_len = out_len;
-        HkdfSha384.expand_label_args.label_prefix = kdf->label_prefix;
+        HkdfSha384V.expand_label_args.secret = secret;
+        HkdfSha384V.expand_label_args.label = label;
+        HkdfSha384V.expand_label_args.out = out;
+        HkdfSha384V.expand_label_args.out_len = out_len;
+        HkdfSha384V.expand_label_args.label_prefix = kdf->label_prefix;
         HkdfSha384.expand_label(work);
         return;
     }
-    Hkdf.expand_label_args.secret = secret;
-    Hkdf.expand_label_args.label = label;
-    Hkdf.expand_label_args.out = out;
-    Hkdf.expand_label_args.out_len = out_len;
-    Hkdf.expand_label_args.label_prefix = kdf->label_prefix;
+    HkdfV.expand_label_args.secret = secret;
+    HkdfV.expand_label_args.label = label;
+    HkdfV.expand_label_args.out = out;
+    HkdfV.expand_label_args.out_len = out_len;
+    HkdfV.expand_label_args.label_prefix = kdf->label_prefix;
     Hkdf.expand_label(work);
 }
 
@@ -68,23 +68,23 @@ static void derive(const Tls13Kdf *kdf, proto_bool is384, uint8_t *work, const u
     const size_t len = hash_len(is384);
     if (is384)
     {
-        HkdfSha384.expand_label_ctx_args.secret = secret;
-        HkdfSha384.expand_label_ctx_args.label = label;
-        HkdfSha384.expand_label_ctx_args.context = transcript_hash;
-        HkdfSha384.expand_label_ctx_args.context_len = len;
-        HkdfSha384.expand_label_ctx_args.out = out;
-        HkdfSha384.expand_label_ctx_args.out_len = len;
-        HkdfSha384.expand_label_ctx_args.label_prefix = kdf->label_prefix;
+        HkdfSha384V.expand_label_ctx_args.secret = secret;
+        HkdfSha384V.expand_label_ctx_args.label = label;
+        HkdfSha384V.expand_label_ctx_args.context = transcript_hash;
+        HkdfSha384V.expand_label_ctx_args.context_len = len;
+        HkdfSha384V.expand_label_ctx_args.out = out;
+        HkdfSha384V.expand_label_ctx_args.out_len = len;
+        HkdfSha384V.expand_label_ctx_args.label_prefix = kdf->label_prefix;
         HkdfSha384.expand_label_ctx(work);
         return;
     }
-    Hkdf.expand_label_ctx_args.secret = secret;
-    Hkdf.expand_label_ctx_args.label = label;
-    Hkdf.expand_label_ctx_args.context = transcript_hash;
-    Hkdf.expand_label_ctx_args.context_len = len;
-    Hkdf.expand_label_ctx_args.out = out;
-    Hkdf.expand_label_ctx_args.out_len = len;
-    Hkdf.expand_label_ctx_args.label_prefix = kdf->label_prefix;
+    HkdfV.expand_label_ctx_args.secret = secret;
+    HkdfV.expand_label_ctx_args.label = label;
+    HkdfV.expand_label_ctx_args.context = transcript_hash;
+    HkdfV.expand_label_ctx_args.context_len = len;
+    HkdfV.expand_label_ctx_args.out = out;
+    HkdfV.expand_label_ctx_args.out_len = len;
+    HkdfV.expand_label_ctx_args.label_prefix = kdf->label_prefix;
     Hkdf.expand_label_ctx(work);
 }
 
@@ -94,19 +94,19 @@ static void extract(proto_bool is384, uint8_t *work, const uint8_t *salt, size_t
 {
     if (is384)
     {
-        HkdfSha384.extract_args.salt = salt;
-        HkdfSha384.extract_args.salt_len = salt_len;
-        HkdfSha384.extract_args.ikm = ikm;
-        HkdfSha384.extract_args.ikm_len = ikm_len;
-        HkdfSha384.extract_args.prk = prk;
+        HkdfSha384V.extract_args.salt = salt;
+        HkdfSha384V.extract_args.salt_len = salt_len;
+        HkdfSha384V.extract_args.ikm = ikm;
+        HkdfSha384V.extract_args.ikm_len = ikm_len;
+        HkdfSha384V.extract_args.prk = prk;
         HkdfSha384.extract(work);
         return;
     }
-    Hkdf.extract_args.salt = salt;
-    Hkdf.extract_args.salt_len = salt_len;
-    Hkdf.extract_args.ikm = ikm;
-    Hkdf.extract_args.ikm_len = ikm_len;
-    Hkdf.extract_args.prk = prk;
+    HkdfV.extract_args.salt = salt;
+    HkdfV.extract_args.salt_len = salt_len;
+    HkdfV.extract_args.ikm = ikm;
+    HkdfV.extract_args.ikm_len = ikm_len;
+    HkdfV.extract_args.prk = prk;
     Hkdf.extract(work);
 }
 
@@ -115,15 +115,15 @@ static void empty_hash(proto_bool is384, uint8_t *work, uint8_t *out)
 {
     if (is384)
     {
-        Sha384.hash_args.data = NULL;
-        Sha384.hash_args.len = 0;
-        Sha384.hash_args.out = out;
+        Sha384V.hash_args.data = NULL;
+        Sha384V.hash_args.len = 0;
+        Sha384V.hash_args.out = out;
         Sha384.hash(work);
         return;
     }
-    Sha256.hash_args.data = NULL;
-    Sha256.hash_args.len = 0;
-    Sha256.hash_args.out = out;
+    Sha256V.hash_args.data = NULL;
+    Sha256V.hash_args.len = 0;
+    Sha256V.hash_args.out = out;
     Sha256.hash(work);
 }
 
@@ -133,68 +133,68 @@ static void finished_hmac(proto_bool is384, uint8_t *work, const uint8_t *key, c
     const size_t len = hash_len(is384);
     if (is384)
     {
-        HmacSha384.mac_args.key = key;
-        HmacSha384.mac_args.key_len = len;
-        HmacSha384.mac_args.data = data;
-        HmacSha384.mac_args.len = len;
-        HmacSha384.mac_args.out = out;
+        HmacSha384V.mac_args.key = key;
+        HmacSha384V.mac_args.key_len = len;
+        HmacSha384V.mac_args.data = data;
+        HmacSha384V.mac_args.len = len;
+        HmacSha384V.mac_args.out = out;
         HmacSha384.mac(work);
         return;
     }
-    HmacSha256.mac_args.key = key;
-    HmacSha256.mac_args.key_len = len;
-    HmacSha256.mac_args.data = data;
-    HmacSha256.mac_args.len = len;
-    HmacSha256.mac_args.out = out;
+    HmacSha256V.mac_args.key = key;
+    HmacSha256V.mac_args.key_len = len;
+    HmacSha256V.mac_args.data = data;
+    HmacSha256V.mac_args.len = len;
+    HmacSha256V.mac_args.out = out;
     HmacSha256.mac(work);
 }
 
 static void ks_expand_label(uint8_t *restrict work)
 {
-    expand(Tls13Ks.bind.kdf, Tls13Ks.bind.is384, Tls13Ks.derive_args.work, Tls13Ks.derive_args.secret,
-           Tls13Ks.derive_args.label, Tls13Ks.derive_args.out, Tls13Ks.derive_args.out_len);
+    expand(Tls13KsV.bind.kdf, Tls13KsV.bind.is384, Tls13KsV.derive_args.work, Tls13KsV.derive_args.secret,
+           Tls13KsV.derive_args.label, Tls13KsV.derive_args.out, Tls13KsV.derive_args.out_len);
 }
 
 static void ks_derive_secret(uint8_t *restrict work)
 {
-    derive(Tls13Ks.bind.kdf, Tls13Ks.bind.is384, Tls13Ks.derive_args.work, Tls13Ks.derive_args.secret,
-           Tls13Ks.derive_args.label, Tls13Ks.derive_args.transcript_hash, Tls13Ks.derive_args.out);
+    derive(Tls13KsV.bind.kdf, Tls13KsV.bind.is384, Tls13KsV.derive_args.work, Tls13KsV.derive_args.secret,
+           Tls13KsV.derive_args.label, Tls13KsV.derive_args.transcript_hash, Tls13KsV.derive_args.out);
 }
 
 static void ks_early(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
-    ks->kdf = Tls13Ks.bind.kdf;
-    ks->s = Tls13Ks.bind.s;
-    ks->is384 = Tls13Ks.bind.is384;
+    Tls13KeySchedule *ks = Tls13KsV.bind.ks;
+    ks->kdf = Tls13KsV.bind.kdf;
+    ks->s = Tls13KsV.bind.s;
+    ks->is384 = Tls13KsV.bind.is384;
     ks->len = hash_len(ks->is384);
-    Tls13Ks.len = ks->len;
+    Tls13KsV.len = ks->len;
     if (ks->s == NULL)
     {
-        Tls13Ks.ok = PROTO_FALSE;
+        Tls13KsV.ok = PROTO_FALSE;
         return;
     }
     // No PSK: Early Secret = HKDF-Extract(salt=0, IKM=0^Hash.length). HMAC zero-pads a short/absent
     // key, so an empty salt and a run of Hash.length zero bytes reproduce the RFC 8448 early secret
     // exactly.
     extract(ks->is384, ks->s + TLS13_KS_WORK, NULL, 0, ks->s + TLS13_KS_ZEROS, ks->len, ks->s + TLS13_KS_EARLY);
-    Tls13Ks.ok = PROTO_TRUE;
+    Tls13KsV.ok = PROTO_TRUE;
 }
 
 static void ks_handshake(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
+    Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
     {
         return;
     }
-    const uint8_t *ch_sh_hash = Tls13Ks.step.ch_sh_hash;
+    const uint8_t *ch_sh_hash = Tls13KsV.step.ch_sh_hash;
     // Handshake Secret = HKDF-Extract(Derive-Secret(Early, "derived", ""), (EC)DHE).
     empty_hash(ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_EMPTY_HASH);
     derive(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_EARLY, "derived", ks->s + TLS13_KS_EMPTY_HASH,
            ks->s + TLS13_KS_DERIVED);
-    extract(ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_DERIVED, ks->len, Tls13Ks.step.ecdhe,
-            Tls13Ks.step.ecdhe_len, ks->s + TLS13_KS_HANDSHAKE);
+    extract(ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_DERIVED, ks->len, Tls13KsV.step.ecdhe,
+            Tls13KsV.step.ecdhe_len, ks->s + TLS13_KS_HANDSHAKE);
 
     derive(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_HANDSHAKE, "c hs traffic", ch_sh_hash,
            ks->s + TLS13_KS_CLIENT_HS);
@@ -204,12 +204,12 @@ static void ks_handshake(uint8_t *restrict work)
 
 static void ks_master(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
+    Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
     {
         return;
     }
-    const uint8_t *ch_sfin_hash = Tls13Ks.step.ch_sfin_hash;
+    const uint8_t *ch_sfin_hash = Tls13KsV.step.ch_sfin_hash;
     // Master Secret = HKDF-Extract(Derive-Secret(Handshake, "derived", ""), 0^Hash.length).
     empty_hash(ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_EMPTY_HASH);
     derive(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, ks->s + TLS13_KS_HANDSHAKE, "derived",
@@ -225,16 +225,16 @@ static void ks_master(uint8_t *restrict work)
 
 static void ks_finished_mac(uint8_t *restrict work)
 {
-    Tls13KeySchedule *ks = Tls13Ks.bind.ks;
+    Tls13KeySchedule *ks = Tls13KsV.bind.ks;
     if (ks->s == NULL)
     {
         return;
     }
     // finished_key = HKDF-Expand-Label(base_secret, "finished", "", L); verify_data = HMAC(fk, Hash).
     uint8_t *fk = ks->s + TLS13_KS_FINISHED_KEY;
-    expand(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, Tls13Ks.finished_args.base_secret, "finished", fk, ks->len);
-    finished_hmac(ks->is384, ks->s + TLS13_KS_WORK, fk, Tls13Ks.finished_args.transcript_hash,
-                  Tls13Ks.finished_args.out);
+    expand(ks->kdf, ks->is384, ks->s + TLS13_KS_WORK, Tls13KsV.finished_args.base_secret, "finished", fk, ks->len);
+    finished_hmac(ks->is384, ks->s + TLS13_KS_WORK, fk, Tls13KsV.finished_args.transcript_hash,
+                  Tls13KsV.finished_args.out);
 }
 
 // RFC 8446 sec 4.4.1: the Transcript-Hash runs under the same suite hash as the schedule, so it
@@ -242,7 +242,7 @@ static void ks_finished_mac(uint8_t *restrict work)
 
 static void ks_transcript_init(uint8_t *restrict work)
 {
-    if (Tls13Ks.bind.ks->is384)
+    if (Tls13KsV.bind.ks->is384)
     {
         Sha384.init(work);
         return;
@@ -252,15 +252,15 @@ static void ks_transcript_init(uint8_t *restrict work)
 
 static void ks_transcript_update(uint8_t *restrict work)
 {
-    if (Tls13Ks.bind.ks->is384)
+    if (Tls13KsV.bind.ks->is384)
     {
-        Sha384.update_args.data = Tls13Ks.transcript_args.data;
-        Sha384.update_args.len = Tls13Ks.transcript_args.len;
+        Sha384V.update_args.data = Tls13KsV.transcript_args.data;
+        Sha384V.update_args.len = Tls13KsV.transcript_args.len;
         Sha384.update(work);
         return;
     }
-    Sha256.update_args.data = Tls13Ks.transcript_args.data;
-    Sha256.update_args.len = Tls13Ks.transcript_args.len;
+    Sha256V.update_args.data = Tls13KsV.transcript_args.data;
+    Sha256V.update_args.len = Tls13KsV.transcript_args.len;
     Sha256.update(work);
 }
 
@@ -268,24 +268,17 @@ static void ks_transcript_update(uint8_t *restrict work)
 // untouched and keeps taking messages.
 static void ks_transcript_peek(uint8_t *restrict work)
 {
-    if (Tls13Ks.bind.ks->is384)
+    if (Tls13KsV.bind.ks->is384)
     {
-        Sha384.final_args.out = Tls13Ks.transcript_args.out;
+        Sha384V.final_args.out = Tls13KsV.transcript_args.out;
         Sha384.final(work);
         return;
     }
-    Sha256.final_args.out = Tls13Ks.transcript_args.out;
+    Sha256V.final_args.out = Tls13KsV.transcript_args.out;
     Sha256.final(work);
 }
 
-Tls13KsNs Tls13Ks = {.expand_label = ks_expand_label,
-                     .derive_secret = ks_derive_secret,
-                     .early = ks_early,
-                     .handshake = ks_handshake,
-                     .master = ks_master,
-                     .finished_mac = ks_finished_mac,
-                     .transcript_init = ks_transcript_init,
-                     .transcript_update = ks_transcript_update,
-                     .transcript_peek = ks_transcript_peek};
+/** @brief The operands and the outcome. */
+Tls13KsVars Tls13KsV;
 
 #endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE

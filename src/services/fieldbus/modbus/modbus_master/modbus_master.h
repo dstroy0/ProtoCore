@@ -42,7 +42,6 @@ typedef struct
     uint8_t *out;   ///< destination buffer
     size_t cap;     ///< destination capacity (>= 12)
 } ModbusMasterBuildReadArgs;
-
 /** @brief What parse_response takes: adu, len, regs_out, max_regs, ... */
 typedef struct
 {
@@ -53,7 +52,6 @@ typedef struct
     uint8_t
         *exception_out; ///< set to the Modbus exception code if the slave returned one (then the function returns 0 ...
 } ModbusMasterParseResponseArgs;
-
 /** @brief What build_read_bits takes: fc, txid, unit, start, count, ... */
 typedef struct
 {
@@ -65,7 +63,6 @@ typedef struct
     uint8_t *out;   ///< destination buffer
     size_t cap;     ///< destination capacity (>= 12)
 } ModbusMasterBuildReadBitsArgs;
-
 /** @brief What parse_read_bits_response takes: adu, len, count, ... */
 typedef struct
 {
@@ -76,7 +73,6 @@ typedef struct
     size_t max_bits;        ///< capacity of bits_out
     uint8_t *exception_out; ///< set to the Modbus exception code if the slave returned one (then 0 is returned)
 } ModbusMasterParseReadBitsResponseArgs;
-
 /** @brief What build_write_single_coil takes: txid, unit, addr, on, ... */
 typedef struct
 {
@@ -87,7 +83,6 @@ typedef struct
     uint8_t *out;
     size_t cap; ///< destination capacity (>= 12)
 } ModbusMasterBuildWriteSingleCoilArgs;
-
 /** @brief What build_write_multiple_coils takes: txid, unit, start, ... */
 typedef struct
 {
@@ -99,7 +94,6 @@ typedef struct
     uint8_t *out;
     size_t cap; ///< destination capacity (>= 14 + ceil(count/8))
 } ModbusMasterBuildWriteMultipleCoilsArgs;
-
 /** @brief What build_write_single takes: txid, unit, addr, value, ... */
 typedef struct
 {
@@ -110,7 +104,6 @@ typedef struct
     uint8_t *out;   ///< destination buffer
     size_t cap;     ///< destination capacity (>= 12)
 } ModbusMasterBuildWriteSingleArgs;
-
 /** @brief What build_write_multiple takes: txid, unit, start, values, ... */
 typedef struct
 {
@@ -122,7 +115,6 @@ typedef struct
     uint8_t *out;           ///< destination buffer
     size_t cap;             ///< destination capacity (>= 13 + 2*count)
 } ModbusMasterBuildWriteMultipleArgs;
-
 /** @brief What parse_write_response takes: adu, len, addr_out, ... */
 typedef struct
 {
@@ -131,7 +123,6 @@ typedef struct
     uint16_t *addr_out;     ///< set to the echoed address / start (nullable)
     uint8_t *exception_out; ///< set to the Modbus exception code if the slave returned one (then 0 is returned)
 } ModbusMasterParseWriteResponseArgs;
-
 /** @brief What build_mask_write takes: txid, unit, addr, and_mask, ... */
 typedef struct
 {
@@ -143,7 +134,6 @@ typedef struct
     uint8_t *out;
     size_t cap; ///< destination capacity (>= 14)
 } ModbusMasterBuildMaskWriteArgs;
-
 /** @brief What build_read_write_multiple takes: txid, unit, ... */
 typedef struct
 {
@@ -157,7 +147,6 @@ typedef struct
     uint8_t *out;
     size_t cap; ///< destination capacity (>= 17 + 2*write_count)
 } ModbusMasterBuildReadWriteMultipleArgs;
-
 /** @brief What parse_mask_write_response takes: adu, len, addr_out, ... */
 typedef struct
 {
@@ -168,7 +157,6 @@ typedef struct
     uint16_t *or_out;
     uint8_t *exception_out; ///< set to the Modbus exception code if the slave returned one
 } ModbusMasterParseMaskWriteResponseArgs;
-
 /**
  * @brief Modbus TCP master codec + register scanner (PROTOCORE_ENABLE_MODBUS_MASTER).
  *
@@ -233,11 +221,17 @@ typedef struct
     ModbusMasterBuildMaskWriteArgs build_mask_write_args;
     ModbusMasterBuildReadWriteMultipleArgs build_read_write_multiple_args;
     ModbusMasterParseMaskWriteResponseArgs parse_mask_write_response_args;
-
     proto_bool ok;
     size_t n;
     int i32;
+} ModbusMasterVars;
 
+/** @brief The operands and the outcome. */
+extern ModbusMasterVars ModbusMasterV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_read)(uint8_t *restrict work);
     void (*const parse_response)(uint8_t *restrict work);
     void (*const build_read_bits)(uint8_t *restrict work);
@@ -252,8 +246,39 @@ typedef struct
     void (*const parse_mask_write_response)(uint8_t *restrict work);
 } ModbusMasterNs;
 
-/** @brief The one symbol this module exports. */
-extern ModbusMasterNs ModbusMaster;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ModbusMasterV or a region of the borrow at a fixed offset.
+void protocore_modbus_master_build_read(uint8_t *restrict work);
+void protocore_modbus_master_parse_response(uint8_t *restrict work);
+void protocore_modbus_master_build_read_bits(uint8_t *restrict work);
+void protocore_modbus_master_parse_read_bits_response(uint8_t *restrict work);
+void protocore_modbus_master_build_write_single_coil(uint8_t *restrict work);
+void protocore_modbus_master_build_write_multiple_coils(uint8_t *restrict work);
+void protocore_modbus_master_build_write_single(uint8_t *restrict work);
+void protocore_modbus_master_build_write_multiple(uint8_t *restrict work);
+void protocore_modbus_master_parse_write_response(uint8_t *restrict work);
+void protocore_modbus_master_build_mask_write(uint8_t *restrict work);
+void protocore_modbus_master_build_read_write_multiple(uint8_t *restrict work);
+void protocore_modbus_master_parse_mask_write_response(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `ModbusMaster.build_read(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ModbusMasterNs ModbusMaster __attribute__((unused)) = {
+    .build_read = protocore_modbus_master_build_read,
+    .parse_response = protocore_modbus_master_parse_response,
+    .build_read_bits = protocore_modbus_master_build_read_bits,
+    .parse_read_bits_response = protocore_modbus_master_parse_read_bits_response,
+    .build_write_single_coil = protocore_modbus_master_build_write_single_coil,
+    .build_write_multiple_coils = protocore_modbus_master_build_write_multiple_coils,
+    .build_write_single = protocore_modbus_master_build_write_single,
+    .build_write_multiple = protocore_modbus_master_build_write_multiple,
+    .parse_write_response = protocore_modbus_master_parse_write_response,
+    .build_mask_write = protocore_modbus_master_build_mask_write,
+    .build_read_write_multiple = protocore_modbus_master_build_read_write_multiple,
+    .parse_mask_write_response = protocore_modbus_master_parse_mask_write_response,
+};
 
 PROTOCORE_END_DECLS
 

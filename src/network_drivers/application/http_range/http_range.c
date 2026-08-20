@@ -22,23 +22,23 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void http_range_http_parse_byte_range(uint8_t *restrict work)
+void protocore_http_range_http_parse_byte_range(uint8_t *restrict work)
 {
     (void)work;
-    const char *hdr = HttpRange.http_parse_byte_range_args.hdr;
-    size_t size = HttpRange.http_parse_byte_range_args.size;
-    size_t *out_start = HttpRange.http_parse_byte_range_args.out_start;
-    size_t *out_end = HttpRange.http_parse_byte_range_args.out_end;
+    const char *hdr = HttpRangeV.http_parse_byte_range_args.hdr;
+    size_t size = HttpRangeV.http_parse_byte_range_args.size;
+    size_t *out_start = HttpRangeV.http_parse_byte_range_args.out_start;
+    size_t *out_end = HttpRangeV.http_parse_byte_range_args.out_end;
 
     if (!hdr)
     {
-        HttpRange.n = 0;
+        HttpRangeV.n = 0;
         return;
     }
     // Require the "bytes=" unit (case-insensitive).
     if (!str.starts(hdr, "bytes=", 6, PROTO_TRUE))
     {
-        HttpRange.n = 0;
+        HttpRangeV.n = 0;
         return;
     }
     const char *p = hdr + 6;
@@ -48,7 +48,7 @@ static void http_range_http_parse_byte_range(uint8_t *restrict work)
     }
     if (str.find(p, MAX_VAL_LEN, ",", sizeof(","), PROTO_FALSE)) // multi-range not supported -> fall back to full 200
     {
-        HttpRange.n = 0;
+        HttpRangeV.n = 0;
         return;
     }
 
@@ -69,7 +69,7 @@ static void http_range_http_parse_byte_range(uint8_t *restrict work)
     }
     if (*p != '-')
     {
-        HttpRange.n = 0; // malformed
+        HttpRangeV.n = 0; // malformed
         return;
     }
     p++;
@@ -89,7 +89,7 @@ static void http_range_http_parse_byte_range(uint8_t *restrict work)
     }
     if (*p != '\0')
     {
-        HttpRange.n = 0; // trailing garbage -> ignore the header
+        HttpRangeV.n = 0; // trailing garbage -> ignore the header
         return;
     }
 
@@ -98,7 +98,7 @@ static void http_range_http_parse_byte_range(uint8_t *restrict work)
         // Suffix form "bytes=-N": the last N bytes.
         if (!have_end || end == 0)
         {
-            HttpRange.n = -1; // "-" alone, or "-0" -> unsatisfiable
+            HttpRangeV.n = -1; // "-" alone, or "-0" -> unsatisfiable
             return;
         }
         if (size == 0)
@@ -109,7 +109,7 @@ static void http_range_http_parse_byte_range(uint8_t *restrict work)
             // which an inclusive [start, end] cannot express, so the caller is told there is no
             // usable range and serves the whole (empty) representation with 200 - which is what
             // sec 14.2 permits a server to do with any Range it does not act on.
-            HttpRange.n = 0;
+            HttpRangeV.n = 0;
             return;
         }
         start = (end >= size) ? 0 : (size - end);
@@ -119,7 +119,7 @@ static void http_range_http_parse_byte_range(uint8_t *restrict work)
     {
         if (start >= size)
         {
-            HttpRange.n = -1; // start past EOF -> unsatisfiable
+            HttpRangeV.n = -1; // start past EOF -> unsatisfiable
             return;
         }
         if (!have_end || end >= size)
@@ -128,18 +128,17 @@ static void http_range_http_parse_byte_range(uint8_t *restrict work)
         }
         if (start > end)
         {
-            HttpRange.n = -1;
+            HttpRangeV.n = -1;
             return;
         }
     }
     *out_start = start;
     *out_end = end;
-    HttpRange.n = 1;
+    HttpRangeV.n = 1;
 }
 
-HttpRangeNs HttpRange = {
-    .http_parse_byte_range = http_range_http_parse_byte_range,
-};
+/** @brief The operands and the outcome. */
+HttpRangeVars HttpRangeV;
 
 PROTOCORE_END_DECLS
 

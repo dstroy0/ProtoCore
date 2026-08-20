@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_FTP
 
-#include "services/file_transfer/ftp/ftp/ftp.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "services/file_transfer/ftp/ftp/ftp.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -83,17 +83,17 @@ static size_t protocore_ftp_finish(char *buf, size_t cap, size_t n)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void ftp_build_command(uint8_t *restrict work)
+void protocore_ftp_build_command(uint8_t *restrict work)
 {
     (void)work;
-    char *buf = Ftp.build_command_args.buf;
-    size_t cap = Ftp.build_command_args.cap;
-    const char *verb = Ftp.build_command_args.verb;
-    const char *arg = Ftp.build_command_args.arg;
+    char *buf = FtpV.build_command_args.buf;
+    size_t cap = FtpV.build_command_args.cap;
+    const char *verb = FtpV.build_command_args.verb;
+    const char *arg = FtpV.build_command_args.arg;
 
     if (!buf || !verb || !verb[0])
     {
-        Ftp.n = 0;
+        FtpV.n = 0;
         return;
     }
     size_t n = 0;
@@ -104,20 +104,20 @@ static void ftp_build_command(uint8_t *restrict work)
         n = protocore_ftp_emit(buf, cap, n, arg, str.len(arg, cap));
     }
     n = protocore_ftp_emit(buf, cap, n, "\r\n", 2);
-    Ftp.n = protocore_ftp_finish(buf, cap, n);
+    FtpV.n = protocore_ftp_finish(buf, cap, n);
 }
 
-static void ftp_build_port(uint8_t *restrict work)
+void protocore_ftp_build_port(uint8_t *restrict work)
 {
     (void)work;
-    char *buf = Ftp.build_port_args.buf;
-    size_t cap = Ftp.build_port_args.cap;
-    const uint8_t *ip = Ftp.build_port_args.ip;
-    uint16_t port = Ftp.build_port_args.port;
+    char *buf = FtpV.build_port_args.buf;
+    size_t cap = FtpV.build_port_args.cap;
+    const uint8_t *ip = FtpV.build_port_args.ip;
+    uint16_t port = FtpV.build_port_args.port;
 
     if (!buf || !ip)
     {
-        Ftp.n = 0;
+        FtpV.n = 0;
         return;
     }
     size_t n = 0;
@@ -131,21 +131,21 @@ static void ftp_build_port(uint8_t *restrict work)
     n = protocore_ftp_emit(buf, cap, n, ",", 1);
     n = protocore_ftp_emit_uint(buf, cap, n, (unsigned)(port & 0xFF));
     n = protocore_ftp_emit(buf, cap, n, "\r\n", 2);
-    Ftp.n = protocore_ftp_finish(buf, cap, n);
+    FtpV.n = protocore_ftp_finish(buf, cap, n);
 }
 
-static void ftp_build_eprt(uint8_t *restrict work)
+void protocore_ftp_build_eprt(uint8_t *restrict work)
 {
     (void)work;
-    char *buf = Ftp.build_eprt_args.buf;
-    size_t cap = Ftp.build_eprt_args.cap;
-    const char *ip_str = Ftp.build_eprt_args.ip_str;
-    proto_bool ipv6 = Ftp.build_eprt_args.ipv6;
-    uint16_t port = Ftp.build_eprt_args.port;
+    char *buf = FtpV.build_eprt_args.buf;
+    size_t cap = FtpV.build_eprt_args.cap;
+    const char *ip_str = FtpV.build_eprt_args.ip_str;
+    proto_bool ipv6 = FtpV.build_eprt_args.ipv6;
+    uint16_t port = FtpV.build_eprt_args.port;
 
     if (!buf || !ip_str || !ip_str[0])
     {
-        Ftp.n = 0;
+        FtpV.n = 0;
         return;
     }
     size_t n = 0;
@@ -156,7 +156,7 @@ static void ftp_build_eprt(uint8_t *restrict work)
     n = protocore_ftp_emit(buf, cap, n, "|", 1);
     n = protocore_ftp_emit_uint(buf, cap, n, port);
     n = protocore_ftp_emit(buf, cap, n, "|\r\n", 3);
-    Ftp.n = protocore_ftp_finish(buf, cap, n);
+    FtpV.n = protocore_ftp_finish(buf, cap, n);
 }
 
 static proto_bool protocore_ftp_is_3digit(const char *p)
@@ -182,17 +182,17 @@ static size_t protocore_ftp_line_end(const char *buf, size_t len, size_t start)
     return 0;
 }
 
-static void ftp_parse_reply(uint8_t *restrict work)
+void protocore_ftp_parse_reply(uint8_t *restrict work)
 {
     (void)work;
-    const char *buf = Ftp.parse_reply_args.buf;
-    size_t len = Ftp.parse_reply_args.len;
-    int *code = Ftp.parse_reply_args.code;
-    size_t *consumed = Ftp.parse_reply_args.consumed;
+    const char *buf = FtpV.parse_reply_args.buf;
+    size_t len = FtpV.parse_reply_args.len;
+    int *code = FtpV.parse_reply_args.code;
+    size_t *consumed = FtpV.parse_reply_args.consumed;
 
     if (!buf || len < 4 || !protocore_ftp_is_3digit(buf))
     {
-        Ftp.ok = PROTO_FALSE;
+        FtpV.ok = PROTO_FALSE;
         return;
     }
     int first = protocore_ftp_code3(buf);
@@ -203,17 +203,17 @@ static void ftp_parse_reply(uint8_t *restrict work)
         size_t eol = protocore_ftp_line_end(buf, len, 0);
         if (!eol)
         {
-            Ftp.ok = PROTO_FALSE; // line not fully received
+            FtpV.ok = PROTO_FALSE; // line not fully received
             return;
         }
         *code = first;
         *consumed = eol;
-        Ftp.ok = PROTO_TRUE;
+        FtpV.ok = PROTO_TRUE;
         return;
     }
     if (sep != '-')
     {
-        Ftp.ok = PROTO_FALSE; // malformed: the separator must be SP or '-'
+        FtpV.ok = PROTO_FALSE; // malformed: the separator must be SP or '-'
         return;
     }
 
@@ -221,7 +221,7 @@ static void ftp_parse_reply(uint8_t *restrict work)
     size_t pos = protocore_ftp_line_end(buf, len, 0);
     if (!pos)
     {
-        Ftp.ok = PROTO_FALSE;
+        FtpV.ok = PROTO_FALSE;
         return;
     }
     while (pos < len)
@@ -232,36 +232,36 @@ static void ftp_parse_reply(uint8_t *restrict work)
             size_t eol = protocore_ftp_line_end(buf, len, pos);
             if (!eol)
             {
-                Ftp.ok = PROTO_FALSE; // terminator line not fully received
+                FtpV.ok = PROTO_FALSE; // terminator line not fully received
                 return;
             }
             *code = first;
             *consumed = eol;
-            Ftp.ok = PROTO_TRUE;
+            FtpV.ok = PROTO_TRUE;
             return;
         }
         size_t eol = protocore_ftp_line_end(buf, len, pos);
         if (!eol)
         {
-            Ftp.ok = PROTO_FALSE; // partial continuation line; need more
+            FtpV.ok = PROTO_FALSE; // partial continuation line; need more
             return;
         }
         pos = eol;
     }
-    Ftp.ok = PROTO_FALSE; // no terminator yet
+    FtpV.ok = PROTO_FALSE; // no terminator yet
 }
 
-static void ftp_parse_pasv(uint8_t *restrict work)
+void protocore_ftp_parse_pasv(uint8_t *restrict work)
 {
     (void)work;
-    const char *buf = Ftp.parse_pasv_args.buf;
-    size_t len = Ftp.parse_pasv_args.len;
-    uint8_t *ip = Ftp.parse_pasv_args.ip;
-    uint16_t *port = Ftp.parse_pasv_args.port;
+    const char *buf = FtpV.parse_pasv_args.buf;
+    size_t len = FtpV.parse_pasv_args.len;
+    uint8_t *ip = FtpV.parse_pasv_args.ip;
+    uint16_t *port = FtpV.parse_pasv_args.port;
 
     if (!buf || !ip || !port)
     {
-        Ftp.ok = PROTO_FALSE;
+        FtpV.ok = PROTO_FALSE;
         return;
     }
     size_t i = 0;
@@ -271,7 +271,7 @@ static void ftp_parse_pasv(uint8_t *restrict work)
     }
     if (i >= len)
     {
-        Ftp.ok = PROTO_FALSE;
+        FtpV.ok = PROTO_FALSE;
         return;
     }
     i++; // past '('
@@ -281,7 +281,7 @@ static void ftp_parse_pasv(uint8_t *restrict work)
     {
         if (i >= len || buf[i] < '0' || buf[i] > '9')
         {
-            Ftp.ok = PROTO_FALSE; // the guard above guarantees at least one digit in this field
+            FtpV.ok = PROTO_FALSE; // the guard above guarantees at least one digit in this field
             return;
         }
         unsigned v = 0;
@@ -290,7 +290,7 @@ static void ftp_parse_pasv(uint8_t *restrict work)
             v = v * 10 + (unsigned)(buf[i] - '0');
             if (v > 255)
             {
-                Ftp.ok = PROTO_FALSE;
+                FtpV.ok = PROTO_FALSE;
                 return;
             }
             i++;
@@ -300,7 +300,7 @@ static void ftp_parse_pasv(uint8_t *restrict work)
         {
             if (i >= len || buf[i] != ',')
             {
-                Ftp.ok = PROTO_FALSE;
+                FtpV.ok = PROTO_FALSE;
                 return;
             }
             i++;
@@ -311,19 +311,19 @@ static void ftp_parse_pasv(uint8_t *restrict work)
     ip[2] = (uint8_t)nums[2];
     ip[3] = (uint8_t)nums[3];
     *port = (uint16_t)(nums[4] * 256 + nums[5]);
-    Ftp.ok = PROTO_TRUE;
+    FtpV.ok = PROTO_TRUE;
 }
 
-static void ftp_parse_epsv(uint8_t *restrict work)
+void protocore_ftp_parse_epsv(uint8_t *restrict work)
 {
     (void)work;
-    const char *buf = Ftp.parse_epsv_args.buf;
-    size_t len = Ftp.parse_epsv_args.len;
-    uint16_t *port = Ftp.parse_epsv_args.port;
+    const char *buf = FtpV.parse_epsv_args.buf;
+    size_t len = FtpV.parse_epsv_args.len;
+    uint16_t *port = FtpV.parse_epsv_args.port;
 
     if (!buf || !port)
     {
-        Ftp.ok = PROTO_FALSE;
+        FtpV.ok = PROTO_FALSE;
         return;
     }
     size_t i = 0;
@@ -333,13 +333,13 @@ static void ftp_parse_epsv(uint8_t *restrict work)
     }
     if (i >= len)
     {
-        Ftp.ok = PROTO_FALSE;
+        FtpV.ok = PROTO_FALSE;
         return;
     }
     i++; // past '('
     if (i >= len)
     {
-        Ftp.ok = PROTO_FALSE;
+        FtpV.ok = PROTO_FALSE;
         return;
     }
     char d = buf[i]; // the delimiter (RFC 2428 recommends '|')
@@ -356,13 +356,13 @@ static void ftp_parse_epsv(uint8_t *restrict work)
     }
     if (seen < 3)
     {
-        Ftp.ok = PROTO_FALSE;
+        FtpV.ok = PROTO_FALSE;
         return;
     }
 
     if (i >= len || buf[i] < '0' || buf[i] > '9')
     {
-        Ftp.ok = PROTO_FALSE; // the guard above guarantees at least one port digit follows
+        FtpV.ok = PROTO_FALSE; // the guard above guarantees at least one port digit follows
         return;
     }
     unsigned v = 0;
@@ -371,23 +371,17 @@ static void ftp_parse_epsv(uint8_t *restrict work)
         v = v * 10 + (unsigned)(buf[i] - '0');
         if (v > 65535)
         {
-            Ftp.ok = PROTO_FALSE;
+            FtpV.ok = PROTO_FALSE;
             return;
         }
         i++;
     }
     *port = (uint16_t)v;
-    Ftp.ok = PROTO_TRUE;
+    FtpV.ok = PROTO_TRUE;
 }
 
-FtpNs Ftp = {
-    .build_command = ftp_build_command,
-    .build_port = ftp_build_port,
-    .build_eprt = ftp_build_eprt,
-    .parse_reply = ftp_parse_reply,
-    .parse_pasv = ftp_parse_pasv,
-    .parse_epsv = ftp_parse_epsv,
-};
+/** @brief The operands and the outcome. */
+FtpVars FtpV;
 
 PROTOCORE_END_DECLS
 

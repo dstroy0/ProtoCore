@@ -98,10 +98,8 @@ typedef struct
     // The bytes the key digest works out of. Live with the store, so hashing a key costs no borrow.
     uint8_t digest_work[PROTOCORE_SHA256_BORROW];
 } EdgeCacheStore;
-
 /** @brief protocore_cache_control, as the caller already knows it. */
 struct protocore_cache_control;
-
 /** @brief What header_value takes: hdrs, len, name, out, out_cap. */
 typedef struct
 {
@@ -111,14 +109,12 @@ typedef struct
     char *out;
     size_t out_cap;
 } EdgeCacheHeaderValueArgs;
-
 /** @brief What parse_http_date takes: s, len. */
 typedef struct
 {
     const char *s;
     size_t len;
 } EdgeCacheParseHttpDateArgs;
-
 /** @brief What freshness_lifetime takes: cc, shared, date_epoch, ... */
 typedef struct
 {
@@ -127,14 +123,12 @@ typedef struct
     int64_t date_epoch;
     int64_t expires_epoch;
 } EdgeCacheFreshnessLifetimeArgs;
-
 /** @brief What heuristic_lifetime takes: date_epoch, ... */
 typedef struct
 {
     int64_t date_epoch;
     int64_t last_modified_epoch;
 } EdgeCacheHeuristicLifetimeArgs;
-
 /** @brief What initial_age takes: age_hdr, date_epoch, ... */
 typedef struct
 {
@@ -142,7 +136,6 @@ typedef struct
     int64_t date_epoch;
     int64_t response_time_epoch;
 } EdgeCacheInitialAgeArgs;
-
 /** @brief What current_age takes: initial_age, insert_ms, now_ms. */
 typedef struct
 {
@@ -150,14 +143,12 @@ typedef struct
     uint32_t insert_ms;
     uint32_t now_ms;
 } EdgeCacheCurrentAgeArgs;
-
 /** @brief What is_fresh_at takes: lifetime, current_age. */
 typedef struct
 {
     long lifetime;
     long current_age;
 } EdgeCacheIsFreshAtArgs;
-
 /** @brief What key_canon takes: method, host, path, query, ... */
 typedef struct
 {
@@ -169,7 +160,6 @@ typedef struct
     char *out;
     size_t out_cap;
 } EdgeCacheKeyCanonArgs;
-
 /** @brief What key_digest takes: digest_work, canon, len, digest. */
 typedef struct
 {
@@ -178,7 +168,6 @@ typedef struct
     size_t len;
     uint8_t *digest; ///< 32 bytes.
 } EdgeCacheKeyDigestArgs;
-
 /** @brief What vary_serialize takes: vary_header, lookup, ctx, out, ... */
 typedef struct
 {
@@ -188,13 +177,11 @@ typedef struct
     char *out;
     size_t out_cap;
 } EdgeCacheVarySerializeArgs;
-
 /** @brief What store_init takes: s. */
 typedef struct
 {
     EdgeCacheStore *s;
 } EdgeCacheStoreInitArgs;
-
 /** @brief What store_alloc takes: s, canon, vary_key. */
 typedef struct
 {
@@ -202,7 +189,6 @@ typedef struct
     const char *canon;
     const char *vary_key;
 } EdgeCacheStoreAllocArgs;
-
 /** @brief What store_lookup takes: s, canon, vary_key, now_ms. */
 typedef struct
 {
@@ -211,7 +197,6 @@ typedef struct
     const char *vary_key;
     uint32_t now_ms;
 } EdgeCacheStoreLookupArgs;
-
 /** @brief What store_find takes: s, canon, lookup, ctx, now_ms. */
 typedef struct
 {
@@ -221,7 +206,6 @@ typedef struct
     void *ctx;
     uint32_t now_ms;
 } EdgeCacheStoreFindArgs;
-
 /** @brief What entry_set_freshness takes: e, cc, shared, date_epoch, ... */
 typedef struct
 {
@@ -235,48 +219,41 @@ typedef struct
     int64_t response_time_epoch;
     uint32_t now_ms;
 } EdgeCacheEntrySetFreshnessArgs;
-
 /** @brief What entry_has_validator takes: e. */
 typedef struct
 {
     const EdgeEntry *e;
 } EdgeCacheEntryHasValidatorArgs;
-
 /** @brief What entry_fresh takes: e, now_ms. */
 typedef struct
 {
     const EdgeEntry *e;
     uint32_t now_ms;
 } EdgeCacheEntryFreshArgs;
-
 /** @brief What store_sweep takes: s, now_ms. */
 typedef struct
 {
     EdgeCacheStore *s;
     uint32_t now_ms;
 } EdgeCacheStoreSweepArgs;
-
 /** @brief What store_purge takes: s, canon. */
 typedef struct
 {
     EdgeCacheStore *s;
     const char *canon;
 } EdgeCacheStorePurgeArgs;
-
 /** @brief What store_purge_prefix takes: s, prefix. */
 typedef struct
 {
     EdgeCacheStore *s;
     const char *prefix;
 } EdgeCacheStorePurgePrefixArgs;
-
 /** @brief What store_free_entry takes: s, e. */
 typedef struct
 {
     EdgeCacheStore *s;
     const EdgeEntry *e;
 } EdgeCacheStoreFreeEntryArgs;
-
 /** @brief What is_storeable takes: status, method, cc, vary_header, ... */
 typedef struct
 {
@@ -286,7 +263,6 @@ typedef struct
     const char *vary_header;
     size_t body_len;
 } EdgeCacheIsStoreableArgs;
-
 /** @brief What build_conditional takes: e, out, cap. */
 typedef struct
 {
@@ -294,7 +270,6 @@ typedef struct
     char *out;
     size_t cap;
 } EdgeCacheBuildConditionalArgs;
-
 /** @brief What apply_304 takes: e, new_hdrs, hdr_len, ... */
 typedef struct
 {
@@ -304,7 +279,6 @@ typedef struct
     int64_t response_time_epoch;
     uint32_t now_ms;
 } EdgeCacheApply304Args;
-
 /**
  * @brief CDN edge-cache tier - pure engine (PROTOCORE_ENABLE_EDGE_CACHE). The caching reverse-proxy edge that ...
  *
@@ -404,14 +378,20 @@ typedef struct
     EdgeCacheIsStoreableArgs is_storeable_args;
     EdgeCacheBuildConditionalArgs build_conditional_args;
     EdgeCacheApply304Args apply_304_args;
-
     proto_bool ok;
     int64_t epoch;
     long secs;
     size_t n;
     EdgeEntry *entry;
     uint32_t count;
+} EdgeCacheVars;
 
+/** @brief The operands and the outcome. */
+extern EdgeCacheVars EdgeCacheV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const header_value)(uint8_t *restrict work);
     void (*const parse_http_date)(uint8_t *restrict work);
     void (*const freshness_lifetime)(uint8_t *restrict work);
@@ -438,8 +418,63 @@ typedef struct
     void (*const apply_304)(uint8_t *restrict work);
 } EdgeCacheNs;
 
-/** @brief The one symbol this module exports. */
-extern EdgeCacheNs EdgeCache;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in EdgeCacheV or a region of the borrow at a fixed offset.
+void protocore_edge_cache_header_value(uint8_t *restrict work);
+void protocore_edge_cache_parse_http_date(uint8_t *restrict work);
+void protocore_edge_cache_freshness_lifetime(uint8_t *restrict work);
+void protocore_edge_cache_heuristic_lifetime(uint8_t *restrict work);
+void protocore_edge_cache_initial_age(uint8_t *restrict work);
+void protocore_edge_cache_current_age(uint8_t *restrict work);
+void protocore_edge_cache_is_fresh_at(uint8_t *restrict work);
+void protocore_edge_cache_key_canon(uint8_t *restrict work);
+void protocore_edge_cache_key_digest(uint8_t *restrict work);
+void protocore_edge_cache_vary_serialize(uint8_t *restrict work);
+void protocore_edge_cache_store_init(uint8_t *restrict work);
+void protocore_edge_cache_store_alloc(uint8_t *restrict work);
+void protocore_edge_cache_store_lookup(uint8_t *restrict work);
+void protocore_edge_cache_store_find(uint8_t *restrict work);
+void protocore_edge_cache_entry_set_freshness(uint8_t *restrict work);
+void protocore_edge_cache_entry_has_validator(uint8_t *restrict work);
+void protocore_edge_cache_entry_fresh(uint8_t *restrict work);
+void protocore_edge_cache_store_sweep(uint8_t *restrict work);
+void protocore_edge_cache_store_purge(uint8_t *restrict work);
+void protocore_edge_cache_store_purge_prefix(uint8_t *restrict work);
+void protocore_edge_cache_store_free_entry(uint8_t *restrict work);
+void protocore_edge_cache_is_storeable(uint8_t *restrict work);
+void protocore_edge_cache_build_conditional(uint8_t *restrict work);
+void protocore_edge_cache_apply_304(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `EdgeCache.header_value(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const EdgeCacheNs EdgeCache __attribute__((unused)) = {
+    .header_value = protocore_edge_cache_header_value,
+    .parse_http_date = protocore_edge_cache_parse_http_date,
+    .freshness_lifetime = protocore_edge_cache_freshness_lifetime,
+    .heuristic_lifetime = protocore_edge_cache_heuristic_lifetime,
+    .initial_age = protocore_edge_cache_initial_age,
+    .current_age = protocore_edge_cache_current_age,
+    .is_fresh_at = protocore_edge_cache_is_fresh_at,
+    .key_canon = protocore_edge_cache_key_canon,
+    .key_digest = protocore_edge_cache_key_digest,
+    .vary_serialize = protocore_edge_cache_vary_serialize,
+    .store_init = protocore_edge_cache_store_init,
+    .store_alloc = protocore_edge_cache_store_alloc,
+    .store_lookup = protocore_edge_cache_store_lookup,
+    .store_find = protocore_edge_cache_store_find,
+    .entry_set_freshness = protocore_edge_cache_entry_set_freshness,
+    .entry_has_validator = protocore_edge_cache_entry_has_validator,
+    .entry_fresh = protocore_edge_cache_entry_fresh,
+    .store_sweep = protocore_edge_cache_store_sweep,
+    .store_purge = protocore_edge_cache_store_purge,
+    .store_purge_prefix = protocore_edge_cache_store_purge_prefix,
+    .store_free_entry = protocore_edge_cache_store_free_entry,
+    .is_storeable = protocore_edge_cache_is_storeable,
+    .build_conditional = protocore_edge_cache_build_conditional,
+    .apply_304 = protocore_edge_cache_apply_304,
+};
 
 PROTOCORE_END_DECLS
 

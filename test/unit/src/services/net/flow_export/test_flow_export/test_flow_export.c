@@ -55,37 +55,37 @@ static uint8_t g_buf[512];
 
 static void begin_v9(size_t cap)
 {
-    FlowExport.out.buf = g_buf;
-    FlowExport.out.cap = cap;
-    FlowExport.message.sys_uptime = 0x11223344u;
-    FlowExport.message.unix_secs = 0x55667788u;
-    FlowExport.message.sequence_number = 0x99AABBCCu;
-    FlowExport.message.observation_domain_id = 0x0000002Au;
+    FlowExportV.out.buf = g_buf;
+    FlowExportV.out.cap = cap;
+    FlowExportV.message.sys_uptime = 0x11223344u;
+    FlowExportV.message.unix_secs = 0x55667788u;
+    FlowExportV.message.sequence_number = 0x99AABBCCu;
+    FlowExportV.message.observation_domain_id = 0x0000002Au;
     FlowExport.v9_begin(protocore_flow_export_span());
 }
 
 static void begin_ipfix(size_t cap)
 {
-    FlowExport.out.buf = g_buf;
-    FlowExport.out.cap = cap;
-    FlowExport.message.export_time = 0x55667788u;
-    FlowExport.message.sequence_number = 0x99AABBCCu;
-    FlowExport.message.observation_domain_id = 0x0000002Au;
+    FlowExportV.out.buf = g_buf;
+    FlowExportV.out.cap = cap;
+    FlowExportV.message.export_time = 0x55667788u;
+    FlowExportV.message.sequence_number = 0x99AABBCCu;
+    FlowExportV.message.observation_domain_id = 0x0000002Au;
     FlowExport.ipfix_begin(protocore_flow_export_span());
 }
 
 static void emit_template(uint16_t id, const FlowFieldSpecifier *fields, size_t count)
 {
-    FlowExport.template_id = id;
-    FlowExport.tmpl.fields = fields;
-    FlowExport.tmpl.field_count = count;
+    FlowExportV.template_id = id;
+    FlowExportV.tmpl.fields = fields;
+    FlowExportV.tmpl.field_count = count;
     FlowExport.template_set(protocore_flow_export_span());
 }
 
 static void emit_record(const uint8_t *rec, size_t len)
 {
-    FlowExport.data.record = rec;
-    FlowExport.data.len = len;
+    FlowExportV.data.record = rec;
+    FlowExportV.data.len = len;
     FlowExport.data_record(protocore_flow_export_span());
 }
 
@@ -95,11 +95,11 @@ void test_v9_packet_header(void)
 {
     memset(g_buf, 0xAA, sizeof(g_buf));
     begin_v9(sizeof(g_buf));
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     emit_template(256, RFC_FIELDS, 5);
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
 
     static const uint8_t WANT[20] = {0x00, 0x09,              // Version 9
                                      0x00, 0x01,              // Count = the one Template Record
@@ -108,7 +108,7 @@ void test_v9_packet_header(void)
                                      0x99, 0xAA, 0xBB, 0xCC,  // Sequence Number
                                      0x00, 0x00, 0x00, 0x2A}; // Source ID
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, g_buf, sizeof(WANT));
-    TEST_ASSERT_EQUAL_size_t(20u + 28u, FlowExport.n);
+    TEST_ASSERT_EQUAL_size_t(20u + 28u, FlowExportV.n);
 }
 
 // RFC 3954 sec 11.2, octet for octet.
@@ -116,9 +116,9 @@ void test_rfc3954_template_flowset_example(void)
 {
     begin_v9(sizeof(g_buf));
     emit_template(256, RFC_FIELDS, 5);
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
 
     static const uint8_t WANT[28] = {0x00, 0x00,              // FlowSet ID = 0
                                      0x00, 0x1C,              // Length = 28 bytes
@@ -137,16 +137,16 @@ void test_rfc3954_data_flowset_example(void)
 {
     begin_v9(sizeof(g_buf));
     emit_template(256, RFC_FIELDS, 5);
-    FlowExport.template_id = 256;
+    FlowExportV.template_id = 256;
     FlowExport.data_set_begin(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     emit_record(REC1, sizeof(REC1));
     emit_record(REC2, sizeof(REC2));
     emit_record(REC3, sizeof(REC3));
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     FlowExport.data_set_end(protocore_flow_export_span());
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
 
     const uint8_t *set = g_buf + 20 + 28;
     static const uint8_t HDR[4] = {0x01, 0x00, 0x00, 0x40}; // FlowSet ID 256, Length 64
@@ -158,7 +158,7 @@ void test_rfc3954_data_flowset_example(void)
     // RFC 3954 sec 5.1 Count = the Template Record plus the three Data Records
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[2]);
     TEST_ASSERT_EQUAL_HEX8(0x04, g_buf[3]);
-    TEST_ASSERT_EQUAL_size_t(20u + 28u + 64u, FlowExport.n);
+    TEST_ASSERT_EQUAL_size_t(20u + 28u + 64u, FlowExportV.n);
 }
 
 // RFC 7011 sec 3.1: Version 0x000a, then a Length that is the whole message, patched at finish.
@@ -166,13 +166,13 @@ void test_rfc3954_data_flowset_example(void)
 void test_ipfix_message_header_and_template_set_id(void)
 {
     begin_ipfix(sizeof(g_buf));
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     emit_template(256, RFC_FIELDS, 5);
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
 
     // 16-octet Message Header, then the 28-octet Template Set
-    TEST_ASSERT_EQUAL_size_t(16u + 28u, FlowExport.n);
+    TEST_ASSERT_EQUAL_size_t(16u + 28u, FlowExportV.n);
     static const uint8_t WANT[16] = {0x00, 0x0A,              // Version 0x000a
                                      0x00, 0x2C,              // Length = 44 = 16 + 28
                                      0x55, 0x66, 0x77, 0x88,  // Export Time
@@ -193,19 +193,19 @@ void test_data_set_id_must_be_256_or_above(void)
     begin_v9(sizeof(g_buf));
     emit_template(256, RFC_FIELDS, 5);
 
-    FlowExport.template_id = 255;
+    FlowExportV.template_id = 255;
     FlowExport.data_set_begin(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
-    FlowExport.template_id = 0;
+    TEST_ASSERT_FALSE(FlowExportV.ok);
+    FlowExportV.template_id = 0;
     FlowExport.data_set_begin(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
 
-    FlowExport.template_id = 256;
+    FlowExportV.template_id = 256;
     FlowExport.data_set_begin(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
-    FlowExport.template_id = 65535;
+    TEST_ASSERT_TRUE(FlowExportV.ok);
+    FlowExportV.template_id = 65535;
     FlowExport.data_set_begin(protocore_flow_export_span()); // closes the previous Set and opens the next
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
 }
 
 // RFC 3954 sec 5.3: a v9 Data FlowSet is padded so the next FlowSet starts on a 4-octet boundary,
@@ -215,15 +215,15 @@ void test_v9_data_set_is_padded_to_a_four_octet_boundary(void)
     static const uint8_t REC[3] = {0xDE, 0xAD, 0xBE};
     memset(g_buf, 0xAA, sizeof(g_buf));
     begin_v9(sizeof(g_buf));
-    FlowExport.template_id = 256;
+    FlowExportV.template_id = 256;
     FlowExport.data_set_begin(protocore_flow_export_span());
     emit_record(REC, sizeof(REC));
     FlowExport.data_set_end(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
 
-    TEST_ASSERT_EQUAL_size_t(20u + 8u, FlowExport.n);
+    TEST_ASSERT_EQUAL_size_t(20u + 8u, FlowExportV.n);
     static const uint8_t WANT[8] = {0x01, 0x00,       // FlowSet ID 256
                                     0x00, 0x08,       // Length 8: header + 3 + 1 pad
                                     0xDE, 0xAD, 0xBE, // the record
@@ -232,12 +232,12 @@ void test_v9_data_set_is_padded_to_a_four_octet_boundary(void)
 
     // an already-aligned Set gets no padding
     begin_v9(sizeof(g_buf));
-    FlowExport.template_id = 256;
+    FlowExportV.template_id = 256;
     FlowExport.data_set_begin(protocore_flow_export_span());
     emit_record(REC1, sizeof(REC1)); // 4 + 20 = 24, already a multiple of 4
     FlowExport.data_set_end(protocore_flow_export_span());
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_EQUAL_size_t(20u + 24u, FlowExport.n);
+    TEST_ASSERT_EQUAL_size_t(20u + 24u, FlowExportV.n);
 }
 
 // The 4-octet alignment is a v9 rule; an IPFIX Data Set carries the same record with no padding.
@@ -245,14 +245,14 @@ void test_ipfix_data_set_is_not_padded(void)
 {
     static const uint8_t REC[3] = {0xDE, 0xAD, 0xBE};
     begin_ipfix(sizeof(g_buf));
-    FlowExport.template_id = 256;
+    FlowExportV.template_id = 256;
     FlowExport.data_set_begin(protocore_flow_export_span());
     emit_record(REC, sizeof(REC));
     FlowExport.data_set_end(protocore_flow_export_span());
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
 
-    TEST_ASSERT_EQUAL_size_t(16u + 7u, FlowExport.n);
+    TEST_ASSERT_EQUAL_size_t(16u + 7u, FlowExportV.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[18]); // Set Length 7
     TEST_ASSERT_EQUAL_HEX8(0x07, g_buf[19]);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[2]); // IPFIX Length 23 = 16 + 7
@@ -264,28 +264,28 @@ void test_ipfix_data_set_is_not_padded(void)
 void test_an_open_set_is_closed_by_what_follows(void)
 {
     begin_v9(sizeof(g_buf));
-    FlowExport.template_id = 256;
+    FlowExportV.template_id = 256;
     FlowExport.data_set_begin(protocore_flow_export_span());
     emit_record(REC1, sizeof(REC1));
     // no data_set_end: the template that follows must close it
     emit_template(257, RFC_FIELDS, 5);
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
 
     TEST_ASSERT_EQUAL_HEX8(0x00, g_buf[22]); // the Data Set's Length was patched to 24
     TEST_ASSERT_EQUAL_HEX8(0x18, g_buf[23]);
-    TEST_ASSERT_EQUAL_size_t(20u + 24u + 28u, FlowExport.n);
+    TEST_ASSERT_EQUAL_size_t(20u + 24u + 28u, FlowExportV.n);
 
     // and message_finish closes one that is still open at the end
     begin_v9(sizeof(g_buf));
-    FlowExport.template_id = 256;
+    FlowExportV.template_id = 256;
     FlowExport.data_set_begin(protocore_flow_export_span());
     emit_record(REC1, sizeof(REC1));
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x18, g_buf[23]);
-    TEST_ASSERT_EQUAL_size_t(20u + 24u, FlowExport.n);
+    TEST_ASSERT_EQUAL_size_t(20u + 24u, FlowExportV.n);
 }
 
 // A record with no Set open, an empty template, and a null record are all refused.
@@ -293,33 +293,33 @@ void test_calls_out_of_order_are_refused(void)
 {
     begin_v9(sizeof(g_buf));
     emit_record(REC1, sizeof(REC1)); // no Data Set open
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
 
     emit_template(256, NULL, 5);
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
     emit_template(256, RFC_FIELDS, 0);
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
 
-    FlowExport.template_id = 256;
+    FlowExportV.template_id = 256;
     FlowExport.data_set_begin(protocore_flow_export_span());
     emit_record(NULL, 20);
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
     emit_record(REC1, 0);
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
 
     // closing a Set that is not open is refused too
     FlowExport.data_set_end(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     FlowExport.data_set_end(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
 
     // and a begin with nowhere to write never starts a message
-    FlowExport.out.buf = NULL;
-    FlowExport.out.cap = 64;
+    FlowExportV.out.buf = NULL;
+    FlowExportV.out.cap = 64;
     FlowExport.v9_begin(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
     FlowExport.ipfix_begin(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
 }
 
 // A span too small for the message fails closed: the overflow is sticky, so nothing downstream
@@ -327,19 +327,19 @@ void test_calls_out_of_order_are_refused(void)
 void test_overflow_fails_closed(void)
 {
     begin_v9(20); // exactly the header, no room for a Set
-    TEST_ASSERT_TRUE(FlowExport.ok);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
     emit_template(256, RFC_FIELDS, 5);
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
-    TEST_ASSERT_EQUAL_size_t(0u, FlowExport.n);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
+    TEST_ASSERT_EQUAL_size_t(0u, FlowExportV.n);
 
     // a header that does not fit either
     begin_v9(19);
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
     FlowExport.message_finish(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
-    TEST_ASSERT_EQUAL_size_t(0u, FlowExport.n);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
+    TEST_ASSERT_EQUAL_size_t(0u, FlowExportV.n);
 }
 
 // The vendor Version 5 packet header: 24 fixed octets, Version 5 written by the builder itself.
@@ -354,12 +354,12 @@ void test_v5_header_is_twenty_four_octets(void)
                                    .engine_id = 0x02,
                                    .sampling_interval = 0x0304};
     memset(g_buf, 0xAA, sizeof(g_buf));
-    FlowExport.out.buf = g_buf;
-    FlowExport.out.cap = sizeof(g_buf);
-    FlowExport.v5.header = &H;
+    FlowExportV.out.buf = g_buf;
+    FlowExportV.out.cap = sizeof(g_buf);
+    FlowExportV.v5.header = &H;
     FlowExport.v5_header(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
-    TEST_ASSERT_EQUAL_size_t((size_t)FLOW_V5_HEADER_SIZE, FlowExport.n);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
+    TEST_ASSERT_EQUAL_size_t((size_t)FLOW_V5_HEADER_SIZE, FlowExportV.n);
 
     static const uint8_t WANT[FLOW_V5_HEADER_SIZE] = {0x00, 0x05,             // Version 5
                                                       0x00, 0x02,             // count
@@ -396,12 +396,12 @@ void test_v5_record_is_forty_eight_octets(void)
                                    .src_mask = 24,
                                    .dst_mask = 24};
     memset(g_buf, 0xAA, sizeof(g_buf));
-    FlowExport.out.buf = g_buf;
-    FlowExport.out.cap = sizeof(g_buf);
-    FlowExport.v5.record = &R;
+    FlowExportV.out.buf = g_buf;
+    FlowExportV.out.cap = sizeof(g_buf);
+    FlowExportV.v5.record = &R;
     FlowExport.v5_record(protocore_flow_export_span());
-    TEST_ASSERT_TRUE(FlowExport.ok);
-    TEST_ASSERT_EQUAL_size_t((size_t)FLOW_V5_RECORD_SIZE, FlowExport.n);
+    TEST_ASSERT_TRUE(FlowExportV.ok);
+    TEST_ASSERT_EQUAL_size_t((size_t)FLOW_V5_RECORD_SIZE, FlowExportV.n);
 
     static const uint8_t WANT[FLOW_V5_RECORD_SIZE] = {0xC0, 0xA8, 0x01, 0x0C, // src_addr 192.168.1.12
                                                       0x0A, 0x05, 0x0C, 0xFE, // dst_addr 10.5.12.254
@@ -434,30 +434,30 @@ void test_v5_refuses_a_short_span(void)
     static const FlowV5Record R = {0};
     memset(g_buf, 0xAA, sizeof(g_buf));
 
-    FlowExport.out.buf = g_buf;
-    FlowExport.out.cap = FLOW_V5_HEADER_SIZE - 1;
-    FlowExport.v5.header = &H;
+    FlowExportV.out.buf = g_buf;
+    FlowExportV.out.cap = FLOW_V5_HEADER_SIZE - 1;
+    FlowExportV.v5.header = &H;
     FlowExport.v5_header(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
-    TEST_ASSERT_EQUAL_size_t(0u, FlowExport.n);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
+    TEST_ASSERT_EQUAL_size_t(0u, FlowExportV.n);
 
-    FlowExport.out.cap = FLOW_V5_RECORD_SIZE - 1;
-    FlowExport.v5.record = &R;
+    FlowExportV.out.cap = FLOW_V5_RECORD_SIZE - 1;
+    FlowExportV.v5.record = &R;
     FlowExport.v5_record(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
-    TEST_ASSERT_EQUAL_size_t(0u, FlowExport.n);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
+    TEST_ASSERT_EQUAL_size_t(0u, FlowExportV.n);
 
-    FlowExport.out.buf = NULL;
-    FlowExport.out.cap = sizeof(g_buf);
+    FlowExportV.out.buf = NULL;
+    FlowExportV.out.cap = sizeof(g_buf);
     FlowExport.v5_header(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
-    FlowExport.out.buf = g_buf;
-    FlowExport.v5.header = NULL;
+    TEST_ASSERT_FALSE(FlowExportV.ok);
+    FlowExportV.out.buf = g_buf;
+    FlowExportV.v5.header = NULL;
     FlowExport.v5_header(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
-    FlowExport.v5.record = NULL;
+    TEST_ASSERT_FALSE(FlowExportV.ok);
+    FlowExportV.v5.record = NULL;
     FlowExport.v5_record(protocore_flow_export_span());
-    TEST_ASSERT_FALSE(FlowExport.ok);
+    TEST_ASSERT_FALSE(FlowExportV.ok);
 
     TEST_ASSERT_EQUAL_HEX8(0xAA, g_buf[0]); // untouched throughout
 }

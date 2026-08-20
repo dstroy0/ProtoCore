@@ -413,8 +413,8 @@ static void Short_random(small_t *out)
     uint8_t rb[4];
     for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        Rng.fill_args.out = rb;
-        Rng.fill_args.len = 4;
+        RngV.fill_args.out = rb;
+        RngV.fill_args.len = 4;
         Rng.fill(protocore_rng_span());
         L[i] = (uint32_t)rb[0] | ((uint32_t)rb[1] << 8) | ((uint32_t)rb[2] << 16) | ((uint32_t)rb[3] << 24);
     }
@@ -428,13 +428,13 @@ static void Hash_prefix(uint8_t *restrict work, uint8_t *out, int b, const uint8
     uint8_t bb = (uint8_t)b;
     uint8_t *hw = SNTRUP761_SHA512(work);
     Sha512.init(hw);
-    Sha512.update_args.data = &bb;
-    Sha512.update_args.len = 1;
+    Sha512V.update_args.data = &bb;
+    Sha512V.update_args.len = 1;
     Sha512.update(hw);
-    Sha512.update_args.data = in;
-    Sha512.update_args.len = inlen;
+    Sha512V.update_args.data = in;
+    Sha512V.update_args.len = inlen;
     Sha512.update(hw);
-    Sha512.final_args.out = h;
+    Sha512V.final_args.out = h;
     Sha512.final(hw);
     mem.cpy(out, h, PROTOCORE_HASH_BYTES);
 }
@@ -735,8 +735,8 @@ static void Small_random(small_t *out)
     uint8_t rb[4];
     for (int i = 0; i < PROTOCORE_SNTRUP_P; ++i)
     {
-        Rng.fill_args.out = rb;
-        Rng.fill_args.len = 4;
+        RngV.fill_args.out = rb;
+        RngV.fill_args.len = 4;
         Rng.fill(protocore_rng_span());
         uint32_t u = (uint32_t)rb[0] | ((uint32_t)rb[1] << 8) | ((uint32_t)rb[2] << 16) | ((uint32_t)rb[3] << 24);
         out[i] = (small_t)((((u & 0x3fffffff) * 3) >> 30) - 1);
@@ -836,16 +836,16 @@ static int Ciphertexts_diff_mask(const uint8_t *c, const uint8_t *c2)
 
 // --- the entries -----------------------------------------------------------
 
-static void sntrup761_enc(uint8_t *restrict work)
+void protocore_sntrup761_enc(uint8_t *restrict work)
 {
-    Sntrup761.ok = PROTO_FALSE;
-    if (!Sntrup761.enc_args.pk || !Sntrup761.enc_args.ct || !Sntrup761.enc_args.ss)
+    Sntrup761V.ok = PROTO_FALSE;
+    if (!Sntrup761V.enc_args.pk || !Sntrup761V.enc_args.ct || !Sntrup761V.enc_args.ss)
     {
         return;
     }
-    const uint8_t *pk = Sntrup761.enc_args.pk;
-    uint8_t *ct = Sntrup761.enc_args.ct;
-    uint8_t *ss = Sntrup761.enc_args.ss;
+    const uint8_t *pk = Sntrup761V.enc_args.pk;
+    uint8_t *ct = Sntrup761V.enc_args.ct;
+    uint8_t *ss = Sntrup761V.enc_args.ss;
 
     uint16_t scr16[PROTOCORE_SCR16];
     uint32_t scr32[PROTOCORE_SCR32];
@@ -857,18 +857,18 @@ static void sntrup761_enc(uint8_t *restrict work)
     Short_random(r);
     Hide(work, ct, r_enc, r, pk, cache, scr16, scr32);
     HashSession(work, ss, 1, r_enc, ct);
-    Sntrup761.ok = PROTO_TRUE;
+    Sntrup761V.ok = PROTO_TRUE;
 }
 
-static void sntrup761_keypair(uint8_t *restrict work)
+void protocore_sntrup761_keypair(uint8_t *restrict work)
 {
-    Sntrup761.ok = PROTO_FALSE;
-    if (!Sntrup761.keypair_args.pk || !Sntrup761.keypair_args.sk)
+    Sntrup761V.ok = PROTO_FALSE;
+    if (!Sntrup761V.keypair_args.pk || !Sntrup761V.keypair_args.sk)
     {
         return;
     }
-    uint8_t *pk = Sntrup761.keypair_args.pk;
-    uint8_t *sk = Sntrup761.keypair_args.sk;
+    uint8_t *pk = Sntrup761V.keypair_args.pk;
+    uint8_t *sk = Sntrup761V.keypair_args.sk;
 
     uint16_t scr16[PROTOCORE_SCR16];
     Fq h[PROTOCORE_SNTRUP_P];
@@ -882,23 +882,23 @@ static void sntrup761_keypair(uint8_t *restrict work)
     // ...then the pk copy, a random rho for implicit reject, and the cached H(4||pk).
     uint8_t *tail = sk + 2 * PROTOCORE_SMALL_BYTES; // SecretKeys_bytes = 2 * Small_bytes
     mem.cpy(tail, pk, PROTOCORE_PK_BYTES);
-    Rng.fill_args.out = tail + PROTOCORE_PK_BYTES;
-    Rng.fill_args.len = PROTOCORE_SMALL_BYTES;
+    RngV.fill_args.out = tail + PROTOCORE_PK_BYTES;
+    RngV.fill_args.len = PROTOCORE_SMALL_BYTES;
     Rng.fill(protocore_rng_span());
     Hash_prefix(work, tail + PROTOCORE_PK_BYTES + PROTOCORE_SMALL_BYTES, 4, pk, PROTOCORE_PK_BYTES);
-    Sntrup761.ok = PROTO_TRUE;
+    Sntrup761V.ok = PROTO_TRUE;
 }
 
-static void sntrup761_dec(uint8_t *restrict work)
+void protocore_sntrup761_dec(uint8_t *restrict work)
 {
-    Sntrup761.ok = PROTO_FALSE;
-    if (!Sntrup761.dec_args.sk || !Sntrup761.dec_args.ct || !Sntrup761.dec_args.ss)
+    Sntrup761V.ok = PROTO_FALSE;
+    if (!Sntrup761V.dec_args.sk || !Sntrup761V.dec_args.ct || !Sntrup761V.dec_args.ss)
     {
         return;
     }
-    const uint8_t *sk = Sntrup761.dec_args.sk;
-    const uint8_t *ct = Sntrup761.dec_args.ct;
-    uint8_t *ss = Sntrup761.dec_args.ss;
+    const uint8_t *sk = Sntrup761V.dec_args.sk;
+    const uint8_t *ct = Sntrup761V.dec_args.ct;
+    uint8_t *ss = Sntrup761V.dec_args.ss;
 
     uint16_t scr16[PROTOCORE_SCR16];
     uint32_t scr32[PROTOCORE_SCR32];
@@ -923,10 +923,11 @@ static void sntrup761_dec(uint8_t *restrict work)
         r_enc[i] = (uint8_t)(r_enc[i] ^ (mask & (r_enc[i] ^ rho[i]))); // implicit reject -> rho
     }
     HashSession(work, ss, 1 + mask, r_enc, ct);
-    Sntrup761.ok = PROTO_TRUE;
+    Sntrup761V.ok = PROTO_TRUE;
 }
 
-Sntrup761Ns Sntrup761 = {.keypair = sntrup761_keypair, .enc = sntrup761_enc, .dec = sntrup761_dec};
+/** @brief The operands and the outcome. */
+Sntrup761Vars Sntrup761V;
 
 PROTOCORE_END_DECLS
 

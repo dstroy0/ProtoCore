@@ -85,16 +85,17 @@ proto_bool protocore_net_addr_from_ip(const protocore_ip *a, protocore_net_ip *o
 static void to_ip(uint8_t *restrict work)
 {
     (void)work;
-    protocore_net_addr_to_ip(NetAddr.in.addr, NetAddr.in.out_ip);
+    protocore_net_addr_to_ip(NetAddrV.in.addr, NetAddrV.in.out_ip);
 }
 
 static void from_ip(uint8_t *restrict work)
 {
     (void)work;
-    NetAddr.ok = protocore_net_addr_from_ip(NetAddr.out.ip, NetAddr.out.out_addr);
+    NetAddrV.ok = protocore_net_addr_from_ip(NetAddrV.out.ip, NetAddrV.out.out_addr);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-NetAddrNs NetAddr = {.to_ip = to_ip, .from_ip = from_ip};
+/** @brief The operands and the outcome. */
+NetAddrVars NetAddrV;
 
 PROTOCORE_END_DECLS

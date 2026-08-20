@@ -149,7 +149,7 @@ void protocore_server_reset(void)
 #endif
     // The tasks the pipeline runs on. While they are up handle() hands the work to them and does
     // nothing itself, so a reset that leaves them running leaves the server serving.
-    Session.workers->stop(protocore_worker_span());
+    SessionV.workers->stop(protocore_worker_span());
     protocore_resp_reset();
     protocore_middleware_reset();
     Signal.reset(protocore_signaling_span());
@@ -168,7 +168,7 @@ void note_response(uint8_t slot_id, int code, int body_len)
     // Deposited, not tallied here. The loop knows the status at the instant it goes out, and
     // signaling is where a reader finds it; counting it here as well would be a second tally beside
     // the one every reader already consults.
-    Signal.put.code = code;
+    SignalV.put.code = code;
     Signal.put_response(protocore_signaling_span());
     if (s_inst.log_cb)
     {
@@ -212,7 +212,7 @@ static void protocore_pump_trampoline(int worker_id)
 // is no per-server context to thread through.
 static void protocore_http_on_poll(uint8_t slot)
 {
-    Http.slot = slot;
+    HttpV.slot = slot;
     Http.poll_slot(protocore_http_span());
 }
 
@@ -228,8 +228,8 @@ int32_t proto_begin(const WebServerConfig *cfg)
     }
     // The connection's idle deadline is its lifetime, which this layer owns; the pool is told the
     // number rather than handed the config to read it out of.
-    Session.conn_timeout_ms = (cfg != NULL) ? cfg->conn_timeout_ms : CONN_TIMEOUT_MS;
-    ConnPool.life.conn_timeout_ms = Session.conn_timeout_ms;
+    SessionV.conn_timeout_ms = (cfg != NULL) ? cfg->conn_timeout_ms : CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = SessionV.conn_timeout_ms;
     ConnPool.init(protocore_conn_pool_span());
 #if PROTOCORE_ENABLE_AUTH
     // Fresh server keying secret per begin(). The secret it writes lives in the auth module's own
@@ -241,17 +241,17 @@ int32_t proto_begin(const WebServerConfig *cfg)
         // Seed the CSRF HMAC secret from the generator, which binds and seeds itself on first use
         // and redraws from the platform on its own schedule.
         uint8_t sec[32];
-        Rng.fill_args.out = sec;
-        Rng.fill_args.len = sizeof(sec);
+        RngV.fill_args.out = sec;
+        RngV.fill_args.len = sizeof(sec);
         Rng.fill(protocore_rng_span());
-        Csrf.secret_args.secret = sec;
-        Csrf.secret_args.len = sizeof(sec);
+        CsrfV.secret_args.secret = sec;
+        CsrfV.secret_args.len = sizeof(sec);
         Csrf.set_secret(protocore_csrf_span());
     }
 #endif
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        HttpConn.slot = i;
+        HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
@@ -262,12 +262,12 @@ int32_t proto_begin(const WebServerConfig *cfg)
 #endif
     for (uint8_t i = 0; i < s_inst.listener_count; i++)
     {
-        TcpListener.idx = i;
-        TcpListener.bind.port = s_inst.listen_ports[i];
-        TcpListener.bind.proto = s_inst.listen_protos[i];
-        TcpListener.bind.tls = s_inst.listen_tls[i];
+        TcpListenerV.idx = i;
+        TcpListenerV.bind.port = s_inst.listen_ports[i];
+        TcpListenerV.bind.proto = s_inst.listen_protos[i];
+        TcpListenerV.bind.tls = s_inst.listen_tls[i];
         TcpListener.add(protocore_tcp_listener_span());
-        if (TcpListener.i32 < 0)
+        if (TcpListenerV.i32 < 0)
         {
             return (int32_t)PROTOCORE_ERR_LISTEN_FAILED;
         }
@@ -284,18 +284,18 @@ int32_t proto_begin(const WebServerConfig *cfg)
         h3cfg.rng = protocore_h3_server_rng;
         // No app pointer: the trampoline dispatches through the global route table. The QUIC server
         // records whether it came up and protocore_quic_server_poll() reads its own answer.
-        QuicServer.begin_args.port = s_inst.h3_port;
-        QuicServer.begin_args.cfg = &h3cfg;
-        QuicServer.begin_args.on_request = protocore_h3_server_request;
-        QuicServer.begin_args.app = NULL;
+        QuicServerV.begin_args.port = s_inst.h3_port;
+        QuicServerV.begin_args.cfg = &h3cfg;
+        QuicServerV.begin_args.on_request = protocore_h3_server_request;
+        QuicServerV.begin_args.app = NULL;
         QuicServer.begin(protocore_quic_server_span());
     }
 #endif
 #if PROTOCORE_HAS_SCHEDULER
     // Routes/listeners are now fixed; start the worker task(s) that drive the
     // pipeline off the user's loop(). On host the pipeline runs inline via handle().
-    Session.workers->pump = protocore_pump_trampoline;
-    Session.workers->start(protocore_worker_span());
+    SessionV.workers->pump = protocore_pump_trampoline;
+    SessionV.workers->start(protocore_worker_span());
 #endif
     return (int32_t)PROTOCORE_OK;
 }
@@ -388,13 +388,13 @@ void stop(void)
 {
 #if PROTOCORE_HAS_SCHEDULER
     // Stop the worker task(s) before tearing down the slots they service.
-    Session.workers->stop(protocore_worker_span());
+    SessionV.workers->stop(protocore_worker_span());
 #endif
     TcpListener.stop_all(protocore_tcp_listener_span());
     ConnPool.stop(protocore_conn_pool_span());
     for (uint8_t i = 0; i < MAX_CONNS; i++)
     {
-        HttpConn.slot = i;
+        HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
 #if PROTOCORE_ENABLE_WEBSOCKET
@@ -448,7 +448,7 @@ void fill_route_base(HttpRoute *r, const char *path)
 void on_http(const char *path, HttpMethod method, Handler callback)
 {
     HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutes.ptr;
+    HttpRoute *r = HttpRoutesV.ptr;
     if (r == NULL)
     {
         return;
@@ -463,7 +463,7 @@ void on_http(const char *path, HttpMethod method, Handler callback)
 void on_http_iface(const char *path, HttpMethod method, Handler callback, protocore_if_kind iface)
 {
     HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutes.ptr;
+    HttpRoute *r = HttpRoutesV.ptr;
     if (r == NULL)
     {
         return;
@@ -484,7 +484,7 @@ void set_ap_ip(uint32_t ap_ip)
 void on_regex(const char *pattern, HttpMethod method, Handler callback)
 {
     HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutes.ptr;
+    HttpRoute *r = HttpRoutesV.ptr;
     if (r == NULL)
     {
         return;
@@ -502,7 +502,7 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
                   const char *pass, proto_bool digest)
 {
     HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutes.ptr;
+    HttpRoute *r = HttpRoutesV.ptr;
     if (r == NULL)
     {
         return;
@@ -513,12 +513,12 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
     r->method = method;
     r->callback = callback;
     // The credential goes to the module that checks it; the route keeps only the id naming it.
-    Auth.cred.realm = realm;
-    Auth.cred.user = user;
-    Auth.cred.pass = pass;
-    Auth.cred.digest = digest;
+    AuthV.cred.realm = realm;
+    AuthV.cred.user = user;
+    AuthV.cred.pass = pass;
+    AuthV.cred.digest = digest;
     Auth.add(protocore_http_auth_span());
-    r->auth_id = Auth.u8;
+    r->auth_id = AuthV.u8;
 }
 #endif // PROTOCORE_ENABLE_AUTH
 
@@ -526,7 +526,7 @@ void on_http_auth(const char *path, HttpMethod method, Handler callback, const c
 void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_message, WsCloseHandler on_close)
 {
     HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutes.ptr;
+    HttpRoute *r = HttpRoutesV.ptr;
     if (r == NULL)
     {
         return;
@@ -534,11 +534,11 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
 
     fill_route_base(r, path);
     r->type = ROUTE_WS;
-    Ws.route.on_connect = on_connect;
-    Ws.route.on_message = on_message;
-    Ws.route.on_close = on_close;
+    WsV.route.on_connect = on_connect;
+    WsV.route.on_message = on_message;
+    WsV.route.on_close = on_close;
     Ws.route_add(protocore_ws_span());
-    r->ws_id = Ws.u8;
+    r->ws_id = WsV.u8;
 }
 #endif // PROTOCORE_ENABLE_WEBSOCKET
 
@@ -546,7 +546,7 @@ void on_ws(const char *path, WsConnectHandler on_connect, WsMessageHandler on_me
 void on_sse(const char *path, SseConnectHandler on_connect)
 {
     HttpRoutes.add(protocore_http_route_span());
-    HttpRoute *r = HttpRoutes.ptr;
+    HttpRoute *r = HttpRoutesV.ptr;
     if (r == NULL)
     {
         return;
@@ -554,15 +554,15 @@ void on_sse(const char *path, SseConnectHandler on_connect)
 
     fill_route_base(r, path);
     r->type = ROUTE_SSE;
-    Sse.route.on_connect = on_connect;
+    SseV.route.on_connect = on_connect;
     Sse.route_add(protocore_sse_span());
-    r->sse_id = Sse.u8;
+    r->sse_id = SseV.u8;
 }
 #endif // PROTOCORE_ENABLE_SSE
 
 void on_not_found(Handler callback)
 {
-    Http.cb = callback;
+    HttpV.cb = callback;
     Http.set_not_found(protocore_http_span());
 }
 
@@ -574,12 +574,12 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
     // Build the directive with the RFC 5861 core so the header and the protocore_delivery_swr decision
     // can never drift apart.
     char directive[64];
-    HttpDelivery.cache_control_args.max_age_s = max_age_s;
-    HttpDelivery.cache_control_args.swr_s = swr_s;
-    HttpDelivery.cache_control_args.out = directive;
-    HttpDelivery.cache_control_args.cap = sizeof(directive);
+    HttpDeliveryV.cache_control_args.max_age_s = max_age_s;
+    HttpDeliveryV.cache_control_args.swr_s = swr_s;
+    HttpDeliveryV.cache_control_args.out = directive;
+    HttpDeliveryV.cache_control_args.cap = sizeof(directive);
     HttpDelivery.cache_control(http_delivery_work);
-    if (HttpDelivery.n == 0)
+    if (HttpDeliveryV.n == 0)
     {
         return PROTO_FALSE;
     }
@@ -592,20 +592,20 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
 void ws_dispatch_message(const WsConn *ws)
 {
     HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t r = 0; r < HttpRoutes.value; r++)
+    for (uint8_t r = 0; r < HttpRoutesV.value; r++)
     {
-        HttpRoutes.at_args.i = r;
+        HttpRoutesV.at_args.i = r;
         HttpRoutes.at(protocore_http_route_span());
-        const HttpRoute *rt = HttpRoutes.ptr;
+        const HttpRoute *rt = HttpRoutesV.ptr;
         if (rt->type != ROUTE_WS)
         {
             continue;
         }
-        Ws.id = rt->ws_id;
+        WsV.id = rt->ws_id;
         Ws.route_message(protocore_ws_span());
-        if (Ws.message_handler != NULL)
+        if (WsV.message_handler != NULL)
         {
-            Ws.message_handler(ws->ws_id);
+            WsV.message_handler(ws->ws_id);
             break;
         }
     }
@@ -614,20 +614,20 @@ void ws_dispatch_message(const WsConn *ws)
 void ws_dispatch_close(const WsConn *ws)
 {
     HttpRoutes.count(protocore_http_route_span());
-    for (uint8_t r = 0; r < HttpRoutes.value; r++)
+    for (uint8_t r = 0; r < HttpRoutesV.value; r++)
     {
-        HttpRoutes.at_args.i = r;
+        HttpRoutesV.at_args.i = r;
         HttpRoutes.at(protocore_http_route_span());
-        const HttpRoute *rt = HttpRoutes.ptr;
+        const HttpRoute *rt = HttpRoutesV.ptr;
         if (rt->type != ROUTE_WS)
         {
             continue;
         }
-        Ws.id = rt->ws_id;
+        WsV.id = rt->ws_id;
         Ws.route_close(protocore_ws_span());
-        if (Ws.close_handler != NULL)
+        if (WsV.close_handler != NULL)
         {
-            Ws.close_handler(ws->ws_id);
+            WsV.close_handler(ws->ws_id);
             break;
         }
     }
@@ -647,8 +647,8 @@ void ws_dispatch_close(const WsConn *ws)
 void handle(void)
 {
 #if PROTOCORE_HAS_SCHEDULER
-    Session.workers->running(protocore_worker_span());
-    if (Session.workers->ok)
+    SessionV.workers->running(protocore_worker_span());
+    if (SessionV.workers->ok)
     {
         return;
     }
@@ -670,7 +670,7 @@ void service_once(int worker_id)
     HttpConn.poll = protocore_http_on_poll;
     HttpConn.set_poll(protocore_http_conn_span());
 
-    Session.worker_id = worker_id;
+    SessionV.worker_id = worker_id;
     Session.tick(protocore_session_span());
 
 #if PROTOCORE_ENABLE_HTTP3
@@ -678,7 +678,7 @@ void service_once(int worker_id)
     // through the route table), flush replies. One worker owns it, so requests stay single-threaded.
     if (worker_id == 0)
     {
-        QuicServer.now_ms = Clock.ms;
+        QuicServerV.now_ms = Clock.ms;
         QuicServer.poll(protocore_quic_server_span());
     }
 #endif
@@ -694,16 +694,16 @@ void service_once(int worker_id)
         // Ack-on-consume: reopen the TCP receive window by whatever any consumer
         // (HTTP/WS/TLS/service) drained from this slot's ring on the previous pass.
         // Transport owns the window math; we just nudge it once per slot per loop.
-        ConnPool.slot = i;
+        ConnPoolV.slot = i;
         ConnPool.ack_consumed(protocore_conn_pool_span());
 
         // Every protocol - HTTP included - is pumped through the one uniform ProtoHandler.on_poll
         // seam, so there is no per-protocol branch here. HTTP reaches it via http_protocore_set_poll()
         // -> http_poll_slot(); the singleton pollers (SSH etc.) gate on CONN_ACTIVE
         // inside their own on_poll.
-        Session.proto->proto = conn_pool[i].proto;
-        Session.proto->get(protocore_session_span());
-        const ProtoHandler *ph = Session.proto->handler;
+        SessionV.proto->proto = conn_pool[i].proto;
+        SessionV.proto->get(protocore_session_span());
+        const ProtoHandler *ph = SessionV.proto->handler;
         if (ph && ph->on_poll)
         {
             ph->on_poll(i);
@@ -711,8 +711,8 @@ void service_once(int worker_id)
     }
 
     // Run any callbacks app code deferred to this worker (race-free push path).
-    Session.workers->worker_id = worker_id;
-    Session.workers->run_deferred(protocore_worker_span());
+    SessionV.workers->worker_id = worker_id;
+    SessionV.workers->run_deferred(protocore_worker_span());
 }
 
 proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
@@ -723,11 +723,11 @@ proto_bool defer(uint8_t slot, protocore_deferred_fn fn, void *arg)
     }
     // HttpRoute to the worker that owns the slot so the callback runs single-threaded
     // alongside that slot's own processing.
-    Session.workers->worker_id = conn_pool[slot].owner;
-    Session.workers->defer_args.fn = fn;
-    Session.workers->defer_args.arg = arg;
-    Session.workers->defer(protocore_worker_span());
-    return Session.workers->ok;
+    SessionV.workers->worker_id = conn_pool[slot].owner;
+    SessionV.workers->defer_args.fn = fn;
+    SessionV.workers->defer_args.arg = arg;
+    SessionV.workers->defer(protocore_worker_span());
+    return SessionV.workers->ok;
 }
 
 // ---------------------------------------------------------------------------

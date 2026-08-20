@@ -63,7 +63,6 @@ typedef struct
     const uint8_t *data;    ///< service data (the attribute value on a read)
     size_t data_len;
 } CipResponse;
-
 /** @brief What build_epath takes: buf, cap, class_id, instance_id, ... */
 typedef struct
 {
@@ -74,7 +73,6 @@ typedef struct
     uint16_t attribute_id;
     proto_bool with_attribute; ///< include the attribute segment
 } CipBuildEpathArgs;
-
 /** @brief What build_request takes: buf, cap, service, epath, ... */
 typedef struct
 {
@@ -86,7 +84,6 @@ typedef struct
     const uint8_t *data;
     size_t data_len;
 } CipBuildRequestArgs;
-
 /** @brief What build_get_attr_single takes: buf, cap, class_id, ... */
 typedef struct
 {
@@ -96,7 +93,6 @@ typedef struct
     uint16_t instance_id;
     uint16_t attribute_id;
 } CipBuildGetAttrSingleArgs;
-
 /** @brief What build_get_attr_all takes: buf, cap, class_id, ... */
 typedef struct
 {
@@ -105,7 +101,6 @@ typedef struct
     uint16_t class_id;
     uint16_t instance_id;
 } CipBuildGetAttrAllArgs;
-
 /** @brief What build_set_attr_single takes: buf, cap, class_id, ... */
 typedef struct
 {
@@ -117,7 +112,6 @@ typedef struct
     const uint8_t *value;
     size_t value_len;
 } CipBuildSetAttrSingleArgs;
-
 /** @brief What parse_response takes: buf, len, out. */
 typedef struct
 {
@@ -125,7 +119,6 @@ typedef struct
     size_t len;
     CipResponse *out;
 } CipParseResponseArgs;
-
 /**
  * @brief CIP (Common Industrial Protocol) message codec (PROTOCORE_ENABLE_CIP) - zero-heap request builder + response
  * parser for the message that rides inside an EtherNet/IP Unconnected Data item (services/fieldbus/enip).
@@ -169,10 +162,16 @@ typedef struct
     CipBuildGetAttrAllArgs build_get_attr_all_args;
     CipBuildSetAttrSingleArgs build_set_attr_single_args;
     CipParseResponseArgs parse_response_args;
-
     proto_bool ok;
     size_t n;
+} CipVars;
 
+/** @brief The operands and the outcome. */
+extern CipVars CipV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_epath)(uint8_t *restrict work);
     void (*const build_request)(uint8_t *restrict work);
     void (*const build_get_attr_single)(uint8_t *restrict work);
@@ -181,8 +180,27 @@ typedef struct
     void (*const parse_response)(uint8_t *restrict work);
 } CipNs;
 
-/** @brief The one symbol this module exports. */
-extern CipNs Cip;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in CipV or a region of the borrow at a fixed offset.
+void protocore_cip_build_epath(uint8_t *restrict work);
+void protocore_cip_build_request(uint8_t *restrict work);
+void protocore_cip_build_get_attr_single(uint8_t *restrict work);
+void protocore_cip_build_get_attr_all(uint8_t *restrict work);
+void protocore_cip_build_set_attr_single(uint8_t *restrict work);
+void protocore_cip_parse_response(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Cip.build_epath(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const CipNs Cip __attribute__((unused)) = {
+    .build_epath = protocore_cip_build_epath,
+    .build_request = protocore_cip_build_request,
+    .build_get_attr_single = protocore_cip_build_get_attr_single,
+    .build_get_attr_all = protocore_cip_build_get_attr_all,
+    .build_set_attr_single = protocore_cip_build_set_attr_single,
+    .parse_response = protocore_cip_parse_response,
+};
 
 PROTOCORE_END_DECLS
 

@@ -38,7 +38,6 @@ typedef struct
     uint16_t port;       ///< the port it dials
     uint32_t timeout_ms; ///< what the whole open, resolve included, is given
 } TcpDialArgs;
-
 /** @brief The bytes a send or a read moves. Nothing a dial reads. */
 typedef struct
 {
@@ -47,7 +46,6 @@ typedef struct
     uint8_t *buf;     ///< where a read writes
     size_t cap;       ///< how much room it has
 } TcpClientIoArgs;
-
 /**
  * @brief The outbound side of TCP.
  *
@@ -74,15 +72,20 @@ typedef struct
  */
 typedef struct
 {
-    int cid; ///< the slot every call names
-
+    int cid;            ///< the slot every call names
     TcpDialArgs dial;   ///< what an active OPEN dials (RFC 9293 sec 3.9.1.1)
     TcpClientIoArgs io; ///< the bytes a send or a read moves
-
     proto_bool ok;
     int32_t i32;
     size_t n;
+} TcpClientVars;
 
+/** @brief The operands and the outcome. */
+extern TcpClientVars TcpClientV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const open)(uint8_t *restrict work);
     void (*const connected)(uint8_t *restrict work);
     void (*const is_closed)(uint8_t *restrict work);
@@ -92,8 +95,29 @@ typedef struct
     void (*const close)(uint8_t *restrict work);
 } TcpClientNs;
 
-/** @brief The one symbol this module exports. */
-extern TcpClientNs TcpClient;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TcpClientV or a region of the borrow at a fixed offset.
+void protocore_client_open(uint8_t *restrict work);
+void protocore_client_connected(uint8_t *restrict work);
+void protocore_client_is_closed(uint8_t *restrict work);
+void protocore_client_send(uint8_t *restrict work);
+void protocore_client_available(uint8_t *restrict work);
+void protocore_client_read(uint8_t *restrict work);
+void protocore_client_close(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `TcpClient.open(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TcpClientNs TcpClient __attribute__((unused)) = {
+    .open = protocore_client_open,
+    .connected = protocore_client_connected,
+    .is_closed = protocore_client_is_closed,
+    .send = protocore_client_send,
+    .available = protocore_client_available,
+    .read = protocore_client_read,
+    .close = protocore_client_close,
+};
 
 /**
  * @brief The PROTOCORE_TCP_CLIENT_BORROW bytes this module's state lives in.

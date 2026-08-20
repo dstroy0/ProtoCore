@@ -30,32 +30,32 @@ static uint8_t dshot_crc(uint16_t v12, proto_bool bidirectional)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void dshot_encode(uint8_t *restrict work)
+void protocore_dshot_encode(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t value11 = Dshot.encode_args.value11;
-    proto_bool telemetry = Dshot.encode_args.telemetry;
-    proto_bool bidirectional = Dshot.encode_args.bidirectional;
+    uint16_t value11 = DshotV.encode_args.value11;
+    proto_bool telemetry = DshotV.encode_args.telemetry;
+    proto_bool bidirectional = DshotV.encode_args.bidirectional;
 
     value11 &= 0x07FF; // 11-bit value field
     uint16_t v12 = (uint16_t)((value11 << 1) | (telemetry ? 1 : 0));
     uint8_t crc = dshot_crc(v12, bidirectional);
-    Dshot.frame = (uint16_t)((v12 << 4) | crc);
+    DshotV.frame = (uint16_t)((v12 << 4) | crc);
 }
 
-static void dshot_decode(uint8_t *restrict work)
+void protocore_dshot_decode(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t frame = Dshot.decode_args.frame;
-    uint16_t *value11 = Dshot.decode_args.value11;
-    proto_bool *telemetry = Dshot.decode_args.telemetry;
-    proto_bool bidirectional = Dshot.decode_args.bidirectional;
+    uint16_t frame = DshotV.decode_args.frame;
+    uint16_t *value11 = DshotV.decode_args.value11;
+    proto_bool *telemetry = DshotV.decode_args.telemetry;
+    proto_bool bidirectional = DshotV.decode_args.bidirectional;
 
     uint16_t v12 = (uint16_t)(frame >> 4);
     uint8_t got = (uint8_t)(frame & 0x0F);
     if (got != dshot_crc(v12, bidirectional))
     {
-        Dshot.ok = PROTO_FALSE;
+        DshotV.ok = PROTO_FALSE;
         return;
     }
     if (value11)
@@ -66,14 +66,14 @@ static void dshot_decode(uint8_t *restrict work)
     {
         *telemetry = (v12 & 1) != 0;
     }
-    Dshot.ok = PROTO_TRUE;
+    DshotV.ok = PROTO_TRUE;
 }
 
-static void dshot_bit_ns(uint8_t *restrict work)
+void protocore_dshot_bit_ns(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t rate_kbit = Dshot.bit_ns_args.rate_kbit;
-    proto_bool bit = Dshot.bit_ns_args.bit;
+    uint16_t rate_kbit = DshotV.bit_ns_args.rate_kbit;
+    proto_bool bit = DshotV.bit_ns_args.bit;
 
     uint32_t period_ns; // one bit-period, in ns, at rate_kbit kbit/s
     switch (rate_kbit)
@@ -91,18 +91,18 @@ static void dshot_bit_ns(uint8_t *restrict work)
         period_ns = 833;
         break;
     default:
-        Dshot.ns = 0;
+        DshotV.ns = 0;
         return;
     }
     // A "1" holds high ~3/4 of the period, a "0" ~3/8 (T1H = 2 * T0H); the ESC samples the pulse width.
-    Dshot.ns = bit ? (period_ns * 3 / 4) : (period_ns * 3 / 8);
+    DshotV.ns = bit ? (period_ns * 3 / 4) : (period_ns * 3 / 8);
 }
 
-static void dshot_esc_pwm_ns(uint8_t *restrict work)
+void protocore_dshot_esc_pwm_ns(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t throttle_1000 = Dshot.esc_pwm_ns_args.throttle_1000;
-    protocore_esc_pwm mode = Dshot.esc_pwm_ns_args.mode;
+    uint16_t throttle_1000 = DshotV.esc_pwm_ns_args.throttle_1000;
+    protocore_esc_pwm mode = DshotV.esc_pwm_ns_args.mode;
 
     uint32_t lo;
     uint32_t hi; // pulse width range in ns
@@ -131,11 +131,11 @@ static void dshot_esc_pwm_ns(uint8_t *restrict work)
         throttle_1000 = 1000;
     }
     // Linear map, computed in 64-bit to avoid overflow (hi-lo up to 1e6, * 1000).
-    Dshot.ns = lo + (uint32_t)(((uint64_t)(hi - lo) * throttle_1000) / 1000);
+    DshotV.ns = lo + (uint32_t)(((uint64_t)(hi - lo) * throttle_1000) / 1000);
 }
 
-DshotNs Dshot = {
-    .encode = dshot_encode, .decode = dshot_decode, .bit_ns = dshot_bit_ns, .esc_pwm_ns = dshot_esc_pwm_ns};
+/** @brief The operands and the outcome. */
+DshotVars DshotV;
 
 PROTOCORE_END_DECLS
 

@@ -149,37 +149,38 @@ static void aes256ctr_keystream(uint8_t *restrict work, const uint8_t *key, cons
 
 // --- the entries -----------------------------------------------------------
 
-static void aes256ctr_crypt(uint8_t *restrict work)
+void protocore_aes256ctr_crypt(uint8_t *restrict work)
 {
-    Aes256Ctr.ok = PROTO_FALSE;
-    if (!Aes256Ctr.crypt_args.key || !Aes256Ctr.crypt_args.counter || !Aes256Ctr.crypt_args.in ||
-        !Aes256Ctr.crypt_args.out)
+    Aes256CtrV.ok = PROTO_FALSE;
+    if (!Aes256CtrV.crypt_args.key || !Aes256CtrV.crypt_args.counter || !Aes256CtrV.crypt_args.in ||
+        !Aes256CtrV.crypt_args.out)
     {
         return;
     }
-    aes256ctr_stream(work, Aes256Ctr.crypt_args.key, Aes256Ctr.crypt_args.counter, Aes256Ctr.crypt_args.in,
-                     Aes256Ctr.crypt_args.out, Aes256Ctr.crypt_args.len);
-    Aes256Ctr.ok = PROTO_TRUE;
+    aes256ctr_stream(work, Aes256CtrV.crypt_args.key, Aes256CtrV.crypt_args.counter, Aes256CtrV.crypt_args.in,
+                     Aes256CtrV.crypt_args.out, Aes256CtrV.crypt_args.len);
+    Aes256CtrV.ok = PROTO_TRUE;
 }
 
 // The keystream block for the current counter, XOR'd over the 4 length bytes; the counter stands still.
-static void aes256ctr_get_length(uint8_t *restrict work)
+void protocore_aes256ctr_get_length(uint8_t *restrict work)
 {
-    Aes256Ctr.ok = PROTO_FALSE;
-    Aes256Ctr.length = 0;
-    if (!Aes256Ctr.get_length_args.key || !Aes256Ctr.get_length_args.counter || !Aes256Ctr.get_length_args.enc4)
+    Aes256CtrV.ok = PROTO_FALSE;
+    Aes256CtrV.length = 0;
+    if (!Aes256CtrV.get_length_args.key || !Aes256CtrV.get_length_args.counter || !Aes256CtrV.get_length_args.enc4)
     {
         return;
     }
-    aes256ctr_keystream(work, Aes256Ctr.get_length_args.key, Aes256Ctr.get_length_args.counter);
-    const uint8_t *enc4 = Aes256Ctr.get_length_args.enc4;
+    aes256ctr_keystream(work, Aes256CtrV.get_length_args.key, Aes256CtrV.get_length_args.counter);
+    const uint8_t *enc4 = Aes256CtrV.get_length_args.enc4;
     const uint8_t *ks = AES256CTR_KS(work);
-    Aes256Ctr.length = ((uint32_t)(enc4[0] ^ ks[0]) << 24) | ((uint32_t)(enc4[1] ^ ks[1]) << 16) |
-                       ((uint32_t)(enc4[2] ^ ks[2]) << 8) | (uint32_t)(enc4[3] ^ ks[3]);
-    Aes256Ctr.ok = PROTO_TRUE;
+    Aes256CtrV.length = ((uint32_t)(enc4[0] ^ ks[0]) << 24) | ((uint32_t)(enc4[1] ^ ks[1]) << 16) |
+                        ((uint32_t)(enc4[2] ^ ks[2]) << 8) | (uint32_t)(enc4[3] ^ ks[3]);
+    Aes256CtrV.ok = PROTO_TRUE;
 }
 
-Aes256CtrNs Aes256Ctr = {.crypt = aes256ctr_crypt, .get_length = aes256ctr_get_length};
+/** @brief The operands and the outcome. */
+Aes256CtrVars Aes256CtrV;
 
 PROTOCORE_END_DECLS
 

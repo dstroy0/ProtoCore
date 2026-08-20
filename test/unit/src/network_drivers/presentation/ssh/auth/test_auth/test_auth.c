@@ -13,11 +13,11 @@
 
 static int auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *req)
 {
-    SshAuth.msg.payload = payload;
-    SshAuth.msg.len = len;
-    SshAuth.req = req;
+    SshAuthV.msg.payload = payload;
+    SshAuthV.msg.len = len;
+    SshAuthV.req = req;
     SshAuth.parse_request(protocore_ssh_auth_span());
-    return SshAuth.i32;
+    return SshAuthV.i32;
 }
 
 #if PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
@@ -26,43 +26,43 @@ static int auth_parse_request(const uint8_t *payload, size_t len, SshAuthReq *re
 static int auth_handle_info_response(uint8_t slot, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
                                      size_t cap)
 {
-    SshAuth.slot = slot;
-    SshAuth.msg.payload = payload;
-    SshAuth.msg.len = len;
-    SshAuth.out_args.out = out;
-    SshAuth.out_args.cap = cap;
+    SshAuthV.slot = slot;
+    SshAuthV.msg.payload = payload;
+    SshAuthV.msg.len = len;
+    SshAuthV.out_args.out = out;
+    SshAuthV.out_args.cap = cap;
     SshAuth.handle_info_response(protocore_ssh_auth_span());
     if (out_len)
     {
-        *out_len = SshAuth.out_args.out_len;
+        *out_len = SshAuthV.out_args.out_len;
     }
-    return SshAuth.i32;
+    return SshAuthV.i32;
 }
 #endif // PROTOCORE_ENABLE_SSH_KEYBOARD_INTERACTIVE
 
 static int auth_build_failure(uint8_t *out, size_t *out_len, size_t cap, proto_bool partial)
 {
-    SshAuth.out_args.out = out;
-    SshAuth.out_args.cap = cap;
-    SshAuth.partial = partial;
+    SshAuthV.out_args.out = out;
+    SshAuthV.out_args.cap = cap;
+    SshAuthV.partial = partial;
     SshAuth.build_failure(protocore_ssh_auth_span());
     if (out_len)
     {
-        *out_len = SshAuth.out_args.out_len;
+        *out_len = SshAuthV.out_args.out_len;
     }
-    return SshAuth.i32;
+    return SshAuthV.i32;
 }
 
 static int auth_build_success(uint8_t *out, size_t *out_len, size_t cap)
 {
-    SshAuth.out_args.out = out;
-    SshAuth.out_args.cap = cap;
+    SshAuthV.out_args.out = out;
+    SshAuthV.out_args.cap = cap;
     SshAuth.build_success(protocore_ssh_auth_span());
     if (out_len)
     {
-        *out_len = SshAuth.out_args.out_len;
+        *out_len = SshAuthV.out_args.out_len;
     }
-    return SshAuth.i32;
+    return SshAuthV.i32;
 }
 
 // The publickey USERAUTH_REQUEST body writer, reached through the auth namespace.
@@ -70,14 +70,14 @@ static void auth_write_publickey_request(protocore_span *w, const uint8_t *sid, 
                                          const char *service, const char *pk_algo, const uint8_t *pk_blob,
                                          size_t pk_len)
 {
-    SshAuth.out_args.w = w;
-    SshAuth.userauth.sid = sid;
-    SshAuth.userauth.sid_len = sid_len;
-    SshAuth.userauth.user = user;
-    SshAuth.userauth.service = service;
-    SshAuth.userauth.pk_algo = pk_algo;
-    SshAuth.userauth.pk_blob = pk_blob;
-    SshAuth.userauth.pk_len = pk_len;
+    SshAuthV.out_args.w = w;
+    SshAuthV.userauth.sid = sid;
+    SshAuthV.userauth.sid_len = sid_len;
+    SshAuthV.userauth.user = user;
+    SshAuthV.userauth.service = service;
+    SshAuthV.userauth.pk_algo = pk_algo;
+    SshAuthV.userauth.pk_blob = pk_blob;
+    SshAuthV.userauth.pk_len = pk_len;
     SshAuth.write_publickey_request(protocore_ssh_auth_span());
 }
 
@@ -85,43 +85,43 @@ static void auth_write_publickey_request(protocore_span *w, const uint8_t *sid, 
 // the outcome off the same handle.
 static void auth_reset(uint8_t slot)
 {
-    SshAuth.slot = slot;
+    SshAuthV.slot = slot;
     SshAuth.reset(protocore_ssh_auth_span());
 }
 
 static void auth_set_password_cb(SshPasswordCb cb)
 {
-    SshAuth.cbs.password_cb = cb;
+    SshAuthV.cbs.password_cb = cb;
     SshAuth.set_password_cb(protocore_ssh_auth_span());
 }
 
 static void auth_set_password_change_cb(SshPasswordChangeCb cb)
 {
-    SshAuth.cbs.password_change_cb = cb;
+    SshAuthV.cbs.password_change_cb = cb;
     SshAuth.set_password_change_cb(protocore_ssh_auth_span());
 }
 
 static void auth_pw_change_report(uint8_t slot, proto_bool ok)
 {
-    SshAuth.slot = slot;
-    SshAuth.ok = ok;
+    SshAuthV.slot = slot;
+    SshAuthV.ok = ok;
     SshAuth.pw_change_report(protocore_ssh_auth_span());
 }
 
 static int auth_handle_request(uint8_t slot, const uint8_t *payload, size_t len, uint8_t *out, size_t *out_len,
                                size_t cap)
 {
-    SshAuth.slot = slot;
-    SshAuth.msg.payload = payload;
-    SshAuth.msg.len = len;
-    SshAuth.out_args.out = out;
-    SshAuth.out_args.cap = cap;
+    SshAuthV.slot = slot;
+    SshAuthV.msg.payload = payload;
+    SshAuthV.msg.len = len;
+    SshAuthV.out_args.out = out;
+    SshAuthV.out_args.cap = cap;
     SshAuth.handle_request(protocore_ssh_auth_span());
     if (out_len)
     {
-        *out_len = SshAuth.out_args.out_len;
+        *out_len = SshAuthV.out_args.out_len;
     }
-    return SshAuth.i32;
+    return SshAuthV.i32;
 }
 
 static proto_bool s_change_seen;

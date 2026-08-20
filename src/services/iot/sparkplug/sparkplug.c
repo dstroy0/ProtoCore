@@ -16,8 +16,8 @@
 
 #if PROTOCORE_ENABLE_SPARKPLUG
 
-#include "mmgr/protomem/protomem.h"                  // mem.cpy / mem.set: the spans a topic and a decode move
-#include "mmgr/protostr/protostr.h"                  // str.len: the bounded length of each topic element
+#include "mmgr/protomem/protomem.h"         // mem.cpy / mem.set: the spans a topic and a decode move
+#include "mmgr/protostr/protostr.h"         // str.len: the bounded length of each topic element
 #include "services/iot/protobuf/protobuf.h" // the wire codec a Payload and a Metric are written with
 
 // Sparkplug 3.0.0 sec 4.1: the namespace element and the MQTT topic level separator that follows it.
@@ -71,28 +71,28 @@ static_assert(SPARKPLUG_OFF_CTX + sizeof(struct SparkplugStorage) <= PROTOCORE_S
 // Append a VARINT record carrying v under field, on the encoder row slot names.
 static void pb_varint(uint8_t slot, uint32_t field, uint64_t v)
 {
-    Protobuf.slot = slot;
-    Protobuf.tag.field_number = field;
-    Protobuf.value.u64 = v;
+    ProtobufV.slot = slot;
+    ProtobufV.tag.field_number = field;
+    ProtobufV.value.u64 = v;
     Protobuf.write_uint64(protocore_protobuf_span());
 }
 
 // Append a LEN record carrying the NUL-terminated s under field.
 static void pb_text(uint8_t slot, uint32_t field, const char *s)
 {
-    Protobuf.slot = slot;
-    Protobuf.tag.field_number = field;
-    Protobuf.value.text = s;
+    ProtobufV.slot = slot;
+    ProtobufV.tag.field_number = field;
+    ProtobufV.value.text = s;
     Protobuf.write_string(protocore_protobuf_span());
 }
 
 // Append a LEN record carrying len octets of data under field.
 static void pb_span(uint8_t slot, uint32_t field, const uint8_t *data, size_t len)
 {
-    Protobuf.slot = slot;
-    Protobuf.tag.field_number = field;
-    Protobuf.value.data = data;
-    Protobuf.value.len = len;
+    ProtobufV.slot = slot;
+    ProtobufV.tag.field_number = field;
+    ProtobufV.value.data = data;
+    ProtobufV.value.len = len;
     Protobuf.write_bytes(protocore_protobuf_span());
 }
 
@@ -100,9 +100,9 @@ static void pb_span(uint8_t slot, uint32_t field, const uint8_t *data, size_t le
 // returning its length or 0 on overflow. Holds no codec state, so it takes the row, span and Metric.
 static size_t metric_encode(uint8_t slot, uint8_t *buf, size_t cap, const SpbMetric *m)
 {
-    Protobuf.slot = slot;
-    Protobuf.writer.buf = buf;
-    Protobuf.writer.cap = cap;
+    ProtobufV.slot = slot;
+    ProtobufV.writer.buf = buf;
+    ProtobufV.writer.cap = cap;
     Protobuf.writer_open(protocore_protobuf_span());
     if (m->name)
     {
@@ -126,21 +126,21 @@ static size_t metric_encode(uint8_t slot, uint8_t *buf, size_t cap, const SpbMet
         pb_varint(slot, SPB_METRIC_LONG_VALUE, m->long_value);
         break;
     case SPB_M_FLOAT:
-        Protobuf.slot = slot;
-        Protobuf.tag.field_number = SPB_METRIC_FLOAT_VALUE;
-        Protobuf.value.f32 = m->float_value;
+        ProtobufV.slot = slot;
+        ProtobufV.tag.field_number = SPB_METRIC_FLOAT_VALUE;
+        ProtobufV.value.f32 = m->float_value;
         Protobuf.write_float(protocore_protobuf_span());
         break;
     case SPB_M_DOUBLE:
-        Protobuf.slot = slot;
-        Protobuf.tag.field_number = SPB_METRIC_DOUBLE_VALUE;
-        Protobuf.value.f64 = m->double_value;
+        ProtobufV.slot = slot;
+        ProtobufV.tag.field_number = SPB_METRIC_DOUBLE_VALUE;
+        ProtobufV.value.f64 = m->double_value;
         Protobuf.write_double(protocore_protobuf_span());
         break;
     case SPB_M_BOOL:
-        Protobuf.slot = slot;
-        Protobuf.tag.field_number = SPB_METRIC_BOOLEAN_VALUE;
-        Protobuf.value.flag = m->bool_value;
+        ProtobufV.slot = slot;
+        ProtobufV.tag.field_number = SPB_METRIC_BOOLEAN_VALUE;
+        ProtobufV.value.flag = m->bool_value;
         Protobuf.write_bool(protocore_protobuf_span());
         break;
     case SPB_M_STRING:
@@ -150,9 +150,9 @@ static size_t metric_encode(uint8_t slot, uint8_t *buf, size_t cap, const SpbMet
         }
         break;
     }
-    Protobuf.slot = slot;
+    ProtobufV.slot = slot;
     Protobuf.writer_finish(protocore_protobuf_span());
-    return Protobuf.n;
+    return ProtobufV.n;
 }
 
 // --- the program's shared state, beside the namespace not on it -------------
@@ -180,14 +180,14 @@ uint8_t *protocore_sparkplug_span(void)
 static void spb_build_topic(uint8_t *restrict work)
 {
     (void)work;
-    Sparkplug.n = 0;
-    Sparkplug.ok = PROTO_FALSE;
-    char *out = Sparkplug.topic_out.out;
-    const size_t cap = Sparkplug.topic_out.cap;
-    const char *group = Sparkplug.topic.group_id;
-    const char *type = Sparkplug.topic.message_type;
-    const char *node = Sparkplug.topic.edge_node_id;
-    const char *device = Sparkplug.topic.device_id;
+    SparkplugV.n = 0;
+    SparkplugV.ok = PROTO_FALSE;
+    char *out = SparkplugV.topic_out.out;
+    const size_t cap = SparkplugV.topic_out.cap;
+    const char *group = SparkplugV.topic.group_id;
+    const char *type = SparkplugV.topic.message_type;
+    const char *node = SparkplugV.topic.edge_node_id;
+    const char *device = SparkplugV.topic.device_id;
     if (!out || !group || !type || !node)
     {
         return;
@@ -223,22 +223,22 @@ static void spb_build_topic(uint8_t *restrict work)
         p += n;
     }
     out[p] = '\0';
-    Sparkplug.n = p;
-    Sparkplug.ok = PROTO_TRUE;
+    SparkplugV.n = p;
+    SparkplugV.ok = PROTO_TRUE;
 }
 
 // Serialize ns->metrics.list[0] as one Metric message into ns->out, reporting its length in ns->n.
 static void spb_build_metric(uint8_t *restrict work)
 {
     (void)work;
-    Sparkplug.n = 0;
-    Sparkplug.ok = PROTO_FALSE;
-    if (!Sparkplug.out.buf || !Sparkplug.metrics.list)
+    SparkplugV.n = 0;
+    SparkplugV.ok = PROTO_FALSE;
+    if (!SparkplugV.out.buf || !SparkplugV.metrics.list)
     {
         return;
     }
-    Sparkplug.n = metric_encode(SPB_SLOT_MSG, Sparkplug.out.buf, Sparkplug.out.cap, &Sparkplug.metrics.list[0]);
-    Sparkplug.ok = Sparkplug.n != 0;
+    SparkplugV.n = metric_encode(SPB_SLOT_MSG, SparkplugV.out.buf, SparkplugV.out.cap, &SparkplugV.metrics.list[0]);
+    SparkplugV.ok = SparkplugV.n != 0;
 }
 
 // Serialize a Payload (Sparkplug 3.0.0 sec 6.4.5): timestamp(1), then metrics(2) once per Metric,
@@ -246,33 +246,33 @@ static void spb_build_metric(uint8_t *restrict work)
 // whole build closed.
 static void spb_build_payload(uint8_t *restrict work)
 {
-    Sparkplug.n = 0;
-    Sparkplug.ok = PROTO_FALSE;
-    const size_t count = Sparkplug.metrics.count;
-    if (!Sparkplug.out.buf || (count && !Sparkplug.metrics.list))
+    SparkplugV.n = 0;
+    SparkplugV.ok = PROTO_FALSE;
+    const size_t count = SparkplugV.metrics.count;
+    if (!SparkplugV.out.buf || (count && !SparkplugV.metrics.list))
     {
         return;
     }
-    Protobuf.slot = SPB_SLOT_MSG;
-    Protobuf.writer.buf = Sparkplug.out.buf;
-    Protobuf.writer.cap = Sparkplug.out.cap;
+    ProtobufV.slot = SPB_SLOT_MSG;
+    ProtobufV.writer.buf = SparkplugV.out.buf;
+    ProtobufV.writer.cap = SparkplugV.out.cap;
     Protobuf.writer_open(protocore_protobuf_span());
-    pb_varint(SPB_SLOT_MSG, SPB_PAYLOAD_TIMESTAMP, Sparkplug.payload.timestamp);
+    pb_varint(SPB_SLOT_MSG, SPB_PAYLOAD_TIMESTAMP, SparkplugV.payload.timestamp);
     for (size_t i = 0; i < count; i++)
     {
         size_t mlen = metric_encode(SPB_SLOT_METRIC, SPARKPLUG_CTX(work)->metric, sizeof(SPARKPLUG_CTX(work)->metric),
-                                    &Sparkplug.metrics.list[i]);
+                                    &SparkplugV.metrics.list[i]);
         if (!mlen)
         {
             return;
         }
         pb_span(SPB_SLOT_MSG, SPB_PAYLOAD_METRICS, SPARKPLUG_CTX(work)->metric, mlen);
     }
-    pb_varint(SPB_SLOT_MSG, SPB_PAYLOAD_SEQ, Sparkplug.payload.seq);
-    Protobuf.slot = SPB_SLOT_MSG;
+    pb_varint(SPB_SLOT_MSG, SPB_PAYLOAD_SEQ, SparkplugV.payload.seq);
+    ProtobufV.slot = SPB_SLOT_MSG;
     Protobuf.writer_finish(protocore_protobuf_span());
-    Sparkplug.n = Protobuf.n;
-    Sparkplug.ok = Sparkplug.n != 0;
+    SparkplugV.n = ProtobufV.n;
+    SparkplugV.ok = SparkplugV.n != 0;
 }
 
 // Read a Payload's timestamp(1) and seq(3) from ns->source into ns->header. metrics(2), uuid(4) and
@@ -280,42 +280,42 @@ static void spb_build_payload(uint8_t *restrict work)
 static void spb_parse_payload(uint8_t *restrict work)
 {
     (void)work;
-    Sparkplug.ok = PROTO_FALSE;
-    mem.set(&Sparkplug.header, 0, sizeof(Sparkplug.header));
-    if (!Sparkplug.source.buf)
+    SparkplugV.ok = PROTO_FALSE;
+    mem.set(&SparkplugV.header, 0, sizeof(SparkplugV.header));
+    if (!SparkplugV.source.buf)
     {
         return;
     }
-    const size_t len = Sparkplug.source.len;
-    Protobuf.slot = SPB_SLOT_MSG;
-    Protobuf.source.buf = Sparkplug.source.buf;
-    Protobuf.source.len = len;
-    Protobuf.source.pos = 0;
+    const size_t len = SparkplugV.source.len;
+    ProtobufV.slot = SPB_SLOT_MSG;
+    ProtobufV.source.buf = SparkplugV.source.buf;
+    ProtobufV.source.len = len;
+    ProtobufV.source.pos = 0;
     Protobuf.reader_open(protocore_protobuf_span());
     size_t pos = 0;
     while (pos < len)
     {
-        Protobuf.slot = SPB_SLOT_MSG;
+        ProtobufV.slot = SPB_SLOT_MSG;
         Protobuf.read_record(protocore_protobuf_span());
-        if (!Protobuf.ok)
+        if (!ProtobufV.ok)
         {
             return;
         }
-        pos = Protobuf.n;
-        if (Protobuf.record.field_number == SPB_PAYLOAD_TIMESTAMP &&
-            Protobuf.record.wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
+        pos = ProtobufV.n;
+        if (ProtobufV.record.field_number == SPB_PAYLOAD_TIMESTAMP &&
+            ProtobufV.record.wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            Sparkplug.header.has_timestamp = PROTO_TRUE;
-            Sparkplug.header.timestamp = Protobuf.record.value;
+            SparkplugV.header.has_timestamp = PROTO_TRUE;
+            SparkplugV.header.timestamp = ProtobufV.record.value;
         }
-        else if (Protobuf.record.field_number == SPB_PAYLOAD_SEQ &&
-                 Protobuf.record.wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
+        else if (ProtobufV.record.field_number == SPB_PAYLOAD_SEQ &&
+                 ProtobufV.record.wire_type == PROTOCORE_PROTOBUF_WT_VARINT)
         {
-            Sparkplug.header.has_seq = PROTO_TRUE;
-            Sparkplug.header.seq = Protobuf.record.value;
+            SparkplugV.header.has_seq = PROTO_TRUE;
+            SparkplugV.header.seq = ProtobufV.record.value;
         }
     }
-    Sparkplug.ok = PROTO_TRUE;
+    SparkplugV.ok = PROTO_TRUE;
 }
 
 // Report the next metrics(2) sub-message of a Payload in ns->metric_bytes / ns->metric_len and
@@ -323,34 +323,34 @@ static void spb_parse_payload(uint8_t *restrict work)
 static void spb_next_metric(uint8_t *restrict work)
 {
     (void)work;
-    Sparkplug.ok = PROTO_FALSE;
-    Sparkplug.metric_bytes = NULL;
-    Sparkplug.metric_len = 0;
-    if (!Sparkplug.source.buf)
+    SparkplugV.ok = PROTO_FALSE;
+    SparkplugV.metric_bytes = NULL;
+    SparkplugV.metric_len = 0;
+    if (!SparkplugV.source.buf)
     {
         return;
     }
-    const size_t len = Sparkplug.source.len;
-    Protobuf.slot = SPB_SLOT_MSG;
-    Protobuf.source.buf = Sparkplug.source.buf;
-    Protobuf.source.len = len;
-    Protobuf.source.pos = Sparkplug.source.cursor;
+    const size_t len = SparkplugV.source.len;
+    ProtobufV.slot = SPB_SLOT_MSG;
+    ProtobufV.source.buf = SparkplugV.source.buf;
+    ProtobufV.source.len = len;
+    ProtobufV.source.pos = SparkplugV.source.cursor;
     Protobuf.reader_open(protocore_protobuf_span());
-    while (Sparkplug.source.cursor < len)
+    while (SparkplugV.source.cursor < len)
     {
-        Protobuf.slot = SPB_SLOT_MSG;
+        ProtobufV.slot = SPB_SLOT_MSG;
         Protobuf.read_record(protocore_protobuf_span());
-        if (!Protobuf.ok)
+        if (!ProtobufV.ok)
         {
             return;
         }
-        Sparkplug.source.cursor = Protobuf.n;
-        if (Protobuf.record.field_number == SPB_PAYLOAD_METRICS &&
-            Protobuf.record.wire_type == PROTOCORE_PROTOBUF_WT_LEN)
+        SparkplugV.source.cursor = ProtobufV.n;
+        if (ProtobufV.record.field_number == SPB_PAYLOAD_METRICS &&
+            ProtobufV.record.wire_type == PROTOCORE_PROTOBUF_WT_LEN)
         {
-            Sparkplug.metric_bytes = Protobuf.record.data;
-            Sparkplug.metric_len = Protobuf.record.len;
-            Sparkplug.ok = PROTO_TRUE;
+            SparkplugV.metric_bytes = ProtobufV.record.data;
+            SparkplugV.metric_len = ProtobufV.record.len;
+            SparkplugV.ok = PROTO_TRUE;
             return;
         }
     }
@@ -419,9 +419,9 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
         {
             out->has_value = PROTO_TRUE;
             out->kind = SPB_M_FLOAT;
-            Protobuf.value.u32 = (uint32_t)f->value;
+            ProtobufV.value.u32 = (uint32_t)f->value;
             Protobuf.float_bits(protocore_protobuf_span());
-            out->float_value = Protobuf.f32;
+            out->float_value = ProtobufV.f32;
         }
         break;
     case SPB_METRIC_DOUBLE_VALUE:
@@ -429,9 +429,9 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
         {
             out->has_value = PROTO_TRUE;
             out->kind = SPB_M_DOUBLE;
-            Protobuf.value.u64 = f->value;
+            ProtobufV.value.u64 = f->value;
             Protobuf.double_bits(protocore_protobuf_span());
-            out->double_value = Protobuf.f64;
+            out->double_value = ProtobufV.f64;
         }
         break;
     case SPB_METRIC_BOOLEAN_VALUE:
@@ -460,41 +460,37 @@ static void spb_apply_value_field(SpbMetricDecoded *out, const ProtobufRecord *f
 static void spb_parse_metric(uint8_t *restrict work)
 {
     (void)work;
-    Sparkplug.ok = PROTO_FALSE;
-    mem.set(&Sparkplug.metric, 0, sizeof(Sparkplug.metric));
-    if (!Sparkplug.source.buf)
+    SparkplugV.ok = PROTO_FALSE;
+    mem.set(&SparkplugV.metric, 0, sizeof(SparkplugV.metric));
+    if (!SparkplugV.source.buf)
     {
         return;
     }
-    const size_t len = Sparkplug.source.len;
-    Protobuf.slot = SPB_SLOT_MSG;
-    Protobuf.source.buf = Sparkplug.source.buf;
-    Protobuf.source.len = len;
-    Protobuf.source.pos = 0;
+    const size_t len = SparkplugV.source.len;
+    ProtobufV.slot = SPB_SLOT_MSG;
+    ProtobufV.source.buf = SparkplugV.source.buf;
+    ProtobufV.source.len = len;
+    ProtobufV.source.pos = 0;
     Protobuf.reader_open(protocore_protobuf_span());
     size_t pos = 0;
     while (pos < len)
     {
-        Protobuf.slot = SPB_SLOT_MSG;
+        ProtobufV.slot = SPB_SLOT_MSG;
         Protobuf.read_record(protocore_protobuf_span());
-        if (!Protobuf.ok)
+        if (!ProtobufV.ok)
         {
             return;
         }
-        pos = Protobuf.n;
-        const ProtobufRecord rec = Protobuf.record;
-        spb_apply_meta_field(&Sparkplug.metric, &rec);  // name / alias / timestamp / datatype
-        spb_apply_value_field(&Sparkplug.metric, &rec); // the value oneof member
+        pos = ProtobufV.n;
+        const ProtobufRecord rec = ProtobufV.record;
+        spb_apply_meta_field(&SparkplugV.metric, &rec);  // name / alias / timestamp / datatype
+        spb_apply_value_field(&SparkplugV.metric, &rec); // the value oneof member
     }
-    Sparkplug.ok = PROTO_TRUE;
+    SparkplugV.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SparkplugNs Sparkplug = {.build_topic = spb_build_topic,
-                         .build_metric = spb_build_metric,
-                         .build_payload = spb_build_payload,
-                         .parse_payload = spb_parse_payload,
-                         .next_metric = spb_next_metric,
-                         .parse_metric = spb_parse_metric};
+/** @brief The operands and the outcome. */
+SparkplugVars SparkplugV;
 
 #endif // PROTOCORE_ENABLE_SPARKPLUG

@@ -48,7 +48,6 @@ typedef struct
     uint32_t last_active_ms; ///< timestamp of the last active-level sample
     uint32_t motion_events;  ///< count of clear -> present transitions (rising edges of presence)
 } Sen0192Motion;
-
 /** @brief What motion_init takes: m, hold_ms, active_high. */
 typedef struct
 {
@@ -56,7 +55,6 @@ typedef struct
     uint32_t hold_ms;
     proto_bool active_high;
 } Sen0192MotionInitArgs;
-
 /** @brief What motion_update takes: m, level_high, now_ms. */
 typedef struct
 {
@@ -64,33 +62,28 @@ typedef struct
     proto_bool level_high;
     uint32_t now_ms;
 } Sen0192MotionUpdateArgs;
-
 /** @brief What motion_tick takes: m, now_ms. */
 typedef struct
 {
     Sen0192Motion *m;
     uint32_t now_ms;
 } Sen0192MotionTickArgs;
-
 /** @brief What motion_present takes: m. */
 typedef struct
 {
     const Sen0192Motion *m;
 } Sen0192MotionPresentArgs;
-
 /** @brief What motion_events takes: m. */
 typedef struct
 {
     const Sen0192Motion *m;
 } Sen0192MotionEventsArgs;
-
 /** @brief What motion_active_age_ms takes: m, now_ms. */
 typedef struct
 {
     const Sen0192Motion *m;
     uint32_t now_ms;
 } Sen0192MotionActiveAgeMsArgs;
-
 /**
  * @brief DFRobot SEN0192 10.525 GHz microwave Doppler motion sensor (PROTOCORE_ENABLE_SEN0192).
  *
@@ -134,11 +127,17 @@ typedef struct
     Sen0192MotionPresentArgs motion_present_args;
     Sen0192MotionEventsArgs motion_events_args;
     Sen0192MotionActiveAgeMsArgs motion_active_age_ms_args;
-
     proto_bool ok;
     uint32_t n;
     uint32_t ms;
+} Sen0192Vars;
 
+/** @brief The operands and the outcome. */
+extern Sen0192Vars Sen0192V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const motion_init)(uint8_t *restrict work);
     void (*const motion_update)(uint8_t *restrict work);
     void (*const motion_tick)(uint8_t *restrict work);
@@ -151,8 +150,35 @@ typedef struct
     void (*const motion_count)(uint8_t *restrict work);
 } Sen0192Ns;
 
-/** @brief The one symbol this module exports. */
-extern Sen0192Ns Sen0192;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Sen0192V or a region of the borrow at a fixed offset.
+void protocore_sen0192_motion_init(uint8_t *restrict work);
+void protocore_sen0192_motion_update(uint8_t *restrict work);
+void protocore_sen0192_motion_tick(uint8_t *restrict work);
+void protocore_sen0192_motion_present(uint8_t *restrict work);
+void protocore_sen0192_motion_events(uint8_t *restrict work);
+void protocore_sen0192_motion_active_age_ms(uint8_t *restrict work);
+void protocore_sen0192_begin(uint8_t *restrict work);
+void protocore_sen0192_poll(uint8_t *restrict work);
+void protocore_sen0192_present(uint8_t *restrict work);
+void protocore_sen0192_motion_count(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sen0192.motion_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Sen0192Ns Sen0192 __attribute__((unused)) = {
+    .motion_init = protocore_sen0192_motion_init,
+    .motion_update = protocore_sen0192_motion_update,
+    .motion_tick = protocore_sen0192_motion_tick,
+    .motion_present = protocore_sen0192_motion_present,
+    .motion_events = protocore_sen0192_motion_events,
+    .motion_active_age_ms = protocore_sen0192_motion_active_age_ms,
+    .begin = protocore_sen0192_begin,
+    .poll = protocore_sen0192_poll,
+    .present = protocore_sen0192_present,
+    .motion_count = protocore_sen0192_motion_count,
+};
 
 /**
  * @brief The PROTOCORE_SEN0192_BORROW bytes this module's state lives in.

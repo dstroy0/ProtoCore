@@ -50,7 +50,6 @@ typedef struct
     const uint8_t *value;
     size_t value_len;
 } LonNv;
-
 /** @brief What build_nv takes: msg_code, selector, value, value_len, ... */
 typedef struct
 {
@@ -61,7 +60,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } LonworksBuildNvArgs;
-
 /** @brief What parse_nv takes: pdu, len, out. */
 typedef struct
 {
@@ -69,20 +67,17 @@ typedef struct
     size_t len;
     LonNv *out;
 } LonworksParseNvArgs;
-
 /** @brief What snvt_temp_encode takes: celsius, out. */
 typedef struct
 {
     double celsius;
     uint8_t *out; ///< 2 bytes.
 } LonworksSnvtTempEncodeArgs;
-
 /** @brief What snvt_temp_decode takes: in. */
 typedef struct
 {
     const uint8_t *in; ///< 2 bytes.
 } LonworksSnvtTempDecodeArgs;
-
 /** @brief What snvt_switch_encode takes: percent, state, out. */
 typedef struct
 {
@@ -90,7 +85,6 @@ typedef struct
     uint8_t state;
     uint8_t *out; ///< 2 bytes.
 } LonworksSnvtSwitchEncodeArgs;
-
 /** @brief What snvt_switch_decode takes: in, percent, state. */
 typedef struct
 {
@@ -98,7 +92,6 @@ typedef struct
     double *percent;
     uint8_t *state;
 } LonworksSnvtSwitchDecodeArgs;
-
 /**
  * @brief LonWorks / LON-IP (ISO/IEC 14908) network-variable codec (PROTOCORE_ENABLE_LONWORKS).
  *
@@ -142,11 +135,17 @@ typedef struct
     LonworksSnvtTempDecodeArgs snvt_temp_decode_args;
     LonworksSnvtSwitchEncodeArgs snvt_switch_encode_args;
     LonworksSnvtSwitchDecodeArgs snvt_switch_decode_args;
-
     proto_bool ok;
     size_t n;
     double value;
+} LonworksVars;
 
+/** @brief The operands and the outcome. */
+extern LonworksVars LonworksV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_nv)(uint8_t *restrict work);
     void (*const parse_nv)(uint8_t *restrict work);
     void (*const snvt_temp_encode)(uint8_t *restrict work);
@@ -155,8 +154,27 @@ typedef struct
     void (*const snvt_switch_decode)(uint8_t *restrict work);
 } LonworksNs;
 
-/** @brief The one symbol this module exports. */
-extern LonworksNs Lonworks;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in LonworksV or a region of the borrow at a fixed offset.
+void protocore_lonworks_build_nv(uint8_t *restrict work);
+void protocore_lonworks_parse_nv(uint8_t *restrict work);
+void protocore_lonworks_snvt_temp_encode(uint8_t *restrict work);
+void protocore_lonworks_snvt_temp_decode(uint8_t *restrict work);
+void protocore_lonworks_snvt_switch_encode(uint8_t *restrict work);
+void protocore_lonworks_snvt_switch_decode(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Lonworks.build_nv(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const LonworksNs Lonworks __attribute__((unused)) = {
+    .build_nv = protocore_lonworks_build_nv,
+    .parse_nv = protocore_lonworks_parse_nv,
+    .snvt_temp_encode = protocore_lonworks_snvt_temp_encode,
+    .snvt_temp_decode = protocore_lonworks_snvt_temp_decode,
+    .snvt_switch_encode = protocore_lonworks_snvt_switch_encode,
+    .snvt_switch_decode = protocore_lonworks_snvt_switch_decode,
+};
 
 PROTOCORE_END_DECLS
 

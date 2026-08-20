@@ -34,10 +34,10 @@ void tearDown(void)
 void test_packet_length_excludes_the_length_field(void)
 {
     uint8_t out[32];
-    Sftp.build_version_args.out = out;
-    Sftp.build_version_args.cap = sizeof(out);
-    Sftp.build_version(sftp_work);
-    size_t n = Sftp.n;
+    SftpV.build_version_args.out = out;
+    SftpV.build_version_args.cap = sizeof(out);
+    SftpV.build_version(sftp_work);
+    size_t n = SftpV.n;
     TEST_ASSERT_EQUAL_size_t(9, n);
 
     static const uint8_t WANT[9] = {
@@ -49,13 +49,13 @@ void test_packet_length_excludes_the_length_field(void)
 
     // Stated the other way: the length field is always the total minus the four it sits in.
     SftpReader r;
-    Sftp.rd_init_args.r = &r;
-    Sftp.rd_init_args.payload = out;
-    Sftp.rd_init_args.len = n;
-    Sftp.rd_init(sftp_work);
-    Sftp.rd_u32_args.r = &r;
-    Sftp.rd_u32(sftp_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)(n - 4), Sftp.u32);
+    SftpV.rd_init_args.r = &r;
+    SftpV.rd_init_args.payload = out;
+    SftpV.rd_init_args.len = n;
+    SftpV.rd_init(sftp_work);
+    SftpV.rd_u32_args.r = &r;
+    SftpV.rd_u32(sftp_work);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)(n - 4), SftpV.u32);
 }
 
 // sec 3 lists the packet type numbers, sec 7 the status codes, sec 5 the ATTRS flag bits and
@@ -121,26 +121,26 @@ void test_protocol_constants(void)
 void test_status_response_layout(void)
 {
     uint8_t out[64];
-    Sftp.build_status_args.id = 7;
-    Sftp.build_status_args.code = PROTOCORE_SSH_FX_NO_SUCH_FILE;
-    Sftp.build_status_args.msg = "no";
-    Sftp.build_status_args.out = out;
-    Sftp.build_status_args.cap = sizeof(out);
-    Sftp.build_status(sftp_work);
-    size_t n = Sftp.n;
+    SftpV.build_status_args.id = 7;
+    SftpV.build_status_args.code = PROTOCORE_SSH_FX_NO_SUCH_FILE;
+    SftpV.build_status_args.msg = "no";
+    SftpV.build_status_args.out = out;
+    SftpV.build_status_args.cap = sizeof(out);
+    SftpV.build_status(sftp_work);
+    size_t n = SftpV.n;
     static const uint8_t WANT[23] = {0x00, 0x00, 0x00, 0x13, 0x65, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00,
                                      0x02, 0x00, 0x00, 0x00, 0x02, 0x6E, 0x6F, 0x00, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, n);
 
     // A null message is still a present, zero-length string: the language tag must follow it.
-    Sftp.build_status_args.id = 1;
-    Sftp.build_status_args.code = PROTOCORE_SSH_FX_OK;
-    Sftp.build_status_args.msg = NULL;
-    Sftp.build_status_args.out = out;
-    Sftp.build_status_args.cap = sizeof(out);
-    Sftp.build_status(sftp_work);
-    n = Sftp.n;
+    SftpV.build_status_args.id = 1;
+    SftpV.build_status_args.code = PROTOCORE_SSH_FX_OK;
+    SftpV.build_status_args.msg = NULL;
+    SftpV.build_status_args.out = out;
+    SftpV.build_status_args.cap = sizeof(out);
+    SftpV.build_status(sftp_work);
+    n = SftpV.n;
     static const uint8_t WANT_EMPTY[21] = {0x00, 0x00, 0x00, 0x11, 0x65, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
                                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT_EMPTY), n);
@@ -154,38 +154,38 @@ void test_handle_and_data_responses(void)
 {
     uint8_t out[64];
     static const uint8_t HANDLE[4] = {0x00, 0x01, 0x00, 0x02};
-    Sftp.build_handle_args.id = 0x11223344u;
-    Sftp.build_handle_args.handle = HANDLE;
-    Sftp.build_handle_args.hlen = sizeof(HANDLE);
-    Sftp.build_handle_args.out = out;
-    Sftp.build_handle_args.cap = sizeof(out);
-    Sftp.build_handle(sftp_work);
-    size_t n = Sftp.n;
+    SftpV.build_handle_args.id = 0x11223344u;
+    SftpV.build_handle_args.handle = HANDLE;
+    SftpV.build_handle_args.hlen = sizeof(HANDLE);
+    SftpV.build_handle_args.out = out;
+    SftpV.build_handle_args.cap = sizeof(out);
+    SftpV.build_handle(sftp_work);
+    size_t n = SftpV.n;
     static const uint8_t WANT_H[17] = {0x00, 0x00, 0x00, 0x0D, 0x66, 0x11, 0x22, 0x33, 0x44,
                                        0x00, 0x00, 0x00, 0x04, 0x00, 0x01, 0x00, 0x02};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT_H), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT_H, out, n);
 
-    Sftp.build_data_args.id = 2;
-    Sftp.build_data_args.data = "abc";
-    Sftp.build_data_args.dlen = 3;
-    Sftp.build_data_args.out = out;
-    Sftp.build_data_args.cap = sizeof(out);
+    SftpV.build_data_args.id = 2;
+    SftpV.build_data_args.data = "abc";
+    SftpV.build_data_args.dlen = 3;
+    SftpV.build_data_args.out = out;
+    SftpV.build_data_args.cap = sizeof(out);
     Sftp.build_data(sftp_work);
-    n = Sftp.n;
+    n = SftpV.n;
     static const uint8_t WANT_D[16] = {0x00, 0x00, 0x00, 0x0C, 0x67, 0x00, 0x00, 0x00,
                                        0x02, 0x00, 0x00, 0x00, 0x03, 0x61, 0x62, 0x63};
     TEST_ASSERT_EQUAL_size_t(sizeof(WANT_D), n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT_D, out, n);
 
     // A zero-length DATA string is the legal way to say "nothing read", not an omitted field.
-    Sftp.build_data_args.id = 2;
-    Sftp.build_data_args.data = "";
-    Sftp.build_data_args.dlen = 0;
-    Sftp.build_data_args.out = out;
-    Sftp.build_data_args.cap = sizeof(out);
+    SftpV.build_data_args.id = 2;
+    SftpV.build_data_args.data = "";
+    SftpV.build_data_args.dlen = 0;
+    SftpV.build_data_args.out = out;
+    SftpV.build_data_args.cap = sizeof(out);
     Sftp.build_data(sftp_work);
-    n = Sftp.n;
+    n = SftpV.n;
     TEST_ASSERT_EQUAL_size_t(13, n); // 4 length + 1 type + 4 id + 4 string count
 }
 
@@ -201,12 +201,12 @@ void test_attrs_field_order_and_presence(void)
     a.permissions = 0100644u; // S_IFREG | rw-r--r--, which is 33188 = 0x81A4
 
     uint8_t out[64];
-    Sftp.build_attrs_args.id = 3;
-    Sftp.build_attrs_args.a = &a;
-    Sftp.build_attrs_args.out = out;
-    Sftp.build_attrs_args.cap = sizeof(out);
-    Sftp.build_attrs(sftp_work);
-    size_t n = Sftp.n;
+    SftpV.build_attrs_args.id = 3;
+    SftpV.build_attrs_args.a = &a;
+    SftpV.build_attrs_args.out = out;
+    SftpV.build_attrs_args.cap = sizeof(out);
+    SftpV.build_attrs(sftp_work);
+    size_t n = SftpV.n;
     static const uint8_t WANT[25] = {
         0x00, 0x00, 0x00, 0x15,                         // length 21
         0x69,                                           // SSH_FXP_ATTRS = 105
@@ -222,12 +222,12 @@ void test_attrs_field_order_and_presence(void)
     memset(&a, 0, sizeof(a));
     a.size = 999;
     a.permissions = 0777;
-    Sftp.build_attrs_args.id = 0;
-    Sftp.build_attrs_args.a = &a;
-    Sftp.build_attrs_args.out = out;
-    Sftp.build_attrs_args.cap = sizeof(out);
-    Sftp.build_attrs(sftp_work);
-    n = Sftp.n;
+    SftpV.build_attrs_args.id = 0;
+    SftpV.build_attrs_args.a = &a;
+    SftpV.build_attrs_args.out = out;
+    SftpV.build_attrs_args.cap = sizeof(out);
+    SftpV.build_attrs(sftp_work);
+    n = SftpV.n;
     TEST_ASSERT_EQUAL_size_t(13, n); // 4 length + 1 type + 4 id + 4 flags
 }
 
@@ -256,28 +256,28 @@ void test_attrs_round_trip(void)
 
         uint8_t buf[64];
         SftpWriter w;
-        Sftp.wr_init_args.w = &w;
-        Sftp.wr_init_args.out = buf;
-        Sftp.wr_init_args.cap = sizeof(buf);
-        Sftp.wr_init(sftp_work);
-        Sftp.wr_attrs_args.w = &w;
-        Sftp.wr_attrs_args.a = &a;
-        Sftp.wr_attrs(sftp_work);
-        Sftp.wr_finish_args.w = &w;
+        SftpV.wr_init_args.w = &w;
+        SftpV.wr_init_args.out = buf;
+        SftpV.wr_init_args.cap = sizeof(buf);
+        SftpV.wr_init(sftp_work);
+        SftpV.wr_attrs_args.w = &w;
+        SftpV.wr_attrs_args.a = &a;
+        SftpV.wr_attrs(sftp_work);
+        SftpV.wr_finish_args.w = &w;
         Sftp.wr_finish(sftp_work);
-        size_t n = Sftp.n;
+        size_t n = SftpV.n;
         TEST_ASSERT_TRUE(n > 4);
 
         SftpReader r;
-        Sftp.rd_init_args.r = &r;
-        Sftp.rd_init_args.payload = buf + 4;
-        Sftp.rd_init_args.len = n - 4;
-        Sftp.rd_init(sftp_work);
+        SftpV.rd_init_args.r = &r;
+        SftpV.rd_init_args.payload = buf + 4;
+        SftpV.rd_init_args.len = n - 4;
+        SftpV.rd_init(sftp_work);
         SftpAttrs got;
-        Sftp.rd_attrs_args.r = &r;
-        Sftp.rd_attrs_args.a = &got;
+        SftpV.rd_attrs_args.r = &r;
+        SftpV.rd_attrs_args.a = &got;
         Sftp.rd_attrs(sftp_work);
-        TEST_ASSERT_TRUE(Sftp.ok);
+        TEST_ASSERT_TRUE(SftpV.ok);
         TEST_ASSERT_EQUAL_HEX32(FLAGS[i], got.flags);
         TEST_ASSERT_EQUAL_UINT64((FLAGS[i] & PROTOCORE_SSH_FILEXFER_ATTR_SIZE) ? a.size : 0, got.size);
         TEST_ASSERT_EQUAL_HEX32((FLAGS[i] & PROTOCORE_SSH_FILEXFER_ATTR_PERMS) ? a.permissions : 0, got.permissions);
@@ -302,23 +302,23 @@ void test_attrs_skips_extended_fields(void)
         0xC0, 0xDE                                      // a trailing field the caller reads next
     };
     SftpReader r;
-    Sftp.rd_init_args.r = &r;
-    Sftp.rd_init_args.payload = BLOB;
-    Sftp.rd_init_args.len = sizeof(BLOB);
-    Sftp.rd_init(sftp_work);
+    SftpV.rd_init_args.r = &r;
+    SftpV.rd_init_args.payload = BLOB;
+    SftpV.rd_init_args.len = sizeof(BLOB);
+    SftpV.rd_init(sftp_work);
     SftpAttrs a;
-    Sftp.rd_attrs_args.r = &r;
-    Sftp.rd_attrs_args.a = &a;
+    SftpV.rd_attrs_args.r = &r;
+    SftpV.rd_attrs_args.a = &a;
     Sftp.rd_attrs(sftp_work);
-    TEST_ASSERT_TRUE(Sftp.ok);
+    TEST_ASSERT_TRUE(SftpV.ok);
     TEST_ASSERT_EQUAL_HEX32(0x80000001u, a.flags);
     TEST_ASSERT_EQUAL_UINT64(42, a.size);
-    Sftp.rd_u8_args.r = &r;
-    Sftp.rd_u8(sftp_work);
-    TEST_ASSERT_EQUAL_HEX8(0xC0, Sftp.value);
-    Sftp.rd_u8_args.r = &r;
-    Sftp.rd_u8(sftp_work);
-    TEST_ASSERT_EQUAL_HEX8(0xDE, Sftp.value);
+    SftpV.rd_u8_args.r = &r;
+    SftpV.rd_u8(sftp_work);
+    TEST_ASSERT_EQUAL_HEX8(0xC0, SftpV.value);
+    SftpV.rd_u8_args.r = &r;
+    SftpV.rd_u8(sftp_work);
+    TEST_ASSERT_EQUAL_HEX8(0xDE, SftpV.value);
     TEST_ASSERT_TRUE(r.ok);
 }
 
@@ -333,55 +333,55 @@ void test_name_response_layout(void)
     a.permissions = 0040755u; // S_IFDIR | rwxr-xr-x
 
     uint8_t out[128];
-    Sftp.build_name1_args.id = 9;
-    Sftp.build_name1_args.name = "/";
-    Sftp.build_name1_args.longname = "drwxr-xr-x 1 0 0 0 Jan 1 1970 /";
-    Sftp.build_name1_args.a = &a;
-    Sftp.build_name1_args.out = out;
-    Sftp.build_name1_args.cap = sizeof(out);
+    SftpV.build_name1_args.id = 9;
+    SftpV.build_name1_args.name = "/";
+    SftpV.build_name1_args.longname = "drwxr-xr-x 1 0 0 0 Jan 1 1970 /";
+    SftpV.build_name1_args.a = &a;
+    SftpV.build_name1_args.out = out;
+    SftpV.build_name1_args.cap = sizeof(out);
     Sftp.build_name1(sftp_work);
-    size_t n = Sftp.n;
+    size_t n = SftpV.n;
     TEST_ASSERT_TRUE(n > 0);
 
     SftpReader r;
-    Sftp.rd_init_args.r = &r;
-    Sftp.rd_init_args.payload = out;
-    Sftp.rd_init_args.len = n;
-    Sftp.rd_init(sftp_work);
-    Sftp.rd_u32_args.r = &r;
-    Sftp.rd_u32(sftp_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)(n - 4), Sftp.u32);
-    Sftp.rd_u8_args.r = &r;
-    Sftp.rd_u8(sftp_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_SSH_FXP_NAME, Sftp.value);
-    Sftp.rd_u32_args.r = &r;
-    Sftp.rd_u32(sftp_work);
-    TEST_ASSERT_EQUAL_UINT32(9, Sftp.u32);
-    Sftp.rd_u32_args.r = &r;
-    Sftp.rd_u32(sftp_work);
-    TEST_ASSERT_EQUAL_UINT32(1, Sftp.u32);
+    SftpV.rd_init_args.r = &r;
+    SftpV.rd_init_args.payload = out;
+    SftpV.rd_init_args.len = n;
+    SftpV.rd_init(sftp_work);
+    SftpV.rd_u32_args.r = &r;
+    SftpV.rd_u32(sftp_work);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)(n - 4), SftpV.u32);
+    SftpV.rd_u8_args.r = &r;
+    SftpV.rd_u8(sftp_work);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_SSH_FXP_NAME, SftpV.value);
+    SftpV.rd_u32_args.r = &r;
+    SftpV.rd_u32(sftp_work);
+    TEST_ASSERT_EQUAL_UINT32(9, SftpV.u32);
+    SftpV.rd_u32_args.r = &r;
+    SftpV.rd_u32(sftp_work);
+    TEST_ASSERT_EQUAL_UINT32(1, SftpV.u32);
 
     const uint8_t *s = NULL;
     uint32_t sl = 0;
-    Sftp.rd_string_args.r = &r;
-    Sftp.rd_string_args.out = &s;
-    Sftp.rd_string_args.out_len = &sl;
+    SftpV.rd_string_args.r = &r;
+    SftpV.rd_string_args.out = &s;
+    SftpV.rd_string_args.out_len = &sl;
     Sftp.rd_string(sftp_work);
-    TEST_ASSERT_TRUE(Sftp.ok);
+    TEST_ASSERT_TRUE(SftpV.ok);
     TEST_ASSERT_EQUAL_UINT32(1, sl);
     TEST_ASSERT_EQUAL_HEX8('/', s[0]);
-    Sftp.rd_string_args.r = &r;
-    Sftp.rd_string_args.out = &s;
-    Sftp.rd_string_args.out_len = &sl;
+    SftpV.rd_string_args.r = &r;
+    SftpV.rd_string_args.out = &s;
+    SftpV.rd_string_args.out_len = &sl;
     Sftp.rd_string(sftp_work);
-    TEST_ASSERT_TRUE(Sftp.ok);
+    TEST_ASSERT_TRUE(SftpV.ok);
     TEST_ASSERT_EQUAL_UINT32(strlen("drwxr-xr-x 1 0 0 0 Jan 1 1970 /"), sl);
 
     SftpAttrs got;
-    Sftp.rd_attrs_args.r = &r;
-    Sftp.rd_attrs_args.a = &got;
+    SftpV.rd_attrs_args.r = &r;
+    SftpV.rd_attrs_args.a = &got;
     Sftp.rd_attrs(sftp_work);
-    TEST_ASSERT_TRUE(Sftp.ok);
+    TEST_ASSERT_TRUE(SftpV.ok);
     TEST_ASSERT_EQUAL_HEX32(PROTOCORE_SSH_FILEXFER_ATTR_PERMS, got.flags);
     TEST_ASSERT_EQUAL_HEX32(0040755u, got.permissions);
     TEST_ASSERT_EQUAL_size_t(n, r.off); // the packet ends exactly where its length said
@@ -395,51 +395,51 @@ void test_frame_length(void)
 {
     static const uint8_t P[] = {0x00, 0x00, 0x00, 0x05, 0x02, 0x00, 0x00, 0x00, 0x03};
 
-    Sftp.frame_len_args.buf = P;
-    Sftp.frame_len_args.have = 0;
-    Sftp.frame_len_args.max = 4096;
+    SftpV.frame_len_args.buf = P;
+    SftpV.frame_len_args.have = 0;
+    SftpV.frame_len_args.max = 4096;
     Sftp.frame_len(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Sftp.n);
-    Sftp.frame_len_args.buf = P;
-    Sftp.frame_len_args.have = 3;
-    Sftp.frame_len_args.max = 4096;
+    TEST_ASSERT_EQUAL_size_t(0, SftpV.n);
+    SftpV.frame_len_args.buf = P;
+    SftpV.frame_len_args.have = 3;
+    SftpV.frame_len_args.max = 4096;
     Sftp.frame_len(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Sftp.n);
-    Sftp.frame_len_args.buf = P;
-    Sftp.frame_len_args.have = 4;
-    Sftp.frame_len_args.max = 4096;
+    TEST_ASSERT_EQUAL_size_t(0, SftpV.n);
+    SftpV.frame_len_args.buf = P;
+    SftpV.frame_len_args.have = 4;
+    SftpV.frame_len_args.max = 4096;
     Sftp.frame_len(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(9, Sftp.n); // the prefix alone is enough
-    Sftp.frame_len_args.buf = P;
-    Sftp.frame_len_args.have = sizeof(P);
-    Sftp.frame_len_args.max = 4096;
+    TEST_ASSERT_EQUAL_size_t(9, SftpV.n); // the prefix alone is enough
+    SftpV.frame_len_args.buf = P;
+    SftpV.frame_len_args.have = sizeof(P);
+    SftpV.frame_len_args.max = 4096;
     Sftp.frame_len(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(9, Sftp.n);
-    Sftp.frame_len_args.buf = P;
-    Sftp.frame_len_args.have = sizeof(P);
-    Sftp.frame_len_args.max = 9;
+    TEST_ASSERT_EQUAL_size_t(9, SftpV.n);
+    SftpV.frame_len_args.buf = P;
+    SftpV.frame_len_args.have = sizeof(P);
+    SftpV.frame_len_args.max = 9;
     Sftp.frame_len(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(9, Sftp.n); // exactly the limit
+    TEST_ASSERT_EQUAL_size_t(9, SftpV.n); // exactly the limit
 
-    Sftp.frame_len_args.buf = P;
-    Sftp.frame_len_args.have = sizeof(P);
-    Sftp.frame_len_args.max = 8;
+    SftpV.frame_len_args.buf = P;
+    SftpV.frame_len_args.have = sizeof(P);
+    SftpV.frame_len_args.max = 8;
     Sftp.frame_len(sftp_work);
-    TEST_ASSERT_EQUAL_size_t((size_t)-1, Sftp.n); // one short
+    TEST_ASSERT_EQUAL_size_t((size_t)-1, SftpV.n); // one short
 
     static const uint8_t ZERO[4] = {0x00, 0x00, 0x00, 0x00};
-    Sftp.frame_len_args.buf = ZERO;
-    Sftp.frame_len_args.have = sizeof(ZERO);
-    Sftp.frame_len_args.max = 4096;
+    SftpV.frame_len_args.buf = ZERO;
+    SftpV.frame_len_args.have = sizeof(ZERO);
+    SftpV.frame_len_args.max = 4096;
     Sftp.frame_len(sftp_work);
-    TEST_ASSERT_EQUAL_size_t((size_t)-1, Sftp.n);
+    TEST_ASSERT_EQUAL_size_t((size_t)-1, SftpV.n);
 
     static const uint8_t OVERSIZE[4] = {0xFF, 0xFF, 0xFF, 0xFF};
-    Sftp.frame_len_args.buf = OVERSIZE;
-    Sftp.frame_len_args.have = sizeof(OVERSIZE);
-    Sftp.frame_len_args.max = 34000;
+    SftpV.frame_len_args.buf = OVERSIZE;
+    SftpV.frame_len_args.have = sizeof(OVERSIZE);
+    SftpV.frame_len_args.max = 34000;
     Sftp.frame_len(sftp_work);
-    TEST_ASSERT_EQUAL_size_t((size_t)-1, Sftp.n);
+    TEST_ASSERT_EQUAL_size_t((size_t)-1, SftpV.n);
 }
 
 // The reader is the only thing standing between a hostile packet and the parser above it. Once a
@@ -449,35 +449,35 @@ void test_reader_stays_failed_after_a_short_read(void)
 {
     static const uint8_t BUF[3] = {0x01, 0x02, 0x03};
     SftpReader r;
-    Sftp.rd_init_args.r = &r;
-    Sftp.rd_init_args.payload = BUF;
-    Sftp.rd_init_args.len = sizeof(BUF);
-    Sftp.rd_init(sftp_work);
-    Sftp.rd_u8_args.r = &r;
-    Sftp.rd_u8(sftp_work);
-    TEST_ASSERT_EQUAL_HEX8(0x01, Sftp.value);
+    SftpV.rd_init_args.r = &r;
+    SftpV.rd_init_args.payload = BUF;
+    SftpV.rd_init_args.len = sizeof(BUF);
+    SftpV.rd_init(sftp_work);
+    SftpV.rd_u8_args.r = &r;
+    SftpV.rd_u8(sftp_work);
+    TEST_ASSERT_EQUAL_HEX8(0x01, SftpV.value);
     TEST_ASSERT_TRUE(r.ok);
-    Sftp.rd_u32_args.r = &r;
-    Sftp.rd_u32(sftp_work);
-    TEST_ASSERT_EQUAL_UINT32(0, Sftp.u32); // only 2 octets left
+    SftpV.rd_u32_args.r = &r;
+    SftpV.rd_u32(sftp_work);
+    TEST_ASSERT_EQUAL_UINT32(0, SftpV.u32); // only 2 octets left
     TEST_ASSERT_FALSE(r.ok);
-    Sftp.rd_u8_args.r = &r;
-    Sftp.rd_u8(sftp_work);
-    TEST_ASSERT_EQUAL_HEX8(0, Sftp.value); // the remaining octet is not handed out
-    Sftp.rd_u64_args.r = &r;
-    Sftp.rd_u64(sftp_work);
-    TEST_ASSERT_EQUAL_UINT64(0, Sftp.u64);
+    SftpV.rd_u8_args.r = &r;
+    SftpV.rd_u8(sftp_work);
+    TEST_ASSERT_EQUAL_HEX8(0, SftpV.value); // the remaining octet is not handed out
+    SftpV.rd_u64_args.r = &r;
+    SftpV.rd_u64(sftp_work);
+    TEST_ASSERT_EQUAL_UINT64(0, SftpV.u64);
     TEST_ASSERT_FALSE(r.ok);
 
     // A u64 that needs eight octets from a seven-octet buffer fails without consuming any.
     static const uint8_t SEVEN[7] = {1, 2, 3, 4, 5, 6, 7};
-    Sftp.rd_init_args.r = &r;
-    Sftp.rd_init_args.payload = SEVEN;
-    Sftp.rd_init_args.len = sizeof(SEVEN);
-    Sftp.rd_init(sftp_work);
-    Sftp.rd_u64_args.r = &r;
-    Sftp.rd_u64(sftp_work);
-    TEST_ASSERT_EQUAL_UINT64(0, Sftp.u64);
+    SftpV.rd_init_args.r = &r;
+    SftpV.rd_init_args.payload = SEVEN;
+    SftpV.rd_init_args.len = sizeof(SEVEN);
+    SftpV.rd_init(sftp_work);
+    SftpV.rd_u64_args.r = &r;
+    SftpV.rd_u64(sftp_work);
+    TEST_ASSERT_EQUAL_UINT64(0, SftpV.u64);
     TEST_ASSERT_FALSE(r.ok);
 }
 
@@ -487,46 +487,46 @@ void test_reader_refuses_a_string_longer_than_the_payload(void)
 {
     static const uint8_t BAD[6] = {0x00, 0x00, 0x00, 0x10, 0xAA, 0xBB}; // declares 16, carries 2
     SftpReader r;
-    Sftp.rd_init_args.r = &r;
-    Sftp.rd_init_args.payload = BAD;
-    Sftp.rd_init_args.len = sizeof(BAD);
-    Sftp.rd_init(sftp_work);
+    SftpV.rd_init_args.r = &r;
+    SftpV.rd_init_args.payload = BAD;
+    SftpV.rd_init_args.len = sizeof(BAD);
+    SftpV.rd_init(sftp_work);
     const uint8_t *s = (const uint8_t *)BAD;
     uint32_t sl = 0xFFFFFFFFu;
-    Sftp.rd_string_args.r = &r;
-    Sftp.rd_string_args.out = &s;
-    Sftp.rd_string_args.out_len = &sl;
+    SftpV.rd_string_args.r = &r;
+    SftpV.rd_string_args.out = &s;
+    SftpV.rd_string_args.out_len = &sl;
     Sftp.rd_string(sftp_work);
-    TEST_ASSERT_FALSE(Sftp.ok);
+    TEST_ASSERT_FALSE(SftpV.ok);
     TEST_ASSERT_FALSE(r.ok);
 
     // A zero-length string is legal and consumes only its count.
     static const uint8_t EMPTY[6] = {0x00, 0x00, 0x00, 0x00, 0xC0, 0xDE};
-    Sftp.rd_init_args.r = &r;
-    Sftp.rd_init_args.payload = EMPTY;
-    Sftp.rd_init_args.len = sizeof(EMPTY);
-    Sftp.rd_init(sftp_work);
-    Sftp.rd_string_args.r = &r;
-    Sftp.rd_string_args.out = &s;
-    Sftp.rd_string_args.out_len = &sl;
+    SftpV.rd_init_args.r = &r;
+    SftpV.rd_init_args.payload = EMPTY;
+    SftpV.rd_init_args.len = sizeof(EMPTY);
+    SftpV.rd_init(sftp_work);
+    SftpV.rd_string_args.r = &r;
+    SftpV.rd_string_args.out = &s;
+    SftpV.rd_string_args.out_len = &sl;
     Sftp.rd_string(sftp_work);
-    TEST_ASSERT_TRUE(Sftp.ok);
+    TEST_ASSERT_TRUE(SftpV.ok);
     TEST_ASSERT_EQUAL_UINT32(0, sl);
-    Sftp.rd_u8_args.r = &r;
-    Sftp.rd_u8(sftp_work);
-    TEST_ASSERT_EQUAL_HEX8(0xC0, Sftp.value);
+    SftpV.rd_u8_args.r = &r;
+    SftpV.rd_u8(sftp_work);
+    TEST_ASSERT_EQUAL_HEX8(0xC0, SftpV.value);
 
     // Reading an ATTRS blob out of a truncated payload fails rather than inventing fields.
     static const uint8_t SHORT_ATTRS[6] = {0x00, 0x00, 0x00, 0x01, 0x00, 0x00}; // SIZE set, 2 of 8 octets
-    Sftp.rd_init_args.r = &r;
-    Sftp.rd_init_args.payload = SHORT_ATTRS;
-    Sftp.rd_init_args.len = sizeof(SHORT_ATTRS);
-    Sftp.rd_init(sftp_work);
+    SftpV.rd_init_args.r = &r;
+    SftpV.rd_init_args.payload = SHORT_ATTRS;
+    SftpV.rd_init_args.len = sizeof(SHORT_ATTRS);
+    SftpV.rd_init(sftp_work);
     SftpAttrs a;
-    Sftp.rd_attrs_args.r = &r;
-    Sftp.rd_attrs_args.a = &a;
+    SftpV.rd_attrs_args.r = &r;
+    SftpV.rd_attrs_args.a = &a;
     Sftp.rd_attrs(sftp_work);
-    TEST_ASSERT_FALSE(Sftp.ok);
+    TEST_ASSERT_FALSE(SftpV.ok);
 }
 
 // A packet that does not fit reports zero rather than a truncated one, and the failure sticks: a
@@ -535,63 +535,63 @@ void test_writer_overflow_is_final(void)
 {
     uint8_t small[12];
     SftpWriter w;
-    Sftp.wr_init_args.w = &w;
-    Sftp.wr_init_args.out = small;
-    Sftp.wr_init_args.cap = sizeof(small);
-    Sftp.wr_init(sftp_work);
-    Sftp.wr_u8_args.w = &w;
-    Sftp.wr_u8_args.v = PROTOCORE_SSH_FXP_DATA;
-    Sftp.wr_u8(sftp_work); // 4 reserved + 1 = 5
-    Sftp.wr_u32_args.w = &w;
-    Sftp.wr_u32_args.v = 1;
-    Sftp.wr_u32(sftp_work); // 9
+    SftpV.wr_init_args.w = &w;
+    SftpV.wr_init_args.out = small;
+    SftpV.wr_init_args.cap = sizeof(small);
+    SftpV.wr_init(sftp_work);
+    SftpV.wr_u8_args.w = &w;
+    SftpV.wr_u8_args.v = PROTOCORE_SSH_FXP_DATA;
+    SftpV.wr_u8(sftp_work); // 4 reserved + 1 = 5
+    SftpV.wr_u32_args.w = &w;
+    SftpV.wr_u32_args.v = 1;
+    SftpV.wr_u32(sftp_work); // 9
     TEST_ASSERT_FALSE(w.ovf);
-    Sftp.wr_u32_args.w = &w;
-    Sftp.wr_u32_args.v = 2;
-    Sftp.wr_u32(sftp_work); // would reach 13 > 12
+    SftpV.wr_u32_args.w = &w;
+    SftpV.wr_u32_args.v = 2;
+    SftpV.wr_u32(sftp_work); // would reach 13 > 12
     TEST_ASSERT_TRUE(w.ovf);
-    Sftp.wr_u8_args.w = &w;
-    Sftp.wr_u8_args.v = 0;
-    Sftp.wr_u8(sftp_work); // still refused once failed
-    Sftp.wr_finish_args.w = &w;
+    SftpV.wr_u8_args.w = &w;
+    SftpV.wr_u8_args.v = 0;
+    SftpV.wr_u8(sftp_work); // still refused once failed
+    SftpV.wr_finish_args.w = &w;
     Sftp.wr_finish(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Sftp.n);
+    TEST_ASSERT_EQUAL_size_t(0, SftpV.n);
 
     // A buffer too small even for the length prefix fails at init.
     uint8_t tiny[3];
-    Sftp.wr_init_args.w = &w;
-    Sftp.wr_init_args.out = tiny;
-    Sftp.wr_init_args.cap = sizeof(tiny);
-    Sftp.wr_init(sftp_work);
+    SftpV.wr_init_args.w = &w;
+    SftpV.wr_init_args.out = tiny;
+    SftpV.wr_init_args.cap = sizeof(tiny);
+    SftpV.wr_init(sftp_work);
     TEST_ASSERT_TRUE(w.ovf);
-    Sftp.wr_finish_args.w = &w;
+    SftpV.wr_finish_args.w = &w;
     Sftp.wr_finish(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Sftp.n);
+    TEST_ASSERT_EQUAL_size_t(0, SftpV.n);
 
     // Every builder inherits that: a nine-octet VERSION packet needs nine octets.
     uint8_t out[16];
-    Sftp.build_version_args.out = out;
-    Sftp.build_version_args.cap = 8;
-    Sftp.build_version(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Sftp.n);
-    Sftp.build_version_args.out = out;
-    Sftp.build_version_args.cap = 9;
-    Sftp.build_version(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(9, Sftp.n);
-    Sftp.build_status_args.id = 1;
-    Sftp.build_status_args.code = 0;
-    Sftp.build_status_args.msg = "msg";
-    Sftp.build_status_args.out = out;
-    Sftp.build_status_args.cap = 10;
-    Sftp.build_status(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Sftp.n);
-    Sftp.build_data_args.id = 1;
-    Sftp.build_data_args.data = "abcdefgh";
-    Sftp.build_data_args.dlen = 8;
-    Sftp.build_data_args.out = out;
-    Sftp.build_data_args.cap = 16;
+    SftpV.build_version_args.out = out;
+    SftpV.build_version_args.cap = 8;
+    SftpV.build_version(sftp_work);
+    TEST_ASSERT_EQUAL_size_t(0, SftpV.n);
+    SftpV.build_version_args.out = out;
+    SftpV.build_version_args.cap = 9;
+    SftpV.build_version(sftp_work);
+    TEST_ASSERT_EQUAL_size_t(9, SftpV.n);
+    SftpV.build_status_args.id = 1;
+    SftpV.build_status_args.code = 0;
+    SftpV.build_status_args.msg = "msg";
+    SftpV.build_status_args.out = out;
+    SftpV.build_status_args.cap = 10;
+    SftpV.build_status(sftp_work);
+    TEST_ASSERT_EQUAL_size_t(0, SftpV.n);
+    SftpV.build_data_args.id = 1;
+    SftpV.build_data_args.data = "abcdefgh";
+    SftpV.build_data_args.dlen = 8;
+    SftpV.build_data_args.out = out;
+    SftpV.build_data_args.cap = 16;
     Sftp.build_data(sftp_work);
-    TEST_ASSERT_EQUAL_size_t(0, Sftp.n);
+    TEST_ASSERT_EQUAL_size_t(0, SftpV.n);
 }
 
 // A READDIR reply cannot know its entry count until it has written the entries, so the count is
@@ -601,71 +601,71 @@ void test_patch_u32_backfills_a_reserved_count(void)
 {
     uint8_t buf[32];
     SftpWriter w;
-    Sftp.wr_init_args.w = &w;
-    Sftp.wr_init_args.out = buf;
-    Sftp.wr_init_args.cap = sizeof(buf);
-    Sftp.wr_init(sftp_work);
-    Sftp.wr_u8_args.w = &w;
-    Sftp.wr_u8_args.v = PROTOCORE_SSH_FXP_NAME;
-    Sftp.wr_u8(sftp_work);
-    Sftp.wr_u32_args.w = &w;
-    Sftp.wr_u32_args.v = 42;
-    Sftp.wr_u32(sftp_work); // id
-    Sftp.wr_pos_args.w = &w;
+    SftpV.wr_init_args.w = &w;
+    SftpV.wr_init_args.out = buf;
+    SftpV.wr_init_args.cap = sizeof(buf);
+    SftpV.wr_init(sftp_work);
+    SftpV.wr_u8_args.w = &w;
+    SftpV.wr_u8_args.v = PROTOCORE_SSH_FXP_NAME;
+    SftpV.wr_u8(sftp_work);
+    SftpV.wr_u32_args.w = &w;
+    SftpV.wr_u32_args.v = 42;
+    SftpV.wr_u32(sftp_work); // id
+    SftpV.wr_pos_args.w = &w;
     Sftp.wr_pos(sftp_work);
-    size_t at = Sftp.n;
-    Sftp.wr_u32_args.w = &w;
-    Sftp.wr_u32_args.v = 0;
-    Sftp.wr_u32(sftp_work); // count placeholder
-    Sftp.wr_string_args.w = &w;
-    Sftp.wr_string_args.s = "ab";
-    Sftp.wr_string_args.n = 2;
-    Sftp.wr_string(sftp_work);
-    Sftp.wr_patch_u32_args.w = &w;
-    Sftp.wr_patch_u32_args.at = at;
-    Sftp.wr_patch_u32_args.v = 1;
+    size_t at = SftpV.n;
+    SftpV.wr_u32_args.w = &w;
+    SftpV.wr_u32_args.v = 0;
+    SftpV.wr_u32(sftp_work); // count placeholder
+    SftpV.wr_string_args.w = &w;
+    SftpV.wr_string_args.s = "ab";
+    SftpV.wr_string_args.n = 2;
+    SftpV.wr_string(sftp_work);
+    SftpV.wr_patch_u32_args.w = &w;
+    SftpV.wr_patch_u32_args.at = at;
+    SftpV.wr_patch_u32_args.v = 1;
     Sftp.wr_patch_u32(sftp_work);
-    Sftp.wr_finish_args.w = &w;
+    SftpV.wr_finish_args.w = &w;
     Sftp.wr_finish(sftp_work);
-    size_t n = Sftp.n;
+    size_t n = SftpV.n;
 
     SftpReader r;
-    Sftp.rd_init_args.r = &r;
-    Sftp.rd_init_args.payload = buf;
-    Sftp.rd_init_args.len = n;
-    Sftp.rd_init(sftp_work);
-    Sftp.rd_u32_args.r = &r;
-    Sftp.rd_u32(sftp_work);
-    TEST_ASSERT_EQUAL_UINT32((uint32_t)(n - 4), Sftp.u32);
-    Sftp.rd_u8_args.r = &r;
-    Sftp.rd_u8(sftp_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_SSH_FXP_NAME, Sftp.value);
-    Sftp.rd_u32_args.r = &r;
-    Sftp.rd_u32(sftp_work);
-    TEST_ASSERT_EQUAL_UINT32(42, Sftp.u32);
-    Sftp.rd_u32_args.r = &r;
-    Sftp.rd_u32(sftp_work);
-    TEST_ASSERT_EQUAL_UINT32(1, Sftp.u32);
+    SftpV.rd_init_args.r = &r;
+    SftpV.rd_init_args.payload = buf;
+    SftpV.rd_init_args.len = n;
+    SftpV.rd_init(sftp_work);
+    SftpV.rd_u32_args.r = &r;
+    SftpV.rd_u32(sftp_work);
+    TEST_ASSERT_EQUAL_UINT32((uint32_t)(n - 4), SftpV.u32);
+    SftpV.rd_u8_args.r = &r;
+    SftpV.rd_u8(sftp_work);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_SSH_FXP_NAME, SftpV.value);
+    SftpV.rd_u32_args.r = &r;
+    SftpV.rd_u32(sftp_work);
+    TEST_ASSERT_EQUAL_UINT32(42, SftpV.u32);
+    SftpV.rd_u32_args.r = &r;
+    SftpV.rd_u32(sftp_work);
+    TEST_ASSERT_EQUAL_UINT32(1, SftpV.u32);
     const uint8_t *s = NULL;
     uint32_t sl = 0;
-    Sftp.rd_string_args.r = &r;
-    Sftp.rd_string_args.out = &s;
-    Sftp.rd_string_args.out_len = &sl;
+    SftpV.rd_string_args.r = &r;
+    SftpV.rd_string_args.out = &s;
+    SftpV.rd_string_args.out_len = &sl;
     Sftp.rd_string(sftp_work);
-    TEST_ASSERT_TRUE(Sftp.ok);
+    TEST_ASSERT_TRUE(SftpV.ok);
     TEST_ASSERT_EQUAL_UINT32(2, sl);
 
     // A patch aimed past the buffer writes nothing.
     uint8_t guard[8];
     memset(guard, 0x5A, sizeof(guard));
     SftpWriter g;
-    Sftp.wr_init_args.w = &g;
-    Sftp.wr_init_args.out = guard;
-    Sftp.wr_init_args.cap = sizeof(guard);
-    Sftp.wr_init(sftp_work);
-    Sftp.wr_patch_u32_args.w = &g;
-    Sftp.wr_patch_u32_args.at = 5;
-    Sftp.wr_patch_u32_args.v = 0xFFFFFFFFu;
+    SftpV.wr_init_args.w = &g;
+    SftpV.wr_init_args.out = guard;
+    SftpV.wr_init_args.cap = sizeof(guard);
+    SftpV.wr_init(sftp_work);
+    SftpV.wr_patch_u32_args.w = &g;
+    SftpV.wr_patch_u32_args.at = 5;
+    SftpV.wr_patch_u32_args.v = 0xFFFFFFFFu;
     Sftp.wr_patch_u32(sftp_work); // 5 + 4 > 8
     TEST_ASSERT_EQUAL_HEX8(0x5A, guard[5]);
     TEST_ASSERT_EQUAL_HEX8(0x5A, guard[7]);
@@ -693,15 +693,15 @@ void test_longname_permission_column(void)
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         char out[128];
-        Sftp.format_longname_args.is_dir = CASES[i].dir;
-        Sftp.format_longname_args.perms = CASES[i].perms;
-        Sftp.format_longname_args.size = 0;
-        Sftp.format_longname_args.mtime = 0;
-        Sftp.format_longname_args.name = "f";
-        Sftp.format_longname_args.out = out;
-        Sftp.format_longname_args.cap = sizeof(out);
+        SftpV.format_longname_args.is_dir = CASES[i].dir;
+        SftpV.format_longname_args.perms = CASES[i].perms;
+        SftpV.format_longname_args.size = 0;
+        SftpV.format_longname_args.mtime = 0;
+        SftpV.format_longname_args.name = "f";
+        SftpV.format_longname_args.out = out;
+        SftpV.format_longname_args.cap = sizeof(out);
         Sftp.format_longname(sftp_work);
-        size_t n = Sftp.n;
+        size_t n = SftpV.n;
         TEST_ASSERT_TRUE(n > 10);
         TEST_ASSERT_EQUAL_STRING_LEN(CASES[i].want, out, 10);
         TEST_ASSERT_EQUAL_CHAR(' ', out[10]); // sec 7: "Fields are separated by spaces"
@@ -714,21 +714,21 @@ void test_longname_ignores_the_file_type_bits(void)
 {
     char reg[128];
     char dir[128];
-    Sftp.format_longname_args.is_dir = PROTO_FALSE;
-    Sftp.format_longname_args.perms = PROTOCORE_SFTP_S_IFREG | 0644u;
-    Sftp.format_longname_args.size = 0;
-    Sftp.format_longname_args.mtime = 0;
-    Sftp.format_longname_args.name = "f";
-    Sftp.format_longname_args.out = reg;
-    Sftp.format_longname_args.cap = sizeof(reg);
+    SftpV.format_longname_args.is_dir = PROTO_FALSE;
+    SftpV.format_longname_args.perms = PROTOCORE_SFTP_S_IFREG | 0644u;
+    SftpV.format_longname_args.size = 0;
+    SftpV.format_longname_args.mtime = 0;
+    SftpV.format_longname_args.name = "f";
+    SftpV.format_longname_args.out = reg;
+    SftpV.format_longname_args.cap = sizeof(reg);
     Sftp.format_longname(sftp_work);
-    Sftp.format_longname_args.is_dir = PROTO_TRUE;
-    Sftp.format_longname_args.perms = PROTOCORE_SFTP_S_IFDIR | 0755u;
-    Sftp.format_longname_args.size = 0;
-    Sftp.format_longname_args.mtime = 0;
-    Sftp.format_longname_args.name = "d";
-    Sftp.format_longname_args.out = dir;
-    Sftp.format_longname_args.cap = sizeof(dir);
+    SftpV.format_longname_args.is_dir = PROTO_TRUE;
+    SftpV.format_longname_args.perms = PROTOCORE_SFTP_S_IFDIR | 0755u;
+    SftpV.format_longname_args.size = 0;
+    SftpV.format_longname_args.mtime = 0;
+    SftpV.format_longname_args.name = "d";
+    SftpV.format_longname_args.out = dir;
+    SftpV.format_longname_args.cap = sizeof(dir);
     Sftp.format_longname(sftp_work);
     TEST_ASSERT_EQUAL_STRING_LEN("-rw-r--r--", reg, 10);
     TEST_ASSERT_EQUAL_STRING_LEN("drwxr-xr-x", dir, 10);
@@ -742,15 +742,15 @@ void test_longname_ignores_the_file_type_bits(void)
 void test_longname_carries_the_size_and_ends_with_the_name(void)
 {
     char out[128];
-    Sftp.format_longname_args.is_dir = PROTO_FALSE;
-    Sftp.format_longname_args.perms = 0644;
-    Sftp.format_longname_args.size = 348911;
-    Sftp.format_longname_args.mtime = 0;
-    Sftp.format_longname_args.name = "t-filexfer";
-    Sftp.format_longname_args.out = out;
-    Sftp.format_longname_args.cap = sizeof(out);
+    SftpV.format_longname_args.is_dir = PROTO_FALSE;
+    SftpV.format_longname_args.perms = 0644;
+    SftpV.format_longname_args.size = 348911;
+    SftpV.format_longname_args.mtime = 0;
+    SftpV.format_longname_args.name = "t-filexfer";
+    SftpV.format_longname_args.out = out;
+    SftpV.format_longname_args.cap = sizeof(out);
     Sftp.format_longname(sftp_work);
-    size_t n = Sftp.n;
+    size_t n = SftpV.n;
     TEST_ASSERT_EQUAL_size_t(strlen(out), n);
     TEST_ASSERT_NOT_NULL(strstr(out, " 348911 "));
     TEST_ASSERT_EQUAL_STRING("t-filexfer", out + n - strlen("t-filexfer"));
@@ -764,15 +764,15 @@ void test_longname_clips_to_the_buffer(void)
 {
     char out[8];
     memset(out, 0x7F, sizeof(out));
-    Sftp.format_longname_args.is_dir = PROTO_FALSE;
-    Sftp.format_longname_args.perms = 0644;
-    Sftp.format_longname_args.size = 1234;
-    Sftp.format_longname_args.mtime = 0;
-    Sftp.format_longname_args.name = "a-long-file-name";
-    Sftp.format_longname_args.out = out;
-    Sftp.format_longname_args.cap = sizeof(out);
+    SftpV.format_longname_args.is_dir = PROTO_FALSE;
+    SftpV.format_longname_args.perms = 0644;
+    SftpV.format_longname_args.size = 1234;
+    SftpV.format_longname_args.mtime = 0;
+    SftpV.format_longname_args.name = "a-long-file-name";
+    SftpV.format_longname_args.out = out;
+    SftpV.format_longname_args.cap = sizeof(out);
     Sftp.format_longname(sftp_work);
-    size_t n = Sftp.n;
+    size_t n = SftpV.n;
     TEST_ASSERT_TRUE(n < sizeof(out));
     TEST_ASSERT_EQUAL_size_t(strlen(out), n);
     TEST_ASSERT_EQUAL_STRING_LEN("-rw-r--", out, n < 7 ? n : 7);

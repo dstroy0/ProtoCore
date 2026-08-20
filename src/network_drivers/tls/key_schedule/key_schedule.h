@@ -35,7 +35,6 @@
 #define PROTOCORE_TLS_KEY_SCHEDULE_H
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-
 #if (PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE)
 
 PROTOCORE_BEGIN_DECLS
@@ -63,12 +62,10 @@ typedef struct
 {
     const char *label_prefix;
 } Tls13Kdf;
-
 /** @brief TLS 1.3 / QUIC variant ("tls13 " prefix, RFC 8446). */
 extern const Tls13Kdf TLS13_KDF;
 /** @brief DTLS 1.3 variant ("dtls13" prefix, RFC 9147 sec 5.9). */
 extern const Tls13Kdf DTLS13_KDF;
-
 /**
  * @brief The running key-schedule state for one handshake (server side).
  *
@@ -94,7 +91,6 @@ extern const Tls13Kdf DTLS13_KDF;
 #define TLS13_KS_VERIFY (11 * TLS13_SECRET_MAX)      ///< the Finished verify_data this end built or expects
 #define PROTOCORE_TLS13_KS_CAP ((size_t)PROTOCORE_TLS13_KS_TERMS * TLS13_SECRET_MAX)
 #define TLS13_KS_WORK PROTOCORE_TLS13_KS_CAP ///< past the terms: the bytes this schedule's HKDF works out of
-
 typedef struct
 {
     const Tls13Kdf *kdf; ///< variant (label prefix) bound by @ref Tls13KsNs::early
@@ -102,7 +98,6 @@ typedef struct
     size_t len;          ///< the bound hash's secret length, 32 or 48
     proto_bool is384;    ///< true when the suite's hash is SHA-384
 } Tls13KeySchedule;
-
 /** @brief The variant a call runs under, and the schedule it advances. */
 typedef struct
 {
@@ -111,7 +106,6 @@ typedef struct
     uint8_t *s;           ///< PROTOCORE_TLS13_KS_BORROW secure bytes the schedule runs out of
     proto_bool is384;     ///< the negotiated suite's hash: true for SHA-384, false for SHA-256
 } Tls13KsBind;
-
 /** @brief RFC 8446 sec 7.1 HKDF-Expand-Label / Derive-Secret: one derivation's terms. */
 typedef struct
 {
@@ -122,7 +116,6 @@ typedef struct
     uint8_t *out;                   ///< where the derived bytes land
     size_t out_len;                 ///< how many
 } Tls13KsDeriveArgs;
-
 /** @brief RFC 8446 sec 7.1 steps 2 and 3: the (EC)DHE input, and the transcript each level is keyed off. */
 typedef struct
 {
@@ -131,7 +124,6 @@ typedef struct
     const uint8_t *ch_sh_hash;   ///< Transcript-Hash of ClientHello..ServerHello
     const uint8_t *ch_sfin_hash; ///< Transcript-Hash of ClientHello..server Finished
 } Tls13KsStepArgs;
-
 /** @brief RFC 8446 sec 4.4.4: what the Finished verify_data is taken over, and where it lands. */
 typedef struct
 {
@@ -139,7 +131,6 @@ typedef struct
     const uint8_t *transcript_hash; ///< the handshake up to but excluding this Finished
     uint8_t *out;                   ///< @ref Tls13KsNs::len bytes of verify_data
 } Tls13FinishedArgs;
-
 /** @brief RFC 8446 sec 4.4.1 Transcript-Hash: the bytes one update absorbs, and where a peek lands. */
 typedef struct
 {
@@ -147,7 +138,6 @@ typedef struct
     size_t len;          ///< how many
     uint8_t *out;        ///< where a peek writes @ref Tls13KsNs::len octets of digest
 } Tls13TranscriptArgs;
-
 /**
  * @brief The TLS 1.3 key schedule (RFC 8446 sec 7.1).
  *
@@ -184,10 +174,16 @@ typedef struct
     Tls13KsStepArgs step;
     Tls13FinishedArgs finished_args;
     Tls13TranscriptArgs transcript_args;
-
     proto_bool ok;
     size_t len;
+} Tls13KsVars;
 
+/** @brief The operands and the outcome. */
+extern Tls13KsVars Tls13KsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const expand_label)(uint8_t *restrict work);
     void (*const derive_secret)(uint8_t *restrict work);
     void (*const early)(uint8_t *restrict work);
@@ -197,11 +193,35 @@ typedef struct
     void (*const transcript_init)(uint8_t *restrict work);
     void (*const transcript_update)(uint8_t *restrict work);
     void (*const transcript_peek)(uint8_t *restrict work);
-
 } Tls13KsNs;
 
-/** @brief The one symbol this module exports. */
-extern Tls13KsNs Tls13Ks;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Tls13KsV or a region of the borrow at a fixed offset.
+void protocore_key_schedule_expand_label(uint8_t *restrict work);
+void protocore_key_schedule_derive_secret(uint8_t *restrict work);
+void protocore_key_schedule_early(uint8_t *restrict work);
+void protocore_key_schedule_handshake(uint8_t *restrict work);
+void protocore_key_schedule_master(uint8_t *restrict work);
+void protocore_key_schedule_finished_mac(uint8_t *restrict work);
+void protocore_key_schedule_transcript_init(uint8_t *restrict work);
+void protocore_key_schedule_transcript_update(uint8_t *restrict work);
+void protocore_key_schedule_transcript_peek(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Tls13Ks.expand_label(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Tls13KsNs Tls13Ks __attribute__((unused)) = {
+    .expand_label = protocore_key_schedule_expand_label,
+    .derive_secret = protocore_key_schedule_derive_secret,
+    .early = protocore_key_schedule_early,
+    .handshake = protocore_key_schedule_handshake,
+    .master = protocore_key_schedule_master,
+    .finished_mac = protocore_key_schedule_finished_mac,
+    .transcript_init = protocore_key_schedule_transcript_init,
+    .transcript_update = protocore_key_schedule_transcript_update,
+    .transcript_peek = protocore_key_schedule_transcript_peek,
+};
 
 #endif // PROTOCORE_ENABLE_HTTP3 || PROTOCORE_ENABLE_DTLS || PROTOCORE_TLS_SOFTWARE
 

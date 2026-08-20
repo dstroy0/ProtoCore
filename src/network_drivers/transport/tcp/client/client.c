@@ -40,12 +40,12 @@ uint8_t *protocore_tcp_client_span(void)
 // see PROTOCORE_NEED_CLIENT in protocore_config.h.
 #if PROTOCORE_NEED_CLIENT
 
-#include "../../diffserv/diffserv.h" // DiffServ DSCP marking for outbound client connections (compiles out when off)
+#include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "config/platform/platform.h" // the stack's TCP, under our names
-#include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
-#include "network_drivers/network/dns/dns_resolver/dns_resolver.h"  // shared host->IP resolve (one DNS owner)
-#include "network_drivers/transport/tcp/lower/lower.h" // TcpLower: the TTL stamp on the outbound pcb
-#include "server/clock/clock.h"                        // Clock.millis
+#include "mmgr/ring.h"                // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
+#include "network_drivers/network/dns/dns_resolver/dns_resolver.h" // shared host->IP resolve (one DNS owner)
+#include "network_drivers/transport/tcp/lower/lower.h"             // TcpLower: the TTL stamp on the outbound pcb
+#include "server/clock/clock.h"                                    // Clock.millis
 
 typedef struct
 {
@@ -202,7 +202,7 @@ static protocore_net_err cc_do_connect(protocore_net_call *cd)
     protocore_net_on_err(c->pcb, cc_err);
     // RFC 9293 sec 3.9.2 MUST-49: stamped before the SYN goes out, so the whole connection carries
     // the configured TTL. Runs in the stack's thread (this is the marshalled connect op).
-    TcpLower.pcb = c->pcb;
+    TcpLowerV.pcb = c->pcb;
     TcpLower.apply_ttl(protocore_tcp_lower_span());
 #if PROTOCORE_ENABLE_DIFFSERV
     {
@@ -296,10 +296,10 @@ static void cc_pump(uint8_t *restrict work)
     }
 
     // Resolve through the shared DNS owner, which reports busy until its own answer lands.
-    Resolver.query.host = c->host;
+    ResolverV.query.host = c->host;
     Resolver.resolve(protocore_dns_resolver_span());
-    protocore_dns_state s = Resolver.state;
-    uint32_t ip = Resolver.u32;
+    protocore_dns_state s = ResolverV.state;
+    uint32_t ip = ResolverV.u32;
     if (s == PROTOCORE_DNS_BUSY)
     {
         return;
@@ -325,34 +325,34 @@ static void cc_pump(uint8_t *restrict work)
 
 static void protocore_client_open(uint8_t *restrict work)
 {
-    if (TcpClient.dial.host == NULL)
+    if (TcpClientV.dial.host == NULL)
     {
-        TcpClient.i32 = -2;
+        TcpClientV.i32 = -2;
         return;
     }
-    TcpClient.i32 = -1;
+    TcpClientV.i32 = -1;
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
         if (!TCP_CLIENT_CTX(work)->cc[i].in_use)
         {
-            TcpClient.i32 = i;
+            TcpClientV.i32 = i;
             break;
         }
     }
-    if (TcpClient.i32 < 0)
+    if (TcpClientV.i32 < 0)
     {
         return; // pool full
     }
 
-    ClientConn *c = &TCP_CLIENT_CTX(work)->cc[TcpClient.i32];
+    ClientConn *c = &TCP_CLIENT_CTX(work)->cc[TcpClientV.i32];
     c->pcb = NULL;
     c->connected = PROTO_FALSE;
     c->closed = PROTO_FALSE;
     PROTO_ATOMIC_STORE(&c->head, 0);
     PROTO_ATOMIC_STORE(&c->tail, 0);
-    c->host = TcpClient.dial.host;
-    c->port = TcpClient.dial.port;
-    c->timeout_ms = TcpClient.dial.timeout_ms;
+    c->host = TcpClientV.dial.host;
+    c->port = TcpClientV.dial.port;
+    c->timeout_ms = TcpClientV.dial.timeout_ms;
     c->timer = cc_now();
     c->resolving = PROTO_TRUE;
     c->in_use = PROTO_TRUE;
@@ -362,103 +362,101 @@ static void protocore_client_open(uint8_t *restrict work)
 
 static void protocore_client_connected(uint8_t *restrict work)
 {
-    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS || !TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use)
+    if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
+        !TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use)
     {
-        TcpClient.ok = PROTO_FALSE;
+        TcpClientV.ok = PROTO_FALSE;
         return;
     }
-    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
+    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     cc_pump(work);
-    TcpClient.ok = TCP_CLIENT_CTX(work)->conn->connected && !TCP_CLIENT_CTX(work)->conn->closed;
+    TcpClientV.ok = TCP_CLIENT_CTX(work)->conn->connected && !TCP_CLIENT_CTX(work)->conn->closed;
 }
 
 static void protocore_client_is_closed(uint8_t *restrict work)
 {
-    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS)
+    if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS)
     {
-        TcpClient.ok = PROTO_TRUE;
+        TcpClientV.ok = PROTO_TRUE;
         return;
     }
-    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
+    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     cc_pump(work);
-    TcpClient.ok = TCP_CLIENT_CTX(work)->conn->closed;
+    TcpClientV.ok = TCP_CLIENT_CTX(work)->conn->closed;
 }
 
 static void protocore_client_send(uint8_t *restrict work)
 {
-    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS || !TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use)
+    if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
+        !TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use)
     {
-        TcpClient.ok = PROTO_FALSE;
+        TcpClientV.ok = PROTO_FALSE;
         return;
     }
     CcSendCall k;
     mem.set(&k, 0, sizeof(k));
-    k.c = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
-    k.data = TcpClient.io.data;
-    k.len = (proto_u16)(TcpClient.io.len > 0xFFFF ? 0xFFFF : TcpClient.io.len);
+    k.c = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
+    k.data = TcpClientV.io.data;
+    k.len = (proto_u16)(TcpClientV.io.len > 0xFFFF ? 0xFFFF : TcpClientV.io.len);
     protocore_net_call_marshal(cc_do_send, &k.base);
-    TcpClient.ok = k.result == PROTOCORE_NET_OK;
+    TcpClientV.ok = k.result == PROTOCORE_NET_OK;
 }
 
 static void protocore_client_available(uint8_t *restrict work)
 {
-    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS)
+    if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS)
     {
-        TcpClient.n = 0;
+        TcpClientV.n = 0;
         return;
     }
-    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
+    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     // Step the open here too, not only in connected() / is_closed(): a caller that polls a slot by
     // asking what has arrived would otherwise never advance a connect that has not come up, and sit
     // on an empty ring until its own timer expired.
     cc_pump(work);
-    TcpClient.n = protocore_ring_available(&TCP_CLIENT_CTX(work)->conn->head, &TCP_CLIENT_CTX(work)->conn->tail,
-                                           PROTOCORE_CLIENT_RX_BUF);
+    TcpClientV.n = protocore_ring_available(&TCP_CLIENT_CTX(work)->conn->head, &TCP_CLIENT_CTX(work)->conn->tail,
+                                            PROTOCORE_CLIENT_RX_BUF);
 }
 
 static void protocore_client_read(uint8_t *restrict work)
 {
-    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS)
+    if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS)
     {
-        TcpClient.n = 0;
+        TcpClientV.n = 0;
         return;
     }
-    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
+    TCP_CLIENT_CTX(work)->conn = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     cc_pump(work); // as in available(): a caller that only ever reads still steps its open along
-    TcpClient.n =
+    TcpClientV.n =
         protocore_ring_read(TCP_CLIENT_CTX(work)->conn->rx, PROTOCORE_CLIENT_RX_BUF, &TCP_CLIENT_CTX(work)->conn->head,
-                            &TCP_CLIENT_CTX(work)->conn->tail, TcpClient.io.buf, TcpClient.io.cap);
-    if (TcpClient.n > 0 && TCP_CLIENT_CTX(work)->conn->pcb)
+                            &TCP_CLIENT_CTX(work)->conn->tail, TcpClientV.io.buf, TcpClientV.io.cap);
+    if (TcpClientV.n > 0 && TCP_CLIENT_CTX(work)->conn->pcb)
     {
         // Ack-on-consume: reopen the receive window by exactly what we just drained.
         CcRecvedCall k;
         mem.set(&k, 0, sizeof(k));
         k.c = TCP_CLIENT_CTX(work)->conn;
-        k.len = (proto_u16)TcpClient.n;
+        k.len = (proto_u16)TcpClientV.n;
         protocore_net_call_marshal(cc_do_recved, &k.base);
     }
 }
 
 static void protocore_client_close(uint8_t *restrict work)
 {
-    if (TcpClient.cid < 0 || TcpClient.cid >= PROTOCORE_CLIENT_CONNS || !TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use)
+    if (TcpClientV.cid < 0 || TcpClientV.cid >= PROTOCORE_CLIENT_CONNS ||
+        !TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use)
     {
         return;
     }
     CcSendCall k;
     mem.set(&k, 0, sizeof(k));
-    k.c = &TCP_CLIENT_CTX(work)->cc[TcpClient.cid];
+    k.c = &TCP_CLIENT_CTX(work)->cc[TcpClientV.cid];
     protocore_net_call_marshal(cc_do_close, &k.base);
-    TCP_CLIENT_CTX(work)->cc[TcpClient.cid].in_use = PROTO_FALSE;
+    TCP_CLIENT_CTX(work)->cc[TcpClientV.cid].in_use = PROTO_FALSE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-TcpClientNs TcpClient = {.open = protocore_client_open,
-                         .connected = protocore_client_connected,
-                         .is_closed = protocore_client_is_closed,
-                         .send = protocore_client_send,
-                         .available = protocore_client_available,
-                         .read = protocore_client_read,
-                         .close = protocore_client_close};
+/** @brief The operands and the outcome. */
+TcpClientVars TcpClientV;
 
 #endif // PROTOCORE_NEED_CLIENT

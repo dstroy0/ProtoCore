@@ -131,7 +131,6 @@ typedef struct
     uint16_t off;       ///< next unread offset
     proto_bool err;     ///< set once any read runs past the end / is malformed
 } SpinelReader;
-
 /** @brief A write cursor building a spinel property value into a caller buffer. */
 typedef struct
 {
@@ -140,7 +139,6 @@ typedef struct
     uint16_t off;   ///< bytes written so far
     proto_bool err; ///< set once any write would overflow @c cap
 } SpinelWriter;
-
 /** @brief A registry entry: a property id, its human name, and its primary spinel datatype char. */
 typedef struct
 {
@@ -148,32 +146,27 @@ typedef struct
     const char *name;
     char type; ///< the leading spinel datatype ('U','i','C','c','S','E','6','b','D', or '.')
 } SpinelPropInfo;
-
 /** @brief Build a spinel header byte for interface @p iid and transaction @p tid (tid 0 = no response wanted). */
 static inline uint8_t protocore_spinel_header(uint8_t iid, uint8_t tid)
 {
     return (uint8_t)(0x80 | ((iid & 0x03) << 4) | (tid & 0x0F));
 }
-
 /** @brief The transaction id carried in header byte @p h. */
 static inline uint8_t protocore_spinel_header_tid(uint8_t h)
 {
     return (uint8_t)(h & 0x0F);
 }
-
 /** @brief The interface id carried in header byte @p h. */
 static inline uint8_t protocore_spinel_header_iid(uint8_t h)
 {
     return (uint8_t)((h >> 4) & 0x03);
 }
-
 /** @brief What spinel_fcs takes: buf, len. */
 typedef struct
 {
     const uint8_t *buf;
     uint16_t len;
 } ThreadSpinelFcsArgs;
-
 /** @brief What spinel_pack_uint takes: value, out, cap. */
 typedef struct
 {
@@ -181,7 +174,6 @@ typedef struct
     uint8_t *out;
     uint8_t cap;
 } ThreadSpinelPackUintArgs;
-
 /** @brief What spinel_unpack_uint takes: raw, len, value. */
 typedef struct
 {
@@ -189,7 +181,6 @@ typedef struct
     uint8_t len;
     uint32_t *value;
 } ThreadSpinelUnpackUintArgs;
-
 /** @brief What spinel_command_build takes: header, cmd, prop, value, ... */
 typedef struct
 {
@@ -201,7 +192,6 @@ typedef struct
     uint8_t *out;
     uint16_t cap;
 } ThreadSpinelCommandBuildArgs;
-
 /** @brief What spinel_command_parse takes: payload, len, header, cmd, ... */
 typedef struct
 {
@@ -213,7 +203,6 @@ typedef struct
     const uint8_t **value;
     uint16_t *value_len;
 } ThreadSpinelCommandParseArgs;
-
 /** @brief What spinel_reader_init takes: r, value, len. */
 typedef struct
 {
@@ -221,77 +210,66 @@ typedef struct
     const uint8_t *value;
     uint16_t len;
 } ThreadSpinelReaderInitArgs;
-
 /** @brief What spinel_get_bool takes: r, out. */
 typedef struct
 {
     SpinelReader *r;
     proto_bool *out;
 } ThreadSpinelGetBoolArgs;
-
 /** @brief What spinel_get_u8 takes: r, out. */
 typedef struct
 {
     SpinelReader *r;
     uint8_t *out;
 } ThreadSpinelGetU8Args;
-
 /** @brief What spinel_get_i8 takes: r, out. */
 typedef struct
 {
     SpinelReader *r;
     int8_t *out;
 } ThreadSpinelGetI8Args;
-
 /** @brief What spinel_get_u16 takes: r, out. */
 typedef struct
 {
     SpinelReader *r;
     uint16_t *out;
 } ThreadSpinelGetU16Args;
-
 /** @brief What spinel_get_i16 takes: r, out. */
 typedef struct
 {
     SpinelReader *r;
     int16_t *out;
 } ThreadSpinelGetI16Args;
-
 /** @brief What spinel_get_u32 takes: r, out. */
 typedef struct
 {
     SpinelReader *r;
     uint32_t *out;
 } ThreadSpinelGetU32Args;
-
 /** @brief What spinel_get_i32 takes: r, out. */
 typedef struct
 {
     SpinelReader *r;
     int32_t *out;
 } ThreadSpinelGetI32Args;
-
 /** @brief What spinel_get_uint takes: r, out. */
 typedef struct
 {
     SpinelReader *r;
     uint32_t *out;
 } ThreadSpinelGetUintArgs;
-
 /** @brief What spinel_get_eui64 takes: r, out8. */
 typedef struct
 {
     SpinelReader *r;
     const uint8_t **out8;
 } ThreadSpinelGetEui64Args;
-
 /** @brief What spinel_get_ipv6 takes: r, out16. */
 typedef struct
 {
     SpinelReader *r;
     const uint8_t **out16;
 } ThreadSpinelGetIpv6Args;
-
 /** @brief What spinel_get_utf8 takes: r, out, out_len. */
 typedef struct
 {
@@ -299,7 +277,6 @@ typedef struct
     const char **out;
     uint16_t *out_len;
 } ThreadSpinelGetUtf8Args;
-
 /** @brief What spinel_get_data takes: r, out, out_len. */
 typedef struct
 {
@@ -307,7 +284,6 @@ typedef struct
     const uint8_t **out;
     uint16_t *out_len;
 } ThreadSpinelGetDataArgs;
-
 /** @brief What spinel_get_data_wlen takes: r, out, out_len. */
 typedef struct
 {
@@ -315,13 +291,11 @@ typedef struct
     const uint8_t **out;
     uint16_t *out_len;
 } ThreadSpinelGetDataWlenArgs;
-
 /** @brief What spinel_reader_ok takes: r. */
 typedef struct
 {
     const SpinelReader *r;
 } ThreadSpinelReaderOkArgs;
-
 /** @brief What spinel_writer_init takes: w, out, cap. */
 typedef struct
 {
@@ -329,84 +303,72 @@ typedef struct
     uint8_t *out;
     uint16_t cap;
 } ThreadSpinelWriterInitArgs;
-
 /** @brief What spinel_put_bool takes: w, v. */
 typedef struct
 {
     SpinelWriter *w;
     proto_bool v;
 } ThreadSpinelPutBoolArgs;
-
 /** @brief What spinel_put_u8 takes: w, v. */
 typedef struct
 {
     SpinelWriter *w;
     uint8_t v;
 } ThreadSpinelPutU8Args;
-
 /** @brief What spinel_put_i8 takes: w, v. */
 typedef struct
 {
     SpinelWriter *w;
     int8_t v;
 } ThreadSpinelPutI8Args;
-
 /** @brief What spinel_put_u16 takes: w, v. */
 typedef struct
 {
     SpinelWriter *w;
     uint16_t v;
 } ThreadSpinelPutU16Args;
-
 /** @brief What spinel_put_i16 takes: w, v. */
 typedef struct
 {
     SpinelWriter *w;
     int16_t v;
 } ThreadSpinelPutI16Args;
-
 /** @brief What spinel_put_u32 takes: w, v. */
 typedef struct
 {
     SpinelWriter *w;
     uint32_t v;
 } ThreadSpinelPutU32Args;
-
 /** @brief What spinel_put_i32 takes: w, v. */
 typedef struct
 {
     SpinelWriter *w;
     int32_t v;
 } ThreadSpinelPutI32Args;
-
 /** @brief What spinel_put_uint takes: w, v. */
 typedef struct
 {
     SpinelWriter *w;
     uint32_t v;
 } ThreadSpinelPutUintArgs;
-
 /** @brief What spinel_put_eui64 takes: w, v8. */
 typedef struct
 {
     SpinelWriter *w;
     const uint8_t *v8;
 } ThreadSpinelPutEui64Args;
-
 /** @brief What spinel_put_ipv6 takes: w, v16. */
 typedef struct
 {
     SpinelWriter *w;
     const uint8_t *v16;
 } ThreadSpinelPutIpv6Args;
-
 /** @brief What spinel_put_utf8 takes: w, s. */
 typedef struct
 {
     SpinelWriter *w;
     const char *s;
 } ThreadSpinelPutUtf8Args;
-
 /** @brief What spinel_put_data takes: w, d, n. */
 typedef struct
 {
@@ -414,7 +376,6 @@ typedef struct
     const uint8_t *d;
     uint16_t n;
 } ThreadSpinelPutDataArgs;
-
 /** @brief What spinel_put_data_wlen takes: w, d, n. */
 typedef struct
 {
@@ -422,31 +383,26 @@ typedef struct
     const uint8_t *d;
     uint16_t n;
 } ThreadSpinelPutDataWlenArgs;
-
 /** @brief What spinel_writer_len takes: w. */
 typedef struct
 {
     const SpinelWriter *w;
 } ThreadSpinelWriterLenArgs;
-
 /** @brief What spinel_prop_lookup takes: id. */
 typedef struct
 {
     uint32_t id;
 } ThreadSpinelPropLookupArgs;
-
 /** @brief What spinel_prop_name takes: id. */
 typedef struct
 {
     uint32_t id;
 } ThreadSpinelPropNameArgs;
-
 /** @brief What spinel_status_name takes: status. */
 typedef struct
 {
     uint32_t status;
 } ThreadSpinelStatusNameArgs;
-
 /** @brief What spinel_frame_encode takes: payload, len, out, cap. */
 typedef struct
 {
@@ -455,7 +411,6 @@ typedef struct
     uint8_t *out;
     uint16_t cap;
 } ThreadSpinelFrameEncodeArgs;
-
 /** @brief What spinel_frame_decode takes: raw, len, payload, pay_cap, ... */
 typedef struct
 {
@@ -465,7 +420,6 @@ typedef struct
     uint16_t pay_cap;
     uint16_t *pay_len;
 } ThreadSpinelFrameDecodeArgs;
-
 /**
  * @brief Thread spinel / HDLC-lite framing codec (PROTOCORE_ENABLE_THREAD) - OpenThread RCP.
  *
@@ -610,14 +564,20 @@ typedef struct
     ThreadSpinelStatusNameArgs spinel_status_name_args;
     ThreadSpinelFrameEncodeArgs spinel_frame_encode_args;
     ThreadSpinelFrameDecodeArgs spinel_frame_decode_args;
-
     proto_bool ok;
     uint16_t value;
     uint8_t u8;
     int n;
     const SpinelPropInfo *ptr;
     const char *text;
+} ThreadVars;
 
+/** @brief The operands and the outcome. */
+extern ThreadVars ThreadV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const spinel_fcs)(uint8_t *restrict work);
     void (*const spinel_pack_uint)(uint8_t *restrict work);
     void (*const spinel_unpack_uint)(uint8_t *restrict work);
@@ -660,8 +620,95 @@ typedef struct
     void (*const spinel_frame_decode)(uint8_t *restrict work);
 } ThreadNs;
 
-/** @brief The one symbol this module exports. */
-extern ThreadNs Thread;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ThreadV or a region of the borrow at a fixed offset.
+void protocore_thread_spinel_fcs(uint8_t *restrict work);
+void protocore_thread_spinel_pack_uint(uint8_t *restrict work);
+void protocore_thread_spinel_unpack_uint(uint8_t *restrict work);
+void protocore_thread_spinel_command_build(uint8_t *restrict work);
+void protocore_thread_spinel_command_parse(uint8_t *restrict work);
+void protocore_thread_spinel_reader_init(uint8_t *restrict work);
+void protocore_thread_spinel_get_bool(uint8_t *restrict work);
+void protocore_thread_spinel_get_u8(uint8_t *restrict work);
+void protocore_thread_spinel_get_i8(uint8_t *restrict work);
+void protocore_thread_spinel_get_u16(uint8_t *restrict work);
+void protocore_thread_spinel_get_i16(uint8_t *restrict work);
+void protocore_thread_spinel_get_u32(uint8_t *restrict work);
+void protocore_thread_spinel_get_i32(uint8_t *restrict work);
+void protocore_thread_spinel_get_uint(uint8_t *restrict work);
+void protocore_thread_spinel_get_eui64(uint8_t *restrict work);
+void protocore_thread_spinel_get_ipv6(uint8_t *restrict work);
+void protocore_thread_spinel_get_utf8(uint8_t *restrict work);
+void protocore_thread_spinel_get_data(uint8_t *restrict work);
+void protocore_thread_spinel_get_data_wlen(uint8_t *restrict work);
+void protocore_thread_spinel_reader_ok(uint8_t *restrict work);
+void protocore_thread_spinel_writer_init(uint8_t *restrict work);
+void protocore_thread_spinel_put_bool(uint8_t *restrict work);
+void protocore_thread_spinel_put_u8(uint8_t *restrict work);
+void protocore_thread_spinel_put_i8(uint8_t *restrict work);
+void protocore_thread_spinel_put_u16(uint8_t *restrict work);
+void protocore_thread_spinel_put_i16(uint8_t *restrict work);
+void protocore_thread_spinel_put_u32(uint8_t *restrict work);
+void protocore_thread_spinel_put_i32(uint8_t *restrict work);
+void protocore_thread_spinel_put_uint(uint8_t *restrict work);
+void protocore_thread_spinel_put_eui64(uint8_t *restrict work);
+void protocore_thread_spinel_put_ipv6(uint8_t *restrict work);
+void protocore_thread_spinel_put_utf8(uint8_t *restrict work);
+void protocore_thread_spinel_put_data(uint8_t *restrict work);
+void protocore_thread_spinel_put_data_wlen(uint8_t *restrict work);
+void protocore_thread_spinel_writer_len(uint8_t *restrict work);
+void protocore_thread_spinel_prop_lookup(uint8_t *restrict work);
+void protocore_thread_spinel_prop_name(uint8_t *restrict work);
+void protocore_thread_spinel_status_name(uint8_t *restrict work);
+void protocore_thread_spinel_frame_encode(uint8_t *restrict work);
+void protocore_thread_spinel_frame_decode(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Thread.spinel_fcs(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ThreadNs Thread __attribute__((unused)) = {
+    .spinel_fcs = protocore_thread_spinel_fcs,
+    .spinel_pack_uint = protocore_thread_spinel_pack_uint,
+    .spinel_unpack_uint = protocore_thread_spinel_unpack_uint,
+    .spinel_command_build = protocore_thread_spinel_command_build,
+    .spinel_command_parse = protocore_thread_spinel_command_parse,
+    .spinel_reader_init = protocore_thread_spinel_reader_init,
+    .spinel_get_bool = protocore_thread_spinel_get_bool,
+    .spinel_get_u8 = protocore_thread_spinel_get_u8,
+    .spinel_get_i8 = protocore_thread_spinel_get_i8,
+    .spinel_get_u16 = protocore_thread_spinel_get_u16,
+    .spinel_get_i16 = protocore_thread_spinel_get_i16,
+    .spinel_get_u32 = protocore_thread_spinel_get_u32,
+    .spinel_get_i32 = protocore_thread_spinel_get_i32,
+    .spinel_get_uint = protocore_thread_spinel_get_uint,
+    .spinel_get_eui64 = protocore_thread_spinel_get_eui64,
+    .spinel_get_ipv6 = protocore_thread_spinel_get_ipv6,
+    .spinel_get_utf8 = protocore_thread_spinel_get_utf8,
+    .spinel_get_data = protocore_thread_spinel_get_data,
+    .spinel_get_data_wlen = protocore_thread_spinel_get_data_wlen,
+    .spinel_reader_ok = protocore_thread_spinel_reader_ok,
+    .spinel_writer_init = protocore_thread_spinel_writer_init,
+    .spinel_put_bool = protocore_thread_spinel_put_bool,
+    .spinel_put_u8 = protocore_thread_spinel_put_u8,
+    .spinel_put_i8 = protocore_thread_spinel_put_i8,
+    .spinel_put_u16 = protocore_thread_spinel_put_u16,
+    .spinel_put_i16 = protocore_thread_spinel_put_i16,
+    .spinel_put_u32 = protocore_thread_spinel_put_u32,
+    .spinel_put_i32 = protocore_thread_spinel_put_i32,
+    .spinel_put_uint = protocore_thread_spinel_put_uint,
+    .spinel_put_eui64 = protocore_thread_spinel_put_eui64,
+    .spinel_put_ipv6 = protocore_thread_spinel_put_ipv6,
+    .spinel_put_utf8 = protocore_thread_spinel_put_utf8,
+    .spinel_put_data = protocore_thread_spinel_put_data,
+    .spinel_put_data_wlen = protocore_thread_spinel_put_data_wlen,
+    .spinel_writer_len = protocore_thread_spinel_writer_len,
+    .spinel_prop_lookup = protocore_thread_spinel_prop_lookup,
+    .spinel_prop_name = protocore_thread_spinel_prop_name,
+    .spinel_status_name = protocore_thread_spinel_status_name,
+    .spinel_frame_encode = protocore_thread_spinel_frame_encode,
+    .spinel_frame_decode = protocore_thread_spinel_frame_decode,
+};
 
 PROTOCORE_END_DECLS
 

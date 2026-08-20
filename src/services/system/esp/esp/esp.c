@@ -42,23 +42,23 @@ static void esp_nonce(uint8_t nonce[PROTOCORE_AESGCM_IV_LEN], const uint8_t *sal
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void esp_gcm_encapsulate(uint8_t *restrict work)
+void protocore_esp_gcm_encapsulate(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t spi = Esp.gcm_encapsulate_args.spi;
-    uint32_t seq = Esp.gcm_encapsulate_args.seq;
-    const uint8_t *key = Esp.gcm_encapsulate_args.key;
-    const uint8_t *salt = Esp.gcm_encapsulate_args.salt;
-    const uint8_t *iv = Esp.gcm_encapsulate_args.iv;
-    uint8_t next_header = Esp.gcm_encapsulate_args.next_header;
-    const uint8_t *payload = Esp.gcm_encapsulate_args.payload;
-    size_t payload_len = Esp.gcm_encapsulate_args.payload_len;
-    uint8_t *out = Esp.gcm_encapsulate_args.out;
-    size_t out_cap = Esp.gcm_encapsulate_args.out_cap;
+    uint32_t spi = EspV.gcm_encapsulate_args.spi;
+    uint32_t seq = EspV.gcm_encapsulate_args.seq;
+    const uint8_t *key = EspV.gcm_encapsulate_args.key;
+    const uint8_t *salt = EspV.gcm_encapsulate_args.salt;
+    const uint8_t *iv = EspV.gcm_encapsulate_args.iv;
+    uint8_t next_header = EspV.gcm_encapsulate_args.next_header;
+    const uint8_t *payload = EspV.gcm_encapsulate_args.payload;
+    size_t payload_len = EspV.gcm_encapsulate_args.payload_len;
+    uint8_t *out = EspV.gcm_encapsulate_args.out;
+    size_t out_cap = EspV.gcm_encapsulate_args.out_cap;
 
     if (!key || !salt || !iv || !out || (payload_len && !payload))
     {
-        Esp.n = 0;
+        EspV.n = 0;
         return;
     }
 
@@ -69,7 +69,7 @@ static void esp_gcm_encapsulate(uint8_t *restrict work)
     size_t total = PROTOCORE_ESP_CT_OFF + pt_len + PROTOCORE_ESP_ICV_LEN;
     if (out_cap < total)
     {
-        Esp.n = 0;
+        EspV.n = 0;
         return;
     }
 
@@ -98,44 +98,44 @@ static void esp_gcm_encapsulate(uint8_t *restrict work)
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.seal_args.nonce = nonce;
-        AesGcm.seal_args.aad = out;
-        AesGcm.seal_args.aad_len = PROTOCORE_ESP_HDR_LEN;
-        AesGcm.seal_args.pt = pt;
-        AesGcm.seal_args.pt_len = pt_len;
-        AesGcm.seal_args.ct_out = pt;
-        AesGcm.seal_args.tag_out = pt + pt_len;
+        AesGcmV.seal_args.nonce = nonce;
+        AesGcmV.seal_args.aad = out;
+        AesGcmV.seal_args.aad_len = PROTOCORE_ESP_HDR_LEN;
+        AesGcmV.seal_args.pt = pt;
+        AesGcmV.seal_args.pt_len = pt_len;
+        AesGcmV.seal_args.ct_out = pt;
+        AesGcmV.seal_args.tag_out = pt + pt_len;
         AesGcm.seal(gcm);
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
-    Esp.n = total;
+    EspV.n = total;
 }
 
-static void esp_gcm_decapsulate(uint8_t *restrict work)
+void protocore_esp_gcm_decapsulate(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *key = Esp.gcm_decapsulate_args.key;
-    const uint8_t *salt = Esp.gcm_decapsulate_args.salt;
-    uint8_t *packet = Esp.gcm_decapsulate_args.packet;
-    size_t len = Esp.gcm_decapsulate_args.len;
-    uint32_t *spi_out = Esp.gcm_decapsulate_args.spi_out;
-    uint32_t *seq_out = Esp.gcm_decapsulate_args.seq_out;
-    uint8_t *next_header_out = Esp.gcm_decapsulate_args.next_header_out;
-    const uint8_t **payload_out = Esp.gcm_decapsulate_args.payload_out;
-    size_t *payload_len_out = Esp.gcm_decapsulate_args.payload_len_out;
+    const uint8_t *key = EspV.gcm_decapsulate_args.key;
+    const uint8_t *salt = EspV.gcm_decapsulate_args.salt;
+    uint8_t *packet = EspV.gcm_decapsulate_args.packet;
+    size_t len = EspV.gcm_decapsulate_args.len;
+    uint32_t *spi_out = EspV.gcm_decapsulate_args.spi_out;
+    uint32_t *seq_out = EspV.gcm_decapsulate_args.seq_out;
+    uint8_t *next_header_out = EspV.gcm_decapsulate_args.next_header_out;
+    const uint8_t **payload_out = EspV.gcm_decapsulate_args.payload_out;
+    size_t *payload_len_out = EspV.gcm_decapsulate_args.payload_len_out;
 
     if (!key || !salt || !packet || !payload_out || !payload_len_out)
     {
-        Esp.ok = PROTO_FALSE;
+        EspV.ok = PROTO_FALSE;
         return;
     }
     // Minimum: header + IV + at least the 2-octet trailer (Pad Length + Next Header) + ICV.
     if (len < PROTOCORE_ESP_CT_OFF + 2 + PROTOCORE_ESP_ICV_LEN)
     {
-        Esp.ok = PROTO_FALSE;
+        EspV.ok = PROTO_FALSE;
         return;
     }
 
@@ -153,23 +153,23 @@ static void esp_gcm_decapsulate(uint8_t *restrict work)
         // ever shows up in a profile.
         size_t mark = protocore_secure_mark();
         uint8_t *gcm = protocore_secure_span(PROTOCORE_AESGCM_BORROW, 8).buf;
-        AesGcm.key_args.key = key;
+        AesGcmV.key_args.key = key;
         AesGcm.key_init(gcm);
-        AesGcm.open_args.nonce = nonce;
-        AesGcm.open_args.aad = packet; // AAD = SPI | Seq
-        AesGcm.open_args.aad_len = PROTOCORE_ESP_HDR_LEN;
-        AesGcm.open_args.ct = ct;
-        AesGcm.open_args.ct_len = ct_len;
-        AesGcm.open_args.tag = tag;
-        AesGcm.open_args.out = ct;
+        AesGcmV.open_args.nonce = nonce;
+        AesGcmV.open_args.aad = packet; // AAD = SPI | Seq
+        AesGcmV.open_args.aad_len = PROTOCORE_ESP_HDR_LEN;
+        AesGcmV.open_args.ct = ct;
+        AesGcmV.open_args.ct_len = ct_len;
+        AesGcmV.open_args.tag = tag;
+        AesGcmV.open_args.out = ct;
         AesGcm.open(gcm);
-        ok = AesGcm.ok;
+        ok = AesGcmV.ok;
         AesGcm.key_wipe(gcm);
         protocore_secure_release(mark);
     }
     if (!ok)
     {
-        Esp.ok = PROTO_FALSE;
+        EspV.ok = PROTO_FALSE;
         return;
     }
 
@@ -178,7 +178,7 @@ static void esp_gcm_decapsulate(uint8_t *restrict work)
     uint8_t pad_len = ct[ct_len - 2];
     if ((size_t)pad_len + 2 > ct_len) // padding + trailer cannot exceed the plaintext
     {
-        Esp.ok = PROTO_FALSE;
+        EspV.ok = PROTO_FALSE;
         return;
     }
 
@@ -196,15 +196,15 @@ static void esp_gcm_decapsulate(uint8_t *restrict work)
     }
     *payload_out = ct;
     *payload_len_out = ct_len - 2 - pad_len;
-    Esp.ok = PROTO_TRUE;
+    EspV.ok = PROTO_TRUE;
 }
 
 // ── ESP anti-replay window (RFC 4303 §3.4.3) ───────────────────────────────────────────────────
 
-static void esp_replay_init(uint8_t *restrict work)
+void protocore_esp_replay_init(uint8_t *restrict work)
 {
     (void)work;
-    EspReplay *r = Esp.replay_init_args.r;
+    EspReplay *r = EspV.replay_init_args.r;
 
     if (!r)
     {
@@ -215,15 +215,15 @@ static void esp_replay_init(uint8_t *restrict work)
     r->seen_any = PROTO_FALSE;
 }
 
-static void esp_replay_check(uint8_t *restrict work)
+void protocore_esp_replay_check(uint8_t *restrict work)
 {
     (void)work;
-    EspReplay *r = Esp.replay_check_args.r;
-    uint32_t seq = Esp.replay_check_args.seq;
+    EspReplay *r = EspV.replay_check_args.r;
+    uint32_t seq = EspV.replay_check_args.seq;
 
     if (!r || seq == 0) // sequence 0 is never valid (ESP counts from 1)
     {
-        Esp.ok = PROTO_FALSE;
+        EspV.ok = PROTO_FALSE;
         return;
     }
 
@@ -232,7 +232,7 @@ static void esp_replay_check(uint8_t *restrict work)
         r->highest = seq;
         r->bitmap = 1; // bit 0 = this (the new highest)
         r->seen_any = PROTO_TRUE;
-        Esp.ok = PROTO_TRUE;
+        EspV.ok = PROTO_TRUE;
         return;
     }
 
@@ -243,32 +243,28 @@ static void esp_replay_check(uint8_t *restrict work)
         r->bitmap = (shift >= PROTOCORE_ESP_REPLAY_WINDOW) ? 0u : (r->bitmap << shift);
         r->bitmap |= 1u;
         r->highest = seq;
-        Esp.ok = PROTO_TRUE;
+        EspV.ok = PROTO_TRUE;
         return;
     }
 
     uint32_t offset = r->highest - seq;
     if (offset >= PROTOCORE_ESP_REPLAY_WINDOW) // left of the window -> too old
     {
-        Esp.ok = PROTO_FALSE;
+        EspV.ok = PROTO_FALSE;
         return;
     }
     uint64_t mask = (uint64_t)1 << offset;
     if (r->bitmap & mask) // already accepted -> replay
     {
-        Esp.ok = PROTO_FALSE;
+        EspV.ok = PROTO_FALSE;
         return;
     }
     r->bitmap |= mask;
-    Esp.ok = PROTO_TRUE;
+    EspV.ok = PROTO_TRUE;
 }
 
-EspNs Esp = {
-    .gcm_encapsulate = esp_gcm_encapsulate,
-    .gcm_decapsulate = esp_gcm_decapsulate,
-    .replay_init = esp_replay_init,
-    .replay_check = esp_replay_check,
-};
+/** @brief The operands and the outcome. */
+EspVars EspV;
 
 PROTOCORE_END_DECLS
 

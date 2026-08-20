@@ -38,13 +38,11 @@ typedef struct
     const uint8_t *data; ///< the bytes
     size_t len;          ///< how many
 } Sha256UpdateArgs;
-
 /** @brief Where a finished digest lands. */
 typedef struct
 {
     uint8_t *out; ///< PROTOCORE_SHA256_DIGEST_LEN bytes
 } Sha256FinalArgs;
-
 /** @brief The message a one-shot digest is taken over. */
 typedef struct
 {
@@ -52,7 +50,6 @@ typedef struct
     size_t len;          ///< its length
     uint8_t *out;        ///< PROTOCORE_SHA256_DIGEST_LEN bytes
 } Sha256HashArgs;
-
 /**
  * @brief SHA-256 (FIPS 180-4).
  *
@@ -93,17 +90,38 @@ typedef struct
     Sha256UpdateArgs update_args;
     Sha256FinalArgs final_args;
     Sha256HashArgs hash_args;
-
     proto_bool ok;
+} Sha256Vars;
 
+/** @brief The operands and the outcome. */
+extern Sha256Vars Sha256V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
     void (*const final)(uint8_t *restrict work);
     void (*const hash)(uint8_t *restrict work);
 } Sha256Ns;
 
-/** @brief The one symbol this module exports. */
-extern Sha256Ns Sha256;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Sha256V or a region of the borrow at a fixed offset.
+void protocore_sha256_init(uint8_t *restrict work);
+void protocore_sha256_update(uint8_t *restrict work);
+void protocore_sha256_final(uint8_t *restrict work);
+void protocore_sha256_hash(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sha256.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Sha256Ns Sha256 __attribute__((unused)) = {
+    .init = protocore_sha256_init,
+    .update = protocore_sha256_update,
+    .final = protocore_sha256_final,
+    .hash = protocore_sha256_hash,
+};
 
 PROTOCORE_END_DECLS
 

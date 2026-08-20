@@ -50,68 +50,68 @@ static size_t write_header(uint8_t *buf, size_t cap, const AdsRequest *r, AdsCom
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void ads_build_read_device_info(uint8_t *restrict work)
+void protocore_ads_build_read_device_info(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ads.build_read_device_info_args.buf;
-    size_t cap = Ads.build_read_device_info_args.cap;
-    const AdsRequest *r = Ads.build_read_device_info_args.r;
+    uint8_t *buf = AdsV.build_read_device_info_args.buf;
+    size_t cap = AdsV.build_read_device_info_args.cap;
+    const AdsRequest *r = AdsV.build_read_device_info_args.r;
 
-    Ads.n = write_header(buf, cap, r, ADS_COMMAND_READ_DEVICE_INFO, 0);
+    AdsV.n = write_header(buf, cap, r, ADS_COMMAND_READ_DEVICE_INFO, 0);
 }
 
-static void ads_build_read_state(uint8_t *restrict work)
+void protocore_ads_build_read_state(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ads.build_read_state_args.buf;
-    size_t cap = Ads.build_read_state_args.cap;
-    const AdsRequest *r = Ads.build_read_state_args.r;
+    uint8_t *buf = AdsV.build_read_state_args.buf;
+    size_t cap = AdsV.build_read_state_args.cap;
+    const AdsRequest *r = AdsV.build_read_state_args.r;
 
-    Ads.n = write_header(buf, cap, r, ADS_COMMAND_READ_STATE, 0);
+    AdsV.n = write_header(buf, cap, r, ADS_COMMAND_READ_STATE, 0);
 }
 
-static void ads_build_read(uint8_t *restrict work)
+void protocore_ads_build_read(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ads.build_read_args.buf;
-    size_t cap = Ads.build_read_args.cap;
-    const AdsRequest *r = Ads.build_read_args.r;
-    uint32_t index_group = Ads.build_read_args.index_group;
-    uint32_t index_offset = Ads.build_read_args.index_offset;
-    uint32_t read_len = Ads.build_read_args.read_len;
+    uint8_t *buf = AdsV.build_read_args.buf;
+    size_t cap = AdsV.build_read_args.cap;
+    const AdsRequest *r = AdsV.build_read_args.r;
+    uint32_t index_group = AdsV.build_read_args.index_group;
+    uint32_t index_offset = AdsV.build_read_args.index_offset;
+    uint32_t read_len = AdsV.build_read_args.read_len;
 
     size_t p = write_header(buf, cap, r, ADS_COMMAND_READ, 12);
     if (!p)
     {
-        Ads.n = 0;
+        AdsV.n = 0;
         return;
     }
     p += endian.wr32le(buf + p, index_group);
     p += endian.wr32le(buf + p, index_offset);
     p += endian.wr32le(buf + p, read_len);
-    Ads.n = p;
+    AdsV.n = p;
 }
 
-static void ads_build_write(uint8_t *restrict work)
+void protocore_ads_build_write(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ads.build_write_args.buf;
-    size_t cap = Ads.build_write_args.cap;
-    const AdsRequest *r = Ads.build_write_args.r;
-    uint32_t index_group = Ads.build_write_args.index_group;
-    uint32_t index_offset = Ads.build_write_args.index_offset;
-    const uint8_t *data = Ads.build_write_args.data;
-    uint32_t len = Ads.build_write_args.len;
+    uint8_t *buf = AdsV.build_write_args.buf;
+    size_t cap = AdsV.build_write_args.cap;
+    const AdsRequest *r = AdsV.build_write_args.r;
+    uint32_t index_group = AdsV.build_write_args.index_group;
+    uint32_t index_offset = AdsV.build_write_args.index_offset;
+    const uint8_t *data = AdsV.build_write_args.data;
+    uint32_t len = AdsV.build_write_args.len;
 
     if (len && !data)
     {
-        Ads.n = 0;
+        AdsV.n = 0;
         return;
     }
     size_t p = write_header(buf, cap, r, ADS_COMMAND_WRITE, 12 + len);
     if (!p)
     {
-        Ads.n = 0;
+        AdsV.n = 0;
         return;
     }
     p += endian.wr32le(buf + p, index_group);
@@ -122,30 +122,30 @@ static void ads_build_write(uint8_t *restrict work)
         mem.cpy(buf + p, data, len);
         p += len;
     }
-    Ads.n = p;
+    AdsV.n = p;
 }
 
-static void ads_build_read_write(uint8_t *restrict work)
+void protocore_ads_build_read_write(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ads.build_read_write_args.buf;
-    size_t cap = Ads.build_read_write_args.cap;
-    const AdsRequest *r = Ads.build_read_write_args.r;
-    uint32_t index_group = Ads.build_read_write_args.index_group;
-    uint32_t index_offset = Ads.build_read_write_args.index_offset;
-    uint32_t read_len = Ads.build_read_write_args.read_len;
-    const uint8_t *write_data = Ads.build_read_write_args.write_data;
-    uint32_t write_len = Ads.build_read_write_args.write_len;
+    uint8_t *buf = AdsV.build_read_write_args.buf;
+    size_t cap = AdsV.build_read_write_args.cap;
+    const AdsRequest *r = AdsV.build_read_write_args.r;
+    uint32_t index_group = AdsV.build_read_write_args.index_group;
+    uint32_t index_offset = AdsV.build_read_write_args.index_offset;
+    uint32_t read_len = AdsV.build_read_write_args.read_len;
+    const uint8_t *write_data = AdsV.build_read_write_args.write_data;
+    uint32_t write_len = AdsV.build_read_write_args.write_len;
 
     if (write_len && !write_data)
     {
-        Ads.n = 0;
+        AdsV.n = 0;
         return;
     }
     size_t p = write_header(buf, cap, r, ADS_COMMAND_READ_WRITE, 16 + write_len);
     if (!p)
     {
-        Ads.n = 0;
+        AdsV.n = 0;
         return;
     }
     p += endian.wr32le(buf + p, index_group);
@@ -157,29 +157,29 @@ static void ads_build_read_write(uint8_t *restrict work)
         mem.cpy(buf + p, write_data, write_len);
         p += write_len;
     }
-    Ads.n = p;
+    AdsV.n = p;
 }
 
-static void ads_build_write_control(uint8_t *restrict work)
+void protocore_ads_build_write_control(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ads.build_write_control_args.buf;
-    size_t cap = Ads.build_write_control_args.cap;
-    const AdsRequest *r = Ads.build_write_control_args.r;
-    uint16_t protocore_ads_state = Ads.build_write_control_args.protocore_ads_state;
-    uint16_t device_state = Ads.build_write_control_args.device_state;
-    const uint8_t *data = Ads.build_write_control_args.data;
-    uint32_t len = Ads.build_write_control_args.len;
+    uint8_t *buf = AdsV.build_write_control_args.buf;
+    size_t cap = AdsV.build_write_control_args.cap;
+    const AdsRequest *r = AdsV.build_write_control_args.r;
+    uint16_t protocore_ads_state = AdsV.build_write_control_args.protocore_ads_state;
+    uint16_t device_state = AdsV.build_write_control_args.device_state;
+    const uint8_t *data = AdsV.build_write_control_args.data;
+    uint32_t len = AdsV.build_write_control_args.len;
 
     if (len && !data)
     {
-        Ads.n = 0;
+        AdsV.n = 0;
         return;
     }
     size_t p = write_header(buf, cap, r, ADS_COMMAND_WRITE_CONTROL, 8 + len);
     if (!p)
     {
-        Ads.n = 0;
+        AdsV.n = 0;
         return;
     }
     p += endian.wr16le(buf + p, protocore_ads_state);
@@ -190,27 +190,27 @@ static void ads_build_write_control(uint8_t *restrict work)
         mem.cpy(buf + p, data, len);
         p += len;
     }
-    Ads.n = p;
+    AdsV.n = p;
 }
 
-static void ads_build_add_notification(uint8_t *restrict work)
+void protocore_ads_build_add_notification(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ads.build_add_notification_args.buf;
-    size_t cap = Ads.build_add_notification_args.cap;
-    const AdsRequest *r = Ads.build_add_notification_args.r;
-    uint32_t index_group = Ads.build_add_notification_args.index_group;
-    uint32_t index_offset = Ads.build_add_notification_args.index_offset;
-    uint32_t length = Ads.build_add_notification_args.length;
-    AdsTransMode mode = Ads.build_add_notification_args.mode;
-    uint32_t max_delay = Ads.build_add_notification_args.max_delay;
-    uint32_t cycle_time = Ads.build_add_notification_args.cycle_time;
+    uint8_t *buf = AdsV.build_add_notification_args.buf;
+    size_t cap = AdsV.build_add_notification_args.cap;
+    const AdsRequest *r = AdsV.build_add_notification_args.r;
+    uint32_t index_group = AdsV.build_add_notification_args.index_group;
+    uint32_t index_offset = AdsV.build_add_notification_args.index_offset;
+    uint32_t length = AdsV.build_add_notification_args.length;
+    AdsTransMode mode = AdsV.build_add_notification_args.mode;
+    uint32_t max_delay = AdsV.build_add_notification_args.max_delay;
+    uint32_t cycle_time = AdsV.build_add_notification_args.cycle_time;
 
     // IndexGroup + IndexOffset + Length + TransMode + MaxDelay + CycleTime + Reserved(16) = 40.
     size_t p = write_header(buf, cap, r, ADS_COMMAND_ADD_NOTIFICATION, 40);
     if (!p)
     {
-        Ads.n = 0;
+        AdsV.n = 0;
         return;
     }
     p += endian.wr32le(buf + p, index_group);
@@ -221,53 +221,53 @@ static void ads_build_add_notification(uint8_t *restrict work)
     p += endian.wr32le(buf + p, cycle_time);
     mem.set(buf + p, 0, 16); // reserved
     p += 16;
-    Ads.n = p;
+    AdsV.n = p;
 }
 
-static void ads_build_del_notification(uint8_t *restrict work)
+void protocore_ads_build_del_notification(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ads.build_del_notification_args.buf;
-    size_t cap = Ads.build_del_notification_args.cap;
-    const AdsRequest *r = Ads.build_del_notification_args.r;
-    uint32_t notification_handle = Ads.build_del_notification_args.notification_handle;
+    uint8_t *buf = AdsV.build_del_notification_args.buf;
+    size_t cap = AdsV.build_del_notification_args.cap;
+    const AdsRequest *r = AdsV.build_del_notification_args.r;
+    uint32_t notification_handle = AdsV.build_del_notification_args.notification_handle;
 
     size_t p = write_header(buf, cap, r, ADS_COMMAND_DEL_NOTIFICATION, 4);
     if (!p)
     {
-        Ads.n = 0;
+        AdsV.n = 0;
         return;
     }
     p += endian.wr32le(buf + p, notification_handle);
-    Ads.n = p;
+    AdsV.n = p;
 }
 
-static void ads_parse_ams_header(uint8_t *restrict work)
+void protocore_ads_parse_ams_header(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = Ads.parse_ams_header_args.buf;
-    size_t len = Ads.parse_ams_header_args.len;
-    AdsAmsHeader *out = Ads.parse_ams_header_args.out;
+    const uint8_t *buf = AdsV.parse_ams_header_args.buf;
+    size_t len = AdsV.parse_ams_header_args.len;
+    AdsAmsHeader *out = AdsV.parse_ams_header_args.out;
 
     if (!buf || !out || len < (size_t)ADS_HDR_LEN)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     if (buf[0] != 0x00 || buf[1] != 0x00) // AMS/TCP reserved
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     uint32_t frame_len = endian.rd32le(buf + 2); // AMS header + payload
     if (frame_len < (uint32_t)ADS_AMS_HDR_LEN)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     if ((size_t)ADS_AMSTCP_HDR_LEN + frame_len > len)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     const uint8_t *a = buf + ADS_AMSTCP_HDR_LEN;
@@ -283,80 +283,80 @@ static void ads_parse_ams_header(uint8_t *restrict work)
     // cbData must fit inside the frame the AMS/TCP length promised.
     if ((uint32_t)ADS_AMS_HDR_LEN + out->data_len > frame_len)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     out->data = a + ADS_AMS_HDR_LEN;
-    Ads.ok = PROTO_TRUE;
+    AdsV.ok = PROTO_TRUE;
 }
 
-static void ads_parse_read(uint8_t *restrict work)
+void protocore_ads_parse_read(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = Ads.parse_read_args.data;
-    size_t data_len = Ads.parse_read_args.data_len;
-    AdsReadResult *out = Ads.parse_read_args.out;
+    const uint8_t *data = AdsV.parse_read_args.data;
+    size_t data_len = AdsV.parse_read_args.data_len;
+    AdsReadResult *out = AdsV.parse_read_args.out;
 
     if (!data || !out || data_len < 8)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     out->result = endian.rd32le(data);
     out->len = endian.rd32le(data + 4);
     if (8 + (size_t)out->len > data_len)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     out->data = data + 8;
-    Ads.ok = PROTO_TRUE;
+    AdsV.ok = PROTO_TRUE;
 }
 
-static void ads_parse_result(uint8_t *restrict work)
+void protocore_ads_parse_result(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = Ads.parse_result_args.data;
-    size_t data_len = Ads.parse_result_args.data_len;
-    uint32_t *result = Ads.parse_result_args.result;
+    const uint8_t *data = AdsV.parse_result_args.data;
+    size_t data_len = AdsV.parse_result_args.data_len;
+    uint32_t *result = AdsV.parse_result_args.result;
 
     if (!data || !result || data_len < 4)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     *result = endian.rd32le(data);
-    Ads.ok = PROTO_TRUE;
+    AdsV.ok = PROTO_TRUE;
 }
 
-static void ads_parse_read_state(uint8_t *restrict work)
+void protocore_ads_parse_read_state(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = Ads.parse_read_state_args.data;
-    size_t data_len = Ads.parse_read_state_args.data_len;
-    AdsReadStateResult *out = Ads.parse_read_state_args.out;
+    const uint8_t *data = AdsV.parse_read_state_args.data;
+    size_t data_len = AdsV.parse_read_state_args.data_len;
+    AdsReadStateResult *out = AdsV.parse_read_state_args.out;
 
     if (!data || !out || data_len < 8)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     out->result = endian.rd32le(data);
     out->protocore_ads_state = endian.rd16le(data + 4);
     out->device_state = endian.rd16le(data + 6);
-    Ads.ok = PROTO_TRUE;
+    AdsV.ok = PROTO_TRUE;
 }
 
-static void ads_parse_read_device_info(uint8_t *restrict work)
+void protocore_ads_parse_read_device_info(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = Ads.parse_read_device_info_args.data;
-    size_t data_len = Ads.parse_read_device_info_args.data_len;
-    AdsDeviceInfo *out = Ads.parse_read_device_info_args.out;
+    const uint8_t *data = AdsV.parse_read_device_info_args.data;
+    size_t data_len = AdsV.parse_read_device_info_args.data_len;
+    AdsDeviceInfo *out = AdsV.parse_read_device_info_args.out;
 
     if (!data || !out || data_len < 4 + 4 + ADS_DEVICE_NAME_LEN)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     out->result = endian.rd32le(data);
@@ -365,46 +365,46 @@ static void ads_parse_read_device_info(uint8_t *restrict work)
     out->version_build = endian.rd16le(data + 6);
     mem.cpy(out->device_name, data + 8, ADS_DEVICE_NAME_LEN);
     out->device_name[ADS_DEVICE_NAME_LEN] = '\0'; // the field is not guaranteed NUL-terminated
-    Ads.ok = PROTO_TRUE;
+    AdsV.ok = PROTO_TRUE;
 }
 
-static void ads_parse_add_notification(uint8_t *restrict work)
+void protocore_ads_parse_add_notification(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = Ads.parse_add_notification_args.data;
-    size_t data_len = Ads.parse_add_notification_args.data_len;
-    uint32_t *result = Ads.parse_add_notification_args.result;
-    uint32_t *handle = Ads.parse_add_notification_args.handle;
+    const uint8_t *data = AdsV.parse_add_notification_args.data;
+    size_t data_len = AdsV.parse_add_notification_args.data_len;
+    uint32_t *result = AdsV.parse_add_notification_args.result;
+    uint32_t *handle = AdsV.parse_add_notification_args.handle;
 
     if (!data || !result || !handle || data_len < 8)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     *result = endian.rd32le(data);
     *handle = endian.rd32le(data + 4);
-    Ads.ok = PROTO_TRUE;
+    AdsV.ok = PROTO_TRUE;
 }
 
-static void ads_parse_notification(uint8_t *restrict work)
+void protocore_ads_parse_notification(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *data = Ads.parse_notification_args.data;
-    size_t data_len = Ads.parse_notification_args.data_len;
-    AdsNotificationSampleFn on_sample = Ads.parse_notification_args.on_sample;
-    void *user = Ads.parse_notification_args.user;
+    const uint8_t *data = AdsV.parse_notification_args.data;
+    size_t data_len = AdsV.parse_notification_args.data_len;
+    AdsNotificationSampleFn on_sample = AdsV.parse_notification_args.on_sample;
+    void *user = AdsV.parse_notification_args.user;
 
     // Length(4) + Stamps(4), then per stamp: Timestamp(8) + Samples(4) + samples.
     if (!data || !on_sample || data_len < 8)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     uint32_t length = endian.rd32le(data); // octets after this field
     uint32_t stamps = endian.rd32le(data + 4);
     if (4 + (size_t)length > data_len)
     {
-        Ads.ok = PROTO_FALSE;
+        AdsV.ok = PROTO_FALSE;
         return;
     }
     size_t p = 8;
@@ -412,7 +412,7 @@ static void ads_parse_notification(uint8_t *restrict work)
     {
         if (p + 12 > data_len) // timestamp(8) + samples(4)
         {
-            Ads.ok = PROTO_FALSE;
+            AdsV.ok = PROTO_FALSE;
             return;
         }
         uint64_t timestamp = endian.rd64le(data + p);
@@ -422,7 +422,7 @@ static void ads_parse_notification(uint8_t *restrict work)
         {
             if (p + 8 > data_len) // handle(4) + size(4)
             {
-                Ads.ok = PROTO_FALSE;
+                AdsV.ok = PROTO_FALSE;
                 return;
             }
             uint32_t handle = endian.rd32le(data + p);
@@ -430,31 +430,18 @@ static void ads_parse_notification(uint8_t *restrict work)
             p += 8;
             if (p + (size_t)size > data_len)
             {
-                Ads.ok = PROTO_FALSE;
+                AdsV.ok = PROTO_FALSE;
                 return;
             }
             on_sample(handle, data + p, size, timestamp, user);
             p += size;
         }
     }
-    Ads.ok = PROTO_TRUE;
+    AdsV.ok = PROTO_TRUE;
 }
 
-AdsNs Ads = {.build_read_device_info = ads_build_read_device_info,
-             .build_read_state = ads_build_read_state,
-             .build_read = ads_build_read,
-             .build_write = ads_build_write,
-             .build_read_write = ads_build_read_write,
-             .build_write_control = ads_build_write_control,
-             .build_add_notification = ads_build_add_notification,
-             .build_del_notification = ads_build_del_notification,
-             .parse_ams_header = ads_parse_ams_header,
-             .parse_read = ads_parse_read,
-             .parse_result = ads_parse_result,
-             .parse_read_state = ads_parse_read_state,
-             .parse_read_device_info = ads_parse_read_device_info,
-             .parse_add_notification = ads_parse_add_notification,
-             .parse_notification = ads_parse_notification};
+/** @brief The operands and the outcome. */
+AdsVars AdsV;
 
 PROTOCORE_END_DECLS
 

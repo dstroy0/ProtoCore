@@ -57,19 +57,19 @@ uint8_t *protocore_rcwl0516_span(void)
     return s_own.span;
 }
 
-static void rcwl0516_core_init(uint8_t *restrict work);
-static void rcwl0516_presence_get(uint8_t *restrict work);
-static void rcwl0516_presence_init(uint8_t *restrict work);
-static void rcwl0516_presence_take_event(uint8_t *restrict work);
-static void rcwl0516_presence_update(uint8_t *restrict work);
+void protocore_rcwl0516_core_init(uint8_t *restrict work);
+void protocore_rcwl0516_presence_get(uint8_t *restrict work);
+void protocore_rcwl0516_presence_init(uint8_t *restrict work);
+void protocore_rcwl0516_presence_take_event(uint8_t *restrict work);
+void protocore_rcwl0516_presence_update(uint8_t *restrict work);
 
-static void rcwl0516_presence_init(uint8_t *restrict work)
+void protocore_rcwl0516_presence_init(uint8_t *restrict work)
 {
     (void)work;
-    PresenceCore *c = Rcwl0516.presence_init_args.c;
-    uint32_t debounce_ms = Rcwl0516.presence_init_args.debounce_ms;
-    uint32_t hold_ms = Rcwl0516.presence_init_args.hold_ms;
-    uint32_t now = Rcwl0516.presence_init_args.now;
+    PresenceCore *c = Rcwl0516V.presence_init_args.c;
+    uint32_t debounce_ms = Rcwl0516V.presence_init_args.debounce_ms;
+    uint32_t hold_ms = Rcwl0516V.presence_init_args.hold_ms;
+    uint32_t now = Rcwl0516V.presence_init_args.now;
 
     if (!c)
     {
@@ -85,16 +85,16 @@ static void rcwl0516_presence_init(uint8_t *restrict work)
     c->changed = 0;
 }
 
-static void rcwl0516_presence_update(uint8_t *restrict work)
+void protocore_rcwl0516_presence_update(uint8_t *restrict work)
 {
     (void)work;
-    PresenceCore *c = Rcwl0516.presence_update_args.c;
-    proto_bool pin_high = Rcwl0516.presence_update_args.pin_high;
-    uint32_t now = Rcwl0516.presence_update_args.now;
+    PresenceCore *c = Rcwl0516V.presence_update_args.c;
+    proto_bool pin_high = Rcwl0516V.presence_update_args.pin_high;
+    uint32_t now = Rcwl0516V.presence_update_args.now;
 
     if (!c)
     {
-        Rcwl0516.ok = PROTO_FALSE;
+        Rcwl0516V.ok = PROTO_FALSE;
         return;
     }
     const uint8_t lvl = pin_high ? 1u : 0u;
@@ -128,41 +128,41 @@ static void rcwl0516_presence_update(uint8_t *restrict work)
     {
         c->changed = 1;
     }
-    Rcwl0516.ok = c->present != 0;
+    Rcwl0516V.ok = c->present != 0;
 }
 
-static void rcwl0516_presence_get(uint8_t *restrict work)
+void protocore_rcwl0516_presence_get(uint8_t *restrict work)
 {
     (void)work;
-    const PresenceCore *c = Rcwl0516.presence_get_args.c;
+    const PresenceCore *c = Rcwl0516V.presence_get_args.c;
 
-    Rcwl0516.ok = c && c->present != 0;
+    Rcwl0516V.ok = c && c->present != 0;
 }
 
-static void rcwl0516_presence_take_event(uint8_t *restrict work)
+void protocore_rcwl0516_presence_take_event(uint8_t *restrict work)
 {
     (void)work;
-    PresenceCore *c = Rcwl0516.presence_take_event_args.c;
+    PresenceCore *c = Rcwl0516V.presence_take_event_args.c;
 
     if (!c || !c->changed)
     {
-        Rcwl0516.ok = PROTO_FALSE;
+        Rcwl0516V.ok = PROTO_FALSE;
         return;
     }
     c->changed = 0;
-    Rcwl0516.ok = PROTO_TRUE;
+    Rcwl0516V.ok = PROTO_TRUE;
 }
 
-static void rcwl0516_core_init(uint8_t *restrict work)
+void protocore_rcwl0516_core_init(uint8_t *restrict work)
 {
-    PresenceCore *c = Rcwl0516.core_init_args.c;
-    uint32_t now = Rcwl0516.core_init_args.now;
+    PresenceCore *c = Rcwl0516V.core_init_args.c;
+    uint32_t now = Rcwl0516V.core_init_args.now;
 
-    Rcwl0516.presence_init_args.c = c;
-    Rcwl0516.presence_init_args.debounce_ms = PROTOCORE_RCWL0516_DEBOUNCE_MS;
-    Rcwl0516.presence_init_args.hold_ms = PROTOCORE_RCWL0516_HOLD_MS;
-    Rcwl0516.presence_init_args.now = now;
-    rcwl0516_presence_init(work);
+    Rcwl0516V.presence_init_args.c = c;
+    Rcwl0516V.presence_init_args.debounce_ms = PROTOCORE_RCWL0516_DEBOUNCE_MS;
+    Rcwl0516V.presence_init_args.hold_ms = PROTOCORE_RCWL0516_HOLD_MS;
+    Rcwl0516V.presence_init_args.now = now;
+    protocore_rcwl0516_presence_init(work);
 }
 
 // ---------------------------------------------------------------------------
@@ -206,52 +206,44 @@ static int dev_pin(uint8_t *restrict work)
     return RCWL0516_CTX(work)->begun ? RCWL0516_CTX(work)->pin : -1;
 }
 
-static void rcwl0516_begin(uint8_t *restrict work)
+void protocore_rcwl0516_begin(uint8_t *restrict work)
 {
-    int out_pin = Rcwl0516.begin_args.out_pin;
+    int out_pin = Rcwl0516V.begin_args.out_pin;
 
     RCWL0516_CTX(work)->pin = out_pin;
     RCWL0516_CTX(work)->begun = PROTO_TRUE;
     protocore_platform_gpio_mode((uint8_t)(out_pin),
                                  PROTOCORE_GPIO_IN); // the module drives OUT actively; no pull needed
-    Rcwl0516.core_init_args.c = &RCWL0516_CTX(work)->core;
-    Rcwl0516.core_init_args.now = Clock.ms;
-    rcwl0516_core_init(work);
-    Rcwl0516.ok = PROTO_TRUE;
+    Rcwl0516V.core_init_args.c = &RCWL0516_CTX(work)->core;
+    Rcwl0516V.core_init_args.now = Clock.ms;
+    protocore_rcwl0516_core_init(work);
+    Rcwl0516V.ok = PROTO_TRUE;
 }
 
-static void rcwl0516_poll(uint8_t *restrict work)
+void protocore_rcwl0516_poll(uint8_t *restrict work)
 {
     const int pin = dev_pin(work);
     if (pin < 0)
     {
-        Rcwl0516.ok = PROTO_FALSE;
+        Rcwl0516V.ok = PROTO_FALSE;
         return;
     }
-    Rcwl0516.presence_update_args.c = &RCWL0516_CTX(work)->core;
-    Rcwl0516.presence_update_args.pin_high = protocore_platform_gpio_read((uint8_t)(pin)) == PROTOCORE_GPIO_HIGH;
-    Rcwl0516.presence_update_args.now = Clock.ms;
-    rcwl0516_presence_update(work);
-    Rcwl0516.presence_take_event_args.c = &RCWL0516_CTX(work)->core;
-    rcwl0516_presence_take_event(work);
+    Rcwl0516V.presence_update_args.c = &RCWL0516_CTX(work)->core;
+    Rcwl0516V.presence_update_args.pin_high = protocore_platform_gpio_read((uint8_t)(pin)) == PROTOCORE_GPIO_HIGH;
+    Rcwl0516V.presence_update_args.now = Clock.ms;
+    protocore_rcwl0516_presence_update(work);
+    Rcwl0516V.presence_take_event_args.c = &RCWL0516_CTX(work)->core;
+    protocore_rcwl0516_presence_take_event(work);
 }
 
-static void rcwl0516_present(uint8_t *restrict work)
+void protocore_rcwl0516_present(uint8_t *restrict work)
 {
-    Rcwl0516.presence_get_args.c = &RCWL0516_CTX(work)->core;
-    rcwl0516_presence_get(work);
+    Rcwl0516V.presence_get_args.c = &RCWL0516_CTX(work)->core;
+    protocore_rcwl0516_presence_get(work);
 }
 
-Rcwl0516Ns Rcwl0516 = {
-    .presence_init = rcwl0516_presence_init,
-    .presence_update = rcwl0516_presence_update,
-    .presence_get = rcwl0516_presence_get,
-    .presence_take_event = rcwl0516_presence_take_event,
-    .core_init = rcwl0516_core_init,
-    .begin = rcwl0516_begin,
-    .poll = rcwl0516_poll,
-    .present = rcwl0516_present,
-};
+/** @brief The operands and the outcome. */
+Rcwl0516Vars Rcwl0516V;
 
 PROTOCORE_END_DECLS
 

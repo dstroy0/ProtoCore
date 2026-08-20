@@ -18,14 +18,14 @@
 void ssh_classify_file_transfer_request(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshAppServer.slot;
-    const uint32_t channel = SshAppServer.channel;
-    const uint8_t *rtype = SshAppServer.req.rtype;
-    const uint32_t rtype_len = SshAppServer.req.rtype_len;
-    const uint8_t *payload = SshAppServer.req.payload;
-    const size_t len = SshAppServer.req.len;
-    size_t *off = &SshAppServer.req.off;
-    proto_bool *accept = &SshAppServer.accept;
+    const uint8_t i = SshAppServerV.slot;
+    const uint32_t channel = SshAppServerV.channel;
+    const uint8_t *rtype = SshAppServerV.req.rtype;
+    const uint32_t rtype_len = SshAppServerV.req.rtype_len;
+    const uint8_t *payload = SshAppServerV.req.payload;
+    const size_t len = SshAppServerV.req.len;
+    size_t *off = &SshAppServerV.req.off;
+    proto_bool *accept = &SshAppServerV.accept;
 #if !PROTOCORE_ENABLE_SSH_SFTP
     (void)accept; // only the SFTP subsystem path flips acceptance; scp exec is already accepted
 #endif
@@ -38,9 +38,9 @@ void ssh_classify_file_transfer_request(uint8_t *restrict work)
         if (bytes.rd_str(payload, len, off, &arg, &arg_len) && arg_len == 4 && mem.cmp(arg, "sftp", 4) == 0)
         {
             *accept = PROTO_TRUE;
-            SshConnection.chan.slot = i;
-            SshConnection.chan.channel = channel;
-            SshConnection.chan.service = SSH_CHAN_SERVICE_SFTP;
+            SshConnectionV.chan.slot = i;
+            SshConnectionV.chan.channel = channel;
+            SshConnectionV.chan.service = SSH_CHAN_SERVICE_SFTP;
             SshConnection.channel_bind_service(protocore_ssh_connection_span());
             SshSftpOpenCb open_cb = protocore_ssh_channel_sftp_open_cb();
             if (open_cb)
@@ -58,9 +58,9 @@ void ssh_classify_file_transfer_request(uint8_t *restrict work)
         uint32_t arg_len = 0;
         if (bytes.rd_str(payload, len, off, &arg, &arg_len) && arg_len >= 4 && mem.cmp(arg, "scp ", 4) == 0)
         {
-            SshConnection.chan.slot = i;
-            SshConnection.chan.channel = channel;
-            SshConnection.chan.service = SSH_CHAN_SERVICE_SCP;
+            SshConnectionV.chan.slot = i;
+            SshConnectionV.chan.channel = channel;
+            SshConnectionV.chan.service = SSH_CHAN_SERVICE_SCP;
             SshConnection.channel_bind_service(protocore_ssh_connection_span());
             SshScpOpenCb open_cb = protocore_ssh_channel_scp_open_cb();
             if (open_cb)
@@ -82,4 +82,5 @@ void ssh_classify_file_transfer_request(uint8_t *restrict work)
 #endif
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SshAppServerNs SshAppServer = {.classify = ssh_classify_file_transfer_request};
+/** @brief The operands and the outcome. */
+SshAppServerVars SshAppServerV;

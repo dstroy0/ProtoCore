@@ -39,7 +39,7 @@ PROTOCORE_BEGIN_DECLS
 #define PROTOCORE_MAX_CHAIN 64 // bounded hash-chain walk per position
 #define PROTOCORE_NONE 0xFFFF  // empty hash slot / chain terminator
 
-// All working memory deflate_raw() needs, laid over the caller's scratch.
+// All working memory protocore_deflate_raw() needs, laid over the caller's scratch.
 typedef struct
 {
     uint16_t head[PROTOCORE_HASH_SIZE]; // most-recent position for each 3-byte hash
@@ -62,28 +62,28 @@ static inline int hash3(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void deflate_raw(uint8_t *restrict work)
+void protocore_deflate_raw(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *src = Deflate.raw_args.src;
-    size_t src_len = Deflate.raw_args.src_len;
-    uint8_t *dst = Deflate.raw_args.dst;
-    size_t dst_cap = Deflate.raw_args.dst_cap;
-    size_t *out_len = Deflate.raw_args.out_len;
-    void *scratch = Deflate.raw_args.scratch;
-    size_t scratch_len = Deflate.raw_args.scratch_len;
+    const uint8_t *src = DeflateV.raw_args.src;
+    size_t src_len = DeflateV.raw_args.src_len;
+    uint8_t *dst = DeflateV.raw_args.dst;
+    size_t dst_cap = DeflateV.raw_args.dst_cap;
+    size_t *out_len = DeflateV.raw_args.out_len;
+    void *scratch = DeflateV.raw_args.scratch;
+    size_t scratch_len = DeflateV.raw_args.scratch_len;
 
     if (scratch_len < DEFLATE_SCRATCH_SIZE)
     {
-        Deflate.value = DEFLATE_ERR_SCRATCH;
+        DeflateV.value = DEFLATE_ERR_SCRATCH;
         return;
     }
 
     Tables *t = (Tables *)scratch;
-    Rfc1951.build_fixed_args.ll_code = t->ll_code;
-    Rfc1951.build_fixed_args.ll_len = t->ll_len;
-    Rfc1951.build_fixed_args.d_code = t->d_code;
-    Rfc1951.build_fixed_args.d_len = t->d_len;
+    Rfc1951V.build_fixed_args.ll_code = t->ll_code;
+    Rfc1951V.build_fixed_args.ll_len = t->ll_len;
+    Rfc1951V.build_fixed_args.d_code = t->d_code;
+    Rfc1951V.build_fixed_args.d_len = t->d_len;
     Rfc1951.build_fixed(work);
     for (int i = 0; i < PROTOCORE_HASH_SIZE; i++)
     {
@@ -149,22 +149,22 @@ static void deflate_raw(uint8_t *restrict work)
         size_t advance;
         if (best_len >= PROTOCORE_MIN_MATCH)
         {
-            Rfc1951.emit_match_args.w = &w;
-            Rfc1951.emit_match_args.ll_code = t->ll_code;
-            Rfc1951.emit_match_args.ll_len = t->ll_len;
-            Rfc1951.emit_match_args.d_code = t->d_code;
-            Rfc1951.emit_match_args.d_len = t->d_len;
-            Rfc1951.emit_match_args.len = best_len;
-            Rfc1951.emit_match_args.dist = best_dist;
+            Rfc1951V.emit_match_args.w = &w;
+            Rfc1951V.emit_match_args.ll_code = t->ll_code;
+            Rfc1951V.emit_match_args.ll_len = t->ll_len;
+            Rfc1951V.emit_match_args.d_code = t->d_code;
+            Rfc1951V.emit_match_args.d_len = t->d_len;
+            Rfc1951V.emit_match_args.len = best_len;
+            Rfc1951V.emit_match_args.dist = best_dist;
             Rfc1951.emit_match(work);
             advance = (size_t)best_len;
         }
         else
         {
-            Rfc1951.emit_literal_args.w = &w;
-            Rfc1951.emit_literal_args.ll_code = t->ll_code;
-            Rfc1951.emit_literal_args.ll_len = t->ll_len;
-            Rfc1951.emit_literal_args.b = src[i];
+            Rfc1951V.emit_literal_args.w = &w;
+            Rfc1951V.emit_literal_args.ll_code = t->ll_code;
+            Rfc1951V.emit_literal_args.ll_len = t->ll_len;
+            Rfc1951V.emit_literal_args.b = src[i];
             Rfc1951.emit_literal(work);
             advance = 1;
         }
@@ -206,16 +206,15 @@ static void deflate_raw(uint8_t *restrict work)
 
     if (w.overflow)
     {
-        Deflate.value = DEFLATE_ERR_OVERFLOW;
+        DeflateV.value = DEFLATE_ERR_OVERFLOW;
         return;
     }
     *out_len = w.cnt - 4; // strip the marker for the on-wire payload
-    Deflate.value = DEFLATE_OK;
+    DeflateV.value = DEFLATE_OK;
 }
 
-DeflateNs Deflate = {
-    .raw = deflate_raw,
-};
+/** @brief The operands and the outcome. */
+DeflateVars DeflateV;
 
 PROTOCORE_END_DECLS
 

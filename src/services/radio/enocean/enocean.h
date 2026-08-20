@@ -69,7 +69,6 @@ typedef struct
     uint8_t opt_len;          ///< optional-data length
     protocore_esp3_type type; ///< packet type (protocore_esp3_type)
 } protocore_esp3_packet;
-
 /** @brief A decoded ERP1 radio telegram (the payload aliases the caller's buffer). */
 typedef struct
 {
@@ -79,14 +78,12 @@ typedef struct
     uint32_t sender_id;     ///< 4-octet sender id (big-endian)
     uint8_t status;         ///< status octet (repeater count + telegram-type bits)
 } protocore_erp1;
-
 /** @brief What esp3_crc8 takes: buf, len. */
 typedef struct
 {
     const uint8_t *buf;
     uint16_t len;
 } EnoceanEsp3Crc8Args;
-
 /** @brief What esp3_parse takes: raw, len, out. */
 typedef struct
 {
@@ -94,7 +91,6 @@ typedef struct
     uint16_t len;
     protocore_esp3_packet *out;
 } EnoceanEsp3ParseArgs;
-
 /** @brief What esp3_build takes: type, data, data_len, opt, opt_len, ... */
 typedef struct
 {
@@ -106,7 +102,6 @@ typedef struct
     uint8_t *out;
     uint16_t cap;
 } EnoceanEsp3BuildArgs;
-
 /** @brief What erp1_parse takes: data, len, out. */
 typedef struct
 {
@@ -114,7 +109,6 @@ typedef struct
     uint16_t len;
     protocore_erp1 *out;
 } EnoceanErp1ParseArgs;
-
 /** @brief What erp1_build takes: out, cap, rorg, payload, ... */
 typedef struct
 {
@@ -126,7 +120,6 @@ typedef struct
     uint32_t sender_id;
     uint8_t status;
 } EnoceanErp1BuildArgs;
-
 /**
  * @brief EnOcean ESP3 serial codec (PROTOCORE_ENABLE_ENOCEAN) - energy-harvesting 868 MHz.
  *
@@ -164,12 +157,18 @@ typedef struct
     EnoceanEsp3BuildArgs esp3_build_args;
     EnoceanErp1ParseArgs erp1_parse_args;
     EnoceanErp1BuildArgs erp1_build_args;
-
     proto_bool ok;
     uint8_t value;
     int n;
     uint16_t u16;
+} EnoceanVars;
 
+/** @brief The operands and the outcome. */
+extern EnoceanVars EnoceanV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const esp3_crc8)(uint8_t *restrict work);
     void (*const esp3_parse)(uint8_t *restrict work);
     void (*const esp3_build)(uint8_t *restrict work);
@@ -177,8 +176,25 @@ typedef struct
     void (*const erp1_build)(uint8_t *restrict work);
 } EnoceanNs;
 
-/** @brief The one symbol this module exports. */
-extern EnoceanNs Enocean;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in EnoceanV or a region of the borrow at a fixed offset.
+void protocore_enocean_esp3_crc8(uint8_t *restrict work);
+void protocore_enocean_esp3_parse(uint8_t *restrict work);
+void protocore_enocean_esp3_build(uint8_t *restrict work);
+void protocore_enocean_erp1_parse(uint8_t *restrict work);
+void protocore_enocean_erp1_build(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Enocean.esp3_crc8(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const EnoceanNs Enocean __attribute__((unused)) = {
+    .esp3_crc8 = protocore_enocean_esp3_crc8,
+    .esp3_parse = protocore_enocean_esp3_parse,
+    .esp3_build = protocore_enocean_esp3_build,
+    .erp1_parse = protocore_enocean_erp1_parse,
+    .erp1_build = protocore_enocean_erp1_build,
+};
 
 PROTOCORE_END_DECLS
 

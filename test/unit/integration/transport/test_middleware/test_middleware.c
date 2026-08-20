@@ -31,7 +31,7 @@ static void arm_slot(uint8_t slot)
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 }
@@ -40,7 +40,7 @@ static const char *do_req(uint8_t slot, const char *req_str)
 {
     arm_slot(slot);
     push_str(slot, req_str);
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
     return tcp_captured();
@@ -100,7 +100,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConn.slot = i;
+        HttpConnV.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -239,4 +239,3 @@ void test_rate_limit_zero_window_disables()
         TEST_ASSERT_NOT_NULL(strstr(r, "200 OK"));
     }
 }
-

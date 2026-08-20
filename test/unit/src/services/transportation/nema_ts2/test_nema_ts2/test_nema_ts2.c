@@ -36,11 +36,11 @@ void tearDown(void)
 
 static uint32_t x25_of(const uint8_t *d, size_t n)
 {
-    Crc.args.params = &PROTOCORE_CRC16_X25;
-    Crc.args.data = d;
-    Crc.args.len = n;
+    CrcV.args.params = &PROTOCORE_CRC16_X25;
+    CrcV.args.data = d;
+    CrcV.args.len = n;
     Crc.compute(crc_work);
-    return Crc.value;
+    return CrcV.value;
 }
 
 // The nine ASCII octets the CRC catalogue publishes a check value for, laid out as a TS 2 frame:

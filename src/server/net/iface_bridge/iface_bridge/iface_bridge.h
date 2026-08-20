@@ -28,7 +28,7 @@
 #ifndef PROTOCORE_IFACE_BRIDGE_H
 #define PROTOCORE_IFACE_BRIDGE_H
 
-#include "shared/ip/ip.h"     // the complete type a public struct below holds by value
+#include "shared/ip/ip.h" // the complete type a public struct below holds by value
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
@@ -80,13 +80,11 @@ typedef struct
     BridgeTarget target;
     proto_bool used;
 } BridgeRule;
-
 /** @brief What add takes: rule. */
 typedef struct
 {
     const BridgeRule *rule;
 } IfaceBridgeAddArgs;
-
 /** @brief What map takes: ip, port, proto, target. */
 typedef struct
 {
@@ -95,14 +93,12 @@ typedef struct
     BridgeProto proto;
     const BridgeTarget *target;
 } IfaceBridgeMapArgs;
-
 /** @brief What find takes: port, proto. */
 typedef struct
 {
     uint16_t port;
     BridgeProto proto;
 } IfaceBridgeFindArgs;
-
 /** @brief What txn_parse takes: buf, len, write_len, read_len, ... */
 typedef struct
 {
@@ -112,7 +108,6 @@ typedef struct
     uint16_t *read_len;
     const uint8_t **write_data;
 } IfaceBridgeTxnParseArgs;
-
 /** @brief What txn_build takes: out, cap, write_data, write_len, ... */
 typedef struct
 {
@@ -122,7 +117,6 @@ typedef struct
     uint16_t write_len;
     uint16_t read_len;
 } IfaceBridgeTxnBuildArgs;
-
 /**
  * @brief User-defined address:port -> hardware-bus translation (PROTOCORE_ENABLE_IFACE_BRIDGE). A configurable "device
  * ...
@@ -160,12 +154,18 @@ typedef struct
     IfaceBridgeFindArgs find_args;
     IfaceBridgeTxnParseArgs txn_parse_args;
     IfaceBridgeTxnBuildArgs txn_build_args;
-
     proto_bool ok;
     const BridgeRule *rule;
     uint8_t u8;
     size_t n;
+} IfaceBridgeVars;
 
+/** @brief The operands and the outcome. */
+extern IfaceBridgeVars IfaceBridgeV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const clear)(uint8_t *restrict work);
     void (*const add)(uint8_t *restrict work);
     void (*const map)(uint8_t *restrict work);
@@ -175,8 +175,29 @@ typedef struct
     void (*const txn_build)(uint8_t *restrict work);
 } IfaceBridgeNs;
 
-/** @brief The one symbol this module exports. */
-extern IfaceBridgeNs IfaceBridge;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in IfaceBridgeV or a region of the borrow at a fixed offset.
+void protocore_iface_bridge_clear(uint8_t *restrict work);
+void protocore_iface_bridge_add(uint8_t *restrict work);
+void protocore_iface_bridge_map(uint8_t *restrict work);
+void protocore_iface_bridge_find(uint8_t *restrict work);
+void protocore_iface_bridge_count(uint8_t *restrict work);
+void protocore_iface_bridge_txn_parse(uint8_t *restrict work);
+void protocore_iface_bridge_txn_build(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `IfaceBridge.clear(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const IfaceBridgeNs IfaceBridge __attribute__((unused)) = {
+    .clear = protocore_iface_bridge_clear,
+    .add = protocore_iface_bridge_add,
+    .map = protocore_iface_bridge_map,
+    .find = protocore_iface_bridge_find,
+    .count = protocore_iface_bridge_count,
+    .txn_parse = protocore_iface_bridge_txn_parse,
+    .txn_build = protocore_iface_bridge_txn_build,
+};
 
 /**
  * @brief The PROTOCORE_IFACE_BRIDGE_BORROW bytes this module's state lives in.

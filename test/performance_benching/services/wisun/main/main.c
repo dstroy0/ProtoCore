@@ -31,20 +31,20 @@ void dbench_run(void)
         DBENCH_OP("protocore_wisun_build_coap (CON PUT)", 200000,
                   sink += protocore_wisun_build_coap(WISUN_COAP_CON, WISUN_COAP_PUT, 0x1234, NULL, 0, "led", body,
                                                      sizeof(body), out, sizeof(out)));
-        Wisun.init_args.fan = &fan;
-        Wisun.init_args.border_router = &br;
-        Wisun.init_args.storage = storage;
-        Wisun.init_args.cap = 8;
+        WisunV.init_args.fan = &fan;
+        WisunV.init_args.border_router = &br;
+        WisunV.init_args.storage = storage;
+        WisunV.init_args.cap = 8;
         Wisun.init(wisun_work);
         uint8_t na[16] = {0xfd, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2};
         DBENCH_OP("protocore_wisun_node_register", 100000, {
             na[15] = (uint8_t)(sink & 0x7F) + 2;
             protocore_ip addr = protocore_ip_from_v6_bytes(na);
-            Wisun.node_register_args.fan = &fan;
-            Wisun.node_register_args.addr = &addr;
-            Wisun.node_register_args.now = 0;
+            WisunV.node_register_args.fan = &fan;
+            WisunV.node_register_args.addr = &addr;
+            WisunV.node_register_args.now = 0;
             Wisun.node_register(wisun_work);
-            sink += (size_t)(Wisun.i32 >= 0 ? 1 : 0);
+            sink += (size_t)(WisunV.i32 >= 0 ? 1 : 0);
         });
         protocore_ip find = protocore_ip_from_v6_bytes(na);
         size_t idx;

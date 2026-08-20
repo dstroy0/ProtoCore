@@ -71,25 +71,21 @@ typedef struct
     uint8_t depth;                         // open containers
     proto_bool need_comma[JSON_MAX_DEPTH]; // per-level: has a prior item been emitted?
 } protocore_json_writer;
-
 /** @brief False after any overflow / structural error. */
 PROTOCORE_INLINE proto_bool protocore_json_ok(const protocore_json_writer *w)
 {
     return w->ok;
 }
-
 /** @brief Bytes written so far (excludes the NUL). */
 PROTOCORE_INLINE size_t protocore_json_length(const protocore_json_writer *w)
 {
     return w->len;
 }
-
 /** @brief NUL-terminated output (truncated if !protocore_json_ok()). */
 PROTOCORE_INLINE const char *protocore_json_c_str(const protocore_json_writer *w)
 {
     return w->buf;
 }
-
 /** @brief What init takes: w, buf, cap. */
 typedef struct
 {
@@ -97,79 +93,67 @@ typedef struct
     char *buf;
     size_t cap;
 } JsonInitArgs;
-
 /** @brief What begin_object takes: w. */
 typedef struct
 {
     protocore_json_writer *w;
 } JsonBeginObjectArgs;
-
 /** @brief What end_object takes: w. */
 typedef struct
 {
     protocore_json_writer *w;
 } JsonEndObjectArgs;
-
 /** @brief What begin_array takes: w. */
 typedef struct
 {
     protocore_json_writer *w;
 } JsonBeginArrayArgs;
-
 /** @brief What end_array takes: w. */
 typedef struct
 {
     protocore_json_writer *w;
 } JsonEndArrayArgs;
-
 /** @brief What key takes: w, k. */
 typedef struct
 {
     protocore_json_writer *w;
     const char *k;
 } JsonKeyArgs;
-
 /** @brief What put_str takes: w, v. */
 typedef struct
 {
     protocore_json_writer *w;
     const char *v;
 } JsonPutStrArgs;
-
 /** @brief What put_int takes: w, v. */
 typedef struct
 {
     protocore_json_writer *w;
     long v;
 } JsonPutIntArgs;
-
 /** @brief What put_uint takes: w, v. */
 typedef struct
 {
     protocore_json_writer *w;
     unsigned long v;
 } JsonPutUintArgs;
-
 /** @brief What put_bool takes: w, v. */
 typedef struct
 {
     protocore_json_writer *w;
     proto_bool v;
 } JsonPutBoolArgs;
-
 /** @brief What put_null takes: w. */
 typedef struct
 {
     protocore_json_writer *w;
 } JsonPutNullArgs;
-
 /** @brief What put_raw takes: w, literal. */
 typedef struct
 {
     protocore_json_writer *w;
     const char *literal;
 } JsonPutRawArgs;
-
 /** @brief What kv_str takes: w, k, v. */
 typedef struct
 {
@@ -177,7 +161,6 @@ typedef struct
     const char *k;
     const char *v;
 } JsonKvStrArgs;
-
 /** @brief What kv_int takes: w, k, v. */
 typedef struct
 {
@@ -185,7 +168,6 @@ typedef struct
     const char *k;
     long v;
 } JsonKvIntArgs;
-
 /** @brief What kv_uint takes: w, k, v. */
 typedef struct
 {
@@ -193,7 +175,6 @@ typedef struct
     const char *k;
     unsigned long v;
 } JsonKvUintArgs;
-
 /** @brief What kv_bool takes: w, k, v. */
 typedef struct
 {
@@ -201,14 +182,12 @@ typedef struct
     const char *k;
     proto_bool v;
 } JsonKvBoolArgs;
-
 /** @brief What kv_null takes: w, k. */
 typedef struct
 {
     protocore_json_writer *w;
     const char *k;
 } JsonKvNullArgs;
-
 /** @brief What kv_raw takes: w, k, literal. */
 typedef struct
 {
@@ -216,7 +195,6 @@ typedef struct
     const char *k;
     const char *literal;
 } JsonKvRawArgs;
-
 /** @brief What get_str takes: json, key, out, out_cap. */
 typedef struct
 {
@@ -225,7 +203,6 @@ typedef struct
     char *out;
     size_t out_cap;
 } JsonGetStrArgs;
-
 /** @brief What get_int takes: json, key, out. */
 typedef struct
 {
@@ -233,7 +210,6 @@ typedef struct
     const char *key;
     long *out;
 } JsonGetIntArgs;
-
 /** @brief What get_bool takes: json, key, out. */
 typedef struct
 {
@@ -241,7 +217,6 @@ typedef struct
     const char *key;
     proto_bool *out;
 } JsonGetBoolArgs;
-
 /**
  * @brief Layer 6 (Presentation) - zero-heap JSON: a bounded writer and top-level reader.
  *
@@ -324,9 +299,15 @@ typedef struct
     JsonGetStrArgs get_str_args;
     JsonGetIntArgs get_int_args;
     JsonGetBoolArgs get_bool_args;
-
     proto_bool ok;
+} JsonVars;
 
+/** @brief The operands and the outcome. */
+extern JsonVars JsonV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const begin_object)(uint8_t *restrict work);
     void (*const end_object)(uint8_t *restrict work);
@@ -350,8 +331,57 @@ typedef struct
     void (*const get_bool)(uint8_t *restrict work);
 } JsonNs;
 
-/** @brief The one symbol this module exports. */
-extern JsonNs Json;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in JsonV or a region of the borrow at a fixed offset.
+void protocore_json_init(uint8_t *restrict work);
+void protocore_json_begin_object(uint8_t *restrict work);
+void protocore_json_end_object(uint8_t *restrict work);
+void protocore_json_begin_array(uint8_t *restrict work);
+void protocore_json_end_array(uint8_t *restrict work);
+void protocore_json_key(uint8_t *restrict work);
+void protocore_json_put_str(uint8_t *restrict work);
+void protocore_json_put_int(uint8_t *restrict work);
+void protocore_json_put_uint(uint8_t *restrict work);
+void protocore_json_put_bool(uint8_t *restrict work);
+void protocore_json_put_null(uint8_t *restrict work);
+void protocore_json_put_raw(uint8_t *restrict work);
+void protocore_json_kv_str(uint8_t *restrict work);
+void protocore_json_kv_int(uint8_t *restrict work);
+void protocore_json_kv_uint(uint8_t *restrict work);
+void protocore_json_kv_bool(uint8_t *restrict work);
+void protocore_json_kv_null(uint8_t *restrict work);
+void protocore_json_kv_raw(uint8_t *restrict work);
+void protocore_json_get_str(uint8_t *restrict work);
+void protocore_json_get_int(uint8_t *restrict work);
+void protocore_json_get_bool(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Json.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const JsonNs Json __attribute__((unused)) = {
+    .init = protocore_json_init,
+    .begin_object = protocore_json_begin_object,
+    .end_object = protocore_json_end_object,
+    .begin_array = protocore_json_begin_array,
+    .end_array = protocore_json_end_array,
+    .key = protocore_json_key,
+    .put_str = protocore_json_put_str,
+    .put_int = protocore_json_put_int,
+    .put_uint = protocore_json_put_uint,
+    .put_bool = protocore_json_put_bool,
+    .put_null = protocore_json_put_null,
+    .put_raw = protocore_json_put_raw,
+    .kv_str = protocore_json_kv_str,
+    .kv_int = protocore_json_kv_int,
+    .kv_uint = protocore_json_kv_uint,
+    .kv_bool = protocore_json_kv_bool,
+    .kv_null = protocore_json_kv_null,
+    .kv_raw = protocore_json_kv_raw,
+    .get_str = protocore_json_get_str,
+    .get_int = protocore_json_get_int,
+    .get_bool = protocore_json_get_bool,
+};
 
 PROTOCORE_END_DECLS
 

@@ -61,19 +61,16 @@ typedef struct
 {
     const char *path;
 } WebTerminalBeginArgs;
-
 /** @brief What on_command takes. */
 typedef struct
 {
     TermCommandCb cb;
 } WebTerminalOnCommandArgs;
-
 /** @brief What print takes. */
 typedef struct
 {
     const char *s;
 } WebTerminalPrintArgs;
-
 /** @brief What println takes. */
 typedef struct
 {
@@ -85,10 +82,16 @@ typedef struct
     WebTerminalOnCommandArgs on_command_args;
     WebTerminalPrintArgs print_args;
     WebTerminalPrintlnArgs println_args;
-
     proto_bool ok;
     uint16_t value;
+} WebTerminalVars;
 
+/** @brief The operands and the outcome. */
+extern WebTerminalVars WebTerminalV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const on_command)(uint8_t *restrict work);
     void (*const print)(uint8_t *restrict work);
@@ -96,8 +99,25 @@ typedef struct
     void (*const client_count)(uint8_t *restrict work);
 } WebTerminalNs;
 
-/** @brief The one symbol this module exports. */
-extern WebTerminalNs WebTerminal;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WebTerminalV or a region of the borrow at a fixed offset.
+void protocore_web_terminal_begin(uint8_t *restrict work);
+void protocore_web_terminal_on_command(uint8_t *restrict work);
+void protocore_web_terminal_print(uint8_t *restrict work);
+void protocore_web_terminal_println(uint8_t *restrict work);
+void protocore_web_terminal_client_count(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `WebTerminal.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WebTerminalNs WebTerminal __attribute__((unused)) = {
+    .begin = protocore_web_terminal_begin,
+    .on_command = protocore_web_terminal_on_command,
+    .print = protocore_web_terminal_print,
+    .println = protocore_web_terminal_println,
+    .client_count = protocore_web_terminal_client_count,
+};
 
 /**
  * @brief The PROTOCORE_WEB_TERMINAL_BORROW bytes this module's state lives in.

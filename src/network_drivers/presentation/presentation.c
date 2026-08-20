@@ -85,13 +85,13 @@ uint8_t *protocore_http_conn_span(void)
 static void reset(uint8_t *restrict work)
 {
     (void)work;
-    if (HttpConn.slot >= MAX_CONNS)
+    if (HttpConnV.slot >= MAX_CONNS)
     {
         return;
     }
-    http_pool[HttpConn.slot].slot_id = HttpConn.slot; // ensure slot_id is correct before reset reads it
-    HttpParser.reset_args.req = &http_pool[HttpConn.slot];
-    HttpParser.reset(protocore_http_parser_span());
+    http_pool[HttpConnV.slot].slot_id = HttpConnV.slot; // ensure slot_id is correct before reset reads it
+    HttpParserV.reset_args.req = &http_pool[HttpConnV.slot];
+    HttpParserV.reset(protocore_http_parser_span());
 }
 
 // Release any WebSocket / SSE binding still attached to a slot. WS and SSE upgrades leave the slot
@@ -106,24 +106,24 @@ static inline void http_release_upgrade_bindings(uint8_t slot_id)
 #if PROTOCORE_ENABLE_WEBSOCKET
     // The channel's close is the session layer's: it informs the application before the number is
     // released (RFC 9293 sec 3.6 MUST-12), which a bare release does not.
-    Ws.slot = slot_id;
+    WsV.slot = slot_id;
     SessionWs.close(NULL);
 #endif
 #if PROTOCORE_ENABLE_SSE
-    Sse.slot = slot_id;
+    SseV.slot = slot_id;
     SessionSse.close(NULL);
 #endif
 }
 
 static void conn_open(uint8_t *restrict work)
 {
-    if (HttpConn.slot >= MAX_CONNS)
+    if (HttpConnV.slot >= MAX_CONNS)
     {
         return;
     }
-    http_release_upgrade_bindings(HttpConn.slot); // a reused slot must not inherit a prior WS/SSE binding
+    http_release_upgrade_bindings(HttpConnV.slot); // a reused slot must not inherit a prior WS/SSE binding
 #if PROTOCORE_ENABLE_KEEPALIVE
-    http_req_count[HttpConn.slot] = 0; // fresh connection: clear the keep-alive request tally
+    http_req_count[HttpConnV.slot] = 0; // fresh connection: clear the keep-alive request tally
 #endif
     reset(work);
 }
@@ -133,7 +133,7 @@ static void conn_open(uint8_t *restrict work)
 // the worker's ack_consumed.
 static void parse(uint8_t *restrict work)
 {
-    if (HttpConn.slot >= MAX_CONNS)
+    if (HttpConnV.slot >= MAX_CONNS)
     {
         return;
     }
@@ -144,24 +144,24 @@ static void parse(uint8_t *restrict work)
     // would consume - and corrupt - the first WS frame. This guard makes "never HTTP-parse a WS
     // slot" hold for every caller (the event-queue dispatch raced the WS pump and ate the first
     // frame's header byte, dropping the first connection after a reboot).
-    Ws.slot = HttpConn.slot;
+    WsV.slot = HttpConnV.slot;
     Ws.find(protocore_ws_span());
-    if (Ws.found)
+    if (WsV.found)
     {
         return;
     }
 #endif
 
-    HttpReq *req = &http_pool[HttpConn.slot];
+    HttpReq *req = &http_pool[HttpConnV.slot];
 
     // Peeked, not read: a pipelined client sends the next request in the same segment as this one
     // (RFC 9112 sec 9.3), and the parser stops at the end of the first. Reading drained the ring, so
     // whatever followed the request was taken out of it and never fed to anything. Only the bytes
     // this call actually consumed are dropped from the tail, and the rest stay for the next one -
     // `rx` is one shared staging buffer, so the remainder cannot be held here.
-    ConnPool.slot = HttpConn.slot;
+    ConnPoolV.slot = HttpConnV.slot;
     ConnPool.available(protocore_conn_pool_span());
-    size_t have = ConnPool.n;
+    size_t have = ConnPoolV.n;
     if (have > sizeof(HTTP_CONN_CTX(work)->rx))
     {
         have = sizeof(HTTP_CONN_CTX(work)->rx);
@@ -170,9 +170,9 @@ static void parse(uint8_t *restrict work)
     {
         return;
     }
-    ConnPool.io.buf = HTTP_CONN_CTX(work)->rx;
-    ConnPool.io.off = 0;
-    ConnPool.io.count = have;
+    ConnPoolV.io.buf = HTTP_CONN_CTX(work)->rx;
+    ConnPoolV.io.off = 0;
+    ConnPoolV.io.count = have;
     ConnPool.peek(protocore_conn_pool_span());
 
     size_t fed = 0;
@@ -186,17 +186,17 @@ static void parse(uint8_t *restrict work)
         case PARSE_URI_TOO_LONG:
             break; // terminal state - feed nothing further, and leave the rest in the ring
         default:
-            HttpParser.feed_args.req = req;
-            HttpParser.feed_args.byte = HTTP_CONN_CTX(work)->rx[fed];
-            HttpParser.feed(protocore_http_parser_span());
+            HttpParserV.feed_args.req = req;
+            HttpParserV.feed_args.byte = HTTP_CONN_CTX(work)->rx[fed];
+            HttpParserV.feed(protocore_http_parser_span());
             fed++;
             continue;
         }
         break;
     }
 
-    ConnPool.slot = HttpConn.slot;
-    ConnPool.io.count = fed;
+    ConnPoolV.slot = HttpConnV.slot;
+    ConnPoolV.io.count = fed;
     ConnPool.consume(protocore_conn_pool_span());
 }
 
@@ -217,9 +217,9 @@ static void parse(uint8_t *restrict work)
 // slot, then RST - so this never reaches into the raw control block.
 static void tls_abort(uint8_t slot)
 {
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.abort_slot(protocore_conn_pool_span());
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     reset(protocore_http_conn_span());
 }
 
@@ -253,13 +253,13 @@ static void tls_data(uint8_t slot)
         {
             http_h2[slot] = 1;
             http_resp_sink[slot] = protocore_h2_server_respond; // route responses through the h2 framer
-            H2Server.slot = slot;
-            H2Server.open(protocore_h2_server_span());
+            H2ServerV.slot = slot;
+            H2ServerV.open(protocore_h2_server_span());
         }
     }
     if (http_h2[slot])
     {
-        H2Server.slot = slot;
+        H2ServerV.slot = slot;
         H2Server.data(protocore_h2_server_span());
         return;
     }
@@ -269,9 +269,9 @@ static void tls_data(uint8_t slot)
     // A TLS slot upgraded to WebSocket is pumped from handle() (it decrypts
     // records and feeds the WS frame parser, dispatching each frame); leave the
     // ciphertext in the rx ring for it rather than feeding the HTTP parser here.
-    Ws.slot = slot;
+    WsV.slot = slot;
     Ws.find(protocore_ws_span());
-    if (Ws.found)
+    if (WsV.found)
     {
         return;
     }
@@ -289,9 +289,9 @@ static void tls_data(uint8_t slot)
             {
                 break; // terminal state - let handle() dispatch before reading more
             }
-            HttpParser.feed_args.req = req;
-            HttpParser.feed_args.byte = buf[i];
-            HttpParser.feed(protocore_http_parser_span());
+            HttpParserV.feed_args.req = req;
+            HttpParserV.feed_args.byte = buf[i];
+            HttpParserV.feed(protocore_http_parser_span());
         }
     }
     if (n < 0)
@@ -305,7 +305,7 @@ static void tls_data(uint8_t slot)
 // decrypted into the parser); accept maps directly.
 static void http_evt_accept(uint8_t slot)
 {
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     conn_open(protocore_http_conn_span()); // resets the parser + (keep-alive) the per-conn request tally
 #if PROTOCORE_ENABLE_HTTP2
     http_h2[slot] = 0; // a reused slot must re-run the post-handshake ALPN check
@@ -316,29 +316,29 @@ static void http_evt_accept(uint8_t slot)
 static void http_evt_data(uint8_t slot)
 {
 #if PROTOCORE_ENABLE_TLS
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.tls(protocore_conn_pool_span());
-    if (ConnPool.ok)
+    if (ConnPoolV.ok)
     {
         tls_data(slot);
         return;
     }
 #endif
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     parse(protocore_http_conn_span()); // a no-op once the slot has upgraded to WebSocket (see parse)
 }
 static void http_evt_close(uint8_t slot)
 {
 #if PROTOCORE_ENABLE_TLS
-    ConnPool.slot = slot;
+    ConnPoolV.slot = slot;
     ConnPool.tls(protocore_conn_pool_span());
-    if (ConnPool.ok)
+    if (ConnPoolV.ok)
     {
         protocore_tls_conn_free(slot); // also covers timeouts (EVT_ERROR)
     }
 #endif
     http_release_upgrade_bindings(slot); // FIN/RST/error on an SSE or WS slot must free its binding
-    HttpConn.slot = slot;
+    HttpConnV.slot = slot;
     reset(protocore_http_conn_span());
 }
 // HTTP's poll pump is instance-bound (it dispatches into a PC's routes), so the routing core
@@ -366,7 +366,7 @@ static const ProtoHandler s_http_handler = {
 static void proto_handler(uint8_t *restrict work)
 {
     (void)work;
-    HttpConn.handler = &s_http_handler;
+    HttpConnV.handler = &s_http_handler;
 }
 
 #if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
@@ -376,14 +376,14 @@ static void proto_handler(uint8_t *restrict work)
 static void has_token(uint8_t *restrict work)
 {
     (void)work;
-    HttpConn.ok = PROTO_FALSE;
-    if (HttpConn.hdr_args.hdr == NULL)
+    HttpConnV.ok = PROTO_FALSE;
+    if (HttpConnV.hdr_args.hdr == NULL)
     {
         return;
     }
-    const char *token = HttpConn.hdr_args.token;
+    const char *token = HttpConnV.hdr_args.token;
     size_t tlen = str.len(token, 32);
-    const char *p = HttpConn.hdr_args.hdr;
+    const char *p = HttpConnV.hdr_args.hdr;
     while (*p)
     {
         while (*p == ' ' || *p == ',' || *p == '\t')
@@ -405,7 +405,7 @@ static void has_token(uint8_t *restrict work)
         // stops a longer token matching on its prefix.
         if (len == tlen && str.diff(start, token, tlen, PROTO_TRUE) == tlen)
         {
-            HttpConn.ok = PROTO_TRUE;
+            HttpConnV.ok = PROTO_TRUE;
             return;
         }
         if (*p == ',')
@@ -419,56 +419,47 @@ static void has_token(uint8_t *restrict work)
 #if PROTOCORE_ENABLE_KEEPALIVE
 static void keepalive_eval(uint8_t *restrict work)
 {
-    HttpConn.ok = PROTO_FALSE;
-    HttpReq *req = &http_pool[HttpConn.slot];
+    HttpConnV.ok = PROTO_FALSE;
+    HttpReq *req = &http_pool[HttpConnV.slot];
     // Only a cleanly-parsed request has a known message boundary; errors close.
     if (req->parse_state != PARSE_COMPLETE)
     {
         return;
     }
 
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Connection";
-    HttpParser.get_header(protocore_http_parser_span());
-    HttpConn.hdr_args.hdr = HttpParser.text;
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Connection";
+    HttpParserV.get_header(protocore_http_parser_span());
+    HttpConnV.hdr_args.hdr = HttpParserV.text;
     proto_bool keep;
     if (req->version == HTTP_11)
     {
-        HttpConn.hdr_args.token = "close";
+        HttpConnV.hdr_args.token = "close";
         has_token(work);
-        keep = !HttpConn.ok; // 1.1 default: persistent
+        keep = !HttpConnV.ok; // 1.1 default: persistent
     }
     else
     {
-        HttpConn.hdr_args.token = "keep-alive";
+        HttpConnV.hdr_args.token = "keep-alive";
         has_token(work);
-        keep = HttpConn.ok; // 1.0/unknown default: close
+        keep = HttpConnV.ok; // 1.0/unknown default: close
     }
-    HttpConn.ok = PROTO_FALSE;
+    HttpConnV.ok = PROTO_FALSE;
     if (!keep)
     {
         return;
     }
 
     // Fairness bound: serve at most PROTOCORE_KEEPALIVE_MAX_REQUESTS, then close.
-    http_req_count[HttpConn.slot]++;
-    if (http_req_count[HttpConn.slot] >= PROTOCORE_KEEPALIVE_MAX_REQUESTS)
+    http_req_count[HttpConnV.slot]++;
+    if (http_req_count[HttpConnV.slot] >= PROTOCORE_KEEPALIVE_MAX_REQUESTS)
     {
         return;
     }
-    HttpConn.ok = PROTO_TRUE;
+    HttpConnV.ok = PROTO_TRUE;
 }
 #endif // PROTOCORE_ENABLE_KEEPALIVE
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-HttpConnNs HttpConn = {.reset = reset,
-                       .conn_open = conn_open,
-                       .parse = parse,
-#if PROTOCORE_ENABLE_KEEPALIVE
-                       .keepalive_eval = keepalive_eval,
-#endif
-#if PROTOCORE_ENABLE_KEEPALIVE || PROTOCORE_ENABLE_WEBSOCKET
-                       .has_token = has_token,
-#endif
-                       .proto_handler = proto_handler,
-                       .set_poll = set_poll};
+/** @brief The operands and the outcome. */
+HttpConnVars HttpConnV;

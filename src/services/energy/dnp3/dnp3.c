@@ -19,11 +19,11 @@ uint16_t protocore_dnp3_crc(const uint8_t *data, size_t len)
 {
     // The DNP3 link-layer block check: reflected poly 0xA6BC = reflect(0x3D65), init 0, final XOR 0xFFFF -
     // cataloged as CRC-16/DNP.
-    Crc.args.params = &PROTOCORE_CRC16_DNP;
-    Crc.args.data = data;
-    Crc.args.len = len;
+    CrcV.args.params = &PROTOCORE_CRC16_DNP;
+    CrcV.args.data = data;
+    CrcV.args.len = len;
     Crc.compute(crc_work);
-    return (uint16_t)Crc.value;
+    return (uint16_t)CrcV.value;
 }
 
 // Append a CRC over [data, data+n) low octet first.

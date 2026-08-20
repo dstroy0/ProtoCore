@@ -86,20 +86,20 @@ static proto_bool magic_bad(const uint8_t *buf, size_t len)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void edge_mesh_parse_response(uint8_t *restrict work);
+void protocore_edge_mesh_parse_response(uint8_t *restrict work);
 
-static void edge_mesh_build_request(uint8_t *restrict work)
+void protocore_edge_mesh_build_request(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *digest = EdgeMesh.build_request_args.digest;
-    const char *canon = EdgeMesh.build_request_args.canon;
-    const char *req_hdrs = EdgeMesh.build_request_args.req_hdrs;
-    uint8_t *out = EdgeMesh.build_request_args.out;
-    size_t cap = EdgeMesh.build_request_args.cap;
+    const uint8_t *digest = EdgeMeshV.build_request_args.digest;
+    const char *canon = EdgeMeshV.build_request_args.canon;
+    const char *req_hdrs = EdgeMeshV.build_request_args.req_hdrs;
+    uint8_t *out = EdgeMeshV.build_request_args.out;
+    size_t cap = EdgeMeshV.build_request_args.cap;
 
     if (!digest || !canon || !out)
     {
-        EdgeMesh.n = 0;
+        EdgeMeshV.n = 0;
         return;
     }
     const char *hdrs = req_hdrs ? req_hdrs : "";
@@ -111,13 +111,13 @@ static void edge_mesh_build_request(uint8_t *restrict work)
     // below honest if either cap is ever raised.
     if (kl > 0xFFFFu || hl > 0xFFFFu)
     {
-        EdgeMesh.n = 0;
+        EdgeMeshV.n = 0;
         return;
     }
     size_t need = 2 + 1 + 1 + 32 + 2 + kl + 2 + hl;
     if (need > cap)
     {
-        EdgeMesh.n = 0;
+        EdgeMeshV.n = 0;
         return;
     }
     size_t pos = 0;
@@ -135,77 +135,77 @@ static void edge_mesh_build_request(uint8_t *restrict work)
     pos += 2;
     mem.cpy(out + pos, hdrs, hl);
     pos += hl;
-    EdgeMesh.n = pos;
+    EdgeMeshV.n = pos;
 }
 
-static void edge_mesh_parse_request(uint8_t *restrict work)
+void protocore_edge_mesh_parse_request(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = EdgeMesh.parse_request_args.buf;
-    size_t len = EdgeMesh.parse_request_args.len;
-    uint8_t *digest_out = EdgeMesh.parse_request_args.digest_out;
-    char *canon_out = EdgeMesh.parse_request_args.canon_out;
-    size_t canon_cap = EdgeMesh.parse_request_args.canon_cap;
-    char *hdrs_out = EdgeMesh.parse_request_args.hdrs_out;
-    size_t hdrs_cap = EdgeMesh.parse_request_args.hdrs_cap;
+    const uint8_t *buf = EdgeMeshV.parse_request_args.buf;
+    size_t len = EdgeMeshV.parse_request_args.len;
+    uint8_t *digest_out = EdgeMeshV.parse_request_args.digest_out;
+    char *canon_out = EdgeMeshV.parse_request_args.canon_out;
+    size_t canon_cap = EdgeMeshV.parse_request_args.canon_cap;
+    char *hdrs_out = EdgeMeshV.parse_request_args.hdrs_out;
+    size_t hdrs_cap = EdgeMeshV.parse_request_args.hdrs_cap;
 
     if (magic_bad(buf, len))
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_MALFORMED;
         return;
     }
     if (len < 4)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_INCOMPLETE;
         return;
     }
     if (buf[3] != PROTOCORE_EDGE_MESH_OP_GET)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_MALFORMED;
         return;
     }
     size_t pos = 4;
     if (pos + 32 > len)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_INCOMPLETE;
         return;
     }
     size_t digest_off = pos;
     pos += 32;
     if (pos + 2 > len)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_INCOMPLETE;
         return;
     }
     uint16_t kl = get_u16(buf + pos);
     pos += 2;
     if (kl >= canon_cap)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_MALFORMED;
         return; // cannot fit the destination key buffer
     }
     if (pos + kl > len)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_INCOMPLETE;
         return;
     }
     size_t key_off = pos;
     pos += kl;
     if (pos + 2 > len)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_INCOMPLETE;
         return;
     }
     uint16_t hl = get_u16(buf + pos);
     pos += 2;
     if (hl >= hdrs_cap)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_MALFORMED;
         return;
     }
     if (pos + hl > len)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_INCOMPLETE;
         return;
     }
     size_t hdrs_off = pos;
@@ -223,21 +223,21 @@ static void edge_mesh_parse_request(uint8_t *restrict work)
         mem.cpy(hdrs_out, buf + hdrs_off, hl);
         hdrs_out[hl] = '\0';
     }
-    EdgeMesh.parse = EDGE_MESH_PARSE_HIT;
+    EdgeMeshV.parse = EDGE_MESH_PARSE_HIT;
     return; // a complete, valid request
 }
 
-static void edge_mesh_serialize_entry(uint8_t *restrict work)
+void protocore_edge_mesh_serialize_entry(uint8_t *restrict work)
 {
     (void)work;
-    const EdgeEntry *e = EdgeMesh.serialize_entry_args.e;
-    long current_age = EdgeMesh.serialize_entry_args.current_age;
-    uint8_t *out = EdgeMesh.serialize_entry_args.out;
-    size_t cap = EdgeMesh.serialize_entry_args.cap;
+    const EdgeEntry *e = EdgeMeshV.serialize_entry_args.e;
+    long current_age = EdgeMeshV.serialize_entry_args.current_age;
+    uint8_t *out = EdgeMeshV.serialize_entry_args.out;
+    size_t cap = EdgeMeshV.serialize_entry_args.cap;
 
     if (!e || !out || cap < PROTOCORE_EDGE_MESH_TRAILER)
     {
-        EdgeMesh.n = 0;
+        EdgeMeshV.n = 0;
         return;
     }
     if (current_age < 0)
@@ -249,31 +249,31 @@ static void edge_mesh_serialize_entry(uint8_t *restrict work)
     put_u32(out + 16, (uint32_t)(e->lifetime_s < 0 ? 0 : e->lifetime_s));
     put_u32(out + 20, (uint32_t)(e->age_hdr < 0 ? 0 : e->age_hdr));
     put_u32(out + 24, (uint32_t)current_age);
-    EdgeCacheSd.serialize_args.e = e;
-    EdgeCacheSd.serialize_args.out = out + PROTOCORE_EDGE_MESH_TRAILER;
-    EdgeCacheSd.serialize_args.cap = cap - PROTOCORE_EDGE_MESH_TRAILER;
+    EdgeCacheSdV.serialize_args.e = e;
+    EdgeCacheSdV.serialize_args.out = out + PROTOCORE_EDGE_MESH_TRAILER;
+    EdgeCacheSdV.serialize_args.cap = cap - PROTOCORE_EDGE_MESH_TRAILER;
     EdgeCacheSd.serialize(edge_cache_sd_work);
-    size_t n = EdgeCacheSd.n;
+    size_t n = EdgeCacheSdV.n;
     if (n == 0)
     {
-        EdgeMesh.n = 0;
+        EdgeMeshV.n = 0;
         return;
     }
-    EdgeMesh.n = PROTOCORE_EDGE_MESH_TRAILER + n;
+    EdgeMeshV.n = PROTOCORE_EDGE_MESH_TRAILER + n;
 }
 
-static void edge_mesh_deserialize_entry(uint8_t *restrict work)
+void protocore_edge_mesh_deserialize_entry(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *entry_buf = EdgeMesh.deserialize_entry_args.entry_buf;
-    const uint8_t *buf = EdgeMesh.deserialize_entry_args.buf;
-    size_t len = EdgeMesh.deserialize_entry_args.len;
-    EdgeEntry *e = EdgeMesh.deserialize_entry_args.e;
-    uint32_t now_ms = EdgeMesh.deserialize_entry_args.now_ms;
+    uint8_t *entry_buf = EdgeMeshV.deserialize_entry_args.entry_buf;
+    const uint8_t *buf = EdgeMeshV.deserialize_entry_args.buf;
+    size_t len = EdgeMeshV.deserialize_entry_args.len;
+    EdgeEntry *e = EdgeMeshV.deserialize_entry_args.e;
+    uint32_t now_ms = EdgeMeshV.deserialize_entry_args.now_ms;
 
     if (!buf || !e || len < PROTOCORE_EDGE_MESH_TRAILER)
     {
-        EdgeMesh.ok = PROTO_FALSE;
+        EdgeMeshV.ok = PROTO_FALSE;
         return;
     }
     int64_t date = get_i64(buf + 0);
@@ -281,14 +281,14 @@ static void edge_mesh_deserialize_entry(uint8_t *restrict work)
     uint32_t lifetime = get_u32(buf + 16);
     uint32_t age_hdr = get_u32(buf + 20);
     uint32_t current_age = get_u32(buf + 24);
-    EdgeCacheSd.deserialize_args.entry_buf = entry_buf;
-    EdgeCacheSd.deserialize_args.buf = buf + PROTOCORE_EDGE_MESH_TRAILER;
-    EdgeCacheSd.deserialize_args.len = len - PROTOCORE_EDGE_MESH_TRAILER;
-    EdgeCacheSd.deserialize_args.e = e;
+    EdgeCacheSdV.deserialize_args.entry_buf = entry_buf;
+    EdgeCacheSdV.deserialize_args.buf = buf + PROTOCORE_EDGE_MESH_TRAILER;
+    EdgeCacheSdV.deserialize_args.len = len - PROTOCORE_EDGE_MESH_TRAILER;
+    EdgeCacheSdV.deserialize_args.e = e;
     EdgeCacheSd.deserialize(edge_cache_sd_work);
-    if (!EdgeCacheSd.ok)
+    if (!EdgeCacheSdV.ok)
     {
-        EdgeMesh.ok = PROTO_FALSE;
+        EdgeMeshV.ok = PROTO_FALSE;
         return;
     }
     e->date_epoch = date;
@@ -298,21 +298,21 @@ static void edge_mesh_deserialize_entry(uint8_t *restrict work)
     e->initial_age = (long)current_age; // the sender's age at transfer -> receiver keeps propagating it
     e->insert_ms = now_ms;
     e->last_used_ms = now_ms;
-    EdgeMesh.ok = PROTO_TRUE;
+    EdgeMeshV.ok = PROTO_TRUE;
 }
 
-static void edge_mesh_build_response(uint8_t *restrict work)
+void protocore_edge_mesh_build_response(uint8_t *restrict work)
 {
     (void)work;
-    proto_bool hit = EdgeMesh.build_response_args.hit;
-    const uint8_t *entry = EdgeMesh.build_response_args.entry;
-    size_t entry_len = EdgeMesh.build_response_args.entry_len;
-    uint8_t *out = EdgeMesh.build_response_args.out;
-    size_t cap = EdgeMesh.build_response_args.cap;
+    proto_bool hit = EdgeMeshV.build_response_args.hit;
+    const uint8_t *entry = EdgeMeshV.build_response_args.entry;
+    size_t entry_len = EdgeMeshV.build_response_args.entry_len;
+    uint8_t *out = EdgeMeshV.build_response_args.out;
+    size_t cap = EdgeMeshV.build_response_args.cap;
 
     if (!out || cap < 4)
     {
-        EdgeMesh.n = 0;
+        EdgeMeshV.n = 0;
         return;
     }
     size_t pos = 0;
@@ -324,7 +324,7 @@ static void edge_mesh_build_response(uint8_t *restrict work)
     {
         if (!entry || entry_len == 0 || entry_len > 0xFFFFu || pos + 2 + entry_len > cap)
         {
-            EdgeMesh.n = 0;
+            EdgeMeshV.n = 0;
             return;
         }
         put_u16(out + pos, (uint16_t)entry_len);
@@ -332,52 +332,52 @@ static void edge_mesh_build_response(uint8_t *restrict work)
         mem.cpy(out + pos, entry, entry_len);
         pos += entry_len;
     }
-    EdgeMesh.n = pos;
+    EdgeMeshV.n = pos;
 }
 
-static void edge_mesh_parse_response(uint8_t *restrict work)
+void protocore_edge_mesh_parse_response(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = EdgeMesh.parse_response_args.buf;
-    size_t len = EdgeMesh.parse_response_args.len;
-    size_t *entry_off = EdgeMesh.parse_response_args.entry_off;
-    size_t *entry_len = EdgeMesh.parse_response_args.entry_len;
+    const uint8_t *buf = EdgeMeshV.parse_response_args.buf;
+    size_t len = EdgeMeshV.parse_response_args.len;
+    size_t *entry_off = EdgeMeshV.parse_response_args.entry_off;
+    size_t *entry_len = EdgeMeshV.parse_response_args.entry_len;
 
     if (magic_bad(buf, len))
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_MALFORMED;
         return;
     }
     if (len < 4)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_INCOMPLETE;
         return;
     }
     uint8_t status = buf[3];
     if (status == 0)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_MISS;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_MISS;
         return;
     }
     if (status != 1)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_MALFORMED;
         return;
     }
     if (len < 6)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_INCOMPLETE;
         return;
     }
     uint16_t el = get_u16(buf + 4);
     if (el == 0)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_MALFORMED;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_MALFORMED;
         return;
     }
     if (len < (size_t)6 + el)
     {
-        EdgeMesh.parse = EDGE_MESH_PARSE_INCOMPLETE;
+        EdgeMeshV.parse = EDGE_MESH_PARSE_INCOMPLETE;
         return;
     }
     if (entry_off)
@@ -388,23 +388,23 @@ static void edge_mesh_parse_response(uint8_t *restrict work)
     {
         *entry_len = el;
     }
-    EdgeMesh.parse = EDGE_MESH_PARSE_HIT;
+    EdgeMeshV.parse = EDGE_MESH_PARSE_HIT;
 }
 
 // --- async requester engine ----------------------------------------------------------------------
 
-static void edge_mesh_fetch_begin(uint8_t *restrict work)
+void protocore_edge_mesh_fetch_begin(uint8_t *restrict work)
 {
     (void)work;
-    EdgeMeshFetch *m = EdgeMesh.fetch_begin_args.m;
-    const EdgeFetchTransport *t = EdgeMesh.fetch_begin_args.t;
-    const char *host = EdgeMesh.fetch_begin_args.host;
-    uint16_t port = EdgeMesh.fetch_begin_args.port;
-    const uint8_t *request = EdgeMesh.fetch_begin_args.request;
-    size_t req_len = EdgeMesh.fetch_begin_args.req_len;
-    uint8_t *buf = EdgeMesh.fetch_begin_args.buf;
-    size_t cap = EdgeMesh.fetch_begin_args.cap;
-    uint32_t now_ms = EdgeMesh.fetch_begin_args.now_ms;
+    EdgeMeshFetch *m = EdgeMeshV.fetch_begin_args.m;
+    const EdgeFetchTransport *t = EdgeMeshV.fetch_begin_args.t;
+    const char *host = EdgeMeshV.fetch_begin_args.host;
+    uint16_t port = EdgeMeshV.fetch_begin_args.port;
+    const uint8_t *request = EdgeMeshV.fetch_begin_args.request;
+    size_t req_len = EdgeMeshV.fetch_begin_args.req_len;
+    uint8_t *buf = EdgeMeshV.fetch_begin_args.buf;
+    size_t cap = EdgeMeshV.fetch_begin_args.cap;
+    uint32_t now_ms = EdgeMeshV.fetch_begin_args.now_ms;
 
     m->st = EDGE_MESH_STATUS_PENDING;
     m->cid = -1;
@@ -435,28 +435,28 @@ static void edge_mesh_fetch_begin(uint8_t *restrict work)
     }
 }
 
-static void edge_mesh_fetch_pump(uint8_t *restrict work)
+void protocore_edge_mesh_fetch_pump(uint8_t *restrict work)
 {
     (void)work;
-    EdgeMeshFetch *m = EdgeMesh.fetch_pump_args.m;
-    const EdgeFetchTransport *t = EdgeMesh.fetch_pump_args.t;
-    uint32_t now_ms = EdgeMesh.fetch_pump_args.now_ms;
+    EdgeMeshFetch *m = EdgeMeshV.fetch_pump_args.m;
+    const EdgeFetchTransport *t = EdgeMeshV.fetch_pump_args.t;
+    uint32_t now_ms = EdgeMeshV.fetch_pump_args.now_ms;
 
     if (m->st != EDGE_MESH_STATUS_PENDING)
     {
-        EdgeMesh.status = m->st;
+        EdgeMeshV.status = m->st;
         return;
     }
     if (!t || m->cid < 0)
     {
         m->st = EDGE_MESH_STATUS_FAILED;
-        EdgeMesh.status = m->st;
+        EdgeMeshV.status = m->st;
         return;
     }
     if (now_ms - m->start_ms > PROTOCORE_MESH_QUERY_MS)
     {
         m->st = EDGE_MESH_STATUS_FAILED; // query deadline
-        EdgeMesh.status = m->st;
+        EdgeMeshV.status = m->st;
         return;
     }
 
@@ -467,12 +467,12 @@ static void edge_mesh_fetch_pump(uint8_t *restrict work)
 
     size_t eoff = 0;
     size_t elen = 0;
-    EdgeMesh.parse_response_args.buf = m->buf;
-    EdgeMesh.parse_response_args.len = m->got;
-    EdgeMesh.parse_response_args.entry_off = &eoff;
-    EdgeMesh.parse_response_args.entry_len = &elen;
-    edge_mesh_parse_response(work);
-    EdgeMeshParse p = EdgeMesh.parse;
+    EdgeMeshV.parse_response_args.buf = m->buf;
+    EdgeMeshV.parse_response_args.len = m->got;
+    EdgeMeshV.parse_response_args.entry_off = &eoff;
+    EdgeMeshV.parse_response_args.entry_len = &elen;
+    protocore_edge_mesh_parse_response(work);
+    EdgeMeshParse p = EdgeMeshV.parse;
     if (p == EDGE_MESH_PARSE_HIT)
     {
         m->entry_off = eoff;
@@ -491,14 +491,14 @@ static void edge_mesh_fetch_pump(uint8_t *restrict work)
     {
         m->st = EDGE_MESH_STATUS_FAILED; // buffer full still short, or peer closed before a complete frame
     }
-    EdgeMesh.status = m->st;
+    EdgeMeshV.status = m->st;
 }
 
-static void edge_mesh_fetch_end(uint8_t *restrict work)
+void protocore_edge_mesh_fetch_end(uint8_t *restrict work)
 {
     (void)work;
-    EdgeMeshFetch *m = EdgeMesh.fetch_end_args.m;
-    const EdgeFetchTransport *t = EdgeMesh.fetch_end_args.t;
+    EdgeMeshFetch *m = EdgeMeshV.fetch_end_args.m;
+    const EdgeFetchTransport *t = EdgeMeshV.fetch_end_args.t;
 
     if (m->cid >= 0 && t)
     {
@@ -507,15 +507,8 @@ static void edge_mesh_fetch_end(uint8_t *restrict work)
     m->cid = -1;
 }
 
-EdgeMeshNs EdgeMesh = {.build_request = edge_mesh_build_request,
-                       .parse_request = edge_mesh_parse_request,
-                       .serialize_entry = edge_mesh_serialize_entry,
-                       .deserialize_entry = edge_mesh_deserialize_entry,
-                       .build_response = edge_mesh_build_response,
-                       .parse_response = edge_mesh_parse_response,
-                       .fetch_begin = edge_mesh_fetch_begin,
-                       .fetch_pump = edge_mesh_fetch_pump,
-                       .fetch_end = edge_mesh_fetch_end};
+/** @brief The operands and the outcome. */
+EdgeMeshVars EdgeMeshV;
 
 PROTOCORE_END_DECLS
 

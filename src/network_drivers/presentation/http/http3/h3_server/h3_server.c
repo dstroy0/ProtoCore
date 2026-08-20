@@ -24,8 +24,8 @@ static uint8_t h3_server_work[16]; // the borrow an entry takes; H3Server never 
 static void rng(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = H3Server.rng_args.out;
-    const size_t len = H3Server.rng_args.len;
+    uint8_t *out = H3ServerV.rng_args.out;
+    const size_t len = H3ServerV.rng_args.len;
     size_t i = 0;
     while (i < len)
     {
@@ -52,17 +52,17 @@ static proto_bool protocore_h3_resp_sink(uint8_t slot, int code, const char *con
 static void request(uint8_t *restrict work)
 {
     (void)work;
-    const uint32_t conn_id = H3Server.stream.conn_id;
-    const uint64_t stream_id = H3Server.stream.stream_id;
-    const char *method = H3Server.req.method;
-    const char *path = H3Server.req.path;
-    const char *authority = H3Server.req.authority;
-    const uint8_t *body = H3Server.req.body;
-    const size_t body_len = H3Server.req.body_len;
+    const uint32_t conn_id = H3ServerV.stream.conn_id;
+    const uint64_t stream_id = H3ServerV.stream.stream_id;
+    const char *method = H3ServerV.req.method;
+    const char *path = H3ServerV.req.path;
+    const char *authority = H3ServerV.req.authority;
+    const uint8_t *body = H3ServerV.req.body;
+    const size_t body_len = H3ServerV.req.body_len;
     const uint8_t slot = PROTOCORE_H3_DISPATCH_SLOT;
     HttpReq *r = &http_pool[slot];
-    HttpParser.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParserV.reset_args.req = &http_pool[slot];
+    HttpParserV.reset(protocore_http_parser_span());
 
     // Map the semantic request fields into the shared HttpReq (as protocore_h2_server does per stream).
     size_t mn = str.len(method, sizeof(r->method));
@@ -129,29 +129,29 @@ static void request(uint8_t *restrict work)
     http_h3_conn_id[slot] = conn_id;
     http_h3_stream[slot] = stream_id;
     http_resp_sink[slot] = protocore_h3_resp_sink;
-    ConnPool.slot = slot;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = slot;
+    ConnPoolV.st = CONN_ACTIVE;
     ConnPool.set_state(protocore_conn_pool_span()); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
 
-    Http.slot = slot;
+    HttpV.slot = slot;
     Http.match_and_execute(
         protocore_http_span()); // -> handler -> send_text() -> protocore_resp_sink -> protocore_quic_server_respond()
 
     // Release the dispatch slot for the next request (a no-response handler simply leaves the stream open).
     http_h3[slot] = 0;
     http_resp_sink[slot] = NULL;
-    ConnPool.slot = slot;
-    ConnPool.st = CONN_FREE;
+    ConnPoolV.slot = slot;
+    ConnPoolV.st = CONN_FREE;
     ConnPool.set_state(protocore_conn_pool_span()); // reserved slot: no bitmask bit (slot >= MAX_CONNS)
-    HttpParser.reset_args.req = &http_pool[slot];
-    HttpParser.reset(protocore_http_parser_span());
+    HttpParserV.reset_args.req = &http_pool[slot];
+    HttpParserV.reset(protocore_http_parser_span());
 }
 
 // The QUIC server's seam dictates these two shapes, so they carry their arguments onto the handle.
 void protocore_h3_server_rng(uint8_t *out, size_t len)
 {
-    H3Server.rng_args.out = out;
-    H3Server.rng_args.len = len;
+    H3ServerV.rng_args.out = out;
+    H3ServerV.rng_args.len = len;
     rng(h3_server_work);
 }
 
@@ -159,17 +159,18 @@ void protocore_h3_server_request(void *app, uint32_t conn_id, uint64_t stream_id
                                  const char *authority, const uint8_t *body, size_t body_len)
 {
     (void)app; // the route table and the slot pools are global owners; nothing is carried here
-    H3Server.stream.conn_id = conn_id;
-    H3Server.stream.stream_id = stream_id;
-    H3Server.req.method = method;
-    H3Server.req.path = path;
-    H3Server.req.authority = authority;
-    H3Server.req.body = body;
-    H3Server.req.body_len = body_len;
+    H3ServerV.stream.conn_id = conn_id;
+    H3ServerV.stream.stream_id = stream_id;
+    H3ServerV.req.method = method;
+    H3ServerV.req.path = path;
+    H3ServerV.req.authority = authority;
+    H3ServerV.req.body = body;
+    H3ServerV.req.body_len = body_len;
     request(h3_server_work);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-H3ServerNs H3Server = {.request = request, .rng = rng};
+/** @brief The operands and the outcome. */
+H3ServerVars H3ServerV;
 
 #endif // PROTOCORE_ENABLE_HTTP3

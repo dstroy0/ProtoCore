@@ -18,8 +18,8 @@
 // then open the port to capture the repeating "DB ..." lines (each run repeats every ~5 s, so a
 // capture opened at any time still catches a full cycle).
 #include "device_bench.h"
-#include "services/opcua/opcua.h"
 #include "services/opcua/models/euromap77/euromap77.h"
+#include "services/opcua/opcua.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -68,7 +68,7 @@ void dbench_run(void)
     g_imm.active_job_values.job_status = EM_JOB_IN_PRODUCTION;
     // Install rather than bind: the resolvers answer the server's handler contract, so they are
     // reached the way the server reaches them.
-    Euromap77.install_args.imm = &g_imm;
+    Euromap77V.install_args.imm = &g_imm;
     Euromap77.install(protocore_euromap77_span());
     const OpcUaReadHandler em77_read = protocore_opcua_read_handler();
     const OpcUaBrowseHandler em77_browse = protocore_opcua_browse_handler();

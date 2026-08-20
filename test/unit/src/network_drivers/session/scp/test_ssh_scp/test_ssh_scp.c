@@ -25,7 +25,7 @@ static uint8_t suite_mnt_work[16]; // the borrow an entry takes; Mnt never reads
 void setUp(void)
 {
     Mnt.ram(suite_mnt_work);
-    Mnt.args.backend = Mnt.backend;
+    MntV.args.backend = MntV.backend;
     Mnt.mount(suite_mnt_work);
     Mnt.ram_format(suite_mnt_work);
 }
@@ -71,9 +71,9 @@ void test_begin_binds_its_own_mount(void)
     SshScp.begin(work);
     TEST_ASSERT_TRUE(SSH_SCP_CTX(work)->root >= 0);
 
-    Fs.mount = "mnt/scp";
+    FsV.mount = "mnt/scp";
     Fs.begin(protocore_filesystem_span());
-    TEST_ASSERT_EQUAL_INT(Fs.i32, SSH_SCP_CTX(work)->root);
+    TEST_ASSERT_EQUAL_INT(FsV.i32, SSH_SCP_CTX(work)->root);
 }
 
 // A handle table starts at -1, not 0: closing handle 0 would take a file another server had open.
@@ -92,14 +92,14 @@ void test_begin_registers_the_channel_callbacks_once(void)
 {
     uint8_t *work = protocore_ssh_scp_span();
     SshScp.begin(work);
-    TEST_ASSERT_NOT_NULL(SshConnection.scp_open_cb);
-    TEST_ASSERT_NOT_NULL(SshConnection.scp_data_cb);
+    TEST_ASSERT_NOT_NULL(SshConnectionV.scp_open_cb);
+    TEST_ASSERT_NOT_NULL(SshConnectionV.scp_data_cb);
     TEST_ASSERT_TRUE(SSH_SCP_CTX(work)->registered);
 
-    SshConnection.scp_open_cb = NULL;
+    SshConnectionV.scp_open_cb = NULL;
     SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
     SshScp.begin(work);
-    TEST_ASSERT_NULL(SshConnection.scp_open_cb);
+    TEST_ASSERT_NULL(SshConnectionV.scp_open_cb);
 }
 
 // ---------------------------------------------------------------------------

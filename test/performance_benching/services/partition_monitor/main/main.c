@@ -56,18 +56,18 @@ void dbench_run(void)
                   sink += (uint32_t)protocore_partition_kind(dat_type, dat_sub)[0]);
 
         // Serializer throughput: report MB/s over the JSON produced for the full 7-entry table.
-        PartitionMonitor.json_args.parts = table;
-        PartitionMonitor.json_args.count = count;
-        PartitionMonitor.json_args.out = buf;
-        PartitionMonitor.json_args.cap = sizeof(buf);
+        PartitionMonitorV.json_args.parts = table;
+        PartitionMonitorV.json_args.count = count;
+        PartitionMonitorV.json_args.out = buf;
+        PartitionMonitorV.json_args.cap = sizeof(buf);
         PartitionMonitor.json(partition_monitor_work);
-        int jlen = PartitionMonitor.n;
-        PartitionMonitor.json_args.parts = table;
-        PartitionMonitor.json_args.count = count;
-        PartitionMonitor.json_args.out = buf;
-        PartitionMonitor.json_args.cap = sizeof(buf);
+        int jlen = PartitionMonitorV.n;
+        PartitionMonitorV.json_args.parts = table;
+        PartitionMonitorV.json_args.count = count;
+        PartitionMonitorV.json_args.out = buf;
+        PartitionMonitorV.json_args.cap = sizeof(buf);
         DBENCH_BULK("protocore_partition_json (7 parts)", 20000, (jlen > 0 ? (size_t)jlen : 1),
-                    (PartitionMonitor.json(partition_monitor_work), jsink += PartitionMonitor.n));
+                    (PartitionMonitor.json(partition_monitor_work), jsink += PartitionMonitorV.n));
 
         (void)sink;
         (void)jsink;

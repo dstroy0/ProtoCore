@@ -43,48 +43,48 @@ void tearDown(void)
 static protocore_if_kind egress(void)
 {
     Physical.egress(protocore_physical_span());
-    return Physical.if_kind;
+    return PhysicalV.if_kind;
 }
 
 static uint32_t egress_ip(void)
 {
-    Physical.egress_ip(protocore_physical_span());
-    return Physical.u32;
+    PhysicalV.egress_ip(protocore_physical_span());
+    return PhysicalV.u32;
 }
 
 static uint8_t channel(void)
 {
     Physical.wifi_channel(protocore_physical_span());
-    return Physical.u8;
+    return PhysicalV.u8;
 }
 
 static proto_bool join(const char *ssid)
 {
-    Physical.wifi.ssid = ssid;
-    Physical.wifi.password = "passphrase";
+    PhysicalV.wifi.ssid = ssid;
+    PhysicalV.wifi.password = "passphrase";
     Physical.wifi_init(protocore_physical_span());
-    return Physical.ok;
+    return PhysicalV.ok;
 }
 
 static size_t read_ssid(char *out, size_t cap)
 {
-    Physical.read.text = out;
-    Physical.read.cap = cap;
+    PhysicalV.read.text = out;
+    PhysicalV.read.cap = cap;
     Physical.wifi_ssid(protocore_physical_span());
-    return Physical.n;
+    return PhysicalV.n;
 }
 
 static protocore_phy_ps ps_mode(void)
 {
-    Physical.radio->ps_mode(protocore_radio_power_span());
-    return Physical.radio->mode;
+    PhysicalV.radio->ps_mode(protocore_radio_power_span());
+    return PhysicalV.radio->mode;
 }
 
 static proto_bool ps_set(protocore_phy_ps mode)
 {
-    Physical.radio->ps.mode = mode;
-    Physical.radio->ps_set(protocore_radio_power_span());
-    return Physical.radio->ok;
+    PhysicalV.radio->ps.mode = mode;
+    PhysicalV.radio->ps_set(protocore_radio_power_span());
+    return PhysicalV.radio->ok;
 }
 
 // ---- nothing up -----------------------------------------------------------
@@ -96,22 +96,22 @@ void test_a_no_link_reports_no_route(void)
     TEST_ASSERT_EQUAL_UINT32(0, egress_ip());
 
     Physical.wifi_ready(protocore_physical_span());
-    TEST_ASSERT_FALSE(Physical.ok);
+    TEST_ASSERT_FALSE(PhysicalV.ok);
 
     Physical.wifi_ap_ip(protocore_physical_span());
-    TEST_ASSERT_EQUAL_UINT32(0, Physical.u32);
+    TEST_ASSERT_EQUAL_UINT32(0, PhysicalV.u32);
 
     Physical.wifi_rssi(protocore_physical_span());
-    TEST_ASSERT_EQUAL_INT8(0, Physical.i8);
+    TEST_ASSERT_EQUAL_INT8(0, PhysicalV.i8);
 
     TEST_ASSERT_EQUAL_UINT8(0, channel());
 
     // No route means no egress address, even before any interface has one of its own.
     uint8_t mac[6];
     memset(mac, 0xFF, sizeof(mac));
-    Physical.read.mac = mac;
+    PhysicalV.read.mac = mac;
     Physical.egress_mac(protocore_physical_span());
-    TEST_ASSERT_FALSE(Physical.ok);
+    TEST_ASSERT_FALSE(PhysicalV.ok);
     TEST_ASSERT_EQUAL_HEX8(0xFF, mac[0]);
 }
 
@@ -123,14 +123,14 @@ void test_b_station_bring_up_is_live(void)
     TEST_ASSERT_TRUE(join("protocore-net"));
 
     Physical.wifi_ready(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_STA, egress());
     TEST_ASSERT_EQUAL_UINT32(STA_IP, egress_ip());
 
     // RSSI is a signed dBm reading, negative for any real association.
     Physical.wifi_rssi(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.i8 < 0);
+    TEST_ASSERT_TRUE(PhysicalV.i8 < 0);
 
     // IEEE 802.11 channel numbering: an associated station sits on a valid channel, never 0.
     uint8_t ch = channel();
@@ -192,15 +192,15 @@ void test_f_station_mac_is_locally_administered_unicast(void)
     uint8_t mac[6];
     memset(mac, 0, sizeof(mac));
 
-    Physical.read.mac = mac;
+    PhysicalV.read.mac = mac;
     Physical.wifi_mac(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x02, mac[0] & 0x02u);
     TEST_ASSERT_EQUAL_HEX8(0x00, mac[0] & 0x01u);
 
-    Physical.read.mac = NULL;
+    PhysicalV.read.mac = NULL;
     Physical.wifi_mac(protocore_physical_span());
-    TEST_ASSERT_FALSE(Physical.ok);
+    TEST_ASSERT_FALSE(PhysicalV.ok);
 }
 
 // ---- the softAP -----------------------------------------------------------
@@ -208,13 +208,13 @@ void test_f_station_mac_is_locally_administered_unicast(void)
 // The softAP comes up alongside the station and holds its own address without taking the route.
 void test_g_softap_has_its_own_address(void)
 {
-    Physical.wifi.ssid = "protocore-ap";
-    Physical.wifi.password = "ap-passphrase";
+    PhysicalV.wifi.ssid = "protocore-ap";
+    PhysicalV.wifi.password = "ap-passphrase";
     Physical.wifi_ap_init(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
 
     Physical.wifi_ap_ip(protocore_physical_span());
-    TEST_ASSERT_EQUAL_UINT32(AP_IP, Physical.u32);
+    TEST_ASSERT_EQUAL_UINT32(AP_IP, PhysicalV.u32);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_WIFI_STA, egress());
     TEST_ASSERT_EQUAL_UINT32(STA_IP, egress_ip());
@@ -227,18 +227,18 @@ void test_g_softap_has_its_own_address(void)
 void test_h_wired_wins_the_route(void)
 {
     Physical.eth_ready(protocore_physical_span());
-    TEST_ASSERT_FALSE(Physical.ok); // ready() is not init()
+    TEST_ASSERT_FALSE(PhysicalV.ok); // ready() is not init()
 
     Physical.eth_init(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
     Physical.eth_ready(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IF_ETH, egress());
     TEST_ASSERT_EQUAL_UINT32(ETH_IP, egress_ip());
 
     Physical.wifi_ready(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok); // the station is still associated underneath
+    TEST_ASSERT_TRUE(PhysicalV.ok); // the station is still associated underneath
 }
 
 // Once the wire carries the traffic the two readouts answer differently: wifi_mac is the 802.11
@@ -251,13 +251,13 @@ void test_i_egress_mac_tracks_the_route(void)
     memset(sta, 0, sizeof(sta));
     memset(out, 0, sizeof(out));
 
-    Physical.read.mac = sta;
+    PhysicalV.read.mac = sta;
     Physical.wifi_mac(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
 
-    Physical.read.mac = out;
+    PhysicalV.read.mac = out;
     Physical.egress_mac(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
 
     TEST_ASSERT_TRUE(memcmp(sta, out, 6) != 0);
     TEST_ASSERT_EQUAL_HEX8(0x02, out[0] & 0x02u);
@@ -274,16 +274,16 @@ void test_j_ipv6_global_address(void)
     memset(&addr, 0, sizeof(addr));
 
     Physical.ip6_ready(protocore_physical_span());
-    TEST_ASSERT_FALSE(Physical.ok); // ready() is not init()
+    TEST_ASSERT_FALSE(PhysicalV.ok); // ready() is not init()
 
     Physical.ip6_init(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
     Physical.ip6_ready(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
 
-    Physical.read.ip6 = &addr;
+    PhysicalV.read.ip6 = &addr;
     Physical.ip6_global(protocore_physical_span());
-    TEST_ASSERT_TRUE(Physical.ok);
+    TEST_ASSERT_TRUE(PhysicalV.ok);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_V6, addr.family);
 
     // RFC 3849 reserves 2001:db8::/32 for documentation, which is what the backend answers with.
@@ -295,9 +295,9 @@ void test_j_ipv6_global_address(void)
     // RFC 4291 sec 2.5.6 puts link-local in fe80::/10, which a global address must not be.
     TEST_ASSERT_FALSE(addr.bytes[0] == 0xFEu && (addr.bytes[1] & 0xC0u) == 0x80u);
 
-    Physical.read.ip6 = NULL;
+    PhysicalV.read.ip6 = NULL;
     Physical.ip6_global(protocore_physical_span());
-    TEST_ASSERT_FALSE(Physical.ok);
+    TEST_ASSERT_FALSE(PhysicalV.ok);
 }
 
 // ---- radio control --------------------------------------------------------
@@ -316,12 +316,12 @@ void test_k_power_save_mode_round_trips(void)
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 
     // 802.11-2020 11.7.6 selects a transmit power in dBm; a cap may be negative.
-    Physical.radio->tx.dbm = 11;
-    Physical.radio->tx_power_set(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Physical.radio->ok);
-    Physical.radio->tx.dbm = -4;
-    Physical.radio->tx_power_set(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Physical.radio->ok);
+    PhysicalV.radio->tx.dbm = 11;
+    PhysicalV.radio->tx_power_set(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(PhysicalV.radio->ok);
+    PhysicalV.radio->tx.dbm = -4;
+    PhysicalV.radio->tx_power_set(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(PhysicalV.radio->ok);
 }
 
 // The keep-awake refcount: the first hold puts the radio in active mode so a bulk transfer crosses
@@ -330,19 +330,19 @@ void test_l_busy_hold_refcount_gates_doze(void)
 {
     TEST_ASSERT_TRUE(ps_set(PROTOCORE_PHY_PS_MAX_MODEM));
 
-    Physical.radio->busy_hold(protocore_radio_power_span());
+    PhysicalV.radio->busy_hold(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 
-    Physical.radio->busy_hold(protocore_radio_power_span()); // nested: still held
-    Physical.radio->busy_release(protocore_radio_power_span());
+    PhysicalV.radio->busy_hold(protocore_radio_power_span()); // nested: still held
+    PhysicalV.radio->busy_release(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 
-    Physical.radio->busy_release(protocore_radio_power_span());
+    PhysicalV.radio->busy_release(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8((uint8_t)PROTOCORE_RADIO_WIFI_PS, ps_mode());
 
     // An unbalanced release cannot drive the count negative or change the mode again.
     protocore_phy_ps before = ps_mode();
-    Physical.radio->busy_release(protocore_radio_power_span());
+    PhysicalV.radio->busy_release(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8((uint8_t)before, ps_mode());
 }
 
@@ -350,7 +350,7 @@ void test_l_busy_hold_refcount_gates_doze(void)
 void test_m_power_applies_the_configured_mode(void)
 {
     TEST_ASSERT_TRUE(ps_set(PROTOCORE_PHY_PS_MIN_MODEM));
-    Physical.radio->power(protocore_radio_power_span());
+    PhysicalV.radio->power(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8((uint8_t)PROTOCORE_RADIO_WIFI_PS, ps_mode());
 }
 
@@ -366,25 +366,25 @@ static void on_frame(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t ch
 // deliver its frames.
 void test_n_monitor_mode_tunes_and_refuses_a_null_sink(void)
 {
-    Physical.radio->monitor.channel = 6;
-    Physical.radio->monitor.on_frame = NULL;
-    Physical.radio->monitor_begin(protocore_radio_power_span());
-    TEST_ASSERT_FALSE(Physical.radio->ok);
+    PhysicalV.radio->monitor.channel = 6;
+    PhysicalV.radio->monitor.on_frame = NULL;
+    PhysicalV.radio->monitor_begin(protocore_radio_power_span());
+    TEST_ASSERT_FALSE(PhysicalV.radio->ok);
 
-    Physical.radio->monitor.on_frame = on_frame;
-    Physical.radio->monitor_begin(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Physical.radio->ok);
+    PhysicalV.radio->monitor.on_frame = on_frame;
+    PhysicalV.radio->monitor_begin(protocore_radio_power_span());
+    TEST_ASSERT_TRUE(PhysicalV.radio->ok);
     TEST_ASSERT_EQUAL_UINT8(6, channel());
 
-    Physical.radio->monitor.channel = 11;
-    Physical.radio->monitor_set_channel(protocore_radio_power_span());
+    PhysicalV.radio->monitor.channel = 11;
+    PhysicalV.radio->monitor_set_channel(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8(11, channel());
 
-    Physical.radio->monitor.channel = 0; // 0 leaves the channel to whoever captures
-    Physical.radio->monitor_set_channel(protocore_radio_power_span());
+    PhysicalV.radio->monitor.channel = 0; // 0 leaves the channel to whoever captures
+    PhysicalV.radio->monitor_set_channel(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8(11, channel());
 
-    Physical.radio->monitor_end(protocore_radio_power_span());
+    PhysicalV.radio->monitor_end(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8(11, channel()); // ending does not retune
 }
 
@@ -392,19 +392,19 @@ void test_n_monitor_mode_tunes_and_refuses_a_null_sink(void)
 // the active mode of 802.11-2020 11.2.3.2 rather than as a made-up name.
 void test_o_power_save_names(void)
 {
-    Physical.radio->ps.mode = PROTOCORE_PHY_PS_NONE;
-    Physical.radio->ps_name(protocore_radio_power_span());
-    TEST_ASSERT_EQUAL_STRING("none", Physical.radio->text);
+    PhysicalV.radio->ps.mode = PROTOCORE_PHY_PS_NONE;
+    PhysicalV.radio->ps_name(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_STRING("none", PhysicalV.radio->text);
 
-    Physical.radio->ps.mode = PROTOCORE_PHY_PS_MIN_MODEM;
-    Physical.radio->ps_name(protocore_radio_power_span());
-    TEST_ASSERT_EQUAL_STRING("min_modem", Physical.radio->text);
+    PhysicalV.radio->ps.mode = PROTOCORE_PHY_PS_MIN_MODEM;
+    PhysicalV.radio->ps_name(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_STRING("min_modem", PhysicalV.radio->text);
 
-    Physical.radio->ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
-    Physical.radio->ps_name(protocore_radio_power_span());
-    TEST_ASSERT_EQUAL_STRING("max_modem", Physical.radio->text);
+    PhysicalV.radio->ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
+    PhysicalV.radio->ps_name(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_STRING("max_modem", PhysicalV.radio->text);
 
-    Physical.radio->ps.mode = (protocore_phy_ps)99;
-    Physical.radio->ps_name(protocore_radio_power_span());
-    TEST_ASSERT_EQUAL_STRING("none", Physical.radio->text);
+    PhysicalV.radio->ps.mode = (protocore_phy_ps)99;
+    PhysicalV.radio->ps_name(protocore_radio_power_span());
+    TEST_ASSERT_EQUAL_STRING("none", PhysicalV.radio->text);
 }

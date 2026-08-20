@@ -132,132 +132,132 @@ static void wr_pn(uint8_t *o, uint64_t pn, uint8_t pn_len)
 static size_t build_long(uint8_t *out, size_t cap, uint8_t type, const uint8_t *dcid, uint8_t dcl, const uint8_t *scid,
                          uint8_t scl, uint64_t pn, const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
-    QuicPacket.pn_length_args.full_pn = pn;
-    QuicPacket.pn_length_args.largest_acked = -1;
+    QuicPacketV.pn_length_args.full_pn = pn;
+    QuicPacketV.pn_length_args.largest_acked = -1;
     QuicPacket.pn_length(quic_packet_work);
-    uint8_t pn_len = QuicPacket.u8;
-    QuicPacket.build_long_header_args.out = out;
-    QuicPacket.build_long_header_args.cap = cap;
-    QuicPacket.build_long_header_args.type = type;
-    QuicPacket.build_long_header_args.version = QUIC_VERSION_1;
-    QuicPacket.build_long_header_args.dcid = dcid;
-    QuicPacket.build_long_header_args.dcid_len = dcl;
-    QuicPacket.build_long_header_args.scid = scid;
-    QuicPacket.build_long_header_args.scid_len = scl;
-    QuicPacket.build_long_header_args.pn_len = pn_len;
+    uint8_t pn_len = QuicPacketV.u8;
+    QuicPacketV.build_long_header_args.out = out;
+    QuicPacketV.build_long_header_args.cap = cap;
+    QuicPacketV.build_long_header_args.type = type;
+    QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
+    QuicPacketV.build_long_header_args.dcid = dcid;
+    QuicPacketV.build_long_header_args.dcid_len = dcl;
+    QuicPacketV.build_long_header_args.scid = scid;
+    QuicPacketV.build_long_header_args.scid_len = scl;
+    QuicPacketV.build_long_header_args.pn_len = pn_len;
     QuicPacket.build_long_header(quic_packet_work);
-    size_t p = QuicPacket.n;
+    size_t p = QuicPacketV.n;
     if (type == QUIC_LP_INITIAL)
     {
-        QuicVarint.encode_args.out = out + p;
-        QuicVarint.encode_args.cap = cap - p;
-        QuicVarint.encode_args.value = 0;
+        QuicVarintV.encode_args.out = out + p;
+        QuicVarintV.encode_args.cap = cap - p;
+        QuicVarintV.encode_args.value = 0;
         QuicVarint.encode(quic_varint_work);
-        p += QuicVarint.n;
+        p += QuicVarintV.n;
     }
-    QuicVarint.encode_args.out = out + p;
-    QuicVarint.encode_args.cap = cap - p;
-    QuicVarint.encode_args.value = (uint64_t)pn_len + frame_len + 16;
+    QuicVarintV.encode_args.out = out + p;
+    QuicVarintV.encode_args.cap = cap - p;
+    QuicVarintV.encode_args.value = (uint64_t)pn_len + frame_len + 16;
     QuicVarint.encode(quic_varint_work);
-    p += QuicVarint.n;
+    p += QuicVarintV.n;
     size_t pn_off = p;
     wr_pn(out + p, pn, pn_len);
     p += pn_len;
     memcpy(out + p, frames, frame_len);
-    QuicCrypto.packet_protect_args.pkt = out;
-    QuicCrypto.packet_protect_args.cap = cap;
-    QuicCrypto.packet_protect_args.pn_offset = pn_off;
-    QuicCrypto.packet_protect_args.pn_len = pn_len;
-    QuicCrypto.packet_protect_args.full_pn = pn;
-    QuicCrypto.packet_protect_args.payload_len = frame_len;
-    QuicCrypto.packet_protect_args.keys = keys;
-    QuicCrypto.packet_protect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_protect_args.pkt = out;
+    QuicCryptoV.packet_protect_args.cap = cap;
+    QuicCryptoV.packet_protect_args.pn_offset = pn_off;
+    QuicCryptoV.packet_protect_args.pn_len = pn_len;
+    QuicCryptoV.packet_protect_args.full_pn = pn;
+    QuicCryptoV.packet_protect_args.payload_len = frame_len;
+    QuicCryptoV.packet_protect_args.keys = keys;
+    QuicCryptoV.packet_protect_args.is_long = PROTO_TRUE;
     QuicCrypto.packet_protect(quic_crypto_work);
-    return QuicCrypto.n;
+    return QuicCryptoV.n;
 }
 static size_t build_short(uint8_t *out, size_t cap, const uint8_t *dcid, uint8_t dcl, uint64_t pn,
                           const QuicPacketKeys *keys, const uint8_t *frames, size_t frame_len)
 {
-    QuicPacket.pn_length_args.full_pn = pn;
-    QuicPacket.pn_length_args.largest_acked = -1;
+    QuicPacketV.pn_length_args.full_pn = pn;
+    QuicPacketV.pn_length_args.largest_acked = -1;
     QuicPacket.pn_length(quic_packet_work);
-    uint8_t pn_len = QuicPacket.u8;
+    uint8_t pn_len = QuicPacketV.u8;
     out[0] = (uint8_t)(0x40 | (pn_len - 1));
     memcpy(out + 1, dcid, dcl);
     size_t pn_off = 1 + dcl;
     wr_pn(out + pn_off, pn, pn_len);
     memcpy(out + pn_off + pn_len, frames, frame_len);
-    QuicCrypto.packet_protect_args.pkt = out;
-    QuicCrypto.packet_protect_args.cap = cap;
-    QuicCrypto.packet_protect_args.pn_offset = pn_off;
-    QuicCrypto.packet_protect_args.pn_len = pn_len;
-    QuicCrypto.packet_protect_args.full_pn = pn;
-    QuicCrypto.packet_protect_args.payload_len = frame_len;
-    QuicCrypto.packet_protect_args.keys = keys;
-    QuicCrypto.packet_protect_args.is_long = PROTO_FALSE;
+    QuicCryptoV.packet_protect_args.pkt = out;
+    QuicCryptoV.packet_protect_args.cap = cap;
+    QuicCryptoV.packet_protect_args.pn_offset = pn_off;
+    QuicCryptoV.packet_protect_args.pn_len = pn_len;
+    QuicCryptoV.packet_protect_args.full_pn = pn;
+    QuicCryptoV.packet_protect_args.payload_len = frame_len;
+    QuicCryptoV.packet_protect_args.keys = keys;
+    QuicCryptoV.packet_protect_args.is_long = PROTO_FALSE;
     QuicCrypto.packet_protect(quic_crypto_work);
-    return QuicCrypto.n;
+    return QuicCryptoV.n;
 }
 static size_t open_long(const uint8_t *dg, size_t len, const QuicPacketKeys *keys, uint8_t *plain, size_t *wire,
                         uint8_t *type)
 {
     QuicLongHeader h;
-    QuicPacket.parse_long_header_args.buf = dg;
-    QuicPacket.parse_long_header_args.len = len;
-    QuicPacket.parse_long_header_args.out = &h;
+    QuicPacketV.parse_long_header_args.buf = dg;
+    QuicPacketV.parse_long_header_args.len = len;
+    QuicPacketV.parse_long_header_args.out = &h;
     QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacket.ok);
+    TEST_ASSERT_TRUE(QuicPacketV.ok);
     *type = h.type;
     size_t off = h.hdr_len;
     if (h.type == QUIC_LP_INITIAL)
     {
         uint64_t tl = 0;
         size_t c = 0;
-        QuicVarint.decode_args.in = dg + off;
-        QuicVarint.decode_args.len = len - off;
-        QuicVarint.decode_args.value = &tl;
-        QuicVarint.decode_args.consumed = &c;
+        QuicVarintV.decode_args.in = dg + off;
+        QuicVarintV.decode_args.len = len - off;
+        QuicVarintV.decode_args.value = &tl;
+        QuicVarintV.decode_args.consumed = &c;
         QuicVarint.decode(quic_varint_work);
         off += c + (size_t)tl;
     }
     uint64_t length = 0;
     size_t c = 0;
-    QuicVarint.decode_args.in = dg + off;
-    QuicVarint.decode_args.len = len - off;
-    QuicVarint.decode_args.value = &length;
-    QuicVarint.decode_args.consumed = &c;
+    QuicVarintV.decode_args.in = dg + off;
+    QuicVarintV.decode_args.len = len - off;
+    QuicVarintV.decode_args.value = &length;
+    QuicVarintV.decode_args.consumed = &c;
     QuicVarint.decode(quic_varint_work);
     off += c;
     *wire = off + (size_t)length;
     static uint8_t work[2048];
     memcpy(work, dg, *wire);
     uint64_t pn = 0;
-    QuicCrypto.packet_unprotect_args.pkt = work;
-    QuicCrypto.packet_unprotect_args.pn_offset = off;
-    QuicCrypto.packet_unprotect_args.length = (size_t)length;
-    QuicCrypto.packet_unprotect_args.largest_pn = 0;
-    QuicCrypto.packet_unprotect_args.keys = keys;
-    QuicCrypto.packet_unprotect_args.is_long = PROTO_TRUE;
-    QuicCrypto.packet_unprotect_args.out = plain;
-    QuicCrypto.packet_unprotect_args.out_pn = &pn;
+    QuicCryptoV.packet_unprotect_args.pkt = work;
+    QuicCryptoV.packet_unprotect_args.pn_offset = off;
+    QuicCryptoV.packet_unprotect_args.length = (size_t)length;
+    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
+    QuicCryptoV.packet_unprotect_args.keys = keys;
+    QuicCryptoV.packet_unprotect_args.is_long = PROTO_TRUE;
+    QuicCryptoV.packet_unprotect_args.out = plain;
+    QuicCryptoV.packet_unprotect_args.out_pn = &pn;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    return QuicCrypto.n;
+    return QuicCryptoV.n;
 }
 static size_t open_short(const uint8_t *dg, size_t len, uint8_t dcl, const QuicPacketKeys *keys, uint8_t *plain)
 {
     static uint8_t work[2048];
     memcpy(work, dg, len);
     uint64_t pn = 0;
-    QuicCrypto.packet_unprotect_args.pkt = work;
-    QuicCrypto.packet_unprotect_args.pn_offset = 1 + dcl;
-    QuicCrypto.packet_unprotect_args.length = len - (1 + dcl);
-    QuicCrypto.packet_unprotect_args.largest_pn = 0;
-    QuicCrypto.packet_unprotect_args.keys = keys;
-    QuicCrypto.packet_unprotect_args.is_long = PROTO_FALSE;
-    QuicCrypto.packet_unprotect_args.out = plain;
-    QuicCrypto.packet_unprotect_args.out_pn = &pn;
+    QuicCryptoV.packet_unprotect_args.pkt = work;
+    QuicCryptoV.packet_unprotect_args.pn_offset = 1 + dcl;
+    QuicCryptoV.packet_unprotect_args.length = len - (1 + dcl);
+    QuicCryptoV.packet_unprotect_args.largest_pn = 0;
+    QuicCryptoV.packet_unprotect_args.keys = keys;
+    QuicCryptoV.packet_unprotect_args.is_long = PROTO_FALSE;
+    QuicCryptoV.packet_unprotect_args.out = plain;
+    QuicCryptoV.packet_unprotect_args.out_pn = &pn;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    return QuicCrypto.n;
+    return QuicCryptoV.n;
 }
 static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
 {
@@ -270,11 +270,11 @@ static size_t extract_crypto(const uint8_t *p, size_t len, uint8_t *out)
             continue;
         }
         QuicFrameHeader f;
-        QuicFrame.parse_args.buf = p + off;
-        QuicFrame.parse_args.len = len - off;
-        QuicFrame.parse_args.out = &f;
+        QuicFrameV.parse_args.buf = p + off;
+        QuicFrameV.parse_args.len = len - off;
+        QuicFrameV.parse_args.out = &f;
         QuicFrame.parse(quic_frame_work);
-        size_t n = QuicFrame.n;
+        size_t n = QuicFrameV.n;
         if (!n)
         {
             break;
@@ -360,9 +360,9 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
     uint8_t plain[2048];
     for (int d = 0; d < g_out_n; d++)
     {
-        QuicPacket.is_long_header_args.first = g_out[d][0];
+        QuicPacketV.is_long_header_args.first = g_out[d][0];
         QuicPacket.is_long_header(quic_packet_work);
-        if (QuicPacket.ok)
+        if (QuicPacketV.ok)
         {
             continue;
         }
@@ -380,11 +380,11 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
                 continue;
             }
             QuicFrameHeader f;
-            QuicFrame.parse_args.buf = plain + fo;
-            QuicFrame.parse_args.len = p2 - fo;
-            QuicFrame.parse_args.out = &f;
+            QuicFrameV.parse_args.buf = plain + fo;
+            QuicFrameV.parse_args.len = p2 - fo;
+            QuicFrameV.parse_args.out = &f;
             QuicFrame.parse(quic_frame_work);
-            size_t n = QuicFrame.n;
+            size_t n = QuicFrameV.n;
             if (!n)
             {
                 break;
@@ -401,11 +401,11 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
             while (so < sn)
             {
                 H3FrameHeader hf;
-                H3Frame.parse_header_args.buf = sp + so;
-                H3Frame.parse_header_args.len = sn - so;
-                H3Frame.parse_header_args.out = &hf;
+                H3FrameV.parse_header_args.buf = sp + so;
+                H3FrameV.parse_header_args.len = sn - so;
+                H3FrameV.parse_header_args.out = &hf;
                 H3Frame.parse_header(h3_frame_work);
-                if (!H3Frame.ok)
+                if (!H3FrameV.ok)
                 {
                     break;
                 }
@@ -414,12 +414,12 @@ static proto_bool response_ok(const QuicPacketKeys *ap_s)
                 {
                     char sc[128];
                     H3StatusCtx e = {status};
-                    Qpack.decode_args.block = hp;
-                    Qpack.decode_args.len = (size_t)hf.length;
-                    Qpack.decode_args.scratch = sc;
-                    Qpack.decode_args.scratch_cap = sizeof(sc);
-                    Qpack.decode_args.emit = h3_take_status;
-                    Qpack.decode_args.ctx = &e;
+                    QpackV.decode_args.block = hp;
+                    QpackV.decode_args.len = (size_t)hf.length;
+                    QpackV.decode_args.scratch = sc;
+                    QpackV.decode_args.scratch_cap = sizeof(sc);
+                    QpackV.decode_args.emit = h3_take_status;
+                    QpackV.decode_args.ctx = &e;
                     Qpack.decode(qpack_work);
                 }
                 else if (hf.type == H3_DATA)
@@ -449,37 +449,37 @@ void test_h3_request_served_by_route()
     TEST_ASSERT_EQUAL_INT32(PROTOCORE_OK, proto_begin(NULL));
 
     QuicInitialSecrets init;
-    QuicCrypto.derive_initial_secrets_args.keys_work = tw;
-    QuicCrypto.derive_initial_secrets_args.dcid = ODCID;
-    QuicCrypto.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
-    QuicCrypto.derive_initial_secrets_args.out = &init;
+    QuicCryptoV.derive_initial_secrets_args.keys_work = tw;
+    QuicCryptoV.derive_initial_secrets_args.dcid = ODCID;
+    QuicCryptoV.derive_initial_secrets_args.dcid_len = sizeof(ODCID);
+    QuicCryptoV.derive_initial_secrets_args.out = &init;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     QuicTransportParams ctp;
-    QuicTp.defaults_args.tp = &ctp;
+    QuicTpV.defaults_args.tp = &ctp;
     QuicTp.defaults(quic_tp_work);
     ctp.initial_max_data = 524288;
     ctp.initial_max_sd_bidi_local = 131072;
     uint8_t ctpe[128];
-    QuicTp.encode_args.tp = &ctp;
-    QuicTp.encode_args.out = ctpe;
-    QuicTp.encode_args.cap = sizeof(ctpe);
+    QuicTpV.encode_args.tp = &ctp;
+    QuicTpV.encode_args.out = ctpe;
+    QuicTpV.encode_args.cap = sizeof(ctpe);
     QuicTp.encode(quic_tp_work);
-    size_t ctpl = QuicTp.n;
+    size_t ctpl = QuicTpV.n;
     uint8_t client_pub[32];
-    Curve25519.x25519_base_args.out = client_pub;
-    Curve25519.x25519_base_args.scalar = CLIENT_PRIV;
+    Curve25519V.x25519_base_args.out = client_pub;
+    Curve25519V.x25519_base_args.scalar = CLIENT_PRIV;
     Curve25519.x25519_base(tw);
     uint8_t ch[512];
     size_t chl = build_client_hello(ch, client_pub, ctpe, ctpl);
     uint8_t frames[1200];
-    QuicFrame.build_crypto_args.out = frames;
-    QuicFrame.build_crypto_args.cap = sizeof(frames);
-    QuicFrame.build_crypto_args.offset = 0;
-    QuicFrame.build_crypto_args.data = ch;
-    QuicFrame.build_crypto_args.len = chl;
+    QuicFrameV.build_crypto_args.out = frames;
+    QuicFrameV.build_crypto_args.cap = sizeof(frames);
+    QuicFrameV.build_crypto_args.offset = 0;
+    QuicFrameV.build_crypto_args.data = ch;
+    QuicFrameV.build_crypto_args.len = chl;
     QuicFrame.build_crypto(quic_frame_work);
-    size_t fl = QuicFrame.n;
+    size_t fl = QuicFrameV.n;
     memset(frames + fl, 0, 1100 - fl);
     fl = 1100;
     uint8_t dg[1500];
@@ -489,11 +489,11 @@ void test_h3_request_served_by_route()
     TEST_ASSERT_GREATER_THAN(0, g_out_n);
 
     QuicLongHeader sh_hdr;
-    QuicPacket.parse_long_header_args.buf = g_out[0];
-    QuicPacket.parse_long_header_args.len = g_out_len[0];
-    QuicPacket.parse_long_header_args.out = &sh_hdr;
+    QuicPacketV.parse_long_header_args.buf = g_out[0];
+    QuicPacketV.parse_long_header_args.len = g_out_len[0];
+    QuicPacketV.parse_long_header_args.out = &sh_hdr;
     QuicPacket.parse_long_header(quic_packet_work);
-    TEST_ASSERT_TRUE(QuicPacket.ok);
+    TEST_ASSERT_TRUE(QuicPacketV.ok);
     uint8_t server_scid[QUIC_MAX_CID_LEN];
     uint8_t server_scid_len = sh_hdr.scid_len;
     memcpy(server_scid, sh_hdr.scid, server_scid_len);
@@ -505,147 +505,147 @@ void test_h3_request_served_by_route()
     size_t shl = extract_crypto(plain, pt, sh);
     uint8_t server_pub[32], ecdhe[32];
     TEST_ASSERT_TRUE(server_pub_from_sh(sh, shl, server_pub));
-    Curve25519.x25519_args.out = ecdhe;
-    Curve25519.x25519_args.scalar = CLIENT_PRIV;
-    Curve25519.x25519_args.point = server_pub;
+    Curve25519V.x25519_args.out = ecdhe;
+    Curve25519V.x25519_args.scalar = CLIENT_PRIV;
+    Curve25519V.x25519_args.point = server_pub;
     Curve25519.x25519(tw);
     uint8_t *t;
     uint8_t chsh[32], chsf[32];
     t = tw_t;
     Sha256.init(t);
-    Sha256.update_args.data = ch;
-    Sha256.update_args.len = chl;
+    Sha256V.update_args.data = ch;
+    Sha256V.update_args.len = chl;
     Sha256.update(t);
-    Sha256.update_args.data = sh;
-    Sha256.update_args.len = shl;
+    Sha256V.update_args.data = sh;
+    Sha256V.update_args.len = shl;
     Sha256.update(t);
     {
-        Sha256.final_args.out = chsh;
+        Sha256V.final_args.out = chsh;
         Sha256.final(t);
     }
     Tls13KeySchedule cks;
     static uint8_t ks_store_408[PROTOCORE_TLS13_KS_BORROW];
-    Tls13Ks.bind.kdf = &TLS13_KDF;
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.bind.s = ks_store_408;
-    Tls13Ks.early(NULL);
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.step.ecdhe = ecdhe;
-    Tls13Ks.step.ecdhe_len = 32;
-    Tls13Ks.step.ch_sh_hash = chsh;
+    Tls13KsV.bind.kdf = &TLS13_KDF;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.bind.s = ks_store_408;
+    Tls13KsV.early(NULL);
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.step.ecdhe = ecdhe;
+    Tls13KsV.step.ecdhe_len = 32;
+    Tls13KsV.step.ch_sh_hash = chsh;
     Tls13Ks.handshake(NULL);
     QuicPacketKeys hs_s, hs_c, ap_s, ap_c;
-    QuicCrypto.keys_from_secret_args.keys_work = tw;
-    QuicCrypto.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_HS;
-    QuicCrypto.keys_from_secret_args.out = &hs_s;
+    QuicCryptoV.keys_from_secret_args.keys_work = tw;
+    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_HS;
+    QuicCryptoV.keys_from_secret_args.out = &hs_s;
     QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicCrypto.keys_from_secret_args.keys_work = tw;
-    QuicCrypto.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_HS;
-    QuicCrypto.keys_from_secret_args.out = &hs_c;
+    QuicCryptoV.keys_from_secret_args.keys_work = tw;
+    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_HS;
+    QuicCryptoV.keys_from_secret_args.out = &hs_c;
     QuicCrypto.keys_from_secret(quic_crypto_work);
     size_t hw = 0;
     uint8_t hty = 0;
     size_t hpt = open_long(g_out[0] + wire, g_out_len[0] - wire, &hs_s, plain, &hw, &hty);
     size_t hsfl = extract_crypto(plain, hpt, hsf);
-    Sha256.update_args.data = hsf;
-    Sha256.update_args.len = hsfl;
+    Sha256V.update_args.data = hsf;
+    Sha256V.update_args.len = hsfl;
     Sha256.update(t);
-    Sha256.final_args.out = chsf;
+    Sha256V.final_args.out = chsf;
     Sha256.final(t);
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.step.ch_sfin_hash = chsf;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.step.ch_sfin_hash = chsf;
     Tls13Ks.master(NULL);
-    QuicCrypto.keys_from_secret_args.keys_work = tw;
-    QuicCrypto.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_AP;
-    QuicCrypto.keys_from_secret_args.out = &ap_s;
+    QuicCryptoV.keys_from_secret_args.keys_work = tw;
+    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_SERVER_AP;
+    QuicCryptoV.keys_from_secret_args.out = &ap_s;
     QuicCrypto.keys_from_secret(quic_crypto_work);
-    QuicCrypto.keys_from_secret_args.keys_work = tw;
-    QuicCrypto.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_AP;
-    QuicCrypto.keys_from_secret_args.out = &ap_c;
+    QuicCryptoV.keys_from_secret_args.keys_work = tw;
+    QuicCryptoV.keys_from_secret_args.secret = cks.s + TLS13_KS_CLIENT_AP;
+    QuicCryptoV.keys_from_secret_args.out = &ap_c;
     QuicCrypto.keys_from_secret(quic_crypto_work);
 
     uint8_t ifr[64];
-    QuicFrame.build_ack_args.out = ifr;
-    QuicFrame.build_ack_args.cap = sizeof(ifr);
-    QuicFrame.build_ack_args.largest = 0;
-    QuicFrame.build_ack_args.delay = 0;
-    QuicFrame.build_ack_args.first_range = 0;
+    QuicFrameV.build_ack_args.out = ifr;
+    QuicFrameV.build_ack_args.cap = sizeof(ifr);
+    QuicFrameV.build_ack_args.largest = 0;
+    QuicFrameV.build_ack_args.delay = 0;
+    QuicFrameV.build_ack_args.first_range = 0;
     QuicFrame.build_ack(quic_frame_work);
-    size_t ifl = QuicFrame.n;
+    size_t ifl = QuicFrameV.n;
     uint8_t idg[256];
     size_t idl = build_long(idg, sizeof(idg), QUIC_LP_INITIAL, ODCID, sizeof(ODCID), CLIENT_SCID, sizeof(CLIENT_SCID),
                             1, &init.client, ifr, ifl);
     uint8_t cfin[36] = {TLS_HS_FINISHED, 0x00, 0x00, 0x20};
-    Tls13Ks.bind.ks = &cks;
-    Tls13Ks.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
-    Tls13Ks.finished_args.transcript_hash = chsf;
-    Tls13Ks.finished_args.out = cfin + 4;
+    Tls13KsV.bind.ks = &cks;
+    Tls13KsV.finished_args.base_secret = cks.s + TLS13_KS_CLIENT_HS;
+    Tls13KsV.finished_args.transcript_hash = chsf;
+    Tls13KsV.finished_args.out = cfin + 4;
     Tls13Ks.finished_mac(NULL);
     uint8_t hfr[64];
-    QuicFrame.build_ack_args.out = hfr;
-    QuicFrame.build_ack_args.cap = sizeof(hfr);
-    QuicFrame.build_ack_args.largest = 0;
-    QuicFrame.build_ack_args.delay = 0;
-    QuicFrame.build_ack_args.first_range = 0;
+    QuicFrameV.build_ack_args.out = hfr;
+    QuicFrameV.build_ack_args.cap = sizeof(hfr);
+    QuicFrameV.build_ack_args.largest = 0;
+    QuicFrameV.build_ack_args.delay = 0;
+    QuicFrameV.build_ack_args.first_range = 0;
     QuicFrame.build_ack(quic_frame_work);
-    size_t hfl = QuicFrame.n;
-    QuicFrame.build_crypto_args.out = hfr + hfl;
-    QuicFrame.build_crypto_args.cap = sizeof(hfr) - hfl;
-    QuicFrame.build_crypto_args.offset = 0;
-    QuicFrame.build_crypto_args.data = cfin;
-    QuicFrame.build_crypto_args.len = sizeof(cfin);
+    size_t hfl = QuicFrameV.n;
+    QuicFrameV.build_crypto_args.out = hfr + hfl;
+    QuicFrameV.build_crypto_args.cap = sizeof(hfr) - hfl;
+    QuicFrameV.build_crypto_args.offset = 0;
+    QuicFrameV.build_crypto_args.data = cfin;
+    QuicFrameV.build_crypto_args.len = sizeof(cfin);
     QuicFrame.build_crypto(quic_frame_work);
-    hfl += QuicFrame.n;
+    hfl += QuicFrameV.n;
     size_t hdl = build_long(idg + idl, sizeof(idg) - idl, QUIC_LP_HANDSHAKE, ODCID, sizeof(ODCID), CLIENT_SCID,
                             sizeof(CLIENT_SCID), 0, &hs_c, hfr, hfl);
     feed(idg, idl + hdl, "192.0.2.10", 40000);
 
     uint8_t block[128];
-    Qpack.encode_prefix_args.out = block;
-    Qpack.encode_prefix_args.cap = sizeof(block);
+    QpackV.encode_prefix_args.out = block;
+    QpackV.encode_prefix_args.cap = sizeof(block);
     Qpack.encode_prefix(qpack_work);
-    size_t bp = Qpack.n;
-    Qpack.encode_header_args.out = block + bp;
-    Qpack.encode_header_args.cap = sizeof(block) - bp;
-    Qpack.encode_header_args.name = ":method";
-    Qpack.encode_header_args.name_len = 7;
-    Qpack.encode_header_args.value = "GET";
-    Qpack.encode_header_args.value_len = 3;
+    size_t bp = QpackV.n;
+    QpackV.encode_header_args.out = block + bp;
+    QpackV.encode_header_args.cap = sizeof(block) - bp;
+    QpackV.encode_header_args.name = ":method";
+    QpackV.encode_header_args.name_len = 7;
+    QpackV.encode_header_args.value = "GET";
+    QpackV.encode_header_args.value_len = 3;
     Qpack.encode_header(qpack_work);
-    bp += Qpack.n;
-    Qpack.encode_header_args.out = block + bp;
-    Qpack.encode_header_args.cap = sizeof(block) - bp;
-    Qpack.encode_header_args.name = ":path";
-    Qpack.encode_header_args.name_len = 5;
-    Qpack.encode_header_args.value = "/hello";
-    Qpack.encode_header_args.value_len = 6;
+    bp += QpackV.n;
+    QpackV.encode_header_args.out = block + bp;
+    QpackV.encode_header_args.cap = sizeof(block) - bp;
+    QpackV.encode_header_args.name = ":path";
+    QpackV.encode_header_args.name_len = 5;
+    QpackV.encode_header_args.value = "/hello";
+    QpackV.encode_header_args.value_len = 6;
     Qpack.encode_header(qpack_work);
-    bp += Qpack.n;
-    Qpack.encode_header_args.out = block + bp;
-    Qpack.encode_header_args.cap = sizeof(block) - bp;
-    Qpack.encode_header_args.name = ":authority";
-    Qpack.encode_header_args.name_len = 10;
-    Qpack.encode_header_args.value = "h3.test";
-    Qpack.encode_header_args.value_len = 7;
+    bp += QpackV.n;
+    QpackV.encode_header_args.out = block + bp;
+    QpackV.encode_header_args.cap = sizeof(block) - bp;
+    QpackV.encode_header_args.name = ":authority";
+    QpackV.encode_header_args.name_len = 10;
+    QpackV.encode_header_args.value = "h3.test";
+    QpackV.encode_header_args.value_len = 7;
     Qpack.encode_header(qpack_work);
-    bp += Qpack.n;
+    bp += QpackV.n;
     uint8_t h3req[256];
-    H3Frame.build_headers_args.out = h3req;
-    H3Frame.build_headers_args.cap = sizeof(h3req);
-    H3Frame.build_headers_args.block = block;
-    H3Frame.build_headers_args.len = bp;
+    H3FrameV.build_headers_args.out = h3req;
+    H3FrameV.build_headers_args.cap = sizeof(h3req);
+    H3FrameV.build_headers_args.block = block;
+    H3FrameV.build_headers_args.len = bp;
     H3Frame.build_headers(h3_frame_work);
-    size_t h3l = H3Frame.n;
+    size_t h3l = H3FrameV.n;
     uint8_t sfr[300];
-    QuicFrame.build_stream_args.out = sfr;
-    QuicFrame.build_stream_args.cap = sizeof(sfr);
-    QuicFrame.build_stream_args.id = 0;
-    QuicFrame.build_stream_args.offset = 0;
-    QuicFrame.build_stream_args.data = h3req;
-    QuicFrame.build_stream_args.len = h3l;
-    QuicFrame.build_stream_args.fin = PROTO_TRUE;
+    QuicFrameV.build_stream_args.out = sfr;
+    QuicFrameV.build_stream_args.cap = sizeof(sfr);
+    QuicFrameV.build_stream_args.id = 0;
+    QuicFrameV.build_stream_args.offset = 0;
+    QuicFrameV.build_stream_args.data = h3req;
+    QuicFrameV.build_stream_args.len = h3l;
+    QuicFrameV.build_stream_args.fin = PROTO_TRUE;
     QuicFrame.build_stream(quic_frame_work);
-    size_t sfrl = QuicFrame.n;
+    size_t sfrl = QuicFrameV.n;
     uint8_t s1[512];
     size_t s1l = build_short(s1, sizeof(s1), server_scid, server_scid_len, 0, &ap_c, sfr, sfrl);
 
@@ -732,4 +732,3 @@ void test_h3_dispatch_edges()
     send_text(0, 200, "text/plain", "x");
     send_empty(0, 204);
 }
-

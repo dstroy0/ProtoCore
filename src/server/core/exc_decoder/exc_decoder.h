@@ -37,7 +37,6 @@ typedef struct
     uint32_t pc;
     uint32_t sp;
 } ExcFrame;
-
 /** @brief A decoded panic. Fields not found in the input are left at their zeroed / -1 defaults. */
 typedef struct
 {
@@ -49,21 +48,18 @@ typedef struct
     ExcFrame frames[PROTOCORE_EXC_MAX_FRAMES]; ///< backtrace, outermost-first as printed.
     size_t frame_count;
 } ExcInfo;
-
 /** @brief The panic a call reads, and where the decoded form lands. */
 typedef struct
 {
     const char *text; ///< the printed panic dump a parse walks
     ExcInfo *info;    ///< where a parse or a summary lands the decoded panic
 } ExcParseArgs;
-
 /** @brief Where a stored crash image sits, and how much of it there is. */
 typedef struct
 {
     uint32_t addr; ///< absolute flash address of the image
     size_t size;   ///< image size in bytes
 } ExcCoreDump;
-
 /** @brief The stored crash image: the span a call names, and where its bytes land. */
 typedef struct
 {
@@ -74,14 +70,12 @@ typedef struct
     const protocore_mnt_backend *file_sys; ///< the filesystem a save writes through
     const char *path;                      ///< the file it writes
 } ExcDumpArgs;
-
 /** @brief Where a report is written. */
 typedef struct
 {
     char *out;  ///< where the JSON lands
     size_t cap; ///< how much room it has
 } ExcOutArgs;
-
 /**
  * @brief The panic decoder and the stored crash image.
  *
@@ -108,23 +102,50 @@ typedef struct
     ExcParseArgs parse_args;
     ExcDumpArgs dump;
     ExcOutArgs out_args;
-
     proto_bool ok;
     size_t n;
+#if PROTOCORE_HAS_VENDOR_COREDUMP
+#endif
+} ExcVars;
 
+/** @brief The operands and the outcome. */
+extern ExcVars ExcV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse)(uint8_t *restrict work);
     void (*const json)(uint8_t *restrict work);
-#if PROTOCORE_HAS_VENDOR_COREDUMP
     void (*const present)(uint8_t *restrict work);
     void (*const summary)(uint8_t *restrict work);
     void (*const read)(uint8_t *restrict work);
     void (*const save)(uint8_t *restrict work);
     void (*const erase)(uint8_t *restrict work);
-#endif
 } ExcDecoderNs;
 
-/** @brief The one symbol this module exports. */
-extern ExcDecoderNs Exc;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ExcV or a region of the borrow at a fixed offset.
+void protocore_exc_decoder_parse(uint8_t *restrict work);
+void protocore_exc_decoder_json(uint8_t *restrict work);
+void protocore_exc_decoder_present(uint8_t *restrict work);
+void protocore_exc_decoder_summary(uint8_t *restrict work);
+void protocore_exc_decoder_read(uint8_t *restrict work);
+void protocore_exc_decoder_save(uint8_t *restrict work);
+void protocore_exc_decoder_erase(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Exc.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ExcDecoderNs Exc __attribute__((unused)) = {
+    .parse = protocore_exc_decoder_parse,
+    .json = protocore_exc_decoder_json,
+    .present = protocore_exc_decoder_present,
+    .summary = protocore_exc_decoder_summary,
+    .read = protocore_exc_decoder_read,
+    .save = protocore_exc_decoder_save,
+    .erase = protocore_exc_decoder_erase,
+};
 
 PROTOCORE_END_DECLS
 

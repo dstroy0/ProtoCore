@@ -35,7 +35,6 @@ typedef struct
     uint32_t max_ms;  ///< longest single sleep window (the ceiling as the idle streak grows).
     uint32_t ramp_ms; ///< every additional `ramp_ms` of idle doubles the window (0 => jump to max_ms).
 } protocore_sleep_cfg;
-
 /** @brief What the decision reads: where the clock stands against the last activity. */
 typedef struct
 {
@@ -43,7 +42,6 @@ typedef struct
     uint32_t last_active_ms;        ///< timestamp of the last activity (a request, a send, app work)
     const protocore_sleep_cfg *cfg; ///< the thresholds
 } SleepAskArgs;
-
 /**
  * @brief The dynamic sleep-cycle scheduler.
  *
@@ -64,14 +62,29 @@ typedef struct
 typedef struct
 {
     SleepAskArgs ask;
-
     uint32_t ms;
+} SleepSchedVars;
 
+/** @brief The operands and the outcome. */
+extern SleepSchedVars SleepSchedV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const next)(uint8_t *restrict work);
 } SleepSchedNs;
 
-/** @brief The one symbol this module exports. */
-extern SleepSchedNs SleepSched;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SleepSchedV or a region of the borrow at a fixed offset.
+void protocore_sleep_sched_next(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `SleepSched.next(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SleepSchedNs SleepSched __attribute__((unused)) = {
+    .next = protocore_sleep_sched_next,
+};
 
 PROTOCORE_END_DECLS
 

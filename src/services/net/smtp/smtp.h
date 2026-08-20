@@ -86,7 +86,6 @@ typedef struct
     SmtpSecurity security;   ///< how the channel is secured
     const char *client_name; ///< the Domain the EHLO argument carries (RFC 5321 sec 4.1.1.1)
 } SmtpSessionArgs;
-
 /**
  * @brief RFC 4954 sec 4: the identity the AUTH exchange presents.
  *
@@ -100,21 +99,18 @@ typedef struct
     const char *user; ///< the authentication identity; null or empty skips AUTH entirely
     const char *pass; ///< its password
 } SmtpAuthArgs;
-
 /** @brief RFC 5321 sec 3.3: the two paths one mail transaction names. Bare mailboxes, no brackets. */
 typedef struct
 {
     const char *reverse_path; ///< the sender mailbox MAIL carries (RFC 5321 sec 4.1.1.2)
     const char *forward_path; ///< the recipient mailbox RCPT carries (RFC 5321 sec 4.1.1.3)
 } SmtpEnvelopeArgs;
-
 /** @brief RFC 5322: the message DATA carries. Nothing the envelope reads. */
 typedef struct
 {
     const char *subject; ///< the Subject: field body (RFC 5322 sec 3.6.5); null writes an empty one
     const char *body;    ///< the body (RFC 5322 sec 2.1); LF or CRLF ends, dot-stuffed on the way out
 } SmtpContentArgs;
-
 /** @brief The seam the octets move through, and the transport state handed back to it. */
 typedef struct
 {
@@ -123,7 +119,6 @@ typedef struct
     SmtpStartTlsFn starttls; ///< upgrades the channel in place (RFC 3207 sec 4); null when it cannot
     void *ctx;               ///< the transport's own handle, passed back to all three
 } SmtpTransportArgs;
-
 /**
  * @brief The SMTP client.
  *
@@ -149,17 +144,34 @@ typedef struct
     SmtpEnvelopeArgs envelope;   ///< the two paths of one mail transaction
     SmtpContentArgs content;     ///< the message DATA carries
     SmtpTransportArgs transport; ///< the seam the octets move through
-
     proto_bool ok;
     SmtpResult result;
     int16_t code;
+} SmtpVars;
 
+/** @brief The operands and the outcome. */
+extern SmtpVars SmtpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const run)(uint8_t *restrict work);
     void (*const send)(uint8_t *restrict work);
 } SmtpNs;
 
-/** @brief The one symbol this module exports. */
-extern SmtpNs Smtp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SmtpV or a region of the borrow at a fixed offset.
+void protocore_smtp_run(uint8_t *restrict work);
+void protocore_smtp_send(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Smtp.run(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SmtpNs Smtp __attribute__((unused)) = {
+    .run = protocore_smtp_run,
+    .send = protocore_smtp_send,
+};
 
 /**
  * @brief The PROTOCORE_SMTP_BORROW bytes this module's state lives in.

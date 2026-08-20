@@ -11,12 +11,12 @@
  */
 
 #include "network_drivers/transport/udp/server/server.h"
-#include "mmgr/plaintext/plaintext.h"                       // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h"             // the persistent end this module's state is taken from
 #include "network_drivers/transport/udp/common.h" // the wire layout the receive ring carries
 
-#include "config/platform/platform.h" // the stack's UDP, under our names
-#include "network_drivers/transport/diffserv/diffserv.h"  // DSCP marking; compiles out when off
-#include "network_drivers/transport/net_addr/net_addr.h"  // NetAddr: the stack's address as a protocore_ip
+#include "config/platform/platform.h"                    // the stack's UDP, under our names
+#include "network_drivers/transport/diffserv/diffserv.h" // DSCP marking; compiles out when off
+#include "network_drivers/transport/net_addr/net_addr.h" // NetAddr: the stack's address as a protocore_ip
 
 static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
@@ -99,9 +99,9 @@ static proto_bool addr_is_group(const protocore_ip *a)
     {
         return PROTO_FALSE;
     }
-    Ip.args.ip = a;
+    IpV.args.ip = a;
     Ip.classify(ip_work);
-    return Ip.scope == PROTOCORE_IP_SCOPE_MULTICAST;
+    return IpV.scope == PROTOCORE_IP_SCOPE_MULTICAST;
 }
 
 /** @brief The slot index UDP_LISTENER_CTX(work)->slot sits at. */
@@ -143,7 +143,7 @@ static void find_bind(uint8_t *restrict work)
     while (m != 0u)
     {
         int32_t i = protocore_slot_next(m);
-        if (UDP_LISTENER_CTX(work)->bind[i].port == UdpListener.port)
+        if (UDP_LISTENER_CTX(work)->bind[i].port == UdpListenerV.port)
         {
             UDP_LISTENER_CTX(work)->slot = &UDP_LISTENER_CTX(work)->bind[i];
             return;
@@ -438,14 +438,15 @@ static protocore_net_err send_do(protocore_net_call *c)
 // Send one datagram out of UDP_LISTENER_CTX(work)->slot to @p a, from where the caller's bytes already are.
 static proto_bool send_now(uint8_t *restrict work, const protocore_ip *a, uint16_t port)
 {
-    if (UDP_LISTENER_CTX(work)->slot == NULL || a == NULL || UdpListener.send_args.data == NULL ||
-        UdpListener.send_args.len == 0 || UdpListener.send_args.len > PROTOCORE_UDP_RX_BUF_SIZE)
+    if (UDP_LISTENER_CTX(work)->slot == NULL || a == NULL || UdpListenerV.send_args.data == NULL ||
+        UdpListenerV.send_args.len == 0 || UdpListenerV.send_args.len > PROTOCORE_UDP_RX_BUF_SIZE)
     {
         return PROTO_FALSE;
     }
     // The marshal is synchronous, so this outlives the call and carries its answer back.
     protocore_udp_send_call k = {
-        {0}, UDP_LISTENER_CTX(work)->slot, a, UdpListener.send_args.data, UdpListener.send_args.len, port, PROTO_FALSE};
+        {0},        UDP_LISTENER_CTX(work)->slot, a, UdpListenerV.send_args.data, UdpListenerV.send_args.len, port,
+        PROTO_FALSE};
     (void)protocore_net_call_marshal(send_do, &k.base);
     return k.ok;
 }
@@ -461,40 +462,40 @@ static void listen_on(uint8_t *restrict work)
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot != NULL)
     {
-        UDP_LISTENER_CTX(work)->slot->handler = UdpListener.bind.handler;
-        UDP_LISTENER_CTX(work)->slot->ctx = UdpListener.bind.handler_ctx;
-        UdpListener.ok = PROTO_TRUE;
+        UDP_LISTENER_CTX(work)->slot->handler = UdpListenerV.bind.handler;
+        UDP_LISTENER_CTX(work)->slot->ctx = UdpListenerV.bind.handler_ctx;
+        UdpListenerV.ok = PROTO_TRUE;
         return;
     }
     free_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL)
     {
-        UdpListener.ok = PROTO_FALSE; // pool exhausted
+        UdpListenerV.ok = PROTO_FALSE; // pool exhausted
         return;
     }
     bind_clear(work);
     // The trampoline reads handler and work as soon as recv is armed, so set them first.
-    UDP_LISTENER_CTX(work)->slot->handler = UdpListener.bind.handler;
-    UDP_LISTENER_CTX(work)->slot->ctx = UdpListener.bind.handler_ctx;
-    UDP_LISTENER_CTX(work)->slot->port = UdpListener.port;
-    if (!marshal_op(work, UDP_OP_BIND, UdpListener.port, NULL))
+    UDP_LISTENER_CTX(work)->slot->handler = UdpListenerV.bind.handler;
+    UDP_LISTENER_CTX(work)->slot->ctx = UdpListenerV.bind.handler_ctx;
+    UDP_LISTENER_CTX(work)->slot->port = UdpListenerV.port;
+    if (!marshal_op(work, UDP_OP_BIND, UdpListenerV.port, NULL))
     {
         UDP_LISTENER_CTX(work)->slot->handler = NULL;
-        UdpListener.ok = PROTO_FALSE;
+        UdpListenerV.ok = PROTO_FALSE;
         return;
     }
     protocore_slot_mark(&UDP_LISTENER_CTX(work)->bound, bind_idx(work));
-    UdpListener.ok = PROTO_TRUE;
+    UdpListenerV.ok = PROTO_TRUE;
 }
 
 static void listen_group(uint8_t *restrict work)
 {
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
-    UdpListener.ok = PROTO_FALSE;
-    Ip.args.text = UdpListener.bind.group_ip;
-    Ip.args.out = &group;
+    UdpListenerV.ok = PROTO_FALSE;
+    IpV.args.text = UdpListenerV.bind.group_ip;
+    IpV.args.out = &group;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         return;
     }
@@ -508,16 +509,16 @@ static void listen_group(uint8_t *restrict work)
         return;
     }
     bind_clear(work);
-    UDP_LISTENER_CTX(work)->slot->handler = UdpListener.bind.handler;
-    UDP_LISTENER_CTX(work)->slot->ctx = UdpListener.bind.handler_ctx;
-    UDP_LISTENER_CTX(work)->slot->port = UdpListener.port;
-    if (!marshal_op(work, UDP_OP_BIND_MCAST, UdpListener.port, &group))
+    UDP_LISTENER_CTX(work)->slot->handler = UdpListenerV.bind.handler;
+    UDP_LISTENER_CTX(work)->slot->ctx = UdpListenerV.bind.handler_ctx;
+    UDP_LISTENER_CTX(work)->slot->port = UdpListenerV.port;
+    if (!marshal_op(work, UDP_OP_BIND_MCAST, UdpListenerV.port, &group))
     {
         UDP_LISTENER_CTX(work)->slot->handler = NULL;
         return;
     }
     protocore_slot_mark(&UDP_LISTENER_CTX(work)->bound, bind_idx(work));
-    UdpListener.ok = PROTO_TRUE;
+    UdpListenerV.ok = PROTO_TRUE;
 }
 
 static void leave_group(uint8_t *restrict work)
@@ -525,12 +526,12 @@ static void leave_group(uint8_t *restrict work)
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL || !UDP_LISTENER_CTX(work)->slot->mcast)
     {
-        UdpListener.ok = PROTO_FALSE;
+        UdpListenerV.ok = PROTO_FALSE;
         return;
     }
     unbind_port(work);
     bind_clear(work);
-    UdpListener.ok = PROTO_TRUE;
+    UdpListenerV.ok = PROTO_TRUE;
 }
 
 static void poll_all(uint8_t *restrict work)
@@ -563,48 +564,49 @@ static void poll_all(uint8_t *restrict work)
 
 static void reply_to(uint8_t *restrict work)
 {
-    if (UdpListener.peer_args.peer == NULL)
+    if (UdpListenerV.peer_args.peer == NULL)
     {
-        UdpListener.ok = PROTO_FALSE;
+        UdpListenerV.ok = PROTO_FALSE;
         return;
     }
-    UDP_LISTENER_CTX(work)->slot = UdpListener.peer_args.peer->bind;
-    UdpListener.ok = send_now(work, &UdpListener.peer_args.peer->addr, UdpListener.peer_args.peer->port);
+    UDP_LISTENER_CTX(work)->slot = UdpListenerV.peer_args.peer->bind;
+    UdpListenerV.ok = send_now(work, &UdpListenerV.peer_args.peer->addr, UdpListenerV.peer_args.peer->port);
 }
 
 static void peer_addr_of(uint8_t *restrict work)
 {
     (void)work;
-    UdpListener.ok = PROTO_FALSE;
-    if (UdpListener.peer_args.peer == NULL || UdpListener.peer_args.ip_out == NULL || UdpListener.peer_args.ip_cap < 8u)
+    UdpListenerV.ok = PROTO_FALSE;
+    if (UdpListenerV.peer_args.peer == NULL || UdpListenerV.peer_args.ip_out == NULL ||
+        UdpListenerV.peer_args.ip_cap < 8u)
     {
         return;
     }
-    Ip.args.ip = &UdpListener.peer_args.peer->addr;
-    Ip.args.buf = UdpListener.peer_args.ip_out;
-    Ip.args.cap = UdpListener.peer_args.ip_cap;
+    IpV.args.ip = &UdpListenerV.peer_args.peer->addr;
+    IpV.args.buf = UdpListenerV.peer_args.ip_out;
+    IpV.args.cap = UdpListenerV.peer_args.ip_cap;
     Ip.format(ip_work);
-    if (Ip.n == 0)
+    if (IpV.n == 0)
     {
         return;
     }
-    if (UdpListener.peer_args.port_out != NULL)
+    if (UdpListenerV.peer_args.port_out != NULL)
     {
-        *UdpListener.peer_args.port_out = UdpListener.peer_args.peer->port;
+        *UdpListenerV.peer_args.port_out = UdpListenerV.peer_args.peer->port;
     }
-    UdpListener.ok = PROTO_TRUE;
+    UdpListenerV.ok = PROTO_TRUE;
 }
 
 static void send_from(uint8_t *restrict work)
 {
     find_bind(work);
-    if (UDP_LISTENER_CTX(work)->slot == NULL || UdpListener.send_args.dst == NULL ||
-        UdpListener.send_args.dst->family == PROTOCORE_IP_NONE)
+    if (UDP_LISTENER_CTX(work)->slot == NULL || UdpListenerV.send_args.dst == NULL ||
+        UdpListenerV.send_args.dst->family == PROTOCORE_IP_NONE)
     {
-        UdpListener.ok = PROTO_FALSE;
+        UdpListenerV.ok = PROTO_FALSE;
         return;
     }
-    UdpListener.ok = send_now(work, UdpListener.send_args.dst, UdpListener.send_args.dst_port);
+    UdpListenerV.ok = send_now(work, UdpListenerV.send_args.dst, UdpListenerV.send_args.dst_port);
 }
 
 // Close ns->port: leave its group when it joined one, drop the control block, free the slot.
@@ -613,43 +615,36 @@ static void close_port(uint8_t *restrict work)
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL)
     {
-        UdpListener.ok = PROTO_FALSE;
+        UdpListenerV.ok = PROTO_FALSE;
         return;
     }
     unbind_port(work);
     bind_clear(work);
-    UdpListener.ok = PROTO_TRUE;
+    UdpListenerV.ok = PROTO_TRUE;
 }
 
 // The group ns->port joined, formatted, or NULL when the port is unbound or joined none.
 static void group_on(uint8_t *restrict work)
 {
-    UdpListener.text = NULL;
+    UdpListenerV.text = NULL;
     find_bind(work);
     if (UDP_LISTENER_CTX(work)->slot == NULL || !UDP_LISTENER_CTX(work)->slot->mcast)
     {
         return;
     }
-    Ip.args.ip = &UDP_LISTENER_CTX(work)->slot->group;
-    Ip.args.buf = UDP_LISTENER_CTX(work)->group_text;
-    Ip.args.cap = sizeof(UDP_LISTENER_CTX(work)->group_text);
+    IpV.args.ip = &UDP_LISTENER_CTX(work)->slot->group;
+    IpV.args.buf = UDP_LISTENER_CTX(work)->group_text;
+    IpV.args.cap = sizeof(UDP_LISTENER_CTX(work)->group_text);
     Ip.format(ip_work);
-    if (Ip.n == 0)
+    if (IpV.n == 0)
     {
         return;
     }
-    UdpListener.text = UDP_LISTENER_CTX(work)->group_text;
+    UdpListenerV.text = UDP_LISTENER_CTX(work)->group_text;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-UdpListenerNs UdpListener = {.listen = listen_on,
-                             .listen_multicast = listen_group,
-                             .leave_multicast = leave_group,
-                             .poll = poll_all,
-                             .reply = reply_to,
-                             .peer_addr = peer_addr_of,
-                             .sendto = send_from,
-                             .close = close_port,
-                             .joined_group = group_on};
+/** @brief The operands and the outcome. */
+UdpListenerVars UdpListenerV;
 
 PROTOCORE_END_DECLS

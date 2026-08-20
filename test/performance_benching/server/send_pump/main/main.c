@@ -37,10 +37,10 @@ static inline size_t frame_snprintf(uint8_t *body, size_t n)
 static inline size_t frame_hex_u32(uint8_t *body, size_t n)
 {
     char digits[8];
-    Hex.args.v = (uint32_t)n;
-    Hex.io.out = digits;
+    HexV.args.v = (uint32_t)n;
+    HexV.io.out = digits;
     Hex.u32(hex_work);
-    size_t nd = Hex.u8;
+    size_t nd = HexV.u8;
     uint8_t *start = body - (nd + 2);
     memcpy(start, digits, nd);
     start[nd] = '\r';

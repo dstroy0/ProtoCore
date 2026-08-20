@@ -38,21 +38,21 @@ static OtaCtx s_ota;
 /// @brief Validate the request's HTTP Basic credentials against s_ota.user/s_ota.pass.
 static proto_bool ota_check_auth(HttpReq *req)
 {
-    HttpParser.get_header_args.req = req;
-    HttpParser.get_header_args.key = "Authorization";
-    HttpParser.get_header(protocore_http_parser_span());
-    const char *h = HttpParser.text;
+    HttpParserV.get_header_args.req = req;
+    HttpParserV.get_header_args.key = "Authorization";
+    HttpParserV.get_header(protocore_http_parser_span());
+    const char *h = HttpParserV.text;
     if (!h || !str.starts(h, "Basic ", 6, PROTO_FALSE))
     {
         return PROTO_FALSE;
     }
 
     uint8_t decoded[MAX_AUTH_LEN * 2 + 2];
-    Base64.decode_args.src = h + 6;
-    Base64.decode_args.dst = decoded;
-    Base64.decode_args.dst_cap = sizeof(decoded) - 1;
+    Base64V.decode_args.src = h + 6;
+    Base64V.decode_args.dst = decoded;
+    Base64V.decode_args.dst_cap = sizeof(decoded) - 1;
     Base64.decode(base64_work);
-    size_t n = Base64.n;
+    size_t n = Base64V.n;
     if (n == 0)
     {
         return PROTO_FALSE;
@@ -142,12 +142,12 @@ static void ota_handle(uint8_t slot_id, HttpReq *req)
     protocore_platform_restart();
 }
 
-static void ota_service_begin(uint8_t *restrict work)
+void protocore_ota_service_begin(uint8_t *restrict work)
 {
     (void)work;
-    const char *path = OtaService.args.path;
-    const char *user = OtaService.args.user;
-    const char *pass = OtaService.args.pass;
+    const char *path = OtaServiceV.args.path;
+    const char *user = OtaServiceV.args.user;
+    const char *pass = OtaServiceV.args.pass;
 
     s_ota.path = path;
     str.copy(s_ota.user, user ? user : "", sizeof(s_ota.user));
@@ -155,22 +155,23 @@ static void ota_service_begin(uint8_t *restrict work)
     str.copy(s_ota.pass, pass ? pass : "", sizeof(s_ota.pass));
     s_ota.pass[sizeof(s_ota.pass) - 1] = '\0';
 
-    HttpParser.set_stream_hooks_args.begin = ota_stream_begin;
-    HttpParser.set_stream_hooks_args.data = ota_stream_data;
-    HttpParser.set_stream_hooks_args.abort = NULL;
-    HttpParser.set_stream_hooks(protocore_http_parser_span());
+    HttpParserV.set_stream_hooks_args.begin = ota_stream_begin;
+    HttpParserV.set_stream_hooks_args.data = ota_stream_data;
+    HttpParserV.set_stream_hooks_args.abort = NULL;
+    HttpParserV.set_stream_hooks(protocore_http_parser_span());
     on_http(path, HTTP_POST, ota_handle);
 }
 
-OtaServiceNs OtaService = {.begin = ota_service_begin};
+/** @brief The operands and the outcome. */
+OtaServiceVars OtaServiceV;
 
 #else
 
-static void ota_service_begin(uint8_t *restrict work)
+void protocore_ota_service_begin(uint8_t *restrict work)
 {
     (void)work;
 }
 
-OtaServiceNs OtaService = {.begin = ota_service_begin};
+OtaServiceNs OtaService = {.begin = protocore_ota_service_begin};
 
 #endif // PROTOCORE_ENABLE_OTA && PROTOCORE_HAS_VENDOR_OTA

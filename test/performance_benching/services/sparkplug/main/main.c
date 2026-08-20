@@ -16,37 +16,37 @@
 /** @brief Join `spBv1.0/Group1/NDATA/edge1/dev1` into @p out; the octets written. */
 static size_t spb_topic(char *out, size_t cap)
 {
-    Sparkplug.topic_out.out = out;
-    Sparkplug.topic_out.cap = cap;
-    Sparkplug.topic.group_id = "Group1";
-    Sparkplug.topic.message_type = "NDATA";
-    Sparkplug.topic.edge_node_id = "edge1";
-    Sparkplug.topic.device_id = "dev1";
+    SparkplugV.topic_out.out = out;
+    SparkplugV.topic_out.cap = cap;
+    SparkplugV.topic.group_id = "Group1";
+    SparkplugV.topic.message_type = "NDATA";
+    SparkplugV.topic.edge_node_id = "edge1";
+    SparkplugV.topic.device_id = "dev1";
     Sparkplug.build_topic(protocore_sparkplug_span());
-    return Sparkplug.n;
+    return SparkplugV.n;
 }
 
 /** @brief Serialize @p m as one Metric message into @p out; the octets written. */
 static size_t spb_metric(uint8_t *out, size_t cap, const SpbMetric *m)
 {
-    Sparkplug.out.buf = out;
-    Sparkplug.out.cap = cap;
-    Sparkplug.metrics.list = m;
+    SparkplugV.out.buf = out;
+    SparkplugV.out.cap = cap;
+    SparkplugV.metrics.list = m;
     Sparkplug.build_metric(protocore_sparkplug_span());
-    return Sparkplug.n;
+    return SparkplugV.n;
 }
 
 /** @brief Serialize a Payload header plus @p n Metrics into @p out; the octets written. */
 static size_t spb_payload(uint8_t *out, size_t cap, const SpbMetric *m, size_t n, uint64_t ts, uint64_t seq)
 {
-    Sparkplug.out.buf = out;
-    Sparkplug.out.cap = cap;
-    Sparkplug.payload.timestamp = ts;
-    Sparkplug.payload.seq = seq;
-    Sparkplug.metrics.list = m;
-    Sparkplug.metrics.count = n;
+    SparkplugV.out.buf = out;
+    SparkplugV.out.cap = cap;
+    SparkplugV.payload.timestamp = ts;
+    SparkplugV.payload.seq = seq;
+    SparkplugV.metrics.list = m;
+    SparkplugV.metrics.count = n;
     Sparkplug.build_payload(protocore_sparkplug_span());
-    return Sparkplug.n;
+    return SparkplugV.n;
 }
 
 void dbench_run(void)

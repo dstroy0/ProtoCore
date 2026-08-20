@@ -29,16 +29,16 @@ void test_hs_header_roundtrip(void)
 
     uint8_t out[64];
 
-    DtlsHandshake.frag_build_args.msg_type = 1;
-    DtlsHandshake.frag_build_args.msg_seq = 7;
-    DtlsHandshake.frag_build_args.full_len = 100;
-    DtlsHandshake.frag_build_args.frag_offset = 40;
-    DtlsHandshake.frag_build_args.frag = frag;
-    DtlsHandshake.frag_build_args.frag_len = sizeof(frag);
-    DtlsHandshake.frag_build_args.out = out;
-    DtlsHandshake.frag_build_args.out_cap = sizeof(out);
+    DtlsHandshakeV.frag_build_args.msg_type = 1;
+    DtlsHandshakeV.frag_build_args.msg_seq = 7;
+    DtlsHandshakeV.frag_build_args.full_len = 100;
+    DtlsHandshakeV.frag_build_args.frag_offset = 40;
+    DtlsHandshakeV.frag_build_args.frag = frag;
+    DtlsHandshakeV.frag_build_args.frag_len = sizeof(frag);
+    DtlsHandshakeV.frag_build_args.out = out;
+    DtlsHandshakeV.frag_build_args.out_cap = sizeof(out);
     DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t n = DtlsHandshake.n;
+    size_t n = DtlsHandshakeV.n;
     TEST_ASSERT_EQUAL_size_t(PROTOCORE_DTLS_HS_HDR_LEN + sizeof(frag), n);
 
     TEST_ASSERT_EQUAL_UINT8(1, out[0]);
@@ -48,11 +48,11 @@ void test_hs_header_roundtrip(void)
     TEST_ASSERT_EQUAL_UINT8(0x1E, out[11]);
 
     DtlsHsHeader h;
-    DtlsHandshake.header_parse_args.p = out;
-    DtlsHandshake.header_parse_args.len = n;
-    DtlsHandshake.header_parse_args.out = &h;
+    DtlsHandshakeV.header_parse_args.p = out;
+    DtlsHandshakeV.header_parse_args.len = n;
+    DtlsHandshakeV.header_parse_args.out = &h;
     DtlsHandshake.header_parse(dtls_handshake_work);
-    size_t consumed = DtlsHandshake.n;
+    size_t consumed = DtlsHandshakeV.n;
     TEST_ASSERT_EQUAL_size_t(n, consumed);
     TEST_ASSERT_EQUAL_UINT8(1, h.msg_type);
     TEST_ASSERT_EQUAL_UINT32(100, h.length);
@@ -67,59 +67,59 @@ void test_hs_header_parse_rejects(void)
     uint8_t buf[32];
     DtlsHsHeader h;
 
-    DtlsHandshake.header_parse_args.p = buf;
-    DtlsHandshake.header_parse_args.len = 11;
-    DtlsHandshake.header_parse_args.out = &h;
+    DtlsHandshakeV.header_parse_args.p = buf;
+    DtlsHandshakeV.header_parse_args.len = 11;
+    DtlsHandshakeV.header_parse_args.out = &h;
     DtlsHandshake.header_parse(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 
     memset(buf, 0, sizeof(buf));
     buf[0] = 1;
     buf[3] = 10;
     buf[8] = 8;
     buf[11] = 5;
-    DtlsHandshake.header_parse_args.p = buf;
-    DtlsHandshake.header_parse_args.len = sizeof(buf);
-    DtlsHandshake.header_parse_args.out = &h;
+    DtlsHandshakeV.header_parse_args.p = buf;
+    DtlsHandshakeV.header_parse_args.len = sizeof(buf);
+    DtlsHandshakeV.header_parse_args.out = &h;
     DtlsHandshake.header_parse(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 
     memset(buf, 0, sizeof(buf));
     buf[0] = 1;
     buf[3] = 40;
     buf[11] = 20;
-    DtlsHandshake.header_parse_args.p = buf;
-    DtlsHandshake.header_parse_args.len = PROTOCORE_DTLS_HS_HDR_LEN + 4;
-    DtlsHandshake.header_parse_args.out = &h;
+    DtlsHandshakeV.header_parse_args.p = buf;
+    DtlsHandshakeV.header_parse_args.len = PROTOCORE_DTLS_HS_HDR_LEN + 4;
+    DtlsHandshakeV.header_parse_args.out = &h;
     DtlsHandshake.header_parse(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 }
 
 static int feed(DtlsHsReasm *r, uint8_t msg_type, uint16_t msg_seq, uint32_t full_len, uint32_t off,
                 const uint8_t *body, uint32_t flen)
 {
     uint8_t rec[512];
-    DtlsHandshake.frag_build_args.msg_type = msg_type;
-    DtlsHandshake.frag_build_args.msg_seq = msg_seq;
-    DtlsHandshake.frag_build_args.full_len = full_len;
-    DtlsHandshake.frag_build_args.frag_offset = off;
-    DtlsHandshake.frag_build_args.frag = body + off;
-    DtlsHandshake.frag_build_args.frag_len = flen;
-    DtlsHandshake.frag_build_args.out = rec;
-    DtlsHandshake.frag_build_args.out_cap = sizeof(rec);
+    DtlsHandshakeV.frag_build_args.msg_type = msg_type;
+    DtlsHandshakeV.frag_build_args.msg_seq = msg_seq;
+    DtlsHandshakeV.frag_build_args.full_len = full_len;
+    DtlsHandshakeV.frag_build_args.frag_offset = off;
+    DtlsHandshakeV.frag_build_args.frag = body + off;
+    DtlsHandshakeV.frag_build_args.frag_len = flen;
+    DtlsHandshakeV.frag_build_args.out = rec;
+    DtlsHandshakeV.frag_build_args.out_cap = sizeof(rec);
     DtlsHandshake.frag_build(dtls_handshake_work);
-    size_t n = DtlsHandshake.n;
+    size_t n = DtlsHandshakeV.n;
     TEST_ASSERT_TRUE(n > 0);
     DtlsHsHeader h;
-    DtlsHandshake.header_parse_args.p = rec;
-    DtlsHandshake.header_parse_args.len = n;
-    DtlsHandshake.header_parse_args.out = &h;
+    DtlsHandshakeV.header_parse_args.p = rec;
+    DtlsHandshakeV.header_parse_args.len = n;
+    DtlsHandshakeV.header_parse_args.out = &h;
     DtlsHandshake.header_parse(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(n, DtlsHandshake.n);
-    DtlsHandshake.reasm_add_args.r = r;
-    DtlsHandshake.reasm_add_args.frag = &h;
+    TEST_ASSERT_EQUAL_size_t(n, DtlsHandshakeV.n);
+    DtlsHandshakeV.reasm_add_args.r = r;
+    DtlsHandshakeV.reasm_add_args.frag = &h;
     DtlsHandshake.reasm_add(dtls_handshake_work);
-    return DtlsHandshake.n;
+    return DtlsHandshakeV.n;
 }
 
 static void fill(uint8_t *b, size_t n)
@@ -136,10 +136,10 @@ void test_hs_reasm_single_fragment(void)
     fill(body, sizeof(body));
     uint8_t buf[80];
     DtlsHsReasm r;
-    DtlsHandshake.reasm_init_args.r = &r;
-    DtlsHandshake.reasm_init_args.msg_seq = 2;
-    DtlsHandshake.reasm_init_args.buf = buf;
-    DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+    DtlsHandshakeV.reasm_init_args.r = &r;
+    DtlsHandshakeV.reasm_init_args.msg_seq = 2;
+    DtlsHandshakeV.reasm_init_args.buf = buf;
+    DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
     DtlsHandshake.reasm_init(dtls_handshake_work);
     TEST_ASSERT_EQUAL_INT(1, feed(&r, 11, 2, sizeof(body), 0, body, sizeof(body)));
     TEST_ASSERT_EQUAL_UINT32(sizeof(body), r.length);
@@ -153,10 +153,10 @@ void test_hs_reasm_in_order(void)
     fill(body, sizeof(body));
     uint8_t buf[100];
     DtlsHsReasm r;
-    DtlsHandshake.reasm_init_args.r = &r;
-    DtlsHandshake.reasm_init_args.msg_seq = 0;
-    DtlsHandshake.reasm_init_args.buf = buf;
-    DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+    DtlsHandshakeV.reasm_init_args.r = &r;
+    DtlsHandshakeV.reasm_init_args.msg_seq = 0;
+    DtlsHandshakeV.reasm_init_args.buf = buf;
+    DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
     DtlsHandshake.reasm_init(dtls_handshake_work);
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 0, 100, 0, body, 40));
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 0, 100, 40, body, 40));
@@ -170,10 +170,10 @@ void test_hs_reasm_out_of_order(void)
     fill(body, sizeof(body));
     uint8_t buf[100];
     DtlsHsReasm r;
-    DtlsHandshake.reasm_init_args.r = &r;
-    DtlsHandshake.reasm_init_args.msg_seq = 4;
-    DtlsHandshake.reasm_init_args.buf = buf;
-    DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+    DtlsHandshakeV.reasm_init_args.r = &r;
+    DtlsHandshakeV.reasm_init_args.msg_seq = 4;
+    DtlsHandshakeV.reasm_init_args.buf = buf;
+    DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
     DtlsHandshake.reasm_init(dtls_handshake_work);
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 4, 100, 80, body, 20));
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 4, 100, 0, body, 40));
@@ -187,10 +187,10 @@ void test_hs_reasm_overlap_and_duplicate(void)
     fill(body, sizeof(body));
     uint8_t buf[100];
     DtlsHsReasm r;
-    DtlsHandshake.reasm_init_args.r = &r;
-    DtlsHandshake.reasm_init_args.msg_seq = 1;
-    DtlsHandshake.reasm_init_args.buf = buf;
-    DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+    DtlsHandshakeV.reasm_init_args.r = &r;
+    DtlsHandshakeV.reasm_init_args.msg_seq = 1;
+    DtlsHandshakeV.reasm_init_args.buf = buf;
+    DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
     DtlsHandshake.reasm_init(dtls_handshake_work);
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 1, 100, 0, body, 60));
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 1, 100, 0, body, 60));
@@ -209,18 +209,18 @@ void test_hs_reasm_conflicting_overlap_aborts(void)
 
     uint8_t buf[100];
     DtlsHsReasm r;
-    DtlsHandshake.reasm_init_args.r = &r;
-    DtlsHandshake.reasm_init_args.msg_seq = 1;
-    DtlsHandshake.reasm_init_args.buf = buf;
-    DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+    DtlsHandshakeV.reasm_init_args.r = &r;
+    DtlsHandshakeV.reasm_init_args.msg_seq = 1;
+    DtlsHandshakeV.reasm_init_args.buf = buf;
+    DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
     DtlsHandshake.reasm_init(dtls_handshake_work);
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 1, 100, 0, body, 60));
     TEST_ASSERT_EQUAL_INT(-1, feed(&r, 1, 1, 100, 30, other, 40));
 
-    DtlsHandshake.reasm_init_args.r = &r;
-    DtlsHandshake.reasm_init_args.msg_seq = 1;
-    DtlsHandshake.reasm_init_args.buf = buf;
-    DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+    DtlsHandshakeV.reasm_init_args.r = &r;
+    DtlsHandshakeV.reasm_init_args.msg_seq = 1;
+    DtlsHandshakeV.reasm_init_args.buf = buf;
+    DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
     DtlsHandshake.reasm_init(dtls_handshake_work);
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 1, 100, 0, body, 60));
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 1, 100, 41, other, 19));
@@ -232,10 +232,10 @@ void test_hs_reasm_wrong_msg_seq_ignored(void)
     fill(body, sizeof(body));
     uint8_t buf[40];
     DtlsHsReasm r;
-    DtlsHandshake.reasm_init_args.r = &r;
-    DtlsHandshake.reasm_init_args.msg_seq = 5;
-    DtlsHandshake.reasm_init_args.buf = buf;
-    DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+    DtlsHandshakeV.reasm_init_args.r = &r;
+    DtlsHandshakeV.reasm_init_args.msg_seq = 5;
+    DtlsHandshakeV.reasm_init_args.buf = buf;
+    DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
     DtlsHandshake.reasm_init(dtls_handshake_work);
     TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 6, 40, 0, body, 40));
     TEST_ASSERT_FALSE(r.active);
@@ -247,10 +247,10 @@ void test_hs_reasm_empty_body(void)
 {
     uint8_t buf[16];
     DtlsHsReasm r;
-    DtlsHandshake.reasm_init_args.r = &r;
-    DtlsHandshake.reasm_init_args.msg_seq = 0;
-    DtlsHandshake.reasm_init_args.buf = buf;
-    DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+    DtlsHandshakeV.reasm_init_args.r = &r;
+    DtlsHandshakeV.reasm_init_args.msg_seq = 0;
+    DtlsHandshakeV.reasm_init_args.buf = buf;
+    DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
     DtlsHandshake.reasm_init(dtls_handshake_work);
 
     TEST_ASSERT_EQUAL_INT(1, feed(&r, 22, 0, 0, 0, buf, 0));
@@ -265,10 +265,10 @@ void test_hs_reasm_rejects(void)
     {
         uint8_t buf[32];
         DtlsHsReasm r;
-        DtlsHandshake.reasm_init_args.r = &r;
-        DtlsHandshake.reasm_init_args.msg_seq = 0;
-        DtlsHandshake.reasm_init_args.buf = buf;
-        DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+        DtlsHandshakeV.reasm_init_args.r = &r;
+        DtlsHandshakeV.reasm_init_args.msg_seq = 0;
+        DtlsHandshakeV.reasm_init_args.buf = buf;
+        DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
         DtlsHandshake.reasm_init(dtls_handshake_work);
         TEST_ASSERT_EQUAL_INT(-1, feed(&r, 1, 0, 100, 0, body, 32));
     }
@@ -276,26 +276,26 @@ void test_hs_reasm_rejects(void)
     {
         uint8_t buf[256];
         DtlsHsReasm r;
-        DtlsHandshake.reasm_init_args.r = &r;
-        DtlsHandshake.reasm_init_args.msg_seq = 0;
-        DtlsHandshake.reasm_init_args.buf = buf;
-        DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+        DtlsHandshakeV.reasm_init_args.r = &r;
+        DtlsHandshakeV.reasm_init_args.msg_seq = 0;
+        DtlsHandshakeV.reasm_init_args.buf = buf;
+        DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
         DtlsHandshake.reasm_init(dtls_handshake_work);
         TEST_ASSERT_EQUAL_INT(0, feed(&r, 1, 0, 100, 0, body, 40));
         DtlsHsHeader h = {1, 90, 0, 40, 10, body + 40};
-        DtlsHandshake.reasm_add_args.r = &r;
-        DtlsHandshake.reasm_add_args.frag = &h;
+        DtlsHandshakeV.reasm_add_args.r = &r;
+        DtlsHandshakeV.reasm_add_args.frag = &h;
         DtlsHandshake.reasm_add(dtls_handshake_work);
-        TEST_ASSERT_EQUAL_INT(-1, DtlsHandshake.n);
+        TEST_ASSERT_EQUAL_INT(-1, DtlsHandshakeV.n);
     }
 
     {
         uint8_t buf[256];
         DtlsHsReasm r;
-        DtlsHandshake.reasm_init_args.r = &r;
-        DtlsHandshake.reasm_init_args.msg_seq = 0;
-        DtlsHandshake.reasm_init_args.buf = buf;
-        DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+        DtlsHandshakeV.reasm_init_args.r = &r;
+        DtlsHandshakeV.reasm_init_args.msg_seq = 0;
+        DtlsHandshakeV.reasm_init_args.buf = buf;
+        DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
         DtlsHandshake.reasm_init(dtls_handshake_work);
         int rc = 0;
 
@@ -311,12 +311,12 @@ void test_ack_roundtrip(void)
 {
     DtlsRecordNumber in[3] = {{2, 5}, {2, 6}, {3, 0x0102030405060708ull}};
     uint8_t out[64];
-    DtlsHandshake.ack_build_args.nums = in;
-    DtlsHandshake.ack_build_args.count = 3;
-    DtlsHandshake.ack_build_args.out = out;
-    DtlsHandshake.ack_build_args.out_cap = sizeof(out);
+    DtlsHandshakeV.ack_build_args.nums = in;
+    DtlsHandshakeV.ack_build_args.count = 3;
+    DtlsHandshakeV.ack_build_args.out = out;
+    DtlsHandshakeV.ack_build_args.out_cap = sizeof(out);
     DtlsHandshake.ack_build(dtls_handshake_work);
-    size_t n = DtlsHandshake.n;
+    size_t n = DtlsHandshakeV.n;
     TEST_ASSERT_EQUAL_size_t(2 + 3 * 16, n);
     TEST_ASSERT_EQUAL_UINT8(0x00, out[0]);
     TEST_ASSERT_EQUAL_UINT8(0x30, out[1]);
@@ -325,13 +325,13 @@ void test_ack_roundtrip(void)
 
     DtlsRecordNumber back[4];
     size_t count = 0;
-    DtlsHandshake.ack_parse_args.body = out;
-    DtlsHandshake.ack_parse_args.len = n;
-    DtlsHandshake.ack_parse_args.out = back;
-    DtlsHandshake.ack_parse_args.out_cap = 4;
-    DtlsHandshake.ack_parse_args.out_count = &count;
+    DtlsHandshakeV.ack_parse_args.body = out;
+    DtlsHandshakeV.ack_parse_args.len = n;
+    DtlsHandshakeV.ack_parse_args.out = back;
+    DtlsHandshakeV.ack_parse_args.out_cap = 4;
+    DtlsHandshakeV.ack_parse_args.out_count = &count;
     DtlsHandshake.ack_parse(dtls_handshake_work);
-    TEST_ASSERT_TRUE(DtlsHandshake.ok);
+    TEST_ASSERT_TRUE(DtlsHandshakeV.ok);
     TEST_ASSERT_EQUAL_size_t(3, count);
     for (unsigned i = 0; i < 3; i++)
     {
@@ -339,20 +339,20 @@ void test_ack_roundtrip(void)
         TEST_ASSERT_EQUAL_UINT64(in[i].seq, back[i].seq);
     }
 
-    DtlsHandshake.ack_build_args.nums = NULL;
-    DtlsHandshake.ack_build_args.count = 0;
-    DtlsHandshake.ack_build_args.out = out;
-    DtlsHandshake.ack_build_args.out_cap = sizeof(out);
+    DtlsHandshakeV.ack_build_args.nums = NULL;
+    DtlsHandshakeV.ack_build_args.count = 0;
+    DtlsHandshakeV.ack_build_args.out = out;
+    DtlsHandshakeV.ack_build_args.out_cap = sizeof(out);
     DtlsHandshake.ack_build(dtls_handshake_work);
-    n = DtlsHandshake.n;
+    n = DtlsHandshakeV.n;
     TEST_ASSERT_EQUAL_size_t(2, n);
-    DtlsHandshake.ack_parse_args.body = out;
-    DtlsHandshake.ack_parse_args.len = n;
-    DtlsHandshake.ack_parse_args.out = back;
-    DtlsHandshake.ack_parse_args.out_cap = 4;
-    DtlsHandshake.ack_parse_args.out_count = &count;
+    DtlsHandshakeV.ack_parse_args.body = out;
+    DtlsHandshakeV.ack_parse_args.len = n;
+    DtlsHandshakeV.ack_parse_args.out = back;
+    DtlsHandshakeV.ack_parse_args.out_cap = 4;
+    DtlsHandshakeV.ack_parse_args.out_count = &count;
     DtlsHandshake.ack_parse(dtls_handshake_work);
-    TEST_ASSERT_TRUE(DtlsHandshake.ok);
+    TEST_ASSERT_TRUE(DtlsHandshakeV.ok);
     TEST_ASSERT_EQUAL_size_t(0, count);
 }
 
@@ -362,48 +362,48 @@ void test_ack_parse_rejects(void)
     size_t count = 0;
     uint8_t buf[64];
 
-    DtlsHandshake.ack_parse_args.body = buf;
-    DtlsHandshake.ack_parse_args.len = 1;
-    DtlsHandshake.ack_parse_args.out = out;
-    DtlsHandshake.ack_parse_args.out_cap = 4;
-    DtlsHandshake.ack_parse_args.out_count = &count;
+    DtlsHandshakeV.ack_parse_args.body = buf;
+    DtlsHandshakeV.ack_parse_args.len = 1;
+    DtlsHandshakeV.ack_parse_args.out = out;
+    DtlsHandshakeV.ack_parse_args.out_cap = 4;
+    DtlsHandshakeV.ack_parse_args.out_count = &count;
     DtlsHandshake.ack_parse(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 
     buf[0] = 0x00;
     buf[1] = 0x08;
-    DtlsHandshake.ack_parse_args.body = buf;
-    DtlsHandshake.ack_parse_args.len = 10;
-    DtlsHandshake.ack_parse_args.out = out;
-    DtlsHandshake.ack_parse_args.out_cap = 4;
-    DtlsHandshake.ack_parse_args.out_count = &count;
+    DtlsHandshakeV.ack_parse_args.body = buf;
+    DtlsHandshakeV.ack_parse_args.len = 10;
+    DtlsHandshakeV.ack_parse_args.out = out;
+    DtlsHandshakeV.ack_parse_args.out_cap = 4;
+    DtlsHandshakeV.ack_parse_args.out_count = &count;
     DtlsHandshake.ack_parse(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 
     buf[0] = 0x00;
     buf[1] = 0x10;
-    DtlsHandshake.ack_parse_args.body = buf;
-    DtlsHandshake.ack_parse_args.len = 10;
-    DtlsHandshake.ack_parse_args.out = out;
-    DtlsHandshake.ack_parse_args.out_cap = 4;
-    DtlsHandshake.ack_parse_args.out_count = &count;
+    DtlsHandshakeV.ack_parse_args.body = buf;
+    DtlsHandshakeV.ack_parse_args.len = 10;
+    DtlsHandshakeV.ack_parse_args.out = out;
+    DtlsHandshakeV.ack_parse_args.out_cap = 4;
+    DtlsHandshakeV.ack_parse_args.out_count = &count;
     DtlsHandshake.ack_parse(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 
     DtlsRecordNumber many[3] = {{0, 1}, {0, 2}, {0, 3}};
-    DtlsHandshake.ack_build_args.nums = many;
-    DtlsHandshake.ack_build_args.count = 3;
-    DtlsHandshake.ack_build_args.out = buf;
-    DtlsHandshake.ack_build_args.out_cap = sizeof(buf);
+    DtlsHandshakeV.ack_build_args.nums = many;
+    DtlsHandshakeV.ack_build_args.count = 3;
+    DtlsHandshakeV.ack_build_args.out = buf;
+    DtlsHandshakeV.ack_build_args.out_cap = sizeof(buf);
     DtlsHandshake.ack_build(dtls_handshake_work);
-    size_t n = DtlsHandshake.n;
-    DtlsHandshake.ack_parse_args.body = buf;
-    DtlsHandshake.ack_parse_args.len = n;
-    DtlsHandshake.ack_parse_args.out = out;
-    DtlsHandshake.ack_parse_args.out_cap = 2;
-    DtlsHandshake.ack_parse_args.out_count = &count;
+    size_t n = DtlsHandshakeV.n;
+    DtlsHandshakeV.ack_parse_args.body = buf;
+    DtlsHandshakeV.ack_parse_args.len = n;
+    DtlsHandshakeV.ack_parse_args.out = out;
+    DtlsHandshakeV.ack_parse_args.out_cap = 2;
+    DtlsHandshakeV.ack_parse_args.out_count = &count;
     DtlsHandshake.ack_parse(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 }
 
 static const uint8_t COOKIE_KEY[32] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
@@ -426,17 +426,17 @@ static const uint8_t COOKIE_WIRE[77] = {0x01, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66
 void test_cookie_kat(void)
 {
     uint8_t out[PROTOCORE_DTLS_COOKIE_MAX];
-    DtlsHandshake.cookie_make_args.mac_work = tw;
-    DtlsHandshake.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_make_args.timestamp = COOKIE_TS;
-    DtlsHandshake.cookie_make_args.payload = COOKIE_PAYLOAD;
-    DtlsHandshake.cookie_make_args.payload_len = sizeof(COOKIE_PAYLOAD);
-    DtlsHandshake.cookie_make_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_make_args.out = out;
-    DtlsHandshake.cookie_make_args.out_cap = sizeof(out);
+    DtlsHandshakeV.cookie_make_args.mac_work = tw;
+    DtlsHandshakeV.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_make_args.timestamp = COOKIE_TS;
+    DtlsHandshakeV.cookie_make_args.payload = COOKIE_PAYLOAD;
+    DtlsHandshakeV.cookie_make_args.payload_len = sizeof(COOKIE_PAYLOAD);
+    DtlsHandshakeV.cookie_make_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_make_args.out = out;
+    DtlsHandshakeV.cookie_make_args.out_cap = sizeof(out);
     DtlsHandshake.cookie_make(dtls_handshake_work);
-    size_t n = DtlsHandshake.n;
+    size_t n = DtlsHandshakeV.n;
     TEST_ASSERT_EQUAL_size_t(sizeof(COOKIE_WIRE), n);
     TEST_ASSERT_EQUAL_MEMORY(COOKIE_WIRE, out, sizeof(COOKIE_WIRE));
 }
@@ -446,19 +446,19 @@ void test_cookie_verify_accept_and_payload(void)
     uint8_t payload[64];
     size_t plen = 0;
 
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 0;
-    DtlsHandshake.cookie_verify_args.max_age = 0;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = COOKIE_WIRE;
-    DtlsHandshake.cookie_verify_args.cookie_len = sizeof(COOKIE_WIRE);
-    DtlsHandshake.cookie_verify_args.payload_out = payload;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(payload);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 0;
+    DtlsHandshakeV.cookie_verify_args.max_age = 0;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = COOKIE_WIRE;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = sizeof(COOKIE_WIRE);
+    DtlsHandshakeV.cookie_verify_args.payload_out = payload;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(payload);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_TRUE(DtlsHandshake.ok);
+    TEST_ASSERT_TRUE(DtlsHandshakeV.ok);
     TEST_ASSERT_EQUAL_size_t(sizeof(COOKIE_PAYLOAD), plen);
     TEST_ASSERT_EQUAL_MEMORY(COOKIE_PAYLOAD, payload, plen);
 }
@@ -469,113 +469,113 @@ void test_cookie_verify_rejects(void)
     size_t plen = 0;
 
     uint8_t other_addr[4] = {0xC0, 0xA8, 0x01, 0x33};
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 0;
-    DtlsHandshake.cookie_verify_args.max_age = 0;
-    DtlsHandshake.cookie_verify_args.client_addr = other_addr;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(other_addr);
-    DtlsHandshake.cookie_verify_args.cookie = COOKIE_WIRE;
-    DtlsHandshake.cookie_verify_args.cookie_len = sizeof(COOKIE_WIRE);
-    DtlsHandshake.cookie_verify_args.payload_out = payload;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(payload);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 0;
+    DtlsHandshakeV.cookie_verify_args.max_age = 0;
+    DtlsHandshakeV.cookie_verify_args.client_addr = other_addr;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(other_addr);
+    DtlsHandshakeV.cookie_verify_args.cookie = COOKIE_WIRE;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = sizeof(COOKIE_WIRE);
+    DtlsHandshakeV.cookie_verify_args.payload_out = payload;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(payload);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 
     uint8_t bad[77];
     memcpy(bad, COOKIE_WIRE, sizeof(bad));
     bad[20] ^= 0x01;
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 0;
-    DtlsHandshake.cookie_verify_args.max_age = 0;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = bad;
-    DtlsHandshake.cookie_verify_args.cookie_len = sizeof(bad);
-    DtlsHandshake.cookie_verify_args.payload_out = payload;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(payload);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 0;
+    DtlsHandshakeV.cookie_verify_args.max_age = 0;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = bad;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = sizeof(bad);
+    DtlsHandshakeV.cookie_verify_args.payload_out = payload;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(payload);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 0;
-    DtlsHandshake.cookie_verify_args.max_age = 0;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = COOKIE_WIRE;
-    DtlsHandshake.cookie_verify_args.cookie_len = 20;
-    DtlsHandshake.cookie_verify_args.payload_out = payload;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(payload);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 0;
+    DtlsHandshakeV.cookie_verify_args.max_age = 0;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = COOKIE_WIRE;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = 20;
+    DtlsHandshakeV.cookie_verify_args.payload_out = payload;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(payload);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 }
 
 void test_cookie_freshness(void)
 {
     uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
     const uint8_t payload[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    DtlsHandshake.cookie_make_args.mac_work = tw;
-    DtlsHandshake.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_make_args.timestamp = 1000;
-    DtlsHandshake.cookie_make_args.payload = payload;
-    DtlsHandshake.cookie_make_args.payload_len = sizeof(payload);
-    DtlsHandshake.cookie_make_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_make_args.out = cookie;
-    DtlsHandshake.cookie_make_args.out_cap = sizeof(cookie);
+    DtlsHandshakeV.cookie_make_args.mac_work = tw;
+    DtlsHandshakeV.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_make_args.timestamp = 1000;
+    DtlsHandshakeV.cookie_make_args.payload = payload;
+    DtlsHandshakeV.cookie_make_args.payload_len = sizeof(payload);
+    DtlsHandshakeV.cookie_make_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_make_args.out = cookie;
+    DtlsHandshakeV.cookie_make_args.out_cap = sizeof(cookie);
     DtlsHandshake.cookie_make(dtls_handshake_work);
-    size_t n = DtlsHandshake.n;
+    size_t n = DtlsHandshakeV.n;
     TEST_ASSERT_TRUE(n > 0);
 
     uint8_t out[16];
     size_t plen = 0;
 
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 1005;
-    DtlsHandshake.cookie_verify_args.max_age = 10;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = cookie;
-    DtlsHandshake.cookie_verify_args.cookie_len = n;
-    DtlsHandshake.cookie_verify_args.payload_out = out;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(out);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 1005;
+    DtlsHandshakeV.cookie_verify_args.max_age = 10;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = cookie;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = n;
+    DtlsHandshakeV.cookie_verify_args.payload_out = out;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(out);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_TRUE(DtlsHandshake.ok);
+    TEST_ASSERT_TRUE(DtlsHandshakeV.ok);
 
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 2000;
-    DtlsHandshake.cookie_verify_args.max_age = 10;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = cookie;
-    DtlsHandshake.cookie_verify_args.cookie_len = n;
-    DtlsHandshake.cookie_verify_args.payload_out = out;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(out);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 2000;
+    DtlsHandshakeV.cookie_verify_args.max_age = 10;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = cookie;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = n;
+    DtlsHandshakeV.cookie_verify_args.payload_out = out;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(out);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 999;
-    DtlsHandshake.cookie_verify_args.max_age = 10;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = cookie;
-    DtlsHandshake.cookie_verify_args.cookie_len = n;
-    DtlsHandshake.cookie_verify_args.payload_out = out;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(out);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 999;
+    DtlsHandshakeV.cookie_verify_args.max_age = 10;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = cookie;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = n;
+    DtlsHandshakeV.cookie_verify_args.payload_out = out;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(out);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 }
 
 void test_hs_frag_build_rejects(void)
@@ -583,69 +583,69 @@ void test_hs_frag_build_rejects(void)
     uint8_t body[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t out[64];
 
-    DtlsHandshake.frag_build_args.msg_type = 1;
-    DtlsHandshake.frag_build_args.msg_seq = 0;
-    DtlsHandshake.frag_build_args.full_len = 0x1000000;
-    DtlsHandshake.frag_build_args.frag_offset = 0;
-    DtlsHandshake.frag_build_args.frag = body;
-    DtlsHandshake.frag_build_args.frag_len = 8;
-    DtlsHandshake.frag_build_args.out = out;
-    DtlsHandshake.frag_build_args.out_cap = sizeof(out);
+    DtlsHandshakeV.frag_build_args.msg_type = 1;
+    DtlsHandshakeV.frag_build_args.msg_seq = 0;
+    DtlsHandshakeV.frag_build_args.full_len = 0x1000000;
+    DtlsHandshakeV.frag_build_args.frag_offset = 0;
+    DtlsHandshakeV.frag_build_args.frag = body;
+    DtlsHandshakeV.frag_build_args.frag_len = 8;
+    DtlsHandshakeV.frag_build_args.out = out;
+    DtlsHandshakeV.frag_build_args.out_cap = sizeof(out);
     DtlsHandshake.frag_build(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
-    DtlsHandshake.frag_build_args.msg_type = 1;
-    DtlsHandshake.frag_build_args.msg_seq = 0;
-    DtlsHandshake.frag_build_args.full_len = 100;
-    DtlsHandshake.frag_build_args.frag_offset = 0x1000000;
-    DtlsHandshake.frag_build_args.frag = body;
-    DtlsHandshake.frag_build_args.frag_len = 8;
-    DtlsHandshake.frag_build_args.out = out;
-    DtlsHandshake.frag_build_args.out_cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
+    DtlsHandshakeV.frag_build_args.msg_type = 1;
+    DtlsHandshakeV.frag_build_args.msg_seq = 0;
+    DtlsHandshakeV.frag_build_args.full_len = 100;
+    DtlsHandshakeV.frag_build_args.frag_offset = 0x1000000;
+    DtlsHandshakeV.frag_build_args.frag = body;
+    DtlsHandshakeV.frag_build_args.frag_len = 8;
+    DtlsHandshakeV.frag_build_args.out = out;
+    DtlsHandshakeV.frag_build_args.out_cap = sizeof(out);
     DtlsHandshake.frag_build(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
-    DtlsHandshake.frag_build_args.msg_type = 1;
-    DtlsHandshake.frag_build_args.msg_seq = 0;
-    DtlsHandshake.frag_build_args.full_len = 100;
-    DtlsHandshake.frag_build_args.frag_offset = 0;
-    DtlsHandshake.frag_build_args.frag = body;
-    DtlsHandshake.frag_build_args.frag_len = 0x1000000;
-    DtlsHandshake.frag_build_args.out = out;
-    DtlsHandshake.frag_build_args.out_cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
+    DtlsHandshakeV.frag_build_args.msg_type = 1;
+    DtlsHandshakeV.frag_build_args.msg_seq = 0;
+    DtlsHandshakeV.frag_build_args.full_len = 100;
+    DtlsHandshakeV.frag_build_args.frag_offset = 0;
+    DtlsHandshakeV.frag_build_args.frag = body;
+    DtlsHandshakeV.frag_build_args.frag_len = 0x1000000;
+    DtlsHandshakeV.frag_build_args.out = out;
+    DtlsHandshakeV.frag_build_args.out_cap = sizeof(out);
     DtlsHandshake.frag_build(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 
-    DtlsHandshake.frag_build_args.msg_type = 1;
-    DtlsHandshake.frag_build_args.msg_seq = 0;
-    DtlsHandshake.frag_build_args.full_len = 10;
-    DtlsHandshake.frag_build_args.frag_offset = 8;
-    DtlsHandshake.frag_build_args.frag = body;
-    DtlsHandshake.frag_build_args.frag_len = 5;
-    DtlsHandshake.frag_build_args.out = out;
-    DtlsHandshake.frag_build_args.out_cap = sizeof(out);
+    DtlsHandshakeV.frag_build_args.msg_type = 1;
+    DtlsHandshakeV.frag_build_args.msg_seq = 0;
+    DtlsHandshakeV.frag_build_args.full_len = 10;
+    DtlsHandshakeV.frag_build_args.frag_offset = 8;
+    DtlsHandshakeV.frag_build_args.frag = body;
+    DtlsHandshakeV.frag_build_args.frag_len = 5;
+    DtlsHandshakeV.frag_build_args.out = out;
+    DtlsHandshakeV.frag_build_args.out_cap = sizeof(out);
     DtlsHandshake.frag_build(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 
-    DtlsHandshake.frag_build_args.msg_type = 1;
-    DtlsHandshake.frag_build_args.msg_seq = 0;
-    DtlsHandshake.frag_build_args.full_len = 8;
-    DtlsHandshake.frag_build_args.frag_offset = 0;
-    DtlsHandshake.frag_build_args.frag = body;
-    DtlsHandshake.frag_build_args.frag_len = 8;
-    DtlsHandshake.frag_build_args.out = out;
-    DtlsHandshake.frag_build_args.out_cap = PROTOCORE_DTLS_HS_HDR_LEN + 7;
+    DtlsHandshakeV.frag_build_args.msg_type = 1;
+    DtlsHandshakeV.frag_build_args.msg_seq = 0;
+    DtlsHandshakeV.frag_build_args.full_len = 8;
+    DtlsHandshakeV.frag_build_args.frag_offset = 0;
+    DtlsHandshakeV.frag_build_args.frag = body;
+    DtlsHandshakeV.frag_build_args.frag_len = 8;
+    DtlsHandshakeV.frag_build_args.out = out;
+    DtlsHandshakeV.frag_build_args.out_cap = PROTOCORE_DTLS_HS_HDR_LEN + 7;
     DtlsHandshake.frag_build(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 
-    DtlsHandshake.frag_build_args.msg_type = 1;
-    DtlsHandshake.frag_build_args.msg_seq = 0;
-    DtlsHandshake.frag_build_args.full_len = 8;
-    DtlsHandshake.frag_build_args.frag_offset = 0;
-    DtlsHandshake.frag_build_args.frag = body;
-    DtlsHandshake.frag_build_args.frag_len = 8;
-    DtlsHandshake.frag_build_args.out = out;
-    DtlsHandshake.frag_build_args.out_cap = PROTOCORE_DTLS_HS_HDR_LEN + 8;
+    DtlsHandshakeV.frag_build_args.msg_type = 1;
+    DtlsHandshakeV.frag_build_args.msg_seq = 0;
+    DtlsHandshakeV.frag_build_args.full_len = 8;
+    DtlsHandshakeV.frag_build_args.frag_offset = 0;
+    DtlsHandshakeV.frag_build_args.frag = body;
+    DtlsHandshakeV.frag_build_args.frag_len = 8;
+    DtlsHandshakeV.frag_build_args.out = out;
+    DtlsHandshakeV.frag_build_args.out_cap = PROTOCORE_DTLS_HS_HDR_LEN + 8;
     DtlsHandshake.frag_build(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(PROTOCORE_DTLS_HS_HDR_LEN + 8, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_DTLS_HS_HDR_LEN + 8, DtlsHandshakeV.n);
 }
 
 void test_hs_reasm_header_guards(void)
@@ -656,30 +656,30 @@ void test_hs_reasm_header_guards(void)
 
     {
         DtlsHsReasm r;
-        DtlsHandshake.reasm_init_args.r = &r;
-        DtlsHandshake.reasm_init_args.msg_seq = 0;
-        DtlsHandshake.reasm_init_args.buf = buf;
-        DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+        DtlsHandshakeV.reasm_init_args.r = &r;
+        DtlsHandshakeV.reasm_init_args.msg_seq = 0;
+        DtlsHandshakeV.reasm_init_args.buf = buf;
+        DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
         DtlsHandshake.reasm_init(dtls_handshake_work);
         DtlsHsHeader h = {1, 40, 0, 30, 20, body};
-        DtlsHandshake.reasm_add_args.r = &r;
-        DtlsHandshake.reasm_add_args.frag = &h;
+        DtlsHandshakeV.reasm_add_args.r = &r;
+        DtlsHandshakeV.reasm_add_args.frag = &h;
         DtlsHandshake.reasm_add(dtls_handshake_work);
-        TEST_ASSERT_EQUAL_INT(-1, DtlsHandshake.n);
+        TEST_ASSERT_EQUAL_INT(-1, DtlsHandshakeV.n);
     }
 
     {
         DtlsHsReasm r;
-        DtlsHandshake.reasm_init_args.r = &r;
-        DtlsHandshake.reasm_init_args.msg_seq = 0;
-        DtlsHandshake.reasm_init_args.buf = buf;
-        DtlsHandshake.reasm_init_args.buf_cap = sizeof(buf);
+        DtlsHandshakeV.reasm_init_args.r = &r;
+        DtlsHandshakeV.reasm_init_args.msg_seq = 0;
+        DtlsHandshakeV.reasm_init_args.buf = buf;
+        DtlsHandshakeV.reasm_init_args.buf_cap = sizeof(buf);
         DtlsHandshake.reasm_init(dtls_handshake_work);
         DtlsHsHeader empty = {1, 40, 0, 0, 0, body};
-        DtlsHandshake.reasm_add_args.r = &r;
-        DtlsHandshake.reasm_add_args.frag = &empty;
+        DtlsHandshakeV.reasm_add_args.r = &r;
+        DtlsHandshakeV.reasm_add_args.frag = &empty;
         DtlsHandshake.reasm_add(dtls_handshake_work);
-        TEST_ASSERT_EQUAL_INT(0, DtlsHandshake.n);
+        TEST_ASSERT_EQUAL_INT(0, DtlsHandshakeV.n);
         TEST_ASSERT_TRUE(r.active);
         TEST_ASSERT_EQUAL_INT(1, feed(&r, 1, 0, 40, 0, body, 40));
         TEST_ASSERT_EQUAL_MEMORY(body, buf, 40);
@@ -690,26 +690,26 @@ void test_ack_build_rejects(void)
 {
     uint8_t out[64];
 
-    DtlsHandshake.ack_build_args.nums = NULL;
-    DtlsHandshake.ack_build_args.count = 4096;
-    DtlsHandshake.ack_build_args.out = out;
-    DtlsHandshake.ack_build_args.out_cap = sizeof(out);
+    DtlsHandshakeV.ack_build_args.nums = NULL;
+    DtlsHandshakeV.ack_build_args.count = 4096;
+    DtlsHandshakeV.ack_build_args.out = out;
+    DtlsHandshakeV.ack_build_args.out_cap = sizeof(out);
     DtlsHandshake.ack_build(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 
     DtlsRecordNumber rns[2] = {{2, 1}, {2, 2}};
-    DtlsHandshake.ack_build_args.nums = rns;
-    DtlsHandshake.ack_build_args.count = 2;
-    DtlsHandshake.ack_build_args.out = out;
-    DtlsHandshake.ack_build_args.out_cap = 2 + 2 * 16 - 1;
+    DtlsHandshakeV.ack_build_args.nums = rns;
+    DtlsHandshakeV.ack_build_args.count = 2;
+    DtlsHandshakeV.ack_build_args.out = out;
+    DtlsHandshakeV.ack_build_args.out_cap = 2 + 2 * 16 - 1;
     DtlsHandshake.ack_build(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
-    DtlsHandshake.ack_build_args.nums = rns;
-    DtlsHandshake.ack_build_args.count = 2;
-    DtlsHandshake.ack_build_args.out = out;
-    DtlsHandshake.ack_build_args.out_cap = 2 + 2 * 16;
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
+    DtlsHandshakeV.ack_build_args.nums = rns;
+    DtlsHandshakeV.ack_build_args.count = 2;
+    DtlsHandshakeV.ack_build_args.out = out;
+    DtlsHandshakeV.ack_build_args.out_cap = 2 + 2 * 16;
     DtlsHandshake.ack_build(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(2 + 2 * 16, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(2 + 2 * 16, DtlsHandshakeV.n);
 }
 
 void test_cookie_make_rejects(void)
@@ -717,77 +717,77 @@ void test_cookie_make_rejects(void)
     uint8_t out[256];
     const uint8_t payload[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
-    DtlsHandshake.cookie_make_args.mac_work = tw;
-    DtlsHandshake.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_make_args.timestamp = 1;
-    DtlsHandshake.cookie_make_args.payload = NULL;
-    DtlsHandshake.cookie_make_args.payload_len = 0x10000;
-    DtlsHandshake.cookie_make_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_make_args.out = out;
-    DtlsHandshake.cookie_make_args.out_cap = sizeof(out);
+    DtlsHandshakeV.cookie_make_args.mac_work = tw;
+    DtlsHandshakeV.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_make_args.timestamp = 1;
+    DtlsHandshakeV.cookie_make_args.payload = NULL;
+    DtlsHandshakeV.cookie_make_args.payload_len = 0x10000;
+    DtlsHandshakeV.cookie_make_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_make_args.out = out;
+    DtlsHandshakeV.cookie_make_args.out_cap = sizeof(out);
     DtlsHandshake.cookie_make(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 
-    DtlsHandshake.cookie_make_args.mac_work = tw;
-    DtlsHandshake.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_make_args.timestamp = 1;
-    DtlsHandshake.cookie_make_args.payload = payload;
-    DtlsHandshake.cookie_make_args.payload_len = sizeof(payload);
-    DtlsHandshake.cookie_make_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_make_args.out = out;
-    DtlsHandshake.cookie_make_args.out_cap = 20;
+    DtlsHandshakeV.cookie_make_args.mac_work = tw;
+    DtlsHandshakeV.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_make_args.timestamp = 1;
+    DtlsHandshakeV.cookie_make_args.payload = payload;
+    DtlsHandshakeV.cookie_make_args.payload_len = sizeof(payload);
+    DtlsHandshakeV.cookie_make_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_make_args.out = out;
+    DtlsHandshakeV.cookie_make_args.out_cap = 20;
     DtlsHandshake.cookie_make(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 
     uint8_t big[128];
     memset(big, 0x5A, sizeof(big));
-    DtlsHandshake.cookie_make_args.mac_work = tw;
-    DtlsHandshake.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_make_args.timestamp = 1;
-    DtlsHandshake.cookie_make_args.payload = big;
-    DtlsHandshake.cookie_make_args.payload_len = sizeof(big);
-    DtlsHandshake.cookie_make_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_make_args.out = out;
-    DtlsHandshake.cookie_make_args.out_cap = sizeof(out);
+    DtlsHandshakeV.cookie_make_args.mac_work = tw;
+    DtlsHandshakeV.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_make_args.timestamp = 1;
+    DtlsHandshakeV.cookie_make_args.payload = big;
+    DtlsHandshakeV.cookie_make_args.payload_len = sizeof(big);
+    DtlsHandshakeV.cookie_make_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_make_args.out = out;
+    DtlsHandshakeV.cookie_make_args.out_cap = sizeof(out);
     DtlsHandshake.cookie_make(dtls_handshake_work);
-    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshake.n);
+    TEST_ASSERT_EQUAL_size_t(0, DtlsHandshakeV.n);
 }
 
 void test_cookie_empty_payload_roundtrip(void)
 {
     uint8_t cookie[PROTOCORE_DTLS_COOKIE_MAX];
-    DtlsHandshake.cookie_make_args.mac_work = tw;
-    DtlsHandshake.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_make_args.timestamp = 4242;
-    DtlsHandshake.cookie_make_args.payload = NULL;
-    DtlsHandshake.cookie_make_args.payload_len = 0;
-    DtlsHandshake.cookie_make_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_make_args.out = cookie;
-    DtlsHandshake.cookie_make_args.out_cap = sizeof(cookie);
+    DtlsHandshakeV.cookie_make_args.mac_work = tw;
+    DtlsHandshakeV.cookie_make_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_make_args.timestamp = 4242;
+    DtlsHandshakeV.cookie_make_args.payload = NULL;
+    DtlsHandshakeV.cookie_make_args.payload_len = 0;
+    DtlsHandshakeV.cookie_make_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_make_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_make_args.out = cookie;
+    DtlsHandshakeV.cookie_make_args.out_cap = sizeof(cookie);
     DtlsHandshake.cookie_make(dtls_handshake_work);
-    size_t n = DtlsHandshake.n;
+    size_t n = DtlsHandshakeV.n;
     TEST_ASSERT_EQUAL_size_t(1 + 8 + 2 + PROTOCORE_HMAC_SHA256_LEN, n);
 
     uint8_t payload[4];
     memset(payload, 0xEE, sizeof(payload));
     size_t plen = 123;
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 4242;
-    DtlsHandshake.cookie_verify_args.max_age = 0;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = cookie;
-    DtlsHandshake.cookie_verify_args.cookie_len = n;
-    DtlsHandshake.cookie_verify_args.payload_out = payload;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(payload);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 4242;
+    DtlsHandshakeV.cookie_verify_args.max_age = 0;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = cookie;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = n;
+    DtlsHandshakeV.cookie_verify_args.payload_out = payload;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(payload);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_TRUE(DtlsHandshake.ok);
+    TEST_ASSERT_TRUE(DtlsHandshakeV.ok);
     TEST_ASSERT_EQUAL_size_t(0, plen);
     TEST_ASSERT_EQUAL_UINT8(0xEE, payload[0]);
 }
@@ -800,48 +800,48 @@ void test_cookie_verify_structural_rejects(void)
 
     memcpy(bad, COOKIE_WIRE, sizeof(bad));
     bad[0] = 2;
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 0;
-    DtlsHandshake.cookie_verify_args.max_age = 0;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = bad;
-    DtlsHandshake.cookie_verify_args.cookie_len = sizeof(bad);
-    DtlsHandshake.cookie_verify_args.payload_out = payload;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(payload);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 0;
+    DtlsHandshakeV.cookie_verify_args.max_age = 0;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = bad;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = sizeof(bad);
+    DtlsHandshakeV.cookie_verify_args.payload_out = payload;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(payload);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 
     memcpy(bad, COOKIE_WIRE, sizeof(bad));
     bad[10] = 0x21;
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 0;
-    DtlsHandshake.cookie_verify_args.max_age = 0;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = bad;
-    DtlsHandshake.cookie_verify_args.cookie_len = sizeof(bad);
-    DtlsHandshake.cookie_verify_args.payload_out = payload;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(payload);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 0;
+    DtlsHandshakeV.cookie_verify_args.max_age = 0;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = bad;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = sizeof(bad);
+    DtlsHandshakeV.cookie_verify_args.payload_out = payload;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(payload);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 
     uint8_t small[16];
-    DtlsHandshake.cookie_verify_args.mac_work = tw;
-    DtlsHandshake.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
-    DtlsHandshake.cookie_verify_args.now = 0;
-    DtlsHandshake.cookie_verify_args.max_age = 0;
-    DtlsHandshake.cookie_verify_args.client_addr = COOKIE_ADDR;
-    DtlsHandshake.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
-    DtlsHandshake.cookie_verify_args.cookie = COOKIE_WIRE;
-    DtlsHandshake.cookie_verify_args.cookie_len = sizeof(COOKIE_WIRE);
-    DtlsHandshake.cookie_verify_args.payload_out = small;
-    DtlsHandshake.cookie_verify_args.payload_cap = sizeof(small);
-    DtlsHandshake.cookie_verify_args.payload_len_out = &plen;
+    DtlsHandshakeV.cookie_verify_args.mac_work = tw;
+    DtlsHandshakeV.cookie_verify_args.protocore_hmac_key = COOKIE_KEY;
+    DtlsHandshakeV.cookie_verify_args.now = 0;
+    DtlsHandshakeV.cookie_verify_args.max_age = 0;
+    DtlsHandshakeV.cookie_verify_args.client_addr = COOKIE_ADDR;
+    DtlsHandshakeV.cookie_verify_args.addr_len = sizeof(COOKIE_ADDR);
+    DtlsHandshakeV.cookie_verify_args.cookie = COOKIE_WIRE;
+    DtlsHandshakeV.cookie_verify_args.cookie_len = sizeof(COOKIE_WIRE);
+    DtlsHandshakeV.cookie_verify_args.payload_out = small;
+    DtlsHandshakeV.cookie_verify_args.payload_cap = sizeof(small);
+    DtlsHandshakeV.cookie_verify_args.payload_len_out = &plen;
     DtlsHandshake.cookie_verify(dtls_handshake_work);
-    TEST_ASSERT_FALSE(DtlsHandshake.ok);
+    TEST_ASSERT_FALSE(DtlsHandshakeV.ok);
 }

@@ -60,12 +60,28 @@ typedef struct
     ForwardNs *forward; ///< the forwarding plane (RFC 1812 sec 5)
 #endif
     IpNs *ip; ///< an internet address as a value (RFC 791, RFC 8200)
+} networkVars;
 
+/** @brief The operands and the outcome. */
+extern networkVars networkV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
 } NetworkNs;
 
-/** @brief The one symbol this module exports. */
-extern NetworkNs network;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in networkV or a region of the borrow at a fixed offset.
+void protocore_network_init(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `network.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const NetworkNs network __attribute__((unused)) = {
+    .init = protocore_network_init,
+};
 
 PROTOCORE_END_DECLS
 

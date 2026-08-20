@@ -23,18 +23,18 @@ static void sink_cb(const protocore_tc_window *, void *)
 /** @brief Open a capture with @p cfg: the pre-roll ring, the post-trigger half, and the sink. */
 static proto_bool tc_begin(const protocore_tc_config *cfg)
 {
-    TraceCapture.cfg = cfg;
+    TraceCaptureV.cfg = cfg;
     TraceCapture.begin(protocore_trace_capture_span());
-    return TraceCapture.ok;
+    return TraceCaptureV.ok;
 }
 
 /** @brief Feed @p n samples at @p samples into the capture; how many it took. */
 static uint16_t tc_feed(const uint16_t *samples, uint16_t n)
 {
-    TraceCapture.feed.samples = samples;
-    TraceCapture.feed.n = n;
+    TraceCaptureV.feed.samples = samples;
+    TraceCaptureV.feed.n = n;
     TraceCapture.feed_in(protocore_trace_capture_span());
-    return TraceCapture.accepted;
+    return TraceCaptureV.accepted;
 }
 
 void dbench_run(void)

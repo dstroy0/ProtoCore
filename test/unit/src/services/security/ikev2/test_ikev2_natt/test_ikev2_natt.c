@@ -36,14 +36,14 @@ static const uint8_t IP6[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 
 static size_t digest_of(const uint8_t *spi_i, const uint8_t *spi_r, const uint8_t *ip, size_t ip_len, uint16_t port,
                         uint8_t *out)
 {
-    IkeNatt.spi.init_spi = spi_i;
-    IkeNatt.spi.resp_spi = spi_r;
-    IkeNatt.addr.ip = ip;
-    IkeNatt.addr.ip_len = ip_len;
-    IkeNatt.addr.port = port;
-    IkeNatt.digest.out = out;
+    IkeNattV.spi.init_spi = spi_i;
+    IkeNattV.spi.resp_spi = spi_r;
+    IkeNattV.addr.ip = ip;
+    IkeNattV.addr.ip_len = ip_len;
+    IkeNattV.addr.port = port;
+    IkeNattV.digest.out = out;
     IkeNatt.hash(ikev2_natt_work);
-    return IkeNatt.n;
+    return IkeNattV.n;
 }
 
 // RFC 7296 sec 3.10: Next Payload, C+RESERVED, Payload Length, Protocol ID, SPI Size, Notify Message
@@ -60,17 +60,17 @@ void test_rfc7296_detection_notify_layout(void)
     TEST_ASSERT_EQUAL_size_t(20, digest_of(SPI_I, SPI_R, IP4, sizeof(IP4), 500, want_hash));
 
     uint8_t out[64];
-    IkeNatt.spi.init_spi = SPI_I;
-    IkeNatt.spi.resp_spi = SPI_R;
-    IkeNatt.addr.ip = IP4;
-    IkeNatt.addr.ip_len = sizeof(IP4);
-    IkeNatt.addr.port = 500;
-    IkeNatt.out.buf = out;
-    IkeNatt.out.cap = sizeof(out);
-    IkeNatt.out.next_payload = IKE_PL_NOTIFY; // another Notify follows this one
+    IkeNattV.spi.init_spi = SPI_I;
+    IkeNattV.spi.resp_spi = SPI_R;
+    IkeNattV.addr.ip = IP4;
+    IkeNattV.addr.ip_len = sizeof(IP4);
+    IkeNattV.addr.port = 500;
+    IkeNattV.out.buf = out;
+    IkeNattV.out.cap = sizeof(out);
+    IkeNattV.out.next_payload = IKE_PL_NOTIFY; // another Notify follows this one
     IkeNatt.source_build(ikev2_natt_work);
 
-    TEST_ASSERT_EQUAL_size_t(28, IkeNatt.n);
+    TEST_ASSERT_EQUAL_size_t(28, IkeNattV.n);
     TEST_ASSERT_EQUAL_HEX8(IKE_PL_NOTIFY, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x00, out[1]); // the Critical bit is clear
     TEST_ASSERT_EQUAL_HEX8(0x00, out[2]); // Payload Length, big endian
@@ -82,9 +82,9 @@ void test_rfc7296_detection_notify_layout(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(want_hash, out + 8, 20);
 
     // The destination payload is the same shape with type 16389, over the address sent to.
-    IkeNatt.out.next_payload = IKE_PL_NONE;
+    IkeNattV.out.next_payload = IKE_PL_NONE;
     IkeNatt.dest_build(ikev2_natt_work);
-    TEST_ASSERT_EQUAL_size_t(28, IkeNatt.n);
+    TEST_ASSERT_EQUAL_size_t(28, IkeNattV.n);
     TEST_ASSERT_EQUAL_HEX8(IKE_PL_NONE, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x40, out[6]);
     TEST_ASSERT_EQUAL_HEX8(0x05, out[7]);
@@ -157,18 +157,18 @@ void test_address_length_is_four_or_sixteen(void)
 
     // A build over an address it cannot digest emits no payload.
     uint8_t buf[64];
-    IkeNatt.spi.init_spi = SPI_I;
-    IkeNatt.spi.resp_spi = SPI_R;
-    IkeNatt.addr.ip = IP4;
-    IkeNatt.addr.ip_len = 5;
-    IkeNatt.addr.port = 500;
-    IkeNatt.out.buf = buf;
-    IkeNatt.out.cap = sizeof(buf);
-    IkeNatt.out.next_payload = IKE_PL_NONE;
+    IkeNattV.spi.init_spi = SPI_I;
+    IkeNattV.spi.resp_spi = SPI_R;
+    IkeNattV.addr.ip = IP4;
+    IkeNattV.addr.ip_len = 5;
+    IkeNattV.addr.port = 500;
+    IkeNattV.out.buf = buf;
+    IkeNattV.out.cap = sizeof(buf);
+    IkeNattV.out.next_payload = IKE_PL_NONE;
     IkeNatt.source_build(ikev2_natt_work);
-    TEST_ASSERT_EQUAL_size_t(0, IkeNatt.n);
+    TEST_ASSERT_EQUAL_size_t(0, IkeNattV.n);
     IkeNatt.dest_build(ikev2_natt_work);
-    TEST_ASSERT_EQUAL_size_t(0, IkeNatt.n);
+    TEST_ASSERT_EQUAL_size_t(0, IkeNattV.n);
 }
 
 // RFC 7296 sec 2.23: a recipient recomputes the digest over the addresses it actually observes. A
@@ -179,79 +179,79 @@ void test_nat_detection_verdicts(void)
     digest_of(SPI_I, SPI_R, IP4, sizeof(IP4), 500, sent);
 
     // The observed source is what the peer said it was: no NAT on that axis.
-    IkeNatt.spi.init_spi = SPI_I;
-    IkeNatt.spi.resp_spi = SPI_R;
-    IkeNatt.addr.ip = IP4;
-    IkeNatt.addr.ip_len = sizeof(IP4);
-    IkeNatt.addr.port = 500;
-    IkeNatt.digest.received = sent;
+    IkeNattV.spi.init_spi = SPI_I;
+    IkeNattV.spi.resp_spi = SPI_R;
+    IkeNattV.addr.ip = IP4;
+    IkeNattV.addr.ip_len = sizeof(IP4);
+    IkeNattV.addr.port = 500;
+    IkeNattV.digest.received = sent;
     IkeNatt.match(ikev2_natt_work);
-    TEST_ASSERT_TRUE(IkeNatt.ok);
+    TEST_ASSERT_TRUE(IkeNattV.ok);
     IkeNatt.peer_behind_nat(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
 
     // The datagram arrived from port 4500 instead: the source was translated.
-    IkeNatt.addr.port = 4500;
+    IkeNattV.addr.port = 4500;
     IkeNatt.match(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
     IkeNatt.peer_behind_nat(ikev2_natt_work);
-    TEST_ASSERT_TRUE(IkeNatt.ok);
+    TEST_ASSERT_TRUE(IkeNattV.ok);
 
     // The same test on the destination axis says this system is behind a NAT.
     static const uint8_t OUR_IP[4] = {198, 51, 100, 7}; // RFC 5737 TEST-NET-2
     uint8_t peer_saw[20];
     digest_of(SPI_I, SPI_R, IP4, sizeof(IP4), 500, peer_saw); // the peer sent to a translated address
-    IkeNatt.addr.ip = OUR_IP;
-    IkeNatt.addr.ip_len = sizeof(OUR_IP);
-    IkeNatt.addr.port = 500;
-    IkeNatt.digest.received = peer_saw;
+    IkeNattV.addr.ip = OUR_IP;
+    IkeNattV.addr.ip_len = sizeof(OUR_IP);
+    IkeNattV.addr.port = 500;
+    IkeNattV.digest.received = peer_saw;
     IkeNatt.self_behind_nat(ikev2_natt_work);
-    TEST_ASSERT_TRUE(IkeNatt.ok);
+    TEST_ASSERT_TRUE(IkeNattV.ok);
 
     uint8_t our_own[20];
     digest_of(SPI_I, SPI_R, OUR_IP, sizeof(OUR_IP), 500, our_own);
-    IkeNatt.addr.ip = OUR_IP;
-    IkeNatt.addr.ip_len = sizeof(OUR_IP);
-    IkeNatt.addr.port = 500;
-    IkeNatt.digest.received = our_own;
+    IkeNattV.addr.ip = OUR_IP;
+    IkeNattV.addr.ip_len = sizeof(OUR_IP);
+    IkeNattV.addr.port = 500;
+    IkeNattV.digest.received = our_own;
     IkeNatt.self_behind_nat(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
 
     // Nothing received is no match, so it reads as a NAT rather than as agreement.
-    IkeNatt.digest.received = NULL;
+    IkeNattV.digest.received = NULL;
     IkeNatt.match(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
     IkeNatt.peer_behind_nat(ikev2_natt_work);
-    TEST_ASSERT_TRUE(IkeNatt.ok);
+    TEST_ASSERT_TRUE(IkeNattV.ok);
 }
 
 // A payload this side built is the payload the other side matches against: the two halves agree.
 void test_built_payload_carries_the_matching_digest(void)
 {
     uint8_t out[64];
-    IkeNatt.spi.init_spi = SPI_I;
-    IkeNatt.spi.resp_spi = SPI_R;
-    IkeNatt.addr.ip = IP6;
-    IkeNatt.addr.ip_len = sizeof(IP6);
-    IkeNatt.addr.port = PROTOCORE_NATT_PORT;
-    IkeNatt.out.buf = out;
-    IkeNatt.out.cap = sizeof(out);
-    IkeNatt.out.next_payload = IKE_PL_NONE;
+    IkeNattV.spi.init_spi = SPI_I;
+    IkeNattV.spi.resp_spi = SPI_R;
+    IkeNattV.addr.ip = IP6;
+    IkeNattV.addr.ip_len = sizeof(IP6);
+    IkeNattV.addr.port = PROTOCORE_NATT_PORT;
+    IkeNattV.out.buf = out;
+    IkeNattV.out.cap = sizeof(out);
+    IkeNattV.out.next_payload = IKE_PL_NONE;
     IkeNatt.source_build(ikev2_natt_work);
-    TEST_ASSERT_EQUAL_size_t(28, IkeNatt.n);
+    TEST_ASSERT_EQUAL_size_t(28, IkeNattV.n);
 
-    IkeNatt.digest.received = out + 8; // the Notification Data, straight off the wire
+    IkeNattV.digest.received = out + 8; // the Notification Data, straight off the wire
     IkeNatt.match(ikev2_natt_work);
-    TEST_ASSERT_TRUE(IkeNatt.ok);
+    TEST_ASSERT_TRUE(IkeNattV.ok);
 
     // A buffer too small for the whole payload emits nothing.
-    IkeNatt.out.cap = 27;
+    IkeNattV.out.cap = 27;
     IkeNatt.source_build(ikev2_natt_work);
-    TEST_ASSERT_EQUAL_size_t(0, IkeNatt.n);
-    IkeNatt.out.buf = NULL;
-    IkeNatt.out.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0, IkeNattV.n);
+    IkeNattV.out.buf = NULL;
+    IkeNattV.out.cap = sizeof(out);
     IkeNatt.source_build(ikev2_natt_work);
-    TEST_ASSERT_EQUAL_size_t(0, IkeNatt.n);
+    TEST_ASSERT_EQUAL_size_t(0, IkeNattV.n);
 }
 
 // RFC 3948 sec 2.3: a NAT-keepalive is one octet of value 0xFF. Nothing longer and nothing else is.
@@ -260,32 +260,32 @@ void test_rfc3948_keepalive(void)
     TEST_ASSERT_EQUAL_HEX8(0xFF, PROTOCORE_NATT_KEEPALIVE_BYTE);
 
     static const uint8_t KEEPALIVE[1] = {0xFF};
-    IkeNatt.pkt.p = KEEPALIVE;
-    IkeNatt.pkt.len = 1;
+    IkeNattV.pkt.p = KEEPALIVE;
+    IkeNattV.pkt.len = 1;
     IkeNatt.is_keepalive(ikev2_natt_work);
-    TEST_ASSERT_TRUE(IkeNatt.ok);
+    TEST_ASSERT_TRUE(IkeNattV.ok);
 
     static const uint8_t TWO[2] = {0xFF, 0xFF};
-    IkeNatt.pkt.p = TWO;
-    IkeNatt.pkt.len = 2;
+    IkeNattV.pkt.p = TWO;
+    IkeNattV.pkt.len = 2;
     IkeNatt.is_keepalive(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
 
     static const uint8_t OTHER[1] = {0x00};
-    IkeNatt.pkt.p = OTHER;
-    IkeNatt.pkt.len = 1;
+    IkeNattV.pkt.p = OTHER;
+    IkeNattV.pkt.len = 1;
     IkeNatt.is_keepalive(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
 
-    IkeNatt.pkt.p = KEEPALIVE;
-    IkeNatt.pkt.len = 0;
+    IkeNattV.pkt.p = KEEPALIVE;
+    IkeNattV.pkt.len = 0;
     IkeNatt.is_keepalive(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
 
-    IkeNatt.pkt.p = NULL;
-    IkeNatt.pkt.len = 1;
+    IkeNattV.pkt.p = NULL;
+    IkeNattV.pkt.len = 1;
     IkeNatt.is_keepalive(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
 }
 
 // RFC 3948 sec 2.2: an IKE message on port 4500 carries four zero octets aligned with the ESP SPI
@@ -297,38 +297,38 @@ void test_rfc3948_non_esp_marker(void)
 
     // Marker then an IKE header whose Initiator's SPI leads.
     static const uint8_t IKE_MSG[12] = {0, 0, 0, 0, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
-    IkeNatt.pkt.p = IKE_MSG;
-    IkeNatt.pkt.len = sizeof(IKE_MSG);
+    IkeNattV.pkt.p = IKE_MSG;
+    IkeNattV.pkt.len = sizeof(IKE_MSG);
     IkeNatt.is_ike(ikev2_natt_work);
-    TEST_ASSERT_TRUE(IkeNatt.ok);
+    TEST_ASSERT_TRUE(IkeNattV.ok);
 
     // An ESP packet leads with its non-zero SPI, so any of the four octets being set says ESP.
     for (size_t i = 0; i < 4; i++)
     {
         uint8_t esp[12] = {0, 0, 0, 0, 0x00, 0x00, 0x00, 0x01, 0, 0, 0, 0};
         esp[i] = 0x01;
-        IkeNatt.pkt.p = esp;
-        IkeNatt.pkt.len = sizeof(esp);
+        IkeNattV.pkt.p = esp;
+        IkeNattV.pkt.len = sizeof(esp);
         IkeNatt.is_ike(ikev2_natt_work);
-        TEST_ASSERT_FALSE(IkeNatt.ok);
+        TEST_ASSERT_FALSE(IkeNattV.ok);
     }
 
     // A datagram too short to hold the marker is neither.
     static const uint8_t SHORT[3] = {0, 0, 0};
-    IkeNatt.pkt.p = SHORT;
-    IkeNatt.pkt.len = sizeof(SHORT);
+    IkeNattV.pkt.p = SHORT;
+    IkeNattV.pkt.len = sizeof(SHORT);
     IkeNatt.is_ike(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
 
-    IkeNatt.pkt.p = NULL;
-    IkeNatt.pkt.len = 8;
+    IkeNattV.pkt.p = NULL;
+    IkeNattV.pkt.len = 8;
     IkeNatt.is_ike(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
 
     // A keepalive is not an IKE message: one octet cannot hold the marker.
     static const uint8_t KEEPALIVE[1] = {0xFF};
-    IkeNatt.pkt.p = KEEPALIVE;
-    IkeNatt.pkt.len = 1;
+    IkeNattV.pkt.p = KEEPALIVE;
+    IkeNattV.pkt.len = 1;
     IkeNatt.is_ike(ikev2_natt_work);
-    TEST_ASSERT_FALSE(IkeNatt.ok);
+    TEST_ASSERT_FALSE(IkeNattV.ok);
 }

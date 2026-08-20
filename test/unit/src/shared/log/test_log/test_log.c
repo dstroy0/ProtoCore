@@ -60,7 +60,7 @@ static void capture(uint8_t level, const char *line)
 
 static void install(protocore_log_sink_fn fn)
 {
-    Log.sink = fn;
+    LogV.sink = fn;
     Log.set_sink(protocore_log_span());
 }
 
@@ -81,21 +81,21 @@ static const protocore_fval *value_probe(const protocore_fval *v)
 
 static uint16_t held(void)
 {
-    Logbuf.held(protocore_logbuf_span());
-    return Logbuf.count;
+    LogbufV.held(protocore_logbuf_span());
+    return LogbufV.count;
 }
 
 static const char *line_at(uint16_t i)
 {
-    Logbuf.read.i = i;
+    LogbufV.read.i = i;
     Logbuf.at(protocore_logbuf_span());
-    return Logbuf.text;
+    return LogbufV.text;
 }
 
 void setUp(void)
 {
-    Logbuf.trap.threshold = 0xFF;
-    Logbuf.trap.cb = NULL;
+    LogbufV.trap.threshold = 0xFF;
+    LogbufV.trap.cb = NULL;
     Logbuf.set_trap(protocore_logbuf_span());
     Logbuf.reset(protocore_logbuf_span());
     install(capture);

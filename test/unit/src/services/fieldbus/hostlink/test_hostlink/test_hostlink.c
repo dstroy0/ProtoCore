@@ -28,27 +28,27 @@ void tearDown(void)
 // times cancels; that is what makes the hand derivations below auditable.
 void test_fcs_is_a_running_xor(void)
 {
-    Hostlink.fcs_args.data = "";
-    Hostlink.fcs_args.len = 0;
+    HostlinkV.fcs_args.data = "";
+    HostlinkV.fcs_args.len = 0;
     Hostlink.fcs(hostlink_work);
-    TEST_ASSERT_EQUAL_HEX8(0x00u, Hostlink.value);
-    Hostlink.fcs_args.data = "@";
-    Hostlink.fcs_args.len = 1;
+    TEST_ASSERT_EQUAL_HEX8(0x00u, HostlinkV.value);
+    HostlinkV.fcs_args.data = "@";
+    HostlinkV.fcs_args.len = 1;
     Hostlink.fcs(hostlink_work);
-    TEST_ASSERT_EQUAL_HEX8(0x40u, Hostlink.value); // '@' = 0x40
-    Hostlink.fcs_args.data = "@@";
-    Hostlink.fcs_args.len = 2;
+    TEST_ASSERT_EQUAL_HEX8(0x40u, HostlinkV.value); // '@' = 0x40
+    HostlinkV.fcs_args.data = "@@";
+    HostlinkV.fcs_args.len = 2;
     Hostlink.fcs(hostlink_work);
-    TEST_ASSERT_EQUAL_HEX8(0x00u, Hostlink.value); // a pair cancels
-    Hostlink.fcs_args.data = "@@@";
-    Hostlink.fcs_args.len = 3;
+    TEST_ASSERT_EQUAL_HEX8(0x00u, HostlinkV.value); // a pair cancels
+    HostlinkV.fcs_args.data = "@@@";
+    HostlinkV.fcs_args.len = 3;
     Hostlink.fcs(hostlink_work);
-    TEST_ASSERT_EQUAL_HEX8(0x40u, Hostlink.value); // an odd count does not
+    TEST_ASSERT_EQUAL_HEX8(0x40u, HostlinkV.value); // an odd count does not
     // '@' ^ '0' ^ '0' = 0x40 ^ 0x30 ^ 0x30 = 0x40
-    Hostlink.fcs_args.data = "@00";
-    Hostlink.fcs_args.len = 3;
+    HostlinkV.fcs_args.data = "@00";
+    HostlinkV.fcs_args.len = 3;
     Hostlink.fcs(hostlink_work);
-    TEST_ASSERT_EQUAL_HEX8(0x40u, Hostlink.value);
+    TEST_ASSERT_EQUAL_HEX8(0x40u, HostlinkV.value);
 }
 
 // RD from node 0, beginning word address 0, 10 words. The text is two 4-digit zero-padded decimal
@@ -61,13 +61,13 @@ void test_fcs_is_a_running_xor(void)
 void test_read_command_frame(void)
 {
     char buf[32];
-    Hostlink.build_read_args.buf = buf;
-    Hostlink.build_read_args.cap = sizeof(buf);
-    Hostlink.build_read_args.node = 0;
-    Hostlink.build_read_args.address = 0;
-    Hostlink.build_read_args.count = 10;
+    HostlinkV.build_read_args.buf = buf;
+    HostlinkV.build_read_args.cap = sizeof(buf);
+    HostlinkV.build_read_args.node = 0;
+    HostlinkV.build_read_args.address = 0;
+    HostlinkV.build_read_args.count = 10;
     Hostlink.build_read(hostlink_work);
-    size_t n = Hostlink.n;
+    size_t n = HostlinkV.n;
     TEST_ASSERT_EQUAL_size_t(17u, n);
     TEST_ASSERT_EQUAL_STRING("@00RD0000001057*\r", buf);
     TEST_ASSERT_EQUAL_CHAR('\0', buf[n]); // the frame is usable as a C string
@@ -82,14 +82,14 @@ void test_write_command_frame(void)
 {
     static const uint16_t WORDS[1] = {0xABCD};
     char buf[32];
-    Hostlink.build_write_args.buf = buf;
-    Hostlink.build_write_args.cap = sizeof(buf);
-    Hostlink.build_write_args.node = 0;
-    Hostlink.build_write_args.address = 100;
-    Hostlink.build_write_args.words = WORDS;
-    Hostlink.build_write_args.word_count = 1;
+    HostlinkV.build_write_args.buf = buf;
+    HostlinkV.build_write_args.cap = sizeof(buf);
+    HostlinkV.build_write_args.node = 0;
+    HostlinkV.build_write_args.address = 100;
+    HostlinkV.build_write_args.words = WORDS;
+    HostlinkV.build_write_args.word_count = 1;
     Hostlink.build_write(hostlink_work);
-    size_t n = Hostlink.n;
+    size_t n = HostlinkV.n;
     TEST_ASSERT_EQUAL_size_t(17u, n);
     TEST_ASSERT_EQUAL_STRING("@00WR0100ABCD40*\r", buf);
 }
@@ -106,57 +106,57 @@ void test_read_response_words(void)
     static const char RESP[] = "@00RD00123456789ABC27*\r";
     HostlinkFrame f;
     memset(&f, 0, sizeof(f));
-    Hostlink.parse_args.buf = RESP;
-    Hostlink.parse_args.len = strlen(RESP);
-    Hostlink.parse_args.out = &f;
+    HostlinkV.parse_args.buf = RESP;
+    HostlinkV.parse_args.len = strlen(RESP);
+    HostlinkV.parse_args.out = &f;
     Hostlink.parse(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
+    TEST_ASSERT_TRUE(HostlinkV.ok);
     TEST_ASSERT_EQUAL_UINT8(0u, f.node);
     TEST_ASSERT_EQUAL_STRING("RD", f.header_code);
     TEST_ASSERT_EQUAL_size_t(14u, f.text_len); // "00" + three 4-character words
 
     uint8_t code = 0xFF;
-    Hostlink.end_code_args.f = &f;
-    Hostlink.end_code_args.code = &code;
+    HostlinkV.end_code_args.f = &f;
+    HostlinkV.end_code_args.code = &code;
     Hostlink.end_code(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
+    TEST_ASSERT_TRUE(HostlinkV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x00u, code); // 00 = normal completion
 
     uint16_t w = 0;
-    Hostlink.read_word_args.f = &f;
-    Hostlink.read_word_args.index = 0;
-    Hostlink.read_word_args.out = &w;
+    HostlinkV.read_word_args.f = &f;
+    HostlinkV.read_word_args.index = 0;
+    HostlinkV.read_word_args.out = &w;
     Hostlink.read_word(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
+    TEST_ASSERT_TRUE(HostlinkV.ok);
     TEST_ASSERT_EQUAL_HEX16(0x1234u, w);
-    Hostlink.read_word_args.f = &f;
-    Hostlink.read_word_args.index = 1;
-    Hostlink.read_word_args.out = &w;
+    HostlinkV.read_word_args.f = &f;
+    HostlinkV.read_word_args.index = 1;
+    HostlinkV.read_word_args.out = &w;
     Hostlink.read_word(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
+    TEST_ASSERT_TRUE(HostlinkV.ok);
     TEST_ASSERT_EQUAL_HEX16(0x5678u, w);
-    Hostlink.read_word_args.f = &f;
-    Hostlink.read_word_args.index = 2;
-    Hostlink.read_word_args.out = &w;
+    HostlinkV.read_word_args.f = &f;
+    HostlinkV.read_word_args.index = 2;
+    HostlinkV.read_word_args.out = &w;
     Hostlink.read_word(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
+    TEST_ASSERT_TRUE(HostlinkV.ok);
     TEST_ASSERT_EQUAL_HEX16(0x9ABCu, w);
 
-    Hostlink.read_word_args.f = &f;
-    Hostlink.read_word_args.index = 3;
-    Hostlink.read_word_args.out = &w;
+    HostlinkV.read_word_args.f = &f;
+    HostlinkV.read_word_args.index = 3;
+    HostlinkV.read_word_args.out = &w;
     Hostlink.read_word(hostlink_work);
-    TEST_ASSERT_FALSE(Hostlink.ok); // past the end of the text
-    Hostlink.read_word_args.f = &f;
-    Hostlink.read_word_args.index = 0;
-    Hostlink.read_word_args.out = NULL;
+    TEST_ASSERT_FALSE(HostlinkV.ok); // past the end of the text
+    HostlinkV.read_word_args.f = &f;
+    HostlinkV.read_word_args.index = 0;
+    HostlinkV.read_word_args.out = NULL;
     Hostlink.read_word(hostlink_work);
-    TEST_ASSERT_FALSE(Hostlink.ok);
-    Hostlink.read_word_args.f = NULL;
-    Hostlink.read_word_args.index = 0;
-    Hostlink.read_word_args.out = &w;
+    TEST_ASSERT_FALSE(HostlinkV.ok);
+    HostlinkV.read_word_args.f = NULL;
+    HostlinkV.read_word_args.index = 0;
+    HostlinkV.read_word_args.out = &w;
     Hostlink.read_word(hostlink_work);
-    TEST_ASSERT_FALSE(Hostlink.ok);
+    TEST_ASSERT_FALSE(HostlinkV.ok);
 }
 
 // The node number, the two header characters and the text all survive build then parse, for every
@@ -167,25 +167,25 @@ void test_build_parse_round_trip(void)
     for (uint8_t node = 0; node <= 99; node++)
     {
         char buf[32];
-        Hostlink.build_args.buf = buf;
-        Hostlink.build_args.cap = sizeof(buf);
-        Hostlink.build_args.node = node;
-        Hostlink.build_args.header_code = "RD";
-        Hostlink.build_args.text = TEXT;
-        Hostlink.build_args.text_len = strlen(TEXT);
+        HostlinkV.build_args.buf = buf;
+        HostlinkV.build_args.cap = sizeof(buf);
+        HostlinkV.build_args.node = node;
+        HostlinkV.build_args.header_code = "RD";
+        HostlinkV.build_args.text = TEXT;
+        HostlinkV.build_args.text_len = strlen(TEXT);
         Hostlink.build(hostlink_work);
-        size_t n = Hostlink.n;
+        size_t n = HostlinkV.n;
         TEST_ASSERT_EQUAL_size_t(15u, n);
         TEST_ASSERT_EQUAL_CHAR('0' + (node / 10), buf[1]);
         TEST_ASSERT_EQUAL_CHAR('0' + (node % 10), buf[2]);
 
         HostlinkFrame f;
         memset(&f, 0, sizeof(f));
-        Hostlink.parse_args.buf = buf;
-        Hostlink.parse_args.len = n;
-        Hostlink.parse_args.out = &f;
+        HostlinkV.parse_args.buf = buf;
+        HostlinkV.parse_args.len = n;
+        HostlinkV.parse_args.out = &f;
         Hostlink.parse(hostlink_work);
-        TEST_ASSERT_TRUE(Hostlink.ok);
+        TEST_ASSERT_TRUE(HostlinkV.ok);
         TEST_ASSERT_EQUAL_UINT8(node, f.node);
         TEST_ASSERT_EQUAL_STRING("RD", f.header_code);
         TEST_ASSERT_EQUAL_size_t(strlen(TEXT), f.text_len);
@@ -193,14 +193,14 @@ void test_build_parse_round_trip(void)
     }
     // A node above 99 has no two-digit spelling.
     char buf[32];
-    Hostlink.build_args.buf = buf;
-    Hostlink.build_args.cap = sizeof(buf);
-    Hostlink.build_args.node = 100;
-    Hostlink.build_args.header_code = "RD";
-    Hostlink.build_args.text = TEXT;
-    Hostlink.build_args.text_len = strlen(TEXT);
+    HostlinkV.build_args.buf = buf;
+    HostlinkV.build_args.cap = sizeof(buf);
+    HostlinkV.build_args.node = 100;
+    HostlinkV.build_args.header_code = "RD";
+    HostlinkV.build_args.text = TEXT;
+    HostlinkV.build_args.text_len = strlen(TEXT);
     Hostlink.build(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n);
 }
 
 // The builder renders the FCS in uppercase hex, the spelling Omron's tables show, and the parser
@@ -210,30 +210,30 @@ void test_build_parse_round_trip(void)
 void test_fcs_rendering_and_acceptance(void)
 {
     char buf[32];
-    Hostlink.build_args.buf = buf;
-    Hostlink.build_args.cap = sizeof(buf);
-    Hostlink.build_args.node = 0;
-    Hostlink.build_args.header_code = "RD";
-    Hostlink.build_args.text = "x";
-    Hostlink.build_args.text_len = 1;
+    HostlinkV.build_args.buf = buf;
+    HostlinkV.build_args.cap = sizeof(buf);
+    HostlinkV.build_args.node = 0;
+    HostlinkV.build_args.header_code = "RD";
+    HostlinkV.build_args.text = "x";
+    HostlinkV.build_args.text_len = 1;
     Hostlink.build(hostlink_work);
-    size_t n = Hostlink.n;
+    size_t n = HostlinkV.n;
     TEST_ASSERT_EQUAL_size_t(10u, n);
     TEST_ASSERT_EQUAL_STRING("@00RDx2E*\r", buf);
 
     HostlinkFrame f;
-    Hostlink.parse_args.buf = buf;
-    Hostlink.parse_args.len = n;
-    Hostlink.parse_args.out = &f;
+    HostlinkV.parse_args.buf = buf;
+    HostlinkV.parse_args.len = n;
+    HostlinkV.parse_args.out = &f;
     Hostlink.parse(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
+    TEST_ASSERT_TRUE(HostlinkV.ok);
 
     static const char LOWER[] = "@00RDx2e*\r";
-    Hostlink.parse_args.buf = LOWER;
-    Hostlink.parse_args.len = strlen(LOWER);
-    Hostlink.parse_args.out = &f;
+    HostlinkV.parse_args.buf = LOWER;
+    HostlinkV.parse_args.len = strlen(LOWER);
+    HostlinkV.parse_args.out = &f;
     Hostlink.parse(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
+    TEST_ASSERT_TRUE(HostlinkV.ok);
     TEST_ASSERT_EQUAL_size_t(1u, f.text_len);
     TEST_ASSERT_EQUAL_CHAR('x', f.text[0]);
 }
@@ -243,25 +243,25 @@ void test_fcs_rendering_and_acceptance(void)
 void test_single_character_corruption_is_refused(void)
 {
     char frame[32];
-    Hostlink.build_args.buf = frame;
-    Hostlink.build_args.cap = sizeof(frame);
-    Hostlink.build_args.node = 12;
-    Hostlink.build_args.header_code = "RD";
-    Hostlink.build_args.text = "00001234";
-    Hostlink.build_args.text_len = 8;
+    HostlinkV.build_args.buf = frame;
+    HostlinkV.build_args.cap = sizeof(frame);
+    HostlinkV.build_args.node = 12;
+    HostlinkV.build_args.header_code = "RD";
+    HostlinkV.build_args.text = "00001234";
+    HostlinkV.build_args.text_len = 8;
     Hostlink.build(hostlink_work);
-    size_t n = Hostlink.n;
+    size_t n = HostlinkV.n;
     for (size_t i = 0; i < n - 2; i++) // everything up to but not including "*\r"
     {
         char bad[32];
         memcpy(bad, frame, n);
         bad[i] = (char)(bad[i] ^ 0x01);
         HostlinkFrame f;
-        Hostlink.parse_args.buf = bad;
-        Hostlink.parse_args.len = n;
-        Hostlink.parse_args.out = &f;
+        HostlinkV.parse_args.buf = bad;
+        HostlinkV.parse_args.len = n;
+        HostlinkV.parse_args.out = &f;
         Hostlink.parse(hostlink_work);
-        TEST_ASSERT_FALSE(Hostlink.ok);
+        TEST_ASSERT_FALSE(HostlinkV.ok);
     }
 }
 
@@ -282,22 +282,22 @@ void test_parse_rejects_bad_framing(void)
     };
     for (size_t i = 0; i < sizeof(BAD) / sizeof(BAD[0]); i++)
     {
-        Hostlink.parse_args.buf = BAD[i];
-        Hostlink.parse_args.len = strlen(BAD[i]);
-        Hostlink.parse_args.out = &f;
+        HostlinkV.parse_args.buf = BAD[i];
+        HostlinkV.parse_args.len = strlen(BAD[i]);
+        HostlinkV.parse_args.out = &f;
         Hostlink.parse(hostlink_work);
-        TEST_ASSERT_FALSE_MESSAGE(Hostlink.ok, BAD[i]);
+        TEST_ASSERT_FALSE_MESSAGE(HostlinkV.ok, BAD[i]);
     }
-    Hostlink.parse_args.buf = NULL;
-    Hostlink.parse_args.len = 17;
-    Hostlink.parse_args.out = &f;
+    HostlinkV.parse_args.buf = NULL;
+    HostlinkV.parse_args.len = 17;
+    HostlinkV.parse_args.out = &f;
     Hostlink.parse(hostlink_work);
-    TEST_ASSERT_FALSE(Hostlink.ok);
-    Hostlink.parse_args.buf = "@00RD0000001057*\r";
-    Hostlink.parse_args.len = 17;
-    Hostlink.parse_args.out = NULL;
+    TEST_ASSERT_FALSE(HostlinkV.ok);
+    HostlinkV.parse_args.buf = "@00RD0000001057*\r";
+    HostlinkV.parse_args.len = 17;
+    HostlinkV.parse_args.out = NULL;
     Hostlink.parse(hostlink_work);
-    TEST_ASSERT_FALSE(Hostlink.ok);
+    TEST_ASSERT_FALSE(HostlinkV.ok);
 }
 
 // The end-code reader needs two text characters and both must be hexadecimal.
@@ -308,53 +308,53 @@ void test_end_code_guards(void)
 
     // "@00RD" alone: the response has no end code at all.
     static const char EMPTY[] = "@00RD56*\r";
-    Hostlink.parse_args.buf = EMPTY;
-    Hostlink.parse_args.len = strlen(EMPTY);
-    Hostlink.parse_args.out = &f;
+    HostlinkV.parse_args.buf = EMPTY;
+    HostlinkV.parse_args.len = strlen(EMPTY);
+    HostlinkV.parse_args.out = &f;
     Hostlink.parse(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
+    TEST_ASSERT_TRUE(HostlinkV.ok);
     TEST_ASSERT_EQUAL_size_t(0u, f.text_len);
-    Hostlink.end_code_args.f = &f;
-    Hostlink.end_code_args.code = &code;
+    HostlinkV.end_code_args.f = &f;
+    HostlinkV.end_code_args.code = &code;
     Hostlink.end_code(hostlink_work);
-    TEST_ASSERT_FALSE(Hostlink.ok);
+    TEST_ASSERT_FALSE(HostlinkV.ok);
 
     // "@00RDzz" - a pair of 'z' cancels, so the FCS is again that of "@00RD" = 0x56.
     static const char NOT_HEX[] = "@00RDzz56*\r";
-    Hostlink.parse_args.buf = NOT_HEX;
-    Hostlink.parse_args.len = strlen(NOT_HEX);
-    Hostlink.parse_args.out = &f;
+    HostlinkV.parse_args.buf = NOT_HEX;
+    HostlinkV.parse_args.len = strlen(NOT_HEX);
+    HostlinkV.parse_args.out = &f;
     Hostlink.parse(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
-    Hostlink.end_code_args.f = &f;
-    Hostlink.end_code_args.code = &code;
+    TEST_ASSERT_TRUE(HostlinkV.ok);
+    HostlinkV.end_code_args.f = &f;
+    HostlinkV.end_code_args.code = &code;
     Hostlink.end_code(hostlink_work);
-    TEST_ASSERT_FALSE(Hostlink.ok);
+    TEST_ASSERT_FALSE(HostlinkV.ok);
 
-    Hostlink.end_code_args.f = NULL;
-    Hostlink.end_code_args.code = &code;
+    HostlinkV.end_code_args.f = NULL;
+    HostlinkV.end_code_args.code = &code;
     Hostlink.end_code(hostlink_work);
-    TEST_ASSERT_FALSE(Hostlink.ok);
+    TEST_ASSERT_FALSE(HostlinkV.ok);
 
     // The end code is a whole byte, so both nibbles are read: "1A" is 0x1A, not 0x01 or 0x0A.
     char buf[32];
-    Hostlink.build_args.buf = buf;
-    Hostlink.build_args.cap = sizeof(buf);
-    Hostlink.build_args.node = 0;
-    Hostlink.build_args.header_code = "RD";
-    Hostlink.build_args.text = "1A";
-    Hostlink.build_args.text_len = 2;
+    HostlinkV.build_args.buf = buf;
+    HostlinkV.build_args.cap = sizeof(buf);
+    HostlinkV.build_args.node = 0;
+    HostlinkV.build_args.header_code = "RD";
+    HostlinkV.build_args.text = "1A";
+    HostlinkV.build_args.text_len = 2;
     Hostlink.build(hostlink_work);
-    size_t n = Hostlink.n;
-    Hostlink.parse_args.buf = buf;
-    Hostlink.parse_args.len = n;
-    Hostlink.parse_args.out = &f;
+    size_t n = HostlinkV.n;
+    HostlinkV.parse_args.buf = buf;
+    HostlinkV.parse_args.len = n;
+    HostlinkV.parse_args.out = &f;
     Hostlink.parse(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
-    Hostlink.end_code_args.f = &f;
-    Hostlink.end_code_args.code = &code;
+    TEST_ASSERT_TRUE(HostlinkV.ok);
+    HostlinkV.end_code_args.f = &f;
+    HostlinkV.end_code_args.code = &code;
     Hostlink.end_code(hostlink_work);
-    TEST_ASSERT_TRUE(Hostlink.ok);
+    TEST_ASSERT_TRUE(HostlinkV.ok);
     TEST_ASSERT_EQUAL_HEX8(0x1Au, code);
 }
 
@@ -364,122 +364,122 @@ void test_builders_refuse_a_short_buffer(void)
     char buf[32];
     static const uint16_t WORDS[2] = {0x0001, 0x0002};
 
-    Hostlink.build_read_args.buf = buf;
-    Hostlink.build_read_args.cap = 17;
-    Hostlink.build_read_args.node = 0;
-    Hostlink.build_read_args.address = 0;
-    Hostlink.build_read_args.count = 10;
+    HostlinkV.build_read_args.buf = buf;
+    HostlinkV.build_read_args.cap = 17;
+    HostlinkV.build_read_args.node = 0;
+    HostlinkV.build_read_args.address = 0;
+    HostlinkV.build_read_args.count = 10;
     Hostlink.build_read(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // 17 frame + NUL needs 18
-    Hostlink.build_read_args.buf = buf;
-    Hostlink.build_read_args.cap = 18;
-    Hostlink.build_read_args.node = 0;
-    Hostlink.build_read_args.address = 0;
-    Hostlink.build_read_args.count = 10;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n); // 17 frame + NUL needs 18
+    HostlinkV.build_read_args.buf = buf;
+    HostlinkV.build_read_args.cap = 18;
+    HostlinkV.build_read_args.node = 0;
+    HostlinkV.build_read_args.address = 0;
+    HostlinkV.build_read_args.count = 10;
     Hostlink.build_read(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(17u, Hostlink.n);
+    TEST_ASSERT_EQUAL_size_t(17u, HostlinkV.n);
 
-    Hostlink.build_read_args.buf = buf;
-    Hostlink.build_read_args.cap = sizeof(buf);
-    Hostlink.build_read_args.node = 0;
-    Hostlink.build_read_args.address = 10000;
-    Hostlink.build_read_args.count = 1;
+    HostlinkV.build_read_args.buf = buf;
+    HostlinkV.build_read_args.cap = sizeof(buf);
+    HostlinkV.build_read_args.node = 0;
+    HostlinkV.build_read_args.address = 10000;
+    HostlinkV.build_read_args.count = 1;
     Hostlink.build_read(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // address > 9999
-    Hostlink.build_read_args.buf = buf;
-    Hostlink.build_read_args.cap = sizeof(buf);
-    Hostlink.build_read_args.node = 0;
-    Hostlink.build_read_args.address = 0;
-    Hostlink.build_read_args.count = 0;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n); // address > 9999
+    HostlinkV.build_read_args.buf = buf;
+    HostlinkV.build_read_args.cap = sizeof(buf);
+    HostlinkV.build_read_args.node = 0;
+    HostlinkV.build_read_args.address = 0;
+    HostlinkV.build_read_args.count = 0;
     Hostlink.build_read(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // zero words
-    Hostlink.build_read_args.buf = buf;
-    Hostlink.build_read_args.cap = sizeof(buf);
-    Hostlink.build_read_args.node = 0;
-    Hostlink.build_read_args.address = 0;
-    Hostlink.build_read_args.count = 10000;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n); // zero words
+    HostlinkV.build_read_args.buf = buf;
+    HostlinkV.build_read_args.cap = sizeof(buf);
+    HostlinkV.build_read_args.node = 0;
+    HostlinkV.build_read_args.address = 0;
+    HostlinkV.build_read_args.count = 10000;
     Hostlink.build_read(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // count > 9999
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n); // count > 9999
 
-    Hostlink.build_write_args.buf = buf;
-    Hostlink.build_write_args.cap = 21;
-    Hostlink.build_write_args.node = 0;
-    Hostlink.build_write_args.address = 100;
-    Hostlink.build_write_args.words = WORDS;
-    Hostlink.build_write_args.word_count = 2;
+    HostlinkV.build_write_args.buf = buf;
+    HostlinkV.build_write_args.cap = 21;
+    HostlinkV.build_write_args.node = 0;
+    HostlinkV.build_write_args.address = 100;
+    HostlinkV.build_write_args.words = WORDS;
+    HostlinkV.build_write_args.word_count = 2;
     Hostlink.build_write(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // 21 frame + NUL needs 22
-    Hostlink.build_write_args.buf = buf;
-    Hostlink.build_write_args.cap = 22;
-    Hostlink.build_write_args.node = 0;
-    Hostlink.build_write_args.address = 100;
-    Hostlink.build_write_args.words = WORDS;
-    Hostlink.build_write_args.word_count = 2;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n); // 21 frame + NUL needs 22
+    HostlinkV.build_write_args.buf = buf;
+    HostlinkV.build_write_args.cap = 22;
+    HostlinkV.build_write_args.node = 0;
+    HostlinkV.build_write_args.address = 100;
+    HostlinkV.build_write_args.words = WORDS;
+    HostlinkV.build_write_args.word_count = 2;
     Hostlink.build_write(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(21u, Hostlink.n);
-    Hostlink.build_write_args.buf = buf;
-    Hostlink.build_write_args.cap = sizeof(buf);
-    Hostlink.build_write_args.node = 0;
-    Hostlink.build_write_args.address = 100;
-    Hostlink.build_write_args.words = WORDS;
-    Hostlink.build_write_args.word_count = 0;
+    TEST_ASSERT_EQUAL_size_t(21u, HostlinkV.n);
+    HostlinkV.build_write_args.buf = buf;
+    HostlinkV.build_write_args.cap = sizeof(buf);
+    HostlinkV.build_write_args.node = 0;
+    HostlinkV.build_write_args.address = 100;
+    HostlinkV.build_write_args.words = WORDS;
+    HostlinkV.build_write_args.word_count = 0;
     Hostlink.build_write(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);
-    Hostlink.build_write_args.buf = buf;
-    Hostlink.build_write_args.cap = sizeof(buf);
-    Hostlink.build_write_args.node = 0;
-    Hostlink.build_write_args.address = 100;
-    Hostlink.build_write_args.words = NULL;
-    Hostlink.build_write_args.word_count = 1;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n);
+    HostlinkV.build_write_args.buf = buf;
+    HostlinkV.build_write_args.cap = sizeof(buf);
+    HostlinkV.build_write_args.node = 0;
+    HostlinkV.build_write_args.address = 100;
+    HostlinkV.build_write_args.words = NULL;
+    HostlinkV.build_write_args.word_count = 1;
     Hostlink.build_write(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);
-    Hostlink.build_write_args.buf = NULL;
-    Hostlink.build_write_args.cap = sizeof(buf);
-    Hostlink.build_write_args.node = 0;
-    Hostlink.build_write_args.address = 100;
-    Hostlink.build_write_args.words = WORDS;
-    Hostlink.build_write_args.word_count = 1;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n);
+    HostlinkV.build_write_args.buf = NULL;
+    HostlinkV.build_write_args.cap = sizeof(buf);
+    HostlinkV.build_write_args.node = 0;
+    HostlinkV.build_write_args.address = 100;
+    HostlinkV.build_write_args.words = WORDS;
+    HostlinkV.build_write_args.word_count = 1;
     Hostlink.build_write(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);
-    Hostlink.build_write_args.buf = buf;
-    Hostlink.build_write_args.cap = sizeof(buf);
-    Hostlink.build_write_args.node = 100;
-    Hostlink.build_write_args.address = 100;
-    Hostlink.build_write_args.words = WORDS;
-    Hostlink.build_write_args.word_count = 1;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n);
+    HostlinkV.build_write_args.buf = buf;
+    HostlinkV.build_write_args.cap = sizeof(buf);
+    HostlinkV.build_write_args.node = 100;
+    HostlinkV.build_write_args.address = 100;
+    HostlinkV.build_write_args.words = WORDS;
+    HostlinkV.build_write_args.word_count = 1;
     Hostlink.build_write(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n);
 
-    Hostlink.build_args.buf = NULL;
-    Hostlink.build_args.cap = sizeof(buf);
-    Hostlink.build_args.node = 0;
-    Hostlink.build_args.header_code = "RD";
-    Hostlink.build_args.text = "";
-    Hostlink.build_args.text_len = 0;
+    HostlinkV.build_args.buf = NULL;
+    HostlinkV.build_args.cap = sizeof(buf);
+    HostlinkV.build_args.node = 0;
+    HostlinkV.build_args.header_code = "RD";
+    HostlinkV.build_args.text = "";
+    HostlinkV.build_args.text_len = 0;
     Hostlink.build(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);
-    Hostlink.build_args.buf = buf;
-    Hostlink.build_args.cap = sizeof(buf);
-    Hostlink.build_args.node = 0;
-    Hostlink.build_args.header_code = NULL;
-    Hostlink.build_args.text = "";
-    Hostlink.build_args.text_len = 0;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n);
+    HostlinkV.build_args.buf = buf;
+    HostlinkV.build_args.cap = sizeof(buf);
+    HostlinkV.build_args.node = 0;
+    HostlinkV.build_args.header_code = NULL;
+    HostlinkV.build_args.text = "";
+    HostlinkV.build_args.text_len = 0;
     Hostlink.build(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);
-    Hostlink.build_args.buf = buf;
-    Hostlink.build_args.cap = sizeof(buf);
-    Hostlink.build_args.node = 0;
-    Hostlink.build_args.header_code = "R";
-    Hostlink.build_args.text = "";
-    Hostlink.build_args.text_len = 0;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n);
+    HostlinkV.build_args.buf = buf;
+    HostlinkV.build_args.cap = sizeof(buf);
+    HostlinkV.build_args.node = 0;
+    HostlinkV.build_args.header_code = "R";
+    HostlinkV.build_args.text = "";
+    HostlinkV.build_args.text_len = 0;
     Hostlink.build(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n); // one header character
-    Hostlink.build_args.buf = buf;
-    Hostlink.build_args.cap = sizeof(buf);
-    Hostlink.build_args.node = 0;
-    Hostlink.build_args.header_code = "RD";
-    Hostlink.build_args.text = NULL;
-    Hostlink.build_args.text_len = 4;
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n); // one header character
+    HostlinkV.build_args.buf = buf;
+    HostlinkV.build_args.cap = sizeof(buf);
+    HostlinkV.build_args.node = 0;
+    HostlinkV.build_args.header_code = "RD";
+    HostlinkV.build_args.text = NULL;
+    HostlinkV.build_args.text_len = 4;
     Hostlink.build(hostlink_work);
-    TEST_ASSERT_EQUAL_size_t(0u, Hostlink.n);
+    TEST_ASSERT_EQUAL_size_t(0u, HostlinkV.n);
 }

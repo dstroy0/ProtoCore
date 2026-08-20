@@ -88,7 +88,7 @@ static const ProtoHandler s_ssh_handler = {
 void ssh_protocore_handler(uint8_t *restrict work)
 {
     (void)work;
-    SshServer.handler = &s_ssh_handler;
+    SshServerV.handler = &s_ssh_handler;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,19 +101,19 @@ static void net_accept(uint8_t conn_slot)
 
     // Take a free SSH session slot and bind this socket to it.
     SshNetwork.slot_free(protocore_ssh_network_span());
-    const uint8_t j = SshNetwork.u8;
+    const uint8_t j = SshNetworkV.u8;
     if (j != 0xFF)
     {
-        SshNetwork.ssh_slot = j;
-        SshNetwork.handle = (int)conn_slot;
-        SshNetwork.stream.kind = SSH_STREAM_ACCEPTED;
+        SshNetworkV.ssh_slot = j;
+        SshNetworkV.handle = (int)conn_slot;
+        SshNetworkV.stream.kind = SSH_STREAM_ACCEPTED;
         SshNetwork.claim(protocore_ssh_network_span());
     }
-    if (j == 0xFF || SshNetwork.i32 != 0)
+    if (j == 0xFF || SshNetworkV.i32 != 0)
     {
         // No SSH capacity: drop the connection (transport owns the teardown).
-        ConnPool.slot = conn->id;
-        ConnPool.close(protocore_conn_pool_span());
+        ConnPoolV.slot = conn->id;
+        ConnPoolV.close(protocore_conn_pool_span());
         return;
     }
 
@@ -125,10 +125,10 @@ static void net_accept(uint8_t conn_slot)
     // Role is a property of what was acquired: this slot was claimed by an inbound accept, so it is
     // the server end. It selects which direction's keys each cipher and MAC site reads, and
     // ssh_pkt_init has already set it - the accepting role is the codec's default.
-    SshConnection.chan.slot = j;
+    SshConnectionV.chan.slot = j;
     SshConnection.channel_init(protocore_ssh_connection_span());
 #if PROTOCORE_ENABLE_SSH_ZLIB
-    Comp.reset_args.i = j;
+    CompV.reset_args.i = j;
     Comp.reset(protocore_ssh_comp_span()); // clear compression state for the new connection (not run on a re-key)
 #endif
 
@@ -137,8 +137,8 @@ static void net_accept(uint8_t conn_slot)
 
 static void close_conn(uint8_t conn_slot)
 {
-    ConnPool.slot = conn_slot;
-    ConnPool.close(protocore_conn_pool_span()); // transport owns detach + slot reset + close
+    ConnPoolV.slot = conn_slot;
+    ConnPoolV.close(protocore_conn_pool_span()); // transport owns detach + slot reset + close
     net_close(conn_slot);
 }
 
@@ -146,23 +146,23 @@ static void net_rx(uint8_t conn_slot)
 {
     TcpConn *conn = &conn_pool[conn_slot];
     uint8_t j = conn->proto_slot;
-    SshNetwork.ssh_slot = j;
-    SshNetwork.conn_slot = conn_slot;
+    SshNetworkV.ssh_slot = j;
+    SshNetworkV.conn_slot = conn_slot;
     SshNetwork.owns(protocore_ssh_network_span());
-    if (!SshNetwork.ok)
+    if (!SshNetworkV.ok)
     {
         return;
     }
 
     // Drain the ring into this slot's own read scratch via the transport read API.
-    Ssh.conn_slot_args.i = j;
+    SshV.conn_slot_args.i = j;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *buf = Ssh.ptr + SSH_OFF_RX_READ;
-    ConnPool.slot = conn_slot;
-    ConnPool.io.buf = buf;
-    ConnPool.io.cap = RX_BUF_SIZE;
+    uint8_t *buf = SshV.ptr + SSH_OFF_RX_READ;
+    ConnPoolV.slot = conn_slot;
+    ConnPoolV.io.buf = buf;
+    ConnPoolV.io.cap = RX_BUF_SIZE;
     ConnPool.read(protocore_conn_pool_span());
-    size_t n = ConnPool.n;
+    size_t n = ConnPoolV.n;
     if (n == 0)
     {
         return;
@@ -187,8 +187,8 @@ static void net_rx(uint8_t conn_slot)
 
     protocore_secure_wipe(buf, n);
 
-    SshNetwork.conn_slot = conn_slot;
-    SshNetwork.ssh_slot = j;
+    SshNetworkV.conn_slot = conn_slot;
+    SshNetworkV.ssh_slot = j;
     SshNetwork.tx_drain(protocore_ssh_network_span()); // the reply the dispatch framed leaves on this pass
 
     if (SSH_SERVER_CTX(protocore_ssh_server_span())->close[j])
@@ -204,20 +204,20 @@ static void net_close(uint8_t conn_slot)
     if (j < MAX_SSH_CONNS)
     {
 #if PROTOCORE_SSH_PORT_FORWARD
-        SshConnection.fwd.slot = j;
+        SshConnectionV.fwd.slot = j;
         SshConnection.forward_reset(
             protocore_ssh_connection_span()); // close any forwarded TCP sockets this connection owned
 #endif
         // Zero all key material and session state for this slot. The span holds every byte the
         // connection used, so wiping it covers all four regions in one pass.
         ssh_keymat_wipe(j);
-        SshAuth.slot = j;
+        SshAuthV.slot = j;
         SshAuth.reset(protocore_ssh_auth_span());
-        Ssh.conn_slot_args.i = j;
+        SshV.conn_slot_args.i = j;
         Ssh.conn_slot(protocore_ssh_span());
-        protocore_secure_wipe(Ssh.ptr, SSH_SLOT_BORROW);
+        protocore_secure_wipe(SshV.ptr, SSH_SLOT_BORROW);
         protocore_secure_wipe(&ssh_sess[j], sizeof(SshSession));
-        SshNetwork.ssh_slot = j;
+        SshNetworkV.ssh_slot = j;
         SshNetwork.release(protocore_ssh_network_span());
     }
     conn->proto_slot = PROTOCORE_PROTO_SLOT_NONE;
@@ -226,55 +226,55 @@ static void net_close(uint8_t conn_slot)
 static void net_poll(uint8_t conn_slot)
 {
     TcpConn *conn = &conn_pool[conn_slot];
-    ConnPool.slot = conn_slot;
+    ConnPoolV.slot = conn_slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         return;
     }
     uint8_t j = conn->proto_slot;
-    SshNetwork.ssh_slot = j;
-    SshNetwork.conn_slot = conn_slot;
+    SshNetworkV.ssh_slot = j;
+    SshNetworkV.conn_slot = conn_slot;
     SshNetwork.owns(protocore_ssh_network_span());
-    if (!SshNetwork.ok)
+    if (!SshNetworkV.ok)
     {
         return;
     }
 
     // RFC 4252 sec 4: a connection that has not authenticated inside the timeout is disconnected.
-    SshAuth.slot = j;
+    SshAuthV.slot = j;
     SshAuth.timed_out(protocore_ssh_auth_span());
-    if (SshAuth.ok)
+    if (SshAuthV.ok)
     {
         static const char desc[] = "authentication timeout";
         uint8_t out[13 + sizeof(desc) - 1];
         size_t n = 0;
         if (ssh_pkt_build_disconnect(SSH_DISCONNECT_BY_APPLICATION, desc, sizeof(desc) - 1, out, &n, sizeof(out)) == 0)
         {
-            SshNetwork.ssh_slot = j;
-            SshNetwork.msg.payload = out;
-            SshNetwork.msg.len = n;
+            SshNetworkV.ssh_slot = j;
+            SshNetworkV.msg.payload = out;
+            SshNetworkV.msg.len = n;
             SshNetwork.emit(protocore_ssh_network_span());
-            SshNetwork.conn_slot = conn_slot;
-            SshNetwork.ssh_slot = j;
+            SshNetworkV.conn_slot = conn_slot;
+            SshNetworkV.ssh_slot = j;
             SshNetwork.tx_drain(protocore_ssh_network_span()); // the codec flagged it; put it out before the close
         }
-        ConnPool.slot = conn_slot;
-        ConnPool.close(protocore_conn_pool_span());
+        ConnPoolV.slot = conn_slot;
+        ConnPoolV.close(protocore_conn_pool_span());
         return;
     }
 
     ssh_transport_key_re_exchange(j);
-    SshAuth.slot = j;
+    SshAuthV.slot = j;
     SshAuth.passwd_change_reply(protocore_ssh_auth_span());
 
 #if PROTOCORE_SSH_PORT_FORWARD
-    SshConnection.fwd.slot = j;
+    SshConnectionV.fwd.slot = j;
     SshConnection.forward_pump(protocore_ssh_connection_span());
 #endif
 
-    SshNetwork.conn_slot = conn_slot;
-    SshNetwork.ssh_slot = j;
+    SshNetworkV.conn_slot = conn_slot;
+    SshNetworkV.ssh_slot = j;
     SshNetwork.tx_drain(protocore_ssh_network_span()); // after the codec, so a packet framed on this pass leaves on it
 }
 
@@ -289,15 +289,15 @@ static void rfwd_on_accept(uint8_t conn_slot)
     uint8_t ssh_slot = 0;
     uint16_t bind_port = 0;
     const char *bind_addr = NULL;
-    SshConnection.fwd.listener_idx = conn_pool[conn_slot].listener_id;
+    SshConnectionV.fwd.listener_idx = conn_pool[conn_slot].listener_id;
     SshConnection.forward_binding(protocore_ssh_connection_span());
-    ssh_slot = SshConnection.fwd.out_slot;
-    bind_port = SshConnection.fwd.bind_port;
-    bind_addr = SshConnection.fwd.bind_addr;
-    if (!SshConnection.ok)
+    ssh_slot = SshConnectionV.fwd.out_slot;
+    bind_port = SshConnectionV.fwd.bind_port;
+    bind_addr = SshConnectionV.fwd.bind_addr;
+    if (!SshConnectionV.ok)
     {
-        ConnPool.slot = conn_slot;
-        ConnPool.close(protocore_conn_pool_span()); // no binding owns this listener (stale): drop
+        ConnPoolV.slot = conn_slot;
+        ConnPoolV.close(protocore_conn_pool_span()); // no binding owns this listener (stale): drop
         return;
     }
     // Originator address (advisory, RFC 4254 sec 7.2); the peer port is not exposed by the
@@ -305,34 +305,34 @@ static void rfwd_on_accept(uint8_t conn_slot)
     char orig[PROTOCORE_IP_STR_MAX];
     orig[0] = 0;
     protocore_ip rip;
-    ConnPool.slot = conn_slot;
-    ConnPool.out = &rip;
+    ConnPoolV.slot = conn_slot;
+    ConnPoolV.out = &rip;
     ConnPool.remote_addr(protocore_conn_pool_span());
-    if (ConnPool.ok)
+    if (ConnPoolV.ok)
     {
-        Ip.args.ip = &rip;
-        Ip.args.buf = orig;
-        Ip.args.cap = sizeof(orig);
+        IpV.args.ip = &rip;
+        IpV.args.buf = orig;
+        IpV.args.cap = sizeof(orig);
         Ip.format(ip_work);
     }
     // Open the forwarded-tcpip channel back to the client, echoing the requested bind
     // address as the "address that was connected".
-    SshConnection.chan.slot = ssh_slot;
-    SshConnection.fwd.conn_addr = bind_addr[0] ? bind_addr : "0.0.0.0";
-    SshConnection.fwd.conn_port = bind_port;
-    SshConnection.fwd.orig_addr = orig;
-    SshConnection.fwd.orig_port = 0;
+    SshConnectionV.chan.slot = ssh_slot;
+    SshConnectionV.fwd.conn_addr = bind_addr[0] ? bind_addr : "0.0.0.0";
+    SshConnectionV.fwd.conn_port = bind_port;
+    SshConnectionV.fwd.orig_addr = orig;
+    SshConnectionV.fwd.orig_port = 0;
     SshConnection.channel_send_open_forwarded(protocore_ssh_connection_span());
-    int ch = SshConnection.i32;
+    int ch = SshConnectionV.i32;
     if (ch < 0)
     {
-        ConnPool.slot = conn_slot;
-        ConnPool.close(protocore_conn_pool_span()); // SSH connection gone or channel pool full
+        ConnPoolV.slot = conn_slot;
+        ConnPoolV.close(protocore_conn_pool_span()); // SSH connection gone or channel pool full
         return;
     }
-    SshNetwork.ssh_slot = ssh_slot;
-    SshNetwork.stream.channel = (uint32_t)ch;
-    SshNetwork.dial.cid = (int)conn_slot;
+    SshNetworkV.ssh_slot = ssh_slot;
+    SshNetworkV.stream.channel = (uint32_t)ch;
+    SshNetworkV.dial.cid = (int)conn_slot;
     SshNetwork.chan_adopt(protocore_ssh_network_span());
 }
 
@@ -340,13 +340,13 @@ static void rfwd_on_data(uint8_t conn_slot)
 {
     uint8_t slot = 0;
     uint32_t channel = 0;
-    SshNetwork.dial.cid = (int)conn_slot;
+    SshNetworkV.dial.cid = (int)conn_slot;
     SshNetwork.chan_by_cid(protocore_ssh_network_span());
-    if (SshNetwork.ok)
+    if (SshNetworkV.ok)
     {
-        slot = SshNetwork.ssh_slot;
-        channel = SshNetwork.stream.channel;
-        SshConnection.fwd.slot = slot;
+        slot = SshNetworkV.ssh_slot;
+        channel = SshNetworkV.stream.channel;
+        SshConnectionV.fwd.slot = slot;
         SshConnection.forward_pump(protocore_ssh_connection_span()); // the window gates it until the client confirms
     }
 }
@@ -355,23 +355,23 @@ static void rfwd_on_close(uint8_t conn_slot)
 {
     uint8_t slot = 0;
     uint32_t channel = 0;
-    SshNetwork.dial.cid = (int)conn_slot;
+    SshNetworkV.dial.cid = (int)conn_slot;
     SshNetwork.chan_by_cid(protocore_ssh_network_span());
-    if (!SshNetwork.ok)
+    if (!SshNetworkV.ok)
     {
         return;
     }
-    slot = SshNetwork.ssh_slot;
-    channel = SshNetwork.stream.channel;
-    SshConnection.chan.slot = slot;
-    SshConnection.chan.channel = channel;
+    slot = SshNetworkV.ssh_slot;
+    channel = SshNetworkV.stream.channel;
+    SshConnectionV.chan.slot = slot;
+    SshConnectionV.chan.channel = channel;
     SshConnection.channel_send_eof(
         protocore_ssh_connection_span()); // the socket is gone, so this direction sends no more
-    SshConnection.chan.slot = slot;
-    SshConnection.chan.channel = channel;
+    SshConnectionV.chan.slot = slot;
+    SshConnectionV.chan.channel = channel;
     SshConnection.channel_send_close(protocore_ssh_connection_span()); // then terminate the channel
-    SshNetwork.ssh_slot = slot;
-    SshNetwork.stream.channel = channel;
+    SshNetworkV.ssh_slot = slot;
+    SshNetworkV.stream.channel = channel;
     SshNetwork.chan_close(protocore_ssh_network_span());
 }
 
@@ -379,34 +379,34 @@ static void rfwd_on_poll(uint8_t conn_slot)
 {
     // The dispatch loop now polls every slot uniformly; it used to poll only ACTIVE slots, so preserve
     // that gate here (a closing/free forward slot has nothing to pump).
-    ConnPool.slot = conn_slot;
+    ConnPoolV.slot = conn_slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         return;
     }
     uint8_t slot = 0;
     uint32_t channel = 0;
-    SshNetwork.dial.cid = (int)conn_slot;
+    SshNetworkV.dial.cid = (int)conn_slot;
     SshNetwork.chan_by_cid(protocore_ssh_network_span());
-    if (!SshNetwork.ok)
+    if (!SshNetworkV.ok)
     {
         return;
     }
-    slot = SshNetwork.ssh_slot;
-    channel = SshNetwork.stream.channel;
+    slot = SshNetworkV.ssh_slot;
+    channel = SshNetworkV.stream.channel;
     // The client closed its side of the channel -> close the accepted socket.
-    SshConnection.chan.slot = slot;
-    SshConnection.chan.id = channel;
+    SshConnectionV.chan.slot = slot;
+    SshConnectionV.chan.id = channel;
     SshConnection.chan_by_id(protocore_ssh_connection_span());
-    if (SshConnection.found == NULL)
+    if (SshConnectionV.found == NULL)
     {
-        SshNetwork.ssh_slot = slot;
-        SshNetwork.stream.channel = channel;
+        SshNetworkV.ssh_slot = slot;
+        SshNetworkV.stream.channel = channel;
         SshNetwork.chan_close(protocore_ssh_network_span());
         return;
     }
-    SshConnection.fwd.slot = slot;
+    SshConnectionV.fwd.slot = slot;
     SshConnection.forward_pump(protocore_ssh_connection_span()); // drain anything the window blocked earlier
 }
 
@@ -418,7 +418,7 @@ static const ProtoHandler s_rfwd_handler = {
 void ssh_rfwd_listener_open(uint8_t *restrict work)
 {
     (void)work;
-    const uint16_t bind_port = SshServer.bind_port;
+    const uint16_t bind_port = SshServerV.bind_port;
     int li = -1;
     for (int k = 0; k < MAX_LISTENERS; k++)
     {
@@ -430,30 +430,30 @@ void ssh_rfwd_listener_open(uint8_t *restrict work)
     }
     if (li < 0)
     {
-        SshServer.i32 = -1;
+        SshServerV.i32 = -1;
         return; // no listener capacity
     }
     // Dynamic (tcpip_thread-marshaled) create: this runs in the SSH worker task.
-    TcpListener.idx = (uint8_t)li;
-    TcpListener.bind.port = bind_port;
-    TcpListener.bind.proto = PROTO_SSH_RFWD;
+    TcpListenerV.idx = (uint8_t)li;
+    TcpListenerV.bind.port = bind_port;
+    TcpListenerV.bind.proto = PROTO_SSH_RFWD;
     TcpListener.add_dynamic(protocore_tcp_listener_span());
-    if (TcpListener.i32 != 1)
+    if (TcpListenerV.i32 != 1)
     {
-        SshServer.i32 = -1;
+        SshServerV.i32 = -1;
         return; // bind failed (port already in use, etc.)
     }
-    SshServer.i32 = li;
+    SshServerV.i32 = li;
     return;
 }
 
 void ssh_rfwd_listener_close(uint8_t *restrict work)
 {
     (void)work;
-    const int handle = SshServer.handle;
+    const int handle = SshServerV.handle;
     if (handle >= 0 && handle < MAX_LISTENERS)
     {
-        TcpListener.idx = (uint8_t)handle;
+        TcpListenerV.idx = (uint8_t)handle;
         TcpListener.stop_dynamic(protocore_tcp_listener_span());
     }
 }
@@ -461,7 +461,7 @@ void ssh_rfwd_listener_close(uint8_t *restrict work)
 void ssh_protocore_rfwd_handler(uint8_t *restrict work)
 {
     (void)work;
-    SshServer.handler = &s_rfwd_handler;
+    SshServerV.handler = &s_rfwd_handler;
 }
 
 #else
@@ -471,7 +471,7 @@ void ssh_protocore_rfwd_handler(uint8_t *restrict work)
 void ssh_rfwd_listener_open(uint8_t *restrict work)
 {
     (void)work;
-    SshServer.i32 = -1;
+    SshServerV.i32 = -1;
 }
 void ssh_rfwd_listener_close(uint8_t *restrict work)
 {
@@ -480,13 +480,11 @@ void ssh_rfwd_listener_close(uint8_t *restrict work)
 void ssh_protocore_rfwd_handler(uint8_t *restrict work)
 {
     (void)work;
-    SshServer.handler = NULL;
+    SshServerV.handler = NULL;
 }
 
 #endif // PROTOCORE_SSH_PORT_FORWARD
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SshServerNs SshServer = {.rfwd_listener_open = ssh_rfwd_listener_open,
-                         .rfwd_listener_close = ssh_rfwd_listener_close,
-                         .proto_handler = ssh_protocore_handler,
-                         .rfwd_proto_handler = ssh_protocore_rfwd_handler};
+/** @brief The operands and the outcome. */
+SshServerVars SshServerV;

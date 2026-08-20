@@ -42,41 +42,39 @@ void dbench_run(void)
         volatile size_t sink = 0;
         volatile double sinkd = 0;
 
-        Lonworks.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
-        Lonworks.build_nv_args.selector = 0x1234;
-        Lonworks.build_nv_args.value = nv_value;
-        Lonworks.build_nv_args.value_len = sizeof(nv_value);
-        Lonworks.build_nv_args.out = out;
-        Lonworks.build_nv_args.cap = sizeof(out);
-        DBENCH_OP("Lonworks.build_nv (upd+2B)", 100000,
-                  sink +=
-                  (Lonworks.build_nv(lonworks_work), Lonworks.n));
+        LonworksV.build_nv_args.msg_code = LON_MSG_NV_UPDATE;
+        LonworksV.build_nv_args.selector = 0x1234;
+        LonworksV.build_nv_args.value = nv_value;
+        LonworksV.build_nv_args.value_len = sizeof(nv_value);
+        LonworksV.build_nv_args.out = out;
+        LonworksV.build_nv_args.cap = sizeof(out);
+        DBENCH_OP("Lonworks.build_nv (upd+2B)", 100000, sink += (Lonworks.build_nv(lonworks_work), LonworksV.n));
 
         LonNv nv;
-        Lonworks.parse_nv_args.pdu = nv_pdu;
-        Lonworks.parse_nv_args.len = sizeof(nv_pdu);
-        Lonworks.parse_nv_args.out = &nv;
-        DBENCH_OP("Lonworks.parse_nv", 200000,
-                  sink += (Lonworks.parse_nv(lonworks_work), Lonworks.ok) ? 1u : 0u);
+        LonworksV.parse_nv_args.pdu = nv_pdu;
+        LonworksV.parse_nv_args.len = sizeof(nv_pdu);
+        LonworksV.parse_nv_args.out = &nv;
+        DBENCH_OP("Lonworks.parse_nv", 200000, sink += (Lonworks.parse_nv(lonworks_work), LonworksV.ok) ? 1u : 0u);
 
-        Lonworks.snvt_temp_encode_args.celsius = 25.0;
-        Lonworks.snvt_temp_encode_args.out = out;
-        DBENCH_OP("Lonworks.snvt_temp_encode", 100000, (Lonworks.snvt_temp_encode(lonworks_work), Lonworks.ok));
-        Lonworks.snvt_temp_decode_args.in = snvt_temp_val;
-        DBENCH_OP("Lonworks.snvt_temp_decode", 200000, sinkd += (Lonworks.snvt_temp_decode(lonworks_work), Lonworks.value));
+        LonworksV.snvt_temp_encode_args.celsius = 25.0;
+        LonworksV.snvt_temp_encode_args.out = out;
+        DBENCH_OP("Lonworks.snvt_temp_encode", 100000, (Lonworks.snvt_temp_encode(lonworks_work), LonworksV.ok));
+        LonworksV.snvt_temp_decode_args.in = snvt_temp_val;
+        DBENCH_OP("Lonworks.snvt_temp_decode", 200000,
+                  sinkd += (Lonworks.snvt_temp_decode(lonworks_work), LonworksV.value));
 
-        Lonworks.snvt_switch_encode_args.percent = 50.0;
-        Lonworks.snvt_switch_encode_args.state = 1;
-        Lonworks.snvt_switch_encode_args.out = out;
-        DBENCH_OP("Lonworks.snvt_switch_encode", 100000, (Lonworks.snvt_switch_encode(lonworks_work), Lonworks.ok));
+        LonworksV.snvt_switch_encode_args.percent = 50.0;
+        LonworksV.snvt_switch_encode_args.state = 1;
+        LonworksV.snvt_switch_encode_args.out = out;
+        DBENCH_OP("Lonworks.snvt_switch_encode", 100000, (Lonworks.snvt_switch_encode(lonworks_work), LonworksV.ok));
         {
             double pct = 0;
             uint8_t st = 0;
-            Lonworks.snvt_switch_decode_args.in = snvt_switch_val;
-            Lonworks.snvt_switch_decode_args.percent = &pct;
-            Lonworks.snvt_switch_decode_args.state = &st;
+            LonworksV.snvt_switch_decode_args.in = snvt_switch_val;
+            LonworksV.snvt_switch_decode_args.percent = &pct;
+            LonworksV.snvt_switch_decode_args.state = &st;
             DBENCH_OP("Lonworks.snvt_switch_decode", 200000,
-                      (Lonworks.snvt_switch_decode(lonworks_work), Lonworks.ok));
+                      (Lonworks.snvt_switch_decode(lonworks_work), LonworksV.ok));
             sinkd += pct + st;
         }
 

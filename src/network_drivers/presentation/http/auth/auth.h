@@ -90,7 +90,6 @@ typedef struct
     const char *pass;  ///< its password
     proto_bool digest; ///< the row is Digest rather than Basic
 } AuthCredArgs;
-
 /** @brief RFC 7616 sec 3.3: the nonce a challenge carries, and where a mint writes one. */
 typedef struct
 {
@@ -99,7 +98,6 @@ typedef struct
     char *out;         ///< where a mint writes
     size_t cap;        ///< how much room it has; at least 48
 } AuthNonceArgs;
-
 /**
  * A caller sets the members a call takes, invokes it through ::Auth, and reads the outcome off the
  * same handle.
@@ -115,17 +113,22 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t slot;        ///< the connection a challenge or a check acts on
-    struct HttpReq *req; ///< the parsed request a check reads its credential from
-    uint8_t id;          ///< the credential set a call names
-
+    uint8_t slot;             ///< the connection a challenge or a check acts on
+    struct HttpReq *req;      ///< the parsed request a check reads its credential from
+    uint8_t id;               ///< the credential set a call names
     AuthCredArgs cred;        ///< one credential row
     AuthNonceArgs nonce_args; ///< the nonce a mint writes and a verify judges
-
     proto_bool ok;
     proto_bool expired;
     uint8_t u8;
+} AuthVars;
 
+/** @brief The operands and the outcome. */
+extern AuthVars AuthV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const add)(uint8_t *restrict work);
     void (*const check)(uint8_t *restrict work);
     void (*const challenge)(uint8_t *restrict work);
@@ -133,11 +136,31 @@ typedef struct
     void (*const mint_nonce)(uint8_t *restrict work);
     void (*const verify_nonce)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
-
 } AuthNs;
 
-/** @brief The one symbol this module exports. */
-extern AuthNs Auth;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in AuthV or a region of the borrow at a fixed offset.
+void protocore_auth_add(uint8_t *restrict work);
+void protocore_auth_check(uint8_t *restrict work);
+void protocore_auth_challenge(uint8_t *restrict work);
+void protocore_auth_rekey(uint8_t *restrict work);
+void protocore_auth_mint_nonce(uint8_t *restrict work);
+void protocore_auth_verify_nonce(uint8_t *restrict work);
+void protocore_auth_reset(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Auth.add(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const AuthNs Auth __attribute__((unused)) = {
+    .add = protocore_auth_add,
+    .check = protocore_auth_check,
+    .challenge = protocore_auth_challenge,
+    .rekey = protocore_auth_rekey,
+    .mint_nonce = protocore_auth_mint_nonce,
+    .verify_nonce = protocore_auth_verify_nonce,
+    .reset = protocore_auth_reset,
+};
 
 /**
  * @brief The bytes every entry here runs out of: the credential table and the SHA-256 behind it.

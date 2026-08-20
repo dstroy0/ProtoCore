@@ -28,20 +28,20 @@ static uint8_t exc_decoder_work[16]; // the borrow an entry takes; Exc never rea
 /** @brief Decode the printed panic dump @p text into @p info. */
 static proto_bool exc_parse(const char *text, ExcInfo *info)
 {
-    Exc.parse_args.text = text;
-    Exc.parse_args.info = info;
+    ExcV.parse_args.text = text;
+    ExcV.parse_args.info = info;
     Exc.parse(exc_decoder_work);
-    return Exc.ok;
+    return ExcV.ok;
 }
 
 /** @brief Serialize the decoded panic @p info into @p out; the bytes written. */
 static size_t exc_json(ExcInfo *info, char *out, size_t cap)
 {
-    Exc.parse_args.info = info;
-    Exc.out_args.out = out;
-    Exc.out_args.cap = cap;
+    ExcV.parse_args.info = info;
+    ExcV.out_args.out = out;
+    ExcV.out_args.cap = cap;
     Exc.json(exc_decoder_work);
-    return Exc.n;
+    return ExcV.n;
 }
 
 void dbench_run(void)

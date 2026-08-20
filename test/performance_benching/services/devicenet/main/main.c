@@ -33,18 +33,18 @@ void dbench_run(void)
 
     // Three-frame fragmentation roundtrip, 14 octets of reassembled data
     // (test_devicenet.cpp: test_frag_reassembly_roundtrip).
-    Devicenet.frag_octet_args.type = DEVICENET_FRAG_FIRST;
-    Devicenet.frag_octet_args.count = 0;
+    DevicenetV.frag_octet_args.type = DEVICENET_FRAG_FIRST;
+    DevicenetV.frag_octet_args.count = 0;
     Devicenet.frag_octet(devicenet_work);
-    const uint8_t f0[8] = {0x80 | 0x21, Devicenet.value, 1, 2, 3, 4, 5, 6};
-    Devicenet.frag_octet_args.type = DEVICENET_FRAG_MIDDLE;
-    Devicenet.frag_octet_args.count = 1;
+    const uint8_t f0[8] = {0x80 | 0x21, DevicenetV.value, 1, 2, 3, 4, 5, 6};
+    DevicenetV.frag_octet_args.type = DEVICENET_FRAG_MIDDLE;
+    DevicenetV.frag_octet_args.count = 1;
     Devicenet.frag_octet(devicenet_work);
-    const uint8_t f1[8] = {0x80 | 0x21, Devicenet.value, 7, 8, 9, 10, 11, 12};
-    Devicenet.frag_octet_args.type = DEVICENET_FRAG_LAST;
-    Devicenet.frag_octet_args.count = 2;
+    const uint8_t f1[8] = {0x80 | 0x21, DevicenetV.value, 7, 8, 9, 10, 11, 12};
+    DevicenetV.frag_octet_args.type = DEVICENET_FRAG_LAST;
+    DevicenetV.frag_octet_args.count = 2;
     Devicenet.frag_octet(devicenet_work);
-    const uint8_t f2[4] = {0x80 | 0x21, Devicenet.value, 13, 14};
+    const uint8_t f2[4] = {0x80 | 0x21, DevicenetV.value, 13, 14};
 
     for (;;)
     {
@@ -57,47 +57,45 @@ void dbench_run(void)
         CanFrame frame;
         DeviceNetFragRx rx;
 
-        Devicenet.encode_id_args.id = &id;
-        Devicenet.encode_id_args.group = DEVICENET_GROUP_2;
-        Devicenet.encode_id_args.msg_id = DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ;
-        Devicenet.encode_id_args.mac_id = 0x21;
-        DBENCH_OP("Devicenet.encode_id", 100000,
-                  sinkb |=
-                  (Devicenet.encode_id(devicenet_work), Devicenet.ok));
-        Devicenet.decode_id_args.can_id = decode_test_id;
-        Devicenet.decode_id_args.out = &d;
-        DBENCH_OP("Devicenet.decode_id", 100000, sinkb |= (Devicenet.decode_id(devicenet_work), Devicenet.ok));
-        Devicenet.msg_header_args.frag = true;
-        Devicenet.msg_header_args.xid = false;
-        Devicenet.msg_header_args.mac_id = 0x21;
-        DBENCH_OP("Devicenet.msg_header", 200000, sink8 += (Devicenet.msg_header(devicenet_work), Devicenet.value));
-        Devicenet.frag_octet_args.type = DEVICENET_FRAG_LAST;
-        Devicenet.frag_octet_args.count = 5;
-        DBENCH_OP("Devicenet.frag_octet", 200000,
-                  sink8 += (Devicenet.frag_octet(devicenet_work), Devicenet.value));
-        Devicenet.build_explicit_args.out = &frame;
-        Devicenet.build_explicit_args.group = DEVICENET_GROUP_2;
-        Devicenet.build_explicit_args.msg_id = DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ;
-        Devicenet.build_explicit_args.mac_id = 0x21;
-        Devicenet.build_explicit_args.body = cip;
-        Devicenet.build_explicit_args.body_len = 3;
+        DevicenetV.encode_id_args.id = &id;
+        DevicenetV.encode_id_args.group = DEVICENET_GROUP_2;
+        DevicenetV.encode_id_args.msg_id = DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ;
+        DevicenetV.encode_id_args.mac_id = 0x21;
+        DBENCH_OP("Devicenet.encode_id", 100000, sinkb |= (Devicenet.encode_id(devicenet_work), DevicenetV.ok));
+        DevicenetV.decode_id_args.can_id = decode_test_id;
+        DevicenetV.decode_id_args.out = &d;
+        DBENCH_OP("Devicenet.decode_id", 100000, sinkb |= (Devicenet.decode_id(devicenet_work), DevicenetV.ok));
+        DevicenetV.msg_header_args.frag = true;
+        DevicenetV.msg_header_args.xid = false;
+        DevicenetV.msg_header_args.mac_id = 0x21;
+        DBENCH_OP("Devicenet.msg_header", 200000, sink8 += (Devicenet.msg_header(devicenet_work), DevicenetV.value));
+        DevicenetV.frag_octet_args.type = DEVICENET_FRAG_LAST;
+        DevicenetV.frag_octet_args.count = 5;
+        DBENCH_OP("Devicenet.frag_octet", 200000, sink8 += (Devicenet.frag_octet(devicenet_work), DevicenetV.value));
+        DevicenetV.build_explicit_args.out = &frame;
+        DevicenetV.build_explicit_args.group = DEVICENET_GROUP_2;
+        DevicenetV.build_explicit_args.msg_id = DEVICENET_G2_UNCONNECTED_EXPLICIT_REQ;
+        DevicenetV.build_explicit_args.mac_id = 0x21;
+        DevicenetV.build_explicit_args.body = cip;
+        DevicenetV.build_explicit_args.body_len = 3;
         DBENCH_OP("Devicenet.build_explicit", 100000,
-                  sinkb |= (Devicenet.build_explicit(devicenet_work), Devicenet.ok));
+                  sinkb |= (Devicenet.build_explicit(devicenet_work), DevicenetV.ok));
         // 3-frame reassembly per iteration: reset + FIRST + MIDDLE + LAST, 14 octets of payload data.
-        Devicenet.frag_reset_args.rx = &rx;
-        Devicenet.frag_feed_args.rx = &rx;
-        Devicenet.frag_feed_args.body = f0;
-        Devicenet.frag_feed_args.body_len = sizeof(f0);
-        Devicenet.frag_feed_args.rx = &rx;
-        Devicenet.frag_feed_args.body = f1;
-        Devicenet.frag_feed_args.body_len = sizeof(f1);
-        Devicenet.frag_feed_args.rx = &rx;
-        Devicenet.frag_feed_args.body = f2;
-        Devicenet.frag_feed_args.body_len = sizeof(f2);
+        DevicenetV.frag_reset_args.rx = &rx;
+        DevicenetV.frag_feed_args.rx = &rx;
+        DevicenetV.frag_feed_args.body = f0;
+        DevicenetV.frag_feed_args.body_len = sizeof(f0);
+        DevicenetV.frag_feed_args.rx = &rx;
+        DevicenetV.frag_feed_args.body = f1;
+        DevicenetV.frag_feed_args.body_len = sizeof(f1);
+        DevicenetV.frag_feed_args.rx = &rx;
+        DevicenetV.frag_feed_args.body = f2;
+        DevicenetV.frag_feed_args.body_len = sizeof(f2);
         DBENCH_BULK("Devicenet.frag_feed (3-frame reasm)", 50000, 14,
-                    ((Devicenet.frag_reset(devicenet_work), Devicenet.ok), (Devicenet.frag_feed(devicenet_work), Devicenet.frag),
-                     (Devicenet.frag_feed(devicenet_work), Devicenet.frag),
-                     (Devicenet.frag_feed(devicenet_work), Devicenet.frag)));
+                    ((Devicenet.frag_reset(devicenet_work), DevicenetV.ok),
+                     (Devicenet.frag_feed(devicenet_work), DevicenetV.frag),
+                     (Devicenet.frag_feed(devicenet_work), DevicenetV.frag),
+                     (Devicenet.frag_feed(devicenet_work), DevicenetV.frag)));
 
         (void)sinkb;
         (void)sink8;

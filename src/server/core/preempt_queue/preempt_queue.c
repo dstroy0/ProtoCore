@@ -152,10 +152,10 @@ static void pq_task(void *arg)
 
 static void pq_start(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = PreemptQueue.lane;
-    const protocore_pq_config *cfg = PreemptQueue.cfg;
+    const protocore_pq_lane lane = PreemptQueueV.lane;
+    const protocore_pq_config *cfg = PreemptQueueV.cfg;
 
-    PreemptQueue.ok = PROTO_FALSE;
+    PreemptQueueV.ok = PROTO_FALSE;
     if (!lane_ok(lane) || PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] || !cfg || !cfg->handler)
     {
         return;
@@ -183,65 +183,65 @@ static void pq_start(uint8_t *restrict work)
         PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)lane] = PROTO_FALSE;
         return;
     }
-    PreemptQueue.ok = PROTO_TRUE;
+    PreemptQueueV.ok = PROTO_TRUE;
 }
 
 static void pq_post(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = PreemptQueue.lane;
+    const protocore_pq_lane lane = PreemptQueueV.lane;
 
-    PreemptQueue.ok = PROTO_FALSE;
-    if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueue.post_args.item)
+    PreemptQueueV.ok = PROTO_FALSE;
+    if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueueV.post_args.item)
     {
         return;
     }
-    if (protocore_platform_queue_send(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane], PreemptQueue.post_args.item,
-                                      (protocore_platform_ticks)PreemptQueue.post_args.timeout_ticks) !=
+    if (protocore_platform_queue_send(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane], PreemptQueueV.post_args.item,
+                                      (protocore_platform_ticks)PreemptQueueV.post_args.timeout_ticks) !=
         PROTOCORE_PLATFORM_OK)
     {
         return;
     }
     note_depth(work, lane, protocore_platform_queue_waiting(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane]));
-    PreemptQueue.ok = PROTO_TRUE;
+    PreemptQueueV.ok = PROTO_TRUE;
 }
 
 static void pq_post_urgent(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = PreemptQueue.lane;
+    const protocore_pq_lane lane = PreemptQueueV.lane;
 
-    PreemptQueue.ok = PROTO_FALSE;
-    if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueue.post_args.item)
+    PreemptQueueV.ok = PROTO_FALSE;
+    if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueueV.post_args.item)
     {
         return;
     }
-    if (protocore_platform_queue_send_front(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane], PreemptQueue.post_args.item,
-                                            (protocore_platform_ticks)PreemptQueue.post_args.timeout_ticks) !=
+    if (protocore_platform_queue_send_front(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane], PreemptQueueV.post_args.item,
+                                            (protocore_platform_ticks)PreemptQueueV.post_args.timeout_ticks) !=
         PROTOCORE_PLATFORM_OK)
     {
         return;
     }
     note_depth(work, lane, protocore_platform_queue_waiting(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane]));
-    PreemptQueue.ok = PROTO_TRUE;
+    PreemptQueueV.ok = PROTO_TRUE;
 }
 
 static void pq_post_from_isr(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = PreemptQueue.lane;
+    const protocore_pq_lane lane = PreemptQueueV.lane;
 
-    PreemptQueue.ok = PROTO_FALSE;
-    if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueue.post_args.item)
+    PreemptQueueV.ok = PROTO_FALSE;
+    if (!lane_ok(lane) || !PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane] || !PreemptQueueV.post_args.item)
     {
         return;
     }
     protocore_platform_status woke = PROTOCORE_PLATFORM_FALSE;
-    if (protocore_platform_queue_send_isr(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane], PreemptQueue.post_args.item,
+    if (protocore_platform_queue_send_isr(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane], PreemptQueueV.post_args.item,
                                           &woke) != PROTOCORE_PLATFORM_OK)
     {
         return;
     }
     note_depth(work, lane, protocore_platform_queue_waiting_isr(PREEMPT_QUEUE_CTX(work)->qq.q[(size_t)lane]));
     protocore_platform_task_yield_from_isr(woke); // switch to the processing task now if it outranks us
-    PreemptQueue.ok = PROTO_TRUE;
+    PreemptQueueV.ok = PROTO_TRUE;
 }
 
 static void pq_drain(uint8_t *restrict work)
@@ -253,7 +253,7 @@ static void pq_drain(uint8_t *restrict work)
 
 static void pq_stop(uint8_t *restrict work)
 {
-    const protocore_pq_lane lane = PreemptQueue.lane;
+    const protocore_pq_lane lane = PreemptQueueV.lane;
 
     if (!lane_ok(lane))
     {
@@ -269,29 +269,23 @@ static void pq_stop(uint8_t *restrict work)
 
 static void pq_running(uint8_t *restrict work)
 {
-    PreemptQueue.ok = lane_ok(PreemptQueue.lane) && PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)PreemptQueue.lane];
+    PreemptQueueV.ok = lane_ok(PreemptQueueV.lane) && PREEMPT_QUEUE_CTX(work)->qq.run[(size_t)PreemptQueueV.lane];
 }
 
 static void pq_high_water(uint8_t *restrict work)
 {
-    PreemptQueue.n = lane_ok(PreemptQueue.lane) ? PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)PreemptQueue.lane] : 0;
+    PreemptQueueV.n =
+        lane_ok(PreemptQueueV.lane) ? PREEMPT_QUEUE_CTX(work)->pq.high_water[(size_t)PreemptQueueV.lane] : 0;
 }
 
 static void pq_priority(uint8_t *restrict work)
 {
     (void)work;
-    PreemptQueue.u8 = lane_priority(PreemptQueue.lane);
+    PreemptQueueV.u8 = lane_priority(PreemptQueueV.lane);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-PreemptQueueNs PreemptQueue = {.post_from_isr = pq_post_from_isr,
-                               .post_urgent = pq_post_urgent,
-                               .high_water = pq_high_water,
-                               .priority = pq_priority,
-                               .running = pq_running,
-                               .start = pq_start,
-                               .post = pq_post,
-                               .drain = pq_drain,
-                               .stop = pq_stop};
+/** @brief The operands and the outcome. */
+PreemptQueueVars PreemptQueueV;
 
 #endif // PROTOCORE_ENABLE_PREEMPT_QUEUE

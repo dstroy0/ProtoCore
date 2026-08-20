@@ -44,13 +44,11 @@ typedef struct
     uint16_t server_min; ///< the lowest version this server accepts
     uint16_t server_max; ///< the highest it supports
 } TlsPolicyNegotiateArgs;
-
 /** @brief The version word a name is asked for. */
 typedef struct
 {
     uint16_t version; ///< the wire word
 } TlsPolicyNameArgs;
-
 /** @brief The offered suites, and the pinned list that orders the choice. */
 typedef struct
 {
@@ -59,13 +57,11 @@ typedef struct
     const uint16_t *server_pinned;  ///< the audited allowlist, in preference order
     size_t n_server;                ///< how many
 } TlsPolicySelectArgs;
-
 /** @brief The suite a classification is asked about. */
 typedef struct
 {
     uint16_t suite; ///< the wire id
 } TlsPolicyAeadArgs;
-
 /**
  * @brief TLS version and cipher-suite policy.
  *
@@ -105,21 +101,42 @@ typedef struct
     TlsPolicyNameArgs name_args;
     TlsPolicySelectArgs select_args;
     TlsPolicyAeadArgs aead_args;
-
     proto_bool ok;
     uint16_t version;
     uint16_t suite;
     const char *text;
     proto_bool aead;
+} TlsPolicyVars;
 
+/** @brief The operands and the outcome. */
+extern TlsPolicyVars TlsPolicyV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const negotiate)(uint8_t *restrict work);
     void (*const name)(uint8_t *restrict work);
     void (*const select)(uint8_t *restrict work);
     void (*const is_aead)(uint8_t *restrict work);
 } TlsPolicyNs;
 
-/** @brief The one symbol this module exports. */
-extern TlsPolicyNs TlsPolicy;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in TlsPolicyV or a region of the borrow at a fixed offset.
+void protocore_tls_policy_negotiate(uint8_t *restrict work);
+void protocore_tls_policy_name(uint8_t *restrict work);
+void protocore_tls_policy_select(uint8_t *restrict work);
+void protocore_tls_policy_is_aead(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `TlsPolicy.negotiate(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const TlsPolicyNs TlsPolicy __attribute__((unused)) = {
+    .negotiate = protocore_tls_policy_negotiate,
+    .name = protocore_tls_policy_name,
+    .select = protocore_tls_policy_select,
+    .is_aead = protocore_tls_policy_is_aead,
+};
 
 PROTOCORE_END_DECLS
 

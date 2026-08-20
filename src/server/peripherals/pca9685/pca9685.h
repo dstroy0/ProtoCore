@@ -56,20 +56,17 @@ typedef struct
 {
     uint32_t freq_hz;
 } Pca9685PrescaleArgs;
-
 /** @brief What channel_reg takes: channel. */
 typedef struct
 {
     uint8_t channel;
 } Pca9685ChannelRegArgs;
-
 /** @brief What us_to_count takes: microseconds, freq_hz. */
 typedef struct
 {
     uint32_t microseconds;
     uint32_t freq_hz;
 } Pca9685UsToCountArgs;
-
 /** @brief What set_pwm_bytes takes: buf, cap, channel, on, off. */
 typedef struct
 {
@@ -79,14 +76,12 @@ typedef struct
     uint16_t on;
     uint16_t off;
 } Pca9685SetPwmBytesArgs;
-
 /** @brief What begin takes: addr, freq_hz. */
 typedef struct
 {
     uint8_t addr;
     uint32_t freq_hz;
 } Pca9685BeginArgs;
-
 /** @brief What set_pwm takes: channel, on, off. */
 typedef struct
 {
@@ -94,14 +89,12 @@ typedef struct
     uint16_t on;
     uint16_t off;
 } Pca9685SetPwmArgs;
-
 /** @brief What set_servo_us takes: channel, microseconds. */
 typedef struct
 {
     uint8_t channel;
     uint32_t microseconds;
 } Pca9685SetServoUsArgs;
-
 /**
  * @brief NXP PCA9685 16-channel 12-bit PWM / servo driver codec (PROTOCORE_ENABLE_PCA9685).
  *
@@ -144,12 +137,18 @@ typedef struct
     Pca9685BeginArgs begin_args;
     Pca9685SetPwmArgs set_pwm_args;
     Pca9685SetServoUsArgs set_servo_us_args;
-
     proto_bool ok;
     uint8_t value;
     uint16_t count;
     size_t n;
+} Pca9685Vars;
 
+/** @brief The operands and the outcome. */
+extern Pca9685Vars Pca9685V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const prescale)(uint8_t *restrict work);
     void (*const channel_reg)(uint8_t *restrict work);
     void (*const us_to_count)(uint8_t *restrict work);
@@ -159,8 +158,29 @@ typedef struct
     void (*const set_servo_us)(uint8_t *restrict work);
 } Pca9685Ns;
 
-/** @brief The one symbol this module exports. */
-extern Pca9685Ns Pca9685;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Pca9685V or a region of the borrow at a fixed offset.
+void protocore_pca9685_prescale(uint8_t *restrict work);
+void protocore_pca9685_channel_reg(uint8_t *restrict work);
+void protocore_pca9685_us_to_count(uint8_t *restrict work);
+void protocore_pca9685_set_pwm_bytes(uint8_t *restrict work);
+void protocore_pca9685_begin(uint8_t *restrict work);
+void protocore_pca9685_set_pwm(uint8_t *restrict work);
+void protocore_pca9685_set_servo_us(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Pca9685.prescale(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Pca9685Ns Pca9685 __attribute__((unused)) = {
+    .prescale = protocore_pca9685_prescale,
+    .channel_reg = protocore_pca9685_channel_reg,
+    .us_to_count = protocore_pca9685_us_to_count,
+    .set_pwm_bytes = protocore_pca9685_set_pwm_bytes,
+    .begin = protocore_pca9685_begin,
+    .set_pwm = protocore_pca9685_set_pwm,
+    .set_servo_us = protocore_pca9685_set_servo_us,
+};
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

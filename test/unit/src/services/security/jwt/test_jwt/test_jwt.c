@@ -42,12 +42,12 @@ static const uint8_t RFC7515_A1_KEY[64] = {0x03, 0x23, 0x35, 0x4B, 0x2B, 0x0F, 0
 
 static proto_bool verify(const char *jws, const uint8_t *key, size_t key_len)
 {
-    Jwt.token.jws = jws;
-    Jwt.token.jws_len = strlen(jws);
-    Jwt.key.secret = key;
-    Jwt.key.secret_len = key_len;
-    Jwt.verify_mac(jwt_work);
-    return Jwt.ok;
+    JwtV.token.jws = jws;
+    JwtV.token.jws_len = strlen(jws);
+    JwtV.key.secret = key;
+    JwtV.key.secret_len = key_len;
+    JwtV.verify_mac(jwt_work);
+    return JwtV.ok;
 }
 
 // The RFC's token under the RFC's key. Nothing else in this file proves the MAC.
@@ -136,10 +136,10 @@ void test_malformed_serializations_are_refused(void)
     TEST_ASSERT_FALSE(verify(short_sig, RFC7515_A1_KEY, sizeof(RFC7515_A1_KEY)));
 
     TEST_ASSERT_FALSE(verify(RFC7515_A1, RFC7515_A1_KEY, 0));
-    Jwt.token.jws = NULL;
-    Jwt.token.jws_len = 0;
-    Jwt.verify_mac(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.token.jws = NULL;
+    JwtV.token.jws_len = 0;
+    JwtV.verify_mac(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
 }
 
 // RFC 6750 sec 2.1: credentials = "Bearer" 1*SP b64token. RFC 7235 sec 2.1 makes the scheme name a
@@ -152,67 +152,67 @@ void test_bearer_credentials(void)
         char field[256];
         strcpy(field, SCHEMES[i]);
         strcat(field, RFC7515_A1);
-        Jwt.token.credentials = field;
-        Jwt.key.secret = RFC7515_A1_KEY;
-        Jwt.key.secret_len = sizeof(RFC7515_A1_KEY);
-        Jwt.verify_bearer(jwt_work);
-        TEST_ASSERT_TRUE_MESSAGE(Jwt.ok, SCHEMES[i]);
+        JwtV.token.credentials = field;
+        JwtV.key.secret = RFC7515_A1_KEY;
+        JwtV.key.secret_len = sizeof(RFC7515_A1_KEY);
+        JwtV.verify_bearer(jwt_work);
+        TEST_ASSERT_TRUE_MESSAGE(JwtV.ok, SCHEMES[i]);
         // The token that was found is left on the handle.
-        TEST_ASSERT_EQUAL_STRING(RFC7515_A1, Jwt.token.jws);
+        TEST_ASSERT_EQUAL_STRING(RFC7515_A1, JwtV.token.jws);
     }
 
     static const char *const NOT_BEARER[] = {"Basic czZCaGRSa3F0Mw==", "Bearer", "Token abc", "", "Bear "};
     for (size_t i = 0; i < sizeof(NOT_BEARER) / sizeof(NOT_BEARER[0]); i++)
     {
-        Jwt.token.credentials = NOT_BEARER[i];
-        Jwt.key.secret = RFC7515_A1_KEY;
-        Jwt.key.secret_len = sizeof(RFC7515_A1_KEY);
-        Jwt.verify_bearer(jwt_work);
-        TEST_ASSERT_FALSE_MESSAGE(Jwt.ok, NOT_BEARER[i]);
+        JwtV.token.credentials = NOT_BEARER[i];
+        JwtV.key.secret = RFC7515_A1_KEY;
+        JwtV.key.secret_len = sizeof(RFC7515_A1_KEY);
+        JwtV.verify_bearer(jwt_work);
+        TEST_ASSERT_FALSE_MESSAGE(JwtV.ok, NOT_BEARER[i]);
     }
 
-    Jwt.token.credentials = NULL;
-    Jwt.verify_bearer(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.token.credentials = NULL;
+    JwtV.verify_bearer(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
 }
 
 // RFC 7519 sec 4: the claims are the members of the JSON object the payload carries. Appendix A.1's
 // payload is {"iss":"joe", "exp":1300819380, "http://example.com/is_root":true}.
 void test_rfc7515_a1_claims(void)
 {
-    Jwt.token.jws = RFC7515_A1;
-    Jwt.token.jws_len = strlen(RFC7515_A1);
+    JwtV.token.jws = RFC7515_A1;
+    JwtV.token.jws_len = strlen(RFC7515_A1);
 
-    Jwt.claim.name = "exp";
-    Jwt.claim_int(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
-    TEST_ASSERT_EQUAL_INT32(1300819380L, Jwt.num);
+    JwtV.claim.name = "exp";
+    JwtV.claim_int(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
+    TEST_ASSERT_EQUAL_INT32(1300819380L, JwtV.num);
 
     char out[64];
-    Jwt.claim.name = "iss";
-    Jwt.claim.out = out;
-    Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
+    JwtV.claim.name = "iss";
+    JwtV.claim.out = out;
+    JwtV.claim.out_cap = sizeof(out);
+    JwtV.claim_str(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
     TEST_ASSERT_EQUAL_STRING("joe", out);
 
     // An absent claim is reported, not invented.
-    Jwt.claim.name = "sub";
-    Jwt.claim_int(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
-    Jwt.claim.name = "sub";
-    Jwt.claim.out = out;
-    Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.claim.name = "sub";
+    JwtV.claim_int(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
+    JwtV.claim.name = "sub";
+    JwtV.claim.out = out;
+    JwtV.claim.out_cap = sizeof(out);
+    JwtV.claim_str(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
     TEST_ASSERT_EQUAL_STRING("", out);
 
     // A claim whose value is not a string does not read as one.
-    Jwt.claim.name = "exp";
-    Jwt.claim.out = out;
-    Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.claim.name = "exp";
+    JwtV.claim.out = out;
+    JwtV.claim.out_cap = sizeof(out);
+    JwtV.claim_str(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
 }
 
 // A payload carrying every time claim, so the window can be walked without a MAC:
@@ -226,12 +226,12 @@ static const char TIMED[] = "eyJhbGciOiJIUzI1NiJ9"
 
 static proto_bool time_valid(long now, long leeway)
 {
-    Jwt.token.jws = TIMED;
-    Jwt.token.jws_len = strlen(TIMED);
-    Jwt.time.now = now;
-    Jwt.time.leeway_s = leeway;
-    Jwt.time_claims_valid(jwt_work);
-    return Jwt.ok;
+    JwtV.token.jws = TIMED;
+    JwtV.token.jws_len = strlen(TIMED);
+    JwtV.time.now = now;
+    JwtV.time.leeway_s = leeway;
+    JwtV.time_claims_valid(jwt_work);
+    return JwtV.ok;
 }
 
 // RFC 7519 sec 4.1.4: the token MUST NOT be accepted on or after `exp`. Sec 4.1.5: nor before `nbf`.
@@ -252,44 +252,44 @@ void test_time_claims_window(void)
 
     // A payload with no time claims is unconstrained by them: RFC 7515 A.1 carries no nbf, and its
     // exp of 1300819380 is in the past, so only exp can refuse it.
-    Jwt.token.jws = RFC7515_A1;
-    Jwt.token.jws_len = strlen(RFC7515_A1);
-    Jwt.time.now = 1300819379L;
-    Jwt.time.leeway_s = 0;
-    Jwt.time_claims_valid(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
-    Jwt.time.now = 1300819381L;
-    Jwt.time_claims_valid(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.token.jws = RFC7515_A1;
+    JwtV.token.jws_len = strlen(RFC7515_A1);
+    JwtV.time.now = 1300819379L;
+    JwtV.time.leeway_s = 0;
+    JwtV.time_claims_valid(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
+    JwtV.time.now = 1300819381L;
+    JwtV.time_claims_valid(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
 }
 
 // verify_mac_at is the MAC and then the window: a token that fails either is not accepted.
 void test_verify_mac_at_needs_both(void)
 {
-    Jwt.token.jws = RFC7515_A1;
-    Jwt.token.jws_len = strlen(RFC7515_A1);
-    Jwt.key.secret = RFC7515_A1_KEY;
-    Jwt.key.secret_len = sizeof(RFC7515_A1_KEY);
-    Jwt.time.leeway_s = 0;
+    JwtV.token.jws = RFC7515_A1;
+    JwtV.token.jws_len = strlen(RFC7515_A1);
+    JwtV.key.secret = RFC7515_A1_KEY;
+    JwtV.key.secret_len = sizeof(RFC7515_A1_KEY);
+    JwtV.time.leeway_s = 0;
 
-    Jwt.time.now = 1300819379L; // one second before exp
-    Jwt.verify_mac_at(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
+    JwtV.time.now = 1300819379L; // one second before exp
+    JwtV.verify_mac_at(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
 
-    Jwt.time.now = 1300819381L; // one second after exp: the MAC still passes, the window does not
-    Jwt.verify_mac_at(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.time.now = 1300819381L; // one second after exp: the MAC still passes, the window does not
+    JwtV.verify_mac_at(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
 
     char field[256];
     strcpy(field, "Bearer ");
     strcat(field, RFC7515_A1);
-    Jwt.token.credentials = field;
-    Jwt.time.now = 1300819379L;
-    Jwt.verify_bearer_at(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
-    Jwt.time.now = 1300819381L;
-    Jwt.verify_bearer_at(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.token.credentials = field;
+    JwtV.time.now = 1300819379L;
+    JwtV.verify_bearer_at(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
+    JwtV.time.now = 1300819381L;
+    JwtV.verify_bearer_at(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
 }
 
 // A backslash escape inside a string claim is dropped and the character after it taken literally,
@@ -297,39 +297,39 @@ void test_verify_mac_at_needs_both(void)
 void test_claim_str_escapes_and_bounds(void)
 {
     char out[64];
-    Jwt.token.jws = TIMED;
-    Jwt.token.jws_len = strlen(TIMED);
-    Jwt.claim.name = "role";
-    Jwt.claim.out = out;
-    Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
+    JwtV.token.jws = TIMED;
+    JwtV.token.jws_len = strlen(TIMED);
+    JwtV.claim.name = "role";
+    JwtV.claim.out = out;
+    JwtV.claim.out_cap = sizeof(out);
+    JwtV.claim_str(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
     TEST_ASSERT_EQUAL_STRING("a\"b", out);
 
-    Jwt.claim.name = "sub";
-    Jwt.claim_str(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
+    JwtV.claim.name = "sub";
+    JwtV.claim_str(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
     TEST_ASSERT_EQUAL_STRING("1234567890", out);
 
     // A buffer too small for the value reports failure and leaves nothing partial behind.
     char small[4];
-    Jwt.claim.name = "sub";
-    Jwt.claim.out = small;
-    Jwt.claim.out_cap = sizeof(small);
-    Jwt.claim_str(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.claim.name = "sub";
+    JwtV.claim.out = small;
+    JwtV.claim.out_cap = sizeof(small);
+    JwtV.claim_str(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
     TEST_ASSERT_EQUAL_STRING("", small);
 
-    Jwt.claim.out = NULL;
-    Jwt.claim.out_cap = sizeof(out);
-    Jwt.claim_str(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.claim.out = NULL;
+    JwtV.claim.out_cap = sizeof(out);
+    JwtV.claim_str(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
 
     // iat is read like any other integer claim (RFC 7519 sec 4.1.6).
-    Jwt.claim.name = "iat";
-    Jwt.claim_int(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
-    TEST_ASSERT_EQUAL_INT32(1000000001L, Jwt.num);
+    JwtV.claim.name = "iat";
+    JwtV.claim_int(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
+    TEST_ASSERT_EQUAL_INT32(1000000001L, JwtV.num);
 }
 
 // RFC 6749 sec 3.3: scope is space-delimited, case-sensitive strings. A prefix of a token is not
@@ -357,41 +357,41 @@ void test_scope_matches_whole_tokens(void)
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
-        Jwt.scope.claim = CASES[i].claim;
-        Jwt.scope.required = CASES[i].required;
-        Jwt.scope_allows(jwt_work);
-        TEST_ASSERT_EQUAL_INT_MESSAGE(CASES[i].want, Jwt.ok, CASES[i].required);
+        JwtV.scope.claim = CASES[i].claim;
+        JwtV.scope.required = CASES[i].required;
+        JwtV.scope_allows(jwt_work);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(CASES[i].want, JwtV.ok, CASES[i].required);
     }
 
-    Jwt.scope.claim = NULL;
-    Jwt.scope.required = "read";
-    Jwt.scope_allows(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
-    Jwt.scope.claim = "read";
-    Jwt.scope.required = NULL;
-    Jwt.scope_allows(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.scope.claim = NULL;
+    JwtV.scope.required = "read";
+    JwtV.scope_allows(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
+    JwtV.scope.claim = "read";
+    JwtV.scope.required = NULL;
+    JwtV.scope_allows(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
 }
 
 // The scope claim read out of a token feeds the scope check: the two calls compose.
 void test_scope_claim_then_check(void)
 {
     char scope[64];
-    Jwt.token.jws = TIMED;
-    Jwt.token.jws_len = strlen(TIMED);
-    Jwt.claim.name = "scope";
-    Jwt.claim.out = scope;
-    Jwt.claim.out_cap = sizeof(scope);
-    Jwt.claim_str(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
+    JwtV.token.jws = TIMED;
+    JwtV.token.jws_len = strlen(TIMED);
+    JwtV.claim.name = "scope";
+    JwtV.claim.out = scope;
+    JwtV.claim.out_cap = sizeof(scope);
+    JwtV.claim_str(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
     TEST_ASSERT_EQUAL_STRING("read write admin", scope);
 
-    Jwt.scope.claim = scope;
-    Jwt.scope.required = "admin";
-    Jwt.scope_allows(jwt_work);
-    TEST_ASSERT_TRUE(Jwt.ok);
+    JwtV.scope.claim = scope;
+    JwtV.scope.required = "admin";
+    JwtV.scope_allows(jwt_work);
+    TEST_ASSERT_TRUE(JwtV.ok);
 
-    Jwt.scope.required = "delete";
-    Jwt.scope_allows(jwt_work);
-    TEST_ASSERT_FALSE(Jwt.ok);
+    JwtV.scope.required = "delete";
+    JwtV.scope_allows(jwt_work);
+    TEST_ASSERT_FALSE(JwtV.ok);
 }

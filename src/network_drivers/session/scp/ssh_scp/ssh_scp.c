@@ -90,12 +90,12 @@ static void protocore_scp_end(ScpConn *c); // called above its definition; stati
 // rather than writing further records into a channel nobody reads.
 static void ack(ScpConn *c, uint8_t byte)
 {
-    SshConnection.chan.slot = c->slot;
-    SshConnection.chan.channel = c->channel;
-    SshConnection.chan.data = &byte;
-    SshConnection.chan.len = 1;
+    SshConnectionV.chan.slot = c->slot;
+    SshConnectionV.chan.channel = c->channel;
+    SshConnectionV.chan.data = &byte;
+    SshConnectionV.chan.len = 1;
     SshConnection.channel_send_data(protocore_ssh_connection_span());
-    if (SshConnection.i32 < 0)
+    if (SshConnectionV.i32 < 0)
     {
         protocore_scp_end(c);
     }
@@ -103,12 +103,12 @@ static void ack(ScpConn *c, uint8_t byte)
 /** @brief Send one complete error record. @p len is `sizeof(record) - 1`, resolved at compile time. */
 static void err_ack(ScpConn *c, const char *rec, size_t len)
 {
-    SshConnection.chan.slot = c->slot;
-    SshConnection.chan.channel = c->channel;
-    SshConnection.chan.data = (const uint8_t *)(rec);
-    SshConnection.chan.len = len;
+    SshConnectionV.chan.slot = c->slot;
+    SshConnectionV.chan.channel = c->channel;
+    SshConnectionV.chan.data = (const uint8_t *)(rec);
+    SshConnectionV.chan.len = len;
     SshConnection.channel_send_data(protocore_ssh_connection_span());
-    if (SshConnection.i32 < 0)
+    if (SshConnectionV.i32 < 0)
     {
         protocore_scp_end(c);
     }
@@ -117,7 +117,7 @@ static void close_file(ScpConn *c)
 {
     if (c->fh >= 0)
     {
-        Fs.io.handle = c->fh;
+        FsV.io.handle = c->fh;
         Fs.close(protocore_filesystem_span());
         c->fh = -1;
     }
@@ -126,8 +126,8 @@ static void protocore_scp_end(ScpConn *c)
 {
     close_file(c);
     c->active = PROTO_FALSE;
-    SshConnection.chan.slot = c->slot;
-    SshConnection.chan.channel = c->channel;
+    SshConnectionV.chan.slot = c->slot;
+    SshConnectionV.chan.channel = c->channel;
     SshConnection.channel_send_close(protocore_ssh_connection_span());
 }
 
@@ -147,12 +147,12 @@ static void protocore_scp_on_open(uint8_t slot, uint32_t channel, const char *cm
 
     // Parsed straight into the field that keeps it. Parsing into scratch and copying would move a
     // whole path twice and then rescan the copy for a length the parse already walked past.
-    Scp.parse_cmd_args.cmd = cmd;
-    Scp.parse_cmd_args.cmd_len = cmd_len;
-    Scp.parse_cmd_args.path_out = c->dest;
-    Scp.parse_cmd_args.path_cap = sizeof(c->dest);
+    ScpV.parse_cmd_args.cmd = cmd;
+    ScpV.parse_cmd_args.cmd_len = cmd_len;
+    ScpV.parse_cmd_args.path_out = c->dest;
+    ScpV.parse_cmd_args.path_cap = sizeof(c->dest);
     Scp.parse_cmd(scp_work);
-    ScpMode mode = Scp.value;
+    ScpMode mode = ScpV.value;
     if (mode == SCP_MODE_SINK)
     {
         // A '/' terminator is what makes the target a directory, and it is also the separator the
@@ -218,14 +218,14 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
 
             uint32_t mode = 0;
             uint64_t size = 0;
-            Scp.parse_cline_args.line = c->cl;
-            Scp.parse_cline_args.len = c->cl_len;
-            Scp.parse_cline_args.mode_out = &mode;
-            Scp.parse_cline_args.size_out = &size;
-            Scp.parse_cline_args.name_out = SSH_SCP_CTX(work)->leaf;
-            Scp.parse_cline_args.name_cap = sizeof(SSH_SCP_CTX(work)->leaf);
+            ScpV.parse_cline_args.line = c->cl;
+            ScpV.parse_cline_args.len = c->cl_len;
+            ScpV.parse_cline_args.mode_out = &mode;
+            ScpV.parse_cline_args.size_out = &size;
+            ScpV.parse_cline_args.name_out = SSH_SCP_CTX(work)->leaf;
+            ScpV.parse_cline_args.name_cap = sizeof(SSH_SCP_CTX(work)->leaf);
             Scp.parse_cline(scp_work);
-            if (!Scp.ok)
+            if (!ScpV.ok)
             {
                 // e.g. a D/E directory record (no -r support)
                 err_ack(c, SCP_ERR_BAD_RECORD, sizeof(SCP_ERR_BAD_RECORD) - 1);
@@ -234,12 +234,12 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
             }
             // A directory target takes the control line's filename; a file target is the whole
             // destination on its own. Either way the accessor gets the pieces and frames once.
-            Fs.path.root = SSH_SCP_CTX(work)->root;
-            Fs.path.dir = c->dest;
-            Fs.path.name = c->dest_is_dir ? SSH_SCP_CTX(work)->leaf : "";
-            Fs.io.mode = PROTOCORE_MNT_WRITE;
+            FsV.path.root = SSH_SCP_CTX(work)->root;
+            FsV.path.dir = c->dest;
+            FsV.path.name = c->dest_is_dir ? SSH_SCP_CTX(work)->leaf : "";
+            FsV.io.mode = PROTOCORE_MNT_WRITE;
             Fs.open(protocore_filesystem_span());
-            c->fh = Fs.i32;
+            c->fh = FsV.i32;
             if (c->fh < 0)
             {
                 err_ack(c, SCP_ERR_CREATE, sizeof(SCP_ERR_CREATE) - 1);
@@ -255,11 +255,11 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
         if (c->st == RECV)
         {
             size_t take = (len < c->remaining) ? len : (size_t)c->remaining;
-            Fs.io.handle = c->fh;
-            Fs.io.wbuf = data;
-            Fs.io.n = take;
+            FsV.io.handle = c->fh;
+            FsV.io.wbuf = data;
+            FsV.io.n = take;
             Fs.write(protocore_filesystem_span());
-            if (Fs.i32 != (int)take)
+            if (FsV.i32 != (int)take)
             {
                 c->err = PROTO_TRUE;
             }
@@ -314,13 +314,13 @@ uint8_t *protocore_ssh_scp_span(void)
     return s_own.span;
 }
 
-static void ssh_scp_begin(uint8_t *restrict work)
+void protocore_ssh_scp_begin(uint8_t *restrict work)
 {
     // Bind the root this server answers from. Naming a different one than SFTP is how the two end up
     // over different storage; naming the same one shares it and costs one entry.
-    Fs.mount = "mnt/scp";
+    FsV.mount = "mnt/scp";
     Fs.begin(protocore_filesystem_span());
-    SSH_SCP_CTX(work)->root = Fs.i32;
+    SSH_SCP_CTX(work)->root = FsV.i32;
 
     for (int i = 0; i < MAX_SSH_CONNS; i++)
     {
@@ -331,17 +331,16 @@ static void ssh_scp_begin(uint8_t *restrict work)
     }
     if (!SSH_SCP_CTX(work)->registered)
     {
-        SshConnection.scp_open_cb = protocore_scp_on_open;
+        SshConnectionV.scp_open_cb = protocore_scp_on_open;
         SshConnection.set_scp_open_cb(protocore_ssh_connection_span());
-        SshConnection.scp_data_cb = protocore_scp_on_data;
+        SshConnectionV.scp_data_cb = protocore_scp_on_data;
         SshConnection.set_scp_data_cb(protocore_ssh_connection_span());
         SSH_SCP_CTX(work)->registered = PROTO_TRUE;
     }
 }
 
-SshScpNs SshScp = {
-    .begin = ssh_scp_begin,
-};
+/** @brief The operands and the outcome. */
+SshScpVars SshScpV;
 
 PROTOCORE_END_DECLS
 

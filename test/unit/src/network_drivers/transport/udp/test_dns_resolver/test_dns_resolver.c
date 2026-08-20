@@ -26,7 +26,7 @@ void setUp(void)
 {
     protocore_net_host_reset();
     set_millis(0);
-    Resolver.server.ip = "9.9.9.9";
+    ResolverV.server.ip = "9.9.9.9";
     Resolver.set_server(protocore_dns_resolver_span());
 }
 
@@ -35,13 +35,13 @@ void setUp(void)
 void tearDown(void)
 {
     Resolver.busy(protocore_dns_resolver_span());
-    if (Resolver.ok)
+    if (ResolverV.ok)
     {
         set_millis(millis() + PROTOCORE_DNS_TIMEOUT_MS);
-        Resolver.query.host = "release.example";
+        ResolverV.query.host = "release.example";
         Resolver.resolve(protocore_dns_resolver_span());
     }
-    UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
+    UdpListenerV.port = PROTOCORE_DNS_CLIENT_PORT;
     UdpListener.close(protocore_udp_listener_span());
 }
 
@@ -49,63 +49,63 @@ void tearDown(void)
 
 static size_t query_build(uint8_t *out, size_t cap, uint16_t id, const char *host)
 {
-    Resolver.query.host = host;
-    Resolver.query.id = id;
-    Resolver.query.out = out;
-    Resolver.query.cap = cap;
+    ResolverV.query.host = host;
+    ResolverV.query.id = id;
+    ResolverV.query.out = out;
+    ResolverV.query.cap = cap;
     Resolver.query_build(protocore_dns_resolver_span());
-    return Resolver.n;
+    return ResolverV.n;
 }
 
 static proto_bool answer_parse(const uint8_t *pkt, size_t len, uint16_t id, uint32_t *out)
 {
-    Resolver.query.id = id;
-    Resolver.answer.pkt = pkt;
-    Resolver.answer.len = len;
+    ResolverV.query.id = id;
+    ResolverV.answer.pkt = pkt;
+    ResolverV.answer.len = len;
     Resolver.answer_parse(protocore_dns_resolver_span());
-    *out = Resolver.u32;
-    return Resolver.ok;
+    *out = ResolverV.u32;
+    return ResolverV.ok;
 }
 
 static protocore_ip_class classify(uint32_t ip)
 {
-    Resolver.addr.ip = ip;
+    ResolverV.addr.ip = ip;
     Resolver.classify(protocore_dns_resolver_span());
-    return Resolver.cls;
+    return ResolverV.cls;
 }
 
 static proto_bool verify(uint32_t ip)
 {
-    Resolver.addr.ip = ip;
-    Resolver.verify(protocore_dns_resolver_span());
-    return Resolver.ok;
+    ResolverV.addr.ip = ip;
+    ResolverV.verify(protocore_dns_resolver_span());
+    return ResolverV.ok;
 }
 
 static protocore_dns_state resolve(const char *host)
 {
-    Resolver.query.host = host;
+    ResolverV.query.host = host;
     Resolver.resolve(protocore_dns_resolver_span());
-    return Resolver.state;
+    return ResolverV.state;
 }
 
 static protocore_dns_state resolve_verified(const char *host)
 {
-    Resolver.query.host = host;
+    ResolverV.query.host = host;
     Resolver.resolve_verified(protocore_dns_resolver_span());
-    return Resolver.state;
+    return ResolverV.state;
 }
 
 static proto_bool busy(void)
 {
     Resolver.busy(protocore_dns_resolver_span());
-    return Resolver.ok;
+    return ResolverV.ok;
 }
 
 static proto_bool set_server(const char *ip)
 {
-    Resolver.server.ip = ip;
+    ResolverV.server.ip = ip;
     Resolver.set_server(protocore_dns_resolver_span());
-    return Resolver.ok;
+    return ResolverV.ok;
 }
 
 // --- a response, assembled the way a server writes one ---------------------------------------
@@ -366,7 +366,7 @@ void test_verify_refuses_what_cannot_be_a_remote_host(void)
 void test_a_literal_answers_itself(void)
 {
     TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, resolve("192.168.4.7"));
-    TEST_ASSERT_EQUAL_HEX32(IPV4(192, 168, 4, 7), Resolver.u32);
+    TEST_ASSERT_EQUAL_HEX32(IPV4(192, 168, 4, 7), ResolverV.u32);
     TEST_ASSERT_EQUAL_size_t(0u, protocore_net_host_udp_sent());
     TEST_ASSERT_NULL(protocore_net_host_udp_pcb(PROTOCORE_DNS_CLIENT_PORT));
     TEST_ASSERT_FALSE(busy());
@@ -413,11 +413,11 @@ void test_the_answer_completes_the_resolve(void)
     const uint8_t addr[4] = {192, 0, 2, 42};
     n = put_rr(p, n, 1, 1, addr, 4);
     TEST_ASSERT_EQUAL_INT(1, protocore_net_host_udp_deliver(PROTOCORE_DNS_CLIENT_PORT, "9.9.9.9", 53, p, (uint16_t)n));
-    UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
+    UdpListenerV.port = PROTOCORE_DNS_CLIENT_PORT;
     UdpListener.poll(protocore_udp_listener_span());
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, resolve("example.com"));
-    TEST_ASSERT_EQUAL_HEX32(IPV4(192, 0, 2, 42), Resolver.u32);
+    TEST_ASSERT_EQUAL_HEX32(IPV4(192, 0, 2, 42), ResolverV.u32);
     TEST_ASSERT_FALSE(busy());
 }
 
@@ -433,7 +433,7 @@ void test_a_foreign_response_does_not_end_the_query(void)
     const uint8_t addr[4] = {203, 0, 113, 9};
     n = put_rr(p, n, 1, 1, addr, 4);
     (void)protocore_net_host_udp_deliver(PROTOCORE_DNS_CLIENT_PORT, "203.0.113.9", 53, p, (uint16_t)n);
-    UdpListener.port = PROTOCORE_DNS_CLIENT_PORT;
+    UdpListenerV.port = PROTOCORE_DNS_CLIENT_PORT;
     UdpListener.poll(protocore_udp_listener_span());
 
     TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_BUSY, resolve("example.com"));
@@ -471,8 +471,8 @@ void test_set_server_takes_only_an_address(void)
 void test_resolve_verified_refuses_an_implausible_answer(void)
 {
     TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_FAILED, resolve_verified("127.0.0.1"));
-    TEST_ASSERT_EQUAL_HEX32(0u, Resolver.u32);
+    TEST_ASSERT_EQUAL_HEX32(0u, ResolverV.u32);
     TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_FAILED, resolve_verified("224.0.0.251"));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, resolve_verified("192.0.2.42"));
-    TEST_ASSERT_EQUAL_HEX32(IPV4(192, 0, 2, 42), Resolver.u32);
+    TEST_ASSERT_EQUAL_HEX32(IPV4(192, 0, 2, 42), ResolverV.u32);
 }

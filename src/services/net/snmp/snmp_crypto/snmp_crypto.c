@@ -32,8 +32,8 @@
 static void localize_key(uint8_t *restrict work)
 {
     (void)work;
-    const char *password = SnmpCrypto.key.password;
-    uint8_t *key_out = SnmpCrypto.key.out;
+    const char *password = SnmpCryptoV.key.password;
+    uint8_t *key_out = SnmpCryptoV.key.out;
     size_t pwlen = password ? str.len(password, PROTOCORE_SNMP_USM_PASS_MAX) : 0;
     if (pwlen == 0 || key_out == NULL)
     {
@@ -41,12 +41,12 @@ static void localize_key(uint8_t *restrict work)
         {
             mem.set(key_out, 0, SNMP_USM_KEY_LEN);
         }
-        SnmpCrypto.ok = PROTO_FALSE;
+        SnmpCryptoV.ok = PROTO_FALSE;
         return;
     }
 
     uint8_t *sha;
-    sha = SnmpCrypto.work;
+    sha = SnmpCryptoV.work;
     Sha256.init(sha);
     uint8_t block[64];
     size_t pw_index = 0;
@@ -58,32 +58,32 @@ static void localize_key(uint8_t *restrict work)
             block[i] = (uint8_t)password[pw_index];
             pw_index = (pw_index + 1) % pwlen;
         }
-        Sha256.update_args.data = block;
-        Sha256.update_args.len = 64;
+        Sha256V.update_args.data = block;
+        Sha256V.update_args.len = 64;
         Sha256.update(sha);
         count += 64;
     }
     uint8_t ku[SNMP_USM_KEY_LEN];
-    Sha256.final_args.out = ku;
+    Sha256V.final_args.out = ku;
     Sha256.final(sha);
 
-    sha = SnmpCrypto.work;
+    sha = SnmpCryptoV.work;
     Sha256.init(sha);
-    Sha256.update_args.data = ku;
-    Sha256.update_args.len = SNMP_USM_KEY_LEN;
+    Sha256V.update_args.data = ku;
+    Sha256V.update_args.len = SNMP_USM_KEY_LEN;
     Sha256.update(sha);
-    Sha256.update_args.data = SnmpCrypto.key.engine_id;
-    Sha256.update_args.len = SnmpCrypto.key.engine_id_len;
+    Sha256V.update_args.data = SnmpCryptoV.key.engine_id;
+    Sha256V.update_args.len = SnmpCryptoV.key.engine_id_len;
     Sha256.update(sha);
-    Sha256.update_args.data = ku;
-    Sha256.update_args.len = SNMP_USM_KEY_LEN;
+    Sha256V.update_args.data = ku;
+    Sha256V.update_args.len = SNMP_USM_KEY_LEN;
     Sha256.update(sha);
-    Sha256.final_args.out = key_out;
+    Sha256V.final_args.out = key_out;
     Sha256.final(sha);
 
     protocore_secure_wipe(ku, sizeof(ku));
     protocore_secure_wipe(block, sizeof(block));
-    SnmpCrypto.ok = PROTO_TRUE;
+    SnmpCryptoV.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -183,20 +183,20 @@ static void aes128_encrypt_block(const uint8_t rk[176], const uint8_t in[16], ui
 static void aes_cfb128(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *in = SnmpCrypto.priv.in;
-    uint8_t *out = SnmpCrypto.priv.out;
-    const size_t len = SnmpCrypto.priv.len;
-    const proto_bool encrypt = SnmpCrypto.priv.encrypt;
-    if (SnmpCrypto.priv.key == NULL || SnmpCrypto.priv.iv == NULL || in == NULL || out == NULL)
+    const uint8_t *in = SnmpCryptoV.priv.in;
+    uint8_t *out = SnmpCryptoV.priv.out;
+    const size_t len = SnmpCryptoV.priv.len;
+    const proto_bool encrypt = SnmpCryptoV.priv.encrypt;
+    if (SnmpCryptoV.priv.key == NULL || SnmpCryptoV.priv.iv == NULL || in == NULL || out == NULL)
     {
-        SnmpCrypto.ok = PROTO_FALSE;
+        SnmpCryptoV.ok = PROTO_FALSE;
         return;
     }
 
     uint8_t rk[176];
-    aes128_key_schedule(SnmpCrypto.priv.key, rk);
+    aes128_key_schedule(SnmpCryptoV.priv.key, rk);
     uint8_t fb[16];
-    mem.cpy(fb, SnmpCrypto.priv.iv, 16);
+    mem.cpy(fb, SnmpCryptoV.priv.iv, 16);
     uint8_t ks[16];
 
     size_t off = 0;
@@ -236,10 +236,11 @@ static void aes_cfb128(uint8_t *restrict work)
     protocore_secure_wipe(rk, sizeof(rk));
     protocore_secure_wipe(ks, sizeof(ks));
     protocore_secure_wipe(fb, sizeof(fb));
-    SnmpCrypto.ok = PROTO_TRUE;
+    SnmpCryptoV.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SnmpCryptoNs SnmpCrypto = {.localize_key = localize_key, .aes_cfb128 = aes_cfb128};
+/** @brief The operands and the outcome. */
+SnmpCryptoVars SnmpCryptoV;
 
 #endif // PROTOCORE_ENABLE_SNMP_V3

@@ -44,38 +44,38 @@ int main(void)
     {
         cookie[i] = (uint8_t)(i * 7 + 3);
     }
-    Nts.ke_record_args.critical = true;
-    Nts.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
-    Nts.ke_record_args.body = next_proto;
-    Nts.ke_record_args.body_len = 2;
-    Nts.ke_record_args.out = resp + rl;
-    Nts.ke_record_args.cap = sizeof(resp) - rl;
+    NtsV.ke_record_args.critical = true;
+    NtsV.ke_record_args.type = NTS_KE_NEXT_PROTOCOL;
+    NtsV.ke_record_args.body = next_proto;
+    NtsV.ke_record_args.body_len = 2;
+    NtsV.ke_record_args.out = resp + rl;
+    NtsV.ke_record_args.cap = sizeof(resp) - rl;
     Nts.ke_record(nts_work);
-    rl += Nts.n;
-    Nts.ke_record_args.critical = true;
-    Nts.ke_record_args.type = NTS_KE_AEAD_ALGORITHM;
-    Nts.ke_record_args.body = aead;
-    Nts.ke_record_args.body_len = 2;
-    Nts.ke_record_args.out = resp + rl;
-    Nts.ke_record_args.cap = sizeof(resp) - rl;
+    rl += NtsV.n;
+    NtsV.ke_record_args.critical = true;
+    NtsV.ke_record_args.type = NTS_KE_AEAD_ALGORITHM;
+    NtsV.ke_record_args.body = aead;
+    NtsV.ke_record_args.body_len = 2;
+    NtsV.ke_record_args.out = resp + rl;
+    NtsV.ke_record_args.cap = sizeof(resp) - rl;
     Nts.ke_record(nts_work);
-    rl += Nts.n;
-    Nts.ke_record_args.critical = false;
-    Nts.ke_record_args.type = NTS_KE_COOKIE;
-    Nts.ke_record_args.body = cookie;
-    Nts.ke_record_args.body_len = sizeof(cookie);
-    Nts.ke_record_args.out = resp + rl;
-    Nts.ke_record_args.cap = sizeof(resp) - rl;
+    rl += NtsV.n;
+    NtsV.ke_record_args.critical = false;
+    NtsV.ke_record_args.type = NTS_KE_COOKIE;
+    NtsV.ke_record_args.body = cookie;
+    NtsV.ke_record_args.body_len = sizeof(cookie);
+    NtsV.ke_record_args.out = resp + rl;
+    NtsV.ke_record_args.cap = sizeof(resp) - rl;
     Nts.ke_record(nts_work);
-    rl += Nts.n;
-    Nts.ke_record_args.critical = true;
-    Nts.ke_record_args.type = NTS_KE_END_OF_MESSAGE;
-    Nts.ke_record_args.body = NULL;
-    Nts.ke_record_args.body_len = 0;
-    Nts.ke_record_args.out = resp + rl;
-    Nts.ke_record_args.cap = sizeof(resp) - rl;
+    rl += NtsV.n;
+    NtsV.ke_record_args.critical = true;
+    NtsV.ke_record_args.type = NTS_KE_END_OF_MESSAGE;
+    NtsV.ke_record_args.body = NULL;
+    NtsV.ke_record_args.body_len = 0;
+    NtsV.ke_record_args.out = resp + rl;
+    NtsV.ke_record_args.cap = sizeof(resp) - rl;
     Nts.ke_record(nts_work);
-    rl += Nts.n;
+    rl += NtsV.n;
 
     uint8_t nonce[16];
     for (int i = 0; i < 16; i++)
@@ -87,16 +87,16 @@ int main(void)
 
     // Build the NTS-KE request (client hello: next-protocol + AEAD offer). Once per key establishment.
     {
-        Nts.ke_request_args.out = out;
-        Nts.ke_request_args.cap = sizeof(out);
+        NtsV.ke_request_args.out = out;
+        NtsV.ke_request_args.cap = sizeof(out);
         Nts.ke_request(nts_work);
-        size_t req_len = Nts.n;
+        size_t req_len = NtsV.n;
         volatile size_t sink = 0;
         double ns = 0.0;
-        Nts.ke_request_args.out = out;
-        Nts.ke_request_args.cap = sizeof(out);
+        NtsV.ke_request_args.out = out;
+        NtsV.ke_request_args.cap = sizeof(out);
         Nts.ke_request(nts_work);
-        HBENCH_NS(2000000, sink += Nts.n, ns);
+        HBENCH_NS(2000000, sink += NtsV.n, ns);
         hbench_row("nts", "ke_request (build)", ns, (double)req_len);
         (void)sink;
     }
@@ -109,12 +109,12 @@ int main(void)
             2000000,
             {
                 size_t n = 0;
-                Nts.ke_parse_args.buf = resp;
-                Nts.ke_parse_args.len = rl;
-                Nts.ke_parse_args.cb = ke_count_cb;
-                Nts.ke_parse_args.arg = &n;
+                NtsV.ke_parse_args.buf = resp;
+                NtsV.ke_parse_args.len = rl;
+                NtsV.ke_parse_args.cb = ke_count_cb;
+                NtsV.ke_parse_args.arg = &n;
                 Nts.ke_parse(nts_work);
-                if (Nts.ok)
+                if (NtsV.ok)
                 {
                     sink += n;
                 }
@@ -126,40 +126,40 @@ int main(void)
 
     // Build a Unique-Identifier EF (RFC 8915 5.3) - on every NTS-protected NTP request the client sends.
     {
-        Nts.ef_unique_id_args.nonce = nonce;
-        Nts.ef_unique_id_args.nonce_len = sizeof(nonce);
-        Nts.ef_unique_id_args.out = out;
-        Nts.ef_unique_id_args.cap = sizeof(out);
+        NtsV.ef_unique_id_args.nonce = nonce;
+        NtsV.ef_unique_id_args.nonce_len = sizeof(nonce);
+        NtsV.ef_unique_id_args.out = out;
+        NtsV.ef_unique_id_args.cap = sizeof(out);
         Nts.ef_unique_id(nts_work);
-        size_t ef_len = Nts.n;
+        size_t ef_len = NtsV.n;
         volatile size_t sink = 0;
         double ns = 0.0;
-        Nts.ef_unique_id_args.nonce = nonce;
-        Nts.ef_unique_id_args.nonce_len = sizeof(nonce);
-        Nts.ef_unique_id_args.out = out;
-        Nts.ef_unique_id_args.cap = sizeof(out);
+        NtsV.ef_unique_id_args.nonce = nonce;
+        NtsV.ef_unique_id_args.nonce_len = sizeof(nonce);
+        NtsV.ef_unique_id_args.out = out;
+        NtsV.ef_unique_id_args.cap = sizeof(out);
         Nts.ef_unique_id(nts_work);
-        HBENCH_NS(5000000, sink += Nts.n, ns);
+        HBENCH_NS(5000000, sink += NtsV.n, ns);
         hbench_row("nts", "ef_unique_id (build)", ns, (double)ef_len);
         (void)sink;
     }
 
     // Build a Cookie EF - carried on every NTS-protected NTP request (one cookie spent per exchange).
     {
-        Nts.ef_cookie_args.cookie = cookie;
-        Nts.ef_cookie_args.cookie_len = sizeof(cookie);
-        Nts.ef_cookie_args.out = out;
-        Nts.ef_cookie_args.cap = sizeof(out);
+        NtsV.ef_cookie_args.cookie = cookie;
+        NtsV.ef_cookie_args.cookie_len = sizeof(cookie);
+        NtsV.ef_cookie_args.out = out;
+        NtsV.ef_cookie_args.cap = sizeof(out);
         Nts.ef_cookie(nts_work);
-        size_t ck_len = Nts.n;
+        size_t ck_len = NtsV.n;
         volatile size_t sink = 0;
         double ns = 0.0;
-        Nts.ef_cookie_args.cookie = cookie;
-        Nts.ef_cookie_args.cookie_len = sizeof(cookie);
-        Nts.ef_cookie_args.out = out;
-        Nts.ef_cookie_args.cap = sizeof(out);
+        NtsV.ef_cookie_args.cookie = cookie;
+        NtsV.ef_cookie_args.cookie_len = sizeof(cookie);
+        NtsV.ef_cookie_args.out = out;
+        NtsV.ef_cookie_args.cap = sizeof(out);
         Nts.ef_cookie(nts_work);
-        HBENCH_NS(5000000, sink += Nts.n, ns);
+        HBENCH_NS(5000000, sink += NtsV.n, ns);
         hbench_row("nts", "ef_cookie (build)", ns, (double)ck_len);
         (void)sink;
     }

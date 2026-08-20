@@ -42,14 +42,12 @@ typedef struct
     uint8_t bit_off;                  ///< bits already consumed from carry[0] at the last block boundary (0..7).
     proto_bool header_seen;           ///< true once the leading 2-byte RFC 1950 zlib header was consumed.
 } SshInflate;
-
 /** @brief What init takes: z, window. */
 typedef struct
 {
     SshInflate *z;   ///< the decompressor to initialize
     uint8_t *window; ///< back-reference window, >= SSH_INFLATE_WINDOW bytes
 } InflateInitArgs;
-
 /** @brief What packet takes: z, src, src_len, dst, dst_cap, out_len. */
 typedef struct
 {
@@ -60,7 +58,6 @@ typedef struct
     size_t dst_cap;
     size_t *out_len; ///< set to the decompressed length on success (may be 0 if a packet carried only flush bits)
 } InflatePacketArgs;
-
 /**
  * @brief RFC 1951 inflate, as SSH negotiates it.
  *
@@ -86,16 +83,33 @@ typedef struct
 {
     InflateInitArgs init_args;
     InflatePacketArgs packet_args;
-
     proto_bool ok;
     int n;
+} InflateVars;
 
+/** @brief The operands and the outcome. */
+extern InflateVars InflateV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const packet)(uint8_t *restrict work);
 } InflateNs;
 
-/** @brief The one symbol this module exports. */
-extern InflateNs Inflate;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in InflateV or a region of the borrow at a fixed offset.
+void protocore_inflate_init(uint8_t *restrict work);
+void protocore_inflate_packet(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Inflate.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const InflateNs Inflate __attribute__((unused)) = {
+    .init = protocore_inflate_init,
+    .packet = protocore_inflate_packet,
+};
 
 PROTOCORE_END_DECLS
 

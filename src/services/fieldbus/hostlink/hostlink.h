@@ -44,14 +44,12 @@ typedef struct
     const char *text;
     size_t text_len;
 } HostlinkFrame;
-
 /** @brief What fcs takes: data, len. */
 typedef struct
 {
     const char *data;
     size_t len;
 } HostlinkFcsArgs;
-
 /** @brief What build takes: buf, cap, node, header_code, text, ... */
 typedef struct
 {
@@ -62,7 +60,6 @@ typedef struct
     const char *text;
     size_t text_len;
 } HostlinkBuildArgs;
-
 /** @brief What parse takes: buf, len, out. */
 typedef struct
 {
@@ -70,14 +67,12 @@ typedef struct
     size_t len;
     HostlinkFrame *out;
 } HostlinkParseArgs;
-
 /** @brief What end_code takes: f, code. */
 typedef struct
 {
     const HostlinkFrame *f;
     uint8_t *code;
 } HostlinkEndCodeArgs;
-
 /** @brief What build_read takes: buf, cap, node, address, count. */
 typedef struct
 {
@@ -87,7 +82,6 @@ typedef struct
     uint16_t address;
     uint16_t count;
 } HostlinkBuildReadArgs;
-
 /** @brief What read_word takes: f, index, out. */
 typedef struct
 {
@@ -95,7 +89,6 @@ typedef struct
     size_t index;
     uint16_t *out;
 } HostlinkReadWordArgs;
-
 /** @brief What build_write takes: buf, cap, node, address, words, ... */
 typedef struct
 {
@@ -106,7 +99,6 @@ typedef struct
     const uint16_t *words;
     size_t word_count;
 } HostlinkBuildWriteArgs;
-
 /**
  * @brief Omron Host Link (C-mode) frame codec (PROTOCORE_ENABLE_HOSTLINK) - zero-heap ASCII command/response framing
  * for the Omron serial host-link protocol, the RS-232/485 sibling of FINS.
@@ -150,11 +142,17 @@ typedef struct
     HostlinkBuildReadArgs build_read_args;
     HostlinkReadWordArgs read_word_args;
     HostlinkBuildWriteArgs build_write_args;
-
     proto_bool ok;
     uint8_t value;
     size_t n;
+} HostlinkVars;
 
+/** @brief The operands and the outcome. */
+extern HostlinkVars HostlinkV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const fcs)(uint8_t *restrict work);
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
@@ -164,8 +162,29 @@ typedef struct
     void (*const build_write)(uint8_t *restrict work);
 } HostlinkNs;
 
-/** @brief The one symbol this module exports. */
-extern HostlinkNs Hostlink;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HostlinkV or a region of the borrow at a fixed offset.
+void protocore_hostlink_fcs(uint8_t *restrict work);
+void protocore_hostlink_build(uint8_t *restrict work);
+void protocore_hostlink_parse(uint8_t *restrict work);
+void protocore_hostlink_end_code(uint8_t *restrict work);
+void protocore_hostlink_build_read(uint8_t *restrict work);
+void protocore_hostlink_read_word(uint8_t *restrict work);
+void protocore_hostlink_build_write(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Hostlink.fcs(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HostlinkNs Hostlink __attribute__((unused)) = {
+    .fcs = protocore_hostlink_fcs,
+    .build = protocore_hostlink_build,
+    .parse = protocore_hostlink_parse,
+    .end_code = protocore_hostlink_end_code,
+    .build_read = protocore_hostlink_build_read,
+    .read_word = protocore_hostlink_read_word,
+    .build_write = protocore_hostlink_build_write,
+};
 
 PROTOCORE_END_DECLS
 

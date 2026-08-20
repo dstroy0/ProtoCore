@@ -40,20 +40,17 @@ typedef struct
     const uint8_t *key; ///< MAC key bytes
     size_t key_len;     ///< key length; > 128 is pre-hashed (RFC 2104), shorter is zero-padded to the block
 } HmacSha512KeyArgs;
-
 /** @brief One chunk fed to a running MAC. */
 typedef struct
 {
     const uint8_t *data; ///< the bytes
     size_t len;          ///< how many
 } HmacSha512UpdateArgs;
-
 /** @brief Where the finished MAC lands. */
 typedef struct
 {
     uint8_t *out; ///< PROTOCORE_HMAC_SHA512_LEN bytes
 } HmacSha512FinalArgs;
-
 /** @brief The key and message a one-shot MAC is taken over. */
 typedef struct
 {
@@ -63,7 +60,6 @@ typedef struct
     size_t len;          ///< its length
     uint8_t *out;        ///< PROTOCORE_HMAC_SHA512_LEN bytes
 } HmacSha512MacArgs;
-
 /**
  * @brief HMAC-SHA2-512 (RFC 2104).
  *
@@ -107,17 +103,38 @@ typedef struct
     HmacSha512UpdateArgs update_args;
     HmacSha512FinalArgs final_args;
     HmacSha512MacArgs mac_args;
-
     proto_bool ok;
+} HmacSha512Vars;
 
+/** @brief The operands and the outcome. */
+extern HmacSha512Vars HmacSha512V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
     void (*const final)(uint8_t *restrict work);
     void (*const mac)(uint8_t *restrict work);
 } HmacSha512Ns;
 
-/** @brief The one symbol this module exports. */
-extern HmacSha512Ns HmacSha512;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HmacSha512V or a region of the borrow at a fixed offset.
+void protocore_hmac_sha512_init(uint8_t *restrict work);
+void protocore_hmac_sha512_update(uint8_t *restrict work);
+void protocore_hmac_sha512_final(uint8_t *restrict work);
+void protocore_hmac_sha512_mac(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HmacSha512.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HmacSha512Ns HmacSha512 __attribute__((unused)) = {
+    .init = protocore_hmac_sha512_init,
+    .update = protocore_hmac_sha512_update,
+    .final = protocore_hmac_sha512_final,
+    .mac = protocore_hmac_sha512_mac,
+};
 
 PROTOCORE_END_DECLS
 

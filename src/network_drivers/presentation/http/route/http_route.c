@@ -66,7 +66,7 @@ static void http_routes_add(uint8_t *restrict work)
     struct HttpRouteCtx *t = ROUTE_CTX(work);
     if (t->count >= MAX_ROUTES)
     {
-        HttpRoutes.ptr = NULL;
+        HttpRoutesV.ptr = NULL;
         return;
     }
     HttpRoute *r = &t->entry[t->count];
@@ -77,24 +77,24 @@ static void http_routes_add(uint8_t *restrict work)
     // dispatch to it. There is no release path - routes are registered at setup and live forever -
     // so hand-out is the only moment this can be done.
     mem.zero(r, sizeof(*r));
-    HttpRoutes.ptr = r;
+    HttpRoutesV.ptr = r;
 }
 
 static void http_routes_count(uint8_t *restrict work)
 {
-    HttpRoutes.value = ROUTE_CTX(work)->count;
+    HttpRoutesV.value = ROUTE_CTX(work)->count;
 }
 
 static void http_routes_at(uint8_t *restrict work)
 {
-    uint8_t i = HttpRoutes.at_args.i;
+    uint8_t i = HttpRoutesV.at_args.i;
 
     if (i >= ROUTE_CTX(work)->count)
     {
-        HttpRoutes.ptr = NULL;
+        HttpRoutesV.ptr = NULL;
         return;
     }
-    HttpRoutes.ptr = &ROUTE_CTX(work)->entry[i];
+    HttpRoutesV.ptr = &ROUTE_CTX(work)->entry[i];
 }
 
 static void http_routes_reset(uint8_t *restrict work)
@@ -104,12 +104,8 @@ static void http_routes_reset(uint8_t *restrict work)
     ROUTE_CTX(work)->count = 0;
 }
 
-HttpRouteNs HttpRoutes = {
-    .add = http_routes_add,
-    .count = http_routes_count,
-    .at = http_routes_at,
-    .reset = http_routes_reset,
-};
+/** @brief The operands and the outcome. */
+HttpRoutesVars HttpRoutesV;
 
 PROTOCORE_END_DECLS
 

@@ -53,10 +53,10 @@ void dbench_run(void)
 
     // Pre-build the standard 16-byte NTS-KE request once; the parse bench walks this known-good stream.
     static uint8_t req[32];
-    Nts.ke_request_args.out = req;
-    Nts.ke_request_args.cap = sizeof(req);
+    NtsV.ke_request_args.out = req;
+    NtsV.ke_request_args.cap = sizeof(req);
     Nts.ke_request(nts_work);
-    size_t req_len = Nts.n;
+    size_t req_len = NtsV.n;
 
     static uint8_t out[128];
 

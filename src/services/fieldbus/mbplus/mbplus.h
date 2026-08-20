@@ -44,14 +44,12 @@ typedef struct
     const uint8_t *payload;
     size_t payload_len;
 } MbPlusFrame;
-
 /** @brief What crc takes: bytes, len. */
 typedef struct
 {
     const uint8_t *bytes;
     size_t len;
 } MbplusCrcArgs;
-
 /** @brief What build takes: address, control, payload, payload_len, ... */
 typedef struct
 {
@@ -62,7 +60,6 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } MbplusBuildArgs;
-
 /** @brief What parse takes: frame, len, out. */
 typedef struct
 {
@@ -70,14 +67,12 @@ typedef struct
     size_t len;
     MbPlusFrame *out;
 } MbplusParseArgs;
-
 /** @brief What next_token takes: current, max_station. */
 typedef struct
 {
     uint8_t current;     ///< this station's address (1..max_station)
     uint8_t max_station; ///< the highest active station on the segment
 } MbplusNextTokenArgs;
-
 /**
  * @brief Modbus Plus HDLC token-bus frame codec (PROTOCORE_ENABLE_MBPLUS).
  *
@@ -111,19 +106,40 @@ typedef struct
     MbplusBuildArgs build_args;
     MbplusParseArgs parse_args;
     MbplusNextTokenArgs next_token_args;
-
     proto_bool ok;
     uint16_t value;
     size_t n;
+} MbplusVars;
 
+/** @brief The operands and the outcome. */
+extern MbplusVars MbplusV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const crc)(uint8_t *restrict work);
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
     void (*const next_token)(uint8_t *restrict work);
 } MbplusNs;
 
-/** @brief The one symbol this module exports. */
-extern MbplusNs Mbplus;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MbplusV or a region of the borrow at a fixed offset.
+void protocore_mbplus_crc(uint8_t *restrict work);
+void protocore_mbplus_build(uint8_t *restrict work);
+void protocore_mbplus_parse(uint8_t *restrict work);
+void protocore_mbplus_next_token(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Mbplus.crc(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MbplusNs Mbplus __attribute__((unused)) = {
+    .crc = protocore_mbplus_crc,
+    .build = protocore_mbplus_build,
+    .parse = protocore_mbplus_parse,
+    .next_token = protocore_mbplus_next_token,
+};
 
 PROTOCORE_END_DECLS
 

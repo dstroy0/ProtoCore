@@ -42,20 +42,17 @@ typedef struct
     const uint8_t *key; ///< MAC key bytes
     size_t key_len;     ///< key length; > 128 is pre-hashed (RFC 2104), shorter is zero-padded to the block
 } HmacSha384KeyArgs;
-
 /** @brief One chunk fed to a running MAC. */
 typedef struct
 {
     const uint8_t *data; ///< the bytes
     size_t len;          ///< how many
 } HmacSha384UpdateArgs;
-
 /** @brief Where the finished MAC lands. */
 typedef struct
 {
     uint8_t *out; ///< PROTOCORE_HMAC_SHA384_LEN bytes
 } HmacSha384FinalArgs;
-
 /** @brief The key and message a one-shot MAC is taken over. */
 typedef struct
 {
@@ -65,7 +62,6 @@ typedef struct
     size_t len;          ///< its length
     uint8_t *out;        ///< PROTOCORE_HMAC_SHA384_LEN bytes
 } HmacSha384MacArgs;
-
 /**
  * @brief HMAC-SHA2-384 (RFC 2104).
  *
@@ -108,17 +104,38 @@ typedef struct
     HmacSha384UpdateArgs update_args;
     HmacSha384FinalArgs final_args;
     HmacSha384MacArgs mac_args;
-
     proto_bool ok;
+} HmacSha384Vars;
 
+/** @brief The operands and the outcome. */
+extern HmacSha384Vars HmacSha384V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
     void (*const final)(uint8_t *restrict work);
     void (*const mac)(uint8_t *restrict work);
 } HmacSha384Ns;
 
-/** @brief The one symbol this module exports. */
-extern HmacSha384Ns HmacSha384;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in HmacSha384V or a region of the borrow at a fixed offset.
+void protocore_hmac_sha384_init(uint8_t *restrict work);
+void protocore_hmac_sha384_update(uint8_t *restrict work);
+void protocore_hmac_sha384_final(uint8_t *restrict work);
+void protocore_hmac_sha384_mac(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `HmacSha384.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const HmacSha384Ns HmacSha384 __attribute__((unused)) = {
+    .init = protocore_hmac_sha384_init,
+    .update = protocore_hmac_sha384_update,
+    .final = protocore_hmac_sha384_final,
+    .mac = protocore_hmac_sha384_mac,
+};
 
 PROTOCORE_END_DECLS
 

@@ -29,15 +29,15 @@ void tearDown(void)
 
 static const char *ps_name(protocore_phy_ps mode)
 {
-    Radio.ps.mode = mode;
+    RadioV.ps.mode = mode;
     Radio.ps_name(protocore_radio_power_span());
-    return Radio.text;
+    return RadioV.text;
 }
 
 static protocore_phy_ps ps_mode(void)
 {
     Radio.ps_mode(protocore_radio_power_span());
-    return Radio.mode;
+    return RadioV.mode;
 }
 
 // The two 802.11-2020 11.2.3.2 modes plus the longer listen interval of 9.4.1.6, each rendered as
@@ -60,28 +60,28 @@ void test_ps_name_does_not_apply_the_mode(void)
 // 802.11-2020 6.3.2.2: an applied mode is the mode the radio reports back.
 void test_apply_sets_the_mode_and_reads_it_back(void)
 {
-    Radio.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
+    RadioV.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
     Radio.ps_set(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Radio.ok);
+    TEST_ASSERT_TRUE(RadioV.ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_MAX_MODEM, ps_mode());
 
-    Radio.ps.mode = PROTOCORE_PHY_PS_MIN_MODEM;
+    RadioV.ps.mode = PROTOCORE_PHY_PS_MIN_MODEM;
     Radio.ps_set(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Radio.ok);
+    TEST_ASSERT_TRUE(RadioV.ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_MIN_MODEM, ps_mode());
 
-    Radio.ps.mode = PROTOCORE_PHY_PS_NONE;
+    RadioV.ps.mode = PROTOCORE_PHY_PS_NONE;
     Radio.ps_set(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Radio.ok);
+    TEST_ASSERT_TRUE(RadioV.ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_NONE, ps_mode());
 
     // 802.11-2020 11.7.6 selects a transmit power in dBm; the backend takes both signs.
-    Radio.tx.dbm = 11;
+    RadioV.tx.dbm = 11;
     Radio.tx_power_set(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Radio.ok);
-    Radio.tx.dbm = -4;
+    TEST_ASSERT_TRUE(RadioV.ok);
+    RadioV.tx.dbm = -4;
     Radio.tx_power_set(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Radio.ok);
+    TEST_ASSERT_TRUE(RadioV.ok);
 }
 
 static void on_frame(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t channel)
@@ -96,16 +96,16 @@ static void on_frame(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_t ch
 // retunes, and stops.
 void test_monitor_arms_and_refuses_a_null_sink(void)
 {
-    Radio.monitor.channel = 6;
-    Radio.monitor.on_frame = NULL;
+    RadioV.monitor.channel = 6;
+    RadioV.monitor.on_frame = NULL;
     Radio.monitor_begin(protocore_radio_power_span());
-    TEST_ASSERT_FALSE(Radio.ok);
+    TEST_ASSERT_FALSE(RadioV.ok);
 
-    Radio.monitor.on_frame = on_frame;
+    RadioV.monitor.on_frame = on_frame;
     Radio.monitor_begin(protocore_radio_power_span());
-    TEST_ASSERT_TRUE(Radio.ok);
+    TEST_ASSERT_TRUE(RadioV.ok);
 
-    Radio.monitor.channel = 11;
+    RadioV.monitor.channel = 11;
     Radio.monitor_set_channel(protocore_radio_power_span());
     Radio.monitor_end(protocore_radio_power_span());
 }
@@ -113,7 +113,7 @@ void test_monitor_arms_and_refuses_a_null_sink(void)
 // Applying the configured mode puts it on whatever the radio was left in.
 void test_power_applies_the_configured_mode(void)
 {
-    Radio.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
+    RadioV.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
     Radio.ps_set(protocore_radio_power_span());
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_PHY_PS_MAX_MODEM, ps_mode());
 
@@ -125,7 +125,7 @@ void test_power_applies_the_configured_mode(void)
 // mode back when the last holder releases. A release with nothing held changes nothing.
 void test_busy_hold_forces_active_and_release_restores(void)
 {
-    Radio.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
+    RadioV.ps.mode = PROTOCORE_PHY_PS_MAX_MODEM;
     Radio.ps_set(protocore_radio_power_span());
 
     Radio.busy_hold(protocore_radio_power_span());

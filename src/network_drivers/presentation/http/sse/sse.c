@@ -54,11 +54,11 @@ static void route_add(uint8_t *restrict work)
 {
     if (SSE_CTX(work)->count >= MAX_ROUTES)
     {
-        Sse.u8 = PROTOCORE_SSE_NONE;
+        SseV.u8 = PROTOCORE_SSE_NONE;
         return;
     }
-    SSE_CTX(work)->on_connect[SSE_CTX(work)->count] = Sse.route.on_connect;
-    Sse.u8 = SSE_CTX(work)->count++;
+    SSE_CTX(work)->on_connect[SSE_CTX(work)->count] = SseV.route.on_connect;
+    SseV.u8 = SSE_CTX(work)->count++;
 }
 
 // Empty the handler table. A route holds the id an add returned, so this belongs with whatever
@@ -71,7 +71,7 @@ static void route_reset(uint8_t *restrict work)
 
 static void route_connect(uint8_t *restrict work)
 {
-    Sse.handler = (Sse.id >= SSE_CTX(work)->count) ? NULL : SSE_CTX(work)->on_connect[Sse.id];
+    SseV.handler = (SseV.id >= SSE_CTX(work)->count) ? NULL : SSE_CTX(work)->on_connect[SseV.id];
 }
 
 static void init(uint8_t *restrict work)
@@ -87,18 +87,18 @@ static void init(uint8_t *restrict work)
 static void alloc(uint8_t *restrict work)
 {
     (void)work;
-    Sse.conn = NULL;
+    SseV.conn = NULL;
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
         if (!protocore_sse_pool[i].active)
         {
             protocore_sse_pool[i] = (SseConn){0};
             protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
-            protocore_sse_pool[i].slot_id = Sse.slot;
+            protocore_sse_pool[i].slot_id = SseV.slot;
             protocore_sse_pool[i].active = PROTO_TRUE;
-            str.copy(protocore_sse_pool[i].path, Sse.route.path, sizeof(protocore_sse_pool[i].path));
+            str.copy(protocore_sse_pool[i].path, SseV.route.path, sizeof(protocore_sse_pool[i].path));
             protocore_sse_pool[i].path[MAX_PATH_LEN - 1] = '\0';
-            Sse.conn = &protocore_sse_pool[i];
+            SseV.conn = &protocore_sse_pool[i];
             return;
         }
     }
@@ -107,12 +107,12 @@ static void alloc(uint8_t *restrict work)
 static void find(uint8_t *restrict work)
 {
     (void)work;
-    Sse.conn = NULL;
+    SseV.conn = NULL;
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == Sse.slot)
+        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == SseV.slot)
         {
-            Sse.conn = &protocore_sse_pool[i];
+            SseV.conn = &protocore_sse_pool[i];
             return;
         }
     }
@@ -123,7 +123,7 @@ static void release(uint8_t *restrict work)
     (void)work;
     for (int i = 0; i < MAX_SSE_CONNS; i++)
     {
-        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == Sse.slot)
+        if (protocore_sse_pool[i].active && protocore_sse_pool[i].slot_id == SseV.slot)
         {
             protocore_sse_pool[i] = (SseConn){0};
             protocore_sse_pool[i].protocore_sse_id = (uint8_t)i;
@@ -149,10 +149,10 @@ static inline proto_bool sse_append(char *buf, size_t n, size_t *pos, const char
 static void format(uint8_t *restrict work)
 {
     (void)work;
-    Sse.n = 0;
-    char *buf = Sse.out.buf;
-    const size_t n = Sse.out.cap;
-    if (!Sse.event_args.data || n == 0)
+    SseV.n = 0;
+    char *buf = SseV.out.buf;
+    const size_t n = SseV.out.cap;
+    if (!SseV.event_args.data || n == 0)
     {
         return;
     }
@@ -164,8 +164,8 @@ static void format(uint8_t *restrict work)
     // Bounded lengths (str.len, cap n): a field can never exceed the output buffer (an over-long value makes
     // the append fail and the record report 0), and str.len never reads past `n` if a value is unterminated.
     size_t pos = 0;
-    const char *event = Sse.event_args.event;
-    const char *id = Sse.event_args.event_id;
+    const char *event = SseV.event_args.event;
+    const char *id = SseV.event_args.event_id;
     if (event && (!sse_append(buf, n, &pos, "event: ", 7) || !sse_append(buf, n, &pos, event, str.len(event, n)) ||
                   !sse_append(buf, n, &pos, "\n", 1)))
     {
@@ -177,38 +177,38 @@ static void format(uint8_t *restrict work)
         return;
     }
     if (!sse_append(buf, n, &pos, "data: ", 6) ||
-        !sse_append(buf, n, &pos, Sse.event_args.data, str.len(Sse.event_args.data, n)) ||
+        !sse_append(buf, n, &pos, SseV.event_args.data, str.len(SseV.event_args.data, n)) ||
         !sse_append(buf, n, &pos, "\n\n", 2))
     {
         return;
     }
 
     buf[pos] = '\0'; // pos <= n-1 by construction, so the NUL always fits
-    Sse.n = (int)pos;
+    SseV.n = (int)pos;
 }
 
 static void write_event(uint8_t *restrict work)
 {
-    Sse.ok = PROTO_FALSE;
-    ConnPool.slot = Sse.stream->slot_id;
+    SseV.ok = PROTO_FALSE;
+    ConnPoolV.slot = SseV.stream->slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPool.ok)
+    if (!ConnPoolV.ok)
     {
         return;
     }
 
-    Sse.out.buf = SSE_CTX(work)->buf;
-    Sse.out.cap = sizeof(SSE_CTX(work)->buf);
+    SseV.out.buf = SSE_CTX(work)->buf;
+    SseV.out.cap = sizeof(SSE_CTX(work)->buf);
     format(work);
-    if (Sse.n <= 0)
+    if (SseV.n <= 0)
     {
         return;
     }
 
-    ConnPool.io.data = SSE_CTX(work)->buf;
-    ConnPool.io.len = (proto_u16)Sse.n;
-    ConnPool.send(protocore_conn_pool_span());
-    Sse.ok = PROTO_TRUE;
+    ConnPoolV.io.data = SSE_CTX(work)->buf;
+    ConnPoolV.io.len = (proto_u16)SseV.n;
+    ConnPoolV.send(protocore_conn_pool_span());
+    SseV.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
@@ -224,14 +224,7 @@ uint8_t *protocore_sse_span(void)
     return s_span;
 }
 
-SseNs Sse = {.route_add = route_add,
-             .route_reset = route_reset,
-             .route_connect = route_connect,
-             .init = init,
-             .alloc = alloc,
-             .find = find,
-             .free = release,
-             .format = format,
-             .write = write_event};
+/** @brief The operands and the outcome. */
+SseVars SseV;
 
 #endif // PROTOCORE_ENABLE_SSE

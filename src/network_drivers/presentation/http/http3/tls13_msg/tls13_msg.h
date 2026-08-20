@@ -108,7 +108,6 @@ typedef struct
     const uint8_t *conn_id; ///< the CID the client wants the server to use in records sent to it (may be empty)
     size_t conn_id_len;     ///< length of @c conn_id (0..255; 0 = the client wants a zero-length CID)
 } Tls13ClientHello;
-
 /** @brief A parsed ServerHello (RFC 8446 sec 4.1.3). Pointer fields alias the input, not copied. */
 typedef struct
 {
@@ -128,11 +127,9 @@ typedef struct
     const uint8_t *conn_id; ///< the CID to place in records sent to the server (aliases input)
     size_t conn_id_len;
 } Tls13ServerHello;
-
 /** @brief The fixed HelloRetryRequest random - SHA-256("HelloRetryRequest"), RFC 8446 §4.1.3. A
  *  ServerHello carrying this random _is_ a HelloRetryRequest. 32 bytes. */
 extern const uint8_t protocore_tls13_hrr_random[32];
-
 /** @brief What parse_client_hello takes: msg, len, out, dtls. */
 typedef struct
 {
@@ -141,7 +138,6 @@ typedef struct
     Tls13ClientHello *out;
     proto_bool dtls; ///< true for a DTLS ClientHello (RFC 9147 §5.3), which carries an extra legacy_cookie field ...
 } Tls13MsgParseClientHelloArgs;
-
 /** @brief What parse_server_hello takes: msg, len, out, dtls. */
 typedef struct
 {
@@ -150,7 +146,6 @@ typedef struct
     Tls13ServerHello *out;
     proto_bool dtls; ///< true for DTLS, whose supported_versions selection is 0xFEFC (RFC 9147 §5.3)
 } Tls13MsgParseServerHelloArgs;
-
 /** @brief What build_client_hello takes: out, cap, random, ... */
 typedef struct
 {
@@ -170,7 +165,6 @@ typedef struct
     proto_bool rpk_server_cert;
     proto_bool dtls;
 } Tls13MsgBuildClientHelloArgs;
-
 /** @brief What parse_certificate takes: msg, len, cert, cert_len. */
 typedef struct
 {
@@ -179,7 +173,6 @@ typedef struct
     const uint8_t **cert;
     size_t *cert_len;
 } Tls13MsgParseCertificateArgs;
-
 /** @brief What parse_cert_verify takes: msg, len, scheme, sig, sig_len. */
 typedef struct
 {
@@ -189,7 +182,6 @@ typedef struct
     const uint8_t **sig;
     size_t *sig_len;
 } Tls13MsgParseCertVerifyArgs;
-
 /** @brief What parse_finished takes: msg, len, vd, verify_len. */
 typedef struct
 {
@@ -198,7 +190,6 @@ typedef struct
     const uint8_t **vd;
     size_t verify_len; ///< the suite's Hash.length, which sec 4.4.4 makes the body's exact size
 } Tls13MsgParseFinishedArgs;
-
 /** @brief What build_server_hello takes: out, cap, random, ... */
 typedef struct
 {
@@ -216,7 +207,6 @@ typedef struct
     const uint8_t *conn_id; ///< when non-NULL, emit a connection_id extension (RFC 9146 / RFC 9147 §9) carrying the ...
     size_t conn_id_len;     ///< length of conn_id (0..255)
 } Tls13MsgBuildServerHelloArgs;
-
 /** @brief What build_encrypted_extensions takes: out, cap, quic_tp, ... */
 typedef struct
 {
@@ -227,7 +217,6 @@ typedef struct
     proto_bool rpk_server_cert; ///< when true (PROTOCORE_ENABLE_TLS_RPK), also emit the negotiated
                                 ///< server_certificate_type = ...
 } Tls13MsgBuildEncryptedExtensionsArgs;
-
 /** @brief What build_certificate takes: out, cap, cert_der, cert_len. */
 typedef struct
 {
@@ -236,7 +225,6 @@ typedef struct
     const uint8_t *cert_der;
     size_t cert_len;
 } Tls13MsgBuildCertificateArgs;
-
 /** @brief What build_cert_verify takes: sign_work, out, cap, ... */
 typedef struct
 {
@@ -247,7 +235,6 @@ typedef struct
     size_t hash_len;                ///< its length: the suite's Hash.length, at most PROTOCORE_TLS13_SECRET_MAX
     const uint8_t *seed;            ///< 32-byte Ed25519 private seed 32 bytes.
 } Tls13MsgBuildCertVerifyArgs;
-
 /** @brief What build_finished takes: out, cap, verify_data, verify_len. */
 typedef struct
 {
@@ -256,7 +243,6 @@ typedef struct
     const uint8_t *verify_data;
     size_t verify_len;
 } Tls13MsgBuildFinishedArgs;
-
 /** @brief What cert_verify_content takes: out, cap, transcript_hash, ... */
 typedef struct
 {
@@ -266,7 +252,6 @@ typedef struct
     size_t hash_len;
     proto_bool is_server;
 } Tls13MsgCertVerifyContentArgs;
-
 /** @brief What build_hello_retry_request takes: out, cap, session_id, ... */
 typedef struct
 {
@@ -280,7 +265,6 @@ typedef struct
     size_t cookie_len;
     proto_bool dtls; ///< true to emit the DTLS 1.3 version codepoints (0xFEFD / 0xFEFC, RFC 9147 §5.3); false for ...
 } Tls13MsgBuildHelloRetryRequestArgs;
-
 /** @brief What build_encrypted_extensions_empty takes: out, cap, ... */
 typedef struct
 {
@@ -289,7 +273,6 @@ typedef struct
     proto_bool rpk_server_cert;
     const char *alpn;
 } Tls13MsgBuildEncryptedExtensionsEmptyArgs;
-
 /** @brief What build_message_hash takes: out, cap, ch1_hash. */
 typedef struct
 {
@@ -297,7 +280,6 @@ typedef struct
     size_t cap;
     const uint8_t *ch1_hash; ///< 32 bytes.
 } Tls13MsgBuildMessageHashArgs;
-
 /**
  * @brief TLS 1.3 handshake messages for the QUIC handshake (RFC 8446 sec 4).
  *
@@ -365,10 +347,16 @@ typedef struct
     Tls13MsgBuildHelloRetryRequestArgs build_hello_retry_request_args;
     Tls13MsgBuildEncryptedExtensionsEmptyArgs build_encrypted_extensions_empty_args;
     Tls13MsgBuildMessageHashArgs build_message_hash_args;
-
     proto_bool ok;
     size_t n;
+} Tls13MsgVars;
 
+/** @brief The operands and the outcome. */
+extern Tls13MsgVars Tls13MsgV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse_client_hello)(uint8_t *restrict work);
     void (*const parse_server_hello)(uint8_t *restrict work);
     void (*const build_client_hello)(uint8_t *restrict work);
@@ -386,8 +374,45 @@ typedef struct
     void (*const build_message_hash)(uint8_t *restrict work);
 } Tls13MsgNs;
 
-/** @brief The one symbol this module exports. */
-extern Tls13MsgNs Tls13Msg;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Tls13MsgV or a region of the borrow at a fixed offset.
+void protocore_tls13_msg_parse_client_hello(uint8_t *restrict work);
+void protocore_tls13_msg_parse_server_hello(uint8_t *restrict work);
+void protocore_tls13_msg_build_client_hello(uint8_t *restrict work);
+void protocore_tls13_msg_parse_certificate(uint8_t *restrict work);
+void protocore_tls13_msg_parse_cert_verify(uint8_t *restrict work);
+void protocore_tls13_msg_parse_finished(uint8_t *restrict work);
+void protocore_tls13_msg_build_server_hello(uint8_t *restrict work);
+void protocore_tls13_msg_build_encrypted_extensions(uint8_t *restrict work);
+void protocore_tls13_msg_build_certificate(uint8_t *restrict work);
+void protocore_tls13_msg_build_cert_verify(uint8_t *restrict work);
+void protocore_tls13_msg_build_finished(uint8_t *restrict work);
+void protocore_tls13_msg_cert_verify_content(uint8_t *restrict work);
+void protocore_tls13_msg_build_hello_retry_request(uint8_t *restrict work);
+void protocore_tls13_msg_build_encrypted_extensions_empty(uint8_t *restrict work);
+void protocore_tls13_msg_build_message_hash(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Tls13Msg.parse_client_hello(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Tls13MsgNs Tls13Msg __attribute__((unused)) = {
+    .parse_client_hello = protocore_tls13_msg_parse_client_hello,
+    .parse_server_hello = protocore_tls13_msg_parse_server_hello,
+    .build_client_hello = protocore_tls13_msg_build_client_hello,
+    .parse_certificate = protocore_tls13_msg_parse_certificate,
+    .parse_cert_verify = protocore_tls13_msg_parse_cert_verify,
+    .parse_finished = protocore_tls13_msg_parse_finished,
+    .build_server_hello = protocore_tls13_msg_build_server_hello,
+    .build_encrypted_extensions = protocore_tls13_msg_build_encrypted_extensions,
+    .build_certificate = protocore_tls13_msg_build_certificate,
+    .build_cert_verify = protocore_tls13_msg_build_cert_verify,
+    .build_finished = protocore_tls13_msg_build_finished,
+    .cert_verify_content = protocore_tls13_msg_cert_verify_content,
+    .build_hello_retry_request = protocore_tls13_msg_build_hello_retry_request,
+    .build_encrypted_extensions_empty = protocore_tls13_msg_build_encrypted_extensions_empty,
+    .build_message_hash = protocore_tls13_msg_build_message_hash,
+};
 
 PROTOCORE_END_DECLS
 

@@ -52,14 +52,14 @@ void setUp(void)
     mock_abort_call_reset();
     memset(&g_pcb, 0, sizeof(g_pcb));
 
-    ConnPool.life.conn_timeout_ms = CONN_TIMEOUT_MS;
+    ConnPoolV.life.conn_timeout_ms = CONN_TIMEOUT_MS;
     Tcp.conn->init(g_conn);
 
     Tcp.listener->stop_all(g_listener);
-    TcpListener.idx = 0;
-    TcpListener.bind.port = 80;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 0;
+    TcpListenerV.bind.port = 80;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     Tcp.listener->add(g_listener);
 }
 
@@ -74,8 +74,8 @@ static void arm_slot(uint8_t slot)
     conn_pool[slot].pcb = &g_pcb;
     conn_pool[slot].listener_id = 0;
     conn_pool[slot].owner = 0;
-    ConnPool.slot = slot;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = slot;
+    ConnPoolV.st = CONN_ACTIVE;
     Tcp.conn->set_state(g_conn);
 }
 
@@ -154,35 +154,35 @@ void test_the_seam_below_the_pool_owns_the_raw_control_block_calls(void)
 void test_alloc_free_reports_a_slot_index(void)
 {
     Tcp.conn->alloc_free(g_conn);
-    TEST_ASSERT_EQUAL_INT32(0, ConnPool.i32);
+    TEST_ASSERT_EQUAL_INT32(0, ConnPoolV.i32);
 
-    ConnPool.slot = 0;
-    ConnPool.st = CONN_ACTIVE;
+    ConnPoolV.slot = 0;
+    ConnPoolV.st = CONN_ACTIVE;
     Tcp.conn->set_state(g_conn);
 
     Tcp.conn->alloc_free(g_conn);
-    TEST_ASSERT_EQUAL_INT32(1, ConnPool.i32); // moves on, so it is the allocator
+    TEST_ASSERT_EQUAL_INT32(1, ConnPoolV.i32); // moves on, so it is the allocator
 }
 
 void test_set_state_writes_the_state_it_is_given(void)
 {
-    ConnPool.slot = 3;
-    ConnPool.st = CONN_CLOSING;
+    ConnPoolV.slot = 3;
+    ConnPoolV.st = CONN_CLOSING;
     Tcp.conn->set_state(g_conn);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[3].state);
 
-    ConnPool.slot = 3;
-    ConnPool.st = CONN_FREE;
+    ConnPoolV.slot = 3;
+    ConnPoolV.st = CONN_FREE;
     Tcp.conn->set_state(g_conn);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[3].state);
 }
 
 void test_timeout_ms_reports_what_init_was_configured_with(void)
 {
-    ConnPool.life.conn_timeout_ms = 4242;
+    ConnPoolV.life.conn_timeout_ms = 4242;
     Tcp.conn->init(g_conn);
     Tcp.conn->timeout_ms(g_conn);
-    TEST_ASSERT_EQUAL_UINT32(4242, ConnPool.u32); // init and timeout_ms are not swapped
+    TEST_ASSERT_EQUAL_UINT32(4242, ConnPoolV.u32); // init and timeout_ms are not swapped
 }
 
 void test_active_count_counts_and_stop_clears(void)
@@ -190,20 +190,20 @@ void test_active_count_counts_and_stop_clears(void)
     arm_slot(0);
     arm_slot(1);
     Tcp.conn->active_count(g_conn);
-    TEST_ASSERT_EQUAL_UINT8(2, ConnPool.u8);
+    TEST_ASSERT_EQUAL_UINT8(2, ConnPoolV.u8);
 
     Tcp.conn->stop(g_conn);
     Tcp.conn->active_count(g_conn);
-    TEST_ASSERT_EQUAL_UINT8(0, ConnPool.u8);
+    TEST_ASSERT_EQUAL_UINT8(0, ConnPoolV.u8);
 }
 
 void test_sndbuf_reports_the_room_the_stack_offers(void)
 {
     arm_slot(0);
     mock_sndbuf_set(1234);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     Tcp.conn->sndbuf(g_conn);
-    TEST_ASSERT_EQUAL_UINT16(1234, ConnPool.u16);
+    TEST_ASSERT_EQUAL_UINT16(1234, ConnPoolV.u16);
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT);
 }
 
@@ -214,18 +214,18 @@ void test_send_and_send_flush_both_reach_the_wire(void)
     arm_slot(0);
     size_t before = protocore_net_host_tx_len;
 
-    ConnPool.slot = 0;
-    ConnPool.io.data = "AB";
-    ConnPool.io.len = 2;
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.data = "AB";
+    ConnPoolV.io.len = 2;
     Tcp.conn->send(g_conn);
-    TEST_ASSERT_TRUE(ConnPool.ok);
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
     TEST_ASSERT_EQUAL_UINT(before + 2, protocore_net_host_tx_len);
 
-    ConnPool.slot = 0;
-    ConnPool.io.data = "CD";
-    ConnPool.io.len = 2;
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.data = "CD";
+    ConnPoolV.io.len = 2;
     Tcp.conn->send_flush(g_conn);
-    TEST_ASSERT_TRUE(ConnPool.ok);
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
     TEST_ASSERT_EQUAL_UINT(before + 4, protocore_net_host_tx_len);
     TEST_ASSERT_EQUAL_UINT8_ARRAY("ABCD", protocore_net_host_tx + before, 4);
 }
@@ -235,18 +235,18 @@ void test_raw_send_writes_to_a_control_block_with_no_slot(void)
     arm_slot(0); // raw_send needs the block bound to some slot to be considered live
     size_t before = protocore_net_host_tx_len;
 
-    ConnPool.pcb = &g_pcb;
-    ConnPool.io.data = "RAW";
-    ConnPool.io.len = 3;
+    ConnPoolV.pcb = &g_pcb;
+    ConnPoolV.io.data = "RAW";
+    ConnPoolV.io.len = 3;
     Tcp.conn->raw_send(g_conn);
-    TEST_ASSERT_TRUE(ConnPool.ok);
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
     TEST_ASSERT_EQUAL_UINT(before + 3, protocore_net_host_tx_len);
 }
 
 void test_flush_is_accepted_on_a_live_slot(void)
 {
     arm_slot(0);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     Tcp.conn->flush(g_conn); // no wire effect to observe; it must not disturb the slot
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[0].state);
 }
@@ -256,7 +256,7 @@ void test_touch_active_moves_the_idle_stamp(void)
     arm_slot(0);
     conn_pool[0].last_activity_ms = 0;
     advance_to(777);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     Tcp.conn->touch_active(g_conn);
     TEST_ASSERT_EQUAL_UINT32(777, conn_pool[0].last_activity_ms);
 }
@@ -264,13 +264,13 @@ void test_touch_active_moves_the_idle_stamp(void)
 void test_close_frees_the_slot_and_abort_slot_resets_it(void)
 {
     arm_slot(0);
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     Tcp.conn->close(g_conn);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 
     arm_slot(1);
     int aborts_before = mock_abort_call_count();
-    ConnPool.slot = 1;
+    ConnPoolV.slot = 1;
     Tcp.conn->abort_slot(g_conn);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[1].state);
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count()); // the reset is what tells them apart
@@ -280,7 +280,7 @@ void test_begin_close_takes_the_slot_into_the_drain_dwell(void)
 {
     arm_slot(0);
     g_pcb.snd_queuelen = 2;
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     Tcp.conn->begin_close(g_conn);
     TEST_ASSERT_EQUAL(CONN_CLOSING, (ConnState)conn_pool[0].state); // not close(), which frees it
 }
@@ -290,9 +290,9 @@ void test_check_timeouts_reaps_a_stale_slot(void)
     arm_slot(0);
     conn_pool[0].last_activity_ms = 0;
     Tcp.conn->timeout_ms(g_conn);
-    advance_to(ConnPool.u32 + 1);
+    advance_to(ConnPoolV.u32 + 1);
 
-    ConnPool.life.worker_id = 0;
+    ConnPoolV.life.worker_id = 0;
     Tcp.conn->check_timeouts(g_conn);
     TEST_ASSERT_EQUAL(CONN_FREE, (ConnState)conn_pool[0].state);
 }
@@ -310,13 +310,13 @@ void test_ack_consumed_reopens_the_window(void)
     lowlevel_recv_cb(&conn_pool[0], &g_pcb, &p, PROTOCORE_NET_OK);
 
     uint8_t got[16];
-    ConnPool.slot = 0;
-    ConnPool.io.buf = got;
-    ConnPool.io.cap = sizeof(got);
+    ConnPoolV.slot = 0;
+    ConnPoolV.io.buf = got;
+    ConnPoolV.io.cap = sizeof(got);
     Tcp.conn->read(g_conn);
 
     mock_recved_reset();
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     Tcp.conn->ack_consumed(g_conn);
     TEST_ASSERT_EQUAL_UINT16(16, mock_recved_last());
 }
@@ -329,14 +329,14 @@ void test_detach_and_abort_act_on_a_bare_control_block(void)
     memset(&bare, 0, sizeof(bare));
     bare.arg = (void *)0x1234;
 
-    TcpLower.pcb = &bare;
-    TcpLower.slot = 0;
+    TcpLowerV.pcb = &bare;
+    TcpLowerV.slot = 0;
     TcpLower.detach(g_lower);
     TEST_ASSERT_NULL(bare.arg); // detach drops the back-reference
 
     int aborts_before = mock_abort_call_count();
-    TcpLower.pcb = &bare;
-    TcpLower.slot = 0;
+    TcpLowerV.pcb = &bare;
+    TcpLowerV.slot = 0;
     TcpLower.abort(g_lower);
     TEST_ASSERT_EQUAL_INT(aborts_before + 1, mock_abort_call_count());
 }
@@ -345,20 +345,20 @@ void test_detach_and_abort_act_on_a_bare_control_block(void)
 // 1122 sec 3.2.1.7 requires a datagram to leave with a non-zero TTL.
 void test_set_ttl_takes_a_code_point_and_refuses_zero(void)
 {
-    TcpLower.len = 0;
+    TcpLowerV.len = 0;
     TcpLower.set_ttl(g_lower);
-    TEST_ASSERT_FALSE(TcpLower.ok);
+    TEST_ASSERT_FALSE(TcpLowerV.ok);
 
-    TcpLower.len = 32;
+    TcpLowerV.len = 32;
     TcpLower.set_ttl(g_lower);
-    TEST_ASSERT_TRUE(TcpLower.ok);
+    TEST_ASSERT_TRUE(TcpLowerV.ok);
 
-    TcpLower.pcb = &g_pcb;
-    TcpLower.slot = 0;
+    TcpLowerV.pcb = &g_pcb;
+    TcpLowerV.slot = 0;
     TcpLower.apply_ttl(g_lower);
     TEST_ASSERT_EQUAL_UINT8(32, g_pcb.ttl);
 
-    TcpLower.len = PROTOCORE_TCP_TTL; // put it back for whatever runs next
+    TcpLowerV.len = PROTOCORE_TCP_TTL; // put it back for whatever runs next
     TcpLower.set_ttl(g_lower);
 }
 
@@ -367,15 +367,15 @@ void test_remote_ip_and_remote_addr_report_the_peer(void)
     arm_slot(0);
     protocore_net_ip4_set(&g_pcb.remote_ip, 198, 51, 100, 3);
 
-    ConnPool.slot = 0;
+    ConnPoolV.slot = 0;
     Tcp.conn->remote_ip(g_conn);
-    TEST_ASSERT_NOT_EQUAL(0, ConnPool.u32);
+    TEST_ASSERT_NOT_EQUAL(0, ConnPoolV.u32);
 
     protocore_ip out;
-    ConnPool.slot = 0;
-    ConnPool.out = &out;
+    ConnPoolV.slot = 0;
+    ConnPoolV.out = &out;
     Tcp.conn->remote_addr(g_conn);
-    TEST_ASSERT_TRUE(ConnPool.ok);
+    TEST_ASSERT_TRUE(ConnPoolV.ok);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_IP_V4, out.family);
     TEST_ASSERT_EQUAL_UINT8(198, out.bytes[0]);
     TEST_ASSERT_EQUAL_UINT8(51, out.bytes[1]);
@@ -389,15 +389,15 @@ void test_remote_ip_and_remote_addr_report_the_peer(void)
 
 void test_add_binds_a_port_and_stop_takes_it_down(void)
 {
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 8081;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 8081;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     Tcp.listener->add(g_listener);
-    TEST_ASSERT_EQUAL_INT32(1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);
     TEST_ASSERT_EQUAL_UINT16(8081, listener_pool[1].port);
 
-    TcpListener.idx = 1;
+    TcpListenerV.idx = 1;
     Tcp.listener->stop(g_listener);
     TEST_ASSERT_FALSE(listener_pool[1].active);
 }
@@ -405,15 +405,15 @@ void test_add_binds_a_port_and_stop_takes_it_down(void)
 // A dynamically started listener is a plaintext bridge, and stop_dynamic takes down only those.
 void test_add_dynamic_and_stop_dynamic_are_their_own_pair(void)
 {
-    TcpListener.idx = 2;
-    TcpListener.bind.port = 2222;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_TRUE; // a forwarded port is plaintext whatever this says
+    TcpListenerV.idx = 2;
+    TcpListenerV.bind.port = 2222;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_TRUE; // a forwarded port is plaintext whatever this says
     Tcp.listener->add_dynamic(g_listener);
-    TEST_ASSERT_EQUAL_INT32(1, TcpListener.i32);
+    TEST_ASSERT_EQUAL_INT32(1, TcpListenerV.i32);
     TEST_ASSERT_FALSE(listener_pool[2].tls);
 
-    TcpListener.idx = 2;
+    TcpListenerV.idx = 2;
     Tcp.listener->stop_dynamic(g_listener);
     TEST_ASSERT_FALSE(listener_pool[2].active);
     TEST_ASSERT_TRUE(listener_pool[0].active); // the one setUp bound is untouched
@@ -422,24 +422,24 @@ void test_add_dynamic_and_stop_dynamic_are_their_own_pair(void)
 // set_dscp names the port, not the row, and preserves the sentinel rather than masking it.
 void test_set_dscp_installs_a_code_point_on_the_port_it_names(void)
 {
-    TcpListener.bind.port = 80;
-    TcpListener.bind.dscp = 46;
+    TcpListenerV.bind.port = 80;
+    TcpListenerV.bind.dscp = 46;
     Tcp.listener->set_dscp(g_listener);
-    TEST_ASSERT_TRUE(TcpListener.ok);
+    TEST_ASSERT_TRUE(TcpListenerV.ok);
     TEST_ASSERT_EQUAL_UINT8(46, listener_pool[0].dscp);
 
-    TcpListener.bind.port = 65535;
-    TcpListener.bind.dscp = 46;
+    TcpListenerV.bind.port = 65535;
+    TcpListenerV.bind.dscp = 46;
     Tcp.listener->set_dscp(g_listener);
-    TEST_ASSERT_FALSE(TcpListener.ok); // no port bound there
+    TEST_ASSERT_FALSE(TcpListenerV.ok); // no port bound there
 }
 
 void test_stop_all_takes_every_listener_down(void)
 {
-    TcpListener.idx = 1;
-    TcpListener.bind.port = 8081;
-    TcpListener.bind.proto = PROTO_HTTP;
-    TcpListener.bind.tls = PROTO_FALSE;
+    TcpListenerV.idx = 1;
+    TcpListenerV.bind.port = 8081;
+    TcpListenerV.bind.proto = PROTO_HTTP;
+    TcpListenerV.bind.tls = PROTO_FALSE;
     Tcp.listener->add(g_listener);
 
     Tcp.listener->stop_all(g_listener);

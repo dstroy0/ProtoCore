@@ -89,13 +89,11 @@ typedef struct
     float d_filt;      ///< filtered derivative
     proto_bool primed; ///< false until the first update supplies prev_meas (no derivative on step 1)
 } Pid;
-
 /// Clamp @p v to [lo, hi].
 static inline float control_clamp(float v, float lo, float hi)
 {
     return v < lo ? lo : (v > hi ? hi : v);
 }
-
 /// Deadband: return 0 within +/- @p band, else @p v shifted toward 0 by @p band (continuous).
 static inline float control_deadband(float v, float band)
 {
@@ -109,7 +107,6 @@ static inline float control_deadband(float v, float band)
     }
     return 0.0f;
 }
-
 /// Slew-rate limit: move @p current toward @p target by at most @p max_step this call.
 static inline float control_slew(float target, float current, float max_step)
 {
@@ -124,20 +121,17 @@ static inline float control_slew(float target, float current, float max_step)
     }
     return target;
 }
-
 /// One step of a single-pole low-pass: blend @p sample into @p prev by @p alpha in [0,1].
 static inline float control_lpf(float prev, float sample, float alpha)
 {
     return prev + alpha * (sample - prev);
 }
-
 /// Internal shared step, used by pid_update() and pid_update_fixed(): the whole control law with
 /// @p dt and its reciprocal @p inv_dt supplied, so there is no divide inside. Call an entry point
 /// below, not this directly.
 static inline float pid_step_(Pid *p, float setpoint, float measurement, float dt, float inv_dt)
 {
     float error = setpoint - measurement;
-
     // Derivative on measurement (no setpoint-change "kick"): d(error)/dt = -d(measurement)/dt when
     // the setpoint is held. Skip the first update (no prev_meas yet), optionally low-pass filter it.
     float deriv = 0.0f;
@@ -148,14 +142,11 @@ static inline float pid_step_(Pid *p, float setpoint, float measurement, float d
     }
     p->prev_meas = measurement;
     p->primed = PROTO_TRUE;
-
     // Tentative integration, hard-clamped to the accumulator bounds (a secondary safety limit).
     float integ_next = control_clamp(p->integ + p->ki * error * dt, p->integ_min, p->integ_max);
-
     // FMA chain -> madd.s on the FPU: kp*error + integ + kd*d_filt + kff*setpoint.
     float unclamped = p->kp * error + integ_next + p->kd * p->d_filt + p->kff * setpoint;
     float out = control_clamp(unclamped, p->out_min, p->out_max);
-
     // Anti-windup by conditional integration: commit the new integral unless the output is
     // saturated AND integrating further this direction would push it deeper into the rail - then
     // freeze the accumulator instead, so it never winds up past what the actuator can deliver.
@@ -165,10 +156,8 @@ static inline float pid_step_(Pid *p, float setpoint, float measurement, float d
     {
         p->integ = integ_next;
     }
-
     return out;
 }
-
 /**
  * @brief Advance the loop one step: returns the (clamped) control output for @p setpoint given the
  *        measured process value @p measurement over the elapsed time @p dt seconds (dt <= 0 -> 0).
@@ -184,7 +173,6 @@ static inline float pid_update(Pid *p, float setpoint, float measurement, float 
     }
     return pid_step_(p, setpoint, measurement, dt, 1.0f / dt);
 }
-
 /**
  * @brief Zero-divide fixed-rate step: same law as pid_update() but uses the dt / 1-over-dt cached
  *        by pid_set_rate(), so the hot path is all multiplies (the fastest form). Returns 0 until
@@ -198,7 +186,6 @@ static inline float pid_update_fixed(Pid *p, float setpoint, float measurement)
     }
     return pid_step_(p, setpoint, measurement, p->dt, p->inv_dt);
 }
-
 /** @brief What pid_init takes: p, kp, ki, kd. */
 typedef struct
 {
@@ -207,7 +194,6 @@ typedef struct
     float ki;
     float kd;
 } ControlPidInitArgs;
-
 /** @brief What pid_set_output_limits takes: p, lo, hi. */
 typedef struct
 {
@@ -215,7 +201,6 @@ typedef struct
     float lo;
     float hi;
 } ControlPidSetOutputLimitsArgs;
-
 /** @brief What pid_set_integral_limits takes: p, lo, hi. */
 typedef struct
 {
@@ -223,34 +208,29 @@ typedef struct
     float lo;
     float hi;
 } ControlPidSetIntegralLimitsArgs;
-
 /** @brief What pid_set_derivative_filter takes: p, alpha. */
 typedef struct
 {
     Pid *p;
     float alpha;
 } ControlPidSetDerivativeFilterArgs;
-
 /** @brief What pid_set_feedforward takes: p, kff. */
 typedef struct
 {
     Pid *p;
     float kff;
 } ControlPidSetFeedforwardArgs;
-
 /** @brief What pid_set_rate takes: p, dt. */
 typedef struct
 {
     Pid *p;
     float dt;
 } ControlPidSetRateArgs;
-
 /** @brief What pid_reset takes: p. */
 typedef struct
 {
     Pid *p;
 } ControlPidResetArgs;
-
 /** @brief What pid_update_n takes: p, setpoint, measurement, dt, out, ... */
 typedef struct
 {
@@ -261,7 +241,6 @@ typedef struct
     float *out;
     uint8_t n;
 } ControlPidUpdateNArgs;
-
 /** @brief What pid_log_header takes: buf, cap, p, dt. */
 typedef struct
 {
@@ -270,7 +249,6 @@ typedef struct
     const Pid *p;
     float dt;
 } ControlPidLogHeaderArgs;
-
 /** @brief What pid_log_record takes: buf, cap, setpoint, measurement, ... */
 typedef struct
 {
@@ -281,7 +259,6 @@ typedef struct
     float output;
     proto_bool saturated;
 } ControlPidLogRecordArgs;
-
 /**
  * @brief Closed-loop control law (PROTOCORE_ENABLE_CONTROL) - a zero-heap PID controller plus a handful of inline
  * control-law primitives, for driving an actuator toward a setpoint.
@@ -334,10 +311,16 @@ typedef struct
     ControlPidUpdateNArgs pid_update_n_args;
     ControlPidLogHeaderArgs pid_log_header_args;
     ControlPidLogRecordArgs pid_log_record_args;
-
     proto_bool ok;
     size_t n;
+} ControlVars;
 
+/** @brief The operands and the outcome. */
+extern ControlVars ControlV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const pid_init)(uint8_t *restrict work);
     void (*const pid_set_output_limits)(uint8_t *restrict work);
     void (*const pid_set_integral_limits)(uint8_t *restrict work);
@@ -350,8 +333,35 @@ typedef struct
     void (*const pid_log_record)(uint8_t *restrict work);
 } ControlNs;
 
-/** @brief The one symbol this module exports. */
-extern ControlNs Control;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ControlV or a region of the borrow at a fixed offset.
+void protocore_control_pid_init(uint8_t *restrict work);
+void protocore_control_pid_set_output_limits(uint8_t *restrict work);
+void protocore_control_pid_set_integral_limits(uint8_t *restrict work);
+void protocore_control_pid_set_derivative_filter(uint8_t *restrict work);
+void protocore_control_pid_set_feedforward(uint8_t *restrict work);
+void protocore_control_pid_set_rate(uint8_t *restrict work);
+void protocore_control_pid_reset(uint8_t *restrict work);
+void protocore_control_pid_update_n(uint8_t *restrict work);
+void protocore_control_pid_log_header(uint8_t *restrict work);
+void protocore_control_pid_log_record(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Control.pid_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ControlNs Control __attribute__((unused)) = {
+    .pid_init = protocore_control_pid_init,
+    .pid_set_output_limits = protocore_control_pid_set_output_limits,
+    .pid_set_integral_limits = protocore_control_pid_set_integral_limits,
+    .pid_set_derivative_filter = protocore_control_pid_set_derivative_filter,
+    .pid_set_feedforward = protocore_control_pid_set_feedforward,
+    .pid_set_rate = protocore_control_pid_set_rate,
+    .pid_reset = protocore_control_pid_reset,
+    .pid_update_n = protocore_control_pid_update_n,
+    .pid_log_header = protocore_control_pid_log_header,
+    .pid_log_record = protocore_control_pid_log_record,
+};
 
 PROTOCORE_END_DECLS
 

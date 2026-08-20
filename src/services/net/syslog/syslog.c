@@ -17,8 +17,8 @@ static uint8_t ip_work[16]; // the borrow an entry takes; Ip never reads it
 
 #if PROTOCORE_ENABLE_SYSLOG
 
-#include "mmgr/protomem/protomem.h"                               // mem.cpy: the spans a line is assembled from
-#include "mmgr/protostr/protostr.h"                               // str.copy / str.len: the bounded field moves
+#include "mmgr/protomem/protomem.h"                      // mem.cpy: the spans a line is assembled from
+#include "mmgr/protostr/protostr.h"                      // str.copy / str.len: the bounded field moves
 #include "network_drivers/transport/udp/client/client.h" // UdpClient.sendto: one message, one datagram
 #include "shared/ip/ip.h"                                // Ip.parse: the collector address, once
 
@@ -95,40 +95,40 @@ uint8_t *protocore_syslog_span(void)
 }
 
 // Parse the collector address and store the HEADER fields every later line carries.
-static void syslog_init(uint8_t *restrict work)
+void protocore_syslog_init(uint8_t *restrict work)
 {
-    Ip.args.text = Syslog.collector.addr;
-    Ip.args.out = &SYSLOG_CTX(work)->collector;
+    IpV.args.text = SyslogV.collector.addr;
+    IpV.args.out = &SYSLOG_CTX(work)->collector;
     Ip.parse(ip_work);
-    SYSLOG_CTX(work)->ready = Ip.ok;
-    SYSLOG_CTX(work)->port = Syslog.collector.port;
-    copy_field(SYSLOG_CTX(work)->hostname, sizeof(SYSLOG_CTX(work)->hostname), Syslog.header.hostname);
-    copy_field(SYSLOG_CTX(work)->app_name, sizeof(SYSLOG_CTX(work)->app_name), Syslog.header.app_name);
-    SYSLOG_CTX(work)->facility = Syslog.header.facility;
-    Syslog.ok = SYSLOG_CTX(work)->ready;
+    SYSLOG_CTX(work)->ready = IpV.ok;
+    SYSLOG_CTX(work)->port = SyslogV.collector.port;
+    copy_field(SYSLOG_CTX(work)->hostname, sizeof(SYSLOG_CTX(work)->hostname), SyslogV.header.hostname);
+    copy_field(SYSLOG_CTX(work)->app_name, sizeof(SYSLOG_CTX(work)->app_name), SyslogV.header.app_name);
+    SYSLOG_CTX(work)->facility = SyslogV.header.facility;
+    SyslogV.ok = SYSLOG_CTX(work)->ready;
 }
 
 // Build one SYSLOG-MSG (RFC 5424 sec 6) into ns->line, and report its length in ns->n.
-static void syslog_format(uint8_t *restrict work)
+void protocore_syslog_format(uint8_t *restrict work)
 {
     (void)work;
-    char *out = Syslog.line.out;
-    const size_t cap = Syslog.line.cap;
-    Syslog.n = 0;
+    char *out = SyslogV.line.out;
+    const size_t cap = SyslogV.line.cap;
+    SyslogV.n = 0;
     if (!out || cap == 0)
     {
         return;
     }
     // RFC 5424 sec 6.2.1: PRIVAL = Facility * 8 + Severity, 1*3DIGIT over 0..191. Both enums are
     // unsigned, so only the top is clamped.
-    int pri = (int)Syslog.header.facility * 8 + (int)Syslog.record.severity;
+    int pri = (int)SyslogV.header.facility * 8 + (int)SyslogV.record.severity;
     if (pri > 191)
     {
         pri = 191;
     }
-    const char *h = (Syslog.header.hostname && Syslog.header.hostname[0]) ? Syslog.header.hostname : "-";
-    const char *a = (Syslog.header.app_name && Syslog.header.app_name[0]) ? Syslog.header.app_name : "-";
-    const char *m = Syslog.record.msg ? Syslog.record.msg : "";
+    const char *h = (SyslogV.header.hostname && SyslogV.header.hostname[0]) ? SyslogV.header.hostname : "-";
+    const char *a = (SyslogV.header.app_name && SyslogV.header.app_name[0]) ? SyslogV.header.app_name : "-";
+    const char *m = SyslogV.record.msg ? SyslogV.record.msg : "";
 
     // PRIVAL as 1..3 decimal digits, the leading digit dropped below its decade: RFC 5424 sec 6.2.1
     // allows a '0' after '<' only for the Priority value 0, and forbids leading '0's otherwise.
@@ -156,39 +156,40 @@ static void syslog_format(uint8_t *restrict work)
         return;
     }
     out[pos] = '\0'; // pos <= cap-1 by construction
-    Syslog.n = pos;
+    SyslogV.n = pos;
 }
 
 // Format one record with the stored HEADER fields and send it as one datagram (RFC 5426 sec 3.1).
-static void syslog_log(uint8_t *restrict work)
+void protocore_syslog_log(uint8_t *restrict work)
 {
-    Syslog.ok = PROTO_FALSE;
-    Syslog.n = 0;
+    SyslogV.ok = PROTO_FALSE;
+    SyslogV.n = 0;
     if (!SYSLOG_CTX(work)->ready)
     {
         return;
     }
-    Syslog.header.hostname = SYSLOG_CTX(work)->hostname;
-    Syslog.header.app_name = SYSLOG_CTX(work)->app_name;
-    Syslog.header.facility = SYSLOG_CTX(work)->facility;
-    Syslog.line.out = SYSLOG_CTX(work)->buf;
-    Syslog.line.cap = sizeof(SYSLOG_CTX(work)->buf);
-    syslog_format(work);
-    if (Syslog.n == 0)
+    SyslogV.header.hostname = SYSLOG_CTX(work)->hostname;
+    SyslogV.header.app_name = SYSLOG_CTX(work)->app_name;
+    SyslogV.header.facility = SYSLOG_CTX(work)->facility;
+    SyslogV.line.out = SYSLOG_CTX(work)->buf;
+    SyslogV.line.cap = sizeof(SYSLOG_CTX(work)->buf);
+    protocore_syslog_format(work);
+    if (SyslogV.n == 0)
     {
         return;
     }
     // The datagram payload is the message and nothing else (RFC 5426 sec 3.1). Nothing acknowledges
     // it (RFC 5426 sec 4.1), so ok reports only that the stack took the octets.
-    UdpClient.dst = &SYSLOG_CTX(work)->collector;
-    UdpClient.dst_port = SYSLOG_CTX(work)->port;
-    UdpClient.data = (const uint8_t *)SYSLOG_CTX(work)->buf;
-    UdpClient.len = Syslog.n;
+    UdpClientV.dst = &SYSLOG_CTX(work)->collector;
+    UdpClientV.dst_port = SYSLOG_CTX(work)->port;
+    UdpClientV.data = (const uint8_t *)SYSLOG_CTX(work)->buf;
+    UdpClientV.len = SyslogV.n;
     UdpClient.sendto(protocore_udp_client_span());
-    Syslog.ok = UdpClient.ok;
+    SyslogV.ok = UdpClientV.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-SyslogNs Syslog = {.init = syslog_init, .format = syslog_format, .log = syslog_log};
+/** @brief The operands and the outcome. */
+SyslogVars SyslogV;
 
 #endif // PROTOCORE_ENABLE_SYSLOG

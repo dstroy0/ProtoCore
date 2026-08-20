@@ -42,8 +42,8 @@ int main(void)
         HBENCH_NS(
             4000,
             {
-                Curve25519.x25519_base_args.out = pk;
-                Curve25519.x25519_base_args.scalar = sk;
+                Curve25519V.x25519_base_args.out = pk;
+                Curve25519V.x25519_base_args.scalar = sk;
                 Curve25519.x25519_base(tw);
                 sink += pk[0];
             },
@@ -57,9 +57,9 @@ int main(void)
         HBENCH_NS(
             4000,
             {
-                Curve25519.x25519_args.out = shared;
-                Curve25519.x25519_args.scalar = sk;
-                Curve25519.x25519_args.point = peer_pk;
+                Curve25519V.x25519_args.out = shared;
+                Curve25519V.x25519_args.scalar = sk;
+                Curve25519V.x25519_args.point = peer_pk;
                 Curve25519.x25519(tw);
                 sink += shared[0];
             },
@@ -108,10 +108,10 @@ int main(void)
         HBENCH_NS(
             2000,
             {
-                Ed25519.sign_args.sig = sig;
-                Ed25519.sign_args.msg = hash;
-                Ed25519.sign_args.msg_len = sizeof(hash);
-                Ed25519.sign_args.seed = seed;
+                Ed25519V.sign_args.sig = sig;
+                Ed25519V.sign_args.msg = hash;
+                Ed25519V.sign_args.msg_len = sizeof(hash);
+                Ed25519V.sign_args.seed = seed;
                 Ed25519.sign(tw);
                 sink += sig[0];
             },
@@ -137,11 +137,11 @@ int main(void)
         HBENCH_NS(
             40000,
             {
-                ChachaPoly.encrypt_args.key = key;
-                ChachaPoly.encrypt_args.src = src;
-                ChachaPoly.encrypt_args.dest = dst;
-                ChachaPoly.encrypt_args.seqnr = seq++;
-                ChachaPoly.encrypt_args.payload_len = plen;
+                ChachaPolyV.encrypt_args.key = key;
+                ChachaPolyV.encrypt_args.src = src;
+                ChachaPolyV.encrypt_args.dest = dst;
+                ChachaPolyV.encrypt_args.seqnr = seq++;
+                ChachaPolyV.encrypt_args.payload_len = plen;
                 ChachaPoly.encrypt(tw);
                 sink += dst[0];
             },

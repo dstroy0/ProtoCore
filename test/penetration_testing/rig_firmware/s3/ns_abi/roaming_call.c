@@ -16,6 +16,6 @@ void app_main(void)
     static const protocore_roam_neighbor nb[1] = {{{9, 8, 7, 6, 5, 4}, 6, -40}};
     protocore_roam_decision d;
 
-    Roam.decide(cur, -80, nb, 1, 0, 0, &d);
+    RoamV.decide(cur, -80, nb, 1, 0, 0, &d);
     roam_sink = (uint8_t)d.reason;
 }
