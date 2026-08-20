@@ -70,7 +70,9 @@ def module_gate(text):
         # empty and reversed, an empty string matches "nothing but whitespace", and the very first
         # PROTOCORE_ENABLE_* in the file came back as the gate - which is the guess this function
         # replaces, returned by the function that replaced it.
-        if re.match(r"^\w+_H\b", last["expr"]) and re.search(r"^[ \t]*#[ \t]*ifndef\b", text[last["open"] : last["open"] + 40], re.M):
+        if re.match(r"^\w+_H\b", last["expr"]) and re.search(
+            r"^[ \t]*#[ \t]*ifndef\b", text[last["open"] : last["open"] + 40], re.M
+        ):
             guard_end = last["close"]
     for s in sorted(spans, key=lambda s: s["open"]):
         g = GATE_MACRO.match(s["expr"])
@@ -338,7 +340,7 @@ def read_design(path):
             take(
                 s,
                 "include",
-                path=((m2.group(1) or m2.group(2)) if m2 else rest.strip("\"<>")).strip(),
+                path=((m2.group(1) or m2.group(2)) if m2 else rest.strip('"<>')).strip(),
                 system=bool(m2 and m2.group(2) is not None),
             )
         elif word == "ifndef" and re.match(r"^\w+_H$", rest):
@@ -562,7 +564,9 @@ def _role(name):
     return "type"
 
 
-FNPTR_MEMBER = re.compile(r"^(?P<ret>.*?)\(\s*\*\s*(?P<qual>const\s+|volatile\s+)*(?P<name>[A-Za-z_]\w*)\s*\)\s*\((?P<params>.*)\)$")
+FNPTR_MEMBER = re.compile(
+    r"^(?P<ret>.*?)\(\s*\*\s*(?P<qual>const\s+|volatile\s+)*(?P<name>[A-Za-z_]\w*)\s*\)\s*\((?P<params>.*)\)$"
+)
 
 
 def _members(body, form):
@@ -659,7 +663,9 @@ def traits(design, which):
 
     ns = next((d for d in recs if d["role"] == "Ns"), None)
     t["ns_entry_types"] = sorted({m["type"] for m in ns["members"] if m["fnptr"]}) if ns else []
-    t["ns_result_members"] = [m["name"] for m in ns["members"] if not m["fnptr"] and not m["name"].endswith("_args")] if ns else []
+    t["ns_result_members"] = (
+        [m["name"] for m in ns["members"] if not m["fnptr"] and not m["name"].endswith("_args")] if ns else []
+    )
     t["ns_arg_members"] = [m["name"] for m in ns["members"] if m["name"].endswith("_args")] if ns else []
 
     t["externs"] = sorted((d["type"], d["name"]) for d in design if d["kind"] == "extern")
@@ -699,7 +705,9 @@ def traits(design, which):
     asserts = [d for d in design if d["kind"] == "static_assert"]
     t.update(_offset_chain(offs, asserts))
     t.update(_region_alignment([d for d in design if d["kind"] == "define" and d.get("fn")], asserts))
-    t["file_statics"] = sorted(d["name"] for d in design if d["kind"] == "object" and d.get("static") and not d.get("const"))
+    t["file_statics"] = sorted(
+        d["name"] for d in design if d["kind"] == "object" and d.get("static") and not d.get("const")
+    )
 
     # Any test of the BORROW against null, in any position - not only an `if` condition. euromap77
     # spelled it `Euromap77.ok = work != NULL;`, which made the entry's whole success criterion a
@@ -795,9 +803,7 @@ def _offset_chain(offs, asserts):
     out["offset_chain_intact"] = all(links) and out["offset_first_is_zero"]
     # The assert has to bound the LAST region, so it is the last offset's name it must carry.
     cite = [a for a in asserts if a.get("cites_borrow")]
-    out["offset_assert_covers_last"] = any(
-        re.search(r"\b%s\b" % re.escape(names[-1]), a.get("text", "")) for a in cite
-    )
+    out["offset_assert_covers_last"] = any(re.search(r"\b%s\b" % re.escape(names[-1]), a.get("text", "")) for a in cite)
     return out
 
 
@@ -1061,7 +1067,9 @@ CHECKS = [
     (
         "no internal handle",
         "is state reached through the borrow rather than a struct <X>Internal *?",
-        lambda h, c, gh, gc: not any(n.endswith(("Internal", "Handle")) for n in h["state_records"] + c["state_records"]),
+        lambda h, c, gh, gc: not any(
+            n.endswith(("Internal", "Handle")) for n in h["state_records"] + c["state_records"]
+        ),
         "convert pimpl",
     ),
     (

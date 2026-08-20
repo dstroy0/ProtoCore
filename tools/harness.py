@@ -682,7 +682,11 @@ SELFTESTS = {
 GROUPS = [
     ("convert", CONVERT, "flat C module -> the sha256 golden shape, and the call sites with it"),
     ("edit", EDIT, "mechanical source edits that a pattern-driven conversion needs first"),
-    ("view", VIEW, "read-only readers; none of these writes into the tree. START WITH `view read blind` - assume nothing, evaluate everything, and meet the prose last"),
+    (
+        "view",
+        VIEW,
+        "read-only readers; none of these writes into the tree. START WITH `view read blind` - assume nothing, evaluate everything, and meet the prose last",
+    ),
     ("measure", MEASURE, "what something costs, and the three standing probes"),
     ("crypto", CRYPTO, "test vectors and keys - test DATA, which is why it is not under ci_tooling"),
     ("assets", ASSETS, "renders images and packs web assets"),

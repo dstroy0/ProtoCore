@@ -147,7 +147,10 @@ def main():
                 if a.go:
                     open(p, "w", encoding="utf-8", newline="\n").write(new)
 
-    print("%s: %d pair(s) move, %d reference(s) in %d file(s)" % ("moving" if a.go else "DRY RUN", len(pairs), edits, touched))
+    print(
+        "%s: %d pair(s) move, %d reference(s) in %d file(s)"
+        % ("moving" if a.go else "DRY RUN", len(pairs), edits, touched)
+    )
 
     if not a.go:
         print("\nnothing written - pass --go")

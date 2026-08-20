@@ -301,7 +301,9 @@ check(
 )
 check(
     "nor is the last of several inner arms",
-    find_gate(GUARD + "#if PROTOCORE_NEED_CLIENT\nint a;\n#endif\n#if PROTOCORE_NEED_CLIENT\nint b;\n#endif\n\n#endif\n"),
+    find_gate(
+        GUARD + "#if PROTOCORE_NEED_CLIENT\nint a;\n#endif\n#if PROTOCORE_NEED_CLIENT\nint b;\n#endif\n\n#endif\n"
+    ),
     "",
 )
 check(
@@ -318,7 +320,11 @@ check("one argument, and it is the span", already_converted(["dtls_record_work"]
 check("whitespace either side does not hide it", already_converted([" dtls_record_work "], "dtls_record_work"), True)
 check("an accessor span is recognized too", already_converted(["protocore_x_span()"], "protocore_x_span()"), True)
 check("one argument that is an operand is a call", already_converted(["&c->replay_ep2"], "dtls_record_work"), False)
-check("two arguments are never the converted form", already_converted(["a", "dtls_record_work"], "dtls_record_work"), False)
+check(
+    "two arguments are never the converted form",
+    already_converted(["a", "dtls_record_work"], "dtls_record_work"),
+    False,
+)
 check("no arguments are not either", already_converted([], "dtls_record_work"), False)
 
 
@@ -550,9 +556,11 @@ check(
 print("\nmodule_macros: an overridable constant keeps its guard")
 check(
     "the #ifndef and #endif come with the define",
-    module_macros("/** @brief How long presence is held. */\n#ifndef PROTOCORE_HOLD_MS\n#define PROTOCORE_HOLD_MS 2000\n#endif\n", "PROTOCORE_X_H"),
-    ["/** @brief How long presence is held. */\n#ifndef PROTOCORE_HOLD_MS\n"
-     "#define PROTOCORE_HOLD_MS 2000\n#endif"],
+    module_macros(
+        "/** @brief How long presence is held. */\n#ifndef PROTOCORE_HOLD_MS\n#define PROTOCORE_HOLD_MS 2000\n#endif\n",
+        "PROTOCORE_X_H",
+    ),
+    ["/** @brief How long presence is held. */\n#ifndef PROTOCORE_HOLD_MS\n" "#define PROTOCORE_HOLD_MS 2000\n#endif"],
 )
 check(
     "a bare define is still taken bare",
@@ -582,7 +590,9 @@ check(
 # `#if CAP` it vanishes when that capability is off.
 print("\nwork_decl_at: the borrow goes with the calls that pass it")
 WAMP = '#include "wamp.h"\n\n#if PROTOCORE_ENABLE_WAMP\n\n#include "json.h"\n\nvoid f(void)\n{\n    Json.init(w);\n}\n\n#endif\n'
-check("inside the file's own gate, after the include there", WAMP[work_decl_at(WAMP, "Json") :].startswith("void f"), True)
+check(
+    "inside the file's own gate, after the include there", WAMP[work_decl_at(WAMP, "Json") :].startswith("void f"), True
+)
 FLAT = '#include "a.h"\n#include "b.h"\n\nvoid f(void)\n{\n    Json.init(w);\n}\n'
 check("a file with no gate takes the last include", FLAT[work_decl_at(FLAT, "Json") :].startswith("void f"), True)
 INNER = '#include "a.h"\n\n#if PROTOCORE_ENABLE_X\n#include "x.h"\n#endif\n\nvoid f(void)\n{\n    Json.init(w);\n}\n'

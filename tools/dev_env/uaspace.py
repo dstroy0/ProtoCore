@@ -43,9 +43,9 @@ class Node:
         self.key = key
         self.name = name
         self.cls = cls
-        self.typedef = None   # key of its TypeDefinition
-        self.supertype = None # key of the type it is a subtype of
-        self.children = []    # (ref name, child key)
+        self.typedef = None  # key of its TypeDefinition
+        self.supertype = None  # key of the type it is a subtype of
+        self.children = []  # (ref name, child key)
 
 
 def _bn(node):

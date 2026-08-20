@@ -35,59 +35,59 @@ found by any of those, so the column is a floor, not a ceiling.
 
 ## I need to...
 
-| I need to                                       | Run                                                               |
-| ----------------------------------------------- | ----------------------------------------------------------------- |
-| **read a module at all — do this first**        | `tools/harness.py view read blind <module.h>`                     |
-| read it again with the names attached           | `tools/harness.py view read code <module.h>`                      |
-| check the prose against the code, last          | `tools/harness.py view read claims <module.h>`                    |
-| find the tool for a job at all                  | `tools/harness.py list`                                           |
-| read a tool's hint before running it            | `tools/harness.py list <group>`                                   |
-| know which envs my change affects               | `test/harness.py env select` (stdin or `--base/--head`)           |
-| add a test env                                  | `test/harness.py env add`, then `env gen`                         |
-| change a test env                               | `test/harness.py env update`, then `env gen`                      |
-| rebuild `platformio.ini`                        | `test/harness.py env gen` (never hand-edit the ini)               |
-| refresh the dependency graph after a rename     | `test/harness.py env deps`                                        |
-| run the whole native suite and write the report | `test/harness.py run --report-out test/TEST_REPORT.md`            |
-| regenerate coverage for Sonar                   | `test/harness.py run --coverage`                                  |
-| see which modules are not the golden yet        | `tools/harness.py convert audit families`                         |
-| know which checks ONE module fails, and why     | `tools/harness.py convert audit check <module.h>`                 |
-| prove a shape check against the golden itself   | `tools/harness.py convert audit selfcheck`                        |
+| I need to                                       | Run                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| **read a module at all — do this first**        | `tools/harness.py view read blind <module.h>`                      |
+| read it again with the names attached           | `tools/harness.py view read code <module.h>`                       |
+| check the prose against the code, last          | `tools/harness.py view read claims <module.h>`                     |
+| find the tool for a job at all                  | `tools/harness.py list`                                            |
+| read a tool's hint before running it            | `tools/harness.py list <group>`                                    |
+| know which envs my change affects               | `test/harness.py env select` (stdin or `--base/--head`)            |
+| add a test env                                  | `test/harness.py env add`, then `env gen`                          |
+| change a test env                               | `test/harness.py env update`, then `env gen`                       |
+| rebuild `platformio.ini`                        | `test/harness.py env gen` (never hand-edit the ini)                |
+| refresh the dependency graph after a rename     | `test/harness.py env deps`                                         |
+| run the whole native suite and write the report | `test/harness.py run --report-out test/TEST_REPORT.md`             |
+| regenerate coverage for Sonar                   | `test/harness.py run --coverage`                                   |
+| see which modules are not the golden yet        | `tools/harness.py convert audit families`                          |
+| know which checks ONE module fails, and why     | `tools/harness.py convert audit check <module.h>`                  |
+| prove a shape check against the golden itself   | `tools/harness.py convert audit selfcheck`                         |
 | make a module's table fold to a direct call     | `tools/harness.py convert handle --batch=25` (then build AND test) |
-| assert a cast region's offset is aligned        | `tools/harness.py convert align --dry` (no paths = all of src/)   |
-| delete a dead `if (!work)` borrow null-check    | `tools/harness.py convert unnull --dry`                           |
-| convert a flat module to the golden             | `tools/harness.py convert scan`, then `convert gen --dry`         |
-| convert an Internal-handle module               | `tools/harness.py convert pimpl <module.h> --dry`                 |
-| move a file-static context into the borrow      | `tools/harness.py convert funnel <module.c> --dry`                |
-| rewrite the stale flat call sites of a module   | `tools/harness.py convert nsmap <map.json> --dry`                 |
-| run every guard CI runs                         | `tools/harness.py ci check`                                       |
-| check a `src/` file against the ban list        | `tools/harness.py ci check src_banned`                            |
-| check naming against SYMBOLS.md                 | `tools/harness.py ci check symbols`                               |
-| check the single-owner state rule               | `tools/harness.py ci check owned_context`                         |
-| find a second definition of one symbol          | `tools/harness.py ci check duplicate_symbols`                     |
-| find prose that cites something now gone        | `tools/harness.py ci check docs`                                  |
-| find src files no env compiles                  | `tools/harness.py ci check test_coverage`                         |
-| raise a ratcheted guard's floor                 | `tools/harness.py ci baseline <guard>`                            |
-| regenerate every doc region                     | `tools/harness.py ci gen` (`--check` is what CI gates on)         |
-| format the whole tree                           | `tools/harness.py ci fmt` (`--check` to report only)              |
-| see uncovered branches per file                 | `tools/harness.py ci cov map --cov <report>`                      |
-| plan coverage work that will not collide        | `tools/harness.py ci cov plan`                                    |
-| run coverage over a few envs                    | `tools/harness.py ci cov run --env ...`                           |
-| rebuild the coverage baseline from scratch      | `tools/harness.py ci cov base`                                    |
-| compile every Arduino example for real          | `tools/harness.py ci check examples`                              |
-| read a whole file at image density              | `tools/harness.py view png`                                       |
-| move line ranges from one file into another     | `tools/harness.py edit move --dry-run`                            |
-| strip comments before a pattern-driven rewrite  | `tools/harness.py edit comments` (dry until `--go`)               |
-| check an OPC UA model against its NodeSets      | `tools/harness.py view conform`                                   |
-| build several envs in the WSL clone             | `tools/harness.py build envs`                                     |
-| measure what an `#include` costs                | `tools/harness.py measure includes`                               |
-| measure what a feature costs in flash           | `tools/harness.py ci gen footprints`                              |
-| tune a PID loop from a run log                  | `tools/harness.py measure pid`                                    |
-| regenerate crypto KAT headers                   | `tools/harness.py crypto kat`                                     |
-| mint SSH test keys                              | `tools/harness.py crypto sshkeys --if-absent`                     |
-| commit a long message without a temp file       | `tools/harness.py hooks commit "subject" "para" ...` (`--dry`)    |
-| point git at the tracked hooks                  | `tools/harness.py hooks install`                                  |
-| check a converter still works after touching it | `tools/harness.py selftest`                                       |
-| refresh the tables below                        | `tools/harness.py doc gen` (CI: `ci gen --check tools_inventory`) |
+| assert a cast region's offset is aligned        | `tools/harness.py convert align --dry` (no paths = all of src/)    |
+| delete a dead `if (!work)` borrow null-check    | `tools/harness.py convert unnull --dry`                            |
+| convert a flat module to the golden             | `tools/harness.py convert scan`, then `convert gen --dry`          |
+| convert an Internal-handle module               | `tools/harness.py convert pimpl <module.h> --dry`                  |
+| move a file-static context into the borrow      | `tools/harness.py convert funnel <module.c> --dry`                 |
+| rewrite the stale flat call sites of a module   | `tools/harness.py convert nsmap <map.json> --dry`                  |
+| run every guard CI runs                         | `tools/harness.py ci check`                                        |
+| check a `src/` file against the ban list        | `tools/harness.py ci check src_banned`                             |
+| check naming against SYMBOLS.md                 | `tools/harness.py ci check symbols`                                |
+| check the single-owner state rule               | `tools/harness.py ci check owned_context`                          |
+| find a second definition of one symbol          | `tools/harness.py ci check duplicate_symbols`                      |
+| find prose that cites something now gone        | `tools/harness.py ci check docs`                                   |
+| find src files no env compiles                  | `tools/harness.py ci check test_coverage`                          |
+| raise a ratcheted guard's floor                 | `tools/harness.py ci baseline <guard>`                             |
+| regenerate every doc region                     | `tools/harness.py ci gen` (`--check` is what CI gates on)          |
+| format the whole tree                           | `tools/harness.py ci fmt` (`--check` to report only)               |
+| see uncovered branches per file                 | `tools/harness.py ci cov map --cov <report>`                       |
+| plan coverage work that will not collide        | `tools/harness.py ci cov plan`                                     |
+| run coverage over a few envs                    | `tools/harness.py ci cov run --env ...`                            |
+| rebuild the coverage baseline from scratch      | `tools/harness.py ci cov base`                                     |
+| compile every Arduino example for real          | `tools/harness.py ci check examples`                               |
+| read a whole file at image density              | `tools/harness.py view png`                                        |
+| move line ranges from one file into another     | `tools/harness.py edit move --dry-run`                             |
+| strip comments before a pattern-driven rewrite  | `tools/harness.py edit comments` (dry until `--go`)                |
+| check an OPC UA model against its NodeSets      | `tools/harness.py view conform`                                    |
+| build several envs in the WSL clone             | `tools/harness.py build envs`                                      |
+| measure what an `#include` costs                | `tools/harness.py measure includes`                                |
+| measure what a feature costs in flash           | `tools/harness.py ci gen footprints`                               |
+| tune a PID loop from a run log                  | `tools/harness.py measure pid`                                     |
+| regenerate crypto KAT headers                   | `tools/harness.py crypto kat`                                      |
+| mint SSH test keys                              | `tools/harness.py crypto sshkeys --if-absent`                      |
+| commit a long message without a temp file       | `tools/harness.py hooks commit "subject" "para" ...` (`--dry`)     |
+| point git at the tracked hooks                  | `tools/harness.py hooks install`                                   |
+| check a converter still works after touching it | `tools/harness.py selftest`                                        |
+| refresh the tables below                        | `tools/harness.py doc gen` (CI: `ci gen --check tools_inventory`)  |
 
 <!-- BEGIN GENERATED TOOLS INVENTORY (tools/harness.py) -->
 
