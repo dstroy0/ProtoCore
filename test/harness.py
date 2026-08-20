@@ -25,6 +25,19 @@ The full sweep is the ACCEPTANCE GATE at the end of a change, run once - not the
 for it when a shared header moved (protocore_config.h, buffer_sizing.h, feature_en_error.h) or when
 the change is finished and needs proving.
 
+READ THE MODULE BEFORE WRITING THE TEST, AND READ IT BLIND FIRST:
+
+    python tools/harness.py view read blind  src/crypto/hash/sha256/sha256.h
+    python tools/harness.py view read code   src/crypto/hash/sha256/sha256.h
+    python tools/harness.py view read claims src/crypto/hash/sha256/sha256.h
+
+In that order, and not the other one. `blind` strips every comment AND replaces every name this
+project chose, so the code is read for what it DOES rather than for what it is called - a suite
+written after reading a doc block asserts the doc block, and passes against code that does
+something else. Assume nothing: a name is a claim, and it is the one claim nothing ever checks.
+`claims` is LAST, and it pairs each comment with the line it sits above precisely so the prose is
+met with its subject instead of being taken on trust.
+
 A TEST THAT ASSERTS A REMOVED CONTRACT IS THE STALE HALF OF THE CHANGE. When a suite fails because
 src/ no longer does something, read git log for the commit that stopped doing it before "fixing"
 src/ back. The borrow null-checks are the worked example: 350 `if (!work)` branches were deleted in
