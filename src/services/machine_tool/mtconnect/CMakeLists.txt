@@ -9,7 +9,10 @@ if(PROTOCORE_ENABLE_MTCONNECT)
   protocore_module(pc_services_machine_tool_mtconnect
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/mtconnect.c"
     PRIVATE
+      pc_mmgr_plaintext
       pc_mmgr_protomem
       pc_mmgr_protostr
+      pc_server_clock
+      pc_shared_time_compat
   )
 endif()
