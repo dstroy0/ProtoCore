@@ -1135,7 +1135,7 @@ shipped work:
       Optional services, plus mTLS, `wss://` / TLS-SSE, and RFC 5077 session
       resumption.
 
-- [x] **`Date` response header** _(done, opt-in)_ - [`PROTOCORE_HTTP_EMIT_DATE`](@ref PROTOCORE_HTTP_EMIT_DATE)
+- [x] **`Date` response header** _(done, opt-in)_ - [`PROTOCORE_ENABLE_HTTP_CLOCK`](@ref PROTOCORE_ENABLE_HTTP_CLOCK)
       (default off, so the hot path is unchanged unless enabled) auto-injects
       `Date: <IMF-fixdate>` into every dynamic response once a wall-clock time exists
       ([`protocore_ntp_http_date()`](@ref protocore_ntp_http_date) non-empty); a clock-less / pre-sync device omits it

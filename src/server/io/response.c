@@ -20,9 +20,10 @@
 #include "network_drivers/transport/tcp/common.h"            // conn_pool, TcpConn/ConnState
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.send: the bytes a response writes
 #include "network_drivers/transport/tcp/tcp.h"
-#include "protocore.h"        // PROTOCORE_ENABLE_STATS, PROTOCORE_ENABLE_METRICS, PROTOCORE_ENABLE_LOGBUF
-#include "shared/hex/hex.h"   // protocore_hex_u32 (chunk size-line writer)
-#include "shared/mime/mime.h" // PROTOCORE_MIME_*, mime tables
+#include "protocore.h" // PROTOCORE_ENABLE_STATS, PROTOCORE_ENABLE_METRICS, PROTOCORE_ENABLE_LOGBUF
+#include "server/io/http_clock/http_clock.h" // HttpClock.date: which clock the Date header reads
+#include "shared/hex/hex.h"                  // protocore_hex_u32 (chunk size-line writer)
+#include "shared/mime/mime.h"                // PROTOCORE_MIME_*, mime tables
 
 static uint8_t hex_work[16]; // the borrow an entry takes; Hex never reads it
 
@@ -924,22 +925,20 @@ int proto_append_resp_trailer(char *buf, size_t cap, int hlen, uint8_t slot_id, 
     {
         return 0;
     }
-#if PROTOCORE_HTTP_EMIT_DATE
+#if PROTOCORE_ENABLE_HTTP_CLOCK
     // RFC 7231 7.1.1.2: emit Date only when a real wall-clock time exists; a clock-less device (no
     // synced/valid time source yet) omits it. The time comes from the multi-source registry (any
     // enabled NTP / GPS / RTC / ... by priority) when PROTOCORE_ENABLE_TIME_SOURCE is set, else straight
-    // from NTP.
+    // from NTP. Which of those a build has is HttpClock's decision, not this one's.
     char date_hdr[48] = "";
-    char imf[40];
-#if PROTOCORE_ENABLE_TIME_SOURCE
-    if (protocore_time_http_date(imf, sizeof(imf)) > 0)
-#else
-    if (protocore_ntp_http_date(imf, sizeof(imf)) > 0)
-#endif
+    // No borrow is in scope anywhere on the response path, so the span comes from the module that
+    // owns the bytes and the entry carves its region out of it.
+    HttpClock.date(protocore_http_clock_span());
+    if (HttpClockV.n > 0)
     {
         protocore_sb sb_date_hdr = {date_hdr, sizeof(date_hdr), 0, PROTO_TRUE};
         Sb.put(&sb_date_hdr, "Date: ");
-        Sb.put(&sb_date_hdr, imf);
+        Sb.put(&sb_date_hdr, HttpClockV.imf);
         Sb.put(&sb_date_hdr, "\r\n");
         if (Sb.finish(&sb_date_hdr) == 0)
         {

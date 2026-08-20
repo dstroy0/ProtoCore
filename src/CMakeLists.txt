@@ -63,7 +63,6 @@ if(PROTOCORE_ENABLE_HTTP2)
       pc_mmgr_protoframe
       pc_mmgr_protostr
       pc_mmgr_rawmemcpy
-      pc_network_drivers_application_ntp_service
       pc_network_drivers_application_web_assets
       pc_network_drivers_application_webdav
       pc_network_drivers_presentation
@@ -83,7 +82,6 @@ if(PROTOCORE_ENABLE_HTTP2)
       pc_server_io_webdav_handler
       pc_server_security_csrf
       pc_services_file_transfer_http_delivery
-      pc_services_timing_position_time_source
       pc_shared_hex
       pc_shared_mime
   )

@@ -122,11 +122,16 @@
     "native_application": {
       "desc": "test_application against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/misc/test_application"],
+      "tests": [
+        "unit/integration/misc/test_application"
+      ],
       "flags": [
         "-DPROTOCORE_ENABLE_FILE_SERVING=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
       ]
     },
     "native_arena": {
@@ -185,11 +190,16 @@
     "native_auth": {
       "desc": "test_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/http/test_auth"],
+      "tests": [
+        "unit/integration/http/test_auth"
+      ],
       "flags": [
         "-DPROTOCORE_ENABLE_AUTH=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
       ]
     },
     "native_auth_lockout": {
@@ -478,8 +488,16 @@
     "native_chunked": {
       "desc": "test_chunked against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/shared/test_chunked"],
-      "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
+      "tests": [
+        "unit/integration/shared/test_chunked"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_cia402": {
       "desc": "CiA 402 / IEC 61800-7-201 drive profile (services/fieldbus/cia402): the Statusword power-state\ndecode (mask/value table), the Controlword commands + enable sequence, Statusword flags, the\nCANopen SDO setters (Controlword / Modes / target position-velocity-torque) and cyclic PDO\npack/unpack. Layers on services/canopen. Pure host tests.",
@@ -1050,7 +1068,8 @@
         "+<services/file_transfer/http_delivery/http_delivery_routes.c>",
         "+<network_drivers/application/mdns_service/mdns_service.c>",
         "+<services/radio/promisc/promisc.c>",
-        "+<network_drivers/network/dns/dns_wire/dns_wire.c>"
+        "+<network_drivers/network/dns/dns_wire/dns_wire.c>",
+        "+<server/io/http_clock/http_clock.c>"
       ],
       "tests": [
         "unit/integration/fieldbus/test_dispatch"
@@ -1361,7 +1380,8 @@
         "+<server/web/dashboard/dashboard_routes.c>",
         "+<mmgr/secure/secure.c>",
         "+<mmgr/span/span.c>",
-        "+<mmgr/arena/arena.c>"
+        "+<mmgr/arena/arena.c>",
+        "+<server/io/http_clock/http_clock.c>"
       ],
       "tests": [
         "unit/src/server/web/dashboard/test_dashboard"
@@ -1415,7 +1435,12 @@
     "native_defer": {
       "desc": "test_defer against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/session/test_defer"]
+      "tests": [
+        "unit/integration/session/test_defer"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_codec_deflate": {
       "desc": "The RFC 1951 DEFLATE compressor (network_drivers/presentation/codec/deflate), the WebSocket permessage-deflate sender. The load-bearing case derives the exact output octets for three inputs from RFC 1951 alone - sec 3.2.3's block header, sec 3.2.6's fixed code table, sec 3.2.5's length and distance codes, sec 3.1.1's bit order and RFC 7692 sec 7.2.1's stripped 00 00 ff ff tail - with the bit-by-bit derivation written beside the bytes, so a compressor that agreed with its own decompressor while emitting a non-conforming stream fails here rather than passing. The rest is round-trip identity through INFLATE over text, the empty input, a single octet, every octet value, highly repetitive input that must actually shrink, a chain walk driven past its budget, a candidate match past the window that must be discarded, and random and low-entropy corpora; plus the fail-closed paths for an output buffer and a scratch buffer that are too small.",
@@ -1500,9 +1525,12 @@
         "${env:native_stack_http.build_src_filter}",
         "+<mmgr/protomem/protomem.c>",
         "+<mmgr/rawmemcpy/rawmemcpy.c>",
-        "+<mmgr/swar/swar.c>"
+        "+<mmgr/swar/swar.c>",
+        "+<server/io/http_clock/http_clock.c>"
       ],
-      "tests": ["unit/integration/transport/test_diag"]
+      "tests": [
+        "unit/integration/transport/test_diag"
+      ]
     },
     "native_diffserv": {
       "desc": "DiffServ QoS marking (PROTOCORE_ENABLE_DIFFSERV): the DSCP->TOS encode (DSCP << 2, ECN 0), the\nserver-wide and UDP DSCP defaults through the DiffServ entries and through the flat readers the\naccept path uses, and the per-listener override (TcpListener.set_dscp, which names the port, incl.\nthe UNSET sentinel + 6-bit mask + unknown-port miss). A live connection has no setter: RFC 9293 sec\n3.9.2 SHLD-23. The accept callback's three arms - per-listener override, server default, best-effort\nskip - and a dynamic (forwarded) listener taking the sentinel. Pure L4 core, host-tested.",
@@ -1555,19 +1583,33 @@
     "native_digest_auth": {
       "desc": "test_digest_auth against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/http/test_digest_auth"],
+      "tests": [
+        "unit/integration/http/test_digest_auth"
+      ],
       "flags": [
         "-DPROTOCORE_ENABLE_AUTH=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
       ]
     },
     "native_digest_vectors": {
       "desc": "test_digest_vectors against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/src/crypto/hash/test_digest_vectors"],
-      "flags": ["-DPROTOCORE_ENABLE_AUTH=1"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/crypto/hash/test_digest_vectors"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_AUTH=1"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_sha256_kat": {
       "desc": "SHA-256 (crypto/hash/sha256.h) against the RFC 6234 sec 8.5 SHA256 known-answer vectors: 'abc', the 56-octet message whose padding overflows into a second block, one million 'a' fed as a stream, and a 640-octet message that is an exact multiple of the 512-bit block. The empty-message digest is the Transcript-Hash('') RFC 8448 sec 3 prints for the TLS 1.3 'tls13 derived' step. Adds chunk-split invariance, the header's contract that final() leaves the context running, and the one-shot / streaming equivalence.",
@@ -1744,8 +1786,16 @@
     "native_dispatch": {
       "desc": "test_dispatch against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/fieldbus/test_dispatch"],
-      "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
+      "tests": [
+        "unit/integration/fieldbus/test_dispatch"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_dma": {
       "desc": "DMA peripheral ingest / egress simulator (mmgr/dma), v5 hardware ingest: an\ningress feed surfaces as RX completion events, a full buffer ping-pongs and re-arms,\negress DMA is captured, TX is one-in-flight fail-closed, and a loopback channel\nround-trips its own TX into RX. The preempt-queue hand-off is observable on the host\nthrough the keyed queue mock; only the interrupt that triggers it needs hardware.",
@@ -2151,7 +2201,8 @@
         "+<mmgr/span/span.c>",
         "+<mmgr/arena/arena.c>",
         "+<mmgr/plaintext/plaintext.c>",
-        "+<test/core_setup/hal/portable/portable_platform.c>"
+        "+<test/core_setup/hal/portable/portable_platform.c>",
+        "+<server/io/http_clock/http_clock.c>"
       ],
       "tests": [
         "unit/src/server/web/edge_cache/test_edge_cache_proxy"
@@ -2500,11 +2551,16 @@
     "native_file_serving": {
       "desc": "test_file_serving against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/filesystem/test_file_serving"],
+      "tests": [
+        "unit/integration/filesystem/test_file_serving"
+      ],
       "flags": [
         "-DPROTOCORE_ENABLE_FILE_SERVING=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
       ]
     },
     "native_fins": {
@@ -2583,8 +2639,16 @@
     "native_form_params": {
       "desc": "test_form_params against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/transport/test_form_params"],
-      "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
+      "tests": [
+        "unit/integration/transport/test_form_params"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_forward": {
       "desc": "Interface forwarding plane (network_drivers/network/forward), v5 bridge / router: default-deny,\nan ALLOW rule forwards, a DENY wins, multi-destination fan-out, no reflection to the\nsource, the per-rule rate cap (host test clock), send-failure counting, the interface /\nrule table limits, the ingress ACL (byte-pattern permit/deny, first-match, default\naction), policy routing (byte-pattern -> egress, precedence + fail-closed), and the opt-in\ninspection hook. Pure host tests; the DMA-driven wiring is covered by native_dma over the same host queue.",
@@ -3148,7 +3212,8 @@
         "+<src/mmgr/plaintext/plaintext.c>",
         "+<src/mmgr/span/span.c>",
         "+<src/mmgr/arena/arena.c>",
-        "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>"
+        "+<network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.c>",
+        "+<server/io/http_clock/http_clock.c>"
       ],
       "tests": [
         "unit/integration/http/test_h3_server"
@@ -3530,8 +3595,16 @@
     "native_iface": {
       "desc": "test_iface against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/transport/test_iface"],
-      "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
+      "tests": [
+        "unit/integration/transport/test_iface"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_iface_bridge": {
       "desc": "Interface bridge pure core (server/net/iface_bridge): the user-defined address:port -> bus\nrule table (register / find / dedup / capacity, keyed by port+proto with the full protocore_ip bind address\npreserved) and the write-then-read transaction frame codec (big-endian write_len/read_len header,\npartial-frame handling, build/parse round-trip). Bus I/O + listener are ESP32-only. Pure host tests.",
@@ -3869,8 +3942,15 @@
     "native_json": {
       "desc": "test_json against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/src/network_drivers/presentation/codec/json/test_json"],
-      "extra_scripts": ["pre:test/gen_test_runners.py"]
+      "tests": [
+        "unit/src/network_drivers/presentation/codec/json/test_json"
+      ],
+      "extra_scripts": [
+        "pre:test/gen_test_runners.py"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_json_codec": {
       "desc": "Zero-heap JSON writer and top-level reader (network_drivers/presentation/codec/json, RFC 8259): the sec 13 example object built byte for byte, the sec 7 mandatory escape set, the sec 7 \"\\uD834\\uDD1E\" G clef surrogate pair decoded to its RFC 3629 UTF-8 form, the sec 8.2 unpaired surrogate mapped to U+FFFD, the sec 3 literal names, top-level-only member matching, write/read round trip, and the overflow / depth / null-storage refusals.",
@@ -4371,8 +4451,16 @@
     "native_middleware": {
       "desc": "test_middleware against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/transport/test_middleware"],
-      "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
+      "tests": [
+        "unit/integration/transport/test_middleware"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_mms": {
       "desc": "IEC 61850 MMS PDU codec (services/energy/mms): the BER confirmed-request/response Read PDUs\n(invokeID + read service + named ObjectName), build + parse. Pure host tests with structural vectors.",
@@ -4617,7 +4705,12 @@
     "native_multipart": {
       "desc": "test_multipart against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/codec/test_multipart"]
+      "tests": [
+        "unit/integration/codec/test_multipart"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     
     "native_net_addr": {
@@ -5304,8 +5397,16 @@
     "native_path_params": {
       "desc": "test_path_params against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/transport/test_path_params"],
-      "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
+      "tests": [
+        "unit/integration/transport/test_path_params"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_pca9685": {
       "desc": "PCA9685 16-channel 12-bit PWM / servo driver (server/peripherals/pca9685): the PRE_SCALE value for a PWM frequency (Eq 1, hardware minimum 3), the per-channel register base, a servo pulse width as a 12-bit count, the five-byte channel write, and programming a part end to end - the suite reads the registers back off the Rev. 4 device model in test/core_setup/hal/host/devices/, where a PRE_SCALE write is blocked unless begin() slept the oscillator first.",
@@ -5997,7 +6098,8 @@
         "+<test/core_setup/hal/host/physical/physical_mock.c>",
         "+<network_drivers/physical/radio_power/radio_power.c>",
         "+<network_drivers/transport/udp/client/client.c>",
-        "+<test/core_setup/hal/host/protocore_dma_host.c>"
+        "+<test/core_setup/hal/host/protocore_dma_host.c>",
+        "+<server/io/http_clock/http_clock.c>"
       ],
       "tests": [
         "unit/src/server/core/provisioning_service/test_provisioning"
@@ -6579,8 +6681,16 @@
     "native_regex": {
       "desc": "test_regex against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/transport/test_regex"],
-      "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
+      "tests": [
+        "unit/integration/transport/test_regex"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_relay": {
       "desc": "TCP relay / DNAT byte pump (server/net/relay): the bidirectional relay engine that\npublishes an internal host:port through the server. Tests cover a bidirectional transfer, the\nbackpressure carry (a send that accepts partial writes), independent half-close with shutdown\npropagation, a large multi-step transfer (byte-exact), and a seam error - driven by two mock\nsockets over the send/recv seams. Pure host tests.",
@@ -6676,7 +6786,8 @@
             "+<shared/hex/hex.c>",
             "+<mmgr/plaintext/plaintext.c>",
             "+<mmgr/arena/arena.c>",
-            "+<test/core_setup/hal/portable/portable_platform.c>"
+            "+<test/core_setup/hal/portable/portable_platform.c>",
+            "+<server/io/http_clock/http_clock.c>"
           ],
           "tests": [
             "unit/integration/application/test_response_headers"
@@ -9067,14 +9178,14 @@
         "-DPROTOCORE_ENABLE_METRICS=1",
         "-DPROTOCORE_ENABLE_ETAG=1",
         "-DPROTOCORE_ENABLE_WEB_TERMINAL=1",
-        "-DPROTOCORE_HTTP_EMIT_DATE=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1",
         "-DPROTOCORE_ENABLE_MULTIPART=1",
         "-DPROTOCORE_ENABLE_WEB_ASSETS=1",
         "-DPROTOCORE_ENABLE_HTTP_ROUTE=1",
         "-DPROTOCORE_ENABLE_JSON=1",
         "-DPROTOCORE_ENABLE_DNS=1",
-        "-DPROTOCORE_ENABLE_TCP=1"
+        "-DPROTOCORE_ENABLE_TCP=1",
+        "-DPROTOCORE_ENABLE_HTTP_CLOCK=1"
       ],
       "src": [
         "+<shared/ip/ip.c>",
@@ -9146,7 +9257,8 @@
         "+<test/core_setup/hal/host/protocore_dma_host.c>",
         "+<src/mmgr/plaintext/plaintext.c>",
         "+<src/mmgr/span/span.c>",
-        "+<src/mmgr/arena/arena.c>"
+        "+<src/mmgr/arena/arena.c>",
+        "+<server/io/http_clock/http_clock.c>"
       ],
       "tests": []
     },
@@ -9559,8 +9671,16 @@
     "native_template": {
       "desc": "test_template against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/transport/test_template"],
-      "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
+      "tests": [
+        "unit/integration/transport/test_template"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_radio_thread": {
       "desc": "Thread spinel / HDLC-lite framing codec (services/radio/thread). The FCS is pinned twice: to the\nCRC-16/X-25 catalogue check value 0x906E and to RFC 1662 Appendix C's good-FCS residue 0xf0b8\n(complemented to 0x0F47, since X-25 folds the final XOR in), so the receiver-side acceptance test\nthe RFC specifies is what governs the checksum. RFC 1662 sec 4.2 supplies the byte-stuffing table\nverbatim (7E/7D/11/13). The spinel layer covers the packed unsigned integer (the protocol\nreference's 1337 -> B9 0A example plus the 7-bit-group boundaries), the FLG/NLI/TID header byte,\ncommand build/parse through HDLC, the typed value cursors with their little-endian wire layout and\nbounds latching, and the property + LAST_STATUS registries.",
@@ -9609,6 +9729,34 @@
         "unit/src/services/timing_position/time_source/test_time_source"
       ],
       "extra_scripts": ["pre:test/gen_test_runners.py"]
+    },
+    
+    "native_http_clock": {
+      "desc": "The HTTP Date header's clock (server/io/http_clock): which source supplies the instant, and the IMF-fixdate rendered from it. RFC 9110 sec 5.6.7's own example reproduced octet for octet from a registered source, and the two ways a build has no trustworthy time - a source that has not synced, and no source at all - each yielding no header rather than a wrong one. These cases were in test_time_source and test_ntp_service while the joining lived in an escape hatch inside each of those modules.",
+      "flags": [
+        "-DPROTOCORE_ENABLE_HTTP_CLOCK=1",
+        "-DPROTOCORE_ENABLE_TIME_SOURCE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>",
+        "+<services/timing_position/time_source/time_source.c>",
+        "+<shared/http_date/http_date.c>",
+        "+<shared/time_compat/time_compat.c>",
+        "+<mmgr/arena/arena.c>",
+        "+<mmgr/plaintext/plaintext.c>",
+        "+<mmgr/span/span.c>",
+        "+<mmgr/protomem/protomem.c>",
+        "+<mmgr/rawmemcpy/rawmemcpy.c>",
+        "+<mmgr/swar/swar.c>",
+        "+<mmgr/membuild/membuild.c>",
+        "+<mmgr/protostr/protostr.c>",
+        "+<mmgr/float_bits/float_bits.c>",
+        "+<shared/hex/hex.c>",
+        "+<test/core_setup/hal/portable/portable_platform.c>"
+      ],
+      "tests": [
+        "unit/src/server/io/http_clock/test_http_clock"
+      ]
     },
     "native_tls13_kdf": {
       "desc": "TLS 1.3 key schedule for the QUIC handshake (network_drivers/tls/tls13_kdf,\nRFC 8446 sec 7.1 / 4.4.4): Early/Handshake/Master secret Extract chain, client/server handshake +\napplication traffic secrets, the server handshake write key/iv label path, and the server Finished\nverify_data over a full ClientHello..CertificateVerify transcript. Pinned to RFC 8448 sec 3.",
@@ -10235,8 +10383,16 @@
     "native_web_terminal": {
       "desc": "test_web_terminal against the native_stack_http stack.",
       "base": "env:native_stack_http",
-      "tests": ["unit/integration/transport/test_web_terminal"],
-      "flags": ["-DPROTOCORE_ENABLE_WEBSOCKET=1", "-DPROTOCORE_ENABLE_SSE=1"]
+      "tests": [
+        "unit/integration/transport/test_web_terminal"
+      ],
+      "flags": [
+        "-DPROTOCORE_ENABLE_WEBSOCKET=1",
+        "-DPROTOCORE_ENABLE_SSE=1"
+      ],
+      "src": [
+        "+<server/io/http_clock/http_clock.c>"
+      ]
     },
     "native_webdav_wire": {
       "desc": "WebDAV wire core (network_drivers/application/webdav, RFC 4918). Walks every cell of the sec 9.10.5 Lock Compatibility Table, the sec 9.10.3 Depth-infinity lock scope and its path-segment boundary, the sec 6.6 timeout sweep and sec 9.10.2 refresh, the sec 7 write gate keyed on the If-header token, the sec 10.4.2 If ABNF with the worked examples of secs 10.4.6 and 10.4.7, the sec 10.2 Depth ABNF, the sec 9 method set, the sec 14.16 Multi-Status document and the sec 9.2 PROPPATCH 403 reflection, plus the five XML 1.0 sec 4.6 predefined entities and the RFC 3986 sec 2.1 percent-decoding of the Destination header.",

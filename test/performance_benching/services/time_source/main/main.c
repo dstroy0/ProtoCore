@@ -3,13 +3,14 @@
 //
 // On-device CCOUNT microbenchmark for the pluggable time source (services/timing_position/time_source): the
 // priority-resolved current-time read (protocore_time_now) and the RFC 7231 IMF-fixdate HTTP-date
-// formatter (protocore_time_http_date). Pure; a fixed in-memory source stands in for a real clock so the
+// formatter (HttpClock.date). Pure; a fixed in-memory source stands in for a real clock so the
 // figures are deterministic.
 //
 // Build/flash:  idf.py -C test/performance_benching/time_source -t upload --upload-port COM7
 #include "device_bench.h"
 #include "services/timing_position/time_source/time_source.h"
 
+#include "server/io/http_clock/http_clock.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -30,7 +31,8 @@ void dbench_run(void)
         volatile size_t sink = 0;
         DBENCH_OP("protocore_time_now (resolve source)", 200000, sink += protocore_time_now());
         static char out[40];
-        DBENCH_OP("protocore_time_http_date (IMF-fixdate)", 200000, sink += protocore_time_http_date(out, sizeof(out)));
+        DBENCH_OP("HttpClock.date (IMF-fixdate)", 200000,
+                  (HttpClock.date(protocore_http_clock_span()), sink += HttpClockV.n));
         (void)sink;
         DBENCH_DONE();
     }

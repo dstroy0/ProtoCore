@@ -244,18 +244,12 @@ void test_ntp_host_seam_accessors()
     NtpService.time_source(protocore_ntp_service_span());
     TEST_ASSERT_EQUAL_UINT32(784111777, NtpServiceV.ms);
 
-    char buf[40];
-    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_http_date(NULL, sizeof(buf)));
-    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_http_date(buf, 0));
-
-    TEST_ASSERT_TRUE(protocore_ntp_http_date(buf, sizeof(buf)) > 0);
-    TEST_ASSERT_EQUAL_STRING("Sun, 06 Nov 1994 08:49:37 GMT", buf);
-
-    NtpServiceV.set_test_epoch_args.epoch = (time_t)100000000000000000LL;
-    NtpService.set_test_epoch(protocore_ntp_service_span());
-    buf[0] = 'x';
-    TEST_ASSERT_EQUAL_UINT(0, protocore_ntp_http_date(buf, sizeof(buf)));
-    TEST_ASSERT_EQUAL_CHAR('\0', buf[0]);
+    // The rendering these asserted through protocore_ntp_http_date is HttpClock's now, and
+    // test_http_clock covers it - including the epoch that will not break down. What is left
+    // here is the seam this case is named for: what the NTP client reports, which is the input
+    // to that rendering rather than the rendering itself.
     NtpServiceV.set_test_epoch_args.epoch = 0;
     NtpService.set_test_epoch(protocore_ntp_service_span());
+    NtpService.epoch(protocore_ntp_service_span());
+    TEST_ASSERT_EQUAL_INT(0, (long)NtpServiceV.value);
 }

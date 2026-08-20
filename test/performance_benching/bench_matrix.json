@@ -2382,7 +2382,7 @@
         "-DPROTOCORE_ENABLE_METRICS=1",
         "-DPROTOCORE_ENABLE_ETAG=1",
         "-DPROTOCORE_ENABLE_WEB_TERMINAL=1",
-        "-DPROTOCORE_HTTP_EMIT_DATE=1",
+        "-DPROTOCORE_ENABLE_HTTP_CLOCK=1",
         "-DPROTOCORE_ENABLE_WEBSOCKET=1"
       ],
       "src": [
@@ -2401,7 +2401,8 @@
         "src/server/clock/clock.c",
         "src/shared/hex/hex.c",
         "src/shared/http_date/http_date.c",
-        "src/shared/time_compat/time_compat.c"
+        "src/shared/time_compat/time_compat.c",
+        "src/server/io/http_clock/http_clock.c"
       ]
     },
     "services_nts": {
@@ -3271,7 +3272,8 @@
       "desc": "On-device CCOUNT microbenchmark for the pluggable time source (services/timing_position/time_source): the\npriority-resolved current-time read (protocore_time_now) and the RFC 7231 IMF-fixdate HTTP-date\nformatter (protocore_time_http_date). Pure; a fixed in-memory source stands in for a real clock so the\nfigures are deterministic.",
       "path": "services/time_source",
       "flags": [
-        "-DPROTOCORE_ENABLE_TIME_SOURCE=1"
+        "-DPROTOCORE_ENABLE_TIME_SOURCE=1",
+        "-DPROTOCORE_ENABLE_HTTP_CLOCK=1"
       ],
       "src": [
         "src/mmgr/float_bits/float_bits.c",
@@ -3283,7 +3285,8 @@
         "src/services/timing_position/time_source/time_source.c",
         "src/shared/hex/hex.c",
         "src/shared/http_date/http_date.c",
-        "src/shared/time_compat/time_compat.c"
+        "src/shared/time_compat/time_compat.c",
+        "src/server/io/http_clock/http_clock.c"
       ]
     },
     "services_tls_policy": {

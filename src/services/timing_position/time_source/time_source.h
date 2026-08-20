@@ -65,16 +65,6 @@ const char *protocore_time_source_active(void);
 /** @brief Clear all registered sources. */
 void protocore_time_source_reset(void);
 
-/**
- * @brief The current best time (protocore_time_now, any registered NTP / GPS / RTC / ... source)
- *        formatted as an RFC 7231 IMF-fixdate into @p out.
- * @return bytes written, or 0 with an empty @p out when no source currently has a valid time.
- *
- * This is what lets the HTTP `Date:` header be fed by whatever time source is enabled, not just
- * NTP: register RTC / GPS / NTP via protocore_time_source_add() and the header follows the priority.
- */
-size_t protocore_time_http_date(char *out, size_t out_cap);
-
 PROTOCORE_END_DECLS
 
 #endif // PROTOCORE_ENABLE_TIME_SOURCE
