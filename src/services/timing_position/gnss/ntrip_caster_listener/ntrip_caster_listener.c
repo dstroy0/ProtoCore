@@ -338,7 +338,7 @@ proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMoun
     {
         ProtocolsV.proto = PROTO_NTRIP_CASTER;
         ProtocolsV.h = &s_caster_handler;
-        SessionV.proto->add(protocore_session_span());
+        Protocols.add(protocore_session_span());
         s_ctx.registered = PROTO_TRUE;
     }
     return PROTO_TRUE;

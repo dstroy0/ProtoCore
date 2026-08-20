@@ -315,6 +315,5 @@ ProtocolsVars ProtocolsV;
 // Designated, so a member's position in the struct does not decide what it binds to.
 /** @brief The operands and the outcome. */
 SessionVars SessionV = {
-    .proto = &Protocols,
     .workers = &Workers,
 };

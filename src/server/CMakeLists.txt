@@ -26,6 +26,7 @@ if(PROTOCORE_ENABLE_TELNET)
       pc_network_drivers_presentation
       pc_network_drivers_presentation_ssh_server
       pc_network_drivers_presentation_telnet
+      pc_network_drivers_session
       pc_server_core_proto_handler
       pc_services_fieldbus_modbus_modbus
       pc_services_opcua

@@ -48,6 +48,7 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.init: the pool this brings up
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis(): the QUIC poll stamp and the request timeout
+#include "network_drivers/session/session.h" // Protocols: the registry, owned by the session layer
 #include "server/core/proto_handler.h"
 #include "server/core/worker/worker.h"
 #include "shared/hex/hex.h"
@@ -702,7 +703,7 @@ void service_once(int worker_id)
         // -> http_poll_slot(); the singleton pollers (SSH etc.) gate on CONN_ACTIVE
         // inside their own on_poll.
         ProtocolsV.proto = conn_pool[i].proto;
-        SessionV.proto->get(protocore_session_span());
+        Protocols.get(protocore_session_span());
         const ProtoHandler *ph = ProtocolsV.handler;
         if (ph && ph->on_poll)
         {

@@ -461,7 +461,7 @@ void protocore_iface_bridge_hw_publish(uint8_t *restrict work)
     {
         ProtocolsV.proto = PROTO_BRIDGE;
         ProtocolsV.h = &s_bridge_handler;
-        SessionV.proto->add(protocore_session_span());
+        Protocols.add(protocore_session_span());
         IFACE_BRIDGE_HW_CTX(work)->registered = PROTO_TRUE;
     }
     IfaceBridgeHwV.ok = PROTO_TRUE;

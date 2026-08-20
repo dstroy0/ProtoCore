@@ -22,10 +22,66 @@
 #define PROTOCORE_SESSION_H
 
 #include "network_drivers/transport/tcp/evt.h" // EvtType, TcpEvt: the events this layer drains
-#include "server/core/proto_handler.h"         // ProtoRegistryNs: carried below as Session.proto
+#include "server/core/proto_handler.h"         // ProtoHandler: the record ::Protocols binds
 #include "server/core/worker/worker.h"         // WorkerNs: carried below as Session.workers
 
 #include "protocore_config.h" // CONN_POOL_SLOTS, proto_bool: the tables below
+
+// --- the protocol registry -------------------------------------------------------------
+//
+// Declared HERE and not in server/core/proto_handler.h, which declares the ProtoHandler record
+// the application layer implements. Registering a handler is connection lifetime, which this
+// layer owns: the storage is proto_handlers[PROTO_MAX_HANDLERS] inside SessionCtx, every entry
+// reaches it through SESSION_CTX(work), and every caller passes protocore_session_span(). With
+// the declaration on the server side, the registry's own header had no .c to be defined in.
+
+/**
+ * @brief The protocol registry.
+ *
+ * A caller sets the members a call takes, invokes it through ::Protocols, and reads the outcome off
+ * ::ProtocolsV. The handlers themselves live in SessionCtx, reached only through the borrow.
+ *
+ * @var ProtoRegistryNs::proto              the protocol a call names
+ * @var ProtoRegistryNs::h                  the handler an add binds to it
+ * @var ProtoRegistryNs::handler            the handler a lookup reports, or NULL when none is bound
+ * @var ProtoRegistryNs::register_builtins  install every handler the build compiled in
+ * @var ProtoRegistryNs::add                bind one handler to one protocol
+ * @var ProtoRegistryNs::get                the handler for a protocol, or null if none is bound
+ */
+typedef struct
+{
+    ProtoConn proto;
+    const ProtoHandler *h;
+    const ProtoHandler *handler;
+} ProtocolsVars;
+
+/** @brief The operands and the outcome. */
+extern ProtocolsVars ProtocolsV;
+
+/** @brief The entries. */
+typedef struct
+{
+    void (*const register_builtins)(uint8_t *restrict work);
+    void (*const add)(uint8_t *restrict work);
+    void (*const get)(uint8_t *restrict work);
+} ProtoRegistryNs;
+
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ProtocolsV or a region of the borrow at a fixed offset.
+void protocore_protocols_register_builtins(uint8_t *restrict work);
+void protocore_protocols_add(uint8_t *restrict work);
+void protocore_protocols_get(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Protocols.register_builtins(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ProtoRegistryNs Protocols __attribute__((unused)) = {
+    .register_builtins = protocore_protocols_register_builtins,
+    .add = protocore_protocols_add,
+    .get = protocore_protocols_get,
+};
+
 
 /**
  * @brief Per-connection state, keyed on the transport slot index.
@@ -190,7 +246,6 @@ typedef struct
 {
     int worker_id;
     proto_u32 conn_timeout_ms;
-    ProtoRegistryNs *proto;
     WorkerNs *workers;
 } SessionVars;
 
