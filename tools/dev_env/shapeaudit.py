@@ -502,7 +502,23 @@ def read_design(path):
         )
 
     els.sort(key=lambda p: p[0])
-    return [d for _, d in els]
+    out = [d for _, d in els]
+
+    # Mark the module gate, ONCE, where the text is still in hand, so everything downstream reads
+    # the same answer. `traits` used to find it on its own as "the first cond_open whose expr
+    # contains ENABLE_", which is a different rule and disagreed with module_gate in two ways at
+    # once: it accepted an inner `#if PROTOCORE_ENABLE_OBSERVABILITY` arm as the gate, and it did
+    # not accept `#if PROTOCORE_NEED_MODBUS` as one at all. So modbus, j1939, protobuf, nmea0183,
+    # cbor, dns_resolver, x509 and both transport clients read as UNGATED - which made `guarded`
+    # report them, and made `includes_above_gate` and `constructs_above_gate` the whole file, so
+    # `includes placed` and `functions placed` reported them too. One disagreement, three checks.
+    gate = module_gate(raw)
+    if gate:
+        for d in out:
+            if d["kind"] == "cond_open" and re.match(r"^\(?\s*%s\b" % re.escape(gate), d.get("expr", "")):
+                d["is_gate"] = True
+                break
+    return out
 
 
 # A declaration inside a function body that reserves storage by extent: `uint8_t buf[64];`. The
@@ -644,7 +660,8 @@ def traits(design, which):
     t["includes"] = [d["path"] for d in inc]
     t["system_includes"] = [d["path"] for d in inc if d["system"]]
 
-    gate = next((i for i, d in enumerate(design) if d["kind"] == "cond_open" and "ENABLE_" in d.get("expr", "")), None)
+    # The gate the reader marked, not one found again by a second rule. See read_design.
+    gate = next((i for i, d in enumerate(design) if d.get("is_gate")), None)
     t["gate_present"] = gate is not None
     above = design[:gate] if gate is not None else design
     below = design[gate:] if gate is not None else []

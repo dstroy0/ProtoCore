@@ -327,6 +327,19 @@ check(
     S.module_gate(WRAPPED.replace("#if PROTOCORE_ENABLE_P", "#if PROTOCORE_HAS_BUS")) == "",
 )
 check("a file with no conditional at all has no gate", S.module_gate("void f(void) {}\n") == "")
+# ONE rule, not two. traits() used to find the gate again on its own - "the first cond_open whose
+# expr contains ENABLE_" - which disagreed with module_gate in both directions: it took an inner
+# ENABLE arm for a gate, and it did not recognise `#if PROTOCORE_NEED_MODBUS` as one at all. So
+# eight modules read as ungated, which made `guarded` report them AND made includes_above_gate the
+# whole file, so `includes placed` and `functions placed` reported them too.
+d = design(WRAPPED, ".h")
+check("the reader marks the gate, and traits reads that mark", sum(1 for e in d if e.get("is_gate")) == 1)
+check(
+    "the marked one is the wrapping conditional, not the inner arm",
+    next(e["expr"] for e in d if e.get("is_gate")).startswith("PROTOCORE_ENABLE_P"),
+)
+check("an ungated file marks nothing", not any(e.get("is_gate") for e in design(UNGATED, ".h")))
+check("and traits agrees it has no gate", S.traits(design(UNGATED, ".h"), "header")["gate_present"] is False)
 print()
 
 print("a check compares the golden's SHAPE, not its SIZE")
