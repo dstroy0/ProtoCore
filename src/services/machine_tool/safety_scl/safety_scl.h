@@ -45,7 +45,7 @@
 #ifndef PROTOCORE_SAFETY_SCL_H
 #define PROTOCORE_SAFETY_SCL_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SAFETY_SCL
 

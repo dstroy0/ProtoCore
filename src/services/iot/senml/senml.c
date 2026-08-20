@@ -12,9 +12,11 @@
  * Time forward and folds them into every Record (sec 4.6).
  */
 
-#include "services/iot/senml/senml.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SENML
+
+#include "services/iot/senml/senml.h"
 
 #include "mmgr/membuild/membuild.h" // Sb: the Number rendering, and the resolved-Name concatenation
 #include "mmgr/span/span.h"         // protocore_span: the region a binary build writes into

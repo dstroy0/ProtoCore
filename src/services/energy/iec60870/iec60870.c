@@ -6,10 +6,12 @@
  * @brief IEC 60870-5-101 / -104 telecontrol codec (pure, host-tested).
  */
 
-#include "services/energy/iec60870/iec60870.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_IEC60870
+
+#include "services/energy/iec60870/iec60870.h"
+#include "mmgr/protomem/protomem.h"
 
 // --- -104 APCI ---
 

@@ -6,11 +6,13 @@
  * @brief NMEA 2000 codec (Fast Packet over J1939; pure, host-tested).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_NMEA2000
+
 #include "services/timing_position/nmea2000/nmea2000.h"
 #include "mmgr/protomem/protomem.h"
 #include "shared/can/can.h"
-
-#if PROTOCORE_ENABLE_NMEA2000
 
 uint8_t protocore_n2k_fastpacket_num_frames(uint16_t total_len)
 {

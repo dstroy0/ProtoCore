@@ -6,9 +6,11 @@
  * @brief Buffer placement policy + SPI DMA ping-pong index manager (see psram_pool.h).
  */
 
-#include "mmgr/psram_pool/psram_pool.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_PSRAM_POOL
+
+#include "mmgr/psram_pool/psram_pool.h"
 
 // Does `size` fit in DRAM while still leaving `reserve` free? Subtracts instead of summing, so no
 // width of size_t can wrap the comparison.

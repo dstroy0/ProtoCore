@@ -7,11 +7,13 @@
  *        requests via the pure protocore_ntrip_caster codec and fans RTCM corrections out to subscribed rovers.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_NTRIP_CASTER
+
 #include "services/timing_position/gnss/ntrip_caster_listener/ntrip_caster_listener.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_NTRIP_CASTER
 
 #include "network_drivers/session/session.h"                 // Session.proto->add: the handler registration
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot

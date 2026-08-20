@@ -25,7 +25,7 @@
 #ifndef PROTOCORE_GNSS_SURVEY_H
 #define PROTOCORE_GNSS_SURVEY_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 

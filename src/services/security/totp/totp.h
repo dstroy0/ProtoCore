@@ -30,7 +30,7 @@
 #ifndef PROTOCORE_TOTP_H
 #define PROTOCORE_TOTP_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_TOTP
 

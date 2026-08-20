@@ -6,11 +6,13 @@
  * @brief ATC field-I/O interop snapshot (see atc.h).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_ATC
+
 #include "services/machine_tool/atc/atc.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protostr/protostr.h" // str.eq: the FIO point name lookup
-
-#if PROTOCORE_ENABLE_ATC
 
 static void put_json_str(protocore_sb *b, const char *s)
 {

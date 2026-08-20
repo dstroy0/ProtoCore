@@ -15,10 +15,12 @@
  * BSS owned by one storage instance.
  */
 
-#include "services/iot/graphql/graphql.h"
-#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_GRAPHQL
+
+#include "services/iot/graphql/graphql.h"
+#include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #include "mmgr/membuild/membuild.h" // Sb: the Int, Float and \uXXXX renderings
 #include "mmgr/protomem/protomem.h" // mem.cpy: the spans a name and a decoded String move with

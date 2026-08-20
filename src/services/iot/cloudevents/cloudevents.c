@@ -11,9 +11,11 @@
  * context attribute and reports whether the three REQUIRED ones arrived.
  */
 
-#include "services/iot/cloudevents/cloudevents.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_CLOUDEVENTS
+
+#include "services/iot/cloudevents/cloudevents.h"
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer an envelope is built with
 

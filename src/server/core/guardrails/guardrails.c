@@ -6,11 +6,13 @@
  * @brief Heap/stack guardrail evaluator + JSON (pure) and the live sampler. See guardrails.h.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_GUARDRAILS
+
 #include "server/core/guardrails/guardrails.h"
 #include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-
-#if PROTOCORE_ENABLE_GUARDRAILS
 
 /** @brief The guardrails' compile-time storage: the breach callback, for the length of a build. */
 struct GuardrailsStorage

@@ -6,12 +6,14 @@
  * @brief SCPI / IEEE 488.2 instrument-control codec (pure, host-tested).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SCPI
+
 #include "services/instrumentation/scpi/scpi.h"
 #include "mmgr/protoframe/protoframe.h" // the one frame engine
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_SCPI
 
 // A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
 static const protocore_field SCPI_REAL[] = {{PROTOCORE_FK_G, 10, 0, NULL}, PROTOCORE_END};

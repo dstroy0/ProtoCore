@@ -6,10 +6,12 @@
  * @brief FANUC FOCAS Ethernet builder + parser (pure, host-tested). All fields big-endian.
  */
 
-#include "services/machine_tool/focas/focas.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_FOCAS
+
+#include "services/machine_tool/focas/focas.h"
+#include "mmgr/protomem/protomem.h"
 
 // FOCAS is big-endian throughout.
 static size_t put16be(uint8_t *p, uint16_t v)

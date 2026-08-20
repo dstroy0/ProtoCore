@@ -10,9 +10,11 @@
  * octetsToNextHeader, handing each to the caller's sink.
  */
 
-#include "services/iot/dds/dds.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_DDS
+
+#include "services/iot/dds/dds.h"
 
 #include "mmgr/protomem/protomem.h" // mem.cpy: the guidPrefix and the Submessage contents
 

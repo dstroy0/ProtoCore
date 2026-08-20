@@ -17,10 +17,11 @@
  * touches the stack or BSS.
  */
 
-#include "mmgr/secure/secure.h" // protocore_secure_wipe: a schedule that is done is zeroed
-#include "protocore_config.h"   // the entry point: the enable gate below, and the widths
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_AES128GCM
+
+#include "mmgr/secure/secure.h" // protocore_secure_wipe: a schedule that is done is zeroed
 
 #if PROTOCORE_HAS_HW_AESGCM
 #endif
@@ -33,7 +34,6 @@
 #include "crypto/mac/ghash/ghash.h" // the 4-bit-table GF(2^128) hash
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load
-
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS
 

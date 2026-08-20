@@ -6,9 +6,11 @@
  * @brief Dynamic sleep-cycle scheduler decision core (see sleep_sched.h).
  */
 
-#include "server/core/sleep_sched/sleep_sched.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_SLEEP_SCHED
+
+#include "server/core/sleep_sched/sleep_sched.h"
 
 void protocore_sleep_sched_next(uint8_t *restrict work)
 {

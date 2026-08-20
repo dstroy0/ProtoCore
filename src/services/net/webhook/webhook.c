@@ -11,19 +11,19 @@
  * that comes back (RFC 9110 sec 15.1). No IETF standard defines the webhook pattern itself.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_WEBHOOK
+
 #include "services/net/webhook/webhook.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb: the bounded frame builder the URI is built with
 #include "mmgr/protomem/protomem.h" // mem.cpy
 #include "mmgr/protostr/protostr.h" // str.len: bounded length, no stdlib
 
-#if PROTOCORE_ENABLE_WEBHOOK
-
-#include "shared/mime/mime.h" // PROTOCORE_MIME_JSON: the Content-Type a POST sends (RFC 9110 sec 8.3)
-
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 #include "services/net/http_client/http_client.h"
 #endif
-
+#include "shared/mime/mime.h" // PROTOCORE_MIME_JSON: the Content-Type a POST sends (RFC 9110 sec 8.3)
 // The two fixed path segments of the Maker target URI, with the event and the key between them
 // (RFC 3986 sec 3.3).
 #define PROTOCORE_IFTTT_MAKER_ROOT "https://maker.ifttt.com/trigger/"

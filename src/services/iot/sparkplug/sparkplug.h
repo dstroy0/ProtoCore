@@ -45,7 +45,7 @@
 #ifndef PROTOCORE_SPARKPLUG_H
 #define PROTOCORE_SPARKPLUG_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SPARKPLUG
 

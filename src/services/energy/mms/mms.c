@@ -6,11 +6,13 @@
  * @brief IEC 61850 MMS PDU codec (see mms.h).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_MMS
+
 #include "services/energy/mms/mms.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_MMS
 
 // BER definite-length octet count for a length value < 64 KiB.
 static size_t len_octets(size_t len)

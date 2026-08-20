@@ -28,12 +28,12 @@
 #ifndef PROTOCORE_IPSEC_DB_H
 #define PROTOCORE_IPSEC_DB_H
 
-#include "services/security/ikev2/ikev2/ikev2.h" // the complete type a public struct below holds by value
-#include "services/system/esp/esp/esp.h"         // the complete type a public struct below holds by value
-
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_IKEV2
+
+#include "services/security/ikev2/ikev2/ikev2.h" // the complete type a public struct below holds by value
+#include "services/system/esp/esp/esp.h"         // the complete type a public struct below holds by value
 
 PROTOCORE_BEGIN_DECLS
 

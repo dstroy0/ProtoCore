@@ -10,14 +10,14 @@
  * See config_store.h.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_CONFIG_STORE
+
 #include "config_store.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
-
-#include "protocore_config.h" // the entry point: the enable gate below, and the widths
-
-#if PROTOCORE_ENABLE_CONFIG_STORE
 
 #include "test/core_setup/hal/nvs.h"
 

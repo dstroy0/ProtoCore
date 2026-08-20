@@ -10,9 +10,11 @@
  * is host-testable.
  */
 
-#include "services/iot/mqtt/mqtt_sn/mqtt_sn.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_MQTT_SN
+
+#include "services/iot/mqtt/mqtt_sn/mqtt_sn.h"
 
 #include "mmgr/protomem/protomem.h" // mem.cpy: the ClientId, TopicName and Data spans
 #include "mmgr/protostr/protostr.h" // str.len: their bounded lengths

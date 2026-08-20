@@ -38,7 +38,7 @@
 #ifndef PROTOCORE_SNMP_V3_H
 #define PROTOCORE_SNMP_V3_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SNMP_V3
 

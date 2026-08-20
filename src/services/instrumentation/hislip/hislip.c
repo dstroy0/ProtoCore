@@ -6,11 +6,13 @@
  * @brief HiSLIP (IVI-6.1) message codec (pure, host-tested).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_HISLIP
+
 #include "services/instrumentation/hislip/hislip.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_HISLIP
 
 #include "mmgr/endian/endian.h"
 

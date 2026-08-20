@@ -6,10 +6,12 @@
  * @brief Heidenhain LSV/2 telegram codec (pure, host-tested).
  */
 
-#include "services/machine_tool/lsv2/lsv2.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_LSV2
+
+#include "services/machine_tool/lsv2/lsv2.h"
+#include "mmgr/protomem/protomem.h"
 
 // memcpy / memcmp / memset (framing + parsing are hand-rolled)
 

@@ -10,10 +10,12 @@
  * handshake driver lays whole messages down, and a shared cursor would collide.
  */
 
-#include "services/security/ikev2/ikev2/ikev2.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_IKEV2
+
+#include "services/security/ikev2/ikev2/ikev2.h"
+#include "mmgr/protomem/protomem.h"
 
 #include "crypto/aead/aesgcm/aesgcm.h"               // the Encrypted payload's AEAD (RFC 5282)
 #include "crypto/asymmetric/curve25519/curve25519.h" // Diffie-Hellman Group Num 31 (RFC 8031)

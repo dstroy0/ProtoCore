@@ -11,9 +11,11 @@
  * occupies. See nats.h for the grammar and the reference it comes from.
  */
 
-#include "services/iot/nats/nats.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_NATS
+
+#include "services/iot/nats/nats.h"
 
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans an operation is laid from and matched against
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a caller's NUL-terminated field

@@ -32,7 +32,7 @@
 #ifndef PROTOCORE_HAAS_MDC_H
 #define PROTOCORE_HAAS_MDC_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_HAAS_MDC
 

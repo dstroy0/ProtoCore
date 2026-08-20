@@ -13,11 +13,13 @@
  * message_finish patches the header. Every field is network byte order.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_FLOW_EXPORT
+
 #include "services/net/flow_export/flow_export.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
-
-#if PROTOCORE_ENABLE_FLOW_EXPORT
 
 #include "mmgr/endian/endian.h"
 

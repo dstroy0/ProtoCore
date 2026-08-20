@@ -21,11 +21,11 @@
 #ifndef PROTOCORE_WISUN_H
 #define PROTOCORE_WISUN_H
 
-#include "shared/ip/ip.h" // the complete type a public struct below holds by value
-
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_WISUN
+
+#include "shared/ip/ip.h" // the complete type a public struct below holds by value
 
 PROTOCORE_BEGIN_DECLS
 

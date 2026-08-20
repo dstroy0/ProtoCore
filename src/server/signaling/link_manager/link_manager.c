@@ -6,9 +6,11 @@
  * @brief Multi-interface egress selection + graceful escalation/failover (see link_manager.h).
  */
 
-#include "server/signaling/link_manager/link_manager.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_LINK_MANAGER
+
+#include "server/signaling/link_manager/link_manager.h"
 
 // The highest-priority interface that is up, or -1. Higher priority wins; the lower index breaks a
 // tie, because best is the first entry seen at that priority.

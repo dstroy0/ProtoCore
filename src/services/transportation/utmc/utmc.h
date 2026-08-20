@@ -20,7 +20,7 @@
 #ifndef PROTOCORE_UTMC_H
 #define PROTOCORE_UTMC_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_UTMC
 

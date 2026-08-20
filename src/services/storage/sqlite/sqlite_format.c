@@ -6,11 +6,13 @@
  * @brief SQLite3 on-disk file-format parsers (see protocore_sqlite_format.h).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SQLITE
+
 #include "services/storage/sqlite/sqlite_format.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_SQLITE
 
 static uint16_t be16(const uint8_t *p)
 {

@@ -10,9 +10,11 @@
  * frame-end before decoding (sec 4.2.3), then points ns->payload into the caller's octets.
  */
 
-#include "services/iot/amqp/amqp.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_AMQP
+
+#include "services/iot/amqp/amqp.h"
 
 #include "mmgr/endian/endian.h"     // endian.wr16be / rd32be: the network byte order of sec 4.2.5.1
 #include "mmgr/protomem/protomem.h" // mem.cpy: the payload spans a frame carries

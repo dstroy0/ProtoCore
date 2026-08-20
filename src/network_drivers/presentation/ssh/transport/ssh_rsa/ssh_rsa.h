@@ -30,10 +30,11 @@
 #ifndef PROTOCORE_SSH_RSA_H
 #define PROTOCORE_SSH_RSA_H
 
-#include "crypto/asymmetric/rsa/rsa.h" // the complete type a public struct below holds by value
-#include "protocore_config.h"          // the entry point: protocore_types.h for the widths
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SSH_RSA
+
+#include "crypto/asymmetric/rsa/rsa.h" // the complete type a public struct below holds by value
 
 PROTOCORE_BEGIN_DECLS
 

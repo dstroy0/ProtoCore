@@ -31,12 +31,13 @@
 #ifndef PROTOCORE_QUIC_TLS_H
 #define PROTOCORE_QUIC_TLS_H
 
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
+
+#if PROTOCORE_ENABLE_HTTP3
+
 #include "network_drivers/presentation/http/http3/quic_crypto/quic_crypto.h" // the complete type a public struct below holds by value
 #include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h" // the complete type a public struct below holds by value
 #include "network_drivers/tls/key_schedule/key_schedule.h" // the complete type a public struct below holds by value
-#include "protocore_config.h"                              // the entry point: protocore_types.h for the widths
-
-#if PROTOCORE_ENABLE_HTTP3
 
 PROTOCORE_BEGIN_DECLS
 

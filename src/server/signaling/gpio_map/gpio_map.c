@@ -11,12 +11,14 @@
  * and is a no-op where there is none. No server dependency lives here.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_GPIO_MAP
+
 #include "server/signaling/gpio_map/gpio_map.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
 #include "server/clock/clock.h" // protocore_millis()
-
-#if PROTOCORE_ENABLE_GPIO_MAP
 
 #include "mmgr/protoframe/protoframe.h"
 

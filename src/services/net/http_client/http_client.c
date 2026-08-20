@@ -11,15 +11,12 @@
  * ::TcpClient, with the TLS record layer under it when the target URI is https (RFC 9112 sec 9.7).
  */
 
-#include "services/net/http_client/http_client.h"
-#include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
 
-#include "mmgr/membuild/membuild.h" // protocore_sb: the message builder
-#include "mmgr/protomem/protomem.h" // mem.cpy / mem.move / mem.cmp / mem.chr
-#include "mmgr/protostr/protostr.h" // str.len / diff / starts / digit / to_long
-#include "shared/mime/mime.h"       // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
+#include "services/net/http_client/http_client.h"
+#include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
 
 #if PROTOCORE_HAS_NET_STACK
 #include "network_drivers/transport/tcp/client/client.h" // ::TcpClient, the shared outbound transport
@@ -28,12 +25,15 @@
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS
 #include "network_drivers/tls/tls.h" // the client TLS session (RFC 9112 sec 9.7)
 #endif
+#include "mmgr/membuild/membuild.h" // protocore_sb: the message builder
+#include "mmgr/protomem/protomem.h" // mem.cpy / mem.move / mem.cmp / mem.chr
+#include "mmgr/protostr/protostr.h" // str.len / diff / starts / digit / to_long
+#include "shared/mime/mime.h"       // PROTOCORE_MIME_OCTET_STREAM: the Content-Type default (RFC 9110 sec 8.3)
 #if PROTOCORE_ENABLE_HTTP_CLIENT_TLS && PROTOCORE_HAS_VENDOR_TLS
 #endif
 #ifdef PROTOCORE_HTTP_CLIENT_DEBUG
 #include <stdio.h>
 #endif
-
 // ---------------------------------------------------------------------------
 // Literals
 // ---------------------------------------------------------------------------

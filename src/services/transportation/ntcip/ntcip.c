@@ -6,9 +6,11 @@
  * @brief NTCIP object identifiers (see ntcip.h).
  */
 
-#include "services/transportation/ntcip/ntcip.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_NTCIP
+
+#include "services/transportation/ntcip/ntcip.h"
 
 // Everything hangs under 1.3.6.1.4.1.1206.4.2 = iso.org.dod.internet.private.enterprises.nema(1206)
 // .transportation(4).devices(2). Under devices: .1 = protocols, .3 = global, and each device class has

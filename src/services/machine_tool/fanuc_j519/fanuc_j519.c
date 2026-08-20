@@ -11,10 +11,12 @@
  * memcpy (no type punning, no strict-aliasing UB) - the same approach as the OPC UA Variant codec.
  */
 
-#include "services/machine_tool/fanuc_j519/fanuc_j519.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_FANUC_J519
+
+#include "services/machine_tool/fanuc_j519/fanuc_j519.h"
+#include "mmgr/protomem/protomem.h"
 
 #include "mmgr/endian/endian.h"
 // memcpy (string.h is allowed; the no-stdlib rule is about stdlib.h/malloc)

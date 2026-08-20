@@ -13,9 +13,11 @@
  * decoded section. Every call works on the caller's octets and touches no socket.
  */
 
-#include "services/iot/grpcweb/grpcweb.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_GRPC_WEB
+
+#include "services/iot/grpcweb/grpcweb.h"
 
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched on
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a field-line's text

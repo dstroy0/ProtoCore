@@ -6,10 +6,12 @@
  * @brief IEEE 1609 WAVE codec (see wave.h).
  */
 
-#include "services/transportation/wave/wave.h"
-#include "mmgr/protomem/protomem.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_WAVE
+
+#include "services/transportation/wave/wave.h"
+#include "mmgr/protomem/protomem.h"
 
 size_t protocore_wave_encode_psid(uint32_t psid, uint8_t *out, size_t cap)
 {

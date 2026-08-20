@@ -27,7 +27,7 @@
 #ifndef PROTOCORE_NTRIP_CASTER_H
 #define PROTOCORE_NTRIP_CASTER_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_NTRIP_CASTER
 

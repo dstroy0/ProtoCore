@@ -6,12 +6,14 @@
  * @brief The USM transforms - implementation. See snmp_crypto.h.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SNMP_V3
+
 #include "services/net/snmp/snmp_crypto/snmp_crypto.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
 #include "mmgr/secure/secure.h"
-
-#if PROTOCORE_ENABLE_SNMP_V3
 
 #include "crypto/cipher/aes_sbox.h"
 #include "crypto/hash/sha256/sha256.h"

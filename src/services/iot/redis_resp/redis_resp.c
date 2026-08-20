@@ -10,9 +10,11 @@
  * in ns->reply, and reports the octets it occupied in ns->n.
  */
 
-#include "services/iot/redis_resp/redis_resp.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_REDIS
+
+#include "services/iot/redis_resp/redis_resp.h"
 
 #include "mmgr/protomem/protomem.h" // mem.cpy: the argument octets an encode moves
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a NUL-terminated argument

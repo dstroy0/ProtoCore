@@ -6,14 +6,15 @@
  * @brief OTA rollback decision (pure) + the platform seam's commit/rollback.
  */
 
-#include "server/update/ota_rollback/ota_rollback.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_OTA_ROLLBACK
+
+#include "server/update/ota_rollback/ota_rollback.h"
 
 #if PROTOCORE_HAS_VENDOR_OTA
 #include "server/clock/clock.h" // protocore_millis()
 #endif
-
 void protocore_ota_rollback_decide(uint8_t *restrict work)
 {
     (void)work;

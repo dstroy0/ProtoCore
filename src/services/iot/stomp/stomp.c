@@ -13,9 +13,11 @@
  * between calls, so there is no storage member.
  */
 
-#include "services/iot/stomp/stomp.h"
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_STOMP
+
+#include "services/iot/stomp/stomp.h"
 
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.cmp: the spans a frame is assembled from and matched over
 #include "mmgr/protostr/protostr.h" // str.len: the bounded length of a header-name needle

@@ -6,11 +6,13 @@
  * @brief The power governor's decision + its device binding (see power_mgmt.h).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_POWER_MGMT
+
 #include "server/core/power_mgmt/power_mgmt.h"
 #include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-
-#if PROTOCORE_ENABLE_POWER_MGMT
 
 // ---------------------------------------------------------------------------
 // Pure decision

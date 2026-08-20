@@ -6,11 +6,13 @@
  * @brief Zero-heap MessagePack encoder and decoder implementation.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_MSGPACK
+
 #include "msgpack.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_MSGPACK
 
 #include "mmgr/bytes/bytes.h"
 

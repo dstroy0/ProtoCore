@@ -6,11 +6,13 @@
  * @brief SunSpec Modbus model-chain walker + point readers + map writer (pure, host-tested).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_SUNSPEC
+
 #include "services/energy/sunspec/sunspec.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_SUNSPEC
 
 static uint16_t be16(const uint8_t *p)
 {

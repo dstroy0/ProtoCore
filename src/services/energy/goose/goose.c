@@ -6,11 +6,13 @@
  * @brief IEC 61850 GOOSE publisher codec (see goose.h).
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_GOOSE
+
 #include "services/energy/goose/goose.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-
-#if PROTOCORE_ENABLE_GOOSE
 
 // Number of octets to encode a BER definite length.
 static size_t len_octets(size_t len)

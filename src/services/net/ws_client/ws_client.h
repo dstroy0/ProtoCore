@@ -30,7 +30,7 @@
 #ifndef PROTOCORE_WS_CLIENT_H
 #define PROTOCORE_WS_CLIENT_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_WS_CLIENT
 

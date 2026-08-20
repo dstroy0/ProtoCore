@@ -37,7 +37,7 @@
 #ifndef PROTOCORE_SENML_H
 #define PROTOCORE_SENML_H
 
-#include "protocore_config.h"
+#include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
 #if PROTOCORE_ENABLE_SENML
 

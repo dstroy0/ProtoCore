@@ -6,10 +6,12 @@
  * @brief Hardware-health diagnostics (see hw_health.h).
  */
 
-#include "server/signaling/hw_health/hw_health.h"
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
 #if PROTOCORE_ENABLE_HW_HEALTH
+
+#include "server/signaling/hw_health/hw_health.h"
+#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 
 void protocore_hw_health_rail_init(uint8_t *restrict work)
 {
