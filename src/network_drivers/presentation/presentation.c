@@ -16,7 +16,7 @@
 #include "mmgr/plaintext/plaintext.h"                        // the persistent end this module's state is taken from
 #include "mmgr/protostr/protostr.h"                          // str: the bounded-run walks
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a handler is dispatched on
-#include "server/core/proto_handler.h"                       // ProtoHandler (the L5 dispatch seam this registers into)
+#include "server/core/proto_handler/proto_handler.h"                       // ProtoHandler (the L5 dispatch seam this registers into)
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h" // Ws.find/Ws.free: a WS-upgraded slot must never be HTTP-parsed
 #include "network_drivers/session/ws/ws.h" // SessionWs.close: the channel teardown that informs the application

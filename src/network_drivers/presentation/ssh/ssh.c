@@ -11,7 +11,7 @@
 #if PROTOCORE_ENABLE_SSH
 
 #include "mmgr/secure/secure.h" // the persistent end this module's key material is taken from
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 
 PROTOCORE_BEGIN_DECLS

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SHA3
 
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/sha3/sha3.h"
 
 PROTOCORE_CRYPTO_HOT

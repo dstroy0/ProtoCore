@@ -1,7 +1,7 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include <pthread.h>
 #include <sched.h>

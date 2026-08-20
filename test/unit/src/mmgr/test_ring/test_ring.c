@@ -12,7 +12,7 @@
 // exactly i - cap*floor(i/cap). The test states that identity against C's own % over three full
 // laps, so the day a capacity stops being a power of two the index math fails here.
 
-#include "mmgr/ring.h"
+#include "mmgr/ring/ring.h"
 #include <string.h>
 
 #include <unity.h>

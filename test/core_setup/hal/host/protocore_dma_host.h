@@ -22,7 +22,7 @@
 #define PROTOCORE_PROTOCORE_DMA_HOST_H
 
 #include "mmgr/dma/dma.h"
-#include "mmgr/ring.h"
+#include "mmgr/ring/ring.h"
 #include <stdint.h>
 #include <string.h>
 

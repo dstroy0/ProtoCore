@@ -41,15 +41,15 @@
 #include "mmgr/protostr/protostr.h"     // str: the bounded-run walks
 #include "mmgr/rawmemcpy/rawmemcpy.h"   // raw.read: every move here is into our own buffer
 #include "network_drivers/presentation/http/http.h"
-#include "network_drivers/presentation/http/route/http_route.h"
+#include "network_drivers/presentation/http/route/http_route/http_route.h"
 #include "network_drivers/presentation/presentation.h" // http_protocore_set_poll (install the instance-bound HTTP poll)
 #include "network_drivers/session/session.h"           // Protocols: the registry, owned by the session layer
 #include "network_drivers/tls/tls.h"
-#include "network_drivers/transport/tcp/common.h"            // TcpConn, conn_pool: the slots this drives
+#include "network_drivers/transport/tcp/common/common.h"            // TcpConn, conn_pool: the slots this drives
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool.init: the pool this brings up
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis(): the QUIC poll stamp and the request timeout
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 #include "server/core/worker/worker.h"
 #include "shared/hex/hex.h"
 #include "shared/mime/mime.h"
@@ -72,7 +72,7 @@ static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 #endif
 #if PROTOCORE_ENABLE_WEBDAV
 #include "network_drivers/application/webdav/webdav.h"
-#include "server/io/webdav_handler.h" // try_serve_dav()
+#include "server/io/webdav_handler/webdav_handler.h" // try_serve_dav()
 #endif
 #if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
 #include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_METRICS_PROM / PROTOCORE_STATS_JSON (generated)

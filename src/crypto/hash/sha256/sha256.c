@@ -17,7 +17,7 @@
 
 #if PROTOCORE_ENABLE_SHA256
 
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/sha256/sha256.h"
 #include "mmgr/endian/endian.h" // the big-endian reads and writes both arms' padding and digest use
 #include "mmgr/protomem/protomem.h"

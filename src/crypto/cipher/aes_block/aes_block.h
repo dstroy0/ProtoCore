@@ -26,7 +26,7 @@
 
 #if PROTOCORE_ENABLE_AES_BLOCK
 
-#include "crypto/cipher/aes_sbox.h" // PROTOCORE_AES_SBOX
+#include "crypto/cipher/aes_sbox/aes_sbox.h" // PROTOCORE_AES_SBOX
 #include "mmgr/protomem/protomem.h"
 
 PROTOCORE_BEGIN_DECLS

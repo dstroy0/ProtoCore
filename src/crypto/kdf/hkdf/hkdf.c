@@ -18,7 +18,7 @@
 
 #if PROTOCORE_ENABLE_HKDF
 
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/kdf/hkdf/hkdf.h"
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "mmgr/protomem/protomem.h"

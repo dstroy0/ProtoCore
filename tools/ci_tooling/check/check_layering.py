@@ -104,7 +104,7 @@ def resolve(inc, from_rel, known):
     """The src-relative path an include names, or None when it leaves the tree.
 
     C resolves a quoted include against the including file's own directory first, so a sibling
-    reached as "../tcp/evt.h" is the same file as "network_drivers/transport/tcp/evt.h".
+    reached as "../tcp/evt.h" is the same file as "network_drivers/transport/tcp/evt/evt.h".
     Matching the literal text alone makes every relative include invisible.
     """
     local = os.path.normpath(os.path.join(os.path.dirname(from_rel), inc)).replace(os.sep, "/")

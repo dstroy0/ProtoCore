@@ -6,7 +6,7 @@
 // sec 7.3 NEWKEYS, sec 10 service request, RFC 4252 authentication, and sec 9 re-exchange - which
 // runs the same sequence again without disturbing what sits above it.
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/phase_machine/phase_machine.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include <stdint.h>

@@ -31,11 +31,11 @@
 #include "crypto/asymmetric/curve25519/curve25519.h" // protocore_gf + field ops (native / non-S3 path)
 #include "crypto/asymmetric/ed25519/ed25519.h"
 #include "crypto/asymmetric/fe25519/fe25519.h" // MODMULT dies: canonical uint32[8] field on the RSA accelerator
-#include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h" // protocore_ct_eq
+#include "crypto/crypto_opt/crypto_opt.h"
+#include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 #include "crypto/hash/sha512/sha512.h"
 #if PROTOCORE_FE25519_MPI_HW
-#include "crypto/asymmetric/ed25519_comb_table.h" // fixed-base comb ED_COMB[i][j] = (j+1)*256^i*B; drives the MODMULT sign
+#include "crypto/asymmetric/ed25519_comb_table/ed25519_comb_table.h" // fixed-base comb ED_COMB[i][j] = (j+1)*256^i*B; drives the MODMULT sign
 #endif
 
 PROTOCORE_CRYPTO_HOT

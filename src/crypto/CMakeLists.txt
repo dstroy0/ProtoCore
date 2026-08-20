@@ -7,21 +7,11 @@
 add_subdirectory(aead)
 add_subdirectory(asymmetric)
 add_subdirectory(cipher)
+add_subdirectory(crypto_opt)
+add_subdirectory(ct_eq)
 add_subdirectory(hash)
 add_subdirectory(kdf)
 add_subdirectory(mac)
 add_subdirectory(pqc)
 add_subdirectory(rng)
 add_subdirectory(x509)
-
-protocore_header_module(pc_crypto_crypto_opt)
-
-if(PROTOCORE_ENABLE_CT_EQ)
-  protocore_module(pc_crypto_ct_eq
-    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ct_eq.c"
-    PUBLIC
-      pc_mmgr_protomem
-    PRIVATE
-      pc_crypto_crypto_opt
-  )
-endif()

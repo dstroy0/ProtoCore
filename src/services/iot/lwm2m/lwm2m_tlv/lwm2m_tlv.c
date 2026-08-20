@@ -15,7 +15,7 @@
 #if PROTOCORE_ENABLE_LWM2M
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
-#include "services/iot/lwm2m/lwm2m_tlv.h"
+#include "services/iot/lwm2m/lwm2m_tlv/lwm2m_tlv.h"
 
 #include "mmgr/protomem/protomem.h" // mem.cpy: the Value octets a write copies, and the Float bit pattern
 #include "mmgr/protostr/protostr.h" // str.len: the bounded String measure

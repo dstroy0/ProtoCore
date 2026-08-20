@@ -68,7 +68,7 @@
 // Measured (crypto bench): the S3 P-256 MODMULT path's ~14% -O3 win is carried by -fpeel-loops (bisected
 // on-device); pin just that transform on the -O2 floor. Every other die takes the crypto_opt per-die
 // default (P4 -O3, else -O2). crypto_opt.h states the die test it needs.
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #if defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
 PROTOCORE_CRYPTO_HOT_PEEL
 #else

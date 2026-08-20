@@ -20,7 +20,7 @@
 #ifndef PROTOCORE_PRESENTATION_H
 #define PROTOCORE_PRESENTATION_H
 
-#include "../transport/tcp/evt.h" // EvtType: the event a handler is dispatched on
+#include "network_drivers/transport/tcp/evt/evt.h" // EvtType: the event a handler is dispatched on
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
 #include "network_drivers/session/session.h" // the per-connection tables this reads
 

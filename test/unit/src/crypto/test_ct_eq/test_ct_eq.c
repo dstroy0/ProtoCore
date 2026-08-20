@@ -13,7 +13,7 @@
 // answer correctly, but an implementation that accumulated only part of the buffer - a wrong length,
 // an off-by-one, a loop that stopped at the first zero - passes a first-byte test and fails here.
 
-#include "crypto/ct_eq.h"
+#include "crypto/ct_eq/ct_eq.h"
 #include <string.h>
 
 #include <unity.h>

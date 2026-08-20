@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from

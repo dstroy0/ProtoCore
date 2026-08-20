@@ -15,7 +15,7 @@
 #include "crypto/asymmetric/ed25519/ed25519.h"       // protocore_ed25519 host-key sign
 #include "crypto/asymmetric/rsa/rsa.h"               // PROTOCORE_RSA_KEY_BYTES / _SIG_BYTES - the host-key sizes
 #include "crypto/cipher/aes256ctr/aes256ctr.h"       // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the cipher key and IV
-#include "crypto/ct_eq.h"                            // protocore_ct_eq
+#include "crypto/ct_eq/ct_eq.h"                            // protocore_ct_eq
 #include "crypto/hash/sha256/sha256.h"
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512/hmac_sha512.h"
@@ -27,7 +27,7 @@
 #include "mmgr/protostr/protostr.h" // str.len / str.eq - the bounded string verbs
 #include "mmgr/secure/secure.h"
 #include "network_drivers/presentation/ssh/auth/auth.h" // ssh_auth_dispatch()
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/network/network.h"               // SshNetwork.emit()
 #include "network_drivers/presentation/ssh/ssh.h"                           // ssh_conn_slot() + the memory map
 #include "network_drivers/presentation/ssh/transport/extension/extension.h" // ssh_extinfo_build()

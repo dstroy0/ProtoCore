@@ -35,7 +35,7 @@
 
 #if PROTOCORE_ENABLE_FE25519
 
-#include "crypto/ct_eq.h" // protocore_ct_eq
+#include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 
 PROTOCORE_BEGIN_DECLS
 

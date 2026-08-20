@@ -4,7 +4,7 @@
 // transport/extension.c (RFC 8308): the SSH_MSG_EXT_INFO message and the
 // "server-sig-algs" name-list, in both host-key preference orders.
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/extension/extension.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include <stdint.h>

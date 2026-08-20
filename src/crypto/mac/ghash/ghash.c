@@ -21,7 +21,7 @@
 
 #if PROTOCORE_ENABLE_GHASH
 
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/mac/ghash/ghash.h"
 #include "mmgr/endian/endian.h" // protocore_rd32be / protocore_wr32be
 

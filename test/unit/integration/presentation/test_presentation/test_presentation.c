@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "network_drivers/presentation/presentation.h"
-#include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 #if PROTOCORE_ENABLE_WEBSOCKET
 #include "network_drivers/presentation/http/websocket/websocket.h"
 #endif

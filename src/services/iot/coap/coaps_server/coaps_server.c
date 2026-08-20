@@ -13,7 +13,7 @@
 
 #include "mmgr/protomem/protomem.h" // mem.cpy / mem.set / mem.cmp: the spans a slot and the ring move
 #include "mmgr/protostr/protostr.h" // str.copy / str.eq: the peer address text
-#include "mmgr/ring.h"              // the atomics the single-producer ingest ring's cursors are
+#include "mmgr/ring/ring.h"              // the atomics the single-producer ingest ring's cursors are
 #include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"
 #include "server/clock/clock.h"            // Clock.millis: the reclaim clock
 #include "services/iot/coap/coaps/coaps.h" // Coaps.process: the handshake and the CoAP exchange

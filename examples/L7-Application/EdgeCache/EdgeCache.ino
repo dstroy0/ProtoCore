@@ -33,7 +33,7 @@
 // first request for a persisted URL revalidates it with a cheap conditional GET instead of re-downloading.
 #if PROTOCORE_ENABLE_DBM
 #include "services/storage/dbm/dbm.h"
-#include "services/storage/wal/wal_fs.h"
+#include "services/storage/wal/wal_fs/wal_fs.h"
 #include "services/storage/wal/wal_store/wal_store.h"
 #include <SD.h>
 #endif

@@ -9,26 +9,10 @@ add_subdirectory(core)
 add_subdirectory(io)
 add_subdirectory(net)
 add_subdirectory(peripherals)
+add_subdirectory(protocore_builtins)
+add_subdirectory(regex)
 add_subdirectory(security)
 add_subdirectory(signaling)
 add_subdirectory(storage)
 add_subdirectory(update)
 add_subdirectory(web)
-
-protocore_module(pc_server_regex
-  SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/regex.c"
-)
-
-if(PROTOCORE_ENABLE_TELNET)
-  protocore_module(pc_server_protocore_builtins
-    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/protocore_builtins.c"
-    PRIVATE
-      pc_network_drivers_presentation
-      pc_network_drivers_presentation_ssh_server
-      pc_network_drivers_presentation_telnet
-      pc_network_drivers_session
-      pc_server_core_proto_handler
-      pc_services_fieldbus_modbus_modbus
-      pc_services_opcua
-  )
-endif()

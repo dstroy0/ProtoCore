@@ -16,7 +16,7 @@ PROTOCORE_BEGIN_DECLS
 #include "crypto/pqc/mlkem/mlkem.h" // MlKem (X25519MLKEM768 hybrid)
 #endif
 #include "crypto/asymmetric/curve25519/curve25519.h"
-#include "crypto/ct_eq.h" // protocore_ct_eq: the Finished compare
+#include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq: the Finished compare
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_tls/quic_tls.h"
 #include "network_drivers/presentation/http/http3/tls13_msg/tls13_msg.h"

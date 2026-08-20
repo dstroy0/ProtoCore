@@ -16,7 +16,7 @@
 // one asserts on behavior a stub cannot produce.
 
 #include "network_drivers/tls/tls.h"
-#include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include <string.h>
 

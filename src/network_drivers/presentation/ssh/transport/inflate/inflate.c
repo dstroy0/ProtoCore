@@ -12,7 +12,7 @@
 
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/codec/deflate/rfc1951/rfc1951.h" // the sec 3.2.5 tables
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
 
 PROTOCORE_BEGIN_DECLS

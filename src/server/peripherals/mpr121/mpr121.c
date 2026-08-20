@@ -23,7 +23,7 @@
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/clock/clock.h" // pcdelay
-#include "server/peripherals/i2c.h"
+#include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/mpr121/mpr121.h"
 
 PROTOCORE_BEGIN_DECLS

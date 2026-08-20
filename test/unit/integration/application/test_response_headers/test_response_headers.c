@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "network_drivers/application/ntp_service/ntp_service.h"
-#include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/tcp/common/common.h"
 #include "protocore.h"
 #include <stdio.h>
 #include <string.h>

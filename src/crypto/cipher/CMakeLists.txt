@@ -6,6 +6,5 @@
 
 add_subdirectory(aes256ctr)
 add_subdirectory(aes_block)
+add_subdirectory(aes_sbox)
 add_subdirectory(chacha20)
-
-protocore_header_module(pc_crypto_cipher_aes_sbox)

@@ -13,7 +13,7 @@
 // Note the document's own sec 7.4.5.1 hex dump drops one octet of the Model Number string, so that
 // entry is taken from Table 7.4.5.1.-1's Length column (0x16, 22 octets) rather than from the dump.
 
-#include "services/iot/lwm2m/lwm2m_tlv.h"
+#include "services/iot/lwm2m/lwm2m_tlv/lwm2m_tlv.h"
 #include <string.h>
 
 #include <unity.h>

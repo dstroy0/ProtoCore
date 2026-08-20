@@ -20,7 +20,7 @@
 #include "network_drivers/transport/tcp/client/client.h"     // TcpClient: the dialed connection
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 #include "server/net/relay/relay/relay.h"
 PROTOCORE_BEGIN_DECLS
 

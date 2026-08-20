@@ -15,7 +15,7 @@
 #include "crypto/cipher/aes256ctr/aes256ctr.h"
 #include "crypto/hash/sha256/sha256.h" // PROTOCORE_SHA256_DIGEST_LEN - the exchange hash and session id
 #include "mmgr/secure/secure.h"        // protocore_secure_wipe (the canonical secure wipe)
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/phase_machine/phase_machine.h" // SshPhase: the session's phase
 
 #include "protocore_config.h"

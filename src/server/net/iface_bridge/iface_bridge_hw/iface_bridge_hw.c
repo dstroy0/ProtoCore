@@ -20,14 +20,14 @@
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h" // protocore_millis() pluggable monotonic clock
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 
 PROTOCORE_BEGIN_DECLS
 
 #if PROTOCORE_HAS_BUS
-#include "server/peripherals/i2c.h"  // the shared I2C bus owner
-#include "server/peripherals/spi.h"  // the shared SPI bus owner, and chip select
-#include "server/peripherals/uart.h" // the shared UART owner
+#include "server/peripherals/i2c/i2c.h"  // the shared I2C bus owner
+#include "server/peripherals/spi/spi.h"  // the shared SPI bus owner, and chip select
+#include "server/peripherals/uart/uart.h" // the shared UART owner
 #endif
 
 // One published listener -> hardware rule. Dispatch is by the listener id the transport stamps on each

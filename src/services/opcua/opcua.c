@@ -23,7 +23,7 @@
 
 // ProtoHandler is named by protocore_opcua_protocore_handler() in BOTH build arms, so it cannot sit behind
 // the PROTOCORE_HAS_NET_STACK guard below.
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 
 PROTOCORE_BEGIN_DECLS
 
@@ -31,7 +31,7 @@ PROTOCORE_BEGIN_DECLS
 // Built-in type codec
 // ---------------------------------------------------------------------------
 #if PROTOCORE_HAS_NET_STACK
-#include "network_drivers/transport/tcp/common.h"            // TcpConn: the slot's ring the reader walks
+#include "network_drivers/transport/tcp/common/common.h"            // TcpConn: the slot's ring the reader walks
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
 #include <time.h>

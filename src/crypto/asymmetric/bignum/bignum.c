@@ -17,7 +17,7 @@
 #if PROTOCORE_ENABLE_BIGNUM
 
 #include "crypto/asymmetric/bignum/bignum.h"
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "mmgr/protomem/protomem.h"
 
 PROTOCORE_CRYPTO_HOT

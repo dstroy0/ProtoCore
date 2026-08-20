@@ -28,7 +28,7 @@
 #ifndef PROTOCORE_TCP_LOWER_H
 #define PROTOCORE_TCP_LOWER_H
 
-#include "../common.h"
+#include "network_drivers/transport/tcp/common/common.h"
 
 #include "protocore_config.h"
 

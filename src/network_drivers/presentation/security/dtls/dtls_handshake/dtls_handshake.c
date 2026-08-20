@@ -13,7 +13,7 @@
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/security/dtls/dtls_handshake/dtls_handshake.h"
 
-#include "crypto/ct_eq.h" // protocore_ct_eq
+#include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 
 PROTOCORE_BEGIN_DECLS

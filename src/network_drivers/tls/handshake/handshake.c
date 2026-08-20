@@ -14,7 +14,7 @@
 
 #include "crypto/asymmetric/curve25519/curve25519.h" // protocore_x25519, protocore_x25519_base
 #include "crypto/asymmetric/ed25519/ed25519.h"       // Ed25519: the peer's CertificateVerify
-#include "crypto/ct_eq.h"                            // protocore_ct_eq: the Finished compare
+#include "crypto/ct_eq/ct_eq.h"                            // protocore_ct_eq: the Finished compare
 #include "crypto/x509/x509_types/x509_types.h"       // X509Cert, protocore_x509_sig_alg: both credentials
 #include "crypto/x509/x509_verify/x509_verify.h"     // X509Verify: CertificateVerify, and the path to an anchor
 #if PROTOCORE_ENABLE_X509

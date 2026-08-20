@@ -21,7 +21,7 @@
 
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/clock/clock.h" // protocore_delay_us: the oscillator settle in begin()
-#include "server/peripherals/i2c.h"
+#include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/pca9685/pca9685.h"
 
 PROTOCORE_BEGIN_DECLS

@@ -21,8 +21,8 @@
 
 #include "crypto/asymmetric/bignum/bignum.h" // protocore_bignum, the byte conversions and the limb compare
 #include "crypto/asymmetric/rsa/rsa.h"
-#include "crypto/crypto_opt.h"
-#include "crypto/ct_eq.h" // protocore_ct_eq
+#include "crypto/crypto_opt/crypto_opt.h"
+#include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq
 #include "crypto/hash/sha256/sha256.h"
 #include "crypto/hash/sha512/sha512.h"
 #include "mmgr/protomem/protomem.h"

@@ -5,71 +5,7 @@
 # Regenerate with:  python tools/harness.py build modules
 
 add_subdirectory(http_clock)
-
-protocore_module(pc_server_io_middleware
-  SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/middleware.c"
-  PRIVATE
-    pc_mmgr_protoframe
-    pc_server_clock
-    pc_shared_mime
-)
-
-if(PROTOCORE_ENABLE_STATS)
-  protocore_module(pc_server_io_response
-    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/response.c"
-    PRIVATE
-      pc_mmgr_membuild
-      pc_mmgr_protomem
-      pc_mmgr_protostr
-      pc_network_drivers_application_web_assets
-      pc_network_drivers_presentation_http
-      pc_network_drivers_session
-      pc_network_drivers_transport_tcp
-      pc_network_drivers_transport_tcp_common
-      pc_network_drivers_transport_tcp_protocol
-      pc_server_clock
-      pc_server_io_http_clock
-      pc_shared_hex
-      pc_shared_mime
-  )
-endif()
-
-if(PROTOCORE_ENABLE_WEBDAV)
-  protocore_module(pc_server_io_webdav_handler
-    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/webdav_handler.c"
-    PRIVATE
-      pc_crypto_rng
-      pc_mmgr_membuild
-      pc_mmgr_protomem
-      pc_mmgr_protostr
-      pc_mmgr_secure
-      pc_network_drivers_application_webdav
-      pc_network_drivers_presentation_http
-      pc_network_drivers_presentation_http_http_parser
-      pc_network_drivers_presentation_http_route_http_route
-      pc_network_drivers_transport_tcp
-      pc_server_clock
-      pc_shared_mime
-  )
-endif()
-
-if(PROTOCORE_ENABLE_WEBSOCKET)
-  protocore_module(pc_server_io_websocket_sse
-    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/websocket_sse.c"
-    PRIVATE
-      pc_crypto_hash_sha1
-      pc_mmgr_membuild
-      pc_mmgr_protomem
-      pc_mmgr_protostr
-      pc_mmgr_secure
-      pc_mmgr_span
-      pc_network_drivers_presentation_codec_base64
-      pc_network_drivers_presentation_http_http_parser
-      pc_network_drivers_presentation_http_sse
-      pc_network_drivers_presentation_http_websocket
-      pc_network_drivers_session_sse
-      pc_network_drivers_session_ws
-      pc_network_drivers_transport_tcp
-      pc_network_drivers_transport_tcp_protocol
-  )
-endif()
+add_subdirectory(middleware)
+add_subdirectory(response)
+add_subdirectory(webdav_handler)
+add_subdirectory(websocket_sse)
