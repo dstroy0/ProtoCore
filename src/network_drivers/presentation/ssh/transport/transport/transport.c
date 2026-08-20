@@ -717,8 +717,8 @@ void ssh_kexinit_build(uint8_t *restrict work)
     bytes.put(&w, SSH_MSG_KEXINIT);
 
     uint8_t cookie[16];
-    Rng.fill_args.out = cookie;
-    Rng.fill_args.len = sizeof(cookie);
+    RngV.fill_args.out = cookie;
+    RngV.fill_args.len = sizeof(cookie);
     Rng.fill(protocore_rng_span());
     bytes.raw(&w, cookie, sizeof(cookie));
 
@@ -1633,8 +1633,8 @@ void ssh_kex_generate(uint8_t *restrict work)
 #ifdef PROTOCORE_SSH_KEX_BENCH
         uint32_t kexgen_t0 = protocore_platform_micros();
 #endif
-        Rng.fill_args.out = ssh_sess[i].ecdh_sk;
-        Rng.fill_args.len = 32;
+        RngV.fill_args.out = ssh_sess[i].ecdh_sk;
+        RngV.fill_args.len = 32;
         Rng.fill(protocore_rng_span());
         Curve25519.x25519_base_args.scalar = ssh_sess[i].ecdh_sk;
         Curve25519.x25519_base_args.out = ssh_sess[i].ecdh_pk;
@@ -1653,8 +1653,8 @@ void ssh_kex_generate(uint8_t *restrict work)
         uint8_t qtmp[PROTOCORE_ECDSA_P256_PUB_LEN];
         for (int t = 0; t < 8; t++)
         { // hands back an invalid P-256 scalar, which no host build can provoke
-            Rng.fill_args.out = ssh_sess[i].ecdh_sk;
-            Rng.fill_args.len = 32;
+            RngV.fill_args.out = ssh_sess[i].ecdh_sk;
+            RngV.fill_args.len = 32;
             Rng.fill(protocore_rng_span());
             Ecdsa.pubkey_args.priv = ssh_sess[i].ecdh_sk;
             Ecdsa.pubkey_args.pub = qtmp;
@@ -1693,8 +1693,8 @@ static int hybrid_mlkem_x25519(uint8_t i, const uint8_t *payload, size_t len, ui
     const uint8_t *qc = payload + 5 + MLKEM768_EK_BYTES; // C_PK1: client X25519 public
 
     uint8_t m[32];
-    Rng.fill_args.out = m;
-    Rng.fill_args.len = sizeof(m);
+    RngV.fill_args.out = m;
+    RngV.fill_args.len = sizeof(m);
     Rng.fill(protocore_rng_span());
     uint8_t k_pq[32];
     MlKem.encaps_args.ek = ek;
@@ -1771,9 +1771,9 @@ static int hybrid_sntrup761_x25519(uint8_t *work, uint8_t i, const uint8_t *payl
     const uint8_t *qc = payload + 5 + PROTOCORE_SNTRUP761_PK_BYTES; // C_PK1: client X25519 public
 
     uint8_t k_pq[PROTOCORE_SNTRUP761_SS_BYTES];
-    Sntrup761.enc_args.pk = pk;
-    Sntrup761.enc_args.ct = s_reply; // ciphertext -> s_reply[0..1038]
-    Sntrup761.enc_args.ss = k_pq;
+    Sntrup761V.enc_args.pk = pk;
+    Sntrup761V.enc_args.ct = s_reply; // ciphertext -> s_reply[0..1038]
+    Sntrup761V.enc_args.ss = k_pq;
     Sntrup761.enc(work);
 
     uint8_t k_cl[32];
@@ -2637,8 +2637,8 @@ int ssh_pkt_send_at(uint8_t i, uint8_t *out, size_t payload_len, size_t *out_len
     // Frame around the payload already sitting at out + SSH_WIRE_PAYLOAD_OFF.
     write_u32_be(out, (uint32_t)pkt_len); // packet_length
     out[4] = (uint8_t)pad_len;            // padding_length
-    Rng.fill_args.out = out + 5 + payload_len;
-    Rng.fill_args.len = pad_len;
+    RngV.fill_args.out = out + 5 + payload_len;
+    RngV.fill_args.len = pad_len;
     Rng.fill(protocore_rng_span()); // random padding
 
     if (chacha)
@@ -3336,8 +3336,8 @@ int ssh_dh_generate(uint8_t i)
     // RFC 4253 §8 does not specify a minimum bit-length for y beyond requiring
     // it to be in [1, p-1].  Common practice is a full 2048-bit random value,
     // which ensures the discrete-log is as hard as the group order.
-    Rng.fill_args.out = (uint8_t *)dh->y->d;
-    Rng.fill_args.len = sizeof(protocore_bignum);
+    RngV.fill_args.out = (uint8_t *)dh->y->d;
+    RngV.fill_args.len = sizeof(protocore_bignum);
     Rng.fill(protocore_rng_span());
 
     // Ensure y < p by clearing the two MSBs (conservative; not strictly
@@ -4023,9 +4023,9 @@ proto_bool ssh_kex_shared_secret(const SshKexEphemeral *e, const uint8_t *peer_p
             return PROTO_FALSE;
         }
         uint8_t k_pq[PROTOCORE_SNTRUP761_SS_BYTES], k_cl[32];
-        Sntrup761.dec_args.sk = e->hybrid_sk;
-        Sntrup761.dec_args.ct = peer_pub;
-        Sntrup761.dec_args.ss = k_pq;
+        Sntrup761V.dec_args.sk = e->hybrid_sk;
+        Sntrup761V.dec_args.ct = peer_pub;
+        Sntrup761V.dec_args.ss = k_pq;
         Sntrup761.dec(e->work);
         Curve25519.x25519_args.scalar = e->priv;
         Curve25519.x25519_args.point = peer_pub + PROTOCORE_SNTRUP761_CT_BYTES;

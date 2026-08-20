@@ -305,15 +305,15 @@ static void send_frame(uint8_t *restrict work)
         if (scr && cbuf)
         {
             size_t clen = 0;
-            Deflate.raw_args.src = payload;
-            Deflate.raw_args.src_len = len;
-            Deflate.raw_args.dst = cbuf;
-            Deflate.raw_args.dst_cap = cap;
-            Deflate.raw_args.out_len = &clen;
-            Deflate.raw_args.scratch = scr;
-            Deflate.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
+            DeflateV.raw_args.src = payload;
+            DeflateV.raw_args.src_len = len;
+            DeflateV.raw_args.dst = cbuf;
+            DeflateV.raw_args.dst_cap = cap;
+            DeflateV.raw_args.out_len = &clen;
+            DeflateV.raw_args.scratch = scr;
+            DeflateV.raw_args.scratch_len = DEFLATE_SCRATCH_SIZE;
             Deflate.raw(deflate_work);
-            DeflateResult rc = Deflate.value;
+            DeflateResult rc = DeflateV.value;
             // Only adopt it if it actually shrank the message; otherwise send it
             // uncompressed (the per-message RSV1 flag makes that legal).
             // rc != DEFLATE_OK is unreachable here: Deflate.raw returns non-OK only on

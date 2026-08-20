@@ -93,12 +93,12 @@ static proto_bool jws_split(const char *jws, size_t jws_len, JwsParts *parts)
 static proto_bool alg_is_hs256(const char *header, size_t header_len)
 {
     uint8_t buf[JWT_JOSE_HDR_CAP];
-    Base64.url_decode_args.src = header;
-    Base64.url_decode_args.src_len = header_len;
-    Base64.url_decode_args.dst = buf;
-    Base64.url_decode_args.dst_cap = sizeof(buf) - 1u;
+    Base64V.url_decode_args.src = header;
+    Base64V.url_decode_args.src_len = header_len;
+    Base64V.url_decode_args.dst = buf;
+    Base64V.url_decode_args.dst_cap = sizeof(buf) - 1u;
     Base64.url_decode(base64_work);
-    const size_t n = Base64.n;
+    const size_t n = Base64V.n;
     if (n == 0)
     {
         return PROTO_FALSE;
@@ -164,12 +164,12 @@ static const char *claim_value(const char *jws, size_t jws_len, const char *name
     {
         return NULL;
     }
-    Base64.url_decode_args.src = parts.payload;
-    Base64.url_decode_args.src_len = parts.payload_len;
-    Base64.url_decode_args.dst = buf;
-    Base64.url_decode_args.dst_cap = buf_cap - 1u;
+    Base64V.url_decode_args.src = parts.payload;
+    Base64V.url_decode_args.src_len = parts.payload_len;
+    Base64V.url_decode_args.dst = buf;
+    Base64V.url_decode_args.dst_cap = buf_cap - 1u;
     Base64.url_decode(base64_work);
-    const size_t n = Base64.n;
+    const size_t n = Base64V.n;
     if (n == 0)
     {
         return NULL;
@@ -271,11 +271,11 @@ static void verify_mac(uint8_t *restrict work)
 
     char computed[JWT_SIG_B64_CAP];
     // A 32-byte MAC is always 43 base64url characters, so this length test never fires.
-    Base64.url_encode_args.src = mac;
-    Base64.url_encode_args.src_len = sizeof(mac);
-    Base64.url_encode_args.dst = computed;
+    Base64V.url_encode_args.src = mac;
+    Base64V.url_encode_args.src_len = sizeof(mac);
+    Base64V.url_encode_args.dst = computed;
     Base64.url_encode(base64_work);
-    if (Base64.n != JWT_SIG_B64_LEN)
+    if (Base64V.n != JWT_SIG_B64_LEN)
     {
         return;
     }

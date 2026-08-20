@@ -98,11 +98,17 @@ typedef struct
 {
     NtpServiceBeginArgs begin_args;
     NtpServiceSetTestEpochArgs set_test_epoch_args;
-
     proto_bool ok;
     time_t value;
     uint32_t ms;
+} NtpServiceVars;
 
+/** @brief The operands and the outcome. */
+extern NtpServiceVars NtpServiceV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const begin)(uint8_t *restrict work);
     void (*const synced)(uint8_t *restrict work);
     void (*const epoch)(uint8_t *restrict work);
@@ -110,8 +116,25 @@ typedef struct
     void (*const set_test_epoch)(uint8_t *restrict work);
 } NtpServiceNs;
 
-/** @brief The one symbol this module exports. */
-extern NtpServiceNs NtpService;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in NtpServiceV or a region of the borrow at a fixed offset.
+void protocore_ntp_service_begin(uint8_t *restrict work);
+void protocore_ntp_service_synced(uint8_t *restrict work);
+void protocore_ntp_service_epoch(uint8_t *restrict work);
+void protocore_ntp_service_time_source(uint8_t *restrict work);
+void protocore_ntp_service_set_test_epoch(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `NtpService.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const NtpServiceNs NtpService __attribute__((unused)) = {
+    .begin = protocore_ntp_service_begin,
+    .synced = protocore_ntp_service_synced,
+    .epoch = protocore_ntp_service_epoch,
+    .time_source = protocore_ntp_service_time_source,
+    .set_test_epoch = protocore_ntp_service_set_test_epoch,
+};
 
 /**
  * @brief The PROTOCORE_NTP_SERVICE_BORROW bytes this module's state lives in.

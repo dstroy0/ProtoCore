@@ -153,16 +153,33 @@ typedef struct
 {
     X509ParseArgs parse_args;
     X509MatchArgs match_args;
-
     X509Cert cert;
     proto_bool ok;
+} X509Vars;
 
+/** @brief The operands and the outcome. */
+extern X509Vars X509V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const parse)(uint8_t *restrict work);
     void (*const name_match)(uint8_t *restrict work);
 } X509Ns;
 
-/** @brief The one symbol this module exports. */
-extern X509Ns X509;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in X509V or a region of the borrow at a fixed offset.
+void protocore_x509_parse(uint8_t *restrict work);
+void protocore_x509_name_match(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `X509.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const X509Ns X509 __attribute__((unused)) = {
+    .parse = protocore_x509_parse,
+    .name_match = protocore_x509_name_match,
+};
 
 PROTOCORE_END_DECLS
 

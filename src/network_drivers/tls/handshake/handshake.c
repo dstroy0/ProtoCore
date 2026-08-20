@@ -673,36 +673,36 @@ static void client_on_certificate(const uint8_t *msg, size_t len)
 
     if (c->cfg->ca_der)
     {
-        X509.parse_args.der = entry;
-        X509.parse_args.len = entry_len;
+        X509V.parse_args.der = entry;
+        X509V.parse_args.len = entry_len;
         X509.parse(NULL);
-        if (!X509.ok)
+        if (!X509V.ok)
         {
             fail(TLS_ALERT_DECODE_ERROR);
             return;
         }
-        const X509Cert leaf = X509.cert;
+        const X509Cert leaf = X509V.cert;
 
-        X509.parse_args.der = c->cfg->ca_der;
-        X509.parse_args.len = c->cfg->ca_len;
+        X509V.parse_args.der = c->cfg->ca_der;
+        X509V.parse_args.len = c->cfg->ca_len;
         X509.parse(NULL);
-        if (!X509.ok)
+        if (!X509V.ok)
         {
             fail(TLS_ALERT_INTERNAL_ERROR); // the anchor this build was given does not parse
             return;
         }
-        const X509Cert anchor = X509.cert;
+        const X509Cert anchor = X509V.cert;
 
         // sec 6.1: one link to the anchor - the signature, the validity window, the issuer name and
         // whether the anchor may sign at this depth.
-        X509Verify.link_args.cert = &leaf;
-        X509Verify.link_args.issuer = &anchor;
-        X509Verify.time_args.cert = &leaf;
-        X509Verify.time_args.now = c->cfg->now;
-        X509Verify.issuer_args.issuer = &anchor;
-        X509Verify.issuer_args.depth = 0;
+        X509VerifyV.link_args.cert = &leaf;
+        X509VerifyV.link_args.issuer = &anchor;
+        X509VerifyV.time_args.cert = &leaf;
+        X509VerifyV.time_args.now = c->cfg->now;
+        X509VerifyV.issuer_args.issuer = &anchor;
+        X509VerifyV.issuer_args.depth = 0;
         X509Verify.link(protocore_x509_verify_span());
-        if (!X509Verify.ok)
+        if (!X509VerifyV.ok)
         {
             fail(TLS_ALERT_HANDSHAKE_FAILURE);
             return;
@@ -710,11 +710,11 @@ static void client_on_certificate(const uint8_t *msg, size_t len)
         // RFC 6125 sec 6.4: the certificate has to speak for the name that was asked for.
         if (c->cfg->hostname)
         {
-            X509.match_args.cert = &leaf;
-            X509.match_args.host = c->cfg->hostname;
-            X509.match_args.host_len = 0;
+            X509V.match_args.cert = &leaf;
+            X509V.match_args.host = c->cfg->hostname;
+            X509V.match_args.host_len = 0;
             X509.name_match(NULL);
-            if (!X509.ok)
+            if (!X509V.ok)
             {
                 fail(TLS_ALERT_HANDSHAKE_FAILURE);
                 return;
@@ -820,14 +820,14 @@ static void client_on_cert_verify(const uint8_t *msg, size_t len)
     signer.key.p = TLS_PEERKEY_P(c->tx);
     signer.key.len = TLS_PEERKEY_LEN(c->tx);
 
-    X509Verify.message_args.signer = &signer;
-    X509Verify.message_args.alg = alg;
-    X509Verify.message_args.msg = content;
-    X509Verify.message_args.msg_len = clen;
-    X509Verify.message_args.sig = sig;
-    X509Verify.message_args.sig_len = sig_len;
+    X509VerifyV.message_args.signer = &signer;
+    X509VerifyV.message_args.alg = alg;
+    X509VerifyV.message_args.msg = content;
+    X509VerifyV.message_args.msg_len = clen;
+    X509VerifyV.message_args.sig = sig;
+    X509VerifyV.message_args.sig_len = sig_len;
     X509Verify.message(protocore_x509_verify_span());
-    if (!X509Verify.ok)
+    if (!X509VerifyV.ok)
     {
         fail(TLS_ALERT_DECRYPT_ERROR);
         return;

@@ -15,9 +15,9 @@
 
 #include "server/core/provisioning_service/provisioning_service.h"
 
-#include "test/core_setup/hal/nvs.h"                          // the store the save / load / clear paths use
-#include "network_drivers/physical/physical/physical.h"            // what begin() asked the radio for
-#include "network_drivers/transport/udp/server/server.h"  // the port the catch-all DNS bound
+#include "network_drivers/physical/physical/physical.h"  // what begin() asked the radio for
+#include "network_drivers/transport/udp/server/server.h" // the port the catch-all DNS bound
+#include "test/core_setup/hal/nvs.h"                     // the store the save / load / clear paths use
 
 #include <string.h>
 
@@ -306,8 +306,8 @@ void test_begin_raises_the_softap_under_the_name_it_was_given(void)
 {
     Prov.begin_args.ap_ssid = "ProtoCore-Setup";
     Prov.begin(protocore_provisioning_service_span());
-    TEST_ASSERT_EQUAL_STRING("ProtoCore-Setup", Physical.wifi.ssid);
-    TEST_ASSERT_NULL(Physical.wifi.password); // a provisioning AP is open, or nobody can reach it
+    TEST_ASSERT_EQUAL_STRING("ProtoCore-Setup", PhysicalV.wifi.ssid);
+    TEST_ASSERT_NULL(PhysicalV.wifi.password); // a provisioning AP is open, or nobody can reach it
 }
 
 // The catch-all DNS binds UDP/53: that is the whole hijack, and a portal that bound anything else

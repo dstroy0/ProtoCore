@@ -103,27 +103,27 @@ static uint32_t fwd_now(void)
 // Whether layer 1 holds interface @p id.
 static proto_bool fwd_iface_present(uint8_t id)
 {
-    Physical.iface.id = id;
+    PhysicalV.iface.id = id;
     Physical.iface_present(protocore_physical_span());
-    return Physical.ok;
+    return PhysicalV.ok;
 }
 
 // The interface id held in layer 1 registry row @p i, or PROTOCORE_IF_NONE.
 static int16_t fwd_iface_at(uint8_t i)
 {
-    Physical.iface.i = i;
+    PhysicalV.iface.i = i;
     Physical.iface_at(protocore_physical_span());
-    return Physical.i16;
+    return PhysicalV.i16;
 }
 
 // Hand the held frame to layer 1 for interface @p id.
 static proto_bool fwd_iface_send(uint8_t *restrict work, uint8_t id)
 {
-    Physical.iface.id = id;
-    Physical.iface.data = Forward.frame.data;
-    Physical.iface.len = Forward.frame.len;
+    PhysicalV.iface.id = id;
+    PhysicalV.iface.data = Forward.frame.data;
+    PhysicalV.iface.len = Forward.frame.len;
     Physical.iface_send(protocore_physical_span());
-    return Physical.ok;
+    return PhysicalV.ok;
 }
 
 // What the controls on forwarding say about one (src, dst) pair. RFC 1812 sec 5.3.11.

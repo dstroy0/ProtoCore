@@ -27,31 +27,31 @@ void tearDown(void)
 
 static proto_bool decode(const uint8_t *pkt, size_t len, size_t off, char *out, size_t cap, proto_bool allow_ptr)
 {
-    DnsWire.msg.pkt = pkt;
-    DnsWire.msg.len = len;
-    DnsWire.msg.off = off;
-    DnsWire.msg.out = out;
-    DnsWire.msg.out_cap = cap;
-    DnsWire.msg.allow_ptr = allow_ptr;
+    DnsWireV.msg.pkt = pkt;
+    DnsWireV.msg.len = len;
+    DnsWireV.msg.off = off;
+    DnsWireV.msg.out = out;
+    DnsWireV.msg.out_cap = cap;
+    DnsWireV.msg.allow_ptr = allow_ptr;
     DnsWire.decode(dns_wire_work);
-    return DnsWire.ok;
+    return DnsWireV.ok;
 }
 
 static size_t encode(const char *dotted, uint8_t *out, size_t cap)
 {
-    DnsWire.text.dotted = dotted;
-    DnsWire.text.out = out;
-    DnsWire.text.out_cap = cap;
+    DnsWireV.text.dotted = dotted;
+    DnsWireV.text.out = out;
+    DnsWireV.text.out_cap = cap;
     DnsWire.encode(dns_wire_work);
-    return DnsWire.n;
+    return DnsWireV.n;
 }
 
 static proto_bool eq(const char *a, const char *b)
 {
-    DnsWire.cmp.a = a;
-    DnsWire.cmp.b = b;
+    DnsWireV.cmp.a = a;
+    DnsWireV.cmp.b = b;
     DnsWire.eq(dns_wire_work);
-    return DnsWire.ok;
+    return DnsWireV.ok;
 }
 
 // RFC 1035 sec 4.1.4's figure, transcribed at the offsets it names. Octets it does not show are
@@ -97,19 +97,19 @@ void test_rfc1035_worked_message(void)
 
     TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 20, out, sizeof(out), PROTO_TRUE));
     TEST_ASSERT_EQUAL_STRING("F.ISI.ARPA", out);
-    TEST_ASSERT_EQUAL_size_t(32, DnsWire.next); // the zero octet at 31 ends it
+    TEST_ASSERT_EQUAL_size_t(32, DnsWireV.next); // the zero octet at 31 ends it
 
     TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 40, out, sizeof(out), PROTO_TRUE));
     TEST_ASSERT_EQUAL_STRING("FOO.F.ISI.ARPA", out);
-    TEST_ASSERT_EQUAL_size_t(46, DnsWire.next); // two octets past the pointer, not past what it named
+    TEST_ASSERT_EQUAL_size_t(46, DnsWireV.next); // two octets past the pointer, not past what it named
 
     TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 64, out, sizeof(out), PROTO_TRUE));
     TEST_ASSERT_EQUAL_STRING("ARPA", out);
-    TEST_ASSERT_EQUAL_size_t(66, DnsWire.next);
+    TEST_ASSERT_EQUAL_size_t(66, DnsWireV.next);
 
     TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 92, out, sizeof(out), PROTO_TRUE));
     TEST_ASSERT_EQUAL_STRING("", out); // "the root domain name has no labels"
-    TEST_ASSERT_EQUAL_size_t(93, DnsWire.next);
+    TEST_ASSERT_EQUAL_size_t(93, DnsWireV.next);
 }
 
 // RFC 1035 sec 3.1: "a domain name ... is a sequence of labels, where each label consists of a
@@ -147,7 +147,7 @@ void test_encode_decode_round_trip(void)
         TEST_ASSERT_TRUE_MESSAGE(n > 0, NAMES[i]);
         TEST_ASSERT_TRUE_MESSAGE(decode(wire, n, 0, text, sizeof(text), PROTO_FALSE), NAMES[i]);
         TEST_ASSERT_EQUAL_STRING(NAMES[i], text);
-        TEST_ASSERT_EQUAL_size_t(n, DnsWire.next);
+        TEST_ASSERT_EQUAL_size_t(n, DnsWireV.next);
     }
 }
 
@@ -351,7 +351,7 @@ void test_pointer_hop_cap(void)
     // Entering at the second link follows eight pointers, exactly what the cap admits.
     TEST_ASSERT_TRUE(decode(msg, sizeof(msg), 2, out, sizeof(out), PROTO_TRUE));
     TEST_ASSERT_EQUAL_STRING("z", out);
-    TEST_ASSERT_EQUAL_size_t(4, DnsWire.next);
+    TEST_ASSERT_EQUAL_size_t(4, DnsWireV.next);
 
     // Entering at the head follows nine, one past it.
     TEST_ASSERT_FALSE(decode(msg, sizeof(msg), 0, out, sizeof(out), PROTO_TRUE));
@@ -364,9 +364,9 @@ void test_failure_reports_zero_progress(void)
     char out[8];
     static const uint8_t TRUNC[3] = {5, 'a', 'b'};
     TEST_ASSERT_FALSE(decode(TRUNC, sizeof(TRUNC), 0, out, sizeof(out), PROTO_FALSE));
-    TEST_ASSERT_EQUAL_size_t(0, DnsWire.next);
+    TEST_ASSERT_EQUAL_size_t(0, DnsWireV.next);
 
     uint8_t wire[4];
     TEST_ASSERT_EQUAL_size_t(0, encode("toolongforthisbuffer", wire, sizeof(wire)));
-    TEST_ASSERT_EQUAL_size_t(0, DnsWire.n);
+    TEST_ASSERT_EQUAL_size_t(0, DnsWireV.n);
 }

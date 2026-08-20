@@ -101,10 +101,10 @@ static void zlib_init(uint8_t *restrict work)
     z->d_len = d_len;
     z->hist = 0;
     z->header_sent = PROTO_FALSE;
-    Rfc1951.build_fixed_args.ll_code = z->ll_code;
-    Rfc1951.build_fixed_args.ll_len = z->ll_len;
-    Rfc1951.build_fixed_args.d_code = z->d_code;
-    Rfc1951.build_fixed_args.d_len = z->d_len;
+    Rfc1951V.build_fixed_args.ll_code = z->ll_code;
+    Rfc1951V.build_fixed_args.ll_len = z->ll_len;
+    Rfc1951V.build_fixed_args.d_code = z->d_code;
+    Rfc1951V.build_fixed_args.d_len = z->d_len;
     Rfc1951.build_fixed(work);
 }
 
@@ -188,22 +188,22 @@ static void zlib_packet(uint8_t *restrict work)
         size_t advance;
         if (best_len >= PROTOCORE_MIN_MATCH)
         {
-            Rfc1951.emit_match_args.w = &w;
-            Rfc1951.emit_match_args.ll_code = z->ll_code;
-            Rfc1951.emit_match_args.ll_len = z->ll_len;
-            Rfc1951.emit_match_args.d_code = z->d_code;
-            Rfc1951.emit_match_args.d_len = z->d_len;
-            Rfc1951.emit_match_args.len = best_len;
-            Rfc1951.emit_match_args.dist = best_dist;
+            Rfc1951V.emit_match_args.w = &w;
+            Rfc1951V.emit_match_args.ll_code = z->ll_code;
+            Rfc1951V.emit_match_args.ll_len = z->ll_len;
+            Rfc1951V.emit_match_args.d_code = z->d_code;
+            Rfc1951V.emit_match_args.d_len = z->d_len;
+            Rfc1951V.emit_match_args.len = best_len;
+            Rfc1951V.emit_match_args.dist = best_dist;
             Rfc1951.emit_match(work);
             advance = (size_t)best_len;
         }
         else
         {
-            Rfc1951.emit_literal_args.w = &w;
-            Rfc1951.emit_literal_args.ll_code = z->ll_code;
-            Rfc1951.emit_literal_args.ll_len = z->ll_len;
-            Rfc1951.emit_literal_args.b = buf[i];
+            Rfc1951V.emit_literal_args.w = &w;
+            Rfc1951V.emit_literal_args.ll_code = z->ll_code;
+            Rfc1951V.emit_literal_args.ll_len = z->ll_len;
+            Rfc1951V.emit_literal_args.b = buf[i];
             Rfc1951.emit_literal(work);
             advance = 1;
         }

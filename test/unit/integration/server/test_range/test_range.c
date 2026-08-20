@@ -17,10 +17,10 @@ static const char FILE_DATA[] = "0123456789ABCDEFGHIJ";
 static void serve_data(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
-    FileServing.serve_file_args.slot_id = slot_id;
-    FileServing.serve_file_args.file_sys = lfsm();
-    FileServing.serve_file_args.fs_path = "/data.bin";
-    FileServing.serve_file_args.content_type = "application/octet-stream";
+    FileServingV.serve_file_args.slot_id = slot_id;
+    FileServingV.serve_file_args.file_sys = lfsm();
+    FileServingV.serve_file_args.fs_path = "/data.bin";
+    FileServingV.serve_file_args.content_type = "application/octet-stream";
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -28,10 +28,10 @@ static void serve_data_conn_gone(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     conn_pool[slot_id].pcb = NULL;
-    FileServing.serve_file_args.slot_id = slot_id;
-    FileServing.serve_file_args.file_sys = lfsm();
-    FileServing.serve_file_args.fs_path = "/data.bin";
-    FileServing.serve_file_args.content_type = "application/octet-stream";
+    FileServingV.serve_file_args.slot_id = slot_id;
+    FileServingV.serve_file_args.file_sys = lfsm();
+    FileServingV.serve_file_args.fs_path = "/data.bin";
+    FileServingV.serve_file_args.content_type = "application/octet-stream";
     FileServing.serve_file(protocore_file_serving_span());
 }
 

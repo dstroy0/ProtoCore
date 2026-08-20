@@ -396,11 +396,17 @@ typedef struct
     PtpParsePdelayRespFollowUpArgs parse_pdelay_resp_follow_up_args;
     PtpComputeArgs compute_args;
     PtpComputeLinkDelayArgs compute_link_delay_args;
-
     proto_bool ok;
     int64_t value;
     size_t n;
+} PtpVars;
 
+/** @brief The operands and the outcome. */
+extern PtpVars PtpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const ts_write)(uint8_t *restrict work);
     void (*const ts_read)(uint8_t *restrict work);
     void (*const ts_to_ns)(uint8_t *restrict work);
@@ -425,8 +431,59 @@ typedef struct
     void (*const compute_link_delay)(uint8_t *restrict work);
 } PtpNs;
 
-/** @brief The one symbol this module exports. */
-extern PtpNs Ptp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in PtpV or a region of the borrow at a fixed offset.
+void protocore_ptp_ts_write(uint8_t *restrict work);
+void protocore_ptp_ts_read(uint8_t *restrict work);
+void protocore_ptp_ts_to_ns(uint8_t *restrict work);
+void protocore_ptp_ts_from_ns(uint8_t *restrict work);
+void protocore_ptp_build_header(uint8_t *restrict work);
+void protocore_ptp_parse_header(uint8_t *restrict work);
+void protocore_ptp_build_sync(uint8_t *restrict work);
+void protocore_ptp_build_delay_req(uint8_t *restrict work);
+void protocore_ptp_build_follow_up(uint8_t *restrict work);
+void protocore_ptp_build_delay_resp(uint8_t *restrict work);
+void protocore_ptp_build_announce(uint8_t *restrict work);
+void protocore_ptp_build_pdelay_req(uint8_t *restrict work);
+void protocore_ptp_build_pdelay_resp(uint8_t *restrict work);
+void protocore_ptp_build_pdelay_resp_follow_up(uint8_t *restrict work);
+void protocore_ptp_parse_timestamp_msg(uint8_t *restrict work);
+void protocore_ptp_parse_delay_resp(uint8_t *restrict work);
+void protocore_ptp_parse_announce(uint8_t *restrict work);
+void protocore_ptp_parse_pdelay_req(uint8_t *restrict work);
+void protocore_ptp_parse_pdelay_resp(uint8_t *restrict work);
+void protocore_ptp_parse_pdelay_resp_follow_up(uint8_t *restrict work);
+void protocore_ptp_compute(uint8_t *restrict work);
+void protocore_ptp_compute_link_delay(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Ptp.ts_write(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const PtpNs Ptp __attribute__((unused)) = {
+    .ts_write = protocore_ptp_ts_write,
+    .ts_read = protocore_ptp_ts_read,
+    .ts_to_ns = protocore_ptp_ts_to_ns,
+    .ts_from_ns = protocore_ptp_ts_from_ns,
+    .build_header = protocore_ptp_build_header,
+    .parse_header = protocore_ptp_parse_header,
+    .build_sync = protocore_ptp_build_sync,
+    .build_delay_req = protocore_ptp_build_delay_req,
+    .build_follow_up = protocore_ptp_build_follow_up,
+    .build_delay_resp = protocore_ptp_build_delay_resp,
+    .build_announce = protocore_ptp_build_announce,
+    .build_pdelay_req = protocore_ptp_build_pdelay_req,
+    .build_pdelay_resp = protocore_ptp_build_pdelay_resp,
+    .build_pdelay_resp_follow_up = protocore_ptp_build_pdelay_resp_follow_up,
+    .parse_timestamp_msg = protocore_ptp_parse_timestamp_msg,
+    .parse_delay_resp = protocore_ptp_parse_delay_resp,
+    .parse_announce = protocore_ptp_parse_announce,
+    .parse_pdelay_req = protocore_ptp_parse_pdelay_req,
+    .parse_pdelay_resp = protocore_ptp_parse_pdelay_resp,
+    .parse_pdelay_resp_follow_up = protocore_ptp_parse_pdelay_resp_follow_up,
+    .compute = protocore_ptp_compute,
+    .compute_link_delay = protocore_ptp_compute_link_delay,
+};
 
 PROTOCORE_END_DECLS
 

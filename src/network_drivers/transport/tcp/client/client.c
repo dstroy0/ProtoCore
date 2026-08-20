@@ -40,12 +40,12 @@ uint8_t *protocore_tcp_client_span(void)
 // see PROTOCORE_NEED_CLIENT in protocore_config.h.
 #if PROTOCORE_NEED_CLIENT
 
-#include "../../diffserv/diffserv.h" // DiffServ DSCP marking for outbound client connections (compiles out when off)
+#include "../../diffserv/diffserv.h"  // DiffServ DSCP marking for outbound client connections (compiles out when off)
 #include "config/platform/platform.h" // the stack's TCP, under our names
-#include "mmgr/ring.h" // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
-#include "network_drivers/network/dns/dns_resolver/dns_resolver.h"  // shared host->IP resolve (one DNS owner)
-#include "network_drivers/transport/tcp/lower/lower.h" // TcpLower: the TTL stamp on the outbound pcb
-#include "server/clock/clock.h"                        // Clock.millis
+#include "mmgr/ring.h"                // PROTO_ATOMIC_LOAD/STORE + SPSC ring drain (same primitive as the server)
+#include "network_drivers/network/dns/dns_resolver/dns_resolver.h" // shared host->IP resolve (one DNS owner)
+#include "network_drivers/transport/tcp/lower/lower.h"             // TcpLower: the TTL stamp on the outbound pcb
+#include "server/clock/clock.h"                                    // Clock.millis
 
 typedef struct
 {
@@ -296,10 +296,10 @@ static void cc_pump(uint8_t *restrict work)
     }
 
     // Resolve through the shared DNS owner, which reports busy until its own answer lands.
-    Resolver.query.host = c->host;
+    ResolverV.query.host = c->host;
     Resolver.resolve(protocore_dns_resolver_span());
-    protocore_dns_state s = Resolver.state;
-    uint32_t ip = Resolver.u32;
+    protocore_dns_state s = ResolverV.state;
+    uint32_t ip = ResolverV.u32;
     if (s == PROTOCORE_DNS_BUSY)
     {
         return;

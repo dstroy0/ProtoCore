@@ -49,12 +49,12 @@ void test_first_token_is_an_rfc2743_initial_context_token(void)
 {
     static const uint8_t NTLM[4] = {0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t out[64];
-    Spnego.wrap_negotiate_args.ntlm = NTLM;
-    Spnego.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_negotiate_args.out = out;
-    Spnego.wrap_negotiate_args.cap = sizeof(out);
+    SpnegoV.wrap_negotiate_args.ntlm = NTLM;
+    SpnegoV.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_negotiate_args.out = out;
+    SpnegoV.wrap_negotiate_args.cap = sizeof(out);
     Spnego.wrap_negotiate(spnego_work);
-    size_t n = Spnego.n;
+    size_t n = SpnegoV.n;
     TEST_ASSERT_EQUAL_size_t(38, n);
 
     static const uint8_t WANT[38] = {0x60, 0x24,                                     // [APPLICATION 0], 36 octets
@@ -79,12 +79,12 @@ void test_second_token_is_a_bare_neg_token_resp(void)
 {
     static const uint8_t NTLM[4] = {0x01, 0x02, 0x03, 0x04};
     uint8_t out[64];
-    Spnego.wrap_authenticate_args.ntlm = NTLM;
-    Spnego.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_authenticate_args.out = out;
-    Spnego.wrap_authenticate_args.cap = sizeof(out);
+    SpnegoV.wrap_authenticate_args.ntlm = NTLM;
+    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_authenticate_args.out = out;
+    SpnegoV.wrap_authenticate_args.cap = sizeof(out);
     Spnego.wrap_authenticate(spnego_work);
-    size_t n = Spnego.n;
+    size_t n = SpnegoV.n;
     TEST_ASSERT_EQUAL_size_t(12, n);
 
     static const uint8_t WANT[12] = {0xa1, 0x0a, 0x30, 0x08, 0xa2, 0x06, 0x04, 0x04, 0x01, 0x02, 0x03, 0x04};
@@ -111,12 +111,12 @@ void test_response_token_is_found_after_negstate_and_supportedmech(void)
 
     const uint8_t *tok = NULL;
     size_t tok_len = 0;
-    Spnego.parse_response_args.blob = BLOB;
-    Spnego.parse_response_args.len = sizeof(BLOB);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = BLOB;
+    SpnegoV.parse_response_args.len = sizeof(BLOB);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_TRUE(Spnego.ok);
+    TEST_ASSERT_TRUE(SpnegoV.ok);
     TEST_ASSERT_EQUAL_size_t(sizeof(NTLM), tok_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(NTLM, tok, sizeof(NTLM));
     TEST_ASSERT_EQUAL_PTR(BLOB + 27, tok); // a pointer INTO the blob, not a copy
@@ -134,22 +134,22 @@ void test_wrap_then_parse_round_trip(void)
             ntlm[i] = (uint8_t)(i * 7 + 1);
         }
         uint8_t wrapped[512];
-        Spnego.wrap_authenticate_args.ntlm = ntlm;
-        Spnego.wrap_authenticate_args.protocore_ntlm_len = len;
-        Spnego.wrap_authenticate_args.out = wrapped;
-        Spnego.wrap_authenticate_args.cap = sizeof(wrapped);
+        SpnegoV.wrap_authenticate_args.ntlm = ntlm;
+        SpnegoV.wrap_authenticate_args.protocore_ntlm_len = len;
+        SpnegoV.wrap_authenticate_args.out = wrapped;
+        SpnegoV.wrap_authenticate_args.cap = sizeof(wrapped);
         Spnego.wrap_authenticate(spnego_work);
-        size_t n = Spnego.n;
+        size_t n = SpnegoV.n;
         TEST_ASSERT_TRUE(n > len);
 
         const uint8_t *tok = NULL;
         size_t tok_len = 0;
-        Spnego.parse_response_args.blob = wrapped;
-        Spnego.parse_response_args.len = n;
-        Spnego.parse_response_args.protocore_resp_token = &tok;
-        Spnego.parse_response_args.protocore_resp_len = &tok_len;
+        SpnegoV.parse_response_args.blob = wrapped;
+        SpnegoV.parse_response_args.len = n;
+        SpnegoV.parse_response_args.protocore_resp_token = &tok;
+        SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
         Spnego.parse_response(spnego_work);
-        TEST_ASSERT_TRUE(Spnego.ok);
+        TEST_ASSERT_TRUE(SpnegoV.ok);
         TEST_ASSERT_EQUAL_size_t(len, tok_len);
         TEST_ASSERT_EQUAL_HEX8_ARRAY(ntlm, tok, len);
     }
@@ -167,12 +167,12 @@ void test_der_length_forms(void)
 
     // 127-octet token: OCTET STRING 04 7f <127> = 129; [2] a2 81 81 <129> = 132;
     // SEQUENCE 30 81 84 <132> = 135; [1] a1 81 87 <135> = 138.
-    Spnego.wrap_authenticate_args.ntlm = ntlm;
-    Spnego.wrap_authenticate_args.protocore_ntlm_len = 127;
-    Spnego.wrap_authenticate_args.out = out;
-    Spnego.wrap_authenticate_args.cap = sizeof(out);
+    SpnegoV.wrap_authenticate_args.ntlm = ntlm;
+    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = 127;
+    SpnegoV.wrap_authenticate_args.out = out;
+    SpnegoV.wrap_authenticate_args.cap = sizeof(out);
     Spnego.wrap_authenticate(spnego_work);
-    size_t n = Spnego.n;
+    size_t n = SpnegoV.n;
     TEST_ASSERT_EQUAL_size_t(138, n);
     TEST_ASSERT_EQUAL_HEX8(0xa1, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x81, out[1]);
@@ -180,12 +180,12 @@ void test_der_length_forms(void)
 
     // 300-octet token: OCTET STRING 04 82 01 2c <300> = 304; [2] a2 82 01 30 <304> = 308;
     // SEQUENCE 30 82 01 34 <308> = 312; [1] a1 82 01 38 <312> = 316.
-    Spnego.wrap_authenticate_args.ntlm = ntlm;
-    Spnego.wrap_authenticate_args.protocore_ntlm_len = 300;
-    Spnego.wrap_authenticate_args.out = out;
-    Spnego.wrap_authenticate_args.cap = sizeof(out);
+    SpnegoV.wrap_authenticate_args.ntlm = ntlm;
+    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = 300;
+    SpnegoV.wrap_authenticate_args.out = out;
+    SpnegoV.wrap_authenticate_args.cap = sizeof(out);
     Spnego.wrap_authenticate(spnego_work);
-    n = Spnego.n;
+    n = SpnegoV.n;
     TEST_ASSERT_EQUAL_size_t(316, n);
     TEST_ASSERT_EQUAL_HEX8(0xa1, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x82, out[1]);
@@ -193,12 +193,12 @@ void test_der_length_forms(void)
     TEST_ASSERT_EQUAL_HEX8(0x38, out[3]);
 
     // A short content still uses the short form at every level.
-    Spnego.wrap_authenticate_args.ntlm = ntlm;
-    Spnego.wrap_authenticate_args.protocore_ntlm_len = 1;
-    Spnego.wrap_authenticate_args.out = out;
-    Spnego.wrap_authenticate_args.cap = sizeof(out);
+    SpnegoV.wrap_authenticate_args.ntlm = ntlm;
+    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = 1;
+    SpnegoV.wrap_authenticate_args.out = out;
+    SpnegoV.wrap_authenticate_args.cap = sizeof(out);
     Spnego.wrap_authenticate(spnego_work);
-    n = Spnego.n;
+    n = SpnegoV.n;
     TEST_ASSERT_EQUAL_size_t(9, n); // 04 01 <1> = 3, a2 03 = 5, 30 05 = 7, a1 07 = 9
     TEST_ASSERT_EQUAL_HEX8(0x07, out[1]);
 }
@@ -212,109 +212,109 @@ void test_parse_response_fails_closed(void)
 
     // Wrong outer tag: an InitialContextToken where a NegTokenResp belongs.
     static const uint8_t WRONG_OUTER[12] = {0x60, 0x0a, 0x30, 0x08, 0xa2, 0x06, 0x04, 0x04, 1, 2, 3, 4};
-    Spnego.parse_response_args.blob = WRONG_OUTER;
-    Spnego.parse_response_args.len = sizeof(WRONG_OUTER);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = WRONG_OUTER;
+    SpnegoV.parse_response_args.len = sizeof(WRONG_OUTER);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
     // NegTokenResp whose content is not a SEQUENCE.
     static const uint8_t NOT_SEQ[6] = {0xa1, 0x04, 0x04, 0x02, 0xAA, 0xBB};
-    Spnego.parse_response_args.blob = NOT_SEQ;
-    Spnego.parse_response_args.len = sizeof(NOT_SEQ);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = NOT_SEQ;
+    SpnegoV.parse_response_args.len = sizeof(NOT_SEQ);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
     // SEQUENCE with no [2] field at all: only a negState.
     static const uint8_t NO_TOKEN[9] = {0xa1, 0x07, 0x30, 0x05, 0xa0, 0x03, 0x0a, 0x01, 0x00};
-    Spnego.parse_response_args.blob = NO_TOKEN;
-    Spnego.parse_response_args.len = sizeof(NO_TOKEN);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = NO_TOKEN;
+    SpnegoV.parse_response_args.len = sizeof(NO_TOKEN);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
     // [2] present but wrapping something that is not an OCTET STRING.
     static const uint8_t NOT_OCTET[10] = {0xa1, 0x08, 0x30, 0x06, 0xa2, 0x04, 0x02, 0x02, 0xAA, 0xBB};
-    Spnego.parse_response_args.blob = NOT_OCTET;
-    Spnego.parse_response_args.len = sizeof(NOT_OCTET);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = NOT_OCTET;
+    SpnegoV.parse_response_args.len = sizeof(NOT_OCTET);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
     // A length that runs past the buffer.
     static const uint8_t OVER[8] = {0xa1, 0x7f, 0x30, 0x08, 0xa2, 0x06, 0x04, 0x04};
-    Spnego.parse_response_args.blob = OVER;
-    Spnego.parse_response_args.len = sizeof(OVER);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = OVER;
+    SpnegoV.parse_response_args.len = sizeof(OVER);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
     // An inner OCTET STRING longer than the [2] that contains it.
     static const uint8_t INNER_OVER[12] = {0xa1, 0x0a, 0x30, 0x08, 0xa2, 0x06, 0x04, 0x40, 1, 2, 3, 4};
-    Spnego.parse_response_args.blob = INNER_OVER;
-    Spnego.parse_response_args.len = sizeof(INNER_OVER);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = INNER_OVER;
+    SpnegoV.parse_response_args.len = sizeof(INNER_OVER);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
     // X.690 clause 8.1.3.6 indefinite length (0x80) is not DER: this parser takes definite only.
     static const uint8_t INDEFINITE[8] = {0xa1, 0x80, 0x30, 0x08, 0xa2, 0x06, 0x04, 0x04};
-    Spnego.parse_response_args.blob = INDEFINITE;
-    Spnego.parse_response_args.len = sizeof(INDEFINITE);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = INDEFINITE;
+    SpnegoV.parse_response_args.len = sizeof(INDEFINITE);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
     // A long form claiming more length octets than a size_t token could need.
     static const uint8_t HUGE_LEN[10] = {0xa1, 0x85, 1, 2, 3, 4, 5, 0x30, 0x00, 0x00};
-    Spnego.parse_response_args.blob = HUGE_LEN;
-    Spnego.parse_response_args.len = sizeof(HUGE_LEN);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = HUGE_LEN;
+    SpnegoV.parse_response_args.len = sizeof(HUGE_LEN);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
     // Truncated to nothing.
     static const uint8_t ONE[1] = {0xa1};
-    Spnego.parse_response_args.blob = ONE;
-    Spnego.parse_response_args.len = sizeof(ONE);
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = ONE;
+    SpnegoV.parse_response_args.len = sizeof(ONE);
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
-    Spnego.parse_response_args.blob = ONE;
-    Spnego.parse_response_args.len = 0;
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    TEST_ASSERT_FALSE(SpnegoV.ok);
+    SpnegoV.parse_response_args.blob = ONE;
+    SpnegoV.parse_response_args.len = 0;
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
-    Spnego.parse_response_args.blob = NULL;
-    Spnego.parse_response_args.len = 12;
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    SpnegoV.parse_response_args.blob = NULL;
+    SpnegoV.parse_response_args.len = 12;
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
-    Spnego.parse_response_args.blob = ONE;
-    Spnego.parse_response_args.len = 1;
-    Spnego.parse_response_args.protocore_resp_token = NULL;
-    Spnego.parse_response_args.protocore_resp_len = &tok_len;
+    TEST_ASSERT_FALSE(SpnegoV.ok);
+    SpnegoV.parse_response_args.blob = ONE;
+    SpnegoV.parse_response_args.len = 1;
+    SpnegoV.parse_response_args.protocore_resp_token = NULL;
+    SpnegoV.parse_response_args.protocore_resp_len = &tok_len;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
-    Spnego.parse_response_args.blob = ONE;
-    Spnego.parse_response_args.len = 1;
-    Spnego.parse_response_args.protocore_resp_token = &tok;
-    Spnego.parse_response_args.protocore_resp_len = NULL;
+    TEST_ASSERT_FALSE(SpnegoV.ok);
+    SpnegoV.parse_response_args.blob = ONE;
+    SpnegoV.parse_response_args.len = 1;
+    SpnegoV.parse_response_args.protocore_resp_token = &tok;
+    SpnegoV.parse_response_args.protocore_resp_len = NULL;
     Spnego.parse_response(spnego_work);
-    TEST_ASSERT_FALSE(Spnego.ok);
+    TEST_ASSERT_FALSE(SpnegoV.ok);
 
     // Nothing above touched the caller's outputs.
     TEST_ASSERT_EQUAL_size_t(12345, tok_len);
@@ -327,55 +327,55 @@ void test_wrappers_fail_closed(void)
     static const uint8_t NTLM[4] = {1, 2, 3, 4};
     uint8_t out[64];
 
-    Spnego.wrap_negotiate_args.ntlm = NTLM;
-    Spnego.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_negotiate_args.out = out;
-    Spnego.wrap_negotiate_args.cap = 37;
+    SpnegoV.wrap_negotiate_args.ntlm = NTLM;
+    SpnegoV.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_negotiate_args.out = out;
+    SpnegoV.wrap_negotiate_args.cap = 37;
     Spnego.wrap_negotiate(spnego_work);
-    TEST_ASSERT_EQUAL_size_t(0, Spnego.n);
-    Spnego.wrap_negotiate_args.ntlm = NTLM;
-    Spnego.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_negotiate_args.out = out;
-    Spnego.wrap_negotiate_args.cap = 38;
+    TEST_ASSERT_EQUAL_size_t(0, SpnegoV.n);
+    SpnegoV.wrap_negotiate_args.ntlm = NTLM;
+    SpnegoV.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_negotiate_args.out = out;
+    SpnegoV.wrap_negotiate_args.cap = 38;
     Spnego.wrap_negotiate(spnego_work);
-    TEST_ASSERT_EQUAL_size_t(38, Spnego.n);
-    Spnego.wrap_negotiate_args.ntlm = NULL;
-    Spnego.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_negotiate_args.out = out;
-    Spnego.wrap_negotiate_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(38, SpnegoV.n);
+    SpnegoV.wrap_negotiate_args.ntlm = NULL;
+    SpnegoV.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_negotiate_args.out = out;
+    SpnegoV.wrap_negotiate_args.cap = sizeof(out);
     Spnego.wrap_negotiate(spnego_work);
-    TEST_ASSERT_EQUAL_size_t(0, Spnego.n);
-    Spnego.wrap_negotiate_args.ntlm = NTLM;
-    Spnego.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_negotiate_args.out = NULL;
-    Spnego.wrap_negotiate_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0, SpnegoV.n);
+    SpnegoV.wrap_negotiate_args.ntlm = NTLM;
+    SpnegoV.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_negotiate_args.out = NULL;
+    SpnegoV.wrap_negotiate_args.cap = sizeof(out);
     Spnego.wrap_negotiate(spnego_work);
-    TEST_ASSERT_EQUAL_size_t(0, Spnego.n);
+    TEST_ASSERT_EQUAL_size_t(0, SpnegoV.n);
 
-    Spnego.wrap_authenticate_args.ntlm = NTLM;
-    Spnego.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_authenticate_args.out = out;
-    Spnego.wrap_authenticate_args.cap = 11;
+    SpnegoV.wrap_authenticate_args.ntlm = NTLM;
+    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_authenticate_args.out = out;
+    SpnegoV.wrap_authenticate_args.cap = 11;
     Spnego.wrap_authenticate(spnego_work);
-    TEST_ASSERT_EQUAL_size_t(0, Spnego.n);
-    Spnego.wrap_authenticate_args.ntlm = NTLM;
-    Spnego.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_authenticate_args.out = out;
-    Spnego.wrap_authenticate_args.cap = 12;
+    TEST_ASSERT_EQUAL_size_t(0, SpnegoV.n);
+    SpnegoV.wrap_authenticate_args.ntlm = NTLM;
+    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_authenticate_args.out = out;
+    SpnegoV.wrap_authenticate_args.cap = 12;
     Spnego.wrap_authenticate(spnego_work);
-    TEST_ASSERT_EQUAL_size_t(12, Spnego.n);
-    Spnego.wrap_authenticate_args.ntlm = NULL;
-    Spnego.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_authenticate_args.out = out;
-    Spnego.wrap_authenticate_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(12, SpnegoV.n);
+    SpnegoV.wrap_authenticate_args.ntlm = NULL;
+    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_authenticate_args.out = out;
+    SpnegoV.wrap_authenticate_args.cap = sizeof(out);
     Spnego.wrap_authenticate(spnego_work);
-    TEST_ASSERT_EQUAL_size_t(0, Spnego.n);
-    Spnego.wrap_authenticate_args.ntlm = NTLM;
-    Spnego.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_authenticate_args.out = NULL;
-    Spnego.wrap_authenticate_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0, SpnegoV.n);
+    SpnegoV.wrap_authenticate_args.ntlm = NTLM;
+    SpnegoV.wrap_authenticate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_authenticate_args.out = NULL;
+    SpnegoV.wrap_authenticate_args.cap = sizeof(out);
     Spnego.wrap_authenticate(spnego_work);
-    TEST_ASSERT_EQUAL_size_t(0, Spnego.n);
+    TEST_ASSERT_EQUAL_size_t(0, SpnegoV.n);
 }
 
 // The two OIDs are what tell the server which mechanism is being negotiated, so both must appear in
@@ -384,12 +384,12 @@ void test_both_oids_appear_in_the_first_token(void)
 {
     static const uint8_t NTLM[2] = {0xAA, 0xBB};
     uint8_t out[64];
-    Spnego.wrap_negotiate_args.ntlm = NTLM;
-    Spnego.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
-    Spnego.wrap_negotiate_args.out = out;
-    Spnego.wrap_negotiate_args.cap = sizeof(out);
+    SpnegoV.wrap_negotiate_args.ntlm = NTLM;
+    SpnegoV.wrap_negotiate_args.protocore_ntlm_len = sizeof(NTLM);
+    SpnegoV.wrap_negotiate_args.out = out;
+    SpnegoV.wrap_negotiate_args.cap = sizeof(out);
     Spnego.wrap_negotiate(spnego_work);
-    size_t n = Spnego.n;
+    size_t n = SpnegoV.n;
     TEST_ASSERT_EQUAL_size_t(36, n);
 
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SPNEGO_OID_TLV, out + 2, sizeof(SPNEGO_OID_TLV));

@@ -186,15 +186,15 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     send_text(slot_id, 200, PROTOCORE_MIME_TEXT_PLAIN, msg);
 }
 
-static void upload_service_last_size(uint8_t *restrict work)
+void protocore_upload_service_last_size(uint8_t *restrict work)
 {
-    UploadService.n = UPLOAD_SERVICE_CTX(work)->written;
+    UploadServiceV.n = UPLOAD_SERVICE_CTX(work)->written;
 }
 
-static void upload_service_begin(uint8_t *restrict work)
+void protocore_upload_service_begin(uint8_t *restrict work)
 {
-    const char *path = UploadService.begin_args.path;
-    const char *dest_path = UploadService.begin_args.dest_path;
+    const char *path = UploadServiceV.begin_args.path;
+    const char *dest_path = UploadServiceV.begin_args.dest_path;
 
     UPLOAD_SERVICE_CTX(work)->path = path;
     UPLOAD_SERVICE_CTX(work)->dest = dest_path;
@@ -207,10 +207,8 @@ static void upload_service_begin(uint8_t *restrict work)
     on_http(path, HTTP_POST, upload_handle);
 }
 
-UploadServiceNs UploadService = {
-    .begin = upload_service_begin,
-    .last_size = upload_service_last_size,
-};
+/** @brief The operands and the outcome. */
+UploadServiceVars UploadServiceV;
 
 PROTOCORE_END_DECLS
 

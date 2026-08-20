@@ -43,12 +43,18 @@ static protocore_pcb *dialed(uint16_t port)
 
 void test_the_dial_resolves_a_literal()
 {
-    TEST_ASSERT_NOT_NULL(network.dns);
-    TEST_ASSERT_EQUAL_PTR(&Resolver, network.dns->resolver); // the half the dial actually reaches
-    Resolver.query.host = HOST;
-    Resolver.resolve(protocore_dns_resolver_span());
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, Resolver.state);
-    TEST_ASSERT_EQUAL_HEX32(0xC0A8010Au, Resolver.u32);
+    TEST_ASSERT_NOT_NULL(networkV.dns);
+    TEST_ASSERT_NOT_NULL(networkV.dns->resolver);
+
+    // The wiring is checked by what the stored resolver DOES, not by its address. A namespace table
+    // is `static const` in its header, so every translation unit that takes its address gets its
+    // own copy of an identical object: `&Resolver` here is not the pointer dns.c stored, and
+    // comparing the two asserts an identity the shape deliberately does not provide. Calling
+    // through the stored pointer proves the same wiring and survives the difference.
+    ResolverV.query.host = HOST;
+    networkV.dns->resolver->resolve(protocore_dns_resolver_span());
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_DNS_READY, ResolverV.state);
+    TEST_ASSERT_EQUAL_HEX32(0xC0A8010Au, ResolverV.u32);
 }
 
 void test_open_connects_and_reports_the_slot()
@@ -291,4 +297,3 @@ void test_pool_exhaustion_refuses_a_further_open()
         TcpClient.close(protocore_tcp_client_span());
     }
 }
-

@@ -48,11 +48,11 @@ static proto_bool ota_check_auth(HttpReq *req)
     }
 
     uint8_t decoded[MAX_AUTH_LEN * 2 + 2];
-    Base64.decode_args.src = h + 6;
-    Base64.decode_args.dst = decoded;
-    Base64.decode_args.dst_cap = sizeof(decoded) - 1;
+    Base64V.decode_args.src = h + 6;
+    Base64V.decode_args.dst = decoded;
+    Base64V.decode_args.dst_cap = sizeof(decoded) - 1;
     Base64.decode(base64_work);
-    size_t n = Base64.n;
+    size_t n = Base64V.n;
     if (n == 0)
     {
         return PROTO_FALSE;

@@ -27,24 +27,24 @@ static uint8_t g_work[PROTOCORE_SNTRUP761_BORROW] __attribute__((aligned(8)));
 // The namespace, called the way the cases below read: operands in, one call, answer out.
 static void sn_keypair(uint8_t *w, uint8_t *pk, uint8_t *sk)
 {
-    Sntrup761.keypair_args.pk = pk;
-    Sntrup761.keypair_args.sk = sk;
+    Sntrup761V.keypair_args.pk = pk;
+    Sntrup761V.keypair_args.sk = sk;
     Sntrup761.keypair(w);
 }
 
 static void sn_enc(uint8_t *w, const uint8_t *pk, uint8_t *ct, uint8_t *ss)
 {
-    Sntrup761.enc_args.pk = pk;
-    Sntrup761.enc_args.ct = ct;
-    Sntrup761.enc_args.ss = ss;
+    Sntrup761V.enc_args.pk = pk;
+    Sntrup761V.enc_args.ct = ct;
+    Sntrup761V.enc_args.ss = ss;
     Sntrup761.enc(w);
 }
 
 static void sn_dec(uint8_t *w, const uint8_t *sk, const uint8_t *ct, uint8_t *ss)
 {
-    Sntrup761.dec_args.sk = sk;
-    Sntrup761.dec_args.ct = ct;
-    Sntrup761.dec_args.ss = ss;
+    Sntrup761V.dec_args.sk = sk;
+    Sntrup761V.dec_args.ct = ct;
+    Sntrup761V.dec_args.ss = ss;
     Sntrup761.dec(w);
 }
 
@@ -65,12 +65,12 @@ uint8_t *protocore_rng_span(void)
     return g_rng_span;
 }
 
-static void kat_rng_fill(uint8_t *restrict work)
+void protocore_rng_fill(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *b = Rng.fill_args.out;
-    size_t n = Rng.fill_args.len;
-    Rng.ok = PROTO_TRUE;
+    uint8_t *b = RngV.fill_args.out;
+    size_t n = RngV.fill_args.len;
+    RngV.ok = PROTO_TRUE;
     if (s_force_zero_calls > 0)
     {
         --s_force_zero_calls;
@@ -91,14 +91,16 @@ static void kat_rng_fill(uint8_t *restrict work)
     }
 }
 
-static void kat_rng_reseed(uint8_t *restrict work)
+void protocore_rng_reseed(uint8_t *restrict work)
 {
     (void)work;
     s_rng = 0xA5A5F00Du;
-    Rng.ok = PROTO_TRUE;
+    RngV.ok = PROTO_TRUE;
 }
 
-RngNs Rng = {.fill = kat_rng_fill, .reseed = kat_rng_reseed};
+// A test substitutes a module by defining its ENTRY SYMBOLS and its Vars: the header owns the
+// table as static const, so the seam is the symbol rather than a redefinition of the table.
+RngVars RngV;
 
 void setUp(void)
 {

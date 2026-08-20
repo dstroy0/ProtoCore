@@ -29,7 +29,7 @@
 #include "config/platform/platform.h" // PROTOCORE_VENDOR_* selector (picks the L1 backend)
 #include "shared/ip/ip.h"
 
-#include "protocore_config.h"                             // protocore_if_kind
+#include "protocore_config.h" // protocore_if_kind
 
 // There is always a physical (L1) backend to drive. The bring-up (radio, Ethernet PHY, the stack's
 // interface access) lives beside its owner - test/core_setup/physical/<vendor>/ for silicon,
@@ -344,7 +344,6 @@ typedef struct
     PhysicalReadArgs read;
     PhysicalRouteArgs route;
     PhysicalIfaceArgs iface;
-
     proto_bool ok;
     protocore_if_kind if_kind;
     uint32_t u32;
@@ -352,7 +351,15 @@ typedef struct
     uint8_t u8;
     int8_t i8;
     int16_t i16;
+    RadioNs *radio;
+} PhysicalVars;
 
+/** @brief The operands and the outcome. */
+extern PhysicalVars PhysicalV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const wifi_init)(uint8_t *restrict work);
     void (*const wifi_ready)(uint8_t *restrict work);
     void (*const wifi_radio_init)(uint8_t *restrict work);
@@ -378,12 +385,67 @@ typedef struct
     void (*const iface_at)(uint8_t *restrict work);
     void (*const iface_count)(uint8_t *restrict work);
     void (*const iface_send)(uint8_t *restrict work);
-
-    RadioNs *radio;
 } PhysicalNs;
 
-/** @brief The one symbol this module exports. */
-extern PhysicalNs Physical;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in PhysicalV or a region of the borrow at a fixed offset.
+void protocore_physical_wifi_init(uint8_t *restrict work);
+void protocore_physical_wifi_ready(uint8_t *restrict work);
+void protocore_physical_wifi_radio_init(uint8_t *restrict work);
+void protocore_physical_wifi_ap_init(uint8_t *restrict work);
+void protocore_physical_wifi_ssid(uint8_t *restrict work);
+void protocore_physical_wifi_channel(uint8_t *restrict work);
+void protocore_physical_wifi_rssi(uint8_t *restrict work);
+void protocore_physical_wifi_ap_ip(uint8_t *restrict work);
+void protocore_physical_wifi_mac(uint8_t *restrict work);
+void protocore_physical_eth_init(uint8_t *restrict work);
+void protocore_physical_eth_ready(uint8_t *restrict work);
+void protocore_physical_ip6_init(uint8_t *restrict work);
+void protocore_physical_ip6_global(uint8_t *restrict work);
+void protocore_physical_ip6_ready(uint8_t *restrict work);
+void protocore_physical_egress(uint8_t *restrict work);
+void protocore_physical_egress_ip(uint8_t *restrict work);
+void protocore_physical_egress_mac(uint8_t *restrict work);
+void protocore_physical_classify_ip(uint8_t *restrict work);
+void protocore_physical_iface_add(uint8_t *restrict work);
+void protocore_physical_iface_reset(uint8_t *restrict work);
+void protocore_physical_iface_present(uint8_t *restrict work);
+void protocore_physical_iface_kind(uint8_t *restrict work);
+void protocore_physical_iface_at(uint8_t *restrict work);
+void protocore_physical_iface_count(uint8_t *restrict work);
+void protocore_physical_iface_send(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Physical.wifi_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const PhysicalNs Physical __attribute__((unused)) = {
+    .wifi_init = protocore_physical_wifi_init,
+    .wifi_ready = protocore_physical_wifi_ready,
+    .wifi_radio_init = protocore_physical_wifi_radio_init,
+    .wifi_ap_init = protocore_physical_wifi_ap_init,
+    .wifi_ssid = protocore_physical_wifi_ssid,
+    .wifi_channel = protocore_physical_wifi_channel,
+    .wifi_rssi = protocore_physical_wifi_rssi,
+    .wifi_ap_ip = protocore_physical_wifi_ap_ip,
+    .wifi_mac = protocore_physical_wifi_mac,
+    .eth_init = protocore_physical_eth_init,
+    .eth_ready = protocore_physical_eth_ready,
+    .ip6_init = protocore_physical_ip6_init,
+    .ip6_global = protocore_physical_ip6_global,
+    .ip6_ready = protocore_physical_ip6_ready,
+    .egress = protocore_physical_egress,
+    .egress_ip = protocore_physical_egress_ip,
+    .egress_mac = protocore_physical_egress_mac,
+    .classify_ip = protocore_physical_classify_ip,
+    .iface_add = protocore_physical_iface_add,
+    .iface_reset = protocore_physical_iface_reset,
+    .iface_present = protocore_physical_iface_present,
+    .iface_kind = protocore_physical_iface_kind,
+    .iface_at = protocore_physical_iface_at,
+    .iface_count = protocore_physical_iface_count,
+    .iface_send = protocore_physical_iface_send,
+};
 
 /**
  * @brief The PROTOCORE_PHYSICAL_BORROW bytes this module's state lives in.

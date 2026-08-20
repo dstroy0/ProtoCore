@@ -16,9 +16,9 @@ static uint8_t dns_wire_work[16]; // the borrow an entry takes; DnsWire never re
 
 #if PROTOCORE_NEED_DNS_RESOLVER
 
-#include "mmgr/secure/secure.h"                          // protocore_secure_persist_span: this module's storage
+#include "mmgr/secure/secure.h"                            // protocore_secure_persist_span: this module's storage
 #include "network_drivers/network/dns/dns_wire/dns_wire.h" // the name codec both DNS halves share
-#include "server/clock/clock.h"                   // Clock.millis: the deadline the resolve waits to
+#include "server/clock/clock.h"                            // Clock.millis: the deadline the resolve waits to
 
 // --- the program's shared state, beside the namespace not on it -------------
 
@@ -43,8 +43,8 @@ uint8_t *protocore_dns_resolver_span(void)
 #if PROTOCORE_HAS_VENDOR_DNS_RESOLVER
 #include "config/platform/platform.h" // the platform's own resolver, under our names
 #else
-#include "mmgr/protostr/protostr.h"                               // str: the bounded-run walks
-#include "mmgr/rawmemcpy/rawmemcpy.h"                              // raw.read: the server address moves whole
+#include "mmgr/protostr/protostr.h"                      // str: the bounded-run walks
+#include "mmgr/rawmemcpy/rawmemcpy.h"                    // raw.read: the server address moves whole
 #include "network_drivers/transport/udp/server/server.h" // UdpListener: the query port and the ask
 #include "shared/ip/ip.h"                                // Ip.parse: the server, and the dotted-quad fast path
 #endif
@@ -183,11 +183,11 @@ static size_t question_build(uint8_t *out, size_t cap, uint16_t id, const char *
     out[2] = (uint8_t)(PROTOCORE_DNS_FLAG_RD >> 8);
     out[5] = 1; // QDCOUNT = 1
     size_t n = PROTOCORE_DNS_HDR_LEN;
-    DnsWire.text.dotted = host;
-    DnsWire.text.out = out + n;
-    DnsWire.text.out_cap = cap - n;
+    DnsWireV.text.dotted = host;
+    DnsWireV.text.out = out + n;
+    DnsWireV.text.out_cap = cap - n;
     DnsWire.encode(dns_wire_work);
-    size_t w = DnsWire.n;
+    size_t w = DnsWireV.n;
     if (w == 0)
     {
         return 0;
@@ -247,18 +247,18 @@ static proto_bool answer_read(uint8_t *restrict work, const uint8_t *pkt, size_t
     char *name = (char *)DNS_RESOLVER_CTX(work)->name.buf;
     for (uint16_t q = 0; q < qd; q++)
     {
-        DnsWire.msg.pkt = pkt;
-        DnsWire.msg.len = len;
-        DnsWire.msg.off = off;
-        DnsWire.msg.out = name;
-        DnsWire.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
-        DnsWire.msg.allow_ptr = PROTO_TRUE;
+        DnsWireV.msg.pkt = pkt;
+        DnsWireV.msg.len = len;
+        DnsWireV.msg.off = off;
+        DnsWireV.msg.out = name;
+        DnsWireV.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
+        DnsWireV.msg.allow_ptr = PROTO_TRUE;
         DnsWire.decode(dns_wire_work);
-        if (!DnsWire.ok)
+        if (!DnsWireV.ok)
         {
             return PROTO_FALSE;
         }
-        off = DnsWire.next;
+        off = DnsWireV.next;
         if (off + 4 > len)
         {
             return PROTO_FALSE;
@@ -270,18 +270,18 @@ static proto_bool answer_read(uint8_t *restrict work, const uint8_t *pkt, size_t
     // address is the one this resolver was asked for, so any other TYPE is stepped over.
     for (uint16_t r = 0; r < an; r++)
     {
-        DnsWire.msg.pkt = pkt;
-        DnsWire.msg.len = len;
-        DnsWire.msg.off = off;
-        DnsWire.msg.out = name;
-        DnsWire.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
-        DnsWire.msg.allow_ptr = PROTO_TRUE;
+        DnsWireV.msg.pkt = pkt;
+        DnsWireV.msg.len = len;
+        DnsWireV.msg.off = off;
+        DnsWireV.msg.out = name;
+        DnsWireV.msg.out_cap = DNS_RESOLVER_CTX(work)->name.cap;
+        DnsWireV.msg.allow_ptr = PROTO_TRUE;
         DnsWire.decode(dns_wire_work);
-        if (!DnsWire.ok)
+        if (!DnsWireV.ok)
         {
             return PROTO_FALSE;
         }
-        off = DnsWire.next;
+        off = DnsWireV.next;
         if (off + PROTOCORE_DNS_RR_FIXED > len)
         {
             return PROTO_FALSE;
@@ -369,11 +369,11 @@ static protocore_net_err dns_ask(protocore_net_call *c)
     return PROTOCORE_NET_OK;
 }
 
-static void resolver_resolve(uint8_t *restrict work)
+void protocore_resolver_resolve(uint8_t *restrict work)
 {
-    Resolver.u32 = 0;
-    Resolver.state = PROTOCORE_DNS_FAILED;
-    const char *host = Resolver.query.host;
+    ResolverV.u32 = 0;
+    ResolverV.state = PROTOCORE_DNS_FAILED;
+    const char *host = ResolverV.query.host;
     if (host == NULL)
     {
         return;
@@ -382,8 +382,8 @@ static void resolver_resolve(uint8_t *restrict work)
     protocore_net_ip literal;
     if (protocore_net_ip_parse(host, &literal)) // dotted-quad fast path, no query
     {
-        Resolver.u32 = addr_host_order(&literal);
-        Resolver.state = PROTOCORE_DNS_READY;
+        ResolverV.u32 = addr_host_order(&literal);
+        ResolverV.state = PROTOCORE_DNS_READY;
         return;
     }
 
@@ -397,8 +397,8 @@ static void resolver_resolve(uint8_t *restrict work)
             {
                 return;
             }
-            Resolver.u32 = addr_host_order(&DNS_RESOLVER_CTX(work)->addr);
-            Resolver.state = PROTOCORE_DNS_READY;
+            ResolverV.u32 = addr_host_order(&DNS_RESOLVER_CTX(work)->addr);
+            ResolverV.state = PROTOCORE_DNS_READY;
             return;
         }
         if ((uint32_t)(dns_now() - DNS_RESOLVER_CTX(work)->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
@@ -406,7 +406,7 @@ static void resolver_resolve(uint8_t *restrict work)
             DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
             return;
         }
-        Resolver.state = PROTOCORE_DNS_BUSY;
+        ResolverV.state = PROTOCORE_DNS_BUSY;
         return;
     }
 
@@ -425,20 +425,20 @@ static void resolver_resolve(uint8_t *restrict work)
         {
             return;
         }
-        Resolver.u32 = addr_host_order(&DNS_RESOLVER_CTX(work)->addr);
-        Resolver.state = PROTOCORE_DNS_READY;
+        ResolverV.u32 = addr_host_order(&DNS_RESOLVER_CTX(work)->addr);
+        ResolverV.state = PROTOCORE_DNS_READY;
         return;
     }
     DNS_RESOLVER_CTX(work)->busy = PROTO_TRUE;
     DNS_RESOLVER_CTX(work)->timer = dns_now();
-    Resolver.state = PROTOCORE_DNS_BUSY;
+    ResolverV.state = PROTOCORE_DNS_BUSY;
 }
 
 // Reports false and changes nothing. The nameserver list is the stack's, learned from DHCP.
-static void resolver_set_server(uint8_t *restrict work)
+void protocore_resolver_set_server(uint8_t *restrict work)
 {
     (void)work;
-    Resolver.ok = PROTO_FALSE;
+    ResolverV.ok = PROTO_FALSE;
 }
 
 #else // the portable resolver
@@ -487,10 +487,10 @@ static void dns_reply(const uint8_t *data, size_t len, const struct protocore_ud
     }
 }
 
-static void resolver_set_server(uint8_t *restrict work)
+void protocore_resolver_set_server(uint8_t *restrict work)
 {
-    Resolver.ok = PROTO_FALSE;
-    const char *ip = Resolver.server.ip;
+    ResolverV.ok = PROTO_FALSE;
+    const char *ip = ResolverV.server.ip;
     if (ip == NULL || !client_bind(work))
     {
         return;
@@ -510,14 +510,14 @@ static void resolver_set_server(uint8_t *restrict work)
     }
     raw.read(DNS_RESOLVER_CTX(work)->server.buf, ip, n);
     DNS_RESOLVER_CTX(work)->server.buf[n] = '\0';
-    Resolver.ok = PROTO_TRUE;
+    ResolverV.ok = PROTO_TRUE;
 }
 
-static void resolver_resolve(uint8_t *restrict work)
+void protocore_resolver_resolve(uint8_t *restrict work)
 {
-    Resolver.u32 = 0;
-    Resolver.state = PROTOCORE_DNS_FAILED;
-    const char *host = Resolver.query.host;
+    ResolverV.u32 = 0;
+    ResolverV.state = PROTOCORE_DNS_FAILED;
+    const char *host = ResolverV.query.host;
     if (host == NULL)
     {
         return;
@@ -529,9 +529,9 @@ static void resolver_resolve(uint8_t *restrict work)
     Ip.parse(ip_work);
     if (Ip.ok) // a dotted quad answers itself, no query
     {
-        Resolver.u32 = ((uint32_t)literal.bytes[0] << 24) | ((uint32_t)literal.bytes[1] << 16) |
-                       ((uint32_t)literal.bytes[2] << 8) | (uint32_t)literal.bytes[3];
-        Resolver.state = PROTOCORE_DNS_READY;
+        ResolverV.u32 = ((uint32_t)literal.bytes[0] << 24) | ((uint32_t)literal.bytes[1] << 16) |
+                        ((uint32_t)literal.bytes[2] << 8) | (uint32_t)literal.bytes[3];
+        ResolverV.state = PROTOCORE_DNS_READY;
         return;
     }
 
@@ -541,8 +541,8 @@ static void resolver_resolve(uint8_t *restrict work)
         if (DNS_RESOLVER_CTX(work)->done)
         {
             DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
-            Resolver.u32 = DNS_RESOLVER_CTX(work)->answer;
-            Resolver.state = PROTOCORE_DNS_READY;
+            ResolverV.u32 = DNS_RESOLVER_CTX(work)->answer;
+            ResolverV.state = PROTOCORE_DNS_READY;
             return;
         }
         if ((uint32_t)(dns_now() - DNS_RESOLVER_CTX(work)->timer) >= PROTOCORE_DNS_TIMEOUT_MS)
@@ -550,7 +550,7 @@ static void resolver_resolve(uint8_t *restrict work)
             DNS_RESOLVER_CTX(work)->busy = PROTO_FALSE;
             return;
         }
-        Resolver.state = PROTOCORE_DNS_BUSY;
+        ResolverV.state = PROTOCORE_DNS_BUSY;
         return;
     }
 
@@ -600,7 +600,7 @@ static void resolver_resolve(uint8_t *restrict work)
     }
     DNS_RESOLVER_CTX(work)->busy = PROTO_TRUE;
     DNS_RESOLVER_CTX(work)->timer = dns_now();
-    Resolver.state = PROTOCORE_DNS_BUSY;
+    ResolverV.state = PROTOCORE_DNS_BUSY;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_DNS_RESOLVER
@@ -609,57 +609,51 @@ static void resolver_resolve(uint8_t *restrict work)
 // The bodies behind the table
 // ---------------------------------------------------------------------------
 
-static void resolver_classify(uint8_t *restrict work)
+void protocore_resolver_classify(uint8_t *restrict work)
 {
     (void)work;
-    Resolver.cls = ip_class(Resolver.addr.ip);
+    ResolverV.cls = ip_class(ResolverV.addr.ip);
 }
 
-static void resolver_verify(uint8_t *restrict work)
+void protocore_resolver_verify(uint8_t *restrict work)
 {
     (void)work;
-    Resolver.ok = ip_plausible(Resolver.addr.ip);
+    ResolverV.ok = ip_plausible(ResolverV.addr.ip);
 }
 
-static void resolver_query_build(uint8_t *restrict work)
+void protocore_resolver_query_build(uint8_t *restrict work)
 {
     (void)work;
-    Resolver.n = question_build(Resolver.query.out, Resolver.query.cap, Resolver.query.id, Resolver.query.host);
+    ResolverV.n = question_build(ResolverV.query.out, ResolverV.query.cap, ResolverV.query.id, ResolverV.query.host);
 }
 
-static void resolver_answer_parse(uint8_t *restrict work)
+void protocore_resolver_answer_parse(uint8_t *restrict work)
 {
-    Resolver.u32 = 0;
-    Resolver.ok = answer_read(work, Resolver.answer.pkt, Resolver.answer.len, Resolver.query.id, &Resolver.u32);
+    ResolverV.u32 = 0;
+    ResolverV.ok = answer_read(work, ResolverV.answer.pkt, ResolverV.answer.len, ResolverV.query.id, &ResolverV.u32);
 }
 
-static void resolver_resolve_verified(uint8_t *restrict work)
+void protocore_resolver_resolve_verified(uint8_t *restrict work)
 {
-    resolver_resolve(work);
-    if (Resolver.state != PROTOCORE_DNS_READY)
+    protocore_resolver_resolve(work);
+    if (ResolverV.state != PROTOCORE_DNS_READY)
     {
         return;
     }
-    if (!ip_plausible(Resolver.u32))
+    if (!ip_plausible(ResolverV.u32))
     {
-        Resolver.u32 = 0;
-        Resolver.state = PROTOCORE_DNS_FAILED;
+        ResolverV.u32 = 0;
+        ResolverV.state = PROTOCORE_DNS_FAILED;
     }
 }
 
-static void resolver_busy(uint8_t *restrict work)
+void protocore_resolver_busy(uint8_t *restrict work)
 {
-    Resolver.ok = DNS_RESOLVER_CTX(work)->busy;
+    ResolverV.ok = DNS_RESOLVER_CTX(work)->busy;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-ResolverNs Resolver = {.classify = resolver_classify,
-                       .verify = resolver_verify,
-                       .query_build = resolver_query_build,
-                       .answer_parse = resolver_answer_parse,
-                       .resolve = resolver_resolve,
-                       .resolve_verified = resolver_resolve_verified,
-                       .busy = resolver_busy,
-                       .set_server = resolver_set_server};
+/** @brief The operands and the outcome. */
+ResolverVars ResolverV;
 
 #endif // PROTOCORE_NEED_DNS_RESOLVER

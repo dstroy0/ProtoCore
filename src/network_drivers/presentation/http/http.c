@@ -806,9 +806,9 @@ static proto_bool dispatch_matched_route(uint8_t slot_id, HttpReq *req, HttpMeth
             Http.allow_append(protocore_http_span());
             return PROTO_FALSE;
         }
-        FileServing.serve_static_request_args.slot_id = slot_id;
-        FileServing.serve_static_request_args.req = req;
-        FileServing.serve_static_request_args.r = r;
+        FileServingV.serve_static_request_args.slot_id = slot_id;
+        FileServingV.serve_static_request_args.req = req;
+        FileServingV.serve_static_request_args.r = r;
         FileServing.serve_static_request(protocore_file_serving_span());
         return PROTO_TRUE;
     }
@@ -972,11 +972,11 @@ static void poll_slot(uint8_t *restrict work)
 #if PROTOCORE_ENABLE_FILE_SERVING
     // A file response in flight owns the slot: page out the next window and
     // skip the rest of the pipeline until the whole body has been sent.
-    FileServing.holds_slot_args.slot = i;
+    FileServingV.holds_slot_args.slot = i;
     FileServing.holds_slot(protocore_file_serving_span());
-    if (FileServing.ok)
+    if (FileServingV.ok)
     {
-        FileServing.file_send_pump_args.slot_id = i;
+        FileServingV.file_send_pump_args.slot_id = i;
         FileServing.file_send_pump(protocore_file_serving_span());
         return;
     }

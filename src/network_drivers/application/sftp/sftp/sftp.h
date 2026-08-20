@@ -400,13 +400,19 @@ typedef struct
     SftpBuildDataArgs build_data_args;
     SftpBuildName1Args build_name1_args;
     SftpFormatLongnameArgs format_longname_args;
-
     proto_bool ok;
     uint8_t value;
     uint32_t u32;
     uint64_t u64;
     size_t n;
+} SftpVars;
 
+/** @brief The operands and the outcome. */
+extern SftpVars SftpV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const rd_init)(uint8_t *restrict work);
     void (*const rd_u8)(uint8_t *restrict work);
     void (*const rd_u32)(uint8_t *restrict work);
@@ -433,8 +439,63 @@ typedef struct
     void (*const format_longname)(uint8_t *restrict work);
 } SftpNs;
 
-/** @brief The one symbol this module exports. */
-extern SftpNs Sftp;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SftpV or a region of the borrow at a fixed offset.
+void protocore_sftp_rd_init(uint8_t *restrict work);
+void protocore_sftp_rd_u8(uint8_t *restrict work);
+void protocore_sftp_rd_u32(uint8_t *restrict work);
+void protocore_sftp_rd_u64(uint8_t *restrict work);
+void protocore_sftp_rd_string(uint8_t *restrict work);
+void protocore_sftp_rd_attrs(uint8_t *restrict work);
+void protocore_sftp_wr_init(uint8_t *restrict work);
+void protocore_sftp_wr_u8(uint8_t *restrict work);
+void protocore_sftp_wr_u32(uint8_t *restrict work);
+void protocore_sftp_wr_u64(uint8_t *restrict work);
+void protocore_sftp_wr_bytes(uint8_t *restrict work);
+void protocore_sftp_wr_string(uint8_t *restrict work);
+void protocore_sftp_wr_attrs(uint8_t *restrict work);
+void protocore_sftp_wr_finish(uint8_t *restrict work);
+void protocore_sftp_wr_pos(uint8_t *restrict work);
+void protocore_sftp_wr_patch_u32(uint8_t *restrict work);
+void protocore_sftp_frame_len(uint8_t *restrict work);
+void protocore_sftp_build_version(uint8_t *restrict work);
+void protocore_sftp_build_status(uint8_t *restrict work);
+void protocore_sftp_build_handle(uint8_t *restrict work);
+void protocore_sftp_build_attrs(uint8_t *restrict work);
+void protocore_sftp_build_data(uint8_t *restrict work);
+void protocore_sftp_build_name1(uint8_t *restrict work);
+void protocore_sftp_format_longname(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sftp.rd_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SftpNs Sftp __attribute__((unused)) = {
+    .rd_init = protocore_sftp_rd_init,
+    .rd_u8 = protocore_sftp_rd_u8,
+    .rd_u32 = protocore_sftp_rd_u32,
+    .rd_u64 = protocore_sftp_rd_u64,
+    .rd_string = protocore_sftp_rd_string,
+    .rd_attrs = protocore_sftp_rd_attrs,
+    .wr_init = protocore_sftp_wr_init,
+    .wr_u8 = protocore_sftp_wr_u8,
+    .wr_u32 = protocore_sftp_wr_u32,
+    .wr_u64 = protocore_sftp_wr_u64,
+    .wr_bytes = protocore_sftp_wr_bytes,
+    .wr_string = protocore_sftp_wr_string,
+    .wr_attrs = protocore_sftp_wr_attrs,
+    .wr_finish = protocore_sftp_wr_finish,
+    .wr_pos = protocore_sftp_wr_pos,
+    .wr_patch_u32 = protocore_sftp_wr_patch_u32,
+    .frame_len = protocore_sftp_frame_len,
+    .build_version = protocore_sftp_build_version,
+    .build_status = protocore_sftp_build_status,
+    .build_handle = protocore_sftp_build_handle,
+    .build_attrs = protocore_sftp_build_attrs,
+    .build_data = protocore_sftp_build_data,
+    .build_name1 = protocore_sftp_build_name1,
+    .format_longname = protocore_sftp_format_longname,
+};
 
 PROTOCORE_END_DECLS
 

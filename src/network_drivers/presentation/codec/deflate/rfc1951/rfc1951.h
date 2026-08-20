@@ -101,22 +101,42 @@ typedef struct
     const short *len_extra;
     const short *dist_base;
     const short *dist_extra;
-
     Rfc1951ReverseBitsArgs reverse_bits_args;
     Rfc1951BuildFixedArgs build_fixed_args;
     Rfc1951EmitLiteralArgs emit_literal_args;
     Rfc1951EmitMatchArgs emit_match_args;
-
     uint16_t u16;
+} Rfc1951Vars;
 
+/** @brief The operands and the outcome. */
+extern Rfc1951Vars Rfc1951V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const reverse_bits)(uint8_t *restrict work);
     void (*const build_fixed)(uint8_t *restrict work);
     void (*const emit_literal)(uint8_t *restrict work);
     void (*const emit_match)(uint8_t *restrict work);
 } Rfc1951Ns;
 
-/** @brief The one symbol this module exports. */
-extern Rfc1951Ns Rfc1951;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Rfc1951V or a region of the borrow at a fixed offset.
+void protocore_rfc1951_reverse_bits(uint8_t *restrict work);
+void protocore_rfc1951_build_fixed(uint8_t *restrict work);
+void protocore_rfc1951_emit_literal(uint8_t *restrict work);
+void protocore_rfc1951_emit_match(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Rfc1951.reverse_bits(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Rfc1951Ns Rfc1951 __attribute__((unused)) = {
+    .reverse_bits = protocore_rfc1951_reverse_bits,
+    .build_fixed = protocore_rfc1951_build_fixed,
+    .emit_literal = protocore_rfc1951_emit_literal,
+    .emit_match = protocore_rfc1951_emit_match,
+};
 
 PROTOCORE_END_DECLS
 

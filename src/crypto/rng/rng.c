@@ -125,10 +125,10 @@ uint8_t *protocore_rng_span(void)
 
 // --- the entries -----------------------------------------------------------
 
-static void rng_fill(uint8_t *restrict work)
+void protocore_rng_fill(uint8_t *restrict work)
 {
-    Rng.ok = PROTO_FALSE;
-    if (!Rng.fill_args.out || Rng.fill_args.len == 0)
+    RngV.ok = PROTO_FALSE;
+    if (!RngV.fill_args.out || RngV.fill_args.len == 0)
     {
         return;
     }
@@ -136,27 +136,28 @@ static void rng_fill(uint8_t *restrict work)
     uint8_t *key = RNG_KEY(work);
     uint8_t *iv = RNG_IV(work);
     uint8_t *next = RNG_NEXT(work);
-    const size_t len = Rng.fill_args.len;
+    const size_t len = RngV.fill_args.len;
     if (!ctx->seeded || ctx->drawn >= PROTOCORE_RAND_RESEED_BYTES || len >= PROTOCORE_RAND_RESEED_BYTES - ctx->drawn)
     {
         rng_platform_seed(work);
     }
     rng_chacha(work, key, iv, 0, NULL, next, PROTOCORE_RAND_SEED_LEN);
-    rng_chacha(work, key, iv, 1, NULL, Rng.fill_args.out, len);
+    rng_chacha(work, key, iv, 1, NULL, RngV.fill_args.out, len);
     mem.cpy(key, next, PROTOCORE_RAND_SEED_LEN);
     protocore_secure_wipe(next, PROTOCORE_RAND_SEED_LEN);
     ctx->drawn += len;
-    Rng.ok = PROTO_TRUE;
+    RngV.ok = PROTO_TRUE;
 }
 
-static void rng_reseed(uint8_t *restrict work)
+void protocore_rng_reseed(uint8_t *restrict work)
 {
-    Rng.ok = PROTO_FALSE;
+    RngV.ok = PROTO_FALSE;
     rng_platform_seed(work);
-    Rng.ok = PROTO_TRUE;
+    RngV.ok = PROTO_TRUE;
 }
 
-RngNs Rng = {.fill = rng_fill, .reseed = rng_reseed};
+/** @brief The operands and the outcome. */
+RngVars RngV;
 
 PROTOCORE_END_DECLS
 

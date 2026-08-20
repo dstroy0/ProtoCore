@@ -44,40 +44,40 @@ static uint8_t rfc1951_work[16]; // the borrow an entry takes; Rfc1951 never rea
 // Thin wrappers so a case reads as the operation it is checking rather than four assignments.
 static void build_fixed(uint16_t *ll_code, uint8_t *ll_len, uint16_t *d_code, uint8_t *d_len)
 {
-    Rfc1951.build_fixed_args.ll_code = ll_code;
-    Rfc1951.build_fixed_args.ll_len = ll_len;
-    Rfc1951.build_fixed_args.d_code = d_code;
-    Rfc1951.build_fixed_args.d_len = d_len;
+    Rfc1951V.build_fixed_args.ll_code = ll_code;
+    Rfc1951V.build_fixed_args.ll_len = ll_len;
+    Rfc1951V.build_fixed_args.d_code = d_code;
+    Rfc1951V.build_fixed_args.d_len = d_len;
     Rfc1951.build_fixed(rfc1951_work);
 }
 
 static uint16_t rev(uint16_t code, int len)
 {
-    Rfc1951.reverse_bits_args.code = code;
-    Rfc1951.reverse_bits_args.len = len;
+    Rfc1951V.reverse_bits_args.code = code;
+    Rfc1951V.reverse_bits_args.len = len;
     Rfc1951.reverse_bits(rfc1951_work);
-    return Rfc1951.u16;
+    return Rfc1951V.u16;
 }
 
 static void emit_literal(protocore_bit_writer *w, const uint16_t *ll_code, const uint8_t *ll_len, uint8_t b)
 {
-    Rfc1951.emit_literal_args.w = w;
-    Rfc1951.emit_literal_args.ll_code = ll_code;
-    Rfc1951.emit_literal_args.ll_len = ll_len;
-    Rfc1951.emit_literal_args.b = b;
+    Rfc1951V.emit_literal_args.w = w;
+    Rfc1951V.emit_literal_args.ll_code = ll_code;
+    Rfc1951V.emit_literal_args.ll_len = ll_len;
+    Rfc1951V.emit_literal_args.b = b;
     Rfc1951.emit_literal(rfc1951_work);
 }
 
-static void emit_match(protocore_bit_writer *w, const uint16_t *ll_code, const uint8_t *ll_len,
-                       const uint16_t *d_code, const uint8_t *d_len, int len, int dist)
+static void emit_match(protocore_bit_writer *w, const uint16_t *ll_code, const uint8_t *ll_len, const uint16_t *d_code,
+                       const uint8_t *d_len, int len, int dist)
 {
-    Rfc1951.emit_match_args.w = w;
-    Rfc1951.emit_match_args.ll_code = ll_code;
-    Rfc1951.emit_match_args.ll_len = ll_len;
-    Rfc1951.emit_match_args.d_code = d_code;
-    Rfc1951.emit_match_args.d_len = d_len;
-    Rfc1951.emit_match_args.len = len;
-    Rfc1951.emit_match_args.dist = dist;
+    Rfc1951V.emit_match_args.w = w;
+    Rfc1951V.emit_match_args.ll_code = ll_code;
+    Rfc1951V.emit_match_args.ll_len = ll_len;
+    Rfc1951V.emit_match_args.d_code = d_code;
+    Rfc1951V.emit_match_args.d_len = d_len;
+    Rfc1951V.emit_match_args.len = len;
+    Rfc1951V.emit_match_args.dist = dist;
     Rfc1951.emit_match(rfc1951_work);
 }
 
@@ -85,8 +85,8 @@ void test_length_table_matches_rfc(void)
 {
     for (int i = 0; i < 29; i++)
     {
-        TEST_ASSERT_EQUAL_INT16(RFC_LEN_BASE[i], Rfc1951.len_base[i]);
-        TEST_ASSERT_EQUAL_INT16(RFC_LEN_EXTRA[i], Rfc1951.len_extra[i]);
+        TEST_ASSERT_EQUAL_INT16(RFC_LEN_BASE[i], Rfc1951V.len_base[i]);
+        TEST_ASSERT_EQUAL_INT16(RFC_LEN_EXTRA[i], Rfc1951V.len_extra[i]);
     }
 }
 
@@ -94,8 +94,8 @@ void test_distance_table_matches_rfc(void)
 {
     for (int i = 0; i < 30; i++)
     {
-        TEST_ASSERT_EQUAL_INT16(RFC_DIST_BASE[i], Rfc1951.dist_base[i]);
-        TEST_ASSERT_EQUAL_INT16(RFC_DIST_EXTRA[i], Rfc1951.dist_extra[i]);
+        TEST_ASSERT_EQUAL_INT16(RFC_DIST_BASE[i], Rfc1951V.dist_base[i]);
+        TEST_ASSERT_EQUAL_INT16(RFC_DIST_EXTRA[i], Rfc1951V.dist_extra[i]);
     }
 }
 
@@ -106,10 +106,10 @@ void test_length_spans_are_contiguous(void)
 {
     for (int i = 0; i < 27; i++)
     {
-        const int span = 1 << Rfc1951.len_extra[i];
-        TEST_ASSERT_EQUAL_INT16(Rfc1951.len_base[i] + span, Rfc1951.len_base[i + 1]);
+        const int span = 1 << Rfc1951V.len_extra[i];
+        TEST_ASSERT_EQUAL_INT16(Rfc1951V.len_base[i] + span, Rfc1951V.len_base[i + 1]);
     }
-    TEST_ASSERT_EQUAL_INT16(258, Rfc1951.len_base[28]);
+    TEST_ASSERT_EQUAL_INT16(258, Rfc1951V.len_base[28]);
 }
 
 // The distance ranges tile all the way to 32768, sec 3.2.5's largest distance.
@@ -117,24 +117,24 @@ void test_distance_spans_are_contiguous(void)
 {
     for (int i = 0; i < 29; i++)
     {
-        const int span = 1 << Rfc1951.dist_extra[i];
-        TEST_ASSERT_EQUAL_INT16(Rfc1951.dist_base[i] + span, Rfc1951.dist_base[i + 1]);
+        const int span = 1 << Rfc1951V.dist_extra[i];
+        TEST_ASSERT_EQUAL_INT16(Rfc1951V.dist_base[i] + span, Rfc1951V.dist_base[i + 1]);
     }
     // Code 29's printed range is 24577-32768, so its last value is base + 2^extra - 1.
-    TEST_ASSERT_EQUAL_INT32(32768, Rfc1951.dist_base[29] + (1 << Rfc1951.dist_extra[29]) - 1);
+    TEST_ASSERT_EQUAL_INT32(32768, Rfc1951V.dist_base[29] + (1 << Rfc1951V.dist_extra[29]) - 1);
 }
 
 // One namespace holds all four tables, which is what lets the encoder and the decoder read the same
 // table rather than two copies that can drift. Four distinct arrays, every one of them bound.
 void test_namespace_holds_all_four_tables(void)
 {
-    TEST_ASSERT_NOT_NULL(Rfc1951.len_base);
-    TEST_ASSERT_NOT_NULL(Rfc1951.len_extra);
-    TEST_ASSERT_NOT_NULL(Rfc1951.dist_base);
-    TEST_ASSERT_NOT_NULL(Rfc1951.dist_extra);
-    TEST_ASSERT_NOT_EQUAL(Rfc1951.len_base, Rfc1951.len_extra);
-    TEST_ASSERT_NOT_EQUAL(Rfc1951.dist_base, Rfc1951.dist_extra);
-    TEST_ASSERT_NOT_EQUAL(Rfc1951.len_base, Rfc1951.dist_base);
+    TEST_ASSERT_NOT_NULL(Rfc1951V.len_base);
+    TEST_ASSERT_NOT_NULL(Rfc1951V.len_extra);
+    TEST_ASSERT_NOT_NULL(Rfc1951V.dist_base);
+    TEST_ASSERT_NOT_NULL(Rfc1951V.dist_extra);
+    TEST_ASSERT_NOT_EQUAL(Rfc1951V.len_base, Rfc1951V.len_extra);
+    TEST_ASSERT_NOT_EQUAL(Rfc1951V.dist_base, Rfc1951V.dist_extra);
+    TEST_ASSERT_NOT_EQUAL(Rfc1951V.len_base, Rfc1951V.dist_base);
 }
 
 // RFC 1951 sec 3.2.6: literal/length values 0-143 take 8 bits, 144-255 take 9, 256-279 take 7 and
@@ -296,10 +296,10 @@ void test_emit_match_writes_the_offset_in_the_extra_bits(void)
 {
 
     // The table itself says which code a span belongs to, which is what the emitter walks.
-    TEST_ASSERT_EQUAL_INT16(11, Rfc1951.len_base[8]); // code 257 + 8 = 265
-    TEST_ASSERT_EQUAL_INT16(1, Rfc1951.len_extra[8]);
-    TEST_ASSERT_EQUAL_INT16(5, Rfc1951.dist_base[4]); // distance code 4
-    TEST_ASSERT_EQUAL_INT16(1, Rfc1951.dist_extra[4]);
+    TEST_ASSERT_EQUAL_INT16(11, Rfc1951V.len_base[8]); // code 257 + 8 = 265
+    TEST_ASSERT_EQUAL_INT16(1, Rfc1951V.len_extra[8]);
+    TEST_ASSERT_EQUAL_INT16(5, Rfc1951V.dist_base[4]); // distance code 4
+    TEST_ASSERT_EQUAL_INT16(1, Rfc1951V.dist_extra[4]);
 
     uint16_t ll_code[288];
     uint8_t ll_len[288];

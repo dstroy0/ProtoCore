@@ -183,11 +183,17 @@ typedef struct
     MdnsAdaptiveContentionInitArgs contention_init_args;
     MdnsAdaptiveContentionSampleArgs contention_sample_args;
     MdnsAdaptiveBeginArgs begin_args;
-
     proto_bool ok;
     uint32_t ms;
     uint16_t value;
+} MdnsAdaptiveVars;
 
+/** @brief The operands and the outcome. */
+extern MdnsAdaptiveVars MdnsAdaptiveV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const refresh_interval)(uint8_t *restrict work);
     void (*const beacon_init)(uint8_t *restrict work);
     void (*const beacon_adapt)(uint8_t *restrict work);
@@ -203,8 +209,41 @@ typedef struct
     void (*const announces)(uint8_t *restrict work);
 } MdnsAdaptiveNs;
 
-/** @brief The one symbol this module exports. */
-extern MdnsAdaptiveNs MdnsAdaptive;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in MdnsAdaptiveV or a region of the borrow at a fixed offset.
+void protocore_mdns_adaptive_refresh_interval(uint8_t *restrict work);
+void protocore_mdns_adaptive_beacon_init(uint8_t *restrict work);
+void protocore_mdns_adaptive_beacon_adapt(uint8_t *restrict work);
+void protocore_mdns_adaptive_beacon_due(uint8_t *restrict work);
+void protocore_mdns_adaptive_beacon_presleep_due(uint8_t *restrict work);
+void protocore_mdns_adaptive_contention_init(uint8_t *restrict work);
+void protocore_mdns_adaptive_contention_sample(uint8_t *restrict work);
+void protocore_mdns_adaptive_begin(uint8_t *restrict work);
+void protocore_mdns_adaptive_tick(uint8_t *restrict work);
+void protocore_mdns_adaptive_end(uint8_t *restrict work);
+void protocore_mdns_adaptive_interval_ms(uint8_t *restrict work);
+void protocore_mdns_adaptive_contention(uint8_t *restrict work);
+void protocore_mdns_adaptive_announces(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `MdnsAdaptive.refresh_interval(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const MdnsAdaptiveNs MdnsAdaptive __attribute__((unused)) = {
+    .refresh_interval = protocore_mdns_adaptive_refresh_interval,
+    .beacon_init = protocore_mdns_adaptive_beacon_init,
+    .beacon_adapt = protocore_mdns_adaptive_beacon_adapt,
+    .beacon_due = protocore_mdns_adaptive_beacon_due,
+    .beacon_presleep_due = protocore_mdns_adaptive_beacon_presleep_due,
+    .contention_init = protocore_mdns_adaptive_contention_init,
+    .contention_sample = protocore_mdns_adaptive_contention_sample,
+    .begin = protocore_mdns_adaptive_begin,
+    .tick = protocore_mdns_adaptive_tick,
+    .end = protocore_mdns_adaptive_end,
+    .interval_ms = protocore_mdns_adaptive_interval_ms,
+    .contention = protocore_mdns_adaptive_contention,
+    .announces = protocore_mdns_adaptive_announces,
+};
 
 /**
  * @brief The PROTOCORE_MDNS_ADAPTIVE_BORROW bytes this module's state lives in.

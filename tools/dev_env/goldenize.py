@@ -2770,11 +2770,42 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     # is wrong far more often than not: protocol.c binds `.set_state = set_state` with a bare name,
     # and the guess `protocol_set_state` matches nothing - so the header declared entries the .c
     # never defined, and 537 symbols went undefined at link time with the source compiling cleanly.
-    bind = {}
+    bind, data_init = {}, []
     init = re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), csrc, re.S)
     if init:
-        for m in re.finditer(r"\.(?P<entry>\w+)\s*=\s*(?P<impl>\w+)\s*(?:[,}]|$)", init.group(1)):
-            bind[m.group("entry")] = m.group("impl")
+        entry_set = set(entries)
+        # LINE BY LINE, because an initializer can be conditional. network.c guards `.dns = &Dns`
+        # with `#if PROTOCORE_ENABLE_DNS`, and a regex over the whole body drops the directives - so
+        # the member came out unset, NULL at run time, with nothing to say so at compile time.
+        # A directive line is carried through verbatim; only a `.name = value` line is classified.
+        for line in init.group(1).splitlines():
+            bare = line.strip().rstrip(",")
+            if bare.startswith("#"):
+                data_init.append((None, line.rstrip()))
+                continue
+            # One line can carry several members: rng.c writes
+            # `RngNs Rng = {.fill = rng_fill, .reseed = rng_reseed};` on a single line, and matching
+            # `.name = rest-of-line` binds the first member to everything after it and loses the
+            # second. Split on TOP-LEVEL commas - nsconv's split is literal- and paren-aware, so a
+            # value holding a comma inside parentheses or a string stays one piece.
+            for piece in N.split_args(bare):
+                m = re.match(r"\.(?P<name>\w+)\s*=\s*(?P<val>.+)$", piece.strip())
+                if not m:
+                    continue
+                name, val = m.group("name"), " ".join(m.group("val").split())
+                if name in entry_set:
+                    bind[name] = val
+                    continue
+                # A DATA member the table initialised. rfc1951 binds .len_base = len_base and three
+                # more pointers to static tables in the same brace as its entries. Replacing the
+                # table with a bare `<X>Vars <X>V;` zero-initialises them, so the pointers come out
+                # NULL - it compiles, links, and segfaults on first use with no diagnostic.
+                data_init.append((name, val))
+        # A block of directives with no member left under it says nothing; drop trailing ones.
+        while data_init and data_init[-1][0] is None:
+            data_init.pop()
+        if not any(n for n, _ in data_init):
+            data_init = []
 
     cout = csrc
     for e, f in zip(entries, impl):
@@ -2796,9 +2827,15 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     # log.c has one under `#if PROTOCORE_LOG_LEVEL < ...` and a stub under `#else` - and replacing
     # only the first leaves the other still defining the table the header now declares const.
     # Only one arm compiles, so a definition in each is right.
+    # The Vars definition CARRIES the data initializers the table had, or they are lost to zero.
+    if data_init:
+        body = "\n".join(v if n is None else "    .%s = %s," % (n, v) for n, v in data_init)
+        vardef = "/** @brief The operands and the outcome. */\n%s %s = {\n%s\n};" % (vars_t, objv, body)
+    else:
+        vardef = "/** @brief The operands and the outcome. */\n%s %s;" % (vars_t, objv)
     cout = re.sub(
         r"^[ \t]*%s[ \t]+%s[ \t]*=[ \t]*\{.*?\};" % (re.escape(ns), re.escape(obj)),
-        "/** @brief The operands and the outcome. */\n%s %s;" % (vars_t, objv),
+        lambda _m: vardef,
         cout,
         flags=re.S | re.M,
     )

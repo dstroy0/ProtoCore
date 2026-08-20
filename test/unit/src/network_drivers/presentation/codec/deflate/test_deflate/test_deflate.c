@@ -39,15 +39,15 @@ void tearDown(void)
 static size_t compress(const uint8_t *src, size_t src_len)
 {
     size_t clen = 0;
-    Deflate.raw_args.src = src;
-    Deflate.raw_args.src_len = src_len;
-    Deflate.raw_args.dst = g_comp;
-    Deflate.raw_args.dst_cap = sizeof(g_comp);
-    Deflate.raw_args.out_len = &clen;
-    Deflate.raw_args.scratch = g_dscratch;
-    Deflate.raw_args.scratch_len = sizeof(g_dscratch);
+    DeflateV.raw_args.src = src;
+    DeflateV.raw_args.src_len = src_len;
+    DeflateV.raw_args.dst = g_comp;
+    DeflateV.raw_args.dst_cap = sizeof(g_comp);
+    DeflateV.raw_args.out_len = &clen;
+    DeflateV.raw_args.scratch = g_dscratch;
+    DeflateV.raw_args.scratch_len = sizeof(g_dscratch);
     Deflate.raw(deflate_work);
-    TEST_ASSERT_EQUAL_INT(DEFLATE_OK, Deflate.value);
+    TEST_ASSERT_EQUAL_INT(DEFLATE_OK, DeflateV.value);
     return clen;
 }
 
@@ -293,15 +293,15 @@ void test_output_overflow_fails_closed(void)
     }
     uint8_t tiny[16];
     size_t clen = 0;
-    Deflate.raw_args.src = buf;
-    Deflate.raw_args.src_len = sizeof(buf);
-    Deflate.raw_args.dst = tiny;
-    Deflate.raw_args.dst_cap = sizeof(tiny);
-    Deflate.raw_args.out_len = &clen;
-    Deflate.raw_args.scratch = g_dscratch;
-    Deflate.raw_args.scratch_len = sizeof(g_dscratch);
+    DeflateV.raw_args.src = buf;
+    DeflateV.raw_args.src_len = sizeof(buf);
+    DeflateV.raw_args.dst = tiny;
+    DeflateV.raw_args.dst_cap = sizeof(tiny);
+    DeflateV.raw_args.out_len = &clen;
+    DeflateV.raw_args.scratch = g_dscratch;
+    DeflateV.raw_args.scratch_len = sizeof(g_dscratch);
     Deflate.raw(deflate_work);
-    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_OVERFLOW, Deflate.value);
+    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_OVERFLOW, DeflateV.value);
 }
 
 // Working memory one octet short of what the tables need is refused before anything is written.
@@ -309,13 +309,13 @@ void test_scratch_too_small_fails_closed(void)
 {
     uint8_t small[DEFLATE_SCRATCH_SIZE - 1];
     size_t clen = 0;
-    Deflate.raw_args.src = (const uint8_t *)"anything";
-    Deflate.raw_args.src_len = 8;
-    Deflate.raw_args.dst = g_comp;
-    Deflate.raw_args.dst_cap = sizeof(g_comp);
-    Deflate.raw_args.out_len = &clen;
-    Deflate.raw_args.scratch = small;
-    Deflate.raw_args.scratch_len = sizeof(small);
+    DeflateV.raw_args.src = (const uint8_t *)"anything";
+    DeflateV.raw_args.src_len = 8;
+    DeflateV.raw_args.dst = g_comp;
+    DeflateV.raw_args.dst_cap = sizeof(g_comp);
+    DeflateV.raw_args.out_len = &clen;
+    DeflateV.raw_args.scratch = small;
+    DeflateV.raw_args.scratch_len = sizeof(small);
     Deflate.raw(deflate_work);
-    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_SCRATCH, Deflate.value);
+    TEST_ASSERT_EQUAL_INT(DEFLATE_ERR_SCRATCH, DeflateV.value);
 }

@@ -151,13 +151,19 @@ typedef struct
     DnsQueryArgs query;   ///< what a question names (RFC 1035 sec 4.1.2)
     DnsAnswerArgs answer; ///< what a parse reads (RFC 1035 sec 4.1.3)
     DnsServerArgs server; ///< where a portable query is sent (RFC 1035 sec 4.2.1)
-
     proto_bool ok;
     size_t n;
     uint32_t u32;
     protocore_ip_class cls;
     protocore_dns_state state;
+} ResolverVars;
 
+/** @brief The operands and the outcome. */
+extern ResolverVars ResolverV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const classify)(uint8_t *restrict work);
     void (*const verify)(uint8_t *restrict work);
     void (*const query_build)(uint8_t *restrict work);
@@ -168,8 +174,31 @@ typedef struct
     void (*const set_server)(uint8_t *restrict work);
 } ResolverNs;
 
-/** @brief The one symbol this module exports. */
-extern ResolverNs Resolver;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in ResolverV or a region of the borrow at a fixed offset.
+void protocore_resolver_classify(uint8_t *restrict work);
+void protocore_resolver_verify(uint8_t *restrict work);
+void protocore_resolver_query_build(uint8_t *restrict work);
+void protocore_resolver_answer_parse(uint8_t *restrict work);
+void protocore_resolver_resolve(uint8_t *restrict work);
+void protocore_resolver_resolve_verified(uint8_t *restrict work);
+void protocore_resolver_busy(uint8_t *restrict work);
+void protocore_resolver_set_server(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Resolver.classify(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const ResolverNs Resolver __attribute__((unused)) = {
+    .classify = protocore_resolver_classify,
+    .verify = protocore_resolver_verify,
+    .query_build = protocore_resolver_query_build,
+    .answer_parse = protocore_resolver_answer_parse,
+    .resolve = protocore_resolver_resolve,
+    .resolve_verified = protocore_resolver_resolve_verified,
+    .busy = protocore_resolver_busy,
+    .set_server = protocore_resolver_set_server,
+};
 
 /**
  * @brief The PROTOCORE_DNS_RESOLVER_BORROW bytes this module's state lives in.
