@@ -395,6 +395,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+<<<<<<< Updated upstream
+=======
+- hooks commit: say to single-quote the paragraphs ([`fc5cc5e`](https://github.com/dstroy0/ProtoCore/commit/fc5cc5e73fa7fe280a54604d03f2dc7dbd3d5b08))
+>>>>>>> Stashed changes
 - no call spells one as null, 63 sites ([`b03a90a`](https://github.com/dstroy0/ProtoCore/commit/b03a90aed7364cfd3034464b523926d6ae2ad9c3))
 - measure cap-sweep: compile the arm the host never answers ([`4b12dfa`](https://github.com/dstroy0/ProtoCore/commit/4b12dfabfc94af755a1fdab0bdd6c3f9ddc897ed))
 - the no-bus arms of hmmd, ld2410 and pmbus never compiled ([`2965ad1`](https://github.com/dstroy0/ProtoCore/commit/2965ad1dee204142f2ae3c884fb600e39bba0dc7))
