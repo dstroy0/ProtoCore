@@ -119,6 +119,7 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`8d62e65`](https://github.com/dstroy0/ProtoCore/commit/8d62e659eaa50ee5f9ce420fc7dac7c0f1a9f5c4))
 - update CHANGELOG.md [skip ci] ([`137a0af`](https://github.com/dstroy0/ProtoCore/commit/137a0af04b54fa5105148b317a923b7487c13faf))
 - update CHANGELOG.md [skip ci] ([`b139154`](https://github.com/dstroy0/ProtoCore/commit/b13915458d027d15932bca53491dc581f690d6b3))
 - update CHANGELOG.md [skip ci] ([`f8ddc1f`](https://github.com/dstroy0/ProtoCore/commit/f8ddc1fd1a9a7e8696256e3c4f6ca85c74896ac8))
@@ -389,6 +390,19 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
+- batch 11 of the handle reshape, 29 modules to 280 of 308 ([`6c268ef`](https://github.com/dstroy0/ProtoCore/commit/6c268ef790bcfa77a0b1c79770c21e71cc909e60))
+- ask whether a namespace is reached in one hop, and whether the table binds every entry ([`64ec6d4`](https://github.com/dstroy0/ProtoCore/commit/64ec6d4417456cb5c4dcacbd3bb1c8450ed8d654))
+- bind a wrapped table entry, and refuse a table that leaves one unbound ([`9e6bdf5`](https://github.com/dstroy0/ProtoCore/commit/9e6bdf5b57a4075be2e01b9b78d356b59704f2a1))
+- (housekeeping): handle reshape, 251 modules; shared implementations and local aliases ([`0d379f9`](https://github.com/dstroy0/ProtoCore/commit/0d379f9e7317e47dbc70e49210be9a9f6d8fcb43))
+- (housekeeping): handle reshape, 228 modules; a guarded entry keeps its guard ([`4ce62a1`](https://github.com/dstroy0/ProtoCore/commit/4ce62a14071dd3c7ff0ec5380446551443adeb3d))
+- (housekeeping): handle reshape, 198 modules; the table is not always in the sibling .c ([`5eb2b16`](https://github.com/dstroy0/ProtoCore/commit/5eb2b16aad901f7b5c6cbbdca916175da8b3c48a))
+- (housekeeping): handle reshape, 168 modules; the rename needs all three conditions ([`b745c37`](https://github.com/dstroy0/ProtoCore/commit/b745c374ff842d5816b43dbc249ac0a12e05acb4))
+- (housekeeping): handle reshape, 142 modules ([`f6be0b4`](https://github.com/dstroy0/ProtoCore/commit/f6be0b421df371c29f8f02303590b7b96ff1ea7f))
+- (housekeeping): handle reshape, 112 modules, and the hint that carries what it cost ([`7ea879c`](https://github.com/dstroy0/ProtoCore/commit/7ea879cfe5d7f2b9338829f30231b62ef4ec61e9))
+- (housekeeping): handle reshape, 82 modules; rename only where the bytes are code ([`6049cf1`](https://github.com/dstroy0/ProtoCore/commit/6049cf1ec943120af6a4e1d8f2ce8edc099407c3))
+- (housekeeping): handle reshape, 52 modules, and three defects the tests caught ([`bd17fdb`](https://github.com/dstroy0/ProtoCore/commit/bd17fdb9960da7b9b3f74b088104311f9e5a07fa))
+- (housekeeping): handle reshape, first 15 modules ([`b462bf1`](https://github.com/dstroy0/ProtoCore/commit/b462bf177b5e83551493b864a33d23703050580f))
+- (housekeeping): revert the 302-module handle sweep, keep the verb ([`4b602c8`](https://github.com/dstroy0/ProtoCore/commit/4b602c871b8539eac52ab47fa37b693de8be7ab5))
 - (housekeeping): regenerate the three CMakeLists the module graph moved ([`b6f1c44`](https://github.com/dstroy0/ProtoCore/commit/b6f1c44641bd403188da3bd4e60c9a302554352d))
 - (housekeeping): convert handle - extern table becomes a static const one ([`4452162`](https://github.com/dstroy0/ProtoCore/commit/445216219ba1a07e1dee565f967536d5b03ec6a8))
 - (housekeeping): scan_vtable - the last entry of every table was dropped, and a header-defined table was not seen at all ([`1ee0725`](https://github.com/dstroy0/ProtoCore/commit/1ee0725f5fed86027b3b775d59ef00ec7a8ebe4e))
