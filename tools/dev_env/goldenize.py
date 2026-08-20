@@ -1275,7 +1275,13 @@ VTABLE_ENTRY = re.compile(
 )
 
 # What the .c binds each member to: `.decode = b64_decode,` in the one initializer.
-VTABLE_BIND = re.compile(r"\.(?P<entry>\w+)\s*=\s*(?P<impl>\w+)\s*[,}]")
+#
+# The trailing separator is optional at the END of the body. The initializer is captured as the text
+# BETWEEN the braces, so its closing `}` is the delimiter and is not part of what is searched - and
+# a last binding written without a trailing comma then had neither a `,` nor a `}` after it. That
+# dropped the LAST entry of every vtable module silently: rawmemcpy came back with thirteen of its
+# fourteen, and the missing one was `read`, the only entry the module also declares as a prototype.
+VTABLE_BIND = re.compile(r"\.(?P<entry>\w+)\s*=\s*(?P<impl>\w+)\s*(?:[,}]|$)")
 
 
 def scan_vtable(hpath):
@@ -1292,7 +1298,14 @@ def scan_vtable(hpath):
     mod = os.path.splitext(os.path.basename(hpath))[0]
     gate = find_gate(s)
     ns = re.search(r"\}\s*(\w+Ns)\s*;", s)
-    obj = re.search(r"^\s*extern\s+(?:const\s+)?\w+Ns\s+(\w+)\s*;", s, re.M)
+    # The object is declared either way round: `extern <X>Ns <obj>;` with the definition in the .c,
+    # or - rawmemcpy's shape - `static const <X>Ns <obj> = { ... };` defined IN THE HEADER, which
+    # gives every translation unit that includes it a private copy. The second spelling was not
+    # recognised, so the module fell through to the flat scan, which sees only its one non-inline
+    # prototype and would have regenerated a one-entry namespace over a fourteen-entry table.
+    obj = re.search(r"^\s*extern\s+(?:const\s+)?\w+Ns\s+(\w+)\s*;", s, re.M) or re.search(
+        r"^\s*static\s+(?:const\s+)?\w+Ns\s+(\w+)\b", s, re.M
+    )
     ns_name = ns.group(1) if ns else camel(mod) + "Ns"
     obj_name = obj.group(1) if obj else camel(mod)
     cpath = hpath[:-1] + "c"
@@ -1312,7 +1325,12 @@ def scan_vtable(hpath):
     # What the .c binds, so an entry knows which static function is its implementation. The tree's
     # convention is a designated initializer, but base64's predates it and binds by position.
     bind = {}
-    init = re.search(r"\b%s\s+%s\s*=\s*\{(.*?)\};" % (re.escape(ns_name), re.escape(obj_name)), csrc, re.S)
+    # The initializer sits beside the definition, so it is looked for in the .c AND in the header:
+    # a `static const <X>Ns <obj> = {...}` header table binds its members there, and searching only
+    # the .c came back with no bindings at all.
+    init = re.search(
+        r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns_name), re.escape(obj_name)), csrc, re.S
+    ) or re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns_name), re.escape(obj_name)), s, re.S)
     if init:
         body = init.group(1)
         if "." in body and VTABLE_BIND.search(body):
@@ -2792,7 +2810,13 @@ def main():
         hp = os.path.join(R, arg.replace("/", os.sep))
         text = io.open(hp, encoding="utf-8").read()
         is_ns = re.search(r"^\s*extern\s+(?:const\s+)?\w+Ns\s+\w+\s*;", text, re.M) and not GOLDEN_ENTRY.search(text)
-        if not is_ns:
+        # A table DEFINED in the header - `static const <X>Ns <obj> = {...}` - is a namespace too,
+        # and rawmemcpy is one: fourteen entries, no extern. Without this it fell to the flat scan,
+        # which reads its single non-inline prototype and answers with a one-entry spec.
+        is_static_ns = re.search(r"^\s*static\s+(?:const\s+)?\w+Ns\s+\w+\b", text, re.M) and VTABLE_ENTRY.search(text)
+        if is_static_ns and not is_ns:
+            spec = scan_vtable(hp)
+        elif not is_ns:
             spec = scan(hp)
         elif ns_entries(text):
             spec = scan_ns(hp)  # the `struct <X>Internal *ctx` shape
