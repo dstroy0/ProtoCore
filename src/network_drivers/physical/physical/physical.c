@@ -17,7 +17,6 @@
 
 #include "network_drivers/physical/physical/physical.h"
 #include "mmgr/plaintext/plaintext.h"                         // the persistent end this module's state is taken from
-#include "network_drivers/physical/radio_power/radio_power.h" // Radio: the layer carries the radio handle
 
 // ---------------------------------------------------------------------------
 // The seam this module implements itself
@@ -314,6 +313,4 @@ void protocore_physical_iface_send(uint8_t *restrict work)
 // the seam, so the handle reaches whichever backend the PROTOCORE_VENDOR_* selector compiled: the
 // no-op definitions above, a part's backend under test/core_setup/physical/, or a suite's mock.
 /** @brief The operands and the outcome. */
-PhysicalVars PhysicalV = {
-    .radio = &Radio,
-};
+PhysicalVars PhysicalV;

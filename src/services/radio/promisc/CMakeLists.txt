@@ -12,7 +12,6 @@ if(PROTOCORE_ENABLE_PROMISC)
       pc_mmgr_plaintext
       pc_mmgr_protomem
       pc_network_drivers_physical_physical
-      pc_network_drivers_physical_radio_power
       pc_shared_pcap
   )
 endif()
