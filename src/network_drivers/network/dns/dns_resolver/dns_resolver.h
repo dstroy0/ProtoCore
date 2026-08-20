@@ -42,7 +42,7 @@
 
 #include "protocore_config.h"
 
-#if PROTOCORE_NEED_DNS_RESOLVER
+#if PROTOCORE_ENABLE_DNS_RESOLVER
 
 PROTOCORE_BEGIN_DECLS
 
@@ -213,5 +213,5 @@ uint8_t *protocore_dns_resolver_span(void);
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_NEED_DNS_RESOLVER
+#endif // PROTOCORE_ENABLE_DNS_RESOLVER
 #endif // PROTOCORE_DNS_RESOLVER_H

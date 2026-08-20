@@ -79,7 +79,7 @@ The feature lives in the library, so the flag must reach the whole build:
 ```bash
 pio ci examples/L7-Application/StatsdMetrics \
   --board esp32dev --lib "." \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_STATSD=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_STATSD=1 -DPROTOCORE_ENABLE_UDP=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)

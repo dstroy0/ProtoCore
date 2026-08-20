@@ -49,7 +49,7 @@ representation/upload you need (here 1024).
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_COAP_BLOCK=1 -DPROTOCORE_COAP_MAX_PAYLOAD=1024" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_COAP_BLOCK=1 -DPROTOCORE_COAP_MAX_PAYLOAD=1024 -DPROTOCORE_ENABLE_UDP=1" \
   --lib="." examples/L7-Application/CoapBlock/CoapBlock.ino
 ```
 

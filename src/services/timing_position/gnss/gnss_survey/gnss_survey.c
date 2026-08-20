@@ -15,7 +15,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
-#if PROTOCORE_NEED_NMEA0183
+#if PROTOCORE_ENABLE_NMEA0183
 #include "mmgr/protostr/protostr.h"
 #include "services/timing_position/nmea0183/nmea0183.h"
 #endif
@@ -163,7 +163,7 @@ proto_bool protocore_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs,
 // GGA -> geodetic (only when the NMEA 0183 codec is available).
 // ---------------------------------------------------------------------------------------------
 
-#if PROTOCORE_NEED_NMEA0183
+#if PROTOCORE_ENABLE_NMEA0183
 
 // A GGA lat/lon field is ddmm.mmmm / dddmm.mmmm; split into whole degrees + decimal minutes.
 static proto_bool dm_to_deg(const char *field, uint8_t len, double *out)
@@ -245,7 +245,7 @@ proto_bool protocore_gnss_survey_add_gga(GnssSurvey *s, const Nmea0183 *m)
     return PROTO_TRUE;
 }
 
-#endif // PROTOCORE_NEED_NMEA0183
+#endif // PROTOCORE_ENABLE_NMEA0183
 
 PROTOCORE_END_DECLS
 

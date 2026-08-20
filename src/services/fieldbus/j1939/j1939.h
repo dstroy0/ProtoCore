@@ -29,7 +29,7 @@
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
-#if PROTOCORE_NEED_J1939
+#if PROTOCORE_ENABLE_J1939
 
 PROTOCORE_BEGIN_DECLS
 

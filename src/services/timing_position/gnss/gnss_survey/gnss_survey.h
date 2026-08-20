@@ -106,7 +106,7 @@ double protocore_gnss_survey_accuracy_m(const GnssSurvey *s);
  */
 proto_bool protocore_gnss_survey_complete(const GnssSurvey *s, uint32_t min_obs, double acc_limit_m);
 
-#if PROTOCORE_NEED_NMEA0183
+#if PROTOCORE_ENABLE_NMEA0183
 struct Nmea0183;
 
 /**

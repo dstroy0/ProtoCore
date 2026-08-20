@@ -5,7 +5,7 @@
 # Regenerate with:  python tools/harness.py build modules
 
 
-if(PROTOCORE_ENABLE_MODBUS_RTU)
+if(PROTOCORE_ENABLE_MODBUS)
   protocore_module(pc_services_fieldbus_modbus_modbus
     SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/modbus.c"
     PRIVATE

@@ -128,7 +128,7 @@ DNC lives inside the library, so the flag must reach the whole build:
 pio ci examples/L7-Application/EthernetDnc \
   --board esp32dev \
   --lib "." \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_DNC=1"
+  --project-option="build_flags=-DPROTOCORE_ENABLE_DNC=1 -DPROTOCORE_ENABLE_TCP_CLIENT=1 -DPROTOCORE_ENABLE_DNS_RESOLVER=1"
 ```
 
 (The Arduino IDE reads the flag from `build_opt.h` beside the sketch automatically.)

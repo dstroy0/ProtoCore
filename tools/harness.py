@@ -605,7 +605,12 @@ BUILD = {
         "Writes src/CMakeLists.txt: one CMake target per module, with the dependencies read out of "
         "what each module includes rather than maintained by hand. Include paths and transitive deps "
         "then propagate through the targets, and a module whose PROTOCORE_ENABLE_* gate is off is a "
-        "target that is never added instead of a file that compiles to nothing.",
+        "target that is never added instead of a file that compiles to nothing. "
+        "THIS IS HALF THE BUILD. It renders WHICH MODULE compiles; `build cmake` renders WHAT "
+        "DEFINES each test target compiles with, from the same matrix. A flag change needs both, and "
+        "running only this one leaves every target on its previous define set - which reads as the "
+        "source being wrong rather than the build being stale. `test/harness.py env gen` is a third "
+        "renderer of the same matrix, for platformio.ini.",
     ),
     "envs": T(
         "tools/dev_env/build_envs.sh",

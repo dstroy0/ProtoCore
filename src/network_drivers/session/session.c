@@ -265,7 +265,7 @@ void protocore_session_tick(uint8_t *restrict work)
     ConnPoolV.life.conn_timeout_ms = SessionV.conn_timeout_ms;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
-#if PROTOCORE_NEED_UDP
+#if PROTOCORE_ENABLE_UDP
     // One set of datagram rings serves the whole server rather than one per worker, so worker 0
     // drains them: the receive side runs each bound port's handler, the send side moves queued
     // frames to the wire.

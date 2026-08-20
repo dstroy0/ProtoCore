@@ -230,29 +230,7 @@ Each **green** node is a parent feature and each **blue** node a child that need
   <img alt="Build-flag dependencies" src="docs/diagrams/flag_deps.svg">
 </a>
 
-> Not drawn (so the forest stays uncrossed): **`PROTOCORE_ENABLE_RANGE`** also need `PROTOCORE_ENABLE_EDGE_CACHE`; **`PROTOCORE_ENABLE_EDGE_CACHE`** also need `PROTOCORE_ENABLE_HTTP_CLIENT`.
-
-<details><summary><b>Auto-derived flags</b> - enabling the left flag turns the right one on for you; do not set it yourself.</summary>
-
-| Enabling this... | ...auto-enables |
-| --- | --- |
-| `PROTOCORE_ENABLE_HTTP_CLIENT_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
-| `PROTOCORE_ENABLE_MQTT_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
-| `PROTOCORE_ENABLE_OTA` | `PROTOCORE_ENABLE_STREAM_BODY` |
-| `PROTOCORE_ENABLE_UPLOAD` | `PROTOCORE_ENABLE_STREAM_BODY` |
-| `PROTOCORE_ENABLE_WEBDAV` | `PROTOCORE_ENABLE_STREAM_BODY` |
-| `PROTOCORE_ENABLE_WS_CLIENT_TLS` | `PROTOCORE_ENABLE_CLIENT_TLS` |
-</details>
-
-<details><summary><b>PSRAM-class features</b> - the pool cannot fit internal DRAM; enable `*_IN_PSRAM` or acknowledge with an `*_ACK_DRAM` opt-out.</summary>
-
-| Feature | Gate |
-| --- | --- |
-| `PROTOCORE_ENABLE_SSH_ZLIB` | PSRAM pool |
-| `PROTOCORE_ENABLE_TLS` | MAX_TLS_CONNS gt 1 |
-</details>
-
-_42 hard dependencies, 2 PSRAM gates, 6 derived flags._
+_0 hard dependencies, 0 PSRAM gates, 0 derived flags._
 
 <!-- prettier-ignore-end -->
 

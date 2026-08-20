@@ -23,7 +23,7 @@
 
 #include "mmgr/span/span.h"
 
-#include "protocore_config.h" // PROTOCORE_NEED_CBOR / PROTOCORE_ENABLE_MSGPACK gate the instances below
+#include "protocore_config.h" // PROTOCORE_ENABLE_CBOR / PROTOCORE_ENABLE_MSGPACK gate the instances below
 
 PROTOCORE_BEGIN_DECLS
 

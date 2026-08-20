@@ -32,7 +32,7 @@ receiver (for example `snmptrapd` on UDP/162). For SNMPv3 traps, add
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_SNMP=1 -DPROTOCORE_ENABLE_SNMP_TRAP=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_SNMP=1 -DPROTOCORE_ENABLE_SNMP_TRAP=1 -DPROTOCORE_ENABLE_UDP=1" \
   --lib="." examples/L7-Application/SnmpTrap/SnmpTrap.ino
 ```
 

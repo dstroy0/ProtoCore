@@ -1320,6 +1320,18 @@ Syslog client (RFC 5424 over UDP). Default off. When set, the device can ship lo
 
 Telemetry math helpers (moving-window stats, rate-of-change, totalizer). Default off. When set, src/services/iot/telemetry/telemetry.h provides zero-heap pure-computation helpers over caller-supplied storage: a moving-window stats accumulator (mean / variance / stddev / min / max), a derivative / rate-of- change tracker, and a trapezoidal run-time totalizer. No ESP32 dependency, so the whole cluster is host-testable; it feeds dashboards, alert triggers, and odometer-style counters.
 
+## TCP
+
+`PROTOCORE_ENABLE_TCP`
+
+The TCP surface: the shared connection state every TCP role reaches through - the accepted-connection pool, the per-connection lifetime and timeout bookkeeping, and the event callbacks the stack drives. Default off. A build that binds a port or dials out enables it; the listener (`PROTOCORE_ENABLE_TCP` plus a server feature) and the client (`PROTOCORE_ENABLE_TCP_CLIENT`) both reach their connection state through it. See src/network_drivers/transport/tcp/tcp.h.
+
+## TCP Client
+
+`PROTOCORE_ENABLE_TCP_CLIENT`
+
+Dialing out: the one TCP client every outbound feature connects through, rather than each carrying a private copy of the connect-and-drain pattern. Default off. **Required by** HTTP_CLIENT, MQTT, WS_CLIENT, RELAY, SMTP, SMB, DNC, FTP_SESSION, SSH_CLIENT and SSH_PORT_FORWARD - each declares the dependency and a build that enables one without this stops at a `#error` naming both flags. It dials by name, so it also requires `PROTOCORE_ENABLE_DNS_RESOLVER`. It was `PROTOCORE_NEED_CLIENT`, a derived flag OR-ing those features together, which left the module with no gate CMake could read and compiled it into every target; stated instead, the client is compiled only where a build asks for it. See src/network_drivers/transport/tcp/client/client.h.
+
 ## Telnet
 
 `PROTOCORE_ENABLE_TELNET`
@@ -1389,6 +1401,12 @@ Pre/post-trigger sample-window assembler - the high-rate acquisition primitive t
 `PROTOCORE_ENABLE_UBX`
 
 u-blox UBX binary GNSS protocol codec - the binary companion to NMEA 0183 that u-blox receivers speak on the same UART. Default off. services/timing_position/ubx is a zero-heap codec for the UBX frame `B5 62 <class> <id> <len-LE> <payload> <CK_A> <CK_B>`: `protocore_ubx_build` emits a frame (adding the sync chars, the little-endian length, and the 8-bit Fletcher checksum), `protocore_ubx_build_poll` emits the zero-length poll request that asks a receiver to send a message, `protocore_ubx_parse` validates one frame (sync chars, declared length against the buffer, and checksum) and exposes its class/id/payload, `protocore_ubx_ack` decodes UBX-ACK-ACK / -NAK, and `protocore_ubx_u16` / `protocore_ubx_u32` / `protocore_ubx_i32` read little-endian payload fields. `protocore_ubx_parse_nav_pvt` decodes the all-in-one UBX-NAV-PVT navigation solution (the message most applications read) into a `protocore_ubx_nav_pvt` - GPS/UTC time with validity + accuracy, fixType + gnssFixOK + satellite count, lat/lon (1e-7 deg) and ellipsoid/MSL height with horizontal/vertical accuracy, NED + ground velocity with heading, and pDOP - verified field-by-field against a u-blox-8 reference frame. `protocore_ubx_parse_nav_sat` + `protocore_ubx_nav_sat_get` decode the variable-length UBX-NAV-SAT (per-satellite signal + usage): the header gives the satellite count, then each block yields the GNSS/SV id, carrier-to-noise (dB-Hz), elevation/azimuth, pseudorange residual, and the flags (signal-quality indicator + the used-in-solution bit), with the declared length checked against the block count. `protocore_ubx_parse_nav_timeutc` decodes UBX-NAV-TIMEUTC (the receiver's validated UTC time solution) into a `protocore_ubx_nav_time_utc` - iTOW, the estimated time accuracy (ns) and the sub-second nano correction, the broken-down UTC year/month/day/hour/minute/second, and the validity byte (validTOW / validWKN / validUTC), where the validUTC bit means the leap-second count is resolved so the wall-clock fields are trustworthy - the message a PTP grandmaster or an SNTP source reads to discipline its clock. To configure the receiver, `protocore_ubx_build_cfg_msg` emits a CFG-MSG that sets how often a given message is output (rate 0 disables it, N sends every Nth solution) and `protocore_ubx_build_cfg_rate` a CFG-RATE that sets the measurement period + navigation rate (e.g. 200 ms / 5 Hz) and the time reference - so an app turns on NAV-PVT / NAV-SAT and dials the update rate, then decodes what it asked for. Because a u-blox module multiplexes UBX with ASCII NMEA on one link, `protocore_ubx_stream_feed` is a byte-at-a-time demultiplexer: it pulls complete, checksum-valid UBX frames out of the stream and hands every non-UBX byte back to the caller for an NMEA line assembler (so one UART carries both, with an over-long-frame guard bounded by PROTOCORE_UBX_MAX_PAYLOAD). Frame framing + Fletcher checksum verified against the published u-blox poll frames (UBX-MON-VER `B5 62 0A 04 00 00 0E 34`, UBX-CFG-PRT `... 06 18`); pure and host-tested (`native_ubx`). GNSS receivers are cheap UART breakouts, so this is a plain HardwareSerial link; send config/poll as UBX, read fixes as UBX or NMEA. Pairs with services/nmea0183. Example UbloxGnss. See src/services/timing_position/ubx/ubx.h.
+
+## UDP
+
+`PROTOCORE_ENABLE_UDP`
+
+The UDP surface: the shared socket state the datagram client and the bound-port listener reach through, and the receive/send rings `Session.tick()` drains. Default off. **Required by** COAP, DTLS, STATSD, UDP_TELEMETRY, SNMP, SNMP_TRAP, SNMP_V3, SYSLOG, FLOW_EXPORT, PROVISIONING, NTP_SERVER, DNS_SERVER and HTTP3 - each declares the dependency, and a build enabling one without this stops at a `#error` naming both flags. Those features previously OR-ed themselves into a derived `PROTOCORE_NEED_UDP`; a feature missing from that list compiled and linked, then filled its rings and stopped with nothing on the wire. See src/network_drivers/transport/udp/udp.h.
 
 ## UDP Telemetry
 

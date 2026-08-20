@@ -108,10 +108,10 @@ typedef struct
     uint8_t u8;
     size_t n;
     uint8_t *region;
-#if PROTOCORE_NEED_CLIENT
+#if PROTOCORE_ENABLE_TCP_CLIENT
     // Bridging a channel to a socket of our own needs the client half of the transport, so these
     // exist exactly when TcpClient does.
-#endif // PROTOCORE_NEED_CLIENT
+#endif // PROTOCORE_ENABLE_TCP_CLIENT
 } SshNetworkVars;
 
 /** @brief The operands and the outcome. */

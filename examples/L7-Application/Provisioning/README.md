@@ -34,7 +34,7 @@ form handler that writes NVS and reboots. To re-provision later, call
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_PROVISIONING=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_PROVISIONING=1 -DPROTOCORE_ENABLE_UDP=1" \
   --lib="." examples/L7-Application/Provisioning/Provisioning.ino
 ```
 

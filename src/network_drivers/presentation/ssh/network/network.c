@@ -83,7 +83,7 @@ static proto_bool stream_live(uint8_t i)
         return PROTO_FALSE;
     }
     const uint8_t h = SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i];
-#if PROTOCORE_NEED_CLIENT
+#if PROTOCORE_ENABLE_TCP_CLIENT
     if (SSH_NETWORK_CTX(protocore_ssh_network_span())->kind[i] == SSH_STREAM_DIALED)
     {
         TcpClientV.cid = (int)h;
@@ -106,7 +106,7 @@ static proto_bool stream_write(uint8_t i, const uint8_t *buf, size_t len)
         return PROTO_FALSE;
     }
     const uint8_t h = SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i];
-#if PROTOCORE_NEED_CLIENT
+#if PROTOCORE_ENABLE_TCP_CLIENT
     if (SSH_NETWORK_CTX(protocore_ssh_network_span())->kind[i] == SSH_STREAM_DIALED)
     {
         TcpClientV.cid = (int)h;
@@ -166,7 +166,7 @@ void protocore_ssh_network_emit(uint8_t *restrict work)
     // stream has no accepted-side worker; its owner drains it from its own poll.
     if (ssh_pkt_emit(i, payload, len, &ssh_sess[i].out) == 0)
     {
-#if PROTOCORE_NEED_CLIENT
+#if PROTOCORE_ENABLE_TCP_CLIENT
         if (SSH_NETWORK_CTX(protocore_ssh_network_span())->kind[i] == SSH_STREAM_DIALED)
         {
             return;
@@ -408,7 +408,7 @@ void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot)
 // The slot the handle for @p channel sits in, or null when the pair is out of range.
 // A channel bridged to a socket of our own is an outbound connection, so this whole family needs the
 // client half of the transport. TcpNs carries Tcp.client under the same condition.
-#if PROTOCORE_NEED_CLIENT
+#if PROTOCORE_ENABLE_TCP_CLIENT
 
 static int *chan_cid_of(uint8_t ssh_slot, uint32_t channel)
 {
@@ -605,7 +605,7 @@ void protocore_ssh_network_chan_close_all(uint8_t *restrict work)
     }
 }
 
-#endif // PROTOCORE_NEED_CLIENT
+#endif // PROTOCORE_ENABLE_TCP_CLIENT
 
 /** @brief The operands and the outcome. */
 SshNetworkVars SshNetworkV;

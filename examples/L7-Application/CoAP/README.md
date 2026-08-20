@@ -47,7 +47,7 @@ the library. For server-push and large transfers, see
 
 ```sh
 pio ci --board=esp32dev --project-option="framework=arduino" \
-  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1" \
+  --project-option="build_flags=-DPROTOCORE_ENABLE_COAP=1 -DPROTOCORE_ENABLE_UDP=1" \
   --lib="." examples/L7-Application/CoAP/CoAP.ino
 ```
 

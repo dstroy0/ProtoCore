@@ -34,7 +34,13 @@ GOLDEN = "src/crypto/hash/sha256/sha256.h"
 COND = re.compile(r"^[ \t]*#[ \t]*(if|ifdef|ifndef|endif)\b([^\n]*)$", re.M)
 # Only these open a module. A capability is an ARM inside one - the module is the thing that can be
 # switched off wholesale, and PROTOCORE_HAS_BUS is a question about the board.
-GATE_MACRO = re.compile(r"^\(?\s*(PROTOCORE_(?:ENABLE|NEED)_\w+)")
+# Only ENABLE opens a module. There was a second family, PROTOCORE_NEED_<X> - an OR over the
+# callers that wanted a module compiled - and it is gone: gen_modules.py matches
+# PROTOCORE_ENABLE_\w+ when it reads a module's gate off its source, so a module gated the other way
+# had no gate CMake could see and was compiled into every target. A NEED_ spelling today names an
+# undefined macro, which evaluates to 0 and empties the file, so recognising one as a gate would be
+# reading a mistake as a design.
+GATE_MACRO = re.compile(r"^\(?\s*(PROTOCORE_ENABLE_\w+)")
 
 
 def module_gate(text):

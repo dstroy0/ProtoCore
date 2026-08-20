@@ -8,7 +8,7 @@
 
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
-#if PROTOCORE_NEED_MODBUS
+#if PROTOCORE_ENABLE_MODBUS
 
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
@@ -730,4 +730,4 @@ ModbusVars ModbusV;
 
 PROTOCORE_END_DECLS
 
-#endif // PROTOCORE_NEED_MODBUS
+#endif // PROTOCORE_ENABLE_MODBUS
