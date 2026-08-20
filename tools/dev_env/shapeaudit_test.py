@@ -5,7 +5,7 @@ a check the golden fails is a check that marks all 400 modules divergent on a qu
 the conversion does not itself satisfy - and it fails silently, as a bigger number.
 """
 
-import os, sys
+import io, os, re, sys
 
 sys.path.insert(0, __file__.rsplit("shapeaudit_test.py", 1)[0])
 import shapeaudit as S  # noqa: E402
@@ -160,6 +160,80 @@ check("the `if (!work || ...)` disjunct is found", "!work" in found)
 check("the `ok = work != NULL` assignment is found too", "work != NULL" in found)
 check("a struct member called work is NOT counted", "e->work" not in found)
 check("so the count is two, not three", t["null_borrow_tests"] == 2)
+print()
+
+print("a namespace is reached in one hop, and the reader can tell which hop it is")
+gsrc = io.open(S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.c", encoding="utf-8").read()
+
+
+def deep(inject):
+    return S.traits(design(gsrc.replace("PROTOCORE_BEGIN_DECLS", "PROTOCORE_BEGIN_DECLS\n" + inject, 1)), "source")
+
+
+check("the golden reaches nothing at depth two", deep("")["deep_ns_accesses"] == 0)
+# `<X>V.<entry>_args.<operand>` IS the one hop. If this counted, every converted module would
+# answer no to the question and the check would say nothing about anything.
+check(
+    "an operand read is not a detour",
+    deep("static void probe(void) { Sha256V.update_args.len = 1; }")["deep_ns_accesses"] == 0,
+)
+# A REAL pair: session.h declares `WorkerNs *workers;` in SessionVars. The pair has to be real,
+# because whether the hop lands in another module's table is read from that declaration and not
+# from the shape of the expression - which is the whole point of the check.
+check("the index knows a namespace pointer when it sees one", ("SessionV", "workers") in S.ns_pointer_members())
+t = deep("static void probe(void) { SessionV.workers->pump = 1; }")
+check("reaching another namespace through one is a reach", t["deep_ns_accesses"] == 1)
+check("and the chain is kept, because the fix is per-site", t["deep_ns_chains"] == ["SessionV.workers->pump"])
+# Same expression shape, ordinary pointer operand. lower.h declares `protocore_pcb *pcb;`, and
+# counting this reported nine modules for reading a field of something they point at.
+check(
+    "a hop through a plain pointer operand is not",
+    deep("static void probe(void) { TcpLowerV.pcb->ttl = 1; }")["deep_ns_accesses"] == 0,
+)
+check(
+    "so is a nested Vars",
+    deep("static void probe(void) { Sha256V.OtherV.slot = 1; }")["deep_ns_accesses"] == 1,
+)
+# Every regex over this tree goes through the code mask or it reads the prose above the code.
+check(
+    "the same chain in a comment is prose",
+    deep("// was Sha256V.workers->pump = 1;")["deep_ns_accesses"] == 0,
+)
+print()
+
+print("an entry declared in the Ns struct is bound by the table")
+ghsrc = io.open(S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8").read()
+check("the golden leaves none unbound", S.traits(design(ghsrc, ".h"), "header")["unbound_entries"] == [])
+victim = re.search(r"\(\*const (\w+)\)", ghsrc).group(1)
+dropped = re.sub(r"\n\s*\.%s\s*=[^,]*,\n" % victim, "\n", ghsrc, count=1)
+check("dropping one binding is not silent", dropped != ghsrc)
+# `static const` zero-fills what the initializer omits: the miss is a NULL function pointer that
+# compiles, links, and segfaults on the first call. forwarded_trust shipped one.
+check(
+    "an unbound entry is named, not zero-filled quietly",
+    S.traits(design(dropped, ".h"), "header")["unbound_entries"] == [victim],
+)
+# POSITIONAL. mmgr writes all five of its tables `{fn, fn, fn}` - no `.name =` anywhere - and
+# reading only designated initializers said every entry in them was unbound, which is backwards:
+# they are bound, in order. Five modules were reported for a shape that is simply the other legal
+# spelling.
+POSITIONAL = """#ifndef P_H
+#define P_H
+#if PROTOCORE_ENABLE_P
+PROTOCORE_BEGIN_DECLS
+typedef struct { void (*const a)(uint8_t *restrict work); void (*const b)(uint8_t *restrict work); } PNs;
+void p_a(uint8_t *restrict work);
+void p_b(uint8_t *restrict work);
+static const PNs p __attribute__((unused)) = {p_a, p_b};
+PROTOCORE_END_DECLS
+#endif
+#endif
+"""
+check("a positional table binds in order", S.traits(design(POSITIONAL, ".h"), "header")["unbound_entries"] == [])
+check(
+    "and a short positional table leaves the tail unbound",
+    S.traits(design(POSITIONAL.replace("{p_a, p_b}", "{p_a}"), ".h"), "header")["unbound_entries"] == ["b"],
+)
 print()
 
 print("a check that cannot apply is n/a, never no")

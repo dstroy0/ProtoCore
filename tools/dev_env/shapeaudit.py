@@ -43,7 +43,14 @@ def identity(htext, ctext, hpath):
     ident["guard"] = m.group(1) if m else ""
     m = re.search(r"^\s*#\s*if\s+(PROTOCORE_ENABLE_\w+)", htext, re.M)
     ident["gate"] = m.group(1) if m else ""
-    m = re.search(r"^\s*extern\s+(?:const\s+)?(\w+)\s+(\w+)\s*;", htext, re.M)
+    # The object the module publishes. Read the TABLE first: since the handle reshape it is a
+    # `static const <X>Ns <X>` in the header, and the only `extern` left is the operands - so the
+    # extern form now answers ("Sha256Vars", "Sha256V"), and substituting that wrong pair into the
+    # golden marks whole files divergent on a name. The extern form is still the answer for a module
+    # the reshape has not reached, so both spellings are read, and both are anchored on `Ns`.
+    m = re.search(r"^\s*static\s+const\s+(\w+Ns)\s+(\w+)\b", htext, re.M) or re.search(
+        r"^\s*extern\s+(?:const\s+)?(\w+Ns)\s+(\w+)\s*;", htext, re.M
+    )
     ident["ns"], ident["object"] = (m.group(1), m.group(2)) if m else ("", "")
     m = re.search(r"\b(PROTOCORE_\w+_BORROW)\b", htext + ctext)
     ident["borrow"] = m.group(1) if m else ""
@@ -106,11 +113,88 @@ OBJDEF = re.compile(r"^(?P<qual>(?:static\s+|const\s+)*)(?P<type>\w+)\s+(?P<name
 STATIC_ASSERT = re.compile(r"\bstatic_assert\s*\(", re.M)
 # The borrow tested against null, in any position. `pre` captures what precedes the identifier so a
 # `->work` / `.work` struct member can be told apart from the borrow itself.
+# A namespace reached through ANOTHER module. Not merely two dots: the golden itself writes
+# `Sha256V.update_args.len`, and so does every converted module - an operand record is a member of
+# the Vars object, so reading a field of it IS the one hop. What is not is going THROUGH a Vars
+# member to somewhere else, and there are exactly two ways to write that: dereference a pointer
+# held there (`SessionV.workers->pump`), or reach a second Vars object nested in the first
+# (`SessionV.WorkersV.pump`). Both are named here; a plain `.field` second hop is not.
+#
+# Matching every two-dot chain instead reported 132 modules for writing ordinary operand reads,
+# which is the false-divergence-at-scale this file's own reader is built to avoid.
+DEEP_NS_ACCESS = re.compile(r"\b(?P<head>\w+V)\s*\.\s*(?P<mid>\w+)(?:\s*->\s*|(?<=V)\s*\.\s*)(?P<tail>\w+)\b")
+
+# The table the header publishes. The head only; the brace is MATCHED, not scanned to the first
+# `}` - a value that is itself braced would otherwise cut the initializer short and every member
+# past it would read as unbound.
+HANDLE_TABLE = re.compile(r"static\s+const\s+(?P<ns>\w+Ns)\s+(?P<obj>\w+)[^=;]*=\s*\{")
+
 NULL_BORROW_TEST = re.compile(
     r"(?P<pre>[-.>\w]{0,2})\bwork\s*(?:==|!=)\s*(?:NULL|0|nullptr)\b|!\s*(?P<pre2>[-.>]{0,2})\bwork\b\s*(?=[)&|])"
 )
 
 KEYWORD = ("typedef", "return", "if", "while", "for", "switch", "else", "do", "sizeof", "case")
+
+
+_NS_PTR_MEMBERS = None
+
+
+def ns_pointer_members():
+    """`(VarsObject, member)` for every Vars member declared as another module's `<Y>Ns *`.
+
+    Read tree-wide and cached, because the fact is never in the file that needs it: four modules
+    write `SessionV.proto->add(...)`, and the only thing that makes that a namespace reach rather
+    than a pointer read is `ProtoRegistryNs *proto;` over in session.h. Keyed on the PAIR, not the
+    member name - `conn` is a `ConnPoolNs *` in one module and a `ClientConn *` in another, and
+    matching by name alone rewrote the second into a compile error.
+    """
+    global _NS_PTR_MEMBERS
+    if _NS_PTR_MEMBERS is not None:
+        return _NS_PTR_MEMBERS
+    _NS_PTR_MEMBERS = set()
+    for root, _dirs, files in os.walk(os.path.join(R, "src")):
+        for f in files:
+            if not f.endswith(".h"):
+                continue
+            try:
+                text = io.open(os.path.join(root, f), encoding="utf-8", errors="replace").read()
+            except OSError:
+                continue
+            code = _blank_noncode(text)
+            # The object each Vars TYPE is published as, so a member can be keyed to the name the
+            # reaching file actually writes.
+            obj_of = dict(re.findall(r"^\s*extern\s+(\w+Vars)\s+(\w+)\s*;", code, re.M))
+            if not obj_of:
+                continue
+            # Every `typedef struct { ... } <name>;` in the file, by BRACE MATCH. A non-greedy regex
+            # from `typedef struct` to `} <name>;` starts at the FIRST struct in the file and
+            # swallows the ones between - the same defect that once made a whole file's members read
+            # as one struct's.
+            for d in re.finditer(r"typedef\s+struct\b[^{;]*\{", code):
+                open_at = code.index("{", d.end() - 1)
+                end = _close_brace(code, open_at)
+                tail = re.match(r"\s*(\w+)\s*;", code[end:])
+                if not tail or tail.group(1) not in obj_of:
+                    continue
+                obj = obj_of[tail.group(1)]
+                for mm in re.finditer(r"\b\w+Ns\s*\*\s*(?:const\s+)?(\w+)\s*[;\[]", code[open_at + 1 : end - 1]):
+                    _NS_PTR_MEMBERS.add((obj, mm.group(1)))
+    return _NS_PTR_MEMBERS
+
+
+def _top_level_split(s):
+    """`s` split on the commas that separate initializer values, ignoring nested ones."""
+    out, depth, start = [], 0, 0
+    for i, ch in enumerate(s):
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            out.append(s[start:i])
+            start = i + 1
+    out.append(s[start:])
+    return out
 
 
 def _close_brace(s, at):
@@ -272,6 +356,36 @@ def read_design(path):
         if pre.strip().endswith((">", ".")):
             continue
         take(m.start(), "null_borrow_test", text=" ".join(m.group(0).split()))
+
+    # DEPTH ONE: every module's namespace is reached as `ns->member`, one hop, because the table
+    # is a compile-time fact every translation unit sees. Two hops means this file went through
+    # another module's Vars to get somewhere, and the operands it read that way are not the ones the
+    # reshape moved. An `_args` middle is the operand record itself and is depth one by construction.
+    for m in DEEP_NS_ACCESS.finditer(code):
+        if m.group("mid").endswith("_args"):
+            continue
+        take(
+            m.start(),
+            "deep_ns_access",
+            text=" ".join(m.group(0).split()),
+            head=m.group("head"),
+            mid=m.group("mid"),
+        )
+
+    # What the published table actually binds, so an entry declared and left unbound can be seen.
+    # Two spellings: designated, which names its members, and positional, which binds in declaration
+    # order and names nothing - mmgr writes all five of its tables the second way.
+    for m in HANDLE_TABLE.finditer(code):
+        open_at = code.index("{", m.end() - 1)
+        init = code[open_at + 1 : _close_brace(code, open_at) - 1]
+        take(
+            m.start(),
+            "handle_table",
+            ns=m.group("ns"),
+            obj=m.group("obj"),
+            bound=sorted(set(re.findall(r"\.(\w+)\s*=", init))),
+            count=len([v for v in _top_level_split(init) if v.strip()]),
+        )
 
     for m in EXTERN.finditer(code):
         take(m.start(), "extern", type=m.group("type").strip(), name=m.group("name"))
@@ -476,6 +590,34 @@ def traits(design, which):
     # condition that is always true, and an `if`-shaped search walked straight past it.
     t["null_borrow_tests"] = sum(1 for d in design if d["kind"] == "null_borrow_test")
 
+    # Reaching a namespace through another module's Vars. Counted, and the chains kept, because the
+    # fix is per-site: each one becomes the direct `<X>V.member` the flattened table already offers.
+    # Only the hops that land in another module's TABLE. A `->` through an operand that happens to
+    # be a pointer is an ordinary read, and counting those reported nine modules for writing
+    # `TcpLowerV.pcb->ttl`.
+    known = ns_pointer_members()
+    deep = [
+        d["text"]
+        for d in design
+        if d["kind"] == "deep_ns_access" and (d["mid"].endswith("V") or (d["head"], d["mid"]) in known)
+    ]
+    t["deep_ns_accesses"] = len(deep)
+    t["deep_ns_chains"] = sorted(set(deep))
+
+    # An entry with a slot in the Ns struct and nothing in the table's brace. `static const`
+    # zero-fills what an initializer omits, so the miss is a NULL function pointer that no
+    # optimisation level and no warning flag will mention until something calls it.
+    table = next((d for d in design if d["kind"] == "handle_table"), None)
+    t["unbound_entries"] = []
+    if table and ns:
+        declared = [m["name"] for m in ns["members"] if m["fnptr"]]
+        if table["bound"]:
+            t["unbound_entries"] = sorted(e for e in declared if e not in table["bound"])
+        else:
+            # POSITIONAL: values bind in declaration order, so what is unbound is the tail past the
+            # last value. mmgr's tables are all written this way and every entry in them IS bound.
+            t["unbound_entries"] = sorted(declared[table["count"] :])
+
     # Storage reserved on the stack instead of carved out of the borrow. Counted, and listed with
     # the function that reserves it, because the fix is per-array: each one becomes a region.
     la = [dict(a, fn=d["name"]) for d in design if d["kind"] == "function" for a in d.get("locals", [])]
@@ -584,6 +726,7 @@ def _collapse(seq):
 # module's args records are named after itself, and listing them would report every module as
 # divergent from every other. The structural traits are compared exactly.
 SHAPE_ONLY = (
+    "deep_ns_chains",
     "args_records",
     "ns_records",
     "state_records",
@@ -733,6 +876,19 @@ CHECKS = [
         "does every entry take exactly the borrow and nothing else?",
         lambda h, c, gh, gc: h["ns_entry_types"] == gh["ns_entry_types"],
         "convert gen",
+    ),
+    (
+        "depth one",
+        "is every namespace reached in one hop rather than through another module's Vars?",
+        lambda h, c, gh, gc: h["deep_ns_accesses"] == gh["deep_ns_accesses"]
+        and c["deep_ns_accesses"] == gc["deep_ns_accesses"],
+        "convert handle",
+    ),
+    (
+        "table bound",
+        "does the table bind every entry the Ns struct declares?",
+        lambda h, c, gh, gc: h["unbound_entries"] == gh["unbound_entries"],
+        "convert handle",
     ),
     (
         "ctx private",
