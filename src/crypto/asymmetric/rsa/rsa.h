@@ -27,8 +27,8 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/** @brief RSA modulus / signature size in bytes (RSA-2048). */
-#define PROTOCORE_RSA_KEY_BYTES 256
+// PROTOCORE_RSA_KEY_BYTES - the modulus size, RSA-2048 - is stated in protocore_config.h, which
+// sizes the X.509 verification borrow out of it.
 
 /** @brief PKCS#1 v1.5 signature size for RSA-2048 in bytes. */
 #define PROTOCORE_RSA_SIG_BYTES 256

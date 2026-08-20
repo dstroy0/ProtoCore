@@ -6,6 +6,10 @@
  * @brief RFC 5280 certificates, read out of the caller's DER. See x509.h.
  */
 
+#include "protocore_config.h" // the entry point: the enable gate below, and the widths
+
+#if PROTOCORE_ENABLE_X509
+
 #include "crypto/x509/x509/x509.h"
 
 #include "mmgr/protomem/protomem.h" // mem.set: the view is cleared before a parse fills it
@@ -677,3 +681,5 @@ void protocore_x509_name_match(uint8_t *restrict work)
 X509Vars X509V;
 
 PROTOCORE_END_DECLS
+
+#endif // PROTOCORE_ENABLE_X509

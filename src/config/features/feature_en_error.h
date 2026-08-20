@@ -699,6 +699,12 @@
 #ifndef PROTOCORE_ED25519_BORROW
 #define PROTOCORE_ED25519_BORROW (768 + PROTOCORE_SHA512_BORROW)
 #endif
+// The RSA modulus, and so the signature: RSA-2048. Stated here rather than in rsa.h because the
+// arena sizes X509_VERIFY_BORROW out of it, and a config header cannot reach into a module's own -
+// least of all one where the value sits inside `#if PROTOCORE_ENABLE_RSA` and is absent otherwise.
+#ifndef PROTOCORE_RSA_KEY_BYTES
+#define PROTOCORE_RSA_KEY_BYTES 256
+#endif
 // The RSA borrow, split by offset in rsa.c: the regions SHA-256, SHA-512 and the bignum conversions
 // run in, then the ladder's working set - the staged multiply, the digest, the encoded block, the
 // recovered block, the five 256-octet bignums and the double-width product, 2,432 octets. Proved by a
@@ -1503,7 +1509,10 @@
 #define PROTOCORE_X509_VERIFY_BORROW ((size_t)PROTOCORE_RSA_KEY_BYTES + 8u + PROTOCORE_RSA_BORROW)
 #endif
 
-#if PROTOCORE_ENABLE_X509
+// Either credential reaches it: PROTOCORE_ENABLE_X509 for the chain, and the portable TLS arm
+// for CertificateVerify, which it checks through X509Verify.message whether the peer presented a
+// certificate or an RFC 7250 raw public key.
+#if PROTOCORE_ENABLE_X509 || PROTOCORE_TLS_SOFTWARE
 #define PROTOCORE_SECURE_WORK_X509VERIFY PROTOCORE_X509_VERIFY_BORROW
 #else
 #define PROTOCORE_SECURE_WORK_X509VERIFY 0

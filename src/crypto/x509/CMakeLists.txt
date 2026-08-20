@@ -5,4 +5,5 @@
 # Regenerate with:  python tools/harness.py build modules
 
 add_subdirectory(x509)
+add_subdirectory(x509_types)
 add_subdirectory(x509_verify)

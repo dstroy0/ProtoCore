@@ -256,6 +256,9 @@ src/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── x509.c
 │   │   │   └── x509.h
+│   │   ├── x509_types/
+│   │   │   ├── CMakeLists.txt
+│   │   │   └── x509_types.h
 │   │   ├── x509_verify/
 │   │   │   ├── CMakeLists.txt
 │   │   │   ├── x509_verify.c

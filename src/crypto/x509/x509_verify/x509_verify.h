@@ -24,7 +24,7 @@
 #ifndef PROTOCORE_X509_VERIFY_H
 #define PROTOCORE_X509_VERIFY_H
 
-#include "crypto/x509/x509/x509.h" // X509Cert: what a check is given
+#include "crypto/x509/x509_types/x509_types.h" // X509Cert: what a check is given
 
 PROTOCORE_BEGIN_DECLS
 

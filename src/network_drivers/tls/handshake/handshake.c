@@ -15,12 +15,15 @@
 #include "crypto/asymmetric/curve25519/curve25519.h" // protocore_x25519, protocore_x25519_base
 #include "crypto/asymmetric/ed25519/ed25519.h"       // Ed25519: the peer's CertificateVerify
 #include "crypto/ct_eq.h"                            // protocore_ct_eq: the Finished compare
-#include "crypto/x509/x509/x509.h"                   // X509: the peer's certificate and the name it speaks for
-#include "crypto/x509/x509_verify/x509_verify.h"     // X509Verify: the path to the anchor, and CertificateVerify
-#include "mmgr/protomem/protomem.h"                  // mem.cpy: the peer's presented key
-#include "mmgr/protostr/protostr.h"                  // str.len: the ALPN protocol name lengths
-#include "mmgr/rawmemcpy/rawmemcpy.h"                // raw.read
-#include "mmgr/secure/secure.h"                      // the borrow this driver runs out of, and protocore_secure_wipe
+#include "crypto/x509/x509_types/x509_types.h"       // X509Cert, protocore_x509_sig_alg: both credentials
+#include "crypto/x509/x509_verify/x509_verify.h"     // X509Verify: CertificateVerify, and the path to an anchor
+#if PROTOCORE_ENABLE_X509
+#include "crypto/x509/x509/x509.h" // X509: the peer's certificate and the name it speaks for
+#endif
+#include "mmgr/protomem/protomem.h"   // mem.cpy: the peer's presented key
+#include "mmgr/protostr/protostr.h"   // str.len: the ALPN protocol name lengths
+#include "mmgr/rawmemcpy/rawmemcpy.h" // raw.read
+#include "mmgr/secure/secure.h"       // the borrow this driver runs out of, and protocore_secure_wipe
 #include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h" // the RFC 7250 RawPublicKey credential
 
 // The secure-pool term this file declares against PROTOCORE_SECURE_ARENA_SIZE: one borrow per TLS
@@ -667,6 +670,7 @@ static void client_on_certificate(uint8_t *restrict work, const uint8_t *msg, si
         return;
     }
 
+#if PROTOCORE_ENABLE_X509
     if (c->cfg->ca_der)
     {
         X509V.parse_args.der = entry;
@@ -725,6 +729,15 @@ static void client_on_certificate(uint8_t *restrict work, const uint8_t *msg, si
         TlsConnectionV.i32 = 0;
         return;
     }
+#else
+    // A configured anchor this build cannot read is refused rather than ignored: falling through
+    // would authenticate the peer by its raw public key on a connection that asked for a chain.
+    if (c->cfg->ca_der)
+    {
+        fail(TLS_ALERT_INTERNAL_ERROR);
+        return;
+    }
+#endif
 
     const uint8_t *pub = NULL;
     Tls13RpkV.ed25519_from_spki_args.spki = entry;
