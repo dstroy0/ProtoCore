@@ -15,8 +15,8 @@
 
 #if PROTOCORE_ENABLE_TOTP
 
-#include "services/security/totp/totp.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/security/totp/totp.h"
 
 #include "crypto/hash/sha1/sha1.h"
 #include "mmgr/secure/secure.h" // the pool the digest borrow comes from

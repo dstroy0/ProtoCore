@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_HISLIP
 
-#include "services/instrumentation/hislip/hislip.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "services/instrumentation/hislip/hislip.h"
 
 #include "mmgr/endian/endian.h"
 

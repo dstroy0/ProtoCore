@@ -62,7 +62,8 @@ static uint64_t seq_decode(uint64_t expected, uint64_t truncated, unsigned bits)
 }
 
 // HKDF-Expand-Label of a traffic secret under the "dtls13" prefix (RFC 9147 §5.9), into out.
-static void expand_label(uint8_t *restrict work, uint8_t *scratch, const uint8_t *secret, const char *label, uint8_t *out, size_t out_len)
+static void expand_label(uint8_t *restrict work, uint8_t *scratch, const uint8_t *secret, const char *label,
+                         uint8_t *out, size_t out_len)
 {
     Tls13KsV.bind.kdf = &DTLS13_KDF;
     Tls13KsV.bind.is384 = PROTO_FALSE; // the record keys of a TLS_AES_128_GCM_SHA256 connection

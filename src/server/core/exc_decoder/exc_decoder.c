@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_EXC_DECODER
 
-#include "server/core/exc_decoder/exc_decoder.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protostr/protostr.h" // str.find: each field's marker inside the panic dump
-#include "shared/hex/hex.h"         // PROTOCORE_HEX: the shared digit tables
+#include "server/core/exc_decoder/exc_decoder.h"
+#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 static proto_bool hexval(char c, uint8_t *v)
 {

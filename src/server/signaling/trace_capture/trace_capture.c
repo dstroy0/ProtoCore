@@ -18,9 +18,9 @@
 
 #if PROTOCORE_ENABLE_TRACE_CAPTURE
 
-#include "server/signaling/trace_capture/trace_capture.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
+#include "server/signaling/trace_capture/trace_capture.h"
 
 #include "server/clock/clock.h" // protocore_cycles()
                                 // memset

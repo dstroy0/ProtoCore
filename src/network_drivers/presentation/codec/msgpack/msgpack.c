@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_MSGPACK
 
-#include "msgpack.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "msgpack.h"
 
 #include "mmgr/bytes/bytes.h"
 

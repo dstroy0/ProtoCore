@@ -810,9 +810,9 @@
 #endif
 #ifndef PROTOCORE_WORK_TLS_CONN
 #define PROTOCORE_WORK_TLS_CONN                                                                                        \
-    ((size_t)MAX_TLS_CONNS * ((size_t)PROTOCORE_TLS_CONN_MSG_CAP + (size_t)PROTOCORE_TLS_CONN_REC_CAP +                \
-                              (size_t)PROTOCORE_TLS_CONN_TERMS_CAP + (size_t)PROTOCORE_TLS_CONN_STATE_CAP +            \
-                              (size_t)PROTOCORE_TLS_CONN_PEERKEY_CAP))
+    ((size_t)MAX_TLS_CONNS *                                                                                           \
+     ((size_t)PROTOCORE_TLS_CONN_MSG_CAP + (size_t)PROTOCORE_TLS_CONN_REC_CAP + (size_t)PROTOCORE_TLS_CONN_TERMS_CAP + \
+      (size_t)PROTOCORE_TLS_CONN_STATE_CAP + (size_t)PROTOCORE_TLS_CONN_PEERKEY_CAP))
 #endif
 
 /**
@@ -1130,8 +1130,7 @@
 // capability on, and scales with PROTOCORE_SSH_RFWD_MAX. Carries the bound addresses a forward
 // names, so the secure end alongside the rest of the SSH state.
 #ifndef PROTOCORE_SSH_CONNECTION_BORROW
-#define PROTOCORE_SSH_CONNECTION_BORROW                                                                                \
-    ((size_t)PROTOCORE_SSH_RFWD_MAX * (PROTOCORE_SSH_FWD_HOST_MAX + 16u) + 128u)
+#define PROTOCORE_SSH_CONNECTION_BORROW ((size_t)PROTOCORE_SSH_RFWD_MAX * (PROTOCORE_SSH_FWD_HOST_MAX + 16u) + 128u)
 #endif
 
 #if PROTOCORE_ENABLE_SSH || PROTOCORE_ENABLE_SSH_CLIENT
@@ -1532,10 +1531,9 @@
      PROTOCORE_SECURE_WORK_COAPSSERVER + PROTOCORE_SECURE_WORK_MQTT + PROTOCORE_SECURE_WORK_SNMPNOTIFY +               \
      PROTOCORE_SECURE_WORK_HTTPCLIENT + PROTOCORE_SECURE_WORK_SMTP + PROTOCORE_SECURE_WORK_WSCLIENT +                  \
      PROTOCORE_SECURE_WORK_SNMPV3 + PROTOCORE_SECURE_WORK_SNMPAGENT + PROTOCORE_SECURE_WORK_OAUTH2 +                   \
-     PROTOCORE_SECURE_WORK_SSHCLIENT + PROTOCORE_SECURE_WORK_SSHTRANSPORT +                                            \
-     PROTOCORE_SECURE_WORK_SSHAUTH + PROTOCORE_SECURE_WORK_SSHCONNECTION +                                             \
-     PROTOCORE_SECURE_WORK_SSHRSA + PROTOCORE_SECURE_WORK_SSHSLOTS + PROTOCORE_SECURE_WORK_SMBCLIENT +                 \
-     256) // + 256: alignment round-up across the individual borrows
+     PROTOCORE_SECURE_WORK_SSHCLIENT + PROTOCORE_SECURE_WORK_SSHTRANSPORT + PROTOCORE_SECURE_WORK_SSHAUTH +            \
+     PROTOCORE_SECURE_WORK_SSHCONNECTION + PROTOCORE_SECURE_WORK_SSHRSA + PROTOCORE_SECURE_WORK_SSHSLOTS +             \
+     PROTOCORE_SECURE_WORK_SMBCLIENT + 256) // + 256: alignment round-up across the individual borrows
 #endif
 
 // Both of these are struct members (TcpConn::proto, TcpConn::iface, Listener::proto, and a route's

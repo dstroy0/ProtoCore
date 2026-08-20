@@ -19,8 +19,8 @@
 
 #if PROTOCORE_ENABLE_GRAPHQL
 
-#include "services/iot/graphql/graphql.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "services/iot/graphql/graphql.h"
 
 #include "mmgr/membuild/membuild.h" // Sb: the Int, Float and \uXXXX renderings
 #include "mmgr/protomem/protomem.h" // mem.cpy: the spans a name and a decoded String move with

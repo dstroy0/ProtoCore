@@ -16,9 +16,9 @@
 
 #if PROTOCORE_ENABLE_FORWARD
 
-#include "network_drivers/network/forward/forward.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protomem/protomem.h"
+#include "network_drivers/network/forward/forward.h"
 
 #include "server/clock/clock.h" // Clock.millis: the one time source the rate cap reads
 

@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_LSV2
 
-#include "services/machine_tool/lsv2/lsv2.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/machine_tool/lsv2/lsv2.h"
 
 // memcpy / memcmp / memset (framing + parsing are hand-rolled)
 

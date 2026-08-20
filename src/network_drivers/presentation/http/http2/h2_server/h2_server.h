@@ -28,7 +28,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-
 /** @brief RFC 9113 sec 8.3: what one HEADERS + DATA response carries. */
 typedef struct
 {

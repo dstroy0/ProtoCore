@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_NMEA2000
 
-#include "services/timing_position/nmea2000/nmea2000.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/timing_position/nmea2000/nmea2000.h"
 #include "shared/can/can.h"
 
 uint8_t protocore_n2k_fastpacket_num_frames(uint16_t total_len)

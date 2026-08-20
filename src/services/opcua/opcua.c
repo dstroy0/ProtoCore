@@ -17,9 +17,9 @@
 
 #if PROTOCORE_ENABLE_OPCUA
 
-#include "services/opcua/opcua.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "services/opcua/opcua.h"
 
 // ProtoHandler is named by protocore_opcua_protocore_handler() in BOTH build arms, so it cannot sit behind
 // the PROTOCORE_HAS_NET_STACK guard below.

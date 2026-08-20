@@ -15,8 +15,8 @@
 
 #if PROTOCORE_ENABLE_SPARKPLUG
 
-#include "services/iot/sparkplug/sparkplug.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "services/iot/sparkplug/sparkplug.h"
 
 #include "mmgr/protomem/protomem.h"         // mem.cpy / mem.set: the spans a topic and a decode move
 #include "mmgr/protostr/protostr.h"         // str.len: the bounded length of each topic element

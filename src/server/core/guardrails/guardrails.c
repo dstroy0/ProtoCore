@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_GUARDRAILS
 
-#include "server/core/guardrails/guardrails.h"
 #include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/guardrails/guardrails.h"
 
 /** @brief The guardrails' compile-time storage: the breach callback, for the length of a build. */
 struct GuardrailsStorage

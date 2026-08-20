@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_SNMP_V3
 
-#include "services/net/snmp/snmp_crypto/snmp_crypto.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
 #include "mmgr/secure/secure.h"
+#include "services/net/snmp/snmp_crypto/snmp_crypto.h"
 
 #include "crypto/cipher/aes_sbox.h"
 #include "crypto/hash/sha256/sha256.h"

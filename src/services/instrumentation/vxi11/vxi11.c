@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_VXI11
 
-#include "services/instrumentation/vxi11/vxi11.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "services/instrumentation/vxi11/vxi11.h"
 
 #include "mmgr/endian/endian.h"
 

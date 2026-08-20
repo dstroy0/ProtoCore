@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_ROAMING
 
-#include "network_drivers/datalink/roaming/roaming.h"
 #include "mmgr/protomem/protomem.h" // mem.cmp / mem.cpy / mem.zero
+#include "network_drivers/datalink/roaming/roaming.h"
 
 /** @brief A BSSID is six octets, and every compare and copy below moves exactly that. */
 #define PROTOCORE_ROAM_BSSID_LEN 6u

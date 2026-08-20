@@ -14,8 +14,8 @@
 
 #if PROTOCORE_ENABLE_PREEMPT_QUEUE
 
-#include "server/core/preempt_queue/preempt_queue.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/preempt_queue/preempt_queue.h"
 
 #include "config/platform/platform.h"
 #include "mmgr/secure/secure.h" // protocore_secure_persist_span: the item a lane's task receives into

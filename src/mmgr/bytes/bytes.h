@@ -25,11 +25,10 @@
 #ifndef PROTOCORE_BYTES_H
 #define PROTOCORE_BYTES_H
 
-#include "mmgr/endian/endian.h"   // protocore_rd32be - the fixed-width serializers the reads step with
+#include "mmgr/endian/endian.h"     // protocore_rd32be - the fixed-width serializers the reads step with
 #include "mmgr/protomem/protomem.h" // mem.set / mem.cpy - the byte movers
 #include "mmgr/protostr/protostr.h" // str.len - the bounded run length
-#include "mmgr/span/span.h"     // protocore_span / protocore_cspan - the region these verbs act on
-
+#include "mmgr/span/span.h"         // protocore_span / protocore_cspan - the region these verbs act on
 
 PROTOCORE_BEGIN_DECLS
 

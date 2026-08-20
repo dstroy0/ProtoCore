@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_SUNSPEC
 
-#include "services/energy/sunspec/sunspec.h"
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "services/energy/sunspec/sunspec.h"
 
 static uint16_t be16(const uint8_t *p)
 {

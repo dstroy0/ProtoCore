@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_DBM
 
-#include "services/storage/dbm/dbm.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/storage/dbm/dbm.h"
 
 // dbm record payload header: op u8 | key_len u16 | val_len u32.
 static const size_t DBM_HDR = 7;

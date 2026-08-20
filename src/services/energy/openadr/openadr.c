@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_OPENADR
 
-#include "services/energy/openadr/openadr.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
+#include "services/energy/openadr/openadr.h"
 
 static void put_u64(protocore_sb *b, uint64_t v)
 {

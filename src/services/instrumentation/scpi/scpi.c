@@ -10,10 +10,10 @@
 
 #if PROTOCORE_ENABLE_SCPI
 
-#include "services/instrumentation/scpi/scpi.h"
 #include "mmgr/protoframe/protoframe.h" // the one frame engine
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
+#include "services/instrumentation/scpi/scpi.h"
 
 // A response value is one number. 10 significant digits is the SCPI NR2/NR3 rendering.
 static const protocore_field SCPI_REAL[] = {{PROTOCORE_FK_G, 10, 0, NULL}, PROTOCORE_END};

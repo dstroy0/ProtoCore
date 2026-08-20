@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_ATC
 
-#include "services/machine_tool/atc/atc.h"
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protostr/protostr.h" // str.eq: the FIO point name lookup
+#include "services/machine_tool/atc/atc.h"
 
 static void put_json_str(protocore_sb *b, const char *s)
 {

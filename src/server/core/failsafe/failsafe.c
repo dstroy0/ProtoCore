@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_FAILSAFE
 
-#include "server/core/failsafe/failsafe.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
+#include "server/core/failsafe/failsafe.h"
 
 /**
  * @brief The lifelines' compile-time storage: the table, and what a breach fires.

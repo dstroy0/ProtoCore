@@ -10,9 +10,9 @@
 
 #if PROTOCORE_ENABLE_SOUTHBOUND
 
-#include "services/southbound/southbound/southbound.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "mmgr/protostr/protostr.h"   // str.eq: the driver registry name lookup
+#include "services/southbound/southbound/southbound.h"
 
 #ifndef PROTOCORE_SOUTHBOUND_MAX_DRIVERS
 #define PROTOCORE_SOUTHBOUND_MAX_DRIVERS 8 ///< bounded registry; no heap.

@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_WAL
 
-#include "services/storage/wal/wal_store/wal_store.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/storage/wal/wal_store/wal_store.h"
 
 #include "mmgr/endian/endian.h"
 

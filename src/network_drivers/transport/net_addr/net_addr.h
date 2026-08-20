@@ -27,10 +27,9 @@
 #define PROTOCORE_NET_ADDR_H
 
 #include "config/platform/platform.h" // protocore_net_ip: the stack's own address type
-#include "shared/ip/ip.h"                                 // protocore_ip: the address everything above carries
+#include "shared/ip/ip.h"             // protocore_ip: the address everything above carries
 
 #include "protocore_config.h"
-
 
 PROTOCORE_BEGIN_DECLS
 

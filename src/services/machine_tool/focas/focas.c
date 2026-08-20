@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_FOCAS
 
-#include "services/machine_tool/focas/focas.h"
 #include "mmgr/protomem/protomem.h"
+#include "services/machine_tool/focas/focas.h"
 
 // FOCAS is big-endian throughout.
 static size_t put16be(uint8_t *p, uint16_t v)
