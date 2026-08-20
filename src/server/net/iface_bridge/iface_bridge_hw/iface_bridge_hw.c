@@ -214,8 +214,15 @@ static void stream_uart_to_sock(uint8_t *restrict work, uint8_t slot, const Brid
 
 #else // no bus seam. The codec + rule table are host-tested elsewhere.
 
-static void bus_begin(work, const BridgeTarget *t)
+// These four mirror the bus arm's signatures exactly, or the file does not parse. Three of them had
+// lost the TYPE of their first parameter - `bus_begin(work, const BridgeTarget *t)` - which is not a
+// K&R declaration the compiler can make sense of but a rewrite that reached into an arm nothing
+// compiles. Every host env states PROTOCORE_PLATFORM_HAS_BUS 1, so this half has never been built
+// and the damage sat here unreported.
+
+static void bus_begin(uint8_t *restrict work, const BridgeTarget *t)
 {
+    (void)work;
     (void)t;
 }
 static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t wlen, uint8_t *rbuf, uint16_t rlen)
@@ -227,13 +234,15 @@ static proto_bool bus_txn(const BridgeTarget *t, const uint8_t *wbuf, uint16_t w
     (void)rlen;
     return PROTO_FALSE;
 }
-static void stream_sock_to_uart(work, uint8_t slot, const BridgeTarget *t)
+static void stream_sock_to_uart(uint8_t *restrict work, uint8_t slot, const BridgeTarget *t)
 {
+    (void)work;
     (void)slot;
     (void)t;
 }
-static void stream_uart_to_sock(work, uint8_t slot, const BridgeTarget *t)
+static void stream_uart_to_sock(uint8_t *restrict work, uint8_t slot, const BridgeTarget *t)
 {
+    (void)work;
     (void)slot;
     (void)t;
 }

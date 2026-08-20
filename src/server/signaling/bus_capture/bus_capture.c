@@ -81,10 +81,13 @@ void protocore_bus_capture_can_to_socketcan(uint8_t *restrict work)
 }
 
 // --- Controller binding ------------------------------------------------------------------
-#if PROTOCORE_HAS_VENDOR_CAN
+// --- the borrow, carved above the capability gate ---------------------------
+//
+// Above it, because the borrow is the MODULE's and not the seam's: same size, same offset, same
+// alignment, whether or not a CAN controller exists behind it. The carving used to sit inside
+// `#if PROTOCORE_HAS_VENDOR_CAN` while the borrow is handed out unconditionally, so with the
+// capability off the module owned a borrow and had nothing to read it with.
 
-// All bus-capture bind state, owned by one instance (internal linkage): the frame sink and
-// the running flag, grouped so it is one named owner, unreachable from any other TU.
 typedef struct
 {
     bus_capture_sink_fn sink;
@@ -109,6 +112,11 @@ static_assert(
 
 // The region, at its offset in the caller's borrow.
 #define BUS_CAPTURE_CTX(w) ((BusCaptureCtx *)(void *)((w) + BUS_CAPTURE_OFF_CTX))
+
+#if PROTOCORE_HAS_VENDOR_CAN
+
+// All bus-capture bind state, owned by one instance (internal linkage): the frame sink and
+// the running flag, grouped so it is one named owner, unreachable from any other TU.
 
 void protocore_bus_capture_begin(uint8_t *restrict work)
 {
@@ -162,23 +170,32 @@ void protocore_bus_capture_end(uint8_t *restrict work)
     BUS_CAPTURE_CTX(work)->sink = NULL;
 }
 
-#else // no controller seam to open
+#else // no controller seam to open: the three entries answer, and capture never starts
 
-proto_bool protocore_bus_capture_begin(int tx_pin, int rx_pin, uint32_t bitrate, bus_capture_sink_fn sink)
+// The SAME THREE ENTRIES the header declares, not a second API beside them. This arm used to define
+// protocore_bus_capture_begin(int, int, uint32_t, bus_capture_sink_fn) - the pre-namespace flat
+// shape - under the name bus_capture.h declares as an entry taking the borrow. Not a stale
+// duplicate sitting quietly next to the table: the same symbol with two signatures, so the arm
+// failed on `conflicting types` before reaching anything else. Nothing reported it, because no env
+// states PROTOCORE_HAS_VENDOR_CAN=0 and this half has never been compiled.
+
+void protocore_bus_capture_begin(uint8_t *restrict work)
 {
-    (void)tx_pin;
-    (void)rx_pin;
-    (void)bitrate;
-    (void)sink;
-    return PROTO_FALSE;
+    // The context is still cleared, so a later poll or end reads a stopped capture rather than
+    // whatever the borrow held before.
+    BUS_CAPTURE_CTX(work)->sink = NULL;
+    BUS_CAPTURE_CTX(work)->running = PROTO_FALSE;
+    BusCaptureV.ok = PROTO_FALSE; // no controller was opened
 }
-void protocore_bus_capture_poll(void)
+
+void protocore_bus_capture_poll(uint8_t *restrict work)
 {
-    // no controller, so nothing to drain
+    (void)work; // no controller, so nothing to drain
 }
-void protocore_bus_capture_end(void)
+
+void protocore_bus_capture_end(uint8_t *restrict work)
 {
-    // no controller, so nothing to stop
+    (void)work; // no controller, so nothing to stop
 }
 
 #endif // PROTOCORE_HAS_VENDOR_CAN
