@@ -1405,8 +1405,7 @@ def generate_runner(suite_dir, libdeps=None, envname=None):
             "runners: %s registers %s, which is not a case.\n"
             "  Unity's generator collects on the name alone, so a helper called test_<something>\n"
             "  is registered and then called with no arguments. A case takes (void) and nothing\n"
-            "  else - rename the helper, or mark it static."
-            % (os.path.relpath(src, ROOT), ", ".join(over))
+            "  else - rename the helper, or mark it static." % (os.path.relpath(src, ROOT), ", ".join(over))
         )
     return out
 
@@ -2226,8 +2225,9 @@ def run_cmake(a):
         if r.returncode != 0:
             return r.returncode
 
-    r = subprocess.run(["cmake", "--build", build] + jobs + ["--", "-k"], cwd=ROOT,
-                       capture_output=not a.verbose, text=True)
+    r = subprocess.run(
+        ["cmake", "--build", build] + jobs + ["--", "-k"], cwd=ROOT, capture_output=not a.verbose, text=True
+    )
     if r.returncode != 0:
         broke = sorted(set(re.findall(r"CMakeFiles/(\w+)\.dir/all\] Error", (r.stdout or "") + (r.stderr or ""))))
         print("%d target(s) did not build: %s" % (len(broke), " ".join(broke)))

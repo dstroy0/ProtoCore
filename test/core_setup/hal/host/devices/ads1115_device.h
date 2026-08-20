@@ -55,8 +55,7 @@ static const int32_t protocore_ads1115_dev_fs_uv[8] = {6144000, 4096000, 2048000
                                                        512000,  256000,  256000,  256000};
 
 // 8.1.3 MUX[2:0]: the positive and negative input for each setting. 4 is GND.
-static const uint8_t protocore_ads1115_dev_mux[8][2] = {{0, 1}, {0, 3}, {1, 3}, {2, 3},
-                                                        {0, 4}, {1, 4}, {2, 4}, {3, 4}};
+static const uint8_t protocore_ads1115_dev_mux[8][2] = {{0, 1}, {0, 3}, {1, 3}, {2, 3}, {0, 4}, {1, 4}, {2, 4}, {3, 4}};
 
 /** @brief Power-up state: 8.1.2 and 8.1.4 reset values, config at 8583h, every input at 0 V. */
 static inline void protocore_ads1115_dev_init(protocore_ads1115_dev *d)
@@ -121,7 +120,8 @@ static inline uint32_t protocore_ads1115_dev_txn(void *ctx, const uint8_t *w, ui
     }
     // 8.1.3 MODE 0b is continuous conversion, so the conversion register tracks the input without
     // being asked. 1b is single shot: the value stands until the next OS write.
-    if (d->ptr == PROTOCORE_ADS1115_DEV_CONVERSION && !(d->reg[PROTOCORE_ADS1115_DEV_CONFIG] & PROTOCORE_ADS1115_DEV_MODE))
+    if (d->ptr == PROTOCORE_ADS1115_DEV_CONVERSION &&
+        !(d->reg[PROTOCORE_ADS1115_DEV_CONFIG] & PROTOCORE_ADS1115_DEV_MODE))
     {
         d->reg[PROTOCORE_ADS1115_DEV_CONVERSION] = protocore_ads1115_dev_convert(d);
     }

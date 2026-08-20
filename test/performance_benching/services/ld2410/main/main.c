@@ -101,8 +101,7 @@ void dbench_run(void)
                   (Ld2410.parse_report(protocore_ld2410_span()), sink += Ld2410.ok));
         Ld2410.parse_report_args.frame = ENG;
         Ld2410.parse_report_args.len = sizeof(ENG);
-        DBENCH_OP("Ld2410.parse_report eng", 100000,
-                  (Ld2410.parse_report(protocore_ld2410_span()), sink += Ld2410.ok));
+        DBENCH_OP("Ld2410.parse_report eng", 100000, (Ld2410.parse_report(protocore_ld2410_span()), sink += Ld2410.ok));
         // Per-byte UART reassembly throughput over a whole basic frame (reports ns/B, MB/s).
         DBENCH_BULK("Ld2410.stream_push basic", 20000, sizeof(BASIC),
                     sink += feed_frame(&stream, BASIC, sizeof(BASIC), &rep));

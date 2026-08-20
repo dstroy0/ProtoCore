@@ -63,10 +63,10 @@
 
 typedef struct
 {
-    uint32_t ch0;     /**< the 28-bit conversion result on channel 0 */
-    uint8_t err;      /**< the error flags to raise with it, in bits 13 and 12 of the high register */
+    uint32_t ch0;      /**< the 28-bit conversion result on channel 0 */
+    uint8_t err;       /**< the error flags to raise with it, in bits 13 and 12 of the high register */
     uint16_t reg[128]; /**< the register file, addressed as the part addresses it */
-    uint8_t ptr;      /**< the register the last transfer named */
+    uint8_t ptr;       /**< the register the last transfer named */
 } protocore_fdc2214_dev;
 
 /** @brief Power-up state: 7.4.1 puts the part in Sleep Mode with the 7.6.x reset values. */

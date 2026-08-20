@@ -630,4 +630,3 @@ void test_pread_in_and_out_of_range(void)
     TEST_ASSERT_EQUAL_MEMORY("hello", buf, 5);
     TEST_ASSERT_FALSE(protocore_wal_store_pread(&s, protocore_wal_store_capacity(&s) - 2, buf, 5));
 }
-

@@ -194,8 +194,8 @@ document reaches ban #7 through the generated `.c`.
 to wrap a C++ vendor API keeps `.cpp`, because the extension selects the compiler and the vendor type
 cannot be named from C at all. Today that is three files:
 
-| File                                       | The C++ it wraps                                           |
-| ------------------------------------------ | ---------------------------------------------------------- |
+| File                                            | The C++ it wraps                                           |
+| ----------------------------------------------- | ---------------------------------------------------------- |
 | `test/core_setup/hal/esp/esp_mnt_fs.cpp`        | an Arduino `fs::FS`, turned into a `protocore_mnt_backend` |
 | `test/core_setup/hal/esp/esp_nvs.cpp`           | an Arduino `Preferences` namespace, behind `nvs.h`         |
 | `test/core_setup/physical/esp/physical_esp.cpp` | the Arduino `WiFi` and `ETH` objects, behind `physical.h`  |

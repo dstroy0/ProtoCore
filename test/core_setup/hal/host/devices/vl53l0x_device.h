@@ -59,11 +59,11 @@
 
 typedef struct
 {
-    uint16_t range_mm;   /**< the distance the part is measuring, in millimetres */
+    uint16_t range_mm;    /**< the distance the part is measuring, in millimetres */
     uint8_t range_status; /**< the raw DeviceRangeStatus, 11 for a completed measurement */
-    uint8_t reg[256];    /**< the register file, addressed as the part addresses it */
-    uint8_t ptr;         /**< the register the last transfer named */
-    uint8_t ranging;     /**< SYSRANGE_START put it in continuous back-to-back mode */
+    uint8_t reg[256];     /**< the register file, addressed as the part addresses it */
+    uint8_t ptr;          /**< the register the last transfer named */
+    uint8_t ranging;      /**< SYSRANGE_START put it in continuous back-to-back mode */
 } protocore_vl53l0x_dev;
 
 /** @brief Power-up state: the DS11555 Table 5 reference registers, not ranging, nothing measured. */

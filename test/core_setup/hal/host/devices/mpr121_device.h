@@ -53,10 +53,10 @@
 
 typedef struct
 {
-    uint16_t touch;                                       /**< which channels are being touched, ELEPROX at bit 12 */
-    uint16_t filtered[PROTOCORE_MPR121_DEV_ELECTRODES];   /**< the 10-bit reading on each channel */
-    uint8_t reg[256];                                     /**< the register file, addressed as the part addresses it */
-    uint8_t ptr;                                          /**< the register the last transfer named */
+    uint16_t touch;                                     /**< which channels are being touched, ELEPROX at bit 12 */
+    uint16_t filtered[PROTOCORE_MPR121_DEV_ELECTRODES]; /**< the 10-bit reading on each channel */
+    uint8_t reg[256];                                   /**< the register file, addressed as the part addresses it */
+    uint8_t ptr;                                        /**< the register the last transfer named */
 } protocore_mpr121_dev;
 
 /** @brief Power-up state: 5.11 puts the ECR at 00h, which is Stop Mode, and everything else at 0. */

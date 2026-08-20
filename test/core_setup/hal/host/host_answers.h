@@ -68,7 +68,6 @@
 #define PROTOCORE_HAS_PSRAM 0 // a unit-test build has one flat address space
 #endif
 
-
 // No vendor stack, so the same surface comes from a host driver the test environment puts on the
 // include path (test/core_setup/hal/host/protocore_net_host.h), exactly the way it supplies <Arduino.h>. Guarded on
 // presence, so a build without that path simply has no transport.
@@ -77,7 +76,6 @@
 #include "protocore_net_host.h" // PROTOCORE_ALLOW_LATE_INCLUDE: ordered - the host driver for the block above
 #endif
 #endif
-
 
 #ifndef PROTOCORE_HAS_BUS
 #define PROTOCORE_HAS_BUS PROTOCORE_PLATFORM_HAS_BUS

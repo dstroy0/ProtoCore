@@ -106,4 +106,3 @@ void test_state_handoff_no_race(void)
     (void)observed_free;
     TEST_ASSERT_EQUAL_INT(CONN_FREE, (ConnState)g_slot.state);
 }
-
