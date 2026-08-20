@@ -115,18 +115,18 @@ static size_t mounts_on_listener(uint8_t listener_id, NtripMount *out, size_t ca
 // Send a response and close the rover (a control reply is small; a single send is fine).
 static void reply_and_close(CasterRover *r, const char *resp, size_t len)
 {
-    ConnPoolV.slot = r->conn_slot;
+    ConnPool.slot = r->conn_slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (len && ConnPoolV.ok)
+    if (len && ConnPool.ok)
     {
-        ConnPoolV.slot = r->conn_slot;
-        ConnPoolV.io.data = resp;
-        ConnPoolV.io.len = (proto_u16)len;
-        ConnPoolV.send(protocore_conn_pool_span());
+        ConnPool.slot = r->conn_slot;
+        ConnPool.io.data = resp;
+        ConnPool.io.len = (proto_u16)len;
+        ConnPool.send(protocore_conn_pool_span());
     }
     r->active = PROTO_FALSE;
-    ConnPoolV.slot = r->conn_slot;
-    ConnPoolV.close(protocore_conn_pool_span());
+    ConnPool.slot = r->conn_slot;
+    ConnPool.close(protocore_conn_pool_span());
 }
 
 // Constant-length credential compare (auth strings are short and app-configured).
@@ -151,9 +151,9 @@ static proto_bool auth_ok(const NtripRequest *req, const char *expect)
 static void serve_sourcetable(CasterRover *r, NtripVersion version)
 {
     NtripMount list[PROTOCORE_NTRIP_MAX_MOUNTS];
-    ConnPoolV.slot = r->conn_slot;
+    ConnPool.slot = r->conn_slot;
     ConnPool.listener_id(protocore_conn_pool_span());
-    size_t nm = mounts_on_listener(ConnPoolV.u8, list, PROTOCORE_NTRIP_MAX_MOUNTS);
+    size_t nm = mounts_on_listener(ConnPool.u8, list, PROTOCORE_NTRIP_MAX_MOUNTS);
     char buf[PROTOCORE_NTRIP_REQ_MAX + 256];
     size_t n = protocore_ntrip_build_sourcetable(buf, sizeof(buf), version, list, nm);
     reply_and_close(r, buf, n);
@@ -174,9 +174,9 @@ static void dispatch(CasterRover *r, const NtripRequest *req)
         serve_sourcetable(r, req->version);
         return;
     }
-    ConnPoolV.slot = r->conn_slot;
+    ConnPool.slot = r->conn_slot;
     ConnPool.listener_id(protocore_conn_pool_span());
-    int mi = mount_index(req->mountpoint, (int)ConnPoolV.u8);
+    int mi = mount_index(req->mountpoint, (int)ConnPool.u8);
     if (mi < 0)
     {
         serve_sourcetable(r, req->version); // unknown mount -> advertise the available ones
@@ -189,18 +189,18 @@ static void dispatch(CasterRover *r, const NtripRequest *req)
         return;
     }
     size_t n = protocore_ntrip_build_stream_response(buf, sizeof(buf), req->version);
-    ConnPoolV.slot = r->conn_slot;
+    ConnPool.slot = r->conn_slot;
     ConnPool.active(protocore_conn_pool_span());
-    const proto_bool up = ConnPoolV.ok;
-    ConnPoolV.slot = r->conn_slot;
-    ConnPoolV.io.data = buf;
-    ConnPoolV.io.len = (proto_u16)n;
-    ConnPoolV.send(protocore_conn_pool_span());
-    if (n == 0 || !up || !ConnPoolV.ok)
+    const proto_bool up = ConnPool.ok;
+    ConnPool.slot = r->conn_slot;
+    ConnPool.io.data = buf;
+    ConnPool.io.len = (proto_u16)n;
+    ConnPool.send(protocore_conn_pool_span());
+    if (n == 0 || !up || !ConnPool.ok)
     {
         r->active = PROTO_FALSE;
-        ConnPoolV.slot = r->conn_slot;
-        ConnPoolV.close(protocore_conn_pool_span());
+        ConnPool.slot = r->conn_slot;
+        ConnPool.close(protocore_conn_pool_span());
         return;
     }
     r->streaming = PROTO_TRUE;
@@ -212,8 +212,8 @@ static void caster_on_accept(uint8_t slot)
     int idx = rover_find_free();
     if (idx < 0)
     {
-        ConnPoolV.slot = slot;
-        ConnPoolV.close(protocore_conn_pool_span()); // rover table full
+        ConnPool.slot = slot;
+        ConnPool.close(protocore_conn_pool_span()); // rover table full
         return;
     }
     CasterRover *r = &s_ctx.rovers[idx];
@@ -229,8 +229,8 @@ static void caster_on_data(uint8_t slot)
     CasterRover *r = rover_by_conn(slot);
     if (!r)
     {
-        ConnPoolV.slot = slot;
-        ConnPoolV.close(protocore_conn_pool_span());
+        ConnPool.slot = slot;
+        ConnPool.close(protocore_conn_pool_span());
         return;
     }
     if (r->streaming)
@@ -239,17 +239,17 @@ static void caster_on_data(uint8_t slot)
         uint8_t sink[64];
         for (;;)
         {
-            ConnPoolV.slot = slot;
+            ConnPool.slot = slot;
             ConnPool.available(protocore_conn_pool_span());
-            if (ConnPoolV.n == 0)
+            if (ConnPool.n == 0)
             {
                 break;
             }
-            ConnPoolV.slot = slot;
-            ConnPoolV.io.buf = sink;
-            ConnPoolV.io.cap = sizeof(sink);
+            ConnPool.slot = slot;
+            ConnPool.io.buf = sink;
+            ConnPool.io.cap = sizeof(sink);
             ConnPool.read(protocore_conn_pool_span());
-            if (ConnPoolV.n == 0)
+            if (ConnPool.n == 0)
             {
                 break;
             }
@@ -259,21 +259,21 @@ static void caster_on_data(uint8_t slot)
     // Still reading the request: append what is available, then try to parse.
     for (;;)
     {
-        ConnPoolV.slot = slot;
+        ConnPool.slot = slot;
         ConnPool.available(protocore_conn_pool_span());
-        if (ConnPoolV.n == 0 || r->req_len >= sizeof(r->req) - 1)
+        if (ConnPool.n == 0 || r->req_len >= sizeof(r->req) - 1)
         {
             break;
         }
-        ConnPoolV.slot = slot;
-        ConnPoolV.io.buf = (uint8_t *)r->req + r->req_len;
-        ConnPoolV.io.cap = sizeof(r->req) - 1 - r->req_len;
+        ConnPool.slot = slot;
+        ConnPool.io.buf = (uint8_t *)r->req + r->req_len;
+        ConnPool.io.cap = sizeof(r->req) - 1 - r->req_len;
         ConnPool.read(protocore_conn_pool_span());
-        if (ConnPoolV.n == 0)
+        if (ConnPool.n == 0)
         {
             break;
         }
-        r->req_len += (uint16_t)ConnPoolV.n;
+        r->req_len += (uint16_t)ConnPool.n;
     }
     NtripRequest req;
     if (protocore_ntrip_request_parse(r->req, r->req_len, &req))
@@ -336,9 +336,9 @@ proto_bool protocore_ntrip_caster_add_mount(uint8_t listener_id, const NtripMoun
     m->auth_b64 = auth_b64;
     if (!s_ctx.registered)
     {
-        SessionV.proto->proto = PROTO_NTRIP_CASTER;
-        SessionV.proto->h = &s_caster_handler;
-        SessionV.proto->add(protocore_session_span());
+        Session.proto->proto = PROTO_NTRIP_CASTER;
+        Session.proto->h = &s_caster_handler;
+        Session.proto->add(protocore_session_span());
         s_ctx.registered = PROTO_TRUE;
     }
     return PROTO_TRUE;
@@ -363,17 +363,17 @@ int protocore_ntrip_caster_broadcast(const char *mountpoint, const uint8_t *data
         {
             continue;
         }
-        ConnPoolV.slot = r->conn_slot;
+        ConnPool.slot = r->conn_slot;
         ConnPool.active(protocore_conn_pool_span());
-        if (!ConnPoolV.ok)
+        if (!ConnPool.ok)
         {
             continue;
         }
-        ConnPoolV.slot = r->conn_slot;
-        ConnPoolV.io.data = data;
-        ConnPoolV.io.len = (proto_u16)len;
-        ConnPoolV.send(protocore_conn_pool_span());
-        if (ConnPoolV.ok)
+        ConnPool.slot = r->conn_slot;
+        ConnPool.io.data = data;
+        ConnPool.io.len = (proto_u16)len;
+        ConnPool.send(protocore_conn_pool_span());
+        if (ConnPool.ok)
         {
             sent++;
         }

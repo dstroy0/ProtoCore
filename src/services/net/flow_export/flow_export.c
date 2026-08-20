@@ -168,11 +168,11 @@ static void patch_u16(uint8_t *restrict work, size_t off, uint16_t v)
 static void v5_header(uint8_t *restrict work)
 {
     (void)work;
-    FlowExportV.ok = PROTO_FALSE;
-    FlowExportV.n = 0;
-    uint8_t *buf = FlowExportV.out.buf;
-    const FlowV5Header *h = FlowExportV.v5.header;
-    if (!buf || !h || FlowExportV.out.cap < FLOW_V5_HEADER_SIZE)
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
+    uint8_t *buf = FlowExport.out.buf;
+    const FlowV5Header *h = FlowExport.v5.header;
+    if (!buf || !h || FlowExport.out.cap < FLOW_V5_HEADER_SIZE)
     {
         return;
     }
@@ -186,18 +186,18 @@ static void v5_header(uint8_t *restrict work)
     buf[p++] = h->engine_type;
     buf[p++] = h->engine_id;
     p += endian.wr16be(buf + p, h->sampling_interval);
-    FlowExportV.n = p; // 24
-    FlowExportV.ok = PROTO_TRUE;
+    FlowExport.n = p; // 24
+    FlowExport.ok = PROTO_TRUE;
 }
 
 static void v5_record(uint8_t *restrict work)
 {
     (void)work;
-    FlowExportV.ok = PROTO_FALSE;
-    FlowExportV.n = 0;
-    uint8_t *buf = FlowExportV.out.buf;
-    const FlowV5Record *r = FlowExportV.v5.record;
-    if (!buf || !r || FlowExportV.out.cap < FLOW_V5_RECORD_SIZE)
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
+    uint8_t *buf = FlowExport.out.buf;
+    const FlowV5Record *r = FlowExport.v5.record;
+    if (!buf || !r || FlowExport.out.cap < FLOW_V5_RECORD_SIZE)
     {
         return;
     }
@@ -223,8 +223,8 @@ static void v5_record(uint8_t *restrict work)
     buf[p++] = r->dst_mask;
     buf[p++] = 0; // pad2, two octets
     buf[p++] = 0;
-    FlowExportV.n = p; // 48
-    FlowExportV.ok = PROTO_TRUE;
+    FlowExport.n = p; // 48
+    FlowExport.ok = PROTO_TRUE;
 }
 
 // ---------------------------------------------------------------------------
@@ -235,15 +235,15 @@ static void v5_record(uint8_t *restrict work)
 // Length stays zero until message_finish.
 static void ipfix_begin(uint8_t *restrict work)
 {
-    FlowExportV.ok = PROTO_FALSE;
-    FlowExportV.n = 0;
-    if (!FlowExportV.out.buf)
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
+    if (!FlowExport.out.buf)
     {
         return;
     }
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
-    m->buf = FlowExportV.out.buf;
-    m->cap = FlowExportV.out.cap;
+    m->buf = FlowExport.out.buf;
+    m->cap = FlowExport.out.cap;
     m->pos = 0;
     m->set_start = 0;
     m->count = 0;
@@ -251,25 +251,25 @@ static void ipfix_begin(uint8_t *restrict work)
     m->error = PROTO_FALSE;
     put_u16(work, FLOW_IPFIX_VERSION);
     put_u16(work, 0);
-    put_u32(work, FlowExportV.message.export_time);
-    put_u32(work, FlowExportV.message.sequence_number);
-    put_u32(work, FlowExportV.message.observation_domain_id);
-    FlowExportV.ok = !m->error;
+    put_u32(work, FlowExport.message.export_time);
+    put_u32(work, FlowExport.message.sequence_number);
+    put_u32(work, FlowExport.message.observation_domain_id);
+    FlowExport.ok = !m->error;
 }
 
 // RFC 3954 sec 5.1: Version 9, Count, sysUpTime, UNIX Secs, Sequence Number, Source ID.
 // Count stays zero until message_finish.
 static void v9_begin(uint8_t *restrict work)
 {
-    FlowExportV.ok = PROTO_FALSE;
-    FlowExportV.n = 0;
-    if (!FlowExportV.out.buf)
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
+    if (!FlowExport.out.buf)
     {
         return;
     }
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
-    m->buf = FlowExportV.out.buf;
-    m->cap = FlowExportV.out.cap;
+    m->buf = FlowExport.out.buf;
+    m->cap = FlowExport.out.cap;
     m->pos = 0;
     m->set_start = 0;
     m->count = 0;
@@ -277,21 +277,21 @@ static void v9_begin(uint8_t *restrict work)
     m->error = PROTO_FALSE;
     put_u16(work, FLOW_V9_VERSION);
     put_u16(work, 0);
-    put_u32(work, FlowExportV.message.sys_uptime);
-    put_u32(work, FlowExportV.message.unix_secs);
-    put_u32(work, FlowExportV.message.sequence_number);
-    put_u32(work, FlowExportV.message.observation_domain_id);
-    FlowExportV.ok = !m->error;
+    put_u32(work, FlowExport.message.sys_uptime);
+    put_u32(work, FlowExport.message.unix_secs);
+    put_u32(work, FlowExport.message.sequence_number);
+    put_u32(work, FlowExport.message.observation_domain_id);
+    FlowExport.ok = !m->error;
 }
 
 // RFC 7011 sec 3.4.1 / RFC 3954 sec 5.2: Set ID, Set Length, Template ID, Field Count, then one
 // Field Specifier per field. RFC 3954 sec 5.1 counts a Template Record toward Count.
 static void template_set(uint8_t *restrict work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExport.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
-    const FlowFieldSpecifier *fields = FlowExportV.tmpl.fields;
-    const size_t field_count = FlowExportV.tmpl.field_count;
+    const FlowFieldSpecifier *fields = FlowExport.tmpl.fields;
+    const size_t field_count = FlowExport.tmpl.field_count;
     if (!fields || field_count == 0)
     {
         return;
@@ -303,7 +303,7 @@ static void template_set(uint8_t *restrict work)
     size_t set_off = m->pos;
     put_u16(work, (m->version == FLOW_V9_VERSION) ? FLOW_V9_TEMPLATE_FLOWSET_ID : FLOW_IPFIX_TEMPLATE_SET_ID);
     put_u16(work, 0);
-    put_u16(work, FlowExportV.template_id);
+    put_u16(work, FlowExport.template_id);
     put_u16(work, (uint16_t)field_count);
     for (size_t i = 0; i < field_count; i++)
     {
@@ -315,16 +315,16 @@ static void template_set(uint8_t *restrict work)
         patch_u16(work, set_off + 2, (uint16_t)(m->pos - set_off));
     }
     m->count++;
-    FlowExportV.ok = !m->error;
+    FlowExport.ok = !m->error;
 }
 
 // RFC 7011 sec 3.3.2: a Data Set's Set ID is the Template ID its records match, 256 or above.
 // RFC 3954 sec 5.2 reserves FlowSet IDs 0 through 255.
 static void data_set_begin(uint8_t *restrict work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExport.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
-    if (FlowExportV.template_id < FLOW_TEMPLATE_ID_MIN)
+    if (FlowExport.template_id < FLOW_TEMPLATE_ID_MIN)
     {
         return;
     }
@@ -333,27 +333,27 @@ static void data_set_begin(uint8_t *restrict work)
         data_set_end(work);
     }
     m->set_start = m->pos;
-    put_u16(work, FlowExportV.template_id);
+    put_u16(work, FlowExport.template_id);
     put_u16(work, 0);
-    FlowExportV.ok = !m->error;
+    FlowExport.ok = !m->error;
 }
 
 // RFC 7011 sec 3.4.3: "It consists only of one or more Field Values." The caller encodes them in
 // Template order; this copies them in and counts the record.
 static void data_record(uint8_t *restrict work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExport.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
-    if (!m->set_start || !FlowExportV.data.record || FlowExportV.data.len == 0)
+    if (!m->set_start || !FlowExport.data.record || FlowExport.data.len == 0)
     {
         return;
     }
-    put_span(work, FlowExportV.data.record, FlowExportV.data.len);
+    put_span(work, FlowExport.data.record, FlowExport.data.len);
     if (!m->error)
     {
         m->count++;
     }
-    FlowExportV.ok = !m->error;
+    FlowExport.ok = !m->error;
 }
 
 // RFC 3954 sec 5.3: "The Exporter SHOULD insert some padding bytes so that the subsequent FlowSet
@@ -361,7 +361,7 @@ static void data_record(uint8_t *restrict work)
 // the Length is the Set Header plus all records plus the optional padding.
 static void data_set_end(uint8_t *restrict work)
 {
-    FlowExportV.ok = PROTO_FALSE;
+    FlowExport.ok = PROTO_FALSE;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (!m->set_start)
     {
@@ -377,7 +377,7 @@ static void data_set_end(uint8_t *restrict work)
         patch_u16(work, m->set_start + 2, (uint16_t)(m->pos - m->set_start));
     }
     m->set_start = 0;
-    FlowExportV.ok = !m->error;
+    FlowExport.ok = !m->error;
 }
 
 // RFC 3954 sec 5.1 Count: "the sum of Options FlowSet records, Template FlowSet records, and Data
@@ -386,8 +386,8 @@ static void data_set_end(uint8_t *restrict work)
 // rather than reporting a truncated length.
 static void message_finish(uint8_t *restrict work)
 {
-    FlowExportV.ok = PROTO_FALSE;
-    FlowExportV.n = 0;
+    FlowExport.ok = PROTO_FALSE;
+    FlowExport.n = 0;
     struct FlowExportStorage *m = FLOW_EXPORT_CTX(work);
     if (m->set_start)
     {
@@ -409,12 +409,19 @@ static void message_finish(uint8_t *restrict work)
         }
         patch_u16(work, 2, (uint16_t)m->pos);
     }
-    FlowExportV.n = m->pos;
-    FlowExportV.ok = PROTO_TRUE;
+    FlowExport.n = m->pos;
+    FlowExport.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-FlowExportVars FlowExportV;
+FlowExportNs FlowExport = {.v5_header = v5_header,
+                           .v5_record = v5_record,
+                           .ipfix_begin = ipfix_begin,
+                           .v9_begin = v9_begin,
+                           .template_set = template_set,
+                           .data_set_begin = data_set_begin,
+                           .data_record = data_record,
+                           .data_set_end = data_set_end,
+                           .message_finish = message_finish};
 
 #endif // PROTOCORE_ENABLE_FLOW_EXPORT

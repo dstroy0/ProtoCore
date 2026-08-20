@@ -32,8 +32,10 @@ typedef struct
     const char *lower; ///< the 16 hex digits, lowercase
     const char *upper; ///< the 16 hex digits, uppercase - for the protocols that specify capitals
 } HexStorage;
+
 /** @brief The digit tables every hex site reads. */
 extern const HexStorage PROTOCORE_HEX;
+
 /** @brief What a digit conversion names: one nibble, or one character. */
 typedef struct
 {
@@ -42,6 +44,7 @@ typedef struct
     uint32_t v;       ///< the value a u32 render writes
     proto_bool upper; ///< render A-F rather than a-f
 } HexArgs;
+
 /** @brief The buffers a run conversion moves between. */
 typedef struct
 {
@@ -52,6 +55,7 @@ typedef struct
     uint8_t *bytes;    ///< where a decode writes
     uint32_t cap;      ///< how much room that has
 } HexIoArgs;
+
 /**
  * @brief Hex digits, and the conversions both directions.
  *
@@ -81,18 +85,12 @@ typedef struct
 {
     HexArgs args;
     HexIoArgs io;
+
     char ch;
     int8_t i8;
     uint8_t u8;
     int32_t i32;
-} HexVars;
 
-/** @brief The operands and the outcome. */
-extern HexVars HexV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const digit)(uint8_t *restrict work);
     void (*const val)(uint8_t *restrict work);
     void (*const u32)(uint8_t *restrict work);
@@ -100,24 +98,7 @@ typedef struct
     void (*const decode)(uint8_t *restrict work);
 } HexNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HexV or a region of the borrow at a fixed offset.
-void protocore_hex_digit(uint8_t *restrict work);
-void protocore_hex_val(uint8_t *restrict work);
-void protocore_hex_u32(uint8_t *restrict work);
-void protocore_hex_encode(uint8_t *restrict work);
-void protocore_hex_decode(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Hex.digit(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HexNs Hex __attribute__((unused)) = {
-    .digit = protocore_hex_digit,
-    .val = protocore_hex_val,
-    .u32 = protocore_hex_u32,
-    .encode = protocore_hex_encode,
-    .decode = protocore_hex_decode,
-};
+/** @brief The one symbol this module exports. */
+extern HexNs Hex;
 
 #endif // PROTOCORE_HEX_H

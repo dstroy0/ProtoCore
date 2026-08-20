@@ -31,36 +31,36 @@ static const uint8_t CHECK_INPUT[9] = {'1', '2', '3', '4', '5', '6', '7', '8', '
 
 static uint32_t compute(const protocore_crc_params *p, const uint8_t *d, size_t n)
 {
-    CrcV.args.params = p;
-    CrcV.args.data = d;
-    CrcV.args.len = n;
+    Crc.args.params = p;
+    Crc.args.data = d;
+    Crc.args.len = n;
     Crc.compute(crc_work);
-    return CrcV.value;
+    return Crc.value;
 }
 
 static uint32_t begin(const protocore_crc_params *p)
 {
-    CrcV.args.params = p;
+    Crc.args.params = p;
     Crc.begin(crc_work);
-    return CrcV.value;
+    return Crc.value;
 }
 
 static uint32_t update(const protocore_crc_params *p, uint32_t crc, const uint8_t *d, size_t n)
 {
-    CrcV.args.params = p;
-    CrcV.args.crc = crc;
-    CrcV.args.data = d;
-    CrcV.args.len = n;
+    Crc.args.params = p;
+    Crc.args.crc = crc;
+    Crc.args.data = d;
+    Crc.args.len = n;
     Crc.update(crc_work);
-    return CrcV.value;
+    return Crc.value;
 }
 
 static uint32_t finish(const protocore_crc_params *p, uint32_t crc)
 {
-    CrcV.args.params = p;
-    CrcV.args.crc = crc;
+    Crc.args.params = p;
+    Crc.args.crc = crc;
     Crc.final(crc_work);
-    return CrcV.value;
+    return Crc.value;
 }
 
 static uint32_t check_of(const protocore_crc_params *p)

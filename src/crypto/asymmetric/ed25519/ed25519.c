@@ -634,9 +634,9 @@ static proto_bool ed_verify_recompute(uint8_t out[32], const uint8_t S[32], cons
 static void ed_expand_seed(uint8_t *restrict work, const uint8_t *seed)
 {
     Ed25519Ctx *ctx = ED25519_CTX(work);
-    Sha512V.hash_args.data = seed;
-    Sha512V.hash_args.len = PROTOCORE_ED25519_SEED_LEN;
-    Sha512V.hash_args.out = ctx->d;
+    Sha512.hash_args.data = seed;
+    Sha512.hash_args.len = PROTOCORE_ED25519_SEED_LEN;
+    Sha512.hash_args.out = ctx->d;
     Sha512.hash(ED25519_SHA(work));
     ctx->d[0] &= 248;
     ctx->d[31] &= 127;
@@ -650,61 +650,61 @@ static void ed_challenge(uint8_t *restrict work, const uint8_t *sig_r, const uin
     Ed25519Ctx *ctx = ED25519_CTX(work);
     uint8_t *sha = ED25519_SHA(work);
     Sha512.init(sha);
-    Sha512V.update_args.data = sig_r; // R
-    Sha512V.update_args.len = 32;
+    Sha512.update_args.data = sig_r; // R
+    Sha512.update_args.len = 32;
     Sha512.update(sha);
-    Sha512V.update_args.data = pub; // A
-    Sha512V.update_args.len = 32;
+    Sha512.update_args.data = pub; // A
+    Sha512.update_args.len = 32;
     Sha512.update(sha);
-    Sha512V.update_args.data = msg;
-    Sha512V.update_args.len = msg_len;
+    Sha512.update_args.data = msg;
+    Sha512.update_args.len = msg_len;
     Sha512.update(sha);
-    Sha512V.final_args.out = ctx->h;
+    Sha512.final_args.out = ctx->h;
     Sha512.final(sha);
     ed_reduce(ctx->h);
 }
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_ed25519_pubkey(uint8_t *restrict work)
+static void ed25519_pubkey(uint8_t *restrict work)
 {
-    Ed25519V.ok = PROTO_FALSE;
-    if (!Ed25519V.pubkey_args.seed || !Ed25519V.pubkey_args.pub)
+    Ed25519.ok = PROTO_FALSE;
+    if (!Ed25519.pubkey_args.seed || !Ed25519.pubkey_args.pub)
     {
         return;
     }
-    ed_expand_seed(work, Ed25519V.pubkey_args.seed);
-    ed_scalarbase_bytes(Ed25519V.pubkey_args.pub, ED25519_CTX(work)->d);
-    Ed25519V.ok = PROTO_TRUE;
+    ed_expand_seed(work, Ed25519.pubkey_args.seed);
+    ed_scalarbase_bytes(Ed25519.pubkey_args.pub, ED25519_CTX(work)->d);
+    Ed25519.ok = PROTO_TRUE;
 }
 
-void protocore_ed25519_sign(uint8_t *restrict work)
+static void ed25519_sign(uint8_t *restrict work)
 {
-    Ed25519V.ok = PROTO_FALSE;
-    if (!Ed25519V.sign_args.seed || !Ed25519V.sign_args.sig)
+    Ed25519.ok = PROTO_FALSE;
+    if (!Ed25519.sign_args.seed || !Ed25519.sign_args.sig)
     {
         return;
     }
     Ed25519Ctx *ctx = ED25519_CTX(work);
     uint8_t *sha = ED25519_SHA(work);
-    const uint8_t *msg = Ed25519V.sign_args.msg;
-    const size_t msg_len = Ed25519V.sign_args.msg_len;
-    uint8_t *sig = Ed25519V.sign_args.sig;
+    const uint8_t *msg = Ed25519.sign_args.msg;
+    const size_t msg_len = Ed25519.sign_args.msg_len;
+    uint8_t *sig = Ed25519.sign_args.sig;
 
-    ed_expand_seed(work, Ed25519V.sign_args.seed);
+    ed_expand_seed(work, Ed25519.sign_args.seed);
 
     // A = a * B
     ed_scalarbase_bytes(ctx->pub, ctx->d);
 
     // r = SHA-512(prefix || M) mod L
     Sha512.init(sha);
-    Sha512V.update_args.data = ctx->d + 32;
-    Sha512V.update_args.len = 32;
+    Sha512.update_args.data = ctx->d + 32;
+    Sha512.update_args.len = 32;
     Sha512.update(sha);
-    Sha512V.update_args.data = msg;
-    Sha512V.update_args.len = msg_len;
+    Sha512.update_args.data = msg;
+    Sha512.update_args.len = msg_len;
     Sha512.update(sha);
-    Sha512V.final_args.out = ctx->r;
+    Sha512.final_args.out = ctx->r;
     Sha512.final(sha);
     ed_reduce(ctx->r);
 
@@ -731,18 +731,18 @@ void protocore_ed25519_sign(uint8_t *restrict work)
         }
     }
     ed_modL(sig + 32, ctx->x); // sig[32..63] = S
-    Ed25519V.ok = PROTO_TRUE;
+    Ed25519.ok = PROTO_TRUE;
 }
 
-void protocore_ed25519_verify(uint8_t *restrict work)
+static void ed25519_verify(uint8_t *restrict work)
 {
-    Ed25519V.ok = PROTO_FALSE;
-    if (!Ed25519V.verify_args.pub || !Ed25519V.verify_args.sig)
+    Ed25519.ok = PROTO_FALSE;
+    if (!Ed25519.verify_args.pub || !Ed25519.verify_args.sig)
     {
         return;
     }
-    const uint8_t *sig = Ed25519V.verify_args.sig;
-    const uint8_t *pub = Ed25519V.verify_args.pub;
+    const uint8_t *sig = Ed25519.verify_args.sig;
+    const uint8_t *pub = Ed25519.verify_args.pub;
     if (!ed_scalar_canonical(sig + 32))
     {
         return; // non-canonical S (RFC 8032 §5.1.7): reject to prevent malleability
@@ -750,7 +750,7 @@ void protocore_ed25519_verify(uint8_t *restrict work)
     Ed25519Ctx *ctx = ED25519_CTX(work);
 
     // h = SHA-512(R || A || M) mod L
-    ed_challenge(work, sig, pub, Ed25519V.verify_args.msg, Ed25519V.verify_args.msg_len);
+    ed_challenge(work, sig, pub, Ed25519.verify_args.msg, Ed25519.verify_args.msg_len);
 
     if (!ed_verify_recompute(ctx->t, sig + 32, ctx->h, pub))
     {
@@ -758,12 +758,11 @@ void protocore_ed25519_verify(uint8_t *restrict work)
     }
     if (ct_verify32(sig, ctx->t) == 0) // R == S*B - h*A ?
     {
-        Ed25519V.ok = PROTO_TRUE;
+        Ed25519.ok = PROTO_TRUE;
     }
 }
 
-/** @brief The operands and the outcome. */
-Ed25519Vars Ed25519V;
+Ed25519Ns Ed25519 = {.pubkey = ed25519_pubkey, .sign = ed25519_sign, .verify = ed25519_verify};
 
 PROTOCORE_END_DECLS
 

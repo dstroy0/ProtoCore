@@ -237,11 +237,11 @@ static void put_creation_time(uint8_t *restrict work)
 {
     Clock.millis(Clock.internal);
     struct tm tmv;
-    TimeCompatV.args.epoch = (time_t)(Clock.ms / 1000u);
-    TimeCompatV.args.out = &tmv;
+    TimeCompat.args.epoch = (time_t)(Clock.ms / 1000u);
+    TimeCompat.args.out = &tmv;
     TimeCompat.gmtime(time_compat_work);
     put(work, "\" creationTime=\"");
-    if (TimeCompatV.tm_out == NULL)
+    if (TimeCompat.tm_out == NULL)
     {
         put(work, "1970-01-01T00:00:00Z");
         return;
@@ -272,11 +272,11 @@ static void put_creation_time(uint8_t *restrict work)
 static void put_header_common(uint8_t *restrict work)
 {
     put(work, "<Header instanceId=\"");
-    put_u64(work, MtConnectV.doc.instance_id);
+    put_u64(work, MtConnect.doc.instance_id);
     put(work, "\" version=\"1.4");
     put_creation_time(work);
     put(work, "\" sender=\"");
-    put_escaped(work, MtConnectV.doc.sender);
+    put_escaped(work, MtConnect.doc.sender);
 }
 
 // The retained observation window the stream and error Headers carry.
@@ -294,8 +294,8 @@ static void put_window(uint8_t *restrict work, uint64_t first, uint64_t last, ui
 static void doc_open(uint8_t *restrict work, const char *root)
 {
     MtConnectCtx *c = MTC_CTX(work);
-    c->out = MtConnectV.doc.out;
-    c->cap = MtConnectV.doc.cap;
+    c->out = MtConnect.doc.out;
+    c->cap = MtConnect.doc.cap;
     c->len = 0;
     c->ok = (c->out != NULL && c->cap > 0);
     c->in_comp = PROTO_FALSE;
@@ -312,14 +312,14 @@ static void doc_close(uint8_t *restrict work, const char *tail)
 {
     MtConnectCtx *c = MTC_CTX(work);
     put(work, tail);
-    MtConnectV.ok = c->ok;
+    MtConnect.ok = c->ok;
     if (!c->ok)
     {
-        MtConnectV.n = 0;
+        MtConnect.n = 0;
         return;
     }
     c->out[c->len] = '\0';
-    MtConnectV.n = c->len;
+    MtConnect.n = c->len;
 }
 
 // --- streams (current / sample) --------------------------------------------
@@ -354,18 +354,18 @@ static void streams_begin(uint8_t *restrict work)
     doc_open(work, "MTConnectStreams");
     put_header_common(work);
     put(work, "\" nextSequence=\"");
-    put_u64(work, MtConnectV.streams.next_seq);
-    put_window(work, MtConnectV.window.first_seq, MtConnectV.window.last_seq,
-               MtConnectV.window.buffer_size ? MtConnectV.window.buffer_size : PROTOCORE_MTC_SAMPLE_BUFFER);
+    put_u64(work, MtConnect.streams.next_seq);
+    put_window(work, MtConnect.window.first_seq, MtConnect.window.last_seq,
+               MtConnect.window.buffer_size ? MtConnect.window.buffer_size : PROTOCORE_MTC_SAMPLE_BUFFER);
     put(work, "\"/>");
     // DeviceStreamType marks name AND uuid required; ComponentStreamType marks component AND
     // componentId. Both are the caller's - they are what the probe response published.
     put(work, "<Streams><DeviceStream name=\"");
-    put_escaped(work, MtConnectV.streams.device_name);
+    put_escaped(work, MtConnect.streams.device_name);
     put(work, "\" uuid=\"");
-    put_escaped(work, MtConnectV.streams.device_uuid);
+    put_escaped(work, MtConnect.streams.device_uuid);
     put(work, "\">");
-    MtConnectV.ok = MTC_CTX(work)->ok;
+    MtConnect.ok = MTC_CTX(work)->ok;
 }
 
 static void streams_add(uint8_t *restrict work)
@@ -378,9 +378,9 @@ static void streams_add(uint8_t *restrict work)
     if (!c->in_comp)
     {
         put(work, "<ComponentStream component=\"");
-        put_escaped(work, MtConnectV.streams.component ? MtConnectV.streams.component : "Device");
+        put_escaped(work, MtConnect.streams.component ? MtConnect.streams.component : "Device");
         put(work, "\" componentId=\"");
-        put_escaped(work, MtConnectV.streams.component_id);
+        put_escaped(work, MtConnect.streams.component_id);
         put(work, "\">");
         c->in_comp = PROTO_TRUE;
         c->comp_start = c->len;
@@ -393,36 +393,36 @@ static void streams_add(uint8_t *restrict work)
     // element is composed at the document end and then moved into place, which keeps one code path
     // for the text and one memmove for the placement.
     const size_t tail = c->len;
-    const protocore_mtc_category cat = MtConnectV.obs.cat;
+    const protocore_mtc_category cat = MtConnect.obs.cat;
     if (cat == PROTOCORE_MTC_CONDITION)
     {
         // <Condition><Normal type="TYPE" dataItemId="ID" sequence="SEQ" timestamp="TS"/></Condition>
         put(work, "<");
-        put(work, MtConnectV.obs.value ? MtConnectV.obs.value : "Normal");
+        put(work, MtConnect.obs.value ? MtConnect.obs.value : "Normal");
         put(work, " type=\"");
-        put_escaped(work, MtConnectV.obs.type);
+        put_escaped(work, MtConnect.obs.type);
         put(work, "\" dataItemId=\"");
-        put_escaped(work, MtConnectV.obs.data_id);
+        put_escaped(work, MtConnect.obs.data_id);
         put(work, "\" sequence=\"");
-        put_u64(work, MtConnectV.obs.seq);
+        put_u64(work, MtConnect.obs.seq);
         put(work, "\" timestamp=\"");
-        put_escaped(work, MtConnectV.obs.timestamp);
+        put_escaped(work, MtConnect.obs.timestamp);
         put(work, "\"/>");
     }
     else
     {
         put(work, "<");
-        put(work, MtConnectV.obs.type ? MtConnectV.obs.type : "");
+        put(work, MtConnect.obs.type ? MtConnect.obs.type : "");
         put(work, " dataItemId=\"");
-        put_escaped(work, MtConnectV.obs.data_id);
+        put_escaped(work, MtConnect.obs.data_id);
         put(work, "\" sequence=\"");
-        put_u64(work, MtConnectV.obs.seq);
+        put_u64(work, MtConnect.obs.seq);
         put(work, "\" timestamp=\"");
-        put_escaped(work, MtConnectV.obs.timestamp);
+        put_escaped(work, MtConnect.obs.timestamp);
         put(work, "\">");
-        put_escaped(work, MtConnectV.obs.value);
+        put_escaped(work, MtConnect.obs.value);
         put(work, "</");
-        put(work, MtConnectV.obs.type ? MtConnectV.obs.type : "");
+        put(work, MtConnect.obs.type ? MtConnect.obs.type : "");
         put(work, ">");
     }
     if (!c->ok)
@@ -444,7 +444,7 @@ static void streams_add(uint8_t *restrict work)
     {
         c->run[i] += n;
     }
-    MtConnectV.ok = c->ok;
+    MtConnect.ok = c->ok;
 }
 
 static void streams_end(uint8_t *restrict work)
@@ -462,9 +462,9 @@ static void error(uint8_t *restrict work)
     put_window(work, 0, 0, PROTOCORE_MTC_SAMPLE_BUFFER);
     put(work, "\"/>");
     put(work, "<Errors><Error errorCode=\"");
-    put_escaped(work, MtConnectV.err.error_code);
+    put_escaped(work, MtConnect.err.error_code);
     put(work, "\">");
-    put_escaped(work, MtConnectV.err.message);
+    put_escaped(work, MtConnect.err.message);
     doc_close(work, "</Error></Errors></MTConnectError>");
 }
 
@@ -478,43 +478,43 @@ static void devices_begin(uint8_t *restrict work)
     // DevicesType's Header adds the asset counters: the agent's capacity and how much is in use,
     // neither of which is a property of the device being described.
     put(work, "\" assetBufferSize=\"");
-    put_u64(work, (uint64_t)MtConnectV.assets.asset_buffer_size);
+    put_u64(work, (uint64_t)MtConnect.assets.asset_buffer_size);
     put(work, "\" assetCount=\"");
-    put_u64(work, (uint64_t)MtConnectV.assets.asset_count);
+    put_u64(work, (uint64_t)MtConnect.assets.asset_count);
     put(work, "\"/>");
     put(work, "<Devices><Device id=\"");
-    put_escaped(work, MtConnectV.device.device_id);
+    put_escaped(work, MtConnect.device.device_id);
     put(work, "\" name=\"");
-    put_escaped(work, MtConnectV.device.device_name);
+    put_escaped(work, MtConnect.device.device_name);
     put(work, "\" uuid=\"");
-    put_escaped(work, MtConnectV.device.uuid);
+    put_escaped(work, MtConnect.device.uuid);
     put(work, "\"><DataItems>");
-    MtConnectV.ok = MTC_CTX(work)->ok;
+    MtConnect.ok = MTC_CTX(work)->ok;
 }
 
 static void devices_add(uint8_t *restrict work)
 {
     put(work, "<DataItem category=\"");
-    put(work, mtc_cat_str(MtConnectV.item.cat));
+    put(work, mtc_cat_str(MtConnect.item.cat));
     put(work, "\" id=\"");
-    put_escaped(work, MtConnectV.item.id);
+    put_escaped(work, MtConnect.item.id);
     put(work, "\" type=\"");
-    put_escaped(work, MtConnectV.item.type);
+    put_escaped(work, MtConnect.item.type);
     put(work, "\"");
-    if (MtConnectV.item.name && MtConnectV.item.name[0])
+    if (MtConnect.item.name && MtConnect.item.name[0])
     {
         put(work, " name=\"");
-        put_escaped(work, MtConnectV.item.name);
+        put_escaped(work, MtConnect.item.name);
         put(work, "\"");
     }
-    if (MtConnectV.item.units && MtConnectV.item.units[0])
+    if (MtConnect.item.units && MtConnect.item.units[0])
     {
         put(work, " units=\"");
-        put_escaped(work, MtConnectV.item.units);
+        put_escaped(work, MtConnect.item.units);
         put(work, "\"");
     }
     put(work, "/>");
-    MtConnectV.ok = MTC_CTX(work)->ok;
+    MtConnect.ok = MTC_CTX(work)->ok;
 }
 
 static void devices_end(uint8_t *restrict work)
@@ -529,12 +529,12 @@ static void assets_begin(uint8_t *restrict work)
     doc_open(work, "MTConnectAssets");
     put_header_common(work);
     put(work, "\" assetBufferSize=\"");
-    put_u64(work, (uint64_t)MtConnectV.assets.asset_buffer_size);
+    put_u64(work, (uint64_t)MtConnect.assets.asset_buffer_size);
     put(work, "\" assetCount=\"");
-    put_u64(work, (uint64_t)MtConnectV.assets.asset_count);
+    put_u64(work, (uint64_t)MtConnect.assets.asset_count);
     put(work, "\"/>");
     put(work, "<Assets>");
-    MtConnectV.ok = MTC_CTX(work)->ok;
+    MtConnect.ok = MTC_CTX(work)->ok;
 }
 
 // One optional attribute, written only when the caller supplied it.
@@ -554,18 +554,18 @@ static void put_opt_attr(uint8_t *restrict work, const char *name, const char *v
 static void tool_begin(uint8_t *restrict work)
 {
     put(work, "<CuttingTool assetId=\"");
-    put_escaped(work, MtConnectV.tool.asset_id);
+    put_escaped(work, MtConnect.tool.asset_id);
     put(work, "\"");
-    put_opt_attr(work, "serialNumber", MtConnectV.tool.serial_number);
-    put_opt_attr(work, "toolId", MtConnectV.tool.tool_id);
-    put_opt_attr(work, "deviceUuid", MtConnectV.tool.device_uuid);
-    put_opt_attr(work, "timestamp", MtConnectV.tool.timestamp);
+    put_opt_attr(work, "serialNumber", MtConnect.tool.serial_number);
+    put_opt_attr(work, "toolId", MtConnect.tool.tool_id);
+    put_opt_attr(work, "deviceUuid", MtConnect.tool.device_uuid);
+    put_opt_attr(work, "timestamp", MtConnect.tool.timestamp);
     // CuttingToolLifeCycleType opens with CutterStatus at minOccurs=1, ahead of ToolLife in the same
     // sequence, so it is written here rather than left to the caller to remember.
     put(work, "><CuttingToolLifeCycle><CutterStatus><Status>");
-    put_escaped(work, MtConnectV.tool.cutter_status);
+    put_escaped(work, MtConnect.tool.cutter_status);
     put(work, "</Status></CutterStatus>");
-    MtConnectV.ok = MTC_CTX(work)->ok;
+    MtConnect.ok = MTC_CTX(work)->ok;
 }
 
 static void tool_life(uint8_t *restrict work)
@@ -573,23 +573,23 @@ static void tool_life(uint8_t *restrict work)
     // LifeType marks type, countDirection, initial and limit required: without initial and limit the
     // count says neither where the life started nor where it ends.
     put(work, "<ToolLife type=\"");
-    put_escaped(work, MtConnectV.life.type);
+    put_escaped(work, MtConnect.life.type);
     put(work, "\" countDirection=\"");
-    put_escaped(work, MtConnectV.life.count_direction);
+    put_escaped(work, MtConnect.life.count_direction);
     put(work, "\" initial=\"");
-    put_escaped(work, MtConnectV.life.initial);
+    put_escaped(work, MtConnect.life.initial);
     put(work, "\" limit=\"");
-    put_escaped(work, MtConnectV.life.limit);
+    put_escaped(work, MtConnect.life.limit);
     put(work, "\">");
-    put_escaped(work, MtConnectV.life.value);
+    put_escaped(work, MtConnect.life.value);
     put(work, "</ToolLife>");
-    MtConnectV.ok = MTC_CTX(work)->ok;
+    MtConnect.ok = MTC_CTX(work)->ok;
 }
 
 static void tool_end(uint8_t *restrict work)
 {
     put(work, "</CuttingToolLifeCycle></CuttingTool>");
-    MtConnectV.ok = MTC_CTX(work)->ok;
+    MtConnect.ok = MTC_CTX(work)->ok;
 }
 
 static void assets_end(uint8_t *restrict work)
@@ -619,21 +619,21 @@ static void ring_init(uint8_t *restrict work)
     MtConnectCtx *c = MTC_CTX(work);
     c->count = 0;
     c->head = 0;
-    c->next_seq = MtConnectV.streams.next_seq ? MtConnectV.streams.next_seq : 1u;
+    c->next_seq = MtConnect.streams.next_seq ? MtConnect.streams.next_seq : 1u;
     c->first_seq = c->next_seq; // empty: first == next, so lastSequence sits just below first
-    MtConnectV.ok = PROTO_TRUE;
+    MtConnect.ok = PROTO_TRUE;
 }
 
 static void ring_add(uint8_t *restrict work)
 {
     MtConnectCtx *c = MTC_CTX(work);
     MtConnectObs *o = &MTC_RING(work)[c->head];
-    o->cat = (uint8_t)MtConnectV.obs.cat;
+    o->cat = (uint8_t)MtConnect.obs.cat;
     o->seq = c->next_seq;
-    copy_str(o->type, sizeof(o->type), MtConnectV.obs.type);
-    copy_str(o->data_id, sizeof(o->data_id), MtConnectV.obs.data_id);
-    copy_str(o->timestamp, sizeof(o->timestamp), MtConnectV.obs.timestamp);
-    copy_str(o->value, sizeof(o->value), MtConnectV.obs.value);
+    copy_str(o->type, sizeof(o->type), MtConnect.obs.type);
+    copy_str(o->data_id, sizeof(o->data_id), MtConnect.obs.data_id);
+    copy_str(o->timestamp, sizeof(o->timestamp), MtConnect.obs.timestamp);
+    copy_str(o->value, sizeof(o->value), MtConnect.obs.value);
     c->head = (c->head + 1) % PROTOCORE_MTC_SAMPLE_BUFFER;
     if (c->count < PROTOCORE_MTC_SAMPLE_BUFFER)
     {
@@ -643,8 +643,8 @@ static void ring_add(uint8_t *restrict work)
     {
         c->first_seq++; // full: the oldest was overwritten, so the window slides forward
     }
-    MtConnectV.seq = c->next_seq++;
-    MtConnectV.ok = PROTO_TRUE;
+    MtConnect.seq = c->next_seq++;
+    MtConnect.ok = PROTO_TRUE;
 }
 
 static void ring_query(uint8_t *restrict work)
@@ -653,11 +653,11 @@ static void ring_query(uint8_t *restrict work)
     const uint64_t first = c->first_seq;
     const uint64_t next = c->next_seq; // one past the newest retained observation
     const uint64_t last = next - 1u;   // newest sequence; when empty this is first-1
-    const uint64_t from = MtConnectV.query.from;
+    const uint64_t from = MtConnect.query.from;
     const uint64_t start = from < first ? first : from; // a stale `from` catches up from the oldest
 
     const uint32_t avail = (start < next) ? (uint32_t)(next - start) : 0u;
-    const uint32_t to_emit = (MtConnectV.query.count < avail) ? MtConnectV.query.count : avail;
+    const uint32_t to_emit = (MtConnect.query.count < avail) ? MtConnect.query.count : avail;
     // Resume point: past the last one returned, or nextSequence when nothing was in range.
     const uint64_t next_report = (start >= next) ? next : start + to_emit;
 
@@ -668,28 +668,43 @@ static void ring_query(uint8_t *restrict work)
     const uint32_t base = (uint32_t)(start - first);
     const MtConnectObs *ring = MTC_RING(work);
 
-    MtConnectV.streams.next_seq = next_report;
-    MtConnectV.window.first_seq = first;
-    MtConnectV.window.last_seq = last;
-    MtConnectV.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
+    MtConnect.streams.next_seq = next_report;
+    MtConnect.window.first_seq = first;
+    MtConnect.window.last_seq = last;
+    MtConnect.window.buffer_size = PROTOCORE_MTC_SAMPLE_BUFFER;
     streams_begin(work);
 
     for (uint32_t e = 0; e < to_emit; e++)
     {
         const MtConnectObs *o = &ring[(oldest + base + e) % PROTOCORE_MTC_SAMPLE_BUFFER];
-        MtConnectV.obs.cat = (protocore_mtc_category)o->cat;
-        MtConnectV.obs.type = o->type;
-        MtConnectV.obs.data_id = o->data_id;
-        MtConnectV.obs.seq = o->seq;
-        MtConnectV.obs.timestamp = o->timestamp;
-        MtConnectV.obs.value = o->value;
+        MtConnect.obs.cat = (protocore_mtc_category)o->cat;
+        MtConnect.obs.type = o->type;
+        MtConnect.obs.data_id = o->data_id;
+        MtConnect.obs.seq = o->seq;
+        MtConnect.obs.timestamp = o->timestamp;
+        MtConnect.obs.value = o->value;
         streams_add(work);
     }
     streams_end(work);
 }
 
-/** @brief The operands and the outcome. */
-MtConnectVars MtConnectV;
+MtConnectNs MtConnect = {
+    .streams_begin = streams_begin,
+    .streams_add = streams_add,
+    .streams_end = streams_end,
+    .error = error,
+    .devices_begin = devices_begin,
+    .devices_add = devices_add,
+    .devices_end = devices_end,
+    .assets_begin = assets_begin,
+    .tool_begin = tool_begin,
+    .tool_life = tool_life,
+    .tool_end = tool_end,
+    .assets_end = assets_end,
+    .ring_init = ring_init,
+    .ring_add = ring_add,
+    .ring_query = ring_query,
+};
 
 PROTOCORE_END_DECLS
 

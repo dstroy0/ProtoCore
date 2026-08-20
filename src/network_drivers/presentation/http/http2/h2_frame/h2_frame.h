@@ -81,6 +81,7 @@ typedef struct
     uint8_t flags;      ///< frame flags
     uint32_t stream_id; ///< stream identifier (reserved bit cleared)
 } H2FrameHeader;
+
 /** @brief The six settings we track, with RFC defaults after ::H2FrameNs::settings_defaults. */
 typedef struct
 {
@@ -91,12 +92,14 @@ typedef struct
     uint32_t max_frame_size;         ///< default 16384
     uint32_t max_header_list_size;   ///< default "unlimited" (0xFFFFFFFF here)
 } H2Settings;
+
 /** @brief RFC 9113 sec 4.1: the 9-octet header a parse reads. */
 typedef struct
 {
     const uint8_t *buf; ///< the bytes to read
     size_t len;         ///< how many are available
 } H2FrameParseArgs;
+
 /** @brief RFC 9113 sec 4.1: the 9-octet header a write emits. */
 typedef struct
 {
@@ -107,6 +110,7 @@ typedef struct
     uint8_t flags;      ///< the frame flags
     uint32_t stream_id; ///< the stream it belongs to
 } H2FrameWriteArgs;
+
 /** @brief The settings block a defaults fill or a parse applies to. */
 typedef struct
 {
@@ -114,6 +118,7 @@ typedef struct
     size_t len;             ///< how many bytes it carries
     H2Settings *s;          ///< the block written into
 } H2FrameSettingsArgs;
+
 /** @brief RFC 9113 sec 6.5: the (id, value) pairs a SETTINGS frame carries. */
 typedef struct
 {
@@ -123,12 +128,14 @@ typedef struct
     const uint32_t *vals; ///< their values
     size_t n;             ///< how many pairs
 } H2FrameBuildSettingsArgs;
+
 /** @brief Where a frame that carries nothing else is written. */
 typedef struct
 {
     uint8_t *buf; ///< where the frame is written
     size_t cap;   ///< how much room it has
 } H2FrameAckArgs;
+
 /** @brief RFC 9113 sec 6.9: the increment a WINDOW_UPDATE carries. */
 typedef struct
 {
@@ -137,6 +144,7 @@ typedef struct
     uint32_t stream_id; ///< the stream it credits
     uint32_t increment; ///< the 31-bit credit
 } H2FrameWindowArgs;
+
 /** @brief RFC 9113 sec 6.4: the error a RST_STREAM carries. */
 typedef struct
 {
@@ -145,6 +153,7 @@ typedef struct
     uint32_t stream_id; ///< the stream it resets
     uint32_t error;     ///< the code it reports
 } H2FrameRstArgs;
+
 /** @brief RFC 9113 sec 6.8: what a GOAWAY reports. */
 typedef struct
 {
@@ -153,6 +162,7 @@ typedef struct
     uint32_t last_stream_id; ///< the highest stream that will be processed
     uint32_t error;          ///< the code it reports
 } H2FrameGoawayArgs;
+
 /** @brief RFC 9113 sec 6.7: the opaque data a PING ACK echoes. */
 typedef struct
 {
@@ -160,6 +170,7 @@ typedef struct
     size_t cap;            ///< how much room it has
     const uint8_t *opaque; ///< the 8 octets echoed back
 } H2FramePingArgs;
+
 /** @brief RFC 9113 sec 6.2: the HPACK block a HEADERS frame carries. */
 typedef struct
 {
@@ -170,6 +181,7 @@ typedef struct
     size_t block_len;      ///< how many bytes
     proto_bool end_stream; ///< whether it closes the stream
 } H2FrameHeadersArgs;
+
 /** @brief RFC 9113 sec 6.1: the payload a DATA frame carries. */
 typedef struct
 {
@@ -180,6 +192,7 @@ typedef struct
     size_t data_len;       ///< how many bytes
     proto_bool end_stream; ///< whether it closes the stream
 } H2FrameDataArgs;
+
 /**
  * @brief HTTP/2 frame headers, settings and builders (RFC 9113 sec 4 and 6).
  *
@@ -229,17 +242,11 @@ typedef struct
     H2FramePingArgs ping_args;                    ///< the members ::H2FrameNs::build_ping_ack takes
     H2FrameHeadersArgs headers_args;              ///< the members ::H2FrameNs::build_headers takes
     H2FrameDataArgs data_args;                    ///< the members ::H2FrameNs::build_data takes
-    proto_bool ok;                                ///< whether a parse read a well-formed frame
-    size_t n;                                     ///< bytes a build wrote, or 0 on overflow
-    H2FrameHeader header;                         ///< the header a parse read
-} H2FrameVars;
 
-/** @brief The operands and the outcome. */
-extern H2FrameVars H2FrameV;
+    proto_bool ok;        ///< whether a parse read a well-formed frame
+    size_t n;             ///< bytes a build wrote, or 0 on overflow
+    H2FrameHeader header; ///< the header a parse read
 
-/** @brief The entries. */
-typedef struct
-{
     void (*const parse_header)(uint8_t *restrict work);
     void (*const write_header)(uint8_t *restrict work);
     void (*const settings_defaults)(uint8_t *restrict work);
@@ -254,39 +261,8 @@ typedef struct
     void (*const build_data)(uint8_t *restrict work);
 } H2FrameNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in H2FrameV or a region of the borrow at a fixed offset.
-void protocore_h2_frame_parse_header(uint8_t *restrict work);
-void protocore_h2_frame_write_header(uint8_t *restrict work);
-void protocore_h2_frame_settings_defaults(uint8_t *restrict work);
-void protocore_h2_frame_parse_settings(uint8_t *restrict work);
-void protocore_h2_frame_build_settings(uint8_t *restrict work);
-void protocore_h2_frame_build_settings_ack(uint8_t *restrict work);
-void protocore_h2_frame_build_window_update(uint8_t *restrict work);
-void protocore_h2_frame_build_rst_stream(uint8_t *restrict work);
-void protocore_h2_frame_build_goaway(uint8_t *restrict work);
-void protocore_h2_frame_build_ping_ack(uint8_t *restrict work);
-void protocore_h2_frame_build_headers(uint8_t *restrict work);
-void protocore_h2_frame_build_data(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `H2Frame.parse_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const H2FrameNs H2Frame __attribute__((unused)) = {
-    .parse_header = protocore_h2_frame_parse_header,
-    .write_header = protocore_h2_frame_write_header,
-    .settings_defaults = protocore_h2_frame_settings_defaults,
-    .parse_settings = protocore_h2_frame_parse_settings,
-    .build_settings = protocore_h2_frame_build_settings,
-    .build_settings_ack = protocore_h2_frame_build_settings_ack,
-    .build_window_update = protocore_h2_frame_build_window_update,
-    .build_rst_stream = protocore_h2_frame_build_rst_stream,
-    .build_goaway = protocore_h2_frame_build_goaway,
-    .build_ping_ack = protocore_h2_frame_build_ping_ack,
-    .build_headers = protocore_h2_frame_build_headers,
-    .build_data = protocore_h2_frame_build_data,
-};
+/** @brief The one symbol this module exports. */
+extern H2FrameNs H2Frame;
 
 PROTOCORE_END_DECLS
 

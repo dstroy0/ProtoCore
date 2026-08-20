@@ -23,10 +23,10 @@ static void handle_html(uint8_t slot_id, HttpReq *req)
     (void)req;
     handler_called = PROTO_TRUE;
     const protocore_mnt_backend *fs = mock_mnt();
-    FileServingV.serve_file_args.slot_id = slot_id;
-    FileServingV.serve_file_args.file_sys = fs;
-    FileServingV.serve_file_args.fs_path = "/index.html";
-    FileServingV.serve_file_args.content_type = "text/html";
+    FileServing.serve_file_args.slot_id = slot_id;
+    FileServing.serve_file_args.file_sys = fs;
+    FileServing.serve_file_args.fs_path = "/index.html";
+    FileServing.serve_file_args.content_type = "text/html";
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -35,10 +35,10 @@ static void handle_js(uint8_t slot_id, HttpReq *req)
     (void)req;
     handler_called = PROTO_TRUE;
     const protocore_mnt_backend *fs = mock_mnt();
-    FileServingV.serve_file_args.slot_id = slot_id;
-    FileServingV.serve_file_args.file_sys = fs;
-    FileServingV.serve_file_args.fs_path = "/app.js";
-    FileServingV.serve_file_args.content_type = "application/javascript";
+    FileServing.serve_file_args.slot_id = slot_id;
+    FileServing.serve_file_args.file_sys = fs;
+    FileServing.serve_file_args.fs_path = "/app.js";
+    FileServing.serve_file_args.content_type = "application/javascript";
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -47,10 +47,10 @@ static void handle_missing(uint8_t slot_id, HttpReq *req)
     (void)req;
     handler_called = PROTO_TRUE;
     const protocore_mnt_backend *fs = mock_mnt();
-    FileServingV.serve_file_args.slot_id = slot_id;
-    FileServingV.serve_file_args.file_sys = fs;
-    FileServingV.serve_file_args.fs_path = "/missing.txt";
-    FileServingV.serve_file_args.content_type = "text/plain";
+    FileServing.serve_file_args.slot_id = slot_id;
+    FileServing.serve_file_args.file_sys = fs;
+    FileServing.serve_file_args.fs_path = "/missing.txt";
+    FileServing.serve_file_args.content_type = "text/plain";
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -66,7 +66,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = i;
+        HttpConn.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -74,7 +74,7 @@ void setUp()
 
     mock_mnt_reset();
 
-    MntV.args.backend = mock_mnt();
+    Mnt.args.backend = mock_mnt();
     Mnt.mount(mnt_work);
     tcp_capture_reset();
 }
@@ -88,7 +88,7 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -159,10 +159,10 @@ static void h_empty(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     const protocore_mnt_backend *fs = mock_mnt();
-    FileServingV.serve_file_args.slot_id = slot_id;
-    FileServingV.serve_file_args.file_sys = fs;
-    FileServingV.serve_file_args.fs_path = "/empty.txt";
-    FileServingV.serve_file_args.content_type = "text/plain";
+    FileServing.serve_file_args.slot_id = slot_id;
+    FileServing.serve_file_args.file_sys = fs;
+    FileServing.serve_file_args.fs_path = "/empty.txt";
+    FileServing.serve_file_args.content_type = "text/plain";
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -170,10 +170,10 @@ static void h_big(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     const protocore_mnt_backend *fs = mock_mnt();
-    FileServingV.serve_file_args.slot_id = slot_id;
-    FileServingV.serve_file_args.file_sys = fs;
-    FileServingV.serve_file_args.fs_path = "/big.bin";
-    FileServingV.serve_file_args.content_type = "application/octet-stream";
+    FileServing.serve_file_args.slot_id = slot_id;
+    FileServing.serve_file_args.file_sys = fs;
+    FileServing.serve_file_args.fs_path = "/big.bin";
+    FileServing.serve_file_args.content_type = "application/octet-stream";
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -188,10 +188,10 @@ static void h_case(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     const protocore_mnt_backend *fs = mock_mnt();
-    FileServingV.serve_file_args.slot_id = slot_id;
-    FileServingV.serve_file_args.file_sys = fs;
-    FileServingV.serve_file_args.fs_path = cur_path;
-    FileServingV.serve_file_args.content_type = cur_ctype;
+    FileServing.serve_file_args.slot_id = slot_id;
+    FileServing.serve_file_args.file_sys = fs;
+    FileServing.serve_file_args.fs_path = cur_path;
+    FileServing.serve_file_args.content_type = cur_ctype;
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -199,10 +199,10 @@ static void h_f(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     const protocore_mnt_backend *fs = mock_mnt();
-    FileServingV.serve_file_args.slot_id = slot_id;
-    FileServingV.serve_file_args.file_sys = fs;
-    FileServingV.serve_file_args.fs_path = "/f.txt";
-    FileServingV.serve_file_args.content_type = "text/plain";
+    FileServing.serve_file_args.slot_id = slot_id;
+    FileServing.serve_file_args.file_sys = fs;
+    FileServing.serve_file_args.fs_path = "/f.txt";
+    FileServing.serve_file_args.content_type = "text/plain";
     FileServing.serve_file(protocore_file_serving_span());
 }
 
@@ -285,7 +285,7 @@ void test_multiple_content_types()
         conn_pool[0].state = CONN_ACTIVE;
         conn_pool[0].proto = PROTO_HTTP;
         conn_pool[0].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = 0;
+        HttpConn.slot = 0;
         HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
 
@@ -308,7 +308,7 @@ static void rearm(uint8_t slot)
     conn_pool[slot].state = CONN_ACTIVE;
     conn_pool[slot].proto = PROTO_HTTP;
     conn_pool[slot].pcb = protocore_net_host_pcb();
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 }
@@ -320,27 +320,27 @@ void test_serve_static_root_join_variants()
     mock_mnt_add_text("/b.txt", "BBB", 0);
     mock_mnt_add_text("/www/c.txt", "CCC", 0);
 
-    FileServingV.serve_static_args.url_prefix = "/ts";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www/";
+    FileServing.serve_static_args.url_prefix = "/ts";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www/";
     FileServing.serve_static(protocore_file_serving_span());
     feed_and_handle(0, "GET /ts/a.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "AAA"));
 
     rearm(0);
-    FileServingV.serve_static_args.url_prefix = "/nr";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = NULL;
+    FileServing.serve_static_args.url_prefix = "/nr";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = NULL;
     FileServing.serve_static(protocore_file_serving_span());
     feed_and_handle(0, "GET /nr/b.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "BBB"));
 
     rearm(0);
-    FileServingV.serve_static_args.url_prefix = "/ns";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/ns";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
     feed_and_handle(0, "GET /ns/c.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -353,9 +353,9 @@ void test_serve_static_empty_prefix_mount()
 {
     mock_mnt_reset();
     mock_mnt_add_text("/www/any.txt", "anything", 0);
-    FileServingV.serve_static_args.url_prefix = "";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
     feed_and_handle(0, "GET /any.txt HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -367,9 +367,9 @@ void test_serve_static_directory_and_overlong_path()
 {
     mock_mnt_reset();
     mock_mnt_add_text("/www/docs/index.html", "<i>docs</i>", 0);
-    FileServingV.serve_static_args.url_prefix = "/";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
     feed_and_handle(0, "GET /docs/ HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -380,9 +380,9 @@ void test_serve_static_directory_and_overlong_path()
     memset(longroot, 'r', sizeof(longroot) - 1);
     longroot[0] = '/';
     longroot[sizeof(longroot) - 1] = '\0';
-    FileServingV.serve_static_args.url_prefix = "/lp";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = longroot;
+    FileServing.serve_static_args.url_prefix = "/lp";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = longroot;
     FileServing.serve_static(protocore_file_serving_span());
     feed_and_handle(0, "GET /lp/x HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "404"));
@@ -395,9 +395,9 @@ void test_serve_static_gzip_negotiation_misses()
     mock_mnt_add_text("/www/app.js", "console.log(2)", 0);
     mock_mnt_add_text("/www/app.js.gz", "GZ", 0);
     mock_mnt_add_text("/www/plain.txt", "plain body", 0);
-    FileServingV.serve_static_args.url_prefix = "/";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
 
     feed_and_handle(0, "GET /app.js HTTP/1.1\r\nHost: x\r\nAccept-Encoding: deflate, br\r\n\r\n");
@@ -416,9 +416,9 @@ void test_serve_static_head_and_cors_headers()
     mock_mnt_reset();
     mock_mnt_add_text("/www/page.html", "<html>body</html>", 0);
     set_cors("*");
-    FileServingV.serve_static_args.url_prefix = "/";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
 
     feed_and_handle(0, "HEAD /page.html HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -443,9 +443,9 @@ void test_serve_static_inm_non_matching_forms()
 {
     mock_mnt_reset();
     mock_mnt_add_text("/www/p.html", "123456789012345", (time_t)1000);
-    FileServingV.serve_static_args.url_prefix = "/";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
 
     feed_and_handle(0, "GET /p.html HTTP/1.1\r\nHost: x\r\n\r\n");
@@ -476,23 +476,23 @@ void test_file_send_pump_connection_lost_midtransfer()
     static uint8_t big[BIG_N];
     memset(big, 'Z', BIG_N);
     mock_mnt_add_text("/www/big.bin", big, BIG_N);
-    FileServingV.serve_static_args.url_prefix = "/";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
 
     mock_sndbuf_set(0);
     feed_and_handle(0, "GET /big.bin HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
-    FileServingV.holds_slot_args.slot = 0;
+    FileServing.holds_slot_args.slot = 0;
     FileServing.holds_slot(protocore_file_serving_span());
-    TEST_ASSERT_TRUE(FileServingV.ok);
+    TEST_ASSERT_TRUE(FileServing.ok);
 
     conn_pool[0].pcb = NULL;
     handle();
-    FileServingV.holds_slot_args.slot = 0;
+    FileServing.holds_slot_args.slot = 0;
     FileServing.holds_slot(protocore_file_serving_span());
-    TEST_ASSERT_FALSE(FileServingV.ok);
+    TEST_ASSERT_FALSE(FileServing.ok);
     TEST_ASSERT_NULL(strstr(tcp_captured(), "ZZZZ"));
 
     mock_sndbuf_set(MOCK_SNDBUF_DEFAULT);
@@ -513,13 +513,13 @@ void stress_serve_file_50_requests()
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = slot;
+        HttpConn.slot = slot;
         HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
         handler_called = PROTO_FALSE;
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
-        HttpConnV.slot = slot;
+        HttpConn.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
         handle();
 
@@ -541,7 +541,7 @@ void stress_alternate_missing_and_found()
         conn_pool[slot].state = CONN_ACTIVE;
         conn_pool[slot].proto = PROTO_HTTP;
         conn_pool[slot].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = slot;
+        HttpConn.slot = slot;
         HttpConn.reset(protocore_http_conn_span());
         tcp_capture_reset();
 
@@ -555,7 +555,7 @@ void stress_alternate_missing_and_found()
         }
 
         push_str(slot, "GET /f HTTP/1.1\r\n\r\n");
-        HttpConnV.slot = slot;
+        HttpConn.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
         handle();
 
@@ -583,13 +583,13 @@ void test_inm_leading_ows_still_matches()
 {
     mock_mnt_reset();
     mock_mnt_add_text("/www/p.html", "123456789012345", (time_t)1000);
-    FileServingV.serve_static_args.url_prefix = "/";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
 
     push_str(0, "GET /p.html HTTP/1.1\r\nHost: x\r\n\r\n");
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     inject_header(0, "If-None-Match", " \t\"f-3e8\"");
     handle();
@@ -601,9 +601,9 @@ void test_inm_list_separators_reach_later_tag()
 {
     mock_mnt_reset();
     mock_mnt_add_text("/www/p.html", "123456789012345", (time_t)1000);
-    FileServingV.serve_static_args.url_prefix = "/";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
     feed_and_handle(0, "GET /p.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: , \"a\" , \"f-3e8\"\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "304 Not Modified"));
@@ -615,9 +615,9 @@ void test_conditional_304_carries_cors_block()
     mock_mnt_reset();
     mock_mnt_add_text("/www/p.html", "123456789012345", (time_t)1000);
     set_cors("*");
-    FileServingV.serve_static_args.url_prefix = "/";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
 
     feed_and_handle(0, "GET /p.html HTTP/1.1\r\nHost: x\r\nIf-None-Match: \"f-3e8\"\r\n\r\n");
@@ -640,9 +640,9 @@ void test_serve_static_overlong_prefix_registers_nothing()
     prefix[0] = '/';
     memset(prefix + 1, 'p', sizeof(prefix) - 2);
     prefix[sizeof(prefix) - 1] = '\0';
-    FileServingV.serve_static_args.url_prefix = prefix;
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = prefix;
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
 
     char req[MAX_PATH_LEN + 64];
@@ -660,9 +660,9 @@ void test_serve_static_param_mount_shorter_than_pattern()
 {
     mock_mnt_reset();
     mock_mnt_add_text("/www/index.html", "<i>idx</i>", 0);
-    FileServingV.serve_static_args.url_prefix = "/a/:b";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/www";
+    FileServing.serve_static_args.url_prefix = "/a/:b";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/www";
     FileServing.serve_static(protocore_file_serving_span());
     feed_and_handle(0, "GET /a/x HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -674,9 +674,9 @@ void test_serve_static_trailing_slash_root_bare_prefix()
 {
     mock_mnt_reset();
     mock_mnt_add_text("/root/index.html", "<i>bare</i>", 0);
-    FileServingV.serve_static_args.url_prefix = "/s";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = "/root/";
+    FileServing.serve_static_args.url_prefix = "/s";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = "/root/";
     FileServing.serve_static(protocore_file_serving_span());
     feed_and_handle(0, "GET /s HTTP/1.1\r\nHost: x\r\n\r\n");
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "200 OK"));
@@ -691,9 +691,9 @@ void test_serve_static_joined_path_overflow_is_404()
     memset(longroot, 'r', sizeof(longroot) - 1);
     longroot[0] = '/';
     longroot[sizeof(longroot) - 1] = '\0';
-    FileServingV.serve_static_args.url_prefix = "/";
-    FileServingV.serve_static_args.file_sys = g_fs;
-    FileServingV.serve_static_args.fs_root = longroot;
+    FileServing.serve_static_args.url_prefix = "/";
+    FileServing.serve_static_args.file_sys = g_fs;
+    FileServing.serve_static_args.fs_root = longroot;
     FileServing.serve_static(protocore_file_serving_span());
 
     char req[128];

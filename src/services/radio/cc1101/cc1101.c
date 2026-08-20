@@ -71,27 +71,27 @@ static uint8_t status_byte(const protocore_cc1101_bus *b)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_cc1101_rssi_dbm(uint8_t *restrict work);
+static void cc1101_rssi_dbm(uint8_t *restrict work);
 
-void protocore_cc1101_rssi_dbm(uint8_t *restrict work)
+static void cc1101_rssi_dbm(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t raw = Cc1101V.rssi_dbm_args.raw;
+    uint8_t raw = Cc1101.rssi_dbm_args.raw;
 
     // TI CC1101 datasheet: dBm = (raw >= 128 ? (raw - 256) : raw) / 2 - 74.
     int16_t r = raw >= 128 ? (int16_t)raw - 256 : (int16_t)raw;
-    Cc1101V.value = (int16_t)(r / 2 - 74);
+    Cc1101.value = (int16_t)(r / 2 - 74);
 }
 
-void protocore_cc1101_init(uint8_t *restrict work)
+static void cc1101_init(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_cc1101_bus *bus = Cc1101V.init_args.bus;
-    const protocore_cc1101_config *cfg = Cc1101V.init_args.cfg;
+    const protocore_cc1101_bus *bus = Cc1101.init_args.bus;
+    const protocore_cc1101_config *cfg = Cc1101.init_args.cfg;
 
     if (!bus || !bus->spi || !cfg)
     {
-        Cc1101V.ok = PROTO_FALSE;
+        Cc1101.ok = PROTO_FALSE;
         return;
     }
     strobe(bus, STROBE_SRES);
@@ -101,19 +101,19 @@ void protocore_cc1101_init(uint8_t *restrict work)
     }
     write_reg(bus, REG_CHANNR, cfg->channel);
     uint8_t ver = read_reg(bus, STAT_VERSION, PROTO_TRUE);
-    Cc1101V.ok = ver != 0x00 && ver != 0xFF; // a floating bus reads all-0 or all-1
+    Cc1101.ok = ver != 0x00 && ver != 0xFF; // a floating bus reads all-0 or all-1
 }
 
-void protocore_cc1101_send(uint8_t *restrict work)
+static void cc1101_send(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_cc1101_bus *bus = Cc1101V.send_args.bus;
-    const uint8_t *data = Cc1101V.send_args.data;
-    uint8_t len = Cc1101V.send_args.len;
+    const protocore_cc1101_bus *bus = Cc1101.send_args.bus;
+    const uint8_t *data = Cc1101.send_args.data;
+    uint8_t len = Cc1101.send_args.len;
 
     if (!bus || !bus->spi || !data || len == 0 || len > 63)
     {
-        Cc1101V.ok = PROTO_FALSE;
+        Cc1101.ok = PROTO_FALSE;
         return;
     }
     strobe(bus, STROBE_SIDLE);
@@ -129,27 +129,27 @@ void protocore_cc1101_send(uint8_t *restrict work)
     }
     bus->spi(tx, rx, (uint8_t)(2 + len), bus->ctx);
     strobe(bus, STROBE_STX);
-    Cc1101V.ok = PROTO_TRUE;
+    Cc1101.ok = PROTO_TRUE;
 }
 
-void protocore_cc1101_tx_done(uint8_t *restrict work)
+static void cc1101_tx_done(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_cc1101_bus *bus = Cc1101V.tx_done_args.bus;
+    const protocore_cc1101_bus *bus = Cc1101.tx_done_args.bus;
 
     if (!bus || !bus->spi)
     {
-        Cc1101V.ok = PROTO_FALSE;
+        Cc1101.ok = PROTO_FALSE;
         return;
     }
     uint8_t st = (uint8_t)((status_byte(bus) >> 4) & 0x07);
-    Cc1101V.ok = st == STATE_IDLE;
+    Cc1101.ok = st == STATE_IDLE;
 }
 
-void protocore_cc1101_set_rx(uint8_t *restrict work)
+static void cc1101_set_rx(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_cc1101_bus *bus = Cc1101V.set_rx_args.bus;
+    const protocore_cc1101_bus *bus = Cc1101.set_rx_args.bus;
 
     if (!bus || !bus->spi)
     {
@@ -160,29 +160,29 @@ void protocore_cc1101_set_rx(uint8_t *restrict work)
     strobe(bus, STROBE_SRX);
 }
 
-void protocore_cc1101_recv(uint8_t *restrict work)
+static void cc1101_recv(uint8_t *restrict work)
 {
-    const protocore_cc1101_bus *bus = Cc1101V.recv_args.bus;
-    uint8_t *buf = Cc1101V.recv_args.buf;
-    uint8_t cap = Cc1101V.recv_args.cap;
-    int16_t *rssi_dbm = Cc1101V.recv_args.rssi_dbm;
+    const protocore_cc1101_bus *bus = Cc1101.recv_args.bus;
+    uint8_t *buf = Cc1101.recv_args.buf;
+    uint8_t cap = Cc1101.recv_args.cap;
+    int16_t *rssi_dbm = Cc1101.recv_args.rssi_dbm;
 
     if (!bus || !bus->spi || !buf)
     {
-        Cc1101V.n = -1;
+        Cc1101.n = -1;
         return;
     }
     uint8_t rxbytes = (uint8_t)(read_reg(bus, STAT_RXBYTES, PROTO_TRUE) & 0x7F); // low 7 bits = count
     if (rxbytes == 0)
     {
-        Cc1101V.n = -1;
+        Cc1101.n = -1;
         return;
     }
     uint8_t len = read_reg(bus, FIFO, PROTO_FALSE); // variable-length: leading length byte
     if (len == 0 || len > 63)
     {
         strobe(bus, STROBE_SFRX); // corrupt length: flush and bail
-        Cc1101V.n = -1;
+        Cc1101.n = -1;
         return;
     }
     // Burst-read payload + 2 appended status bytes (RSSI, LQI/CRC).
@@ -197,20 +197,24 @@ void protocore_cc1101_recv(uint8_t *restrict work)
     bus->spi(tx, rx, (uint8_t)(1 + n), bus->ctx);
     if (rssi_dbm)
     {
-        Cc1101V.rssi_dbm_args.raw = rx[1 + len];
-        protocore_cc1101_rssi_dbm(work);
-        *rssi_dbm = Cc1101V.value; // first appended status byte is raw RSSI
+        Cc1101.rssi_dbm_args.raw = rx[1 + len];
+        cc1101_rssi_dbm(work);
+        *rssi_dbm = Cc1101.value; // first appended status byte is raw RSSI
     }
     uint8_t out = len < cap ? len : cap;
     for (uint8_t i = 0; i < out; i++)
     {
         buf[i] = rx[1 + i];
     }
-    Cc1101V.n = out;
+    Cc1101.n = out;
 }
 
-/** @brief The operands and the outcome. */
-Cc1101Vars Cc1101V;
+Cc1101Ns Cc1101 = {.init = cc1101_init,
+                   .send = cc1101_send,
+                   .tx_done = cc1101_tx_done,
+                   .set_rx = cc1101_set_rx,
+                   .recv = cc1101_recv,
+                   .rssi_dbm = cc1101_rssi_dbm};
 
 PROTOCORE_END_DECLS
 

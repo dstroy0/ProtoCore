@@ -75,6 +75,7 @@ typedef struct
     uint8_t e_bytes[4];                 ///< Public exponent e (big-endian uint32).
     proto_bool loaded;                  ///< True after protocore_ssh_rsa_load_pubkey() succeeds.
 } SshRsaPubKey;
+
 /** @brief What sign takes: crypto_work, msg, msg_len, hash, sig. */
 typedef struct
 {
@@ -84,6 +85,7 @@ typedef struct
     protocore_rsa_hash hash;
     uint8_t *sig; ///< PROTOCORE_RSA_SIG_BYTES bytes.
 } SshRsaSignArgs;
+
 /** @brief What encode_pubkey takes: out, out_len, out_cap. */
 typedef struct
 {
@@ -91,6 +93,7 @@ typedef struct
     size_t *out_len;
     size_t out_cap;
 } SshRsaEncodePubkeyArgs;
+
 /**
  * @brief SSH RSA host-key layer: NVS-backed host key, host-key signing, and "ssh-rsa" blob encoding.
  *
@@ -116,36 +119,17 @@ typedef struct
 {
     SshRsaSignArgs sign_args;
     SshRsaEncodePubkeyArgs encode_pubkey_args;
+
     proto_bool ok;
     int n;
-} SshRsaVars;
 
-/** @brief The operands and the outcome. */
-extern SshRsaVars SshRsaV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const load_pubkey)(uint8_t *restrict work);
     void (*const sign)(uint8_t *restrict work);
     void (*const encode_pubkey)(uint8_t *restrict work);
 } SshRsaNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SshRsaV or a region of the borrow at a fixed offset.
-void protocore_ssh_rsa_load_pubkey(uint8_t *restrict work);
-void protocore_ssh_rsa_sign(uint8_t *restrict work);
-void protocore_ssh_rsa_encode_pubkey(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SshRsa.load_pubkey(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SshRsaNs SshRsa __attribute__((unused)) = {
-    .load_pubkey = protocore_ssh_rsa_load_pubkey,
-    .sign = protocore_ssh_rsa_sign,
-    .encode_pubkey = protocore_ssh_rsa_encode_pubkey,
-};
+/** @brief The one symbol this module exports. */
+extern SshRsaNs SshRsa;
 
 /**
  * @brief The RSA host key's public half: modulus and exponent, and whether they are loaded.

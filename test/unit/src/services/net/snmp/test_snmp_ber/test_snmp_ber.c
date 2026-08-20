@@ -32,86 +32,86 @@ static BerDec g_dec;
 
 static void enc_open(uint8_t *buf, size_t cap)
 {
-    SnmpBerV.enc = &g_enc;
-    SnmpBerV.buf.out = buf;
-    SnmpBerV.buf.cap = cap;
+    SnmpBer.enc = &g_enc;
+    SnmpBer.buf.out = buf;
+    SnmpBer.buf.cap = cap;
     SnmpBer.enc_init(snmp_ber_work);
 }
 
 static void dec_open(const uint8_t *buf, size_t len)
 {
-    SnmpBerV.dec = &g_dec;
-    SnmpBerV.buf.in = buf;
-    SnmpBerV.buf.cap = len;
+    SnmpBer.dec = &g_dec;
+    SnmpBer.buf.in = buf;
+    SnmpBer.buf.cap = len;
     SnmpBer.dec_init(snmp_ber_work);
 }
 
 static void put_integer(long v)
 {
-    SnmpBerV.tlv.ival = v;
+    SnmpBer.tlv.ival = v;
     SnmpBer.put_integer(snmp_ber_work);
 }
 
 static void put_uint(uint8_t tag, uint32_t v)
 {
-    SnmpBerV.tlv.tag = tag;
-    SnmpBerV.tlv.uval = v;
+    SnmpBer.tlv.tag = tag;
+    SnmpBer.tlv.uval = v;
     SnmpBer.put_uint(snmp_ber_work);
 }
 
 static void put_octet_string(uint8_t tag, const void *p, size_t n)
 {
-    SnmpBerV.tlv.tag = tag;
-    SnmpBerV.tlv.bytes = (const uint8_t *)p;
-    SnmpBerV.tlv.len = n;
+    SnmpBer.tlv.tag = tag;
+    SnmpBer.tlv.bytes = (const uint8_t *)p;
+    SnmpBer.tlv.len = n;
     SnmpBer.put_octet_string(snmp_ber_work);
 }
 
 static void put_oid(const uint32_t *arcs, size_t n)
 {
-    SnmpBerV.tlv.arcs = arcs;
-    SnmpBerV.tlv.arc_count = n;
+    SnmpBer.tlv.arcs = arcs;
+    SnmpBer.tlv.arc_count = n;
     SnmpBer.put_oid(snmp_ber_work);
 }
 
 static size_t seq_begin(uint8_t tag)
 {
-    SnmpBerV.tlv.tag = tag;
+    SnmpBer.tlv.tag = tag;
     SnmpBer.seq_begin(snmp_ber_work);
-    return SnmpBerV.tlv.token;
+    return SnmpBer.tlv.token;
 }
 
 static void seq_end(size_t token)
 {
-    SnmpBerV.tlv.token = token;
+    SnmpBer.tlv.token = token;
     SnmpBer.seq_end(snmp_ber_work);
 }
 
 static proto_bool read_header(void)
 {
     SnmpBer.read_header(snmp_ber_work);
-    return SnmpBerV.ok;
+    return SnmpBer.ok;
 }
 
 static proto_bool read_integer(void)
 {
     SnmpBer.read_integer(snmp_ber_work);
-    return SnmpBerV.ok;
+    return SnmpBer.ok;
 }
 
 static proto_bool read_oid(uint32_t *out, size_t cap)
 {
-    SnmpBerV.read_args.arc_out = out;
-    SnmpBerV.read_args.arc_cap = cap;
+    SnmpBer.read_args.arc_out = out;
+    SnmpBer.read_args.arc_cap = cap;
     SnmpBer.read_oid(snmp_ber_work);
-    return SnmpBerV.ok;
+    return SnmpBer.ok;
 }
 
 static proto_bool skip(size_t n)
 {
-    SnmpBerV.read_args.skip = n;
-    SnmpBerV.skip(snmp_ber_work);
-    return SnmpBerV.ok;
+    SnmpBer.read_args.skip = n;
+    SnmpBer.skip(snmp_ber_work);
+    return SnmpBer.ok;
 }
 
 // Encode one INTEGER on its own and compare the whole TLV.
@@ -174,7 +174,7 @@ void test_x690_object_identifier_first_subidentifier(void)
     uint32_t arcs[SNMP_MAX_OID_LEN];
     dec_open(buf, g_enc.len);
     TEST_ASSERT_TRUE(read_oid(arcs, SNMP_MAX_OID_LEN));
-    TEST_ASSERT_EQUAL_size_t(3, SnmpBerV.n);
+    TEST_ASSERT_EQUAL_size_t(3, SnmpBer.n);
     TEST_ASSERT_EQUAL_UINT32(2u, arcs[0]);
     TEST_ASSERT_EQUAL_UINT32(100u, arcs[1]);
     TEST_ASSERT_EQUAL_UINT32(3u, arcs[2]);
@@ -214,7 +214,7 @@ void test_x690_multi_octet_subidentifier(void)
     uint32_t arcs[SNMP_MAX_OID_LEN];
     dec_open(buf, g_enc.len);
     TEST_ASSERT_TRUE(read_oid(arcs, SNMP_MAX_OID_LEN));
-    TEST_ASSERT_EQUAL_size_t(sizeof(ARCS) / sizeof(ARCS[0]), SnmpBerV.n);
+    TEST_ASSERT_EQUAL_size_t(sizeof(ARCS) / sizeof(ARCS[0]), SnmpBer.n);
     for (size_t i = 0; i < sizeof(ARCS) / sizeof(ARCS[0]); i++)
     {
         TEST_ASSERT_EQUAL_UINT32(ARCS[i], arcs[i]);
@@ -295,8 +295,8 @@ void test_x690_long_form_length(void)
 
     dec_open(buf, g_enc.len);
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, SnmpBerV.tag);
-    TEST_ASSERT_EQUAL_size_t(200, SnmpBerV.vlen);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, SnmpBer.tag);
+    TEST_ASSERT_EQUAL_size_t(200, SnmpBer.vlen);
 }
 
 // RFC 3417 sec 8 item 1 permits more length octets than the minimum, so a constructed type opens
@@ -323,13 +323,13 @@ void test_rfc3417_definite_long_sequence(void)
     // And it reads back as one SEQUENCE holding those two values.
     dec_open(buf, g_enc.len);
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBerV.tag);
-    TEST_ASSERT_EQUAL_size_t(11, SnmpBerV.vlen);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_SEQUENCE, SnmpBer.tag);
+    TEST_ASSERT_EQUAL_size_t(11, SnmpBer.vlen);
     TEST_ASSERT_TRUE(read_integer());
-    TEST_ASSERT_EQUAL_INT(1, SnmpBerV.ival);
+    TEST_ASSERT_EQUAL_INT(1, SnmpBer.ival);
     TEST_ASSERT_TRUE(read_header());
-    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, SnmpBerV.tag);
-    TEST_ASSERT_EQUAL_size_t(6, SnmpBerV.vlen);
+    TEST_ASSERT_EQUAL_HEX8((uint8_t)SNMP_TAG_BER_OCTET_STRING, SnmpBer.tag);
+    TEST_ASSERT_EQUAL_size_t(6, SnmpBer.vlen);
     TEST_ASSERT_EQUAL_MEMORY("public", g_dec.buf + g_dec.pos, 6);
 }
 
@@ -340,8 +340,8 @@ void test_put_raw_appends_verbatim(void)
     static const uint8_t PRE[] = {0x02, 0x01, 0x07};
     uint8_t buf[16];
     enc_open(buf, sizeof(buf));
-    SnmpBerV.tlv.bytes = PRE;
-    SnmpBerV.tlv.len = sizeof(PRE);
+    SnmpBer.tlv.bytes = PRE;
+    SnmpBer.tlv.len = sizeof(PRE);
     SnmpBer.put_raw(snmp_ber_work);
     TEST_ASSERT_TRUE(g_enc.ok);
     TEST_ASSERT_EQUAL_size_t(sizeof(PRE), g_enc.len);
@@ -395,9 +395,9 @@ void test_read_integer_refuses_malformed(void)
 {
     static const uint8_t ZERO_LEN[] = {0x02, 0x00};
     dec_open(ZERO_LEN, sizeof(ZERO_LEN));
-    SnmpBerV.ival = 12345;
+    SnmpBer.ival = 12345;
     TEST_ASSERT_FALSE(read_integer());
-    TEST_ASSERT_EQUAL_INT(12345, SnmpBerV.ival); // left alone
+    TEST_ASSERT_EQUAL_INT(12345, SnmpBer.ival); // left alone
 
     static const uint8_t NINE[] = {0x02, 0x09, 0, 0, 0, 0, 0, 0, 0, 0, 1};
     dec_open(NINE, sizeof(NINE));
@@ -415,18 +415,18 @@ void test_read_integer_sign_extends(void)
     static const uint8_t M1[] = {0x02, 0x01, 0xFF};
     dec_open(M1, sizeof(M1));
     TEST_ASSERT_TRUE(read_integer());
-    TEST_ASSERT_EQUAL_INT(-1, SnmpBerV.ival);
+    TEST_ASSERT_EQUAL_INT(-1, SnmpBer.ival);
 
     static const uint8_t M256[] = {0x02, 0x02, 0xFF, 0x00};
     dec_open(M256, sizeof(M256));
     TEST_ASSERT_TRUE(read_integer());
-    TEST_ASSERT_EQUAL_INT(-256, SnmpBerV.ival);
+    TEST_ASSERT_EQUAL_INT(-256, SnmpBer.ival);
 
     // 0x00 0x80 is +128, not -128: the sign octet is what separates them.
     static const uint8_t P128[] = {0x02, 0x02, 0x00, 0x80};
     dec_open(P128, sizeof(P128));
     TEST_ASSERT_TRUE(read_integer());
-    TEST_ASSERT_EQUAL_INT(128, SnmpBerV.ival);
+    TEST_ASSERT_EQUAL_INT(128, SnmpBer.ival);
 }
 
 // The encoder reports the buffer it was given is full rather than writing past it, and refuses a
@@ -491,7 +491,7 @@ void test_read_oid_bounds(void)
     TEST_ASSERT_FALSE(read_oid(arcs, 2)); // holds those two, not the two that follow
     dec_open(OID_1_3_6_1, sizeof(OID_1_3_6_1));
     TEST_ASSERT_TRUE(read_oid(arcs, 4));
-    TEST_ASSERT_EQUAL_size_t(4, SnmpBerV.n);
+    TEST_ASSERT_EQUAL_size_t(4, SnmpBer.n);
 }
 
 // A skip walks the cursor over value octets and refuses to step past the end.
@@ -528,11 +528,11 @@ void test_seq_end_refuses_over_65535_octets(void)
     memset(g_filler, 0x5A, sizeof(g_filler));
     enc_open(g_wide, sizeof(g_wide));
     const size_t seq = seq_begin((uint8_t)SNMP_TAG_BER_SEQUENCE);
-    SnmpBerV.tlv.bytes = g_filler;
-    SnmpBerV.tlv.len = sizeof(g_filler);
+    SnmpBer.tlv.bytes = g_filler;
+    SnmpBer.tlv.len = sizeof(g_filler);
     SnmpBer.put_raw(snmp_ber_work);
     TEST_ASSERT_TRUE(g_enc.ok);
     seq_end(seq);
     TEST_ASSERT_FALSE(g_enc.ok);
-    TEST_ASSERT_FALSE(SnmpBerV.ok);
+    TEST_ASSERT_FALSE(SnmpBer.ok);
 }

@@ -26,21 +26,20 @@ PROTOCORE_BEGIN_DECLS
 // --- the entries -----------------------------------------------------------
 
 // XOR-accumulate over the caller's two buffers; the borrow goes unread.
-void protocore_ct_eq_eq(uint8_t *restrict work)
+static void ct_eq_eq(uint8_t *restrict work)
 {
     (void)work;
-    CtEqV.ok = PROTO_FALSE;
-    CtEqV.equal = PROTO_FALSE;
-    if (!CtEqV.eq_args.a || !CtEqV.eq_args.b)
+    CtEq.ok = PROTO_FALSE;
+    CtEq.equal = PROTO_FALSE;
+    if (!CtEq.eq_args.a || !CtEq.eq_args.b)
     {
         return;
     }
-    CtEqV.equal = protocore_ct_eq(CtEqV.eq_args.a, CtEqV.eq_args.b, CtEqV.eq_args.n);
-    CtEqV.ok = PROTO_TRUE;
+    CtEq.equal = protocore_ct_eq(CtEq.eq_args.a, CtEq.eq_args.b, CtEq.eq_args.n);
+    CtEq.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-CtEqVars CtEqV;
+CtEqNs CtEq = {.eq = ct_eq_eq};
 
 PROTOCORE_END_DECLS
 

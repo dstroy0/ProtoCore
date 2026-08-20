@@ -2622,6 +2622,44 @@ def drop_null_borrow(src, notes):
 # The extern-table handle shape. Named HANDLE_* rather than NS_*: NS_ENTRY above already means the
 # pimpl shape's `void (*f)(struct XInternal *)`, and reusing the name would shadow it.
 HANDLE_STRUCT = re.compile(r"typedef struct\s*\{(?P<body>.*?)\}\s*(?P<ns>\w+Ns)\s*;", re.S)
+
+
+def ns_struct_span(hsrc, ns):
+    """(start, body_start, body_end, end) of `typedef struct { ... } <ns>;`, by BRACE MATCHING.
+
+    Not by a non-greedy regex from `typedef struct` to `} <ns>;`. That expression matches from the
+    FIRST typedef struct in the file, because no earlier `}` is followed by a name ending in Ns, so
+    its body swallows every struct in between. The members of those structs then read as operands:
+    http_parser has a `reset` field in an unrelated struct AND a `reset` entry, so every
+    `HttpParser.reset(work)` call site was rewritten to `HttpParserV.reset`.
+
+    sha256 only escaped it by accident - re-emitting its body verbatim inside a fresh
+    `typedef struct { ... }` happened to reconstruct the same three args structs - which is why the
+    golden compiled and 302 other modules did not.
+    """
+    mask = code_mask(hsrc)
+    close = None
+    for m in re.finditer(r"\}\s*%s\s*;" % re.escape(ns), hsrc):
+        if mask[m.start()]:
+            close = m
+    if close is None:
+        return None
+    depth, i = 0, close.start()
+    while i >= 0:
+        if mask[i]:
+            if hsrc[i] == "}":
+                depth += 1
+            elif hsrc[i] == "{":
+                depth -= 1
+                if depth == 0:
+                    break
+        i -= 1
+    if i < 0:
+        return None
+    head = re.search(r"typedef\s+struct\s*$", hsrc[:i])
+    if not head:
+        return None
+    return head.start(), i + 1, close.start(), close.end()
 HANDLE_EXTERN = re.compile(r"^[ \t]*extern[ \t]+(?P<ns>\w+Ns)[ \t]+(?P<obj>\w+)[ \t]*;[ \t]*$", re.M)
 HANDLE_FN = re.compile(
     r"^[ \t]*void[ \t]*\([ \t]*\*[ \t]*const[ \t]+(?P<name>\w+)[ \t]*\)[ \t]*"
@@ -2640,14 +2678,12 @@ def split_handle(hsrc):
     if not m:
         return None
     ns, obj = m.group("ns"), m.group("obj")
-    st = None
-    for s in HANDLE_STRUCT.finditer(hsrc):
-        if s.group("ns") == ns:
-            st = s
-    if not st:
+    span = ns_struct_span(hsrc, ns)
+    if not span:
         return None
+    _, bstart, bend, _ = span
     data, entries = [], []
-    for line in st.group("body").splitlines():
+    for line in hsrc[bstart:bend].splitlines():
         e = HANDLE_FN.match(line)
         if e:
             entries.append(e.group("name"))
@@ -2661,11 +2697,21 @@ def split_handle(hsrc):
 
 
 def handle_members(data_lines):
-    """The member NAMES a caller writes, so its call sites can be moved onto the vars object."""
+    """The member NAMES a caller writes, so its call sites can be moved onto the vars object.
+
+    A function-pointer member is read from INSIDE its parentheses. Taking the last identifier on the
+    line gives the last PARAMETER instead: presentation.h stores an application callback as
+    `void (*poll)(uint8_t slot);`, which came back as `slot`, so every `HttpConn.poll` call site was
+    left behind pointing at a member that had moved.
+    """
     out = []
     for line in data_lines:
         line = re.sub(r"//.*|/\*.*?\*/", "", line).strip().rstrip(";")
         if not line:
+            continue
+        fp = re.search(r"\(\s*\*\s*(?:const\s+|volatile\s+)*([A-Za-z_]\w*)\s*\)\s*\(", line)
+        if fp:
+            out.append(fp.group(1))
             continue
         m = re.search(r"([A-Za-z_]\w*)[ \t]*(?:\[[^\]]*\])?$", line)
         if m:
@@ -2706,11 +2752,8 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     block += ["    .%s = %s," % (e, f) for e, f in zip(entries, impl)]
     block += ["};"]
 
-    old = None
-    for s in HANDLE_STRUCT.finditer(hsrc):
-        if s.group("ns") == ns:
-            old = s
-    hout = hsrc[: old.start()] + "\n".join(block) + hsrc[old.end() :]
+    span = ns_struct_span(hsrc, ns)
+    hout = hsrc[: span[0]] + "\n".join(block) + hsrc[span[3] :]
     # The declaration goes with the comment that introduces it: removing the line alone leaves
     # `/** @brief The one symbol this module exports. */` standing over whatever follows it.
     hout = re.sub(
@@ -2723,15 +2766,40 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
     )
     hout = re.sub(r"\n{3,}", "\n\n", hout)
 
+    # What the .c ACTUALLY binds to each entry, read out of its initializer. Guessing `<mod>_<entry>`
+    # is wrong far more often than not: protocol.c binds `.set_state = set_state` with a bare name,
+    # and the guess `protocol_set_state` matches nothing - so the header declared entries the .c
+    # never defined, and 537 symbols went undefined at link time with the source compiling cleanly.
+    bind = {}
+    init = re.search(r"\b%s\s+%s\b[^=;]*=\s*\{(.*?)\};" % (re.escape(ns), re.escape(obj)), csrc, re.S)
+    if init:
+        for m in re.finditer(r"\.(?P<entry>\w+)\s*=\s*(?P<impl>\w+)\s*(?:[,}]|$)", init.group(1)):
+            bind[m.group("entry")] = m.group("impl")
+
     cout = csrc
     for e, f in zip(entries, impl):
-        cout = re.sub(r"\bstatic[ \t]+void[ \t]+%s_%s[ \t]*\(" % (re.escape(mod), re.escape(e)), "void %s(" % f, cout)
-        cout = re.sub(r"\b%s_%s\b" % (re.escape(mod), re.escape(e)), f, cout)
+        old = bind.get(e)
+        if not old or old == f:
+            continue
+        # NOT preceded by `.` or `->`. A bound implementation is often a bare word - protocol.c
+        # binds `.reset = reset` - and renaming every occurrence of it also rewrites the MEMBER of
+        # that name on some other namespace: `HttpConn.reset(...)` came out as
+        # `HttpConn.protocore_auth_reset(...)`. Only the free-standing name is the function.
+        cout = re.sub(r"(?<![.\w])(?<!->)\b%s\b" % re.escape(old), f, cout)
+    # The entries have to lose `static`, wherever they are spelled. Stripping it only from the
+    # definition leaves a forward declaration still static above it - "static declaration of X
+    # follows non-static declaration", once per entry, in every module that forward-declares its
+    # entries. Done after the rename so both spellings are already the final name.
+    for f in impl:
+        cout = re.sub(r"\bstatic[ \t]+(void[ \t]+%s[ \t]*\()" % re.escape(f), r"\1", cout)
+    # EVERY definition, not the first. A module compiled two ways defines its table once per arm -
+    # log.c has one under `#if PROTOCORE_LOG_LEVEL < ...` and a stub under `#else` - and replacing
+    # only the first leaves the other still defining the table the header now declares const.
+    # Only one arm compiles, so a definition in each is right.
     cout = re.sub(
         r"^[ \t]*%s[ \t]+%s[ \t]*=[ \t]*\{.*?\};" % (re.escape(ns), re.escape(obj)),
         "/** @brief The operands and the outcome. */\n%s %s;" % (vars_t, objv),
         cout,
-        count=1,
         flags=re.S | re.M,
     )
     return hout, cout, objv, handle_members(data)
@@ -2901,6 +2969,14 @@ def main():
             import shapeaudit as SA
 
             rels = [r for r in SA.modules(["src"]) if r.endswith(".h")]
+        # --batch=N converts at most N modules and stops. A sweep of 240 is one verdict: it either
+        # builds or it does not, and 3771 errors say nothing about WHICH module caused them. In
+        # batches the build after each one names the module that broke it, which is the only way the
+        # tree's variety - a header with two namespaces, an entry bound to a bare name, a macro that
+        # writes an operand - gets found one cause at a time instead of all at once.
+        batch = next((int(a.split("=")[1]) for a in sys.argv[2:] if a.startswith("--batch=")), 0)
+        # --skip=N resumes past modules already converted, so batches walk the list.
+        start = next((int(a.split("=")[1]) for a in sys.argv[2:] if a.startswith("--skip=")), 0)
         roots = ("src", "test", "examples", "include")
         tree = []
         for root in roots:
@@ -2912,8 +2988,22 @@ def main():
                     continue
                 tree += [os.path.join(dp, fn) for fn in fns if fn.endswith((".c", ".h"))]
 
-        done, moved = 0, 0
+        # Every `protocore_*` name the tree already declares, read ONCE. Checking each candidate by
+        # re-reading the tree is modules x entries x files - about five million reads - which does
+        # not finish. The tree is read once here and every check is a dict lookup.
+        declared = {}
+        cache = {}
+        for p in tree:
+            s = io.open(p, encoding="utf-8", errors="replace").read()
+            cache[p] = s
+            for m in re.finditer(r"\b(protocore_\w+)\s*\(", s):
+                declared.setdefault(m.group(1), p)
+
+        done, moved, skipped, seen = 0, 0, [], 0
         for rel in rels:
+            if batch and done >= batch:
+                print("... stopping at --batch=%d; resume with --skip=%d" % (batch, start + seen))
+                break
             hp = os.path.join(R, rel.replace("/", os.sep))
             cp = hp[:-2] + ".c"
             if not os.path.exists(cp):
@@ -2922,32 +3012,71 @@ def main():
             split = split_handle(hsrc)
             if not split:
                 continue
+            seen += 1
+            if seen <= start:
+                continue
             ns, obj, data, entries = split
-            mod = os.path.basename(hp)[:-2]
+            # The entry names are the OBJECT's, not the file's. protocol.h publishes ConnPool, so
+            # its entries are protocore_conn_pool_*; naming them protocore_protocol_* declared
+            # symbols nothing defines and left every consumer unlinkable.
+            mod = snake(obj)
             csrc = io.open(cp, encoding="utf-8").read()
+            # `protocore_<mod>_<entry>` is not automatically free. net_addr already publishes
+            # protocore_net_addr_to_ip(const protocore_net_ip *, protocore_ip *) as an ordinary
+            # function, and generating an entry of that name gave "conflicting types" once per
+            # consumer - 1391 errors from four modules. A taken name is REPORTED and the module is
+            # skipped, rather than renamed to something a caller would have to be told about.
+            taken = []
+            for e in entries:
+                f = "protocore_%s_%s" % (mod, e)
+                where = declared.get(f)
+                # The module's OWN header counts. net_addr publishes
+                # protocore_net_addr_to_ip(const protocore_net_ip *, protocore_ip *) in net_addr.h
+                # itself, and an entry named `to_ip` generates that exact name - excluding hp/cp
+                # from the check let the clash through and it landed as "conflicting types" in every
+                # consumer.
+                if where:
+                    taken.append("%s (in %s)" % (f, os.path.relpath(where, R).replace("\\", "/")))
+            if taken:
+                print("SKIPPED %-50s name already taken: %s" % (rel, "; ".join(taken[:2])))
+                skipped.append(rel)
+                continue
             hout, cout, objv, members = reshape_handle(hsrc, csrc, mod, ns, obj, data, entries)
             cout, own = move_operands(cout, obj, objv, members)
+            # The module's OWN header carries operand sites too, outside the Ns struct: log.h sets
+            # Log.frame.level inside the PROTOCORE_LOG_EMIT macro, preempt_queue.h reaches
+            # PreemptQueue.lane from an inline. Moving only the .c and the tree left those pointing
+            # at the const table.
+            hout, hown = move_operands(hout, obj, objv, members)
+            own += hown
             # A caller writing an operand moves with it, or it writes the const table and will not
             # compile. The header and its call sites HAVE to land together.
             total, files = 0, []
             for p in tree:
                 if p in (hp, cp):
                     continue
-                s = io.open(p, encoding="utf-8", errors="replace").read()
+                s = cache[p]
                 if obj + "." not in s:
                     continue
                 out, n = move_operands(s, obj, objv, members)
                 if n:
                     files.append((p, out))
+                    cache[p] = out  # the next module reads what this one wrote, not the file on disk
                     total += n
             print("handle: %-56s %s -> %s  entries=%d operands=%d(+%d own)" % (rel, obj, objv, len(entries), total, own))
             emit(hp, hout)
             emit(cp, cout)
+            # The module's OWN files go back into the cache too. Without this a later module reads
+            # the stale original of this one's .c, moves its own operands in that copy, and writes
+            # it back - undoing this reshape entirely. It presents as thousands of "has no member
+            # named" errors in modules that were converted correctly and then overwritten.
+            cache[hp] = hout
+            cache[cp] = cout
             for p, out in files:
                 emit(p, out)
             done += 1
             moved += total + own
-        print("%d module%s, %d operand site%s" % (done, "s"[: done != 1], moved, "s"[: moved != 1]))
+        print("%d module%s, %d operand site%s, %d skipped" % (done, "s"[: done != 1], moved, "s"[: moved != 1], len(skipped)))
         return 0
 
     if cmd == "align":

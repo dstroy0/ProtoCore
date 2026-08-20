@@ -151,19 +151,22 @@ typedef enum PROTO_ENUM_PACKED
  */
 typedef struct
 {
-    uint8_t ws_id;                  ///< Index into ws_pool[] (set at init).
-    uint8_t slot_id;                ///< Owning TCP slot in conn_pool[].
-    uint8_t route_id;               ///< The handler set this channel was opened for.
-    proto_bool active;              ///< True when this entry is in use.
-    WsParseState parse_state;       ///< Current frame parser state.
-    WsOpcode opcode;                ///< Opcode of the frame being parsed.
-    proto_bool fin;                 ///< FIN bit of the frame being parsed.
-    proto_bool masked;              ///< True if client sent a masking key.
+    uint8_t ws_id;     ///< Index into ws_pool[] (set at init).
+    uint8_t slot_id;   ///< Owning TCP slot in conn_pool[].
+    uint8_t route_id;  ///< The handler set this channel was opened for.
+    proto_bool active; ///< True when this entry is in use.
+
+    WsParseState parse_state; ///< Current frame parser state.
+    WsOpcode opcode;          ///< Opcode of the frame being parsed.
+    proto_bool fin;           ///< FIN bit of the frame being parsed.
+    proto_bool masked;        ///< True if client sent a masking key.
+
     uint8_t mask_key[4];            ///< Client masking key.
     uint32_t payload_len;           ///< Expected payload byte count (current frame).
     uint32_t payload_idx;           ///< Bytes received so far (current frame).
     uint8_t len64_count;            ///< Bytes consumed from 64-bit length.
     uint8_t buf[WS_FRAME_SIZE + 1]; ///< Reassembled message payload, null-terminated.
+
     // Fragmentation state (RFC 6455 §5.4). A data message may span multiple
     // frames (first text/binary with FIN=0, then continuation frames). Control
     // frames may be interleaved and use a separate buffer so they never clobber
@@ -172,22 +175,27 @@ typedef struct
     WsOpcode msg_opcode;      ///< Opcode of the data message being assembled.
     uint32_t msg_len;         ///< Bytes assembled so far across all fragments.
     uint8_t ctl_buf[125 + 1]; ///< Control-frame payload (ping/pong/close), null-terminated.
+
 #if PROTOCORE_ENABLE_WS_DEFLATE
     proto_bool pmd;            ///< permessage-deflate negotiated on this connection (RFC 7692).
     proto_bool msg_compressed; ///< Current data message arrived compressed (RSV1 on its first frame).
 #endif
 } WsConn;
+
 /** @brief Pool of WebSocket connection state, one per MAX_WS_CONNS. */
 extern WsConn ws_pool[MAX_WS_CONNS];
+
 // ---------------------------------------------------------------------------
 // WebSocket API
 // ---------------------------------------------------------------------------
+
 /**
  * @brief Callback fired when a WebSocket connection is established.
  *
  * @param ws_id  Index into ws_pool[] for this connection.
  */
 typedef void (*WsConnectHandler)(uint8_t ws_id);
+
 /**
  * @brief Callback fired when a WebSocket text or binary frame arrives.
  *
@@ -197,14 +205,17 @@ typedef void (*WsConnectHandler)(uint8_t ws_id);
  * @param ws_id  Index into ws_pool[].
  */
 typedef void (*WsMessageHandler)(uint8_t ws_id);
+
 /**
  * @brief Callback fired when a WebSocket connection closes.
  *
  * @param ws_id  Index into ws_pool[] (slot is still valid during callback).
  */
 typedef void (*WsCloseHandler)(uint8_t ws_id);
+
 /** @brief The id a route carries when it serves no WebSocket. */
 #define PROTOCORE_WS_NONE 0xFFu
+
 /** @brief The three handlers one route records. */
 typedef struct
 {
@@ -212,6 +223,7 @@ typedef struct
     WsMessageHandler on_message; ///< the handler recorded for a message
     WsCloseHandler on_close;     ///< the handler recorded for a close
 } WsRouteArgs;
+
 /** @brief RFC 6455 sec 5.2 base framing, and the sec 7.4 status a Close carries. */
 typedef struct
 {
@@ -220,6 +232,7 @@ typedef struct
     uint16_t len;           ///< how many
     WsCloseCode code;       ///< the status code a close carries
 } WsFrameArgs;
+
 /**
  * @brief The WebSocket connections this server holds open (RFC 6455).
  *
@@ -282,8 +295,10 @@ typedef struct
                     ///< as the handshake negotiated it. The layer that read the Sec-WebSocket-
                     ///< Extensions header is the only one that knows, so it states it here.
 #endif
+
     WsRouteArgs route; ///< the handlers one route records
     WsFrameArgs frame; ///< one frame's type, payload and close status
+
     proto_bool ok;
     uint8_t u8;
     const char *text;
@@ -291,14 +306,7 @@ typedef struct
     WsConnectHandler connect_handler;
     WsMessageHandler message_handler;
     WsCloseHandler close_handler;
-} WsVars;
 
-/** @brief The operands and the outcome. */
-extern WsVars WsV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const route_add)(uint8_t *restrict work);
     void (*const route_reset)(uint8_t *restrict work);
     void (*const route_connect)(uint8_t *restrict work);
@@ -318,49 +326,8 @@ typedef struct
     void (*const close)(uint8_t *restrict work);
 } WsNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in WsV or a region of the borrow at a fixed offset.
-void protocore_websocket_route_add(uint8_t *restrict work);
-void protocore_websocket_route_reset(uint8_t *restrict work);
-void protocore_websocket_route_connect(uint8_t *restrict work);
-void protocore_websocket_route_message(uint8_t *restrict work);
-void protocore_websocket_route_close(uint8_t *restrict work);
-void protocore_websocket_init(uint8_t *restrict work);
-void protocore_websocket_active(uint8_t *restrict work);
-void protocore_websocket_payload_of(uint8_t *restrict work);
-void protocore_websocket_alloc(uint8_t *restrict work);
-void protocore_websocket_find(uint8_t *restrict work);
-void protocore_websocket_free(uint8_t *restrict work);
-void protocore_websocket_parse(uint8_t *restrict work);
-void protocore_websocket_feed_byte(uint8_t *restrict work);
-void protocore_websocket_reset_frame(uint8_t *restrict work);
-void protocore_websocket_send_frame(uint8_t *restrict work);
-void protocore_websocket_set_frag_size(uint8_t *restrict work);
-void protocore_websocket_close(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Ws.route_add(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const WsNs Ws __attribute__((unused)) = {
-    .route_add = protocore_websocket_route_add,
-    .route_reset = protocore_websocket_route_reset,
-    .route_connect = protocore_websocket_route_connect,
-    .route_message = protocore_websocket_route_message,
-    .route_close = protocore_websocket_route_close,
-    .init = protocore_websocket_init,
-    .active = protocore_websocket_active,
-    .payload_of = protocore_websocket_payload_of,
-    .alloc = protocore_websocket_alloc,
-    .find = protocore_websocket_find,
-    .free = protocore_websocket_free,
-    .parse = protocore_websocket_parse,
-    .feed_byte = protocore_websocket_feed_byte,
-    .reset_frame = protocore_websocket_reset_frame,
-    .send_frame = protocore_websocket_send_frame,
-    .set_frag_size = protocore_websocket_set_frag_size,
-    .close = protocore_websocket_close,
-};
+/** @brief The one symbol this module exports. */
+extern WsNs Ws;
 
 /** @brief Not an entry: an entry takes a borrow and this is where that borrow comes from. */
 uint8_t *protocore_ws_span(void);

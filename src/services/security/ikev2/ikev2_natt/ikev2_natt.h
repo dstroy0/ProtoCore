@@ -66,6 +66,7 @@ typedef struct
     const uint8_t *init_spi; ///< IKE SA Initiator's SPI
     const uint8_t *resp_spi; ///< IKE SA Responder's SPI
 } IkeNattSpiArgs;
+
 /** @brief The address and port a digest covers (RFC 7296 sec 2.23). */
 typedef struct
 {
@@ -73,12 +74,14 @@ typedef struct
     size_t ip_len;     ///< 4 for IPv4 or 16 for IPv6
     uint16_t port;     ///< the UDP port, host order, encoded big endian into the digest
 } IkeNattAddrArgs;
+
 /** @brief Where a digest lands, and the one a compare judges (RFC 7296 sec 2.23). */
 typedef struct
 {
     uint8_t *out;            ///< receives PROTOCORE_IKE_NATD_HASH_LEN octets
     const uint8_t *received; ///< the Notification Data from the peer
 } IkeNattDigestArgs;
+
 /** @brief Where a Notify payload is written (RFC 7296 sec 3.10). */
 typedef struct
 {
@@ -86,12 +89,14 @@ typedef struct
     size_t cap;                  ///< room there
     IkePayloadType next_payload; ///< Next Payload: the type of the payload that follows this one
 } IkeNattOutArgs;
+
 /** @brief The UDP payload the port 4500 demux judges (RFC 3948 sec 2.1, 2.2, 2.3). */
 typedef struct
 {
     const uint8_t *p; ///< the datagram payload
     size_t len;       ///< its length
 } IkeNattPktArgs;
+
 /**
  * @brief The IKEv2 NAT traversal handle (RFC 7296 sec 2.23, RFC 3948).
  *
@@ -124,16 +129,10 @@ typedef struct
     IkeNattDigestArgs digest; ///< where a digest lands and the one a compare judges
     IkeNattOutArgs out;       ///< where a Notify payload is written (sec 3.10)
     IkeNattPktArgs pkt;       ///< the UDP payload the demux judges (RFC 3948 sec 2)
+
     proto_bool ok;
     size_t n;
-} IkeNattVars;
 
-/** @brief The operands and the outcome. */
-extern IkeNattVars IkeNattV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const hash)(uint8_t *restrict work);
     void (*const source_build)(uint8_t *restrict work);
     void (*const dest_build)(uint8_t *restrict work);
@@ -144,31 +143,8 @@ typedef struct
     void (*const is_ike)(uint8_t *restrict work);
 } IkeNattNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in IkeNattV or a region of the borrow at a fixed offset.
-void protocore_ikev2_natt_hash(uint8_t *restrict work);
-void protocore_ikev2_natt_source_build(uint8_t *restrict work);
-void protocore_ikev2_natt_dest_build(uint8_t *restrict work);
-void protocore_ikev2_natt_match(uint8_t *restrict work);
-void protocore_ikev2_natt_peer_behind_nat(uint8_t *restrict work);
-void protocore_ikev2_natt_self_behind_nat(uint8_t *restrict work);
-void protocore_ikev2_natt_is_keepalive(uint8_t *restrict work);
-void protocore_ikev2_natt_is_ike(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `IkeNatt.hash(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const IkeNattNs IkeNatt __attribute__((unused)) = {
-    .hash = protocore_ikev2_natt_hash,
-    .source_build = protocore_ikev2_natt_source_build,
-    .dest_build = protocore_ikev2_natt_dest_build,
-    .match = protocore_ikev2_natt_match,
-    .peer_behind_nat = protocore_ikev2_natt_peer_behind_nat,
-    .self_behind_nat = protocore_ikev2_natt_self_behind_nat,
-    .is_keepalive = protocore_ikev2_natt_is_keepalive,
-    .is_ike = protocore_ikev2_natt_is_ike,
-};
+/** @brief The one symbol this module exports. */
+extern IkeNattNs IkeNatt;
 
 PROTOCORE_END_DECLS
 

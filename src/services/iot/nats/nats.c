@@ -130,157 +130,157 @@ static void finish(uint8_t *restrict work, Buf *b)
 {
     if (!b->ok)
     {
-        NatsV.n = 0;
-        NatsV.ok = PROTO_FALSE;
+        Nats.n = 0;
+        Nats.ok = PROTO_FALSE;
         return;
     }
     if (b->pos < b->cap)
     {
         b->p[b->pos] = '\0';
     }
-    NatsV.n = b->pos;
-    NatsV.ok = PROTO_TRUE;
+    Nats.n = b->pos;
+    Nats.ok = PROTO_TRUE;
 }
 
 // CONNECT {"option_name":option_value,...}
-void protocore_nats_connect(uint8_t *restrict work)
+static void nats_connect(uint8_t *restrict work)
 {
-    NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
-    if (!NatsV.out.buf || !NatsV.client.options)
+    Nats.n = 0;
+    Nats.ok = PROTO_FALSE;
+    if (!Nats.out.buf || !Nats.client.options)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {Nats.out.buf, Nats.out.cap, 0, PROTO_TRUE};
     put_str(&b, "CONNECT ");
-    put_str(&b, NatsV.client.options);
+    put_str(&b, Nats.client.options);
     put_str(&b, NATS_CRLF);
     finish(work, &b);
 }
 
 // PUB <subject> [reply-to] <#bytes>CRLF[payload]CRLF
-void protocore_nats_pub(uint8_t *restrict work)
+static void nats_pub(uint8_t *restrict work)
 {
-    NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
-    if (!NatsV.out.buf || !NatsV.publish.subject || (NatsV.publish.payload_len && !NatsV.publish.payload))
+    Nats.n = 0;
+    Nats.ok = PROTO_FALSE;
+    if (!Nats.out.buf || !Nats.publish.subject || (Nats.publish.payload_len && !Nats.publish.payload))
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {Nats.out.buf, Nats.out.cap, 0, PROTO_TRUE};
     put_str(&b, "PUB ");
-    put_str(&b, NatsV.publish.subject);
-    if (NatsV.publish.reply_to)
+    put_str(&b, Nats.publish.subject);
+    if (Nats.publish.reply_to)
     {
         put_ch(&b, ' ');
-        put_str(&b, NatsV.publish.reply_to);
+        put_str(&b, Nats.publish.reply_to);
     }
     put_ch(&b, ' ');
-    put_uint(&b, NatsV.publish.payload_len);
+    put_uint(&b, Nats.publish.payload_len);
     put_str(&b, NATS_CRLF);
-    put_bytes(&b, NatsV.publish.payload, NatsV.publish.payload_len);
+    put_bytes(&b, Nats.publish.payload, Nats.publish.payload_len);
     put_str(&b, NATS_CRLF);
     finish(work, &b);
 }
 
 // HPUB <subject> [reply-to] <#header bytes> <#total bytes>CRLF[headers][payload]CRLF, where the
 // header section carries its own terminating CR LF CR LF and #total bytes counts it plus the payload.
-void protocore_nats_hpub(uint8_t *restrict work)
+static void nats_hpub(uint8_t *restrict work)
 {
-    NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
-    if (!NatsV.out.buf || !NatsV.publish.subject || !NatsV.headers.block || NatsV.headers.bytes == 0 ||
-        (NatsV.publish.payload_len && !NatsV.publish.payload))
+    Nats.n = 0;
+    Nats.ok = PROTO_FALSE;
+    if (!Nats.out.buf || !Nats.publish.subject || !Nats.headers.block || Nats.headers.bytes == 0 ||
+        (Nats.publish.payload_len && !Nats.publish.payload))
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {Nats.out.buf, Nats.out.cap, 0, PROTO_TRUE};
     put_str(&b, "HPUB ");
-    put_str(&b, NatsV.publish.subject);
-    if (NatsV.publish.reply_to)
+    put_str(&b, Nats.publish.subject);
+    if (Nats.publish.reply_to)
     {
         put_ch(&b, ' ');
-        put_str(&b, NatsV.publish.reply_to);
+        put_str(&b, Nats.publish.reply_to);
     }
     put_ch(&b, ' ');
-    put_uint(&b, NatsV.headers.bytes);
+    put_uint(&b, Nats.headers.bytes);
     put_ch(&b, ' ');
-    put_uint(&b, NatsV.headers.bytes + NatsV.publish.payload_len);
+    put_uint(&b, Nats.headers.bytes + Nats.publish.payload_len);
     put_str(&b, NATS_CRLF);
-    put_bytes(&b, (const uint8_t *)NatsV.headers.block, NatsV.headers.bytes);
-    put_bytes(&b, NatsV.publish.payload, NatsV.publish.payload_len);
+    put_bytes(&b, (const uint8_t *)Nats.headers.block, Nats.headers.bytes);
+    put_bytes(&b, Nats.publish.payload, Nats.publish.payload_len);
     put_str(&b, NATS_CRLF);
     finish(work, &b);
 }
 
 // SUB <subject> [queue group] <sid>
-void protocore_nats_sub(uint8_t *restrict work)
+static void nats_sub(uint8_t *restrict work)
 {
-    NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
-    if (!NatsV.out.buf || !NatsV.subscription.subject || !NatsV.subscription.sid)
+    Nats.n = 0;
+    Nats.ok = PROTO_FALSE;
+    if (!Nats.out.buf || !Nats.subscription.subject || !Nats.subscription.sid)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {Nats.out.buf, Nats.out.cap, 0, PROTO_TRUE};
     put_str(&b, "SUB ");
-    put_str(&b, NatsV.subscription.subject);
-    if (NatsV.subscription.queue_group)
+    put_str(&b, Nats.subscription.subject);
+    if (Nats.subscription.queue_group)
     {
         put_ch(&b, ' ');
-        put_str(&b, NatsV.subscription.queue_group);
+        put_str(&b, Nats.subscription.queue_group);
     }
     put_ch(&b, ' ');
-    put_str(&b, NatsV.subscription.sid);
+    put_str(&b, Nats.subscription.sid);
     put_str(&b, NATS_CRLF);
     finish(work, &b);
 }
 
 // UNSUB <sid> [max_msgs]
-void protocore_nats_unsub(uint8_t *restrict work)
+static void nats_unsub(uint8_t *restrict work)
 {
-    NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
-    if (!NatsV.out.buf || !NatsV.subscription.sid)
+    Nats.n = 0;
+    Nats.ok = PROTO_FALSE;
+    if (!Nats.out.buf || !Nats.subscription.sid)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {Nats.out.buf, Nats.out.cap, 0, PROTO_TRUE};
     put_str(&b, "UNSUB ");
-    put_str(&b, NatsV.subscription.sid);
-    if (NatsV.subscription.with_max)
+    put_str(&b, Nats.subscription.sid);
+    if (Nats.subscription.with_max)
     {
         put_ch(&b, ' ');
-        put_uint(&b, NatsV.subscription.max_msgs);
+        put_uint(&b, Nats.subscription.max_msgs);
     }
     put_str(&b, NATS_CRLF);
     finish(work, &b);
 }
 
 // PING
-void protocore_nats_ping(uint8_t *restrict work)
+static void nats_ping(uint8_t *restrict work)
 {
-    NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
-    if (!NatsV.out.buf)
+    Nats.n = 0;
+    Nats.ok = PROTO_FALSE;
+    if (!Nats.out.buf)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {Nats.out.buf, Nats.out.cap, 0, PROTO_TRUE};
     put_str(&b, "PING" NATS_CRLF);
     finish(work, &b);
 }
 
 // PONG
-void protocore_nats_pong(uint8_t *restrict work)
+static void nats_pong(uint8_t *restrict work)
 {
-    NatsV.n = 0;
-    NatsV.ok = PROTO_FALSE;
-    if (!NatsV.out.buf)
+    Nats.n = 0;
+    Nats.ok = PROTO_FALSE;
+    if (!Nats.out.buf)
     {
         return;
     }
-    Buf b = {NatsV.out.buf, NatsV.out.cap, 0, PROTO_TRUE};
+    Buf b = {Nats.out.buf, Nats.out.cap, 0, PROTO_TRUE};
     put_str(&b, "PONG" NATS_CRLF);
     finish(work, &b);
 }
@@ -363,15 +363,15 @@ static size_t split_fields(const char *buf, size_t line_len, size_t from, const 
 }
 
 // Decode the operation at the head of in.buf into msg, and report the octets it occupies.
-void protocore_nats_parse(uint8_t *restrict work)
+static void nats_parse(uint8_t *restrict work)
 {
     (void)work;
-    NatsV.ok = PROTO_FALSE;
-    NatsV.consumed = 0;
+    Nats.ok = PROTO_FALSE;
+    Nats.consumed = 0;
 
-    const char *buf = NatsV.in.buf;
-    const size_t len = NatsV.in.len;
-    NatsMsg *out = &NatsV.msg;
+    const char *buf = Nats.in.buf;
+    const size_t len = Nats.in.len;
+    NatsMsg *out = &Nats.msg;
     if (!buf)
     {
         return;
@@ -394,22 +394,22 @@ void protocore_nats_parse(uint8_t *restrict work)
     if (verb_is(buf, line_len, "PING"))
     {
         out->op = NATS_OP_PING;
-        NatsV.consumed = after_line;
-        NatsV.ok = PROTO_TRUE;
+        Nats.consumed = after_line;
+        Nats.ok = PROTO_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "PONG"))
     {
         out->op = NATS_OP_PONG;
-        NatsV.consumed = after_line;
-        NatsV.ok = PROTO_TRUE;
+        Nats.consumed = after_line;
+        Nats.ok = PROTO_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "+OK"))
     {
         out->op = NATS_OP_OK;
-        NatsV.consumed = after_line;
-        NatsV.ok = PROTO_TRUE;
+        Nats.consumed = after_line;
+        Nats.ok = PROTO_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "-ERR") || verb_is(buf, line_len, "INFO"))
@@ -422,8 +422,8 @@ void protocore_nats_parse(uint8_t *restrict work)
         }
         out->arg = buf + a;
         out->arg_len = line_len - a;
-        NatsV.consumed = after_line;
-        NatsV.ok = PROTO_TRUE;
+        Nats.consumed = after_line;
+        Nats.ok = PROTO_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "MSG"))
@@ -459,8 +459,8 @@ void protocore_nats_parse(uint8_t *restrict work)
         }
         out->payload = (const uint8_t *)(buf + after_line);
         out->payload_len = size;
-        NatsV.consumed = after_line + size + NATS_CRLF_LEN;
-        NatsV.ok = PROTO_TRUE;
+        Nats.consumed = after_line + size + NATS_CRLF_LEN;
+        Nats.ok = PROTO_TRUE;
         return;
     }
     if (verb_is(buf, line_len, "HMSG"))
@@ -502,18 +502,24 @@ void protocore_nats_parse(uint8_t *restrict work)
         out->header_bytes = hdr_len;
         out->payload = (const uint8_t *)(buf + after_line + hdr_len);
         out->payload_len = total_size - hdr_len;
-        NatsV.consumed = after_line + total_size + NATS_CRLF_LEN;
-        NatsV.ok = PROTO_TRUE;
+        Nats.consumed = after_line + total_size + NATS_CRLF_LEN;
+        Nats.ok = PROTO_TRUE;
         return;
     }
 
     out->op = NATS_OP_UNKNOWN;
-    NatsV.consumed = after_line;
-    NatsV.ok = PROTO_TRUE;
+    Nats.consumed = after_line;
+    Nats.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-NatsVars NatsV;
+NatsNs Nats = {.connect = nats_connect,
+               .pub = nats_pub,
+               .hpub = nats_hpub,
+               .sub = nats_sub,
+               .unsub = nats_unsub,
+               .ping = nats_ping,
+               .pong = nats_pong,
+               .parse = nats_parse};
 
 #endif // PROTOCORE_ENABLE_NATS

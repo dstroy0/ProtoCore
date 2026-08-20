@@ -37,6 +37,7 @@ typedef struct
         bind_port; ///< remote port the relay listens on (tcpip-forward); connections accepted there are forwarded back.
     uint16_t local_port; ///< local TCP port a forwarded connection is bridged to (e.g. 80).
 } protocore_ssh_client_cfg;
+
 /**
  * @brief Start (or restart) the forward: connect to the relay, handshake, authenticate, and request
  *        the remote forward. Non-blocking after the initial connect; drive it with poll().
@@ -49,12 +50,15 @@ typedef struct
  * with a >= 20480-byte stack (see the example). begin() claims a private scratch arena for the calling
  * task, so poll() must run in that same task or the packet-decrypt tripwire fires.
  */
+
 /**
  * @brief Pump the forward: advance the handshake, service the relay's keepalives, accept
  *        forwarded-tcpip channels and bridge their bytes to/from the local service. Call every loop,
  *        from the same (adequately-stacked) task that called begin() - see the begin() @warning.
  */
+
 /** @brief Tear the forward down and close the relay connection. */
+
 /**
  * @brief The client engine's operations, for the layers that frame messages on its connection.
  *
@@ -68,21 +72,17 @@ typedef struct
     const uint8_t *payload; ///< the message bytes a send carries
     size_t len;             ///< how many
 } SshClientMsgArgs;
+
 typedef struct
 {
     const protocore_ssh_client_cfg *cfg; ///< what a begin dials with
-    SshClientMsgArgs msg;                ///< the message bytes a send carries
+
+    SshClientMsgArgs msg; ///< the message bytes a send carries
+
     proto_bool ok;                       ///< a call's true/false outcome
     uint8_t *work;                       ///< the crypto scratch a lookup reports
     protocore_ssh_client_state state_of; ///< the phase a lookup reports
-} SshClientVars;
 
-/** @brief The operands and the outcome. */
-extern SshClientVars SshClientV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const send)(uint8_t *restrict work);
     void (*const crypto_work)(uint8_t *restrict work);
     void (*const state)(uint8_t *restrict work);
@@ -91,27 +91,8 @@ typedef struct
     void (*const end)(uint8_t *restrict work);
 } SshClientNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SshClientV or a region of the borrow at a fixed offset.
-void protocore_client_send(uint8_t *restrict work);
-void protocore_client_crypto_work(uint8_t *restrict work);
-void protocore_client_state(uint8_t *restrict work);
-void protocore_client_begin(uint8_t *restrict work);
-void protocore_client_poll(uint8_t *restrict work);
-void protocore_client_end(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SshClient.send(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SshClientNs SshClient __attribute__((unused)) = {
-    .send = protocore_client_send,
-    .crypto_work = protocore_client_crypto_work,
-    .state = protocore_client_state,
-    .begin = protocore_client_begin,
-    .poll = protocore_client_poll,
-    .end = protocore_client_end,
-};
+/** @brief The one instance, defined in client.c. */
+extern SshClientNs SshClient;
 
 /**
  * @brief The PROTOCORE_SSH_CLIENT_BORROW bytes this module's state lives in.

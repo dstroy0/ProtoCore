@@ -7,7 +7,7 @@
  */
 
 #include "server/core/power_mgmt/power_mgmt.h"
-#include "mmgr/membuild/membuild.h"   // protocore_sb frame builder
+#include "mmgr/membuild/membuild.h"  // protocore_sb frame builder
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 
 #if PROTOCORE_ENABLE_POWER_MGMT
@@ -60,7 +60,7 @@ uint8_t *protocore_power_mgmt_span(void)
 static void power_defaults(uint8_t *restrict work)
 {
     (void)work;
-    PowerCfg *cfg = PowerV.cfg_out;
+    PowerCfg *cfg = Power.cfg_out;
     if (!cfg)
     {
         return;
@@ -76,12 +76,12 @@ static void power_defaults(uint8_t *restrict work)
 static void power_decide(uint8_t *restrict work)
 {
     (void)work;
-    const PowerCfg *cfg = PowerV.plan_args.cfg;
-    uint8_t load_pct = PowerV.plan_args.load_pct;
-    const int16_t temp_c = PowerV.plan_args.temp_c;
-    const proto_bool brownout_boot = PowerV.plan_args.brownout_boot;
-    const uint32_t since_boot_ms = PowerV.plan_args.since_boot_ms;
-    const proto_bool was_throttled = PowerV.plan_args.was_throttled;
+    const PowerCfg *cfg = Power.plan_args.cfg;
+    uint8_t load_pct = Power.plan_args.load_pct;
+    const int16_t temp_c = Power.plan_args.temp_c;
+    const proto_bool brownout_boot = Power.plan_args.brownout_boot;
+    const uint32_t since_boot_ms = Power.plan_args.since_boot_ms;
+    const proto_bool was_throttled = Power.plan_args.was_throttled;
 
     PowerPlan p;
     p.cpu_mhz = 0;
@@ -89,7 +89,7 @@ static void power_decide(uint8_t *restrict work)
     p.recovering = PROTO_FALSE;
     if (!cfg)
     {
-        PowerV.plan = p;
+        Power.plan = p;
         return;
     }
 
@@ -113,7 +113,7 @@ static void power_decide(uint8_t *restrict work)
     if (p.recovering || p.throttled)
     {
         p.cpu_mhz = cfg->mhz_min;
-        PowerV.plan = p;
+        Power.plan = p;
         return;
     }
     if (load_pct > 100)
@@ -121,17 +121,17 @@ static void power_decide(uint8_t *restrict work)
         load_pct = 100;
     }
     p.cpu_mhz = (load_pct >= cfg->busy_pct) ? cfg->mhz_max : cfg->mhz_min;
-    PowerV.plan = p;
+    Power.plan = p;
 }
 
 static void power_json(uint8_t *restrict work)
 {
-    const PowerPlan *plan = PowerV.out_args.plan;
-    const int16_t temp_c = PowerV.out_args.temp_c;
-    char *out = PowerV.out_args.out;
-    const size_t cap = PowerV.out_args.cap;
+    const PowerPlan *plan = Power.out_args.plan;
+    const int16_t temp_c = Power.out_args.temp_c;
+    char *out = Power.out_args.out;
+    const size_t cap = Power.out_args.cap;
 
-    PowerV.n = 0;
+    Power.n = 0;
     if (!plan || !out || cap == 0)
     {
         return;
@@ -163,7 +163,7 @@ static void power_json(uint8_t *restrict work)
         out[0] = '\0';
         return;
     }
-    PowerV.n = n;
+    Power.n = n;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,27 +181,27 @@ static void power_brownout(uint8_t *restrict work)
         POWER_MGMT_CTX(work)->brownout_latched = protocore_platform_reset_was_brownout() ? PROTO_TRUE : PROTO_FALSE;
         POWER_MGMT_CTX(work)->boot_checked = PROTO_TRUE;
     }
-    PowerV.ok = POWER_MGMT_CTX(work)->brownout_latched;
+    Power.ok = POWER_MGMT_CTX(work)->brownout_latched;
 }
 
 static void power_die_temp(uint8_t *restrict work)
 {
     (void)work;
-    PowerV.temp_c = protocore_platform_die_temp_c();
+    Power.temp_c = protocore_platform_die_temp_c();
 }
 
 static void power_cpu_mhz(uint8_t *restrict work)
 {
     (void)work;
-    PowerV.mhz = protocore_platform_cpu_mhz();
+    Power.mhz = protocore_platform_cpu_mhz();
 }
 
 static void power_apply(uint8_t *restrict work)
 {
     (void)work;
-    const PowerPlan *plan = PowerV.out_args.plan;
+    const PowerPlan *plan = Power.out_args.plan;
 
-    PowerV.ok = PROTO_FALSE;
+    Power.ok = PROTO_FALSE;
     if (!plan || plan->cpu_mhz == 0)
     {
         return;
@@ -210,7 +210,7 @@ static void power_apply(uint8_t *restrict work)
     {
         return; // already there; re-setting the clock is not free
     }
-    PowerV.ok = protocore_platform_set_cpu_mhz((uint32_t)plan->cpu_mhz) ? PROTO_TRUE : PROTO_FALSE;
+    Power.ok = protocore_platform_set_cpu_mhz((uint32_t)plan->cpu_mhz) ? PROTO_TRUE : PROTO_FALSE;
 }
 
 #endif // PROTOCORE_HAS_VENDOR_PM
@@ -218,19 +218,31 @@ static void power_apply(uint8_t *restrict work)
 #if PROTOCORE_HAS_VENDOR_BT
 static void power_gate_bt(uint8_t *restrict work)
 {
-    PowerV.ok = PROTO_FALSE;
+    Power.ok = PROTO_FALSE;
     if (POWER_MGMT_CTX(work)->bt_released)
     {
         return; // already handed back, so this call released nothing
     }
     proto_bool ok = protocore_platform_bt_release() ? PROTO_TRUE : PROTO_FALSE;
     POWER_MGMT_CTX(work)->bt_released = ok;
-    PowerV.ok = ok;
+    Power.ok = ok;
 }
 #endif // PROTOCORE_HAS_VENDOR_BT
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-PowerVars PowerV;
+PowerMgmtNs Power = {
+    .defaults = power_defaults,
+    .decide = power_decide,
+    .json = power_json,
+#if PROTOCORE_HAS_VENDOR_PM
+    .brownout = power_brownout,
+    .die_temp = power_die_temp,
+    .cpu_mhz = power_cpu_mhz,
+    .apply = power_apply,
+#endif
+#if PROTOCORE_HAS_VENDOR_BT
+    .gate_bt = power_gate_bt,
+#endif
+};
 
 #endif // PROTOCORE_ENABLE_POWER_MGMT

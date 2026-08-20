@@ -43,12 +43,14 @@ typedef struct
     protocore_cc1101_spi_fn spi;
     void *ctx;
 } protocore_cc1101_bus;
+
 /** @brief One modem-config register write (address + value). */
 typedef struct
 {
     uint8_t addr;
     uint8_t value;
 } protocore_cc1101_reg;
+
 /** @brief Radio configuration applied by protocore_cc1101_init(). */
 typedef struct
 {
@@ -56,12 +58,14 @@ typedef struct
     size_t nregs;
     uint8_t channel; ///< CHANNR (0x0A): channel number on top of the base frequency.
 } protocore_cc1101_config;
+
 /** @brief What init takes: bus, cfg. */
 typedef struct
 {
     const protocore_cc1101_bus *bus;
     const protocore_cc1101_config *cfg;
 } Cc1101InitArgs;
+
 /** @brief What send takes: bus, data, len. */
 typedef struct
 {
@@ -69,16 +73,19 @@ typedef struct
     const uint8_t *data;
     uint8_t len;
 } Cc1101SendArgs;
+
 /** @brief What tx_done takes: bus. */
 typedef struct
 {
     const protocore_cc1101_bus *bus;
 } Cc1101TxDoneArgs;
+
 /** @brief What set_rx takes: bus. */
 typedef struct
 {
     const protocore_cc1101_bus *bus;
 } Cc1101SetRxArgs;
+
 /** @brief What recv takes: bus, buf, cap, rssi_dbm. */
 typedef struct
 {
@@ -87,11 +94,13 @@ typedef struct
     uint8_t cap;
     int16_t *rssi_dbm;
 } Cc1101RecvArgs;
+
 /** @brief What rssi_dbm takes: raw. */
 typedef struct
 {
     uint8_t raw;
 } Cc1101RssiDbmArgs;
+
 /**
  * @brief CC1101 sub-GHz radio driver (PROTOCORE_ENABLE_CC1101) - TI 300-928 MHz over SPI.
  *
@@ -131,17 +140,11 @@ typedef struct
     Cc1101SetRxArgs set_rx_args;
     Cc1101RecvArgs recv_args;
     Cc1101RssiDbmArgs rssi_dbm_args;
+
     proto_bool ok;
     int n;
     int16_t value;
-} Cc1101Vars;
 
-/** @brief The operands and the outcome. */
-extern Cc1101Vars Cc1101V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const init)(uint8_t *restrict work);
     void (*const send)(uint8_t *restrict work);
     void (*const tx_done)(uint8_t *restrict work);
@@ -150,27 +153,8 @@ typedef struct
     void (*const rssi_dbm)(uint8_t *restrict work);
 } Cc1101Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Cc1101V or a region of the borrow at a fixed offset.
-void protocore_cc1101_init(uint8_t *restrict work);
-void protocore_cc1101_send(uint8_t *restrict work);
-void protocore_cc1101_tx_done(uint8_t *restrict work);
-void protocore_cc1101_set_rx(uint8_t *restrict work);
-void protocore_cc1101_recv(uint8_t *restrict work);
-void protocore_cc1101_rssi_dbm(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Cc1101.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Cc1101Ns Cc1101 __attribute__((unused)) = {
-    .init = protocore_cc1101_init,
-    .send = protocore_cc1101_send,
-    .tx_done = protocore_cc1101_tx_done,
-    .set_rx = protocore_cc1101_set_rx,
-    .recv = protocore_cc1101_recv,
-    .rssi_dbm = protocore_cc1101_rssi_dbm,
-};
+/** @brief The one symbol this module exports. */
+extern Cc1101Ns Cc1101;
 
 PROTOCORE_END_DECLS
 

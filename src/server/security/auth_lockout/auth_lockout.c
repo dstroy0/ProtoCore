@@ -60,18 +60,18 @@ static_assert(LOCKOUT_OFF_CTX % _Alignof(LockoutCtx) == 0,
 // Whether @p a and @p b are the same family and address.
 static proto_bool ip_same(const protocore_ip *a, const protocore_ip *b)
 {
-    IpV.args.ip = a;
-    IpV.args.b = b;
+    Ip.args.ip = a;
+    Ip.args.b = b;
     Ip.equal(ip_work);
-    return IpV.ok;
+    return Ip.ok;
 }
 
 // Whether @p ip names nothing: no family, or the all-zero address.
 static proto_bool ip_none(const protocore_ip *ip)
 {
-    IpV.args.ip = ip;
+    Ip.args.ip = ip;
     Ip.is_unspecified(ip_work);
-    return IpV.ok;
+    return Ip.ok;
 }
 
 // Returns a mutable bucket (callers mutate it), so it takes the owner by non-const reference.
@@ -115,39 +115,39 @@ uint8_t *protocore_auth_lockout_span(void)
 
 static void lockout_remaining(uint8_t *restrict work)
 {
-    AuthLockoutV.ok = PROTO_FALSE;
-    AuthLockoutV.ms = 0;
-    const protocore_ip *ip = AuthLockoutV.args.ip;
+    AuthLockout.ok = PROTO_FALSE;
+    AuthLockout.ms = 0;
+    const protocore_ip *ip = AuthLockout.args.ip;
     if (ip_none(ip))
     {
         return; // untrackable source -> never reported as locked
     }
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
-    AuthLockoutV.ok = PROTO_TRUE;
+    AuthLockout.ok = PROTO_TRUE;
     LockoutBucket *b = find_bucket(s_lock, ip);
     if (!b || b->lock_ms == 0)
     {
         return;
     }
-    uint32_t elapsed = AuthLockoutV.args.now_ms - b->lock_start_ms; // wraps correctly across rollover
+    uint32_t elapsed = AuthLockout.args.now_ms - b->lock_start_ms; // wraps correctly across rollover
     if (elapsed >= b->lock_ms)
     {
         return; // the lockout window has passed
     }
-    AuthLockoutV.ms = b->lock_ms - elapsed;
+    AuthLockout.ms = b->lock_ms - elapsed;
 }
 
 static void lockout_fail(uint8_t *restrict work)
 {
-    AuthLockoutV.ok = PROTO_FALSE;
-    const protocore_ip *ip = AuthLockoutV.args.ip;
-    const uint32_t now_ms = AuthLockoutV.args.now_ms;
+    AuthLockout.ok = PROTO_FALSE;
+    const protocore_ip *ip = AuthLockout.args.ip;
+    const uint32_t now_ms = AuthLockout.args.now_ms;
     if (ip_none(ip))
     {
         return; // untrackable source
     }
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
-    AuthLockoutV.ok = PROTO_TRUE;
+    AuthLockout.ok = PROTO_TRUE;
 
     LockoutBucket *b = find_bucket(s_lock, ip);
     if (!b)
@@ -220,14 +220,14 @@ static void lockout_fail(uint8_t *restrict work)
 
 static void lockout_succeed(uint8_t *restrict work)
 {
-    AuthLockoutV.ok = PROTO_FALSE;
-    const protocore_ip *ip = AuthLockoutV.args.ip;
+    AuthLockout.ok = PROTO_FALSE;
+    const protocore_ip *ip = AuthLockout.args.ip;
     if (ip_none(ip))
     {
         return;
     }
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
-    AuthLockoutV.ok = PROTO_TRUE;
+    AuthLockout.ok = PROTO_TRUE;
     LockoutBucket *b = find_bucket(s_lock, ip);
     if (b)
     {
@@ -241,9 +241,9 @@ static void lockout_succeed(uint8_t *restrict work)
 
 static void lockout_reset(uint8_t *restrict work)
 {
-    AuthLockoutV.ok = PROTO_FALSE;
+    AuthLockout.ok = PROTO_FALSE;
     LockoutCtx *s_lock = LOCKOUT_CTX(work);
-    AuthLockoutV.ok = PROTO_TRUE;
+    AuthLockout.ok = PROTO_TRUE;
     for (int i = 0; i < PROTOCORE_AUTH_LOCKOUT_SLOTS; i++)
     {
         s_lock->buckets[i].addr.family = PROTOCORE_IP_NONE;
@@ -254,8 +254,8 @@ static void lockout_reset(uint8_t *restrict work)
     }
 }
 
-/** @brief The operands and the outcome. */
-AuthLockoutVars AuthLockoutV;
+AuthLockoutNs AuthLockout = {
+    .remaining = lockout_remaining, .fail = lockout_fail, .succeed = lockout_succeed, .reset = lockout_reset};
 
 PROTOCORE_END_DECLS
 

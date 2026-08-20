@@ -116,17 +116,17 @@ static const uint32_t SIGMA3 = 0x6b206574;
 
 static void chacha20_xor(uint8_t *restrict work)
 {
-    Chacha20V.ok = PROTO_FALSE;
-    if (!Chacha20V.xor_args.key || !Chacha20V.xor_args.iv || !Chacha20V.xor_args.out)
+    Chacha20.ok = PROTO_FALSE;
+    if (!Chacha20.xor_args.key || !Chacha20.xor_args.iv || !Chacha20.xor_args.out)
     {
         return;
     }
-    const uint8_t *key = Chacha20V.xor_args.key;
-    const uint8_t *iv = Chacha20V.xor_args.iv;
-    const uint8_t *in = Chacha20V.xor_args.in;
-    uint8_t *out = Chacha20V.xor_args.out;
-    size_t len = Chacha20V.xor_args.len;
-    uint64_t counter = Chacha20V.xor_args.counter;
+    const uint8_t *key = Chacha20.xor_args.key;
+    const uint8_t *iv = Chacha20.xor_args.iv;
+    const uint8_t *in = Chacha20.xor_args.in;
+    uint8_t *out = Chacha20.xor_args.out;
+    size_t len = Chacha20.xor_args.len;
+    uint64_t counter = Chacha20.xor_args.counter;
     Chacha20Ctx *w = CHACHA20_CTX(work);
     uint8_t *ks = CHACHA20_KS(work);
 
@@ -154,20 +154,20 @@ static void chacha20_xor(uint8_t *restrict work)
         off += n;
         counter++;
     }
-    Chacha20V.ok = PROTO_TRUE;
+    Chacha20.ok = PROTO_TRUE;
 }
 
-void protocore_chacha20_block_ietf(uint8_t *restrict work)
+static void chacha20_block_ietf(uint8_t *restrict work)
 {
-    Chacha20V.ok = PROTO_FALSE;
-    if (!Chacha20V.block_ietf_args.key || !Chacha20V.block_ietf_args.nonce || !Chacha20V.block_ietf_args.out)
+    Chacha20.ok = PROTO_FALSE;
+    if (!Chacha20.block_ietf_args.key || !Chacha20.block_ietf_args.nonce || !Chacha20.block_ietf_args.out)
     {
         return;
     }
-    const uint8_t *key = Chacha20V.block_ietf_args.key;
-    const uint8_t *nonce = Chacha20V.block_ietf_args.nonce;
-    uint32_t counter = Chacha20V.block_ietf_args.counter;
-    uint8_t *out = Chacha20V.block_ietf_args.out;
+    const uint8_t *key = Chacha20.block_ietf_args.key;
+    const uint8_t *nonce = Chacha20.block_ietf_args.nonce;
+    uint32_t counter = Chacha20.block_ietf_args.counter;
+    uint8_t *out = Chacha20.block_ietf_args.out;
     Chacha20Ctx *w = CHACHA20_CTX(work);
 
     w->st[0] = SIGMA0;
@@ -183,11 +183,10 @@ void protocore_chacha20_block_ietf(uint8_t *restrict work)
     w->st[14] = rd_le32(nonce + 4);
     w->st[15] = rd_le32(nonce + 8);
     chacha_core(w, out);
-    Chacha20V.ok = PROTO_TRUE;
+    Chacha20.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-Chacha20Vars Chacha20V;
+Chacha20Ns Chacha20 = {.xor_ = chacha20_xor, .block_ietf = chacha20_block_ietf};
 
 PROTOCORE_END_DECLS
 

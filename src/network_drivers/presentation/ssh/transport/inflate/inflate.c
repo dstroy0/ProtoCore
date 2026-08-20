@@ -204,7 +204,7 @@ static int do_codes(BitIn *b, OutCtx *o, const Huffman *lc, const Huffman *dc)
         {
             return PROTOCORE_BLK_ERR;
         }
-        int len = Rfc1951V.len_base[sym] + getbits(b, Rfc1951V.len_extra[sym]);
+        int len = Rfc1951.len_base[sym] + getbits(b, Rfc1951.len_extra[sym]);
         if (b->underflow)
         {
             return PROTOCORE_BLK_NEED;
@@ -218,7 +218,7 @@ static int do_codes(BitIn *b, OutCtx *o, const Huffman *lc, const Huffman *dc)
         {
             return PROTOCORE_BLK_ERR;
         }
-        size_t dist = (size_t)(Rfc1951V.dist_base[dsym] + getbits(b, Rfc1951V.dist_extra[dsym]));
+        size_t dist = (size_t)(Rfc1951.dist_base[dsym] + getbits(b, Rfc1951.dist_extra[dsym]));
         if (b->underflow)
         {
             return PROTOCORE_BLK_NEED;
@@ -436,11 +436,11 @@ static int do_block(BitIn *b, OutCtx *o, Tables *t)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_inflate_init(uint8_t *restrict work)
+static void inflate_init(uint8_t *restrict work)
 {
     (void)work;
-    SshInflate *z = InflateV.init_args.z;
-    uint8_t *window = InflateV.init_args.window;
+    SshInflate *z = Inflate.init_args.z;
+    uint8_t *window = Inflate.init_args.window;
 
     z->window = window;
     z->wpos = 0;
@@ -450,19 +450,19 @@ void protocore_inflate_init(uint8_t *restrict work)
     z->header_seen = PROTO_FALSE;
 }
 
-void protocore_inflate_packet(uint8_t *restrict work)
+static void inflate_packet(uint8_t *restrict work)
 {
     (void)work;
-    SshInflate *z = InflateV.packet_args.z;
-    const uint8_t *src = InflateV.packet_args.src;
-    size_t src_len = InflateV.packet_args.src_len;
-    uint8_t *dst = InflateV.packet_args.dst;
-    size_t dst_cap = InflateV.packet_args.dst_cap;
-    size_t *out_len = InflateV.packet_args.out_len;
+    SshInflate *z = Inflate.packet_args.z;
+    const uint8_t *src = Inflate.packet_args.src;
+    size_t src_len = Inflate.packet_args.src_len;
+    uint8_t *dst = Inflate.packet_args.dst;
+    size_t dst_cap = Inflate.packet_args.dst_cap;
+    size_t *out_len = Inflate.packet_args.out_len;
 
     if (!z || (src_len && !src) || !out_len)
     {
-        InflateV.n = -1;
+        Inflate.n = -1;
         return;
     }
 
@@ -492,7 +492,7 @@ void protocore_inflate_packet(uint8_t *restrict work)
             size_t rem = (size_t)z->carry_len + src_len;
             if (rem > SSH_INFLATE_CARRY)
             {
-                InflateV.n = -1;
+                Inflate.n = -1;
                 return;
             }
             uint8_t tmp[SSH_INFLATE_CARRY];
@@ -504,24 +504,24 @@ void protocore_inflate_packet(uint8_t *restrict work)
             z->carry_len = (uint8_t)rem;
             z->bit_off = 0;
             *out_len = 0;
-            InflateV.n = 0;
+            Inflate.n = 0;
             return;
         }
         int cmf = getbits(&b, 8);
         int flg = getbits(&b, 8);
         if ((cmf & 0x0F) != 8)
         {
-            InflateV.n = -1; // compression method must be DEFLATE
+            Inflate.n = -1; // compression method must be DEFLATE
             return;
         }
         if ((((unsigned)cmf << 8) | (unsigned)flg) % 31u != 0u)
         {
-            InflateV.n = -1; // header checksum
+            Inflate.n = -1; // header checksum
             return;
         }
         if (flg & 0x20)
         {
-            InflateV.n = -1; // a preset dictionary (FDICT) is not used by SSH
+            Inflate.n = -1; // a preset dictionary (FDICT) is not used by SSH
             return;
         }
         z->header_seen = PROTO_TRUE;
@@ -557,7 +557,7 @@ void protocore_inflate_packet(uint8_t *restrict work)
             boundary = cp_bit;
             break;
         }
-        InflateV.n = -1; // PROTOCORE_BLK_ERR
+        Inflate.n = -1; // PROTOCORE_BLK_ERR
         return;
     }
 
@@ -567,7 +567,7 @@ void protocore_inflate_packet(uint8_t *restrict work)
     size_t rem = total_bytes - bstart_byte;
     if (rem > SSH_INFLATE_CARRY)
     {
-        InflateV.n = -1; // the peer did not flush at a block boundary within the tail bound
+        Inflate.n = -1; // the peer did not flush at a block boundary within the tail bound
         return;
     }
     uint8_t tmp[SSH_INFLATE_CARRY];
@@ -580,11 +580,13 @@ void protocore_inflate_packet(uint8_t *restrict work)
     z->bit_off = (uint8_t)(boundary & 7u);
 
     *out_len = o.cnt;
-    InflateV.n = 0;
+    Inflate.n = 0;
 }
 
-/** @brief The operands and the outcome. */
-InflateVars InflateV;
+InflateNs Inflate = {
+    .init = inflate_init,
+    .packet = inflate_packet,
+};
 
 PROTOCORE_END_DECLS
 

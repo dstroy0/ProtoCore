@@ -62,11 +62,11 @@ static const protocore_sleep_cfg CFG = {
 
 static uint32_t window(const protocore_sleep_cfg *cfg, uint32_t now, uint32_t last_active_ms)
 {
-    SleepSchedV.ask.now = now;
-    SleepSchedV.ask.last_active_ms = last_active_ms;
-    SleepSchedV.ask.cfg = cfg;
+    SleepSched.ask.now = now;
+    SleepSched.ask.last_active_ms = last_active_ms;
+    SleepSched.ask.cfg = cfg;
     SleepSched.next(sleep_sched_work);
-    return SleepSchedV.ms;
+    return SleepSched.ms;
 }
 
 // last_active_ms 0, so now is the idle streak itself.

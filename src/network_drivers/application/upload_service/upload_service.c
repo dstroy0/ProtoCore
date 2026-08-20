@@ -109,7 +109,7 @@ static proto_bool upload_stream_begin(HttpReq *req)
     // The seam fails closed when nothing is mounted, so a cold mount answers "upload failed"
     // rather than faulting.
     Mnt.active(mnt_work);
-    const protocore_mnt_backend *mnt = MntV.backend;
+    const protocore_mnt_backend *mnt = Mnt.backend;
     if (mnt && UPLOAD_SERVICE_CTX(work)->dest)
     {
         UPLOAD_SERVICE_CTX(work)->handle = mnt->open(UPLOAD_SERVICE_CTX(work)->dest, PROTOCORE_MNT_WRITE);
@@ -141,7 +141,7 @@ static void upload_stream_data(HttpReq *req, const uint8_t *data, size_t len)
     if (UPLOAD_SERVICE_CTX(work)->active && !UPLOAD_SERVICE_CTX(work)->error)
     {
         Mnt.active(mnt_work);
-        const protocore_mnt_backend *mnt = MntV.backend;
+        const protocore_mnt_backend *mnt = Mnt.backend;
         if (!mnt || mnt->write(UPLOAD_SERVICE_CTX(work)->handle, data, len) != (int)len)
         {
             UPLOAD_SERVICE_CTX(work)->error = PROTO_TRUE;
@@ -168,7 +168,7 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     if (UPLOAD_SERVICE_CTX(work)->active)
     {
         Mnt.active(mnt_work);
-        const protocore_mnt_backend *mnt = MntV.backend;
+        const protocore_mnt_backend *mnt = Mnt.backend;
         if (mnt)
         {
             mnt->close(UPLOAD_SERVICE_CTX(work)->handle);
@@ -186,29 +186,31 @@ static void upload_handle(uint8_t slot_id, HttpReq *req)
     send_text(slot_id, 200, PROTOCORE_MIME_TEXT_PLAIN, msg);
 }
 
-void protocore_upload_service_last_size(uint8_t *restrict work)
+static void upload_service_last_size(uint8_t *restrict work)
 {
-    UploadServiceV.n = UPLOAD_SERVICE_CTX(work)->written;
+    UploadService.n = UPLOAD_SERVICE_CTX(work)->written;
 }
 
-void protocore_upload_service_begin(uint8_t *restrict work)
+static void upload_service_begin(uint8_t *restrict work)
 {
-    const char *path = UploadServiceV.begin_args.path;
-    const char *dest_path = UploadServiceV.begin_args.dest_path;
+    const char *path = UploadService.begin_args.path;
+    const char *dest_path = UploadService.begin_args.dest_path;
 
     UPLOAD_SERVICE_CTX(work)->path = path;
     UPLOAD_SERVICE_CTX(work)->dest = dest_path;
     UPLOAD_SERVICE_CTX(work)->handle = -1;
 
-    HttpParserV.set_stream_hooks_args.begin = upload_stream_begin;
-    HttpParserV.set_stream_hooks_args.data = upload_stream_data;
-    HttpParserV.set_stream_hooks_args.abort = NULL;
-    HttpParserV.set_stream_hooks(protocore_http_parser_span());
+    HttpParser.set_stream_hooks_args.begin = upload_stream_begin;
+    HttpParser.set_stream_hooks_args.data = upload_stream_data;
+    HttpParser.set_stream_hooks_args.abort = NULL;
+    HttpParser.set_stream_hooks(protocore_http_parser_span());
     on_http(path, HTTP_POST, upload_handle);
 }
 
-/** @brief The operands and the outcome. */
-UploadServiceVars UploadServiceV;
+UploadServiceNs UploadService = {
+    .begin = upload_service_begin,
+    .last_size = upload_service_last_size,
+};
 
 PROTOCORE_END_DECLS
 

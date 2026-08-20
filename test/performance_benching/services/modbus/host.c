@@ -47,9 +47,9 @@ int main(void)
     Modbus.server_init(protocore_modbus_span());
     for (int i = 0; i < 16; i++)
     {
-        ModbusV.set_holding_reg_args.addr = (uint16_t)i;
-        ModbusV.set_holding_reg_args.value = (uint16_t)(0x1000 + i);
-        ModbusV.set_holding_reg(protocore_modbus_span());
+        Modbus.set_holding_reg_args.addr = (uint16_t)i;
+        Modbus.set_holding_reg_args.value = (uint16_t)(0x1000 + i);
+        Modbus.set_holding_reg(protocore_modbus_span());
     }
 
     // Read Holding Registers (FC 0x03), 8 regs from addr 0: MBAP(txn,proto,len,unit) + PDU(fc,addr,qty).
@@ -65,24 +65,24 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        ModbusV.process_adu_args.req = rd8;
-        ModbusV.process_adu_args.req_len = sizeof(rd8);
-        ModbusV.process_adu_args.resp = resp;
-        ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
+        Modbus.process_adu_args.req = rd8;
+        Modbus.process_adu_args.req_len = sizeof(rd8);
+        Modbus.process_adu_args.resp = resp;
+        Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
         Modbus.process_adu(protocore_modbus_span());
-        HBENCH_NS(1000000, sink += ModbusV.n, ns);
+        HBENCH_NS(1000000, sink += Modbus.n, ns);
         hbench_row("modbus", "read holding x8 (FC3)", ns, (double)sizeof(rd8));
         (void)sink;
     }
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        ModbusV.process_adu_args.req = wr2;
-        ModbusV.process_adu_args.req_len = sizeof(wr2);
-        ModbusV.process_adu_args.resp = resp;
-        ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
+        Modbus.process_adu_args.req = wr2;
+        Modbus.process_adu_args.req_len = sizeof(wr2);
+        Modbus.process_adu_args.resp = resp;
+        Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
         Modbus.process_adu(protocore_modbus_span());
-        HBENCH_NS(1000000, sink += ModbusV.n, ns);
+        HBENCH_NS(1000000, sink += Modbus.n, ns);
         hbench_row("modbus", "write multi x2 (FC16)", ns, (double)sizeof(wr2));
         (void)sink;
     }

@@ -25,12 +25,12 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_quic_tp_defaults(uint8_t *restrict work);
+static void quic_tp_defaults(uint8_t *restrict work);
 
-void protocore_quic_tp_defaults(uint8_t *restrict work)
+static void quic_tp_defaults(uint8_t *restrict work)
 {
     (void)work;
-    QuicTransportParams *tp = QuicTpV.defaults_args.tp;
+    QuicTransportParams *tp = QuicTp.defaults_args.tp;
 
     mem.set(tp, 0, sizeof(*tp));
     tp->max_udp_payload_size = 65527;
@@ -42,21 +42,21 @@ void protocore_quic_tp_defaults(uint8_t *restrict work)
 // Append one parameter: ID (varint) || Length (varint) || raw value bytes.
 static proto_bool put_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, const uint8_t *val, size_t val_len)
 {
-    QuicVarintV.encode_args.out = out + *p;
-    QuicVarintV.encode_args.cap = cap - *p;
-    QuicVarintV.encode_args.value = id;
+    QuicVarint.encode_args.out = out + *p;
+    QuicVarint.encode_args.cap = cap - *p;
+    QuicVarint.encode_args.value = id;
     QuicVarint.encode(quic_varint_work);
-    size_t n = QuicVarintV.n;
+    size_t n = QuicVarint.n;
     if (!n)
     {
         return PROTO_FALSE;
     }
     *p += n;
-    QuicVarintV.encode_args.out = out + *p;
-    QuicVarintV.encode_args.cap = cap - *p;
-    QuicVarintV.encode_args.value = val_len;
+    QuicVarint.encode_args.out = out + *p;
+    QuicVarint.encode_args.cap = cap - *p;
+    QuicVarint.encode_args.value = val_len;
     QuicVarint.encode(quic_varint_work);
-    n = QuicVarintV.n;
+    n = QuicVarint.n;
     if (!n)
     {
         return PROTO_FALSE;
@@ -80,11 +80,11 @@ static proto_bool put_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, co
 static proto_bool put_varint_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, uint64_t value)
 {
     uint8_t v[8];
-    QuicVarintV.encode_args.out = v;
-    QuicVarintV.encode_args.cap = sizeof(v);
-    QuicVarintV.encode_args.value = value;
+    QuicVarint.encode_args.out = v;
+    QuicVarint.encode_args.cap = sizeof(v);
+    QuicVarint.encode_args.value = value;
     QuicVarint.encode(quic_varint_work);
-    size_t vlen = QuicVarintV.n;
+    size_t vlen = QuicVarint.n;
     if (!vlen)
     {
         return PROTO_FALSE;
@@ -92,12 +92,12 @@ static proto_bool put_varint_param(uint8_t *out, size_t cap, size_t *p, uint64_t
     return put_param(out, cap, p, id, v, vlen);
 }
 
-void protocore_quic_tp_encode(uint8_t *restrict work)
+static void quic_tp_encode(uint8_t *restrict work)
 {
     (void)work;
-    const QuicTransportParams *tp = QuicTpV.encode_args.tp;
-    uint8_t *out = QuicTpV.encode_args.out;
-    size_t cap = QuicTpV.encode_args.cap;
+    const QuicTransportParams *tp = QuicTp.encode_args.tp;
+    uint8_t *out = QuicTp.encode_args.out;
+    size_t cap = QuicTp.encode_args.cap;
 
     size_t p = 0;
     proto_bool ok = PROTO_TRUE;
@@ -130,19 +130,19 @@ void protocore_quic_tp_encode(uint8_t *restrict work)
         ok = ok && put_param(out, cap, &p, QUIC_TP_DISABLE_ACTIVE_MIGRATION, NULL, 0);
     }
 
-    QuicTpV.n = ok ? p : 0;
+    QuicTp.n = ok ? p : 0;
 }
 
 // Decode the varint that IS the whole value of a varint-valued parameter (must consume exactly len).
 static proto_bool value_varint(const uint8_t *val, size_t len, uint64_t *out)
 {
     size_t consumed = 0;
-    QuicVarintV.decode_args.in = val;
-    QuicVarintV.decode_args.len = len;
-    QuicVarintV.decode_args.value = out;
-    QuicVarintV.decode_args.consumed = &consumed;
+    QuicVarint.decode_args.in = val;
+    QuicVarint.decode_args.len = len;
+    QuicVarint.decode_args.value = out;
+    QuicVarint.decode_args.consumed = &consumed;
     QuicVarint.decode(quic_varint_work);
-    if (!QuicVarintV.ok)
+    if (!QuicVarint.ok)
     {
         return PROTO_FALSE;
     }
@@ -165,7 +165,7 @@ static proto_bool copy_cid(const uint8_t *val, size_t len, uint8_t *dst, uint8_t
 // Apply a connection-ID transport parameter. *handled is set true if id names a CID param (whether or
 // not the copy succeeded); false leaves it for another category. Returns false only on a bad value.
 static proto_bool quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
-                                    proto_bool *handled)
+                                              proto_bool *handled)
 {
     *handled = PROTO_TRUE;
     switch (id)
@@ -184,7 +184,7 @@ static proto_bool quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen
 
 // Apply a varint-valued transport parameter with its RFC 9000 range checks. *handled is set as above.
 static proto_bool quic_tp_apply_varint(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
-                                       proto_bool *handled)
+                                                 proto_bool *handled)
 {
     *handled = PROTO_TRUE;
     switch (id)
@@ -250,14 +250,14 @@ static proto_bool quic_tp_apply(uint64_t id, const uint8_t *val, size_t vlen, Qu
     return PROTO_TRUE; // unknown / GREASE: skip
 }
 
-void protocore_quic_tp_parse(uint8_t *restrict work)
+static void quic_tp_parse(uint8_t *restrict work)
 {
-    const uint8_t *buf = QuicTpV.parse_args.buf;
-    size_t len = QuicTpV.parse_args.len;
-    QuicTransportParams *tp = QuicTpV.parse_args.tp;
+    const uint8_t *buf = QuicTp.parse_args.buf;
+    size_t len = QuicTp.parse_args.len;
+    QuicTransportParams *tp = QuicTp.parse_args.tp;
 
-    QuicTpV.defaults_args.tp = tp;
-    protocore_quic_tp_defaults(work);
+    QuicTp.defaults_args.tp = tp;
+    quic_tp_defaults(work);
     uint32_t seen = 0; // dup-guard bitmask over the known IDs (all < 32)
 
     size_t off = 0;
@@ -266,31 +266,31 @@ void protocore_quic_tp_parse(uint8_t *restrict work)
         uint64_t id = 0;
         uint64_t vlen = 0;
         size_t c = 0;
-        QuicVarintV.decode_args.in = buf + off;
-        QuicVarintV.decode_args.len = len - off;
-        QuicVarintV.decode_args.value = &id;
-        QuicVarintV.decode_args.consumed = &c;
+        QuicVarint.decode_args.in = buf + off;
+        QuicVarint.decode_args.len = len - off;
+        QuicVarint.decode_args.value = &id;
+        QuicVarint.decode_args.consumed = &c;
         QuicVarint.decode(quic_varint_work);
-        if (!QuicVarintV.ok)
+        if (!QuicVarint.ok)
         {
-            QuicTpV.ok = PROTO_FALSE;
+            QuicTp.ok = PROTO_FALSE;
             return;
         }
         off += c;
-        QuicVarintV.decode_args.in = buf + off;
-        QuicVarintV.decode_args.len = len - off;
-        QuicVarintV.decode_args.value = &vlen;
-        QuicVarintV.decode_args.consumed = &c;
+        QuicVarint.decode_args.in = buf + off;
+        QuicVarint.decode_args.len = len - off;
+        QuicVarint.decode_args.value = &vlen;
+        QuicVarint.decode_args.consumed = &c;
         QuicVarint.decode(quic_varint_work);
-        if (!QuicVarintV.ok)
+        if (!QuicVarint.ok)
         {
-            QuicTpV.ok = PROTO_FALSE;
+            QuicTp.ok = PROTO_FALSE;
             return;
         }
         off += c;
         if (off + vlen > len)
         {
-            QuicTpV.ok = PROTO_FALSE;
+            QuicTp.ok = PROTO_FALSE;
             return;
         }
         const uint8_t *val = buf + off;
@@ -301,7 +301,7 @@ void protocore_quic_tp_parse(uint8_t *restrict work)
             uint32_t bit = 1u << id;
             if (seen & bit)
             {
-                QuicTpV.ok = PROTO_FALSE; // a known parameter must not appear twice
+                QuicTp.ok = PROTO_FALSE; // a known parameter must not appear twice
                 return;
             }
             seen |= bit;
@@ -309,15 +309,18 @@ void protocore_quic_tp_parse(uint8_t *restrict work)
 
         if (!quic_tp_apply(id, val, vlen, tp))
         {
-            QuicTpV.ok = PROTO_FALSE;
+            QuicTp.ok = PROTO_FALSE;
             return;
         }
     }
-    QuicTpV.ok = PROTO_TRUE;
+    QuicTp.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-QuicTpVars QuicTpV;
+QuicTpNs QuicTp = {
+    .defaults = quic_tp_defaults,
+    .encode = quic_tp_encode,
+    .parse = quic_tp_parse,
+};
 
 PROTOCORE_END_DECLS
 

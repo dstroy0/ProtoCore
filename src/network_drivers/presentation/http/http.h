@@ -40,6 +40,7 @@ typedef struct
     HttpMethod method; ///< the method a name lookup names
     const char *token; ///< a method token, or the one an Allow list appends
 } HttpMethodArgs;
+
 /** @brief RFC 9110 sec 7.1 request target: the route pattern, and the path tested against it. */
 typedef struct
 {
@@ -48,12 +49,14 @@ typedef struct
     const char *path;       ///< the request path a match tests against
     HttpReq *req;           ///< the request a param capture writes into
 } HttpRouteArgs;
+
 /** @brief RFC 9110 sec 10.2.1 Allow: the comma-separated list an append builds. */
 typedef struct
 {
     char *buf;  ///< where the list is built
     size_t cap; ///< how much room it has
 } HttpAllowArgs;
+
 /**
  * @brief The version-agnostic HTTP surface.
  *
@@ -83,30 +86,24 @@ typedef struct
  * @var HttpNs::reset              drop every handler registered here, back to the built-in answers
  * @var HttpNs::set_edge_poll      install the edge-cache origin fetch
  */
+
 typedef struct
 {
-    uint8_t slot;               ///< the connection every call names
-    int code;                   ///< the status code a lookup names
-    Handler cb;                 ///< the handler a request runs when no route matched
+    uint8_t slot; ///< the connection every call names
+    int code;     ///< the status code a lookup names
+    Handler cb;   ///< the handler a request runs when no route matched
+
     HttpMethodArgs method_args; ///< a method, as an enum or as a token
     HttpRouteArgs route_args;   ///< the target a route is matched against
     HttpAllowArgs allow;        ///< the Allow list an append builds
 #if PROTOCORE_ENABLE_EDGE_CACHE
     proto_bool (*edge_poll)(uint8_t slot);
 #endif
+
     proto_bool ok;
     const char *text;
     HttpMethod method_of;
-#if PROTOCORE_ENABLE_EDGE_CACHE
-#endif
-} HttpVars;
 
-/** @brief The operands and the outcome. */
-extern HttpVars HttpV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const status_text)(uint8_t *restrict work);
     void (*const parse_method)(uint8_t *restrict work);
     void (*const method_name)(uint8_t *restrict work);
@@ -118,42 +115,13 @@ typedef struct
     void (*const set_not_found)(uint8_t *restrict work);
     void (*const poll_slot)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_EDGE_CACHE
     void (*const set_edge_poll)(uint8_t *restrict work);
+#endif
 } HttpNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HttpV or a region of the borrow at a fixed offset.
-void protocore_http_status_text(uint8_t *restrict work);
-void protocore_http_parse_method(uint8_t *restrict work);
-void protocore_http_method_name(uint8_t *restrict work);
-void protocore_http_path_matches(uint8_t *restrict work);
-void protocore_http_match_path_params(uint8_t *restrict work);
-void protocore_http_req_is_head(uint8_t *restrict work);
-void protocore_http_allow_append(uint8_t *restrict work);
-void protocore_http_match_and_execute(uint8_t *restrict work);
-void protocore_http_set_not_found(uint8_t *restrict work);
-void protocore_http_poll_slot(uint8_t *restrict work);
-void protocore_http_reset(uint8_t *restrict work);
-void protocore_http_set_edge_poll(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Http.status_text(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HttpNs Http __attribute__((unused)) = {
-    .status_text = protocore_http_status_text,
-    .parse_method = protocore_http_parse_method,
-    .method_name = protocore_http_method_name,
-    .path_matches = protocore_http_path_matches,
-    .match_path_params = protocore_http_match_path_params,
-    .req_is_head = protocore_http_req_is_head,
-    .allow_append = protocore_http_allow_append,
-    .match_and_execute = protocore_http_match_and_execute,
-    .set_not_found = protocore_http_set_not_found,
-    .poll_slot = protocore_http_poll_slot,
-    .reset = protocore_http_reset,
-    .set_edge_poll = protocore_http_set_edge_poll,
-};
+/** @brief The one symbol this module exports. */
+extern HttpNs Http;
 
 /**
  * @brief The PROTOCORE_HTTP_BORROW bytes this module's state lives in.

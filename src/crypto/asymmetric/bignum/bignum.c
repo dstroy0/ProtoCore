@@ -121,16 +121,16 @@ static void bignum_expmod(uint8_t *restrict work)
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_bignum_from_bytes(uint8_t *restrict work)
+static void bignum_from_bytes(uint8_t *restrict work)
 {
-    BignumV.ok = PROTO_FALSE;
-    if (!BignumV.from_bytes_args.out || !BignumV.from_bytes_args.bytes)
+    Bignum.ok = PROTO_FALSE;
+    if (!Bignum.from_bytes_args.out || !Bignum.from_bytes_args.bytes)
     {
         return;
     }
-    protocore_bignum *out = BignumV.from_bytes_args.out;
-    const uint8_t *bytes = BignumV.from_bytes_args.bytes;
-    const size_t len = BignumV.from_bytes_args.len;
+    protocore_bignum *out = Bignum.from_bytes_args.out;
+    const uint8_t *bytes = Bignum.from_bytes_args.bytes;
+    const size_t len = Bignum.from_bytes_args.len;
 
     mem.set(out->d, 0, sizeof(protocore_bignum));
     // bytes are big-endian; map to little-endian limbs.
@@ -140,18 +140,18 @@ void protocore_bignum_from_bytes(uint8_t *restrict work)
         size_t byte_pos = i; // byte i from LSB (bytes[len-1-i] is the i-th byte from the end)
         out->d[byte_pos / 4] |= (uint32_t)bytes[len - 1 - i] << ((byte_pos % 4) * 8);
     }
-    BignumV.ok = PROTO_TRUE;
+    Bignum.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_to_bytes(uint8_t *restrict work)
+static void bignum_to_bytes(uint8_t *restrict work)
 {
-    BignumV.ok = PROTO_FALSE;
-    if (!BignumV.to_bytes_args.bytes || !BignumV.to_bytes_args.in)
+    Bignum.ok = PROTO_FALSE;
+    if (!Bignum.to_bytes_args.bytes || !Bignum.to_bytes_args.in)
     {
         return;
     }
-    uint8_t *bytes = BignumV.to_bytes_args.bytes;
-    const protocore_bignum *in = BignumV.to_bytes_args.in;
+    uint8_t *bytes = Bignum.to_bytes_args.bytes;
+    const protocore_bignum *in = Bignum.to_bytes_args.in;
 
     for (int i = 0; i < PROTOCORE_BN_LIMBS; i++)
     {
@@ -161,87 +161,87 @@ void protocore_bignum_to_bytes(uint8_t *restrict work)
         bytes[i * 4 + 2] = (uint8_t)(v >> 8);
         bytes[i * 4 + 3] = (uint8_t)(v);
     }
-    BignumV.ok = PROTO_TRUE;
+    Bignum.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_cmp(uint8_t *restrict work)
+static void bignum_cmp(uint8_t *restrict work)
 {
-    BignumV.ok = PROTO_FALSE;
-    if (!BignumV.cmp_args.a || !BignumV.cmp_args.b)
+    Bignum.ok = PROTO_FALSE;
+    if (!Bignum.cmp_args.a || !Bignum.cmp_args.b)
     {
         return;
     }
     struct BignumCtx *ctx = BIGNUM_CTX(work);
-    ctx->a = BignumV.cmp_args.a->d;
-    ctx->b = BignumV.cmp_args.b->d;
+    ctx->a = Bignum.cmp_args.a->d;
+    ctx->b = Bignum.cmp_args.b->d;
     ctx->n = PROTOCORE_BN_LIMBS;
     bignum_order(work);
-    BignumV.sign = ctx->sign;
-    BignumV.ok = PROTO_TRUE;
+    Bignum.sign = ctx->sign;
+    Bignum.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_cmp_raw(uint8_t *restrict work)
+static void bignum_cmp_raw(uint8_t *restrict work)
 {
-    BignumV.ok = PROTO_FALSE;
-    if (!BignumV.cmp_raw_args.a || !BignumV.cmp_raw_args.b)
+    Bignum.ok = PROTO_FALSE;
+    if (!Bignum.cmp_raw_args.a || !Bignum.cmp_raw_args.b)
     {
         return;
     }
     struct BignumCtx *ctx = BIGNUM_CTX(work);
-    ctx->a = BignumV.cmp_raw_args.a;
-    ctx->b = BignumV.cmp_raw_args.b;
-    ctx->n = BignumV.cmp_raw_args.n;
+    ctx->a = Bignum.cmp_raw_args.a;
+    ctx->b = Bignum.cmp_raw_args.b;
+    ctx->n = Bignum.cmp_raw_args.n;
     bignum_order(work);
-    BignumV.sign = ctx->sign;
-    BignumV.ok = PROTO_TRUE;
+    Bignum.sign = ctx->sign;
+    Bignum.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_is_zero(uint8_t *restrict work)
+static void bignum_is_zero(uint8_t *restrict work)
 {
-    BignumV.ok = PROTO_FALSE;
-    BignumV.zero = PROTO_FALSE;
-    if (!BignumV.is_zero_args.a)
+    Bignum.ok = PROTO_FALSE;
+    Bignum.zero = PROTO_FALSE;
+    if (!Bignum.is_zero_args.a)
     {
         return;
     }
-    const protocore_bignum *a = BignumV.is_zero_args.a;
+    const protocore_bignum *a = Bignum.is_zero_args.a;
 
     for (int i = 0; i < PROTOCORE_BN_LIMBS; i++)
     {
         if (a->d[i])
         {
-            BignumV.ok = PROTO_TRUE;
+            Bignum.ok = PROTO_TRUE;
             return;
         }
     }
-    BignumV.zero = PROTO_TRUE;
-    BignumV.ok = PROTO_TRUE;
+    Bignum.zero = PROTO_TRUE;
+    Bignum.ok = PROTO_TRUE;
 }
 
-void protocore_bignum_expmod_group14(uint8_t *restrict work)
+static void bignum_expmod_group14(uint8_t *restrict work)
 {
-    BignumV.ok = PROTO_FALSE;
-    if (!BignumV.expmod_args.out || !BignumV.expmod_args.base || !BignumV.expmod_args.exp)
+    Bignum.ok = PROTO_FALSE;
+    if (!Bignum.expmod_args.out || !Bignum.expmod_args.base || !Bignum.expmod_args.exp)
     {
         return;
     }
     struct BignumCtx *ctx = BIGNUM_CTX(work);
-    ctx->out = BignumV.expmod_args.out;
-    ctx->base = BignumV.expmod_args.base;
-    ctx->exp = BignumV.expmod_args.exp;
+    ctx->out = Bignum.expmod_args.out;
+    ctx->base = Bignum.expmod_args.base;
+    ctx->exp = Bignum.expmod_args.exp;
     bignum_expmod(work);
-    BignumV.ok = PROTO_TRUE;
+    Bignum.ok = PROTO_TRUE;
 }
 
 // RFC 4253 §8: the received value e (or f) must satisfy 1 < e < p-1.
-void protocore_bignum_dh_validate(uint8_t *restrict work)
+static void bignum_dh_validate(uint8_t *restrict work)
 {
-    BignumV.ok = PROTO_FALSE;
-    if (!BignumV.validate_args.v)
+    Bignum.ok = PROTO_FALSE;
+    if (!Bignum.validate_args.v)
     {
         return;
     }
-    const protocore_bignum *v = BignumV.validate_args.v;
+    const protocore_bignum *v = Bignum.validate_args.v;
     struct BignumCtx *ctx = BIGNUM_CTX(work);
     protocore_bignum *pm1 = BIGNUM_PM1(work);
 
@@ -271,11 +271,16 @@ void protocore_bignum_dh_validate(uint8_t *restrict work)
     {
         return;
     }
-    BignumV.ok = PROTO_TRUE;
+    Bignum.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-BignumVars BignumV;
+BignumNs Bignum = {.from_bytes = bignum_from_bytes,
+                   .to_bytes = bignum_to_bytes,
+                   .cmp = bignum_cmp,
+                   .cmp_raw = bignum_cmp_raw,
+                   .is_zero = bignum_is_zero,
+                   .expmod_group14 = bignum_expmod_group14,
+                   .dh_validate = bignum_dh_validate};
 
 PROTOCORE_END_DECLS
 

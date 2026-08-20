@@ -65,7 +65,7 @@ void dbench_run(void)
         // ISR-style post: xQueueSendToBackFromISR + a (no-op cross-core) yield request.
         DBENCH_OP("protocore_pq_post_from_isr", 20000, sink += protocore_pq_post_from_isr(&item) ? 1u : 0u);
         // Pure scheduler math: the per-lane default priority switch (no queue touched).
-        DBENCH_OP("protocore_pq_lane_priority", 200000, psink += PreemptQueueV.priority(PROTOCORE_PQ_LANE_DMA));
+        DBENCH_OP("protocore_pq_lane_priority", 200000, psink += PreemptQueue.priority(PROTOCORE_PQ_LANE_DMA));
 
         (void)sink;
         (void)psink;

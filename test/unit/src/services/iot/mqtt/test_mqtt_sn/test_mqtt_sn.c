@@ -34,36 +34,36 @@ static uint8_t g_out[1024];
 static void bind_out(void)
 {
     memset(g_out, 0, sizeof(g_out));
-    MqttsnV.buf.out = g_out;
-    MqttsnV.buf.cap = sizeof(g_out);
+    Mqttsn.buf.out = g_out;
+    Mqttsn.buf.cap = sizeof(g_out);
 }
 
 static uint8_t make_flags(proto_bool dup, uint8_t qos, proto_bool retain, proto_bool will, proto_bool clean,
                           uint8_t topic_id_type)
 {
-    MqttsnV.flags.dup = dup;
-    MqttsnV.flags.qos = qos;
-    MqttsnV.flags.retain = retain;
-    MqttsnV.flags.will = will;
-    MqttsnV.flags.clean_session = clean;
-    MqttsnV.flags.topic_id_type = topic_id_type;
-    MqttsnV.make_flags(mqtt_sn_work);
-    return MqttsnV.flags.octet;
+    Mqttsn.flags.dup = dup;
+    Mqttsn.flags.qos = qos;
+    Mqttsn.flags.retain = retain;
+    Mqttsn.flags.will = will;
+    Mqttsn.flags.clean_session = clean;
+    Mqttsn.flags.topic_id_type = topic_id_type;
+    Mqttsn.make_flags(mqtt_sn_work);
+    return Mqttsn.flags.octet;
 }
 
 static proto_bool parse_header(const uint8_t *msg, size_t len)
 {
-    MqttsnV.buf.in = msg;
-    MqttsnV.buf.avail = len;
-    MqttsnV.parse_header(mqtt_sn_work);
-    return MqttsnV.ok;
+    Mqttsn.buf.in = msg;
+    Mqttsn.buf.avail = len;
+    Mqttsn.parse_header(mqtt_sn_work);
+    return Mqttsn.ok;
 }
 
 // Point the typed parsers at the Message Variable Part the header parse found.
 static void seat_variable(void)
 {
-    MqttsnV.buf.in = MqttsnV.header.variable;
-    MqttsnV.buf.avail = MqttsnV.header.variable_len;
+    Mqttsn.buf.in = Mqttsn.header.variable;
+    Mqttsn.buf.avail = Mqttsn.header.variable_len;
 }
 
 // sec 5.2.1: "Length ... is 1-octet long and specifies the total number of octets contained in the
@@ -84,23 +84,23 @@ void test_length_field_switches_at_255(void)
 
     // 248 octets of Data: total 1 + 1 + 1 + 2 + 2 + 248 = 255, the widest 1-octet form.
     bind_out();
-    MqttsnV.topic.topic_id = 0x0102;
-    MqttsnV.field.msg_id = 0x0304;
-    MqttsnV.data.data = data;
-    MqttsnV.data.data_len = 248;
-    MqttsnV.build_publish(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT(255u, MqttsnV.n);
+    Mqttsn.topic.topic_id = 0x0102;
+    Mqttsn.field.msg_id = 0x0304;
+    Mqttsn.data.data = data;
+    Mqttsn.data.data_len = 248;
+    Mqttsn.build_publish(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT(255u, Mqttsn.n);
     TEST_ASSERT_EQUAL_HEX8(255, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_PUBLISH, g_out[1]);
 
     // One octet more of Data pushes the whole message past 255, so the Length becomes 0x01 and a
     // big-endian uint16 of the new total: 3 + 1 + 1 + 2 + 2 + 249 = 258 = 0x0102.
     bind_out();
-    MqttsnV.data.data_len = 249;
-    MqttsnV.build_publish(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT(258u, MqttsnV.n);
+    Mqttsn.data.data_len = 249;
+    Mqttsn.build_publish(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT(258u, Mqttsn.n);
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_LEN3_PREFIX, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x01, g_out[1]);
     TEST_ASSERT_EQUAL_HEX8(0x02, g_out[2]);
@@ -109,18 +109,18 @@ void test_length_field_switches_at_255(void)
 
     // Both forms read back with the same total, and the header parse points at the Variable Part.
     TEST_ASSERT_TRUE(parse_header(g_out, 258));
-    TEST_ASSERT_EQUAL_UINT(258u, MqttsnV.n);
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_PUBLISH, MqttsnV.header.msg_type);
-    TEST_ASSERT_EQUAL_UINT(258u - 4u, MqttsnV.header.variable_len);
-    TEST_ASSERT_EQUAL_PTR(g_out + 4, MqttsnV.header.variable);
+    TEST_ASSERT_EQUAL_UINT(258u, Mqttsn.n);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_PUBLISH, Mqttsn.header.msg_type);
+    TEST_ASSERT_EQUAL_UINT(258u - 4u, Mqttsn.header.variable_len);
+    TEST_ASSERT_EQUAL_PTR(g_out + 4, Mqttsn.header.variable);
 
     // The 3-octet form reaches 65535 octets, which is what a 16-bit Length field expresses.
     bind_out();
-    MqttsnV.buf.cap = 300;
-    MqttsnV.data.data_len = 1000; // more than the buffer can hold
-    MqttsnV.build_publish(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, MqttsnV.n);
+    Mqttsn.buf.cap = 300;
+    Mqttsn.data.data_len = 1000; // more than the buffer can hold
+    Mqttsn.build_publish(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, Mqttsn.n);
 }
 
 // sec 5.3.4 Table 4: DUP is bit 7, QoS bits 6-5, Retain bit 4, Will bit 3, CleanSession bit 2 and
@@ -162,27 +162,27 @@ void test_connect_variable_part(void)
     TEST_ASSERT_EQUAL_HEX8(0x01, MQTTSN_PROTOCOL_ID);
     bind_out();
     (void)make_flags(PROTO_FALSE, 0, PROTO_FALSE, PROTO_TRUE, PROTO_TRUE, MQTTSN_TOPIC_NORMAL);
-    MqttsnV.field.client_id = "node-1";
-    MqttsnV.field.duration = 60;
-    MqttsnV.build_connect(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
+    Mqttsn.field.client_id = "node-1";
+    Mqttsn.field.duration = 60;
+    Mqttsn.build_connect(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
     // 1 Length + 1 MsgType + 1 Flags + 1 ProtocolId + 2 Duration + 6 ClientId = 12.
     static const uint8_t WANT[12] = {
         12, MQTTSN_CONNECT, 0x0C, 0x01, 0x00, 0x3C, 'n', 'o', 'd', 'e', '-', '1',
     };
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), MqttsnV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Mqttsn.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, g_out, sizeof(WANT));
 
     // The gateway's CONNACK is Length, MsgType, ReturnCode: three octets (sec 5.4.5).
     static const uint8_t CONNACK[3] = {3, MQTTSN_CONNACK, MQTTSN_RC_ACCEPTED};
     TEST_ASSERT_TRUE(parse_header(CONNACK, sizeof(CONNACK)));
-    TEST_ASSERT_EQUAL_UINT(3u, MqttsnV.n);
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_CONNACK, MqttsnV.header.msg_type);
-    TEST_ASSERT_EQUAL_UINT(1u, MqttsnV.header.variable_len);
+    TEST_ASSERT_EQUAL_UINT(3u, Mqttsn.n);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_CONNACK, Mqttsn.header.msg_type);
+    TEST_ASSERT_EQUAL_UINT(1u, Mqttsn.header.variable_len);
     seat_variable();
     Mqttsn.parse_connack(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_RC_ACCEPTED, MqttsnV.field.return_code);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_RC_ACCEPTED, Mqttsn.field.return_code);
 }
 
 // sec 5.4.10: REGISTER is TopicId, MsgId, TopicName, and sec 5.4.10 has the client code TopicId
@@ -190,13 +190,13 @@ void test_connect_variable_part(void)
 void test_register_and_regack(void)
 {
     bind_out();
-    MqttsnV.topic.topic_id = 0x0000;
-    MqttsnV.topic.topic_name = "sensors/1/temp";
-    MqttsnV.field.msg_id = 0x1234;
-    MqttsnV.build_register(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
+    Mqttsn.topic.topic_id = 0x0000;
+    Mqttsn.topic.topic_name = "sensors/1/temp";
+    Mqttsn.field.msg_id = 0x1234;
+    Mqttsn.build_register(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
     // 1 + 1 + 2 + 2 + 14 = 20.
-    TEST_ASSERT_EQUAL_UINT(20u, MqttsnV.n);
+    TEST_ASSERT_EQUAL_UINT(20u, Mqttsn.n);
     TEST_ASSERT_EQUAL_HEX8(20, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_REGISTER, g_out[1]);
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[2]);
@@ -207,34 +207,34 @@ void test_register_and_regack(void)
 
     // It reads back with the TopicName pointed at where it lies.
     TEST_ASSERT_TRUE(parse_header(g_out, 20));
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_REGISTER, MqttsnV.header.msg_type);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_REGISTER, Mqttsn.header.msg_type);
     seat_variable();
-    MqttsnV.parse_register(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT16(0x0000, MqttsnV.topic.topic_id);
-    TEST_ASSERT_EQUAL_UINT16(0x1234, MqttsnV.field.msg_id);
-    TEST_ASSERT_EQUAL_UINT(14u, MqttsnV.topic.topic_name_len);
-    TEST_ASSERT_EQUAL_MEMORY("sensors/1/temp", MqttsnV.topic.topic_name, 14);
-    TEST_ASSERT_EQUAL_PTR(g_out + 6, MqttsnV.topic.topic_name);
+    Mqttsn.parse_register(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT16(0x0000, Mqttsn.topic.topic_id);
+    TEST_ASSERT_EQUAL_UINT16(0x1234, Mqttsn.field.msg_id);
+    TEST_ASSERT_EQUAL_UINT(14u, Mqttsn.topic.topic_name_len);
+    TEST_ASSERT_EQUAL_MEMORY("sensors/1/temp", Mqttsn.topic.topic_name, 14);
+    TEST_ASSERT_EQUAL_PTR(g_out + 6, Mqttsn.topic.topic_name);
 
     // sec 5.4.11: REGACK is TopicId, MsgId, ReturnCode, so seven octets whole.
     bind_out();
-    MqttsnV.topic.topic_id = 0x00AB;
-    MqttsnV.field.msg_id = 0x1234;
-    MqttsnV.field.return_code = MQTTSN_RC_ACCEPTED;
-    MqttsnV.build_regack(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
+    Mqttsn.topic.topic_id = 0x00AB;
+    Mqttsn.field.msg_id = 0x1234;
+    Mqttsn.field.return_code = MQTTSN_RC_ACCEPTED;
+    Mqttsn.build_regack(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
     static const uint8_t REGACK[7] = {7, MQTTSN_REGACK, 0x00, 0xAB, 0x12, 0x34, MQTTSN_RC_ACCEPTED};
-    TEST_ASSERT_EQUAL_UINT(sizeof(REGACK), MqttsnV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(REGACK), Mqttsn.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(REGACK, g_out, sizeof(REGACK));
 
     TEST_ASSERT_TRUE(parse_header(REGACK, sizeof(REGACK)));
     seat_variable();
-    MqttsnV.parse_regack(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT16(0x00AB, MqttsnV.topic.topic_id);
-    TEST_ASSERT_EQUAL_UINT16(0x1234, MqttsnV.field.msg_id);
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_RC_ACCEPTED, MqttsnV.field.return_code);
+    Mqttsn.parse_regack(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT16(0x00AB, Mqttsn.topic.topic_id);
+    TEST_ASSERT_EQUAL_UINT16(0x1234, Mqttsn.field.msg_id);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_RC_ACCEPTED, Mqttsn.field.return_code);
 }
 
 // sec 5.4.12: PUBLISH is Flags, TopicId, MsgId, Data, and sec 5.4.13 PUBACK is TopicId, MsgId,
@@ -244,57 +244,57 @@ void test_publish_and_puback(void)
     static const uint8_t DATA[4] = {0xde, 0xad, 0xbe, 0xef};
     bind_out();
     const uint8_t flags = make_flags(PROTO_TRUE, 1, PROTO_TRUE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_PREDEFINED);
-    MqttsnV.topic.topic_id = 0x00AB;
-    MqttsnV.field.msg_id = 0x0007;
-    MqttsnV.data.data = DATA;
-    MqttsnV.data.data_len = sizeof(DATA);
-    MqttsnV.build_publish(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
+    Mqttsn.topic.topic_id = 0x00AB;
+    Mqttsn.field.msg_id = 0x0007;
+    Mqttsn.data.data = DATA;
+    Mqttsn.data.data_len = sizeof(DATA);
+    Mqttsn.build_publish(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
     // 1 + 1 + 1 + 2 + 2 + 4 = 11.
     const uint8_t WANT[11] = {11, MQTTSN_PUBLISH, flags, 0x00, 0xAB, 0x00, 0x07, 0xde, 0xad, 0xbe, 0xef};
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), MqttsnV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Mqttsn.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, g_out, sizeof(WANT));
 
     TEST_ASSERT_TRUE(parse_header(g_out, 11));
     seat_variable();
-    MqttsnV.parse_publish(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_HEX8(flags, MqttsnV.flags.octet);
-    TEST_ASSERT_EQUAL_UINT16(0x00AB, MqttsnV.topic.topic_id);
-    TEST_ASSERT_EQUAL_UINT16(0x0007, MqttsnV.field.msg_id);
-    TEST_ASSERT_EQUAL_UINT(4u, MqttsnV.data.data_len);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(DATA, MqttsnV.data.data, 4);
+    Mqttsn.parse_publish(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_HEX8(flags, Mqttsn.flags.octet);
+    TEST_ASSERT_EQUAL_UINT16(0x00AB, Mqttsn.topic.topic_id);
+    TEST_ASSERT_EQUAL_UINT16(0x0007, Mqttsn.field.msg_id);
+    TEST_ASSERT_EQUAL_UINT(4u, Mqttsn.data.data_len);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(DATA, Mqttsn.data.data, 4);
 
     // A PUBLISH carrying no Data at all: the Variable Part is exactly its five header octets.
     bind_out();
-    MqttsnV.data.data = NULL;
-    MqttsnV.data.data_len = 0;
-    MqttsnV.build_publish(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT(7u, MqttsnV.n);
+    Mqttsn.data.data = NULL;
+    Mqttsn.data.data_len = 0;
+    Mqttsn.build_publish(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT(7u, Mqttsn.n);
     TEST_ASSERT_TRUE(parse_header(g_out, 7));
     seat_variable();
-    MqttsnV.parse_publish(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, MqttsnV.data.data_len);
+    Mqttsn.parse_publish(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, Mqttsn.data.data_len);
 
     // PUBACK, seven octets: Length, MsgType, TopicId, MsgId, ReturnCode.
     bind_out();
-    MqttsnV.topic.topic_id = 0x00AB;
-    MqttsnV.field.msg_id = 0x0007;
-    MqttsnV.field.return_code = MQTTSN_RC_INVALID_TOPIC_ID;
-    MqttsnV.build_puback(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
+    Mqttsn.topic.topic_id = 0x00AB;
+    Mqttsn.field.msg_id = 0x0007;
+    Mqttsn.field.return_code = MQTTSN_RC_INVALID_TOPIC_ID;
+    Mqttsn.build_puback(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
     static const uint8_t PUBACK[7] = {7, MQTTSN_PUBACK, 0x00, 0xAB, 0x00, 0x07, MQTTSN_RC_INVALID_TOPIC_ID};
-    TEST_ASSERT_EQUAL_UINT(sizeof(PUBACK), MqttsnV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(PUBACK), Mqttsn.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(PUBACK, g_out, sizeof(PUBACK));
 
     TEST_ASSERT_TRUE(parse_header(PUBACK, sizeof(PUBACK)));
     seat_variable();
-    MqttsnV.parse_puback(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT16(0x00AB, MqttsnV.topic.topic_id);
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_RC_INVALID_TOPIC_ID, MqttsnV.field.return_code);
+    Mqttsn.parse_puback(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT16(0x00AB, Mqttsn.topic.topic_id);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_RC_INVALID_TOPIC_ID, Mqttsn.field.return_code);
 }
 
 // sec 5.4.15: SUBSCRIBE is Flags, MsgId, then either a TopicName or a two-octet TopicId, which is
@@ -303,37 +303,37 @@ void test_subscribe_by_name_and_by_id(void)
 {
     bind_out();
     const uint8_t by_name = make_flags(PROTO_FALSE, 1, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_NORMAL);
-    MqttsnV.field.msg_id = 0x0002;
-    MqttsnV.topic.topic_name = "a/b";
-    MqttsnV.build_subscribe_name(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
+    Mqttsn.field.msg_id = 0x0002;
+    Mqttsn.topic.topic_name = "a/b";
+    Mqttsn.build_subscribe_name(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
     // 1 + 1 + 1 + 2 + 3 = 8.
     const uint8_t WANT_NAME[8] = {8, MQTTSN_SUBSCRIBE, by_name, 0x00, 0x02, 'a', '/', 'b'};
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT_NAME), MqttsnV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT_NAME), Mqttsn.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT_NAME, g_out, sizeof(WANT_NAME));
 
     bind_out();
     const uint8_t by_id = make_flags(PROTO_FALSE, 1, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_PREDEFINED);
-    MqttsnV.topic.topic_id = 0x0101;
-    MqttsnV.build_subscribe_id(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
+    Mqttsn.topic.topic_id = 0x0101;
+    Mqttsn.build_subscribe_id(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
     // 1 + 1 + 1 + 2 + 2 = 7.
     const uint8_t WANT_ID[7] = {7, MQTTSN_SUBSCRIBE, by_id, 0x00, 0x02, 0x01, 0x01};
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT_ID), MqttsnV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT_ID), Mqttsn.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT_ID, g_out, sizeof(WANT_ID));
 
     // SUBACK: eight octets, the granted QoS riding in the Flags octet (sec 5.4.16).
     const uint8_t granted = make_flags(PROTO_FALSE, 1, PROTO_FALSE, PROTO_FALSE, PROTO_FALSE, MQTTSN_TOPIC_NORMAL);
     const uint8_t SUBACK[8] = {8, MQTTSN_SUBACK, granted, 0x00, 0xAB, 0x00, 0x02, MQTTSN_RC_ACCEPTED};
     TEST_ASSERT_TRUE(parse_header(SUBACK, sizeof(SUBACK)));
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_SUBACK, MqttsnV.header.msg_type);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_SUBACK, Mqttsn.header.msg_type);
     seat_variable();
-    MqttsnV.parse_suback(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_HEX8(granted, MqttsnV.flags.octet);
-    TEST_ASSERT_EQUAL_UINT16(0x00AB, MqttsnV.topic.topic_id);
-    TEST_ASSERT_EQUAL_UINT16(0x0002, MqttsnV.field.msg_id);
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_RC_ACCEPTED, MqttsnV.field.return_code);
+    Mqttsn.parse_suback(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_HEX8(granted, Mqttsn.flags.octet);
+    TEST_ASSERT_EQUAL_UINT16(0x00AB, Mqttsn.topic.topic_id);
+    TEST_ASSERT_EQUAL_UINT16(0x0002, Mqttsn.field.msg_id);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_RC_ACCEPTED, Mqttsn.field.return_code);
 }
 
 // sec 5.4.19 and sec 6.14: a PINGREQ carries the ClientId when a sleeping client wakes and nothing at
@@ -341,43 +341,43 @@ void test_subscribe_by_name_and_by_id(void)
 void test_pingreq_and_disconnect_optional_fields(void)
 {
     bind_out();
-    MqttsnV.field.client_id = NULL;
-    MqttsnV.build_pingreq(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT(2u, MqttsnV.n);
+    Mqttsn.field.client_id = NULL;
+    Mqttsn.build_pingreq(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT(2u, Mqttsn.n);
     TEST_ASSERT_EQUAL_HEX8(2, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_PINGREQ, g_out[1]);
 
     bind_out();
-    MqttsnV.field.client_id = "node-1";
-    MqttsnV.build_pingreq(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT(8u, MqttsnV.n);
+    Mqttsn.field.client_id = "node-1";
+    Mqttsn.build_pingreq(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT(8u, Mqttsn.n);
     TEST_ASSERT_EQUAL_MEMORY("node-1", g_out + 2, 6);
 
     bind_out();
-    MqttsnV.field.with_duration = PROTO_FALSE;
-    MqttsnV.build_disconnect(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT(2u, MqttsnV.n);
+    Mqttsn.field.with_duration = PROTO_FALSE;
+    Mqttsn.build_disconnect(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT(2u, Mqttsn.n);
     TEST_ASSERT_EQUAL_HEX8(MQTTSN_DISCONNECT, g_out[1]);
 
     bind_out();
-    MqttsnV.field.with_duration = PROTO_TRUE;
-    MqttsnV.field.duration = 3600;
-    MqttsnV.build_disconnect(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
+    Mqttsn.field.with_duration = PROTO_TRUE;
+    Mqttsn.field.duration = 3600;
+    Mqttsn.build_disconnect(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
     static const uint8_t SLEEP[4] = {4, MQTTSN_DISCONNECT, 0x0E, 0x10}; // 3600 = 0x0E10
-    TEST_ASSERT_EQUAL_UINT(sizeof(SLEEP), MqttsnV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(SLEEP), Mqttsn.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SLEEP, g_out, sizeof(SLEEP));
 
     // sec 5.4.2: SEARCHGW is Length, MsgType, Radius, and Radius 0x00 broadcasts to all nodes.
     bind_out();
-    MqttsnV.field.radius = 0x00;
-    MqttsnV.build_searchgw(mqtt_sn_work);
-    TEST_ASSERT_TRUE(MqttsnV.ok);
+    Mqttsn.field.radius = 0x00;
+    Mqttsn.build_searchgw(mqtt_sn_work);
+    TEST_ASSERT_TRUE(Mqttsn.ok);
     static const uint8_t SEARCHGW[3] = {3, MQTTSN_SEARCHGW, 0x00};
-    TEST_ASSERT_EQUAL_UINT(sizeof(SEARCHGW), MqttsnV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(SEARCHGW), Mqttsn.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SEARCHGW, g_out, sizeof(SEARCHGW));
 }
 
@@ -444,20 +444,20 @@ void test_header_parse_refuses_an_inconsistent_length(void)
     // A datagram carrying two messages walks by the total each header reports.
     uint8_t two[16];
     bind_out();
-    MqttsnV.field.client_id = NULL;
-    MqttsnV.build_pingreq(mqtt_sn_work);
+    Mqttsn.field.client_id = NULL;
+    Mqttsn.build_pingreq(mqtt_sn_work);
     memcpy(two, g_out, 2);
     bind_out();
-    MqttsnV.field.radius = 3;
-    MqttsnV.build_searchgw(mqtt_sn_work);
+    Mqttsn.field.radius = 3;
+    Mqttsn.build_searchgw(mqtt_sn_work);
     memcpy(two + 2, g_out, 3);
 
     TEST_ASSERT_TRUE(parse_header(two, 5));
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_PINGREQ, MqttsnV.header.msg_type);
-    TEST_ASSERT_EQUAL_UINT(2u, MqttsnV.n);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_PINGREQ, Mqttsn.header.msg_type);
+    TEST_ASSERT_EQUAL_UINT(2u, Mqttsn.n);
     TEST_ASSERT_TRUE(parse_header(two + 2, 3));
-    TEST_ASSERT_EQUAL_HEX8(MQTTSN_SEARCHGW, MqttsnV.header.msg_type);
-    TEST_ASSERT_EQUAL_UINT(3u, MqttsnV.n);
+    TEST_ASSERT_EQUAL_HEX8(MQTTSN_SEARCHGW, Mqttsn.header.msg_type);
+    TEST_ASSERT_EQUAL_UINT(3u, Mqttsn.n);
 }
 
 // A Message Variable Part shorter than the message's own layout is refused by every typed parser.
@@ -465,38 +465,38 @@ void test_typed_parsers_refuse_a_short_variable_part(void)
 {
     static const uint8_t FOUR[4] = {0x00, 0x01, 0x00, 0x02};
 
-    MqttsnV.buf.in = FOUR;
-    MqttsnV.buf.avail = 4; // REGACK needs 5
-    MqttsnV.parse_regack(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.parse_puback(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    Mqttsn.buf.in = FOUR;
+    Mqttsn.buf.avail = 4; // REGACK needs 5
+    Mqttsn.parse_regack(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.parse_puback(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
 
-    MqttsnV.buf.avail = 4; // PUBLISH needs 5, SUBACK 6
-    MqttsnV.parse_publish(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.buf.avail = 5;
-    MqttsnV.parse_suback(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    Mqttsn.buf.avail = 4; // PUBLISH needs 5, SUBACK 6
+    Mqttsn.parse_publish(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.buf.avail = 5;
+    Mqttsn.parse_suback(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
 
-    MqttsnV.buf.avail = 3; // REGISTER needs 4
-    MqttsnV.parse_register(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    Mqttsn.buf.avail = 3; // REGISTER needs 4
+    Mqttsn.parse_register(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
 
-    MqttsnV.buf.avail = 0; // CONNACK needs its one ReturnCode octet
+    Mqttsn.buf.avail = 0; // CONNACK needs its one ReturnCode octet
     Mqttsn.parse_connack(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
 
-    MqttsnV.buf.in = NULL;
-    MqttsnV.buf.avail = 16;
-    MqttsnV.parse_publish(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.parse_register(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.parse_suback(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    Mqttsn.buf.in = NULL;
+    Mqttsn.buf.avail = 16;
+    Mqttsn.parse_publish(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.parse_register(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.parse_suback(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
     Mqttsn.parse_connack(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
 }
 
 // A build that cannot fit the whole message writes nothing and says so, and a builder missing an
@@ -505,45 +505,45 @@ void test_builders_fail_closed(void)
 {
     uint8_t small[4];
     memset(small, 0xAA, sizeof(small));
-    MqttsnV.buf.out = small;
-    MqttsnV.buf.cap = sizeof(small);
-    MqttsnV.field.client_id = "node-1";
-    MqttsnV.field.duration = 60;
-    MqttsnV.build_connect(mqtt_sn_work); // needs 12
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, MqttsnV.n);
+    Mqttsn.buf.out = small;
+    Mqttsn.buf.cap = sizeof(small);
+    Mqttsn.field.client_id = "node-1";
+    Mqttsn.field.duration = 60;
+    Mqttsn.build_connect(mqtt_sn_work); // needs 12
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, Mqttsn.n);
     TEST_ASSERT_EQUAL_HEX8(0xAA, small[0]);
 
     bind_out();
-    MqttsnV.field.client_id = NULL;
-    MqttsnV.build_connect(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    Mqttsn.field.client_id = NULL;
+    Mqttsn.build_connect(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
 
     bind_out();
-    MqttsnV.topic.topic_name = NULL;
-    MqttsnV.build_register(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.build_subscribe_name(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    Mqttsn.topic.topic_name = NULL;
+    Mqttsn.build_register(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.build_subscribe_name(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
 
     bind_out();
-    MqttsnV.data.data = NULL;
-    MqttsnV.data.data_len = 4; // octets promised but not lent
-    MqttsnV.build_publish(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    Mqttsn.data.data = NULL;
+    Mqttsn.data.data_len = 4; // octets promised but not lent
+    Mqttsn.build_publish(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
 
-    MqttsnV.buf.out = NULL;
-    MqttsnV.buf.cap = sizeof(g_out);
-    MqttsnV.build_pingreq(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.build_disconnect(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.build_searchgw(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.build_regack(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.build_puback(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
-    MqttsnV.build_subscribe_id(mqtt_sn_work);
-    TEST_ASSERT_FALSE(MqttsnV.ok);
+    Mqttsn.buf.out = NULL;
+    Mqttsn.buf.cap = sizeof(g_out);
+    Mqttsn.build_pingreq(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.build_disconnect(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.build_searchgw(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.build_regack(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.build_puback(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
+    Mqttsn.build_subscribe_id(mqtt_sn_work);
+    TEST_ASSERT_FALSE(Mqttsn.ok);
 }

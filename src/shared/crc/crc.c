@@ -122,31 +122,30 @@ static uint32_t crc_finish(const protocore_crc_params *p, uint32_t crc)
     return (crc ^ p->xorout) & m;
 }
 
-void protocore_crc_begin(uint8_t *restrict work)
+static void crc_begin(uint8_t *restrict work)
 {
     (void)work;
-    CrcV.value = crc_start(CrcV.args.params);
+    Crc.value = crc_start(Crc.args.params);
 }
 
-void protocore_crc_update(uint8_t *restrict work)
+static void crc_update(uint8_t *restrict work)
 {
     (void)work;
-    CrcV.value = crc_fold(CrcV.args.params, CrcV.args.crc, CrcV.args.data, CrcV.args.len);
+    Crc.value = crc_fold(Crc.args.params, Crc.args.crc, Crc.args.data, Crc.args.len);
 }
 
-void protocore_crc_final(uint8_t *restrict work)
+static void crc_final(uint8_t *restrict work)
 {
     (void)work;
-    CrcV.value = crc_finish(CrcV.args.params, CrcV.args.crc);
+    Crc.value = crc_finish(Crc.args.params, Crc.args.crc);
 }
 
-void protocore_crc_compute(uint8_t *restrict work)
+static void crc_compute(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_crc_params *p = CrcV.args.params;
-    CrcV.value = crc_finish(p, crc_fold(p, crc_start(p), CrcV.args.data, CrcV.args.len));
+    const protocore_crc_params *p = Crc.args.params;
+    Crc.value = crc_finish(p, crc_fold(p, crc_start(p), Crc.args.data, Crc.args.len));
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-CrcVars CrcV;
+CrcNs Crc = {.begin = crc_begin, .update = crc_update, .final = crc_final, .compute = crc_compute};

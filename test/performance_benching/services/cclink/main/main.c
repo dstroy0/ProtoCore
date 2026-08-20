@@ -29,16 +29,16 @@ void dbench_run(void)
     static const uint8_t bits[2] = {0xA5, 0x00};
     static const uint8_t words[4] = {0x34, 0x12, 0x78, 0x56}; // 0x1234, 0x5678
     static uint8_t frame[16];
-    CclinkV.build_args.station = 5;
-    CclinkV.build_args.command = CCLINK_CMD_REFRESH;
-    CclinkV.build_args.bits = bits;
-    CclinkV.build_args.bit_len = sizeof(bits);
-    CclinkV.build_args.words = words;
-    CclinkV.build_args.word_len = sizeof(words);
-    CclinkV.build_args.out = frame;
-    CclinkV.build_args.cap = sizeof(frame);
+    Cclink.build_args.station = 5;
+    Cclink.build_args.command = CCLINK_CMD_REFRESH;
+    Cclink.build_args.bits = bits;
+    Cclink.build_args.bit_len = sizeof(bits);
+    Cclink.build_args.words = words;
+    Cclink.build_args.word_len = sizeof(words);
+    Cclink.build_args.out = frame;
+    Cclink.build_args.cap = sizeof(frame);
     Cclink.build(cclink_work);
-    size_t frame_len = CclinkV.n;
+    size_t frame_len = Cclink.n;
 
     for (;;)
     {
@@ -48,35 +48,36 @@ void dbench_run(void)
         volatile uint16_t sink16 = 0;
         volatile bool sinkb = false;
 
-        CclinkV.sum_args.bytes = frame;
-        CclinkV.sum_args.len = frame_len;
-        DBENCH_OP("Cclink.sum", 100000, sink8 += (Cclink.sum(cclink_work), CclinkV.value));
+        Cclink.sum_args.bytes = frame;
+        Cclink.sum_args.len = frame_len;
+        DBENCH_OP("Cclink.sum", 100000, sink8 += (Cclink.sum(cclink_work), Cclink.value));
 
-        CclinkV.build_args.station = 5;
-        CclinkV.build_args.command = CCLINK_CMD_REFRESH;
-        CclinkV.build_args.bits = bits;
-        CclinkV.build_args.bit_len = sizeof(bits);
-        CclinkV.build_args.words = words;
-        CclinkV.build_args.word_len = sizeof(words);
-        CclinkV.build_args.out = frame;
-        CclinkV.build_args.cap = sizeof(frame);
-        DBENCH_OP("Cclink.build", 100000, sinkz += (Cclink.build(cclink_work), CclinkV.n));
+        Cclink.build_args.station = 5;
+        Cclink.build_args.command = CCLINK_CMD_REFRESH;
+        Cclink.build_args.bits = bits;
+        Cclink.build_args.bit_len = sizeof(bits);
+        Cclink.build_args.words = words;
+        Cclink.build_args.word_len = sizeof(words);
+        Cclink.build_args.out = frame;
+        Cclink.build_args.cap = sizeof(frame);
+        DBENCH_OP("Cclink.build", 100000,
+                  sinkz += (Cclink.build(cclink_work), Cclink.n));
 
         static CcLinkFrame parsed;
-        CclinkV.parse_args.frame = frame;
-        CclinkV.parse_args.len = frame_len;
-        CclinkV.parse_args.out = &parsed;
-        DBENCH_OP("Cclink.parse", 100000, sinkb ^= (Cclink.parse(cclink_work), CclinkV.ok));
+        Cclink.parse_args.frame = frame;
+        Cclink.parse_args.len = frame_len;
+        Cclink.parse_args.out = &parsed;
+        DBENCH_OP("Cclink.parse", 100000, sinkb ^= (Cclink.parse(cclink_work), Cclink.ok));
 
-        CclinkV.get_bit_args.bits = bits;
-        CclinkV.get_bit_args.bit_len = sizeof(bits);
-        CclinkV.get_bit_args.index = 7;
-        DBENCH_OP("Cclink.get_bit", 200000, sinkb ^= (Cclink.get_bit(cclink_work), CclinkV.ok));
+        Cclink.get_bit_args.bits = bits;
+        Cclink.get_bit_args.bit_len = sizeof(bits);
+        Cclink.get_bit_args.index = 7;
+        DBENCH_OP("Cclink.get_bit", 200000, sinkb ^= (Cclink.get_bit(cclink_work), Cclink.ok));
 
-        CclinkV.get_word_args.words = words;
-        CclinkV.get_word_args.word_len = sizeof(words);
-        CclinkV.get_word_args.index = 1;
-        DBENCH_OP("Cclink.get_word", 200000, sink16 += (Cclink.get_word(cclink_work), CclinkV.u16));
+        Cclink.get_word_args.words = words;
+        Cclink.get_word_args.word_len = sizeof(words);
+        Cclink.get_word_args.index = 1;
+        DBENCH_OP("Cclink.get_word", 200000, sink16 += (Cclink.get_word(cclink_work), Cclink.u16));
 
         (void)sinkz;
         (void)sink8;

@@ -36,23 +36,23 @@ void dbench_run(void)
         // what is timed is one call and not the staging that precedes it.
 
         // Bus voltage: register 0x19C8 -> 3300 mV (value in bits [15:3], LSB 4 mV, low status bits ignored).
-        Ina219V.bus_mv_args.raw = 0x19C8;
-        DBENCH_OP("Ina219.bus_mv", 200000, (Ina219.bus_mv(w), sink32 += Ina219V.value));
+        Ina219.bus_mv_args.raw = 0x19C8;
+        DBENCH_OP("Ina219.bus_mv", 200000, (Ina219.bus_mv(w), sink32 += Ina219.value));
         // Shunt voltage: signed raw 320 -> 3200 uV (LSB 10 uV).
-        Ina219V.shunt_uv_args.raw = (int16_t)320;
-        DBENCH_OP("Ina219.shunt_uv", 200000, (Ina219.shunt_uv(w), sink32 += Ina219V.value));
+        Ina219.shunt_uv_args.raw = (int16_t)320;
+        DBENCH_OP("Ina219.shunt_uv", 200000, (Ina219.shunt_uv(w), sink32 += Ina219.value));
         // Calibration register: 100 uA/bit LSB, 100 mohm shunt -> 4096 (32-bit divide, clamped to 16 bits).
-        Ina219V.calibration_args.current_lsb_ua = 100;
-        Ina219V.calibration_args.shunt_mohm = 100;
-        DBENCH_OP("Ina219.calibration", 200000, (Ina219.calibration(w), sink16 += Ina219V.cal));
+        Ina219.calibration_args.current_lsb_ua = 100;
+        Ina219.calibration_args.shunt_mohm = 100;
+        DBENCH_OP("Ina219.calibration", 200000, (Ina219.calibration(w), sink16 += Ina219.cal));
         // Current scale: raw 1000 * 100 uA/bit -> 100000 uA (100 mA), 64-bit intermediate.
-        Ina219V.current_ua_args.raw = (int16_t)1000;
-        Ina219V.current_ua_args.current_lsb_ua = 100;
-        DBENCH_OP("Ina219.current_ua", 200000, (Ina219.current_ua(w), sink32 += Ina219V.value));
+        Ina219.current_ua_args.raw = (int16_t)1000;
+        Ina219.current_ua_args.current_lsb_ua = 100;
+        DBENCH_OP("Ina219.current_ua", 200000, (Ina219.current_ua(w), sink32 += Ina219.value));
         // Power scale: raw 500 * 20 * 100 uA/bit -> 1000000 uW (1 W), 64-bit intermediate.
-        Ina219V.power_uw_args.raw = (int16_t)500;
-        Ina219V.power_uw_args.current_lsb_ua = 100;
-        DBENCH_OP("Ina219.power_uw", 200000, (Ina219.power_uw(w), sink32 += Ina219V.value));
+        Ina219.power_uw_args.raw = (int16_t)500;
+        Ina219.power_uw_args.current_lsb_ua = 100;
+        DBENCH_OP("Ina219.power_uw", 200000, (Ina219.power_uw(w), sink32 += Ina219.value));
 
         (void)sink32;
         (void)sink16;

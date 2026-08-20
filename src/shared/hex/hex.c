@@ -31,22 +31,22 @@ static int8_t hex_value(char c)
     return -1;
 }
 
-void protocore_hex_digit(uint8_t *restrict work)
+static void hex_digit(uint8_t *restrict work)
 {
-    const char *digits = HexV.args.upper ? PROTOCORE_HEX.upper : PROTOCORE_HEX.lower;
-    HexV.ch = digits[HexV.args.nibble & 0x0Fu];
+    const char *digits = Hex.args.upper ? PROTOCORE_HEX.upper : PROTOCORE_HEX.lower;
+    Hex.ch = digits[Hex.args.nibble & 0x0Fu];
 }
 
-void protocore_hex_val(uint8_t *restrict work)
+static void hex_val(uint8_t *restrict work)
 {
     (void)work;
-    HexV.i8 = hex_value(HexV.args.ch);
+    Hex.i8 = hex_value(Hex.args.ch);
 }
 
-void protocore_hex_u32(uint8_t *restrict work)
+static void hex_u32(uint8_t *restrict work)
 {
-    uint32_t v = HexV.args.v;
-    char *out = HexV.io.out;
+    uint32_t v = Hex.args.v;
+    char *out = Hex.io.out;
 
     // The width is counted before any digit is written so each digit lands at its final index,
     // which is why no reversal buffer is needed.
@@ -60,15 +60,15 @@ void protocore_hex_u32(uint8_t *restrict work)
         out[i - 1] = PROTOCORE_HEX.lower[v & 0x0Fu];
         v >>= 4;
     }
-    HexV.u8 = digits;
+    Hex.u8 = digits;
 }
 
-void protocore_hex_encode(uint8_t *restrict work)
+static void hex_encode(uint8_t *restrict work)
 {
-    const uint8_t *in = HexV.io.in;
-    const uint32_t n = HexV.io.n;
-    char *out = HexV.io.out;
-    const char *digits = HexV.args.upper ? PROTOCORE_HEX.upper : PROTOCORE_HEX.lower;
+    const uint8_t *in = Hex.io.in;
+    const uint32_t n = Hex.io.n;
+    char *out = Hex.io.out;
+    const char *digits = Hex.args.upper ? PROTOCORE_HEX.upper : PROTOCORE_HEX.lower;
 
     for (uint32_t i = 0; i < n; i++)
     {
@@ -78,15 +78,15 @@ void protocore_hex_encode(uint8_t *restrict work)
     out[2 * n] = '\0';
 }
 
-void protocore_hex_decode(uint8_t *restrict work)
+static void hex_decode(uint8_t *restrict work)
 {
     (void)work;
-    const char *in = HexV.io.text;
-    const uint32_t hexlen = HexV.io.n;
-    uint8_t *out = HexV.io.bytes;
-    const uint32_t out_cap = HexV.io.cap;
+    const char *in = Hex.io.text;
+    const uint32_t hexlen = Hex.io.n;
+    uint8_t *out = Hex.io.bytes;
+    const uint32_t out_cap = Hex.io.cap;
 
-    HexV.i32 = -1;
+    Hex.i32 = -1;
     if ((hexlen % 2) != 0 || (hexlen / 2) > out_cap)
     {
         return;
@@ -101,9 +101,8 @@ void protocore_hex_decode(uint8_t *restrict work)
         }
         out[i / 2] = (uint8_t)((hi << 4) | lo);
     }
-    HexV.i32 = (int32_t)(hexlen / 2);
+    Hex.i32 = (int32_t)(hexlen / 2);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-HexVars HexV;
+HexNs Hex = {.digit = hex_digit, .val = hex_val, .u32 = hex_u32, .encode = hex_encode, .decode = hex_decode};

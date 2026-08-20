@@ -131,12 +131,14 @@ typedef struct
     uint8_t net_id[ADS_NET_ID_LEN];
     uint16_t port;
 } AdsAmsAddr;
+
 typedef struct
 {
     AdsAmsAddr target;
     AdsAmsAddr source;
     uint32_t invoke_id;
 } AdsRequest;
+
 typedef struct
 {
     AdsAmsAddr target;
@@ -148,18 +150,21 @@ typedef struct
     uint32_t invoke_id;
     const uint8_t *data; ///< -> payload (into the caller's buffer)
 } AdsAmsHeader;
+
 typedef struct
 {
     uint32_t result; ///< ADS error code (0 = success)
     const uint8_t *data;
     uint32_t len;
 } AdsReadResult;
+
 typedef struct
 {
     uint32_t result;
     uint16_t protocore_ads_state;
     uint16_t device_state;
 } AdsReadStateResult;
+
 typedef struct
 {
     uint32_t result;
@@ -168,8 +173,10 @@ typedef struct
     uint16_t version_build;
     char device_name[ADS_DEVICE_NAME_LEN + 1]; ///< NUL-terminated copy of the 16-octet field
 } AdsDeviceInfo;
+
 typedef void (*AdsNotificationSampleFn)(uint32_t notification_handle, const uint8_t *sample, uint32_t sample_len,
                                         uint64_t timestamp, void *user);
+
 /** @brief What build_read_device_info takes: buf, cap, r. */
 typedef struct
 {
@@ -177,6 +184,7 @@ typedef struct
     size_t cap;
     const AdsRequest *r;
 } AdsBuildReadDeviceInfoArgs;
+
 /** @brief What build_read_state takes: buf, cap, r. */
 typedef struct
 {
@@ -184,6 +192,7 @@ typedef struct
     size_t cap;
     const AdsRequest *r;
 } AdsBuildReadStateArgs;
+
 /** @brief What build_read takes: buf, cap, r, index_group, ... */
 typedef struct
 {
@@ -194,6 +203,7 @@ typedef struct
     uint32_t index_offset;
     uint32_t read_len;
 } AdsBuildReadArgs;
+
 /** @brief What build_write takes: buf, cap, r, index_group, ... */
 typedef struct
 {
@@ -205,6 +215,7 @@ typedef struct
     const uint8_t *data;
     uint32_t len;
 } AdsBuildWriteArgs;
+
 /** @brief What build_read_write takes: buf, cap, r, index_group, ... */
 typedef struct
 {
@@ -217,6 +228,7 @@ typedef struct
     const uint8_t *write_data;
     uint32_t write_len;
 } AdsBuildReadWriteArgs;
+
 /** @brief What build_write_control takes: buf, cap, r, ... */
 typedef struct
 {
@@ -228,6 +240,7 @@ typedef struct
     const uint8_t *data;
     uint32_t len;
 } AdsBuildWriteControlArgs;
+
 /** @brief What build_add_notification takes: buf, cap, r, ... */
 typedef struct
 {
@@ -241,6 +254,7 @@ typedef struct
     uint32_t max_delay;
     uint32_t cycle_time;
 } AdsBuildAddNotificationArgs;
+
 /** @brief What build_del_notification takes: buf, cap, r, ... */
 typedef struct
 {
@@ -249,6 +263,7 @@ typedef struct
     const AdsRequest *r;
     uint32_t notification_handle;
 } AdsBuildDelNotificationArgs;
+
 /** @brief What parse_ams_header takes: buf, len, out. */
 typedef struct
 {
@@ -256,6 +271,7 @@ typedef struct
     size_t len;
     AdsAmsHeader *out;
 } AdsParseAmsHeaderArgs;
+
 /** @brief What parse_read takes: data, data_len, out. */
 typedef struct
 {
@@ -263,6 +279,7 @@ typedef struct
     size_t data_len;
     AdsReadResult *out;
 } AdsParseReadArgs;
+
 /** @brief What parse_result takes: data, data_len, result. */
 typedef struct
 {
@@ -270,6 +287,7 @@ typedef struct
     size_t data_len;
     uint32_t *result;
 } AdsParseResultArgs;
+
 /** @brief What parse_read_state takes: data, data_len, out. */
 typedef struct
 {
@@ -277,6 +295,7 @@ typedef struct
     size_t data_len;
     AdsReadStateResult *out;
 } AdsParseReadStateArgs;
+
 /** @brief What parse_read_device_info takes: data, data_len, out. */
 typedef struct
 {
@@ -284,6 +303,7 @@ typedef struct
     size_t data_len;
     AdsDeviceInfo *out;
 } AdsParseReadDeviceInfoArgs;
+
 /** @brief What parse_add_notification takes: data, data_len, result, ... */
 typedef struct
 {
@@ -292,6 +312,7 @@ typedef struct
     uint32_t *result;
     uint32_t *handle;
 } AdsParseAddNotificationArgs;
+
 /** @brief What parse_notification takes: data, data_len, on_sample, ... */
 typedef struct
 {
@@ -300,6 +321,7 @@ typedef struct
     AdsNotificationSampleFn on_sample;
     void *user;
 } AdsParseNotificationArgs;
+
 /**
  * @brief Beckhoff ADS / AMS protocol codec (PROTOCORE_ENABLE_ADS) - zero-heap request builders + response parsers for
  * TwinCAT PLCs over TCP 48898 (the PC-based-control protocol).
@@ -367,16 +389,10 @@ typedef struct
     AdsParseReadDeviceInfoArgs parse_read_device_info_args;
     AdsParseAddNotificationArgs parse_add_notification_args;
     AdsParseNotificationArgs parse_notification_args;
+
     proto_bool ok;
     size_t n;
-} AdsVars;
 
-/** @brief The operands and the outcome. */
-extern AdsVars AdsV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const build_read_device_info)(uint8_t *restrict work);
     void (*const build_read_state)(uint8_t *restrict work);
     void (*const build_read)(uint8_t *restrict work);
@@ -394,45 +410,8 @@ typedef struct
     void (*const parse_notification)(uint8_t *restrict work);
 } AdsNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in AdsV or a region of the borrow at a fixed offset.
-void protocore_ads_build_read_device_info(uint8_t *restrict work);
-void protocore_ads_build_read_state(uint8_t *restrict work);
-void protocore_ads_build_read(uint8_t *restrict work);
-void protocore_ads_build_write(uint8_t *restrict work);
-void protocore_ads_build_read_write(uint8_t *restrict work);
-void protocore_ads_build_write_control(uint8_t *restrict work);
-void protocore_ads_build_add_notification(uint8_t *restrict work);
-void protocore_ads_build_del_notification(uint8_t *restrict work);
-void protocore_ads_parse_ams_header(uint8_t *restrict work);
-void protocore_ads_parse_read(uint8_t *restrict work);
-void protocore_ads_parse_result(uint8_t *restrict work);
-void protocore_ads_parse_read_state(uint8_t *restrict work);
-void protocore_ads_parse_read_device_info(uint8_t *restrict work);
-void protocore_ads_parse_add_notification(uint8_t *restrict work);
-void protocore_ads_parse_notification(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Ads.build_read_device_info(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const AdsNs Ads __attribute__((unused)) = {
-    .build_read_device_info = protocore_ads_build_read_device_info,
-    .build_read_state = protocore_ads_build_read_state,
-    .build_read = protocore_ads_build_read,
-    .build_write = protocore_ads_build_write,
-    .build_read_write = protocore_ads_build_read_write,
-    .build_write_control = protocore_ads_build_write_control,
-    .build_add_notification = protocore_ads_build_add_notification,
-    .build_del_notification = protocore_ads_build_del_notification,
-    .parse_ams_header = protocore_ads_parse_ams_header,
-    .parse_read = protocore_ads_parse_read,
-    .parse_result = protocore_ads_parse_result,
-    .parse_read_state = protocore_ads_parse_read_state,
-    .parse_read_device_info = protocore_ads_parse_read_device_info,
-    .parse_add_notification = protocore_ads_parse_add_notification,
-    .parse_notification = protocore_ads_parse_notification,
-};
+/** @brief The one symbol this module exports. */
+extern AdsNs Ads;
 
 PROTOCORE_END_DECLS
 

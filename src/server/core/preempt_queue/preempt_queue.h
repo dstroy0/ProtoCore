@@ -80,12 +80,14 @@ typedef struct
     uint8_t core;                 ///< Core to pin the lane's worker to; ignored where there is one.
     const char *name;             ///< Lane name (debug); may be NULL.
 } protocore_pq_config;
+
 /** @brief What one post carries, and how long it may wait for room. */
 typedef struct
 {
     const void *item;       ///< PROTOCORE_PQ_ITEM_SIZE bytes to copy onto the lane
     uint32_t timeout_ticks; ///< how long a post may block; 0 returns at once when the lane is full
 } PqPostArgs;
+
 /**
  * @brief The preempting work queues.
  *
@@ -111,19 +113,14 @@ typedef struct
 typedef struct
 {
     protocore_pq_lane lane;
+
     const protocore_pq_config *cfg;
     PqPostArgs post_args;
+
     proto_bool ok;
     size_t n;
     uint8_t u8;
-} PreemptQueueVars;
 
-/** @brief The operands and the outcome. */
-extern PreemptQueueVars PreemptQueueV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const post_from_isr)(uint8_t *restrict work);
     void (*const post_urgent)(uint8_t *restrict work);
     void (*const high_water)(uint8_t *restrict work);
@@ -135,33 +132,8 @@ typedef struct
     void (*const stop)(uint8_t *restrict work);
 } PreemptQueueNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in PreemptQueueV or a region of the borrow at a fixed offset.
-void protocore_preempt_queue_post_from_isr(uint8_t *restrict work);
-void protocore_preempt_queue_post_urgent(uint8_t *restrict work);
-void protocore_preempt_queue_high_water(uint8_t *restrict work);
-void protocore_preempt_queue_priority(uint8_t *restrict work);
-void protocore_preempt_queue_running(uint8_t *restrict work);
-void protocore_preempt_queue_start(uint8_t *restrict work);
-void protocore_preempt_queue_post(uint8_t *restrict work);
-void protocore_preempt_queue_drain(uint8_t *restrict work);
-void protocore_preempt_queue_stop(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `PreemptQueue.post_from_isr(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const PreemptQueueNs PreemptQueue __attribute__((unused)) = {
-    .post_from_isr = protocore_preempt_queue_post_from_isr,
-    .post_urgent = protocore_preempt_queue_post_urgent,
-    .high_water = protocore_preempt_queue_high_water,
-    .priority = protocore_preempt_queue_priority,
-    .running = protocore_preempt_queue_running,
-    .start = protocore_preempt_queue_start,
-    .post = protocore_preempt_queue_post,
-    .drain = protocore_preempt_queue_drain,
-    .stop = protocore_preempt_queue_stop,
-};
+/** @brief The one symbol this module exports. */
+extern PreemptQueueNs PreemptQueue;
 
 /**
  * @brief The PROTOCORE_PREEMPT_QUEUE_BORROW bytes this module's state lives in.

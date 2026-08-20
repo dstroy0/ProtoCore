@@ -61,6 +61,7 @@ typedef struct
     const uint8_t *data;
     size_t data_len;
 } HartFrame;
+
 /** @brief A parsed HART-IP message header + payload slice (the payload points into the input buffer). */
 typedef struct
 {
@@ -73,12 +74,14 @@ typedef struct
     const uint8_t *payload; ///< the payload after the 8-octet header, or nullptr if none
     size_t payload_len;     ///< payload length (total_len - 8)
 } HartIpHeader;
+
 /** @brief What checksum takes: bytes, len. */
 typedef struct
 {
     const uint8_t *bytes;
     size_t len;
 } HartChecksumArgs;
+
 /** @brief What build takes: delimiter, addr, addr_len, command, data, ... */
 typedef struct
 {
@@ -91,6 +94,7 @@ typedef struct
     uint8_t *out;        ///< output buffer
     size_t cap;          ///< capacity of out
 } HartBuildArgs;
+
 /** @brief What parse takes: frame, len, out. */
 typedef struct
 {
@@ -98,6 +102,7 @@ typedef struct
     size_t len;
     HartFrame *out;
 } HartParseArgs;
+
 /** @brief What ip_build_header takes: msg_type, msg_id, status, seq, ... */
 typedef struct
 {
@@ -109,6 +114,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } HartIpBuildHeaderArgs;
+
 /** @brief What ip_parse_header takes: buf, len, out. */
 typedef struct
 {
@@ -116,6 +122,7 @@ typedef struct
     size_t len;
     HartIpHeader *out;
 } HartIpParseHeaderArgs;
+
 /**
  * @brief HART / HART-IP process-instrument protocol codec (PROTOCORE_ENABLE_HART).
  *
@@ -152,17 +159,11 @@ typedef struct
     HartParseArgs parse_args;
     HartIpBuildHeaderArgs ip_build_header_args;
     HartIpParseHeaderArgs ip_parse_header_args;
+
     proto_bool ok;
     uint8_t value;
     size_t n;
-} HartVars;
 
-/** @brief The operands and the outcome. */
-extern HartVars HartV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const checksum)(uint8_t *restrict work);
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
@@ -170,25 +171,8 @@ typedef struct
     void (*const ip_parse_header)(uint8_t *restrict work);
 } HartNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HartV or a region of the borrow at a fixed offset.
-void protocore_hart_checksum(uint8_t *restrict work);
-void protocore_hart_build(uint8_t *restrict work);
-void protocore_hart_parse(uint8_t *restrict work);
-void protocore_hart_ip_build_header(uint8_t *restrict work);
-void protocore_hart_ip_parse_header(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Hart.checksum(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HartNs Hart __attribute__((unused)) = {
-    .checksum = protocore_hart_checksum,
-    .build = protocore_hart_build,
-    .parse = protocore_hart_parse,
-    .ip_build_header = protocore_hart_ip_build_header,
-    .ip_parse_header = protocore_hart_ip_parse_header,
-};
+/** @brief The one symbol this module exports. */
+extern HartNs Hart;
 
 PROTOCORE_END_DECLS
 

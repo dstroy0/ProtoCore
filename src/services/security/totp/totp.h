@@ -50,12 +50,14 @@ typedef struct
     uint64_t t0;        ///< T0: the Unix time step counting starts at; 0 is the epoch (RFC 6238 sec 4.1)
     uint32_t x;         ///< X: the time step in seconds; 0 takes ::PROTOCORE_TOTP_X_DEFAULT (RFC 6238 sec 4.1)
 } TotpStepArgs;
+
 /** @brief RFC 6238 sec 6: the OTP a validation judges and the clock drift it accepts around it. */
 typedef struct
 {
     uint32_t otp;  ///< the OTP value submitted for validation
     int32_t drift; ///< time steps of out-of-synch taken forward and backward; negative matches nothing
 } TotpValidateArgs;
+
 /** @brief RFC 4648 sec 6: the base32 provisioning secret and the buffer a decode fills with K. */
 typedef struct
 {
@@ -63,6 +65,7 @@ typedef struct
     uint8_t *out;    ///< where the decoded K bytes land
     size_t cap;      ///< how many bytes that buffer holds
 } TotpSecretArgs;
+
 /**
  * @brief One-time passwords: HOTP over a counter, TOTP over a time step, and the base32 secret.
  *
@@ -90,46 +93,26 @@ typedef struct
  */
 typedef struct
 {
-    const uint8_t *k;       ///< K: the shared secret every OTP is keyed by (RFC 4226 sec 5.1)
-    size_t keylen;          ///< how many bytes K holds
-    uint8_t digit;          ///< Digit: how many digits the OTP carries (RFC 4226 sec 5.1)
+    const uint8_t *k; ///< K: the shared secret every OTP is keyed by (RFC 4226 sec 5.1)
+    size_t keylen;    ///< how many bytes K holds
+    uint8_t digit;    ///< Digit: how many digits the OTP carries (RFC 4226 sec 5.1)
+
     TotpStepArgs step;      ///< the moving factor an OTP is computed for
     TotpValidateArgs check; ///< what a validation judges, and the drift around it
     TotpSecretArgs secret;  ///< the base32 secret and where a decode writes K
+
     proto_bool ok;
     uint32_t u32;
     int32_t i32;
-} TotpVars;
 
-/** @brief The operands and the outcome. */
-extern TotpVars TotpV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const hotp)(uint8_t *restrict work);
     void (*const totp)(uint8_t *restrict work);
     void (*const verify)(uint8_t *restrict work);
     void (*const base32_decode)(uint8_t *restrict work);
 } TotpNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in TotpV or a region of the borrow at a fixed offset.
-void protocore_totp_hotp(uint8_t *restrict work);
-void protocore_totp_totp(uint8_t *restrict work);
-void protocore_totp_verify(uint8_t *restrict work);
-void protocore_totp_base32_decode(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Totp.hotp(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const TotpNs Totp __attribute__((unused)) = {
-    .hotp = protocore_totp_hotp,
-    .totp = protocore_totp_totp,
-    .verify = protocore_totp_verify,
-    .base32_decode = protocore_totp_base32_decode,
-};
+/** @brief The one symbol this module exports. */
+extern TotpNs Totp;
 
 PROTOCORE_END_DECLS
 

@@ -30,13 +30,13 @@ void dbench_run(void)
 
         // The arguments are set outside the timed expression and the entry is called inside it, so
         // what is timed is one call and not the staging that precedes it.
-        Ads1115V.config_single_args.channel = 0;
-        Ads1115V.config_single_args.gain = ADS1115_GAIN_1;
-        Ads1115V.config_single_args.dr = ADS1115_DR_128;
-        DBENCH_OP("Ads1115.config_single", 200000, (Ads1115.config_single(w), sink16 += Ads1115V.word));
-        Ads1115V.raw_to_uv_args.raw = 16384;
-        Ads1115V.raw_to_uv_args.gain = ADS1115_GAIN_2;
-        DBENCH_OP("Ads1115.raw_to_uv", 200000, (Ads1115.raw_to_uv(w), sink32 += Ads1115V.uv));
+        Ads1115.config_single_args.channel = 0;
+        Ads1115.config_single_args.gain = ADS1115_GAIN_1;
+        Ads1115.config_single_args.dr = ADS1115_DR_128;
+        DBENCH_OP("Ads1115.config_single", 200000, (Ads1115.config_single(w), sink16 += Ads1115.word));
+        Ads1115.raw_to_uv_args.raw = 16384;
+        Ads1115.raw_to_uv_args.gain = ADS1115_GAIN_2;
+        DBENCH_OP("Ads1115.raw_to_uv", 200000, (Ads1115.raw_to_uv(w), sink32 += Ads1115.uv));
         (void)sink16;
         (void)sink32;
         DBENCH_DONE();

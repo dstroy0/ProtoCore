@@ -37,6 +37,7 @@ typedef struct
     const char *path_prefix;
     const char *origin_base_url;
 } EdgeProxyMapArgs;
+
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
 /** @brief What set_origin_ca takes: ca_pem, len. */
 typedef struct
@@ -45,6 +46,7 @@ typedef struct
     size_t len;
 } EdgeProxySetOriginCaArgs;
 #endif
+
 #if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
 /** @brief What set_origin_pin takes: sha256. */
 typedef struct
@@ -52,6 +54,7 @@ typedef struct
     const uint8_t *sha256; ///< 32 bytes.
 } EdgeProxySetOriginPinArgs;
 #endif
+
 #if PROTOCORE_ENABLE_DBM
 /** @brief What bind_sd takes: dbm. */
 typedef struct
@@ -59,6 +62,7 @@ typedef struct
     struct protocore_dbm *dbm;
 } EdgeProxyBindSdArgs;
 #endif
+
 #if PROTOCORE_ENABLE_EDGE_MESH
 /** @brief What add_peer takes: host, port. */
 typedef struct
@@ -67,21 +71,25 @@ typedef struct
     uint16_t port;
 } EdgeProxyAddPeerArgs;
 #endif
+
 /** @brief What purge takes: canonical_key. */
 typedef struct
 {
     const char *canonical_key;
 } EdgeProxyPurgeArgs;
+
 /** @brief What purge_prefix takes: path_prefix. */
 typedef struct
 {
     const char *path_prefix;
 } EdgeProxyPurgePrefixArgs;
+
 /** @brief What stats takes: out. */
 typedef struct
 {
     struct EdgeCacheStats *out;
 } EdgeProxyStatsArgs;
+
 /**
  * @brief CDN edge-cache tier - server glue (PROTOCORE_ENABLE_EDGE_CACHE).
  *
@@ -134,70 +142,35 @@ typedef struct
     EdgeProxyPurgeArgs purge_args;
     EdgeProxyPurgePrefixArgs purge_prefix_args;
     EdgeProxyStatsArgs stats_args;
+
     proto_bool ok;
     uint32_t n;
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-#endif
-#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
-#endif
-#if PROTOCORE_ENABLE_DBM
-#endif
-#if PROTOCORE_ENABLE_EDGE_MESH
-#endif
-#if PROTOCORE_ENABLE_EDGE_MESH
-#endif
-} EdgeProxyVars;
 
-/** @brief The operands and the outcome. */
-extern EdgeProxyVars EdgeProxyV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const enable)(uint8_t *restrict work);
     void (*const map)(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
     void (*const set_origin_ca)(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_EDGE_ORIGIN_TLS
     void (*const set_origin_pin)(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_DBM
     void (*const bind_sd)(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
     void (*const add_peer)(uint8_t *restrict work);
+#endif
+#if PROTOCORE_ENABLE_EDGE_MESH
     void (*const mesh_serve)(uint8_t *restrict work);
+#endif
     void (*const reset)(uint8_t *restrict work);
     void (*const purge)(uint8_t *restrict work);
     void (*const purge_prefix)(uint8_t *restrict work);
     void (*const stats)(uint8_t *restrict work);
 } EdgeProxyNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in EdgeProxyV or a region of the borrow at a fixed offset.
-void protocore_edge_cache_proxy_enable(uint8_t *restrict work);
-void protocore_edge_cache_proxy_map(uint8_t *restrict work);
-void protocore_edge_cache_proxy_set_origin_ca(uint8_t *restrict work);
-void protocore_edge_cache_proxy_set_origin_pin(uint8_t *restrict work);
-void protocore_edge_cache_proxy_bind_sd(uint8_t *restrict work);
-void protocore_edge_cache_proxy_add_peer(uint8_t *restrict work);
-void protocore_edge_cache_proxy_mesh_serve(uint8_t *restrict work);
-void protocore_edge_cache_proxy_reset(uint8_t *restrict work);
-void protocore_edge_cache_proxy_purge(uint8_t *restrict work);
-void protocore_edge_cache_proxy_purge_prefix(uint8_t *restrict work);
-void protocore_edge_cache_proxy_stats(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `EdgeProxy.enable(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const EdgeProxyNs EdgeProxy __attribute__((unused)) = {
-    .enable = protocore_edge_cache_proxy_enable,
-    .map = protocore_edge_cache_proxy_map,
-    .set_origin_ca = protocore_edge_cache_proxy_set_origin_ca,
-    .set_origin_pin = protocore_edge_cache_proxy_set_origin_pin,
-    .bind_sd = protocore_edge_cache_proxy_bind_sd,
-    .add_peer = protocore_edge_cache_proxy_add_peer,
-    .mesh_serve = protocore_edge_cache_proxy_mesh_serve,
-    .reset = protocore_edge_cache_proxy_reset,
-    .purge = protocore_edge_cache_proxy_purge,
-    .purge_prefix = protocore_edge_cache_proxy_purge_prefix,
-    .stats = protocore_edge_cache_proxy_stats,
-};
+/** @brief The one symbol this module exports. */
+extern EdgeProxyNs EdgeProxy;
 
 /**
  * @brief The PROTOCORE_EDGE_PROXY_BORROW bytes this module's state lives in.

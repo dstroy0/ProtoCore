@@ -7,9 +7,9 @@
  */
 
 #include "server/core/exc_decoder/exc_decoder.h"
-#include "mmgr/membuild/membuild.h" // protocore_sb frame builder
-#include "mmgr/protostr/protostr.h" // str.find: each field's marker inside the panic dump
-#include "shared/hex/hex.h"         // PROTOCORE_HEX: the shared digit tables
+#include "mmgr/membuild/membuild.h"  // protocore_sb frame builder
+#include "mmgr/protostr/protostr.h"  // str.find: each field's marker inside the panic dump
+#include "shared/hex/hex.h" // PROTOCORE_HEX: the shared digit tables
 
 #if PROTOCORE_ENABLE_EXC_DECODER
 
@@ -253,10 +253,10 @@ static void parse_backtrace(const char *text, ExcInfo *out)
 static void exc_parse(uint8_t *restrict work)
 {
     (void)work;
-    const char *text = ExcV.parse_args.text;
-    ExcInfo *out = ExcV.parse_args.info;
+    const char *text = Exc.parse_args.text;
+    ExcInfo *out = Exc.parse_args.info;
 
-    ExcV.ok = PROTO_FALSE;
+    Exc.ok = PROTO_FALSE;
     if (!text || !out)
     {
         return;
@@ -279,19 +279,19 @@ static void exc_parse(uint8_t *restrict work)
         out->pc = out->frames[0].pc;
     }
 
-    ExcV.ok = out->cause[0] != '\0' || out->pc != 0 || out->frame_count > 0;
+    Exc.ok = out->cause[0] != '\0' || out->pc != 0 || out->frame_count > 0;
 }
 
 static void exc_json(uint8_t *restrict work)
 {
     (void)work;
-    const ExcInfo *info = ExcV.parse_args.info;
-    char *out = ExcV.out_args.out;
-    const size_t cap = ExcV.out_args.cap;
+    const ExcInfo *info = Exc.parse_args.info;
+    char *out = Exc.out_args.out;
+    const size_t cap = Exc.out_args.cap;
 
     if (!info || !out || cap == 0)
     {
-        ExcV.n = 0;
+        Exc.n = 0;
         return;
     }
     protocore_sb b = {out, cap, 0, PROTO_TRUE};
@@ -329,11 +329,11 @@ static void exc_json(uint8_t *restrict work)
     if (!b.ok)
     {
         out[0] = '\0';
-        ExcV.n = 0;
+        Exc.n = 0;
         return;
     }
     out[b.len] = '\0';
-    ExcV.n = b.len;
+    Exc.n = b.len;
 }
 
 #if PROTOCORE_HAS_VENDOR_COREDUMP
@@ -347,7 +347,16 @@ void protocore_exc_cd_erase(uint8_t *restrict work);
 #endif
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-ExcVars ExcV;
+ExcDecoderNs Exc = {
+    .parse = exc_parse,
+    .json = exc_json,
+#if PROTOCORE_HAS_VENDOR_COREDUMP
+    .present = protocore_exc_cd_present,
+    .summary = protocore_exc_cd_summary,
+    .read = protocore_exc_cd_read,
+    .save = protocore_exc_cd_save,
+    .erase = protocore_exc_cd_erase,
+#endif
+};
 
 #endif // PROTOCORE_ENABLE_EXC_DECODER

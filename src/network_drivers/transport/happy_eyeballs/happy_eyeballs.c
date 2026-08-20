@@ -59,9 +59,9 @@ static proto_bool eff_is_v6(uint8_t *restrict work)
 
 static int scope_rank(uint8_t *restrict work)
 {
-    IpV.args.ip = HAPPY_EYEBALLS_CTX(work)->ip;
+    Ip.args.ip = HAPPY_EYEBALLS_CTX(work)->ip;
     Ip.classify(ip_work);
-    switch (IpV.scope)
+    switch (Ip.scope)
     {
     case PROTOCORE_IP_SCOPE_GLOBAL:
         return 5;
@@ -109,18 +109,18 @@ uint8_t *protocore_happy_eyeballs_span(void)
     return s_own.span;
 }
 
-void protocore_happy_eyeballs_pref(uint8_t *restrict work)
+static void happy_eyeballs_pref(uint8_t *restrict work)
 {
-    const protocore_ip *ip = HappyEyeballsV.pref_args.ip;
+    const protocore_ip *ip = HappyEyeballs.pref_args.ip;
 
     HAPPY_EYEBALLS_CTX(work)->ip = ip;
-    HappyEyeballsV.n = pref_of(work);
+    HappyEyeballs.n = pref_of(work);
 }
 
-void protocore_happy_eyeballs_order(uint8_t *restrict work)
+static void happy_eyeballs_order(uint8_t *restrict work)
 {
-    protocore_ip *list = HappyEyeballsV.order_args.list;
-    size_t n = HappyEyeballsV.order_args.n;
+    protocore_ip *list = HappyEyeballs.order_args.list;
+    size_t n = HappyEyeballs.order_args.n;
 
     if (!list || n < 2)
     {
@@ -204,19 +204,22 @@ void protocore_happy_eyeballs_order(uint8_t *restrict work)
     }
 }
 
-void protocore_happy_eyeballs_attempt_due(uint8_t *restrict work)
+static void happy_eyeballs_attempt_due(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t last_start_ms = HappyEyeballsV.attempt_due_args.last_start_ms;
-    uint32_t now_ms = HappyEyeballsV.attempt_due_args.now_ms;
-    uint32_t attempt_delay_ms = HappyEyeballsV.attempt_due_args.attempt_delay_ms;
+    uint32_t last_start_ms = HappyEyeballs.attempt_due_args.last_start_ms;
+    uint32_t now_ms = HappyEyeballs.attempt_due_args.now_ms;
+    uint32_t attempt_delay_ms = HappyEyeballs.attempt_due_args.attempt_delay_ms;
 
     uint32_t elapsed = now_ms - last_start_ms; // wrap-safe modular subtraction
-    HappyEyeballsV.ok = elapsed >= attempt_delay_ms;
+    HappyEyeballs.ok = elapsed >= attempt_delay_ms;
 }
 
-/** @brief The operands and the outcome. */
-HappyEyeballsVars HappyEyeballsV;
+HappyEyeballsNs HappyEyeballs = {
+    .pref = happy_eyeballs_pref,
+    .order = happy_eyeballs_order,
+    .attempt_due = happy_eyeballs_attempt_due,
+};
 
 PROTOCORE_END_DECLS
 

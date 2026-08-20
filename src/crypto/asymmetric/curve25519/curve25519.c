@@ -562,14 +562,14 @@ static void x25519_mult(uint8_t *restrict work, uint8_t out[32], const uint8_t s
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_curve25519_x25519(uint8_t *restrict work)
+static void curve25519_x25519(uint8_t *restrict work)
 {
-    Curve25519V.ok = PROTO_FALSE;
-    if (!Curve25519V.x25519_args.out || !Curve25519V.x25519_args.scalar || !Curve25519V.x25519_args.point)
+    Curve25519.ok = PROTO_FALSE;
+    if (!Curve25519.x25519_args.out || !Curve25519.x25519_args.scalar || !Curve25519.x25519_args.point)
     {
         return;
     }
-    x25519_mult(work, Curve25519V.x25519_args.out, Curve25519V.x25519_args.scalar, Curve25519V.x25519_args.point);
+    x25519_mult(work, Curve25519.x25519_args.out, Curve25519.x25519_args.scalar, Curve25519.x25519_args.point);
 
     // RFC 7748 sec 6.1: the function produces the all-zero value when it operates on a point of small
     // order, and RFC 8446 sec 7.4.2 makes checking for that and aborting a MUST. Reported here rather
@@ -579,29 +579,28 @@ void protocore_curve25519_x25519(uint8_t *restrict work)
     uint8_t any = 0;
     for (uint32_t i = 0; i < 32u; i++)
     {
-        any = (uint8_t)(any | Curve25519V.x25519_args.out[i]);
+        any = (uint8_t)(any | Curve25519.x25519_args.out[i]);
     }
-    Curve25519V.ok = any != 0;
+    Curve25519.ok = any != 0;
 }
 
 // The standard base point is written into the borrow and multiplied by the same body: u = 9, the rest
 // zero (RFC 7748 §5).
-void protocore_curve25519_x25519_base(uint8_t *restrict work)
+static void curve25519_x25519_base(uint8_t *restrict work)
 {
-    Curve25519V.ok = PROTO_FALSE;
-    if (!Curve25519V.x25519_base_args.out || !Curve25519V.x25519_base_args.scalar)
+    Curve25519.ok = PROTO_FALSE;
+    if (!Curve25519.x25519_base_args.out || !Curve25519.x25519_base_args.scalar)
     {
         return;
     }
     Curve25519Ctx *ctx = CURVE25519_CTX(work);
     mem.zero(ctx->base, 32);
     ctx->base[0] = 9;
-    x25519_mult(work, Curve25519V.x25519_base_args.out, Curve25519V.x25519_base_args.scalar, ctx->base);
-    Curve25519V.ok = PROTO_TRUE;
+    x25519_mult(work, Curve25519.x25519_base_args.out, Curve25519.x25519_base_args.scalar, ctx->base);
+    Curve25519.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-Curve25519Vars Curve25519V;
+Curve25519Ns Curve25519 = {.x25519 = curve25519_x25519, .x25519_base = curve25519_x25519_base};
 
 PROTOCORE_END_DECLS
 

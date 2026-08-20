@@ -26,19 +26,19 @@ void tearDown(void)
 
 static proto_bool parse(const uint8_t *der, size_t len)
 {
-    X509V.parse_args.der = der;
-    X509V.parse_args.len = len;
+    X509.parse_args.der = der;
+    X509.parse_args.len = len;
     X509.parse(NULL);
-    return X509V.ok;
+    return X509.ok;
 }
 
 static proto_bool matches(const char *host)
 {
-    X509V.match_args.cert = &X509V.cert;
-    X509V.match_args.host = host;
-    X509V.match_args.host_len = 0;
+    X509.match_args.cert = &X509.cert;
+    X509.match_args.host = host;
+    X509.match_args.host_len = 0;
     X509.name_match(NULL);
-    return X509V.ok;
+    return X509.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,28 +50,28 @@ void test_an_ed25519_leaf_reads_as_openssl_wrote_it(void)
 {
     TEST_ASSERT_TRUE(parse(X509_ED25519_DER, sizeof(X509_ED25519_DER)));
 
-    TEST_ASSERT_EQUAL_UINT8(2, X509V.cert.version); // v3
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_SIG_ED25519, X509V.cert.sig_alg);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_KEY_ED25519, X509V.cert.key_alg);
+    TEST_ASSERT_EQUAL_UINT8(2, X509.cert.version); // v3
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_SIG_ED25519, X509.cert.sig_alg);
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_KEY_ED25519, X509.cert.key_alg);
 
     // -set_serial 4919 == 0x1337, and sec 4.1.2.2 keeps it as it was encoded.
-    TEST_ASSERT_EQUAL_UINT(2, X509V.cert.serial.len);
-    TEST_ASSERT_EQUAL_HEX8(0x13, X509V.cert.serial.p[0]);
-    TEST_ASSERT_EQUAL_HEX8(0x37, X509V.cert.serial.p[1]);
+    TEST_ASSERT_EQUAL_UINT(2, X509.cert.serial.len);
+    TEST_ASSERT_EQUAL_HEX8(0x13, X509.cert.serial.p[0]);
+    TEST_ASSERT_EQUAL_HEX8(0x37, X509.cert.serial.p[1]);
 
-    TEST_ASSERT_EQUAL_UINT64(X509_ED25519_NOT_BEFORE, X509V.cert.not_before);
-    TEST_ASSERT_EQUAL_UINT64(X509_ED25519_NOT_AFTER, X509V.cert.not_after);
+    TEST_ASSERT_EQUAL_UINT64(X509_ED25519_NOT_BEFORE, X509.cert.not_before);
+    TEST_ASSERT_EQUAL_UINT64(X509_ED25519_NOT_AFTER, X509.cert.not_after);
 
     // RFC 8410 sec 4: the Ed25519 subjectPublicKey is the 32 raw octets.
-    TEST_ASSERT_EQUAL_UINT(32, X509V.cert.key.len);
+    TEST_ASSERT_EQUAL_UINT(32, X509.cert.key.len);
     // sec 5.1: an Ed25519 signature is 64 octets.
-    TEST_ASSERT_EQUAL_UINT(64, X509V.cert.sig.len);
+    TEST_ASSERT_EQUAL_UINT(64, X509.cert.sig.len);
 
     // The TBS is handed back whole, because that is what the signature covers (sec 4.1.1.2). It
     // begins at the second value of the Certificate SEQUENCE and is itself a SEQUENCE.
-    TEST_ASSERT_NOT_NULL(X509V.cert.tbs.p);
-    TEST_ASSERT_EQUAL_HEX8(0x30, X509V.cert.tbs.p[0]);
-    TEST_ASSERT_TRUE(X509V.cert.tbs.len < sizeof(X509_ED25519_DER));
+    TEST_ASSERT_NOT_NULL(X509.cert.tbs.p);
+    TEST_ASSERT_EQUAL_HEX8(0x30, X509.cert.tbs.p[0]);
+    TEST_ASSERT_TRUE(X509.cert.tbs.len < sizeof(X509_ED25519_DER));
 }
 
 // An EC leaf: the curve is named in the algorithm parameters, and a key on a curve this build does
@@ -79,37 +79,37 @@ void test_an_ed25519_leaf_reads_as_openssl_wrote_it(void)
 void test_a_p256_leaf_reports_its_curve(void)
 {
     TEST_ASSERT_TRUE(parse(X509_P256_DER, sizeof(X509_P256_DER)));
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_KEY_EC_P256, X509V.cert.key_alg);
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_SIG_ECDSA_SHA256, X509V.cert.sig_alg); // signed BY the P-256 CA
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_KEY_EC_P256, X509.cert.key_alg);
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_SIG_ECDSA_SHA256, X509.cert.sig_alg); // signed BY the P-256 CA
     // RFC 5480 sec 2.2: an uncompressed P-256 point is 0x04 then two 32-octet coordinates.
-    TEST_ASSERT_EQUAL_UINT(65, X509V.cert.key.len);
-    TEST_ASSERT_EQUAL_HEX8(0x04, X509V.cert.key.p[0]);
+    TEST_ASSERT_EQUAL_UINT(65, X509.cert.key.len);
+    TEST_ASSERT_EQUAL_HEX8(0x04, X509.cert.key.p[0]);
 }
 
 void test_an_rsa_leaf_reads_its_key(void)
 {
     TEST_ASSERT_TRUE(parse(X509_RSA_DER, sizeof(X509_RSA_DER)));
-    TEST_ASSERT_EQUAL(PROTOCORE_X509_KEY_RSA, X509V.cert.key_alg);
+    TEST_ASSERT_EQUAL(PROTOCORE_X509_KEY_RSA, X509.cert.key_alg);
     // A 2048-bit RSAPublicKey SEQUENCE is a little over 256 octets once the modulus and exponent
     // are wrapped; what matters is that it is the key's own bytes and not empty.
-    TEST_ASSERT_TRUE(X509V.cert.key.len > 256);
-    TEST_ASSERT_EQUAL_HEX8(0x30, X509V.cert.key.p[0]); // RFC 8017 A.1.1: RSAPublicKey ::= SEQUENCE
+    TEST_ASSERT_TRUE(X509.cert.key.len > 256);
+    TEST_ASSERT_EQUAL_HEX8(0x30, X509.cert.key.p[0]); // RFC 8017 A.1.1: RSAPublicKey ::= SEQUENCE
 }
 
 // sec 4.2.1.9 and sec 4.2.1.3 on the CA the leaves were signed by.
 void test_a_ca_reports_its_constraints_and_usage(void)
 {
     TEST_ASSERT_TRUE(parse(X509_CA_DER, sizeof(X509_CA_DER)));
-    TEST_ASSERT_TRUE(X509V.cert.has_bc);
-    TEST_ASSERT_TRUE(X509V.cert.is_ca);
-    TEST_ASSERT_TRUE(X509V.cert.has_path_len);
-    TEST_ASSERT_EQUAL_UINT32(1, X509V.cert.path_len); // pathlen:1
+    TEST_ASSERT_TRUE(X509.cert.has_bc);
+    TEST_ASSERT_TRUE(X509.cert.is_ca);
+    TEST_ASSERT_TRUE(X509.cert.has_path_len);
+    TEST_ASSERT_EQUAL_UINT32(1, X509.cert.path_len); // pathlen:1
 
-    TEST_ASSERT_TRUE(X509V.cert.has_ku);
-    TEST_ASSERT_TRUE((X509V.cert.key_usage & PROTOCORE_X509_KU_KEY_CERT_SIGN) != 0);
-    TEST_ASSERT_TRUE((X509V.cert.key_usage & PROTOCORE_X509_KU_CRL_SIGN) != 0);
+    TEST_ASSERT_TRUE(X509.cert.has_ku);
+    TEST_ASSERT_TRUE((X509.cert.key_usage & PROTOCORE_X509_KU_KEY_CERT_SIGN) != 0);
+    TEST_ASSERT_TRUE((X509.cert.key_usage & PROTOCORE_X509_KU_CRL_SIGN) != 0);
     // It was not given digitalSignature, so it must not report one.
-    TEST_ASSERT_FALSE((X509V.cert.key_usage & PROTOCORE_X509_KU_DIGITAL_SIGNATURE) != 0);
+    TEST_ASSERT_FALSE((X509.cert.key_usage & PROTOCORE_X509_KU_DIGITAL_SIGNATURE) != 0);
 }
 
 // A leaf is not a CA. basicConstraints is absent on these leaves, and an absent extension must not
@@ -117,7 +117,7 @@ void test_a_ca_reports_its_constraints_and_usage(void)
 void test_a_leaf_is_not_a_ca(void)
 {
     TEST_ASSERT_TRUE(parse(X509_ED25519_DER, sizeof(X509_ED25519_DER)));
-    TEST_ASSERT_FALSE(X509V.cert.is_ca);
+    TEST_ASSERT_FALSE(X509.cert.is_ca);
 }
 
 // The issuer of a leaf is the subject of the CA, byte for byte. That equality is what a chain walk
@@ -126,13 +126,13 @@ void test_the_leaf_issuer_is_the_ca_subject_byte_for_byte(void)
 {
     TEST_ASSERT_TRUE(parse(X509_ED25519_DER, sizeof(X509_ED25519_DER)));
     static uint8_t issuer[256];
-    const size_t issuer_len = X509V.cert.issuer.len;
+    const size_t issuer_len = X509.cert.issuer.len;
     TEST_ASSERT_TRUE(issuer_len <= sizeof(issuer));
-    memcpy(issuer, X509V.cert.issuer.p, issuer_len);
+    memcpy(issuer, X509.cert.issuer.p, issuer_len);
 
     TEST_ASSERT_TRUE(parse(X509_CA_DER, sizeof(X509_CA_DER)));
-    TEST_ASSERT_EQUAL_UINT(issuer_len, X509V.cert.subject.len);
-    TEST_ASSERT_EQUAL_INT(0, memcmp(issuer, X509V.cert.subject.p, issuer_len));
+    TEST_ASSERT_EQUAL_UINT(issuer_len, X509.cert.subject.len);
+    TEST_ASSERT_EQUAL_INT(0, memcmp(issuer, X509.cert.subject.p, issuer_len));
 }
 
 // ---------------------------------------------------------------------------
@@ -171,12 +171,12 @@ void test_a_flipped_length_octet_does_not_run_off_the_buffer(void)
         (void)parse(buf, sizeof(buf));
         // No assertion on the verdict: a parse may legitimately still succeed. What must hold is
         // that every reported field stays inside the buffer.
-        if (X509V.ok)
+        if (X509.ok)
         {
-            TEST_ASSERT_TRUE(X509V.cert.tbs.p >= buf);
-            TEST_ASSERT_TRUE(X509V.cert.tbs.p + X509V.cert.tbs.len <= buf + sizeof(buf));
-            TEST_ASSERT_TRUE(X509V.cert.key.p + X509V.cert.key.len <= buf + sizeof(buf));
-            TEST_ASSERT_TRUE(X509V.cert.sig.p + X509V.cert.sig.len <= buf + sizeof(buf));
+            TEST_ASSERT_TRUE(X509.cert.tbs.p >= buf);
+            TEST_ASSERT_TRUE(X509.cert.tbs.p + X509.cert.tbs.len <= buf + sizeof(buf));
+            TEST_ASSERT_TRUE(X509.cert.key.p + X509.cert.key.len <= buf + sizeof(buf));
+            TEST_ASSERT_TRUE(X509.cert.sig.p + X509.cert.sig.len <= buf + sizeof(buf));
         }
     }
 }
@@ -240,14 +240,14 @@ void test_a_match_needs_both_a_certificate_and_a_name(void)
 {
     TEST_ASSERT_TRUE(parse(X509_ED25519_DER, sizeof(X509_ED25519_DER)));
 
-    X509V.match_args.cert = NULL;
-    X509V.match_args.host = "leaf.example.com";
-    X509V.match_args.host_len = 0;
+    X509.match_args.cert = NULL;
+    X509.match_args.host = "leaf.example.com";
+    X509.match_args.host_len = 0;
     X509.name_match(NULL);
-    TEST_ASSERT_FALSE(X509V.ok);
+    TEST_ASSERT_FALSE(X509.ok);
 
-    X509V.match_args.cert = &X509V.cert;
-    X509V.match_args.host = NULL;
+    X509.match_args.cert = &X509.cert;
+    X509.match_args.host = NULL;
     X509.name_match(NULL);
-    TEST_ASSERT_FALSE(X509V.ok);
+    TEST_ASSERT_FALSE(X509.ok);
 }

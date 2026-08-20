@@ -83,8 +83,8 @@ static int out_count(uint8_t type, uint32_t *last_err)
     while (off + H2_FRAME_HEADER_LEN <= g_out_len)
     {
         H2FrameHeader h;
-        (H2FrameV.parse_args.buf = g_out + off, H2FrameV.parse_args.len = H2_FRAME_HEADER_LEN,
-         H2Frame.parse_header(NULL), *(&h) = H2FrameV.header, H2FrameV.ok);
+        (H2Frame.parse_args.buf = g_out + off, H2Frame.parse_args.len = H2_FRAME_HEADER_LEN, H2Frame.parse_header(NULL),
+         *(&h) = H2Frame.header, H2Frame.ok);
         if (off + H2_FRAME_HEADER_LEN + h.length > g_out_len)
         {
             break;
@@ -114,8 +114,8 @@ static void feed_request(const Hdr *fields, size_t n)
     wire_reset();
     memset(&conn_pool[0], 0, sizeof conn_pool[0]);
     printf("DIAG span=%p\n", (void *)protocore_h2_server_span());
-    H2ServerV.slot = 0;
-    H2ServerV.open(protocore_h2_server_span());
+    H2Server.slot = 0;
+    H2Server.open(protocore_h2_server_span());
     printf("DIAG after open: g_out_len=%u g_in_len=%u\n", (unsigned)g_out_len, (unsigned)g_in_len);
     g_out_len = 0;
 
@@ -123,25 +123,24 @@ static void feed_request(const Hdr *fields, size_t n)
     size_t bo = 0;
     for (size_t i = 0; i < n; i++)
     {
-        bo += (HpackV.encode_args.out = block + bo, HpackV.encode_args.cap = sizeof block - bo,
-               HpackV.encode_args.name = fields[i].name, HpackV.encode_args.name_len = strlen(fields[i].name),
-               HpackV.encode_args.value = fields[i].value, HpackV.encode_args.value_len = strlen(fields[i].value),
-               Hpack.encode_header(NULL), HpackV.n);
+        bo += (Hpack.encode_args.out = block + bo, Hpack.encode_args.cap = sizeof block - bo,
+               Hpack.encode_args.name = fields[i].name, Hpack.encode_args.name_len = strlen(fields[i].name),
+               Hpack.encode_args.value = fields[i].value, Hpack.encode_args.value_len = strlen(fields[i].value),
+               Hpack.encode_header(NULL), Hpack.n);
     }
 
     uint8_t sf[9];
     in_add(H2_PREFACE, H2_PREFACE_LEN);
-    in_add(sf, (H2FrameV.build_settings_args.buf = sf, H2FrameV.build_settings_args.cap = sizeof sf,
-                H2FrameV.build_settings_args.ids = NULL, H2FrameV.build_settings_args.vals = NULL,
-                H2FrameV.build_settings_args.n = 0, H2Frame.build_settings(NULL), H2FrameV.n));
+    in_add(sf, (H2Frame.build_settings_args.buf = sf, H2Frame.build_settings_args.cap = sizeof sf,
+                H2Frame.build_settings_args.ids = NULL, H2Frame.build_settings_args.vals = NULL,
+                H2Frame.build_settings_args.n = 0, H2Frame.build_settings(NULL), H2Frame.n));
 
     uint8_t hf[H2_FRAME_HEADER_LEN + sizeof block];
-    in_add(hf,
-           (H2FrameV.headers_args.buf = hf, H2FrameV.headers_args.cap = sizeof hf, H2FrameV.headers_args.stream_id = 1,
-            H2FrameV.headers_args.block = block, H2FrameV.headers_args.block_len = bo,
-            H2FrameV.headers_args.end_stream = PROTO_TRUE, H2Frame.build_headers(NULL), H2FrameV.n));
+    in_add(hf, (H2Frame.headers_args.buf = hf, H2Frame.headers_args.cap = sizeof hf, H2Frame.headers_args.stream_id = 1,
+                H2Frame.headers_args.block = block, H2Frame.headers_args.block_len = bo,
+                H2Frame.headers_args.end_stream = PROTO_TRUE, H2Frame.build_headers(NULL), H2Frame.n));
 
-    H2ServerV.slot = 0;
+    H2Server.slot = 0;
     H2Server.data(protocore_h2_server_span());
 }
 
@@ -307,3 +306,4 @@ void test_h2s_mask_clears_between_blocks(void)
     feed_request(good, 3);
     assert_accepted();
 }
+

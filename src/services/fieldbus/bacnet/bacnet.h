@@ -111,6 +111,7 @@ typedef struct
     const uint8_t *apdu;
     size_t apdu_len;
 } NpduInfo;
+
 /** @brief A decoded APDU header (from Bacnet.apdu_parse). Service data points INTO the source buffer. */
 typedef struct
 {
@@ -123,6 +124,7 @@ typedef struct
     const uint8_t *service_data; ///< the service parameters after the header, or nullptr if none
     size_t service_data_len;     ///< octets remaining after the header
 } BacnetApdu;
+
 /** @brief What bvlc_build takes: buf, cap, function, npdu, npdu_len. */
 typedef struct
 {
@@ -132,6 +134,7 @@ typedef struct
     const uint8_t *npdu;
     size_t npdu_len;
 } BacnetBvlcBuildArgs;
+
 /** @brief What bvlc_parse takes: buf, len, function, npdu, npdu_len. */
 typedef struct
 {
@@ -141,6 +144,7 @@ typedef struct
     const uint8_t **npdu;
     size_t *npdu_len;
 } BacnetBvlcParseArgs;
+
 /** @brief What npdu_build takes: buf, cap, expecting_reply, priority, ... */
 typedef struct
 {
@@ -156,6 +160,7 @@ typedef struct
     const uint8_t *apdu;
     size_t apdu_len;
 } BacnetNpduBuildArgs;
+
 /** @brief What npdu_parse takes: buf, len, out. */
 typedef struct
 {
@@ -163,6 +168,7 @@ typedef struct
     size_t len;
     NpduInfo *out;
 } BacnetNpduParseArgs;
+
 /** @brief What apdu_parse takes: apdu, len, out. */
 typedef struct
 {
@@ -170,6 +176,7 @@ typedef struct
     size_t len;
     BacnetApdu *out;
 } BacnetApduParseArgs;
+
 /** @brief What apdu_build_who_is takes: buf, cap, low_limit, ... */
 typedef struct
 {
@@ -179,6 +186,7 @@ typedef struct
     uint32_t high_limit;
     proto_bool has_limits;
 } BacnetApduBuildWhoIsArgs;
+
 /** @brief What apdu_build_i_am takes: buf, cap, device_instance, ... */
 typedef struct
 {
@@ -189,6 +197,7 @@ typedef struct
     uint8_t segmentation;
     uint16_t vendor_id;
 } BacnetApduBuildIAmArgs;
+
 /** @brief What apdu_build_read_property takes: buf, cap, invoke_id, ... */
 typedef struct
 {
@@ -200,6 +209,7 @@ typedef struct
     uint32_t object_instance;
     uint32_t property_id;
 } BacnetApduBuildReadPropertyArgs;
+
 /**
  * @brief BACnet/IP BVLC + NPDU codec (PROTOCORE_ENABLE_BACNET) - zero-heap framing for the ASHRAE 135
  * building-automation network layer over UDP (default port 47808).
@@ -248,16 +258,10 @@ typedef struct
     BacnetApduBuildWhoIsArgs apdu_build_who_is_args;
     BacnetApduBuildIAmArgs apdu_build_i_am_args;
     BacnetApduBuildReadPropertyArgs apdu_build_read_property_args;
+
     proto_bool ok;
     size_t n;
-} BacnetVars;
 
-/** @brief The operands and the outcome. */
-extern BacnetVars BacnetV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const bvlc_build)(uint8_t *restrict work);
     void (*const bvlc_parse)(uint8_t *restrict work);
     void (*const npdu_build)(uint8_t *restrict work);
@@ -268,31 +272,8 @@ typedef struct
     void (*const apdu_build_read_property)(uint8_t *restrict work);
 } BacnetNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in BacnetV or a region of the borrow at a fixed offset.
-void protocore_bacnet_bvlc_build(uint8_t *restrict work);
-void protocore_bacnet_bvlc_parse(uint8_t *restrict work);
-void protocore_bacnet_npdu_build(uint8_t *restrict work);
-void protocore_bacnet_npdu_parse(uint8_t *restrict work);
-void protocore_bacnet_apdu_parse(uint8_t *restrict work);
-void protocore_bacnet_apdu_build_who_is(uint8_t *restrict work);
-void protocore_bacnet_apdu_build_i_am(uint8_t *restrict work);
-void protocore_bacnet_apdu_build_read_property(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Bacnet.bvlc_build(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const BacnetNs Bacnet __attribute__((unused)) = {
-    .bvlc_build = protocore_bacnet_bvlc_build,
-    .bvlc_parse = protocore_bacnet_bvlc_parse,
-    .npdu_build = protocore_bacnet_npdu_build,
-    .npdu_parse = protocore_bacnet_npdu_parse,
-    .apdu_parse = protocore_bacnet_apdu_parse,
-    .apdu_build_who_is = protocore_bacnet_apdu_build_who_is,
-    .apdu_build_i_am = protocore_bacnet_apdu_build_i_am,
-    .apdu_build_read_property = protocore_bacnet_apdu_build_read_property,
-};
+/** @brief The one symbol this module exports. */
+extern BacnetNs Bacnet;
 
 PROTOCORE_END_DECLS
 

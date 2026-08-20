@@ -44,20 +44,20 @@ void setUp(void)
     }
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        TcpClientV.cid = i;
+        TcpClient.cid = i;
         TcpClient.close(protocore_tcp_client_span());
     }
-    Oauth2V.client.client_id = NULL;
-    Oauth2V.client.client_secret = NULL;
-    Oauth2V.code_grant.code = NULL;
-    Oauth2V.code_grant.redirect_uri = NULL;
-    Oauth2V.code_grant.code_verifier = NULL;
-    Oauth2V.refresh_grant.refresh_token = NULL;
-    Oauth2V.response.json = NULL;
-    Oauth2V.response.tokens = NULL;
-    Oauth2V.ok = PROTO_FALSE;
-    Oauth2V.i32 = 0;
-    Oauth2V.request.token_endpoint = "http://10.0.0.5:8080/token";
+    Oauth2.client.client_id = NULL;
+    Oauth2.client.client_secret = NULL;
+    Oauth2.code_grant.code = NULL;
+    Oauth2.code_grant.redirect_uri = NULL;
+    Oauth2.code_grant.code_verifier = NULL;
+    Oauth2.refresh_grant.refresh_token = NULL;
+    Oauth2.response.json = NULL;
+    Oauth2.response.tokens = NULL;
+    Oauth2.ok = PROTO_FALSE;
+    Oauth2.i32 = 0;
+    Oauth2.request.token_endpoint = "http://10.0.0.5:8080/token";
 }
 
 void tearDown(void)
@@ -65,7 +65,7 @@ void tearDown(void)
     protocore_net_host_reply_reset();
     for (int i = 0; i < PROTOCORE_CLIENT_CONNS; i++)
     {
-        TcpClientV.cid = i;
+        TcpClient.cid = i;
         TcpClient.close(protocore_tcp_client_span());
     }
 }
@@ -73,11 +73,11 @@ void tearDown(void)
 // RFC 6749 sec 4.1.3's running example.
 static void seat_code_grant(void)
 {
-    Oauth2V.client.client_id = "s6BhdRkqt3";
-    Oauth2V.client.client_secret = "gX1fBat3bV";
-    Oauth2V.code_grant.code = "SplxlOBeZQQYbYS6WxSbIA";
-    Oauth2V.code_grant.redirect_uri = "https://client.example.com/cb";
-    Oauth2V.code_grant.code_verifier = NULL;
+    Oauth2.client.client_id = "s6BhdRkqt3";
+    Oauth2.client.client_secret = "gX1fBat3bV";
+    Oauth2.code_grant.code = "SplxlOBeZQQYbYS6WxSbIA";
+    Oauth2.code_grant.redirect_uri = "https://client.example.com/cb";
+    Oauth2.code_grant.code_verifier = NULL;
 }
 
 // The octets the exchange put on the wire, NUL terminated for a substring search.
@@ -99,7 +99,7 @@ void test_the_exchange_posts_the_sec413_body_to_the_endpoint(void)
                                "&client_id=s6BhdRkqt3&client_secret=gX1fBat3bV";
     Oauth2Tokens t;
     seat_code_grant();
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.tokens = &t;
     arm_reply(200, "OK", "{\"access_token\":\"x\",\"token_type\":\"Bearer\"}");
     Oauth2.exchange_code(protocore_oauth2_span());
 
@@ -113,10 +113,10 @@ void test_the_exchange_posts_the_sec413_body_to_the_endpoint(void)
 void test_the_refresh_posts_the_sec6_body(void)
 {
     Oauth2Tokens t;
-    Oauth2V.client.client_id = "s6BhdRkqt3";
-    Oauth2V.client.client_secret = "gX1fBat3bV";
-    Oauth2V.refresh_grant.refresh_token = "tGzv3JOkF0XG5Qx2TlKWIA";
-    Oauth2V.response.tokens = &t;
+    Oauth2.client.client_id = "s6BhdRkqt3";
+    Oauth2.client.client_secret = "gX1fBat3bV";
+    Oauth2.refresh_grant.refresh_token = "tGzv3JOkF0XG5Qx2TlKWIA";
+    Oauth2.response.tokens = &t;
     arm_reply(200, "OK", "{\"access_token\":\"x\",\"token_type\":\"Bearer\"}");
     Oauth2.refresh(protocore_oauth2_span());
 
@@ -137,13 +137,13 @@ void test_a_sec51_response_fills_the_tokens(void)
     uint8_t *work = protocore_oauth2_span();
     Oauth2Tokens t;
     seat_code_grant();
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.tokens = &t;
     arm_reply(200, "OK", JSON);
     Oauth2.exchange_code(work);
 
-    TEST_ASSERT_TRUE(Oauth2V.ok);
-    TEST_ASSERT_EQUAL_INT32(200, Oauth2V.i32);
-    TEST_ASSERT_EQUAL_PTR(OAUTH2_CTX(work)->resp, Oauth2V.response.json);
+    TEST_ASSERT_TRUE(Oauth2.ok);
+    TEST_ASSERT_EQUAL_INT32(200, Oauth2.i32);
+    TEST_ASSERT_EQUAL_PTR(OAUTH2_CTX(work)->resp, Oauth2.response.json);
     TEST_ASSERT_EQUAL_STRING(JSON, OAUTH2_CTX(work)->resp);
     TEST_ASSERT_EQUAL_STRING("2YotnFZFEjr1zCsicMWpAA", t.access_token);
     TEST_ASSERT_EQUAL_STRING("Bearer", t.token_type);
@@ -158,12 +158,12 @@ void test_a_sec52_error_object_keeps_its_status(void)
     uint8_t *work = protocore_oauth2_span();
     Oauth2Tokens t;
     seat_code_grant();
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.tokens = &t;
     arm_reply(400, "Bad Request", "{\"error\":\"invalid_grant\"}");
     Oauth2.exchange_code(work);
 
-    TEST_ASSERT_FALSE(Oauth2V.ok);
-    TEST_ASSERT_EQUAL_INT32(400, Oauth2V.i32);
+    TEST_ASSERT_FALSE(Oauth2.ok);
+    TEST_ASSERT_EQUAL_INT32(400, Oauth2.i32);
     TEST_ASSERT_EQUAL_STRING("{\"error\":\"invalid_grant\"}", OAUTH2_CTX(work)->resp);
     TEST_ASSERT_EQUAL_STRING("", t.access_token);
 }
@@ -173,12 +173,12 @@ void test_a_2xx_without_an_access_token_reports_err_response(void)
 {
     Oauth2Tokens t;
     seat_code_grant();
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.tokens = &t;
     arm_reply(200, "OK", "{\"scope\":\"read\"}");
     Oauth2.exchange_code(protocore_oauth2_span());
 
-    TEST_ASSERT_FALSE(Oauth2V.ok);
-    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_RESPONSE, Oauth2V.i32);
+    TEST_ASSERT_FALSE(Oauth2.ok);
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_RESPONSE, Oauth2.i32);
 }
 
 // Nothing answers, so the read runs to its deadline and the exchange has no response at all.
@@ -186,11 +186,11 @@ void test_an_endpoint_that_never_answers_reports_err_transport(void)
 {
     Oauth2Tokens t;
     seat_code_grant();
-    Oauth2V.response.tokens = &t;
+    Oauth2.response.tokens = &t;
     Oauth2.exchange_code(protocore_oauth2_span());
 
-    TEST_ASSERT_FALSE(Oauth2V.ok);
-    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT, Oauth2V.i32);
+    TEST_ASSERT_FALSE(Oauth2.ok);
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT, Oauth2.i32);
 }
 
 // A grant with a required parameter missing builds no body, and the exchange reports that rather
@@ -198,13 +198,13 @@ void test_an_endpoint_that_never_answers_reports_err_transport(void)
 void test_an_unbuildable_grant_sends_nothing(void)
 {
     Oauth2Tokens t;
-    Oauth2V.client.client_id = "s6BhdRkqt3";
-    Oauth2V.code_grant.code = NULL;
-    Oauth2V.code_grant.redirect_uri = "https://client.example.com/cb";
-    Oauth2V.response.tokens = &t;
+    Oauth2.client.client_id = "s6BhdRkqt3";
+    Oauth2.code_grant.code = NULL;
+    Oauth2.code_grant.redirect_uri = "https://client.example.com/cb";
+    Oauth2.response.tokens = &t;
     arm_reply(200, "OK", "{\"access_token\":\"x\"}");
     Oauth2.exchange_code(protocore_oauth2_span());
 
-    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_BUILD, Oauth2V.i32);
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_BUILD, Oauth2.i32);
     TEST_ASSERT_EQUAL_size_t(0, tcp_captured_len());
 }

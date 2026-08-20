@@ -56,16 +56,19 @@ typedef struct
     const uint8_t *data;
     size_t len;
 } Sht3xCrc8Args;
+
 /** @brief What temp_mc takes: raw. */
 typedef struct
 {
     uint16_t raw;
 } Sht3xTempMcArgs;
+
 /** @brief What rh_mpct takes: raw. */
 typedef struct
 {
     uint16_t raw;
 } Sht3xRhMpctArgs;
+
 /** @brief What parse takes: resp, temp_mc, rh_mpct. */
 typedef struct
 {
@@ -73,17 +76,20 @@ typedef struct
     int32_t *temp_mc;
     int32_t *rh_mpct;
 } Sht3xParseArgs;
+
 /** @brief What begin takes: addr. */
 typedef struct
 {
     uint8_t addr;
 } Sht3xBeginArgs;
+
 /** @brief What read takes: temp_mc, rh_mpct. */
 typedef struct
 {
     int32_t *temp_mc;
     int32_t *rh_mpct;
 } Sht3xReadArgs;
+
 /**
  * @brief Sensirion SHT3x temperature / humidity sensor codec (PROTOCORE_ENABLE_SHT3X). The SHT3x (SHT30 / SHT31 / ...
  *
@@ -123,17 +129,11 @@ typedef struct
     Sht3xParseArgs parse_args;
     Sht3xBeginArgs begin_args;
     Sht3xReadArgs read_args;
+
     proto_bool ok;
     uint8_t crc;
     int32_t milli;
-} Sht3xVars;
 
-/** @brief The operands and the outcome. */
-extern Sht3xVars Sht3xV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const crc8)(uint8_t *restrict work);
     void (*const temp_mc)(uint8_t *restrict work);
     void (*const rh_mpct)(uint8_t *restrict work);
@@ -142,27 +142,8 @@ typedef struct
     void (*const read)(uint8_t *restrict work);
 } Sht3xNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Sht3xV or a region of the borrow at a fixed offset.
-void protocore_sht3x_crc8(uint8_t *restrict work);
-void protocore_sht3x_temp_mc(uint8_t *restrict work);
-void protocore_sht3x_rh_mpct(uint8_t *restrict work);
-void protocore_sht3x_parse(uint8_t *restrict work);
-void protocore_sht3x_begin(uint8_t *restrict work);
-void protocore_sht3x_read(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Sht3x.crc8(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Sht3xNs Sht3x __attribute__((unused)) = {
-    .crc8 = protocore_sht3x_crc8,
-    .temp_mc = protocore_sht3x_temp_mc,
-    .rh_mpct = protocore_sht3x_rh_mpct,
-    .parse = protocore_sht3x_parse,
-    .begin = protocore_sht3x_begin,
-    .read = protocore_sht3x_read,
-};
+/** @brief The one symbol this module exports. */
+extern Sht3xNs Sht3x;
 
 /**
  * @brief The PROTOCORE_I2C_DEVICE_BORROW bytes this module's state lives in.

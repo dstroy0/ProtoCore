@@ -76,6 +76,7 @@ typedef struct
     size_t str_len;  ///< how many octets @ref RespReply::str holds
     int64_t count;   ///< children following an Arrays, Sets, Pushes or Maps header (Maps = 2 * entries)
 } RespReply;
+
 /** @brief "Sending commands to a Redis server": the array of bulk strings a client sends. */
 typedef struct
 {
@@ -83,18 +84,21 @@ typedef struct
     const size_t *argv_len;  ///< per-string octet counts, or NULL to measure each NUL-terminated string
     size_t argc;             ///< how many bulk strings the array carries
 } RespCommandArgs;
+
 /** @brief Where an encoded command lands. */
 typedef struct
 {
     char *buf;  ///< the buffer an encode writes the command into
     size_t cap; ///< how much room it has, the terminating NUL included
 } RespOutArgs;
+
 /** @brief The buffered reply octets a parse reads. */
 typedef struct
 {
     const uint8_t *buf; ///< the head of the octets still to decode
     size_t len;         ///< how many of them are buffered
 } RespWireArgs;
+
 /**
  * @brief The RESP codec: one command out, one value in.
  *
@@ -117,34 +121,17 @@ typedef struct
     RespCommandArgs command; ///< what a client sends
     RespOutArgs out;         ///< where the encoded command lands
     RespWireArgs wire;       ///< what a parse reads
+
     proto_bool ok;
     size_t n;
     RespReply reply;
-} RespVars;
 
-/** @brief The operands and the outcome. */
-extern RespVars RespV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const encode_command)(uint8_t *restrict work);
     void (*const parse_reply)(uint8_t *restrict work);
 } RespNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in RespV or a region of the borrow at a fixed offset.
-void protocore_redis_resp_encode_command(uint8_t *restrict work);
-void protocore_redis_resp_parse_reply(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Resp.encode_command(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const RespNs Resp __attribute__((unused)) = {
-    .encode_command = protocore_redis_resp_encode_command,
-    .parse_reply = protocore_redis_resp_parse_reply,
-};
+/** @brief The one symbol this module exports. */
+extern RespNs Resp;
 
 PROTOCORE_END_DECLS
 

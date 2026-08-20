@@ -44,22 +44,22 @@ void dbench_run(void)
     // time only the parser (not the builder that produced their input).
     static uint8_t v1hdr[64];
     static uint8_t v2hdr[32];
-    ProxyProtocolV.v1_build_args.buf = (char *)v1hdr;
-    ProxyProtocolV.v1_build_args.cap = sizeof(v1hdr);
-    ProxyProtocolV.v1_build_args.src_addr = SRC;
-    ProxyProtocolV.v1_build_args.dst_addr = DST;
-    ProxyProtocolV.v1_build_args.src_port = 12345;
-    ProxyProtocolV.v1_build_args.dst_port = 80;
+    ProxyProtocol.v1_build_args.buf = (char *)v1hdr;
+    ProxyProtocol.v1_build_args.cap = sizeof(v1hdr);
+    ProxyProtocol.v1_build_args.src_addr = SRC;
+    ProxyProtocol.v1_build_args.dst_addr = DST;
+    ProxyProtocol.v1_build_args.src_port = 12345;
+    ProxyProtocol.v1_build_args.dst_port = 80;
     ProxyProtocol.v1_build(proxy_protocol_work);
-    size_t v1len = ProxyProtocolV.n;
-    ProxyProtocolV.v2_build_args.buf = v2hdr;
-    ProxyProtocolV.v2_build_args.cap = sizeof(v2hdr);
-    ProxyProtocolV.v2_build_args.src_addr = SRC;
-    ProxyProtocolV.v2_build_args.dst_addr = DST;
-    ProxyProtocolV.v2_build_args.src_port = 12345;
-    ProxyProtocolV.v2_build_args.dst_port = 80;
+    size_t v1len = ProxyProtocol.n;
+    ProxyProtocol.v2_build_args.buf = v2hdr;
+    ProxyProtocol.v2_build_args.cap = sizeof(v2hdr);
+    ProxyProtocol.v2_build_args.src_addr = SRC;
+    ProxyProtocol.v2_build_args.dst_addr = DST;
+    ProxyProtocol.v2_build_args.src_port = 12345;
+    ProxyProtocol.v2_build_args.dst_port = 80;
     ProxyProtocol.v2_build(proxy_protocol_work);
-    size_t v2len = ProxyProtocolV.n;
+    size_t v2len = ProxyProtocol.n;
 
     for (;;)
     {
@@ -70,28 +70,28 @@ void dbench_run(void)
         // inside the argument: DBENCH_OP re-evaluates it, so the operands belong in the timed
         // expression rather than above it.
         DBENCH_OP("ProxyProtocol.v1_build (TCP4 text)", 50000,
-                  (ProxyProtocolV.v1_build_args.buf = v1buf, ProxyProtocolV.v1_build_args.cap = sizeof(v1buf),
-                   ProxyProtocolV.v1_build_args.src_addr = SRC, ProxyProtocolV.v1_build_args.dst_addr = DST,
-                   ProxyProtocolV.v1_build_args.src_port = 12345, ProxyProtocolV.v1_build_args.dst_port = 80,
-                   ProxyProtocol.v1_build(proxy_protocol_work), sink += ProxyProtocolV.n));
+                  (ProxyProtocol.v1_build_args.buf = v1buf, ProxyProtocol.v1_build_args.cap = sizeof(v1buf),
+                   ProxyProtocol.v1_build_args.src_addr = SRC, ProxyProtocol.v1_build_args.dst_addr = DST,
+                   ProxyProtocol.v1_build_args.src_port = 12345, ProxyProtocol.v1_build_args.dst_port = 80,
+                   ProxyProtocol.v1_build(proxy_protocol_work), sink += ProxyProtocol.n));
         // v2 (binary) build: signature memcpy + big-endian pack - cheap, so a large N.
         DBENCH_OP("ProxyProtocol.v2_build (TCP4 binary)", 200000,
-                  (ProxyProtocolV.v2_build_args.buf = v2buf, ProxyProtocolV.v2_build_args.cap = sizeof(v2buf),
-                   ProxyProtocolV.v2_build_args.src_addr = SRC, ProxyProtocolV.v2_build_args.dst_addr = DST,
-                   ProxyProtocolV.v2_build_args.src_port = 12345, ProxyProtocolV.v2_build_args.dst_port = 80,
-                   ProxyProtocol.v2_build(proxy_protocol_work), sink += ProxyProtocolV.n));
+                  (ProxyProtocol.v2_build_args.buf = v2buf, ProxyProtocol.v2_build_args.cap = sizeof(v2buf),
+                   ProxyProtocol.v2_build_args.src_addr = SRC, ProxyProtocol.v2_build_args.dst_addr = DST,
+                   ProxyProtocol.v2_build_args.src_port = 12345, ProxyProtocol.v2_build_args.dst_port = 80,
+                   ProxyProtocol.v2_build(proxy_protocol_work), sink += ProxyProtocol.n));
 
         (void)parsebuf;
         // v1 parse: detect "PROXY ", find CRLF, tokenize, parse_ipv4 x2 + parse_u16 x2.
         DBENCH_OP("ProxyProtocol.parse v1 (TCP4 text)", 50000,
-                  (ProxyProtocolV.parse_args.buf = v1hdr, ProxyProtocolV.parse_args.len = v1len,
-                   ProxyProtocolV.parse_args.out = &info, ProxyProtocolV.parse_args.consumed = &consumed,
-                   ProxyProtocol.parse(proxy_protocol_work), sink += ProxyProtocolV.ok));
+                  (ProxyProtocol.parse_args.buf = v1hdr, ProxyProtocol.parse_args.len = v1len,
+                   ProxyProtocol.parse_args.out = &info, ProxyProtocol.parse_args.consumed = &consumed,
+                   ProxyProtocol.parse(proxy_protocol_work), sink += ProxyProtocol.ok));
         // v2 parse: match the 12-octet signature, unpack the fixed binary address block.
         DBENCH_OP("ProxyProtocol.parse v2 (TCP4 binary)", 200000,
-                  (ProxyProtocolV.parse_args.buf = v2hdr, ProxyProtocolV.parse_args.len = v2len,
-                   ProxyProtocolV.parse_args.out = &info, ProxyProtocolV.parse_args.consumed = &consumed,
-                   ProxyProtocol.parse(proxy_protocol_work), sink += ProxyProtocolV.ok));
+                  (ProxyProtocol.parse_args.buf = v2hdr, ProxyProtocol.parse_args.len = v2len,
+                   ProxyProtocol.parse_args.out = &info, ProxyProtocol.parse_args.consumed = &consumed,
+                   ProxyProtocol.parse(proxy_protocol_work), sink += ProxyProtocol.ok));
 
         (void)sink;
         DBENCH_DONE();

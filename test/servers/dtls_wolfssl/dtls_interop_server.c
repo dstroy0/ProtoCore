@@ -108,44 +108,44 @@ int main(int argc, char **argv)
             uint8_t paddr[6];
             memcpy(paddr, &peer.sin_addr.s_addr, 4);
             memcpy(paddr + 4, &peer.sin_port, 2);
-            DtlsServerV.init_args.c = &conn;
-            DtlsServerV.init_args.cfg = &cfg;
-            DtlsServerV.init_args.peer_addr = paddr;
-            DtlsServerV.init_args.peer_addr_len = sizeof paddr;
+            DtlsServer.init_args.c = &conn;
+            DtlsServer.init_args.cfg = &cfg;
+            DtlsServer.init_args.peer_addr = paddr;
+            DtlsServer.init_args.peer_addr_len = sizeof paddr;
             DtlsServer.init(dtls_server_work);
             inited = PROTO_TRUE;
         }
-        DtlsServerV.established_args.c = &conn;
+        DtlsServer.established_args.c = &conn;
         DtlsServer.established(dtls_server_work);
-        if (!DtlsServerV.ok)
+        if (!DtlsServer.ok)
         {
-            DtlsServerV.process_args.c = &conn;
-            DtlsServerV.process_args.dgram = dgram;
-            DtlsServerV.process_args.len = (size_t)n;
-            DtlsServerV.process_args.out = out;
-            DtlsServerV.process_args.out_cap = sizeof out;
+            DtlsServer.process_args.c = &conn;
+            DtlsServer.process_args.dgram = dgram;
+            DtlsServer.process_args.len = (size_t)n;
+            DtlsServer.process_args.out = out;
+            DtlsServer.process_args.out_cap = sizeof out;
             DtlsServer.process(dtls_server_work);
-            int r = DtlsServerV.n;
+            int r = DtlsServer.n;
             if (r < 0)
             {
-                DtlsServerV.alert_args.c = &conn;
-                DtlsServerV.alert(dtls_server_work);
-                fprintf(stderr, "HANDSHAKE FAIL alert=%u\n", DtlsServerV.value);
+                DtlsServer.alert_args.c = &conn;
+                DtlsServer.alert(dtls_server_work);
+                fprintf(stderr, "HANDSHAKE FAIL alert=%u\n", DtlsServer.value);
                 return 1;
             }
             if (r > 0)
             {
                 sendto(fd, out, (size_t)r, 0, (sockaddr *)&peer, plen);
             }
-            DtlsServerV.established_args.c = &conn;
+            DtlsServer.established_args.c = &conn;
             DtlsServer.established(dtls_server_work);
-            if (DtlsServerV.ok)
+            if (DtlsServer.ok)
             {
                 uint8_t cid[PROTOCORE_DTLS_CID_MAX];
-                DtlsServerV.local_cid_args.c = &conn;
-                DtlsServerV.local_cid_args.out = cid;
-                DtlsServerV.local_cid(dtls_server_work);
-                size_t cidlen = DtlsServerV.n;
+                DtlsServer.local_cid_args.c = &conn;
+                DtlsServer.local_cid_args.out = cid;
+                DtlsServer.local_cid(dtls_server_work);
+                size_t cidlen = DtlsServer.n;
                 fprintf(stderr, "HANDSHAKE OK%s%s", pre_flights >= 2 ? " (via HelloRetryRequest)" : "",
                         cidlen ? " (with connection ID, " : "\n");
                 if (cidlen)
@@ -165,24 +165,24 @@ int main(int argc, char **argv)
             // send sequence, so the echo never collides with the handshake-completion ACK).
             uint8_t inner[8192];
             size_t plen_in = 0;
-            DtlsServerV.open_app_args.c = &conn;
-            DtlsServerV.open_app_args.rec = dgram;
-            DtlsServerV.open_app_args.rec_len = (size_t)n;
-            DtlsServerV.open_app_args.out = inner;
-            DtlsServerV.open_app_args.out_cap = sizeof inner;
-            DtlsServerV.open_app_args.out_len = &plen_in;
+            DtlsServer.open_app_args.c = &conn;
+            DtlsServer.open_app_args.rec = dgram;
+            DtlsServer.open_app_args.rec_len = (size_t)n;
+            DtlsServer.open_app_args.out = inner;
+            DtlsServer.open_app_args.out_cap = sizeof inner;
+            DtlsServer.open_app_args.out_len = &plen_in;
             DtlsServer.open_app(dtls_server_work);
-            if (DtlsServerV.ok)
+            if (DtlsServer.ok)
             {
                 fprintf(stderr, "APPDATA RX %zu bytes: %.*s\n", plen_in, (int)plen_in, inner);
                 uint8_t rec[8192];
-                DtlsServerV.seal_app_args.c = &conn;
-                DtlsServerV.seal_app_args.data = inner;
-                DtlsServerV.seal_app_args.len = plen_in;
-                DtlsServerV.seal_app_args.out = rec;
-                DtlsServerV.seal_app_args.out_cap = sizeof rec;
+                DtlsServer.seal_app_args.c = &conn;
+                DtlsServer.seal_app_args.data = inner;
+                DtlsServer.seal_app_args.len = plen_in;
+                DtlsServer.seal_app_args.out = rec;
+                DtlsServer.seal_app_args.out_cap = sizeof rec;
                 DtlsServer.seal_app(dtls_server_work);
-                size_t rn = DtlsServerV.n;
+                size_t rn = DtlsServer.n;
                 if (rn)
                 {
                     sendto(fd, rec, rn, 0, (sockaddr *)&peer, plen);

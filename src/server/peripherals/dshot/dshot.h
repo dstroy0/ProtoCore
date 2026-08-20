@@ -76,6 +76,7 @@ typedef struct
     proto_bool telemetry;     ///< request telemetry on this frame
     proto_bool bidirectional; ///< bidirectional/extended DShot (the CRC is inverted)
 } DshotEncodeArgs;
+
 /** @brief What decode takes: frame, value11, telemetry, bidirectional. */
 typedef struct
 {
@@ -84,18 +85,21 @@ typedef struct
     proto_bool *telemetry;    ///< out: the telemetry-request bit (may be null)
     proto_bool bidirectional; ///< interpret the CRC as the inverted (bidirectional) form
 } DshotDecodeArgs;
+
 /** @brief What bit_ns takes: rate_kbit, bit. */
 typedef struct
 {
     uint16_t rate_kbit; ///< one of 150, 300, 600, 1200. Others return 0
     proto_bool bit;     ///< the bit value (false = 0, true = 1)
 } DshotBitNsArgs;
+
 /** @brief What esc_pwm_ns takes: throttle_1000, mode. */
 typedef struct
 {
     uint16_t throttle_1000; ///< throttle 0..1000 (clamped); 0 = min pulse (idle/arm), 1000 = max
     protocore_esc_pwm mode; ///< one of protocore_esc_pwm
 } DshotEscPwmNsArgs;
+
 /**
  * @brief DShot ESC digital throttle protocol codec (PROTOCORE_ENABLE_DSHOT). DShot is the digital replacement for ...
  *
@@ -130,40 +134,19 @@ typedef struct
     DshotDecodeArgs decode_args;
     DshotBitNsArgs bit_ns_args;
     DshotEscPwmNsArgs esc_pwm_ns_args;
+
     proto_bool ok;
     uint16_t frame;
     uint32_t ns;
-} DshotVars;
 
-/** @brief The operands and the outcome. */
-extern DshotVars DshotV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const encode)(uint8_t *restrict work);
     void (*const decode)(uint8_t *restrict work);
     void (*const bit_ns)(uint8_t *restrict work);
     void (*const esc_pwm_ns)(uint8_t *restrict work);
 } DshotNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DshotV or a region of the borrow at a fixed offset.
-void protocore_dshot_encode(uint8_t *restrict work);
-void protocore_dshot_decode(uint8_t *restrict work);
-void protocore_dshot_bit_ns(uint8_t *restrict work);
-void protocore_dshot_esc_pwm_ns(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Dshot.encode(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DshotNs Dshot __attribute__((unused)) = {
-    .encode = protocore_dshot_encode,
-    .decode = protocore_dshot_decode,
-    .bit_ns = protocore_dshot_bit_ns,
-    .esc_pwm_ns = protocore_dshot_esc_pwm_ns,
-};
+/** @brief The one symbol this module exports. */
+extern DshotNs Dshot;
 
 PROTOCORE_END_DECLS
 

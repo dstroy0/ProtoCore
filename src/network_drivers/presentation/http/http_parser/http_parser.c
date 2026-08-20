@@ -6,7 +6,7 @@
  * @brief Standalone HTTP/1.1 request parser - implementation.
  *
  * No dependency on transport, session, or lwIP.  Consumes one byte at a
- * time via protocore_http_parser_feed(); the presentation layer is responsible for
+ * time via http_parser_feed(); the presentation layer is responsible for
  * pulling bytes out of whatever transport buffer it uses.
  */
 
@@ -75,13 +75,13 @@ uint8_t *protocore_http_parser_span(void)
 }
 
 // The entries this file calls before reaching their definitions.
-void protocore_http_parser_get_header(uint8_t *restrict work);
+static void http_parser_get_header(uint8_t *restrict work);
 
-void protocore_http_parser_set_stream_hooks(uint8_t *restrict work)
+static void http_parser_set_stream_hooks(uint8_t *restrict work)
 {
-    HttpStreamBeginCb begin = HttpParserV.set_stream_hooks_args.begin;
-    HttpStreamDataCb data = HttpParserV.set_stream_hooks_args.data;
-    HttpStreamAbortCb abort = HttpParserV.set_stream_hooks_args.abort;
+    HttpStreamBeginCb begin = HttpParser.set_stream_hooks_args.begin;
+    HttpStreamDataCb data = HttpParser.set_stream_hooks_args.data;
+    HttpStreamAbortCb abort = HttpParser.set_stream_hooks_args.abort;
 
     HTTP_PARSER_CTX(work)->stream_begin = begin;
     HTTP_PARSER_CTX(work)->stream_data = data;
@@ -204,9 +204,9 @@ static void parse_query_params(HttpReq *req)
     }
 }
 
-void protocore_http_parser_reset(uint8_t *restrict work)
+static void http_parser_reset(uint8_t *restrict work)
 {
-    HttpReq *req = HttpParserV.reset_args.req;
+    HttpReq *req = HttpParser.reset_args.req;
 
     uint8_t id = req->slot_id;
 
@@ -226,10 +226,10 @@ void protocore_http_parser_reset(uint8_t *restrict work)
     req->_version_hash = PROTOCORE_FNV_OFFSET; // seed the FNV-1a accumulator
 }
 
-void protocore_http_parser_feed(uint8_t *restrict work)
+static void http_parser_feed(uint8_t *restrict work)
 {
-    HttpReq *p = HttpParserV.feed_args.req;
-    uint8_t byte = HttpParserV.feed_args.byte;
+    HttpReq *p = HttpParser.feed_args.req;
+    uint8_t byte = HttpParser.feed_args.byte;
 
     // Terminal states (PARSE_COMPLETE / PARSE_ERROR / PARSE_ENTITY_TOO_LARGE / PARSE_URI_TOO_LONG) have no case
     // below, so they fall through to `default:` and no-op - no separate guard switch on the per-byte hot path.
@@ -617,51 +617,51 @@ void protocore_http_parser_feed(uint8_t *restrict work)
     }
 }
 
-void protocore_http_parser_get_header(uint8_t *restrict work)
+static void http_parser_get_header(uint8_t *restrict work)
 {
     (void)work;
-    const HttpReq *req = HttpParserV.get_header_args.req;
-    const char *key = HttpParserV.get_header_args.key;
+    const HttpReq *req = HttpParser.get_header_args.req;
+    const char *key = HttpParser.get_header_args.key;
 
     for (uint8_t i = 0; i < req->header_count; i++)
     {
         if (str.eq(req->headers[i].key, key, MAX_KEY_LEN, PROTO_TRUE))
         {
-            HttpParserV.text = req->headers[i].val;
+            HttpParser.text = req->headers[i].val;
             return;
         }
     }
-    HttpParserV.text = NULL;
+    HttpParser.text = NULL;
 }
 
-void protocore_http_parser_get_cookie(uint8_t *restrict work)
+static void http_parser_get_cookie(uint8_t *restrict work)
 {
-    const HttpReq *req = HttpParserV.get_cookie_args.req;
-    const char *name = HttpParserV.get_cookie_args.name;
-    char *out = HttpParserV.get_cookie_args.out;
-    size_t out_size = HttpParserV.get_cookie_args.out_size;
+    const HttpReq *req = HttpParser.get_cookie_args.req;
+    const char *name = HttpParser.get_cookie_args.name;
+    char *out = HttpParser.get_cookie_args.out;
+    size_t out_size = HttpParser.get_cookie_args.out_size;
 
     if (out == NULL || out_size == 0)
     {
-        HttpParserV.ok = PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
         return;
     }
     out[0] = '\0';
     if (req == NULL || name == NULL || name[0] == '\0')
     {
-        HttpParserV.ok = PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
         return;
     }
 
     // RFC 6265 4.2.1: the request "Cookie" header is "name1=value1; name2=value2".
     // Names are case-sensitive; a value may be DQUOTE-wrapped.
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Cookie";
-    protocore_http_parser_get_header(work);
-    const char *c = HttpParserV.text;
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Cookie";
+    http_parser_get_header(work);
+    const char *c = HttpParser.text;
     if (c == NULL)
     {
-        HttpParserV.ok = PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
         return;
     }
     const size_t clen = str.len(c, MAX_VAL_LEN);
@@ -703,13 +703,13 @@ void protocore_http_parser_get_cookie(uint8_t *restrict work)
                 }
                 mem.cpy(out, c + v, vlen);
                 out[vlen] = '\0';
-                HttpParserV.ok = PROTO_TRUE;
+                HttpParser.ok = PROTO_TRUE;
                 return;
             }
         }
         at = stop + 1u;
     }
-    HttpParserV.ok = PROTO_FALSE;
+    HttpParser.ok = PROTO_FALSE;
 }
 
 // Extract and validate a Forwarded / X-Forwarded-For client-address token from
@@ -800,18 +800,18 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     tok[tlen] = '\0';
 
     protocore_ip ip;
-    IpV.args.text = tok;
-    IpV.args.out = &ip;
+    Ip.args.text = tok;
+    Ip.args.out = &ip;
     Ip.parse(ip_work); // rejects "unknown" / "_obf" / malformed
-    if (!IpV.ok)
+    if (!Ip.ok)
     {
         return PROTO_FALSE;
     }
-    IpV.args.ip = &ip;
-    IpV.args.buf = out;
-    IpV.args.cap = cap;
+    Ip.args.ip = &ip;
+    Ip.args.buf = out;
+    Ip.args.cap = cap;
     Ip.format(ip_work);
-    return IpV.n > 0; // false if out is too small for the canonical text
+    return Ip.n > 0; // false if out is too small for the canonical text
 }
 
 // Index just past the DQUOTE that closes the one at @p i. RFC 7230 §3.2.6:
@@ -893,12 +893,12 @@ static proto_bool fwd_value_is(const char *v, size_t n, const char *lit, size_t 
     return n == litlen && str.diff(v, lit, litlen, PROTO_TRUE) == litlen;
 }
 
-void protocore_http_parser_forwarded_client(uint8_t *restrict work)
+static void http_parser_forwarded_client(uint8_t *restrict work)
 {
-    const HttpReq *req = HttpParserV.forwarded_client_args.req;
-    char *ip_out = HttpParserV.forwarded_client_args.ip_out;
-    size_t ip_cap = HttpParserV.forwarded_client_args.ip_cap;
-    proto_bool *is_https = HttpParserV.forwarded_client_args.is_https;
+    const HttpReq *req = HttpParser.forwarded_client_args.req;
+    char *ip_out = HttpParser.forwarded_client_args.ip_out;
+    size_t ip_cap = HttpParser.forwarded_client_args.ip_cap;
+    proto_bool *is_https = HttpParser.forwarded_client_args.is_https;
 
     if (is_https)
     {
@@ -906,17 +906,17 @@ void protocore_http_parser_forwarded_client(uint8_t *restrict work)
     }
     if (!ip_out || ip_cap == 0 || !req)
     {
-        HttpParserV.ok = PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
         return;
     }
     ip_out[0] = '\0';
 
     // Prefer RFC 7239 "Forwarded" (the leftmost element is the original client):
     //   Forwarded: for=192.0.2.60;proto=https, for=198.51.100.1
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Forwarded";
-    protocore_http_parser_get_header(work);
-    const char *fwd = HttpParserV.text;
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Forwarded";
+    http_parser_get_header(work);
+    const char *fwd = HttpParser.text;
     if (fwd)
     {
         // RFC 7239 §4: Forwarded = 1#forwarded-element, the leftmost holding what the first proxy
@@ -936,7 +936,7 @@ void protocore_http_parser_forwarded_client(uint8_t *restrict work)
         const char *f = fwd_param(fwd, elen, "for", 3u, &flen);
         if (f && fwd_extract_client(f, flen, ip_out, ip_cap))
         {
-            HttpParserV.ok = PROTO_TRUE;
+            HttpParser.ok = PROTO_TRUE;
             return;
         }
     }
@@ -944,76 +944,76 @@ void protocore_http_parser_forwarded_client(uint8_t *restrict work)
     // De-facto X-Forwarded-For (comma list; leftmost = original client) + X-Forwarded-Proto.
     if (is_https)
     {
-        HttpParserV.get_header_args.req = req;
-        HttpParserV.get_header_args.key = "X-Forwarded-Proto";
-        protocore_http_parser_get_header(work);
-        const char *xfp = HttpParserV.text;
+        HttpParser.get_header_args.req = req;
+        HttpParser.get_header_args.key = "X-Forwarded-Proto";
+        http_parser_get_header(work);
+        const char *xfp = HttpParser.text;
         if (xfp && str.starts(xfp, "https", 5, PROTO_TRUE))
         {
             *is_https = PROTO_TRUE;
         }
     }
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "X-Forwarded-For";
-    protocore_http_parser_get_header(work);
-    const char *xff = HttpParserV.text;
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "X-Forwarded-For";
+    http_parser_get_header(work);
+    const char *xff = HttpParser.text;
     if (xff)
     {
         const char *end = str.find(xff, MAX_VAL_LEN, ",", sizeof(","), PROTO_FALSE);
         size_t len = end ? (size_t)(end - xff) : str.len(xff, MAX_VAL_LEN);
         if (fwd_extract_client(xff, len, ip_out, ip_cap))
         {
-            HttpParserV.ok = PROTO_TRUE;
+            HttpParser.ok = PROTO_TRUE;
             return;
         }
     }
-    HttpParserV.ok = PROTO_FALSE;
+    HttpParser.ok = PROTO_FALSE;
 }
 
-void protocore_http_parser_get_query(uint8_t *restrict work)
+static void http_parser_get_query(uint8_t *restrict work)
 {
     (void)work;
-    const HttpReq *req = HttpParserV.get_query_args.req;
-    const char *key = HttpParserV.get_query_args.key;
+    const HttpReq *req = HttpParser.get_query_args.req;
+    const char *key = HttpParser.get_query_args.key;
 
     for (uint8_t i = 0; i < req->query_count; i++)
     {
         if (str.eq(req->query_params[i].key, key, QUERY_KEY_LEN, PROTO_FALSE))
         {
-            HttpParserV.text = req->query_params[i].val;
+            HttpParser.text = req->query_params[i].val;
             return;
         }
     }
-    HttpParserV.text = NULL;
+    HttpParser.text = NULL;
 }
 
-void protocore_http_parser_get_form(uint8_t *restrict work)
+static void http_parser_get_form(uint8_t *restrict work)
 {
-    const HttpReq *req = HttpParserV.get_form_args.req;
-    const char *key = HttpParserV.get_form_args.key;
-    char *out = HttpParserV.get_form_args.out;
-    size_t out_size = HttpParserV.get_form_args.out_size;
+    const HttpReq *req = HttpParser.get_form_args.req;
+    const char *key = HttpParser.get_form_args.key;
+    char *out = HttpParser.get_form_args.out;
+    size_t out_size = HttpParser.get_form_args.out_size;
 
     if (out == NULL || out_size == 0)
     {
-        HttpParserV.ok = PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
         return;
     }
     out[0] = '\0';
     if (req == NULL || key == NULL)
     {
-        HttpParserV.ok = PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
         return;
     }
 
     // Only urlencoded bodies (allow a trailing "; charset=..." suffix).
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Content-Type";
-    protocore_http_parser_get_header(work);
-    const char *ct = HttpParserV.text;
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Content-Type";
+    http_parser_get_header(work);
+    const char *ct = HttpParser.text;
     if (ct == NULL || !str.starts(ct, "application/x-www-form-urlencoded", 33, PROTO_TRUE))
     {
-        HttpParserV.ok = PROTO_FALSE;
+        HttpParser.ok = PROTO_FALSE;
         return;
     }
 
@@ -1062,38 +1062,47 @@ void protocore_http_parser_get_form(uint8_t *restrict work)
             }
             mem.cpy(out, body + vs, vlen);
             out[vlen] = '\0';
-            HttpParserV.ok = PROTO_TRUE;
+            HttpParser.ok = PROTO_TRUE;
             return;
         }
     }
-    HttpParserV.ok = PROTO_FALSE;
+    HttpParser.ok = PROTO_FALSE;
 }
 
-void protocore_http_parser_get_param(uint8_t *restrict work)
+static void http_parser_get_param(uint8_t *restrict work)
 {
     (void)work;
-    const HttpReq *req = HttpParserV.get_param_args.req;
-    const char *key = HttpParserV.get_param_args.key;
+    const HttpReq *req = HttpParser.get_param_args.req;
+    const char *key = HttpParser.get_param_args.key;
 
     if (req == NULL || key == NULL)
     {
-        HttpParserV.text = NULL;
+        HttpParser.text = NULL;
         return;
     }
     for (uint8_t i = 0; i < req->path_param_count; i++)
     {
         if (str.eq(req->path_params[i].key, key, QUERY_KEY_LEN, PROTO_FALSE))
         {
-            HttpParserV.text = req->path_params[i].val;
+            HttpParser.text = req->path_params[i].val;
             return;
         }
     }
-    HttpParserV.text = NULL;
+    HttpParser.text = NULL;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-HttpParserVars HttpParserV;
+HttpParserNs HttpParser = {
+    .set_stream_hooks = http_parser_set_stream_hooks,
+    .reset = http_parser_reset,
+    .feed = http_parser_feed,
+    .get_header = http_parser_get_header,
+    .get_cookie = http_parser_get_cookie,
+    .forwarded_client = http_parser_forwarded_client,
+    .get_query = http_parser_get_query,
+    .get_form = http_parser_get_form,
+    .get_param = http_parser_get_param,
+};
 
 PROTOCORE_END_DECLS
 

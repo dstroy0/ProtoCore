@@ -117,6 +117,7 @@ typedef struct
     size_t payload_len;               ///< its length in bytes
     CoapContentFormat content_format; ///< the request's Content-Format, or COAP_CF_NONE
 } CoapRequest;
+
 /**
  * @brief The response a resource handler fills in.
  *
@@ -131,8 +132,10 @@ typedef struct
     size_t payload_cap;               ///< how much room that has
     size_t payload_len;               ///< how much it wrote
 } CoapResponse;
+
 /** @brief Resource handler: read @p req, fill @p resp. */
 typedef void (*CoapHandler)(const CoapRequest *req, CoapResponse *resp);
+
 /** @brief One row of the resource table: a path, the methods it answers, and what answers them. */
 typedef struct
 {
@@ -140,6 +143,7 @@ typedef struct
     uint8_t methods;     ///< the Method Codes it answers, as COAP_ALLOW_* bits
     CoapHandler handler; ///< what an allowed method on that path dispatches to
 } CoapResourceArgs;
+
 /** @brief RFC 7252 sec 3: one request datagram in, one response datagram out. */
 typedef struct
 {
@@ -148,12 +152,14 @@ typedef struct
     uint8_t *resp;      ///< where the response datagram is built
     size_t resp_cap;    ///< how much room that has
 } CoapMessageArgs;
+
 /** @brief RFC 7641: the Observe option a response carries, and the resource a notification renders. */
 typedef struct
 {
     int32_t seq;      ///< the sequence number a 2.xx notification carries (sec 4.4); below 0 omits the option
     const char *path; ///< the resource a notification re-renders (sec 4.2)
 } CoapObserveArgs;
+
 /** @brief RFC 7252 sec 4.5: the exchange a deduplication entry is keyed by, and what it caches. */
 typedef struct
 {
@@ -163,13 +169,16 @@ typedef struct
     const uint8_t *resp; ///< the response a store caches for it
     size_t resp_len;     ///< how many octets that is
 } CoapExchangeArgs;
+
 /** @brief The UDP endpoint the server receives on (RFC 7252 sec 12.6: port 5683, service "coap"). */
 typedef struct
 {
     uint16_t port; ///< the port a begin binds
 } CoapBindArgs;
+
 /** @brief The server's own state and the calls that reach it, described only in coap.c. */
 struct CoapInternal;
+
 /**
  * @brief The CoAP server.
  *
@@ -203,56 +212,27 @@ typedef struct
     CoapObserveArgs observe;   ///< what the Observe option carries
     CoapExchangeArgs exchange; ///< what a deduplication entry is keyed by
     CoapBindArgs bind;         ///< what binding the receive port takes
+
     proto_bool ok;
     size_t n;
     const uint8_t *bytes;
-#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
-#endif
-#if PROTOCORE_ENABLE_COAP_OBSERVE
-#endif
-} CoapVars;
 
-/** @brief The operands and the outcome. */
-extern CoapVars CoapV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const reset)(uint8_t *restrict work);
     void (*const add_resource)(uint8_t *restrict work);
     void (*const process)(uint8_t *restrict work);
     void (*const process_observe)(uint8_t *restrict work);
+#if PROTOCORE_COAP_DEDUP_ENTRIES > 0
     void (*const dedup_lookup)(uint8_t *restrict work);
     void (*const dedup_store)(uint8_t *restrict work);
+#endif
     void (*const begin)(uint8_t *restrict work);
+#if PROTOCORE_ENABLE_COAP_OBSERVE
     void (*const notify)(uint8_t *restrict work);
+#endif
 } CoapNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in CoapV or a region of the borrow at a fixed offset.
-void protocore_coap_reset(uint8_t *restrict work);
-void protocore_coap_add_resource(uint8_t *restrict work);
-void protocore_coap_process(uint8_t *restrict work);
-void protocore_coap_process_observe(uint8_t *restrict work);
-void protocore_coap_dedup_lookup(uint8_t *restrict work);
-void protocore_coap_dedup_store(uint8_t *restrict work);
-void protocore_coap_begin(uint8_t *restrict work);
-void protocore_coap_notify(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Coap.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const CoapNs Coap __attribute__((unused)) = {
-    .reset = protocore_coap_reset,
-    .add_resource = protocore_coap_add_resource,
-    .process = protocore_coap_process,
-    .process_observe = protocore_coap_process_observe,
-    .dedup_lookup = protocore_coap_dedup_lookup,
-    .dedup_store = protocore_coap_dedup_store,
-    .begin = protocore_coap_begin,
-    .notify = protocore_coap_notify,
-};
+/** @brief The one symbol this module exports. */
+extern CoapNs Coap;
 
 /**
  * @brief The PROTOCORE_COAP_BORROW bytes this module's state lives in.

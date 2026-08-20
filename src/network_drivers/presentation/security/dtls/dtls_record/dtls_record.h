@@ -87,6 +87,7 @@ typedef struct
                                              ///< keys, so neither stays resident.
     uint8_t iv[12];                          ///< AEAD write IV (per-record nonce = iv XOR sequence_number)
 } DtlsRecordKeys;
+
 /** @brief Parsed view of a DTLSPlaintext record (fields point into the caller's buffer). */
 typedef struct
 {
@@ -96,6 +97,7 @@ typedef struct
     const uint8_t *fragment; ///< into the input buffer
     size_t frag_len;
 } DtlsPlaintext;
+
 /** @brief Result of a successful @ref protocore_dtls_ciphertext_unprotect. */
 typedef struct
 {
@@ -104,6 +106,7 @@ typedef struct
     uint64_t seq;         ///< reconstructed full sequence number
     size_t pt_len;        ///< plaintext bytes written to @p out
 } DtlsCiphertext;
+
 /** @brief 64-record sliding replay window over the highest sequence number accepted in an epoch. */
 typedef struct
 {
@@ -111,6 +114,7 @@ typedef struct
     uint64_t bitmap;   ///< bit i set => (highest - i) has been accepted
     proto_bool seeded; ///< false until the first record is accepted
 } DtlsReplayWindow;
+
 /** @brief What keys_derive takes: out, cipher, epoch, secret. */
 typedef struct
 {
@@ -119,6 +123,7 @@ typedef struct
     uint16_t epoch;
     const uint8_t *secret; ///< 32 bytes.
 } DtlsRecordKeysDeriveArgs;
+
 /** @brief What plaintext_build takes: content_type, epoch, seq, ... */
 typedef struct
 {
@@ -130,6 +135,7 @@ typedef struct
     uint8_t *out;
     size_t out_cap;
 } DtlsRecordPlaintextBuildArgs;
+
 /** @brief What plaintext_parse takes: rec, rec_len, out. */
 typedef struct
 {
@@ -137,6 +143,7 @@ typedef struct
     size_t rec_len;
     DtlsPlaintext *out;
 } DtlsRecordPlaintextParseArgs;
+
 /** @brief What protect takes: keys, seq, content_type, plaintext, ... */
 typedef struct
 {
@@ -150,6 +157,7 @@ typedef struct
     const uint8_t *cid;
     size_t cid_len;
 } DtlsRecordProtectArgs;
+
 /** @brief What unprotect takes: keys, next_seq, rec, rec_len, out, ... */
 typedef struct
 {
@@ -163,23 +171,27 @@ typedef struct
     const uint8_t *expected_cid;
     size_t expected_cid_len;
 } DtlsRecordUnprotectArgs;
+
 /** @brief What replay_init takes: w. */
 typedef struct
 {
     DtlsReplayWindow *w;
 } DtlsRecordReplayInitArgs;
+
 /** @brief What replay_check takes: w, seq. */
 typedef struct
 {
     const DtlsReplayWindow *w;
     uint64_t seq;
 } DtlsRecordReplayCheckArgs;
+
 /** @brief What replay_mark takes: w, seq. */
 typedef struct
 {
     DtlsReplayWindow *w;
     uint64_t seq;
 } DtlsRecordReplayMarkArgs;
+
 /**
  * @brief DTLS 1.3 record layer (RFC 9147 §4).
  *
@@ -225,16 +237,10 @@ typedef struct
     DtlsRecordReplayInitArgs replay_init_args;
     DtlsRecordReplayCheckArgs replay_check_args;
     DtlsRecordReplayMarkArgs replay_mark_args;
+
     proto_bool ok;
     size_t n;
-} DtlsRecordVars;
 
-/** @brief The operands and the outcome. */
-extern DtlsRecordVars DtlsRecordV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const keys_derive)(uint8_t *restrict work);
     void (*const plaintext_build)(uint8_t *restrict work);
     void (*const plaintext_parse)(uint8_t *restrict work);
@@ -245,31 +251,8 @@ typedef struct
     void (*const replay_mark)(uint8_t *restrict work);
 } DtlsRecordNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DtlsRecordV or a region of the borrow at a fixed offset.
-void protocore_dtls_record_keys_derive(uint8_t *restrict work);
-void protocore_dtls_record_plaintext_build(uint8_t *restrict work);
-void protocore_dtls_record_plaintext_parse(uint8_t *restrict work);
-void protocore_dtls_record_protect(uint8_t *restrict work);
-void protocore_dtls_record_unprotect(uint8_t *restrict work);
-void protocore_dtls_record_replay_init(uint8_t *restrict work);
-void protocore_dtls_record_replay_check(uint8_t *restrict work);
-void protocore_dtls_record_replay_mark(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `DtlsRecord.keys_derive(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DtlsRecordNs DtlsRecord __attribute__((unused)) = {
-    .keys_derive = protocore_dtls_record_keys_derive,
-    .plaintext_build = protocore_dtls_record_plaintext_build,
-    .plaintext_parse = protocore_dtls_record_plaintext_parse,
-    .protect = protocore_dtls_record_protect,
-    .unprotect = protocore_dtls_record_unprotect,
-    .replay_init = protocore_dtls_record_replay_init,
-    .replay_check = protocore_dtls_record_replay_check,
-    .replay_mark = protocore_dtls_record_replay_mark,
-};
+/** @brief The one symbol this module exports. */
+extern DtlsRecordNs DtlsRecord;
 
 PROTOCORE_END_DECLS
 

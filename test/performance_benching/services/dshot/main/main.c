@@ -45,31 +45,31 @@ void dbench_run(void)
 
         // Every entry call stays inside DBENCH_OP so the timed loop measures the codec, not the
         // read that follows it. The args do not vary across iterations, so they are staged once.
-        DshotV.encode_args.value11 = kValue;
-        DshotV.encode_args.telemetry = PROTO_FALSE;
-        DshotV.encode_args.bidirectional = PROTO_FALSE;
-        DBENCH_OP("Dshot.encode std", 200000, (Dshot.encode(dshot_work), sink16 += DshotV.frame));
-        DshotV.encode_args.telemetry = PROTO_TRUE;
-        DshotV.encode_args.bidirectional = PROTO_TRUE;
-        DBENCH_OP("Dshot.encode bidir", 200000, (Dshot.encode(dshot_work), sink16 += DshotV.frame));
+        Dshot.encode_args.value11 = kValue;
+        Dshot.encode_args.telemetry = PROTO_FALSE;
+        Dshot.encode_args.bidirectional = PROTO_FALSE;
+        DBENCH_OP("Dshot.encode std", 200000, (Dshot.encode(dshot_work), sink16 += Dshot.frame));
+        Dshot.encode_args.telemetry = PROTO_TRUE;
+        Dshot.encode_args.bidirectional = PROTO_TRUE;
+        DBENCH_OP("Dshot.encode bidir", 200000, (Dshot.encode(dshot_work), sink16 += Dshot.frame));
 
         uint16_t val = 0;
         proto_bool tel = PROTO_FALSE;
-        DshotV.decode_args.frame = kFrameStd;
-        DshotV.decode_args.value11 = &val;
-        DshotV.decode_args.telemetry = &tel;
-        DshotV.decode_args.bidirectional = PROTO_FALSE;
-        DBENCH_OP("Dshot.decode std", 200000, (Dshot.decode(dshot_work), sinkb |= DshotV.ok));
-        DshotV.decode_args.frame = kFrameBidir;
-        DshotV.decode_args.bidirectional = PROTO_TRUE;
-        DBENCH_OP("Dshot.decode bidir", 200000, (Dshot.decode(dshot_work), sinkb |= DshotV.ok));
+        Dshot.decode_args.frame = kFrameStd;
+        Dshot.decode_args.value11 = &val;
+        Dshot.decode_args.telemetry = &tel;
+        Dshot.decode_args.bidirectional = PROTO_FALSE;
+        DBENCH_OP("Dshot.decode std", 200000, (Dshot.decode(dshot_work), sinkb |= Dshot.ok));
+        Dshot.decode_args.frame = kFrameBidir;
+        Dshot.decode_args.bidirectional = PROTO_TRUE;
+        DBENCH_OP("Dshot.decode bidir", 200000, (Dshot.decode(dshot_work), sinkb |= Dshot.ok));
 
-        DshotV.bit_ns_args.rate_kbit = 600;
-        DshotV.bit_ns_args.bit = PROTO_TRUE;
-        DBENCH_OP("Dshot.bit_ns", 200000, (Dshot.bit_ns(dshot_work), sink32 += DshotV.ns));
-        DshotV.esc_pwm_ns_args.throttle_1000 = 500;
-        DshotV.esc_pwm_ns_args.mode = PROTOCORE_ESC_ONESHOT125;
-        DBENCH_OP("Dshot.esc_pwm_ns", 200000, (Dshot.esc_pwm_ns(dshot_work), sink32 += DshotV.ns));
+        Dshot.bit_ns_args.rate_kbit = 600;
+        Dshot.bit_ns_args.bit = PROTO_TRUE;
+        DBENCH_OP("Dshot.bit_ns", 200000, (Dshot.bit_ns(dshot_work), sink32 += Dshot.ns));
+        Dshot.esc_pwm_ns_args.throttle_1000 = 500;
+        Dshot.esc_pwm_ns_args.mode = PROTOCORE_ESC_ONESHOT125;
+        DBENCH_OP("Dshot.esc_pwm_ns", 200000, (Dshot.esc_pwm_ns(dshot_work), sink32 += Dshot.ns));
 
         (void)sink16;
         (void)sink32;

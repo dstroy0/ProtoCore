@@ -46,17 +46,17 @@ static char g_json[1024];
 
 static proto_bool decode(const char *text)
 {
-    ExcV.parse_args.text = text;
-    ExcV.parse_args.info = &g_info;
+    Exc.parse_args.text = text;
+    Exc.parse_args.info = &g_info;
     Exc.parse(exc_decoder_work);
-    return ExcV.ok;
+    return Exc.ok;
 }
 
 static const char *serialize(size_t cap)
 {
-    ExcV.parse_args.info = &g_info;
-    ExcV.out_args.out = g_json;
-    ExcV.out_args.cap = cap;
+    Exc.parse_args.info = &g_info;
+    Exc.out_args.out = g_json;
+    Exc.out_args.cap = cap;
     Exc.json(exc_decoder_work);
     return g_json;
 }
@@ -87,7 +87,7 @@ void test_json_of_the_published_panic(void)
                              "\"excvaddr\":\"0x00000000\","
                              "\"backtrace\":[\"0x400e14ed\",\"0x400d0802\"]}",
                              s);
-    TEST_ASSERT_EQUAL_size_t(strlen(s), ExcV.n);
+    TEST_ASSERT_EQUAL_size_t(strlen(s), Exc.n);
 }
 
 // A dump with no register section still names the faulting address: the outermost backtrace frame
@@ -237,36 +237,36 @@ void test_json_fails_closed_on_a_short_buffer(void)
 {
     TEST_ASSERT_TRUE(decode(PANIC));
     (void)serialize(8);
-    TEST_ASSERT_EQUAL_size_t(0u, ExcV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Exc.n);
     TEST_ASSERT_EQUAL_CHAR('\0', g_json[0]);
 }
 
 void test_null_arguments_are_refused(void)
 {
-    ExcV.parse_args.text = NULL;
-    ExcV.parse_args.info = &g_info;
+    Exc.parse_args.text = NULL;
+    Exc.parse_args.info = &g_info;
     Exc.parse(exc_decoder_work);
-    TEST_ASSERT_FALSE(ExcV.ok);
+    TEST_ASSERT_FALSE(Exc.ok);
 
-    ExcV.parse_args.text = "Backtrace: 0x400d1000:0x3ffb0000\n";
-    ExcV.parse_args.info = NULL;
+    Exc.parse_args.text = "Backtrace: 0x400d1000:0x3ffb0000\n";
+    Exc.parse_args.info = NULL;
     Exc.parse(exc_decoder_work);
-    TEST_ASSERT_FALSE(ExcV.ok);
+    TEST_ASSERT_FALSE(Exc.ok);
 
-    ExcV.parse_args.info = NULL;
-    ExcV.out_args.out = g_json;
-    ExcV.out_args.cap = sizeof(g_json);
+    Exc.parse_args.info = NULL;
+    Exc.out_args.out = g_json;
+    Exc.out_args.cap = sizeof(g_json);
     Exc.json(exc_decoder_work);
-    TEST_ASSERT_EQUAL_size_t(0u, ExcV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Exc.n);
 
-    ExcV.parse_args.info = &g_info;
-    ExcV.out_args.out = NULL;
-    ExcV.out_args.cap = sizeof(g_json);
+    Exc.parse_args.info = &g_info;
+    Exc.out_args.out = NULL;
+    Exc.out_args.cap = sizeof(g_json);
     Exc.json(exc_decoder_work);
-    TEST_ASSERT_EQUAL_size_t(0u, ExcV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Exc.n);
 
-    ExcV.out_args.out = g_json;
-    ExcV.out_args.cap = 0;
+    Exc.out_args.out = g_json;
+    Exc.out_args.cap = 0;
     Exc.json(exc_decoder_work);
-    TEST_ASSERT_EQUAL_size_t(0u, ExcV.n);
+    TEST_ASSERT_EQUAL_size_t(0u, Exc.n);
 }

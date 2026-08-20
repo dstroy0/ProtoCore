@@ -69,6 +69,7 @@ typedef struct
     uint8_t sender_context[8];
     uint32_t options;
 } EipHeader;
+
 /** @brief The device identity decoded from a ListIdentity response item. @ref product_name points INTO the
  *  source buffer and is NOT NUL-terminated. The 16-octet CIP socket address is skipped (its sin_* fields are
  *  network-order, unlike the little-endian encapsulation, so this codec does not reinterpret them). */
@@ -86,6 +87,7 @@ typedef struct
     uint8_t product_name_len;
     uint8_t state; ///< device state
 } EipIdentity;
+
 /** @brief What build takes: buf, cap, h, data, data_len. */
 typedef struct
 {
@@ -95,6 +97,7 @@ typedef struct
     const uint8_t *data;
     size_t data_len;
 } EnipBuildArgs;
+
 /** @brief What parse takes: buf, len, out, data, data_len. */
 typedef struct
 {
@@ -104,6 +107,7 @@ typedef struct
     const uint8_t **data;
     size_t *data_len;
 } EnipParseArgs;
+
 /** @brief What build_register_session takes: buf, cap, sender_context. */
 typedef struct
 {
@@ -111,6 +115,7 @@ typedef struct
     size_t cap;
     const uint8_t *sender_context; ///< 8 bytes.
 } EnipBuildRegisterSessionArgs;
+
 /** @brief What build_unregister_session takes: buf, cap, ... */
 typedef struct
 {
@@ -119,6 +124,7 @@ typedef struct
     uint32_t session_handle;
     const uint8_t *sender_context; ///< 8 bytes.
 } EnipBuildUnregisterSessionArgs;
+
 /** @brief What build_send_rr_data takes: buf, cap, session_handle, ... */
 typedef struct
 {
@@ -130,6 +136,7 @@ typedef struct
     const uint8_t *cip;
     size_t cip_len;
 } EnipBuildSendRrDataArgs;
+
 /** @brief What parse_send_rr_data takes: data, data_len, cip, cip_len. */
 typedef struct
 {
@@ -138,6 +145,7 @@ typedef struct
     const uint8_t **cip;
     size_t *cip_len;
 } EnipParseSendRrDataArgs;
+
 /** @brief What build_list_identity takes: buf, cap, sender_context. */
 typedef struct
 {
@@ -145,6 +153,7 @@ typedef struct
     size_t cap;
     const uint8_t *sender_context; ///< 8 bytes.
 } EnipBuildListIdentityArgs;
+
 /** @brief What parse_list_identity takes: data, data_len, out. */
 typedef struct
 {
@@ -152,6 +161,7 @@ typedef struct
     size_t data_len;
     EipIdentity *out;
 } EnipParseListIdentityArgs;
+
 /**
  * @brief EtherNet/IP encapsulation codec (PROTOCORE_ENABLE_ENIP) - zero-heap builder + parser for the ODVA EtherNet/IP
  * encapsulation layer (TCP/UDP 44818), the transport that carries CIP.
@@ -200,16 +210,10 @@ typedef struct
     EnipParseSendRrDataArgs parse_send_rr_data_args;
     EnipBuildListIdentityArgs build_list_identity_args;
     EnipParseListIdentityArgs parse_list_identity_args;
+
     proto_bool ok;
     size_t n;
-} EnipVars;
 
-/** @brief The operands and the outcome. */
-extern EnipVars EnipV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
     void (*const build_register_session)(uint8_t *restrict work);
@@ -220,31 +224,8 @@ typedef struct
     void (*const parse_list_identity)(uint8_t *restrict work);
 } EnipNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in EnipV or a region of the borrow at a fixed offset.
-void protocore_enip_build(uint8_t *restrict work);
-void protocore_enip_parse(uint8_t *restrict work);
-void protocore_enip_build_register_session(uint8_t *restrict work);
-void protocore_enip_build_unregister_session(uint8_t *restrict work);
-void protocore_enip_build_send_rr_data(uint8_t *restrict work);
-void protocore_enip_parse_send_rr_data(uint8_t *restrict work);
-void protocore_enip_build_list_identity(uint8_t *restrict work);
-void protocore_enip_parse_list_identity(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Enip.build(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const EnipNs Enip __attribute__((unused)) = {
-    .build = protocore_enip_build,
-    .parse = protocore_enip_parse,
-    .build_register_session = protocore_enip_build_register_session,
-    .build_unregister_session = protocore_enip_build_unregister_session,
-    .build_send_rr_data = protocore_enip_build_send_rr_data,
-    .parse_send_rr_data = protocore_enip_parse_send_rr_data,
-    .build_list_identity = protocore_enip_build_list_identity,
-    .parse_list_identity = protocore_enip_parse_list_identity,
-};
+/** @brief The one symbol this module exports. */
+extern EnipNs Enip;
 
 PROTOCORE_END_DECLS
 

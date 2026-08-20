@@ -47,19 +47,19 @@ void dbench_run(void)
         volatile size_t sinksz = 0;
         // The arguments are set outside the timed expression and the entry is called inside it, so
         // what is timed is one call and not the staging that precedes it.
-        Fdc2214V.data_args.msb_reg = msb_reg;
-        Fdc2214V.data_args.lsb_reg = lsb_reg;
-        DBENCH_OP("Fdc2214.data", 200000, (Fdc2214.data(w), sink32 += Fdc2214V.value));
-        Fdc2214V.error_args.msb_reg = msb_reg;
-        DBENCH_OP("Fdc2214.error", 200000, (Fdc2214.error(w), sink8 += Fdc2214V.flags));
-        Fdc2214V.sensor_freq_hz_args.data28 = data28;
-        Fdc2214V.sensor_freq_hz_args.fref_hz = fref_hz;
-        DBENCH_OP("Fdc2214.sensor_freq_hz", 200000, (Fdc2214.sensor_freq_hz(w), sink64 += Fdc2214V.hz));
-        Fdc2214V.build_config_args.buf = cfg;
-        Fdc2214V.build_config_args.cap = sizeof(cfg);
-        Fdc2214V.build_config_args.rcount = rcount;
-        Fdc2214V.build_config_args.settlecount = settlecount;
-        DBENCH_BULK("Fdc2214.build_config", 50000, FDC2214_CONFIG_MAX, (Fdc2214.build_config(w), sinksz += Fdc2214V.n));
+        Fdc2214.data_args.msb_reg = msb_reg;
+        Fdc2214.data_args.lsb_reg = lsb_reg;
+        DBENCH_OP("Fdc2214.data", 200000, (Fdc2214.data(w), sink32 += Fdc2214.value));
+        Fdc2214.error_args.msb_reg = msb_reg;
+        DBENCH_OP("Fdc2214.error", 200000, (Fdc2214.error(w), sink8 += Fdc2214.flags));
+        Fdc2214.sensor_freq_hz_args.data28 = data28;
+        Fdc2214.sensor_freq_hz_args.fref_hz = fref_hz;
+        DBENCH_OP("Fdc2214.sensor_freq_hz", 200000, (Fdc2214.sensor_freq_hz(w), sink64 += Fdc2214.hz));
+        Fdc2214.build_config_args.buf = cfg;
+        Fdc2214.build_config_args.cap = sizeof(cfg);
+        Fdc2214.build_config_args.rcount = rcount;
+        Fdc2214.build_config_args.settlecount = settlecount;
+        DBENCH_BULK("Fdc2214.build_config", 50000, FDC2214_CONFIG_MAX, (Fdc2214.build_config(w), sinksz += Fdc2214.n));
         (void)sink32;
         (void)sink8;
         (void)sink64;

@@ -117,6 +117,7 @@ typedef struct
     size_t cap;             ///< how much room that has
     uint8_t prefix_len;     ///< the prefix length a match tests to
 } IpArgs;
+
 /**
  * @brief An IP address, as a value.
  *
@@ -134,17 +135,11 @@ typedef struct
 typedef struct
 {
     IpArgs args;
+
     proto_bool ok;
     size_t n;
     protocore_ip_scope scope;
-} IpVars;
 
-/** @brief The operands and the outcome. */
-extern IpVars IpV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const parse)(uint8_t *restrict work);
     void (*const format)(uint8_t *restrict work);
     void (*const classify)(uint8_t *restrict work);
@@ -153,27 +148,8 @@ typedef struct
     void (*const prefix_match)(uint8_t *restrict work);
 } IpNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in IpV or a region of the borrow at a fixed offset.
-void protocore_ip_parse(uint8_t *restrict work);
-void protocore_ip_format(uint8_t *restrict work);
-void protocore_ip_classify(uint8_t *restrict work);
-void protocore_ip_equal(uint8_t *restrict work);
-void protocore_ip_is_unspecified(uint8_t *restrict work);
-void protocore_ip_prefix_match(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Ip.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const IpNs Ip __attribute__((unused)) = {
-    .parse = protocore_ip_parse,
-    .format = protocore_ip_format,
-    .classify = protocore_ip_classify,
-    .equal = protocore_ip_equal,
-    .is_unspecified = protocore_ip_is_unspecified,
-    .prefix_match = protocore_ip_prefix_match,
-};
+/** @brief The one symbol this module exports. */
+extern IpNs Ip;
 
 PROTOCORE_END_DECLS
 

@@ -10,8 +10,8 @@
 
 #if PROTOCORE_ENABLE_HTTP2
 
-#include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http2/h2_frame/h2_frame.h"
+#include "mmgr/protomem/protomem.h"
 
 static void wr32(uint8_t *p, uint32_t v)
 {
@@ -216,91 +216,100 @@ static size_t h2_build_data_run(uint8_t *out, size_t cap, uint32_t stream_id, co
 
 // --- the entries ---
 
-void protocore_h2_frame_parse_header(uint8_t *restrict work)
+static void h2_frame_parse_header(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.ok = h2_parse_header_run(H2FrameV.parse_args.buf, H2FrameV.parse_args.len, &H2FrameV.header);
+    H2Frame.ok = h2_parse_header_run(H2Frame.parse_args.buf, H2Frame.parse_args.len, &H2Frame.header);
 }
 
-void protocore_h2_frame_write_header(uint8_t *restrict work)
+static void h2_frame_write_header(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.n =
-        h2_write_header_run(H2FrameV.write_args.buf, H2FrameV.write_args.cap, H2FrameV.write_args.length,
-                            H2FrameV.write_args.type, H2FrameV.write_args.flags, H2FrameV.write_args.stream_id);
+    H2Frame.n = h2_write_header_run(H2Frame.write_args.buf, H2Frame.write_args.cap, H2Frame.write_args.length,
+                                    H2Frame.write_args.type, H2Frame.write_args.flags, H2Frame.write_args.stream_id);
 }
 
-void protocore_h2_frame_settings_defaults(uint8_t *restrict work)
+static void h2_frame_settings_defaults(uint8_t *restrict work)
 {
     (void)work;
-    h2_settings_defaults_run(H2FrameV.settings_args.s);
+    h2_settings_defaults_run(H2Frame.settings_args.s);
 }
 
-void protocore_h2_frame_parse_settings(uint8_t *restrict work)
+static void h2_frame_parse_settings(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.ok =
-        h2_parse_settings_run(H2FrameV.settings_args.payload, H2FrameV.settings_args.len, H2FrameV.settings_args.s);
+    H2Frame.ok =
+        h2_parse_settings_run(H2Frame.settings_args.payload, H2Frame.settings_args.len, H2Frame.settings_args.s);
 }
 
-void protocore_h2_frame_build_settings(uint8_t *restrict work)
+static void h2_frame_build_settings(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.n = h2_build_settings_run(H2FrameV.build_settings_args.buf, H2FrameV.build_settings_args.cap,
-                                       H2FrameV.build_settings_args.ids, H2FrameV.build_settings_args.vals,
-                                       H2FrameV.build_settings_args.n);
+    H2Frame.n = h2_build_settings_run(H2Frame.build_settings_args.buf, H2Frame.build_settings_args.cap,
+                                      H2Frame.build_settings_args.ids, H2Frame.build_settings_args.vals,
+                                      H2Frame.build_settings_args.n);
 }
 
-void protocore_h2_frame_build_settings_ack(uint8_t *restrict work)
+static void h2_frame_build_settings_ack(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.n = h2_build_settings_ack_run(H2FrameV.ack_args.buf, H2FrameV.ack_args.cap);
+    H2Frame.n = h2_build_settings_ack_run(H2Frame.ack_args.buf, H2Frame.ack_args.cap);
 }
 
-void protocore_h2_frame_build_window_update(uint8_t *restrict work)
+static void h2_frame_build_window_update(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.n = h2_build_window_update_run(H2FrameV.window_args.buf, H2FrameV.window_args.cap,
-                                            H2FrameV.window_args.stream_id, H2FrameV.window_args.increment);
+    H2Frame.n = h2_build_window_update_run(H2Frame.window_args.buf, H2Frame.window_args.cap,
+                                           H2Frame.window_args.stream_id, H2Frame.window_args.increment);
 }
 
-void protocore_h2_frame_build_rst_stream(uint8_t *restrict work)
+static void h2_frame_build_rst_stream(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.n = h2_build_rst_stream_run(H2FrameV.rst_args.buf, H2FrameV.rst_args.cap, H2FrameV.rst_args.stream_id,
-                                         H2FrameV.rst_args.error);
+    H2Frame.n = h2_build_rst_stream_run(H2Frame.rst_args.buf, H2Frame.rst_args.cap, H2Frame.rst_args.stream_id,
+                                        H2Frame.rst_args.error);
 }
 
-void protocore_h2_frame_build_goaway(uint8_t *restrict work)
+static void h2_frame_build_goaway(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.n = h2_build_goaway_run(H2FrameV.goaway_args.buf, H2FrameV.goaway_args.cap,
-                                     H2FrameV.goaway_args.last_stream_id, H2FrameV.goaway_args.error);
+    H2Frame.n = h2_build_goaway_run(H2Frame.goaway_args.buf, H2Frame.goaway_args.cap,
+                                    H2Frame.goaway_args.last_stream_id, H2Frame.goaway_args.error);
 }
 
-void protocore_h2_frame_build_ping_ack(uint8_t *restrict work)
+static void h2_frame_build_ping_ack(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.n = h2_build_ping_ack_run(H2FrameV.ping_args.buf, H2FrameV.ping_args.cap, H2FrameV.ping_args.opaque);
+    H2Frame.n = h2_build_ping_ack_run(H2Frame.ping_args.buf, H2Frame.ping_args.cap, H2Frame.ping_args.opaque);
 }
 
-void protocore_h2_frame_build_headers(uint8_t *restrict work)
+static void h2_frame_build_headers(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.n = h2_build_headers_run(H2FrameV.headers_args.buf, H2FrameV.headers_args.cap,
-                                      H2FrameV.headers_args.stream_id, H2FrameV.headers_args.block,
-                                      H2FrameV.headers_args.block_len, H2FrameV.headers_args.end_stream);
+    H2Frame.n = h2_build_headers_run(H2Frame.headers_args.buf, H2Frame.headers_args.cap, H2Frame.headers_args.stream_id,
+                                     H2Frame.headers_args.block, H2Frame.headers_args.block_len,
+                                     H2Frame.headers_args.end_stream);
 }
 
-void protocore_h2_frame_build_data(uint8_t *restrict work)
+static void h2_frame_build_data(uint8_t *restrict work)
 {
     (void)work;
-    H2FrameV.n = h2_build_data_run(H2FrameV.data_args.buf, H2FrameV.data_args.cap, H2FrameV.data_args.stream_id,
-                                   H2FrameV.data_args.data, H2FrameV.data_args.data_len, H2FrameV.data_args.end_stream);
+    H2Frame.n = h2_build_data_run(H2Frame.data_args.buf, H2Frame.data_args.cap, H2Frame.data_args.stream_id,
+                                  H2Frame.data_args.data, H2Frame.data_args.data_len, H2Frame.data_args.end_stream);
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-H2FrameVars H2FrameV;
+H2FrameNs H2Frame = {.parse_header = h2_frame_parse_header,
+                     .write_header = h2_frame_write_header,
+                     .settings_defaults = h2_frame_settings_defaults,
+                     .parse_settings = h2_frame_parse_settings,
+                     .build_settings = h2_frame_build_settings,
+                     .build_settings_ack = h2_frame_build_settings_ack,
+                     .build_window_update = h2_frame_build_window_update,
+                     .build_rst_stream = h2_frame_build_rst_stream,
+                     .build_goaway = h2_frame_build_goaway,
+                     .build_ping_ack = h2_frame_build_ping_ack,
+                     .build_headers = h2_frame_build_headers,
+                     .build_data = h2_frame_build_data};
 
 #endif // PROTOCORE_ENABLE_HTTP2

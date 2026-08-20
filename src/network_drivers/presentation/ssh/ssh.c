@@ -15,7 +15,7 @@
 #include "network_drivers/presentation/ssh/ssh.h"
 
 // The connections' storage, owned by one instance (internal linkage). Reached only through
-// protocore_ssh_conn_slot(), at the offsets common.h names.
+// ssh_conn_slot(), at the offsets common.h names.
 typedef struct
 {
     uint8_t mem[MAX_SSH_CONNS][SSH_SLOT_BORROW];
@@ -59,19 +59,20 @@ uint8_t *protocore_ssh_span(void)
     return s_own.span;
 }
 
-void protocore_ssh_conn_slot(uint8_t *restrict work)
+static void ssh_conn_slot(uint8_t *restrict work)
 {
-    uint8_t i = SshV.conn_slot_args.i;
+    uint8_t i = Ssh.conn_slot_args.i;
 
     if (i >= MAX_SSH_CONNS)
     {
-        SshV.ptr = NULL;
+        Ssh.ptr = NULL;
         return;
     }
-    SshV.ptr = SSH_CTX(work)->mem[i];
+    Ssh.ptr = SSH_CTX(work)->mem[i];
 }
-/** @brief The operands and the outcome. */
-SshVars SshV;
+SshNs Ssh = {
+    .conn_slot = ssh_conn_slot,
+};
 
 PROTOCORE_END_DECLS
 

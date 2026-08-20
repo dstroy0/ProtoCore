@@ -36,6 +36,7 @@
 
 #include "protocore_config.h"
 
+
 PROTOCORE_BEGIN_DECLS
 
 // root, dir, name. A whole path is these three pieces, so it is ONE build: a caller that assembled
@@ -182,12 +183,14 @@ typedef struct
     const char *dir;  ///< the directory within it
     const char *name; ///< the entry within that
 } FsPathArgs;
+
 /** @brief The second path a rename or a copy needs. */
 typedef struct
 {
     const char *dir;  ///< the destination directory
     const char *name; ///< the destination entry
 } FsDestArgs;
+
 /** @brief The open file a call acts on, and the bytes it moves. */
 typedef struct
 {
@@ -201,6 +204,7 @@ typedef struct
     size_t name_cap;          ///< how much room that has
     protocore_mnt_stat *stat; ///< where a stat or a directory read lands its entry
 } FsIoArgs;
+
 /**
  * @brief The path-safe filesystem surface over a mount.
  *
@@ -248,19 +252,13 @@ typedef struct
     FsDestArgs dest;
     FsIoArgs io;
     const char *mount;
+
     proto_bool ok;
     int i32;
     long len;
     uint32_t bits;
     const char *text;
-} FsVars;
 
-/** @brief The operands and the outcome. */
-extern FsVars FsV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const status)(uint8_t *restrict work);
     void (*const clear)(uint8_t *restrict work);
     void (*const present)(uint8_t *restrict work);
@@ -285,59 +283,8 @@ typedef struct
     void (*const write_file)(uint8_t *restrict work);
 } FilesystemNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in FsV or a region of the borrow at a fixed offset.
-void protocore_filesystem_status(uint8_t *restrict work);
-void protocore_filesystem_clear(uint8_t *restrict work);
-void protocore_filesystem_present(uint8_t *restrict work);
-void protocore_filesystem_begin(uint8_t *restrict work);
-void protocore_filesystem_resolve(uint8_t *restrict work);
-void protocore_filesystem_open(uint8_t *restrict work);
-void protocore_filesystem_read(uint8_t *restrict work);
-void protocore_filesystem_write(uint8_t *restrict work);
-void protocore_filesystem_close(uint8_t *restrict work);
-void protocore_filesystem_seek(uint8_t *restrict work);
-void protocore_filesystem_size(uint8_t *restrict work);
-void protocore_filesystem_exists(uint8_t *restrict work);
-void protocore_filesystem_stat(uint8_t *restrict work);
-void protocore_filesystem_remove(uint8_t *restrict work);
-void protocore_filesystem_rename(uint8_t *restrict work);
-void protocore_filesystem_copy(uint8_t *restrict work);
-void protocore_filesystem_mkdir(uint8_t *restrict work);
-void protocore_filesystem_rmdir(uint8_t *restrict work);
-void protocore_filesystem_opendir(uint8_t *restrict work);
-void protocore_filesystem_readdir(uint8_t *restrict work);
-void protocore_filesystem_read_file(uint8_t *restrict work);
-void protocore_filesystem_write_file(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Fs.status(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const FilesystemNs Fs __attribute__((unused)) = {
-    .status = protocore_filesystem_status,
-    .clear = protocore_filesystem_clear,
-    .present = protocore_filesystem_present,
-    .begin = protocore_filesystem_begin,
-    .resolve = protocore_filesystem_resolve,
-    .open = protocore_filesystem_open,
-    .read = protocore_filesystem_read,
-    .write = protocore_filesystem_write,
-    .close = protocore_filesystem_close,
-    .seek = protocore_filesystem_seek,
-    .size = protocore_filesystem_size,
-    .exists = protocore_filesystem_exists,
-    .stat = protocore_filesystem_stat,
-    .remove = protocore_filesystem_remove,
-    .rename = protocore_filesystem_rename,
-    .copy = protocore_filesystem_copy,
-    .mkdir = protocore_filesystem_mkdir,
-    .rmdir = protocore_filesystem_rmdir,
-    .opendir = protocore_filesystem_opendir,
-    .readdir = protocore_filesystem_readdir,
-    .read_file = protocore_filesystem_read_file,
-    .write_file = protocore_filesystem_write_file,
-};
+/** @brief The one symbol this module exports. */
+extern FilesystemNs Fs;
 
 /**
  * @brief The PROTOCORE_FILESYSTEM_BORROW bytes this module's state lives in.

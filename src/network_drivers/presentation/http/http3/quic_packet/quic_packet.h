@@ -52,6 +52,7 @@ typedef struct
     uint8_t scid[QUIC_MAX_CID_LEN]; ///< Source Connection ID
     size_t hdr_len;                 ///< bytes consumed up to the start of the type-specific payload
 } QuicLongHeader;
+
 /** @brief A parsed short header (1-RTT). The DCID length is known locally, not on the wire. */
 typedef struct
 {
@@ -63,11 +64,13 @@ typedef struct
     uint8_t dcid[QUIC_MAX_CID_LEN]; ///< Destination Connection ID
     size_t hdr_len;                 ///< bytes up to the (protected) Packet Number field
 } QuicShortHeader;
+
 /** @brief What is_long_header takes: first. */
 typedef struct
 {
     uint8_t first;
 } QuicPacketIsLongHeaderArgs;
+
 /** @brief What parse_long_header takes: buf, len, out. */
 typedef struct
 {
@@ -75,6 +78,7 @@ typedef struct
     size_t len;
     QuicLongHeader *out;
 } QuicPacketParseLongHeaderArgs;
+
 /** @brief What build_long_header takes: out, cap, type, version, ... */
 typedef struct
 {
@@ -88,6 +92,7 @@ typedef struct
     uint8_t scid_len;
     uint8_t pn_len;
 } QuicPacketBuildLongHeaderArgs;
+
 /** @brief What parse_short_header takes: buf, len, dcid_len, out. */
 typedef struct
 {
@@ -96,6 +101,7 @@ typedef struct
     uint8_t dcid_len;
     QuicShortHeader *out;
 } QuicPacketParseShortHeaderArgs;
+
 /** @brief What build_version_negotiation takes: out, cap, dcid, ... */
 typedef struct
 {
@@ -108,12 +114,14 @@ typedef struct
     const uint32_t *versions;
     size_t nversions;
 } QuicPacketBuildVersionNegotiationArgs;
+
 /** @brief What pn_length takes: full_pn, largest_acked. */
 typedef struct
 {
     uint64_t full_pn;
     int64_t largest_acked;
 } QuicPacketPnLengthArgs;
+
 /** @brief What pn_encode takes: out, cap, full_pn, largest_acked. */
 typedef struct
 {
@@ -122,6 +130,7 @@ typedef struct
     uint64_t full_pn;
     int64_t largest_acked;
 } QuicPacketPnEncodeArgs;
+
 /** @brief What pn_decode takes: largest_pn, truncated_pn, pn_nbits. */
 typedef struct
 {
@@ -129,6 +138,7 @@ typedef struct
     uint64_t truncated_pn;
     uint8_t pn_nbits;
 } QuicPacketPnDecodeArgs;
+
 /**
  * @brief QUIC packet headers and packet-number coding (RFC 9000 sec 17).
  *
@@ -174,18 +184,12 @@ typedef struct
     QuicPacketPnLengthArgs pn_length_args;
     QuicPacketPnEncodeArgs pn_encode_args;
     QuicPacketPnDecodeArgs pn_decode_args;
+
     proto_bool ok;
     size_t n;
     uint8_t u8;
     uint64_t u64;
-} QuicPacketVars;
 
-/** @brief The operands and the outcome. */
-extern QuicPacketVars QuicPacketV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const is_long_header)(uint8_t *restrict work);
     void (*const parse_long_header)(uint8_t *restrict work);
     void (*const build_long_header)(uint8_t *restrict work);
@@ -196,31 +200,8 @@ typedef struct
     void (*const pn_decode)(uint8_t *restrict work);
 } QuicPacketNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in QuicPacketV or a region of the borrow at a fixed offset.
-void protocore_quic_packet_is_long_header(uint8_t *restrict work);
-void protocore_quic_packet_parse_long_header(uint8_t *restrict work);
-void protocore_quic_packet_build_long_header(uint8_t *restrict work);
-void protocore_quic_packet_parse_short_header(uint8_t *restrict work);
-void protocore_quic_packet_build_version_negotiation(uint8_t *restrict work);
-void protocore_quic_packet_pn_length(uint8_t *restrict work);
-void protocore_quic_packet_pn_encode(uint8_t *restrict work);
-void protocore_quic_packet_pn_decode(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `QuicPacket.is_long_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const QuicPacketNs QuicPacket __attribute__((unused)) = {
-    .is_long_header = protocore_quic_packet_is_long_header,
-    .parse_long_header = protocore_quic_packet_parse_long_header,
-    .build_long_header = protocore_quic_packet_build_long_header,
-    .parse_short_header = protocore_quic_packet_parse_short_header,
-    .build_version_negotiation = protocore_quic_packet_build_version_negotiation,
-    .pn_length = protocore_quic_packet_pn_length,
-    .pn_encode = protocore_quic_packet_pn_encode,
-    .pn_decode = protocore_quic_packet_pn_decode,
-};
+/** @brief The one symbol this module exports. */
+extern QuicPacketNs QuicPacket;
 
 PROTOCORE_END_DECLS
 

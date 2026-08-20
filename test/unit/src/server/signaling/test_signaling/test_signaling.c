@@ -27,7 +27,7 @@ static void stub_close(uint8_t *restrict work)
 {
     (void)work;
     g_close_calls++;
-    g_close_slot = ConnPoolV.slot;
+    g_close_slot = ConnPool.slot;
 }
 
 ConnPoolNs ConnPool = {.close = stub_close};
@@ -42,29 +42,29 @@ uint8_t *protocore_conn_pool_span(void)
 
 static void put_response(int code)
 {
-    SignalV.put.code = code;
+    Signal.put.code = code;
     Signal.put_response(protocore_signaling_span());
 }
 
 static void put_tick(uint32_t uptime_ms, uint32_t conns, uint32_t listeners)
 {
-    SignalV.put.uptime_ms = uptime_ms;
-    SignalV.put.conns_active = conns;
-    SignalV.put.listeners_up = listeners;
+    Signal.put.uptime_ms = uptime_ms;
+    Signal.put.conns_active = conns;
+    Signal.put.listeners_up = listeners;
     Signal.put_tick(protocore_signaling_span());
 }
 
 static protocore_signal_snapshot know(void)
 {
     protocore_signal_snapshot s;
-    SignalV.out = &s;
+    Signal.out = &s;
     Signal.know(protocore_signaling_span());
     return s;
 }
 
 static void kill_slot(uint8_t slot)
 {
-    SignalV.slot = slot;
+    Signal.slot = slot;
     Signal.kill(protocore_signaling_span());
 }
 
@@ -213,7 +213,7 @@ void test_reset_empties_every_field(void)
 void test_a_read_with_no_destination_is_refused(void)
 {
     put_tick(5u, 1u, 1u);
-    SignalV.out = NULL;
+    Signal.out = NULL;
     Signal.know(protocore_signaling_span());
 
     protocore_signal_snapshot s = know();

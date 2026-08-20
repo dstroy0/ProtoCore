@@ -30,21 +30,21 @@ static char g_out[512];
 // Parse len octets and return whether the frame was complete.
 static proto_bool parse(const char *in, size_t len)
 {
-    StompV.frame = &g_frame;
-    StompV.buf.in = in;
-    StompV.buf.len = len;
+    Stomp.frame = &g_frame;
+    Stomp.buf.in = in;
+    Stomp.buf.len = len;
     Stomp.parse(stomp_work);
-    return StompV.ok;
+    return Stomp.ok;
 }
 
 // The first entry named name, or NULL.
 static const char *header(const char *name, size_t *out_len)
 {
-    StompV.frame = &g_frame;
-    StompV.lookup.name = name;
+    Stomp.frame = &g_frame;
+    Stomp.lookup.name = name;
     Stomp.header(stomp_work);
-    *out_len = StompV.value_len;
-    return StompV.ok ? StompV.value : NULL;
+    *out_len = Stomp.value_len;
+    return Stomp.ok ? Stomp.value : NULL;
 }
 
 // STOMP 1.2 "ERROR": the specification prints this frame complete, content-length and all. Its
@@ -76,7 +76,7 @@ void test_published_error_frame(void)
     TEST_ASSERT_EQUAL_UINT(170u, g_frame.body_len);
     TEST_ASSERT_EQUAL_MEMORY("The message:", g_frame.body, 12);
     TEST_ASSERT_EQUAL_MEMORY("for message propagation.\n", g_frame.body + 170 - 25, 25);
-    TEST_ASSERT_EQUAL_UINT(sizeof(FRAME), StompV.consumed);
+    TEST_ASSERT_EQUAL_UINT(sizeof(FRAME), Stomp.consumed);
 
     size_t n = 0;
     const char *v = header("content-length", &n);
@@ -158,18 +158,18 @@ void test_build_emits_the_published_send_frame(void)
     static const char *const NAMES[] = {"destination", "receipt"};
     static const char *const VALUES[] = {"/queue/a", "message-12345"};
 
-    StompV.buf.out = g_out;
-    StompV.buf.cap = sizeof(g_out);
-    StompV.build_args.command = "SEND";
-    StompV.build_args.header_names = NAMES;
-    StompV.build_args.header_values = VALUES;
-    StompV.build_args.header_count = 2;
-    StompV.build_args.body = "hello queue a";
-    StompV.build_args.body_len = 13;
+    Stomp.buf.out = g_out;
+    Stomp.buf.cap = sizeof(g_out);
+    Stomp.build_args.command = "SEND";
+    Stomp.build_args.header_names = NAMES;
+    Stomp.build_args.header_values = VALUES;
+    Stomp.build_args.header_count = 2;
+    Stomp.build_args.body = "hello queue a";
+    Stomp.build_args.body_len = 13;
     Stomp.build(stomp_work);
 
-    TEST_ASSERT_TRUE(StompV.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), StompV.n); // the NULL octet is counted
+    TEST_ASSERT_TRUE(Stomp.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Stomp.n); // the NULL octet is counted
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, sizeof(WANT));
 }
 
@@ -177,18 +177,18 @@ void test_build_emits_the_published_send_frame(void)
 void test_build_minimal_frame(void)
 {
     static const char WANT[] = "DISCONNECT\n\n";
-    StompV.buf.out = g_out;
-    StompV.buf.cap = sizeof(g_out);
-    StompV.build_args.command = "DISCONNECT";
-    StompV.build_args.header_names = NULL;
-    StompV.build_args.header_values = NULL;
-    StompV.build_args.header_count = 0;
-    StompV.build_args.body = NULL;
-    StompV.build_args.body_len = 0;
+    Stomp.buf.out = g_out;
+    Stomp.buf.cap = sizeof(g_out);
+    Stomp.build_args.command = "DISCONNECT";
+    Stomp.build_args.header_names = NULL;
+    Stomp.build_args.header_values = NULL;
+    Stomp.build_args.header_count = 0;
+    Stomp.build_args.body = NULL;
+    Stomp.build_args.body_len = 0;
     Stomp.build(stomp_work);
 
-    TEST_ASSERT_TRUE(StompV.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), StompV.n);
+    TEST_ASSERT_TRUE(Stomp.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Stomp.n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, sizeof(WANT));
 }
 
@@ -203,18 +203,18 @@ void test_build_escapes_a_header(void)
     static const char *const NAMES[] = {"a:b"};
     static const char *const VALUES[] = {"x\ny"};
 
-    StompV.buf.out = g_out;
-    StompV.buf.cap = sizeof(g_out);
-    StompV.build_args.command = "SEND";
-    StompV.build_args.header_names = NAMES;
-    StompV.build_args.header_values = VALUES;
-    StompV.build_args.header_count = 1;
-    StompV.build_args.body = NULL;
-    StompV.build_args.body_len = 0;
+    Stomp.buf.out = g_out;
+    Stomp.buf.cap = sizeof(g_out);
+    Stomp.build_args.command = "SEND";
+    Stomp.build_args.header_names = NAMES;
+    Stomp.build_args.header_values = VALUES;
+    Stomp.build_args.header_count = 1;
+    Stomp.build_args.body = NULL;
+    Stomp.build_args.body_len = 0;
     Stomp.build(stomp_work);
 
-    TEST_ASSERT_TRUE(StompV.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), StompV.n);
+    TEST_ASSERT_TRUE(Stomp.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Stomp.n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, sizeof(WANT));
 }
 
@@ -224,14 +224,14 @@ void test_unescape_the_four_transformations(void)
     static const char IN[] = "\\r\\n\\c\\\\";
     static const char WANT[] = {'\r', '\n', ':', '\\'};
 
-    StompV.buf.in = IN;
-    StompV.buf.len = sizeof(IN) - 1;
-    StompV.buf.out = g_out;
-    StompV.buf.cap = sizeof(g_out);
+    Stomp.buf.in = IN;
+    Stomp.buf.len = sizeof(IN) - 1;
+    Stomp.buf.out = g_out;
+    Stomp.buf.cap = sizeof(g_out);
     Stomp.unescape(stomp_work);
 
-    TEST_ASSERT_TRUE(StompV.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), StompV.n);
+    TEST_ASSERT_TRUE(Stomp.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Stomp.n);
     TEST_ASSERT_EQUAL_MEMORY(WANT, g_out, sizeof(WANT));
 }
 
@@ -240,21 +240,21 @@ void test_unescape_the_four_transformations(void)
 void test_unescape_rejects_an_undefined_escape(void)
 {
     static const char BAD[] = "a\\tb";
-    StompV.buf.in = BAD;
-    StompV.buf.len = sizeof(BAD) - 1;
-    StompV.buf.out = g_out;
-    StompV.buf.cap = sizeof(g_out);
+    Stomp.buf.in = BAD;
+    Stomp.buf.len = sizeof(BAD) - 1;
+    Stomp.buf.out = g_out;
+    Stomp.buf.cap = sizeof(g_out);
     Stomp.unescape(stomp_work);
-    TEST_ASSERT_FALSE(StompV.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, StompV.n);
+    TEST_ASSERT_FALSE(Stomp.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, Stomp.n);
 
     static const char TRAILING[] = "ab\\";
-    StompV.buf.in = TRAILING;
-    StompV.buf.len = sizeof(TRAILING) - 1;
-    StompV.buf.out = g_out;
-    StompV.buf.cap = sizeof(g_out);
+    Stomp.buf.in = TRAILING;
+    Stomp.buf.len = sizeof(TRAILING) - 1;
+    Stomp.buf.out = g_out;
+    Stomp.buf.cap = sizeof(g_out);
     Stomp.unescape(stomp_work);
-    TEST_ASSERT_FALSE(StompV.ok);
+    TEST_ASSERT_FALSE(Stomp.ok);
 }
 
 // Sec 9: EOL = [CR] LF. The same frame written with CRLF line endings parses to the same slices,
@@ -285,7 +285,7 @@ void test_leading_eols_are_consumed(void)
     TEST_ASSERT_EQUAL_UINT(4u, g_frame.command_len);
     TEST_ASSERT_EQUAL_MEMORY("SEND", g_frame.command, 4);
     TEST_ASSERT_EQUAL_UINT(0u, g_frame.body_len);
-    TEST_ASSERT_EQUAL_UINT(sizeof(FRAME), StompV.consumed);
+    TEST_ASSERT_EQUAL_UINT(sizeof(FRAME), Stomp.consumed);
 }
 
 // Sec 4.3.1: with a content-length "this number of octets MUST be read, regardless of whether or
@@ -299,7 +299,7 @@ void test_content_length_reads_null_octets(void)
     TEST_ASSERT_TRUE(parse(FRAME, sizeof(FRAME)));
     TEST_ASSERT_EQUAL_UINT(3u, g_frame.body_len);
     TEST_ASSERT_EQUAL_MEMORY("a\0b", g_frame.body, 3);
-    TEST_ASSERT_EQUAL_UINT(sizeof(FRAME), StompV.consumed);
+    TEST_ASSERT_EQUAL_UINT(sizeof(FRAME), Stomp.consumed);
 }
 
 // A content-length that does not land on the frame's NULL octet describes a different frame, so
@@ -323,7 +323,7 @@ void test_incomplete_frame_is_refused(void)
 {
     static const char PARTIAL[] = "SEND\ndestination:/queue/a\n\nhello";
     TEST_ASSERT_FALSE(parse(PARTIAL, sizeof(PARTIAL) - 1)); // the terminator withheld
-    TEST_ASSERT_EQUAL_UINT(0u, StompV.consumed);
+    TEST_ASSERT_EQUAL_UINT(0u, Stomp.consumed);
 
     static const char NO_HEADER_EOL[] = "SEND\ndestination";
     TEST_ASSERT_FALSE(parse(NO_HEADER_EOL, sizeof(NO_HEADER_EOL) - 1));
@@ -347,7 +347,7 @@ void test_only_eols_is_not_a_frame(void)
 {
     static const char BEAT[] = "\n\r\n\n";
     TEST_ASSERT_FALSE(parse(BEAT, sizeof(BEAT) - 1));
-    TEST_ASSERT_EQUAL_UINT(0u, StompV.consumed);
+    TEST_ASSERT_EQUAL_UINT(0u, Stomp.consumed);
 }
 
 // A lookup that names no entry reports nothing rather than the previous find.
@@ -370,43 +370,43 @@ void test_build_refuses_a_short_buffer(void)
     static const char *const VALUES[] = {"/queue/a"};
     char small[16];
 
-    StompV.buf.out = small;
-    StompV.buf.cap = sizeof(small);
-    StompV.build_args.command = "SEND";
-    StompV.build_args.header_names = NAMES;
-    StompV.build_args.header_values = VALUES;
-    StompV.build_args.header_count = 1;
-    StompV.build_args.body = NULL;
-    StompV.build_args.body_len = 0;
+    Stomp.buf.out = small;
+    Stomp.buf.cap = sizeof(small);
+    Stomp.build_args.command = "SEND";
+    Stomp.build_args.header_names = NAMES;
+    Stomp.build_args.header_values = VALUES;
+    Stomp.build_args.header_count = 1;
+    Stomp.build_args.body = NULL;
+    Stomp.build_args.body_len = 0;
     Stomp.build(stomp_work);
-    TEST_ASSERT_FALSE(StompV.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, StompV.n);
+    TEST_ASSERT_FALSE(Stomp.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, Stomp.n);
 }
 
 // A null command, a null output buffer, or a header count with no arrays behind it, are each
 // reported rather than written through.
 void test_build_refuses_missing_arguments(void)
 {
-    StompV.buf.out = g_out;
-    StompV.buf.cap = sizeof(g_out);
-    StompV.build_args.command = NULL;
-    StompV.build_args.header_count = 0;
-    StompV.build_args.body = NULL;
-    StompV.build_args.body_len = 0;
+    Stomp.buf.out = g_out;
+    Stomp.buf.cap = sizeof(g_out);
+    Stomp.build_args.command = NULL;
+    Stomp.build_args.header_count = 0;
+    Stomp.build_args.body = NULL;
+    Stomp.build_args.body_len = 0;
     Stomp.build(stomp_work);
-    TEST_ASSERT_FALSE(StompV.ok);
+    TEST_ASSERT_FALSE(Stomp.ok);
 
-    StompV.build_args.command = "SEND";
-    StompV.buf.out = NULL;
+    Stomp.build_args.command = "SEND";
+    Stomp.buf.out = NULL;
     Stomp.build(stomp_work);
-    TEST_ASSERT_FALSE(StompV.ok);
+    TEST_ASSERT_FALSE(Stomp.ok);
 
-    StompV.buf.out = g_out;
-    StompV.build_args.header_names = NULL;
-    StompV.build_args.header_values = NULL;
-    StompV.build_args.header_count = 1;
+    Stomp.buf.out = g_out;
+    Stomp.build_args.header_names = NULL;
+    Stomp.build_args.header_values = NULL;
+    Stomp.build_args.header_count = 1;
     Stomp.build(stomp_work);
-    TEST_ASSERT_FALSE(StompV.ok);
+    TEST_ASSERT_FALSE(Stomp.ok);
 }
 
 // A frame's header entries are sliced out of the caller's buffer, not copied.
@@ -429,23 +429,23 @@ void test_build_parse_round_trip(void)
     static const char *const NAMES[] = {"id", "destination", "ack"};
     static const char *const VALUES[] = {"0", "/queue/foo", "client"};
 
-    StompV.buf.out = g_out;
-    StompV.buf.cap = sizeof(g_out);
-    StompV.build_args.command = "SUBSCRIBE";
-    StompV.build_args.header_names = NAMES;
-    StompV.build_args.header_values = VALUES;
-    StompV.build_args.header_count = 3;
-    StompV.build_args.body = NULL;
-    StompV.build_args.body_len = 0;
+    Stomp.buf.out = g_out;
+    Stomp.buf.cap = sizeof(g_out);
+    Stomp.build_args.command = "SUBSCRIBE";
+    Stomp.build_args.header_names = NAMES;
+    Stomp.build_args.header_values = VALUES;
+    Stomp.build_args.header_count = 3;
+    Stomp.build_args.body = NULL;
+    Stomp.build_args.body_len = 0;
     Stomp.build(stomp_work);
-    TEST_ASSERT_TRUE(StompV.ok);
-    const size_t n = StompV.n;
+    TEST_ASSERT_TRUE(Stomp.ok);
+    const size_t n = Stomp.n;
 
     TEST_ASSERT_TRUE(parse(g_out, n));
     TEST_ASSERT_EQUAL_UINT(9u, g_frame.command_len);
     TEST_ASSERT_EQUAL_MEMORY("SUBSCRIBE", g_frame.command, 9);
     TEST_ASSERT_EQUAL_UINT(3u, g_frame.header_count);
-    TEST_ASSERT_EQUAL_UINT(n, StompV.consumed);
+    TEST_ASSERT_EQUAL_UINT(n, Stomp.consumed);
     for (size_t i = 0; i < 3; i++)
     {
         size_t len = 0;

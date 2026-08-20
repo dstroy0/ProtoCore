@@ -181,17 +181,17 @@ static proto_bool parse_v1(const uint8_t *buf, size_t len, ProxyInfo *out, size_
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_proxy_protocol_parse(uint8_t *restrict work)
+static void proxy_protocol_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = ProxyProtocolV.parse_args.buf;
-    size_t len = ProxyProtocolV.parse_args.len;
-    ProxyInfo *out = ProxyProtocolV.parse_args.out;
-    size_t *consumed = ProxyProtocolV.parse_args.consumed;
+    const uint8_t *buf = ProxyProtocol.parse_args.buf;
+    size_t len = ProxyProtocol.parse_args.len;
+    ProxyInfo *out = ProxyProtocol.parse_args.out;
+    size_t *consumed = ProxyProtocol.parse_args.consumed;
 
     if (!buf || !out || !consumed)
     {
-        ProxyProtocolV.ok = PROTO_FALSE;
+        ProxyProtocol.ok = PROTO_FALSE;
         return;
     }
 
@@ -200,7 +200,7 @@ void protocore_proxy_protocol_parse(uint8_t *restrict work)
     {
         if (len < 16) // signature + ver_cmd + fam + 2-octet length
         {
-            ProxyProtocolV.ok = PROTO_FALSE;
+            ProxyProtocol.ok = PROTO_FALSE;
             return;
         }
         uint8_t ver_cmd = buf[12];
@@ -209,23 +209,23 @@ void protocore_proxy_protocol_parse(uint8_t *restrict work)
         size_t total = 16 + (size_t)addr_len;
         if (total > len)
         {
-            ProxyProtocolV.ok = PROTO_FALSE; // address block not fully buffered
+            ProxyProtocol.ok = PROTO_FALSE; // address block not fully buffered
             return;
         }
         if ((ver_cmd & 0xF0) != 0x20) // must be version 2
         {
-            ProxyProtocolV.ok = PROTO_FALSE;
+            ProxyProtocol.ok = PROTO_FALSE;
             return;
         }
         if ((ver_cmd & 0x0Fu) > 0x1u) // LOCAL and PROXY are the assigned commands
         {
-            ProxyProtocolV.ok = PROTO_FALSE;
+            ProxyProtocol.ok = PROTO_FALSE;
             return;
         }
         // AF_UNSPEC/AF_INET/AF_INET6/AF_UNIX over UNSPEC/STREAM/DGRAM are the assigned pairs.
         if ((fam >> 4) > 0x3u || (fam & 0x0Fu) > 0x2u)
         {
-            ProxyProtocolV.ok = PROTO_FALSE;
+            ProxyProtocol.ok = PROTO_FALSE;
             return;
         }
         out->version = 2;
@@ -241,33 +241,33 @@ void protocore_proxy_protocol_parse(uint8_t *restrict work)
             out->has_addr = PROTO_TRUE;
         }
         *consumed = total;
-        ProxyProtocolV.ok = PROTO_TRUE;
+        ProxyProtocol.ok = PROTO_TRUE;
         return;
     }
 
     // v1: the "PROXY " text prefix.
     if (len >= 6 && mem.cmp(buf, "PROXY ", 6) == 0)
     {
-        ProxyProtocolV.ok = parse_v1(buf, len, out, consumed);
+        ProxyProtocol.ok = parse_v1(buf, len, out, consumed);
         return;
     }
 
-    ProxyProtocolV.ok = PROTO_FALSE; // no PROXY header present
+    ProxyProtocol.ok = PROTO_FALSE; // no PROXY header present
 }
 
-void protocore_proxy_protocol_v1_build(uint8_t *restrict work)
+static void proxy_protocol_v1_build(uint8_t *restrict work)
 {
     (void)work;
-    char *buf = ProxyProtocolV.v1_build_args.buf;
-    size_t cap = ProxyProtocolV.v1_build_args.cap;
-    uint32_t src_addr = ProxyProtocolV.v1_build_args.src_addr;
-    uint32_t dst_addr = ProxyProtocolV.v1_build_args.dst_addr;
-    uint16_t src_port = ProxyProtocolV.v1_build_args.src_port;
-    uint16_t dst_port = ProxyProtocolV.v1_build_args.dst_port;
+    char *buf = ProxyProtocol.v1_build_args.buf;
+    size_t cap = ProxyProtocol.v1_build_args.cap;
+    uint32_t src_addr = ProxyProtocol.v1_build_args.src_addr;
+    uint32_t dst_addr = ProxyProtocol.v1_build_args.dst_addr;
+    uint16_t src_port = ProxyProtocol.v1_build_args.src_port;
+    uint16_t dst_port = ProxyProtocol.v1_build_args.dst_port;
 
     if (!buf)
     {
-        ProxyProtocolV.n = 0;
+        ProxyProtocol.n = 0;
         return;
     }
     protocore_sb sb_buf = {buf, cap, 0, PROTO_TRUE};
@@ -297,26 +297,26 @@ void protocore_proxy_protocol_v1_build(uint8_t *restrict work)
     // specifiers), so snprintf can't fail with an encoding error for this call.
     if (n < 0 || (size_t)n >= cap)
     {
-        ProxyProtocolV.n = 0;
+        ProxyProtocol.n = 0;
         return;
     }
-    ProxyProtocolV.n = (size_t)n;
+    ProxyProtocol.n = (size_t)n;
 }
 
-void protocore_proxy_protocol_v2_build(uint8_t *restrict work)
+static void proxy_protocol_v2_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = ProxyProtocolV.v2_build_args.buf;
-    size_t cap = ProxyProtocolV.v2_build_args.cap;
-    uint32_t src_addr = ProxyProtocolV.v2_build_args.src_addr;
-    uint32_t dst_addr = ProxyProtocolV.v2_build_args.dst_addr;
-    uint16_t src_port = ProxyProtocolV.v2_build_args.src_port;
-    uint16_t dst_port = ProxyProtocolV.v2_build_args.dst_port;
+    uint8_t *buf = ProxyProtocol.v2_build_args.buf;
+    size_t cap = ProxyProtocol.v2_build_args.cap;
+    uint32_t src_addr = ProxyProtocol.v2_build_args.src_addr;
+    uint32_t dst_addr = ProxyProtocol.v2_build_args.dst_addr;
+    uint16_t src_port = ProxyProtocol.v2_build_args.src_port;
+    uint16_t dst_port = ProxyProtocol.v2_build_args.dst_port;
 
     const size_t total = 16 + 12; // header + TCP/IPv4 address block
     if (!buf || cap < total)
     {
-        ProxyProtocolV.n = 0;
+        ProxyProtocol.n = 0;
         return;
     }
     mem.cpy(buf, kV2Sig, PROXY_V2_SIG_LEN);
@@ -336,11 +336,14 @@ void protocore_proxy_protocol_v2_build(uint8_t *restrict work)
     buf[25] = (uint8_t)(src_port);
     buf[26] = (uint8_t)(dst_port >> 8);
     buf[27] = (uint8_t)(dst_port);
-    ProxyProtocolV.n = total;
+    ProxyProtocol.n = total;
 }
 
-/** @brief The operands and the outcome. */
-ProxyProtocolVars ProxyProtocolV;
+ProxyProtocolNs ProxyProtocol = {
+    .parse = proxy_protocol_parse,
+    .v1_build = proxy_protocol_v1_build,
+    .v2_build = proxy_protocol_v2_build,
+};
 
 PROTOCORE_END_DECLS
 

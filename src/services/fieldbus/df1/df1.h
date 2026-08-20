@@ -54,12 +54,14 @@ typedef struct
     const uint8_t *data;
     size_t len;
 } Df1BccArgs;
+
 /** @brief What crc takes: data, len. */
 typedef struct
 {
     const uint8_t *data;
     size_t len;
 } Df1CrcArgs;
+
 /** @brief What build_frame takes: buf, cap, data, data_len, check. */
 typedef struct
 {
@@ -69,6 +71,7 @@ typedef struct
     size_t data_len;
     Df1Check check; ///< DF1_CHECK_BCC (1 octet) or DF1_CHECK_CRC (2 octets, low byte first; CRC over the data + ETX)
 } Df1BuildFrameArgs;
+
 /** @brief What parse_frame takes: buf, len, check, out, out_cap, ... */
 typedef struct
 {
@@ -79,6 +82,7 @@ typedef struct
     size_t out_cap;  ///< capacity of out
     size_t *out_len; ///< receives the application-data length
 } Df1ParseFrameArgs;
+
 /**
  * @brief Allen-Bradley DF1 full-duplex frame codec (PROTOCORE_ENABLE_DF1) - zero-heap framing + DLE byte-stuffing +
  * BCC/CRC for the Rockwell serial PLC link layer.
@@ -114,41 +118,20 @@ typedef struct
     Df1CrcArgs crc_args;
     Df1BuildFrameArgs build_frame_args;
     Df1ParseFrameArgs parse_frame_args;
+
     proto_bool ok;
     uint8_t value;
     uint16_t u16;
     size_t n;
-} Df1Vars;
 
-/** @brief The operands and the outcome. */
-extern Df1Vars Df1V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const bcc)(uint8_t *restrict work);
     void (*const crc)(uint8_t *restrict work);
     void (*const build_frame)(uint8_t *restrict work);
     void (*const parse_frame)(uint8_t *restrict work);
 } Df1Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Df1V or a region of the borrow at a fixed offset.
-void protocore_df1_bcc(uint8_t *restrict work);
-void protocore_df1_crc(uint8_t *restrict work);
-void protocore_df1_build_frame(uint8_t *restrict work);
-void protocore_df1_parse_frame(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Df1.bcc(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Df1Ns Df1 __attribute__((unused)) = {
-    .bcc = protocore_df1_bcc,
-    .crc = protocore_df1_crc,
-    .build_frame = protocore_df1_build_frame,
-    .parse_frame = protocore_df1_parse_frame,
-};
+/** @brief The one symbol this module exports. */
+extern Df1Ns Df1;
 
 PROTOCORE_END_DECLS
 

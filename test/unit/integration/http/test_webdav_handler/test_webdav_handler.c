@@ -21,7 +21,7 @@ static const protocore_mnt_backend *davfs;
 static void feed_and_handle(uint8_t slot, const char *req)
 {
     push_str(slot, req);
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -33,7 +33,7 @@ static void rearm()
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.reset(protocore_http_conn_span());
     tcp_capture_reset();
 }
@@ -102,7 +102,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = i;
+        HttpConn.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -110,7 +110,7 @@ void setUp()
     tcp_capture_reset();
     lfsm_format();
     davfs = lfsm();
-    MntV.args.backend = davfs;
+    Mnt.args.backend = davfs;
     Mnt.mount(mnt_work);
 
     lfsm_mkdir("/dav");
@@ -246,13 +246,13 @@ static void feed_put(uint8_t slot, const char *path, const uint8_t *body, size_t
     char hdr[128];
     snprintf(hdr, sizeof(hdr), "PUT %s HTTP/1.1\r\nHost: x\r\nContent-Length: %u\r\n\r\n", path, (unsigned)n);
     push_str(slot, hdr);
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     for (size_t off = 0; off < n;)
     {
         size_t chunk = n - off > 200 ? 200 : n - off;
         push_bytes(slot, body + off, chunk);
-        HttpConnV.slot = slot;
+        HttpConn.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
         off += chunk;
     }
@@ -323,10 +323,10 @@ void test_put_stream_abort()
 {
 
     push_str(0, "PUT /dav/ab.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 10\r\n\r\nabcd");
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     TEST_ASSERT_TRUE(tree_has("/dav/ab.txt"));
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.reset(protocore_http_conn_span());
 
     TEST_ASSERT_TRUE(tree_has("/dav/ab.txt"));
@@ -338,13 +338,13 @@ static void feed_put_if(uint8_t slot, const char *path, const char *if_hdr, cons
     snprintf(hdr, sizeof(hdr), "PUT %s HTTP/1.1\r\nHost: x\r\nIf: %s\r\nContent-Length: %u\r\n\r\n", path, if_hdr,
              (unsigned)n);
     push_str(slot, hdr);
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     for (size_t off = 0; off < n;)
     {
         size_t chunk = n - off > 200 ? 200 : n - off;
         push_bytes(slot, body + off, chunk);
-        HttpConnV.slot = slot;
+        HttpConn.slot = slot;
         HttpConn.parse(protocore_http_conn_span());
         off += chunk;
     }
@@ -735,10 +735,10 @@ void test_webdav_stream_put_abort_without_open()
 {
     lfsm_fail_prog_always();
     push_str(0, "PUT /dav/never.txt HTTP/1.1\r\nHost: x\r\nContent-Length: 10\r\n\r\nabcd");
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     TEST_ASSERT_FALSE(tree_has("/dav/never.txt"));
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.reset(protocore_http_conn_span());
     TEST_ASSERT_FALSE(tree_has("/dav/never.txt"));
     lfsm_no_prog_failure();
@@ -747,7 +747,7 @@ void test_webdav_stream_put_abort_without_open()
 void test_webdav_status_on_dead_connection()
 {
     push_str(0, "UNLOCK /dav/x HTTP/1.1\r\nHost: x\r\n\r\n");
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     conn_pool[0].pcb = NULL;
     handle();
@@ -792,9 +792,9 @@ void test_webdav_status_text_table()
     };
     for (size_t i = 0; i < sizeof(expect) / sizeof(expect[0]); i++)
     {
-        HttpV.code = expect[i].code;
+        Http.code = expect[i].code;
         Http.status_text(protocore_http_span());
-        TEST_ASSERT_EQUAL_STRING(expect[i].phrase, HttpV.text);
+        TEST_ASSERT_EQUAL_STRING(expect[i].phrase, Http.text);
     }
 
     // A code the table has no phrase for reads "Unknown" rather than an empty string, so a response
@@ -802,9 +802,9 @@ void test_webdav_status_text_table()
     static const int unknown[3] = {299, 0, -1};
     for (size_t i = 0; i < 3u; i++)
     {
-        HttpV.code = unknown[i];
+        Http.code = unknown[i];
         Http.status_text(protocore_http_span());
-        TEST_ASSERT_EQUAL_STRING("Unknown", HttpV.text);
+        TEST_ASSERT_EQUAL_STRING("Unknown", Http.text);
     }
 }
 
@@ -874,3 +874,4 @@ void test_protocore_fs_resolve_traversal_and_root_edge()
 
     TEST_ASSERT_EQUAL_INT(-2, protocore_fs_resolve("/abc/", "def", "", out, 4));
 }
+

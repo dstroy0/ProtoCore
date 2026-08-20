@@ -15,17 +15,16 @@
 static void time_gmtime(uint8_t *restrict work)
 {
     (void)work;
-    const time_t epoch = TimeCompatV.args.epoch;
-    struct tm *out = TimeCompatV.args.out;
+    const time_t epoch = TimeCompat.args.epoch;
+    struct tm *out = TimeCompat.args.out;
 
 #if defined(_WIN32)
     // One runtime takes (tm, time) and returns an errno_t; the other takes (time, tm) and returns
     // the destination. Both are reduced to "the destination, or NULL" here.
-    TimeCompatV.tm_out = (gmtime_s(out, &epoch) == 0) ? out : NULL;
+    TimeCompat.tm_out = (gmtime_s(out, &epoch) == 0) ? out : NULL;
 #else
-    TimeCompatV.tm_out = gmtime_r(&epoch, out);
+    TimeCompat.tm_out = gmtime_r(&epoch, out);
 #endif
 }
 
-/** @brief The operands and the outcome. */
-TimeCompatVars TimeCompatV;
+TimeCompatNs TimeCompat = {.gmtime = time_gmtime};

@@ -111,14 +111,14 @@ uint8_t *protocore_dashboard_span(void)
     return s_own.span;
 }
 
-void protocore_dashboard_configure(uint8_t *restrict work);
-void protocore_dashboard_parse_control(uint8_t *restrict work);
-void protocore_dashboard_values_json(uint8_t *restrict work);
+static void dashboard_configure(uint8_t *restrict work);
+static void dashboard_parse_control(uint8_t *restrict work);
+static void dashboard_values_json(uint8_t *restrict work);
 
-void protocore_dashboard_configure(uint8_t *restrict work)
+static void dashboard_configure(uint8_t *restrict work)
 {
-    const protocore_widget *widgets = DashboardV.configure_args.widgets;
-    uint8_t count = DashboardV.configure_args.count;
+    const protocore_widget *widgets = Dashboard.configure_args.widgets;
+    uint8_t count = Dashboard.configure_args.count;
 
     DASHBOARD_CTX(work)->widgets = widgets;
     DASHBOARD_CTX(work)->count = count > PROTOCORE_DASHBOARD_MAX_WIDGETS ? PROTOCORE_DASHBOARD_MAX_WIDGETS : count;
@@ -128,14 +128,14 @@ void protocore_dashboard_configure(uint8_t *restrict work)
     }
 }
 
-void protocore_dashboard_set(uint8_t *restrict work)
+static void dashboard_set(uint8_t *restrict work)
 {
-    const char *key = DashboardV.set_args.key;
-    float value = DashboardV.set_args.value;
+    const char *key = Dashboard.set_args.key;
+    float value = Dashboard.set_args.value;
 
     if (!key || !DASHBOARD_CTX(work)->widgets)
     {
-        DashboardV.ok = PROTO_FALSE;
+        Dashboard.ok = PROTO_FALSE;
         return;
     }
     for (uint8_t i = 0; i < DASHBOARD_CTX(work)->count; i++)
@@ -144,11 +144,11 @@ void protocore_dashboard_set(uint8_t *restrict work)
             str.eq(DASHBOARD_CTX(work)->widgets[i].key, key, MAX_KEY_LEN, PROTO_FALSE))
         {
             DASHBOARD_CTX(work)->values[i] = value;
-            DashboardV.ok = PROTO_TRUE;
+            Dashboard.ok = PROTO_TRUE;
             return;
         }
     }
-    DashboardV.ok = PROTO_FALSE;
+    Dashboard.ok = PROTO_FALSE;
 }
 
 // The layout is an array of widget objects; the values document is one flat object of key/number
@@ -187,20 +187,20 @@ static const protocore_field DASH_VALUE[] = {
     PROTOCORE_END,
 };
 
-void protocore_dashboard_layout_json(uint8_t *restrict work)
+static void dashboard_layout_json(uint8_t *restrict work)
 {
-    char *out = DashboardV.layout_json_args.out;
-    uint32_t cap = DashboardV.layout_json_args.cap;
+    char *out = Dashboard.layout_json_args.out;
+    uint32_t cap = Dashboard.layout_json_args.cap;
 
     if (!out || cap == 0)
     {
-        DashboardV.value = 0;
+        Dashboard.value = 0;
         return;
     }
     out[0] = '\0';
     if (!DASHBOARD_CTX(work)->widgets)
     {
-        DashboardV.value = 0;
+        Dashboard.value = 0;
         return;
     }
     // Each arm empties the buffer before reporting 0: a frame that did not fit leaves the document
@@ -208,7 +208,7 @@ void protocore_dashboard_layout_json(uint8_t *restrict work)
     if (frame.append(out, cap, DASH_ARRAY_OPEN, NULL, 0) == 0)
     {
         out[0] = '\0';
-        DashboardV.value = 0;
+        Dashboard.value = 0;
         return;
     }
     for (uint8_t i = 0; i < DASHBOARD_CTX(work)->count; i++)
@@ -222,7 +222,7 @@ void protocore_dashboard_layout_json(uint8_t *restrict work)
                          7) == 0)
         {
             out[0] = '\0';
-            DashboardV.value = 0;
+            Dashboard.value = 0;
             return;
         }
     }
@@ -231,29 +231,29 @@ void protocore_dashboard_layout_json(uint8_t *restrict work)
     {
         out[0] = '\0';
     }
-    DashboardV.value = (int32_t)n;
+    Dashboard.value = (int32_t)n;
 }
 
-void protocore_dashboard_values_json(uint8_t *restrict work)
+static void dashboard_values_json(uint8_t *restrict work)
 {
-    char *out = DashboardV.values_json_args.out;
-    uint32_t cap = DashboardV.values_json_args.cap;
+    char *out = Dashboard.values_json_args.out;
+    uint32_t cap = Dashboard.values_json_args.cap;
 
     if (!out || cap == 0)
     {
-        DashboardV.value = 0;
+        Dashboard.value = 0;
         return;
     }
     out[0] = '\0';
     if (!DASHBOARD_CTX(work)->widgets)
     {
-        DashboardV.value = 0;
+        Dashboard.value = 0;
         return;
     }
     if (frame.append(out, cap, DASH_OBJECT_OPEN, NULL, 0) == 0)
     {
         out[0] = '\0';
-        DashboardV.value = 0;
+        Dashboard.value = 0;
         return;
     }
     for (uint8_t i = 0; i < DASHBOARD_CTX(work)->count; i++)
@@ -265,7 +265,7 @@ void protocore_dashboard_values_json(uint8_t *restrict work)
                          3) == 0)
         {
             out[0] = '\0';
-            DashboardV.value = 0;
+            Dashboard.value = 0;
             return;
         }
     }
@@ -274,16 +274,16 @@ void protocore_dashboard_values_json(uint8_t *restrict work)
     {
         out[0] = '\0';
     }
-    DashboardV.value = (int32_t)n;
+    Dashboard.value = (int32_t)n;
 }
 
 // ---------------------------------------------------------------------------
 // Controls (inbound WebSocket messages)
 // ---------------------------------------------------------------------------
 
-void protocore_dashboard_on_control(uint8_t *restrict work)
+static void dashboard_on_control(uint8_t *restrict work)
 {
-    protocore_control_cb cb = DashboardV.on_control_args.cb;
+    protocore_control_cb cb = Dashboard.on_control_args.cb;
 
     DASHBOARD_CTX(work)->control_cb = cb;
 }
@@ -318,17 +318,17 @@ static const char *control_value_ptr(const char *s, const char *key)
     return p;
 }
 
-void protocore_dashboard_parse_control(uint8_t *restrict work)
+static void dashboard_parse_control(uint8_t *restrict work)
 {
     (void)work;
-    const char *msg = DashboardV.parse_control_args.msg;
-    char *key_out = DashboardV.parse_control_args.key_out;
-    size_t key_cap = DashboardV.parse_control_args.key_cap;
-    float *value_out = DashboardV.parse_control_args.value_out;
+    const char *msg = Dashboard.parse_control_args.msg;
+    char *key_out = Dashboard.parse_control_args.key_out;
+    size_t key_cap = Dashboard.parse_control_args.key_cap;
+    float *value_out = Dashboard.parse_control_args.value_out;
 
     if (!msg || !key_out || key_cap == 0 || !value_out)
     {
-        DashboardV.ok = PROTO_FALSE;
+        Dashboard.ok = PROTO_FALSE;
         return;
     }
     key_out[0] = '\0';
@@ -336,7 +336,7 @@ void protocore_dashboard_parse_control(uint8_t *restrict work)
     const char *vp = control_value_ptr(msg, "v");
     if (!kp || !vp || *kp != '"')
     {
-        DashboardV.ok = PROTO_FALSE;
+        Dashboard.ok = PROTO_FALSE;
         return;
     }
     kp++;
@@ -348,7 +348,7 @@ void protocore_dashboard_parse_control(uint8_t *restrict work)
     if (*kp != '"')
     {
         key_out[0] = '\0';
-        DashboardV.ok = PROTO_FALSE;
+        Dashboard.ok = PROTO_FALSE;
         return; // unterminated or key too long
     }
     key_out[i] = '\0';
@@ -356,34 +356,34 @@ void protocore_dashboard_parse_control(uint8_t *restrict work)
     float v = str.to_float(vp, &end);
     if (end == vp)
     {
-        DashboardV.ok = PROTO_FALSE;
+        Dashboard.ok = PROTO_FALSE;
         return; // no numeric value
     }
     *value_out = v;
-    DashboardV.ok = PROTO_TRUE;
+    Dashboard.ok = PROTO_TRUE;
 }
 
-void protocore_dashboard_dispatch_control(uint8_t *restrict work)
+static void dashboard_dispatch_control(uint8_t *restrict work)
 {
-    const char *msg = DashboardV.dispatch_control_args.msg;
+    const char *msg = Dashboard.dispatch_control_args.msg;
 
     char key[32];
     float value;
-    DashboardV.parse_control_args.msg = msg;
-    DashboardV.parse_control_args.key_out = key;
-    DashboardV.parse_control_args.key_cap = sizeof(key);
-    DashboardV.parse_control_args.value_out = &value;
-    protocore_dashboard_parse_control(work);
-    if (!DashboardV.ok)
+    Dashboard.parse_control_args.msg = msg;
+    Dashboard.parse_control_args.key_out = key;
+    Dashboard.parse_control_args.key_cap = sizeof(key);
+    Dashboard.parse_control_args.value_out = &value;
+    dashboard_parse_control(work);
+    if (!Dashboard.ok)
     {
-        DashboardV.ok = PROTO_FALSE;
+        Dashboard.ok = PROTO_FALSE;
         return;
     }
     if (DASHBOARD_CTX(work)->control_cb)
     {
         DASHBOARD_CTX(work)->control_cb(key, value);
     }
-    DashboardV.ok = DASHBOARD_CTX(work)->control_cb != NULL;
+    Dashboard.ok = DASHBOARD_CTX(work)->control_cb != NULL;
 }
 
 // ---------------------------------------------------------------------------
@@ -403,15 +403,15 @@ void dash_ws_message(uint8_t ws_id);
 void dash_ws_close(uint8_t ws_id);
 #endif
 
-void protocore_dashboard_begin(uint8_t *restrict work)
+static void dashboard_begin(uint8_t *restrict work)
 {
-    const char *path = DashboardV.begin_args.path;
-    const protocore_widget *widgets = DashboardV.begin_args.widgets;
-    uint8_t count = DashboardV.begin_args.count;
+    const char *path = Dashboard.begin_args.path;
+    const protocore_widget *widgets = Dashboard.begin_args.widgets;
+    uint8_t count = Dashboard.begin_args.count;
 
-    DashboardV.configure_args.widgets = widgets;
-    DashboardV.configure_args.count = count;
-    protocore_dashboard_configure(work);
+    Dashboard.configure_args.widgets = widgets;
+    Dashboard.configure_args.count = count;
+    dashboard_configure(work);
 
     if (!path || !path[0])
     {
@@ -451,7 +451,7 @@ void protocore_dashboard_begin(uint8_t *restrict work)
     DASHBOARD_CTX(work)->started = PROTO_TRUE; // last: publish() is only meaningful once the stream route exists
 }
 
-void protocore_dashboard_publish(uint8_t *restrict work)
+static void dashboard_publish(uint8_t *restrict work)
 {
 
     if (!DASHBOARD_CTX(work)->started)
@@ -459,17 +459,24 @@ void protocore_dashboard_publish(uint8_t *restrict work)
         return; // nothing is subscribed until begin() has registered the stream routes
     }
     char buf[PROTOCORE_DASHBOARD_JSON_BUF];
-    DashboardV.values_json_args.out = buf;
-    DashboardV.values_json_args.cap = sizeof(buf);
-    protocore_dashboard_values_json(work);
-    if (DashboardV.value > 0)
+    Dashboard.values_json_args.out = buf;
+    Dashboard.values_json_args.cap = sizeof(buf);
+    dashboard_values_json(work);
+    if (Dashboard.value > 0)
     {
         protocore_sse_broadcast(DASHBOARD_CTX(work)->stream_path, buf, NULL, NULL);
     }
 }
 
-/** @brief The operands and the outcome. */
-DashboardVars DashboardV;
+DashboardNs Dashboard = {.configure = dashboard_configure,
+                         .set = dashboard_set,
+                         .layout_json = dashboard_layout_json,
+                         .values_json = dashboard_values_json,
+                         .on_control = dashboard_on_control,
+                         .parse_control = dashboard_parse_control,
+                         .dispatch_control = dashboard_dispatch_control,
+                         .begin = dashboard_begin,
+                         .publish = dashboard_publish};
 
 PROTOCORE_END_DECLS
 

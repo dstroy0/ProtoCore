@@ -30,33 +30,33 @@ void dbench_run(void)
 {
     // Candidate fixtures copied verbatim from test/test_happy_eyeballs.cpp (known-good, spec-conformant).
     protocore_ip g6;
-    IpV.args.text = "2606:4700::1";
-    IpV.args.out = &g6;
+    Ip.args.text = "2606:4700::1";
+    Ip.args.out = &g6;
     Ip.parse(ip_work);                                               // global IPv6
     protocore_ip g4 = protocore_ip_from_v4_octets(93, 184, 216, 34); // global IPv4
 
     // 3-address mixed template, v4-first: the sort must move the two v6 ahead, then interleave alternates.
     protocore_ip tmpl3[3];
     tmpl3[0] = protocore_ip_from_v4_octets(93, 184, 216, 34);
-    IpV.args.text = "2606:4700::1";
-    IpV.args.out = &tmpl3[1];
+    Ip.args.text = "2606:4700::1";
+    Ip.args.out = &tmpl3[1];
     Ip.parse(ip_work);
-    IpV.args.text = "2606:4700::2";
-    IpV.args.out = &tmpl3[2];
+    Ip.args.text = "2606:4700::2";
+    Ip.args.out = &tmpl3[2];
     Ip.parse(ip_work);
 
     // 5-address mixed template (three v6 + two v4) to exercise the longer interleave path.
     protocore_ip tmpl5[5];
-    IpV.args.text = "2606:4700::1";
-    IpV.args.out = &tmpl5[0];
+    Ip.args.text = "2606:4700::1";
+    Ip.args.out = &tmpl5[0];
     Ip.parse(ip_work);
     tmpl5[1] = protocore_ip_from_v4_octets(8, 8, 8, 8);
-    IpV.args.text = "2606:4700::2";
-    IpV.args.out = &tmpl5[2];
+    Ip.args.text = "2606:4700::2";
+    Ip.args.out = &tmpl5[2];
     Ip.parse(ip_work);
     tmpl5[3] = protocore_ip_from_v4_octets(1, 1, 1, 1);
-    IpV.args.text = "2606:4700::3";
-    IpV.args.out = &tmpl5[4];
+    Ip.args.text = "2606:4700::3";
+    Ip.args.out = &tmpl5[4];
     Ip.parse(ip_work);
 
     protocore_ip work3[3];
@@ -76,23 +76,23 @@ void dbench_run(void)
         // Staged inside the argument: DBENCH_OP re-evaluates it, so the operands belong in the
         // timed expression rather than above it.
         DBENCH_OP("HappyEyeballs.pref v6", 200000,
-                  (HappyEyeballsV.pref_args.ip = &g6, HappyEyeballs.pref(he), sinki += HappyEyeballsV.n));
+                  (HappyEyeballs.pref_args.ip = &g6, HappyEyeballs.pref(he), sinki += HappyEyeballs.n));
         DBENCH_OP("HappyEyeballs.pref v4", 200000,
-                  (HappyEyeballsV.pref_args.ip = &g4, HappyEyeballs.pref(he), sinki += HappyEyeballsV.n));
+                  (HappyEyeballs.pref_args.ip = &g4, HappyEyeballs.pref(he), sinki += HappyEyeballs.n));
         // Full candidate ordering: stable insertion-sort by preference + RFC 8305 family interleave.
         // Restore the scrambled order first so every iteration times the real reorder, not the fast path.
         DBENCH_OP("HappyEyeballs.order x3 (sort+ilv)", 50000,
-                  (memcpy(work3, tmpl3, sizeof(tmpl3)), HappyEyeballsV.order_args.list = work3,
-                   HappyEyeballsV.order_args.n = 3, HappyEyeballs.order(he), sink8 += work3[1].bytes[0]));
+                  (memcpy(work3, tmpl3, sizeof(tmpl3)), HappyEyeballs.order_args.list = work3,
+                   HappyEyeballs.order_args.n = 3, HappyEyeballs.order(he), sink8 += work3[1].bytes[0]));
         DBENCH_OP("HappyEyeballs.order x5 (sort+ilv)", 50000,
-                  (memcpy(work5, tmpl5, sizeof(tmpl5)), HappyEyeballsV.order_args.list = work5,
-                   HappyEyeballsV.order_args.n = 5, HappyEyeballs.order(he), sink8 += work5[1].bytes[0]));
+                  (memcpy(work5, tmpl5, sizeof(tmpl5)), HappyEyeballs.order_args.list = work5,
+                   HappyEyeballs.order_args.n = 5, HappyEyeballs.order(he), sink8 += work5[1].bytes[0]));
         // Connection Attempt Delay gate (wrap-safe modular compare).
         DBENCH_OP("HappyEyeballs.attempt_due", 200000,
-                  (HappyEyeballsV.attempt_due_args.last_start_ms = 1000,
-                   HappyEyeballsV.attempt_due_args.now_ms = 1000 + 250,
-                   HappyEyeballsV.attempt_due_args.attempt_delay_ms = PROTOCORE_HE_ATTEMPT_DELAY_MS,
-                   HappyEyeballs.attempt_due(he), sinkb ^= HappyEyeballsV.ok));
+                  (HappyEyeballs.attempt_due_args.last_start_ms = 1000,
+                   HappyEyeballs.attempt_due_args.now_ms = 1000 + 250,
+                   HappyEyeballs.attempt_due_args.attempt_delay_ms = PROTOCORE_HE_ATTEMPT_DELAY_MS,
+                   HappyEyeballs.attempt_due(he), sinkb ^= HappyEyeballs.ok));
 
         (void)sinki;
         (void)sink8;

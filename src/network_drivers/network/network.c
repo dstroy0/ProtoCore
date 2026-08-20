@@ -16,11 +16,18 @@
 
 #include "network.h"
 
-void protocore_network_init(uint8_t *restrict work)
+static void network_init(uint8_t *restrict work)
 {
     (void)work; // no work: the platform stack holds the route table and selects the path
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-networkVars networkV;
+NetworkNs network = {
+#if PROTOCORE_ENABLE_DNS
+    .dns = &Dns,
+#endif
+#if PROTOCORE_ENABLE_FORWARD
+                     .forward = &Forward,
+#endif
+                     .ip = &Ip,
+                     .init = network_init};

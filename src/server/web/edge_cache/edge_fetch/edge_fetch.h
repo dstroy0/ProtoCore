@@ -64,6 +64,7 @@ typedef struct
     size_t body_len;
     uint8_t buf[PROTOCORE_EDGE_FETCH_BUF];
 } EdgeFetch;
+
 /** @brief What begin takes: f, t, host, port, request, req_len, now_ms. */
 typedef struct
 {
@@ -75,6 +76,7 @@ typedef struct
     size_t req_len;
     uint32_t now_ms;
 } EdgeFetchBeginArgs;
+
 /** @brief What pump takes: f, t, now_ms. */
 typedef struct
 {
@@ -82,12 +84,14 @@ typedef struct
     const EdgeFetchTransport *t;
     uint32_t now_ms;
 } EdgeFetchPumpArgs;
+
 /** @brief What end takes: f, t. */
 typedef struct
 {
     EdgeFetch *f;
     const EdgeFetchTransport *t;
 } EdgeFetchEndArgs;
+
 /** @brief What edge_resp_complete takes: buf, len, conn_closed, ... */
 typedef struct
 {
@@ -96,6 +100,7 @@ typedef struct
     proto_bool conn_closed;
     size_t *head_len;
 } EdgeFetchEdgeRespCompleteArgs;
+
 /**
  * @brief CDN edge-cache tier - async origin-fetch engine (PROTOCORE_ENABLE_EDGE_CACHE). A non-blocking origin fetch:
  * ...
@@ -133,39 +138,18 @@ typedef struct
     EdgeFetchPumpArgs pump_args;
     EdgeFetchEndArgs end_args;
     EdgeFetchEdgeRespCompleteArgs edge_resp_complete_args;
+
     proto_bool ok;
     EdgeFetchStatus status;
-} EdgeFetcherVars;
 
-/** @brief The operands and the outcome. */
-extern EdgeFetcherVars EdgeFetcherV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const begin)(uint8_t *restrict work);
     void (*const pump)(uint8_t *restrict work);
     void (*const end)(uint8_t *restrict work);
     void (*const edge_resp_complete)(uint8_t *restrict work);
 } EdgeFetchNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in EdgeFetcherV or a region of the borrow at a fixed offset.
-void protocore_edge_fetch_begin(uint8_t *restrict work);
-void protocore_edge_fetch_pump(uint8_t *restrict work);
-void protocore_edge_fetch_end(uint8_t *restrict work);
-void protocore_edge_fetch_edge_resp_complete(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `EdgeFetcher.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const EdgeFetchNs EdgeFetcher __attribute__((unused)) = {
-    .begin = protocore_edge_fetch_begin,
-    .pump = protocore_edge_fetch_pump,
-    .end = protocore_edge_fetch_end,
-    .edge_resp_complete = protocore_edge_fetch_edge_resp_complete,
-};
+/** @brief The one symbol this module exports. */
+extern EdgeFetchNs EdgeFetcher;
 
 PROTOCORE_END_DECLS
 

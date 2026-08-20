@@ -86,16 +86,16 @@ static proto_bool stream_live(uint8_t i)
 #if PROTOCORE_NEED_CLIENT
     if (SSH_NETWORK_CTX(protocore_ssh_network_span())->kind[i] == SSH_STREAM_DIALED)
     {
-        TcpClientV.cid = (int)h;
+        TcpClient.cid = (int)h;
         TcpClient.connected(protocore_tcp_client_span());
-        const proto_bool up = TcpClientV.ok;
+        const proto_bool up = TcpClient.ok;
         TcpClient.is_closed(protocore_tcp_client_span());
-        return up && !TcpClientV.ok;
+        return up && !TcpClient.ok;
     }
 #endif
-    ConnPoolV.slot = h;
+    ConnPool.slot = h;
     ConnPool.active(protocore_conn_pool_span());
-    return ConnPoolV.ok;
+    return ConnPool.ok;
 }
 
 /** @brief Put @p len bytes of framed packet on slot @p i's stream. */
@@ -109,17 +109,17 @@ static proto_bool stream_write(uint8_t i, const uint8_t *buf, size_t len)
 #if PROTOCORE_NEED_CLIENT
     if (SSH_NETWORK_CTX(protocore_ssh_network_span())->kind[i] == SSH_STREAM_DIALED)
     {
-        TcpClientV.cid = (int)h;
-        TcpClientV.io.data = buf;
-        TcpClientV.io.len = len;
+        TcpClient.cid = (int)h;
+        TcpClient.io.data = buf;
+        TcpClient.io.len = len;
         TcpClient.send(protocore_tcp_client_span());
-        return TcpClientV.ok;
+        return TcpClient.ok;
     }
 #endif
-    ConnPoolV.slot = h;
-    ConnPoolV.io.data = buf;
-    ConnPoolV.io.len = (proto_u16)len;
-    ConnPoolV.send(protocore_conn_pool_span());
+    ConnPool.slot = h;
+    ConnPool.io.data = buf;
+    ConnPool.io.len = (proto_u16)len;
+    ConnPool.send(protocore_conn_pool_span());
     ConnPool.flush(protocore_conn_pool_span());
     return PROTO_TRUE;
 }
@@ -148,9 +148,9 @@ static void ensure_init(void)
 static void emit(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t i = SshNetworkV.ssh_slot;
-    const uint8_t *payload = SshNetworkV.msg.payload;
-    const size_t len = SshNetworkV.msg.len;
+    const uint8_t i = SshNetwork.ssh_slot;
+    const uint8_t *payload = SshNetwork.msg.payload;
+    const size_t len = SshNetwork.msg.len;
     // The receive path checks the slot mapping, never liveness, so a stream that died between the
     // inbound read and this reply arrives here mapped but dead. Drop the reply rather than framing
     // it: ssh_pkt_emit advances the send sequence, and a counted packet that never reaches the peer
@@ -172,9 +172,9 @@ static void emit(uint8_t *restrict work)
             return;
         }
 #endif
-        ConnPoolV.slot = SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i];
+        ConnPool.slot = SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[i];
         ConnPool.owner(protocore_conn_pool_span());
-        WorkersV.worker_id = ConnPoolV.u8;
+        Workers.worker_id = ConnPool.u8;
         Workers.wake(protocore_worker_span());
     }
 }
@@ -184,17 +184,17 @@ static void emit(uint8_t *restrict work)
 static void tx_drain(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t conn_slot = SshNetworkV.conn_slot;
-    const uint8_t j = SshNetworkV.ssh_slot;
+    const uint8_t conn_slot = SshNetwork.conn_slot;
+    const uint8_t j = SshNetwork.ssh_slot;
     SshPacketState *pkt = &ssh_pkt[j];
-    ConnPoolV.slot = conn_slot;
+    ConnPool.slot = conn_slot;
     ConnPool.active(protocore_conn_pool_span());
-    if (!pkt->tx_ready || !ConnPoolV.ok)
+    if (!pkt->tx_ready || !ConnPool.ok)
     {
         return;
     }
     ConnPool.sndbuf(protocore_conn_pool_span());
-    size_t room = (size_t)ConnPoolV.u16;
+    size_t room = (size_t)ConnPool.u16;
     size_t n = pkt->tx_len - pkt->tx_off;
     if (n > room)
     {
@@ -202,10 +202,10 @@ static void tx_drain(uint8_t *restrict work)
     }
     if (n > 0)
     {
-        ConnPoolV.io.data = pkt->tx_wire + pkt->tx_off;
-        ConnPoolV.io.len = (proto_u16)n;
-        ConnPoolV.send(protocore_conn_pool_span());
-        if (ConnPoolV.ok)
+        ConnPool.io.data = pkt->tx_wire + pkt->tx_off;
+        ConnPool.io.len = (proto_u16)n;
+        ConnPool.send(protocore_conn_pool_span());
+        if (ConnPool.ok)
         {
             ConnPool.flush(protocore_conn_pool_span());
             pkt->tx_off += n;
@@ -222,20 +222,20 @@ static void tx_drain(uint8_t *restrict work)
 static void net_write_msg(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const uint8_t *msg = SshNetworkV.msg.payload;
-    const size_t len = SshNetworkV.msg.len;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const uint8_t *msg = SshNetwork.msg.payload;
+    const size_t len = SshNetwork.msg.len;
     if (!stream_live(ssh_slot))
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
-    SshV.conn_slot_args.i = ssh_slot;
+    Ssh.conn_slot_args.i = ssh_slot;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *slot = SshV.ptr;
+    uint8_t *slot = Ssh.ptr;
     if (slot == NULL)
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
 
@@ -243,10 +243,10 @@ static void net_write_msg(uint8_t *restrict work)
     size_t wlen = 0;
     if (ssh_pkt_send(ssh_slot, msg, len, wire, &wlen, SSH_WIRE_CAP, &ssh_sess[ssh_slot].out) != 0)
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
-    SshNetworkV.i32 = stream_write(ssh_slot, wire, wlen) ? 0 : -1;
+    SshNetwork.i32 = stream_write(ssh_slot, wire, wlen) ? 0 : -1;
 }
 
 // The span a message may be built in so the framer wraps it without moving it. Null when the slot
@@ -254,23 +254,23 @@ static void net_write_msg(uint8_t *restrict work)
 static void net_payload_region(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    size_t *cap = &SshNetworkV.read_args.cap;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    size_t *cap = &SshNetwork.read_args.cap;
     if (!stream_live(ssh_slot) || cap == NULL)
     {
-        SshNetworkV.region = NULL;
+        SshNetwork.region = NULL;
         return;
     }
-    SshV.conn_slot_args.i = ssh_slot;
+    Ssh.conn_slot_args.i = ssh_slot;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *slot = SshV.ptr;
+    uint8_t *slot = Ssh.ptr;
     if (slot == NULL)
     {
-        SshNetworkV.region = NULL;
+        SshNetwork.region = NULL;
         return;
     }
     *cap = SSH_WIRE_CAP - SSH_WIRE_PAYLOAD_OFF;
-    SshNetworkV.region = slot + SSH_OFF_WIRE + SSH_WIRE_PAYLOAD_OFF;
+    SshNetwork.region = slot + SSH_OFF_WIRE + SSH_WIRE_PAYLOAD_OFF;
     return;
 }
 
@@ -278,56 +278,56 @@ static void net_payload_region(uint8_t *restrict work)
 static void net_write_msg_at(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const size_t plen = SshNetworkV.msg.plen;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const size_t plen = SshNetwork.msg.plen;
     if (!stream_live(ssh_slot))
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
-    SshV.conn_slot_args.i = ssh_slot;
+    Ssh.conn_slot_args.i = ssh_slot;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *slot = SshV.ptr;
+    uint8_t *slot = Ssh.ptr;
     if (slot == NULL)
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
     uint8_t *wire = slot + SSH_OFF_WIRE;
     size_t wlen = 0;
     if (ssh_pkt_send_at(ssh_slot, wire, plen, &wlen, SSH_WIRE_CAP, &ssh_sess[ssh_slot].out) != 0)
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
     // ssh_pkt_send_at has already advanced the sequence number and the cipher for this packet.
-    SshNetworkV.i32 = stream_write(ssh_slot, wire, wlen) ? 0 : -1;
+    SshNetwork.i32 = stream_write(ssh_slot, wire, wlen) ? 0 : -1;
 }
 
 static void net_claim(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const int handle = SshNetworkV.handle;
-    const SshStreamKind kind = SshNetworkV.stream.kind;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const int handle = SshNetwork.handle;
+    const SshStreamKind kind = SshNetwork.stream.kind;
     ensure_init();
     // 0xFF is the free marker, so a handle that would collide with it cannot be bound.
     if (ssh_slot >= MAX_SSH_CONNS || handle < 0 || handle >= 0xFF ||
         SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[ssh_slot] != 0xFF)
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
     SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[ssh_slot] = (uint8_t)handle;
     SSH_NETWORK_CTX(protocore_ssh_network_span())->kind[ssh_slot] = kind;
-    SshNetworkV.i32 = 0;
+    SshNetwork.i32 = 0;
     return;
 }
 
 static void net_release(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
     ensure_init();
     if (ssh_slot >= MAX_SSH_CONNS)
     {
@@ -346,11 +346,11 @@ static void net_slot_free(uint8_t *restrict work)
     {
         if (SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[j] == 0xFF)
         {
-            SshNetworkV.u8 = j;
+            SshNetwork.u8 = j;
             return;
         }
     }
-    SshNetworkV.u8 = 0xFF;
+    SshNetwork.u8 = 0xFF;
     return;
 }
 
@@ -359,10 +359,10 @@ static void net_slot_free(uint8_t *restrict work)
 static void net_owns(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const uint8_t conn_slot = SshNetworkV.conn_slot;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const uint8_t conn_slot = SshNetwork.conn_slot;
     ensure_init();
-    SshNetworkV.ok =
+    SshNetwork.ok =
         ssh_slot < MAX_SSH_CONNS && SSH_NETWORK_CTX(protocore_ssh_network_span())->conn_for_ssh[ssh_slot] == conn_slot;
 }
 
@@ -375,9 +375,9 @@ static void net_owns(uint8_t *restrict work)
 // it.
 void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot)
 {
-    SshV.conn_slot_args.i = i;
+    Ssh.conn_slot_args.i = i;
     Ssh.conn_slot(protocore_ssh_span());
-    uint8_t *slot = SshV.ptr;
+    uint8_t *slot = Ssh.ptr;
     if (slot == NULL)
     {
         return;
@@ -385,18 +385,18 @@ void ssh_net_version_exchange_send(uint8_t i, uint8_t conn_slot)
 
     uint8_t *ident = slot + SSH_OFF_WIRE;
     size_t ilen = 0;
-    ConnPoolV.slot = conn_slot;
+    ConnPool.slot = conn_slot;
     ConnPool.active(protocore_conn_pool_span());
-    SshTransportV.slot = i;
-    SshTransportV.out_args.out = ident;
-    SshTransportV.out_args.cap = SSH_WIRE_CAP;
+    SshTransport.slot = i;
+    SshTransport.out_args.out = ident;
+    SshTransport.out_args.cap = SSH_WIRE_CAP;
     SshTransport.send_ident(protocore_ssh_transport_span());
-    ilen = SshTransportV.out_args.out_len;
-    if (SshTransportV.i32 == 0 && ConnPoolV.ok)
+    ilen = SshTransport.out_args.out_len;
+    if (SshTransport.i32 == 0 && ConnPool.ok)
     {
-        ConnPoolV.io.data = ident;
-        ConnPoolV.io.len = (proto_u16)ilen;
-        ConnPoolV.send(protocore_conn_pool_span());
+        ConnPool.io.data = ident;
+        ConnPool.io.len = (proto_u16)ilen;
+        ConnPool.send(protocore_conn_pool_span());
         ConnPool.flush(protocore_conn_pool_span());
     }
 }
@@ -422,30 +422,30 @@ static int *chan_cid_of(uint8_t ssh_slot, uint32_t channel)
 static void net_chan_open(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const uint32_t channel = SshNetworkV.stream.channel;
-    const char *host = SshNetworkV.dial.host;
-    const uint16_t port = SshNetworkV.dial.port;
-    const uint32_t timeout_ms = SshNetworkV.dial.timeout_ms;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const uint32_t channel = SshNetwork.stream.channel;
+    const char *host = SshNetwork.dial.host;
+    const uint16_t port = SshNetwork.dial.port;
+    const uint32_t timeout_ms = SshNetwork.dial.timeout_ms;
     ensure_init();
     int *slot = chan_cid_of(ssh_slot, channel);
     if (slot == NULL)
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
-    TcpClientV.dial.host = host;
-    TcpClientV.dial.port = port;
-    TcpClientV.dial.timeout_ms = timeout_ms;
+    TcpClient.dial.host = host;
+    TcpClient.dial.port = port;
+    TcpClient.dial.timeout_ms = timeout_ms;
     TcpClient.open(protocore_tcp_client_span());
-    int cid = TcpClientV.i32;
+    int cid = TcpClient.i32;
     if (cid < 0)
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
     *slot = cid;
-    SshNetworkV.i32 = cid;
+    SshNetwork.i32 = cid;
 }
 
 // Record a socket the listener already accepted. The dial half is chan_open; this is its peer for
@@ -453,18 +453,18 @@ static void net_chan_open(uint8_t *restrict work)
 static void net_chan_adopt(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const uint32_t channel = SshNetworkV.stream.channel;
-    const int cid = SshNetworkV.dial.cid;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const uint32_t channel = SshNetwork.stream.channel;
+    const int cid = SshNetwork.dial.cid;
     ensure_init();
     int *slot = chan_cid_of(ssh_slot, channel);
     if (slot == NULL || cid < 0)
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
     *slot = cid;
-    SshNetworkV.i32 = 0;
+    SshNetwork.i32 = 0;
     return;
 }
 
@@ -473,13 +473,13 @@ static void net_chan_adopt(uint8_t *restrict work)
 static void net_chan_by_cid(uint8_t *restrict work)
 {
     (void)work;
-    const int cid = SshNetworkV.dial.cid;
-    uint8_t *ssh_slot = &SshNetworkV.ssh_slot;
-    uint32_t *channel = &SshNetworkV.stream.channel;
+    const int cid = SshNetwork.dial.cid;
+    uint8_t *ssh_slot = &SshNetwork.ssh_slot;
+    uint32_t *channel = &SshNetwork.stream.channel;
     ensure_init();
     if (cid < 0)
     {
-        SshNetworkV.ok = PROTO_FALSE;
+        SshNetwork.ok = PROTO_FALSE;
         return;
     }
     for (uint8_t j = 0; j < MAX_SSH_CONNS; j++)
@@ -490,53 +490,53 @@ static void net_chan_by_cid(uint8_t *restrict work)
             {
                 *ssh_slot = j;
                 *channel = k;
-                SshNetworkV.ok = PROTO_TRUE;
+                SshNetwork.ok = PROTO_TRUE;
                 return;
             }
         }
     }
-    SshNetworkV.ok = PROTO_FALSE;
+    SshNetwork.ok = PROTO_FALSE;
     return;
 }
 
 static void net_chan_write(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const uint32_t channel = SshNetworkV.stream.channel;
-    const uint8_t *data = SshNetworkV.msg.payload;
-    const size_t len = SshNetworkV.msg.len;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const uint32_t channel = SshNetwork.stream.channel;
+    const uint8_t *data = SshNetwork.msg.payload;
+    const size_t len = SshNetwork.msg.len;
     int *slot = chan_cid_of(ssh_slot, channel);
     if (slot == NULL || *slot < 0)
     {
-        SshNetworkV.i32 = -1;
+        SshNetwork.i32 = -1;
         return;
     }
-    TcpClientV.cid = *slot;
-    TcpClientV.io.data = data;
-    TcpClientV.io.len = len;
+    TcpClient.cid = *slot;
+    TcpClient.io.data = data;
+    TcpClient.io.len = len;
     TcpClient.send(protocore_tcp_client_span());
-    SshNetworkV.i32 = (int)len;
+    SshNetwork.i32 = (int)len;
 }
 
 static void net_chan_read(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const uint32_t channel = SshNetworkV.stream.channel;
-    uint8_t *out = SshNetworkV.read_args.out;
-    const size_t cap = SshNetworkV.read_args.cap;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const uint32_t channel = SshNetwork.stream.channel;
+    uint8_t *out = SshNetwork.read_args.out;
+    const size_t cap = SshNetwork.read_args.cap;
     int *slot = chan_cid_of(ssh_slot, channel);
     if (slot == NULL || *slot < 0)
     {
-        SshNetworkV.n = 0;
+        SshNetwork.n = 0;
         return;
     }
-    TcpClientV.cid = *slot;
-    TcpClientV.io.buf = out;
-    TcpClientV.io.cap = cap;
-    TcpClientV.read(protocore_tcp_client_span());
-    SshNetworkV.n = TcpClientV.n;
+    TcpClient.cid = *slot;
+    TcpClient.io.buf = out;
+    TcpClient.io.cap = cap;
+    TcpClient.read(protocore_tcp_client_span());
+    SshNetwork.n = TcpClient.n;
     return;
 }
 
@@ -544,68 +544,88 @@ static void net_chan_read(uint8_t *restrict work)
 static void net_chan_drained(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const uint32_t channel = SshNetworkV.stream.channel;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const uint32_t channel = SshNetwork.stream.channel;
     int *slot = chan_cid_of(ssh_slot, channel);
     if (slot == NULL || *slot < 0)
     {
-        SshNetworkV.ok = PROTO_TRUE;
+        SshNetwork.ok = PROTO_TRUE;
         return;
     }
-    TcpClientV.cid = *slot;
+    TcpClient.cid = *slot;
     TcpClient.is_closed(protocore_tcp_client_span());
-    const proto_bool gone = TcpClientV.ok;
+    const proto_bool gone = TcpClient.ok;
     TcpClient.available(protocore_tcp_client_span());
-    SshNetworkV.ok = gone && TcpClientV.n == 0;
+    SshNetwork.ok = gone && TcpClient.n == 0;
 }
 
 static void net_chan_avail(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const uint32_t channel = SshNetworkV.stream.channel;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const uint32_t channel = SshNetwork.stream.channel;
     int *slot = chan_cid_of(ssh_slot, channel);
     if (slot == NULL || *slot < 0)
     {
-        SshNetworkV.n = 0;
+        SshNetwork.n = 0;
         return;
     }
-    TcpClientV.cid = *slot;
+    TcpClient.cid = *slot;
     TcpClient.available(protocore_tcp_client_span());
-    SshNetworkV.n = TcpClientV.n;
+    SshNetwork.n = TcpClient.n;
     return;
 }
 
 static void net_chan_close(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
-    const uint32_t channel = SshNetworkV.stream.channel;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
+    const uint32_t channel = SshNetwork.stream.channel;
     int *slot = chan_cid_of(ssh_slot, channel);
     if (slot == NULL || *slot < 0)
     {
         return;
     }
-    TcpClientV.cid = *slot;
+    TcpClient.cid = *slot;
     TcpClient.close(protocore_tcp_client_span());
     *slot = -1;
 }
 
 static void net_chan_close_all(uint8_t *restrict work)
 {
-    const uint8_t ssh_slot = SshNetworkV.ssh_slot;
+    const uint8_t ssh_slot = SshNetwork.ssh_slot;
     if (ssh_slot >= MAX_SSH_CONNS)
     {
         return;
     }
     for (uint32_t k = 0; k < PROTOCORE_SSH_MAX_CHANNELS; k++)
     {
-        SshNetworkV.stream.channel = k;
+        SshNetwork.stream.channel = k;
         net_chan_close(work);
     }
 }
 
 #endif // PROTOCORE_NEED_CLIENT
 
-/** @brief The operands and the outcome. */
-SshNetworkVars SshNetworkV;
+SshNetworkNs SshNetwork = {
+    .claim = net_claim,
+    .release = net_release,
+    .slot_free = net_slot_free,
+    .owns = net_owns,
+    .tx_drain = tx_drain,
+    .emit = emit,
+    .write_msg = net_write_msg,
+    .payload_region = net_payload_region,
+    .write_msg_at = net_write_msg_at,
+#if PROTOCORE_NEED_CLIENT
+    .chan_open = net_chan_open,
+    .chan_adopt = net_chan_adopt,
+    .chan_by_cid = net_chan_by_cid,
+    .chan_write = net_chan_write,
+    .chan_read = net_chan_read,
+    .chan_avail = net_chan_avail,
+    .chan_drained = net_chan_drained,
+    .chan_close = net_chan_close,
+    .chan_close_all = net_chan_close_all,
+#endif // PROTOCORE_NEED_CLIENT
+};

@@ -134,9 +134,9 @@ void protocore_time_source_reset(void)
 // returns 0 (no Date). Lets the HTTP Date header draw from whatever time source is enabled.
 size_t protocore_time_http_date(char *out, size_t out_cap)
 {
-    HttpDateV.args.epoch = (time_t)protocore_time_now();
-    HttpDateV.args.out = out;
-    HttpDateV.args.out_cap = out_cap;
+    HttpDate.args.epoch = (time_t)protocore_time_now();
+    HttpDate.args.out = out;
+    HttpDate.args.out_cap = out_cap;
     HttpDate.format(http_date_work);
-    return HttpDateV.n;
+    return HttpDate.n;
 }

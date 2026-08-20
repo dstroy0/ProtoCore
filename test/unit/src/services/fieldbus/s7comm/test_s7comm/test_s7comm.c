@@ -73,14 +73,14 @@ void test_dissector_constants(void)
 void test_setup_communication_job(void)
 {
     uint8_t buf[32];
-    S7commV.build_setup_args.buf = buf;
-    S7commV.build_setup_args.cap = sizeof(buf);
-    S7commV.build_setup_args.pdu_ref = 0x0400;
-    S7commV.build_setup_args.max_amq_calling = 1;
-    S7commV.build_setup_args.max_amq_called = 1;
-    S7commV.build_setup_args.pdu_size = 480;
+    S7comm.build_setup_args.buf = buf;
+    S7comm.build_setup_args.cap = sizeof(buf);
+    S7comm.build_setup_args.pdu_ref = 0x0400;
+    S7comm.build_setup_args.max_amq_calling = 1;
+    S7comm.build_setup_args.max_amq_called = 1;
+    S7comm.build_setup_args.pdu_size = 480;
     S7comm.build_setup(s7comm_work);
-    size_t n = S7commV.n;
+    size_t n = S7comm.n;
     TEST_ASSERT_EQUAL_UINT(18u, n);
     static const uint8_t WANT[18] = {
         0x32, 0x01, // protocol id, ROSCTR Job
@@ -96,11 +96,11 @@ void test_setup_communication_job(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 18);
 
     S7Header h;
-    S7commV.parse_header_args.buf = buf;
-    S7commV.parse_header_args.len = n;
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = buf;
+    S7comm.parse_header_args.len = n;
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_HEX8(S7_ROSCTR_JOB, h.rosctr);
     TEST_ASSERT_EQUAL_HEX16(0x0400, h.pdu_ref);
     TEST_ASSERT_EQUAL_UINT16(8, h.param_len);
@@ -116,13 +116,13 @@ void test_read_request_s7any_item(void)
 {
     static const S7ReadItem ITEMS[1] = {{S7_AREA_DB, 1, 20, S7_TS_WORD, 2}};
     uint8_t buf[64];
-    S7commV.build_read_request_args.buf = buf;
-    S7commV.build_read_request_args.cap = sizeof(buf);
-    S7commV.build_read_request_args.pdu_ref = 0x0500;
-    S7commV.build_read_request_args.items = ITEMS;
-    S7commV.build_read_request_args.n = 1;
+    S7comm.build_read_request_args.buf = buf;
+    S7comm.build_read_request_args.cap = sizeof(buf);
+    S7comm.build_read_request_args.pdu_ref = 0x0500;
+    S7comm.build_read_request_args.items = ITEMS;
+    S7comm.build_read_request_args.n = 1;
     S7comm.build_read_request(s7comm_work);
-    size_t n = S7commV.n;
+    size_t n = S7comm.n;
     TEST_ASSERT_EQUAL_UINT(10u + 2u + 12u, n);
     static const uint8_t WANT[24] = {
         0x32, 0x01,       // protocol id, Job
@@ -141,11 +141,11 @@ void test_read_request_s7any_item(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 24);
 
     S7Header h;
-    S7commV.parse_header_args.buf = buf;
-    S7commV.parse_header_args.len = n;
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = buf;
+    S7comm.parse_header_args.len = n;
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_UINT16(14, h.param_len);
     TEST_ASSERT_EQUAL_HEX8(S7_FUNC_READ_VAR, h.param[0]);
     TEST_ASSERT_EQUAL_HEX8(1, h.param[1]);
@@ -160,21 +160,21 @@ void test_read_request_multiple_items(void)
         {S7_AREA_OUTPUTS, 0, 0x1FFFF, S7_TS_REAL, 1},
     };
     uint8_t buf[64];
-    S7commV.build_read_request_args.buf = buf;
-    S7commV.build_read_request_args.cap = sizeof(buf);
-    S7commV.build_read_request_args.pdu_ref = 1;
-    S7commV.build_read_request_args.items = ITEMS;
-    S7commV.build_read_request_args.n = 3;
+    S7comm.build_read_request_args.buf = buf;
+    S7comm.build_read_request_args.cap = sizeof(buf);
+    S7comm.build_read_request_args.pdu_ref = 1;
+    S7comm.build_read_request_args.items = ITEMS;
+    S7comm.build_read_request_args.n = 3;
     S7comm.build_read_request(s7comm_work);
-    size_t n = S7commV.n;
+    size_t n = S7comm.n;
     TEST_ASSERT_EQUAL_UINT(10u + 2u + 36u, n);
 
     S7Header h;
-    S7commV.parse_header_args.buf = buf;
-    S7commV.parse_header_args.len = n;
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = buf;
+    S7comm.parse_header_args.len = n;
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_UINT16(38, h.param_len);
     TEST_ASSERT_EQUAL_HEX8(3, h.param[1]);
     for (int i = 0; i < 3; i++)
@@ -200,12 +200,12 @@ void test_read_response_item_length_rule(void)
     static const uint8_t BITS_LEN[8] = {0xFF, 0x04, 0x00, 0x20, 0x11, 0x22, 0x33, 0x44};
     size_t off = 0;
     S7DataItem it;
-    S7commV.read_next_item_args.data = BITS_LEN;
-    S7commV.read_next_item_args.data_len = sizeof(BITS_LEN);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = BITS_LEN;
+    S7comm.read_next_item_args.data_len = sizeof(BITS_LEN);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_HEX8(S7_RET_OK, it.return_code);
     TEST_ASSERT_EQUAL_HEX8(S7_DTS_BYTE, it.transport_size);
     TEST_ASSERT_EQUAL_UINT(4u, it.data_len);
@@ -215,12 +215,12 @@ void test_read_response_item_length_rule(void)
     // a single bit: length 1 bit, which rounds up to one octet
     static const uint8_t ONE_BIT[5] = {0xFF, 0x03, 0x00, 0x01, 0x01};
     off = 0;
-    S7commV.read_next_item_args.data = ONE_BIT;
-    S7commV.read_next_item_args.data_len = sizeof(ONE_BIT);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = ONE_BIT;
+    S7comm.read_next_item_args.data_len = sizeof(ONE_BIT);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_HEX8(S7_DTS_BIT, it.transport_size);
     TEST_ASSERT_EQUAL_UINT(1u, it.data_len);
     TEST_ASSERT_EQUAL_HEX8(0x01, it.data[0]);
@@ -228,24 +228,24 @@ void test_read_response_item_length_rule(void)
     // a REAL is the byte-length form: length 4 means four octets
     static const uint8_t REAL[8] = {0xFF, 0x07, 0x00, 0x04, 0x41, 0x20, 0x00, 0x00};
     off = 0;
-    S7commV.read_next_item_args.data = REAL;
-    S7commV.read_next_item_args.data_len = sizeof(REAL);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = REAL;
+    S7comm.read_next_item_args.data_len = sizeof(REAL);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_HEX8(S7_DTS_REAL, it.transport_size);
     TEST_ASSERT_EQUAL_UINT(4u, it.data_len);
 
     // an octet string is the byte-length form too
     static const uint8_t OCTET[7] = {0xFF, 0x09, 0x00, 0x03, 'a', 'b', 'c'};
     off = 0;
-    S7commV.read_next_item_args.data = OCTET;
-    S7commV.read_next_item_args.data_len = sizeof(OCTET);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = OCTET;
+    S7comm.read_next_item_args.data_len = sizeof(OCTET);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_HEX8(S7_DTS_OCTET, it.transport_size);
     TEST_ASSERT_EQUAL_UINT(3u, it.data_len);
     TEST_ASSERT_EQUAL_HEX8('a', it.data[0]);
@@ -263,50 +263,50 @@ void test_read_response_even_padding(void)
     size_t off = 0;
     S7DataItem it;
 
-    S7commV.read_next_item_args.data = TWO_ITEMS;
-    S7commV.read_next_item_args.data_len = sizeof(TWO_ITEMS);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = TWO_ITEMS;
+    S7comm.read_next_item_args.data_len = sizeof(TWO_ITEMS);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_UINT(1u, it.data_len);
     TEST_ASSERT_EQUAL_HEX8(0xAA, it.data[0]);
     TEST_ASSERT_EQUAL_UINT(6u, off); // 4 header + 1 value + 1 pad
 
-    S7commV.read_next_item_args.data = TWO_ITEMS;
-    S7commV.read_next_item_args.data_len = sizeof(TWO_ITEMS);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = TWO_ITEMS;
+    S7comm.read_next_item_args.data_len = sizeof(TWO_ITEMS);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_UINT(2u, it.data_len);
     TEST_ASSERT_EQUAL_HEX8(0xBB, it.data[0]);
     TEST_ASSERT_EQUAL_HEX8(0xCC, it.data[1]);
     TEST_ASSERT_EQUAL_UINT(sizeof(TWO_ITEMS), off);
 
-    S7commV.read_next_item_args.data = TWO_ITEMS;
-    S7commV.read_next_item_args.data_len = sizeof(TWO_ITEMS);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = TWO_ITEMS;
+    S7comm.read_next_item_args.data_len = sizeof(TWO_ITEMS);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
 
     // an odd-length LAST item carries no pad, so the section ends exactly on its value
     static const uint8_t LAST_ODD[5] = {0xFF, 0x04, 0x00, 0x08, 0xAA};
     off = 0;
-    S7commV.read_next_item_args.data = LAST_ODD;
-    S7commV.read_next_item_args.data_len = sizeof(LAST_ODD);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = LAST_ODD;
+    S7comm.read_next_item_args.data_len = sizeof(LAST_ODD);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_UINT(sizeof(LAST_ODD), off);
-    S7commV.read_next_item_args.data = LAST_ODD;
-    S7commV.read_next_item_args.data_len = sizeof(LAST_ODD);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = LAST_ODD;
+    S7comm.read_next_item_args.data_len = sizeof(LAST_ODD);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
 }
 
 // The Write Var job mirrors the read's parameter and appends one data item per write, whose length
@@ -321,22 +321,22 @@ void test_write_request_round_trips_the_length_rule(void)
         {S7_AREA_DB, 1, 4, S7_TS_REAL, 1, S7_DTS_REAL, V2, 4},
     };
     uint8_t buf[64];
-    S7commV.build_write_request_args.buf = buf;
-    S7commV.build_write_request_args.cap = sizeof(buf);
-    S7commV.build_write_request_args.pdu_ref = 0x0600;
-    S7commV.build_write_request_args.items = ITEMS;
-    S7commV.build_write_request_args.n = 2;
+    S7comm.build_write_request_args.buf = buf;
+    S7comm.build_write_request_args.cap = sizeof(buf);
+    S7comm.build_write_request_args.pdu_ref = 0x0600;
+    S7comm.build_write_request_args.items = ITEMS;
+    S7comm.build_write_request_args.n = 2;
     S7comm.build_write_request(s7comm_work);
-    size_t n = S7commV.n;
+    size_t n = S7comm.n;
     // parameter 2 + 24, data (4 + 1 + 1 pad) + (4 + 4) = 14, header 10
     TEST_ASSERT_EQUAL_UINT(10u + 26u + 14u, n);
 
     S7Header h;
-    S7commV.parse_header_args.buf = buf;
-    S7commV.parse_header_args.len = n;
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = buf;
+    S7comm.parse_header_args.len = n;
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_UINT16(26, h.param_len);
     TEST_ASSERT_EQUAL_UINT16(14, h.data_len);
     TEST_ASSERT_EQUAL_HEX8(S7_FUNC_WRITE_VAR, h.param[0]);
@@ -351,20 +351,20 @@ void test_write_request_round_trips_the_length_rule(void)
 
     size_t off = 0;
     S7DataItem it;
-    S7commV.read_next_item_args.data = h.data;
-    S7commV.read_next_item_args.data_len = h.data_len;
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = h.data;
+    S7comm.read_next_item_args.data_len = h.data_len;
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_UINT(1u, it.data_len);
     TEST_ASSERT_EQUAL_HEX8(0xAA, it.data[0]);
-    S7commV.read_next_item_args.data = h.data;
-    S7commV.read_next_item_args.data_len = h.data_len;
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = h.data;
+    S7comm.read_next_item_args.data_len = h.data_len;
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_UINT(4u, it.data_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(V2, it.data, 4);
     TEST_ASSERT_EQUAL_UINT(h.data_len, off);
@@ -372,13 +372,13 @@ void test_write_request_round_trips_the_length_rule(void)
     // the parameter's S7-ANY specs are the same 12 octets a read would write
     uint8_t rd[64];
     static const S7ReadItem READ_SPEC[2] = {{S7_AREA_DB, 1, 0, S7_TS_BYTE, 1}, {S7_AREA_DB, 1, 4, S7_TS_REAL, 1}};
-    S7commV.build_read_request_args.buf = rd;
-    S7commV.build_read_request_args.cap = sizeof(rd);
-    S7commV.build_read_request_args.pdu_ref = 0x0600;
-    S7commV.build_read_request_args.items = READ_SPEC;
-    S7commV.build_read_request_args.n = 2;
+    S7comm.build_read_request_args.buf = rd;
+    S7comm.build_read_request_args.cap = sizeof(rd);
+    S7comm.build_read_request_args.pdu_ref = 0x0600;
+    S7comm.build_read_request_args.items = READ_SPEC;
+    S7comm.build_read_request_args.n = 2;
     S7comm.build_read_request(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(10u + 26u, S7commV.n);
+    TEST_ASSERT_EQUAL_UINT(10u + 26u, S7comm.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(rd + 12, buf + 12, 24);
 }
 
@@ -397,11 +397,11 @@ void test_response_header_carries_the_error_code(void)
         0xFF, 0x04, 0x00, 0x08, 0xAA, // data: one BYTE item of one octet
     };
     S7Header h;
-    S7commV.parse_header_args.buf = ACK_DATA;
-    S7commV.parse_header_args.len = sizeof(ACK_DATA);
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = ACK_DATA;
+    S7comm.parse_header_args.len = sizeof(ACK_DATA);
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_HEX8(S7_ROSCTR_ACK_DATA, h.rosctr);
     TEST_ASSERT_EQUAL_UINT(12u, h.header_len);
     TEST_ASSERT_EQUAL_UINT16(2, h.param_len);
@@ -414,21 +414,21 @@ void test_response_header_carries_the_error_code(void)
 
     size_t off = 0;
     S7DataItem it;
-    S7commV.read_next_item_args.data = h.data;
-    S7commV.read_next_item_args.data_len = h.data_len;
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = h.data;
+    S7comm.read_next_item_args.data_len = h.data_len;
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_HEX8(0xAA, it.data[0]);
 
     // a plain Ack response is the other 12-octet ROSCTR
     static const uint8_t ACK[12] = {0x32, 0x02, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x81, 0x04};
-    S7commV.parse_header_args.buf = ACK;
-    S7commV.parse_header_args.len = sizeof(ACK);
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = ACK;
+    S7comm.parse_header_args.len = sizeof(ACK);
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
     TEST_ASSERT_EQUAL_UINT(12u, h.header_len);
     TEST_ASSERT_EQUAL_HEX8(0x81, h.error_class);
     TEST_ASSERT_EQUAL_HEX8(0x04, h.error_code);
@@ -441,68 +441,68 @@ void test_header_validation(void)
     S7Header h;
     uint8_t buf[32];
 
-    S7commV.build_setup_args.buf = buf;
-    S7commV.build_setup_args.cap = sizeof(buf);
-    S7commV.build_setup_args.pdu_ref = 1;
-    S7commV.build_setup_args.max_amq_calling = 1;
-    S7commV.build_setup_args.max_amq_called = 1;
-    S7commV.build_setup_args.pdu_size = 480;
+    S7comm.build_setup_args.buf = buf;
+    S7comm.build_setup_args.cap = sizeof(buf);
+    S7comm.build_setup_args.pdu_ref = 1;
+    S7comm.build_setup_args.max_amq_calling = 1;
+    S7comm.build_setup_args.max_amq_called = 1;
+    S7comm.build_setup_args.pdu_size = 480;
     S7comm.build_setup(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(18u, S7commV.n);
-    S7commV.parse_header_args.buf = buf;
-    S7commV.parse_header_args.len = 18;
-    S7commV.parse_header_args.out = &h;
+    TEST_ASSERT_EQUAL_UINT(18u, S7comm.n);
+    S7comm.parse_header_args.buf = buf;
+    S7comm.parse_header_args.len = 18;
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_TRUE(S7commV.ok);
+    TEST_ASSERT_TRUE(S7comm.ok);
 
     buf[0] = 0x33; // not the S7comm protocol id
-    S7commV.parse_header_args.buf = buf;
-    S7commV.parse_header_args.len = 18;
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = buf;
+    S7comm.parse_header_args.len = 18;
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
     buf[0] = S7_PROTOCOL_ID;
 
     buf[7] = 0x40; // a parameter length the buffer does not hold
-    S7commV.parse_header_args.buf = buf;
-    S7commV.parse_header_args.len = 18;
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = buf;
+    S7comm.parse_header_args.len = 18;
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
     buf[7] = 0x08;
     buf[9] = 0x40; // a data length the buffer does not hold
-    S7commV.parse_header_args.buf = buf;
-    S7commV.parse_header_args.len = 18;
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = buf;
+    S7comm.parse_header_args.len = 18;
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
 
     for (size_t n = 0; n < 10; n++)
     {
-        S7commV.parse_header_args.buf = buf;
-        S7commV.parse_header_args.len = n;
-        S7commV.parse_header_args.out = &h;
+        S7comm.parse_header_args.buf = buf;
+        S7comm.parse_header_args.len = n;
+        S7comm.parse_header_args.out = &h;
         S7comm.parse_header(s7comm_work);
-        TEST_ASSERT_FALSE(S7commV.ok);
+        TEST_ASSERT_FALSE(S7comm.ok);
     }
     // an Ack_Data truncated inside its own error code
     static const uint8_t SHORT_ACK[11] = {0x32, 0x03, 0, 0, 0, 1, 0, 0, 0, 0, 0};
-    S7commV.parse_header_args.buf = SHORT_ACK;
-    S7commV.parse_header_args.len = sizeof(SHORT_ACK);
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = SHORT_ACK;
+    S7comm.parse_header_args.len = sizeof(SHORT_ACK);
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
 
-    S7commV.parse_header_args.buf = NULL;
-    S7commV.parse_header_args.len = 18;
-    S7commV.parse_header_args.out = &h;
+    S7comm.parse_header_args.buf = NULL;
+    S7comm.parse_header_args.len = 18;
+    S7comm.parse_header_args.out = &h;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
-    S7commV.parse_header_args.buf = buf;
-    S7commV.parse_header_args.len = 18;
-    S7commV.parse_header_args.out = NULL;
+    TEST_ASSERT_FALSE(S7comm.ok);
+    S7comm.parse_header_args.buf = buf;
+    S7comm.parse_header_args.len = 18;
+    S7comm.parse_header_args.out = NULL;
     S7comm.parse_header(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
 }
 
 // A data item whose declared length runs past the end of the section is refused rather than read
@@ -514,49 +514,49 @@ void test_read_item_refuses_an_overrun(void)
 
     static const uint8_t OVER[6] = {0xFF, 0x09, 0x00, 0x08, 0x01, 0x02}; // claims 8 bytes, carries 2
     off = 0;
-    S7commV.read_next_item_args.data = OVER;
-    S7commV.read_next_item_args.data_len = sizeof(OVER);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = OVER;
+    S7comm.read_next_item_args.data_len = sizeof(OVER);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
 
     static const uint8_t OVER_BITS[6] = {0xFF, 0x04, 0x00, 0x40, 0x01, 0x02}; // 64 bits = 8 bytes, carries 2
     off = 0;
-    S7commV.read_next_item_args.data = OVER_BITS;
-    S7commV.read_next_item_args.data_len = sizeof(OVER_BITS);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = OVER_BITS;
+    S7comm.read_next_item_args.data_len = sizeof(OVER_BITS);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
 
     static const uint8_t STUB[3] = {0xFF, 0x04, 0x00};
     off = 0;
-    S7commV.read_next_item_args.data = STUB;
-    S7commV.read_next_item_args.data_len = sizeof(STUB);
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = STUB;
+    S7comm.read_next_item_args.data_len = sizeof(STUB);
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
 
-    S7commV.read_next_item_args.data = NULL;
-    S7commV.read_next_item_args.data_len = 4;
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = &it;
+    S7comm.read_next_item_args.data = NULL;
+    S7comm.read_next_item_args.data_len = 4;
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
-    S7commV.read_next_item_args.data = STUB;
-    S7commV.read_next_item_args.data_len = 4;
-    S7commV.read_next_item_args.offset = NULL;
-    S7commV.read_next_item_args.out = &it;
+    TEST_ASSERT_FALSE(S7comm.ok);
+    S7comm.read_next_item_args.data = STUB;
+    S7comm.read_next_item_args.data_len = 4;
+    S7comm.read_next_item_args.offset = NULL;
+    S7comm.read_next_item_args.out = &it;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
-    S7commV.read_next_item_args.data = STUB;
-    S7commV.read_next_item_args.data_len = 4;
-    S7commV.read_next_item_args.offset = &off;
-    S7commV.read_next_item_args.out = NULL;
+    TEST_ASSERT_FALSE(S7comm.ok);
+    S7comm.read_next_item_args.data = STUB;
+    S7comm.read_next_item_args.data_len = 4;
+    S7comm.read_next_item_args.offset = &off;
+    S7comm.read_next_item_args.out = NULL;
     S7comm.read_next_item(s7comm_work);
-    TEST_ASSERT_FALSE(S7commV.ok);
+    TEST_ASSERT_FALSE(S7comm.ok);
 }
 
 // A builder given less room than the PDU needs writes nothing, and a request with no items or with
@@ -570,94 +570,94 @@ void test_builders_refuse_bad_arguments(void)
 
     for (size_t cap = 0; cap < 18; cap++)
     {
-        S7commV.build_setup_args.buf = buf;
-        S7commV.build_setup_args.cap = cap;
-        S7commV.build_setup_args.pdu_ref = 1;
-        S7commV.build_setup_args.max_amq_calling = 1;
-        S7commV.build_setup_args.max_amq_called = 1;
-        S7commV.build_setup_args.pdu_size = 480;
+        S7comm.build_setup_args.buf = buf;
+        S7comm.build_setup_args.cap = cap;
+        S7comm.build_setup_args.pdu_ref = 1;
+        S7comm.build_setup_args.max_amq_calling = 1;
+        S7comm.build_setup_args.max_amq_called = 1;
+        S7comm.build_setup_args.pdu_size = 480;
         S7comm.build_setup(s7comm_work);
-        TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
     }
-    S7commV.build_setup_args.buf = NULL;
-    S7commV.build_setup_args.cap = sizeof(buf);
-    S7commV.build_setup_args.pdu_ref = 1;
-    S7commV.build_setup_args.max_amq_calling = 1;
-    S7commV.build_setup_args.max_amq_called = 1;
-    S7commV.build_setup_args.pdu_size = 480;
+    S7comm.build_setup_args.buf = NULL;
+    S7comm.build_setup_args.cap = sizeof(buf);
+    S7comm.build_setup_args.pdu_ref = 1;
+    S7comm.build_setup_args.max_amq_calling = 1;
+    S7comm.build_setup_args.max_amq_called = 1;
+    S7comm.build_setup_args.pdu_size = 480;
     S7comm.build_setup(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
 
     for (size_t cap = 0; cap < 24; cap++)
     {
-        S7commV.build_read_request_args.buf = buf;
-        S7commV.build_read_request_args.cap = cap;
-        S7commV.build_read_request_args.pdu_ref = 1;
-        S7commV.build_read_request_args.items = READ_ONE;
-        S7commV.build_read_request_args.n = 1;
+        S7comm.build_read_request_args.buf = buf;
+        S7comm.build_read_request_args.cap = cap;
+        S7comm.build_read_request_args.pdu_ref = 1;
+        S7comm.build_read_request_args.items = READ_ONE;
+        S7comm.build_read_request_args.n = 1;
         S7comm.build_read_request(s7comm_work);
-        TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
     }
-    S7commV.build_read_request_args.buf = buf;
-    S7commV.build_read_request_args.cap = sizeof(buf);
-    S7commV.build_read_request_args.pdu_ref = 1;
-    S7commV.build_read_request_args.items = READ_ONE;
-    S7commV.build_read_request_args.n = 0;
+    S7comm.build_read_request_args.buf = buf;
+    S7comm.build_read_request_args.cap = sizeof(buf);
+    S7comm.build_read_request_args.pdu_ref = 1;
+    S7comm.build_read_request_args.items = READ_ONE;
+    S7comm.build_read_request_args.n = 0;
     S7comm.build_read_request(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
-    S7commV.build_read_request_args.buf = buf;
-    S7commV.build_read_request_args.cap = sizeof(buf);
-    S7commV.build_read_request_args.pdu_ref = 1;
-    S7commV.build_read_request_args.items = NULL;
-    S7commV.build_read_request_args.n = 1;
+    TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
+    S7comm.build_read_request_args.buf = buf;
+    S7comm.build_read_request_args.cap = sizeof(buf);
+    S7comm.build_read_request_args.pdu_ref = 1;
+    S7comm.build_read_request_args.items = NULL;
+    S7comm.build_read_request_args.n = 1;
     S7comm.build_read_request(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
-    S7commV.build_read_request_args.buf = NULL;
-    S7commV.build_read_request_args.cap = sizeof(buf);
-    S7commV.build_read_request_args.pdu_ref = 1;
-    S7commV.build_read_request_args.items = READ_ONE;
-    S7commV.build_read_request_args.n = 1;
+    TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
+    S7comm.build_read_request_args.buf = NULL;
+    S7comm.build_read_request_args.cap = sizeof(buf);
+    S7comm.build_read_request_args.pdu_ref = 1;
+    S7comm.build_read_request_args.items = READ_ONE;
+    S7comm.build_read_request_args.n = 1;
     S7comm.build_read_request(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
 
     for (size_t cap = 0; cap < 30; cap++)
     {
-        S7commV.build_write_request_args.buf = buf;
-        S7commV.build_write_request_args.cap = cap;
-        S7commV.build_write_request_args.pdu_ref = 1;
-        S7commV.build_write_request_args.items = WRITE_ONE;
-        S7commV.build_write_request_args.n = 1;
+        S7comm.build_write_request_args.buf = buf;
+        S7comm.build_write_request_args.cap = cap;
+        S7comm.build_write_request_args.pdu_ref = 1;
+        S7comm.build_write_request_args.items = WRITE_ONE;
+        S7comm.build_write_request_args.n = 1;
         S7comm.build_write_request(s7comm_work);
-        TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
     }
-    S7commV.build_write_request_args.buf = buf;
-    S7commV.build_write_request_args.cap = 30;
-    S7commV.build_write_request_args.pdu_ref = 1;
-    S7commV.build_write_request_args.items = WRITE_ONE;
-    S7commV.build_write_request_args.n = 1;
+    S7comm.build_write_request_args.buf = buf;
+    S7comm.build_write_request_args.cap = 30;
+    S7comm.build_write_request_args.pdu_ref = 1;
+    S7comm.build_write_request_args.items = WRITE_ONE;
+    S7comm.build_write_request_args.n = 1;
     S7comm.build_write_request(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(30u, S7commV.n);
-    S7commV.build_write_request_args.buf = buf;
-    S7commV.build_write_request_args.cap = sizeof(buf);
-    S7commV.build_write_request_args.pdu_ref = 1;
-    S7commV.build_write_request_args.items = WRITE_ONE;
-    S7commV.build_write_request_args.n = 0;
+    TEST_ASSERT_EQUAL_UINT(30u, S7comm.n);
+    S7comm.build_write_request_args.buf = buf;
+    S7comm.build_write_request_args.cap = sizeof(buf);
+    S7comm.build_write_request_args.pdu_ref = 1;
+    S7comm.build_write_request_args.items = WRITE_ONE;
+    S7comm.build_write_request_args.n = 0;
     S7comm.build_write_request(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
-    S7commV.build_write_request_args.buf = NULL;
-    S7commV.build_write_request_args.cap = sizeof(buf);
-    S7commV.build_write_request_args.pdu_ref = 1;
-    S7commV.build_write_request_args.items = WRITE_ONE;
-    S7commV.build_write_request_args.n = 1;
+    TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
+    S7comm.build_write_request_args.buf = NULL;
+    S7comm.build_write_request_args.cap = sizeof(buf);
+    S7comm.build_write_request_args.pdu_ref = 1;
+    S7comm.build_write_request_args.items = WRITE_ONE;
+    S7comm.build_write_request_args.n = 1;
     S7comm.build_write_request(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
 
     static const S7WriteItem NULL_DATA[1] = {{S7_AREA_DB, 1, 0, S7_TS_WORD, 1, S7_DTS_BYTE, NULL, 2}};
-    S7commV.build_write_request_args.buf = buf;
-    S7commV.build_write_request_args.cap = sizeof(buf);
-    S7commV.build_write_request_args.pdu_ref = 1;
-    S7commV.build_write_request_args.items = NULL_DATA;
-    S7commV.build_write_request_args.n = 1;
+    S7comm.build_write_request_args.buf = buf;
+    S7comm.build_write_request_args.cap = sizeof(buf);
+    S7comm.build_write_request_args.pdu_ref = 1;
+    S7comm.build_write_request_args.items = NULL_DATA;
+    S7comm.build_write_request_args.n = 1;
     S7comm.build_write_request(s7comm_work);
-    TEST_ASSERT_EQUAL_UINT(0u, S7commV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, S7comm.n);
 }

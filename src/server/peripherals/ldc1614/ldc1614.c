@@ -45,46 +45,46 @@ uint8_t *protocore_ldc1614_span(void)
     return s_own.span;
 }
 
-void protocore_ldc1614_build_config(uint8_t *restrict work);
-void protocore_ldc1614_data(uint8_t *restrict work);
+static void ldc1614_build_config(uint8_t *restrict work);
+static void ldc1614_data(uint8_t *restrict work);
 
-void protocore_ldc1614_data(uint8_t *restrict work)
+static void ldc1614_data(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t msb_reg = Ldc1614V.data_args.msb_reg;
-    uint16_t lsb_reg = Ldc1614V.data_args.lsb_reg;
+    uint16_t msb_reg = Ldc1614.data_args.msb_reg;
+    uint16_t lsb_reg = Ldc1614.data_args.lsb_reg;
 
-    Ldc1614V.value = ((uint32_t)(msb_reg & 0x0FFF) << 16) | lsb_reg;
+    Ldc1614.value = ((uint32_t)(msb_reg & 0x0FFF) << 16) | lsb_reg;
 }
 
-void protocore_ldc1614_error(uint8_t *restrict work)
+static void ldc1614_error(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t msb_reg = Ldc1614V.error_args.msb_reg;
+    uint16_t msb_reg = Ldc1614.error_args.msb_reg;
 
-    Ldc1614V.flags = (uint8_t)((msb_reg >> 12) & 0x0F);
+    Ldc1614.flags = (uint8_t)((msb_reg >> 12) & 0x0F);
 }
 
-void protocore_ldc1614_sensor_freq_hz(uint8_t *restrict work)
+static void ldc1614_sensor_freq_hz(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t data28 = Ldc1614V.sensor_freq_hz_args.data28;
-    uint32_t fref_hz = Ldc1614V.sensor_freq_hz_args.fref_hz;
+    uint32_t data28 = Ldc1614.sensor_freq_hz_args.data28;
+    uint32_t fref_hz = Ldc1614.sensor_freq_hz_args.fref_hz;
 
-    Ldc1614V.hz = ((uint64_t)data28 * fref_hz) >> 28;
+    Ldc1614.hz = ((uint64_t)data28 * fref_hz) >> 28;
 }
 
-void protocore_ldc1614_build_config(uint8_t *restrict work)
+static void ldc1614_build_config(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Ldc1614V.build_config_args.buf;
-    size_t cap = Ldc1614V.build_config_args.cap;
-    uint16_t rcount = Ldc1614V.build_config_args.rcount;
-    uint16_t settlecount = Ldc1614V.build_config_args.settlecount;
+    uint8_t *buf = Ldc1614.build_config_args.buf;
+    size_t cap = Ldc1614.build_config_args.cap;
+    uint16_t rcount = Ldc1614.build_config_args.rcount;
+    uint16_t settlecount = Ldc1614.build_config_args.settlecount;
 
     if (!buf || cap < LDC1614_CONFIG_MAX)
     {
-        Ldc1614V.n = 0;
+        Ldc1614.n = 0;
         return;
     }
     const uint16_t seq[][2] = {
@@ -103,7 +103,7 @@ void protocore_ldc1614_build_config(uint8_t *restrict work)
         buf[o++] = (uint8_t)(seq[i][1] >> 8);
         buf[o++] = (uint8_t)seq[i][1];
     }
-    Ldc1614V.n = o;
+    Ldc1614.n = o;
 }
 
 // All LDC1614 I2C-binding state, owned by one instance (internal linkage): the device address, the
@@ -161,67 +161,71 @@ static proto_bool write16(uint8_t *restrict work, uint8_t reg, uint16_t val)
     return protocore_i2c_write(dev_addr(work), LDC1614_CTX(work)->frame, sizeof(LDC1614_CTX(work)->frame));
 }
 
-void protocore_ldc1614_begin(uint8_t *restrict work)
+static void ldc1614_begin(uint8_t *restrict work)
 {
-    uint8_t addr = Ldc1614V.begin_args.addr;
-    uint16_t rcount = Ldc1614V.begin_args.rcount;
-    uint16_t settlecount = Ldc1614V.begin_args.settlecount;
+    uint8_t addr = Ldc1614.begin_args.addr;
+    uint16_t rcount = Ldc1614.begin_args.rcount;
+    uint16_t settlecount = Ldc1614.begin_args.settlecount;
 
     protocore_i2c_begin();
     LDC1614_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_LDC1614_I2C_ADDR;
     uint16_t id = 0;
     if (!read16(work, LDC1614_REG_DEVICE_ID, &id))
     {
-        Ldc1614V.ok = PROTO_FALSE;
+        Ldc1614.ok = PROTO_FALSE;
         return;
     }
     if (id != LDC1614_DEVICE_ID)
     {
-        Ldc1614V.ok = PROTO_FALSE;
+        Ldc1614.ok = PROTO_FALSE;
         return;
     }
-    Ldc1614V.build_config_args.buf = LDC1614_CTX(work)->config;
-    Ldc1614V.build_config_args.cap = sizeof(LDC1614_CTX(work)->config);
-    Ldc1614V.build_config_args.rcount = rcount;
-    Ldc1614V.build_config_args.settlecount = settlecount;
-    protocore_ldc1614_build_config(work);
-    size_t n = Ldc1614V.n;
+    Ldc1614.build_config_args.buf = LDC1614_CTX(work)->config;
+    Ldc1614.build_config_args.cap = sizeof(LDC1614_CTX(work)->config);
+    Ldc1614.build_config_args.rcount = rcount;
+    Ldc1614.build_config_args.settlecount = settlecount;
+    ldc1614_build_config(work);
+    size_t n = Ldc1614.n;
     for (size_t i = 0; i + 3 <= n; i += 3)
     {
         if (!write16(work, LDC1614_CTX(work)->config[i], endian.rd16be(&LDC1614_CTX(work)->config[i + 1])))
         {
-            Ldc1614V.ok = PROTO_FALSE;
+            Ldc1614.ok = PROTO_FALSE;
             return;
         }
     }
-    Ldc1614V.ok = PROTO_TRUE;
+    Ldc1614.ok = PROTO_TRUE;
 }
 
-void protocore_ldc1614_read_ch0(uint8_t *restrict work)
+static void ldc1614_read_ch0(uint8_t *restrict work)
 {
-    uint32_t *out = Ldc1614V.read_ch0_args.out;
+    uint32_t *out = Ldc1614.read_ch0_args.out;
 
     if (!out)
     {
-        Ldc1614V.ok = PROTO_FALSE;
+        Ldc1614.ok = PROTO_FALSE;
         return;
     }
     uint16_t msb = 0;
     uint16_t lsb = 0;
     if (!read16(work, LDC1614_REG_DATA_CH0_MSB, &msb) || !read16(work, LDC1614_REG_DATA_CH0_LSB, &lsb))
     {
-        Ldc1614V.ok = PROTO_FALSE;
+        Ldc1614.ok = PROTO_FALSE;
         return;
     }
-    Ldc1614V.data_args.msb_reg = msb;
-    Ldc1614V.data_args.lsb_reg = lsb;
-    protocore_ldc1614_data(work);
-    *out = Ldc1614V.value;
-    Ldc1614V.ok = PROTO_TRUE;
+    Ldc1614.data_args.msb_reg = msb;
+    Ldc1614.data_args.lsb_reg = lsb;
+    ldc1614_data(work);
+    *out = Ldc1614.value;
+    Ldc1614.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-Ldc1614Vars Ldc1614V;
+Ldc1614Ns Ldc1614 = {.data = ldc1614_data,
+                     .error = ldc1614_error,
+                     .sensor_freq_hz = ldc1614_sensor_freq_hz,
+                     .build_config = ldc1614_build_config,
+                     .begin = ldc1614_begin,
+                     .read_ch0 = ldc1614_read_ch0};
 
 PROTOCORE_END_DECLS
 

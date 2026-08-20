@@ -28,31 +28,31 @@ static void state_get(uint8_t *restrict work)
 {
     (void)work;
     SshClient.state(protocore_ssh_client_span());
-    SshAppClientV.state = SshClientV.state_of;
+    SshAppClient.state = SshClient.state_of;
 }
 
 static void up(uint8_t *restrict work)
 {
     (void)work;
     SshClient.state(protocore_ssh_client_span());
-    SshAppClientV.ok = SshClientV.state_of == PROTOCORE_SSH_CLIENT_UP;
+    SshAppClient.ok = SshClient.state_of == PROTOCORE_SSH_CLIENT_UP;
 }
 
 // Key derivation for provisioning: the seed's public half, without a connection.
 static void pubkey(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *seed = SshAppClientV.seed;
-    uint8_t *pub = SshAppClientV.pub;
+    const uint8_t *seed = SshAppClient.seed;
+    uint8_t *pub = SshAppClient.pub;
     SshClient.crypto_work(protocore_ssh_client_span());
-    uint8_t *crypto_work = SshClientV.work;
+    uint8_t *crypto_work = SshClient.work;
     if (crypto_work == NULL)
     {
         mem.zero(pub, 32);
         return;
     }
-    Ed25519V.pubkey_args.seed = seed;
-    Ed25519V.pubkey_args.pub = pub;
+    Ed25519.pubkey_args.seed = seed;
+    Ed25519.pubkey_args.pub = pub;
     Ed25519.pubkey(crypto_work);
 }
 
@@ -61,23 +61,22 @@ static void pubkey(uint8_t *restrict work)
 static void state_get(uint8_t *restrict work)
 {
     (void)work;
-    SshAppClientV.state = PROTOCORE_SSH_CLIENT_IDLE;
+    SshAppClient.state = PROTOCORE_SSH_CLIENT_IDLE;
 }
 
 static void up(uint8_t *restrict work)
 {
     (void)work;
-    SshAppClientV.ok = PROTO_FALSE;
+    SshAppClient.ok = PROTO_FALSE;
 }
 
 static void pubkey(uint8_t *restrict work)
 {
     (void)work;
-    mem.zero(SshAppClientV.pub, 32);
+    mem.zero(SshAppClient.pub, 32);
 }
 
 #endif // PROTOCORE_ENABLE_SSH_CLIENT
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-SshAppClientVars SshAppClientV;
+SshAppClientNs SshAppClient = {.state_get = state_get, .up = up, .pubkey = pubkey};

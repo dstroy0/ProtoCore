@@ -62,35 +62,41 @@ typedef struct
     float max;                  ///< scale maximum.
     const char *unit;           ///< unit suffix shown by the widget (may be "").
 } protocore_widget;
+
 /** @brief What configure takes: widgets, count. */
 typedef struct
 {
     const protocore_widget *widgets;
     uint8_t count;
 } DashboardConfigureArgs;
+
 /** @brief What set takes: key, value. */
 typedef struct
 {
     const char *key;
     float value;
 } DashboardSetArgs;
+
 /** @brief What layout_json takes: out, cap. */
 typedef struct
 {
     char *out;
     uint32_t cap;
 } DashboardLayoutJsonArgs;
+
 /** @brief What values_json takes: out, cap. */
 typedef struct
 {
     char *out;
     uint32_t cap;
 } DashboardValuesJsonArgs;
+
 /** @brief What on_control takes: cb. */
 typedef struct
 {
     protocore_control_cb cb;
 } DashboardOnControlArgs;
+
 /** @brief What parse_control takes: msg, key_out, key_cap, value_out. */
 typedef struct
 {
@@ -99,11 +105,13 @@ typedef struct
     size_t key_cap;
     float *value_out;
 } DashboardParseControlArgs;
+
 /** @brief What dispatch_control takes: msg. */
 typedef struct
 {
     const char *msg;
 } DashboardDispatchControlArgs;
+
 /** @brief What begin takes: path, widgets, count. */
 typedef struct
 {
@@ -111,6 +119,7 @@ typedef struct
     const protocore_widget *widgets;
     uint8_t count;
 } DashboardBeginArgs;
+
 /**
  * @brief Real-time SVG telemetry dashboard (PROTOCORE_ENABLE_DASHBOARD).
  *
@@ -155,16 +164,10 @@ typedef struct
     DashboardParseControlArgs parse_control_args;
     DashboardDispatchControlArgs dispatch_control_args;
     DashboardBeginArgs begin_args;
+
     proto_bool ok;
     int32_t value;
-} DashboardVars;
 
-/** @brief The operands and the outcome. */
-extern DashboardVars DashboardV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const configure)(uint8_t *restrict work);
     void (*const set)(uint8_t *restrict work);
     void (*const layout_json)(uint8_t *restrict work);
@@ -176,33 +179,8 @@ typedef struct
     void (*const publish)(uint8_t *restrict work);
 } DashboardNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in DashboardV or a region of the borrow at a fixed offset.
-void protocore_dashboard_configure(uint8_t *restrict work);
-void protocore_dashboard_set(uint8_t *restrict work);
-void protocore_dashboard_layout_json(uint8_t *restrict work);
-void protocore_dashboard_values_json(uint8_t *restrict work);
-void protocore_dashboard_on_control(uint8_t *restrict work);
-void protocore_dashboard_parse_control(uint8_t *restrict work);
-void protocore_dashboard_dispatch_control(uint8_t *restrict work);
-void protocore_dashboard_begin(uint8_t *restrict work);
-void protocore_dashboard_publish(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Dashboard.configure(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const DashboardNs Dashboard __attribute__((unused)) = {
-    .configure = protocore_dashboard_configure,
-    .set = protocore_dashboard_set,
-    .layout_json = protocore_dashboard_layout_json,
-    .values_json = protocore_dashboard_values_json,
-    .on_control = protocore_dashboard_on_control,
-    .parse_control = protocore_dashboard_parse_control,
-    .dispatch_control = protocore_dashboard_dispatch_control,
-    .begin = protocore_dashboard_begin,
-    .publish = protocore_dashboard_publish,
-};
+/** @brief The one symbol this module exports. */
+extern DashboardNs Dashboard;
 
 /**
  * @brief The PROTOCORE_DASHBOARD_BORROW bytes this module's state lives in.

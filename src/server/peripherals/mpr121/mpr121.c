@@ -50,65 +50,65 @@ uint8_t *protocore_mpr121_span(void)
     return s_own.span;
 }
 
-void protocore_mpr121_build_init(uint8_t *restrict work);
-void protocore_mpr121_touched(uint8_t *restrict work);
-void protocore_mpr121_word10(uint8_t *restrict work);
+static void mpr121_build_init(uint8_t *restrict work);
+static void mpr121_touched(uint8_t *restrict work);
+static void mpr121_word10(uint8_t *restrict work);
 
-void protocore_mpr121_touched(uint8_t *restrict work)
+static void mpr121_touched(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t status_lo = Mpr121V.touched_args.status_lo;
-    uint8_t status_hi = Mpr121V.touched_args.status_hi;
+    uint8_t status_lo = Mpr121.touched_args.status_lo;
+    uint8_t status_hi = Mpr121.touched_args.status_hi;
 
-    Mpr121V.value = (uint16_t)(((uint16_t)status_lo | ((uint16_t)status_hi << 8)) & 0x0FFF);
+    Mpr121.value = (uint16_t)(((uint16_t)status_lo | ((uint16_t)status_hi << 8)) & 0x0FFF);
 }
 
-void protocore_mpr121_is_touched(uint8_t *restrict work)
+static void mpr121_is_touched(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t mask = Mpr121V.is_touched_args.mask;
-    uint8_t e = Mpr121V.is_touched_args.e;
+    uint16_t mask = Mpr121.is_touched_args.mask;
+    uint8_t e = Mpr121.is_touched_args.e;
 
-    Mpr121V.ok = e < MPR121_ELECTRODES && (mask & (uint16_t)(1u << e)) != 0;
+    Mpr121.ok = e < MPR121_ELECTRODES && (mask & (uint16_t)(1u << e)) != 0;
 }
 
-void protocore_mpr121_proximity(uint8_t *restrict work)
+static void mpr121_proximity(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t status_hi = Mpr121V.proximity_args.status_hi;
+    uint8_t status_hi = Mpr121.proximity_args.status_hi;
 
-    Mpr121V.ok = (status_hi & 0x10) != 0; // status bit 12
+    Mpr121.ok = (status_hi & 0x10) != 0; // status bit 12
 }
 
-void protocore_mpr121_overcurrent(uint8_t *restrict work)
+static void mpr121_overcurrent(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t status_hi = Mpr121V.overcurrent_args.status_hi;
+    uint8_t status_hi = Mpr121.overcurrent_args.status_hi;
 
-    Mpr121V.ok = (status_hi & 0x80) != 0; // status bit 15
+    Mpr121.ok = (status_hi & 0x80) != 0; // status bit 15
 }
 
-void protocore_mpr121_word10(uint8_t *restrict work)
+static void mpr121_word10(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t lsb = Mpr121V.word10_args.lsb;
-    uint8_t msb = Mpr121V.word10_args.msb;
+    uint8_t lsb = Mpr121.word10_args.lsb;
+    uint8_t msb = Mpr121.word10_args.msb;
 
-    Mpr121V.value = (uint16_t)(((uint16_t)lsb | ((uint16_t)msb << 8)) & 0x03FF);
+    Mpr121.value = (uint16_t)(((uint16_t)lsb | ((uint16_t)msb << 8)) & 0x03FF);
 }
 
-void protocore_mpr121_build_init(uint8_t *restrict work)
+static void mpr121_build_init(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = Mpr121V.build_init_args.buf;
-    size_t cap = Mpr121V.build_init_args.cap;
-    uint8_t n = Mpr121V.build_init_args.n_electrodes;
-    uint8_t touch_thr = Mpr121V.build_init_args.touch_thr;
-    uint8_t release_thr = Mpr121V.build_init_args.release_thr;
+    uint8_t *buf = Mpr121.build_init_args.buf;
+    size_t cap = Mpr121.build_init_args.cap;
+    uint8_t n = Mpr121.build_init_args.n_electrodes;
+    uint8_t touch_thr = Mpr121.build_init_args.touch_thr;
+    uint8_t release_thr = Mpr121.build_init_args.release_thr;
 
     if (!buf || n == 0 || n > MPR121_ELECTRODES)
     {
-        Mpr121V.n = 0;
+        Mpr121.n = 0;
         return;
     }
     // Reset, ECR-stop, then the rising / falling / touched baseline-filter defaults.
@@ -125,7 +125,7 @@ void protocore_mpr121_build_init(uint8_t *restrict work)
     size_t need = sizeof(fixed) + (size_t)n * 4 + 8;
     if (cap < need)
     {
-        Mpr121V.n = 0;
+        Mpr121.n = 0;
         return;
     }
     size_t i = sizeof(fixed);
@@ -145,7 +145,7 @@ void protocore_mpr121_build_init(uint8_t *restrict work)
     buf[i++] = 0x20; // CONFIG2
     buf[i++] = 0x5E;
     buf[i++] = (uint8_t)(0x80 | n); // ECR: CL=baseline tracking, ELE_EN=n (written last)
-    Mpr121V.n = i;
+    Mpr121.n = i;
 }
 
 // ---------------------------------------------------------------------------
@@ -202,27 +202,27 @@ static proto_bool rd(uint8_t *restrict work, uint8_t reg, uint8_t *out, uint8_t 
     return protocore_i2c_write_read(dev_addr(work), &reg, 1, out, n);
 }
 
-void protocore_mpr121_begin(uint8_t *restrict work)
+static void mpr121_begin(uint8_t *restrict work)
 {
-    uint8_t addr = Mpr121V.begin_args.addr;
+    uint8_t addr = Mpr121.begin_args.addr;
 
     MPR121_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_MPR121_I2C_ADDR;
     protocore_i2c_begin();
-    Mpr121V.build_init_args.buf = MPR121_CTX(work)->init;
-    Mpr121V.build_init_args.cap = sizeof(MPR121_CTX(work)->init);
-    Mpr121V.build_init_args.n_electrodes = MPR121_ELECTRODES;
-    Mpr121V.build_init_args.touch_thr = PROTOCORE_MPR121_TOUCH_THRESHOLD;
-    Mpr121V.build_init_args.release_thr = PROTOCORE_MPR121_RELEASE_THRESHOLD;
-    protocore_mpr121_build_init(work);
-    size_t n = Mpr121V.n;
+    Mpr121.build_init_args.buf = MPR121_CTX(work)->init;
+    Mpr121.build_init_args.cap = sizeof(MPR121_CTX(work)->init);
+    Mpr121.build_init_args.n_electrodes = MPR121_ELECTRODES;
+    Mpr121.build_init_args.touch_thr = PROTOCORE_MPR121_TOUCH_THRESHOLD;
+    Mpr121.build_init_args.release_thr = PROTOCORE_MPR121_RELEASE_THRESHOLD;
+    mpr121_build_init(work);
+    size_t n = Mpr121.n;
     if (n == 0)
     {
-        Mpr121V.ok = PROTO_FALSE;
+        Mpr121.ok = PROTO_FALSE;
         return;
     }
     if (!wr(work, MPR121_CTX(work)->init[0], MPR121_CTX(work)->init[1])) // soft reset first; then let the chip settle
     {
-        Mpr121V.ok = PROTO_FALSE;
+        Mpr121.ok = PROTO_FALSE;
         return;
     }
     pcdelay(1);
@@ -230,47 +230,54 @@ void protocore_mpr121_begin(uint8_t *restrict work)
     {
         if (!wr(work, MPR121_CTX(work)->init[i], MPR121_CTX(work)->init[i + 1]))
         {
-            Mpr121V.ok = PROTO_FALSE;
+            Mpr121.ok = PROTO_FALSE;
             return;
         }
     }
-    Mpr121V.ok = PROTO_TRUE;
+    Mpr121.ok = PROTO_TRUE;
 }
 
-void protocore_mpr121_read_touched(uint8_t *restrict work)
+static void mpr121_read_touched(uint8_t *restrict work)
 {
 
     if (!rd(work, 0x00, MPR121_CTX(work)->frame, 2))
     {
-        Mpr121V.value = 0;
+        Mpr121.value = 0;
         return;
     }
-    Mpr121V.touched_args.status_lo = MPR121_CTX(work)->frame[0];
-    Mpr121V.touched_args.status_hi = MPR121_CTX(work)->frame[1];
-    protocore_mpr121_touched(work);
+    Mpr121.touched_args.status_lo = MPR121_CTX(work)->frame[0];
+    Mpr121.touched_args.status_hi = MPR121_CTX(work)->frame[1];
+    mpr121_touched(work);
 }
 
-void protocore_mpr121_read_filtered(uint8_t *restrict work)
+static void mpr121_read_filtered(uint8_t *restrict work)
 {
-    uint8_t e = Mpr121V.read_filtered_args.e;
+    uint8_t e = Mpr121.read_filtered_args.e;
 
     if (e >= MPR121_ELECTRODES)
     {
-        Mpr121V.value = 0;
+        Mpr121.value = 0;
         return;
     }
     if (!rd(work, (uint8_t)(0x04 + 2 * e), MPR121_CTX(work)->frame, 2))
     {
-        Mpr121V.value = 0;
+        Mpr121.value = 0;
         return;
     }
-    Mpr121V.word10_args.lsb = MPR121_CTX(work)->frame[0];
-    Mpr121V.word10_args.msb = MPR121_CTX(work)->frame[1];
-    protocore_mpr121_word10(work);
+    Mpr121.word10_args.lsb = MPR121_CTX(work)->frame[0];
+    Mpr121.word10_args.msb = MPR121_CTX(work)->frame[1];
+    mpr121_word10(work);
 }
 
-/** @brief The operands and the outcome. */
-Mpr121Vars Mpr121V;
+Mpr121Ns Mpr121 = {.touched = mpr121_touched,
+                   .is_touched = mpr121_is_touched,
+                   .proximity = mpr121_proximity,
+                   .overcurrent = mpr121_overcurrent,
+                   .word10 = mpr121_word10,
+                   .build_init = mpr121_build_init,
+                   .begin = mpr121_begin,
+                   .read_touched = mpr121_read_touched,
+                   .read_filtered = mpr121_read_filtered};
 
 PROTOCORE_END_DECLS
 

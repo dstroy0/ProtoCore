@@ -25,13 +25,13 @@ static uint8_t cloudevents_work[16]; // the borrow an entry takes; CloudEvents n
 
 static void feed_request(uint8_t slot, const char *raw)
 {
-    HttpParserV.reset_args.req = &http_pool[slot];
-    HttpParserV.reset(protocore_http_parser_span());
+    HttpParser.reset_args.req = &http_pool[slot];
+    HttpParser.reset(protocore_http_parser_span());
     for (const char *p = raw; *p; p++)
     {
-        HttpParserV.feed_args.req = &http_pool[slot];
-        HttpParserV.feed_args.byte = (uint8_t)*p;
-        HttpParserV.feed(protocore_http_parser_span());
+        HttpParser.feed_args.req = &http_pool[slot];
+        HttpParser.feed_args.byte = (uint8_t)*p;
+        HttpParser.feed(protocore_http_parser_span());
     }
 }
 
@@ -45,8 +45,8 @@ void dbench_run(void)
 
     static char buf[256];
 
-    CloudEventsV.envelope.out = buf;
-    CloudEventsV.envelope.cap = sizeof(buf);
+    CloudEvents.envelope.out = buf;
+    CloudEvents.envelope.cap = sizeof(buf);
 
     for (;;)
     {
@@ -55,34 +55,34 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         // Minimal event: only the three required context attributes (CloudEvents 1.0).
-        CloudEventsV.attr.id = "1001";
-        CloudEventsV.attr.source = "/devices/esp32-1";
-        CloudEventsV.attr.type = "com.example.sensor.reading";
-        CloudEventsV.attr.subject = NULL;
-        CloudEventsV.attr.datacontenttype = NULL;
-        CloudEventsV.data.json = NULL;
-        CloudEventsV.data.str = NULL;
+        CloudEvents.attr.id = "1001";
+        CloudEvents.attr.source = "/devices/esp32-1";
+        CloudEvents.attr.type = "com.example.sensor.reading";
+        CloudEvents.attr.subject = NULL;
+        CloudEvents.attr.datacontenttype = NULL;
+        CloudEvents.data.json = NULL;
+        CloudEvents.data.str = NULL;
         DBENCH_OP("CloudEvents.build_structured min", 50000, CloudEvents.build_structured(cloudevents_work);
-                  sink += CloudEventsV.n);
+                  sink += CloudEvents.n);
 
         // Event carrying a pre-formatted JSON value as data (emitted verbatim, not escaped).
-        CloudEventsV.attr.id = "7";
-        CloudEventsV.attr.subject = "temp";
-        CloudEventsV.data.json = "{\"celsius\":23.5}";
+        CloudEvents.attr.id = "7";
+        CloudEvents.attr.subject = "temp";
+        CloudEvents.data.json = "{\"celsius\":23.5}";
         DBENCH_OP("CloudEvents.build_structured json-data", 50000, CloudEvents.build_structured(cloudevents_work);
-                  sink += CloudEventsV.n);
+                  sink += CloudEvents.n);
 
         // Event carrying a plain string as data (JSON-escaped).
-        CloudEventsV.attr.id = "8";
-        CloudEventsV.attr.subject = NULL;
-        CloudEventsV.attr.datacontenttype = "text/plain";
-        CloudEventsV.data.json = NULL;
-        CloudEventsV.data.str = "hi \"there\"";
+        CloudEvents.attr.id = "8";
+        CloudEvents.attr.subject = NULL;
+        CloudEvents.attr.datacontenttype = "text/plain";
+        CloudEvents.data.json = NULL;
+        CloudEvents.data.str = "hi \"there\"";
         DBENCH_OP("CloudEvents.build_structured str-data", 50000, CloudEvents.build_structured(cloudevents_work);
-                  sink += CloudEventsV.n);
+                  sink += CloudEvents.n);
 
-        CloudEventsV.msg.req = &http_pool[0];
-        DBENCH_OP("CloudEvents.read_binary", 50000, CloudEvents.read_binary(cloudevents_work); sinkb = CloudEventsV.ok);
+        CloudEvents.msg.req = &http_pool[0];
+        DBENCH_OP("CloudEvents.read_binary", 50000, CloudEvents.read_binary(cloudevents_work); sinkb = CloudEvents.ok);
 
         (void)sink;
         (void)sinkb;

@@ -61,15 +61,15 @@ static_assert(LOG_OFF_CTX + sizeof(struct LogStorage) <= PROTOCORE_LOG_BORROW,
 // The region, at its offset in the caller's borrow.
 #define LOG_CTX(w) ((struct LogStorage *)(void *)((w) + LOG_OFF_CTX))
 
-void protocore_log_set_sink(uint8_t *restrict work)
+static void log_set_sink(uint8_t *restrict work)
 {
-    LOG_CTX(work)->sink = LogV.sink;
+    LOG_CTX(work)->sink = Log.sink;
 }
 
-void protocore_log_emit(uint8_t *restrict work)
+static void log_emit(uint8_t *restrict work)
 {
-    const uint8_t level = LogV.frame.level;
-    const struct protocore_field *spec = LogV.frame.spec;
+    const uint8_t level = Log.frame.level;
+    const struct protocore_field *spec = Log.frame.spec;
 
     if (!spec)
     {
@@ -81,11 +81,11 @@ void protocore_log_emit(uint8_t *restrict work)
     // states its literals' lengths and bounds its string fields, so whether a message fits is
     // settled when the frame is declared. Nothing here decides it from the data.
     char line[PROTOCORE_LOG_LINE_LEN];
-    (void)frame.build(line, sizeof(line), spec, LogV.frame.v, LogV.frame.nv);
+    (void)frame.build(line, sizeof(line), spec, Log.frame.v, Log.frame.nv);
 
 #if PROTOCORE_ENABLE_LOGBUF
-    LogbufV.line.level = level;
-    LogbufV.line.msg = line;
+    Logbuf.line.level = level;
+    Logbuf.line.msg = line;
     Logbuf.put(protocore_logbuf_span());
 #endif
     if (LOG_CTX(work)->sink)
@@ -95,21 +95,20 @@ void protocore_log_emit(uint8_t *restrict work)
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-LogVars LogV;
+LogNs Log = {.emit = log_emit, .set_sink = log_set_sink};
 
 #else // every level compiled out: the handle stays so a caller still compiles
 
-void protocore_log_emit(uint8_t *restrict work)
+static void log_emit(uint8_t *restrict work)
 {
     (void)work;
 }
 
-void protocore_log_set_sink(uint8_t *restrict work)
+static void log_set_sink(uint8_t *restrict work)
 {
     (void)work;
 }
 
-LogNs Log = {.emit = protocore_log_emit, .set_sink = protocore_log_set_sink};
+LogNs Log = {.emit = log_emit, .set_sink = log_set_sink};
 
 #endif // PROTOCORE_LOG_LEVEL < PROTOCORE_LOG_LEVEL_NONE

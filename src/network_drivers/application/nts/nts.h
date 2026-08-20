@@ -69,12 +69,14 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } NtsKeRecordArgs;
+
 /** @brief What ke_request takes: out, cap. */
 typedef struct
 {
     uint8_t *out;
     size_t cap;
 } NtsKeRequestArgs;
+
 /** @brief What ke_parse takes: buf, len, cb, arg. */
 typedef struct
 {
@@ -83,6 +85,7 @@ typedef struct
     protocore_nts_ke_cb cb;
     void *arg;
 } NtsKeParseArgs;
+
 /** @brief What ef takes: field_type, value, value_len, out, cap. */
 typedef struct
 {
@@ -92,6 +95,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } NtsEfArgs;
+
 /** @brief What ef_unique_id takes: nonce, nonce_len, out, cap. */
 typedef struct
 {
@@ -100,6 +104,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } NtsEfUniqueIdArgs;
+
 /** @brief What ef_cookie takes: cookie, cookie_len, out, cap. */
 typedef struct
 {
@@ -108,8 +113,10 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } NtsEfCookieArgs;
+
 /** @brief RFC 8915 sec 5.1 TLS exporter label + per-direction context (C2S = 0x0000_0001_00, S2C = ..01). */
 extern const char NTS_EXPORTER_LABEL[]; ///< "EXPORTER-network-time-security".
+
 /**
  * @brief Network Time Security (NTS, RFC 8915) wire codec (PROTOCORE_ENABLE_NTS).
  *
@@ -152,16 +159,10 @@ typedef struct
     NtsEfArgs ef_args;
     NtsEfUniqueIdArgs ef_unique_id_args;
     NtsEfCookieArgs ef_cookie_args;
+
     proto_bool ok;
     size_t n;
-} NtsVars;
 
-/** @brief The operands and the outcome. */
-extern NtsVars NtsV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const ke_record)(uint8_t *restrict work);
     void (*const ke_request)(uint8_t *restrict work);
     void (*const ke_parse)(uint8_t *restrict work);
@@ -170,27 +171,8 @@ typedef struct
     void (*const ef_cookie)(uint8_t *restrict work);
 } NtsNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in NtsV or a region of the borrow at a fixed offset.
-void protocore_nts_ke_record(uint8_t *restrict work);
-void protocore_nts_ke_request(uint8_t *restrict work);
-void protocore_nts_ke_parse(uint8_t *restrict work);
-void protocore_nts_ef(uint8_t *restrict work);
-void protocore_nts_ef_unique_id(uint8_t *restrict work);
-void protocore_nts_ef_cookie(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Nts.ke_record(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const NtsNs Nts __attribute__((unused)) = {
-    .ke_record = protocore_nts_ke_record,
-    .ke_request = protocore_nts_ke_request,
-    .ke_parse = protocore_nts_ke_parse,
-    .ef = protocore_nts_ef,
-    .ef_unique_id = protocore_nts_ef_unique_id,
-    .ef_cookie = protocore_nts_ef_cookie,
-};
+/** @brief The one symbol this module exports. */
+extern NtsNs Nts;
 
 PROTOCORE_END_DECLS
 

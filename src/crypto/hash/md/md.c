@@ -287,69 +287,69 @@ static void md_begin(uint8_t *restrict work, md_compress_fn compress)
         md4_state_init(MD_STATE(work));
         MD_STATE(work)->md4 = 1;
     }
-    MdV.ok = PROTO_TRUE;
+    Md.ok = PROTO_TRUE;
 }
 
-void protocore_md_md5_init(uint8_t *restrict work)
+static void md_md5_init(uint8_t *restrict work)
 {
     md_begin(work, protocore_md5_compress);
 }
 
-void protocore_md_md4_init(uint8_t *restrict work)
+static void md_md4_init(uint8_t *restrict work)
 {
     md_begin(work, protocore_md4_compress);
 }
 
-void protocore_md_update(uint8_t *restrict work)
+static void md_update(uint8_t *restrict work)
 {
-    md_absorb(MD_STATE(work), MdV.update_args.data, MdV.update_args.len, md_bound(work));
+    md_absorb(MD_STATE(work), Md.update_args.data, Md.update_args.len, md_bound(work));
 }
 
-void protocore_md_final(uint8_t *restrict work)
+static void md_final(uint8_t *restrict work)
 {
-    if (!MdV.final_args.out)
+    if (!Md.final_args.out)
     {
-        MdV.ok = PROTO_FALSE;
+        Md.ok = PROTO_FALSE;
         return;
     }
-    md_finish(MD_STATE(work), MdV.final_args.out, md_bound(work));
-    MdV.ok = PROTO_TRUE;
+    md_finish(MD_STATE(work), Md.final_args.out, md_bound(work));
+    Md.ok = PROTO_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
 static void md_one(uint8_t *restrict work, md_compress_fn compress)
 {
-    if (!MdV.final_args.out)
+    if (!Md.final_args.out)
     {
-        MdV.ok = PROTO_FALSE;
+        Md.ok = PROTO_FALSE;
         return;
     }
     md_begin(work, compress);
-    md_absorb(MD_STATE(work), MdV.update_args.data, MdV.update_args.len, compress);
-    md_finish(MD_STATE(work), MdV.final_args.out, compress);
+    md_absorb(MD_STATE(work), Md.update_args.data, Md.update_args.len, compress);
+    md_finish(MD_STATE(work), Md.final_args.out, compress);
 }
 
-void protocore_md_md5(uint8_t *restrict work)
+static void md_md5(uint8_t *restrict work)
 {
     md_one(work, protocore_md5_compress);
 }
 
-void protocore_md_md4(uint8_t *restrict work)
+static void md_md4(uint8_t *restrict work)
 {
     md_one(work, protocore_md4_compress);
 }
 
 // --- HMAC-MD5 (RFC 2104) ---------------------------------------------------
 
-void protocore_md_hmac_md5(uint8_t *restrict work)
+static void md_hmac_md5(uint8_t *restrict work)
 {
-    MdV.ok = PROTO_FALSE;
-    if (!MdV.hmac_args.out)
+    Md.ok = PROTO_FALSE;
+    if (!Md.hmac_args.out)
     {
         return;
     }
-    const uint8_t *key = MdV.hmac_args.key;
-    const size_t key_len = MdV.hmac_args.key_len;
+    const uint8_t *key = Md.hmac_args.key;
+    const size_t key_len = Md.hmac_args.key_len;
 
     // Every region is a named offset in the caller's borrow: the key block, its two pads, the inner
     // digest, the running state, and the state a long key is hashed down in.
@@ -382,19 +382,24 @@ void protocore_md_hmac_md5(uint8_t *restrict work)
 
     md5_state_init(c);
     md_absorb(c, ipad, 64, protocore_md5_compress);
-    md_absorb(c, MdV.hmac_args.msg, MdV.hmac_args.msg_len, protocore_md5_compress);
+    md_absorb(c, Md.hmac_args.msg, Md.hmac_args.msg_len, protocore_md5_compress);
     md_finish(c, inner, protocore_md5_compress);
 
     md5_state_init(c);
     md_absorb(c, opad, 64, protocore_md5_compress);
     md_absorb(c, inner, PROTOCORE_MD_DIGEST_LEN, protocore_md5_compress);
-    md_finish(c, MdV.hmac_args.out, protocore_md5_compress);
+    md_finish(c, Md.hmac_args.out, protocore_md5_compress);
 
-    MdV.ok = PROTO_TRUE;
+    Md.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-MdVars MdV;
+MdNs Md = {.md5_init = md_md5_init,
+           .md4_init = md_md4_init,
+           .update = md_update,
+           .final = md_final,
+           .md5 = md_md5,
+           .md4 = md_md4,
+           .hmac_md5 = md_hmac_md5};
 
 PROTOCORE_END_DECLS
 

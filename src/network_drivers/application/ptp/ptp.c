@@ -67,16 +67,16 @@ static uint64_t get_u64(const uint8_t *p)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_ptp_build_header(uint8_t *restrict work);
-void protocore_ptp_parse_header(uint8_t *restrict work);
-void protocore_ptp_ts_read(uint8_t *restrict work);
-void protocore_ptp_ts_write(uint8_t *restrict work);
+static void ptp_build_header(uint8_t *restrict work);
+static void ptp_parse_header(uint8_t *restrict work);
+static void ptp_ts_read(uint8_t *restrict work);
+static void ptp_ts_write(uint8_t *restrict work);
 
-void protocore_ptp_ts_write(uint8_t *restrict work)
+static void ptp_ts_write(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *p = PtpV.ts_write_args.p;
-    const protocore_ptp_timestamp *ts = PtpV.ts_write_args.ts;
+    uint8_t *p = Ptp.ts_write_args.p;
+    const protocore_ptp_timestamp *ts = Ptp.ts_write_args.ts;
 
     uint64_t s = ts->seconds;
     p[0] = (uint8_t)(s >> 40);
@@ -88,30 +88,30 @@ void protocore_ptp_ts_write(uint8_t *restrict work)
     put_u32(p + 6, ts->nanoseconds);
 }
 
-void protocore_ptp_ts_read(uint8_t *restrict work)
+static void ptp_ts_read(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *p = PtpV.ts_read_args.p;
-    protocore_ptp_timestamp *ts = PtpV.ts_read_args.ts;
+    const uint8_t *p = Ptp.ts_read_args.p;
+    protocore_ptp_timestamp *ts = Ptp.ts_read_args.ts;
 
     ts->seconds = ((uint64_t)p[0] << 40) | ((uint64_t)p[1] << 32) | ((uint64_t)p[2] << 24) | ((uint64_t)p[3] << 16) |
                   ((uint64_t)p[4] << 8) | (uint64_t)p[5];
     ts->nanoseconds = get_u32(p + 6);
 }
 
-void protocore_ptp_ts_to_ns(uint8_t *restrict work)
+static void ptp_ts_to_ns(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_ptp_timestamp *ts = PtpV.ts_to_ns_args.ts;
+    const protocore_ptp_timestamp *ts = Ptp.ts_to_ns_args.ts;
 
-    PtpV.value = (int64_t)ts->seconds * 1000000000LL + (int64_t)ts->nanoseconds;
+    Ptp.value = (int64_t)ts->seconds * 1000000000LL + (int64_t)ts->nanoseconds;
 }
 
-void protocore_ptp_ts_from_ns(uint8_t *restrict work)
+static void ptp_ts_from_ns(uint8_t *restrict work)
 {
     (void)work;
-    int64_t ns = PtpV.ts_from_ns_args.ns;
-    protocore_ptp_timestamp *ts = PtpV.ts_from_ns_args.ts;
+    int64_t ns = Ptp.ts_from_ns_args.ns;
+    protocore_ptp_timestamp *ts = Ptp.ts_from_ns_args.ts;
 
     if (ns < 0)
     {
@@ -123,17 +123,17 @@ void protocore_ptp_ts_from_ns(uint8_t *restrict work)
 
 // -- header --
 
-void protocore_ptp_build_header(uint8_t *restrict work)
+static void ptp_build_header(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = PtpV.build_header_args.buf;
-    size_t cap = PtpV.build_header_args.cap;
-    const protocore_ptp_header *h = PtpV.build_header_args.h;
-    uint16_t body_len = PtpV.build_header_args.body_len;
+    uint8_t *buf = Ptp.build_header_args.buf;
+    size_t cap = Ptp.build_header_args.cap;
+    const protocore_ptp_header *h = Ptp.build_header_args.h;
+    uint16_t body_len = Ptp.build_header_args.body_len;
 
     if (!buf || !h || cap < PROTOCORE_PTP_HEADER_LEN)
     {
-        PtpV.n = 0;
+        Ptp.n = 0;
         return;
     }
     mem.set(buf, 0, PROTOCORE_PTP_HEADER_LEN);
@@ -148,19 +148,19 @@ void protocore_ptp_build_header(uint8_t *restrict work)
     put_u16(buf + 30, h->sequence_id);
     buf[32] = h->control;
     buf[33] = (uint8_t)h->log_interval;
-    PtpV.n = PROTOCORE_PTP_HEADER_LEN;
+    Ptp.n = PROTOCORE_PTP_HEADER_LEN;
 }
 
-void protocore_ptp_parse_header(uint8_t *restrict work)
+static void ptp_parse_header(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *s = PtpV.parse_header_args.s;
-    size_t len = PtpV.parse_header_args.len;
-    protocore_ptp_header *h = PtpV.parse_header_args.h;
+    const uint8_t *s = Ptp.parse_header_args.s;
+    size_t len = Ptp.parse_header_args.len;
+    protocore_ptp_header *h = Ptp.parse_header_args.h;
 
     if (!s || !h || len < PROTOCORE_PTP_HEADER_LEN)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     h->message_type = (uint8_t)(s[0] & 0x0F);
@@ -175,13 +175,13 @@ void protocore_ptp_parse_header(uint8_t *restrict work)
     h->sequence_id = get_u16(s + 30);
     h->control = s[32];
     h->log_interval = (int8_t)s[33];
-    PtpV.ok = PROTO_TRUE;
+    Ptp.ok = PROTO_TRUE;
 }
 
 // -- messages --
 
-static size_t build_ts_msg(uint8_t *restrict work, uint8_t *buf, size_t cap, const protocore_ptp_header *h,
-                           const protocore_ptp_timestamp *ts, uint8_t mtype, uint8_t control)
+static size_t build_ts_msg(uint8_t *restrict work, uint8_t *buf, size_t cap, const protocore_ptp_header *h, const protocore_ptp_timestamp *ts,
+                           uint8_t mtype, uint8_t control)
 {
     if (!buf || !h || !ts || cap < PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN)
     {
@@ -194,63 +194,63 @@ static size_t build_ts_msg(uint8_t *restrict work, uint8_t *buf, size_t cap, con
     {
         hh.version = 2;
     }
-    PtpV.build_header_args.buf = buf;
-    PtpV.build_header_args.cap = cap;
-    PtpV.build_header_args.h = &hh;
-    PtpV.build_header_args.body_len = PROTOCORE_PTP_TS_LEN;
+    Ptp.build_header_args.buf = buf;
+    Ptp.build_header_args.cap = cap;
+    Ptp.build_header_args.h = &hh;
+    Ptp.build_header_args.body_len = PROTOCORE_PTP_TS_LEN;
     Ptp.build_header(work);
-    PtpV.ts_write_args.p = buf + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_write_args.ts = ts;
+    Ptp.ts_write_args.p = buf + PROTOCORE_PTP_HEADER_LEN;
+    Ptp.ts_write_args.ts = ts;
     Ptp.ts_write(work);
     return PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN;
 }
 
-void protocore_ptp_build_sync(uint8_t *restrict work)
+static void ptp_build_sync(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = PtpV.build_sync_args.buf;
-    size_t cap = PtpV.build_sync_args.cap;
-    const protocore_ptp_header *h = PtpV.build_sync_args.h;
-    const protocore_ptp_timestamp *origin = PtpV.build_sync_args.origin;
+    uint8_t *buf = Ptp.build_sync_args.buf;
+    size_t cap = Ptp.build_sync_args.cap;
+    const protocore_ptp_header *h = Ptp.build_sync_args.h;
+    const protocore_ptp_timestamp *origin = Ptp.build_sync_args.origin;
 
-    PtpV.n = build_ts_msg(work, buf, cap, h, origin, PROTOCORE_PTP_SYNC, 0x00);
+    Ptp.n = build_ts_msg(work, buf, cap, h, origin, PROTOCORE_PTP_SYNC, 0x00);
 }
 
-void protocore_ptp_build_delay_req(uint8_t *restrict work)
+static void ptp_build_delay_req(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = PtpV.build_delay_req_args.buf;
-    size_t cap = PtpV.build_delay_req_args.cap;
-    const protocore_ptp_header *h = PtpV.build_delay_req_args.h;
-    const protocore_ptp_timestamp *origin = PtpV.build_delay_req_args.origin;
+    uint8_t *buf = Ptp.build_delay_req_args.buf;
+    size_t cap = Ptp.build_delay_req_args.cap;
+    const protocore_ptp_header *h = Ptp.build_delay_req_args.h;
+    const protocore_ptp_timestamp *origin = Ptp.build_delay_req_args.origin;
 
-    PtpV.n = build_ts_msg(work, buf, cap, h, origin, PROTOCORE_PTP_DELAY_REQ, 0x01);
+    Ptp.n = build_ts_msg(work, buf, cap, h, origin, PROTOCORE_PTP_DELAY_REQ, 0x01);
 }
 
-void protocore_ptp_build_follow_up(uint8_t *restrict work)
+static void ptp_build_follow_up(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = PtpV.build_follow_up_args.buf;
-    size_t cap = PtpV.build_follow_up_args.cap;
-    const protocore_ptp_header *h = PtpV.build_follow_up_args.h;
-    const protocore_ptp_timestamp *precise = PtpV.build_follow_up_args.precise;
+    uint8_t *buf = Ptp.build_follow_up_args.buf;
+    size_t cap = Ptp.build_follow_up_args.cap;
+    const protocore_ptp_header *h = Ptp.build_follow_up_args.h;
+    const protocore_ptp_timestamp *precise = Ptp.build_follow_up_args.precise;
 
-    PtpV.n = build_ts_msg(work, buf, cap, h, precise, PROTOCORE_PTP_FOLLOW_UP, 0x02);
+    Ptp.n = build_ts_msg(work, buf, cap, h, precise, PROTOCORE_PTP_FOLLOW_UP, 0x02);
 }
 
-void protocore_ptp_build_delay_resp(uint8_t *restrict work)
+static void ptp_build_delay_resp(uint8_t *restrict work)
 {
-    uint8_t *buf = PtpV.build_delay_resp_args.buf;
-    size_t cap = PtpV.build_delay_resp_args.cap;
-    const protocore_ptp_header *h = PtpV.build_delay_resp_args.h;
-    const protocore_ptp_timestamp *recv = PtpV.build_delay_resp_args.recv;
-    const uint8_t *req_clock_id = PtpV.build_delay_resp_args.req_clock_id;
-    uint16_t req_port = PtpV.build_delay_resp_args.req_port;
+    uint8_t *buf = Ptp.build_delay_resp_args.buf;
+    size_t cap = Ptp.build_delay_resp_args.cap;
+    const protocore_ptp_header *h = Ptp.build_delay_resp_args.h;
+    const protocore_ptp_timestamp *recv = Ptp.build_delay_resp_args.recv;
+    const uint8_t *req_clock_id = Ptp.build_delay_resp_args.req_clock_id;
+    uint16_t req_port = Ptp.build_delay_resp_args.req_port;
 
     const size_t body = PROTOCORE_PTP_TS_LEN + 10; // receiveTimestamp + requestingPortIdentity(10)
     if (!buf || !h || !recv || !req_clock_id || cap < PROTOCORE_PTP_HEADER_LEN + body)
     {
-        PtpV.n = 0;
+        Ptp.n = 0;
         return;
     }
     protocore_ptp_header hh = *h;
@@ -260,33 +260,33 @@ void protocore_ptp_build_delay_resp(uint8_t *restrict work)
     {
         hh.version = 2;
     }
-    PtpV.build_header_args.buf = buf;
-    PtpV.build_header_args.cap = cap;
-    PtpV.build_header_args.h = &hh;
-    PtpV.build_header_args.body_len = (uint16_t)body;
-    protocore_ptp_build_header(work);
+    Ptp.build_header_args.buf = buf;
+    Ptp.build_header_args.cap = cap;
+    Ptp.build_header_args.h = &hh;
+    Ptp.build_header_args.body_len = (uint16_t)body;
+    ptp_build_header(work);
     uint8_t *p = buf + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_write_args.p = p;
-    PtpV.ts_write_args.ts = recv;
-    protocore_ptp_ts_write(work);
+    Ptp.ts_write_args.p = p;
+    Ptp.ts_write_args.ts = recv;
+    ptp_ts_write(work);
     p += PROTOCORE_PTP_TS_LEN;
     mem.cpy(p, req_clock_id, 8);
     p += 8;
     put_u16(p, req_port);
-    PtpV.n = PROTOCORE_PTP_HEADER_LEN + body;
+    Ptp.n = PROTOCORE_PTP_HEADER_LEN + body;
 }
 
-void protocore_ptp_build_pdelay_req(uint8_t *restrict work)
+static void ptp_build_pdelay_req(uint8_t *restrict work)
 {
-    uint8_t *buf = PtpV.build_pdelay_req_args.buf;
-    size_t cap = PtpV.build_pdelay_req_args.cap;
-    const protocore_ptp_header *h = PtpV.build_pdelay_req_args.h;
-    const protocore_ptp_timestamp *origin = PtpV.build_pdelay_req_args.origin;
+    uint8_t *buf = Ptp.build_pdelay_req_args.buf;
+    size_t cap = Ptp.build_pdelay_req_args.cap;
+    const protocore_ptp_header *h = Ptp.build_pdelay_req_args.h;
+    const protocore_ptp_timestamp *origin = Ptp.build_pdelay_req_args.origin;
 
     const size_t body = PROTOCORE_PTP_TS_LEN + 10; // originTimestamp + 10-octet reserved (pads to Pdelay_Resp length)
     if (!buf || !h || !origin || cap < PROTOCORE_PTP_HEADER_LEN + body)
     {
-        PtpV.n = 0;
+        Ptp.n = 0;
         return;
     }
     protocore_ptp_header hh = *h;
@@ -296,17 +296,17 @@ void protocore_ptp_build_pdelay_req(uint8_t *restrict work)
     {
         hh.version = 2;
     }
-    PtpV.build_header_args.buf = buf;
-    PtpV.build_header_args.cap = cap;
-    PtpV.build_header_args.h = &hh;
-    PtpV.build_header_args.body_len = (uint16_t)body;
-    protocore_ptp_build_header(work);
+    Ptp.build_header_args.buf = buf;
+    Ptp.build_header_args.cap = cap;
+    Ptp.build_header_args.h = &hh;
+    Ptp.build_header_args.body_len = (uint16_t)body;
+    ptp_build_header(work);
     uint8_t *p = buf + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_write_args.p = p;
-    PtpV.ts_write_args.ts = origin;
-    protocore_ptp_ts_write(work);
+    Ptp.ts_write_args.p = p;
+    Ptp.ts_write_args.ts = origin;
+    ptp_ts_write(work);
     mem.set(p + PROTOCORE_PTP_TS_LEN, 0, 10); // reserved
-    PtpV.n = PROTOCORE_PTP_HEADER_LEN + body;
+    Ptp.n = PROTOCORE_PTP_HEADER_LEN + body;
 }
 
 // Pdelay_Resp and Pdelay_Resp_Follow_Up share a body layout (a timestamp + the requesting port identity);
@@ -327,14 +327,14 @@ static size_t build_pdelay_resp_msg(uint8_t *restrict work, uint8_t *buf, size_t
     {
         hh.version = 2;
     }
-    PtpV.build_header_args.buf = buf;
-    PtpV.build_header_args.cap = cap;
-    PtpV.build_header_args.h = &hh;
-    PtpV.build_header_args.body_len = (uint16_t)body;
+    Ptp.build_header_args.buf = buf;
+    Ptp.build_header_args.cap = cap;
+    Ptp.build_header_args.h = &hh;
+    Ptp.build_header_args.body_len = (uint16_t)body;
     Ptp.build_header(work);
     uint8_t *p = buf + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_write_args.p = p;
-    PtpV.ts_write_args.ts = ts;
+    Ptp.ts_write_args.p = p;
+    Ptp.ts_write_args.ts = ts;
     Ptp.ts_write(work);
     p += PROTOCORE_PTP_TS_LEN;
     mem.cpy(p, req_clock_id, 8);
@@ -343,44 +343,43 @@ static size_t build_pdelay_resp_msg(uint8_t *restrict work, uint8_t *buf, size_t
     return PROTOCORE_PTP_HEADER_LEN + body;
 }
 
-void protocore_ptp_build_pdelay_resp(uint8_t *restrict work)
+static void ptp_build_pdelay_resp(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = PtpV.build_pdelay_resp_args.buf;
-    size_t cap = PtpV.build_pdelay_resp_args.cap;
-    const protocore_ptp_header *h = PtpV.build_pdelay_resp_args.h;
-    const protocore_ptp_timestamp *recv = PtpV.build_pdelay_resp_args.recv;
-    const uint8_t *req_clock_id = PtpV.build_pdelay_resp_args.req_clock_id;
-    uint16_t req_port = PtpV.build_pdelay_resp_args.req_port;
+    uint8_t *buf = Ptp.build_pdelay_resp_args.buf;
+    size_t cap = Ptp.build_pdelay_resp_args.cap;
+    const protocore_ptp_header *h = Ptp.build_pdelay_resp_args.h;
+    const protocore_ptp_timestamp *recv = Ptp.build_pdelay_resp_args.recv;
+    const uint8_t *req_clock_id = Ptp.build_pdelay_resp_args.req_clock_id;
+    uint16_t req_port = Ptp.build_pdelay_resp_args.req_port;
 
-    PtpV.n = build_pdelay_resp_msg(work, buf, cap, h, recv, req_clock_id, req_port, PROTOCORE_PTP_PDELAY_RESP);
+    Ptp.n = build_pdelay_resp_msg(work, buf, cap, h, recv, req_clock_id, req_port, PROTOCORE_PTP_PDELAY_RESP);
 }
 
-void protocore_ptp_build_pdelay_resp_follow_up(uint8_t *restrict work)
+static void ptp_build_pdelay_resp_follow_up(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = PtpV.build_pdelay_resp_follow_up_args.buf;
-    size_t cap = PtpV.build_pdelay_resp_follow_up_args.cap;
-    const protocore_ptp_header *h = PtpV.build_pdelay_resp_follow_up_args.h;
-    const protocore_ptp_timestamp *origin = PtpV.build_pdelay_resp_follow_up_args.origin;
-    const uint8_t *req_clock_id = PtpV.build_pdelay_resp_follow_up_args.req_clock_id;
-    uint16_t req_port = PtpV.build_pdelay_resp_follow_up_args.req_port;
+    uint8_t *buf = Ptp.build_pdelay_resp_follow_up_args.buf;
+    size_t cap = Ptp.build_pdelay_resp_follow_up_args.cap;
+    const protocore_ptp_header *h = Ptp.build_pdelay_resp_follow_up_args.h;
+    const protocore_ptp_timestamp *origin = Ptp.build_pdelay_resp_follow_up_args.origin;
+    const uint8_t *req_clock_id = Ptp.build_pdelay_resp_follow_up_args.req_clock_id;
+    uint16_t req_port = Ptp.build_pdelay_resp_follow_up_args.req_port;
 
-    PtpV.n =
-        build_pdelay_resp_msg(work, buf, cap, h, origin, req_clock_id, req_port, PROTOCORE_PTP_PDELAY_RESP_FOLLOW_UP);
+    Ptp.n = build_pdelay_resp_msg(work, buf, cap, h, origin, req_clock_id, req_port, PROTOCORE_PTP_PDELAY_RESP_FOLLOW_UP);
 }
 
-void protocore_ptp_build_announce(uint8_t *restrict work)
+static void ptp_build_announce(uint8_t *restrict work)
 {
-    uint8_t *buf = PtpV.build_announce_args.buf;
-    size_t cap = PtpV.build_announce_args.cap;
-    const protocore_ptp_header *h = PtpV.build_announce_args.h;
-    const protocore_ptp_announce *a = PtpV.build_announce_args.a;
+    uint8_t *buf = Ptp.build_announce_args.buf;
+    size_t cap = Ptp.build_announce_args.cap;
+    const protocore_ptp_header *h = Ptp.build_announce_args.h;
+    const protocore_ptp_announce *a = Ptp.build_announce_args.a;
 
     const size_t body = 30; // originTimestamp(10)+utc(2)+rsv(1)+p1(1)+quality(4)+p2(1)+id(8)+steps(2)+src(1)
     if (!buf || !h || !a || cap < PROTOCORE_PTP_HEADER_LEN + body)
     {
-        PtpV.n = 0;
+        Ptp.n = 0;
         return;
     }
     protocore_ptp_header hh = *h;
@@ -390,15 +389,15 @@ void protocore_ptp_build_announce(uint8_t *restrict work)
     {
         hh.version = 2;
     }
-    PtpV.build_header_args.buf = buf;
-    PtpV.build_header_args.cap = cap;
-    PtpV.build_header_args.h = &hh;
-    PtpV.build_header_args.body_len = (uint16_t)body;
-    protocore_ptp_build_header(work);
+    Ptp.build_header_args.buf = buf;
+    Ptp.build_header_args.cap = cap;
+    Ptp.build_header_args.h = &hh;
+    Ptp.build_header_args.body_len = (uint16_t)body;
+    ptp_build_header(work);
     uint8_t *p = buf + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_write_args.p = p;
-    PtpV.ts_write_args.ts = &a->origin;
-    protocore_ptp_ts_write(work);
+    Ptp.ts_write_args.p = p;
+    Ptp.ts_write_args.ts = &a->origin;
+    ptp_ts_write(work);
     p += PROTOCORE_PTP_TS_LEN;
     put_u16(p, (uint16_t)a->utc_offset);
     p += 2;
@@ -414,125 +413,125 @@ void protocore_ptp_build_announce(uint8_t *restrict work)
     put_u16(p, a->steps_removed);
     p += 2;
     *p = a->time_source;
-    PtpV.n = PROTOCORE_PTP_HEADER_LEN + body;
+    Ptp.n = PROTOCORE_PTP_HEADER_LEN + body;
 }
 
-void protocore_ptp_parse_timestamp_msg(uint8_t *restrict work)
+static void ptp_parse_timestamp_msg(uint8_t *restrict work)
 {
-    const uint8_t *s = PtpV.parse_timestamp_msg_args.s;
-    size_t len = PtpV.parse_timestamp_msg_args.len;
-    protocore_ptp_header *h = PtpV.parse_timestamp_msg_args.h;
-    protocore_ptp_timestamp *ts = PtpV.parse_timestamp_msg_args.ts;
+    const uint8_t *s = Ptp.parse_timestamp_msg_args.s;
+    size_t len = Ptp.parse_timestamp_msg_args.len;
+    protocore_ptp_header *h = Ptp.parse_timestamp_msg_args.h;
+    protocore_ptp_timestamp *ts = Ptp.parse_timestamp_msg_args.ts;
 
     if (!ts)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
-    PtpV.parse_header_args.s = s;
-    PtpV.parse_header_args.len = len;
-    PtpV.parse_header_args.h = h;
-    protocore_ptp_parse_header(work);
-    if (!PtpV.ok)
+    Ptp.parse_header_args.s = s;
+    Ptp.parse_header_args.len = len;
+    Ptp.parse_header_args.h = h;
+    ptp_parse_header(work);
+    if (!Ptp.ok)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     if (len < PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     if (h->message_type != PROTOCORE_PTP_SYNC && h->message_type != PROTOCORE_PTP_DELAY_REQ &&
         h->message_type != PROTOCORE_PTP_FOLLOW_UP)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
-    PtpV.ts_read_args.p = s + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_read_args.ts = ts;
-    protocore_ptp_ts_read(work);
-    PtpV.ok = PROTO_TRUE;
+    Ptp.ts_read_args.p = s + PROTOCORE_PTP_HEADER_LEN;
+    Ptp.ts_read_args.ts = ts;
+    ptp_ts_read(work);
+    Ptp.ok = PROTO_TRUE;
 }
 
-void protocore_ptp_parse_delay_resp(uint8_t *restrict work)
+static void ptp_parse_delay_resp(uint8_t *restrict work)
 {
-    const uint8_t *s = PtpV.parse_delay_resp_args.s;
-    size_t len = PtpV.parse_delay_resp_args.len;
-    protocore_ptp_header *h = PtpV.parse_delay_resp_args.h;
-    protocore_ptp_delay_resp *out = PtpV.parse_delay_resp_args.out;
+    const uint8_t *s = Ptp.parse_delay_resp_args.s;
+    size_t len = Ptp.parse_delay_resp_args.len;
+    protocore_ptp_header *h = Ptp.parse_delay_resp_args.h;
+    protocore_ptp_delay_resp *out = Ptp.parse_delay_resp_args.out;
 
     if (!out)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
-    PtpV.parse_header_args.s = s;
-    PtpV.parse_header_args.len = len;
-    PtpV.parse_header_args.h = h;
-    protocore_ptp_parse_header(work);
-    if (!PtpV.ok)
+    Ptp.parse_header_args.s = s;
+    Ptp.parse_header_args.len = len;
+    Ptp.parse_header_args.h = h;
+    ptp_parse_header(work);
+    if (!Ptp.ok)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     if (h->message_type != PROTOCORE_PTP_DELAY_RESP)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     if (len < PROTOCORE_PTP_HEADER_LEN + PROTOCORE_PTP_TS_LEN + 10)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     const uint8_t *p = s + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_read_args.p = p;
-    PtpV.ts_read_args.ts = &out->receive;
-    protocore_ptp_ts_read(work);
+    Ptp.ts_read_args.p = p;
+    Ptp.ts_read_args.ts = &out->receive;
+    ptp_ts_read(work);
     p += PROTOCORE_PTP_TS_LEN;
     mem.cpy(out->req_clock_id, p, 8);
     p += 8;
     out->req_port = get_u16(p);
-    PtpV.ok = PROTO_TRUE;
+    Ptp.ok = PROTO_TRUE;
 }
 
-void protocore_ptp_parse_pdelay_req(uint8_t *restrict work)
+static void ptp_parse_pdelay_req(uint8_t *restrict work)
 {
-    const uint8_t *s = PtpV.parse_pdelay_req_args.s;
-    size_t len = PtpV.parse_pdelay_req_args.len;
-    protocore_ptp_header *h = PtpV.parse_pdelay_req_args.h;
-    protocore_ptp_timestamp *ts = PtpV.parse_pdelay_req_args.ts;
+    const uint8_t *s = Ptp.parse_pdelay_req_args.s;
+    size_t len = Ptp.parse_pdelay_req_args.len;
+    protocore_ptp_header *h = Ptp.parse_pdelay_req_args.h;
+    protocore_ptp_timestamp *ts = Ptp.parse_pdelay_req_args.ts;
 
     if (!ts)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
-    PtpV.parse_header_args.s = s;
-    PtpV.parse_header_args.len = len;
-    PtpV.parse_header_args.h = h;
-    protocore_ptp_parse_header(work);
-    if (!PtpV.ok)
+    Ptp.parse_header_args.s = s;
+    Ptp.parse_header_args.len = len;
+    Ptp.parse_header_args.h = h;
+    ptp_parse_header(work);
+    if (!Ptp.ok)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     if (h->message_type != PROTOCORE_PTP_PDELAY_REQ)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     // header, originTimestamp, and the reserved field that follows it: the whole fixed message.
     if (len < PROTOCORE_PTP_PDELAY_REQ_LEN)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
-    PtpV.ts_read_args.p = s + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_read_args.ts = ts;
-    protocore_ptp_ts_read(work);
-    PtpV.ok = PROTO_TRUE;
+    Ptp.ts_read_args.p = s + PROTOCORE_PTP_HEADER_LEN;
+    Ptp.ts_read_args.ts = ts;
+    ptp_ts_read(work);
+    Ptp.ok = PROTO_TRUE;
 }
 
 // Pdelay_Resp and its Follow_Up share the body layout; only the messageType differs.
@@ -543,11 +542,11 @@ static proto_bool parse_pdelay_resp_msg(uint8_t *restrict work, const uint8_t *s
     {
         return PROTO_FALSE;
     }
-    PtpV.parse_header_args.s = s;
-    PtpV.parse_header_args.len = len;
-    PtpV.parse_header_args.h = h;
+    Ptp.parse_header_args.s = s;
+    Ptp.parse_header_args.len = len;
+    Ptp.parse_header_args.h = h;
     Ptp.parse_header(work);
-    if (!PtpV.ok)
+    if (!Ptp.ok)
     {
         return PROTO_FALSE;
     }
@@ -560,8 +559,8 @@ static proto_bool parse_pdelay_resp_msg(uint8_t *restrict work, const uint8_t *s
         return PROTO_FALSE;
     }
     const uint8_t *p = s + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_read_args.p = p;
-    PtpV.ts_read_args.ts = &out->timestamp;
+    Ptp.ts_read_args.p = p;
+    Ptp.ts_read_args.ts = &out->timestamp;
     Ptp.ts_read(work);
     p += PROTOCORE_PTP_TS_LEN;
     mem.cpy(out->req_clock_id, p, 8);
@@ -570,64 +569,64 @@ static proto_bool parse_pdelay_resp_msg(uint8_t *restrict work, const uint8_t *s
     return PROTO_TRUE;
 }
 
-void protocore_ptp_parse_pdelay_resp(uint8_t *restrict work)
+static void ptp_parse_pdelay_resp(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *s = PtpV.parse_pdelay_resp_args.s;
-    size_t len = PtpV.parse_pdelay_resp_args.len;
-    protocore_ptp_header *h = PtpV.parse_pdelay_resp_args.h;
-    protocore_ptp_pdelay_resp *out = PtpV.parse_pdelay_resp_args.out;
+    const uint8_t *s = Ptp.parse_pdelay_resp_args.s;
+    size_t len = Ptp.parse_pdelay_resp_args.len;
+    protocore_ptp_header *h = Ptp.parse_pdelay_resp_args.h;
+    protocore_ptp_pdelay_resp *out = Ptp.parse_pdelay_resp_args.out;
 
-    PtpV.ok = parse_pdelay_resp_msg(work, s, len, h, out, PROTOCORE_PTP_PDELAY_RESP);
+    Ptp.ok = parse_pdelay_resp_msg(work, s, len, h, out, PROTOCORE_PTP_PDELAY_RESP);
 }
 
-void protocore_ptp_parse_pdelay_resp_follow_up(uint8_t *restrict work)
+static void ptp_parse_pdelay_resp_follow_up(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *s = PtpV.parse_pdelay_resp_follow_up_args.s;
-    size_t len = PtpV.parse_pdelay_resp_follow_up_args.len;
-    protocore_ptp_header *h = PtpV.parse_pdelay_resp_follow_up_args.h;
-    protocore_ptp_pdelay_resp *out = PtpV.parse_pdelay_resp_follow_up_args.out;
+    const uint8_t *s = Ptp.parse_pdelay_resp_follow_up_args.s;
+    size_t len = Ptp.parse_pdelay_resp_follow_up_args.len;
+    protocore_ptp_header *h = Ptp.parse_pdelay_resp_follow_up_args.h;
+    protocore_ptp_pdelay_resp *out = Ptp.parse_pdelay_resp_follow_up_args.out;
 
-    PtpV.ok = parse_pdelay_resp_msg(work, s, len, h, out, PROTOCORE_PTP_PDELAY_RESP_FOLLOW_UP);
+    Ptp.ok = parse_pdelay_resp_msg(work, s, len, h, out, PROTOCORE_PTP_PDELAY_RESP_FOLLOW_UP);
 }
 
-void protocore_ptp_parse_announce(uint8_t *restrict work)
+static void ptp_parse_announce(uint8_t *restrict work)
 {
-    const uint8_t *s = PtpV.parse_announce_args.s;
-    size_t len = PtpV.parse_announce_args.len;
-    protocore_ptp_header *h = PtpV.parse_announce_args.h;
-    protocore_ptp_announce *out = PtpV.parse_announce_args.out;
+    const uint8_t *s = Ptp.parse_announce_args.s;
+    size_t len = Ptp.parse_announce_args.len;
+    protocore_ptp_header *h = Ptp.parse_announce_args.h;
+    protocore_ptp_announce *out = Ptp.parse_announce_args.out;
 
     if (!out)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
-    PtpV.parse_header_args.s = s;
-    PtpV.parse_header_args.len = len;
-    PtpV.parse_header_args.h = h;
-    protocore_ptp_parse_header(work);
-    if (!PtpV.ok)
+    Ptp.parse_header_args.s = s;
+    Ptp.parse_header_args.len = len;
+    Ptp.parse_header_args.h = h;
+    ptp_parse_header(work);
+    if (!Ptp.ok)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     if (h->message_type != PROTOCORE_PTP_ANNOUNCE)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     if (len <
         PROTOCORE_PTP_HEADER_LEN + 30) // originTimestamp(10)+utc(2)+rsv(1)+p1(1)+quality(4)+p2(1)+id(8)+steps(2)+src(1)
     {
-        PtpV.ok = PROTO_FALSE;
+        Ptp.ok = PROTO_FALSE;
         return;
     }
     const uint8_t *p = s + PROTOCORE_PTP_HEADER_LEN;
-    PtpV.ts_read_args.p = p;
-    PtpV.ts_read_args.ts = &out->origin;
-    protocore_ptp_ts_read(work);
+    Ptp.ts_read_args.p = p;
+    Ptp.ts_read_args.ts = &out->origin;
+    ptp_ts_read(work);
     p += PROTOCORE_PTP_TS_LEN;
     out->utc_offset = (int16_t)get_u16(p);
     p += 2;
@@ -643,19 +642,19 @@ void protocore_ptp_parse_announce(uint8_t *restrict work)
     out->steps_removed = get_u16(p);
     p += 2;
     out->time_source = *p;
-    PtpV.ok = PROTO_TRUE;
+    Ptp.ok = PROTO_TRUE;
 }
 
 // -- slave clock math --
 
-void protocore_ptp_compute(uint8_t *restrict work)
+static void ptp_compute(uint8_t *restrict work)
 {
     (void)work;
-    int64_t t1 = PtpV.compute_args.t1;
-    int64_t t2 = PtpV.compute_args.t2;
-    int64_t t3 = PtpV.compute_args.t3;
-    int64_t t4 = PtpV.compute_args.t4;
-    protocore_ptp_sync *out = PtpV.compute_args.out;
+    int64_t t1 = Ptp.compute_args.t1;
+    int64_t t2 = Ptp.compute_args.t2;
+    int64_t t3 = Ptp.compute_args.t3;
+    int64_t t4 = Ptp.compute_args.t4;
+    protocore_ptp_sync *out = Ptp.compute_args.out;
 
     if (!out)
     {
@@ -667,20 +666,42 @@ void protocore_ptp_compute(uint8_t *restrict work)
     out->delay_ns = (ms + sm) / 2;
 }
 
-void protocore_ptp_compute_link_delay(uint8_t *restrict work)
+static void ptp_compute_link_delay(uint8_t *restrict work)
 {
     (void)work;
-    int64_t t1 = PtpV.compute_link_delay_args.t1;
-    int64_t t2 = PtpV.compute_link_delay_args.t2;
-    int64_t t3 = PtpV.compute_link_delay_args.t3;
-    int64_t t4 = PtpV.compute_link_delay_args.t4;
+    int64_t t1 = Ptp.compute_link_delay_args.t1;
+    int64_t t2 = Ptp.compute_link_delay_args.t2;
+    int64_t t3 = Ptp.compute_link_delay_args.t3;
+    int64_t t4 = Ptp.compute_link_delay_args.t4;
 
     // meanLinkDelay = ((t4 - t1) - (t3 - t2)) / 2: the round trip minus the peer's turnaround, halved.
-    PtpV.value = ((t4 - t1) - (t3 - t2)) / 2;
+    Ptp.value = ((t4 - t1) - (t3 - t2)) / 2;
 }
 
-/** @brief The operands and the outcome. */
-PtpVars PtpV;
+PtpNs Ptp = {
+    .ts_write = ptp_ts_write,
+    .ts_read = ptp_ts_read,
+    .ts_to_ns = ptp_ts_to_ns,
+    .ts_from_ns = ptp_ts_from_ns,
+    .build_header = ptp_build_header,
+    .parse_header = ptp_parse_header,
+    .build_sync = ptp_build_sync,
+    .build_delay_req = ptp_build_delay_req,
+    .build_follow_up = ptp_build_follow_up,
+    .build_delay_resp = ptp_build_delay_resp,
+    .build_announce = ptp_build_announce,
+    .build_pdelay_req = ptp_build_pdelay_req,
+    .build_pdelay_resp = ptp_build_pdelay_resp,
+    .build_pdelay_resp_follow_up = ptp_build_pdelay_resp_follow_up,
+    .parse_timestamp_msg = ptp_parse_timestamp_msg,
+    .parse_delay_resp = ptp_parse_delay_resp,
+    .parse_announce = ptp_parse_announce,
+    .parse_pdelay_req = ptp_parse_pdelay_req,
+    .parse_pdelay_resp = ptp_parse_pdelay_resp,
+    .parse_pdelay_resp_follow_up = ptp_parse_pdelay_resp_follow_up,
+    .compute = ptp_compute,
+    .compute_link_delay = ptp_compute_link_delay,
+};
 
 PROTOCORE_END_DECLS
 

@@ -23,19 +23,19 @@ static size_t build_req(uint8_t *buf, size_t cap, uint8_t pdu, long reqid, const
     BerEnc e;
     protocore_ber_enc_init(&e, buf, cap);
     size_t msg = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 1;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 1;
     SnmpBer.put_integer(snmp_ber_work); // v2c
     protocore_ber_put_octet_string(&e, (uint8_t)SNMP_TAG_BER_OCTET_STRING, (const uint8_t *)"public", 6);
     size_t pdus = protocore_ber_seq_begin(&e, pdu);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = reqid;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = reqid;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 0;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
     SnmpBer.put_integer(snmp_ber_work);
-    SnmpBerV.enc = &e;
-    SnmpBerV.tlv.ival = 0;
+    SnmpBer.enc = &e;
+    SnmpBer.tlv.ival = 0;
     SnmpBer.put_integer(snmp_ber_work);
     size_t vbl = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);
     size_t vb = protocore_ber_seq_begin(&e, (uint8_t)SNMP_TAG_BER_SEQUENCE);

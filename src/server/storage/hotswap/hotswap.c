@@ -44,19 +44,19 @@ uint8_t *protocore_hotswap_span(void)
     return s_own.span;
 }
 
-void protocore_hotswap_core_init(uint8_t *restrict work);
-void protocore_hotswap_core_io(uint8_t *restrict work);
-void protocore_hotswap_core_probe(uint8_t *restrict work);
-void protocore_hotswap_poll_at(uint8_t *restrict work);
-void protocore_hotswap_state_name(uint8_t *restrict work);
+static void hotswap_core_init(uint8_t *restrict work);
+static void hotswap_core_io(uint8_t *restrict work);
+static void hotswap_core_probe(uint8_t *restrict work);
+static void hotswap_poll_at(uint8_t *restrict work);
+static void hotswap_state_name(uint8_t *restrict work);
 
-void protocore_hotswap_core_init(uint8_t *restrict work)
+static void hotswap_core_init(uint8_t *restrict work)
 {
     (void)work;
-    HotswapCore *c = HotswapV.core_init_args.c;
-    uint8_t fail_threshold = HotswapV.core_init_args.fail_threshold;
-    uint32_t probe_interval_ms = HotswapV.core_init_args.probe_interval_ms;
-    uint32_t now = HotswapV.core_init_args.now;
+    HotswapCore *c = Hotswap.core_init_args.c;
+    uint8_t fail_threshold = Hotswap.core_init_args.fail_threshold;
+    uint32_t probe_interval_ms = Hotswap.core_init_args.probe_interval_ms;
+    uint32_t now = Hotswap.core_init_args.now;
 
     if (!c)
     {
@@ -73,21 +73,21 @@ void protocore_hotswap_core_init(uint8_t *restrict work)
     c->faults = 0;
 }
 
-void protocore_hotswap_core_io(uint8_t *restrict work)
+static void hotswap_core_io(uint8_t *restrict work)
 {
     (void)work;
-    HotswapCore *c = HotswapV.core_io_args.c;
-    proto_bool ok = HotswapV.core_io_args.ok;
+    HotswapCore *c = Hotswap.core_io_args.c;
+    proto_bool ok = Hotswap.core_io_args.ok;
 
     if (!c || c->state != STORAGE_STATE_READY)
     {
-        HotswapV.ok = PROTO_FALSE;
+        Hotswap.ok = PROTO_FALSE;
         return; // not mounted: the caller should not have been touching it
     }
     if (ok)
     {
         c->fail_run = 0; // any success proves the medium is still there
-        HotswapV.ok = PROTO_FALSE;
+        Hotswap.ok = PROTO_FALSE;
         return;
     }
     if (c->fail_run < 0xFF)
@@ -100,40 +100,40 @@ void protocore_hotswap_core_io(uint8_t *restrict work)
     const uint8_t threshold = c->fail_threshold ? c->fail_threshold : 1u;
     if (c->fail_run < threshold)
     {
-        HotswapV.ok = PROTO_FALSE;
+        Hotswap.ok = PROTO_FALSE;
         return; // one bad write is not a removal
     }
     c->state = STORAGE_STATE_FAULTED;
     c->faults++;
-    HotswapV.ok = PROTO_TRUE;
+    Hotswap.ok = PROTO_TRUE;
 }
 
-void protocore_hotswap_core_due(uint8_t *restrict work)
+static void hotswap_core_due(uint8_t *restrict work)
 {
     (void)work;
-    const HotswapCore *c = HotswapV.core_due_args.c;
-    uint32_t now = HotswapV.core_due_args.now;
+    const HotswapCore *c = Hotswap.core_due_args.c;
+    uint32_t now = Hotswap.core_due_args.now;
 
     if (!c || c->state == STORAGE_STATE_READY)
     {
-        HotswapV.ok = PROTO_FALSE;
+        Hotswap.ok = PROTO_FALSE;
         return;
     }
     // Unsigned delta, so this is correct across a millis() rollover.
-    HotswapV.ok = (now - c->last_probe_ms) >= c->probe_interval_ms;
+    Hotswap.ok = (now - c->last_probe_ms) >= c->probe_interval_ms;
 }
 
-void protocore_hotswap_core_probe(uint8_t *restrict work)
+static void hotswap_core_probe(uint8_t *restrict work)
 {
     (void)work;
-    HotswapCore *c = HotswapV.core_probe_args.c;
-    proto_bool present = HotswapV.core_probe_args.present;
-    proto_bool mounted = HotswapV.core_probe_args.mounted;
-    uint32_t now = HotswapV.core_probe_args.now;
+    HotswapCore *c = Hotswap.core_probe_args.c;
+    proto_bool present = Hotswap.core_probe_args.present;
+    proto_bool mounted = Hotswap.core_probe_args.mounted;
+    uint32_t now = Hotswap.core_probe_args.now;
 
     if (!c)
     {
-        HotswapV.ok = PROTO_FALSE;
+        Hotswap.ok = PROTO_FALSE;
         return;
     }
     c->last_probe_ms = now;
@@ -153,7 +153,7 @@ void protocore_hotswap_core_probe(uint8_t *restrict work)
         c->state = STORAGE_STATE_ABSENT;
         c->fail_run = 0;
     }
-    HotswapV.ok = c->state != was;
+    Hotswap.ok = c->state != was;
 }
 
 // ---------------------------------------------------------------------------
@@ -200,35 +200,35 @@ static void hs_notify(uint8_t *restrict work, StorageState from, StorageState to
     }
 }
 
-void protocore_hotswap_begin(uint8_t *restrict work)
+static void hotswap_begin(uint8_t *restrict work)
 {
-    protocore_hotswap_mount mount = HotswapV.begin_args.mount;
-    protocore_hotswap_unmount unmount = HotswapV.begin_args.unmount;
-    protocore_hotswap_present present = HotswapV.begin_args.present;
-    void *ctx = HotswapV.begin_args.ctx;
+    protocore_hotswap_mount mount = Hotswap.begin_args.mount;
+    protocore_hotswap_unmount unmount = Hotswap.begin_args.unmount;
+    protocore_hotswap_present present = Hotswap.begin_args.present;
+    void *ctx = Hotswap.begin_args.ctx;
 
     HOTSWAP_CTX(work)->mount = mount;
     HOTSWAP_CTX(work)->unmount = unmount;
     HOTSWAP_CTX(work)->present = present;
     HOTSWAP_CTX(work)->ctx = ctx;
     HOTSWAP_CTX(work)->begun = PROTO_TRUE;
-    HotswapV.core_init_args.c = &HOTSWAP_CTX(work)->core;
-    HotswapV.core_init_args.fail_threshold = PROTOCORE_HOTSWAP_FAIL_THRESHOLD;
-    HotswapV.core_init_args.probe_interval_ms = PROTOCORE_HOTSWAP_PROBE_MS;
-    HotswapV.core_init_args.now = Clock.ms;
-    protocore_hotswap_core_init(work);
+    Hotswap.core_init_args.c = &HOTSWAP_CTX(work)->core;
+    Hotswap.core_init_args.fail_threshold = PROTOCORE_HOTSWAP_FAIL_THRESHOLD;
+    Hotswap.core_init_args.probe_interval_ms = PROTOCORE_HOTSWAP_PROBE_MS;
+    Hotswap.core_init_args.now = Clock.ms;
+    hotswap_core_init(work);
 }
 
-void protocore_hotswap_set_event_cb(uint8_t *restrict work)
+static void hotswap_set_event_cb(uint8_t *restrict work)
 {
-    protocore_hotswap_event cb = HotswapV.set_event_cb_args.cb;
+    protocore_hotswap_event cb = Hotswap.set_event_cb_args.cb;
 
     HOTSWAP_CTX(work)->event = cb;
 }
 
-void protocore_hotswap_poll_at(uint8_t *restrict work)
+static void hotswap_poll_at(uint8_t *restrict work)
 {
-    uint32_t now = HotswapV.poll_at_args.now;
+    uint32_t now = Hotswap.poll_at_args.now;
 
     // The two tests stay separate: staged above the flag, the due check would run on a core that
     // begin() has not initialized yet.
@@ -236,10 +236,10 @@ void protocore_hotswap_poll_at(uint8_t *restrict work)
     {
         return;
     }
-    HotswapV.core_due_args.c = &HOTSWAP_CTX(work)->core;
-    HotswapV.core_due_args.now = now;
-    protocore_hotswap_core_due(work);
-    if (!HotswapV.ok)
+    Hotswap.core_due_args.c = &HOTSWAP_CTX(work)->core;
+    Hotswap.core_due_args.now = now;
+    hotswap_core_due(work);
+    if (!Hotswap.ok)
     {
         return;
     }
@@ -259,39 +259,39 @@ void protocore_hotswap_poll_at(uint8_t *restrict work)
     }
 
     StorageState was = HOTSWAP_CTX(work)->core.state;
-    HotswapV.core_probe_args.c = &HOTSWAP_CTX(work)->core;
-    HotswapV.core_probe_args.present = present;
-    HotswapV.core_probe_args.mounted = mounted;
-    HotswapV.core_probe_args.now = now;
-    protocore_hotswap_core_probe(work);
-    if (HotswapV.ok)
+    Hotswap.core_probe_args.c = &HOTSWAP_CTX(work)->core;
+    Hotswap.core_probe_args.present = present;
+    Hotswap.core_probe_args.mounted = mounted;
+    Hotswap.core_probe_args.now = now;
+    hotswap_core_probe(work);
+    if (Hotswap.ok)
     {
         hs_notify(work, was, HOTSWAP_CTX(work)->core.state);
     }
 }
 
-void protocore_hotswap_poll(uint8_t *restrict work)
+static void hotswap_poll(uint8_t *restrict work)
 {
 
-    HotswapV.poll_at_args.now = Clock.ms;
-    protocore_hotswap_poll_at(work);
+    Hotswap.poll_at_args.now = Clock.ms;
+    hotswap_poll_at(work);
 }
 
-void protocore_hotswap_ready(uint8_t *restrict work)
+static void hotswap_ready(uint8_t *restrict work)
 {
 
-    HotswapV.ok = HOTSWAP_CTX(work)->core.state == STORAGE_STATE_READY;
+    Hotswap.ok = HOTSWAP_CTX(work)->core.state == STORAGE_STATE_READY;
 }
 
-void protocore_hotswap_io(uint8_t *restrict work)
+static void hotswap_io(uint8_t *restrict work)
 {
-    proto_bool ok = HotswapV.io_args.ok;
+    proto_bool ok = Hotswap.io_args.ok;
 
     StorageState was = HOTSWAP_CTX(work)->core.state;
-    HotswapV.core_io_args.c = &HOTSWAP_CTX(work)->core;
-    HotswapV.core_io_args.ok = ok;
-    protocore_hotswap_core_io(work);
-    if (!HotswapV.ok)
+    Hotswap.core_io_args.c = &HOTSWAP_CTX(work)->core;
+    Hotswap.core_io_args.ok = ok;
+    hotswap_core_io(work);
+    if (!Hotswap.ok)
     {
         return;
     }
@@ -304,47 +304,47 @@ void protocore_hotswap_io(uint8_t *restrict work)
     hs_notify(work, was, HOTSWAP_CTX(work)->core.state);
 }
 
-void protocore_hotswap_state(uint8_t *restrict work)
+static void hotswap_state(uint8_t *restrict work)
 {
 
-    HotswapV.value = HOTSWAP_CTX(work)->core.state;
+    Hotswap.value = HOTSWAP_CTX(work)->core.state;
 }
 
-void protocore_hotswap_state_name(uint8_t *restrict work)
+static void hotswap_state_name(uint8_t *restrict work)
 {
     (void)work;
-    StorageState s = HotswapV.state_name_args.s;
+    StorageState s = Hotswap.state_name_args.s;
 
     switch (s)
     {
     case STORAGE_STATE_READY:
-        HotswapV.text = "ready";
+        Hotswap.text = "ready";
         return;
     case STORAGE_STATE_FAULTED:
-        HotswapV.text = "faulted";
+        Hotswap.text = "faulted";
         return;
     case STORAGE_STATE_ABSENT:
     default:
-        HotswapV.text = "absent";
+        Hotswap.text = "absent";
         return;
     }
 }
 
-void protocore_hotswap_json(uint8_t *restrict work)
+static void hotswap_json(uint8_t *restrict work)
 {
-    char *out = HotswapV.json_args.out;
-    size_t cap = HotswapV.json_args.cap;
+    char *out = Hotswap.json_args.out;
+    size_t cap = Hotswap.json_args.cap;
 
     if (!out || cap == 0)
     {
-        HotswapV.n = 0;
+        Hotswap.n = 0;
         return;
     }
     protocore_sb sb_out = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb_out, "{\"storage\":\"");
-    HotswapV.state_name_args.s = HOTSWAP_CTX(work)->core.state;
-    protocore_hotswap_state_name(work);
-    Sb.put(&sb_out, HotswapV.text);
+    Hotswap.state_name_args.s = HOTSWAP_CTX(work)->core.state;
+    hotswap_state_name(work);
+    Sb.put(&sb_out, Hotswap.text);
     Sb.put(&sb_out, "\",\"mounts\":");
     Sb.u32(&sb_out, (uint32_t)((unsigned)HOTSWAP_CTX(work)->core.mounts));
     Sb.put(&sb_out, ",\"faults\":");
@@ -356,14 +356,25 @@ void protocore_hotswap_json(uint8_t *restrict work)
     if (!sb_out.ok)
     {
         out[0] = '\0';
-        HotswapV.n = 0;
+        Hotswap.n = 0;
         return; // fail closed rather than emit a truncated object
     }
-    HotswapV.n = (size_t)n;
+    Hotswap.n = (size_t)n;
 }
 
-/** @brief The operands and the outcome. */
-HotswapVars HotswapV;
+HotswapNs Hotswap = {.core_init = hotswap_core_init,
+                     .core_io = hotswap_core_io,
+                     .core_due = hotswap_core_due,
+                     .core_probe = hotswap_core_probe,
+                     .begin = hotswap_begin,
+                     .set_event_cb = hotswap_set_event_cb,
+                     .poll = hotswap_poll,
+                     .poll_at = hotswap_poll_at,
+                     .ready = hotswap_ready,
+                     .io = hotswap_io,
+                     .state = hotswap_state,
+                     .state_name = hotswap_state_name,
+                     .json = hotswap_json};
 
 PROTOCORE_END_DECLS
 

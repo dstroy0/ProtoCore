@@ -76,20 +76,20 @@ void test_idn_symbolic_names(void)
     };
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
-        SercosV.idn_args.is_product = CASES[i].product;
-        SercosV.idn_args.param_set = CASES[i].set;
-        SercosV.idn_args.data_block = CASES[i].block;
-        SercosV.idn(sercos_work);
-        uint16_t got = SercosV.value;
+        Sercos.idn_args.is_product = CASES[i].product;
+        Sercos.idn_args.param_set = CASES[i].set;
+        Sercos.idn_args.data_block = CASES[i].block;
+        Sercos.idn(sercos_work);
+        uint16_t got = Sercos.value;
         TEST_ASSERT_EQUAL_HEX16(CASES[i].idn, got);
 
         proto_bool p = PROTO_FALSE;
         uint8_t s = 0xFF;
         uint16_t b = 0xFFFF;
-        SercosV.idn_parse_args.idn = CASES[i].idn;
-        SercosV.idn_parse_args.is_product = &p;
-        SercosV.idn_parse_args.param_set = &s;
-        SercosV.idn_parse_args.data_block = &b;
+        Sercos.idn_parse_args.idn = CASES[i].idn;
+        Sercos.idn_parse_args.is_product = &p;
+        Sercos.idn_parse_args.param_set = &s;
+        Sercos.idn_parse_args.data_block = &b;
         Sercos.idn_parse(sercos_work);
         TEST_ASSERT_EQUAL_INT(CASES[i].product ? 1 : 0, p ? 1 : 0);
         TEST_ASSERT_EQUAL_UINT8(CASES[i].set, s);
@@ -105,21 +105,21 @@ void test_idn_symbolic_names(void)
 // (0x8000 | 0x7000 | 0x0FFF = 0xFFFF), which is what "no field overlaps another" means.
 void test_idn_fields_are_disjoint_and_tile_the_word(void)
 {
-    SercosV.idn_args.is_product = PROTO_TRUE;
-    SercosV.idn_args.param_set = 0;
-    SercosV.idn_args.data_block = 0;
-    SercosV.idn(sercos_work);
-    const uint16_t sp = SercosV.value;
-    SercosV.idn_args.is_product = PROTO_FALSE;
-    SercosV.idn_args.param_set = 7;
-    SercosV.idn_args.data_block = 0;
-    SercosV.idn(sercos_work);
-    const uint16_t ps = SercosV.value;
-    SercosV.idn_args.is_product = PROTO_FALSE;
-    SercosV.idn_args.param_set = 0;
-    SercosV.idn_args.data_block = 4095;
-    SercosV.idn(sercos_work);
-    const uint16_t dbn = SercosV.value;
+    Sercos.idn_args.is_product = PROTO_TRUE;
+    Sercos.idn_args.param_set = 0;
+    Sercos.idn_args.data_block = 0;
+    Sercos.idn(sercos_work);
+    const uint16_t sp = Sercos.value;
+    Sercos.idn_args.is_product = PROTO_FALSE;
+    Sercos.idn_args.param_set = 7;
+    Sercos.idn_args.data_block = 0;
+    Sercos.idn(sercos_work);
+    const uint16_t ps = Sercos.value;
+    Sercos.idn_args.is_product = PROTO_FALSE;
+    Sercos.idn_args.param_set = 0;
+    Sercos.idn_args.data_block = 4095;
+    Sercos.idn(sercos_work);
+    const uint16_t dbn = Sercos.value;
 
     TEST_ASSERT_EQUAL_HEX16(0x8000, sp);
     TEST_ASSERT_EQUAL_HEX16(0x7000, ps);
@@ -138,21 +138,21 @@ void test_an_over_wide_argument_stays_in_its_own_field(void)
 {
     for (unsigned set = 8; set < 256; set++)
     {
-        SercosV.idn_args.is_product = PROTO_FALSE;
-        SercosV.idn_args.param_set = (uint8_t)set;
-        SercosV.idn_args.data_block = 0x0ABC;
-        SercosV.idn(sercos_work);
-        const uint16_t v = SercosV.value;
+        Sercos.idn_args.is_product = PROTO_FALSE;
+        Sercos.idn_args.param_set = (uint8_t)set;
+        Sercos.idn_args.data_block = 0x0ABC;
+        Sercos.idn(sercos_work);
+        const uint16_t v = Sercos.value;
         TEST_ASSERT_EQUAL_HEX16(0x0000, (uint16_t)(v & 0x8000));
         TEST_ASSERT_EQUAL_HEX16(0x0ABC, (uint16_t)(v & 0x0FFF));
     }
     for (uint32_t block = 0x1000; block <= 0xFFFF; block += 0x111)
     {
-        SercosV.idn_args.is_product = PROTO_TRUE;
-        SercosV.idn_args.param_set = 5;
-        SercosV.idn_args.data_block = (uint16_t)block;
-        SercosV.idn(sercos_work);
-        const uint16_t v = SercosV.value;
+        Sercos.idn_args.is_product = PROTO_TRUE;
+        Sercos.idn_args.param_set = 5;
+        Sercos.idn_args.data_block = (uint16_t)block;
+        Sercos.idn(sercos_work);
+        const uint16_t v = Sercos.value;
         TEST_ASSERT_EQUAL_HEX16(0x8000, (uint16_t)(v & 0x8000));
         TEST_ASSERT_EQUAL_HEX16(0x5000, (uint16_t)(v & 0x7000));
     }
@@ -167,16 +167,16 @@ void test_idn_round_trip_over_every_word(void)
         proto_bool p = PROTO_FALSE;
         uint8_t s = 0;
         uint16_t b = 0;
-        SercosV.idn_parse_args.idn = (uint16_t)v;
-        SercosV.idn_parse_args.is_product = &p;
-        SercosV.idn_parse_args.param_set = &s;
-        SercosV.idn_parse_args.data_block = &b;
+        Sercos.idn_parse_args.idn = (uint16_t)v;
+        Sercos.idn_parse_args.is_product = &p;
+        Sercos.idn_parse_args.param_set = &s;
+        Sercos.idn_parse_args.data_block = &b;
         Sercos.idn_parse(sercos_work);
-        SercosV.idn_args.is_product = p;
-        SercosV.idn_args.param_set = s;
-        SercosV.idn_args.data_block = b;
-        SercosV.idn(sercos_work);
-        TEST_ASSERT_EQUAL_HEX16((uint16_t)v, SercosV.value);
+        Sercos.idn_args.is_product = p;
+        Sercos.idn_args.param_set = s;
+        Sercos.idn_args.data_block = b;
+        Sercos.idn(sercos_work);
+        TEST_ASSERT_EQUAL_HEX16((uint16_t)v, Sercos.value);
     }
 }
 
@@ -188,34 +188,34 @@ void test_idn_parse_accepts_null_outputs(void)
     uint16_t b = 0;
     proto_bool p = PROTO_FALSE;
 
-    SercosV.idn_parse_args.idn = 0x9064;
-    SercosV.idn_parse_args.is_product = NULL;
-    SercosV.idn_parse_args.param_set = &s;
-    SercosV.idn_parse_args.data_block = &b;
+    Sercos.idn_parse_args.idn = 0x9064;
+    Sercos.idn_parse_args.is_product = NULL;
+    Sercos.idn_parse_args.param_set = &s;
+    Sercos.idn_parse_args.data_block = &b;
     Sercos.idn_parse(sercos_work);
     TEST_ASSERT_EQUAL_UINT8(1, s);
     TEST_ASSERT_EQUAL_UINT16(100, b);
 
-    SercosV.idn_parse_args.idn = 0x9064;
-    SercosV.idn_parse_args.is_product = &p;
-    SercosV.idn_parse_args.param_set = NULL;
-    SercosV.idn_parse_args.data_block = &b;
+    Sercos.idn_parse_args.idn = 0x9064;
+    Sercos.idn_parse_args.is_product = &p;
+    Sercos.idn_parse_args.param_set = NULL;
+    Sercos.idn_parse_args.data_block = &b;
     Sercos.idn_parse(sercos_work);
     TEST_ASSERT_TRUE(p);
     TEST_ASSERT_EQUAL_UINT16(100, b);
 
-    SercosV.idn_parse_args.idn = 0x9064;
-    SercosV.idn_parse_args.is_product = &p;
-    SercosV.idn_parse_args.param_set = &s;
-    SercosV.idn_parse_args.data_block = NULL;
+    Sercos.idn_parse_args.idn = 0x9064;
+    Sercos.idn_parse_args.is_product = &p;
+    Sercos.idn_parse_args.param_set = &s;
+    Sercos.idn_parse_args.data_block = NULL;
     Sercos.idn_parse(sercos_work);
     TEST_ASSERT_TRUE(p);
     TEST_ASSERT_EQUAL_UINT8(1, s);
 
-    SercosV.idn_parse_args.idn = 0x9064;
-    SercosV.idn_parse_args.is_product = NULL;
-    SercosV.idn_parse_args.param_set = NULL;
-    SercosV.idn_parse_args.data_block = NULL;
+    Sercos.idn_parse_args.idn = 0x9064;
+    Sercos.idn_parse_args.is_product = NULL;
+    Sercos.idn_parse_args.param_set = NULL;
+    Sercos.idn_parse_args.data_block = NULL;
     Sercos.idn_parse(sercos_work);
 }
 
@@ -225,15 +225,15 @@ void test_idn_parse_accepts_null_outputs(void)
 static size_t header_length(void)
 {
     uint8_t out[8];
-    SercosV.build_args.type = SERCOS_TEL_MDT;
-    SercosV.build_args.phase = 0;
-    SercosV.build_args.cycle = 0;
-    SercosV.build_args.data = NULL;
-    SercosV.build_args.data_len = 0;
-    SercosV.build_args.out = out;
-    SercosV.build_args.cap = sizeof(out);
+    Sercos.build_args.type = SERCOS_TEL_MDT;
+    Sercos.build_args.phase = 0;
+    Sercos.build_args.cycle = 0;
+    Sercos.build_args.data = NULL;
+    Sercos.build_args.data_len = 0;
+    Sercos.build_args.out = out;
+    Sercos.build_args.cap = sizeof(out);
     Sercos.build(sercos_work);
-    return SercosV.n;
+    return Sercos.n;
 }
 
 void test_a_telegram_is_a_fixed_header_plus_its_payload(void)
@@ -253,23 +253,23 @@ void test_a_telegram_is_a_fixed_header_plus_its_payload(void)
         for (size_t len = 0; len <= sizeof(pdo); len++)
         {
             uint8_t out[64];
-            SercosV.build_args.type = TYPES[t];
-            SercosV.build_args.phase = 0x04;
-            SercosV.build_args.cycle = 0xBEEF;
-            SercosV.build_args.data = len ? pdo : NULL;
-            SercosV.build_args.data_len = len;
-            SercosV.build_args.out = out;
-            SercosV.build_args.cap = sizeof(out);
+            Sercos.build_args.type = TYPES[t];
+            Sercos.build_args.phase = 0x04;
+            Sercos.build_args.cycle = 0xBEEF;
+            Sercos.build_args.data = len ? pdo : NULL;
+            Sercos.build_args.data_len = len;
+            Sercos.build_args.out = out;
+            Sercos.build_args.cap = sizeof(out);
             Sercos.build(sercos_work);
-            const size_t n = SercosV.n;
+            const size_t n = Sercos.n;
             TEST_ASSERT_EQUAL_UINT(hdr + len, n);
 
             SercosTelegram s;
-            SercosV.parse_args.frame = out;
-            SercosV.parse_args.len = n;
-            SercosV.parse_args.out = &s;
+            Sercos.parse_args.frame = out;
+            Sercos.parse_args.len = n;
+            Sercos.parse_args.out = &s;
             Sercos.parse(sercos_work);
-            TEST_ASSERT_TRUE(SercosV.ok);
+            TEST_ASSERT_TRUE(Sercos.ok);
             TEST_ASSERT_EQUAL_UINT(len, s.data_len);
         }
     }
@@ -293,22 +293,22 @@ void test_telegram_round_trip(void)
         for (size_t len = 0; len <= sizeof(pdo); len++)
         {
             uint8_t out[64];
-            SercosV.build_args.type = TYPES[t];
-            SercosV.build_args.phase = 0x04;
-            SercosV.build_args.cycle = 0xBEEF;
-            SercosV.build_args.data = len ? pdo : NULL;
-            SercosV.build_args.data_len = len;
-            SercosV.build_args.out = out;
-            SercosV.build_args.cap = sizeof(out);
+            Sercos.build_args.type = TYPES[t];
+            Sercos.build_args.phase = 0x04;
+            Sercos.build_args.cycle = 0xBEEF;
+            Sercos.build_args.data = len ? pdo : NULL;
+            Sercos.build_args.data_len = len;
+            Sercos.build_args.out = out;
+            Sercos.build_args.cap = sizeof(out);
             Sercos.build(sercos_work);
-            const size_t n = SercosV.n;
+            const size_t n = Sercos.n;
 
             SercosTelegram s;
-            SercosV.parse_args.frame = out;
-            SercosV.parse_args.len = n;
-            SercosV.parse_args.out = &s;
+            Sercos.parse_args.frame = out;
+            Sercos.parse_args.len = n;
+            Sercos.parse_args.out = &s;
             Sercos.parse(sercos_work);
-            TEST_ASSERT_TRUE(SercosV.ok);
+            TEST_ASSERT_TRUE(Sercos.ok);
             TEST_ASSERT_EQUAL_HEX8(TYPES[t], s.type);
             TEST_ASSERT_EQUAL_HEX8(0x04, s.phase);
             TEST_ASSERT_EQUAL_HEX16(0xBEEF, s.cycle);
@@ -334,38 +334,38 @@ void test_the_two_telegram_types_are_distinct(void)
 
     uint8_t mdt[8];
     uint8_t at[8];
-    SercosV.build_args.type = SERCOS_TEL_MDT;
-    SercosV.build_args.phase = 0;
-    SercosV.build_args.cycle = 0;
-    SercosV.build_args.data = NULL;
-    SercosV.build_args.data_len = 0;
-    SercosV.build_args.out = mdt;
-    SercosV.build_args.cap = sizeof(mdt);
+    Sercos.build_args.type = SERCOS_TEL_MDT;
+    Sercos.build_args.phase = 0;
+    Sercos.build_args.cycle = 0;
+    Sercos.build_args.data = NULL;
+    Sercos.build_args.data_len = 0;
+    Sercos.build_args.out = mdt;
+    Sercos.build_args.cap = sizeof(mdt);
     Sercos.build(sercos_work);
-    const size_t n = SercosV.n;
-    SercosV.build_args.type = SERCOS_TEL_AT;
-    SercosV.build_args.phase = 0;
-    SercosV.build_args.cycle = 0;
-    SercosV.build_args.data = NULL;
-    SercosV.build_args.data_len = 0;
-    SercosV.build_args.out = at;
-    SercosV.build_args.cap = sizeof(at);
+    const size_t n = Sercos.n;
+    Sercos.build_args.type = SERCOS_TEL_AT;
+    Sercos.build_args.phase = 0;
+    Sercos.build_args.cycle = 0;
+    Sercos.build_args.data = NULL;
+    Sercos.build_args.data_len = 0;
+    Sercos.build_args.out = at;
+    Sercos.build_args.cap = sizeof(at);
     Sercos.build(sercos_work);
-    TEST_ASSERT_EQUAL_UINT(n, SercosV.n);
+    TEST_ASSERT_EQUAL_UINT(n, Sercos.n);
     TEST_ASSERT_TRUE(memcmp(mdt, at, n) != 0);
 
     SercosTelegram s;
-    SercosV.parse_args.frame = mdt;
-    SercosV.parse_args.len = n;
-    SercosV.parse_args.out = &s;
+    Sercos.parse_args.frame = mdt;
+    Sercos.parse_args.len = n;
+    Sercos.parse_args.out = &s;
     Sercos.parse(sercos_work);
-    TEST_ASSERT_TRUE(SercosV.ok);
+    TEST_ASSERT_TRUE(Sercos.ok);
     TEST_ASSERT_EQUAL_HEX8(SERCOS_TEL_MDT, s.type);
-    SercosV.parse_args.frame = at;
-    SercosV.parse_args.len = n;
-    SercosV.parse_args.out = &s;
+    Sercos.parse_args.frame = at;
+    Sercos.parse_args.len = n;
+    Sercos.parse_args.out = &s;
     Sercos.parse(sercos_work);
-    TEST_ASSERT_TRUE(SercosV.ok);
+    TEST_ASSERT_TRUE(Sercos.ok);
     TEST_ASSERT_EQUAL_HEX8(SERCOS_TEL_AT, s.type);
 }
 
@@ -377,20 +377,20 @@ void test_cycle_count_carries_every_sixteen_bit_value(void)
     SercosTelegram s;
     for (uint32_t c = 0; c <= 0xFFFFu; c++)
     {
-        SercosV.build_args.type = SERCOS_TEL_MDT;
-        SercosV.build_args.phase = 0;
-        SercosV.build_args.cycle = (uint16_t)c;
-        SercosV.build_args.data = NULL;
-        SercosV.build_args.data_len = 0;
-        SercosV.build_args.out = out;
-        SercosV.build_args.cap = sizeof(out);
+        Sercos.build_args.type = SERCOS_TEL_MDT;
+        Sercos.build_args.phase = 0;
+        Sercos.build_args.cycle = (uint16_t)c;
+        Sercos.build_args.data = NULL;
+        Sercos.build_args.data_len = 0;
+        Sercos.build_args.out = out;
+        Sercos.build_args.cap = sizeof(out);
         Sercos.build(sercos_work);
-        const size_t n = SercosV.n;
-        SercosV.parse_args.frame = out;
-        SercosV.parse_args.len = n;
-        SercosV.parse_args.out = &s;
+        const size_t n = Sercos.n;
+        Sercos.parse_args.frame = out;
+        Sercos.parse_args.len = n;
+        Sercos.parse_args.out = &s;
         Sercos.parse(sercos_work);
-        TEST_ASSERT_TRUE(SercosV.ok);
+        TEST_ASSERT_TRUE(Sercos.ok);
         TEST_ASSERT_EQUAL_HEX16((uint16_t)c, s.cycle);
     }
 }
@@ -402,20 +402,20 @@ void test_phase_octet_carries_every_value(void)
     SercosTelegram s;
     for (unsigned p = 0; p < 256; p++)
     {
-        SercosV.build_args.type = SERCOS_TEL_AT;
-        SercosV.build_args.phase = (uint8_t)p;
-        SercosV.build_args.cycle = 1;
-        SercosV.build_args.data = NULL;
-        SercosV.build_args.data_len = 0;
-        SercosV.build_args.out = out;
-        SercosV.build_args.cap = sizeof(out);
+        Sercos.build_args.type = SERCOS_TEL_AT;
+        Sercos.build_args.phase = (uint8_t)p;
+        Sercos.build_args.cycle = 1;
+        Sercos.build_args.data = NULL;
+        Sercos.build_args.data_len = 0;
+        Sercos.build_args.out = out;
+        Sercos.build_args.cap = sizeof(out);
         Sercos.build(sercos_work);
-        const size_t n = SercosV.n;
-        SercosV.parse_args.frame = out;
-        SercosV.parse_args.len = n;
-        SercosV.parse_args.out = &s;
+        const size_t n = Sercos.n;
+        Sercos.parse_args.frame = out;
+        Sercos.parse_args.len = n;
+        Sercos.parse_args.out = &s;
         Sercos.parse(sercos_work);
-        TEST_ASSERT_TRUE(SercosV.ok);
+        TEST_ASSERT_TRUE(Sercos.ok);
         TEST_ASSERT_EQUAL_HEX8((uint8_t)p, s.phase);
     }
 }
@@ -432,15 +432,15 @@ void test_only_the_two_defined_types_are_accepted(void)
     {
         const proto_bool defined = (t == SERCOS_TEL_MDT || t == SERCOS_TEL_AT) ? PROTO_TRUE : PROTO_FALSE;
 
-        SercosV.build_args.type = (uint8_t)t;
-        SercosV.build_args.phase = 0;
-        SercosV.build_args.cycle = 0;
-        SercosV.build_args.data = NULL;
-        SercosV.build_args.data_len = 0;
-        SercosV.build_args.out = out;
-        SercosV.build_args.cap = sizeof(out);
+        Sercos.build_args.type = (uint8_t)t;
+        Sercos.build_args.phase = 0;
+        Sercos.build_args.cycle = 0;
+        Sercos.build_args.data = NULL;
+        Sercos.build_args.data_len = 0;
+        Sercos.build_args.out = out;
+        Sercos.build_args.cap = sizeof(out);
         Sercos.build(sercos_work);
-        const size_t n = SercosV.n;
+        const size_t n = Sercos.n;
         uint8_t frame[8];
         memset(frame, 0, sizeof(frame));
         frame[0] = (uint8_t)t;
@@ -448,20 +448,20 @@ void test_only_the_two_defined_types_are_accepted(void)
         if (defined)
         {
             TEST_ASSERT_EQUAL_UINT(hdr, n);
-            SercosV.parse_args.frame = frame;
-            SercosV.parse_args.len = hdr;
-            SercosV.parse_args.out = &s;
+            Sercos.parse_args.frame = frame;
+            Sercos.parse_args.len = hdr;
+            Sercos.parse_args.out = &s;
             Sercos.parse(sercos_work);
-            TEST_ASSERT_TRUE(SercosV.ok);
+            TEST_ASSERT_TRUE(Sercos.ok);
         }
         else
         {
             TEST_ASSERT_EQUAL_UINT(0u, n);
-            SercosV.parse_args.frame = frame;
-            SercosV.parse_args.len = hdr;
-            SercosV.parse_args.out = &s;
+            Sercos.parse_args.frame = frame;
+            Sercos.parse_args.len = hdr;
+            Sercos.parse_args.out = &s;
             Sercos.parse(sercos_work);
-            TEST_ASSERT_FALSE(SercosV.ok);
+            TEST_ASSERT_FALSE(Sercos.ok);
         }
     }
 }
@@ -481,67 +481,67 @@ void test_bounds_refusals(void)
     frame[1] = 0x02;
     for (size_t n = 0; n < hdr; n++)
     {
-        SercosV.parse_args.frame = frame;
-        SercosV.parse_args.len = n;
-        SercosV.parse_args.out = &s;
+        Sercos.parse_args.frame = frame;
+        Sercos.parse_args.len = n;
+        Sercos.parse_args.out = &s;
         Sercos.parse(sercos_work);
-        TEST_ASSERT_FALSE(SercosV.ok);
+        TEST_ASSERT_FALSE(Sercos.ok);
     }
-    SercosV.parse_args.frame = frame;
-    SercosV.parse_args.len = hdr;
-    SercosV.parse_args.out = &s;
+    Sercos.parse_args.frame = frame;
+    Sercos.parse_args.len = hdr;
+    Sercos.parse_args.out = &s;
     Sercos.parse(sercos_work);
-    TEST_ASSERT_TRUE(SercosV.ok);
-    SercosV.parse_args.frame = NULL;
-    SercosV.parse_args.len = hdr;
-    SercosV.parse_args.out = &s;
+    TEST_ASSERT_TRUE(Sercos.ok);
+    Sercos.parse_args.frame = NULL;
+    Sercos.parse_args.len = hdr;
+    Sercos.parse_args.out = &s;
     Sercos.parse(sercos_work);
-    TEST_ASSERT_FALSE(SercosV.ok);
-    SercosV.parse_args.frame = frame;
-    SercosV.parse_args.len = hdr;
-    SercosV.parse_args.out = NULL;
+    TEST_ASSERT_FALSE(Sercos.ok);
+    Sercos.parse_args.frame = frame;
+    Sercos.parse_args.len = hdr;
+    Sercos.parse_args.out = NULL;
     Sercos.parse(sercos_work);
-    TEST_ASSERT_FALSE(SercosV.ok);
+    TEST_ASSERT_FALSE(Sercos.ok);
 
     for (size_t cap = 0; cap < hdr + sizeof(PDO); cap++)
     {
-        SercosV.build_args.type = SERCOS_TEL_MDT;
-        SercosV.build_args.phase = 0;
-        SercosV.build_args.cycle = 0;
-        SercosV.build_args.data = PDO;
-        SercosV.build_args.data_len = sizeof(PDO);
-        SercosV.build_args.out = out;
-        SercosV.build_args.cap = cap;
+        Sercos.build_args.type = SERCOS_TEL_MDT;
+        Sercos.build_args.phase = 0;
+        Sercos.build_args.cycle = 0;
+        Sercos.build_args.data = PDO;
+        Sercos.build_args.data_len = sizeof(PDO);
+        Sercos.build_args.out = out;
+        Sercos.build_args.cap = cap;
         Sercos.build(sercos_work);
-        TEST_ASSERT_EQUAL_UINT(0u, SercosV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, Sercos.n);
     }
-    SercosV.build_args.type = SERCOS_TEL_MDT;
-    SercosV.build_args.phase = 0;
-    SercosV.build_args.cycle = 0;
-    SercosV.build_args.data = PDO;
-    SercosV.build_args.data_len = sizeof(PDO);
-    SercosV.build_args.out = out;
-    SercosV.build_args.cap = hdr + sizeof(PDO);
+    Sercos.build_args.type = SERCOS_TEL_MDT;
+    Sercos.build_args.phase = 0;
+    Sercos.build_args.cycle = 0;
+    Sercos.build_args.data = PDO;
+    Sercos.build_args.data_len = sizeof(PDO);
+    Sercos.build_args.out = out;
+    Sercos.build_args.cap = hdr + sizeof(PDO);
     Sercos.build(sercos_work);
-    TEST_ASSERT_EQUAL_UINT(hdr + sizeof(PDO), SercosV.n);
-    SercosV.build_args.type = SERCOS_TEL_MDT;
-    SercosV.build_args.phase = 0;
-    SercosV.build_args.cycle = 0;
-    SercosV.build_args.data = NULL;
-    SercosV.build_args.data_len = 4;
-    SercosV.build_args.out = out;
-    SercosV.build_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT(hdr + sizeof(PDO), Sercos.n);
+    Sercos.build_args.type = SERCOS_TEL_MDT;
+    Sercos.build_args.phase = 0;
+    Sercos.build_args.cycle = 0;
+    Sercos.build_args.data = NULL;
+    Sercos.build_args.data_len = 4;
+    Sercos.build_args.out = out;
+    Sercos.build_args.cap = sizeof(out);
     Sercos.build(sercos_work);
-    TEST_ASSERT_EQUAL_UINT(0u, SercosV.n);
-    SercosV.build_args.type = SERCOS_TEL_MDT;
-    SercosV.build_args.phase = 0;
-    SercosV.build_args.cycle = 0;
-    SercosV.build_args.data = NULL;
-    SercosV.build_args.data_len = 0;
-    SercosV.build_args.out = NULL;
-    SercosV.build_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT(0u, Sercos.n);
+    Sercos.build_args.type = SERCOS_TEL_MDT;
+    Sercos.build_args.phase = 0;
+    Sercos.build_args.cycle = 0;
+    Sercos.build_args.data = NULL;
+    Sercos.build_args.data_len = 0;
+    Sercos.build_args.out = NULL;
+    Sercos.build_args.cap = sizeof(out);
     Sercos.build(sercos_work);
-    TEST_ASSERT_EQUAL_UINT(0u, SercosV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Sercos.n);
 }
 
 // One cycle of the exchange sercos.h describes: the master sends a setpoint in an MDT and the drive
@@ -552,32 +552,32 @@ void test_mdt_at_exchange(void)
     uint8_t buf[32];
     SercosTelegram s;
 
-    SercosV.idn_args.is_product = PROTO_FALSE;
-    SercosV.idn_args.param_set = 0;
-    SercosV.idn_args.data_block = 47;
-    SercosV.idn(sercos_work);
-    TEST_ASSERT_EQUAL_HEX16(0x002F, SercosV.value);
-    SercosV.idn_args.is_product = PROTO_FALSE;
-    SercosV.idn_args.param_set = 0;
-    SercosV.idn_args.data_block = 51;
-    SercosV.idn(sercos_work);
-    TEST_ASSERT_EQUAL_HEX16(0x0033, SercosV.value);
+    Sercos.idn_args.is_product = PROTO_FALSE;
+    Sercos.idn_args.param_set = 0;
+    Sercos.idn_args.data_block = 47;
+    Sercos.idn(sercos_work);
+    TEST_ASSERT_EQUAL_HEX16(0x002F, Sercos.value);
+    Sercos.idn_args.is_product = PROTO_FALSE;
+    Sercos.idn_args.param_set = 0;
+    Sercos.idn_args.data_block = 51;
+    Sercos.idn(sercos_work);
+    TEST_ASSERT_EQUAL_HEX16(0x0033, Sercos.value);
 
     static const uint8_t SETPOINT[4] = {0x10, 0x27, 0x00, 0x00};
-    SercosV.build_args.type = SERCOS_TEL_MDT;
-    SercosV.build_args.phase = 4;
-    SercosV.build_args.cycle = 1;
-    SercosV.build_args.data = SETPOINT;
-    SercosV.build_args.data_len = sizeof(SETPOINT);
-    SercosV.build_args.out = buf;
-    SercosV.build_args.cap = sizeof(buf);
+    Sercos.build_args.type = SERCOS_TEL_MDT;
+    Sercos.build_args.phase = 4;
+    Sercos.build_args.cycle = 1;
+    Sercos.build_args.data = SETPOINT;
+    Sercos.build_args.data_len = sizeof(SETPOINT);
+    Sercos.build_args.out = buf;
+    Sercos.build_args.cap = sizeof(buf);
     Sercos.build(sercos_work);
-    size_t n = SercosV.n;
-    SercosV.parse_args.frame = buf;
-    SercosV.parse_args.len = n;
-    SercosV.parse_args.out = &s;
+    size_t n = Sercos.n;
+    Sercos.parse_args.frame = buf;
+    Sercos.parse_args.len = n;
+    Sercos.parse_args.out = &s;
     Sercos.parse(sercos_work);
-    TEST_ASSERT_TRUE(SercosV.ok);
+    TEST_ASSERT_TRUE(Sercos.ok);
     TEST_ASSERT_EQUAL_HEX8(SERCOS_TEL_MDT, s.type);
     TEST_ASSERT_EQUAL_HEX8(4, s.phase);
     TEST_ASSERT_EQUAL_HEX16(1, s.cycle);
@@ -585,20 +585,20 @@ void test_mdt_at_exchange(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(SETPOINT, s.data, sizeof(SETPOINT));
 
     static const uint8_t FEEDBACK[4] = {0x0F, 0x27, 0x00, 0x00};
-    SercosV.build_args.type = SERCOS_TEL_AT;
-    SercosV.build_args.phase = 4;
-    SercosV.build_args.cycle = 1;
-    SercosV.build_args.data = FEEDBACK;
-    SercosV.build_args.data_len = sizeof(FEEDBACK);
-    SercosV.build_args.out = buf;
-    SercosV.build_args.cap = sizeof(buf);
+    Sercos.build_args.type = SERCOS_TEL_AT;
+    Sercos.build_args.phase = 4;
+    Sercos.build_args.cycle = 1;
+    Sercos.build_args.data = FEEDBACK;
+    Sercos.build_args.data_len = sizeof(FEEDBACK);
+    Sercos.build_args.out = buf;
+    Sercos.build_args.cap = sizeof(buf);
     Sercos.build(sercos_work);
-    n = SercosV.n;
-    SercosV.parse_args.frame = buf;
-    SercosV.parse_args.len = n;
-    SercosV.parse_args.out = &s;
+    n = Sercos.n;
+    Sercos.parse_args.frame = buf;
+    Sercos.parse_args.len = n;
+    Sercos.parse_args.out = &s;
     Sercos.parse(sercos_work);
-    TEST_ASSERT_TRUE(SercosV.ok);
+    TEST_ASSERT_TRUE(Sercos.ok);
     TEST_ASSERT_EQUAL_HEX8(SERCOS_TEL_AT, s.type);
     TEST_ASSERT_EQUAL_HEX16(1, s.cycle);
     TEST_ASSERT_EQUAL_UINT(sizeof(FEEDBACK), s.data_len);

@@ -76,6 +76,7 @@ typedef struct
     const uint8_t *priv; ///< PROTOCORE_ECDSA_P256_PRIV_LEN big-endian scalar d, 1 <= d < n
     uint8_t *pub;        ///< PROTOCORE_ECDSA_P256_PUB_LEN bytes: 0x04 || X || Y
 } EcdsaPubkeyArgs;
+
 /** @brief The message and key a signature is taken over. */
 typedef struct
 {
@@ -84,6 +85,7 @@ typedef struct
     const uint8_t *priv; ///< PROTOCORE_ECDSA_P256_PRIV_LEN big-endian scalar d
     uint8_t *sig;        ///< PROTOCORE_ECDSA_P256_SIG_LEN bytes: r || s, 32 + 32 big-endian
 } EcdsaSignArgs;
+
 /** @brief The message, key and signature a verification checks. */
 typedef struct
 {
@@ -92,6 +94,7 @@ typedef struct
     size_t mlen;        ///< its length
     const uint8_t *sig; ///< PROTOCORE_ECDSA_P256_SIG_LEN bytes: r || s, 32 + 32 big-endian
 } EcdsaVerifyArgs;
+
 /** @brief The peer point and key an ECDH shared secret is taken from. */
 typedef struct
 {
@@ -99,6 +102,7 @@ typedef struct
     const uint8_t *priv;     ///< PROTOCORE_ECDSA_P256_PRIV_LEN big-endian scalar d, 1 <= d < n
     uint8_t *shared_x;       ///< PROTOCORE_ECDSA_P256_COORD_LEN big-endian X coordinate of d * Q_peer
 } EcdsaEcdhArgs;
+
 /**
  * @brief NIST P-256 ECDSA and ECDH (RFC 5656 / FIPS 186-4).
  *
@@ -137,38 +141,17 @@ typedef struct
     EcdsaSignArgs sign_args;
     EcdsaVerifyArgs verify_args;
     EcdsaEcdhArgs ecdh_args;
+
     proto_bool ok;
-} EcdsaVars;
 
-/** @brief The operands and the outcome. */
-extern EcdsaVars EcdsaV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const pubkey)(uint8_t *restrict work);
     void (*const sign)(uint8_t *restrict work);
     void (*const verify)(uint8_t *restrict work);
     void (*const ecdh)(uint8_t *restrict work);
 } EcdsaNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in EcdsaV or a region of the borrow at a fixed offset.
-void protocore_ecdsa_pubkey(uint8_t *restrict work);
-void protocore_ecdsa_sign(uint8_t *restrict work);
-void protocore_ecdsa_verify(uint8_t *restrict work);
-void protocore_ecdsa_ecdh(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Ecdsa.pubkey(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const EcdsaNs Ecdsa __attribute__((unused)) = {
-    .pubkey = protocore_ecdsa_pubkey,
-    .sign = protocore_ecdsa_sign,
-    .verify = protocore_ecdsa_verify,
-    .ecdh = protocore_ecdsa_ecdh,
-};
+/** @brief The one symbol this module exports. */
+extern EcdsaNs Ecdsa;
 
 PROTOCORE_END_DECLS
 

@@ -59,10 +59,10 @@ void tearDown(void)
 
 static int64_t date_of(const char *s)
 {
-    EdgeCacheV.parse_http_date_args.s = s;
-    EdgeCacheV.parse_http_date_args.len = strlen(s);
+    EdgeCache.parse_http_date_args.s = s;
+    EdgeCache.parse_http_date_args.len = strlen(s);
     EdgeCache.parse_http_date(edge_cache_work);
-    return EdgeCacheV.epoch;
+    return EdgeCache.epoch;
 }
 
 // sec 5.6.7 prints all three formats as spellings of one instant:
@@ -124,39 +124,39 @@ void test_rfc9110_published_range_examples(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=0-499";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=0-499";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(499u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=500-999";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=500-999";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(500u, s);
     TEST_ASSERT_EQUAL_UINT(999u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-500";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=-500";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(9500u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=9500-";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=9500-";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(9500u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 }
@@ -172,40 +172,40 @@ void test_rfc9110_last_pos_and_suffix_clamping(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=0-99999";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=0-99999";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-99999";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=-99999";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 
     // The one-byte ends of both forms: first byte, last byte.
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=0-0";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=0-0";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(0u, e);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-1";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=-1";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(9999u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 }
@@ -219,24 +219,24 @@ void test_rfc9110_unsatisfiable_ranges(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=10000-";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=10000-";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=10500-11000";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    TEST_ASSERT_EQUAL_INT(-1, HttpRange.n);
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=10500-11000";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-0";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    TEST_ASSERT_EQUAL_INT(-1, HttpRange.n);
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=-0";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(-1, HttpRange.n);
 }
 
 // sec 14.1.1: "An int-range is invalid if the last-pos value is present and less than the
@@ -248,12 +248,12 @@ void test_rfc9110_an_invalid_int_range_is_never_served(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=500-499";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=500-499";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_NOT_EQUAL(1, HttpRangeV.n);
+    TEST_ASSERT_NOT_EQUAL(1, HttpRange.n);
 }
 
 // sec 14.1.2: "When a selected representation has zero length, the only satisfiable form of
@@ -272,18 +272,18 @@ void test_rfc9110_zero_length_representation(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=0-0";
-    HttpRangeV.http_parse_byte_range_args.size = 0;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=0-0";
+    HttpRange.http_parse_byte_range_args.size = 0;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=-1";
-    HttpRangeV.http_parse_byte_range_args.size = 0;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    TEST_ASSERT_EQUAL_INT(-1, HttpRange.n);
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=-1";
+    HttpRange.http_parse_byte_range_args.size = 0;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_NOT_EQUAL(-1, HttpRangeV.n);
+    TEST_ASSERT_NOT_EQUAL(-1, HttpRange.n);
 }
 
 // sec 14.2: "An origin server MUST ignore a Range header field that contains a range unit it does
@@ -308,26 +308,26 @@ void test_rfc9110_unusable_range_headers_fall_back_to_a_full_response(void)
     };
     for (size_t i = 0; i < sizeof(IGNORED) / sizeof(IGNORED[0]); i++)
     {
-        HttpRangeV.http_parse_byte_range_args.hdr = IGNORED[i];
-        HttpRangeV.http_parse_byte_range_args.size = 10000;
-        HttpRangeV.http_parse_byte_range_args.out_start = &s;
-        HttpRangeV.http_parse_byte_range_args.out_end = &e;
+        HttpRange.http_parse_byte_range_args.hdr = IGNORED[i];
+        HttpRange.http_parse_byte_range_args.size = 10000;
+        HttpRange.http_parse_byte_range_args.out_start = &s;
+        HttpRange.http_parse_byte_range_args.out_end = &e;
         HttpRange.http_parse_byte_range(http_range_work);
-        TEST_ASSERT_EQUAL_INT_MESSAGE(0, HttpRangeV.n, IGNORED[i]);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(0, HttpRange.n, IGNORED[i]);
     }
-    HttpRangeV.http_parse_byte_range_args.hdr = NULL;
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = NULL;
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(0, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(0, HttpRange.n);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "BYTES=0-9";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "BYTES=0-9";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(0u, s);
     TEST_ASSERT_EQUAL_UINT(9u, e);
 }
@@ -343,19 +343,19 @@ void test_rfc9110_large_decimal_numerals_do_not_wrap(void)
     size_t s = 0;
     size_t e = 0;
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=99999999999999999999999-";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=99999999999999999999999-";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(-1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(-1, HttpRange.n);
 
-    HttpRangeV.http_parse_byte_range_args.hdr = "bytes=10-99999999999999999999999";
-    HttpRangeV.http_parse_byte_range_args.size = 10000;
-    HttpRangeV.http_parse_byte_range_args.out_start = &s;
-    HttpRangeV.http_parse_byte_range_args.out_end = &e;
+    HttpRange.http_parse_byte_range_args.hdr = "bytes=10-99999999999999999999999";
+    HttpRange.http_parse_byte_range_args.size = 10000;
+    HttpRange.http_parse_byte_range_args.out_start = &s;
+    HttpRange.http_parse_byte_range_args.out_end = &e;
     HttpRange.http_parse_byte_range(http_range_work);
-    TEST_ASSERT_EQUAL_INT(1, HttpRangeV.n);
+    TEST_ASSERT_EQUAL_INT(1, HttpRange.n);
     TEST_ASSERT_EQUAL_UINT(10u, s);
     TEST_ASSERT_EQUAL_UINT(9999u, e);
 }
@@ -381,38 +381,38 @@ void test_rfc9112_field_lookup_is_case_insensitive_and_ows_trimmed(void)
     char out[64];
     size_t n = strlen(HEAD);
 
-    EdgeCacheV.header_value_args.hdrs = HEAD;
-    EdgeCacheV.header_value_args.len = n;
-    EdgeCacheV.header_value_args.name = "ETag";
-    EdgeCacheV.header_value_args.out = out;
-    EdgeCacheV.header_value_args.out_cap = sizeof(out);
+    EdgeCache.header_value_args.hdrs = HEAD;
+    EdgeCache.header_value_args.len = n;
+    EdgeCache.header_value_args.name = "ETag";
+    EdgeCache.header_value_args.out = out;
+    EdgeCache.header_value_args.out_cap = sizeof(out);
     EdgeCache.header_value(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     TEST_ASSERT_EQUAL_STRING("\"abc123\"", out);
-    EdgeCacheV.header_value_args.hdrs = HEAD;
-    EdgeCacheV.header_value_args.len = n;
-    EdgeCacheV.header_value_args.name = "cache-CONTROL";
-    EdgeCacheV.header_value_args.out = out;
-    EdgeCacheV.header_value_args.out_cap = sizeof(out);
+    EdgeCache.header_value_args.hdrs = HEAD;
+    EdgeCache.header_value_args.len = n;
+    EdgeCache.header_value_args.name = "cache-CONTROL";
+    EdgeCache.header_value_args.out = out;
+    EdgeCache.header_value_args.out_cap = sizeof(out);
     EdgeCache.header_value(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     TEST_ASSERT_EQUAL_STRING("max-age=60", out);
-    EdgeCacheV.header_value_args.hdrs = HEAD;
-    EdgeCacheV.header_value_args.len = n;
-    EdgeCacheV.header_value_args.name = "Content-Type";
-    EdgeCacheV.header_value_args.out = out;
-    EdgeCacheV.header_value_args.out_cap = sizeof(out);
+    EdgeCache.header_value_args.hdrs = HEAD;
+    EdgeCache.header_value_args.len = n;
+    EdgeCache.header_value_args.name = "Content-Type";
+    EdgeCache.header_value_args.out = out;
+    EdgeCache.header_value_args.out_cap = sizeof(out);
     EdgeCache.header_value(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     TEST_ASSERT_EQUAL_STRING("text/html", out);
 
-    EdgeCacheV.header_value_args.hdrs = HEAD;
-    EdgeCacheV.header_value_args.len = n;
-    EdgeCacheV.header_value_args.name = "HTTP/1.1 200 OK";
-    EdgeCacheV.header_value_args.out = out;
-    EdgeCacheV.header_value_args.out_cap = sizeof(out);
+    EdgeCache.header_value_args.hdrs = HEAD;
+    EdgeCache.header_value_args.len = n;
+    EdgeCache.header_value_args.name = "HTTP/1.1 200 OK";
+    EdgeCache.header_value_args.out = out;
+    EdgeCache.header_value_args.out_cap = sizeof(out);
     EdgeCache.header_value(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 }
 
 // RFC 9110 sec 8.8.3.2 compares entity tags "character-by-character", so a validator that lost its
@@ -424,31 +424,31 @@ void test_field_lookup_refuses_rather_than_truncates(void)
     char out[64];
     size_t n = strlen(HEAD);
 
-    EdgeCacheV.header_value_args.hdrs = HEAD;
-    EdgeCacheV.header_value_args.len = n;
-    EdgeCacheV.header_value_args.name = "X-Missing";
-    EdgeCacheV.header_value_args.out = out;
-    EdgeCacheV.header_value_args.out_cap = sizeof(out);
+    EdgeCache.header_value_args.hdrs = HEAD;
+    EdgeCache.header_value_args.len = n;
+    EdgeCache.header_value_args.name = "X-Missing";
+    EdgeCache.header_value_args.out = out;
+    EdgeCache.header_value_args.out_cap = sizeof(out);
     EdgeCache.header_value(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
     TEST_ASSERT_EQUAL_STRING("", out);
 
     char tiny[4]; // "text/html" is 9 octets
-    EdgeCacheV.header_value_args.hdrs = HEAD;
-    EdgeCacheV.header_value_args.len = n;
-    EdgeCacheV.header_value_args.name = "Content-Type";
-    EdgeCacheV.header_value_args.out = tiny;
-    EdgeCacheV.header_value_args.out_cap = sizeof(tiny);
+    EdgeCache.header_value_args.hdrs = HEAD;
+    EdgeCache.header_value_args.len = n;
+    EdgeCache.header_value_args.name = "Content-Type";
+    EdgeCache.header_value_args.out = tiny;
+    EdgeCache.header_value_args.out_cap = sizeof(tiny);
     EdgeCache.header_value(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
     TEST_ASSERT_EQUAL_STRING("", tiny);
 }
 
 static void parse_cc(const char *s, protocore_cache_control *cc)
 {
-    HttpcacheV.control_parse_args.s = s;
-    HttpcacheV.control_parse_args.len = strlen(s);
-    HttpcacheV.control_parse_args.cc = cc;
+    Httpcache.control_parse_args.s = s;
+    Httpcache.control_parse_args.len = strlen(s);
+    Httpcache.control_parse_args.cc = cc;
     Httpcache.control_parse(httpcache_work);
 }
 
@@ -467,50 +467,50 @@ void test_rfc9111_freshness_lifetime_precedence(void)
 {
     protocore_cache_control cc;
     parse_cc("public, max-age=50, s-maxage=100", &cc);
-    EdgeCacheV.freshness_lifetime_args.cc = &cc;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
-    EdgeCacheV.freshness_lifetime_args.date_epoch = -1;
-    EdgeCacheV.freshness_lifetime_args.expires_epoch = -1;
+    EdgeCache.freshness_lifetime_args.cc = &cc;
+    EdgeCache.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCache.freshness_lifetime_args.date_epoch = -1;
+    EdgeCache.freshness_lifetime_args.expires_epoch = -1;
     EdgeCache.freshness_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(100, EdgeCacheV.secs);
-    EdgeCacheV.freshness_lifetime_args.cc = &cc;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_FALSE;
-    EdgeCacheV.freshness_lifetime_args.date_epoch = -1;
-    EdgeCacheV.freshness_lifetime_args.expires_epoch = -1;
+    TEST_ASSERT_EQUAL_INT32(100, EdgeCache.secs);
+    EdgeCache.freshness_lifetime_args.cc = &cc;
+    EdgeCache.freshness_lifetime_args.shared = PROTO_FALSE;
+    EdgeCache.freshness_lifetime_args.date_epoch = -1;
+    EdgeCache.freshness_lifetime_args.expires_epoch = -1;
     EdgeCache.freshness_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(50, EdgeCacheV.secs);
+    TEST_ASSERT_EQUAL_INT32(50, EdgeCache.secs);
 
     protocore_cache_control none;
-    HttpcacheV.control_init_args.cc = &none;
+    Httpcache.control_init_args.cc = &none;
     Httpcache.control_init(httpcache_work);
-    EdgeCacheV.freshness_lifetime_args.cc = &none;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
-    EdgeCacheV.freshness_lifetime_args.date_epoch = NOV6_1994;
-    EdgeCacheV.freshness_lifetime_args.expires_epoch = NOV6_1994 + 600;
+    EdgeCache.freshness_lifetime_args.cc = &none;
+    EdgeCache.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCache.freshness_lifetime_args.date_epoch = NOV6_1994;
+    EdgeCache.freshness_lifetime_args.expires_epoch = NOV6_1994 + 600;
     EdgeCache.freshness_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(600, EdgeCacheV.secs);
-    EdgeCacheV.freshness_lifetime_args.cc = &none;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
-    EdgeCacheV.freshness_lifetime_args.date_epoch = -1;
-    EdgeCacheV.freshness_lifetime_args.expires_epoch = -1;
+    TEST_ASSERT_EQUAL_INT32(600, EdgeCache.secs);
+    EdgeCache.freshness_lifetime_args.cc = &none;
+    EdgeCache.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCache.freshness_lifetime_args.date_epoch = -1;
+    EdgeCache.freshness_lifetime_args.expires_epoch = -1;
     EdgeCache.freshness_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(-1, EdgeCacheV.secs);
+    TEST_ASSERT_EQUAL_INT32(-1, EdgeCache.secs);
 
     protocore_cache_control ma;
     parse_cc("max-age=30", &ma);
-    EdgeCacheV.freshness_lifetime_args.cc = &ma;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
-    EdgeCacheV.freshness_lifetime_args.date_epoch = NOV6_1994;
-    EdgeCacheV.freshness_lifetime_args.expires_epoch = NOV6_1994 + 600;
+    EdgeCache.freshness_lifetime_args.cc = &ma;
+    EdgeCache.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCache.freshness_lifetime_args.date_epoch = NOV6_1994;
+    EdgeCache.freshness_lifetime_args.expires_epoch = NOV6_1994 + 600;
     EdgeCache.freshness_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(30, EdgeCacheV.secs);
+    TEST_ASSERT_EQUAL_INT32(30, EdgeCache.secs);
 
-    EdgeCacheV.freshness_lifetime_args.cc = &none;
-    EdgeCacheV.freshness_lifetime_args.shared = PROTO_TRUE;
-    EdgeCacheV.freshness_lifetime_args.date_epoch = NOV6_1994;
-    EdgeCacheV.freshness_lifetime_args.expires_epoch = NOV6_1994 - 100;
+    EdgeCache.freshness_lifetime_args.cc = &none;
+    EdgeCache.freshness_lifetime_args.shared = PROTO_TRUE;
+    EdgeCache.freshness_lifetime_args.date_epoch = NOV6_1994;
+    EdgeCache.freshness_lifetime_args.expires_epoch = NOV6_1994 - 100;
     EdgeCache.freshness_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(-100, EdgeCacheV.secs);
+    TEST_ASSERT_EQUAL_INT32(-100, EdgeCache.secs);
 }
 
 // sec 4.2.2: "If the response has a Last-Modified header field, caches are encouraged to use a
@@ -522,31 +522,31 @@ void test_rfc9111_freshness_lifetime_precedence(void)
 // no heuristic is available.
 void test_rfc9111_heuristic_freshness_is_a_tenth_of_the_interval(void)
 {
-    EdgeCacheV.heuristic_lifetime_args.date_epoch = NOV6_1994;
-    EdgeCacheV.heuristic_lifetime_args.last_modified_epoch = NOV6_1994 - 86400;
+    EdgeCache.heuristic_lifetime_args.date_epoch = NOV6_1994;
+    EdgeCache.heuristic_lifetime_args.last_modified_epoch = NOV6_1994 - 86400;
     EdgeCache.heuristic_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(8640, EdgeCacheV.secs);
-    EdgeCacheV.heuristic_lifetime_args.date_epoch = NOV6_1994;
-    EdgeCacheV.heuristic_lifetime_args.last_modified_epoch = NOV6_1994 - 9;
+    TEST_ASSERT_EQUAL_INT32(8640, EdgeCache.secs);
+    EdgeCache.heuristic_lifetime_args.date_epoch = NOV6_1994;
+    EdgeCache.heuristic_lifetime_args.last_modified_epoch = NOV6_1994 - 9;
     EdgeCache.heuristic_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(0, EdgeCacheV.secs);
+    TEST_ASSERT_EQUAL_INT32(0, EdgeCache.secs);
 
-    EdgeCacheV.heuristic_lifetime_args.date_epoch = -1;
-    EdgeCacheV.heuristic_lifetime_args.last_modified_epoch = NOV6_1994;
+    EdgeCache.heuristic_lifetime_args.date_epoch = -1;
+    EdgeCache.heuristic_lifetime_args.last_modified_epoch = NOV6_1994;
     EdgeCache.heuristic_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(-1, EdgeCacheV.secs);
-    EdgeCacheV.heuristic_lifetime_args.date_epoch = NOV6_1994;
-    EdgeCacheV.heuristic_lifetime_args.last_modified_epoch = -1;
+    TEST_ASSERT_EQUAL_INT32(-1, EdgeCache.secs);
+    EdgeCache.heuristic_lifetime_args.date_epoch = NOV6_1994;
+    EdgeCache.heuristic_lifetime_args.last_modified_epoch = -1;
     EdgeCache.heuristic_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(-1, EdgeCacheV.secs);
-    EdgeCacheV.heuristic_lifetime_args.date_epoch = NOV6_1994;
-    EdgeCacheV.heuristic_lifetime_args.last_modified_epoch = NOV6_1994;
+    TEST_ASSERT_EQUAL_INT32(-1, EdgeCache.secs);
+    EdgeCache.heuristic_lifetime_args.date_epoch = NOV6_1994;
+    EdgeCache.heuristic_lifetime_args.last_modified_epoch = NOV6_1994;
     EdgeCache.heuristic_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(-1, EdgeCacheV.secs);
-    EdgeCacheV.heuristic_lifetime_args.date_epoch = NOV6_1994;
-    EdgeCacheV.heuristic_lifetime_args.last_modified_epoch = NOV6_1994 + 10;
+    TEST_ASSERT_EQUAL_INT32(-1, EdgeCache.secs);
+    EdgeCache.heuristic_lifetime_args.date_epoch = NOV6_1994;
+    EdgeCache.heuristic_lifetime_args.last_modified_epoch = NOV6_1994 + 10;
     EdgeCache.heuristic_lifetime(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(-1, EdgeCacheV.secs);
+    TEST_ASSERT_EQUAL_INT32(-1, EdgeCache.secs);
 }
 
 // sec 4.2.3, verbatim:
@@ -561,32 +561,32 @@ void test_rfc9111_heuristic_freshness_is_a_tenth_of_the_interval(void)
 // Without a wall clock there is no response_time and no apparent age, leaving the Age field.
 void test_rfc9111_corrected_initial_age(void)
 {
-    EdgeCacheV.initial_age_args.age_hdr = 0;
-    EdgeCacheV.initial_age_args.date_epoch = NOV6_1994;
-    EdgeCacheV.initial_age_args.response_time_epoch = NOV6_1994 + 40;
-    EdgeCacheV.initial_age(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(40, EdgeCacheV.secs);
-    EdgeCacheV.initial_age_args.age_hdr = 500;
-    EdgeCacheV.initial_age_args.date_epoch = NOV6_1994;
-    EdgeCacheV.initial_age_args.response_time_epoch = NOV6_1994 + 40;
-    EdgeCacheV.initial_age(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(500, EdgeCacheV.secs);
-    EdgeCacheV.initial_age_args.age_hdr = 0;
-    EdgeCacheV.initial_age_args.date_epoch = NOV6_1994;
-    EdgeCacheV.initial_age_args.response_time_epoch = NOV6_1994 - 40;
-    EdgeCacheV.initial_age(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(0, EdgeCacheV.secs);
+    EdgeCache.initial_age_args.age_hdr = 0;
+    EdgeCache.initial_age_args.date_epoch = NOV6_1994;
+    EdgeCache.initial_age_args.response_time_epoch = NOV6_1994 + 40;
+    EdgeCache.initial_age(edge_cache_work);
+    TEST_ASSERT_EQUAL_INT32(40, EdgeCache.secs);
+    EdgeCache.initial_age_args.age_hdr = 500;
+    EdgeCache.initial_age_args.date_epoch = NOV6_1994;
+    EdgeCache.initial_age_args.response_time_epoch = NOV6_1994 + 40;
+    EdgeCache.initial_age(edge_cache_work);
+    TEST_ASSERT_EQUAL_INT32(500, EdgeCache.secs);
+    EdgeCache.initial_age_args.age_hdr = 0;
+    EdgeCache.initial_age_args.date_epoch = NOV6_1994;
+    EdgeCache.initial_age_args.response_time_epoch = NOV6_1994 - 40;
+    EdgeCache.initial_age(edge_cache_work);
+    TEST_ASSERT_EQUAL_INT32(0, EdgeCache.secs);
 
-    EdgeCacheV.initial_age_args.age_hdr = 77;
-    EdgeCacheV.initial_age_args.date_epoch = NOV6_1994;
-    EdgeCacheV.initial_age_args.response_time_epoch = -1;
-    EdgeCacheV.initial_age(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(77, EdgeCacheV.secs);
-    EdgeCacheV.initial_age_args.age_hdr = -1;
-    EdgeCacheV.initial_age_args.date_epoch = -1;
-    EdgeCacheV.initial_age_args.response_time_epoch = -1;
-    EdgeCacheV.initial_age(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(0, EdgeCacheV.secs);
+    EdgeCache.initial_age_args.age_hdr = 77;
+    EdgeCache.initial_age_args.date_epoch = NOV6_1994;
+    EdgeCache.initial_age_args.response_time_epoch = -1;
+    EdgeCache.initial_age(edge_cache_work);
+    TEST_ASSERT_EQUAL_INT32(77, EdgeCache.secs);
+    EdgeCache.initial_age_args.age_hdr = -1;
+    EdgeCache.initial_age_args.date_epoch = -1;
+    EdgeCache.initial_age_args.response_time_epoch = -1;
+    EdgeCache.initial_age(edge_cache_work);
+    TEST_ASSERT_EQUAL_INT32(0, EdgeCache.secs);
 }
 
 // sec 4.2.3, verbatim:
@@ -599,21 +599,21 @@ void test_rfc9111_corrected_initial_age(void)
 // still 10000 ms, so residency stays 10 s instead of jumping ~49 days.
 void test_rfc9111_current_age_over_a_wrapping_millisecond_clock(void)
 {
-    EdgeCacheV.current_age_args.initial_age = 0;
-    EdgeCacheV.current_age_args.insert_ms = 1000u;
-    EdgeCacheV.current_age_args.now_ms = 11000u;
-    EdgeCacheV.current_age(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(10, EdgeCacheV.secs);
-    EdgeCacheV.current_age_args.initial_age = 30;
-    EdgeCacheV.current_age_args.insert_ms = 1000u;
-    EdgeCacheV.current_age_args.now_ms = 6000u;
-    EdgeCacheV.current_age(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(35, EdgeCacheV.secs);
-    EdgeCacheV.current_age_args.initial_age = 0;
-    EdgeCacheV.current_age_args.insert_ms = 0xFFFFF000u;
-    EdgeCacheV.current_age_args.now_ms = 0xFFFFF000u + 10000u;
-    EdgeCacheV.current_age(edge_cache_work);
-    TEST_ASSERT_EQUAL_INT32(10, EdgeCacheV.secs);
+    EdgeCache.current_age_args.initial_age = 0;
+    EdgeCache.current_age_args.insert_ms = 1000u;
+    EdgeCache.current_age_args.now_ms = 11000u;
+    EdgeCache.current_age(edge_cache_work);
+    TEST_ASSERT_EQUAL_INT32(10, EdgeCache.secs);
+    EdgeCache.current_age_args.initial_age = 30;
+    EdgeCache.current_age_args.insert_ms = 1000u;
+    EdgeCache.current_age_args.now_ms = 6000u;
+    EdgeCache.current_age(edge_cache_work);
+    TEST_ASSERT_EQUAL_INT32(35, EdgeCache.secs);
+    EdgeCache.current_age_args.initial_age = 0;
+    EdgeCache.current_age_args.insert_ms = 0xFFFFF000u;
+    EdgeCache.current_age_args.now_ms = 0xFFFFF000u + 10000u;
+    EdgeCache.current_age(edge_cache_work);
+    TEST_ASSERT_EQUAL_INT32(10, EdgeCache.secs);
 }
 
 // sec 4.2 prints the predicate: "response_is_fresh = (freshness_lifetime > current_age)".
@@ -623,22 +623,22 @@ void test_rfc9111_current_age_over_a_wrapping_millisecond_clock(void)
 // is not a fresh state.
 void test_rfc9111_fresh_predicate_is_strictly_greater(void)
 {
-    EdgeCacheV.is_fresh_at_args.lifetime = 60;
-    EdgeCacheV.is_fresh_at_args.current_age = 59;
+    EdgeCache.is_fresh_at_args.lifetime = 60;
+    EdgeCache.is_fresh_at_args.current_age = 59;
     EdgeCache.is_fresh_at(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.is_fresh_at_args.lifetime = 60;
-    EdgeCacheV.is_fresh_at_args.current_age = 60;
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.is_fresh_at_args.lifetime = 60;
+    EdgeCache.is_fresh_at_args.current_age = 60;
     EdgeCache.is_fresh_at(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
-    EdgeCacheV.is_fresh_at_args.lifetime = 60;
-    EdgeCacheV.is_fresh_at_args.current_age = 61;
+    TEST_ASSERT_FALSE(EdgeCache.ok);
+    EdgeCache.is_fresh_at_args.lifetime = 60;
+    EdgeCache.is_fresh_at_args.current_age = 61;
     EdgeCache.is_fresh_at(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
-    EdgeCacheV.is_fresh_at_args.lifetime = -1;
-    EdgeCacheV.is_fresh_at_args.current_age = 0;
+    TEST_ASSERT_FALSE(EdgeCache.ok);
+    EdgeCache.is_fresh_at_args.lifetime = -1;
+    EdgeCache.is_fresh_at_args.current_age = 0;
     EdgeCache.is_fresh_at(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 }
 
 // RFC 9110 sec 4.2.3: "The scheme and host are case-insensitive and normally provided in
@@ -654,109 +654,109 @@ void test_cache_key_is_canonical(void)
     char a[PROTOCORE_EDGE_KEY_MAX];
     char b[PROTOCORE_EDGE_KEY_MAX];
 
-    EdgeCacheV.key_canon_args.method = "GET";
-    EdgeCacheV.key_canon_args.host = "Example.COM";
-    EdgeCacheV.key_canon_args.path = "/a/B";
-    EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
-    EdgeCacheV.key_canon_args.out = a;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(a);
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "Example.COM";
+    EdgeCache.key_canon_args.path = "/a/B";
+    EdgeCache.key_canon_args.query = "q=1";
+    EdgeCache.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCache.key_canon_args.out = a;
+    EdgeCache.key_canon_args.out_cap = sizeof(a);
     EdgeCache.key_canon(edge_cache_work);
-    size_t n = EdgeCacheV.n;
+    size_t n = EdgeCache.n;
     TEST_ASSERT_EQUAL_UINT(strlen(a), n);
 
-    EdgeCacheV.key_canon_args.method = "GET";
-    EdgeCacheV.key_canon_args.host = "EXAMPLE.com";
-    EdgeCacheV.key_canon_args.path = "/a/B";
-    EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
-    EdgeCacheV.key_canon_args.out = b;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(b);
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "EXAMPLE.com";
+    EdgeCache.key_canon_args.path = "/a/B";
+    EdgeCache.key_canon_args.query = "q=1";
+    EdgeCache.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCache.key_canon_args.out = b;
+    EdgeCache.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
     TEST_ASSERT_EQUAL_STRING(a, b); // host case-insensitive
 
-    EdgeCacheV.key_canon_args.method = "GET";
-    EdgeCacheV.key_canon_args.host = "example.com";
-    EdgeCacheV.key_canon_args.path = "/a/b";
-    EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
-    EdgeCacheV.key_canon_args.out = b;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(b);
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "example.com";
+    EdgeCache.key_canon_args.path = "/a/b";
+    EdgeCache.key_canon_args.query = "q=1";
+    EdgeCache.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCache.key_canon_args.out = b;
+    EdgeCache.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
     TEST_ASSERT_NOT_EQUAL(0, strcmp(a, b)); // path case-sensitive
 
-    EdgeCacheV.key_canon_args.method = "GET";
-    EdgeCacheV.key_canon_args.host = "example.com";
-    EdgeCacheV.key_canon_args.path = "/a/B";
-    EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
-    EdgeCacheV.key_canon_args.out = a;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(a);
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "example.com";
+    EdgeCache.key_canon_args.path = "/a/B";
+    EdgeCache.key_canon_args.query = "q=1";
+    EdgeCache.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCache.key_canon_args.out = a;
+    EdgeCache.key_canon_args.out_cap = sizeof(a);
     EdgeCache.key_canon(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
-    EdgeCacheV.key_canon_args.method = "HEAD";
-    EdgeCacheV.key_canon_args.host = "example.com";
-    EdgeCacheV.key_canon_args.path = "/a/B";
-    EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
-    EdgeCacheV.key_canon_args.out = b;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(b);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
+    EdgeCache.key_canon_args.method = "HEAD";
+    EdgeCache.key_canon_args.host = "example.com";
+    EdgeCache.key_canon_args.path = "/a/B";
+    EdgeCache.key_canon_args.query = "q=1";
+    EdgeCache.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCache.key_canon_args.out = b;
+    EdgeCache.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
     TEST_ASSERT_NOT_EQUAL(0, strcmp(a, b)); // the method is part of the key
 
     // Excluding the query collapses the two queries onto one key, and including it separates them.
-    EdgeCacheV.key_canon_args.method = "GET";
-    EdgeCacheV.key_canon_args.host = "example.com";
-    EdgeCacheV.key_canon_args.path = "/a/B";
-    EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_FALSE;
-    EdgeCacheV.key_canon_args.out = a;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(a);
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "example.com";
+    EdgeCache.key_canon_args.path = "/a/B";
+    EdgeCache.key_canon_args.query = "q=1";
+    EdgeCache.key_canon_args.include_query = PROTO_FALSE;
+    EdgeCache.key_canon_args.out = a;
+    EdgeCache.key_canon_args.out_cap = sizeof(a);
     EdgeCache.key_canon(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
-    EdgeCacheV.key_canon_args.method = "GET";
-    EdgeCacheV.key_canon_args.host = "example.com";
-    EdgeCacheV.key_canon_args.path = "/a/B";
-    EdgeCacheV.key_canon_args.query = "q=2";
-    EdgeCacheV.key_canon_args.include_query = PROTO_FALSE;
-    EdgeCacheV.key_canon_args.out = b;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(b);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "example.com";
+    EdgeCache.key_canon_args.path = "/a/B";
+    EdgeCache.key_canon_args.query = "q=2";
+    EdgeCache.key_canon_args.include_query = PROTO_FALSE;
+    EdgeCache.key_canon_args.out = b;
+    EdgeCache.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
     TEST_ASSERT_EQUAL_STRING(a, b);
-    EdgeCacheV.key_canon_args.method = "GET";
-    EdgeCacheV.key_canon_args.host = "example.com";
-    EdgeCacheV.key_canon_args.path = "/a/B";
-    EdgeCacheV.key_canon_args.query = "q=1";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
-    EdgeCacheV.key_canon_args.out = a;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(a);
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "example.com";
+    EdgeCache.key_canon_args.path = "/a/B";
+    EdgeCache.key_canon_args.query = "q=1";
+    EdgeCache.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCache.key_canon_args.out = a;
+    EdgeCache.key_canon_args.out_cap = sizeof(a);
     EdgeCache.key_canon(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
-    EdgeCacheV.key_canon_args.method = "GET";
-    EdgeCacheV.key_canon_args.host = "example.com";
-    EdgeCacheV.key_canon_args.path = "/a/B";
-    EdgeCacheV.key_canon_args.query = "q=2";
-    EdgeCacheV.key_canon_args.include_query = PROTO_TRUE;
-    EdgeCacheV.key_canon_args.out = b;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(b);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "example.com";
+    EdgeCache.key_canon_args.path = "/a/B";
+    EdgeCache.key_canon_args.query = "q=2";
+    EdgeCache.key_canon_args.include_query = PROTO_TRUE;
+    EdgeCache.key_canon_args.out = b;
+    EdgeCache.key_canon_args.out_cap = sizeof(b);
     EdgeCache.key_canon(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
     TEST_ASSERT_NOT_EQUAL(0, strcmp(a, b));
 
     char small[8];
-    EdgeCacheV.key_canon_args.method = "GET";
-    EdgeCacheV.key_canon_args.host = "example.com";
-    EdgeCacheV.key_canon_args.path = "/a/B";
-    EdgeCacheV.key_canon_args.query = NULL;
-    EdgeCacheV.key_canon_args.include_query = PROTO_FALSE;
-    EdgeCacheV.key_canon_args.out = small;
-    EdgeCacheV.key_canon_args.out_cap = sizeof(small);
+    EdgeCache.key_canon_args.method = "GET";
+    EdgeCache.key_canon_args.host = "example.com";
+    EdgeCache.key_canon_args.path = "/a/B";
+    EdgeCache.key_canon_args.query = NULL;
+    EdgeCache.key_canon_args.include_query = PROTO_FALSE;
+    EdgeCache.key_canon_args.out = small;
+    EdgeCache.key_canon_args.out_cap = sizeof(small);
     EdgeCache.key_canon(edge_cache_work);
-    TEST_ASSERT_EQUAL_UINT(0u, EdgeCacheV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, EdgeCache.n);
 }
 
 // RFC 6234 sec 8.5 prints the SHA-256 vector for TEST1 = "abc" as
@@ -771,10 +771,10 @@ void test_key_digest_matches_the_published_sha256_vector(void)
     static uint8_t work[PROTOCORE_SHA256_BORROW + 1];
     uint8_t got[32];
 
-    EdgeCacheV.key_digest_args.digest_work = work;
-    EdgeCacheV.key_digest_args.canon = "abc";
-    EdgeCacheV.key_digest_args.len = 3;
-    EdgeCacheV.key_digest_args.digest = got;
+    EdgeCache.key_digest_args.digest_work = work;
+    EdgeCache.key_digest_args.canon = "abc";
+    EdgeCache.key_digest_args.len = 3;
+    EdgeCache.key_digest_args.digest = got;
     EdgeCache.key_digest(edge_cache_work);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT, got, 32);
 }
@@ -823,93 +823,93 @@ void test_rfc9111_vary_secondary_key(void)
     char absent[PROTOCORE_EDGE_VARY_MAX];
     char present_empty[PROTOCORE_EDGE_VARY_MAX];
 
-    EdgeCacheV.vary_serialize_args.vary_header = "Accept-Encoding";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_gzip;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = gzip;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(gzip);
+    EdgeCache.vary_serialize_args.vary_header = "Accept-Encoding";
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_gzip;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = gzip;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(gzip);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.vary_serialize_args.vary_header = "Accept-Encoding";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_br;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = br;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(br);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.vary_serialize_args.vary_header = "Accept-Encoding";
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_br;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = br;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(br);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.vary_serialize_args.vary_header = "Accept-Encoding";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_nothing;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = absent;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(absent);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.vary_serialize_args.vary_header = "Accept-Encoding";
+    EdgeCache.vary_serialize_args.lookup = lookup_nothing;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = absent;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(absent);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.vary_serialize_args.vary_header = "Accept-Encoding";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_empty;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = present_empty;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(present_empty);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.vary_serialize_args.vary_header = "Accept-Encoding";
+    EdgeCache.vary_serialize_args.lookup = lookup_empty;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = present_empty;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(present_empty);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
 
     TEST_ASSERT_NOT_EQUAL(0, strcmp(gzip, br));
     TEST_ASSERT_NOT_EQUAL(0, strcmp(gzip, absent));
     TEST_ASSERT_NOT_EQUAL(0, strcmp(absent, present_empty));
 
     char spelled[PROTOCORE_EDGE_VARY_MAX];
-    EdgeCacheV.vary_serialize_args.vary_header = "accept-encoding";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_gzip;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = spelled;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(spelled);
+    EdgeCache.vary_serialize_args.vary_header = "accept-encoding";
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_gzip;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = spelled;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(spelled);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     TEST_ASSERT_EQUAL_STRING(gzip, spelled);
 
     // No Vary nominates no field, so every request matches: one key, and it is empty.
     char nothing[PROTOCORE_EDGE_VARY_MAX];
-    EdgeCacheV.vary_serialize_args.vary_header = NULL;
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_gzip;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = nothing;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(nothing);
+    EdgeCache.vary_serialize_args.vary_header = NULL;
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_gzip;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = nothing;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(nothing);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     TEST_ASSERT_EQUAL_STRING("", nothing);
-    EdgeCacheV.vary_serialize_args.vary_header = "";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_gzip;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = nothing;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(nothing);
+    EdgeCache.vary_serialize_args.vary_header = "";
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_gzip;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = nothing;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(nothing);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     TEST_ASSERT_EQUAL_STRING("", nothing);
 
-    EdgeCacheV.vary_serialize_args.vary_header = "*";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_gzip;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = nothing;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(nothing);
+    EdgeCache.vary_serialize_args.vary_header = "*";
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_gzip;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = nothing;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(nothing);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 
     // Two nominated names cannot serialize like one, or the second field stops selecting.
     char two[PROTOCORE_EDGE_VARY_MAX];
     char one[PROTOCORE_EDGE_VARY_MAX];
-    EdgeCacheV.vary_serialize_args.vary_header = "Accept-Encoding, Accept";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_gzip;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = two;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(two);
+    EdgeCache.vary_serialize_args.vary_header = "Accept-Encoding, Accept";
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_gzip;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = two;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(two);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.vary_serialize_args.vary_header = "Accept-Encoding";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_gzip;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = one;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(one);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.vary_serialize_args.vary_header = "Accept-Encoding";
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_gzip;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = one;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(one);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     TEST_ASSERT_NOT_EQUAL(0, strcmp(two, one));
 }
 
@@ -917,11 +917,11 @@ static EdgeCacheStore g_store;
 
 static EdgeEntry *store(const char *canon, const char *vary_key)
 {
-    EdgeCacheV.store_alloc_args.s = &g_store;
-    EdgeCacheV.store_alloc_args.canon = canon;
-    EdgeCacheV.store_alloc_args.vary_key = vary_key;
+    EdgeCache.store_alloc_args.s = &g_store;
+    EdgeCache.store_alloc_args.canon = canon;
+    EdgeCache.store_alloc_args.vary_key = vary_key;
     EdgeCache.store_alloc(edge_cache_work);
-    return EdgeCacheV.entry;
+    return EdgeCache.entry;
 }
 
 // Store and retrieve: what went in under a (key, vary-key) pair comes back out under exactly that
@@ -929,40 +929,40 @@ static EdgeEntry *store(const char *canon, const char *vary_key)
 // since a stored prefix would answer for every key sharing it.
 void test_store_alloc_and_lookup(void)
 {
-    EdgeCacheV.store_init_args.s = &g_store;
+    EdgeCache.store_init_args.s = &g_store;
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *a = store("GET\nexample.com\n/a", "");
     TEST_ASSERT_NOT_NULL(a);
     a->status = 200;
 
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "GET\nexample.com\n/a";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 0u;
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "GET\nexample.com\n/a";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 0u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_EQUAL_PTR(a, EdgeCacheV.entry);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "GET\nexample.com\n/b";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 0u;
+    TEST_ASSERT_EQUAL_PTR(a, EdgeCache.entry);
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "GET\nexample.com\n/b";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 0u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NULL(EdgeCacheV.entry);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "GET\nexample.com\n/a";
-    EdgeCacheV.store_lookup_args.vary_key = "gzip";
-    EdgeCacheV.store_lookup_args.now_ms = 0u;
+    TEST_ASSERT_NULL(EdgeCache.entry);
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "GET\nexample.com\n/a";
+    EdgeCache.store_lookup_args.vary_key = "gzip";
+    EdgeCache.store_lookup_args.now_ms = 0u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NULL(EdgeCacheV.entry);
+    TEST_ASSERT_NULL(EdgeCache.entry);
 
     EdgeEntry *b = store("GET\nexample.com\n/a", "gzip");
     TEST_ASSERT_NOT_NULL(b);
     TEST_ASSERT_TRUE(a != b);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "GET\nexample.com\n/a";
-    EdgeCacheV.store_lookup_args.vary_key = "gzip";
-    EdgeCacheV.store_lookup_args.now_ms = 0u;
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "GET\nexample.com\n/a";
+    EdgeCache.store_lookup_args.vary_key = "gzip";
+    EdgeCache.store_lookup_args.now_ms = 0u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_EQUAL_PTR(b, EdgeCacheV.entry);
+    TEST_ASSERT_EQUAL_PTR(b, EdgeCache.entry);
     TEST_ASSERT_EQUAL_UINT32(2u, g_store.stats.stores);
 
     char huge[PROTOCORE_EDGE_KEY_MAX + 8];
@@ -977,7 +977,7 @@ void test_store_alloc_and_lookup(void)
 void test_store_evicts_the_least_recently_used_slot(void)
 {
     char key[32];
-    EdgeCacheV.store_init_args.s = &g_store;
+    EdgeCache.store_init_args.s = &g_store;
     EdgeCache.store_init(edge_cache_work);
     for (int i = 0; i < PROTOCORE_EDGE_CACHE_SLOTS; i++)
     {
@@ -988,33 +988,33 @@ void test_store_evicts_the_least_recently_used_slot(void)
     }
     TEST_ASSERT_EQUAL_UINT32(0u, g_store.stats.evictions);
 
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "/0";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 100u;
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "/0";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 100u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NOT_NULL(EdgeCacheV.entry);
+    TEST_ASSERT_NOT_NULL(EdgeCache.entry);
 
     TEST_ASSERT_NOT_NULL(store("/new", ""));
     TEST_ASSERT_EQUAL_UINT32(1u, g_store.stats.evictions);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "/0";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 200u;
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "/0";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 200u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NOT_NULL(EdgeCacheV.entry);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "/1";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 200u;
+    TEST_ASSERT_NOT_NULL(EdgeCache.entry);
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "/1";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 200u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NULL(EdgeCacheV.entry);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "/new";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 200u;
+    TEST_ASSERT_NULL(EdgeCache.entry);
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "/new";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 200u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NOT_NULL(EdgeCacheV.entry);
+    TEST_ASSERT_NOT_NULL(EdgeCache.entry);
 }
 
 // RFC 9111 sec 4.1: the cache may reuse a stored response only when the request's nominated
@@ -1024,53 +1024,53 @@ void test_store_evicts_the_least_recently_used_slot(void)
 // ... can only match another request if it is also absent there".
 void test_rfc9111_store_find_resolves_the_vary_variant(void)
 {
-    EdgeCacheV.store_init_args.s = &g_store;
+    EdgeCache.store_init_args.s = &g_store;
     EdgeCache.store_init(edge_cache_work);
     char vk[PROTOCORE_EDGE_VARY_MAX];
 
-    EdgeCacheV.vary_serialize_args.vary_header = "Accept-Encoding";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_gzip;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = vk;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(vk);
+    EdgeCache.vary_serialize_args.vary_header = "Accept-Encoding";
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_gzip;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = vk;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(vk);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     EdgeEntry *g = store("GET\nexample.com\n/a", vk);
     TEST_ASSERT_NOT_NULL(g);
     memcpy(g->vary_names, "Accept-Encoding", sizeof("Accept-Encoding"));
 
-    EdgeCacheV.vary_serialize_args.vary_header = "Accept-Encoding";
-    EdgeCacheV.vary_serialize_args.lookup = lookup_accept_br;
-    EdgeCacheV.vary_serialize_args.ctx = NULL;
-    EdgeCacheV.vary_serialize_args.out = vk;
-    EdgeCacheV.vary_serialize_args.out_cap = sizeof(vk);
+    EdgeCache.vary_serialize_args.vary_header = "Accept-Encoding";
+    EdgeCache.vary_serialize_args.lookup = lookup_accept_br;
+    EdgeCache.vary_serialize_args.ctx = NULL;
+    EdgeCache.vary_serialize_args.out = vk;
+    EdgeCache.vary_serialize_args.out_cap = sizeof(vk);
     EdgeCache.vary_serialize(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     EdgeEntry *b = store("GET\nexample.com\n/a", vk);
     TEST_ASSERT_NOT_NULL(b);
     memcpy(b->vary_names, "Accept-Encoding", sizeof("Accept-Encoding"));
 
-    EdgeCacheV.store_find_args.s = &g_store;
-    EdgeCacheV.store_find_args.canon = "GET\nexample.com\n/a";
-    EdgeCacheV.store_find_args.lookup = lookup_accept_gzip;
-    EdgeCacheV.store_find_args.ctx = NULL;
-    EdgeCacheV.store_find_args.now_ms = 0u;
+    EdgeCache.store_find_args.s = &g_store;
+    EdgeCache.store_find_args.canon = "GET\nexample.com\n/a";
+    EdgeCache.store_find_args.lookup = lookup_accept_gzip;
+    EdgeCache.store_find_args.ctx = NULL;
+    EdgeCache.store_find_args.now_ms = 0u;
     EdgeCache.store_find(edge_cache_work);
-    TEST_ASSERT_EQUAL_PTR(g, EdgeCacheV.entry);
-    EdgeCacheV.store_find_args.s = &g_store;
-    EdgeCacheV.store_find_args.canon = "GET\nexample.com\n/a";
-    EdgeCacheV.store_find_args.lookup = lookup_accept_br;
-    EdgeCacheV.store_find_args.ctx = NULL;
-    EdgeCacheV.store_find_args.now_ms = 0u;
+    TEST_ASSERT_EQUAL_PTR(g, EdgeCache.entry);
+    EdgeCache.store_find_args.s = &g_store;
+    EdgeCache.store_find_args.canon = "GET\nexample.com\n/a";
+    EdgeCache.store_find_args.lookup = lookup_accept_br;
+    EdgeCache.store_find_args.ctx = NULL;
+    EdgeCache.store_find_args.now_ms = 0u;
     EdgeCache.store_find(edge_cache_work);
-    TEST_ASSERT_EQUAL_PTR(b, EdgeCacheV.entry);
-    EdgeCacheV.store_find_args.s = &g_store;
-    EdgeCacheV.store_find_args.canon = "GET\nexample.com\n/a";
-    EdgeCacheV.store_find_args.lookup = lookup_nothing;
-    EdgeCacheV.store_find_args.ctx = NULL;
-    EdgeCacheV.store_find_args.now_ms = 0u;
+    TEST_ASSERT_EQUAL_PTR(b, EdgeCache.entry);
+    EdgeCache.store_find_args.s = &g_store;
+    EdgeCache.store_find_args.canon = "GET\nexample.com\n/a";
+    EdgeCache.store_find_args.lookup = lookup_nothing;
+    EdgeCache.store_find_args.ctx = NULL;
+    EdgeCache.store_find_args.now_ms = 0u;
     EdgeCache.store_find(edge_cache_work);
-    TEST_ASSERT_NULL(EdgeCacheV.entry);
+    TEST_ASSERT_NULL(EdgeCache.entry);
 }
 
 // A purge removes every variant of the named key and nothing outside it; a prefix purge removes
@@ -1078,34 +1078,34 @@ void test_rfc9111_store_find_resolves_the_vary_variant(void)
 // numbers removed, and the purge counter is their sum.
 void test_store_purge_by_key_and_by_path_prefix(void)
 {
-    EdgeCacheV.store_init_args.s = &g_store;
+    EdgeCache.store_init_args.s = &g_store;
     EdgeCache.store_init(edge_cache_work);
     TEST_ASSERT_NOT_NULL(store("GET\nexample.com\n/img/a.png", ""));
     TEST_ASSERT_NOT_NULL(store("GET\nexample.com\n/img/a.png", "gzip"));
     TEST_ASSERT_NOT_NULL(store("GET\nexample.com\n/img/b.png", ""));
     TEST_ASSERT_NOT_NULL(store("GET\nexample.com\n/css/c.css", ""));
 
-    EdgeCacheV.store_purge_args.s = &g_store;
-    EdgeCacheV.store_purge_args.canon = "GET\nexample.com\n/img/a.png";
+    EdgeCache.store_purge_args.s = &g_store;
+    EdgeCache.store_purge_args.canon = "GET\nexample.com\n/img/a.png";
     EdgeCache.store_purge(edge_cache_work);
-    TEST_ASSERT_EQUAL_UINT32(2u, EdgeCacheV.count);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "GET\nexample.com\n/img/a.png";
-    EdgeCacheV.store_lookup_args.vary_key = "gzip";
-    EdgeCacheV.store_lookup_args.now_ms = 0u;
+    TEST_ASSERT_EQUAL_UINT32(2u, EdgeCache.count);
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "GET\nexample.com\n/img/a.png";
+    EdgeCache.store_lookup_args.vary_key = "gzip";
+    EdgeCache.store_lookup_args.now_ms = 0u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NULL(EdgeCacheV.entry);
+    TEST_ASSERT_NULL(EdgeCache.entry);
 
-    EdgeCacheV.store_purge_prefix_args.s = &g_store;
-    EdgeCacheV.store_purge_prefix_args.prefix = "/img/";
+    EdgeCache.store_purge_prefix_args.s = &g_store;
+    EdgeCache.store_purge_prefix_args.prefix = "/img/";
     EdgeCache.store_purge_prefix(edge_cache_work);
-    TEST_ASSERT_EQUAL_UINT32(1u, EdgeCacheV.count);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "GET\nexample.com\n/css/c.css";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 0u;
+    TEST_ASSERT_EQUAL_UINT32(1u, EdgeCache.count);
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "GET\nexample.com\n/css/c.css";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 0u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NOT_NULL(EdgeCacheV.entry);
+    TEST_ASSERT_NOT_NULL(EdgeCache.entry);
     TEST_ASSERT_EQUAL_UINT32(3u, g_store.stats.purges);
 }
 
@@ -1118,7 +1118,7 @@ void test_store_purge_by_key_and_by_path_prefix(void)
 // stale at 10 s (10 > 10 is false).
 void test_sweep_drops_only_unrevalidatable_stale_entries(void)
 {
-    EdgeCacheV.store_init_args.s = &g_store;
+    EdgeCache.store_init_args.s = &g_store;
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *dead = store("/dead", "");
     dead->lifetime_s = 10;
@@ -1136,43 +1136,43 @@ void test_sweep_drops_only_unrevalidatable_stale_entries(void)
     fresh->initial_age = 0;
     fresh->insert_ms = 0u;
 
-    EdgeCacheV.entry_fresh_args.e = dead;
-    EdgeCacheV.entry_fresh_args.now_ms = 9000u;
+    EdgeCache.entry_fresh_args.e = dead;
+    EdgeCache.entry_fresh_args.now_ms = 9000u;
     EdgeCache.entry_fresh(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.entry_fresh_args.e = dead;
-    EdgeCacheV.entry_fresh_args.now_ms = 10000u;
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.entry_fresh_args.e = dead;
+    EdgeCache.entry_fresh_args.now_ms = 10000u;
     EdgeCache.entry_fresh(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
-    EdgeCacheV.entry_has_validator_args.e = keep;
+    TEST_ASSERT_FALSE(EdgeCache.ok);
+    EdgeCache.entry_has_validator_args.e = keep;
     EdgeCache.entry_has_validator(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.entry_has_validator_args.e = dead;
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.entry_has_validator_args.e = dead;
     EdgeCache.entry_has_validator(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 
-    EdgeCacheV.store_sweep_args.s = &g_store;
-    EdgeCacheV.store_sweep_args.now_ms = 20000u;
+    EdgeCache.store_sweep_args.s = &g_store;
+    EdgeCache.store_sweep_args.now_ms = 20000u;
     EdgeCache.store_sweep(edge_cache_work);
-    TEST_ASSERT_EQUAL_UINT32(1u, EdgeCacheV.count);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "/dead";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 0u;
+    TEST_ASSERT_EQUAL_UINT32(1u, EdgeCache.count);
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "/dead";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 0u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NULL(EdgeCacheV.entry);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "/keep";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 0u;
+    TEST_ASSERT_NULL(EdgeCache.entry);
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "/keep";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 0u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NOT_NULL(EdgeCacheV.entry);
-    EdgeCacheV.store_lookup_args.s = &g_store;
-    EdgeCacheV.store_lookup_args.canon = "/fresh";
-    EdgeCacheV.store_lookup_args.vary_key = "";
-    EdgeCacheV.store_lookup_args.now_ms = 0u;
+    TEST_ASSERT_NOT_NULL(EdgeCache.entry);
+    EdgeCache.store_lookup_args.s = &g_store;
+    EdgeCache.store_lookup_args.canon = "/fresh";
+    EdgeCache.store_lookup_args.vary_key = "";
+    EdgeCache.store_lookup_args.now_ms = 0u;
     EdgeCache.store_lookup(edge_cache_work);
-    TEST_ASSERT_NOT_NULL(EdgeCacheV.entry);
+    TEST_ASSERT_NOT_NULL(EdgeCache.entry);
 }
 
 // RFC 9111 sec 3 lists what a cache MUST NOT store without. Two of its bullets are refusals this
@@ -1190,79 +1190,79 @@ void test_sweep_drops_only_unrevalidatable_stale_entries(void)
 void test_rfc9111_storeability(void)
 {
     protocore_cache_control cc;
-    HttpcacheV.control_init_args.cc = &cc;
+    Httpcache.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
-    EdgeCacheV.is_storeable_args.status = 200;
-    EdgeCacheV.is_storeable_args.method = "GET";
-    EdgeCacheV.is_storeable_args.cc = &cc;
-    EdgeCacheV.is_storeable_args.vary_header = NULL;
-    EdgeCacheV.is_storeable_args.body_len = 100;
+    EdgeCache.is_storeable_args.status = 200;
+    EdgeCache.is_storeable_args.method = "GET";
+    EdgeCache.is_storeable_args.cc = &cc;
+    EdgeCache.is_storeable_args.vary_header = NULL;
+    EdgeCache.is_storeable_args.body_len = 100;
     EdgeCache.is_storeable(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.is_storeable_args.status = 200;
-    EdgeCacheV.is_storeable_args.method = "GET";
-    EdgeCacheV.is_storeable_args.cc = NULL;
-    EdgeCacheV.is_storeable_args.vary_header = "Accept-Encoding";
-    EdgeCacheV.is_storeable_args.body_len = 100;
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.is_storeable_args.status = 200;
+    EdgeCache.is_storeable_args.method = "GET";
+    EdgeCache.is_storeable_args.cc = NULL;
+    EdgeCache.is_storeable_args.vary_header = "Accept-Encoding";
+    EdgeCache.is_storeable_args.body_len = 100;
     EdgeCache.is_storeable(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
 
     protocore_cache_control ns;
     parse_cc("no-store", &ns);
-    EdgeCacheV.is_storeable_args.status = 200;
-    EdgeCacheV.is_storeable_args.method = "GET";
-    EdgeCacheV.is_storeable_args.cc = &ns;
-    EdgeCacheV.is_storeable_args.vary_header = NULL;
-    EdgeCacheV.is_storeable_args.body_len = 100;
+    EdgeCache.is_storeable_args.status = 200;
+    EdgeCache.is_storeable_args.method = "GET";
+    EdgeCache.is_storeable_args.cc = &ns;
+    EdgeCache.is_storeable_args.vary_header = NULL;
+    EdgeCache.is_storeable_args.body_len = 100;
     EdgeCache.is_storeable(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 
     protocore_cache_control pv;
     parse_cc("private, max-age=60", &pv);
-    EdgeCacheV.is_storeable_args.status = 200;
-    EdgeCacheV.is_storeable_args.method = "GET";
-    EdgeCacheV.is_storeable_args.cc = &pv;
-    EdgeCacheV.is_storeable_args.vary_header = NULL;
-    EdgeCacheV.is_storeable_args.body_len = 100;
+    EdgeCache.is_storeable_args.status = 200;
+    EdgeCache.is_storeable_args.method = "GET";
+    EdgeCache.is_storeable_args.cc = &pv;
+    EdgeCache.is_storeable_args.vary_header = NULL;
+    EdgeCache.is_storeable_args.body_len = 100;
     EdgeCache.is_storeable(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 
-    EdgeCacheV.is_storeable_args.status = 200;
-    EdgeCacheV.is_storeable_args.method = "GET";
-    EdgeCacheV.is_storeable_args.cc = &cc;
-    EdgeCacheV.is_storeable_args.vary_header = "*";
-    EdgeCacheV.is_storeable_args.body_len = 100;
+    EdgeCache.is_storeable_args.status = 200;
+    EdgeCache.is_storeable_args.method = "GET";
+    EdgeCache.is_storeable_args.cc = &cc;
+    EdgeCache.is_storeable_args.vary_header = "*";
+    EdgeCache.is_storeable_args.body_len = 100;
     EdgeCache.is_storeable(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 
-    EdgeCacheV.is_storeable_args.status = 200;
-    EdgeCacheV.is_storeable_args.method = "POST";
-    EdgeCacheV.is_storeable_args.cc = &cc;
-    EdgeCacheV.is_storeable_args.vary_header = NULL;
-    EdgeCacheV.is_storeable_args.body_len = 100;
+    EdgeCache.is_storeable_args.status = 200;
+    EdgeCache.is_storeable_args.method = "POST";
+    EdgeCache.is_storeable_args.cc = &cc;
+    EdgeCache.is_storeable_args.vary_header = NULL;
+    EdgeCache.is_storeable_args.body_len = 100;
     EdgeCache.is_storeable(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
-    EdgeCacheV.is_storeable_args.status = 404;
-    EdgeCacheV.is_storeable_args.method = "GET";
-    EdgeCacheV.is_storeable_args.cc = &cc;
-    EdgeCacheV.is_storeable_args.vary_header = NULL;
-    EdgeCacheV.is_storeable_args.body_len = 100;
+    TEST_ASSERT_FALSE(EdgeCache.ok);
+    EdgeCache.is_storeable_args.status = 404;
+    EdgeCache.is_storeable_args.method = "GET";
+    EdgeCache.is_storeable_args.cc = &cc;
+    EdgeCache.is_storeable_args.vary_header = NULL;
+    EdgeCache.is_storeable_args.body_len = 100;
     EdgeCache.is_storeable(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
-    EdgeCacheV.is_storeable_args.status = 200;
-    EdgeCacheV.is_storeable_args.method = "GET";
-    EdgeCacheV.is_storeable_args.cc = &cc;
-    EdgeCacheV.is_storeable_args.vary_header = NULL;
-    EdgeCacheV.is_storeable_args.body_len = PROTOCORE_EDGE_BODY_MAX;
+    TEST_ASSERT_FALSE(EdgeCache.ok);
+    EdgeCache.is_storeable_args.status = 200;
+    EdgeCache.is_storeable_args.method = "GET";
+    EdgeCache.is_storeable_args.cc = &cc;
+    EdgeCache.is_storeable_args.vary_header = NULL;
+    EdgeCache.is_storeable_args.body_len = PROTOCORE_EDGE_BODY_MAX;
     EdgeCache.is_storeable(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.is_storeable_args.status = 200;
-    EdgeCacheV.is_storeable_args.method = "GET";
-    EdgeCacheV.is_storeable_args.cc = &cc;
-    EdgeCacheV.is_storeable_args.vary_header = NULL;
-    EdgeCacheV.is_storeable_args.body_len = PROTOCORE_EDGE_BODY_MAX + 1;
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.is_storeable_args.status = 200;
+    EdgeCache.is_storeable_args.method = "GET";
+    EdgeCache.is_storeable_args.cc = &cc;
+    EdgeCache.is_storeable_args.vary_header = NULL;
+    EdgeCache.is_storeable_args.body_len = PROTOCORE_EDGE_BODY_MAX + 1;
     EdgeCache.is_storeable(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 }
 
 // RFC 9111 sec 4.3.1: a validating cache "MUST send the relevant entity tags (using If-Match,
@@ -1276,42 +1276,42 @@ void test_rfc9111_storeability(void)
 // quotes because RFC 9110 sec 8.8.3 makes the DQUOTEs part of the entity-tag.
 void test_rfc9111_conditional_request_carries_the_stored_validators(void)
 {
-    EdgeCacheV.store_init_args.s = &g_store;
+    EdgeCache.store_init_args.s = &g_store;
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *e = store("/x", "");
     char out[256];
 
-    EdgeCacheV.build_conditional_args.e = e;
-    EdgeCacheV.build_conditional_args.out = out;
-    EdgeCacheV.build_conditional_args.cap = sizeof(out);
+    EdgeCache.build_conditional_args.e = e;
+    EdgeCache.build_conditional_args.out = out;
+    EdgeCache.build_conditional_args.cap = sizeof(out);
     EdgeCache.build_conditional(edge_cache_work);
-    TEST_ASSERT_EQUAL_UINT(0u, EdgeCacheV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, EdgeCache.n);
 
     memcpy(e->etag, "\"abc123\"", sizeof("\"abc123\""));
-    EdgeCacheV.build_conditional_args.e = e;
-    EdgeCacheV.build_conditional_args.out = out;
-    EdgeCacheV.build_conditional_args.cap = sizeof(out);
+    EdgeCache.build_conditional_args.e = e;
+    EdgeCache.build_conditional_args.out = out;
+    EdgeCache.build_conditional_args.cap = sizeof(out);
     EdgeCache.build_conditional(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
     TEST_ASSERT_EQUAL_STRING("If-None-Match: \"abc123\"\r\n", out);
 
     memcpy(e->last_modified, "Sun, 06 Nov 1994 08:49:37 GMT", sizeof("Sun, 06 Nov 1994 08:49:37 GMT"));
-    EdgeCacheV.build_conditional_args.e = e;
-    EdgeCacheV.build_conditional_args.out = out;
-    EdgeCacheV.build_conditional_args.cap = sizeof(out);
+    EdgeCache.build_conditional_args.e = e;
+    EdgeCache.build_conditional_args.out = out;
+    EdgeCache.build_conditional_args.cap = sizeof(out);
     EdgeCache.build_conditional(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.n > 0);
+    TEST_ASSERT_TRUE(EdgeCache.n > 0);
     TEST_ASSERT_EQUAL_STRING("If-None-Match: \"abc123\"\r\n"
                              "If-Modified-Since: Sun, 06 Nov 1994 08:49:37 GMT\r\n",
                              out);
 
     // A precondition cut in half asks a different question, so a buffer too small emits nothing.
     char small[16];
-    EdgeCacheV.build_conditional_args.e = e;
-    EdgeCacheV.build_conditional_args.out = small;
-    EdgeCacheV.build_conditional_args.cap = sizeof(small);
+    EdgeCache.build_conditional_args.e = e;
+    EdgeCache.build_conditional_args.out = small;
+    EdgeCache.build_conditional_args.cap = sizeof(small);
     EdgeCache.build_conditional(edge_cache_work);
-    TEST_ASSERT_EQUAL_UINT(0u, EdgeCacheV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, EdgeCache.n);
 }
 
 // RFC 9111 sec 4.3.4: on a 304 "the cache MUST update its header fields with the header fields
@@ -1326,7 +1326,7 @@ void test_rfc9111_conditional_request_carries_the_stored_validators(void)
 // false).
 void test_rfc9111_a_304_freshens_and_keeps_the_stored_content(void)
 {
-    EdgeCacheV.store_init_args.s = &g_store;
+    EdgeCache.store_init_args.s = &g_store;
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *e = store("/x", "");
     memcpy(e->etag, "\"old\"", sizeof("\"old\""));
@@ -1334,31 +1334,31 @@ void test_rfc9111_a_304_freshens_and_keeps_the_stored_content(void)
     e->body[0] = 'a';
     e->lifetime_s = 0;
     e->insert_ms = 0u;
-    EdgeCacheV.entry_fresh_args.e = e;
-    EdgeCacheV.entry_fresh_args.now_ms = 1000u;
+    EdgeCache.entry_fresh_args.e = e;
+    EdgeCache.entry_fresh_args.now_ms = 1000u;
     EdgeCache.entry_fresh(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 
     static const char *const NOT_MODIFIED = "HTTP/1.1 304 Not Modified\r\n"
                                             "Date: Sun, 06 Nov 1994 08:49:37 GMT\r\n"
                                             "Cache-Control: max-age=120\r\n"
                                             "ETag: \"new\"\r\n"
                                             "\r\n";
-    EdgeCacheV.apply_304_args.e = e;
-    EdgeCacheV.apply_304_args.new_hdrs = NOT_MODIFIED;
-    EdgeCacheV.apply_304_args.hdr_len = strlen(NOT_MODIFIED);
-    EdgeCacheV.apply_304_args.response_time_epoch = NOV6_1994;
-    EdgeCacheV.apply_304_args.now_ms = 5000u;
+    EdgeCache.apply_304_args.e = e;
+    EdgeCache.apply_304_args.new_hdrs = NOT_MODIFIED;
+    EdgeCache.apply_304_args.hdr_len = strlen(NOT_MODIFIED);
+    EdgeCache.apply_304_args.response_time_epoch = NOV6_1994;
+    EdgeCache.apply_304_args.now_ms = 5000u;
     EdgeCache.apply_304(edge_cache_work);
 
     TEST_ASSERT_EQUAL_STRING("\"new\"", e->etag);
     TEST_ASSERT_EQUAL_INT32(120, e->lifetime_s);
     TEST_ASSERT_EQUAL_INT64(NOV6_1994, e->date_epoch);
     TEST_ASSERT_EQUAL_INT32(0, e->initial_age);
-    EdgeCacheV.entry_fresh_args.e = e;
-    EdgeCacheV.entry_fresh_args.now_ms = 5000u;
+    EdgeCache.entry_fresh_args.e = e;
+    EdgeCache.entry_fresh_args.now_ms = 5000u;
     EdgeCache.entry_fresh(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
+    TEST_ASSERT_TRUE(EdgeCache.ok);
     TEST_ASSERT_EQUAL_UINT(3u, e->body_len);
     TEST_ASSERT_EQUAL_CHAR('a', (char)e->body[0]);
 
@@ -1367,21 +1367,21 @@ void test_rfc9111_a_304_freshens_and_keeps_the_stored_content(void)
                                     "Cache-Control: max-age=120\r\n"
                                     "Age: 100\r\n"
                                     "\r\n";
-    EdgeCacheV.apply_304_args.e = e;
-    EdgeCacheV.apply_304_args.new_hdrs = AGED;
-    EdgeCacheV.apply_304_args.hdr_len = strlen(AGED);
-    EdgeCacheV.apply_304_args.response_time_epoch = NOV6_1994;
-    EdgeCacheV.apply_304_args.now_ms = 5000u;
+    EdgeCache.apply_304_args.e = e;
+    EdgeCache.apply_304_args.new_hdrs = AGED;
+    EdgeCache.apply_304_args.hdr_len = strlen(AGED);
+    EdgeCache.apply_304_args.response_time_epoch = NOV6_1994;
+    EdgeCache.apply_304_args.now_ms = 5000u;
     EdgeCache.apply_304(edge_cache_work);
     TEST_ASSERT_EQUAL_INT32(100, e->initial_age);
-    EdgeCacheV.entry_fresh_args.e = e;
-    EdgeCacheV.entry_fresh_args.now_ms = 5000u;
+    EdgeCache.entry_fresh_args.e = e;
+    EdgeCache.entry_fresh_args.now_ms = 5000u;
     EdgeCache.entry_fresh(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.entry_fresh_args.e = e;
-    EdgeCacheV.entry_fresh_args.now_ms = 5000u + 20000u;
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.entry_fresh_args.e = e;
+    EdgeCache.entry_fresh_args.now_ms = 5000u + 20000u;
     EdgeCache.entry_fresh(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 }
 
 // RFC 9111 sec 4.2.1 rule 4 leaves the lifetime unset when nothing is explicit, and sec 4.2.2
@@ -1392,34 +1392,34 @@ void test_rfc9111_a_304_freshens_and_keeps_the_stored_content(void)
 // Given a Last-Modified, sec 4.2.2's typical tenth applies instead: 3600 / 10 = 360.
 void test_freshness_falls_back_to_the_default_ttl(void)
 {
-    EdgeCacheV.store_init_args.s = &g_store;
+    EdgeCache.store_init_args.s = &g_store;
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *e = store("/x", "");
     protocore_cache_control cc;
-    HttpcacheV.control_init_args.cc = &cc;
+    Httpcache.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
 
-    EdgeCacheV.entry_set_freshness_args.e = e;
-    EdgeCacheV.entry_set_freshness_args.cc = &cc;
-    EdgeCacheV.entry_set_freshness_args.shared = PROTO_TRUE;
-    EdgeCacheV.entry_set_freshness_args.date_epoch = -1;
-    EdgeCacheV.entry_set_freshness_args.expires_epoch = -1;
-    EdgeCacheV.entry_set_freshness_args.last_modified_epoch = -1;
-    EdgeCacheV.entry_set_freshness_args.age_hdr = 0;
-    EdgeCacheV.entry_set_freshness_args.response_time_epoch = -1;
-    EdgeCacheV.entry_set_freshness_args.now_ms = 0u;
+    EdgeCache.entry_set_freshness_args.e = e;
+    EdgeCache.entry_set_freshness_args.cc = &cc;
+    EdgeCache.entry_set_freshness_args.shared = PROTO_TRUE;
+    EdgeCache.entry_set_freshness_args.date_epoch = -1;
+    EdgeCache.entry_set_freshness_args.expires_epoch = -1;
+    EdgeCache.entry_set_freshness_args.last_modified_epoch = -1;
+    EdgeCache.entry_set_freshness_args.age_hdr = 0;
+    EdgeCache.entry_set_freshness_args.response_time_epoch = -1;
+    EdgeCache.entry_set_freshness_args.now_ms = 0u;
     EdgeCache.entry_set_freshness(edge_cache_work);
     TEST_ASSERT_EQUAL_INT32(PROTOCORE_EDGE_DEFAULT_TTL_S, e->lifetime_s);
 
-    EdgeCacheV.entry_set_freshness_args.e = e;
-    EdgeCacheV.entry_set_freshness_args.cc = &cc;
-    EdgeCacheV.entry_set_freshness_args.shared = PROTO_TRUE;
-    EdgeCacheV.entry_set_freshness_args.date_epoch = NOV6_1994;
-    EdgeCacheV.entry_set_freshness_args.expires_epoch = -1;
-    EdgeCacheV.entry_set_freshness_args.last_modified_epoch = NOV6_1994 - 3600;
-    EdgeCacheV.entry_set_freshness_args.age_hdr = 0;
-    EdgeCacheV.entry_set_freshness_args.response_time_epoch = -1;
-    EdgeCacheV.entry_set_freshness_args.now_ms = 0u;
+    EdgeCache.entry_set_freshness_args.e = e;
+    EdgeCache.entry_set_freshness_args.cc = &cc;
+    EdgeCache.entry_set_freshness_args.shared = PROTO_TRUE;
+    EdgeCache.entry_set_freshness_args.date_epoch = NOV6_1994;
+    EdgeCache.entry_set_freshness_args.expires_epoch = -1;
+    EdgeCache.entry_set_freshness_args.last_modified_epoch = NOV6_1994 - 3600;
+    EdgeCache.entry_set_freshness_args.age_hdr = 0;
+    EdgeCache.entry_set_freshness_args.response_time_epoch = -1;
+    EdgeCache.entry_set_freshness_args.now_ms = 0u;
     EdgeCache.entry_set_freshness(edge_cache_work);
     TEST_ASSERT_EQUAL_INT32(360, e->lifetime_s);
 }
@@ -1435,46 +1435,46 @@ void test_freshness_falls_back_to_the_default_ttl(void)
 // residency and stale at 100 (100 > 100 is false).
 void test_an_expires_in_the_past_stores_as_stale(void)
 {
-    EdgeCacheV.store_init_args.s = &g_store;
+    EdgeCache.store_init_args.s = &g_store;
     EdgeCache.store_init(edge_cache_work);
     EdgeEntry *e = store("/x", "");
     protocore_cache_control cc;
-    HttpcacheV.control_init_args.cc = &cc;
+    Httpcache.control_init_args.cc = &cc;
     Httpcache.control_init(httpcache_work);
 
-    EdgeCacheV.entry_set_freshness_args.e = e;
-    EdgeCacheV.entry_set_freshness_args.cc = &cc;
-    EdgeCacheV.entry_set_freshness_args.shared = PROTO_TRUE;
-    EdgeCacheV.entry_set_freshness_args.date_epoch = NOV6_1994;
-    EdgeCacheV.entry_set_freshness_args.expires_epoch = NOV6_1994 - 100;
-    EdgeCacheV.entry_set_freshness_args.last_modified_epoch = NOV6_1994 - 86400;
-    EdgeCacheV.entry_set_freshness_args.age_hdr = 0;
-    EdgeCacheV.entry_set_freshness_args.response_time_epoch = -1;
-    EdgeCacheV.entry_set_freshness_args.now_ms = 0u;
+    EdgeCache.entry_set_freshness_args.e = e;
+    EdgeCache.entry_set_freshness_args.cc = &cc;
+    EdgeCache.entry_set_freshness_args.shared = PROTO_TRUE;
+    EdgeCache.entry_set_freshness_args.date_epoch = NOV6_1994;
+    EdgeCache.entry_set_freshness_args.expires_epoch = NOV6_1994 - 100;
+    EdgeCache.entry_set_freshness_args.last_modified_epoch = NOV6_1994 - 86400;
+    EdgeCache.entry_set_freshness_args.age_hdr = 0;
+    EdgeCache.entry_set_freshness_args.response_time_epoch = -1;
+    EdgeCache.entry_set_freshness_args.now_ms = 0u;
     EdgeCache.entry_set_freshness(edge_cache_work);
     TEST_ASSERT_EQUAL_INT32(0, e->lifetime_s);
-    EdgeCacheV.entry_fresh_args.e = e;
-    EdgeCacheV.entry_fresh_args.now_ms = 0u;
+    EdgeCache.entry_fresh_args.e = e;
+    EdgeCache.entry_fresh_args.now_ms = 0u;
     EdgeCache.entry_fresh(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 
-    EdgeCacheV.entry_set_freshness_args.e = e;
-    EdgeCacheV.entry_set_freshness_args.cc = &cc;
-    EdgeCacheV.entry_set_freshness_args.shared = PROTO_TRUE;
-    EdgeCacheV.entry_set_freshness_args.date_epoch = NOV6_1994;
-    EdgeCacheV.entry_set_freshness_args.expires_epoch = NOV6_1994 + 100;
-    EdgeCacheV.entry_set_freshness_args.last_modified_epoch = NOV6_1994 - 86400;
-    EdgeCacheV.entry_set_freshness_args.age_hdr = 0;
-    EdgeCacheV.entry_set_freshness_args.response_time_epoch = -1;
-    EdgeCacheV.entry_set_freshness_args.now_ms = 0u;
+    EdgeCache.entry_set_freshness_args.e = e;
+    EdgeCache.entry_set_freshness_args.cc = &cc;
+    EdgeCache.entry_set_freshness_args.shared = PROTO_TRUE;
+    EdgeCache.entry_set_freshness_args.date_epoch = NOV6_1994;
+    EdgeCache.entry_set_freshness_args.expires_epoch = NOV6_1994 + 100;
+    EdgeCache.entry_set_freshness_args.last_modified_epoch = NOV6_1994 - 86400;
+    EdgeCache.entry_set_freshness_args.age_hdr = 0;
+    EdgeCache.entry_set_freshness_args.response_time_epoch = -1;
+    EdgeCache.entry_set_freshness_args.now_ms = 0u;
     EdgeCache.entry_set_freshness(edge_cache_work);
     TEST_ASSERT_EQUAL_INT32(100, e->lifetime_s);
-    EdgeCacheV.entry_fresh_args.e = e;
-    EdgeCacheV.entry_fresh_args.now_ms = 99000u;
+    EdgeCache.entry_fresh_args.e = e;
+    EdgeCache.entry_fresh_args.now_ms = 99000u;
     EdgeCache.entry_fresh(edge_cache_work);
-    TEST_ASSERT_TRUE(EdgeCacheV.ok);
-    EdgeCacheV.entry_fresh_args.e = e;
-    EdgeCacheV.entry_fresh_args.now_ms = 100000u;
+    TEST_ASSERT_TRUE(EdgeCache.ok);
+    EdgeCache.entry_fresh_args.e = e;
+    EdgeCache.entry_fresh_args.now_ms = 100000u;
     EdgeCache.entry_fresh(edge_cache_work);
-    TEST_ASSERT_FALSE(EdgeCacheV.ok);
+    TEST_ASSERT_FALSE(EdgeCache.ok);
 }

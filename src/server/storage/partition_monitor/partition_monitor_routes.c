@@ -31,18 +31,19 @@ void partition_route_handler(uint8_t slot_id, HttpReq *req)
 {
     (void)req;
     protocore_partition_info parts[PROTOCORE_PARTITION_MAX];
-    PartitionMonitorV.collect_args.out = parts;
-    PartitionMonitorV.collect_args.max = PROTOCORE_PARTITION_MAX;
+    PartitionMonitor.collect_args.out = parts;
+    PartitionMonitor.collect_args.max = PROTOCORE_PARTITION_MAX;
     PartitionMonitor.collect(partition_monitor_work);
-    uint8_t n = PartitionMonitorV.u8;
+    uint8_t n = PartitionMonitor.u8;
     char buf[PROTOCORE_PARTITION_JSON_BUF];
-    PartitionMonitorV.json_args.parts = parts;
-    PartitionMonitorV.json_args.count = n;
-    PartitionMonitorV.json_args.out = buf;
-    PartitionMonitorV.json_args.cap = sizeof(buf);
+    PartitionMonitor.json_args.parts = parts;
+    PartitionMonitor.json_args.count = n;
+    PartitionMonitor.json_args.out = buf;
+    PartitionMonitor.json_args.cap = sizeof(buf);
     PartitionMonitor.json(partition_monitor_work);
     // No instance test: a handler only runs because begin() registered its route.
     send_text(slot_id, 200, PROTOCORE_MIME_JSON, buf);
 }
+
 
 #endif // PROTOCORE_ENABLE_PARTITION_MONITOR

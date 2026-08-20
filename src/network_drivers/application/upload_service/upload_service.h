@@ -34,6 +34,7 @@ typedef struct
     const char *path;      ///< the upload URL (e.g. "/upload")
     const char *dest_path; ///< destination file path (e.g. "/uploads/data.bin")
 } UploadServiceBeginArgs;
+
 /**
  * @brief Streaming file upload to an Arduino FS (PROTOCORE_ENABLE_UPLOAD).
  *
@@ -57,33 +58,16 @@ typedef struct
 typedef struct
 {
     UploadServiceBeginArgs begin_args;
+
     proto_bool ok;
     size_t n;
-} UploadServiceVars;
 
-/** @brief The operands and the outcome. */
-extern UploadServiceVars UploadServiceV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const begin)(uint8_t *restrict work);
     void (*const last_size)(uint8_t *restrict work);
 } UploadServiceNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in UploadServiceV or a region of the borrow at a fixed offset.
-void protocore_upload_service_begin(uint8_t *restrict work);
-void protocore_upload_service_last_size(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `UploadService.begin(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const UploadServiceNs UploadService __attribute__((unused)) = {
-    .begin = protocore_upload_service_begin,
-    .last_size = protocore_upload_service_last_size,
-};
+/** @brief The one symbol this module exports. */
+extern UploadServiceNs UploadService;
 
 /**
  * @brief The PROTOCORE_UPLOAD_SERVICE_BORROW bytes this module's state lives in.

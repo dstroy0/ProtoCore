@@ -48,10 +48,13 @@ typedef struct
     uint8_t id;    ///< sequence / message id
     uint8_t flags; ///< application flags
 } protocore_lora_header;
+
 /** @brief Read one SX127x register (@p reg is the bare 7-bit address). */
 typedef uint8_t (*protocore_lora_reg_read_fn)(uint8_t reg, void *ctx);
+
 /** @brief Write one SX127x register (@p reg is the bare 7-bit address). */
 typedef void (*protocore_lora_reg_write_fn)(uint8_t reg, uint8_t val, void *ctx);
+
 /** @brief The register-access bus a driver call uses (your SPI + chip-select behind it). */
 typedef struct
 {
@@ -59,6 +62,7 @@ typedef struct
     protocore_lora_reg_write_fn write;
     void *ctx;
 } protocore_lora_bus;
+
 /** @brief Radio configuration applied by protocore_lora_init(). */
 typedef struct
 {
@@ -69,6 +73,7 @@ typedef struct
     uint8_t sync_word;   ///< 0x12 private / 0x34 LoRaWAN.
     uint8_t tx_power;    ///< PA_BOOST power 2..17 dBm.
 } protocore_lora_config;
+
 /** @brief What frame_parse takes: raw, len, hdr, payload, payload_len. */
 typedef struct
 {
@@ -78,6 +83,7 @@ typedef struct
     const uint8_t **payload;
     uint16_t *payload_len;
 } LoraFrameParseArgs;
+
 /** @brief What frame_build takes: hdr, payload, len, out, cap. */
 typedef struct
 {
@@ -87,12 +93,14 @@ typedef struct
     uint8_t *out;
     uint16_t cap;
 } LoraFrameBuildArgs;
+
 /** @brief What init takes: bus, cfg. */
 typedef struct
 {
     const protocore_lora_bus *bus;
     const protocore_lora_config *cfg;
 } LoraInitArgs;
+
 /** @brief What send takes: bus, frame, len. */
 typedef struct
 {
@@ -100,16 +108,19 @@ typedef struct
     const uint8_t *frame;
     uint8_t len;
 } LoraSendArgs;
+
 /** @brief What tx_done takes: bus. */
 typedef struct
 {
     const protocore_lora_bus *bus;
 } LoraTxDoneArgs;
+
 /** @brief What set_rx takes: bus. */
 typedef struct
 {
     const protocore_lora_bus *bus;
 } LoraSetRxArgs;
+
 /** @brief What recv takes: bus, buf, cap, rssi. */
 typedef struct
 {
@@ -118,6 +129,7 @@ typedef struct
     uint8_t cap;
     int16_t *rssi;
 } LoraRecvArgs;
+
 /**
  * @brief LoRa radio codec + driver (PROTOCORE_ENABLE_LORA) - Semtech SX127x / RFM95-96.
  *
@@ -163,17 +175,11 @@ typedef struct
     LoraTxDoneArgs tx_done_args;
     LoraSetRxArgs set_rx_args;
     LoraRecvArgs recv_args;
+
     proto_bool ok;
     uint16_t value;
     int n;
-} LoraVars;
 
-/** @brief The operands and the outcome. */
-extern LoraVars LoraV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const frame_parse)(uint8_t *restrict work);
     void (*const frame_build)(uint8_t *restrict work);
     void (*const init)(uint8_t *restrict work);
@@ -183,29 +189,8 @@ typedef struct
     void (*const recv)(uint8_t *restrict work);
 } LoraNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in LoraV or a region of the borrow at a fixed offset.
-void protocore_lora_frame_parse(uint8_t *restrict work);
-void protocore_lora_frame_build(uint8_t *restrict work);
-void protocore_lora_init(uint8_t *restrict work);
-void protocore_lora_send(uint8_t *restrict work);
-void protocore_lora_tx_done(uint8_t *restrict work);
-void protocore_lora_set_rx(uint8_t *restrict work);
-void protocore_lora_recv(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Lora.frame_parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const LoraNs Lora __attribute__((unused)) = {
-    .frame_parse = protocore_lora_frame_parse,
-    .frame_build = protocore_lora_frame_build,
-    .init = protocore_lora_init,
-    .send = protocore_lora_send,
-    .tx_done = protocore_lora_tx_done,
-    .set_rx = protocore_lora_set_rx,
-    .recv = protocore_lora_recv,
-};
+/** @brief The one symbol this module exports. */
+extern LoraNs Lora;
 
 PROTOCORE_END_DECLS
 

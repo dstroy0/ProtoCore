@@ -31,9 +31,9 @@ static char g_out[PROTOCORE_HTTP_DATE_MAX];
 
 static const char *fmt(time_t epoch)
 {
-    HttpDateV.args.epoch = epoch;
-    HttpDateV.args.out = g_out;
-    HttpDateV.args.out_cap = (uint32_t)sizeof(g_out);
+    HttpDate.args.epoch = epoch;
+    HttpDate.args.out = g_out;
+    HttpDate.args.out_cap = (uint32_t)sizeof(g_out);
     HttpDate.format(http_date_work);
     return g_out;
 }
@@ -59,11 +59,11 @@ void test_rfc9110_published_example(void)
 void test_form_is_fixed_width(void)
 {
     (void)fmt((time_t)784111777);
-    TEST_ASSERT_EQUAL_UINT(29u, HttpDateV.n);
+    TEST_ASSERT_EQUAL_UINT(29u, HttpDate.n);
     (void)fmt((time_t)1);
-    TEST_ASSERT_EQUAL_UINT(29u, HttpDateV.n);
+    TEST_ASSERT_EQUAL_UINT(29u, HttpDate.n);
     (void)fmt((time_t)2147483647);
-    TEST_ASSERT_EQUAL_UINT(29u, HttpDateV.n);
+    TEST_ASSERT_EQUAL_UINT(29u, HttpDate.n);
 }
 
 // One second past the epoch's own definition: 1970-01-01 00:00:00 UTC was a Thursday.
@@ -109,7 +109,7 @@ void test_leap_day_2000(void)
 void test_epoch_zero_renders_empty(void)
 {
     TEST_ASSERT_EQUAL_STRING("", fmt((time_t)0));
-    TEST_ASSERT_EQUAL_UINT(0u, HttpDateV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDate.n);
 }
 
 // A buffer one octet short of the fixed width truncates to empty, never to a partial date: half an
@@ -117,22 +117,22 @@ void test_epoch_zero_renders_empty(void)
 void test_short_buffer_yields_empty_not_partial(void)
 {
     char small[PROTOCORE_HTTP_DATE_MAX - 1];
-    HttpDateV.args.epoch = (time_t)784111777;
-    HttpDateV.args.out = small;
-    HttpDateV.args.out_cap = (uint32_t)sizeof(small);
+    HttpDate.args.epoch = (time_t)784111777;
+    HttpDate.args.out = small;
+    HttpDate.args.out_cap = (uint32_t)sizeof(small);
     HttpDate.format(http_date_work);
-    TEST_ASSERT_EQUAL_UINT(0u, HttpDateV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDate.n);
     TEST_ASSERT_EQUAL_CHAR('\0', small[0]);
 }
 
 // A null destination is reported, not written through.
 void test_null_destination_is_refused(void)
 {
-    HttpDateV.args.epoch = (time_t)784111777;
-    HttpDateV.args.out = NULL;
-    HttpDateV.args.out_cap = PROTOCORE_HTTP_DATE_MAX;
+    HttpDate.args.epoch = (time_t)784111777;
+    HttpDate.args.out = NULL;
+    HttpDate.args.out_cap = PROTOCORE_HTTP_DATE_MAX;
     HttpDate.format(http_date_work);
-    TEST_ASSERT_EQUAL_UINT(0u, HttpDateV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDate.n);
 }
 
 // A zero capacity is the same refusal, with a non-null buffer.
@@ -140,10 +140,10 @@ void test_zero_capacity_is_refused(void)
 {
     char one[1];
     one[0] = 'x';
-    HttpDateV.args.epoch = (time_t)784111777;
-    HttpDateV.args.out = one;
-    HttpDateV.args.out_cap = 0;
+    HttpDate.args.epoch = (time_t)784111777;
+    HttpDate.args.out = one;
+    HttpDate.args.out_cap = 0;
     HttpDate.format(http_date_work);
-    TEST_ASSERT_EQUAL_UINT(0u, HttpDateV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, HttpDate.n);
     TEST_ASSERT_EQUAL_CHAR('x', one[0]); // untouched, not terminated into
 }

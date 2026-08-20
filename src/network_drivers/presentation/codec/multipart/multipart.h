@@ -54,6 +54,7 @@ typedef struct
     const char *data;     ///< Part body (null-terminated in-place).
     size_t data_len;      ///< Part body length in bytes (not counting the null).
 } MultipartPart;
+
 /**
  * @brief Container for all parsed parts of a multipart body.
  */
@@ -62,19 +63,23 @@ typedef struct
     MultipartPart parts[MAX_MULTIPART_PARTS]; ///< Parsed parts.
     int part_count;                           ///< Number of valid entries in parts[].
 } MultipartBody;
+
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq: the type a parameter points at
+
 /** @brief What parse takes: req, mp. */
 typedef struct
 {
     HttpReq *req;
     MultipartBody *mp;
 } MultipartParseArgs;
+
 /** @brief What get_field takes: mp, field. */
 typedef struct
 {
     const MultipartBody *mp;
     const char *field;
 } MultipartGetFieldArgs;
+
 /**
  * @brief In-place multipart/form-data parser (RFC 7578).
  *
@@ -101,33 +106,16 @@ typedef struct
 {
     MultipartParseArgs parse_args;
     MultipartGetFieldArgs get_field_args;
+
     proto_bool ok;
     const char *text;
-} MultipartVars;
 
-/** @brief The operands and the outcome. */
-extern MultipartVars MultipartV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const parse)(uint8_t *restrict work);
     void (*const get_field)(uint8_t *restrict work);
 } MultipartNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in MultipartV or a region of the borrow at a fixed offset.
-void protocore_multipart_parse(uint8_t *restrict work);
-void protocore_multipart_get_field(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Multipart.parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const MultipartNs Multipart __attribute__((unused)) = {
-    .parse = protocore_multipart_parse,
-    .get_field = protocore_multipart_get_field,
-};
+/** @brief The one symbol this module exports. */
+extern MultipartNs Multipart;
 
 PROTOCORE_END_DECLS
 

@@ -72,6 +72,7 @@ typedef struct
     size_t sig_len;          ///< its length; must equal PROTOCORE_RSA_KEY_BYTES
     protocore_rsa_hash hash; ///< digest algorithm (SHA-256 / SHA-512)
 } RsaVerifyArgs;
+
 /** @brief The key and message a sign covers. */
 typedef struct
 {
@@ -82,6 +83,7 @@ typedef struct
     protocore_rsa_hash hash; ///< digest algorithm (SHA-256 / SHA-512)
     uint8_t *sig;            ///< PROTOCORE_RSA_SIG_BYTES big-endian signature bytes
 } RsaSignArgs;
+
 /**
  * @brief RSASSA-PKCS1-v1.5 over RSA-2048 (RFC 8017 §8.2).
  *
@@ -122,32 +124,15 @@ typedef struct
 {
     RsaVerifyArgs verify_args;
     RsaSignArgs sign_args;
+
     proto_bool ok;
-} RsaVars;
 
-/** @brief The operands and the outcome. */
-extern RsaVars RsaV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const verify)(uint8_t *restrict work);
     void (*const sign)(uint8_t *restrict work);
 } RsaNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in RsaV or a region of the borrow at a fixed offset.
-void protocore_rsa_verify(uint8_t *restrict work);
-void protocore_rsa_sign(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Rsa.verify(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const RsaNs Rsa __attribute__((unused)) = {
-    .verify = protocore_rsa_verify,
-    .sign = protocore_rsa_sign,
-};
+/** @brief The one symbol this module exports. */
+extern RsaNs Rsa;
 
 PROTOCORE_END_DECLS
 

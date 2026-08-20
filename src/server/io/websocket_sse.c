@@ -63,11 +63,11 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
     }
     // RFC 6455 4.2.1: the Sec-WebSocket-Key must base64-decode to exactly 16 bytes.
     uint8_t raw[24];
-    Base64V.decode_args.src = client_key;
-    Base64V.decode_args.dst = raw;
-    Base64V.decode_args.dst_cap = sizeof(raw);
+    Base64.decode_args.src = client_key;
+    Base64.decode_args.dst = raw;
+    Base64.decode_args.dst_cap = sizeof(raw);
     Base64.decode(base64_work);
-    if (Base64V.n != 16)
+    if (Base64.n != 16)
     {
         out[0] = '\0';
         return PROTO_FALSE;
@@ -86,14 +86,14 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
         out[0] = '\0';
         return PROTO_FALSE;
     }
-    Sha1V.hash_args.data = (const uint8_t *)concat;
-    Sha1V.hash_args.len = key_len + magic_len;
-    Sha1V.hash_args.out = digest;
+    Sha1.hash_args.data = (const uint8_t *)concat;
+    Sha1.hash_args.len = key_len + magic_len;
+    Sha1.hash_args.out = digest;
     Sha1.hash(w.buf);
     protocore_secure_release(mark);
-    Base64V.encode_args.src = digest;
-    Base64V.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
-    Base64V.encode_args.dst = out;
+    Base64.encode_args.src = digest;
+    Base64.encode_args.src_len = PROTOCORE_SHA1_DIGEST_LEN;
+    Base64.encode_args.dst = out;
     Base64.encode(base64_work);
     return PROTO_TRUE;
 }
@@ -107,12 +107,12 @@ static proto_bool ws_accept_key(const char *client_key, char *out)
  */
 void ws_send_version_required(uint8_t slot_id)
 {
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPoolV.ok)
+    if (!ConnPool.ok)
     {
-        HttpParserV.reset_args.req = &http_pool[slot_id];
-        HttpParserV.reset(protocore_http_parser_span());
+        HttpParser.reset_args.req = &http_pool[slot_id];
+        HttpParser.reset(protocore_http_parser_span());
         return;
     }
 
@@ -121,15 +121,15 @@ void ws_send_version_required(uint8_t slot_id)
                                "Content-Length: 0\r\n"
                                "Connection: close\r\n\r\n";
 
-    ConnPoolV.slot = slot_id;
-    ConnPoolV.io.data = resp;
-    ConnPoolV.io.len = (proto_u16)(sizeof(resp) - 1);
-    ConnPoolV.send(protocore_conn_pool_span());
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = resp;
+    ConnPool.io.len = (proto_u16)(sizeof(resp) - 1);
+    ConnPool.send(protocore_conn_pool_span());
     ConnPool.flush(protocore_conn_pool_span());
     ConnPool.begin_close(protocore_conn_pool_span()); // dwell in CONN_CLOSING until the response drains
 
-    HttpParserV.reset_args.req = &http_pool[slot_id];
-    HttpParserV.reset(protocore_http_parser_span());
+    HttpParser.reset_args.req = &http_pool[slot_id];
+    HttpParser.reset(protocore_http_parser_span());
 }
 
 /**
@@ -140,10 +140,10 @@ void ws_send_version_required(uint8_t slot_id)
  */
 proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Sec-WebSocket-Key";
-    HttpParserV.get_header(protocore_http_parser_span());
-    const char *client_key = HttpParserV.text;
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Sec-WebSocket-Key";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *client_key = HttpParser.text;
     if (!client_key)
     {
         return PROTO_FALSE;
@@ -155,9 +155,9 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
         return PROTO_FALSE;
     }
 
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPoolV.ok)
+    if (!ConnPool.ok)
     {
         return PROTO_FALSE;
     }
@@ -168,10 +168,10 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
     // Negotiate permessage-deflate (RFC 7692) if the client offered it. We force
     // no_context_takeover in both directions so each message decompresses
     // independently (the INFLATE window is the message buffer, not a kept window).
-    HttpParserV.get_header_args.req = req;
-    HttpParserV.get_header_args.key = "Sec-WebSocket-Extensions";
-    HttpParserV.get_header(protocore_http_parser_span());
-    const char *ws_ext = HttpParserV.text;
+    HttpParser.get_header_args.req = req;
+    HttpParser.get_header_args.key = "Sec-WebSocket-Extensions";
+    HttpParser.get_header(protocore_http_parser_span());
+    const char *ws_ext = HttpParser.text;
     proto_bool pmd =
         ws_ext && str.has(ws_ext, MAX_VAL_LEN, "permessage-deflate", sizeof("permessage-deflate"), PROTO_FALSE);
     protocore_sb sb_hdr = {hdr, sizeof(hdr), 0, PROTO_TRUE};
@@ -193,29 +193,29 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
     hlen = (int)Sb.finish(&sb_hdr2);
 #endif
 
-    ConnPoolV.slot = slot_id;
-    ConnPoolV.io.data = hdr;
-    ConnPoolV.io.len = (proto_u16)hlen;
-    ConnPoolV.send(protocore_conn_pool_span());
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = hdr;
+    ConnPool.io.len = (proto_u16)hlen;
+    ConnPool.send(protocore_conn_pool_span());
+    ConnPool.slot = slot_id;
     ConnPool.flush(protocore_conn_pool_span());
 
     // Reset HTTP parser but keep the TCP slot -- WS owns it now
-    HttpParserV.reset_args.req = &http_pool[slot_id];
-    HttpParserV.reset(protocore_http_parser_span());
+    HttpParser.reset_args.req = &http_pool[slot_id];
+    HttpParser.reset(protocore_http_parser_span());
 
     // The channel is the session layer's: it takes the number, binds it to this slot and runs the
     // route's connect. This layer sent the handshake bytes.
-    WsV.slot = slot_id;
-    WsV.id = route_id;
+    Ws.slot = slot_id;
+    Ws.id = route_id;
 #if PROTOCORE_ENABLE_WS_DEFLATE
-    WsV.pmd = pmd;
+    Ws.pmd = pmd;
 #endif
     SessionWs.open(NULL);
-    if (!SessionWsV.ok)
+    if (!SessionWs.ok)
     {
         // No channel available -- abort the connection (transport owns the teardown)
-        ConnPoolV.slot = slot_id;
+        ConnPool.slot = slot_id;
         ConnPool.abort_slot(protocore_conn_pool_span());
         return PROTO_FALSE;
     }
@@ -234,9 +234,9 @@ proto_bool ws_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
  */
 proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route_id)
 {
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (!ConnPoolV.ok)
+    if (!ConnPool.ok)
     {
         return PROTO_FALSE;
     }
@@ -246,11 +246,11 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route
                                   "Cache-Control: no-cache\r\n"
                                   "Connection: keep-alive\r\n\r\n";
 
-    ConnPoolV.slot = slot_id;
-    ConnPoolV.io.data = SSE_HDR;
-    ConnPoolV.io.len = (proto_u16)(sizeof(SSE_HDR) - 1);
-    ConnPoolV.send(protocore_conn_pool_span());
-    ConnPoolV.slot = slot_id;
+    ConnPool.slot = slot_id;
+    ConnPool.io.data = SSE_HDR;
+    ConnPool.io.len = (proto_u16)(sizeof(SSE_HDR) - 1);
+    ConnPool.send(protocore_conn_pool_span());
+    ConnPool.slot = slot_id;
     ConnPool.flush(protocore_conn_pool_span());
 
     // Copy the path BEFORE resetting the parser: http_reset() zeroes the whole
@@ -258,18 +258,18 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route
     // path is what protocore_sse_broadcast() matches against.
     char path[MAX_PATH_LEN];
     str.copy(path, req->path, sizeof(path));
-    HttpParserV.reset_args.req = &http_pool[slot_id];
-    HttpParserV.reset(protocore_http_parser_span());
+    HttpParser.reset_args.req = &http_pool[slot_id];
+    HttpParser.reset(protocore_http_parser_span());
 
     // The stream is the session layer's: it takes the number, binds it to this connection and runs
     // the route's connect. This layer sent the handshake bytes.
-    SseV.slot = slot_id;
-    SseV.route.path = path;
-    SseV.id = route_id;
+    Sse.slot = slot_id;
+    Sse.route.path = path;
+    Sse.id = route_id;
     SessionSse.open(NULL);
-    if (!SessionSseV.ok)
+    if (!SessionSse.ok)
     {
-        ConnPoolV.slot = slot_id;
+        ConnPool.slot = slot_id;
         ConnPool.abort_slot(protocore_conn_pool_span()); // transport owns detach + reset + RST
         return PROTO_FALSE;
     }
@@ -295,20 +295,20 @@ void ws_send_text(uint8_t ws_id, const char *text)
         return;
     }
     uint16_t len = (uint16_t)str.len(text, 0xFFFF);
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_TEXT;
-    WsV.frame.payload = (const uint8_t *)text;
-    WsV.frame.len = len;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_TEXT;
+    Ws.frame.payload = (const uint8_t *)text;
+    Ws.frame.len = len;
     Ws.send_frame(protocore_ws_span());
-    if (WsV.ok)
+    if (Ws.ok)
     {
         // has itself checked protocore_conn_active(), and nothing between the two can tear the slot down
         // on a single-threaded run. It is a re-check for the marshalled send path.
-        ConnPoolV.slot = ws->slot_id;
+        ConnPool.slot = ws->slot_id;
         ConnPool.active(protocore_conn_pool_span());
-        if (ConnPoolV.ok)
+        if (ConnPool.ok)
         {
-            ConnPoolV.slot = ws->slot_id;
+            ConnPool.slot = ws->slot_id;
             ConnPool.flush(protocore_conn_pool_span());
         }
     }
@@ -325,19 +325,19 @@ void ws_send_binary(uint8_t ws_id, const uint8_t *data, uint16_t len)
     {
         return;
     }
-    WsV.conn = ws;
-    WsV.frame.opcode = WS_OP_BINARY;
-    WsV.frame.payload = data;
-    WsV.frame.len = len;
+    Ws.conn = ws;
+    Ws.frame.opcode = WS_OP_BINARY;
+    Ws.frame.payload = data;
+    Ws.frame.len = len;
     Ws.send_frame(protocore_ws_span());
-    if (WsV.ok)
+    if (Ws.ok)
     {
         // connection, so the false half of this re-check is unreachable from a host test.
-        ConnPoolV.slot = ws->slot_id;
+        ConnPool.slot = ws->slot_id;
         ConnPool.active(protocore_conn_pool_span());
-        if (ConnPoolV.ok)
+        if (ConnPool.ok)
         {
-            ConnPoolV.slot = ws->slot_id;
+            ConnPool.slot = ws->slot_id;
             ConnPool.flush(protocore_conn_pool_span());
         }
     }
@@ -350,14 +350,14 @@ void ws_disconnect(uint8_t ws_id)
         return;
     }
     WsConn *ws = &ws_pool[ws_id];
-    WsV.conn = ws;
-    WsV.frame.code = WS_CLOSE_NORMAL;
+    Ws.conn = ws;
+    Ws.frame.code = WS_CLOSE_NORMAL;
     Ws.close(protocore_ws_span());
-    ConnPoolV.slot = ws->slot_id;
+    ConnPool.slot = ws->slot_id;
     ConnPool.active(protocore_conn_pool_span());
-    if (ConnPoolV.ok)
+    if (ConnPool.ok)
     {
-        ConnPoolV.slot = ws->slot_id;
+        ConnPool.slot = ws->slot_id;
         ConnPool.flush(protocore_conn_pool_span());
     }
     // handle() detects WS_CLOSED next tick and fires ws_close callback
@@ -376,19 +376,19 @@ void protocore_sse_send(uint8_t protocore_sse_id, const char *data, const char *
         return;
     }
     SseConn *sse = &protocore_sse_pool[protocore_sse_id];
-    SseV.stream = sse;
-    SseV.event_args.data = data;
-    SseV.event_args.event = event;
-    SseV.event_args.event_id = id;
+    Sse.stream = sse;
+    Sse.event_args.data = data;
+    Sse.event_args.event = event;
+    Sse.event_args.event_id = id;
     Sse.write(protocore_sse_span());
-    if (SseV.ok)
+    if (Sse.ok)
     {
         // has itself checked protocore_conn_active(), so the slot is still live here.
-        ConnPoolV.slot = sse->slot_id;
+        ConnPool.slot = sse->slot_id;
         ConnPool.active(protocore_conn_pool_span());
-        if (ConnPoolV.ok)
+        if (ConnPool.ok)
         {
-            ConnPoolV.slot = sse->slot_id;
+            ConnPool.slot = sse->slot_id;
             ConnPool.flush(protocore_conn_pool_span());
         }
     }
@@ -407,19 +407,19 @@ void protocore_sse_broadcast(const char *path, const char *data, const char *eve
             continue;
         }
         SseConn *sse = &protocore_sse_pool[i];
-        SseV.stream = sse;
-        SseV.event_args.data = data;
-        SseV.event_args.event = event;
-        SseV.event_args.event_id = id;
+        Sse.stream = sse;
+        Sse.event_args.data = data;
+        Sse.event_args.event = event;
+        Sse.event_args.event_id = id;
         Sse.write(protocore_sse_span());
-        if (SseV.ok)
+        if (Sse.ok)
         {
             // connection, so the false half of this re-check is unreachable from a host test.
-            ConnPoolV.slot = sse->slot_id;
+            ConnPool.slot = sse->slot_id;
             ConnPool.active(protocore_conn_pool_span());
-            if (ConnPoolV.ok)
+            if (ConnPool.ok)
             {
-                ConnPoolV.slot = sse->slot_id;
+                ConnPool.slot = sse->slot_id;
                 ConnPool.flush(protocore_conn_pool_span());
             }
         }

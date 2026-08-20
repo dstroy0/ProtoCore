@@ -52,23 +52,23 @@ static const uint8_t MITSUBISHI_RES[] = {
 void test_mitsubishi_batch_read_example(void)
 {
     uint8_t buf[64];
-    MelsecV.build_read_args.buf = buf;
-    MelsecV.build_read_args.cap = sizeof(buf);
-    MelsecV.build_read_args.device_code = MELSEC_DEV_M;
-    MelsecV.build_read_args.head_device = 100;
-    MelsecV.build_read_args.points = 2;
-    MelsecV.build_read_args.monitoring_timer = 0x0010;
+    Melsec.build_read_args.buf = buf;
+    Melsec.build_read_args.cap = sizeof(buf);
+    Melsec.build_read_args.device_code = MELSEC_DEV_M;
+    Melsec.build_read_args.head_device = 100;
+    Melsec.build_read_args.points = 2;
+    Melsec.build_read_args.monitoring_timer = 0x0010;
     Melsec.build_read(melsec_work);
-    size_t n = MelsecV.n;
+    size_t n = Melsec.n;
     TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(MITSUBISHI_REQ, buf, MELSEC_3E_READ_REQ_LEN);
 
     MelsecResponse r;
-    MelsecV.parse_response_args.buf = MITSUBISHI_RES;
-    MelsecV.parse_response_args.len = sizeof(MITSUBISHI_RES);
-    MelsecV.parse_response_args.out = &r;
+    Melsec.parse_response_args.buf = MITSUBISHI_RES;
+    Melsec.parse_response_args.len = sizeof(MITSUBISHI_RES);
+    Melsec.parse_response_args.out = &r;
     Melsec.parse_response(melsec_work);
-    TEST_ASSERT_TRUE(MelsecV.ok);
+    TEST_ASSERT_TRUE(Melsec.ok);
     TEST_ASSERT_EQUAL_HEX16(MELSEC_ENDCODE_OK, r.end_code);
     TEST_ASSERT_EQUAL_UINT(4u, r.data_len);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(MITSUBISHI_RES + MELSEC_3E_RES_DATA_OFFSET, r.data, 4);
@@ -81,38 +81,38 @@ void test_mitsubishi_batch_read_example(void)
 void test_head_device_and_device_code_layout(void)
 {
     uint8_t buf[64];
-    MelsecV.build_read_args.buf = buf;
-    MelsecV.build_read_args.cap = sizeof(buf);
-    MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_read_args.head_device = 350;
-    MelsecV.build_read_args.points = 2;
-    MelsecV.build_read_args.monitoring_timer = 0;
+    Melsec.build_read_args.buf = buf;
+    Melsec.build_read_args.cap = sizeof(buf);
+    Melsec.build_read_args.device_code = MELSEC_DEV_D;
+    Melsec.build_read_args.head_device = 350;
+    Melsec.build_read_args.points = 2;
+    Melsec.build_read_args.monitoring_timer = 0;
     Melsec.build_read(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, Melsec.n);
     static const uint8_t TAIL[6] = {0x5E, 0x01, 0x00, 0xA8, 0x02, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(TAIL, buf + 15, 6);
 
     // the head device number field is 24 bits wide, so its top octet carries bits 16..23
-    MelsecV.build_read_args.buf = buf;
-    MelsecV.build_read_args.cap = sizeof(buf);
-    MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_read_args.head_device = 0xFFFFFFu;
-    MelsecV.build_read_args.points = 1;
-    MelsecV.build_read_args.monitoring_timer = 0;
+    Melsec.build_read_args.buf = buf;
+    Melsec.build_read_args.cap = sizeof(buf);
+    Melsec.build_read_args.device_code = MELSEC_DEV_D;
+    Melsec.build_read_args.head_device = 0xFFFFFFu;
+    Melsec.build_read_args.points = 1;
+    Melsec.build_read_args.monitoring_timer = 0;
     Melsec.build_read(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, Melsec.n);
     TEST_ASSERT_EQUAL_HEX8(0xFF, buf[15]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, buf[16]);
     TEST_ASSERT_EQUAL_HEX8(0xFF, buf[17]);
     // anything above 24 bits belongs to no field and is dropped
-    MelsecV.build_read_args.buf = buf;
-    MelsecV.build_read_args.cap = sizeof(buf);
-    MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_read_args.head_device = 0x01000064u;
-    MelsecV.build_read_args.points = 1;
-    MelsecV.build_read_args.monitoring_timer = 0;
+    Melsec.build_read_args.buf = buf;
+    Melsec.build_read_args.cap = sizeof(buf);
+    Melsec.build_read_args.device_code = MELSEC_DEV_D;
+    Melsec.build_read_args.head_device = 0x01000064u;
+    Melsec.build_read_args.points = 1;
+    Melsec.build_read_args.monitoring_timer = 0;
     Melsec.build_read(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, Melsec.n);
     TEST_ASSERT_EQUAL_HEX8(0x64, buf[15]);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[16]);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[17]);
@@ -137,14 +137,14 @@ void test_device_code_list(void)
     for (size_t i = 0; i < 4; i++)
     {
         static const uint8_t CODES[4] = {MELSEC_DEV_D, MELSEC_DEV_M, MELSEC_DEV_X, MELSEC_DEV_CN};
-        MelsecV.build_read_args.buf = buf;
-        MelsecV.build_read_args.cap = sizeof(buf);
-        MelsecV.build_read_args.device_code = CODES[i];
-        MelsecV.build_read_args.head_device = 0;
-        MelsecV.build_read_args.points = 1;
-        MelsecV.build_read_args.monitoring_timer = 0;
+        Melsec.build_read_args.buf = buf;
+        Melsec.build_read_args.cap = sizeof(buf);
+        Melsec.build_read_args.device_code = CODES[i];
+        Melsec.build_read_args.head_device = 0;
+        Melsec.build_read_args.points = 1;
+        Melsec.build_read_args.monitoring_timer = 0;
         Melsec.build_read(melsec_work);
-        TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, MelsecV.n);
+        TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, Melsec.n);
         TEST_ASSERT_EQUAL_HEX8(CODES[i], buf[18]);
     }
 }
@@ -156,14 +156,14 @@ void test_device_code_list(void)
 void test_request_data_length_counts_from_the_monitoring_timer(void)
 {
     uint8_t buf[64];
-    MelsecV.build_read_args.buf = buf;
-    MelsecV.build_read_args.cap = sizeof(buf);
-    MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_read_args.head_device = 0;
-    MelsecV.build_read_args.points = 1;
-    MelsecV.build_read_args.monitoring_timer = 0;
+    Melsec.build_read_args.buf = buf;
+    Melsec.build_read_args.cap = sizeof(buf);
+    Melsec.build_read_args.device_code = MELSEC_DEV_D;
+    Melsec.build_read_args.head_device = 0;
+    Melsec.build_read_args.points = 1;
+    Melsec.build_read_args.monitoring_timer = 0;
     Melsec.build_read(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, Melsec.n);
     uint16_t declared = (uint16_t)(buf[7] | (buf[8] << 8));
     TEST_ASSERT_EQUAL_UINT16(MELSEC_3E_READ_REQ_DATA_LEN, declared);
     TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, 9u + declared);
@@ -175,16 +175,16 @@ void test_batch_write_command_and_length(void)
 {
     static const uint8_t DATA[4] = {0x34, 0x12, 0x02, 0x00};
     uint8_t buf[64];
-    MelsecV.build_write_args.buf = buf;
-    MelsecV.build_write_args.cap = sizeof(buf);
-    MelsecV.build_write_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_write_args.head_device = 100;
-    MelsecV.build_write_args.points = 2;
-    MelsecV.build_write_args.monitoring_timer = 0x0010;
-    MelsecV.build_write_args.data = DATA;
-    MelsecV.build_write_args.data_len = sizeof(DATA);
+    Melsec.build_write_args.buf = buf;
+    Melsec.build_write_args.cap = sizeof(buf);
+    Melsec.build_write_args.device_code = MELSEC_DEV_D;
+    Melsec.build_write_args.head_device = 100;
+    Melsec.build_write_args.points = 2;
+    Melsec.build_write_args.monitoring_timer = 0x0010;
+    Melsec.build_write_args.data = DATA;
+    Melsec.build_write_args.data_len = sizeof(DATA);
     Melsec.build_write(melsec_work);
-    size_t n = MelsecV.n;
+    size_t n = Melsec.n;
     TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN + sizeof(DATA), n);
 
     TEST_ASSERT_EQUAL_UINT16(MELSEC_3E_READ_REQ_DATA_LEN + sizeof(DATA), (uint16_t)(buf[7] | (buf[8] << 8)));
@@ -196,14 +196,14 @@ void test_batch_write_command_and_length(void)
 
     // the routing prefix and device tail are the same fields the read writes
     uint8_t rd[64];
-    MelsecV.build_read_args.buf = rd;
-    MelsecV.build_read_args.cap = sizeof(rd);
-    MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_read_args.head_device = 100;
-    MelsecV.build_read_args.points = 2;
-    MelsecV.build_read_args.monitoring_timer = 0x0010;
+    Melsec.build_read_args.buf = rd;
+    Melsec.build_read_args.cap = sizeof(rd);
+    Melsec.build_read_args.device_code = MELSEC_DEV_D;
+    Melsec.build_read_args.head_device = 100;
+    Melsec.build_read_args.points = 2;
+    Melsec.build_read_args.monitoring_timer = 0x0010;
     Melsec.build_read(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, Melsec.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(rd, buf, 7);           // subheader + access route
     TEST_ASSERT_EQUAL_HEX8_ARRAY(rd + 15, buf + 15, 6); // head device + code + points
 }
@@ -213,16 +213,16 @@ void test_batch_write_command_and_length(void)
 void test_write_with_no_data(void)
 {
     uint8_t buf[64];
-    MelsecV.build_write_args.buf = buf;
-    MelsecV.build_write_args.cap = sizeof(buf);
-    MelsecV.build_write_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_write_args.head_device = 0;
-    MelsecV.build_write_args.points = 0;
-    MelsecV.build_write_args.monitoring_timer = 0;
-    MelsecV.build_write_args.data = NULL;
-    MelsecV.build_write_args.data_len = 0;
+    Melsec.build_write_args.buf = buf;
+    Melsec.build_write_args.cap = sizeof(buf);
+    Melsec.build_write_args.device_code = MELSEC_DEV_D;
+    Melsec.build_write_args.head_device = 0;
+    Melsec.build_write_args.points = 0;
+    Melsec.build_write_args.monitoring_timer = 0;
+    Melsec.build_write_args.data = NULL;
+    Melsec.build_write_args.data_len = 0;
     Melsec.build_write(melsec_work);
-    size_t n = MelsecV.n;
+    size_t n = Melsec.n;
     TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, n);
     TEST_ASSERT_EQUAL_UINT16(MELSEC_3E_READ_REQ_DATA_LEN, (uint16_t)(buf[7] | (buf[8] << 8)));
 }
@@ -232,25 +232,25 @@ void test_write_with_no_data(void)
 void test_monitoring_timer_is_little_endian(void)
 {
     uint8_t buf[64];
-    MelsecV.build_read_args.buf = buf;
-    MelsecV.build_read_args.cap = sizeof(buf);
-    MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_read_args.head_device = 0;
-    MelsecV.build_read_args.points = 1;
-    MelsecV.build_read_args.monitoring_timer = 0x1234;
+    Melsec.build_read_args.buf = buf;
+    Melsec.build_read_args.cap = sizeof(buf);
+    Melsec.build_read_args.device_code = MELSEC_DEV_D;
+    Melsec.build_read_args.head_device = 0;
+    Melsec.build_read_args.points = 1;
+    Melsec.build_read_args.monitoring_timer = 0x1234;
     Melsec.build_read(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, Melsec.n);
     TEST_ASSERT_EQUAL_HEX8(0x34, buf[9]);
     TEST_ASSERT_EQUAL_HEX8(0x12, buf[10]);
 
-    MelsecV.build_read_args.buf = buf;
-    MelsecV.build_read_args.cap = sizeof(buf);
-    MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_read_args.head_device = 0;
-    MelsecV.build_read_args.points = 1;
-    MelsecV.build_read_args.monitoring_timer = 0;
+    Melsec.build_read_args.buf = buf;
+    Melsec.build_read_args.cap = sizeof(buf);
+    Melsec.build_read_args.device_code = MELSEC_DEV_D;
+    Melsec.build_read_args.head_device = 0;
+    Melsec.build_read_args.points = 1;
+    Melsec.build_read_args.monitoring_timer = 0;
     Melsec.build_read(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(MELSEC_3E_READ_REQ_LEN, Melsec.n);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[9]);
     TEST_ASSERT_EQUAL_HEX8(0x00, buf[10]);
 }
@@ -263,19 +263,19 @@ void test_response_subheader_is_checked(void)
 
     memcpy(bad, MITSUBISHI_RES, sizeof(bad));
     bad[0] = 0x50; // the request subheader, echoed back by mistake
-    MelsecV.parse_response_args.buf = bad;
-    MelsecV.parse_response_args.len = sizeof(bad);
-    MelsecV.parse_response_args.out = &r;
+    Melsec.parse_response_args.buf = bad;
+    Melsec.parse_response_args.len = sizeof(bad);
+    Melsec.parse_response_args.out = &r;
     Melsec.parse_response(melsec_work);
-    TEST_ASSERT_FALSE(MelsecV.ok);
+    TEST_ASSERT_FALSE(Melsec.ok);
 
     memcpy(bad, MITSUBISHI_RES, sizeof(bad));
     bad[1] = 0x01;
-    MelsecV.parse_response_args.buf = bad;
-    MelsecV.parse_response_args.len = sizeof(bad);
-    MelsecV.parse_response_args.out = &r;
+    Melsec.parse_response_args.buf = bad;
+    Melsec.parse_response_args.len = sizeof(bad);
+    Melsec.parse_response_args.out = &r;
     Melsec.parse_response(melsec_work);
-    TEST_ASSERT_FALSE(MelsecV.ok);
+    TEST_ASSERT_FALSE(Melsec.ok);
 }
 
 // SH(NA)-080008 chapter 5.3: at abnormal completion the end code carries the access target's error
@@ -287,11 +287,11 @@ void test_error_end_code_response(void)
         0x51, 0xC0,                                           // end code C051h
     };
     MelsecResponse r;
-    MelsecV.parse_response_args.buf = ERR;
-    MelsecV.parse_response_args.len = sizeof(ERR);
-    MelsecV.parse_response_args.out = &r;
+    Melsec.parse_response_args.buf = ERR;
+    Melsec.parse_response_args.len = sizeof(ERR);
+    Melsec.parse_response_args.out = &r;
     Melsec.parse_response(melsec_work);
-    TEST_ASSERT_TRUE(MelsecV.ok);
+    TEST_ASSERT_TRUE(Melsec.ok);
     TEST_ASSERT_EQUAL_HEX16(0xC051, r.end_code);
     TEST_ASSERT_EQUAL_UINT(0u, r.data_len);
 }
@@ -306,28 +306,28 @@ void test_response_length_field_is_validated(void)
     memcpy(bad, MITSUBISHI_RES, sizeof(bad));
     bad[MELSEC_3E_RES_LEN_OFFSET] = 0x01; // shorter than the end code itself
     bad[MELSEC_3E_RES_LEN_OFFSET + 1] = 0x00;
-    MelsecV.parse_response_args.buf = bad;
-    MelsecV.parse_response_args.len = sizeof(bad);
-    MelsecV.parse_response_args.out = &r;
+    Melsec.parse_response_args.buf = bad;
+    Melsec.parse_response_args.len = sizeof(bad);
+    Melsec.parse_response_args.out = &r;
     Melsec.parse_response(melsec_work);
-    TEST_ASSERT_FALSE(MelsecV.ok);
+    TEST_ASSERT_FALSE(Melsec.ok);
 
     memcpy(bad, MITSUBISHI_RES, sizeof(bad));
     bad[MELSEC_3E_RES_LEN_OFFSET] = 0x40; // claims 64 octets the frame does not hold
-    MelsecV.parse_response_args.buf = bad;
-    MelsecV.parse_response_args.len = sizeof(bad);
-    MelsecV.parse_response_args.out = &r;
+    Melsec.parse_response_args.buf = bad;
+    Melsec.parse_response_args.len = sizeof(bad);
+    Melsec.parse_response_args.out = &r;
     Melsec.parse_response(melsec_work);
-    TEST_ASSERT_FALSE(MelsecV.ok);
+    TEST_ASSERT_FALSE(Melsec.ok);
 
     // a frame shorter than subheader..end code cannot be parsed at all
     for (size_t n = 0; n < MELSEC_3E_RES_MIN_LEN; n++)
     {
-        MelsecV.parse_response_args.buf = MITSUBISHI_RES;
-        MelsecV.parse_response_args.len = n;
-        MelsecV.parse_response_args.out = &r;
+        Melsec.parse_response_args.buf = MITSUBISHI_RES;
+        Melsec.parse_response_args.len = n;
+        Melsec.parse_response_args.out = &r;
         Melsec.parse_response(melsec_work);
-        TEST_ASSERT_FALSE(MelsecV.ok);
+        TEST_ASSERT_FALSE(Melsec.ok);
     }
 }
 
@@ -340,65 +340,65 @@ void test_builders_refuse_bad_arguments(void)
 
     for (size_t cap = 0; cap < MELSEC_3E_READ_REQ_LEN; cap++)
     {
-        MelsecV.build_read_args.buf = buf;
-        MelsecV.build_read_args.cap = cap;
-        MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-        MelsecV.build_read_args.head_device = 0;
-        MelsecV.build_read_args.points = 1;
-        MelsecV.build_read_args.monitoring_timer = 0;
+        Melsec.build_read_args.buf = buf;
+        Melsec.build_read_args.cap = cap;
+        Melsec.build_read_args.device_code = MELSEC_DEV_D;
+        Melsec.build_read_args.head_device = 0;
+        Melsec.build_read_args.points = 1;
+        Melsec.build_read_args.monitoring_timer = 0;
         Melsec.build_read(melsec_work);
-        TEST_ASSERT_EQUAL_UINT(0u, MelsecV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, Melsec.n);
     }
-    MelsecV.build_read_args.buf = NULL;
-    MelsecV.build_read_args.cap = sizeof(buf);
-    MelsecV.build_read_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_read_args.head_device = 0;
-    MelsecV.build_read_args.points = 1;
-    MelsecV.build_read_args.monitoring_timer = 0;
+    Melsec.build_read_args.buf = NULL;
+    Melsec.build_read_args.cap = sizeof(buf);
+    Melsec.build_read_args.device_code = MELSEC_DEV_D;
+    Melsec.build_read_args.head_device = 0;
+    Melsec.build_read_args.points = 1;
+    Melsec.build_read_args.monitoring_timer = 0;
     Melsec.build_read(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(0u, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Melsec.n);
 
-    MelsecV.build_write_args.buf = buf;
-    MelsecV.build_write_args.cap = MELSEC_3E_READ_REQ_LEN + 3;
-    MelsecV.build_write_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_write_args.head_device = 0;
-    MelsecV.build_write_args.points = 2;
-    MelsecV.build_write_args.monitoring_timer = 0;
-    MelsecV.build_write_args.data = DATA;
-    MelsecV.build_write_args.data_len = sizeof(DATA);
+    Melsec.build_write_args.buf = buf;
+    Melsec.build_write_args.cap = MELSEC_3E_READ_REQ_LEN + 3;
+    Melsec.build_write_args.device_code = MELSEC_DEV_D;
+    Melsec.build_write_args.head_device = 0;
+    Melsec.build_write_args.points = 2;
+    Melsec.build_write_args.monitoring_timer = 0;
+    Melsec.build_write_args.data = DATA;
+    Melsec.build_write_args.data_len = sizeof(DATA);
     Melsec.build_write(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(0u, MelsecV.n);
-    MelsecV.build_write_args.buf = buf;
-    MelsecV.build_write_args.cap = sizeof(buf);
-    MelsecV.build_write_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_write_args.head_device = 0;
-    MelsecV.build_write_args.points = 2;
-    MelsecV.build_write_args.monitoring_timer = 0;
-    MelsecV.build_write_args.data = NULL;
-    MelsecV.build_write_args.data_len = 4;
+    TEST_ASSERT_EQUAL_UINT(0u, Melsec.n);
+    Melsec.build_write_args.buf = buf;
+    Melsec.build_write_args.cap = sizeof(buf);
+    Melsec.build_write_args.device_code = MELSEC_DEV_D;
+    Melsec.build_write_args.head_device = 0;
+    Melsec.build_write_args.points = 2;
+    Melsec.build_write_args.monitoring_timer = 0;
+    Melsec.build_write_args.data = NULL;
+    Melsec.build_write_args.data_len = 4;
     Melsec.build_write(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(0u, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Melsec.n);
     // the request-length field is 16 bits, so the write data cannot exceed 0xFFFF minus the fixed 12
-    MelsecV.build_write_args.buf = buf;
-    MelsecV.build_write_args.cap = sizeof(buf);
-    MelsecV.build_write_args.device_code = MELSEC_DEV_D;
-    MelsecV.build_write_args.head_device = 0;
-    MelsecV.build_write_args.points = 2;
-    MelsecV.build_write_args.monitoring_timer = 0;
-    MelsecV.build_write_args.data = DATA;
-    MelsecV.build_write_args.data_len = (size_t)0xFFFFu - MELSEC_3E_READ_REQ_DATA_LEN + 1u;
+    Melsec.build_write_args.buf = buf;
+    Melsec.build_write_args.cap = sizeof(buf);
+    Melsec.build_write_args.device_code = MELSEC_DEV_D;
+    Melsec.build_write_args.head_device = 0;
+    Melsec.build_write_args.points = 2;
+    Melsec.build_write_args.monitoring_timer = 0;
+    Melsec.build_write_args.data = DATA;
+    Melsec.build_write_args.data_len = (size_t)0xFFFFu - MELSEC_3E_READ_REQ_DATA_LEN + 1u;
     Melsec.build_write(melsec_work);
-    TEST_ASSERT_EQUAL_UINT(0u, MelsecV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Melsec.n);
 
     MelsecResponse r;
-    MelsecV.parse_response_args.buf = NULL;
-    MelsecV.parse_response_args.len = sizeof(MITSUBISHI_RES);
-    MelsecV.parse_response_args.out = &r;
+    Melsec.parse_response_args.buf = NULL;
+    Melsec.parse_response_args.len = sizeof(MITSUBISHI_RES);
+    Melsec.parse_response_args.out = &r;
     Melsec.parse_response(melsec_work);
-    TEST_ASSERT_FALSE(MelsecV.ok);
-    MelsecV.parse_response_args.buf = MITSUBISHI_RES;
-    MelsecV.parse_response_args.len = sizeof(MITSUBISHI_RES);
-    MelsecV.parse_response_args.out = NULL;
+    TEST_ASSERT_FALSE(Melsec.ok);
+    Melsec.parse_response_args.buf = MITSUBISHI_RES;
+    Melsec.parse_response_args.len = sizeof(MITSUBISHI_RES);
+    Melsec.parse_response_args.out = NULL;
     Melsec.parse_response(melsec_work);
-    TEST_ASSERT_FALSE(MelsecV.ok);
+    TEST_ASSERT_FALSE(Melsec.ok);
 }

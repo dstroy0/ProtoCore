@@ -74,17 +74,20 @@ typedef struct
     uint8_t port_id;             ///< the port the frame arrived on
     protocore_gateway_kind kind; ///< protocore_gateway_kind of that port
 } protocore_gateway_msg;
+
 /**
  * @brief Northbound publish: emit @p msg to MQTT / HTTP / WebSocket / UDP.
  * @return true if the northbound stack accepted it; false drops (counted).
  */
 typedef proto_bool (*protocore_gateway_uplink_fn)(const protocore_gateway_msg *msg, void *ctx);
+
 /**
  * @brief Southbound transmit (downlink): send @p payload to @p dst_addr on @p port_id.
  * @return true if the radio accepted the frame; false drops (counted).
  */
 typedef proto_bool (*protocore_gateway_tx_fn)(uint8_t port_id, uint16_t dst_addr, const uint8_t *payload, uint16_t len,
                                               void *ctx);
+
 /** @brief Southbound port (radio / bus) configuration passed to protocore_gateway_add_port(). */
 typedef struct
 {
@@ -94,6 +97,7 @@ typedef struct
     void *ctx;                   ///< opaque, forwarded to @ref tx.
     uint16_t rate_cap;           ///< max uplink frames/second from this port (0 = unlimited).
 } protocore_gateway_port_config;
+
 /** @brief Gateway counters (monotonic since the last protocore_gateway_reset()). */
 typedef struct
 {
@@ -104,22 +108,26 @@ typedef struct
     uint32_t down_sent;    ///< downlinks the port transmit accepted
     uint32_t down_dropped; ///< downlinks dropped (bad port / no tx / refused)
 } protocore_gateway_stats;
+
 /** @brief What add_port takes: cfg. */
 typedef struct
 {
     const protocore_gateway_port_config *cfg;
 } GatewayAddPortArgs;
+
 /** @brief What set_uplink_cb takes: fn, ctx. */
 typedef struct
 {
     protocore_gateway_uplink_fn fn;
     void *ctx;
 } GatewaySetUplinkCbArgs;
+
 /** @brief What set_topic_prefix takes: prefix. */
 typedef struct
 {
     const char *prefix;
 } GatewaySetTopicPrefixArgs;
+
 /** @brief What uplink takes: port_id, src_addr, payload, len, rssi. */
 typedef struct
 {
@@ -129,6 +137,7 @@ typedef struct
     uint16_t len;
     int16_t rssi;
 } GatewayUplinkArgs;
+
 /** @brief What downlink takes: port_id, dst_addr, payload, len. */
 typedef struct
 {
@@ -137,6 +146,7 @@ typedef struct
     const uint8_t *payload;
     uint16_t len;
 } GatewayDownlinkArgs;
+
 /** @brief What topic takes: msg, buf, buflen. */
 typedef struct
 {
@@ -144,11 +154,13 @@ typedef struct
     char *buf;
     uint16_t buflen;
 } GatewayTopicArgs;
+
 /** @brief What get_stats takes: out. */
 typedef struct
 {
     protocore_gateway_stats *out;
 } GatewayGetStatsArgs;
+
 /**
  * @brief Radio / wireless gateway bridge (PROTOCORE_ENABLE_GATEWAY) - the v5 southbound-to- northbound bridge. The ...
  *
@@ -188,16 +200,10 @@ typedef struct
     GatewayDownlinkArgs downlink_args;
     GatewayTopicArgs topic_args;
     GatewayGetStatsArgs get_stats_args;
+
     proto_bool ok;
     uint16_t n;
-} GatewayVars;
 
-/** @brief The operands and the outcome. */
-extern GatewayVars GatewayV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const reset)(uint8_t *restrict work);
     void (*const add_port)(uint8_t *restrict work);
     void (*const set_uplink_cb)(uint8_t *restrict work);
@@ -208,31 +214,8 @@ typedef struct
     void (*const get_stats)(uint8_t *restrict work);
 } GatewayNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in GatewayV or a region of the borrow at a fixed offset.
-void protocore_gateway_reset(uint8_t *restrict work);
-void protocore_gateway_add_port(uint8_t *restrict work);
-void protocore_gateway_set_uplink_cb(uint8_t *restrict work);
-void protocore_gateway_set_topic_prefix(uint8_t *restrict work);
-void protocore_gateway_uplink(uint8_t *restrict work);
-void protocore_gateway_downlink(uint8_t *restrict work);
-void protocore_gateway_topic(uint8_t *restrict work);
-void protocore_gateway_get_stats(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Gateway.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const GatewayNs Gateway __attribute__((unused)) = {
-    .reset = protocore_gateway_reset,
-    .add_port = protocore_gateway_add_port,
-    .set_uplink_cb = protocore_gateway_set_uplink_cb,
-    .set_topic_prefix = protocore_gateway_set_topic_prefix,
-    .uplink = protocore_gateway_uplink,
-    .downlink = protocore_gateway_downlink,
-    .topic = protocore_gateway_topic,
-    .get_stats = protocore_gateway_get_stats,
-};
+/** @brief The one symbol this module exports. */
+extern GatewayNs Gateway;
 
 /**
  * @brief The PROTOCORE_GATEWAY_BORROW bytes this module's state lives in.

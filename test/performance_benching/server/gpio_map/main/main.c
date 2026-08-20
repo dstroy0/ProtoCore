@@ -27,41 +27,41 @@ static uint8_t gpio_map_work[16]; // the borrow an entry takes; GpioMap never re
 /** @brief The short name for direction @p dir. */
 static const char *gpio_dir_name(protocore_gpio_dir dir)
 {
-    GpioMapV.args.dir = dir;
+    GpioMap.args.dir = dir;
     GpioMap.dir_name(gpio_map_work);
-    return GpioMapV.text;
+    return GpioMap.text;
 }
 
 /** @brief Serialize the @p count pins at @p pins into @p out; the characters written. */
 static int32_t gpio_json(const protocore_gpio_pin *pins, uint8_t count, char *out, uint32_t cap)
 {
-    GpioMapV.args.pins = pins;
-    GpioMapV.args.count = count;
-    GpioMapV.out_args.out = out;
-    GpioMapV.out_args.cap = cap;
+    GpioMap.args.pins = pins;
+    GpioMap.args.count = count;
+    GpioMap.out_args.out = out;
+    GpioMap.out_args.cap = cap;
     GpioMap.json(gpio_map_work);
-    return GpioMapV.n;
+    return GpioMap.n;
 }
 
 /** @brief Parse `pin=<n>&level=<0|1>` out of @p body into @p pin and @p level. */
 static proto_bool gpio_parse_set(const char *body, size_t len, uint8_t *pin, uint8_t *level)
 {
-    GpioMapV.parse_args.body = body;
-    GpioMapV.parse_args.len = len;
-    GpioMapV.parse_args.pin_out = pin;
-    GpioMapV.parse_args.level_out = level;
+    GpioMap.parse_args.body = body;
+    GpioMap.parse_args.len = len;
+    GpioMap.parse_args.pin_out = pin;
+    GpioMap.parse_args.level_out = level;
     GpioMap.parse_set(gpio_map_work);
-    return GpioMapV.ok;
+    return GpioMap.ok;
 }
 
 /** @brief Whether @p pin is mapped as an output in the @p count pins at @p pins. */
 static proto_bool gpio_is_output(const protocore_gpio_pin *pins, uint8_t count, uint8_t pin)
 {
-    GpioMapV.args.pins = pins;
-    GpioMapV.args.count = count;
-    GpioMapV.args.pin = pin;
+    GpioMap.args.pins = pins;
+    GpioMap.args.count = count;
+    GpioMap.args.pin = pin;
     GpioMap.is_output(gpio_map_work);
-    return GpioMapV.ok;
+    return GpioMap.ok;
 }
 
 void dbench_run(void)

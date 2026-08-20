@@ -19,11 +19,11 @@ static uint8_t crc_work[16]; // the borrow an entry takes; Crc never reads it
 uint16_t protocore_c37118_crc(const uint8_t *data, size_t len)
 {
     // IEEE C37.118 uses CRC-CCITT (poly 0x1021, init 0xFFFF, unreflected), cataloged as CRC-16/IBM-3740.
-    CrcV.args.params = &PROTOCORE_CRC16_IBM_3740;
-    CrcV.args.data = data;
-    CrcV.args.len = len;
+    Crc.args.params = &PROTOCORE_CRC16_IBM_3740;
+    Crc.args.data = data;
+    Crc.args.len = len;
     Crc.compute(crc_work);
-    return (uint16_t)CrcV.value;
+    return (uint16_t)Crc.value;
 }
 
 size_t protocore_c37118_build_frame(uint8_t *buf, size_t cap, uint8_t type, uint8_t version, uint16_t idcode,

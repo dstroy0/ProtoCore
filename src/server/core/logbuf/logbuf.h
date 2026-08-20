@@ -41,6 +41,7 @@ typedef struct
     uint8_t level;   ///< severity; the line is stored as `<L> msg`
     const char *msg; ///< the message; NULL renders empty
 } LogLineArgs;
+
 /** @brief Where a dump writes, and the line a lookup names. */
 typedef struct
 {
@@ -48,12 +49,14 @@ typedef struct
     size_t cap; ///< how much room it has
     uint16_t i; ///< the line a lookup names (0 = oldest .. count-1 = newest)
 } LogReadArgs;
+
 /** @brief What a trap fires on. */
 typedef struct
 {
     uint8_t threshold;        ///< fire for a line logged at this level or above; 0xFF disables
     protocore_log_trap_fn cb; ///< what fires; NULL leaves the trap off
 } LogTrapArgs;
+
 /**
  * @brief The in-memory log ring.
  *
@@ -80,17 +83,11 @@ typedef struct
     LogLineArgs line;
     LogReadArgs read;
     LogTrapArgs trap;
+
     uint16_t count;
     const char *text;
     int n;
-} LogbufVars;
 
-/** @brief The operands and the outcome. */
-extern LogbufVars LogbufV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const reset)(uint8_t *restrict work);
     void (*const put)(uint8_t *restrict work);
     void (*const held)(uint8_t *restrict work);
@@ -99,27 +96,8 @@ typedef struct
     void (*const set_trap)(uint8_t *restrict work);
 } LogbufNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in LogbufV or a region of the borrow at a fixed offset.
-void protocore_logbuf_reset(uint8_t *restrict work);
-void protocore_logbuf_put(uint8_t *restrict work);
-void protocore_logbuf_held(uint8_t *restrict work);
-void protocore_logbuf_at(uint8_t *restrict work);
-void protocore_logbuf_dump(uint8_t *restrict work);
-void protocore_logbuf_set_trap(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Logbuf.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const LogbufNs Logbuf __attribute__((unused)) = {
-    .reset = protocore_logbuf_reset,
-    .put = protocore_logbuf_put,
-    .held = protocore_logbuf_held,
-    .at = protocore_logbuf_at,
-    .dump = protocore_logbuf_dump,
-    .set_trap = protocore_logbuf_set_trap,
-};
+/** @brief The one symbol this module exports. */
+extern LogbufNs Logbuf;
 
 /**
  * @brief The PROTOCORE_LOGBUF_BORROW bytes this module's state lives in.

@@ -48,12 +48,14 @@ typedef struct
 {
     uint8_t *qc; ///< the QUIC connection's context span (::QuicConnNs::bind, member ctx)
 } H3ConnBind;
+
 /** @brief What the application is told about, and the opaque it is told with. */
 typedef struct
 {
     H3RequestFn on_request; ///< invoked for each completed request
     void *app;              ///< opaque, passed back to the callback
 } H3ConnAppArgs;
+
 /** @brief One response, serialized onto a request stream. */
 typedef struct
 {
@@ -63,6 +65,7 @@ typedef struct
     const uint8_t *body;      ///< the body (may be empty)
     size_t body_len;          ///< its length
 } H3ConnRespondArgs;
+
 /**
  * @brief HTTP/3 server connection (RFC 9114).
  *
@@ -101,32 +104,16 @@ typedef struct
     H3ConnBind bind;
     H3ConnAppArgs app_args;
     H3ConnRespondArgs respond_args;
+
     proto_bool ok;
-} H3ConnVars;
 
-/** @brief The operands and the outcome. */
-extern H3ConnVars H3ConnV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const init)(uint8_t *restrict work);
     void (*const respond)(uint8_t *restrict work);
+
 } H3ConnNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in H3ConnV or a region of the borrow at a fixed offset.
-void protocore_h3_conn_init(uint8_t *restrict work);
-void protocore_h3_conn_respond(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `H3Conn.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const H3ConnNs H3Conn __attribute__((unused)) = {
-    .init = protocore_h3_conn_init,
-    .respond = protocore_h3_conn_respond,
-};
+/** @brief The one symbol this module exports. */
+extern H3ConnNs H3Conn;
 
 PROTOCORE_END_DECLS
 

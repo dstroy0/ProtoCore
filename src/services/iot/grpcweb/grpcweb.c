@@ -94,64 +94,64 @@ static proto_bool find_key(const uint8_t *body, size_t len, const char *key, siz
 }
 
 // Build one Length-Prefixed-Message from ns->msg into ns->out, under the frame byte in msg.flags.
-void protocore_grpcweb_frame(uint8_t *restrict work)
+static void grpcweb_frame(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = GrpcWebV.out.buf;
-    const size_t body_len = GrpcWebV.msg.body_len;
-    GrpcWebV.ok = PROTO_FALSE;
-    GrpcWebV.n = 0;
+    uint8_t *buf = GrpcWeb.out.buf;
+    const size_t body_len = GrpcWeb.msg.body_len;
+    GrpcWeb.ok = PROTO_FALSE;
+    GrpcWeb.n = 0;
     // Message-Length is a 4 byte field, so a longer body has no frame that can carry it.
-    if (!buf || (body_len && !GrpcWebV.msg.body) || body_len > 0xFFFFFFFFu)
+    if (!buf || (body_len && !GrpcWeb.msg.body) || body_len > 0xFFFFFFFFu)
     {
         return;
     }
     const size_t total = (size_t)PROTOCORE_GRPCWEB_PREFIX_LEN + body_len;
-    if (total > GrpcWebV.out.cap)
+    if (total > GrpcWeb.out.cap)
     {
         return;
     }
-    buf[0] = GrpcWebV.msg.flags;
+    buf[0] = GrpcWeb.msg.flags;
     put_be32(buf + 1, (uint32_t)body_len);
     if (body_len)
     {
-        mem.cpy(buf + PROTOCORE_GRPCWEB_PREFIX_LEN, GrpcWebV.msg.body, body_len);
+        mem.cpy(buf + PROTOCORE_GRPCWEB_PREFIX_LEN, GrpcWeb.msg.body, body_len);
     }
-    GrpcWebV.n = total;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWeb.n = total;
+    GrpcWeb.ok = PROTO_TRUE;
 }
 
 // Frame a Message, taking its Compressed-Flag from msg.compressed and leaving the MSB clear.
-void protocore_grpcweb_frame_message(uint8_t *restrict work)
+static void grpcweb_frame_message(uint8_t *restrict work)
 {
-    GrpcWebV.msg.flags = 0;
-    if (GrpcWebV.msg.compressed)
+    GrpcWeb.msg.flags = 0;
+    if (GrpcWeb.msg.compressed)
     {
-        GrpcWebV.msg.flags = PROTOCORE_GRPCWEB_COMPRESSED;
+        GrpcWeb.msg.flags = PROTOCORE_GRPCWEB_COMPRESSED;
     }
-    protocore_grpcweb_frame(work);
+    grpcweb_frame(work);
 }
 
 // Build a trailers frame: the prefix, then `grpc-status:<Status>\r\n` and, when a Status-Message is
 // given, `grpc-message:<text>\r\n`. The prefix is reserved first and patched once the section ends.
-void protocore_grpcweb_frame_trailers(uint8_t *restrict work)
+static void grpcweb_frame_trailers(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *buf = GrpcWebV.out.buf;
-    const size_t cap = GrpcWebV.out.cap;
-    GrpcWebV.ok = PROTO_FALSE;
-    GrpcWebV.n = 0;
+    uint8_t *buf = GrpcWeb.out.buf;
+    const size_t cap = GrpcWeb.out.cap;
+    GrpcWeb.ok = PROTO_FALSE;
+    GrpcWeb.n = 0;
     if (!buf || cap < PROTOCORE_GRPCWEB_PREFIX_LEN)
     {
         return;
     }
     size_t pos = PROTOCORE_GRPCWEB_PREFIX_LEN;
-    if (!put_str(buf, cap, &pos, "grpc-status:") || !put_int(buf, cap, &pos, GrpcWebV.trailers.status) ||
+    if (!put_str(buf, cap, &pos, "grpc-status:") || !put_int(buf, cap, &pos, GrpcWeb.trailers.status) ||
         !put_str(buf, cap, &pos, "\r\n"))
     {
         return;
     }
-    const char *message = GrpcWebV.trailers.message;
+    const char *message = GrpcWeb.trailers.message;
     if (message && message[0])
     {
         if (!put_str(buf, cap, &pos, "grpc-message:") || !put_str(buf, cap, &pos, message) ||
@@ -162,19 +162,19 @@ void protocore_grpcweb_frame_trailers(uint8_t *restrict work)
     }
     buf[0] = PROTOCORE_GRPCWEB_TRAILERS;
     put_be32(buf + 1, (uint32_t)(pos - PROTOCORE_GRPCWEB_PREFIX_LEN));
-    GrpcWebV.n = pos;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWeb.n = pos;
+    GrpcWeb.ok = PROTO_TRUE;
 }
 
 // Decode the Length-Prefixed-Message at the head of ns->in into ns->parsed, and report the octets
 // it spans in ns->n. False while fewer than the prefix plus Message-Length octets are buffered.
-void protocore_grpcweb_parse(uint8_t *restrict work)
+static void grpcweb_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = GrpcWebV.in.data;
-    const size_t len = GrpcWebV.in.len;
-    GrpcWebV.ok = PROTO_FALSE;
-    GrpcWebV.n = 0;
+    const uint8_t *buf = GrpcWeb.in.data;
+    const size_t len = GrpcWeb.in.len;
+    GrpcWeb.ok = PROTO_FALSE;
+    GrpcWeb.n = 0;
     if (!buf || len < PROTOCORE_GRPCWEB_PREFIX_LEN)
     {
         return;
@@ -184,25 +184,25 @@ void protocore_grpcweb_parse(uint8_t *restrict work)
     {
         return;
     }
-    GrpcWebV.parsed.flags = buf[0];
-    GrpcWebV.parsed.compressed = (buf[0] & PROTOCORE_GRPCWEB_COMPRESSED) != 0;
-    GrpcWebV.parsed.trailers = (buf[0] & PROTOCORE_GRPCWEB_TRAILERS) != 0;
-    GrpcWebV.parsed.body = buf + PROTOCORE_GRPCWEB_PREFIX_LEN;
-    GrpcWebV.parsed.body_len = body_len;
-    GrpcWebV.n = (size_t)PROTOCORE_GRPCWEB_PREFIX_LEN + body_len;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWeb.parsed.flags = buf[0];
+    GrpcWeb.parsed.compressed = (buf[0] & PROTOCORE_GRPCWEB_COMPRESSED) != 0;
+    GrpcWeb.parsed.trailers = (buf[0] & PROTOCORE_GRPCWEB_TRAILERS) != 0;
+    GrpcWeb.parsed.body = buf + PROTOCORE_GRPCWEB_PREFIX_LEN;
+    GrpcWeb.parsed.body_len = body_len;
+    GrpcWeb.n = (size_t)PROTOCORE_GRPCWEB_PREFIX_LEN + body_len;
+    GrpcWeb.ok = PROTO_TRUE;
 }
 
 // Read Status, the "grpc-status" 1*DIGIT field-value, out of the trailer-section in ns->in.
-void protocore_grpcweb_trailers_status(uint8_t *restrict work)
+static void grpcweb_trailers_status(uint8_t *restrict work)
 {
     (void)work;
     static const char key[] = "grpc-status:";
-    const uint8_t *body = GrpcWebV.in.data;
-    const size_t len = GrpcWebV.in.len;
+    const uint8_t *body = GrpcWeb.in.data;
+    const size_t len = GrpcWeb.in.len;
     size_t j = 0;
-    GrpcWebV.ok = PROTO_FALSE;
-    GrpcWebV.i32 = 0;
+    GrpcWeb.ok = PROTO_FALSE;
+    GrpcWeb.i32 = 0;
     if (!body || !find_key(body, len, key, sizeof(key) - 1, &j))
     {
         return;
@@ -222,22 +222,22 @@ void protocore_grpcweb_trailers_status(uint8_t *restrict work)
             v = INT32_MAX;
         }
     }
-    GrpcWebV.i32 = (int32_t)v;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWeb.i32 = (int32_t)v;
+    GrpcWeb.ok = PROTO_TRUE;
 }
 
 // Read Status-Message, the "grpc-message" field-value, out of the trailer-section in ns->in. The
 // slice runs to the end of its field-line and stays Percent-Encoded, so decoding is the caller's.
-void protocore_grpcweb_trailers_message(uint8_t *restrict work)
+static void grpcweb_trailers_message(uint8_t *restrict work)
 {
     (void)work;
     static const char key[] = "grpc-message:";
-    const uint8_t *body = GrpcWebV.in.data;
-    const size_t len = GrpcWebV.in.len;
+    const uint8_t *body = GrpcWeb.in.data;
+    const size_t len = GrpcWeb.in.len;
     size_t start = 0;
-    GrpcWebV.ok = PROTO_FALSE;
-    GrpcWebV.text = NULL;
-    GrpcWebV.text_len = 0;
+    GrpcWeb.ok = PROTO_FALSE;
+    GrpcWeb.text = NULL;
+    GrpcWeb.text_len = 0;
     if (!body || !find_key(body, len, key, sizeof(key) - 1, &start))
     {
         return;
@@ -247,13 +247,17 @@ void protocore_grpcweb_trailers_message(uint8_t *restrict work)
     {
         j++;
     }
-    GrpcWebV.text = (const char *)(body + start);
-    GrpcWebV.text_len = j - start;
-    GrpcWebV.ok = PROTO_TRUE;
+    GrpcWeb.text = (const char *)(body + start);
+    GrpcWeb.text_len = j - start;
+    GrpcWeb.ok = PROTO_TRUE;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-GrpcWebVars GrpcWebV;
+GrpcWebNs GrpcWeb = {.frame = grpcweb_frame,
+                     .frame_message = grpcweb_frame_message,
+                     .frame_trailers = grpcweb_frame_trailers,
+                     .parse = grpcweb_parse,
+                     .trailers_status = grpcweb_trailers_status,
+                     .trailers_message = grpcweb_trailers_message};
 
 #endif // PROTOCORE_ENABLE_GRPC_WEB

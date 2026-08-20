@@ -188,16 +188,16 @@ static proto_bool ehlo_has_keyword(const char *buf, size_t len, const char *keyw
 // Publish one session's outcome on the handle.
 static void finish(uint8_t *restrict work, SmtpResult r)
 {
-    SmtpV.result = r;
-    SmtpV.ok = (r == SMTP_OK);
-    SmtpV.code = (int16_t)SMTP_CTX(work)->code;
+    Smtp.result = r;
+    Smtp.ok = (r == SMTP_OK);
+    Smtp.code = (int16_t)SMTP_CTX(work)->code;
 }
 
 // Write a whole command line; true only when every octet went out.
 static proto_bool send_line(uint8_t *restrict work, const char *line)
 {
     size_t n = str.len(line, PROTOCORE_SMTP_LINE_MAX + 1);
-    return n == 0 || SmtpV.transport.send(SmtpV.transport.ctx, (const uint8_t *)line, n) == (int)n;
+    return n == 0 || Smtp.transport.send(Smtp.transport.ctx, (const uint8_t *)line, n) == (int)n;
 }
 
 // Read one reply, continuation lines included, into store->reply and record its code. With
@@ -219,8 +219,8 @@ static SmtpResult read_reply(uint8_t *restrict work, const char *keyword)
         {
             return SMTP_ERR_OVERFLOW;
         }
-        int n = SmtpV.transport.recv(SmtpV.transport.ctx, (uint8_t *)SMTP_CTX(work)->reply + len,
-                                     sizeof(SMTP_CTX(work)->reply) - len);
+        int n = Smtp.transport.recv(Smtp.transport.ctx, (uint8_t *)SMTP_CTX(work)->reply + len,
+                                    sizeof(SMTP_CTX(work)->reply) - len);
         if (n <= 0)
         {
             return SMTP_ERR_IO;
@@ -266,7 +266,7 @@ static SmtpResult initiate_session(uint8_t *restrict work)
         return SMTP_ERR_PROTOCOL;
     }
 
-    const char *client_name = SmtpV.session.client_name;
+    const char *client_name = Smtp.session.client_name;
     protocore_sb sb = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
     Sb.put(&sb, "EHLO ");
     Sb.put(&sb, (client_name && client_name[0]) ? client_name : SMTP_DEFAULT_CLIENT_NAME);
@@ -296,7 +296,7 @@ static SmtpResult upgrade_starttls(uint8_t *restrict work)
     {
         return SMTP_ERR_NO_STARTTLS;
     }
-    if (!SmtpV.transport.starttls)
+    if (!Smtp.transport.starttls)
     {
         return SMTP_ERR_ARG; // asked to upgrade with no way to do it
     }
@@ -305,7 +305,7 @@ static SmtpResult upgrade_starttls(uint8_t *restrict work)
     {
         return r;
     }
-    if (!SmtpV.transport.starttls(SmtpV.transport.ctx))
+    if (!Smtp.transport.starttls(Smtp.transport.ctx))
     {
         return SMTP_ERR_TLS;
     }
@@ -325,9 +325,9 @@ static SmtpResult auth_response(uint8_t *restrict work, const char *secret)
     {
         return SMTP_ERR_OVERFLOW; // the encoding plus CRLF plus NUL must fit
     }
-    Base64V.encode_args.src = (const uint8_t *)secret;
-    Base64V.encode_args.src_len = slen;
-    Base64V.encode_args.dst = SMTP_CTX(work)->b64;
+    Base64.encode_args.src = (const uint8_t *)secret;
+    Base64.encode_args.src_len = slen;
+    Base64.encode_args.dst = SMTP_CTX(work)->b64;
     Base64.encode(base64_work);
     SMTP_CTX(work)->b64[elen] = '\r';
     SMTP_CTX(work)->b64[elen + 1] = '\n';
@@ -344,7 +344,7 @@ static SmtpResult authenticate(uint8_t *restrict work)
     {
         return r;
     }
-    r = auth_response(work, SmtpV.auth.user);
+    r = auth_response(work, Smtp.auth.user);
     if (r != SMTP_OK)
     {
         return r;
@@ -353,7 +353,7 @@ static SmtpResult authenticate(uint8_t *restrict work)
     {
         return SMTP_ERR_AUTH;
     }
-    r = auth_response(work, SmtpV.auth.pass ? SmtpV.auth.pass : "");
+    r = auth_response(work, Smtp.auth.pass ? Smtp.auth.pass : "");
     if (r != SMTP_OK)
     {
         return r;
@@ -373,11 +373,11 @@ static int build_content(uint8_t *restrict work)
 
     protocore_sb sb = {out, cap, 0, PROTO_TRUE};
     Sb.put(&sb, "From: <");
-    Sb.put(&sb, SmtpV.envelope.reverse_path);
+    Sb.put(&sb, Smtp.envelope.reverse_path);
     Sb.put(&sb, ">\r\nTo: <");
-    Sb.put(&sb, SmtpV.envelope.forward_path);
+    Sb.put(&sb, Smtp.envelope.forward_path);
     Sb.put(&sb, ">\r\nSubject: ");
-    Sb.put(&sb, SmtpV.content.subject ? SmtpV.content.subject : "");
+    Sb.put(&sb, Smtp.content.subject ? Smtp.content.subject : "");
     Sb.put(&sb, "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n");
     size_t n = Sb.finish(&sb);
     if (!sb.ok)
@@ -385,7 +385,7 @@ static int build_content(uint8_t *restrict work)
         return (int)SMTP_ERR_OVERFLOW;
     }
 
-    const char *b = SmtpV.content.body ? SmtpV.content.body : "";
+    const char *b = Smtp.content.body ? Smtp.content.body : "";
     proto_bool at_line_start = PROTO_TRUE;
     for (size_t i = 0; b[i]; i++)
     {
@@ -450,7 +450,7 @@ static SmtpResult mail_transaction(uint8_t *restrict work)
 {
     protocore_sb sb_mail = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
     Sb.put(&sb_mail, "MAIL FROM:<");
-    Sb.put(&sb_mail, SmtpV.envelope.reverse_path);
+    Sb.put(&sb_mail, Smtp.envelope.reverse_path);
     Sb.put(&sb_mail, ">\r\n");
     (void)Sb.finish(&sb_mail);
     if (!sb_mail.ok)
@@ -465,7 +465,7 @@ static SmtpResult mail_transaction(uint8_t *restrict work)
 
     protocore_sb sb_rcpt = {SMTP_CTX(work)->line, sizeof(SMTP_CTX(work)->line), 0, PROTO_TRUE};
     Sb.put(&sb_rcpt, "RCPT TO:<");
-    Sb.put(&sb_rcpt, SmtpV.envelope.forward_path);
+    Sb.put(&sb_rcpt, Smtp.envelope.forward_path);
     Sb.put(&sb_rcpt, ">\r\n");
     (void)Sb.finish(&sb_rcpt);
     if (!sb_rcpt.ok)
@@ -499,7 +499,7 @@ static SmtpResult data_transfer(uint8_t *restrict work)
     {
         return (SmtpResult)mlen;
     }
-    if (SmtpV.transport.send(SmtpV.transport.ctx, (const uint8_t *)SMTP_CTX(work)->content, (size_t)mlen) != mlen)
+    if (Smtp.transport.send(Smtp.transport.ctx, (const uint8_t *)SMTP_CTX(work)->content, (size_t)mlen) != mlen)
     {
         return SMTP_ERR_IO;
     }
@@ -535,8 +535,8 @@ static void run_session(uint8_t *restrict work)
     SMTP_CTX(work)->code = 0;
     SMTP_CTX(work)->keyword_seen = PROTO_FALSE;
 
-    if (!SmtpV.transport.send || !SmtpV.transport.recv || !SmtpV.session.host || !SmtpV.envelope.reverse_path ||
-        !SmtpV.envelope.reverse_path[0] || !SmtpV.envelope.forward_path || !SmtpV.envelope.forward_path[0])
+    if (!Smtp.transport.send || !Smtp.transport.recv || !Smtp.session.host || !Smtp.envelope.reverse_path ||
+        !Smtp.envelope.reverse_path[0] || !Smtp.envelope.forward_path || !Smtp.envelope.forward_path[0])
     {
         finish(work, SMTP_ERR_ARG);
         return;
@@ -549,7 +549,7 @@ static void run_session(uint8_t *restrict work)
         return;
     }
 
-    if (SmtpV.session.security == SMTP_STARTTLS)
+    if (Smtp.session.security == SMTP_STARTTLS)
     {
         r = upgrade_starttls(work);
         if (r != SMTP_OK)
@@ -559,7 +559,7 @@ static void run_session(uint8_t *restrict work)
         }
     }
 
-    if (SmtpV.auth.user && SmtpV.auth.user[0]) // RFC 4954 sec 4: AUTH runs only when named
+    if (Smtp.auth.user && Smtp.auth.user[0]) // RFC 4954 sec 4: AUTH runs only when named
     {
         r = authenticate(work);
         if (r != SMTP_OK)
@@ -608,11 +608,11 @@ static int plain_send(void *ctx, const uint8_t *data, size_t len)
         {
             chunk = 0xFFFF;
         }
-        TcpClientV.cid = chan->cid;
-        TcpClientV.io.data = data + sent;
-        TcpClientV.io.len = chunk;
+        TcpClient.cid = chan->cid;
+        TcpClient.io.data = data + sent;
+        TcpClient.io.len = chunk;
         TcpClient.send(protocore_tcp_client_span());
-        if (!TcpClientV.ok)
+        if (!TcpClient.ok)
         {
             return -1;
         }
@@ -629,21 +629,21 @@ static int plain_recv(void *ctx, uint8_t *buf, size_t cap)
     chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
     while ((int32_t)(chan->deadline - Clock.ms) > 0)
     {
-        TcpClientV.cid = chan->cid;
-        TcpClientV.io.buf = buf;
-        TcpClientV.io.cap = cap;
-        TcpClientV.read(protocore_tcp_client_span());
-        if (TcpClientV.n > 0)
+        TcpClient.cid = chan->cid;
+        TcpClient.io.buf = buf;
+        TcpClient.io.cap = cap;
+        TcpClient.read(protocore_tcp_client_span());
+        if (TcpClient.n > 0)
         {
-            return (int)TcpClientV.n;
+            return (int)TcpClient.n;
         }
-        TcpClientV.cid = chan->cid;
+        TcpClient.cid = chan->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        if (TcpClientV.ok)
+        if (TcpClient.ok)
         {
-            TcpClientV.cid = chan->cid;
+            TcpClient.cid = chan->cid;
             TcpClient.available(protocore_tcp_client_span());
-            if (TcpClientV.n == 0)
+            if (TcpClient.n == 0)
             {
                 return -1; // closed, and nothing left buffered to drain
             }
@@ -659,26 +659,26 @@ static int plain_recv(void *ctx, uint8_t *buf, size_t cap)
 // not ours, so the channel is read from the one owned storage.
 static int ciphertext_send(void *ctx, const unsigned char *buf, size_t len)
 {
-    TcpClientV.cid = s_store.chan.cid;
-    TcpClientV.io.data = buf;
-    TcpClientV.io.len = len;
+    TcpClient.cid = s_store.chan.cid;
+    TcpClient.io.data = buf;
+    TcpClient.io.len = len;
     TcpClient.send(protocore_tcp_client_span());
-    return TcpClientV.ok ? (int)len : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
+    return TcpClient.ok ? (int)len : PROTOCORE_PLATFORM_TLS_WANT_WRITE;
 }
 
 static int ciphertext_recv(void *ctx, unsigned char *buf, size_t len)
 {
-    TcpClientV.cid = s_store.chan.cid;
-    TcpClientV.io.buf = buf;
-    TcpClientV.io.cap = len;
-    TcpClientV.read(protocore_tcp_client_span());
-    if (TcpClientV.n > 0)
+    TcpClient.cid = s_store.chan.cid;
+    TcpClient.io.buf = buf;
+    TcpClient.io.cap = len;
+    TcpClient.read(protocore_tcp_client_span());
+    if (TcpClient.n > 0)
     {
-        return (int)TcpClientV.n;
+        return (int)TcpClient.n;
     }
-    TcpClientV.cid = s_store.chan.cid;
+    TcpClient.cid = s_store.chan.cid;
     TcpClient.is_closed(protocore_tcp_client_span());
-    return TcpClientV.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
+    return TcpClient.ok ? 0 : PROTOCORE_PLATFORM_TLS_WANT_READ;
 }
 
 // Application write and read over the established session.
@@ -773,24 +773,24 @@ static proto_bool wire_starttls(void *ctx)
 static void send_message(uint8_t *restrict work)
 {
     SMTP_CTX(work)->code = 0;
-    if (!SmtpV.session.host)
+    if (!Smtp.session.host)
     {
         finish(work, SMTP_ERR_ARG);
         return;
     }
 
     SmtpChannel *chan = &SMTP_CTX(work)->chan;
-    TcpClientV.dial.host = SmtpV.session.host;
-    TcpClientV.dial.port = SmtpV.session.port;
-    TcpClientV.dial.timeout_ms = PROTOCORE_SMTP_TIMEOUT_MS;
+    TcpClient.dial.host = Smtp.session.host;
+    TcpClient.dial.port = Smtp.session.port;
+    TcpClient.dial.timeout_ms = PROTOCORE_SMTP_TIMEOUT_MS;
     TcpClient.open(protocore_tcp_client_span());
-    if (TcpClientV.i32 < 0)
+    if (TcpClient.i32 < 0)
     {
         finish(work, SMTP_ERR_CONNECT);
         return;
     }
-    chan->cid = TcpClientV.i32;
-    chan->host = SmtpV.session.host;
+    chan->cid = TcpClient.i32;
+    chan->host = Smtp.session.host;
     chan->tls_active = PROTO_FALSE;
     chan->deadline = Clock.ms + PROTOCORE_SMTP_TIMEOUT_MS;
 
@@ -798,17 +798,17 @@ static void send_message(uint8_t *restrict work)
     // says so, so the open is stepped here until it lands, closes, or runs out of budget.
     for (;;)
     {
-        TcpClientV.cid = chan->cid;
+        TcpClient.cid = chan->cid;
         TcpClient.connected(protocore_tcp_client_span());
-        if (TcpClientV.ok)
+        if (TcpClient.ok)
         {
             break;
         }
-        TcpClientV.cid = chan->cid;
+        TcpClient.cid = chan->cid;
         TcpClient.is_closed(protocore_tcp_client_span());
-        if (TcpClientV.ok || (int32_t)(chan->deadline - Clock.ms) <= 0)
+        if (TcpClient.ok || (int32_t)(chan->deadline - Clock.ms) <= 0)
         {
-            TcpClientV.cid = chan->cid;
+            TcpClient.cid = chan->cid;
             TcpClient.close(protocore_tcp_client_span());
             finish(work, SMTP_ERR_CONNECT);
             return;
@@ -816,30 +816,30 @@ static void send_message(uint8_t *restrict work)
         pcdelay(5);
     }
 
-    SmtpV.transport.ctx = chan;
+    Smtp.transport.ctx = chan;
 
-    if (SmtpV.session.security == SMTP_TLS)
+    if (Smtp.session.security == SMTP_TLS)
     {
 #if PROTOCORE_ENABLE_SMTP_TLS
         // RFC 8314 sec 3.3: on the submissions service the TLS handshake begins immediately, so
         // there is no cleartext leg and no STARTTLS to offer the engine.
-        if (!protocore_tls_client_session_begin(SmtpV.session.host, ciphertext_send, ciphertext_recv) ||
+        if (!protocore_tls_client_session_begin(Smtp.session.host, ciphertext_send, ciphertext_recv) ||
             !tls_handshake(work))
         {
             protocore_tls_client_session_end();
-            TcpClientV.cid = chan->cid;
+            TcpClient.cid = chan->cid;
             TcpClient.close(protocore_tcp_client_span());
             finish(work, SMTP_ERR_TLS);
             return;
         }
         chan->tls_active = PROTO_TRUE;
-        SmtpV.transport.send = secure_send;
-        SmtpV.transport.recv = secure_recv;
-        SmtpV.transport.starttls = NULL;
+        Smtp.transport.send = secure_send;
+        Smtp.transport.recv = secure_recv;
+        Smtp.transport.starttls = NULL;
         run_session(work);
         protocore_tls_client_session_end();
 #else
-        TcpClientV.cid = chan->cid;
+        TcpClient.cid = chan->cid;
         TcpClient.close(protocore_tcp_client_span());
         finish(work, SMTP_ERR_TLS); // implicit TLS asked for in a build without TLS
         return;
@@ -847,9 +847,9 @@ static void send_message(uint8_t *restrict work)
     }
     else
     {
-        SmtpV.transport.send = wire_send;
-        SmtpV.transport.recv = wire_recv;
-        SmtpV.transport.starttls = wire_starttls;
+        Smtp.transport.send = wire_send;
+        Smtp.transport.recv = wire_recv;
+        Smtp.transport.starttls = wire_starttls;
         run_session(work);
 #if PROTOCORE_ENABLE_SMTP_TLS
         if (chan->tls_active)
@@ -859,7 +859,7 @@ static void send_message(uint8_t *restrict work)
 #endif
     }
 
-    TcpClientV.cid = chan->cid;
+    TcpClient.cid = chan->cid;
     TcpClient.close(protocore_tcp_client_span());
     chan->cid = -1;
 }
@@ -874,7 +874,6 @@ static void send_message(uint8_t *restrict work)
 #endif // PROTOCORE_HAS_NET_STACK
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-SmtpVars SmtpV;
+SmtpNs Smtp = {.run = run_session, .send = send_message};
 
 #endif // PROTOCORE_ENABLE_SMTP

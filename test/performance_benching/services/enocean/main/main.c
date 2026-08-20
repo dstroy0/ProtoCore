@@ -34,15 +34,15 @@ void dbench_run(void)
     static uint8_t build_out[64];
     static uint8_t telegram[64];
 
-    EnoceanV.esp3_build_args.type = ESP3_RADIO_ERP1;
-    EnoceanV.esp3_build_args.data = data;
-    EnoceanV.esp3_build_args.data_len = sizeof(data);
-    EnoceanV.esp3_build_args.opt = opt;
-    EnoceanV.esp3_build_args.opt_len = sizeof(opt);
-    EnoceanV.esp3_build_args.out = telegram;
-    EnoceanV.esp3_build_args.cap = sizeof(telegram);
+    Enocean.esp3_build_args.type = ESP3_RADIO_ERP1;
+    Enocean.esp3_build_args.data = data;
+    Enocean.esp3_build_args.data_len = sizeof(data);
+    Enocean.esp3_build_args.opt = opt;
+    Enocean.esp3_build_args.opt_len = sizeof(opt);
+    Enocean.esp3_build_args.out = telegram;
+    Enocean.esp3_build_args.cap = sizeof(telegram);
     Enocean.esp3_build(enocean_work);
-    uint16_t tg_len = EnoceanV.u16;
+    uint16_t tg_len = Enocean.u16;
 
     for (;;)
     {

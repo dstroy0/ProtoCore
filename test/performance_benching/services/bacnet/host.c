@@ -30,28 +30,28 @@ int main(void)
     const uint8_t dadr[2] = {0x01, 0x02};
 
     uint8_t npdu[64];
-    BacnetV.npdu_build_args.buf = npdu;
-    BacnetV.npdu_build_args.cap = sizeof(npdu);
-    BacnetV.npdu_build_args.expecting_reply = true;
-    BacnetV.npdu_build_args.priority = NPDU_PRIO_NORMAL;
-    BacnetV.npdu_build_args.has_dest = true;
-    BacnetV.npdu_build_args.dnet = 100;
-    BacnetV.npdu_build_args.dadr = dadr;
-    BacnetV.npdu_build_args.dadr_len = 2;
-    BacnetV.npdu_build_args.hop_count = 255;
-    BacnetV.npdu_build_args.apdu = apdu;
-    BacnetV.npdu_build_args.apdu_len = sizeof(apdu);
+    Bacnet.npdu_build_args.buf = npdu;
+    Bacnet.npdu_build_args.cap = sizeof(npdu);
+    Bacnet.npdu_build_args.expecting_reply = true;
+    Bacnet.npdu_build_args.priority = NPDU_PRIO_NORMAL;
+    Bacnet.npdu_build_args.has_dest = true;
+    Bacnet.npdu_build_args.dnet = 100;
+    Bacnet.npdu_build_args.dadr = dadr;
+    Bacnet.npdu_build_args.dadr_len = 2;
+    Bacnet.npdu_build_args.hop_count = 255;
+    Bacnet.npdu_build_args.apdu = apdu;
+    Bacnet.npdu_build_args.apdu_len = sizeof(apdu);
     Bacnet.npdu_build(bacnet_work);
-    size_t npdu_len = BacnetV.n;
+    size_t npdu_len = Bacnet.n;
 
     uint8_t frame[128];
-    BacnetV.bvlc_build_args.buf = frame;
-    BacnetV.bvlc_build_args.cap = sizeof(frame);
-    BacnetV.bvlc_build_args.function = BVLC_FUNC_ORIGINAL_UNICAST;
-    BacnetV.bvlc_build_args.npdu = npdu;
-    BacnetV.bvlc_build_args.npdu_len = npdu_len;
+    Bacnet.bvlc_build_args.buf = frame;
+    Bacnet.bvlc_build_args.cap = sizeof(frame);
+    Bacnet.bvlc_build_args.function = BVLC_FUNC_ORIGINAL_UNICAST;
+    Bacnet.bvlc_build_args.npdu = npdu;
+    Bacnet.bvlc_build_args.npdu_len = npdu_len;
     Bacnet.bvlc_build(bacnet_work);
-    size_t frame_len = BacnetV.n;
+    size_t frame_len = Bacnet.n;
 
     hbench_header();
 
@@ -65,13 +65,13 @@ int main(void)
                 uint8_t fn = 0;
                 const uint8_t *np = NULL;
                 size_t nl = 0;
-                BacnetV.bvlc_parse_args.buf = frame;
-                BacnetV.bvlc_parse_args.len = frame_len;
-                BacnetV.bvlc_parse_args.function = &fn;
-                BacnetV.bvlc_parse_args.npdu = &np;
-                BacnetV.bvlc_parse_args.npdu_len = &nl;
+                Bacnet.bvlc_parse_args.buf = frame;
+                Bacnet.bvlc_parse_args.len = frame_len;
+                Bacnet.bvlc_parse_args.function = &fn;
+                Bacnet.bvlc_parse_args.npdu = &np;
+                Bacnet.bvlc_parse_args.npdu_len = &nl;
                 Bacnet.bvlc_parse(bacnet_work);
-                if (BacnetV.ok)
+                if (Bacnet.ok)
                 {
                     sink += nl;
                 }
@@ -89,11 +89,11 @@ int main(void)
             10000000,
             {
                 NpduInfo info;
-                BacnetV.npdu_parse_args.buf = npdu;
-                BacnetV.npdu_parse_args.len = npdu_len;
-                BacnetV.npdu_parse_args.out = &info;
+                Bacnet.npdu_parse_args.buf = npdu;
+                Bacnet.npdu_parse_args.len = npdu_len;
+                Bacnet.npdu_parse_args.out = &info;
                 Bacnet.npdu_parse(bacnet_work);
-                if (BacnetV.ok)
+                if (Bacnet.ok)
                 {
                     sink += info.apdu_len;
                 }
@@ -107,19 +107,19 @@ int main(void)
     {
         volatile size_t sink = 0;
         double ns = 0.0;
-        BacnetV.npdu_build_args.buf = npdu;
-        BacnetV.npdu_build_args.cap = sizeof(npdu);
-        BacnetV.npdu_build_args.expecting_reply = true;
-        BacnetV.npdu_build_args.priority = NPDU_PRIO_NORMAL;
-        BacnetV.npdu_build_args.has_dest = true;
-        BacnetV.npdu_build_args.dnet = 100;
-        BacnetV.npdu_build_args.dadr = dadr;
-        BacnetV.npdu_build_args.dadr_len = 2;
-        BacnetV.npdu_build_args.hop_count = 255;
-        BacnetV.npdu_build_args.apdu = apdu;
-        BacnetV.npdu_build_args.apdu_len = sizeof(apdu);
+        Bacnet.npdu_build_args.buf = npdu;
+        Bacnet.npdu_build_args.cap = sizeof(npdu);
+        Bacnet.npdu_build_args.expecting_reply = true;
+        Bacnet.npdu_build_args.priority = NPDU_PRIO_NORMAL;
+        Bacnet.npdu_build_args.has_dest = true;
+        Bacnet.npdu_build_args.dnet = 100;
+        Bacnet.npdu_build_args.dadr = dadr;
+        Bacnet.npdu_build_args.dadr_len = 2;
+        Bacnet.npdu_build_args.hop_count = 255;
+        Bacnet.npdu_build_args.apdu = apdu;
+        Bacnet.npdu_build_args.apdu_len = sizeof(apdu);
         Bacnet.npdu_build(bacnet_work);
-        HBENCH_NS(5000000, sink += BacnetV.n, ns);
+        HBENCH_NS(5000000, sink += Bacnet.n, ns);
         hbench_row("bacnet", "Bacnet.npdu_build", ns, (double)npdu_len);
         (void)sink;
     }

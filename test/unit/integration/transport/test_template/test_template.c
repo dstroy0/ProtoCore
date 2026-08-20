@@ -63,7 +63,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = i;
+        HttpConn.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -79,7 +79,7 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -139,3 +139,4 @@ void test_head_suppresses_body_keeps_length()
     TEST_ASSERT_NOT_NULL(strstr(r, "Content-Length: 12"));
     TEST_ASSERT_NULL(strstr(r, "Hello World!"));
 }
+

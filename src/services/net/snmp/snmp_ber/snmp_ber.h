@@ -91,6 +91,7 @@ typedef struct
     size_t pos;         ///< the next octet a read takes
     proto_bool ok;      ///< no read has run past len
 } BerDec;
+
 /** @brief The caller buffer a codec runs over. */
 typedef struct
 {
@@ -98,6 +99,7 @@ typedef struct
     const uint8_t *in; ///< the octets a decoder reads
     size_t cap;        ///< octets available at @c out, or held by @c in
 } SnmpBerBufArgs;
+
 /** @brief The TLV a write carries: its identifier octet and the value under it. */
 typedef struct
 {
@@ -110,6 +112,7 @@ typedef struct
     size_t arc_count;     ///< how many, at least 2
     size_t token;         ///< in: the constructed type a close back-patches; out: the one an open reserved
 } SnmpBerTlvArgs;
+
 /** @brief Where a read lands what it took. */
 typedef struct
 {
@@ -117,6 +120,7 @@ typedef struct
     size_t arc_cap;    ///< how many that holds, at least 2
     size_t skip;       ///< value octets a skip steps over
 } SnmpBerReadArgs;
+
 /**
  * @brief The SNMP serialization (RFC 3417 sec 8, over ITU-T X.690).
  *
@@ -155,24 +159,19 @@ typedef struct
  */
 typedef struct
 {
-    BerEnc *enc;               ///< the encoder cursor every write names
-    BerDec *dec;               ///< the decoder cursor every read names
+    BerEnc *enc; ///< the encoder cursor every write names
+    BerDec *dec; ///< the decoder cursor every read names
+
     SnmpBerBufArgs buf;        ///< the caller buffer an init binds
     SnmpBerTlvArgs tlv;        ///< what a write carries
     SnmpBerReadArgs read_args; ///< where a read lands
+
     proto_bool ok;
     uint8_t tag;
     size_t vlen;
     long ival;
     size_t n;
-} SnmpBerVars;
 
-/** @brief The operands and the outcome. */
-extern SnmpBerVars SnmpBerV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const enc_init)(uint8_t *restrict work);
     void (*const put_integer)(uint8_t *restrict work);
     void (*const put_uint)(uint8_t *restrict work);
@@ -190,45 +189,8 @@ typedef struct
     void (*const skip)(uint8_t *restrict work);
 } SnmpBerNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SnmpBerV or a region of the borrow at a fixed offset.
-void protocore_snmp_ber_enc_init(uint8_t *restrict work);
-void protocore_snmp_ber_put_integer(uint8_t *restrict work);
-void protocore_snmp_ber_put_uint(uint8_t *restrict work);
-void protocore_snmp_ber_put_octet_string(uint8_t *restrict work);
-void protocore_snmp_ber_put_null(uint8_t *restrict work);
-void protocore_snmp_ber_put_oid(uint8_t *restrict work);
-void protocore_snmp_ber_put_tlv(uint8_t *restrict work);
-void protocore_snmp_ber_put_raw(uint8_t *restrict work);
-void protocore_snmp_ber_seq_begin(uint8_t *restrict work);
-void protocore_snmp_ber_seq_end(uint8_t *restrict work);
-void protocore_snmp_ber_dec_init(uint8_t *restrict work);
-void protocore_snmp_ber_read_header(uint8_t *restrict work);
-void protocore_snmp_ber_read_integer(uint8_t *restrict work);
-void protocore_snmp_ber_read_oid(uint8_t *restrict work);
-void protocore_snmp_ber_skip(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SnmpBer.enc_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SnmpBerNs SnmpBer __attribute__((unused)) = {
-    .enc_init = protocore_snmp_ber_enc_init,
-    .put_integer = protocore_snmp_ber_put_integer,
-    .put_uint = protocore_snmp_ber_put_uint,
-    .put_octet_string = protocore_snmp_ber_put_octet_string,
-    .put_null = protocore_snmp_ber_put_null,
-    .put_oid = protocore_snmp_ber_put_oid,
-    .put_tlv = protocore_snmp_ber_put_tlv,
-    .put_raw = protocore_snmp_ber_put_raw,
-    .seq_begin = protocore_snmp_ber_seq_begin,
-    .seq_end = protocore_snmp_ber_seq_end,
-    .dec_init = protocore_snmp_ber_dec_init,
-    .read_header = protocore_snmp_ber_read_header,
-    .read_integer = protocore_snmp_ber_read_integer,
-    .read_oid = protocore_snmp_ber_read_oid,
-    .skip = protocore_snmp_ber_skip,
-};
+/** @brief The one symbol this module exports. */
+extern SnmpBerNs SnmpBer;
 
 PROTOCORE_END_DECLS
 

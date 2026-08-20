@@ -53,16 +53,16 @@ void test_dcp_constants(void)
 void test_dcp_header_layout(void)
 {
     uint8_t out[16];
-    ProfinetV.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_REQ;
-    ProfinetV.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
-    ProfinetV.dcp_header_args.service_type = PN_DCP_TYPE_REQUEST;
-    ProfinetV.dcp_header_args.xid = 0x11223344u;
-    ProfinetV.dcp_header_args.response_delay = 0x0001;
-    ProfinetV.dcp_header_args.data_length = 0x0008;
-    ProfinetV.dcp_header_args.out = out;
-    ProfinetV.dcp_header_args.cap = sizeof(out);
+    Profinet.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_REQ;
+    Profinet.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
+    Profinet.dcp_header_args.service_type = PN_DCP_TYPE_REQUEST;
+    Profinet.dcp_header_args.xid = 0x11223344u;
+    Profinet.dcp_header_args.response_delay = 0x0001;
+    Profinet.dcp_header_args.data_length = 0x0008;
+    Profinet.dcp_header_args.out = out;
+    Profinet.dcp_header_args.cap = sizeof(out);
     Profinet.dcp_header(profinet_work);
-    size_t n = ProfinetV.n;
+    size_t n = Profinet.n;
     TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN, n);
     static const uint8_t WANT[12] = {
         0xFE, 0xFE,             // FrameID, DCP Identify request
@@ -75,11 +75,11 @@ void test_dcp_header_layout(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, PN_DCP_HDR_LEN);
 
     PnDcpHeader h;
-    ProfinetV.dcp_parse_header_args.frame = out;
-    ProfinetV.dcp_parse_header_args.len = n;
-    ProfinetV.dcp_parse_header_args.out = &h;
+    Profinet.dcp_parse_header_args.frame = out;
+    Profinet.dcp_parse_header_args.len = n;
+    Profinet.dcp_parse_header_args.out = &h;
     Profinet.dcp_parse_header(profinet_work);
-    TEST_ASSERT_TRUE(ProfinetV.ok);
+    TEST_ASSERT_TRUE(Profinet.ok);
     TEST_ASSERT_EQUAL_HEX16(PN_FRAMEID_DCP_IDENT_REQ, h.frame_id);
     TEST_ASSERT_EQUAL_HEX8(PN_DCP_SERVICE_IDENTIFY, h.service_id);
     TEST_ASSERT_EQUAL_HEX8(PN_DCP_TYPE_REQUEST, h.service_type);
@@ -94,21 +94,21 @@ void test_dcp_header_field_widths(void)
     uint8_t out[16];
     PnDcpHeader h;
 
-    ProfinetV.dcp_header_args.frame_id = 0xFFFF;
-    ProfinetV.dcp_header_args.service_id = 0xFF;
-    ProfinetV.dcp_header_args.service_type = 0xFF;
-    ProfinetV.dcp_header_args.xid = 0xFFFFFFFFu;
-    ProfinetV.dcp_header_args.response_delay = 0xFFFF;
-    ProfinetV.dcp_header_args.data_length = 0xFFFF;
-    ProfinetV.dcp_header_args.out = out;
-    ProfinetV.dcp_header_args.cap = sizeof(out);
+    Profinet.dcp_header_args.frame_id = 0xFFFF;
+    Profinet.dcp_header_args.service_id = 0xFF;
+    Profinet.dcp_header_args.service_type = 0xFF;
+    Profinet.dcp_header_args.xid = 0xFFFFFFFFu;
+    Profinet.dcp_header_args.response_delay = 0xFFFF;
+    Profinet.dcp_header_args.data_length = 0xFFFF;
+    Profinet.dcp_header_args.out = out;
+    Profinet.dcp_header_args.cap = sizeof(out);
     Profinet.dcp_header(profinet_work);
-    TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN, ProfinetV.n);
-    ProfinetV.dcp_parse_header_args.frame = out;
-    ProfinetV.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
-    ProfinetV.dcp_parse_header_args.out = &h;
+    TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN, Profinet.n);
+    Profinet.dcp_parse_header_args.frame = out;
+    Profinet.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
+    Profinet.dcp_parse_header_args.out = &h;
     Profinet.dcp_parse_header(profinet_work);
-    TEST_ASSERT_TRUE(ProfinetV.ok);
+    TEST_ASSERT_TRUE(Profinet.ok);
     TEST_ASSERT_EQUAL_HEX16(0xFFFF, h.frame_id);
     TEST_ASSERT_EQUAL_HEX8(0xFF, h.service_id);
     TEST_ASSERT_EQUAL_HEX8(0xFF, h.service_type);
@@ -116,21 +116,21 @@ void test_dcp_header_field_widths(void)
     TEST_ASSERT_EQUAL_UINT16(0xFFFF, h.response_delay);
     TEST_ASSERT_EQUAL_UINT16(0xFFFF, h.data_length);
 
-    ProfinetV.dcp_header_args.frame_id = 0;
-    ProfinetV.dcp_header_args.service_id = 0;
-    ProfinetV.dcp_header_args.service_type = 0;
-    ProfinetV.dcp_header_args.xid = 0;
-    ProfinetV.dcp_header_args.response_delay = 0;
-    ProfinetV.dcp_header_args.data_length = 0;
-    ProfinetV.dcp_header_args.out = out;
-    ProfinetV.dcp_header_args.cap = sizeof(out);
+    Profinet.dcp_header_args.frame_id = 0;
+    Profinet.dcp_header_args.service_id = 0;
+    Profinet.dcp_header_args.service_type = 0;
+    Profinet.dcp_header_args.xid = 0;
+    Profinet.dcp_header_args.response_delay = 0;
+    Profinet.dcp_header_args.data_length = 0;
+    Profinet.dcp_header_args.out = out;
+    Profinet.dcp_header_args.cap = sizeof(out);
     Profinet.dcp_header(profinet_work);
-    TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN, ProfinetV.n);
-    ProfinetV.dcp_parse_header_args.frame = out;
-    ProfinetV.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
-    ProfinetV.dcp_parse_header_args.out = &h;
+    TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN, Profinet.n);
+    Profinet.dcp_parse_header_args.frame = out;
+    Profinet.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
+    Profinet.dcp_parse_header_args.out = &h;
     Profinet.dcp_parse_header(profinet_work);
-    TEST_ASSERT_TRUE(ProfinetV.ok);
+    TEST_ASSERT_TRUE(Profinet.ok);
     TEST_ASSERT_EQUAL_HEX32(0u, h.xid);
     TEST_ASSERT_EQUAL_UINT16(0, h.data_length);
 }
@@ -144,28 +144,28 @@ void test_dcp_block_layout_and_padding(void)
 
     // "et200sp" is seven octets, so the block declares 7 and occupies 4 + 7 + 1 = 12
     const char *name = "et200sp";
-    ProfinetV.dcp_block_args.option = PN_DCP_OPT_DEVICE;
-    ProfinetV.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
-    ProfinetV.dcp_block_args.value = (const uint8_t *)name;
-    ProfinetV.dcp_block_args.value_len = 7;
-    ProfinetV.dcp_block_args.out = out;
-    ProfinetV.dcp_block_args.cap = sizeof(out);
+    Profinet.dcp_block_args.option = PN_DCP_OPT_DEVICE;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
+    Profinet.dcp_block_args.value = (const uint8_t *)name;
+    Profinet.dcp_block_args.value_len = 7;
+    Profinet.dcp_block_args.out = out;
+    Profinet.dcp_block_args.cap = sizeof(out);
     Profinet.dcp_block(profinet_work);
-    size_t n = ProfinetV.n;
+    size_t n = Profinet.n;
     TEST_ASSERT_EQUAL_UINT(12u, n);
     static const uint8_t WANT[12] = {0x02, 0x02, 0x00, 0x07, 'e', 't', '2', '0', '0', 's', 'p', 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, 12);
 
     // an even-length value needs no pad: an IPParameter block is 12 octets of IP + mask + gateway
     static const uint8_t IPPARAM[12] = {192, 168, 1, 85, 255, 255, 255, 0, 192, 168, 1, 1};
-    ProfinetV.dcp_block_args.option = PN_DCP_OPT_IP;
-    ProfinetV.dcp_block_args.suboption = PN_DCP_SUB_IP_PARAM;
-    ProfinetV.dcp_block_args.value = IPPARAM;
-    ProfinetV.dcp_block_args.value_len = sizeof(IPPARAM);
-    ProfinetV.dcp_block_args.out = out;
-    ProfinetV.dcp_block_args.cap = sizeof(out);
+    Profinet.dcp_block_args.option = PN_DCP_OPT_IP;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_IP_PARAM;
+    Profinet.dcp_block_args.value = IPPARAM;
+    Profinet.dcp_block_args.value_len = sizeof(IPPARAM);
+    Profinet.dcp_block_args.out = out;
+    Profinet.dcp_block_args.cap = sizeof(out);
     Profinet.dcp_block(profinet_work);
-    n = ProfinetV.n;
+    n = Profinet.n;
     TEST_ASSERT_EQUAL_UINT(16u, n);
     TEST_ASSERT_EQUAL_HEX8(PN_DCP_OPT_IP, out[0]);
     TEST_ASSERT_EQUAL_HEX8(PN_DCP_SUB_IP_PARAM, out[1]);
@@ -174,14 +174,14 @@ void test_dcp_block_layout_and_padding(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(IPPARAM, out + 4, sizeof(IPPARAM));
 
     // an empty value block (the AllSelector an Identify-All request carries) is the 4 header octets
-    ProfinetV.dcp_block_args.option = PN_DCP_OPT_ALL;
-    ProfinetV.dcp_block_args.suboption = PN_DCP_SUB_ALL;
-    ProfinetV.dcp_block_args.value = NULL;
-    ProfinetV.dcp_block_args.value_len = 0;
-    ProfinetV.dcp_block_args.out = out;
-    ProfinetV.dcp_block_args.cap = sizeof(out);
+    Profinet.dcp_block_args.option = PN_DCP_OPT_ALL;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_ALL;
+    Profinet.dcp_block_args.value = NULL;
+    Profinet.dcp_block_args.value_len = 0;
+    Profinet.dcp_block_args.out = out;
+    Profinet.dcp_block_args.cap = sizeof(out);
     Profinet.dcp_block(profinet_work);
-    n = ProfinetV.n;
+    n = Profinet.n;
     TEST_ASSERT_EQUAL_UINT(4u, n);
     static const uint8_t ALL[4] = {0xFF, 0xFF, 0x00, 0x00};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(ALL, out, 4);
@@ -216,41 +216,41 @@ void test_dcp_walk_steps_over_the_pad(void)
     uint8_t blocks[64];
     size_t off = 0;
     const char *name = "plc1"; // even
-    ProfinetV.dcp_block_args.option = PN_DCP_OPT_DEVICE;
-    ProfinetV.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
-    ProfinetV.dcp_block_args.value = (const uint8_t *)name;
-    ProfinetV.dcp_block_args.value_len = 4;
-    ProfinetV.dcp_block_args.out = blocks + off;
-    ProfinetV.dcp_block_args.cap = sizeof(blocks) - off;
+    Profinet.dcp_block_args.option = PN_DCP_OPT_DEVICE;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
+    Profinet.dcp_block_args.value = (const uint8_t *)name;
+    Profinet.dcp_block_args.value_len = 4;
+    Profinet.dcp_block_args.out = blocks + off;
+    Profinet.dcp_block_args.cap = sizeof(blocks) - off;
     Profinet.dcp_block(profinet_work);
-    off += ProfinetV.n;
+    off += Profinet.n;
     static const uint8_t DEVID[5] = {0x01, 0x2A, 0x03, 0x04, 0x05}; // odd, so this block is padded
-    ProfinetV.dcp_block_args.option = PN_DCP_OPT_DEVICE;
-    ProfinetV.dcp_block_args.suboption = PN_DCP_SUB_DEV_ID;
-    ProfinetV.dcp_block_args.value = DEVID;
-    ProfinetV.dcp_block_args.value_len = sizeof(DEVID);
-    ProfinetV.dcp_block_args.out = blocks + off;
-    ProfinetV.dcp_block_args.cap = sizeof(blocks) - off;
+    Profinet.dcp_block_args.option = PN_DCP_OPT_DEVICE;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_DEV_ID;
+    Profinet.dcp_block_args.value = DEVID;
+    Profinet.dcp_block_args.value_len = sizeof(DEVID);
+    Profinet.dcp_block_args.out = blocks + off;
+    Profinet.dcp_block_args.cap = sizeof(blocks) - off;
     Profinet.dcp_block(profinet_work);
-    off += ProfinetV.n;
+    off += Profinet.n;
     static const uint8_t IPPARAM[12] = {10, 0, 0, 5, 255, 255, 255, 0, 10, 0, 0, 1};
-    ProfinetV.dcp_block_args.option = PN_DCP_OPT_IP;
-    ProfinetV.dcp_block_args.suboption = PN_DCP_SUB_IP_PARAM;
-    ProfinetV.dcp_block_args.value = IPPARAM;
-    ProfinetV.dcp_block_args.value_len = sizeof(IPPARAM);
-    ProfinetV.dcp_block_args.out = blocks + off;
-    ProfinetV.dcp_block_args.cap = sizeof(blocks) - off;
+    Profinet.dcp_block_args.option = PN_DCP_OPT_IP;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_IP_PARAM;
+    Profinet.dcp_block_args.value = IPPARAM;
+    Profinet.dcp_block_args.value_len = sizeof(IPPARAM);
+    Profinet.dcp_block_args.out = blocks + off;
+    Profinet.dcp_block_args.cap = sizeof(blocks) - off;
     Profinet.dcp_block(profinet_work);
-    off += ProfinetV.n;
+    off += Profinet.n;
     TEST_ASSERT_EQUAL_UINT(8u + 10u + 16u, off);
 
     memset(&g_walk, 0, sizeof(g_walk));
-    ProfinetV.dcp_walk_args.blocks = blocks;
-    ProfinetV.dcp_walk_args.len = off;
-    ProfinetV.dcp_walk_args.cb = collect;
-    ProfinetV.dcp_walk_args.arg = NULL;
+    Profinet.dcp_walk_args.blocks = blocks;
+    Profinet.dcp_walk_args.len = off;
+    Profinet.dcp_walk_args.cb = collect;
+    Profinet.dcp_walk_args.arg = NULL;
     Profinet.dcp_walk(profinet_work);
-    TEST_ASSERT_TRUE(ProfinetV.ok);
+    TEST_ASSERT_TRUE(Profinet.ok);
     TEST_ASSERT_EQUAL_INT(3, g_walk.n);
 
     TEST_ASSERT_EQUAL_HEX8(PN_DCP_OPT_DEVICE, g_walk.option[0]);
@@ -277,42 +277,42 @@ void test_identify_response_frame(void)
 
     uint8_t blocks[64];
     size_t blen = 0;
-    ProfinetV.dcp_block_args.option = PN_DCP_OPT_DEVICE;
-    ProfinetV.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
-    ProfinetV.dcp_block_args.value = (const uint8_t *)name;
-    ProfinetV.dcp_block_args.value_len = 7;
-    ProfinetV.dcp_block_args.out = blocks + blen;
-    ProfinetV.dcp_block_args.cap = sizeof(blocks) - blen;
+    Profinet.dcp_block_args.option = PN_DCP_OPT_DEVICE;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_DEV_NAME_OF_STATION;
+    Profinet.dcp_block_args.value = (const uint8_t *)name;
+    Profinet.dcp_block_args.value_len = 7;
+    Profinet.dcp_block_args.out = blocks + blen;
+    Profinet.dcp_block_args.cap = sizeof(blocks) - blen;
     Profinet.dcp_block(profinet_work);
-    blen += ProfinetV.n;
-    ProfinetV.dcp_block_args.option = PN_DCP_OPT_IP;
-    ProfinetV.dcp_block_args.suboption = PN_DCP_SUB_IP_PARAM;
-    ProfinetV.dcp_block_args.value = IPPARAM;
-    ProfinetV.dcp_block_args.value_len = sizeof(IPPARAM);
-    ProfinetV.dcp_block_args.out = blocks + blen;
-    ProfinetV.dcp_block_args.cap = sizeof(blocks) - blen;
+    blen += Profinet.n;
+    Profinet.dcp_block_args.option = PN_DCP_OPT_IP;
+    Profinet.dcp_block_args.suboption = PN_DCP_SUB_IP_PARAM;
+    Profinet.dcp_block_args.value = IPPARAM;
+    Profinet.dcp_block_args.value_len = sizeof(IPPARAM);
+    Profinet.dcp_block_args.out = blocks + blen;
+    Profinet.dcp_block_args.cap = sizeof(blocks) - blen;
     Profinet.dcp_block(profinet_work);
-    blen += ProfinetV.n;
+    blen += Profinet.n;
 
-    ProfinetV.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_RES;
-    ProfinetV.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
-    ProfinetV.dcp_header_args.service_type = PN_DCP_TYPE_RESPONSE_SUCCESS;
-    ProfinetV.dcp_header_args.xid = 0x12345678u;
-    ProfinetV.dcp_header_args.response_delay = 0;
-    ProfinetV.dcp_header_args.data_length = (uint16_t)blen;
-    ProfinetV.dcp_header_args.out = frame;
-    ProfinetV.dcp_header_args.cap = sizeof(frame);
+    Profinet.dcp_header_args.frame_id = PN_FRAMEID_DCP_IDENT_RES;
+    Profinet.dcp_header_args.service_id = PN_DCP_SERVICE_IDENTIFY;
+    Profinet.dcp_header_args.service_type = PN_DCP_TYPE_RESPONSE_SUCCESS;
+    Profinet.dcp_header_args.xid = 0x12345678u;
+    Profinet.dcp_header_args.response_delay = 0;
+    Profinet.dcp_header_args.data_length = (uint16_t)blen;
+    Profinet.dcp_header_args.out = frame;
+    Profinet.dcp_header_args.cap = sizeof(frame);
     Profinet.dcp_header(profinet_work);
-    size_t hlen = ProfinetV.n;
+    size_t hlen = Profinet.n;
     TEST_ASSERT_EQUAL_UINT(PN_DCP_HDR_LEN, hlen);
     memcpy(frame + hlen, blocks, blen);
 
     PnDcpHeader h;
-    ProfinetV.dcp_parse_header_args.frame = frame;
-    ProfinetV.dcp_parse_header_args.len = hlen + blen;
-    ProfinetV.dcp_parse_header_args.out = &h;
+    Profinet.dcp_parse_header_args.frame = frame;
+    Profinet.dcp_parse_header_args.len = hlen + blen;
+    Profinet.dcp_parse_header_args.out = &h;
     Profinet.dcp_parse_header(profinet_work);
-    TEST_ASSERT_TRUE(ProfinetV.ok);
+    TEST_ASSERT_TRUE(Profinet.ok);
     TEST_ASSERT_EQUAL_HEX16(PN_FRAMEID_DCP_IDENT_RES, h.frame_id);
     TEST_ASSERT_EQUAL_HEX8(PN_DCP_TYPE_RESPONSE_SUCCESS, h.service_type);
     TEST_ASSERT_EQUAL_HEX32(0x12345678u, h.xid);
@@ -321,12 +321,12 @@ void test_identify_response_frame(void)
     TEST_ASSERT_EQUAL_UINT(hlen + h.data_length, hlen + blen);
 
     memset(&g_walk, 0, sizeof(g_walk));
-    ProfinetV.dcp_walk_args.blocks = frame + hlen;
-    ProfinetV.dcp_walk_args.len = h.data_length;
-    ProfinetV.dcp_walk_args.cb = collect;
-    ProfinetV.dcp_walk_args.arg = NULL;
+    Profinet.dcp_walk_args.blocks = frame + hlen;
+    Profinet.dcp_walk_args.len = h.data_length;
+    Profinet.dcp_walk_args.cb = collect;
+    Profinet.dcp_walk_args.arg = NULL;
     Profinet.dcp_walk(profinet_work);
-    TEST_ASSERT_TRUE(ProfinetV.ok);
+    TEST_ASSERT_TRUE(Profinet.ok);
     TEST_ASSERT_EQUAL_INT(2, g_walk.n);
     TEST_ASSERT_EQUAL_UINT(7u, g_walk.len[0]);
     TEST_ASSERT_EQUAL_UINT(12u, g_walk.len[1]);
@@ -336,37 +336,37 @@ void test_identify_response_frame(void)
 void test_dcp_walk_refuses_an_overrun(void)
 {
     static const uint8_t OVERRUN[8] = {0x02, 0x02, 0x00, 0x10, 'a', 'b', 'c', 'd'}; // claims 16, carries 4
-    ProfinetV.dcp_walk_args.blocks = OVERRUN;
-    ProfinetV.dcp_walk_args.len = sizeof(OVERRUN);
-    ProfinetV.dcp_walk_args.cb = collect;
-    ProfinetV.dcp_walk_args.arg = NULL;
+    Profinet.dcp_walk_args.blocks = OVERRUN;
+    Profinet.dcp_walk_args.len = sizeof(OVERRUN);
+    Profinet.dcp_walk_args.cb = collect;
+    Profinet.dcp_walk_args.arg = NULL;
     Profinet.dcp_walk(profinet_work);
-    TEST_ASSERT_FALSE(ProfinetV.ok);
+    TEST_ASSERT_FALSE(Profinet.ok);
 
     // a trailing fragment shorter than a block header is simply the end of the blocks
     static const uint8_t TRAILING[10] = {0x02, 0x02, 0x00, 0x04, 'p', 'l', 'c', '1', 0x02, 0x03};
     memset(&g_walk, 0, sizeof(g_walk));
-    ProfinetV.dcp_walk_args.blocks = TRAILING;
-    ProfinetV.dcp_walk_args.len = sizeof(TRAILING);
-    ProfinetV.dcp_walk_args.cb = collect;
-    ProfinetV.dcp_walk_args.arg = NULL;
+    Profinet.dcp_walk_args.blocks = TRAILING;
+    Profinet.dcp_walk_args.len = sizeof(TRAILING);
+    Profinet.dcp_walk_args.cb = collect;
+    Profinet.dcp_walk_args.arg = NULL;
     Profinet.dcp_walk(profinet_work);
-    TEST_ASSERT_TRUE(ProfinetV.ok);
+    TEST_ASSERT_TRUE(Profinet.ok);
     TEST_ASSERT_EQUAL_INT(1, g_walk.n);
 
     // a null callback still validates the block chain
-    ProfinetV.dcp_walk_args.blocks = TRAILING;
-    ProfinetV.dcp_walk_args.len = 8;
-    ProfinetV.dcp_walk_args.cb = NULL;
-    ProfinetV.dcp_walk_args.arg = NULL;
+    Profinet.dcp_walk_args.blocks = TRAILING;
+    Profinet.dcp_walk_args.len = 8;
+    Profinet.dcp_walk_args.cb = NULL;
+    Profinet.dcp_walk_args.arg = NULL;
     Profinet.dcp_walk(profinet_work);
-    TEST_ASSERT_TRUE(ProfinetV.ok);
-    ProfinetV.dcp_walk_args.blocks = OVERRUN;
-    ProfinetV.dcp_walk_args.len = sizeof(OVERRUN);
-    ProfinetV.dcp_walk_args.cb = NULL;
-    ProfinetV.dcp_walk_args.arg = NULL;
+    TEST_ASSERT_TRUE(Profinet.ok);
+    Profinet.dcp_walk_args.blocks = OVERRUN;
+    Profinet.dcp_walk_args.len = sizeof(OVERRUN);
+    Profinet.dcp_walk_args.cb = NULL;
+    Profinet.dcp_walk_args.arg = NULL;
     Profinet.dcp_walk(profinet_work);
-    TEST_ASSERT_FALSE(ProfinetV.ok);
+    TEST_ASSERT_FALSE(Profinet.ok);
 }
 
 // Anything shorter than the header cannot be a DCP PDU, and a builder given less room writes
@@ -379,87 +379,87 @@ void test_bounds_refusals(void)
 
     for (size_t cap = 0; cap < PN_DCP_HDR_LEN; cap++)
     {
-        ProfinetV.dcp_header_args.frame_id = 0xFEFE;
-        ProfinetV.dcp_header_args.service_id = 5;
-        ProfinetV.dcp_header_args.service_type = 0;
-        ProfinetV.dcp_header_args.xid = 0;
-        ProfinetV.dcp_header_args.response_delay = 0;
-        ProfinetV.dcp_header_args.data_length = 0;
-        ProfinetV.dcp_header_args.out = out;
-        ProfinetV.dcp_header_args.cap = cap;
+        Profinet.dcp_header_args.frame_id = 0xFEFE;
+        Profinet.dcp_header_args.service_id = 5;
+        Profinet.dcp_header_args.service_type = 0;
+        Profinet.dcp_header_args.xid = 0;
+        Profinet.dcp_header_args.response_delay = 0;
+        Profinet.dcp_header_args.data_length = 0;
+        Profinet.dcp_header_args.out = out;
+        Profinet.dcp_header_args.cap = cap;
         Profinet.dcp_header(profinet_work);
-        TEST_ASSERT_EQUAL_UINT(0u, ProfinetV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, Profinet.n);
     }
-    ProfinetV.dcp_header_args.frame_id = 0xFEFE;
-    ProfinetV.dcp_header_args.service_id = 5;
-    ProfinetV.dcp_header_args.service_type = 0;
-    ProfinetV.dcp_header_args.xid = 0;
-    ProfinetV.dcp_header_args.response_delay = 0;
-    ProfinetV.dcp_header_args.data_length = 0;
-    ProfinetV.dcp_header_args.out = NULL;
-    ProfinetV.dcp_header_args.cap = sizeof(out);
+    Profinet.dcp_header_args.frame_id = 0xFEFE;
+    Profinet.dcp_header_args.service_id = 5;
+    Profinet.dcp_header_args.service_type = 0;
+    Profinet.dcp_header_args.xid = 0;
+    Profinet.dcp_header_args.response_delay = 0;
+    Profinet.dcp_header_args.data_length = 0;
+    Profinet.dcp_header_args.out = NULL;
+    Profinet.dcp_header_args.cap = sizeof(out);
     Profinet.dcp_header(profinet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, ProfinetV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Profinet.n);
 
     for (size_t cap = 0; cap < 8; cap++)
     {
-        ProfinetV.dcp_block_args.option = 2;
-        ProfinetV.dcp_block_args.suboption = 2;
-        ProfinetV.dcp_block_args.value = VALUE;
-        ProfinetV.dcp_block_args.value_len = sizeof(VALUE);
-        ProfinetV.dcp_block_args.out = out;
-        ProfinetV.dcp_block_args.cap = cap;
+        Profinet.dcp_block_args.option = 2;
+        Profinet.dcp_block_args.suboption = 2;
+        Profinet.dcp_block_args.value = VALUE;
+        Profinet.dcp_block_args.value_len = sizeof(VALUE);
+        Profinet.dcp_block_args.out = out;
+        Profinet.dcp_block_args.cap = cap;
         Profinet.dcp_block(profinet_work);
-        TEST_ASSERT_EQUAL_UINT(0u, ProfinetV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, Profinet.n);
     }
-    ProfinetV.dcp_block_args.option = 2;
-    ProfinetV.dcp_block_args.suboption = 2;
-    ProfinetV.dcp_block_args.value = VALUE;
-    ProfinetV.dcp_block_args.value_len = sizeof(VALUE);
-    ProfinetV.dcp_block_args.out = out;
-    ProfinetV.dcp_block_args.cap = 8;
+    Profinet.dcp_block_args.option = 2;
+    Profinet.dcp_block_args.suboption = 2;
+    Profinet.dcp_block_args.value = VALUE;
+    Profinet.dcp_block_args.value_len = sizeof(VALUE);
+    Profinet.dcp_block_args.out = out;
+    Profinet.dcp_block_args.cap = 8;
     Profinet.dcp_block(profinet_work);
-    TEST_ASSERT_EQUAL_UINT(8u, ProfinetV.n);
-    ProfinetV.dcp_block_args.option = 2;
-    ProfinetV.dcp_block_args.suboption = 2;
-    ProfinetV.dcp_block_args.value = NULL;
-    ProfinetV.dcp_block_args.value_len = 4;
-    ProfinetV.dcp_block_args.out = out;
-    ProfinetV.dcp_block_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT(8u, Profinet.n);
+    Profinet.dcp_block_args.option = 2;
+    Profinet.dcp_block_args.suboption = 2;
+    Profinet.dcp_block_args.value = NULL;
+    Profinet.dcp_block_args.value_len = 4;
+    Profinet.dcp_block_args.out = out;
+    Profinet.dcp_block_args.cap = sizeof(out);
     Profinet.dcp_block(profinet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, ProfinetV.n);
-    ProfinetV.dcp_block_args.option = 2;
-    ProfinetV.dcp_block_args.suboption = 2;
-    ProfinetV.dcp_block_args.value = VALUE;
-    ProfinetV.dcp_block_args.value_len = sizeof(VALUE);
-    ProfinetV.dcp_block_args.out = NULL;
-    ProfinetV.dcp_block_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT(0u, Profinet.n);
+    Profinet.dcp_block_args.option = 2;
+    Profinet.dcp_block_args.suboption = 2;
+    Profinet.dcp_block_args.value = VALUE;
+    Profinet.dcp_block_args.value_len = sizeof(VALUE);
+    Profinet.dcp_block_args.out = NULL;
+    Profinet.dcp_block_args.cap = sizeof(out);
     Profinet.dcp_block(profinet_work);
-    TEST_ASSERT_EQUAL_UINT(0u, ProfinetV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Profinet.n);
 
     uint8_t frame[PN_DCP_HDR_LEN];
     memset(frame, 0, sizeof(frame));
     for (size_t n = 0; n < PN_DCP_HDR_LEN; n++)
     {
-        ProfinetV.dcp_parse_header_args.frame = frame;
-        ProfinetV.dcp_parse_header_args.len = n;
-        ProfinetV.dcp_parse_header_args.out = &h;
+        Profinet.dcp_parse_header_args.frame = frame;
+        Profinet.dcp_parse_header_args.len = n;
+        Profinet.dcp_parse_header_args.out = &h;
         Profinet.dcp_parse_header(profinet_work);
-        TEST_ASSERT_FALSE(ProfinetV.ok);
+        TEST_ASSERT_FALSE(Profinet.ok);
     }
-    ProfinetV.dcp_parse_header_args.frame = frame;
-    ProfinetV.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
-    ProfinetV.dcp_parse_header_args.out = &h;
+    Profinet.dcp_parse_header_args.frame = frame;
+    Profinet.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
+    Profinet.dcp_parse_header_args.out = &h;
     Profinet.dcp_parse_header(profinet_work);
-    TEST_ASSERT_TRUE(ProfinetV.ok);
-    ProfinetV.dcp_parse_header_args.frame = NULL;
-    ProfinetV.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
-    ProfinetV.dcp_parse_header_args.out = &h;
+    TEST_ASSERT_TRUE(Profinet.ok);
+    Profinet.dcp_parse_header_args.frame = NULL;
+    Profinet.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
+    Profinet.dcp_parse_header_args.out = &h;
     Profinet.dcp_parse_header(profinet_work);
-    TEST_ASSERT_FALSE(ProfinetV.ok);
-    ProfinetV.dcp_parse_header_args.frame = frame;
-    ProfinetV.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
-    ProfinetV.dcp_parse_header_args.out = NULL;
+    TEST_ASSERT_FALSE(Profinet.ok);
+    Profinet.dcp_parse_header_args.frame = frame;
+    Profinet.dcp_parse_header_args.len = PN_DCP_HDR_LEN;
+    Profinet.dcp_parse_header_args.out = NULL;
     Profinet.dcp_parse_header(profinet_work);
-    TEST_ASSERT_FALSE(ProfinetV.ok);
+    TEST_ASSERT_FALSE(Profinet.ok);
 }

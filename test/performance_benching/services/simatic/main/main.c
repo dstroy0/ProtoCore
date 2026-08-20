@@ -20,41 +20,40 @@ void dbench_run(void)
                                      0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0x01,
                                      0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B};
     static uint8_t block[80];
-    SimaticV.build_block_3964r_args.buf = block;
-    SimaticV.build_block_3964r_args.cap = sizeof(block);
-    SimaticV.build_block_3964r_args.data = data;
-    SimaticV.build_block_3964r_args.len = sizeof(data);
-    SimaticV.build_block_3964r_args.with_bcc = true;
+    Simatic.build_block_3964r_args.buf = block;
+    Simatic.build_block_3964r_args.cap = sizeof(block);
+    Simatic.build_block_3964r_args.data = data;
+    Simatic.build_block_3964r_args.len = sizeof(data);
+    Simatic.build_block_3964r_args.with_bcc = true;
     Simatic.build_block_3964r(protocore_simatic_span());
-    size_t blen = SimaticV.n;
+    size_t blen = Simatic.n;
 
     for (;;)
     {
         DBENCH_BANNER("simatic");
         volatile size_t sink = 0;
-        SimaticV.bcc_3964r_args.data = data;
-        SimaticV.bcc_3964r_args.len = sizeof(data);
-        DBENCH_BULK("Simatic.bcc_3964r", 200000, sizeof(data),
-                    sink += (Simatic.bcc_3964r(protocore_simatic_span()), SimaticV.value));
+        Simatic.bcc_3964r_args.data = data;
+        Simatic.bcc_3964r_args.len = sizeof(data);
+        DBENCH_BULK("Simatic.bcc_3964r", 200000, sizeof(data), sink += (Simatic.bcc_3964r(protocore_simatic_span()), Simatic.value));
         static uint8_t out[80];
-        SimaticV.build_block_3964r_args.buf = out;
-        SimaticV.build_block_3964r_args.cap = sizeof(out);
-        SimaticV.build_block_3964r_args.data = data;
-        SimaticV.build_block_3964r_args.len = sizeof(data);
-        SimaticV.build_block_3964r_args.with_bcc = true;
+        Simatic.build_block_3964r_args.buf = out;
+        Simatic.build_block_3964r_args.cap = sizeof(out);
+        Simatic.build_block_3964r_args.data = data;
+        Simatic.build_block_3964r_args.len = sizeof(data);
+        Simatic.build_block_3964r_args.with_bcc = true;
         DBENCH_OP("Simatic.build_block_3964r (BCC)", 200000,
-                  sink += (Simatic.build_block_3964r(protocore_simatic_span()), SimaticV.n));
+                  sink += (Simatic.build_block_3964r(protocore_simatic_span()), Simatic.n));
         DBENCH_OP("Simatic.parse_block_3964r", 200000, {
             uint8_t p[64];
             size_t plen = 0;
-            SimaticV.parse_block_3964r_args.buf = block;
-            SimaticV.parse_block_3964r_args.len = blen;
-            SimaticV.parse_block_3964r_args.with_bcc = true;
-            SimaticV.parse_block_3964r_args.out = p;
-            SimaticV.parse_block_3964r_args.out_cap = sizeof(p);
-            SimaticV.parse_block_3964r_args.out_len = &plen;
+            Simatic.parse_block_3964r_args.buf = block;
+            Simatic.parse_block_3964r_args.len = blen;
+            Simatic.parse_block_3964r_args.with_bcc = true;
+            Simatic.parse_block_3964r_args.out = p;
+            Simatic.parse_block_3964r_args.out_cap = sizeof(p);
+            Simatic.parse_block_3964r_args.out_len = &plen;
             Simatic.parse_block_3964r(protocore_simatic_span());
-            sink += SimaticV.ok ? plen : 0;
+            sink += Simatic.ok ? plen : 0;
         });
         (void)sink;
         DBENCH_DONE();

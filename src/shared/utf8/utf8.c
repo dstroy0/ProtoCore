@@ -10,13 +10,13 @@
 
 #include "shared/utf8/utf8.h"
 
-void protocore_utf8_valid(uint8_t *restrict work)
+static void utf8_valid(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *s = Utf8V.args.s;
-    const size_t n = Utf8V.args.n;
+    const uint8_t *s = Utf8.args.s;
+    const size_t n = Utf8.args.n;
 
-    Utf8V.ok = PROTO_FALSE;
+    Utf8.ok = PROTO_FALSE;
     size_t i = 0;
     while (i < n)
     {
@@ -70,8 +70,7 @@ void protocore_utf8_valid(uint8_t *restrict work)
         }
         i += need + 1;
     }
-    Utf8V.ok = PROTO_TRUE;
+    Utf8.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-Utf8Vars Utf8V;
+Utf8Ns Utf8 = {.valid = utf8_valid};

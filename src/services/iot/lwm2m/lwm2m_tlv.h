@@ -76,18 +76,21 @@ typedef struct
     uint8_t *buf; ///< the caller buffer every entry is emitted into
     size_t cap;   ///< how many octets it holds
 } Lwm2mTlvSinkArgs;
+
 /** @brief The octets a reader walks. */
 typedef struct
 {
     const uint8_t *buf; ///< the TLV array a read decodes, left where it lies
     size_t len;         ///< how many octets of it are readable
 } Lwm2mTlvSourceArgs;
+
 /** @brief The Type and Identifier fields of one entry (LwM2M Core sec 7.4.5 Table 7.4.5.-1). */
 typedef struct
 {
     Lwm2mTlvIdType id_type; ///< Type bits 7-6: the type of Identifier
     uint16_t id;            ///< the Identifier field: the Object Instance, Resource or Resource Instance ID
 } Lwm2mTlvHeaderArgs;
+
 /** @brief The Value field of one entry, in the forms LwM2M Core Appendix C Table C.-2 gives. */
 typedef struct
 {
@@ -98,6 +101,7 @@ typedef struct
     proto_bool boolean_value; ///< Boolean: staged as one octet, 0 for False and 1 for True
     const char *string_value; ///< String: UTF-8, measured to its NUL within the sink's capacity
 } Lwm2mTlvValueArgs;
+
 /**
  * @brief The OMA LwM2M TLV codec.
  *
@@ -128,16 +132,10 @@ typedef struct
     Lwm2mTlvSourceArgs source; ///< the octets a reader walks
     Lwm2mTlvHeaderArgs hdr;    ///< one entry's Type and Identifier fields
     Lwm2mTlvValueArgs val;     ///< its Value field
+
     proto_bool ok;
     size_t n;
-} Lwm2mTlvVars;
 
-/** @brief The operands and the outcome. */
-extern Lwm2mTlvVars Lwm2mTlvV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const open)(uint8_t *restrict work);
     void (*const write)(uint8_t *restrict work);
     void (*const write_integer)(uint8_t *restrict work);
@@ -150,35 +148,8 @@ typedef struct
     void (*const value_integer)(uint8_t *restrict work);
 } Lwm2mTlvNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Lwm2mTlvV or a region of the borrow at a fixed offset.
-void protocore_lwm2m_tlv_open(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write_integer(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write_boolean(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write_string(uint8_t *restrict work);
-void protocore_lwm2m_tlv_write_float(uint8_t *restrict work);
-void protocore_lwm2m_tlv_finish(uint8_t *restrict work);
-void protocore_lwm2m_tlv_parse(uint8_t *restrict work);
-void protocore_lwm2m_tlv_next(uint8_t *restrict work);
-void protocore_lwm2m_tlv_value_integer(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Lwm2mTlv.open(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Lwm2mTlvNs Lwm2mTlv __attribute__((unused)) = {
-    .open = protocore_lwm2m_tlv_open,
-    .write = protocore_lwm2m_tlv_write,
-    .write_integer = protocore_lwm2m_tlv_write_integer,
-    .write_boolean = protocore_lwm2m_tlv_write_boolean,
-    .write_string = protocore_lwm2m_tlv_write_string,
-    .write_float = protocore_lwm2m_tlv_write_float,
-    .finish = protocore_lwm2m_tlv_finish,
-    .parse = protocore_lwm2m_tlv_parse,
-    .next = protocore_lwm2m_tlv_next,
-    .value_integer = protocore_lwm2m_tlv_value_integer,
-};
+/** @brief The one symbol this module exports. */
+extern Lwm2mTlvNs Lwm2mTlv;
 
 /**
  * @brief The PROTOCORE_LWM2M_TLV_BORROW bytes this module's state lives in.

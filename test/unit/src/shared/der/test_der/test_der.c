@@ -27,11 +27,11 @@ void tearDown(void)
 // One read at @p pos over @p buf, so a case reads as one call.
 static proto_bool read_at(const uint8_t *buf, size_t len, size_t pos)
 {
-    DerV.read_args.buf = buf;
-    DerV.read_args.len = len;
-    DerV.read_args.pos = pos;
+    Der.read_args.buf = buf;
+    Der.read_args.len = len;
+    Der.read_args.pos = pos;
     Der.read(NULL);
-    return DerV.ok;
+    return Der.ok;
 }
 
 // ---------------------------------------------------------------------------
@@ -43,10 +43,10 @@ void test_a_short_form_value_reports_its_content_and_successor(void)
 {
     const uint8_t v[] = {0x02, 0x01, 0x2A, 0xFF}; // INTEGER 42, then a byte that is not part of it
     TEST_ASSERT_TRUE(read_at(v, sizeof(v), 0));
-    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_INTEGER, DerV.tlv.tag);
-    TEST_ASSERT_EQUAL_UINT(1, DerV.tlv.len);
-    TEST_ASSERT_EQUAL_HEX8(0x2A, DerV.tlv.content[0]);
-    TEST_ASSERT_EQUAL_UINT(3, DerV.tlv.next); // where the 0xFF begins
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_INTEGER, Der.tlv.tag);
+    TEST_ASSERT_EQUAL_UINT(1, Der.tlv.len);
+    TEST_ASSERT_EQUAL_HEX8(0x2A, Der.tlv.content[0]);
+    TEST_ASSERT_EQUAL_UINT(3, Der.tlv.next); // where the 0xFF begins
 }
 
 // The long form: a count octet with the high bit set, then that many length octets.
@@ -58,8 +58,8 @@ void test_a_long_form_length_is_read(void)
     v[1] = 0x81; // long form, one length octet
     v[2] = 200;
     TEST_ASSERT_TRUE(read_at(v, sizeof(v), 0));
-    TEST_ASSERT_EQUAL_UINT(200, DerV.tlv.len);
-    TEST_ASSERT_EQUAL_UINT(203, DerV.tlv.next);
+    TEST_ASSERT_EQUAL_UINT(200, Der.tlv.len);
+    TEST_ASSERT_EQUAL_UINT(203, Der.tlv.next);
 }
 
 // X.690 sec 10.1: the length is the shortest form that fits. 200 needs the long form, but a value
@@ -126,23 +126,23 @@ void test_an_empty_or_truncated_buffer_is_refused(void)
 void test_entering_a_sequence_lands_on_its_first_field(void)
 {
     const uint8_t cert[] = {
-        0x30, 0x09,                   // Certificate SEQUENCE, 9 octets
+        0x30, 0x09,             // Certificate SEQUENCE, 9 octets
         0x30, 0x03, 0x02, 0x01, 0x02, // tbsCertificate SEQUENCE { INTEGER 2 }
-        0x02, 0x01, 0x07,             // signatureAlgorithm, standing in as INTEGER 7
-        0x03, 0x01, 0x00,             // signatureValue BIT STRING, empty
+        0x02, 0x01, 0x07,       // signatureAlgorithm, standing in as INTEGER 7
+        0x03, 0x01, 0x00,       // signatureValue BIT STRING, empty
     };
-    DerV.read_args.buf = cert;
-    DerV.read_args.len = sizeof(cert);
-    DerV.read_args.pos = 0;
+    Der.read_args.buf = cert;
+    Der.read_args.len = sizeof(cert);
+    Der.read_args.pos = 0;
     Der.enter(NULL);
-    TEST_ASSERT_TRUE(DerV.ok);
-    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_SEQUENCE, DerV.tlv.tag); // tbsCertificate
-    TEST_ASSERT_EQUAL_UINT(3, DerV.tlv.len);
+    TEST_ASSERT_TRUE(Der.ok);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_SEQUENCE, Der.tlv.tag); // tbsCertificate
+    TEST_ASSERT_EQUAL_UINT(3, Der.tlv.len);
 
     // The field after it.
-    TEST_ASSERT_TRUE(read_at(cert, sizeof(cert), DerV.tlv.next));
-    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_INTEGER, DerV.tlv.tag);
-    TEST_ASSERT_EQUAL_HEX8(0x07, DerV.tlv.content[0]);
+    TEST_ASSERT_TRUE(read_at(cert, sizeof(cert), Der.tlv.next));
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_INTEGER, Der.tlv.tag);
+    TEST_ASSERT_EQUAL_HEX8(0x07, Der.tlv.content[0]);
 }
 
 // X.690 sec 8.1.2.5: only a constructed value holds other values, so entering a primitive is a
@@ -150,21 +150,21 @@ void test_entering_a_sequence_lands_on_its_first_field(void)
 void test_entering_a_primitive_is_refused(void)
 {
     const uint8_t v[] = {0x02, 0x03, 0x30, 0x01, 0x00};
-    DerV.read_args.buf = v;
-    DerV.read_args.len = sizeof(v);
-    DerV.read_args.pos = 0;
+    Der.read_args.buf = v;
+    Der.read_args.len = sizeof(v);
+    Der.read_args.pos = 0;
     Der.enter(NULL);
-    TEST_ASSERT_FALSE(DerV.ok);
+    TEST_ASSERT_FALSE(Der.ok);
 }
 
 void test_entering_an_empty_sequence_is_refused(void)
 {
     const uint8_t v[] = {0x30, 0x00};
-    DerV.read_args.buf = v;
-    DerV.read_args.len = sizeof(v);
-    DerV.read_args.pos = 0;
+    Der.read_args.buf = v;
+    Der.read_args.len = sizeof(v);
+    Der.read_args.pos = 0;
     Der.enter(NULL);
-    TEST_ASSERT_FALSE(DerV.ok);
+    TEST_ASSERT_FALSE(Der.ok);
 }
 
 // A context-specific constructed tag is what X.509 spells its optional fields with: version is
@@ -173,13 +173,13 @@ void test_a_context_tag_is_entered_like_any_constructed_value(void)
 {
     const uint8_t v[] = {0xA0, 0x03, 0x02, 0x01, 0x02}; // [0] EXPLICIT { INTEGER 2 } - version v3
     TEST_ASSERT_TRUE(read_at(v, sizeof(v), 0));
-    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_CONTEXT_CONSTRUCTED(0), DerV.tlv.tag);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_CONTEXT_CONSTRUCTED(0), Der.tlv.tag);
 
-    DerV.read_args.pos = 0;
+    Der.read_args.pos = 0;
     Der.enter(NULL);
-    TEST_ASSERT_TRUE(DerV.ok);
-    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_INTEGER, DerV.tlv.tag);
-    TEST_ASSERT_EQUAL_HEX8(0x02, DerV.tlv.content[0]); // v3
+    TEST_ASSERT_TRUE(Der.ok);
+    TEST_ASSERT_EQUAL_HEX8(PROTOCORE_DER_INTEGER, Der.tlv.tag);
+    TEST_ASSERT_EQUAL_HEX8(0x02, Der.tlv.content[0]); // v3
 }
 
 // ---------------------------------------------------------------------------
@@ -188,26 +188,26 @@ void test_a_context_tag_is_entered_like_any_constructed_value(void)
 
 static proto_bool uint_at(const uint8_t *buf, size_t len)
 {
-    DerV.read_args.buf = buf;
-    DerV.read_args.len = len;
-    DerV.read_args.pos = 0;
+    Der.read_args.buf = buf;
+    Der.read_args.len = len;
+    Der.read_args.pos = 0;
     Der.uint(NULL);
-    return DerV.ok;
+    return Der.ok;
 }
 
 void test_an_integer_reports_its_value(void)
 {
     const uint8_t zero[] = {0x02, 0x01, 0x00};
     TEST_ASSERT_TRUE(uint_at(zero, sizeof(zero)));
-    TEST_ASSERT_EQUAL_UINT64(0, DerV.u64);
+    TEST_ASSERT_EQUAL_UINT64(0, Der.u64);
 
     const uint8_t v3[] = {0x02, 0x01, 0x02};
     TEST_ASSERT_TRUE(uint_at(v3, sizeof(v3)));
-    TEST_ASSERT_EQUAL_UINT64(2, DerV.u64);
+    TEST_ASSERT_EQUAL_UINT64(2, Der.u64);
 
     const uint8_t big[] = {0x02, 0x03, 0x01, 0x00, 0x01}; // 65537, the usual RSA exponent
     TEST_ASSERT_TRUE(uint_at(big, sizeof(big)));
-    TEST_ASSERT_EQUAL_UINT64(65537, DerV.u64);
+    TEST_ASSERT_EQUAL_UINT64(65537, Der.u64);
 }
 
 // sec 8.3.2: a leading 0x00 is there only to keep a high-bit value positive.
@@ -215,7 +215,7 @@ void test_a_leading_zero_is_read_when_the_value_needs_it(void)
 {
     const uint8_t v[] = {0x02, 0x02, 0x00, 0x80};
     TEST_ASSERT_TRUE(uint_at(v, sizeof(v)));
-    TEST_ASSERT_EQUAL_UINT64(0x80, DerV.u64);
+    TEST_ASSERT_EQUAL_UINT64(0x80, Der.u64);
 }
 
 // And refused when it does not: that is a second encoding of the same number.
@@ -256,14 +256,14 @@ void test_an_empty_integer_is_refused(void)
 void test_a_bit_string_yields_its_octets_past_the_unused_count(void)
 {
     const uint8_t v[] = {0x03, 0x04, 0x00, 0xDE, 0xAD, 0xBE};
-    DerV.read_args.buf = v;
-    DerV.read_args.len = sizeof(v);
-    DerV.read_args.pos = 0;
+    Der.read_args.buf = v;
+    Der.read_args.len = sizeof(v);
+    Der.read_args.pos = 0;
     Der.bitstring(NULL);
-    TEST_ASSERT_TRUE(DerV.ok);
-    TEST_ASSERT_EQUAL_UINT(3, DerV.tlv.len);
-    TEST_ASSERT_EQUAL_HEX8(0xDE, DerV.tlv.content[0]);
-    TEST_ASSERT_EQUAL_HEX8(0xBE, DerV.tlv.content[2]);
+    TEST_ASSERT_TRUE(Der.ok);
+    TEST_ASSERT_EQUAL_UINT(3, Der.tlv.len);
+    TEST_ASSERT_EQUAL_HEX8(0xDE, Der.tlv.content[0]);
+    TEST_ASSERT_EQUAL_HEX8(0xBE, Der.tlv.content[2]);
 }
 
 // A non-zero count would mean the last octet is partial. A key is not, so rather than shift the
@@ -271,21 +271,21 @@ void test_a_bit_string_yields_its_octets_past_the_unused_count(void)
 void test_a_bit_string_with_unused_bits_is_refused(void)
 {
     const uint8_t v[] = {0x03, 0x03, 0x04, 0xDE, 0xA0};
-    DerV.read_args.buf = v;
-    DerV.read_args.len = sizeof(v);
-    DerV.read_args.pos = 0;
+    Der.read_args.buf = v;
+    Der.read_args.len = sizeof(v);
+    Der.read_args.pos = 0;
     Der.bitstring(NULL);
-    TEST_ASSERT_FALSE(DerV.ok);
+    TEST_ASSERT_FALSE(Der.ok);
 }
 
 void test_an_empty_bit_string_is_refused(void)
 {
     const uint8_t v[] = {0x03, 0x00};
-    DerV.read_args.buf = v;
-    DerV.read_args.len = sizeof(v);
-    DerV.read_args.pos = 0;
+    Der.read_args.buf = v;
+    Der.read_args.len = sizeof(v);
+    Der.read_args.pos = 0;
     Der.bitstring(NULL);
-    TEST_ASSERT_FALSE(DerV.ok);
+    TEST_ASSERT_FALSE(Der.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -300,44 +300,44 @@ static const uint8_t OID_ED25519[] = {0x2B, 0x65, 0x70};
 void test_an_oid_matches_only_itself(void)
 {
     const uint8_t v[] = {0x06, 0x07, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x02, 0x01};
-    DerV.read_args.buf = v;
-    DerV.read_args.len = sizeof(v);
-    DerV.read_args.pos = 0;
-    DerV.oid_args.oid = OID_EC_PUBKEY;
-    DerV.oid_args.oid_len = sizeof(OID_EC_PUBKEY);
+    Der.read_args.buf = v;
+    Der.read_args.len = sizeof(v);
+    Der.read_args.pos = 0;
+    Der.oid_args.oid = OID_EC_PUBKEY;
+    Der.oid_args.oid_len = sizeof(OID_EC_PUBKEY);
     Der.oid_eq(NULL);
-    TEST_ASSERT_TRUE(DerV.ok);
+    TEST_ASSERT_TRUE(Der.ok);
 
-    DerV.read_args.pos = 0;
-    DerV.oid_args.oid = OID_ED25519;
-    DerV.oid_args.oid_len = sizeof(OID_ED25519);
+    Der.read_args.pos = 0;
+    Der.oid_args.oid = OID_ED25519;
+    Der.oid_args.oid_len = sizeof(OID_ED25519);
     Der.oid_eq(NULL);
-    TEST_ASSERT_FALSE(DerV.ok);
+    TEST_ASSERT_FALSE(Der.ok);
 }
 
 // A prefix is not a match: an OID that begins with another names a different thing entirely.
 void test_an_oid_prefix_is_not_a_match(void)
 {
     const uint8_t v[] = {0x06, 0x03, 0x2A, 0x86, 0x48}; // the first three octets of id-ecPublicKey
-    DerV.read_args.buf = v;
-    DerV.read_args.len = sizeof(v);
-    DerV.read_args.pos = 0;
-    DerV.oid_args.oid = OID_EC_PUBKEY;
-    DerV.oid_args.oid_len = sizeof(OID_EC_PUBKEY);
+    Der.read_args.buf = v;
+    Der.read_args.len = sizeof(v);
+    Der.read_args.pos = 0;
+    Der.oid_args.oid = OID_EC_PUBKEY;
+    Der.oid_args.oid_len = sizeof(OID_EC_PUBKEY);
     Der.oid_eq(NULL);
-    TEST_ASSERT_FALSE(DerV.ok);
+    TEST_ASSERT_FALSE(Der.ok);
 }
 
 void test_a_value_that_is_not_an_oid_does_not_match_one(void)
 {
     const uint8_t v[] = {0x04, 0x03, 0x2B, 0x65, 0x70}; // the Ed25519 octets, tagged OCTET STRING
-    DerV.read_args.buf = v;
-    DerV.read_args.len = sizeof(v);
-    DerV.read_args.pos = 0;
-    DerV.oid_args.oid = OID_ED25519;
-    DerV.oid_args.oid_len = sizeof(OID_ED25519);
+    Der.read_args.buf = v;
+    Der.read_args.len = sizeof(v);
+    Der.read_args.pos = 0;
+    Der.oid_args.oid = OID_ED25519;
+    Der.oid_args.oid_len = sizeof(OID_ED25519);
     Der.oid_eq(NULL);
-    TEST_ASSERT_FALSE(DerV.ok);
+    TEST_ASSERT_FALSE(Der.ok);
 }
 
 // ---------------------------------------------------------------------------
@@ -346,11 +346,11 @@ void test_a_value_that_is_not_an_oid_does_not_match_one(void)
 
 static proto_bool time_at(const uint8_t *buf, size_t len)
 {
-    DerV.read_args.buf = buf;
-    DerV.read_args.len = len;
-    DerV.read_args.pos = 0;
+    Der.read_args.buf = buf;
+    Der.read_args.len = len;
+    Der.read_args.pos = 0;
     Der.time(NULL);
-    return DerV.ok;
+    return Der.ok;
 }
 
 // sec 4.1.2.5.1: YYMMDDHHMMSSZ, and YY < 50 is 20YY.
@@ -358,7 +358,7 @@ void test_a_utc_time_below_the_pivot_is_this_century(void)
 {
     const uint8_t v[] = {0x17, 0x0D, '2', '6', '0', '8', '1', '8', '0', '0', '0', '0', '0', '0', 'Z'};
     TEST_ASSERT_TRUE(time_at(v, sizeof(v)));
-    TEST_ASSERT_EQUAL_UINT64(1787011200ULL, DerV.u64); // 2026-08-18T00:00:00Z
+    TEST_ASSERT_EQUAL_UINT64(1787011200ULL, Der.u64); // 2026-08-18T00:00:00Z
 }
 
 // And YY >= 50 is 19YY. The pivot is the one thing a reader can get silently wrong: a certificate
@@ -367,7 +367,7 @@ void test_a_utc_time_at_or_above_the_pivot_is_last_century(void)
 {
     const uint8_t v[] = {0x17, 0x0D, '9', '8', '0', '1', '0', '1', '0', '0', '0', '0', '0', '0', 'Z'};
     TEST_ASSERT_TRUE(time_at(v, sizeof(v)));
-    TEST_ASSERT_EQUAL_UINT64(883612800ULL, DerV.u64); // 1998-01-01T00:00:00Z
+    TEST_ASSERT_EQUAL_UINT64(883612800ULL, Der.u64); // 1998-01-01T00:00:00Z
 
     // At the pivot itself: 50 is 1950, which is before the epoch this reports seconds from, so it
     // is refused rather than reported as 2050. That confusion is the whole reason the pivot exists,
@@ -380,9 +380,10 @@ void test_a_utc_time_at_or_above_the_pivot_is_last_century(void)
 // sec 4.1.2.5.2: YYYYMMDDHHMMSSZ. RFC 5280 requires GeneralizedTime for 2050 and later.
 void test_a_generalized_time_carries_its_whole_year(void)
 {
-    const uint8_t v[] = {0x18, 0x0F, '2', '0', '5', '0', '0', '1', '0', '1', '0', '0', '0', '0', '0', '0', 'Z'};
+    const uint8_t v[] = {0x18, 0x0F, '2', '0', '5', '0', '0', '1', '0', '1',
+                         '0',  '0',  '0', '0', '0', '0', 'Z'};
     TEST_ASSERT_TRUE(time_at(v, sizeof(v)));
-    TEST_ASSERT_EQUAL_UINT64(2524608000ULL, DerV.u64); // 2050-01-01T00:00:00Z
+    TEST_ASSERT_EQUAL_UINT64(2524608000ULL, Der.u64); // 2050-01-01T00:00:00Z
 }
 
 // A leap day is a real date, and the year-2000 rule is the one most leap tests get wrong.
@@ -390,7 +391,7 @@ void test_a_leap_day_is_counted(void)
 {
     const uint8_t v[] = {0x17, 0x0D, '0', '0', '0', '2', '2', '9', '0', '0', '0', '0', '0', '0', 'Z'};
     TEST_ASSERT_TRUE(time_at(v, sizeof(v)));
-    TEST_ASSERT_EQUAL_UINT64(951782400ULL, DerV.u64); // 2000-02-29T00:00:00Z
+    TEST_ASSERT_EQUAL_UINT64(951782400ULL, Der.u64); // 2000-02-29T00:00:00Z
 }
 
 // sec 4.1.2.5.1 requires seconds and Zulu. A time without them, or with a differential, is a second

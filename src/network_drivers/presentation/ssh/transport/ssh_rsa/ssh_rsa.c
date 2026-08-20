@@ -198,7 +198,7 @@ static proto_bool rsa_key_parse(const uint8_t *der, size_t len, uint8_t *d)
            der_int(der, end, &off, d, PROTOCORE_RSA_KEY_BYTES);
 }
 
-void protocore_ssh_rsa_load_pubkey(uint8_t *restrict work)
+static void ssh_rsa_load_pubkey(uint8_t *restrict work)
 {
     if (!span.has_storage(SSH_RSA_CTX(work)->d))
     {
@@ -206,7 +206,7 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *restrict work)
     }
     if (!span.has_storage(SSH_RSA_CTX(work)->d))
     {
-        SshRsaV.n = -1;
+        SshRsa.n = -1;
         return;
     }
     SSH_RSA_CTX(work)->ready = PROTO_FALSE;
@@ -218,7 +218,7 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *restrict work)
     if (!span.has_storage(der))
     {
         protocore_secure_release(mark);
-        SshRsaV.n = -1;
+        SshRsa.n = -1;
         return;
     }
     const size_t der_len =
@@ -231,19 +231,19 @@ void protocore_ssh_rsa_load_pubkey(uint8_t *restrict work)
     protocore_secure_release(mark);
     if (!SSH_RSA_CTX(work)->ready)
     {
-        SshRsaV.n = -1;
+        SshRsa.n = -1;
         return;
     }
-    SshRsaV.n = 0;
+    SshRsa.n = 0;
 }
 
-void protocore_ssh_rsa_sign(uint8_t *restrict work)
+static void ssh_rsa_sign(uint8_t *restrict work)
 {
-    uint8_t *crypto_work = SshRsaV.sign_args.crypto_work;
-    const uint8_t *msg = SshRsaV.sign_args.msg;
-    size_t msg_len = SshRsaV.sign_args.msg_len;
-    protocore_rsa_hash hash = SshRsaV.sign_args.hash;
-    uint8_t *sig = SshRsaV.sign_args.sig;
+    uint8_t *crypto_work = SshRsa.sign_args.crypto_work;
+    const uint8_t *msg = SshRsa.sign_args.msg;
+    size_t msg_len = SshRsa.sign_args.msg_len;
+    protocore_rsa_hash hash = SshRsa.sign_args.hash;
+    uint8_t *sig = SshRsa.sign_args.sig;
 
     // Reuse the key parsed once at startup; lazy-load as a fallback if the sketch never did. The
     // load is staged inside the guard: as the right operand of `&&` it must not run when the key is
@@ -251,25 +251,25 @@ void protocore_ssh_rsa_sign(uint8_t *restrict work)
     if (!SSH_RSA_CTX(work)->ready)
     {
         SshRsa.load_pubkey(work);
-        if (SshRsaV.n != 0)
+        if (SshRsa.n != 0)
         {
-            SshRsaV.n = -1;
+            SshRsa.n = -1;
             return;
         }
     }
-    RsaV.sign_args.n = ssh_host_pubkey.n;
-    RsaV.sign_args.d = SSH_RSA_CTX(work)->d.buf;
-    RsaV.sign_args.msg = msg;
-    RsaV.sign_args.msg_len = msg_len;
-    RsaV.sign_args.hash = hash;
-    RsaV.sign_args.sig = sig;
+    Rsa.sign_args.n = ssh_host_pubkey.n;
+    Rsa.sign_args.d = SSH_RSA_CTX(work)->d.buf;
+    Rsa.sign_args.msg = msg;
+    Rsa.sign_args.msg_len = msg_len;
+    Rsa.sign_args.hash = hash;
+    Rsa.sign_args.sig = sig;
     Rsa.sign(crypto_work);
-    if (!RsaV.ok)
+    if (!Rsa.ok)
     {
-        SshRsaV.n = -1;
+        SshRsa.n = -1;
         return;
     }
-    SshRsaV.n = 0;
+    SshRsa.n = 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -307,21 +307,21 @@ static uint8_t *put_mpint(uint8_t *p, const uint8_t *data, size_t data_len)
     return p + src_len;
 }
 
-void protocore_ssh_rsa_encode_pubkey(uint8_t *restrict work)
+static void ssh_rsa_encode_pubkey(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t *out = SshRsaV.encode_pubkey_args.out;
-    size_t *out_len = SshRsaV.encode_pubkey_args.out_len;
-    size_t out_cap = SshRsaV.encode_pubkey_args.out_cap;
+    uint8_t *out = SshRsa.encode_pubkey_args.out;
+    size_t *out_len = SshRsa.encode_pubkey_args.out_len;
+    size_t out_cap = SshRsa.encode_pubkey_args.out_cap;
 
     if (!ssh_host_pubkey.loaded)
     {
-        SshRsaV.n = -1;
+        SshRsa.n = -1;
         return;
     }
     if (out_cap < SSH_RSA_PUBKEY_BLOB_MAX)
     {
-        SshRsaV.n = -1;
+        SshRsa.n = -1;
         return;
     }
 
@@ -336,10 +336,13 @@ void protocore_ssh_rsa_encode_pubkey(uint8_t *restrict work)
     p = put_mpint(p, ssh_host_pubkey.n, PROTOCORE_RSA_KEY_BYTES);
 
     *out_len = (size_t)(p - out);
-    SshRsaV.n = 0;
+    SshRsa.n = 0;
 }
-/** @brief The operands and the outcome. */
-SshRsaVars SshRsaV;
+SshRsaNs SshRsa = {
+    .load_pubkey = ssh_rsa_load_pubkey,
+    .sign = ssh_rsa_sign,
+    .encode_pubkey = ssh_rsa_encode_pubkey,
+};
 
 PROTOCORE_END_DECLS
 

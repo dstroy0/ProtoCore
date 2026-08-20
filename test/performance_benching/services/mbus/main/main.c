@@ -40,15 +40,15 @@ void dbench_run(void)
 
     // Wrap the record body in a real RSP_UD long frame once; parse benches this exact buffer.
     static uint8_t frame[64];
-    MbusV.build_long_args.buf = frame;
-    MbusV.build_long_args.cap = sizeof(frame);
-    MbusV.build_long_args.c = MBUS_C_RSP_UD;
-    MbusV.build_long_args.a = 0x01;
-    MbusV.build_long_args.ci = MBUS_CI_RSP_VARIABLE;
-    MbusV.build_long_args.data = record_body;
-    MbusV.build_long_args.data_len = (uint8_t)sizeof(record_body);
+    Mbus.build_long_args.buf = frame;
+    Mbus.build_long_args.cap = sizeof(frame);
+    Mbus.build_long_args.c = MBUS_C_RSP_UD;
+    Mbus.build_long_args.a = 0x01;
+    Mbus.build_long_args.ci = MBUS_CI_RSP_VARIABLE;
+    Mbus.build_long_args.data = record_body;
+    Mbus.build_long_args.data_len = (uint8_t)sizeof(record_body);
     Mbus.build_long(mbus_work);
-    size_t frame_len = MbusV.n;
+    size_t frame_len = Mbus.n;
     static uint8_t out[16];
 
     for (;;)
@@ -59,38 +59,40 @@ void dbench_run(void)
         size_t consumed = 0;
 
         // Short-frame builder (SND_NKE link reset): start/CS/stop over just C + A.
-        MbusV.build_snd_nke_args.buf = out;
-        MbusV.build_snd_nke_args.cap = sizeof(out);
-        MbusV.build_snd_nke_args.a = 0x05;
-        DBENCH_OP("Mbus.build_snd_nke", 100000, sink += (Mbus.build_snd_nke(mbus_work), MbusV.n));
+        Mbus.build_snd_nke_args.buf = out;
+        Mbus.build_snd_nke_args.cap = sizeof(out);
+        Mbus.build_snd_nke_args.a = 0x05;
+        DBENCH_OP("Mbus.build_snd_nke", 100000, sink += (Mbus.build_snd_nke(mbus_work), Mbus.n));
 
         // Long-frame builder: framing + 8-bit sum checksum over the 23-octet record body.
-        MbusV.build_long_args.buf = frame;
-        MbusV.build_long_args.cap = sizeof(frame);
-        MbusV.build_long_args.c = MBUS_C_RSP_UD;
-        MbusV.build_long_args.a = 0x01;
-        MbusV.build_long_args.ci = MBUS_CI_RSP_VARIABLE;
-        MbusV.build_long_args.data = record_body;
-        MbusV.build_long_args.data_len = (uint8_t)sizeof(record_body);
-        DBENCH_OP("Mbus.build_long", 50000, sink += (Mbus.build_long(mbus_work), MbusV.n));
+        Mbus.build_long_args.buf = frame;
+        Mbus.build_long_args.cap = sizeof(frame);
+        Mbus.build_long_args.c = MBUS_C_RSP_UD;
+        Mbus.build_long_args.a = 0x01;
+        Mbus.build_long_args.ci = MBUS_CI_RSP_VARIABLE;
+        Mbus.build_long_args.data = record_body;
+        Mbus.build_long_args.data_len = (uint8_t)sizeof(record_body);
+        DBENCH_OP("Mbus.build_long", 50000,
+                  sink += (Mbus.build_long(mbus_work), Mbus.n));
 
         // Parser: validates start/stop, doubled length, and re-sums the checksum. Bulk => MB/s too.
-        MbusV.parse_args.buf = frame;
-        MbusV.parse_args.len = frame_len;
-        MbusV.parse_args.out = &f;
-        MbusV.parse_args.consumed = &consumed;
-        DBENCH_BULK("Mbus.parse (long)", 50000, frame_len, sink += (Mbus.parse(mbus_work), MbusV.ok));
+        Mbus.parse_args.buf = frame;
+        Mbus.parse_args.len = frame_len;
+        Mbus.parse_args.out = &f;
+        Mbus.parse_args.consumed = &consumed;
+        DBENCH_BULK("Mbus.parse (long)", 50000, frame_len,
+                    sink += (Mbus.parse(mbus_work), Mbus.ok));
 
         // Variable-data record walker: one full pass over all 4 records (DIFE/VIFE + LVAR).
         DBENCH_OP(
             "Mbus.record_walk x4", 50000, do {
                 size_t p = 0;
                 MbusRecord r;
-                MbusV.record_next_args.body = record_body;
-                MbusV.record_next_args.len = sizeof(record_body);
-                MbusV.record_next_args.pos = &p;
-                MbusV.record_next_args.out = &r;
-                while ((Mbus.record_next(mbus_work), MbusV.ok))
+                Mbus.record_next_args.body = record_body;
+                Mbus.record_next_args.len = sizeof(record_body);
+                Mbus.record_next_args.pos = &p;
+                Mbus.record_next_args.out = &r;
+                while ((Mbus.record_next(mbus_work), Mbus.ok))
                 {
                     sink += r.data_len;
                 }

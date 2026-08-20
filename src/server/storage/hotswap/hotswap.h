@@ -65,14 +65,19 @@ typedef struct
     uint32_t mounts;            ///< successful mounts since init (a removal/insert cycle count).
     uint32_t faults;            ///< times a healthy volume was declared faulted.
 } HotswapCore;
+
 /** @brief Mount the volume. @return true on success. */
 typedef proto_bool (*protocore_hotswap_mount)(void *ctx);
+
 /** @brief Drop the mount and any handles it owns. Must tolerate being called when not mounted. */
 typedef void (*protocore_hotswap_unmount)(void *ctx);
+
 /** @brief Optional card-detect probe. nullptr means "assume present and let the mount decide". */
 typedef proto_bool (*protocore_hotswap_present)(void *ctx);
+
 /** @brief Fired on every state change, so an app can log it or light an LED. */
 typedef void (*protocore_hotswap_event)(StorageState from, StorageState to, void *ctx);
+
 /** @brief What core_init takes: c, fail_threshold, probe_interval_ms, ... */
 typedef struct
 {
@@ -82,18 +87,21 @@ typedef struct
     uint32_t probe_interval_ms;
     uint32_t now;
 } HotswapCoreInitArgs;
+
 /** @brief What core_io takes: c, ok. */
 typedef struct
 {
     HotswapCore *c;
     proto_bool ok;
 } HotswapCoreIoArgs;
+
 /** @brief What core_due takes: c, now. */
 typedef struct
 {
     const HotswapCore *c;
     uint32_t now;
 } HotswapCoreDueArgs;
+
 /** @brief What core_probe takes: c, present, mounted, now. */
 typedef struct
 {
@@ -102,6 +110,7 @@ typedef struct
     proto_bool mounted; ///< true if the mount actually succeeded. Present-but-unmountable stays ABSENT rather than ...
     uint32_t now;
 } HotswapCoreProbeArgs;
+
 /** @brief What begin takes: mount, unmount, present, ctx. */
 typedef struct
 {
@@ -110,32 +119,38 @@ typedef struct
     protocore_hotswap_present present;
     void *ctx;
 } HotswapBeginArgs;
+
 /** @brief What set_event_cb takes: cb. */
 typedef struct
 {
     protocore_hotswap_event cb;
 } HotswapSetEventCbArgs;
+
 /** @brief What poll_at takes: now. */
 typedef struct
 {
     uint32_t now;
 } HotswapPollAtArgs;
+
 /** @brief What io takes: ok. */
 typedef struct
 {
     proto_bool ok;
 } HotswapIoArgs;
+
 /** @brief What state_name takes: s. */
 typedef struct
 {
     StorageState s;
 } HotswapStateNameArgs;
+
 /** @brief What json takes: out, cap. */
 typedef struct
 {
     char *out;
     size_t cap;
 } HotswapJsonArgs;
+
 /**
  * @brief Safeties for removable storage that can vanish mid-write (PROTOCORE_ENABLE_HOTSWAP).
  *
@@ -192,18 +207,12 @@ typedef struct
     HotswapIoArgs io_args;
     HotswapStateNameArgs state_name_args;
     HotswapJsonArgs json_args;
+
     proto_bool ok;
     StorageState value;
     const char *text;
     size_t n;
-} HotswapVars;
 
-/** @brief The operands and the outcome. */
-extern HotswapVars HotswapV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const core_init)(uint8_t *restrict work);
     void (*const core_io)(uint8_t *restrict work);
     void (*const core_due)(uint8_t *restrict work);
@@ -219,41 +228,8 @@ typedef struct
     void (*const json)(uint8_t *restrict work);
 } HotswapNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HotswapV or a region of the borrow at a fixed offset.
-void protocore_hotswap_core_init(uint8_t *restrict work);
-void protocore_hotswap_core_io(uint8_t *restrict work);
-void protocore_hotswap_core_due(uint8_t *restrict work);
-void protocore_hotswap_core_probe(uint8_t *restrict work);
-void protocore_hotswap_begin(uint8_t *restrict work);
-void protocore_hotswap_set_event_cb(uint8_t *restrict work);
-void protocore_hotswap_poll(uint8_t *restrict work);
-void protocore_hotswap_poll_at(uint8_t *restrict work);
-void protocore_hotswap_ready(uint8_t *restrict work);
-void protocore_hotswap_io(uint8_t *restrict work);
-void protocore_hotswap_state(uint8_t *restrict work);
-void protocore_hotswap_state_name(uint8_t *restrict work);
-void protocore_hotswap_json(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Hotswap.core_init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HotswapNs Hotswap __attribute__((unused)) = {
-    .core_init = protocore_hotswap_core_init,
-    .core_io = protocore_hotswap_core_io,
-    .core_due = protocore_hotswap_core_due,
-    .core_probe = protocore_hotswap_core_probe,
-    .begin = protocore_hotswap_begin,
-    .set_event_cb = protocore_hotswap_set_event_cb,
-    .poll = protocore_hotswap_poll,
-    .poll_at = protocore_hotswap_poll_at,
-    .ready = protocore_hotswap_ready,
-    .io = protocore_hotswap_io,
-    .state = protocore_hotswap_state,
-    .state_name = protocore_hotswap_state_name,
-    .json = protocore_hotswap_json,
-};
+/** @brief The one symbol this module exports. */
+extern HotswapNs Hotswap;
 
 /**
  * @brief The PROTOCORE_HOTSWAP_BORROW bytes this module's state lives in.

@@ -40,16 +40,19 @@ typedef struct
     const struct protocore_ip *network;
     uint8_t prefix_len;
 } ForwardedTrustAddArgs;
+
 /** @brief What add_cidr takes. */
 typedef struct
 {
     const char *cidr;
 } ForwardedTrustAddCidrArgs;
+
 /** @brief What contains takes. */
 typedef struct
 {
     const struct protocore_ip *peer;
 } ForwardedTrustContainsArgs;
+
 /** @brief What protocore_forwarded_effective_ip takes. */
 typedef struct
 {
@@ -63,15 +66,9 @@ typedef struct
     ForwardedTrustAddCidrArgs add_cidr_args;
     ForwardedTrustContainsArgs contains_args;
     ForwardedTrustProtocoreForwardedEffectiveIpArgs protocore_forwarded_effective_ip_args;
+
     proto_bool ok;
-} ForwardedTrustVars;
 
-/** @brief The operands and the outcome. */
-extern ForwardedTrustVars ForwardedTrustV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const reset)(uint8_t *restrict work);
     void (*const add)(uint8_t *restrict work);
     void (*const add_cidr)(uint8_t *restrict work);
@@ -79,25 +76,8 @@ typedef struct
     void (*const protocore_forwarded_effective_ip)(uint8_t *restrict work);
 } ForwardedTrustNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in ForwardedTrustV or a region of the borrow at a fixed offset.
-void protocore_forwarded_trust_reset(uint8_t *restrict work);
-void protocore_forwarded_trust_add(uint8_t *restrict work);
-void protocore_forwarded_trust_add_cidr(uint8_t *restrict work);
-void protocore_forwarded_trust_contains(uint8_t *restrict work);
-void protocore_forwarded_trust_protocore_forwarded_effective_ip(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `ForwardedTrust.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const ForwardedTrustNs ForwardedTrust __attribute__((unused)) = {
-    .reset = protocore_forwarded_trust_reset,
-    .add = protocore_forwarded_trust_add,
-    .add_cidr = protocore_forwarded_trust_add_cidr,
-    .contains = protocore_forwarded_trust_contains,
-    .protocore_forwarded_effective_ip = protocore_forwarded_trust_protocore_forwarded_effective_ip,
-};
+/** @brief The one symbol this module exports. */
+extern ForwardedTrustNs ForwardedTrust;
 
 /**
  * @brief The PROTOCORE_FORWARDED_TRUST_BORROW bytes this module's state lives in.

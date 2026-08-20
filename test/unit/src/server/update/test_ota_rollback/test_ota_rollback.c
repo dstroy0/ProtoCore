@@ -13,8 +13,8 @@
 
 #include "server/update/ota_rollback/ota_rollback.h"
 
-#include "server/clock/clock.h"
 #include "test/core_setup/hal/host/host_platform.h"
+#include "server/clock/clock.h"
 
 #include <unity.h>
 
@@ -32,12 +32,12 @@ void tearDown(void)
 static protocore_ota_action decide(uint8_t img_state, proto_bool self_test_ok, uint32_t ms_since_boot,
                                    uint32_t window_ms)
 {
-    OtaRollbackV.decide_args.img_state = img_state;
-    OtaRollbackV.decide_args.self_test_ok = self_test_ok;
-    OtaRollbackV.decide_args.ms_since_boot = ms_since_boot;
-    OtaRollbackV.decide_args.window_ms = window_ms;
+    OtaRollback.decide_args.img_state = img_state;
+    OtaRollback.decide_args.self_test_ok = self_test_ok;
+    OtaRollback.decide_args.ms_since_boot = ms_since_boot;
+    OtaRollback.decide_args.window_ms = window_ms;
     OtaRollback.decide(ota_rollback_work);
-    return OtaRollbackV.action;
+    return OtaRollback.action;
 }
 
 // An image that has confirmed itself is committed, so the update sticks across the next boot.
@@ -120,16 +120,16 @@ void test_the_seam_reports_the_state_the_part_holds(void)
 {
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
     OtaRollback.state(ota_rollback_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_PENDING_VERIFY, OtaRollbackV.img_state);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_PENDING_VERIFY, OtaRollback.img_state);
 
     OtaRollback.commit(ota_rollback_work);
     OtaRollback.state(ota_rollback_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_VALID, OtaRollbackV.img_state);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_VALID, OtaRollback.img_state);
 
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
-    OtaRollbackV.rollback(ota_rollback_work);
+    OtaRollback.rollback(ota_rollback_work);
     OtaRollback.state(ota_rollback_work);
-    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_INVALID, OtaRollbackV.img_state);
+    TEST_ASSERT_EQUAL_UINT8(PROTOCORE_OTA_IMG_INVALID, OtaRollback.img_state);
 }
 
 // A tick reads the state through the seam and carries the decision back through it: a pending image
@@ -138,12 +138,12 @@ void test_a_tick_commits_a_confirmed_image_through_the_seam(void)
 {
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
     Clock.ms = 0u;
-    OtaRollbackV.self_test_ok = PROTO_TRUE;
-    OtaRollbackV.action = PROTOCORE_OTA_ROLLBACK; // a value the tick has to overwrite
+    OtaRollback.self_test_ok = PROTO_TRUE;
+    OtaRollback.action = PROTOCORE_OTA_ROLLBACK; // a value the tick has to overwrite
 
     OtaRollback.tick(ota_rollback_work);
 
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, OtaRollbackV.action);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_COMMIT, OtaRollback.action);
     TEST_ASSERT_TRUE(protocore_host_img_committed());
     TEST_ASSERT_FALSE(protocore_host_img_rolled_back());
 }
@@ -153,11 +153,11 @@ void test_a_tick_rolls_back_an_unconfirmed_image_through_the_seam(void)
 {
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_PENDING_VERIFY);
     Clock.ms = PROTOCORE_OTA_CONFIRM_WINDOW_MS;
-    OtaRollbackV.self_test_ok = PROTO_FALSE;
+    OtaRollback.self_test_ok = PROTO_FALSE;
 
     OtaRollback.tick(ota_rollback_work);
 
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK, OtaRollbackV.action);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_ROLLBACK, OtaRollback.action);
     TEST_ASSERT_TRUE(protocore_host_img_rolled_back());
     TEST_ASSERT_FALSE(protocore_host_img_committed());
 }
@@ -167,12 +167,12 @@ void test_a_tick_leaves_a_settled_image_alone_at_the_seam(void)
 {
     protocore_host_set_img_state(PROTOCORE_OTA_IMG_VALID);
     Clock.ms = 999999u;
-    OtaRollbackV.self_test_ok = PROTO_FALSE;
-    OtaRollbackV.action = PROTOCORE_OTA_ROLLBACK;
+    OtaRollback.self_test_ok = PROTO_FALSE;
+    OtaRollback.action = PROTOCORE_OTA_ROLLBACK;
 
     OtaRollback.tick(ota_rollback_work);
 
-    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, OtaRollbackV.action);
+    TEST_ASSERT_EQUAL_INT(PROTOCORE_OTA_WAIT, OtaRollback.action);
     TEST_ASSERT_FALSE(protocore_host_img_committed());
     TEST_ASSERT_FALSE(protocore_host_img_rolled_back());
 }

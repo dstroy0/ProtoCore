@@ -114,6 +114,7 @@ typedef struct
     uint8_t topic_id_type;    ///< TopicIdType: MQTTSN_TOPIC_NORMAL, _PREDEFINED or _SHORT
     uint8_t octet;            ///< the packed Flags octet a compose writes and a parse reports
 } MqttsnFlagsArgs;
+
 /** @brief MQTT-SN v1.2 sec 5.3.11, sec 5.3.12: how a message names its topic. */
 typedef struct
 {
@@ -121,6 +122,7 @@ typedef struct
     const char *topic_name; ///< TopicName a build writes, or where a parse found it (sec 5.3.12)
     size_t topic_name_len;  ///< its octet count as a parse reports it
 } MqttsnTopicArgs;
+
 /** @brief MQTT-SN v1.2 sec 5.3.1, sec 5.3.3, sec 5.3.7, sec 5.3.9, sec 5.3.10: the scalar fields. */
 typedef struct
 {
@@ -131,12 +133,14 @@ typedef struct
     uint8_t radius;           ///< Radius; 0x00 broadcasts to all nodes (sec 5.3.9)
     uint8_t return_code;      ///< ReturnCode (sec 5.3.10)
 } MqttsnFieldArgs;
+
 /** @brief MQTT-SN v1.2 sec 5.3.2: the Data a PUBLISH carries. */
 typedef struct
 {
     const uint8_t *data; ///< the application data a build writes, or where a parse found it
     size_t data_len;     ///< its octet count
 } MqttsnDataArgs;
+
 /** @brief MQTT-SN v1.2 sec 5.2: the Length and MsgType header, and the Variable Part behind it. */
 typedef struct
 {
@@ -144,6 +148,7 @@ typedef struct
     const uint8_t *variable; ///< the Message Variable Part, pointing into @c in (sec 5.3)
     size_t variable_len;     ///< its octet count
 } MqttsnHeaderArgs;
+
 /**
  * @brief The octets a build writes or a parse reads.
  *
@@ -157,6 +162,7 @@ typedef struct
     const uint8_t *in; ///< the octets a parse reads
     size_t avail;      ///< how many are readable there
 } MqttsnBufArgs;
+
 /**
  * @brief The MQTT-SN v1.2 wire codec.
  *
@@ -227,16 +233,10 @@ typedef struct
     MqttsnDataArgs data;     ///< the Data a PUBLISH carries
     MqttsnHeaderArgs header; ///< the Length and MsgType header a parse read
     MqttsnBufArgs buf;       ///< the octets a call moves
+
     proto_bool ok;
     size_t n;
-} MqttsnVars;
 
-/** @brief The operands and the outcome. */
-extern MqttsnVars MqttsnV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const make_flags)(uint8_t *restrict work);
     void (*const build_connect)(uint8_t *restrict work);
     void (*const build_register)(uint8_t *restrict work);
@@ -257,51 +257,8 @@ typedef struct
     void (*const parse_register)(uint8_t *restrict work);
 } MqttsnNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in MqttsnV or a region of the borrow at a fixed offset.
-void protocore_mqtt_sn_make_flags(uint8_t *restrict work);
-void protocore_mqtt_sn_build_connect(uint8_t *restrict work);
-void protocore_mqtt_sn_build_register(uint8_t *restrict work);
-void protocore_mqtt_sn_build_regack(uint8_t *restrict work);
-void protocore_mqtt_sn_build_publish(uint8_t *restrict work);
-void protocore_mqtt_sn_build_puback(uint8_t *restrict work);
-void protocore_mqtt_sn_build_subscribe_name(uint8_t *restrict work);
-void protocore_mqtt_sn_build_subscribe_id(uint8_t *restrict work);
-void protocore_mqtt_sn_build_pingreq(uint8_t *restrict work);
-void protocore_mqtt_sn_build_disconnect(uint8_t *restrict work);
-void protocore_mqtt_sn_build_searchgw(uint8_t *restrict work);
-void protocore_mqtt_sn_parse_header(uint8_t *restrict work);
-void protocore_mqtt_sn_parse_connack(uint8_t *restrict work);
-void protocore_mqtt_sn_parse_regack(uint8_t *restrict work);
-void protocore_mqtt_sn_parse_puback(uint8_t *restrict work);
-void protocore_mqtt_sn_parse_suback(uint8_t *restrict work);
-void protocore_mqtt_sn_parse_publish(uint8_t *restrict work);
-void protocore_mqtt_sn_parse_register(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Mqttsn.make_flags(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const MqttsnNs Mqttsn __attribute__((unused)) = {
-    .make_flags = protocore_mqtt_sn_make_flags,
-    .build_connect = protocore_mqtt_sn_build_connect,
-    .build_register = protocore_mqtt_sn_build_register,
-    .build_regack = protocore_mqtt_sn_build_regack,
-    .build_publish = protocore_mqtt_sn_build_publish,
-    .build_puback = protocore_mqtt_sn_build_puback,
-    .build_subscribe_name = protocore_mqtt_sn_build_subscribe_name,
-    .build_subscribe_id = protocore_mqtt_sn_build_subscribe_id,
-    .build_pingreq = protocore_mqtt_sn_build_pingreq,
-    .build_disconnect = protocore_mqtt_sn_build_disconnect,
-    .build_searchgw = protocore_mqtt_sn_build_searchgw,
-    .parse_header = protocore_mqtt_sn_parse_header,
-    .parse_connack = protocore_mqtt_sn_parse_connack,
-    .parse_regack = protocore_mqtt_sn_parse_regack,
-    .parse_puback = protocore_mqtt_sn_parse_puback,
-    .parse_suback = protocore_mqtt_sn_parse_suback,
-    .parse_publish = protocore_mqtt_sn_parse_publish,
-    .parse_register = protocore_mqtt_sn_parse_register,
-};
+/** @brief The one symbol this module exports. */
+extern MqttsnNs Mqttsn;
 
 PROTOCORE_END_DECLS
 

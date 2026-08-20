@@ -84,42 +84,42 @@ static const uint8_t SH_RECORD[95] = {
 
 static void derive(const uint8_t *secret)
 {
-    TlsRecordV.key.keys = &g_keys;
-    TlsRecordV.key.cipher = TLS_CIPHER_AES_128_GCM_SHA256;
-    TlsRecordV.key.secret = secret;
+    TlsRecord.key.keys = &g_keys;
+    TlsRecord.key.cipher = TLS_CIPHER_AES_128_GCM_SHA256;
+    TlsRecord.key.secret = secret;
     TlsRecord.keys_derive(NULL);
 }
 
 static void derive384(const uint8_t *secret)
 {
-    TlsRecordV.key.keys = &g_keys;
-    TlsRecordV.key.cipher = TLS_CIPHER_AES_256_GCM_SHA384;
-    TlsRecordV.key.secret = secret;
+    TlsRecord.key.keys = &g_keys;
+    TlsRecord.key.cipher = TLS_CIPHER_AES_256_GCM_SHA384;
+    TlsRecord.key.secret = secret;
     TlsRecord.keys_derive(NULL);
 }
 
 static size_t protect(uint8_t type, const uint8_t *pt, size_t pt_len, size_t cap)
 {
-    TlsRecordV.key.keys = &g_keys;
-    TlsRecordV.content_type = type;
-    TlsRecordV.sealed.pt = pt;
-    TlsRecordV.sealed.pt_len = pt_len;
-    TlsRecordV.out_args.out = g_out;
-    TlsRecordV.out_args.out_cap = cap;
+    TlsRecord.key.keys = &g_keys;
+    TlsRecord.content_type = type;
+    TlsRecord.sealed.pt = pt;
+    TlsRecord.sealed.pt_len = pt_len;
+    TlsRecord.out_args.out = g_out;
+    TlsRecord.out_args.out_cap = cap;
     TlsRecord.protect(NULL);
-    return TlsRecordV.n;
+    return TlsRecord.n;
 }
 
 static proto_bool unprotect(const uint8_t *rec, size_t rec_len, uint8_t *out, size_t cap, TlsCiphertext *info)
 {
-    TlsRecordV.key.keys = &g_keys;
-    TlsRecordV.sealed.rec = rec;
-    TlsRecordV.sealed.rec_len = rec_len;
-    TlsRecordV.sealed.info = info;
-    TlsRecordV.out_args.out = out;
-    TlsRecordV.out_args.out_cap = cap;
+    TlsRecord.key.keys = &g_keys;
+    TlsRecord.sealed.rec = rec;
+    TlsRecord.sealed.rec_len = rec_len;
+    TlsRecord.sealed.info = info;
+    TlsRecord.out_args.out = out;
+    TlsRecord.out_args.out_cap = cap;
     TlsRecord.unprotect(NULL);
-    return TlsRecordV.ok;
+    return TlsRecord.ok;
 }
 
 // The three records the RFC 8448 client sends, rebuilt from its traffic secrets alone.
@@ -191,23 +191,23 @@ void test_rfc8448_records_open_again(void)
 // on everything after the first flight. The trace's ServerHello record is that shape.
 void test_rfc8446_5_1_plaintext_record(void)
 {
-    TlsRecordV.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
-    TlsRecordV.plain.fragment = SH_RECORD + PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
-    TlsRecordV.plain.frag_len = sizeof(SH_RECORD) - PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
-    TlsRecordV.out_args.out = g_out;
-    TlsRecordV.out_args.out_cap = sizeof(g_out);
+    TlsRecord.content_type = PROTOCORE_TLS_CT_HANDSHAKE;
+    TlsRecord.plain.fragment = SH_RECORD + PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
+    TlsRecord.plain.frag_len = sizeof(SH_RECORD) - PROTOCORE_TLS_PLAINTEXT_HDR_LEN;
+    TlsRecord.out_args.out = g_out;
+    TlsRecord.out_args.out_cap = sizeof(g_out);
     TlsRecord.plaintext_build(NULL);
 
-    TEST_ASSERT_EQUAL_UINT(sizeof(SH_RECORD), TlsRecordV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(SH_RECORD), TlsRecord.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(SH_RECORD, g_out, sizeof(SH_RECORD));
 
     TlsPlaintext view;
-    TlsRecordV.sealed.rec = SH_RECORD;
-    TlsRecordV.sealed.rec_len = sizeof(SH_RECORD);
-    TlsRecordV.plain.view = &view;
+    TlsRecord.sealed.rec = SH_RECORD;
+    TlsRecord.sealed.rec_len = sizeof(SH_RECORD);
+    TlsRecord.plain.view = &view;
     TlsRecord.plaintext_parse(NULL);
 
-    TEST_ASSERT_EQUAL_UINT(sizeof(SH_RECORD), TlsRecordV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(SH_RECORD), TlsRecord.n);
     TEST_ASSERT_EQUAL_UINT8(PROTOCORE_TLS_CT_HANDSHAKE, view.content_type);
     TEST_ASSERT_EQUAL_UINT(90u, view.frag_len);
     TEST_ASSERT_EQUAL_HEX8(0x02, view.fragment[0]); // the ServerHello handshake type
@@ -218,26 +218,26 @@ void test_rfc8446_5_1_plaintext_record(void)
 void test_plaintext_parse_waits_for_the_whole_record(void)
 {
     TlsPlaintext view;
-    TlsRecordV.plain.view = &view;
-    TlsRecordV.out_args.out = g_out;
-    TlsRecordV.out_args.out_cap = sizeof(g_out);
+    TlsRecord.plain.view = &view;
+    TlsRecord.out_args.out = g_out;
+    TlsRecord.out_args.out_cap = sizeof(g_out);
 
     for (size_t take = 0; take < sizeof(SH_RECORD); take++)
     {
-        TlsRecordV.sealed.rec = SH_RECORD;
-        TlsRecordV.sealed.rec_len = take;
+        TlsRecord.sealed.rec = SH_RECORD;
+        TlsRecord.sealed.rec_len = take;
         TlsRecord.plaintext_parse(NULL);
-        TEST_ASSERT_EQUAL_UINT(0u, TlsRecordV.n);
+        TEST_ASSERT_EQUAL_UINT(0u, TlsRecord.n);
     }
 
     // Extra bytes after the record belong to the next one: the parse reports only its own length.
     uint8_t stream[sizeof(SH_RECORD) + 8];
     memcpy(stream, SH_RECORD, sizeof(SH_RECORD));
     memset(stream + sizeof(SH_RECORD), 0x16, 8);
-    TlsRecordV.sealed.rec = stream;
-    TlsRecordV.sealed.rec_len = sizeof(stream);
+    TlsRecord.sealed.rec = stream;
+    TlsRecord.sealed.rec_len = sizeof(stream);
     TlsRecord.plaintext_parse(NULL);
-    TEST_ASSERT_EQUAL_UINT(sizeof(SH_RECORD), TlsRecordV.n);
+    TEST_ASSERT_EQUAL_UINT(sizeof(SH_RECORD), TlsRecord.n);
 }
 
 // sec 5.1: "implementations MUST NOT send zero-length fragments of Handshake ... types" but a
@@ -245,13 +245,13 @@ void test_plaintext_parse_waits_for_the_whole_record(void)
 // at 2^14 octets.
 void test_plaintext_build_bounds(void)
 {
-    TlsRecordV.content_type = PROTOCORE_TLS_CT_APPLICATION_DATA;
-    TlsRecordV.plain.fragment = NULL;
-    TlsRecordV.plain.frag_len = 0;
-    TlsRecordV.out_args.out = g_out;
-    TlsRecordV.out_args.out_cap = sizeof(g_out);
+    TlsRecord.content_type = PROTOCORE_TLS_CT_APPLICATION_DATA;
+    TlsRecord.plain.fragment = NULL;
+    TlsRecord.plain.frag_len = 0;
+    TlsRecord.out_args.out = g_out;
+    TlsRecord.out_args.out_cap = sizeof(g_out);
     TlsRecord.plaintext_build(NULL);
-    TEST_ASSERT_EQUAL_UINT((size_t)PROTOCORE_TLS_PLAINTEXT_HDR_LEN, TlsRecordV.n);
+    TEST_ASSERT_EQUAL_UINT((size_t)PROTOCORE_TLS_PLAINTEXT_HDR_LEN, TlsRecord.n);
     TEST_ASSERT_EQUAL_HEX8(PROTOCORE_TLS_CT_APPLICATION_DATA, g_out[0]);
     TEST_ASSERT_EQUAL_HEX8(0x03, g_out[1]);
     TEST_ASSERT_EQUAL_HEX8(0x03, g_out[2]);
@@ -259,21 +259,21 @@ void test_plaintext_build_bounds(void)
     TEST_ASSERT_EQUAL_HEX8(0x00, g_out[4]);
 
     // A destination one octet short writes nothing.
-    TlsRecordV.plain.fragment = APP_PAYLOAD;
-    TlsRecordV.plain.frag_len = sizeof(APP_PAYLOAD);
-    TlsRecordV.out_args.out_cap = PROTOCORE_TLS_PLAINTEXT_HDR_LEN + sizeof(APP_PAYLOAD) - 1;
+    TlsRecord.plain.fragment = APP_PAYLOAD;
+    TlsRecord.plain.frag_len = sizeof(APP_PAYLOAD);
+    TlsRecord.out_args.out_cap = PROTOCORE_TLS_PLAINTEXT_HDR_LEN + sizeof(APP_PAYLOAD) - 1;
     TlsRecord.plaintext_build(NULL);
-    TEST_ASSERT_EQUAL_UINT(0u, TlsRecordV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, TlsRecord.n);
 
-    TlsRecordV.out_args.out_cap = PROTOCORE_TLS_PLAINTEXT_HDR_LEN + sizeof(APP_PAYLOAD);
+    TlsRecord.out_args.out_cap = PROTOCORE_TLS_PLAINTEXT_HDR_LEN + sizeof(APP_PAYLOAD);
     TlsRecord.plaintext_build(NULL);
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_TLS_PLAINTEXT_HDR_LEN + sizeof(APP_PAYLOAD), TlsRecordV.n);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_TLS_PLAINTEXT_HDR_LEN + sizeof(APP_PAYLOAD), TlsRecord.n);
 
     // sec 5.1: "The length MUST NOT exceed 2^14 bytes."
-    TlsRecordV.plain.frag_len = PROTOCORE_TLS_MAX_PLAINTEXT + 1;
-    TlsRecordV.out_args.out_cap = sizeof(g_out);
+    TlsRecord.plain.frag_len = PROTOCORE_TLS_MAX_PLAINTEXT + 1;
+    TlsRecord.out_args.out_cap = sizeof(g_out);
     TlsRecord.plaintext_build(NULL);
-    TEST_ASSERT_EQUAL_UINT(0u, TlsRecordV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, TlsRecord.n);
 }
 
 // RFC 8446 sec 5.2: the TLSCiphertext header carries "opaque_type: The outer opaque_type field ...
@@ -423,7 +423,7 @@ void test_unkeyed_direction_fails_closed(void)
     (void)protect(PROTOCORE_TLS_CT_APPLICATION_DATA, APP_PAYLOAD, sizeof(APP_PAYLOAD), sizeof(g_out));
     TEST_ASSERT_EQUAL_UINT64(1u, g_keys.seq);
 
-    TlsRecordV.key.keys = &g_keys;
+    TlsRecord.key.keys = &g_keys;
     TlsRecord.keys_wipe(NULL);
     TEST_ASSERT_FALSE(g_keys.ready);
     TEST_ASSERT_EQUAL_UINT64(0u, g_keys.seq);
@@ -530,7 +530,7 @@ void test_the_two_suites_do_not_open_each_other(void)
 void test_sha384_suite_fails_closed_when_unkeyed(void)
 {
     derive384(AP_SECRET_384);
-    TlsRecordV.key.keys = &g_keys;
+    TlsRecord.key.keys = &g_keys;
     TlsRecord.keys_wipe(NULL);
     TEST_ASSERT_FALSE(g_keys.ready);
     TEST_ASSERT_EQUAL_UINT(0u,

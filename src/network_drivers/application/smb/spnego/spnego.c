@@ -96,17 +96,17 @@ static proto_bool der_read(const uint8_t *buf, size_t len, size_t *pos, uint8_t 
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_spnego_wrap_negotiate(uint8_t *restrict work)
+static void spnego_wrap_negotiate(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *ntlm = SpnegoV.wrap_negotiate_args.ntlm;
-    size_t protocore_ntlm_len = SpnegoV.wrap_negotiate_args.protocore_ntlm_len;
-    uint8_t *out = SpnegoV.wrap_negotiate_args.out;
-    size_t cap = SpnegoV.wrap_negotiate_args.cap;
+    const uint8_t *ntlm = Spnego.wrap_negotiate_args.ntlm;
+    size_t protocore_ntlm_len = Spnego.wrap_negotiate_args.protocore_ntlm_len;
+    uint8_t *out = Spnego.wrap_negotiate_args.out;
+    size_t cap = Spnego.wrap_negotiate_args.cap;
 
     if (!ntlm)
     {
-        SpnegoV.n = 0;
+        Spnego.n = 0;
         return;
     }
     size_t octet = tlv_size(protocore_ntlm_len); // OCTET STRING(mechToken)
@@ -119,7 +119,7 @@ void protocore_spnego_wrap_negotiate(uint8_t *restrict work)
     size_t total = tlv_size(ictbody); // [APPLICATION 0] InitialContextToken
     if (!out || total > cap)
     {
-        SpnegoV.n = 0;
+        Spnego.n = 0;
         return;
     }
 
@@ -137,20 +137,20 @@ void protocore_spnego_wrap_negotiate(uint8_t *restrict work)
     wr_tag_len(out, &p, 0x04, protocore_ntlm_len);
     mem.cpy(out + p, ntlm, protocore_ntlm_len);
     p += protocore_ntlm_len;
-    SpnegoV.n = p;
+    Spnego.n = p;
 }
 
-void protocore_spnego_wrap_authenticate(uint8_t *restrict work)
+static void spnego_wrap_authenticate(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *ntlm = SpnegoV.wrap_authenticate_args.ntlm;
-    size_t protocore_ntlm_len = SpnegoV.wrap_authenticate_args.protocore_ntlm_len;
-    uint8_t *out = SpnegoV.wrap_authenticate_args.out;
-    size_t cap = SpnegoV.wrap_authenticate_args.cap;
+    const uint8_t *ntlm = Spnego.wrap_authenticate_args.ntlm;
+    size_t protocore_ntlm_len = Spnego.wrap_authenticate_args.protocore_ntlm_len;
+    uint8_t *out = Spnego.wrap_authenticate_args.out;
+    size_t cap = Spnego.wrap_authenticate_args.cap;
 
     if (!ntlm)
     {
-        SpnegoV.n = 0;
+        Spnego.n = 0;
         return;
     }
     size_t octet = tlv_size(protocore_ntlm_len); // OCTET STRING(responseToken)
@@ -159,7 +159,7 @@ void protocore_spnego_wrap_authenticate(uint8_t *restrict work)
     size_t total = tlv_size(seq);                // [1] NegTokenResp
     if (!out || total > cap)
     {
-        SpnegoV.n = 0;
+        Spnego.n = 0;
         return;
     }
 
@@ -170,20 +170,20 @@ void protocore_spnego_wrap_authenticate(uint8_t *restrict work)
     wr_tag_len(out, &p, 0x04, protocore_ntlm_len);
     mem.cpy(out + p, ntlm, protocore_ntlm_len);
     p += protocore_ntlm_len;
-    SpnegoV.n = p;
+    Spnego.n = p;
 }
 
-void protocore_spnego_parse_response(uint8_t *restrict work)
+static void spnego_parse_response(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *blob = SpnegoV.parse_response_args.blob;
-    size_t len = SpnegoV.parse_response_args.len;
-    const uint8_t **protocore_resp_token = SpnegoV.parse_response_args.protocore_resp_token;
-    size_t *protocore_resp_len = SpnegoV.parse_response_args.protocore_resp_len;
+    const uint8_t *blob = Spnego.parse_response_args.blob;
+    size_t len = Spnego.parse_response_args.len;
+    const uint8_t **protocore_resp_token = Spnego.parse_response_args.protocore_resp_token;
+    size_t *protocore_resp_len = Spnego.parse_response_args.protocore_resp_len;
 
     if (!blob || !protocore_resp_token || !protocore_resp_len)
     {
-        SpnegoV.ok = PROTO_FALSE;
+        Spnego.ok = PROTO_FALSE;
         return;
     }
     size_t pos = 0;
@@ -193,7 +193,7 @@ void protocore_spnego_parse_response(uint8_t *restrict work)
     // [1] NegTokenResp
     if (!der_read(blob, len, &pos, &tag, &clen, &cstart) || tag != 0xa1)
     {
-        SpnegoV.ok = PROTO_FALSE;
+        Spnego.ok = PROTO_FALSE;
         return;
     }
     size_t neg_end = cstart + clen;
@@ -201,7 +201,7 @@ void protocore_spnego_parse_response(uint8_t *restrict work)
     // SEQUENCE
     if (!der_read(blob, neg_end, &p, &tag, &clen, &cstart) || tag != 0x30)
     {
-        SpnegoV.ok = PROTO_FALSE;
+        Spnego.ok = PROTO_FALSE;
         return;
     }
     size_t seq_end = cstart + clen;
@@ -211,7 +211,7 @@ void protocore_spnego_parse_response(uint8_t *restrict work)
     {
         if (!der_read(blob, seq_end, &p, &tag, &clen, &cstart))
         {
-            SpnegoV.ok = PROTO_FALSE;
+            Spnego.ok = PROTO_FALSE;
             return;
         }
         if (tag == 0xa2)
@@ -222,20 +222,23 @@ void protocore_spnego_parse_response(uint8_t *restrict work)
             uint8_t t2;
             if (!der_read(blob, cstart + clen, &q, &t2, &cl2, &cs2) || t2 != 0x04)
             {
-                SpnegoV.ok = PROTO_FALSE;
+                Spnego.ok = PROTO_FALSE;
                 return;
             }
             *protocore_resp_token = blob + cs2;
             *protocore_resp_len = cl2;
-            SpnegoV.ok = PROTO_TRUE;
+            Spnego.ok = PROTO_TRUE;
             return;
         }
     }
-    SpnegoV.ok = PROTO_FALSE;
+    Spnego.ok = PROTO_FALSE;
 }
 
-/** @brief The operands and the outcome. */
-SpnegoVars SpnegoV;
+SpnegoNs Spnego = {
+    .wrap_negotiate = spnego_wrap_negotiate,
+    .parse_response = spnego_parse_response,
+    .wrap_authenticate = spnego_wrap_authenticate,
+};
 
 PROTOCORE_END_DECLS
 

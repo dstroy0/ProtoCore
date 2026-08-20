@@ -54,6 +54,7 @@ typedef struct
     uint32_t ms_since_boot;  ///< how long this image has been running
     uint32_t window_ms;      ///< how long it has to confirm before the rollback self-heals
 } OtaDecideArgs;
+
 /**
  * @brief The OTA confirm-or-roll-back policy.
  *
@@ -76,16 +77,10 @@ typedef struct
 {
     OtaDecideArgs decide_args;
     proto_bool self_test_ok;
+
     protocore_ota_action action;
     uint8_t img_state;
-} OtaRollbackVars;
 
-/** @brief The operands and the outcome. */
-extern OtaRollbackVars OtaRollbackV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const decide)(uint8_t *restrict work);
     void (*const state)(uint8_t *restrict work);
     void (*const commit)(uint8_t *restrict work);
@@ -93,25 +88,8 @@ typedef struct
     void (*const tick)(uint8_t *restrict work);
 } OtaRollbackNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in OtaRollbackV or a region of the borrow at a fixed offset.
-void protocore_ota_rollback_decide(uint8_t *restrict work);
-void protocore_ota_rollback_state(uint8_t *restrict work);
-void protocore_ota_rollback_commit(uint8_t *restrict work);
-void protocore_ota_rollback_rollback(uint8_t *restrict work);
-void protocore_ota_rollback_tick(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `OtaRollback.decide(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const OtaRollbackNs OtaRollback __attribute__((unused)) = {
-    .decide = protocore_ota_rollback_decide,
-    .state = protocore_ota_rollback_state,
-    .commit = protocore_ota_rollback_commit,
-    .rollback = protocore_ota_rollback_rollback,
-    .tick = protocore_ota_rollback_tick,
-};
+/** @brief The one symbol this module exports. */
+extern OtaRollbackNs OtaRollback;
 
 PROTOCORE_END_DECLS
 

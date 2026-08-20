@@ -49,27 +49,27 @@ static proto_bool cap_send(uint8_t id, const uint8_t *d, uint16_t n, void *ctx)
 
 static proto_bool add_if(uint8_t id)
 {
-    PhysicalV.iface.id = id;
-    PhysicalV.iface.kind = PROTOCORE_IF_ANY;
-    PhysicalV.iface.send = cap_send;
-    PhysicalV.iface.ctx = NULL;
+    Physical.iface.id = id;
+    Physical.iface.kind = PROTOCORE_IF_ANY;
+    Physical.iface.send = cap_send;
+    Physical.iface.ctx = NULL;
     Physical.iface_add(protocore_physical_span());
-    return PhysicalV.ok;
+    return Physical.ok;
 }
 
 static uint8_t ingress(uint8_t src, const char *s)
 {
-    ForwardV.src_if = src;
-    ForwardV.frame.data = (const uint8_t *)s;
-    ForwardV.frame.len = (uint16_t)strlen(s);
+    Forward.src_if = src;
+    Forward.frame.data = (const uint8_t *)s;
+    Forward.frame.len = (uint16_t)strlen(s);
     Forward.ingress(protocore_forward_span());
-    return ForwardV.n;
+    return Forward.n;
 }
 
 static protocore_forward_stats stats(void)
 {
     Forward.get_stats(protocore_forward_span());
-    return ForwardV.stats;
+    return Forward.stats;
 }
 
 static uint32_t g_now_ms;
@@ -113,12 +113,12 @@ void test_allow_forwards()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    TEST_ASSERT_TRUE(ForwardV.ok);
+    TEST_ASSERT_TRUE(Forward.ok);
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "abc"));
     TEST_ASSERT_EQUAL_size_t(1, g_cap[2].count);
     TEST_ASSERT_EQUAL_size_t(0, g_cap[1].count);
@@ -129,10 +129,10 @@ void test_allow_forwards()
 void test_no_self_forward()
 {
     add_if(1);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 1;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 1;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "loop"));
     TEST_ASSERT_EQUAL_size_t(0, g_cap[1].count);
@@ -142,15 +142,15 @@ void test_deny_wins_over_allow()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_DENY;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_DENY;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "x"));
     TEST_ASSERT_EQUAL_size_t(0, g_cap[2].count);
@@ -162,15 +162,15 @@ void test_multi_destination_fanout()
     add_if(1);
     add_if(2);
     add_if(3);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 3;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 3;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     TEST_ASSERT_EQUAL_UINT8(2, ingress(1, "bcast"));
     TEST_ASSERT_EQUAL_size_t(1, g_cap[2].count);
@@ -181,10 +181,10 @@ void test_rate_cap_drops_then_reopens()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 2;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 2;
     Forward.add_rule(protocore_forward_span());
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "a"));
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "b"));
@@ -200,10 +200,10 @@ void test_send_failure_counted()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     g_cap[2].accept = PROTO_FALSE;
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "x"));
@@ -215,12 +215,12 @@ void test_add_if_validation_and_table_full()
 {
     TEST_ASSERT_TRUE(add_if(1));
     TEST_ASSERT_FALSE(add_if(1));
-    PhysicalV.iface.id = 9;
-    PhysicalV.iface.kind = PROTOCORE_IF_ANY;
-    PhysicalV.iface.send = NULL;
-    PhysicalV.iface.ctx = NULL;
+    Physical.iface.id = 9;
+    Physical.iface.kind = PROTOCORE_IF_ANY;
+    Physical.iface.send = NULL;
+    Physical.iface.ctx = NULL;
     Physical.iface_add(protocore_physical_span());
-    TEST_ASSERT_FALSE(PhysicalV.ok);
+    TEST_ASSERT_FALSE(Physical.ok);
     TEST_ASSERT_TRUE(add_if(2));
     TEST_ASSERT_TRUE(add_if(3));
     TEST_ASSERT_TRUE(add_if(4));
@@ -231,28 +231,28 @@ void test_add_rule_table_full()
 {
     for (int i = 0; i < PROTOCORE_FWD_MAX_RULES; i++)
     {
-        ForwardV.src_if = 1;
-        ForwardV.rule.dst_if = 2;
-        ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-        ForwardV.rule.rate_cap_per_sec = 0;
+        Forward.src_if = 1;
+        Forward.rule.dst_if = 2;
+        Forward.rule.action = PROTOCORE_FWD_ALLOW;
+        Forward.rule.rate_cap_per_sec = 0;
         Forward.add_rule(protocore_forward_span());
-        TEST_ASSERT_TRUE(ForwardV.ok);
+        TEST_ASSERT_TRUE(Forward.ok);
     }
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 3;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 3;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    TEST_ASSERT_FALSE(ForwardV.ok);
+    TEST_ASSERT_FALSE(Forward.ok);
 }
 
 void test_unregistered_destination_is_inert()
 {
     add_if(1);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 9;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 9;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "x"));
 }
@@ -261,10 +261,10 @@ void test_rule_with_mismatched_src_is_ignored()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 9;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 9;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "x"));
     TEST_ASSERT_EQUAL_UINT32(0, stats().forwarded);
@@ -274,15 +274,15 @@ void test_duplicate_allow_rule_first_one_governs()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 1;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 1;
     Forward.add_rule(protocore_forward_span());
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "a"));
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "b"));
@@ -294,45 +294,45 @@ void test_get_stats_null_pointer_is_noop()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     ingress(1, "x");
     // Reading the counters reports them and does not disturb them: the second read agrees.
     Forward.get_stats(protocore_forward_span());
-    TEST_ASSERT_EQUAL_UINT32(1, ForwardV.stats.forwarded);
+    TEST_ASSERT_EQUAL_UINT32(1, Forward.stats.forwarded);
     TEST_ASSERT_EQUAL_UINT32(1, stats().forwarded);
 }
 
 static uint8_t in1(const uint8_t *b, uint16_t n)
 {
-    ForwardV.src_if = 1;
-    ForwardV.frame.data = b;
-    ForwardV.frame.len = n;
+    Forward.src_if = 1;
+    Forward.frame.data = b;
+    Forward.frame.len = n;
     Forward.ingress(protocore_forward_span());
-    return ForwardV.n;
+    return Forward.n;
 }
 
 void test_acl_deny_by_byte_pattern()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     uint8_t pat[1] = {0xFF}, msk[1] = {0xFF};
-    ForwardV.src_if = 1;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = pat;
-    ForwardV.match.mask = msk;
-    ForwardV.match.patlen = 1;
-    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    Forward.src_if = 1;
+    Forward.match.offset = 0;
+    Forward.match.pattern = pat;
+    Forward.match.mask = msk;
+    Forward.match.patlen = 1;
+    Forward.acl.action = PROTOCORE_FWD_DENY;
     Forward.acl_add(protocore_forward_span());
-    TEST_ASSERT_TRUE(ForwardV.ok);
+    TEST_ASSERT_TRUE(Forward.ok);
 
     uint8_t ok[3] = {'a', 'b', 'c'};
     uint8_t bad[3] = {0xFF, 0x00, 0x00};
@@ -346,20 +346,20 @@ void test_acl_allowlist_default_deny()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    ForwardV.acl.fallback = PROTOCORE_FWD_DENY;
+    Forward.acl.fallback = PROTOCORE_FWD_DENY;
     Forward.acl_set_default(protocore_forward_span());
     uint8_t pat[1] = {0xAA}, msk[1] = {0xFF};
-    ForwardV.src_if = 1;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = pat;
-    ForwardV.match.mask = msk;
-    ForwardV.match.patlen = 1;
-    ForwardV.acl.action = PROTOCORE_FWD_ALLOW;
+    Forward.src_if = 1;
+    Forward.match.offset = 0;
+    Forward.match.pattern = pat;
+    Forward.match.mask = msk;
+    Forward.match.patlen = 1;
+    Forward.acl.action = PROTOCORE_FWD_ALLOW;
     Forward.acl_add(protocore_forward_span());
 
     uint8_t good[2] = {0xAA, 0x01};
@@ -373,25 +373,25 @@ void test_acl_first_match_wins()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     uint8_t p1[1] = {0x01}, m1[1] = {0xFF};
-    ForwardV.src_if = 1;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = p1;
-    ForwardV.match.mask = m1;
-    ForwardV.match.patlen = 1;
-    ForwardV.acl.action = PROTOCORE_FWD_ALLOW;
+    Forward.src_if = 1;
+    Forward.match.offset = 0;
+    Forward.match.pattern = p1;
+    Forward.match.mask = m1;
+    Forward.match.patlen = 1;
+    Forward.acl.action = PROTOCORE_FWD_ALLOW;
     Forward.acl_add(protocore_forward_span());
-    ForwardV.src_if = PROTOCORE_FWD_IF_ANY;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = NULL;
-    ForwardV.match.mask = NULL;
-    ForwardV.match.patlen = 0;
-    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    Forward.src_if = PROTOCORE_FWD_IF_ANY;
+    Forward.match.offset = 0;
+    Forward.match.pattern = NULL;
+    Forward.match.mask = NULL;
+    Forward.match.patlen = 0;
+    Forward.acl.action = PROTOCORE_FWD_DENY;
     Forward.acl_add(protocore_forward_span());
 
     uint8_t a[1] = {0x01};
@@ -404,17 +404,17 @@ void test_acl_src_any_content_wildcard()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    ForwardV.src_if = PROTOCORE_FWD_IF_ANY;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = NULL;
-    ForwardV.match.mask = NULL;
-    ForwardV.match.patlen = 0;
-    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    Forward.src_if = PROTOCORE_FWD_IF_ANY;
+    Forward.match.offset = 0;
+    Forward.match.pattern = NULL;
+    Forward.match.mask = NULL;
+    Forward.match.patlen = 0;
+    Forward.acl.action = PROTOCORE_FWD_DENY;
     Forward.acl_add(protocore_forward_span());
     uint8_t x[2] = {0x12, 0x34};
     TEST_ASSERT_EQUAL_UINT8(0, in1(x, 2));
@@ -425,18 +425,18 @@ void test_acl_entry_src_mismatch_falls_through()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     uint8_t pat[1] = {0xAA}, msk[1] = {0xFF};
-    ForwardV.src_if = 2;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = pat;
-    ForwardV.match.mask = msk;
-    ForwardV.match.patlen = 1;
-    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    Forward.src_if = 2;
+    Forward.match.offset = 0;
+    Forward.match.pattern = pat;
+    Forward.match.mask = msk;
+    Forward.match.patlen = 1;
+    Forward.acl.action = PROTOCORE_FWD_DENY;
     Forward.acl_add(protocore_forward_span());
 
     uint8_t frame[1] = {0xAA};
@@ -449,18 +449,18 @@ void test_acl_short_frame_skips_entry()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     uint8_t pat[2] = {0x11, 0x22}, msk[2] = {0xFF, 0xFF};
-    ForwardV.src_if = 1;
-    ForwardV.match.offset = 4;
-    ForwardV.match.pattern = pat;
-    ForwardV.match.mask = msk;
-    ForwardV.match.patlen = 2;
-    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    Forward.src_if = 1;
+    Forward.match.offset = 4;
+    Forward.match.pattern = pat;
+    Forward.match.mask = msk;
+    Forward.match.patlen = 2;
+    Forward.acl.action = PROTOCORE_FWD_DENY;
     Forward.acl_add(protocore_forward_span());
     uint8_t shortf[3] = {0x11, 0x22, 0x33};
     TEST_ASSERT_EQUAL_UINT8(1, in1(shortf, 3));
@@ -469,69 +469,69 @@ void test_acl_short_frame_skips_entry()
 void test_acl_add_validation_and_table_full()
 {
     uint8_t big[PROTOCORE_FWD_ACL_PATLEN + 1] = {0}, bm[PROTOCORE_FWD_ACL_PATLEN + 1] = {0};
-    ForwardV.src_if = 1;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = big;
-    ForwardV.match.mask = bm;
-    ForwardV.match.patlen = PROTOCORE_FWD_ACL_PATLEN + 1;
-    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    Forward.src_if = 1;
+    Forward.match.offset = 0;
+    Forward.match.pattern = big;
+    Forward.match.mask = bm;
+    Forward.match.patlen = PROTOCORE_FWD_ACL_PATLEN + 1;
+    Forward.acl.action = PROTOCORE_FWD_DENY;
     Forward.acl_add(protocore_forward_span());
-    TEST_ASSERT_FALSE(ForwardV.ok);
+    TEST_ASSERT_FALSE(Forward.ok);
     for (int i = 0; i < PROTOCORE_FWD_MAX_ACL; i++)
     {
-        ForwardV.src_if = PROTOCORE_FWD_IF_ANY;
-        ForwardV.match.offset = 0;
-        ForwardV.match.pattern = NULL;
-        ForwardV.match.mask = NULL;
-        ForwardV.match.patlen = 0;
-        ForwardV.acl.action = PROTOCORE_FWD_ALLOW;
+        Forward.src_if = PROTOCORE_FWD_IF_ANY;
+        Forward.match.offset = 0;
+        Forward.match.pattern = NULL;
+        Forward.match.mask = NULL;
+        Forward.match.patlen = 0;
+        Forward.acl.action = PROTOCORE_FWD_ALLOW;
         Forward.acl_add(protocore_forward_span());
-        TEST_ASSERT_TRUE(ForwardV.ok);
+        TEST_ASSERT_TRUE(Forward.ok);
     }
-    ForwardV.src_if = PROTOCORE_FWD_IF_ANY;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = NULL;
-    ForwardV.match.mask = NULL;
-    ForwardV.match.patlen = 0;
-    ForwardV.acl.action = PROTOCORE_FWD_ALLOW;
+    Forward.src_if = PROTOCORE_FWD_IF_ANY;
+    Forward.match.offset = 0;
+    Forward.match.pattern = NULL;
+    Forward.match.mask = NULL;
+    Forward.match.patlen = 0;
+    Forward.acl.action = PROTOCORE_FWD_ALLOW;
     Forward.acl_add(protocore_forward_span());
-    TEST_ASSERT_FALSE(ForwardV.ok);
+    TEST_ASSERT_FALSE(Forward.ok);
 }
 
 void test_acl_add_null_pointer_validation()
 {
     uint8_t pat[1] = {0x01}, msk[1] = {0xFF};
-    ForwardV.src_if = 1;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = NULL;
-    ForwardV.match.mask = msk;
-    ForwardV.match.patlen = 1;
-    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    Forward.src_if = 1;
+    Forward.match.offset = 0;
+    Forward.match.pattern = NULL;
+    Forward.match.mask = msk;
+    Forward.match.patlen = 1;
+    Forward.acl.action = PROTOCORE_FWD_DENY;
     Forward.acl_add(protocore_forward_span());
-    TEST_ASSERT_FALSE(ForwardV.ok);
-    ForwardV.src_if = 1;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = pat;
-    ForwardV.match.mask = NULL;
-    ForwardV.match.patlen = 1;
-    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    TEST_ASSERT_FALSE(Forward.ok);
+    Forward.src_if = 1;
+    Forward.match.offset = 0;
+    Forward.match.pattern = pat;
+    Forward.match.mask = NULL;
+    Forward.match.patlen = 1;
+    Forward.acl.action = PROTOCORE_FWD_DENY;
     Forward.acl_add(protocore_forward_span());
-    TEST_ASSERT_FALSE(ForwardV.ok);
+    TEST_ASSERT_FALSE(Forward.ok);
 }
 
 static proto_bool route_firstbyte(uint8_t src, char c, uint8_t egress, uint16_t cap)
 {
     uint8_t pat[1] = {(uint8_t)c};
     uint8_t msk[1] = {0xFF};
-    ForwardV.src_if = src;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = pat;
-    ForwardV.match.mask = msk;
-    ForwardV.match.patlen = 1;
-    ForwardV.route.egress_if = egress;
-    ForwardV.route.rate_cap_per_sec = cap;
+    Forward.src_if = src;
+    Forward.match.offset = 0;
+    Forward.match.pattern = pat;
+    Forward.match.mask = msk;
+    Forward.match.patlen = 1;
+    Forward.route.egress_if = egress;
+    Forward.route.rate_cap_per_sec = cap;
     Forward.route_add(protocore_forward_span());
-    return ForwardV.ok;
+    return Forward.ok;
 }
 
 void test_route_selects_egress_and_falls_through()
@@ -539,10 +539,10 @@ void test_route_selects_egress_and_falls_through()
     add_if(1);
     add_if(2);
     add_if(3);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
     TEST_ASSERT_TRUE(route_firstbyte(PROTOCORE_FWD_IF_ANY, 'X', 3, 0));
 
@@ -581,10 +581,10 @@ void test_route_src_specific_filters_by_source()
     add_if(2);
     add_if(3);
     TEST_ASSERT_TRUE(route_firstbyte(1, 'Y', 3, 0));
-    ForwardV.src_if = 2;
-    ForwardV.rule.dst_if = 3;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 2;
+    Forward.rule.dst_if = 3;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
 
     TEST_ASSERT_EQUAL_UINT8(1, ingress(2, "Yes"));
@@ -626,15 +626,15 @@ void test_route_default_any_content()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = PROTOCORE_FWD_IF_ANY;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = NULL;
-    ForwardV.match.mask = NULL;
-    ForwardV.match.patlen = 0;
-    ForwardV.route.egress_if = 2;
-    ForwardV.route.rate_cap_per_sec = 0;
+    Forward.src_if = PROTOCORE_FWD_IF_ANY;
+    Forward.match.offset = 0;
+    Forward.match.pattern = NULL;
+    Forward.match.mask = NULL;
+    Forward.match.patlen = 0;
+    Forward.route.egress_if = 2;
+    Forward.route.rate_cap_per_sec = 0;
     Forward.route_add(protocore_forward_span());
-    TEST_ASSERT_TRUE(ForwardV.ok);
+    TEST_ASSERT_TRUE(Forward.ok);
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "anything"));
     TEST_ASSERT_EQUAL_size_t(1, g_cap[2].count);
 }
@@ -654,33 +654,33 @@ void test_route_first_match_wins()
 void test_route_add_validation_and_table_full()
 {
     uint8_t pat[PROTOCORE_FWD_ACL_PATLEN + 1] = {0}, msk[PROTOCORE_FWD_ACL_PATLEN + 1] = {0};
-    ForwardV.src_if = PROTOCORE_FWD_IF_ANY;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = pat;
-    ForwardV.match.mask = msk;
-    ForwardV.match.patlen = PROTOCORE_FWD_ACL_PATLEN + 1;
-    ForwardV.route.egress_if = 2;
-    ForwardV.route.rate_cap_per_sec = 0;
+    Forward.src_if = PROTOCORE_FWD_IF_ANY;
+    Forward.match.offset = 0;
+    Forward.match.pattern = pat;
+    Forward.match.mask = msk;
+    Forward.match.patlen = PROTOCORE_FWD_ACL_PATLEN + 1;
+    Forward.route.egress_if = 2;
+    Forward.route.rate_cap_per_sec = 0;
     Forward.route_add(protocore_forward_span());
-    TEST_ASSERT_FALSE(ForwardV.ok);
-    ForwardV.src_if = PROTOCORE_FWD_IF_ANY;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = NULL;
-    ForwardV.match.mask = msk;
-    ForwardV.match.patlen = 1;
-    ForwardV.route.egress_if = 2;
-    ForwardV.route.rate_cap_per_sec = 0;
+    TEST_ASSERT_FALSE(Forward.ok);
+    Forward.src_if = PROTOCORE_FWD_IF_ANY;
+    Forward.match.offset = 0;
+    Forward.match.pattern = NULL;
+    Forward.match.mask = msk;
+    Forward.match.patlen = 1;
+    Forward.route.egress_if = 2;
+    Forward.route.rate_cap_per_sec = 0;
     Forward.route_add(protocore_forward_span());
-    TEST_ASSERT_FALSE(ForwardV.ok);
-    ForwardV.src_if = PROTOCORE_FWD_IF_ANY;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = pat;
-    ForwardV.match.mask = NULL;
-    ForwardV.match.patlen = 1;
-    ForwardV.route.egress_if = 2;
-    ForwardV.route.rate_cap_per_sec = 0;
+    TEST_ASSERT_FALSE(Forward.ok);
+    Forward.src_if = PROTOCORE_FWD_IF_ANY;
+    Forward.match.offset = 0;
+    Forward.match.pattern = pat;
+    Forward.match.mask = NULL;
+    Forward.match.patlen = 1;
+    Forward.route.egress_if = 2;
+    Forward.route.rate_cap_per_sec = 0;
     Forward.route_add(protocore_forward_span());
-    TEST_ASSERT_FALSE(ForwardV.ok);
+    TEST_ASSERT_FALSE(Forward.ok);
     for (int i = 0; i < PROTOCORE_FWD_MAX_ROUTES; i++)
     {
         TEST_ASSERT_TRUE(route_firstbyte(PROTOCORE_FWD_IF_ANY, 'A', 2, 0));
@@ -708,13 +708,13 @@ void test_inspect_pass_and_drop()
     g_inspect_calls = 0;
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    ForwardV.inspect.fn = inspect_drop_D;
-    ForwardV.inspect.ctx = NULL;
+    Forward.inspect.fn = inspect_drop_D;
+    Forward.inspect.ctx = NULL;
     Forward.set_inspector(protocore_forward_span());
 
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "ok"));
@@ -730,22 +730,22 @@ void test_inspect_runs_after_acl()
     g_inspect_calls = 0;
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    ForwardV.inspect.fn = inspect_drop_D;
-    ForwardV.inspect.ctx = NULL;
+    Forward.inspect.fn = inspect_drop_D;
+    Forward.inspect.ctx = NULL;
     Forward.set_inspector(protocore_forward_span());
 
     uint8_t pat[1] = {'X'}, msk[1] = {0xFF};
-    ForwardV.src_if = PROTOCORE_FWD_IF_ANY;
-    ForwardV.match.offset = 0;
-    ForwardV.match.pattern = pat;
-    ForwardV.match.mask = msk;
-    ForwardV.match.patlen = 1;
-    ForwardV.acl.action = PROTOCORE_FWD_DENY;
+    Forward.src_if = PROTOCORE_FWD_IF_ANY;
+    Forward.match.offset = 0;
+    Forward.match.pattern = pat;
+    Forward.match.mask = msk;
+    Forward.match.patlen = 1;
+    Forward.acl.action = PROTOCORE_FWD_DENY;
     Forward.acl_add(protocore_forward_span());
 
     TEST_ASSERT_EQUAL_UINT8(0, ingress(1, "Xhi"));
@@ -757,16 +757,16 @@ void test_inspect_cleared_by_null()
 {
     add_if(1);
     add_if(2);
-    ForwardV.src_if = 1;
-    ForwardV.rule.dst_if = 2;
-    ForwardV.rule.action = PROTOCORE_FWD_ALLOW;
-    ForwardV.rule.rate_cap_per_sec = 0;
+    Forward.src_if = 1;
+    Forward.rule.dst_if = 2;
+    Forward.rule.action = PROTOCORE_FWD_ALLOW;
+    Forward.rule.rate_cap_per_sec = 0;
     Forward.add_rule(protocore_forward_span());
-    ForwardV.inspect.fn = inspect_drop_D;
-    ForwardV.inspect.ctx = NULL;
+    Forward.inspect.fn = inspect_drop_D;
+    Forward.inspect.ctx = NULL;
     Forward.set_inspector(protocore_forward_span());
-    ForwardV.inspect.fn = NULL;
-    ForwardV.inspect.ctx = NULL;
+    Forward.inspect.fn = NULL;
+    Forward.inspect.ctx = NULL;
     Forward.set_inspector(protocore_forward_span());
     TEST_ASSERT_EQUAL_UINT8(1, ingress(1, "Drop"));
     TEST_ASSERT_EQUAL_size_t(1, g_cap[2].count);

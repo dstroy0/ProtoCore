@@ -100,12 +100,12 @@ static int pump(protocore_relay_end *src, protocore_relay_end *dst, uint8_t *buf
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_relay_init(uint8_t *restrict work)
+static void relay_init(uint8_t *restrict work)
 {
     (void)work;
-    protocore_relay *r = RelayV.init_args.r;
-    const protocore_relay_end *client = RelayV.init_args.client;
-    const protocore_relay_end *origin = RelayV.init_args.origin;
+    protocore_relay *r = Relay.init_args.r;
+    const protocore_relay_end *client = Relay.init_args.client;
+    const protocore_relay_end *origin = Relay.init_args.origin;
 
     if (!r || !client || !origin)
     {
@@ -116,39 +116,39 @@ void protocore_relay_init(uint8_t *restrict work)
     r->b = *origin;
 }
 
-void protocore_relay_step(uint8_t *restrict work)
+static void relay_step(uint8_t *restrict work)
 {
     (void)work;
-    protocore_relay *r = RelayV.step_args.r;
+    protocore_relay *r = Relay.step_args.r;
 
     if (!r)
     {
-        RelayV.status = PROTOCORE_RELAY_ERROR;
+        Relay.status = PROTOCORE_RELAY_ERROR;
         return;
     }
     // a -> b: dst is b, so b's shutdown fires when this direction finishes
     if (pump(&r->a, &r->b, r->buf_a2b, &r->a2b_len, &r->a2b_off, &r->a_eof, &r->a2b_done, &r->b_shut_sent,
              &r->bytes_a2b) < 0)
     {
-        RelayV.status = PROTOCORE_RELAY_ERROR;
+        Relay.status = PROTOCORE_RELAY_ERROR;
         return;
     }
     // b -> a: dst is a
     if (pump(&r->b, &r->a, r->buf_b2a, &r->b2a_len, &r->b2a_off, &r->b_eof, &r->b2a_done, &r->a_shut_sent,
              &r->bytes_b2a) < 0)
     {
-        RelayV.status = PROTOCORE_RELAY_ERROR;
+        Relay.status = PROTOCORE_RELAY_ERROR;
         return;
     }
 
-    RelayV.status = (r->a2b_done && r->b2a_done) ? PROTOCORE_RELAY_DONE : PROTOCORE_RELAY_RUNNING;
+    Relay.status = (r->a2b_done && r->b2a_done) ? PROTOCORE_RELAY_DONE : PROTOCORE_RELAY_RUNNING;
 }
 
-void protocore_relay_note_eof(uint8_t *restrict work)
+static void relay_note_eof(uint8_t *restrict work)
 {
     (void)work;
-    protocore_relay *r = RelayV.note_eof_args.r;
-    proto_bool origin = RelayV.note_eof_args.origin;
+    protocore_relay *r = Relay.note_eof_args.r;
+    proto_bool origin = Relay.note_eof_args.origin;
 
     if (!r)
     {
@@ -165,8 +165,7 @@ void protocore_relay_note_eof(uint8_t *restrict work)
     }
 }
 
-/** @brief The operands and the outcome. */
-RelayVars RelayV;
+RelayNs Relay = {.init = relay_init, .step = relay_step, .note_eof = relay_note_eof};
 
 PROTOCORE_END_DECLS
 

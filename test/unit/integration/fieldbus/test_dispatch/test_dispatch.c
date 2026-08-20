@@ -34,7 +34,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = i;
+        HttpConn.slot = i;
         HttpConn.reset(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -44,8 +44,8 @@ void setUp()
 
     static const uint8_t protocore_csrf_key[16] = {0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x4b, 0x65,
                                                    0x79, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36};
-    CsrfV.secret_args.secret = protocore_csrf_key;
-    CsrfV.secret_args.len = sizeof(protocore_csrf_key);
+    Csrf.secret_args.secret = protocore_csrf_key;
+    Csrf.secret_args.len = sizeof(protocore_csrf_key);
     Csrf.set_secret(protocore_csrf_span());
 #endif
 }
@@ -58,7 +58,7 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -68,8 +68,8 @@ static void feed_unsafe(uint8_t slot, const char *method, const char *path)
     char reqbuf[256];
 #if PROTOCORE_ENABLE_CSRF
     char tok[CSRF_TOKEN_BUF];
-    CsrfV.issue_args.out = tok;
-    CsrfV.issue_args.cap = sizeof(tok);
+    Csrf.issue_args.out = tok;
+    Csrf.issue_args.cap = sizeof(tok);
     Csrf.issue(protocore_csrf_span());
     snprintf(reqbuf, sizeof(reqbuf), "%s %s HTTP/1.1\r\nX-CSRF-Token: %s\r\n\r\n", method, path, tok);
 #else
@@ -164,9 +164,9 @@ void test_head_on_post_only_route_405()
 
 void test_http_parse_skips_ws_upgraded_slot()
 {
-    WsV.slot = 2;
+    Ws.slot = 2;
     Ws.alloc(protocore_ws_span());
-    WsConn *ws = WsV.found;
+    WsConn *ws = Ws.found;
     TEST_ASSERT_NOT_NULL(ws);
 
     const uint8_t frame[] = {0x81, 0x85, 0x01, 0x02, 0x03, 0x04, 0x41, 0x43, 0x42, 0x45, 0x44};
@@ -178,11 +178,11 @@ void test_http_parse_skips_ws_upgraded_slot()
     }
     size_t tail_before = c->rx_tail;
 
-    HttpConnV.slot = 2;
+    HttpConn.slot = 2;
     HttpConn.parse(protocore_http_conn_span());
 
     TEST_ASSERT_EQUAL_size_t(tail_before, c->rx_tail);
-    WsV.slot = 2;
+    Ws.slot = 2;
     Ws.free(protocore_ws_span());
 }
 #endif
@@ -202,7 +202,7 @@ void test_slowloris_incomplete_request_reaped_past_deadline()
     on_http("/res", HTTP_GET, handle_ok);
     http_req_start_ms[0] = 1;
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n");
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     TEST_ASSERT_NOT_EQUAL(PARSE_COMPLETE, http_pool[0].parse_state);
 
@@ -223,7 +223,7 @@ void test_incomplete_request_survives_before_deadline()
     on_http("/res", HTTP_GET, handle_ok);
     http_req_start_ms[0] = 1;
     push_str(0, "GET /res HTTP/1.1\r\nHost: x\r\n");
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
 
     set_millis(PROTOCORE_REQUEST_TIMEOUT_MS);

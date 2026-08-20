@@ -11,12 +11,12 @@ static uint8_t sb_modbus_work[16]; // the borrow an entry takes; SbModbus never 
 static int loopback_txn(void *io, const uint8_t *req, size_t req_len, uint8_t *resp, size_t resp_cap)
 {
     (void)io;
-    ModbusV.process_adu_args.req = req;
-    ModbusV.process_adu_args.req_len = req_len;
-    ModbusV.process_adu_args.resp = resp;
-    ModbusV.process_adu_args.protocore_resp_cap = resp_cap;
+    Modbus.process_adu_args.req = req;
+    Modbus.process_adu_args.req_len = req_len;
+    Modbus.process_adu_args.resp = resp;
+    Modbus.process_adu_args.protocore_resp_cap = resp_cap;
     Modbus.process_adu(protocore_modbus_span());
-    size_t pn = ModbusV.n;
+    size_t pn = Modbus.n;
     return (pn == 0) ? -1 : (int)pn;
 }
 
@@ -37,68 +37,68 @@ static SouthboundDriver g_drv;
 static int32_t sbm_init(protocore_sb_modbus_ctx *ctx, protocore_sb_modbus_txn txn, void *io, ModbusFunction fc,
                         uint8_t unit)
 {
-    SbModbusV.ctx = ctx;
-    SbModbusV.txn = txn;
-    SbModbusV.io = io;
-    SbModbusV.fc = fc;
-    SbModbusV.unit = unit;
+    SbModbus.ctx = ctx;
+    SbModbus.txn = txn;
+    SbModbus.io = io;
+    SbModbus.fc = fc;
+    SbModbus.unit = unit;
     SbModbus.init(sb_modbus_work);
-    return SbModbusV.i32;
+    return SbModbus.i32;
 }
 
 // Bind a vtable to an instance.
 static int32_t sbm_driver(SouthboundDriver *drv_out, const char *name, protocore_sb_modbus_ctx *ctx)
 {
-    SbModbusV.drv_out = drv_out;
-    SbModbusV.name = name;
-    SbModbusV.ctx = ctx;
+    SbModbus.drv_out = drv_out;
+    SbModbus.name = name;
+    SbModbus.ctx = ctx;
     SbModbus.driver(sb_modbus_work);
-    return SbModbusV.i32;
+    return SbModbus.i32;
 }
 
 static int32_t sb_add(const SouthboundDriver *drv)
 {
-    SouthboundV.drv = drv;
+    Southbound.drv = drv;
     Southbound.add(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 static int32_t sb_read(const char *name, uint32_t point, int32_t *value_out)
 {
-    SouthboundV.name = name;
-    SouthboundV.point.point = point;
-    SouthboundV.point.value_out = value_out;
+    Southbound.name = name;
+    Southbound.point.point = point;
+    Southbound.point.value_out = value_out;
     Southbound.read(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 static int32_t sb_write(const char *name, uint32_t point, int32_t value)
 {
-    SouthboundV.name = name;
-    SouthboundV.point.point = point;
-    SouthboundV.point.value = value;
+    Southbound.name = name;
+    Southbound.point.point = point;
+    Southbound.point.value = value;
     Southbound.write(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 static int32_t sb_read_block(const char *name, uint32_t first, int32_t *out, size_t n)
 {
-    SouthboundV.name = name;
-    SouthboundV.block.first = first;
-    SouthboundV.block.out = out;
-    SouthboundV.block.n = n;
+    Southbound.name = name;
+    Southbound.block.first = first;
+    Southbound.block.out = out;
+    Southbound.block.n = n;
     Southbound.read_block(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 static int32_t sb_write_block(const char *name, uint32_t first, const int32_t *in, size_t n)
 {
-    SouthboundV.name = name;
-    SouthboundV.block.first = first;
-    SouthboundV.block.in = in;
-    SouthboundV.block.n = n;
+    Southbound.name = name;
+    Southbound.block.first = first;
+    Southbound.block.in = in;
+    Southbound.block.n = n;
     Southbound.write_block(protocore_southbound_span());
-    return SouthboundV.i32;
+    return Southbound.i32;
 }
 
 void setUp()
@@ -112,9 +112,9 @@ void tearDown()
 
 void test_read_single_holding()
 {
-    ModbusV.set_holding_reg_args.addr = 10;
-    ModbusV.set_holding_reg_args.value = 0xBEEF;
-    ModbusV.set_holding_reg(protocore_modbus_span());
+    Modbus.set_holding_reg_args.addr = 10;
+    Modbus.set_holding_reg_args.value = 0xBEEF;
+    Modbus.set_holding_reg(protocore_modbus_span());
     TEST_ASSERT_EQUAL_INT(SB_OK, sbm_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_HOLDING_REGS, 1));
     TEST_ASSERT_EQUAL_INT(SB_OK, sbm_driver(&g_drv, "plc", &g_ctx));
     TEST_ASSERT_EQUAL_INT(SB_OK, sb_add(&g_drv));
@@ -128,9 +128,9 @@ void test_read_block_matrix()
 {
     for (uint16_t i = 0; i < 4; i++)
     {
-        ModbusV.set_holding_reg_args.addr = (uint16_t)(20 + i);
-        ModbusV.set_holding_reg_args.value = (uint16_t)(0x1000 + i);
-        ModbusV.set_holding_reg(protocore_modbus_span());
+        Modbus.set_holding_reg_args.addr = (uint16_t)(20 + i);
+        Modbus.set_holding_reg_args.value = (uint16_t)(0x1000 + i);
+        Modbus.set_holding_reg(protocore_modbus_span());
     }
     sbm_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_HOLDING_REGS, 1);
     sbm_driver(&g_drv, "plc", &g_ctx);
@@ -146,9 +146,9 @@ void test_read_block_matrix()
 
 void test_read_input_registers()
 {
-    ModbusV.set_input_reg_args.addr = 5;
-    ModbusV.set_input_reg_args.value = 0x0777;
-    ModbusV.set_input_reg(protocore_modbus_span());
+    Modbus.set_input_reg_args.addr = 5;
+    Modbus.set_input_reg_args.value = 0x0777;
+    Modbus.set_input_reg(protocore_modbus_span());
     sbm_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_INPUT_REGS, 1);
     sbm_driver(&g_drv, "sensor", &g_ctx);
     sb_add(&g_drv);
@@ -189,9 +189,9 @@ void test_write_single_round_trip()
     sb_add(&g_drv);
 
     TEST_ASSERT_EQUAL_INT(SB_OK, sb_write("plc", 8, 0x4242));
-    ModbusV.get_holding_reg_args.addr = 8;
-    ModbusV.get_holding_reg(protocore_modbus_span());
-    TEST_ASSERT_EQUAL_HEX16(0x4242, ModbusV.value);
+    Modbus.get_holding_reg_args.addr = 8;
+    Modbus.get_holding_reg(protocore_modbus_span());
+    TEST_ASSERT_EQUAL_HEX16(0x4242, Modbus.value);
     int32_t v = 0;
     TEST_ASSERT_EQUAL_INT(SB_OK, sb_read("plc", 8, &v));
     TEST_ASSERT_EQUAL_INT32(0x4242, v);
@@ -266,9 +266,9 @@ void test_read_bounds()
 
 void test_txid_increments()
 {
-    ModbusV.set_holding_reg_args.addr = 0;
-    ModbusV.set_holding_reg_args.value = 0x0001;
-    ModbusV.set_holding_reg(protocore_modbus_span());
+    Modbus.set_holding_reg_args.addr = 0;
+    Modbus.set_holding_reg_args.value = 0x0001;
+    Modbus.set_holding_reg(protocore_modbus_span());
     sbm_init(&g_ctx, loopback_txn, NULL, MODBUS_FC_READ_HOLDING_REGS, 1);
     sbm_driver(&g_drv, "plc", &g_ctx);
     sb_add(&g_drv);
@@ -280,3 +280,4 @@ void test_txid_increments()
     sb_read("plc", 0, &v);
     TEST_ASSERT_EQUAL_UINT16(2, g_ctx.txid);
 }
+

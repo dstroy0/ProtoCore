@@ -166,16 +166,16 @@ static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8
 static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    IpV.args.text = ip;
-    IpV.args.out = &dst;
+    Ip.args.text = ip;
+    Ip.args.out = &dst;
     Ip.parse(ip_work);
-    if (IpV.ok)
+    if (Ip.ok)
     {
-        UdpListenerV.port = QSRV_CTX(work)->port;
-        UdpListenerV.send_args.dst = &dst;
-        UdpListenerV.send_args.dst_port = port;
-        UdpListenerV.send_args.data = data;
-        UdpListenerV.send_args.len = len;
+        UdpListener.port = QSRV_CTX(work)->port;
+        UdpListener.send_args.dst = &dst;
+        UdpListener.send_args.dst_port = port;
+        UdpListener.send_args.data = data;
+        UdpListener.send_args.len = len;
         UdpListener.sendto(protocore_udp_listener_span());
     }
 }
@@ -285,7 +285,7 @@ static QuicSlot *open_conn(uint8_t *restrict work, const QuicLongHeader *lh, con
     tc.cert_der = QSRV_CTX(work)->cfg.cert_der;
     tc.cert_len = QSRV_CTX(work)->cfg.cert_len;
     mem.cpy(tc.ed25519_seed, QSRV_CTX(work)->cfg.ed25519_seed, sizeof tc.ed25519_seed);
-    QuicTpV.defaults_args.tp = &tc.params;
+    QuicTp.defaults_args.tp = &tc.params;
     QuicTp.defaults(quic_tp_work);
     // A real HTTP/3 endpoint must advertise flow-control room, or every request stream (and the
     // client's control / QPACK streams) is blocked - the RFC 9000 sec 18.2 defaults are all zero.
@@ -322,20 +322,20 @@ static QuicSlot *open_conn(uint8_t *restrict work, const QuicLongHeader *lh, con
 
     QuicConnCallbacks cb;
     mem.set(&cb, 0, sizeof cb); // H3Conn.init installs the real callbacks
-    QuicConnV.bind.b = s->qcb;
-    QuicConnV.cb = cb;
-    QuicConnV.init_args.cfg = &tc;
-    QuicConnV.init_args.odcid = lh->dcid;
-    QuicConnV.init_args.odcid_len = lh->dcid_len;
-    QuicConnV.init_args.peer_scid = lh->scid;
-    QuicConnV.init_args.peer_scid_len = lh->scid_len;
-    QuicConnV.init_args.our_scid = our_scid;
-    QuicConnV.init_args.our_scid_len = PROTOCORE_QUIC_SCID_LEN;
+    QuicConn.bind.b = s->qcb;
+    QuicConn.cb = cb;
+    QuicConn.init_args.cfg = &tc;
+    QuicConn.init_args.odcid = lh->dcid;
+    QuicConn.init_args.odcid_len = lh->dcid_len;
+    QuicConn.init_args.peer_scid = lh->scid;
+    QuicConn.init_args.peer_scid_len = lh->scid_len;
+    QuicConn.init_args.our_scid = our_scid;
+    QuicConn.init_args.our_scid_len = PROTOCORE_QUIC_SCID_LEN;
     QuicConn.init(s->qc);
 
-    H3ConnV.bind.qc = s->qc;
-    H3ConnV.app_args.on_request = protocore_h3_on_request;
-    H3ConnV.app_args.app = s;
+    H3Conn.bind.qc = s->qc;
+    H3Conn.app_args.on_request = protocore_h3_on_request;
+    H3Conn.app_args.app = s;
     H3Conn.init(s->h3);
 
     copy_str(s->peer_ip, sizeof s->peer_ip, ip);
@@ -356,15 +356,15 @@ static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, pr
     {
         return NULL;
     }
-    QuicPacketV.is_long_header_args.first = dg[0];
+    QuicPacket.is_long_header_args.first = dg[0];
     QuicPacket.is_long_header(quic_packet_work);
-    if (QuicPacketV.ok)
+    if (QuicPacket.ok)
     {
-        QuicPacketV.parse_long_header_args.buf = dg;
-        QuicPacketV.parse_long_header_args.len = len;
-        QuicPacketV.parse_long_header_args.out = lh_out;
+        QuicPacket.parse_long_header_args.buf = dg;
+        QuicPacket.parse_long_header_args.len = len;
+        QuicPacket.parse_long_header_args.out = lh_out;
         QuicPacket.parse_long_header(quic_packet_work);
-        if (!QuicPacketV.ok)
+        if (!QuicPacket.ok)
         {
             return NULL;
         }
@@ -375,10 +375,10 @@ static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, pr
             {
                 continue;
             }
-            QuicConnV.owns_args.dcid = lh_out->dcid;
-            QuicConnV.owns_args.dcid_len = lh_out->dcid_len;
+            QuicConn.owns_args.dcid = lh_out->dcid;
+            QuicConn.owns_args.dcid_len = lh_out->dcid_len;
             QuicConn.owns(s->qc);
-            if (QuicConnV.ok)
+            if (QuicConn.ok)
             {
                 return s;
             }
@@ -402,10 +402,10 @@ static QuicSlot *route(uint8_t *restrict work, const uint8_t *dg, size_t len, pr
             continue;
         }
         // A short header carries no length, so the id is read at the one length this server chooses.
-        QuicConnV.owns_args.dcid = dg + 1;
-        QuicConnV.owns_args.dcid_len = PROTOCORE_QUIC_SCID_LEN;
+        QuicConn.owns_args.dcid = dg + 1;
+        QuicConn.owns_args.dcid_len = PROTOCORE_QUIC_SCID_LEN;
         QuicConn.owns(s->qc);
-        if (QuicConnV.ok)
+        if (QuicConn.ok)
         {
             return s;
         }
@@ -423,25 +423,25 @@ static void flush_and_reap(uint8_t *restrict work, uint32_t now_ms)
         {
             continue;
         }
-        QuicConnV.bind.b = s->qcb;
-        QuicConnV.timeout_args.now_ms = now_ms;
+        QuicConn.bind.b = s->qcb;
+        QuicConn.timeout_args.now_ms = now_ms;
         QuicConn.on_timeout(s->qc); // retransmit a lost handshake flight (PTO)
         // Drained: send is called until it reports nothing left, so the call is the condition.
         for (;;)
         {
-            QuicConnV.send_args.out = out;
-            QuicConnV.send_args.cap = sizeof out;
-            QuicConnV.send(s->qc);
-            if (QuicConnV.n == 0)
+            QuicConn.send_args.out = out;
+            QuicConn.send_args.cap = sizeof out;
+            QuicConn.send(s->qc);
+            if (QuicConn.n == 0)
             {
                 break;
             }
-            server_send(work, s->peer_ip, s->peer_port, out, QuicConnV.n);
+            server_send(work, s->peer_ip, s->peer_port, out, QuicConn.n);
         }
         // Reap a closed connection, or one idle past the timeout (wrap-safe delta) so a client that
         // never closes cannot leak the fixed pool.
         QuicConn.is_closed(s->qc);
-        if (QuicConnV.closed || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
+        if (QuicConn.closed || (uint32_t)(now_ms - s->last_ms) >= PROTOCORE_QUIC_IDLE_MS)
         {
             s->used = PROTO_FALSE;
         }
@@ -453,12 +453,12 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
     (void)ctx;
     char ip[16];
     uint16_t port = 0;
-    UdpListenerV.peer_args.peer = peer;
-    UdpListenerV.peer_args.ip_out = ip;
-    UdpListenerV.peer_args.ip_cap = sizeof ip;
-    UdpListenerV.peer_args.port_out = &port;
+    UdpListener.peer_args.peer = peer;
+    UdpListener.peer_args.ip_out = ip;
+    UdpListener.peer_args.ip_cap = sizeof ip;
+    UdpListener.peer_args.port_out = &port;
     UdpListener.peer_addr(protocore_udp_listener_span());
-    if (!UdpListenerV.ok)
+    if (!UdpListener.ok)
     {
         return;
     }
@@ -467,16 +467,16 @@ static void udp_ingest_cb(const uint8_t *data, size_t len, const struct protocor
 
 static void begin(uint8_t *restrict work)
 {
-    const QuicServerConfig *cfg = QuicServerV.begin_args.cfg;
-    QuicServerV.ok = PROTO_FALSE;
+    const QuicServerConfig *cfg = QuicServer.begin_args.cfg;
+    QuicServer.ok = PROTO_FALSE;
     if (!cfg || !cfg->rng)
     {
         return;
     }
     QSRV_CTX(work)->cfg = *cfg;
-    QSRV_CTX(work)->on_request = QuicServerV.begin_args.on_request;
-    QSRV_CTX(work)->app = QuicServerV.begin_args.app;
-    QSRV_CTX(work)->port = QuicServerV.begin_args.port ? QuicServerV.begin_args.port : PROTOCORE_HTTP3_PORT;
+    QSRV_CTX(work)->on_request = QuicServer.begin_args.on_request;
+    QSRV_CTX(work)->app = QuicServer.begin_args.app;
+    QSRV_CTX(work)->port = QuicServer.begin_args.port ? QuicServer.begin_args.port : PROTOCORE_HTTP3_PORT;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
     {
         QSRV_POOL(work)[i].used = PROTO_FALSE;
@@ -485,16 +485,16 @@ static void begin(uint8_t *restrict work)
     QSRV_CTX(work)->ring_tail = 0;
     QSRV_CTX(work)->next_id = 1;
     QSRV_CTX(work)->running = PROTO_TRUE;
-    UdpListenerV.port = QSRV_CTX(work)->port;
-    UdpListenerV.bind.handler = udp_ingest_cb;
-    UdpListenerV.bind.handler_ctx = NULL;
+    UdpListener.port = QSRV_CTX(work)->port;
+    UdpListener.bind.handler = udp_ingest_cb;
+    UdpListener.bind.handler_ctx = NULL;
     UdpListener.listen(protocore_udp_listener_span());
-    QuicServerV.ok = UdpListenerV.ok;
+    QuicServer.ok = UdpListener.ok;
 }
 
 static void poll(uint8_t *restrict work)
 {
-    const uint32_t now_ms = QuicServerV.now_ms;
+    const uint32_t now_ms = QuicServer.now_ms;
     if (!QSRV_CTX(work)->running)
     {
         return;
@@ -514,9 +514,9 @@ static void poll(uint8_t *restrict work)
             continue;
         }
         s->last_ms = now_ms; // liveness for idle reaping
-        QuicConnV.bind.b = s->qcb;
-        QuicConnV.recv_args.datagram = ig.data;
-        QuicConnV.recv_args.len = ig.len;
+        QuicConn.bind.b = s->qcb;
+        QuicConn.recv_args.datagram = ig.data;
+        QuicConn.recv_args.len = ig.len;
         QuicConn.recv(s->qc);
     }
     flush_and_reap(work, now_ms);
@@ -524,20 +524,20 @@ static void poll(uint8_t *restrict work)
 
 static void respond(uint8_t *restrict work)
 {
-    QuicSlot *s = slot_by_id(work, QuicServerV.stream.conn_id);
+    QuicSlot *s = slot_by_id(work, QuicServer.stream.conn_id);
     if (!s)
     {
-        QuicServerV.ok = PROTO_FALSE;
+        QuicServer.ok = PROTO_FALSE;
         return;
     }
-    H3ConnV.bind.qc = s->qc;
-    H3ConnV.respond_args.stream_id = QuicServerV.stream.stream_id;
-    H3ConnV.respond_args.status = QuicServerV.resp.status;
-    H3ConnV.respond_args.content_type = QuicServerV.resp.content_type;
-    H3ConnV.respond_args.body = QuicServerV.resp.body;
-    H3ConnV.respond_args.body_len = QuicServerV.resp.body_len;
+    H3Conn.bind.qc = s->qc;
+    H3Conn.respond_args.stream_id = QuicServer.stream.stream_id;
+    H3Conn.respond_args.status = QuicServer.resp.status;
+    H3Conn.respond_args.content_type = QuicServer.resp.content_type;
+    H3Conn.respond_args.body = QuicServer.resp.body;
+    H3Conn.respond_args.body_len = QuicServer.resp.body_len;
     H3Conn.respond(s->h3);
-    QuicServerV.ok = H3ConnV.ok;
+    QuicServer.ok = H3Conn.ok;
 }
 
 static void active_conns(uint8_t *restrict work)
@@ -550,12 +550,12 @@ static void active_conns(uint8_t *restrict work)
             n++;
         }
     }
-    QuicServerV.u8 = n;
+    QuicServer.u8 = n;
 }
 
 static void stop(uint8_t *restrict work)
 {
-    UdpListenerV.port = QSRV_CTX(work)->port;
+    UdpListener.port = QSRV_CTX(work)->port;
     UdpListener.close(protocore_udp_listener_span()); // drop the bind first: nothing more reaches the ring
     QSRV_CTX(work)->running = PROTO_FALSE;
     for (uint8_t i = 0; i < PROTOCORE_QUIC_MAX_CONNS; i++)
@@ -570,18 +570,18 @@ static void stop(uint8_t *restrict work)
 proto_bool protocore_quic_server_respond(uint32_t conn_id, uint64_t stream_id, int status, const char *content_type,
                                          const uint8_t *body, size_t body_len)
 {
-    QuicServerV.stream.conn_id = conn_id;
-    QuicServerV.stream.stream_id = stream_id;
-    QuicServerV.resp.status = status;
-    QuicServerV.resp.content_type = content_type;
-    QuicServerV.resp.body = body;
-    QuicServerV.resp.body_len = body_len;
+    QuicServer.stream.conn_id = conn_id;
+    QuicServer.stream.stream_id = stream_id;
+    QuicServer.resp.status = status;
+    QuicServer.resp.content_type = content_type;
+    QuicServer.resp.body = body;
+    QuicServer.resp.body_len = body_len;
     respond(protocore_quic_server_span());
-    return QuicServerV.ok;
+    return QuicServer.ok;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-QuicServerVars QuicServerV;
+QuicServerNs QuicServer = {
+    .begin = begin, .poll = poll, .respond = respond, .active_conns = active_conns, .stop = stop};
 
 #endif // PROTOCORE_ENABLE_HTTP3

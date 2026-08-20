@@ -29,7 +29,7 @@
 #ifndef PROTOCORE_QUIC_CRYPTO_H
 #define PROTOCORE_QUIC_CRYPTO_H
 
-#include "crypto/kdf/hkdf/hkdf.h" // the complete type a public struct below holds by value
+#include "crypto/kdf/hkdf/hkdf.h"  // the complete type a public struct below holds by value
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
@@ -45,17 +45,19 @@ PROTOCORE_BEGIN_DECLS
 typedef struct
 {
     uint8_t gcm[PROTOCORE_AES128GCM_BORROW]; ///< this direction's AEAD borrow. Carries both keyed
-                                             ///< contexts: the record AEAD and the header-protection
-                                             ///< block. Replaces the raw keys, so neither stays
-                                             ///< resident, and both are keyed once.
-    uint8_t iv[12];                          ///< AEAD nonce base (XOR'd with the padded packet number).
+                                                         ///< contexts: the record AEAD and the header-protection
+                                                         ///< block. Replaces the raw keys, so neither stays
+                                                         ///< resident, and both are keyed once.
+    uint8_t iv[12];                                      ///< AEAD nonce base (XOR'd with the padded packet number).
 } QuicPacketKeys;
+
 /** @brief Both directions' Initial secrets derived from the client's Destination Connection ID. */
 typedef struct
 {
     QuicPacketKeys client; ///< Protects client-sent Initial packets (server opens with this).
     QuicPacketKeys server; ///< Protects server-sent Initial packets (server seals with this).
 } QuicInitialSecrets;
+
 /** @brief What derive_initial_secrets takes: keys_work, dcid, ... */
 typedef struct
 {
@@ -64,6 +66,7 @@ typedef struct
     size_t dcid_len;
     QuicInitialSecrets *out;
 } QuicCryptoDeriveInitialSecretsArgs;
+
 /** @brief What keys_from_secret takes: keys_work, secret, out. */
 typedef struct
 {
@@ -71,6 +74,7 @@ typedef struct
     const uint8_t *secret; ///< PROTOCORE_HKDF_HASH_LEN bytes.
     QuicPacketKeys *out;
 } QuicCryptoKeysFromSecretArgs;
+
 /** @brief What packet_protect takes: pkt, cap, pn_offset, pn_len, ... */
 typedef struct
 {
@@ -83,6 +87,7 @@ typedef struct
     QuicPacketKeys *keys; ///< The {key, iv, hp} triple for this encryption level
     proto_bool is_long;   ///< True for a long header (Initial/Handshake), false for a 1-RTT short header
 } QuicCryptoPacketProtectArgs;
+
 /** @brief What packet_unprotect takes: pkt, pn_offset, length, ... */
 typedef struct
 {
@@ -95,6 +100,7 @@ typedef struct
     uint8_t *out;         ///< Output plaintext frames (>= length - pn_len - 16 bytes); may alias pkt payload
     uint64_t *out_pn;     ///< Receives the reconstructed full packet number (may be NULL)
 } QuicCryptoPacketUnprotectArgs;
+
 /** @brief What retry_integrity_tag takes: odcid, odcid_len, retry, ... */
 typedef struct
 {
@@ -104,6 +110,7 @@ typedef struct
     size_t retry_len;     ///< Length of retry
     uint8_t *tag;         ///< Output 16-byte integrity tag 16 bytes.
 } QuicCryptoRetryIntegrityTagArgs;
+
 /**
  * @brief QUIC packet protection: Initial secrets, AEAD payload protection, header protection, and the Retry integrity
  * tag (RFC 9001).
@@ -141,16 +148,10 @@ typedef struct
     QuicCryptoPacketProtectArgs packet_protect_args;
     QuicCryptoPacketUnprotectArgs packet_unprotect_args;
     QuicCryptoRetryIntegrityTagArgs retry_integrity_tag_args;
+
     proto_bool ok;
     size_t n;
-} QuicCryptoVars;
 
-/** @brief The operands and the outcome. */
-extern QuicCryptoVars QuicCryptoV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const derive_initial_secrets)(uint8_t *restrict work);
     void (*const keys_from_secret)(uint8_t *restrict work);
     void (*const packet_protect)(uint8_t *restrict work);
@@ -158,25 +159,8 @@ typedef struct
     void (*const retry_integrity_tag)(uint8_t *restrict work);
 } QuicCryptoNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in QuicCryptoV or a region of the borrow at a fixed offset.
-void protocore_quic_crypto_derive_initial_secrets(uint8_t *restrict work);
-void protocore_quic_crypto_keys_from_secret(uint8_t *restrict work);
-void protocore_quic_crypto_packet_protect(uint8_t *restrict work);
-void protocore_quic_crypto_packet_unprotect(uint8_t *restrict work);
-void protocore_quic_crypto_retry_integrity_tag(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `QuicCrypto.derive_initial_secrets(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const QuicCryptoNs QuicCrypto __attribute__((unused)) = {
-    .derive_initial_secrets = protocore_quic_crypto_derive_initial_secrets,
-    .keys_from_secret = protocore_quic_crypto_keys_from_secret,
-    .packet_protect = protocore_quic_crypto_packet_protect,
-    .packet_unprotect = protocore_quic_crypto_packet_unprotect,
-    .retry_integrity_tag = protocore_quic_crypto_retry_integrity_tag,
-};
+/** @brief The one symbol this module exports. */
+extern QuicCryptoNs QuicCrypto;
 
 PROTOCORE_END_DECLS
 

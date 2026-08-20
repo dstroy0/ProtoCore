@@ -22,6 +22,7 @@
 
 #include "shared/time_compat/time_compat.h" // ::TimeCompat, time_t, and the entry point behind it
 
+
 /**
  * @brief Smallest buffer that holds an RFC 7231 IMF-fixdate plus its NUL.
  *
@@ -38,6 +39,7 @@ typedef struct
     char *out;        ///< where the date lands
     uint32_t out_cap; ///< how much room it has; ::PROTOCORE_HTTP_DATE_MAX holds the whole form
 } HttpDateArgs;
+
 /**
  * @brief The IMF-fixdate an HTTP Date header carries.
  *
@@ -53,28 +55,13 @@ typedef struct
 typedef struct
 {
     HttpDateArgs args;
+
     uint8_t n;
-} HttpDateVars;
 
-/** @brief The operands and the outcome. */
-extern HttpDateVars HttpDateV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const format)(uint8_t *restrict work);
 } HttpDateNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HttpDateV or a region of the borrow at a fixed offset.
-void protocore_http_date_format(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `HttpDate.format(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HttpDateNs HttpDate __attribute__((unused)) = {
-    .format = protocore_http_date_format,
-};
+/** @brief The one symbol this module exports. */
+extern HttpDateNs HttpDate;
 
 #endif // PROTOCORE_HTTP_DATE_H

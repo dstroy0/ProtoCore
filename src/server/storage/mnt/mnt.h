@@ -76,6 +76,7 @@ typedef struct
     uint64_t size;  ///< 0 for a directory
     uint32_t mtime; ///< unix epoch seconds, 0 if the backend keeps no timestamp
 } protocore_mnt_stat;
+
 /**
  * @brief A storage backend. Each open call returns a small handle (>= 0) or -1.
  *
@@ -114,6 +115,7 @@ typedef struct protocore_mnt_backend
      */
     proto_bool (*sync)(int handle);
 } protocore_mnt_backend;
+
 // Everything above and the two calls below are the HAL: the shape of a store, and which one is
 // mounted. All declarations plus one pointer, so a feature that reads through the seam pays nothing
 // and never has to enable a service just to name a type. The seam fails closed when nothing is
@@ -121,6 +123,7 @@ typedef struct protocore_mnt_backend
 /** @brief Mount the active backend (call once at setup; NULL unmounts). */
 /** @brief The id a route carries when it serves no mount point. */
 #define PROTOCORE_MNT_NONE 0xFFu
+
 /** @brief The mount point a call names, and what registering one takes. */
 typedef struct
 {
@@ -128,6 +131,7 @@ typedef struct
     const char *root;                     ///< the path prefix it answers for
     uint8_t id;                           ///< the point a lookup names
 } MntArgs;
+
 /**
  * @brief The mount table and the active filesystem.
  *
@@ -150,56 +154,27 @@ typedef struct
 typedef struct
 {
     MntArgs args;
+
     uint8_t u8;
     const protocore_mnt_backend *backend;
     const char *text;
-    // The RAM backend is the only part with a footprint (PROTOCORE_MNT_RAM_FILES x
-    // PROTOCORE_MNT_RAM_FILE_SIZE of BSS), so it is the only part the flag gates.
-#if PROTOCORE_ENABLE_MNT
-#endif
-} MntVars;
 
-/** @brief The operands and the outcome. */
-extern MntVars MntV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const point_add)(uint8_t *restrict work);
     void (*const point_of)(uint8_t *restrict work);
     void (*const root_of)(uint8_t *restrict work);
     void (*const reset)(uint8_t *restrict work);
     void (*const mount)(uint8_t *restrict work);
     void (*const active)(uint8_t *restrict work);
+    // The RAM backend is the only part with a footprint (PROTOCORE_MNT_RAM_FILES x
+    // PROTOCORE_MNT_RAM_FILE_SIZE of BSS), so it is the only part the flag gates.
+#if PROTOCORE_ENABLE_MNT
     void (*const ram)(uint8_t *restrict work);
     void (*const ram_format)(uint8_t *restrict work);
+#endif
 } MntNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in MntV or a region of the borrow at a fixed offset.
-void protocore_mnt_point_add(uint8_t *restrict work);
-void protocore_mnt_point_of(uint8_t *restrict work);
-void protocore_mnt_root_of(uint8_t *restrict work);
-void protocore_mnt_reset(uint8_t *restrict work);
-void protocore_mnt_mount(uint8_t *restrict work);
-void protocore_mnt_active(uint8_t *restrict work);
-void protocore_mnt_ram(uint8_t *restrict work);
-void protocore_mnt_ram_format(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Mnt.point_add(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const MntNs Mnt __attribute__((unused)) = {
-    .point_add = protocore_mnt_point_add,
-    .point_of = protocore_mnt_point_of,
-    .root_of = protocore_mnt_root_of,
-    .reset = protocore_mnt_reset,
-    .mount = protocore_mnt_mount,
-    .active = protocore_mnt_active,
-    .ram = protocore_mnt_ram,
-    .ram_format = protocore_mnt_ram_format,
-};
+/** @brief The one symbol this module exports. */
+extern MntNs Mnt;
 
 PROTOCORE_END_DECLS
 

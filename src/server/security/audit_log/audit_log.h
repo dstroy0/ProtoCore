@@ -64,34 +64,41 @@ typedef struct
     char msg[PROTOCORE_AUDIT_MSG_LEN];      ///< Null-terminated message (truncated).
     uint8_t hash[PROTOCORE_AUDIT_HASH_LEN]; ///< SHA-256(prev_hash || fields).
 } protocore_audit_entry;
+
 /** @brief Sink invoked once per record, at append time, for durable forwarding. */
 typedef void (*protocore_audit_sink_fn)(const protocore_audit_entry *entry);
+
 /** @brief What set_sink takes. */
 typedef struct
 {
     protocore_audit_sink_fn sink;
 } AuditLogSetSinkArgs;
+
 /** @brief What append takes. */
 typedef struct
 {
     protocore_audit_cat category;
     const char *msg;
 } AuditLogAppendArgs;
+
 /** @brief What at takes. */
 typedef struct
 {
     uint16_t i;
 } AuditLogAtArgs;
+
 /** @brief What verify takes. */
 typedef struct
 {
     uint32_t *first_broken_seq;
 } AuditLogVerifyArgs;
+
 /** @brief What cat_name takes. */
 typedef struct
 {
     protocore_audit_cat category;
 } AuditLogCatNameArgs;
+
 /** @brief What format takes. */
 typedef struct
 {
@@ -99,6 +106,7 @@ typedef struct
     char *out;
     size_t cap;
 } AuditLogFormatArgs;
+
 /** @brief What dump_json takes. */
 typedef struct
 {
@@ -114,20 +122,14 @@ typedef struct
     AuditLogCatNameArgs cat_name_args;
     AuditLogFormatArgs format_args;
     AuditLogDumpJsonArgs dump_json_args;
+
     proto_bool ok;
     uint32_t ms;
     uint16_t value;
     const protocore_audit_entry *ptr;
     const char *text;
     int n;
-} AuditLogVars;
 
-/** @brief The operands and the outcome. */
-extern AuditLogVars AuditLogV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const reset)(uint8_t *restrict work);
     void (*const set_sink)(uint8_t *restrict work);
     void (*const append)(uint8_t *restrict work);
@@ -139,33 +141,8 @@ typedef struct
     void (*const dump_json)(uint8_t *restrict work);
 } AuditLogNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in AuditLogV or a region of the borrow at a fixed offset.
-void protocore_audit_log_reset(uint8_t *restrict work);
-void protocore_audit_log_set_sink(uint8_t *restrict work);
-void protocore_audit_log_append(uint8_t *restrict work);
-void protocore_audit_log_count(uint8_t *restrict work);
-void protocore_audit_log_at(uint8_t *restrict work);
-void protocore_audit_log_verify(uint8_t *restrict work);
-void protocore_audit_log_cat_name(uint8_t *restrict work);
-void protocore_audit_log_format(uint8_t *restrict work);
-void protocore_audit_log_dump_json(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `AuditLog.reset(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const AuditLogNs AuditLog __attribute__((unused)) = {
-    .reset = protocore_audit_log_reset,
-    .set_sink = protocore_audit_log_set_sink,
-    .append = protocore_audit_log_append,
-    .count = protocore_audit_log_count,
-    .at = protocore_audit_log_at,
-    .verify = protocore_audit_log_verify,
-    .cat_name = protocore_audit_log_cat_name,
-    .format = protocore_audit_log_format,
-    .dump_json = protocore_audit_log_dump_json,
-};
+/** @brief The one symbol this module exports. */
+extern AuditLogNs AuditLog;
 
 /**
  * @brief The PROTOCORE_AUDIT_LOG_BORROW bytes this module's state lives in.

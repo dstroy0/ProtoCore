@@ -65,6 +65,7 @@ typedef struct
     const char *value; ///< the header-value octets, still escaped (sec 4.1)
     size_t value_len;  ///< how many
 } StompHeader;
+
 /** @brief One parsed frame (sec 9). Every pointer slices the source buffer; nothing is copied. */
 typedef struct
 {
@@ -75,6 +76,7 @@ typedef struct
     const char *body;                                 ///< the body octets (sec 4.2)
     size_t body_len;                                  ///< how many
 } StompFrame;
+
 /** @brief The caller buffer a codec runs over. */
 typedef struct
 {
@@ -83,6 +85,7 @@ typedef struct
     const char *in; ///< the octets a parse or an unescape reads
     size_t len;     ///< how many
 } StompBufArgs;
+
 /** @brief The frame a build emits: its command, its header entries, and its body (sec 9). */
 typedef struct
 {
@@ -93,11 +96,13 @@ typedef struct
     const char *body;                 ///< the body octets (sec 4.2); NULL for an empty body
     size_t body_len;                  ///< how many
 } StompBuildArgs;
+
 /** @brief The header entry a lookup names (sec 4.4 takes the first entry with that name). */
 typedef struct
 {
     const char *name; ///< the header-name to match, NUL-terminated
 } StompLookupArgs;
+
 /**
  * @brief The STOMP 1.2 frame codec (stomp.github.io, not an IETF document).
  *
@@ -125,46 +130,26 @@ typedef struct
  */
 typedef struct
 {
-    StompFrame *frame;         ///< the frame a parse fills and a lookup searches
+    StompFrame *frame; ///< the frame a parse fills and a lookup searches
+
     StompBufArgs buf;          ///< the caller buffer a codec runs over
     StompBuildArgs build_args; ///< what a build emits
     StompLookupArgs lookup;    ///< what a lookup matches
+
     proto_bool ok;
     size_t n;
     size_t consumed;
     const char *value;
     size_t value_len;
-} StompVars;
 
-/** @brief The operands and the outcome. */
-extern StompVars StompV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
     void (*const header)(uint8_t *restrict work);
     void (*const unescape)(uint8_t *restrict work);
 } StompNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in StompV or a region of the borrow at a fixed offset.
-void protocore_stomp_build(uint8_t *restrict work);
-void protocore_stomp_parse(uint8_t *restrict work);
-void protocore_stomp_header(uint8_t *restrict work);
-void protocore_stomp_unescape(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Stomp.build(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const StompNs Stomp __attribute__((unused)) = {
-    .build = protocore_stomp_build,
-    .parse = protocore_stomp_parse,
-    .header = protocore_stomp_header,
-    .unescape = protocore_stomp_unescape,
-};
+/** @brief The one symbol this module exports. */
+extern StompNs Stomp;
 
 PROTOCORE_END_DECLS
 

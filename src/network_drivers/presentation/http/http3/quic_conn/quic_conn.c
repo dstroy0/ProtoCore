@@ -161,11 +161,11 @@ static QuicPacketKeys *open_keys(QuicConnCtx *qc, int level)
     {
         return &qc->initial.client;
     }
-    QuicTlsServerV.keys_args.qt = &qc->tls;
-    QuicTlsServerV.keys_args.level = level;
-    QuicTlsServerV.keys_args.is_server = /*is_server=*/PROTO_FALSE;
+    QuicTlsServer.keys_args.qt = &qc->tls;
+    QuicTlsServer.keys_args.level = level;
+    QuicTlsServer.keys_args.is_server = /*is_server=*/PROTO_FALSE;
     QuicTlsServer.keys(quic_tls_work);
-    return QuicTlsServerV.pkt_keys;
+    return QuicTlsServer.pkt_keys;
 }
 static QuicPacketKeys *seal_keys(QuicConnCtx *qc, int level)
 {
@@ -173,11 +173,11 @@ static QuicPacketKeys *seal_keys(QuicConnCtx *qc, int level)
     {
         return &qc->initial.server;
     }
-    QuicTlsServerV.keys_args.qt = &qc->tls;
-    QuicTlsServerV.keys_args.level = level;
-    QuicTlsServerV.keys_args.is_server = /*is_server=*/PROTO_TRUE;
+    QuicTlsServer.keys_args.qt = &qc->tls;
+    QuicTlsServer.keys_args.level = level;
+    QuicTlsServer.keys_args.is_server = /*is_server=*/PROTO_TRUE;
     QuicTlsServer.keys(quic_tls_work);
-    return QuicTlsServerV.pkt_keys;
+    return QuicTlsServer.pkt_keys;
 }
 
 // The engine is one translation unit; these are defined below in dependency order.
@@ -264,10 +264,10 @@ static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint
         qc->cb = *cb;
     }
 
-    QuicCryptoV.derive_initial_secrets_args.keys_work = qc->tls.keys_work;
-    QuicCryptoV.derive_initial_secrets_args.dcid = odcid;
-    QuicCryptoV.derive_initial_secrets_args.dcid_len = odcid_len;
-    QuicCryptoV.derive_initial_secrets_args.out = &qc->initial;
+    QuicCrypto.derive_initial_secrets_args.keys_work = qc->tls.keys_work;
+    QuicCrypto.derive_initial_secrets_args.dcid = odcid;
+    QuicCrypto.derive_initial_secrets_args.dcid_len = odcid_len;
+    QuicCrypto.derive_initial_secrets_args.out = &qc->initial;
     QuicCrypto.derive_initial_secrets(quic_crypto_work);
 
     for (int i = 0; i < 3; i++)
@@ -288,8 +288,8 @@ static void quic_conn_open(QuicConnCtx *qc, const QuicTlsConfig *cfg, const uint
     c.params.has_initial_scid = PROTO_TRUE;
     mem.cpy(c.params.initial_scid, our_scid, our_scid_len);
     c.params.initial_scid_len = our_scid_len;
-    QuicTlsServerV.server_init_args.qt = &qc->tls;
-    QuicTlsServerV.server_init_args.cfg = &c;
+    QuicTlsServer.server_init_args.qt = &qc->tls;
+    QuicTlsServer.server_init_args.cfg = &c;
     QuicTlsServer.server_init(quic_tls_work);
 }
 
@@ -332,12 +332,12 @@ static void handle_crypto(QuicConnCtx *qc, int level, const QuicFrameHeader *f)
     s->crypto_rx_have += nl;
     s->crypto_rx_off += nl;
 
-    QuicTlsServerV.recv_crypto_args.qt = &qc->tls;
-    QuicTlsServerV.recv_crypto_args.level = level;
-    QuicTlsServerV.recv_crypto_args.data = s->crypto_rx;
-    QuicTlsServerV.recv_crypto_args.len = s->crypto_rx_have;
+    QuicTlsServer.recv_crypto_args.qt = &qc->tls;
+    QuicTlsServer.recv_crypto_args.level = level;
+    QuicTlsServer.recv_crypto_args.data = s->crypto_rx;
+    QuicTlsServer.recv_crypto_args.len = s->crypto_rx_have;
     QuicTlsServer.recv_crypto(quic_tls_work);
-    size_t used = QuicTlsServerV.n;
+    size_t used = QuicTlsServer.n;
     if (used)
     {
         mem.move(s->crypto_rx, s->crypto_rx + used, s->crypto_rx_have - used);
@@ -419,11 +419,11 @@ static proto_bool process_frames(QuicConnCtx *qc, int level, const uint8_t *p, s
             continue;
         }
         QuicFrameHeader f;
-        QuicFrameV.parse_args.buf = p + off;
-        QuicFrameV.parse_args.len = len - off;
-        QuicFrameV.parse_args.out = &f;
+        QuicFrame.parse_args.buf = p + off;
+        QuicFrame.parse_args.len = len - off;
+        QuicFrame.parse_args.out = &f;
         QuicFrame.parse(quic_frame_work);
-        size_t n = QuicFrameV.n;
+        size_t n = QuicFrame.n;
         if (!n)
         {
             // Undecodable frame: a transport FRAME_ENCODING_ERROR (RFC 9000 sec 20.1). Report it.
@@ -479,12 +479,12 @@ static proto_bool skip_initial_token(const uint8_t *dg, size_t len, size_t *off)
 {
     uint64_t tok_len = 0;
     size_t c = 0;
-    QuicVarintV.decode_args.in = dg + *off;
-    QuicVarintV.decode_args.len = len - *off;
-    QuicVarintV.decode_args.value = &tok_len;
-    QuicVarintV.decode_args.consumed = &c;
+    QuicVarint.decode_args.in = dg + *off;
+    QuicVarint.decode_args.len = len - *off;
+    QuicVarint.decode_args.value = &tok_len;
+    QuicVarint.decode_args.consumed = &c;
     QuicVarint.decode(quic_varint_work);
-    if (!QuicVarintV.ok)
+    if (!QuicVarint.ok)
     {
         return PROTO_FALSE;
     }
@@ -512,11 +512,11 @@ static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, 
     }
 
     QuicLongHeader h;
-    QuicPacketV.parse_long_header_args.buf = dg;
-    QuicPacketV.parse_long_header_args.len = len;
-    QuicPacketV.parse_long_header_args.out = &h;
+    QuicPacket.parse_long_header_args.buf = dg;
+    QuicPacket.parse_long_header_args.len = len;
+    QuicPacket.parse_long_header_args.out = &h;
     QuicPacket.parse_long_header(quic_packet_work);
-    if (!QuicPacketV.ok)
+    if (!QuicPacket.ok)
     {
         return PROTO_FALSE;
     }
@@ -543,12 +543,12 @@ static proto_bool parse_packet_header(const QuicConnCtx *qc, const uint8_t *dg, 
         return PROTO_FALSE;
     }
     size_t c = 0;
-    QuicVarintV.decode_args.in = dg + off;
-    QuicVarintV.decode_args.len = len - off;
-    QuicVarintV.decode_args.value = payload_length;
-    QuicVarintV.decode_args.consumed = &c;
+    QuicVarint.decode_args.in = dg + off;
+    QuicVarint.decode_args.len = len - off;
+    QuicVarint.decode_args.value = payload_length;
+    QuicVarint.decode_args.consumed = &c;
     QuicVarint.decode(quic_varint_work);
-    if (!QuicVarintV.ok)
+    if (!QuicVarint.ok)
     {
         return PROTO_FALSE;
     }
@@ -565,9 +565,9 @@ static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
     {
         return 0;
     }
-    QuicPacketV.is_long_header_args.first = dg[0];
+    QuicPacket.is_long_header_args.first = dg[0];
     QuicPacket.is_long_header(quic_packet_work);
-    proto_bool is_long = QuicPacketV.ok;
+    proto_bool is_long = QuicPacket.ok;
 
     int level = 0;
     size_t pn_offset = 0;
@@ -594,16 +594,16 @@ static size_t recv_packet(QuicConnCtx *qc, const uint8_t *dg, size_t len)
     }
     mem.cpy(work, dg, pkt_len);
     uint64_t pn = 0;
-    QuicCryptoV.packet_unprotect_args.pkt = work;
-    QuicCryptoV.packet_unprotect_args.pn_offset = pn_offset;
-    QuicCryptoV.packet_unprotect_args.length = (size_t)payload_length;
-    QuicCryptoV.packet_unprotect_args.largest_pn = qc->space[level].largest_rx;
-    QuicCryptoV.packet_unprotect_args.keys = keys;
-    QuicCryptoV.packet_unprotect_args.is_long = is_long;
-    QuicCryptoV.packet_unprotect_args.out = plain;
-    QuicCryptoV.packet_unprotect_args.out_pn = &pn;
+    QuicCrypto.packet_unprotect_args.pkt = work;
+    QuicCrypto.packet_unprotect_args.pn_offset = pn_offset;
+    QuicCrypto.packet_unprotect_args.length = (size_t)payload_length;
+    QuicCrypto.packet_unprotect_args.largest_pn = qc->space[level].largest_rx;
+    QuicCrypto.packet_unprotect_args.keys = keys;
+    QuicCrypto.packet_unprotect_args.is_long = is_long;
+    QuicCrypto.packet_unprotect_args.out = plain;
+    QuicCrypto.packet_unprotect_args.out_pn = &pn;
     QuicCrypto.packet_unprotect(quic_crypto_work);
-    size_t pt = QuicCryptoV.n;
+    size_t pt = QuicCrypto.n;
     if (pt == (size_t)-1)
     {
         return is_long ? pkt_len : 0; // drop this packet, keep parsing later coalesced ones
@@ -676,13 +676,13 @@ static size_t build_ack_frame(QuicPnSpace *s, uint8_t *buf, size_t cap)
     {
         return 0;
     }
-    QuicFrameV.build_ack_args.out = buf;
-    QuicFrameV.build_ack_args.cap = cap;
-    QuicFrameV.build_ack_args.largest = s->largest_rx;
-    QuicFrameV.build_ack_args.delay = 0;
-    QuicFrameV.build_ack_args.first_range = s->largest_rx;
+    QuicFrame.build_ack_args.out = buf;
+    QuicFrame.build_ack_args.cap = cap;
+    QuicFrame.build_ack_args.largest = s->largest_rx;
+    QuicFrame.build_ack_args.delay = 0;
+    QuicFrame.build_ack_args.first_range = s->largest_rx;
     QuicFrame.build_ack(quic_frame_work);
-    size_t n = QuicFrameV.n;
+    size_t n = QuicFrame.n;
     if (n)
     {
         s->ack_eliciting_rx =
@@ -701,11 +701,11 @@ static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *
         return 0;
     }
     size_t flen = 0;
-    QuicTlsServerV.flight_args.qt = &qc->tls;
-    QuicTlsServerV.flight_args.level = level;
-    QuicTlsServerV.flight_args.len = &flen;
+    QuicTlsServer.flight_args.qt = &qc->tls;
+    QuicTlsServer.flight_args.level = level;
+    QuicTlsServer.flight_args.len = &flen;
     QuicTlsServer.flight(quic_tls_work);
-    const uint8_t *flight = QuicTlsServerV.bytes;
+    const uint8_t *flight = QuicTlsServer.bytes;
     if (!flight || s->crypto_tx_off >= flen)
     {
         return 0; // other than INITIAL/HANDSHAKE, which the guard above already excluded
@@ -718,13 +718,13 @@ static size_t build_crypto_frame(const QuicConnCtx *qc, int level, QuicPnSpace *
     {
         return 0;
     }
-    QuicFrameV.build_crypto_args.out = buf;
-    QuicFrameV.build_crypto_args.cap = cap;
-    QuicFrameV.build_crypto_args.offset = s->crypto_tx_off;
-    QuicFrameV.build_crypto_args.data = flight + s->crypto_tx_off;
-    QuicFrameV.build_crypto_args.len = take;
+    QuicFrame.build_crypto_args.out = buf;
+    QuicFrame.build_crypto_args.cap = cap;
+    QuicFrame.build_crypto_args.offset = s->crypto_tx_off;
+    QuicFrame.build_crypto_args.data = flight + s->crypto_tx_off;
+    QuicFrame.build_crypto_args.len = take;
     QuicFrame.build_crypto(quic_frame_work);
-    size_t n = QuicFrameV.n;
+    size_t n = QuicFrame.n;
     if (n)
     {
         s->crypto_tx_off += take;
@@ -743,10 +743,10 @@ static size_t build_app_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t 
     size_t p = 0;
     if (qc->handshake_done_queued)
     {
-        QuicFrameV.build_handshake_done_args.out = buf + p;
-        QuicFrameV.build_handshake_done_args.cap = cap - p;
+        QuicFrame.build_handshake_done_args.out = buf + p;
+        QuicFrame.build_handshake_done_args.cap = cap - p;
         QuicFrame.build_handshake_done(quic_frame_work);
-        size_t n = QuicFrameV.n;
+        size_t n = QuicFrame.n;
         if (n)
         { // ACK/CRYPTO, so the datagram-sized scratch always has room for it
 
@@ -773,15 +773,15 @@ static size_t build_app_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t 
         size_t remain = st->tx_have - st->tx_sent;
         size_t take = remain < room ? remain : room;
         proto_bool fin = st->tx_fin && (st->tx_sent + take == st->tx_have);
-        QuicFrameV.build_stream_args.out = buf + p;
-        QuicFrameV.build_stream_args.cap = cap - p;
-        QuicFrameV.build_stream_args.id = st->id;
-        QuicFrameV.build_stream_args.offset = st->tx_off;
-        QuicFrameV.build_stream_args.data = st->tx + st->tx_sent;
-        QuicFrameV.build_stream_args.len = take;
-        QuicFrameV.build_stream_args.fin = fin;
+        QuicFrame.build_stream_args.out = buf + p;
+        QuicFrame.build_stream_args.cap = cap - p;
+        QuicFrame.build_stream_args.id = st->id;
+        QuicFrame.build_stream_args.offset = st->tx_off;
+        QuicFrame.build_stream_args.data = st->tx + st->tx_sent;
+        QuicFrame.build_stream_args.len = take;
+        QuicFrame.build_stream_args.fin = fin;
         QuicFrame.build_stream(quic_frame_work);
-        size_t n = QuicFrameV.n;
+        size_t n = QuicFrame.n;
         if (n)
         {
             p += n;
@@ -808,15 +808,15 @@ static size_t build_frames(QuicConnCtx *qc, int level, uint8_t *buf, size_t cap,
     // this for a single level when a close is queued, so it is emitted exactly once.
     if (qc->close_queued && !qc->close_sent)
     {
-        QuicFrameV.build_connection_close_args.out = buf;
-        QuicFrameV.build_connection_close_args.cap = cap;
-        QuicFrameV.build_connection_close_args.app = qc->close_is_app;
-        QuicFrameV.build_connection_close_args.error_code = qc->close_error;
-        QuicFrameV.build_connection_close_args.frame_type = qc->close_frame_type;
-        QuicFrameV.build_connection_close_args.reason = NULL;
-        QuicFrameV.build_connection_close_args.reason_len = 0;
+        QuicFrame.build_connection_close_args.out = buf;
+        QuicFrame.build_connection_close_args.cap = cap;
+        QuicFrame.build_connection_close_args.app = qc->close_is_app;
+        QuicFrame.build_connection_close_args.error_code = qc->close_error;
+        QuicFrame.build_connection_close_args.frame_type = qc->close_frame_type;
+        QuicFrame.build_connection_close_args.reason = NULL;
+        QuicFrame.build_connection_close_args.reason_len = 0;
         QuicFrame.build_connection_close(quic_frame_work);
-        return QuicFrameV.n;
+        return QuicFrame.n;
     }
 
     p += build_ack_frame(s, buf + p, cap - p); // ACK first, if we owe one
@@ -863,10 +863,10 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
     }
 
     uint64_t pn = s->next_pn;
-    QuicPacketV.pn_length_args.full_pn = pn;
-    QuicPacketV.pn_length_args.largest_acked = s->largest_acked;
+    QuicPacket.pn_length_args.full_pn = pn;
+    QuicPacket.pn_length_args.largest_acked = s->largest_acked;
     QuicPacket.pn_length(quic_packet_work);
-    uint8_t pn_len = QuicPacketV.u8;
+    uint8_t pn_len = QuicPacket.u8;
     proto_bool is_long = (level != QUIC_ENC_APP);
 
     // Reserve the framing BEFORE filling the payload. build_frames() advances the connection's send
@@ -919,17 +919,17 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
     if (is_long)
     {
         // Invariant header fields, then the type-specific token (Initial only) + Length + PN.
-        QuicPacketV.build_long_header_args.out = out;
-        QuicPacketV.build_long_header_args.cap = cap;
-        QuicPacketV.build_long_header_args.type = level_lp_type(level);
-        QuicPacketV.build_long_header_args.version = QUIC_VERSION_1;
-        QuicPacketV.build_long_header_args.dcid = qc->dcid;
-        QuicPacketV.build_long_header_args.dcid_len = qc->dcid_len;
-        QuicPacketV.build_long_header_args.scid = qc->scid;
-        QuicPacketV.build_long_header_args.scid_len = qc->scid_len;
-        QuicPacketV.build_long_header_args.pn_len = pn_len;
+        QuicPacket.build_long_header_args.out = out;
+        QuicPacket.build_long_header_args.cap = cap;
+        QuicPacket.build_long_header_args.type = level_lp_type(level);
+        QuicPacket.build_long_header_args.version = QUIC_VERSION_1;
+        QuicPacket.build_long_header_args.dcid = qc->dcid;
+        QuicPacket.build_long_header_args.dcid_len = qc->dcid_len;
+        QuicPacket.build_long_header_args.scid = qc->scid;
+        QuicPacket.build_long_header_args.scid_len = qc->scid_len;
+        QuicPacket.build_long_header_args.pn_len = pn_len;
         QuicPacket.build_long_header(quic_packet_work);
-        size_t hn = QuicPacketV.n;
+        size_t hn = QuicPacket.n;
         if (!hn)
         {
             return 0;
@@ -937,11 +937,11 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
         p = hn;
         if (level == QUIC_ENC_INITIAL)
         {
-            QuicVarintV.encode_args.out = out + p;
-            QuicVarintV.encode_args.cap = cap - p;
-            QuicVarintV.encode_args.value = 0;
+            QuicVarint.encode_args.out = out + p;
+            QuicVarint.encode_args.cap = cap - p;
+            QuicVarint.encode_args.value = 0;
             QuicVarint.encode(quic_varint_work);
-            size_t n = QuicVarintV.n; // empty token
+            size_t n = QuicVarint.n; // empty token
             if (!n)
             {
                 return 0;
@@ -949,11 +949,11 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
             p += n;
         }
         uint64_t length = (uint64_t)pn_len + frame_len + PROTOCORE_AES128GCM_TAG_LEN;
-        QuicVarintV.encode_args.out = out + p;
-        QuicVarintV.encode_args.cap = cap - p;
-        QuicVarintV.encode_args.value = length;
+        QuicVarint.encode_args.out = out + p;
+        QuicVarint.encode_args.cap = cap - p;
+        QuicVarint.encode_args.value = length;
         QuicVarint.encode(quic_varint_work);
-        size_t n = QuicVarintV.n;
+        size_t n = QuicVarint.n;
         if (!n)
         {
             return 0;
@@ -991,16 +991,16 @@ static size_t build_packet(QuicConnCtx *qc, int level, uint8_t *out, size_t cap)
 
     mem.cpy(out + p, frames, frame_len);
 
-    QuicCryptoV.packet_protect_args.pkt = out;
-    QuicCryptoV.packet_protect_args.cap = cap;
-    QuicCryptoV.packet_protect_args.pn_offset = pn_offset;
-    QuicCryptoV.packet_protect_args.pn_len = pn_len;
-    QuicCryptoV.packet_protect_args.full_pn = pn;
-    QuicCryptoV.packet_protect_args.payload_len = frame_len;
-    QuicCryptoV.packet_protect_args.keys = keys;
-    QuicCryptoV.packet_protect_args.is_long = is_long;
+    QuicCrypto.packet_protect_args.pkt = out;
+    QuicCrypto.packet_protect_args.cap = cap;
+    QuicCrypto.packet_protect_args.pn_offset = pn_offset;
+    QuicCrypto.packet_protect_args.pn_len = pn_len;
+    QuicCrypto.packet_protect_args.full_pn = pn;
+    QuicCrypto.packet_protect_args.payload_len = frame_len;
+    QuicCrypto.packet_protect_args.keys = keys;
+    QuicCrypto.packet_protect_args.is_long = is_long;
     QuicCrypto.packet_protect(quic_crypto_work);
-    size_t total = QuicCryptoV.n;
+    size_t total = QuicCrypto.n;
     if (!total)
     {
         return 0;
@@ -1225,155 +1225,164 @@ static QuicConnCtx *qc_bound(uint8_t *restrict work)
     return work ? QUIC_CTX(work) : NULL;
 }
 
-void protocore_quic_conn_init(uint8_t *restrict work)
+static void quic_conn_init(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
-    if (!qc || !QuicConnV.bind.b || !QuicConnV.init_args.cfg)
+    QuicConn.ok = PROTO_FALSE;
+    if (!qc || !QuicConn.bind.b || !QuicConn.init_args.cfg)
     {
         return;
     }
-    qc->b = QuicConnV.bind.b; // survives the wipe inside quic_conn_open
-    quic_conn_open(qc, QuicConnV.init_args.cfg, QuicConnV.init_args.odcid, QuicConnV.init_args.odcid_len,
-                   QuicConnV.init_args.peer_scid, QuicConnV.init_args.peer_scid_len, QuicConnV.init_args.our_scid,
-                   QuicConnV.init_args.our_scid_len, &QuicConnV.cb);
-    QuicConnV.ok = !qc->closed;
+    qc->b = QuicConn.bind.b; // survives the wipe inside quic_conn_open
+    quic_conn_open(qc, QuicConn.init_args.cfg, QuicConn.init_args.odcid, QuicConn.init_args.odcid_len,
+                   QuicConn.init_args.peer_scid, QuicConn.init_args.peer_scid_len, QuicConn.init_args.our_scid,
+                   QuicConn.init_args.our_scid_len, &QuicConn.cb);
+    QuicConn.ok = !qc->closed;
 }
 
-void protocore_quic_conn_callbacks(uint8_t *restrict work)
+static void quic_conn_callbacks(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConn.ok = PROTO_FALSE;
     if (!qc)
     {
         return;
     }
-    qc->cb = QuicConnV.cb;
-    QuicConnV.ok = PROTO_TRUE;
+    qc->cb = QuicConn.cb;
+    QuicConn.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_recv(uint8_t *restrict work)
+static void quic_conn_recv(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
-    if (!qc || !QuicConnV.recv_args.datagram)
+    QuicConn.ok = PROTO_FALSE;
+    if (!qc || !QuicConn.recv_args.datagram)
     {
         return;
     }
-    QuicConnV.ok = quic_conn_take(qc, QuicConnV.recv_args.datagram, QuicConnV.recv_args.len);
+    QuicConn.ok = quic_conn_take(qc, QuicConn.recv_args.datagram, QuicConn.recv_args.len);
 }
 
-void protocore_quic_conn_send(uint8_t *restrict work)
+static void quic_conn_send(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
-    QuicConnV.n = 0;
-    if (!qc || !QuicConnV.send_args.out)
+    QuicConn.ok = PROTO_FALSE;
+    QuicConn.n = 0;
+    if (!qc || !QuicConn.send_args.out)
     {
         return;
     }
-    QuicConnV.n = quic_conn_build(qc, QuicConnV.send_args.out, QuicConnV.send_args.cap);
-    QuicConnV.ok = PROTO_TRUE;
+    QuicConn.n = quic_conn_build(qc, QuicConn.send_args.out, QuicConn.send_args.cap);
+    QuicConn.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_on_timeout(uint8_t *restrict work)
+static void quic_conn_on_timeout(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConn.ok = PROTO_FALSE;
     if (!qc)
     {
         return;
     }
-    quic_conn_timeout(qc, QuicConnV.timeout_args.now_ms);
-    QuicConnV.ok = PROTO_TRUE;
+    quic_conn_timeout(qc, QuicConn.timeout_args.now_ms);
+    QuicConn.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_stream_send(uint8_t *restrict work)
+static void quic_conn_stream_send(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
-    QuicConnV.n = 0;
+    QuicConn.ok = PROTO_FALSE;
+    QuicConn.n = 0;
     if (!qc)
     {
         return;
     }
-    QuicConnV.n = quic_conn_stream_put(qc, QuicConnV.stream_send_args.stream_id, QuicConnV.stream_send_args.data,
-                                       QuicConnV.stream_send_args.len, QuicConnV.stream_send_args.fin);
-    QuicConnV.ok = PROTO_TRUE;
+    QuicConn.n = quic_conn_stream_put(qc, QuicConn.stream_send_args.stream_id, QuicConn.stream_send_args.data,
+                                      QuicConn.stream_send_args.len, QuicConn.stream_send_args.fin);
+    QuicConn.ok = PROTO_TRUE;
 }
 
 // A datagram names its connection by DCID: a long header carries the id we chose (scid) or the one
 // the client first used (odcid); a short header carries the former alone. The ids are the context's,
 // so the match is asked here rather than read off it.
-void protocore_quic_conn_owns(uint8_t *restrict work)
+static void quic_conn_owns(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
-    const uint8_t *dcid = QuicConnV.owns_args.dcid;
-    const uint8_t len = QuicConnV.owns_args.dcid_len;
+    QuicConn.ok = PROTO_FALSE;
+    const uint8_t *dcid = QuicConn.owns_args.dcid;
+    const uint8_t len = QuicConn.owns_args.dcid_len;
     if (!qc || !dcid)
     {
         return;
     }
     if (len == qc->scid_len && mem.cmp(dcid, qc->scid, len) == 0)
     {
-        QuicConnV.ok = PROTO_TRUE;
+        QuicConn.ok = PROTO_TRUE;
         return;
     }
     if (len == qc->odcid_len && mem.cmp(dcid, qc->odcid, len) == 0)
     {
-        QuicConnV.ok = PROTO_TRUE;
+        QuicConn.ok = PROTO_TRUE;
     }
 }
 
-void protocore_quic_conn_close(uint8_t *restrict work)
+static void quic_conn_close(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConn.ok = PROTO_FALSE;
     if (!qc)
     {
         return;
     }
-    quic_conn_close_transport(qc, QuicConnV.close_args.error_code);
-    QuicConnV.ok = PROTO_TRUE;
+    quic_conn_close_transport(qc, QuicConn.close_args.error_code);
+    QuicConn.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_close_app(uint8_t *restrict work)
+static void quic_conn_close_app(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.ok = PROTO_FALSE;
+    QuicConn.ok = PROTO_FALSE;
     if (!qc)
     {
         return;
     }
-    quic_conn_close_application(qc, QuicConnV.close_args.error_code);
-    QuicConnV.ok = PROTO_TRUE;
+    quic_conn_close_application(qc, QuicConn.close_args.error_code);
+    QuicConn.ok = PROTO_TRUE;
 }
 
-void protocore_quic_conn_is_established(uint8_t *restrict work)
+static void quic_conn_is_established(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.established = PROTO_FALSE;
-    QuicConnV.ok = (qc != NULL);
+    QuicConn.established = PROTO_FALSE;
+    QuicConn.ok = (qc != NULL);
     if (qc)
     {
-        QuicConnV.established = quic_conn_done(qc);
+        QuicConn.established = quic_conn_done(qc);
     }
 }
 
-void protocore_quic_conn_is_closed(uint8_t *restrict work)
+static void quic_conn_is_closed(uint8_t *restrict work)
 {
     QuicConnCtx *qc = qc_bound(work);
-    QuicConnV.closed = PROTO_TRUE; // an unbound connection answers nothing, which is closed
-    QuicConnV.ok = (qc != NULL);
+    QuicConn.closed = PROTO_TRUE; // an unbound connection answers nothing, which is closed
+    QuicConn.ok = (qc != NULL);
     if (qc)
     {
-        QuicConnV.closed = quic_conn_gone(qc);
+        QuicConn.closed = quic_conn_gone(qc);
     }
 }
 
-/** @brief The operands and the outcome. */
-QuicConnVars QuicConnV;
+QuicConnNs QuicConn = {.init = quic_conn_init,
+                       .callbacks = quic_conn_callbacks,
+                       .recv = quic_conn_recv,
+                       .send = quic_conn_send,
+                       .on_timeout = quic_conn_on_timeout,
+                       .stream_send = quic_conn_stream_send,
+                       .owns = quic_conn_owns,
+                       .close = quic_conn_close,
+                       .close_app = quic_conn_close_app,
+                       .is_established = quic_conn_is_established,
+                       .is_closed = quic_conn_is_closed};
 
 PROTOCORE_END_DECLS
 

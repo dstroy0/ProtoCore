@@ -27,44 +27,44 @@ static uint8_t grpcweb_work[16]; // the borrow an entry takes; GrpcWeb never rea
 /** @brief Frame @p body as a Length-Prefixed-Message into @p out; the octets written. */
 static size_t gw_frame_message(uint8_t *out, size_t cap, const uint8_t *body, size_t len, proto_bool compressed)
 {
-    GrpcWebV.out.buf = out;
-    GrpcWebV.out.cap = cap;
-    GrpcWebV.msg.body = body;
-    GrpcWebV.msg.body_len = len;
-    GrpcWebV.msg.compressed = compressed;
+    GrpcWeb.out.buf = out;
+    GrpcWeb.out.cap = cap;
+    GrpcWeb.msg.body = body;
+    GrpcWeb.msg.body_len = len;
+    GrpcWeb.msg.compressed = compressed;
     GrpcWeb.frame_message(grpcweb_work);
-    return GrpcWebV.n;
+    return GrpcWeb.n;
 }
 
 /** @brief Frame a trailer-section carrying @p status and @p message into @p out; the octets written. */
 static size_t gw_frame_trailers(uint8_t *out, size_t cap, int32_t status, const char *message)
 {
-    GrpcWebV.out.buf = out;
-    GrpcWebV.out.cap = cap;
-    GrpcWebV.trailers.status = status;
-    GrpcWebV.trailers.message = message;
+    GrpcWeb.out.buf = out;
+    GrpcWeb.out.cap = cap;
+    GrpcWeb.trailers.status = status;
+    GrpcWeb.trailers.message = message;
     GrpcWeb.frame_trailers(grpcweb_work);
-    return GrpcWebV.n;
+    return GrpcWeb.n;
 }
 
 /** @brief Decode the frame at the head of @p data into @p f; whether one was there. */
 static proto_bool gw_parse(GrpcWebFrame *f, const uint8_t *data, size_t len)
 {
-    GrpcWebV.in.data = data;
-    GrpcWebV.in.len = len;
+    GrpcWeb.in.data = data;
+    GrpcWeb.in.len = len;
     GrpcWeb.parse(grpcweb_work);
-    *f = GrpcWebV.parsed;
-    return GrpcWebV.ok;
+    *f = GrpcWeb.parsed;
+    return GrpcWeb.ok;
 }
 
 /** @brief Read "grpc-status" out of the trailer-section at @p data into @p status. */
 static proto_bool gw_trailers_status(const uint8_t *data, size_t len, int32_t *status)
 {
-    GrpcWebV.in.data = data;
-    GrpcWebV.in.len = len;
+    GrpcWeb.in.data = data;
+    GrpcWeb.in.len = len;
     GrpcWeb.trailers_status(grpcweb_work);
-    *status = GrpcWebV.i32;
-    return GrpcWebV.ok;
+    *status = GrpcWeb.i32;
+    return GrpcWeb.ok;
 }
 
 void dbench_run(void)

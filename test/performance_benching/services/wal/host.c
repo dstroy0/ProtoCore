@@ -84,23 +84,23 @@ static proto_bool mem_read(void *ctx, uint32_t pgno, uint8_t *page, uint32_t pag
 /** @brief Encode @p argc bulk strings, sized by @p lens, as one command into @p out; the octets written. */
 static size_t resp_encode(char *out, size_t cap, const char *const *argv, const size_t *lens, size_t argc)
 {
-    RespV.out.buf = out;
-    RespV.out.cap = cap;
-    RespV.command.argv = argv;
-    RespV.command.argv_len = lens;
-    RespV.command.argc = argc;
+    Resp.out.buf = out;
+    Resp.out.cap = cap;
+    Resp.command.argv = argv;
+    Resp.command.argv_len = lens;
+    Resp.command.argc = argc;
     Resp.encode_command(redis_resp_work);
-    return RespV.n;
+    return Resp.n;
 }
 
 /** @brief Decode the one value at the head of @p buf into @p r; the octets it consumed, 0 on a refusal. */
 static size_t resp_take(RespReply *r, const uint8_t *buf, size_t len)
 {
-    RespV.wire.buf = buf;
-    RespV.wire.len = len;
+    Resp.wire.buf = buf;
+    Resp.wire.len = len;
     Resp.parse_reply(redis_resp_work);
-    *r = RespV.reply;
-    return RespV.ok ? RespV.n : 0;
+    *r = Resp.reply;
+    return Resp.ok ? Resp.n : 0;
 }
 
 int main(void)

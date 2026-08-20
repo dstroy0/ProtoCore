@@ -48,30 +48,30 @@ void dbench_run(void)
         // 1) Register path: build the rule, validate/parse the bind address (protocore_ip_parse), scan for a
         //    port+proto duplicate, and insert. First iteration inserts; the rest exercise the identical
         //    parse+dedup-scan cost (the dominant work the config-time register path does).
-        IfaceBridgeV.clear(protocore_iface_bridge_span());
+        IfaceBridge.clear(protocore_iface_bridge_span());
         // The entry call stays inside DBENCH_OP so the timed loop measures the parse and the
         // dedup scan, not the read that follows them.
-        IfaceBridgeV.map_args.ip = "192.168.1.50";
-        IfaceBridgeV.map_args.port = 4001;
-        IfaceBridgeV.map_args.proto = BRIDGE_PROTO_TCP;
-        IfaceBridgeV.map_args.target = &uart;
+        IfaceBridge.map_args.ip = "192.168.1.50";
+        IfaceBridge.map_args.port = 4001;
+        IfaceBridge.map_args.proto = BRIDGE_PROTO_TCP;
+        IfaceBridge.map_args.target = &uart;
         DBENCH_OP("IfaceBridge.map", 50000,
-                  (IfaceBridgeV.map(protocore_iface_bridge_span()), sink += IfaceBridgeV.ok ? 1u : 0u));
+                  (IfaceBridge.map(protocore_iface_bridge_span()), sink += IfaceBridge.ok ? 1u : 0u));
 
         // 2) Listener dispatch: find the rule bound to a port+proto - run on every accepted connection.
-        IfaceBridgeV.find_args.port = 4001;
-        IfaceBridgeV.find_args.proto = BRIDGE_PROTO_TCP;
+        IfaceBridge.find_args.port = 4001;
+        IfaceBridge.find_args.proto = BRIDGE_PROTO_TCP;
         DBENCH_OP("IfaceBridge.find", 200000,
-                  (IfaceBridgeV.find(protocore_iface_bridge_span()), sink += (uintptr_t)IfaceBridgeV.rule));
+                  (IfaceBridge.find(protocore_iface_bridge_span()), sink += (uintptr_t)IfaceBridge.rule));
 
         // 3) Transaction frame build (write-then-read request), MB/s over the whole emitted frame.
-        IfaceBridgeV.txn_build_args.out = out;
-        IfaceBridgeV.txn_build_args.cap = sizeof(out);
-        IfaceBridgeV.txn_build_args.write_data = wr;
-        IfaceBridgeV.txn_build_args.write_len = (uint16_t)sizeof(wr);
-        IfaceBridgeV.txn_build_args.read_len = 5;
+        IfaceBridge.txn_build_args.out = out;
+        IfaceBridge.txn_build_args.cap = sizeof(out);
+        IfaceBridge.txn_build_args.write_data = wr;
+        IfaceBridge.txn_build_args.write_len = (uint16_t)sizeof(wr);
+        IfaceBridge.txn_build_args.read_len = 5;
         DBENCH_BULK("protocore_iface_bridge_txn_build", 100000, (size_t)PROTOCORE_BRIDGE_TXN_HDR + sizeof(wr),
-                    (IfaceBridge.txn_build(protocore_iface_bridge_span()), sink += IfaceBridgeV.n));
+                    (IfaceBridge.txn_build(protocore_iface_bridge_span()), sink += IfaceBridge.n));
 
         // 4) Transaction frame parse: the per-request codec on the hot transaction-listener path
         //    (header decode + bounds check, returns a pointer into the buffer - no copy).
@@ -79,13 +79,13 @@ void dbench_run(void)
             uint16_t wl = 0;
             uint16_t rl = 0;
             const uint8_t *wd = NULL;
-            IfaceBridgeV.txn_parse_args.buf = frame;
-            IfaceBridgeV.txn_parse_args.len = sizeof(frame);
-            IfaceBridgeV.txn_parse_args.write_len = &wl;
-            IfaceBridgeV.txn_parse_args.read_len = &rl;
-            IfaceBridgeV.txn_parse_args.write_data = &wd;
+            IfaceBridge.txn_parse_args.buf = frame;
+            IfaceBridge.txn_parse_args.len = sizeof(frame);
+            IfaceBridge.txn_parse_args.write_len = &wl;
+            IfaceBridge.txn_parse_args.read_len = &rl;
+            IfaceBridge.txn_parse_args.write_data = &wd;
             DBENCH_OP("IfaceBridge.txn_parse", 200000,
-                      (IfaceBridge.txn_parse(protocore_iface_bridge_span()), sink += IfaceBridgeV.n));
+                      (IfaceBridge.txn_parse(protocore_iface_bridge_span()), sink += IfaceBridge.n));
         }
 
         (void)sink;

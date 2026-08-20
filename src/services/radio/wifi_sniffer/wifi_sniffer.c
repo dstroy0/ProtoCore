@@ -45,22 +45,22 @@ uint8_t *protocore_wifi_sniffer_span(void)
     return s_own.span;
 }
 
-void protocore_wifi_sniffer_scan_due(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan_init(uint8_t *restrict work);
-void protocore_wifi_sniffer_scan_next(uint8_t *restrict work);
-void protocore_wifi_sniffer_stats_reset(uint8_t *restrict work);
-void protocore_wifi_sniffer_survey_reset(uint8_t *restrict work);
+static void wifi_sniffer_scan_due(uint8_t *restrict work);
+static void wifi_sniffer_scan_init(uint8_t *restrict work);
+static void wifi_sniffer_scan_next(uint8_t *restrict work);
+static void wifi_sniffer_stats_reset(uint8_t *restrict work);
+static void wifi_sniffer_survey_reset(uint8_t *restrict work);
 
-void protocore_wifi_sniffer_parse(uint8_t *restrict work)
+static void wifi_sniffer_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *frame = WifiSnifferV.parse_args.frame;
-    size_t len = WifiSnifferV.parse_args.len;
-    WifiFrame *out = WifiSnifferV.parse_args.out;
+    const uint8_t *frame = WifiSniffer.parse_args.frame;
+    size_t len = WifiSniffer.parse_args.len;
+    WifiFrame *out = WifiSniffer.parse_args.out;
 
     if (!frame || !out || len < 10) // FrameControl(2) + Duration(2) + Address1(6)
     {
-        WifiSnifferV.ok = PROTO_FALSE;
+        WifiSniffer.ok = PROTO_FALSE;
         return;
     }
 
@@ -89,13 +89,13 @@ void protocore_wifi_sniffer_parse(uint8_t *restrict work)
         mem.cpy(out->addr3, frame + 16, 6);
         out->naddr = 3;
     }
-    WifiSnifferV.ok = PROTO_TRUE;
+    WifiSniffer.ok = PROTO_TRUE;
 }
 
-void protocore_wifi_sniffer_stats_reset(uint8_t *restrict work)
+static void wifi_sniffer_stats_reset(uint8_t *restrict work)
 {
     (void)work;
-    WifiStats *s = WifiSnifferV.stats_reset_args.s;
+    WifiStats *s = WifiSniffer.stats_reset_args.s;
 
     if (s)
     {
@@ -103,11 +103,11 @@ void protocore_wifi_sniffer_stats_reset(uint8_t *restrict work)
     }
 }
 
-void protocore_wifi_sniffer_stats_add(uint8_t *restrict work)
+static void wifi_sniffer_stats_add(uint8_t *restrict work)
 {
     (void)work;
-    WifiStats *s = WifiSnifferV.stats_add_args.s;
-    const WifiFrame *f = WifiSnifferV.stats_add_args.f;
+    WifiStats *s = WifiSniffer.stats_add_args.s;
+    const WifiFrame *f = WifiSniffer.stats_add_args.f;
 
     if (!s || !f)
     {
@@ -131,17 +131,17 @@ void protocore_wifi_sniffer_stats_add(uint8_t *restrict work)
     s->total++;
 }
 
-void protocore_wifi_sniffer_should_roam(uint8_t *restrict work)
+static void wifi_sniffer_should_roam(uint8_t *restrict work)
 {
     (void)work;
-    int8_t cur_rssi = WifiSnifferV.should_roam_args.cur_rssi;
-    int8_t cand_rssi = WifiSnifferV.should_roam_args.cand_rssi;
-    uint8_t hysteresis_db = WifiSnifferV.should_roam_args.hysteresis_db;
+    int8_t cur_rssi = WifiSniffer.should_roam_args.cur_rssi;
+    int8_t cand_rssi = WifiSniffer.should_roam_args.cand_rssi;
+    uint8_t hysteresis_db = WifiSniffer.should_roam_args.hysteresis_db;
 
     // Both are negative dBm (stronger = closer to 0). Roam only if the candidate clears the current
     // by more than the hysteresis, computed in a wide signed type to avoid int8 overflow.
     int32_t margin = (int32_t)cand_rssi - (int32_t)cur_rssi;
-    WifiSnifferV.ok = margin > (int32_t)hysteresis_db;
+    WifiSniffer.ok = margin > (int32_t)hysteresis_db;
 }
 
 // --- Channel-hop scan schedule ----------------------------------------------------------
@@ -159,14 +159,14 @@ static uint8_t clamp_channel(uint8_t c)
     return c;
 }
 
-void protocore_wifi_sniffer_scan_init(uint8_t *restrict work)
+static void wifi_sniffer_scan_init(uint8_t *restrict work)
 {
     (void)work;
-    WifiScan *s = WifiSnifferV.scan_init_args.s;
-    uint8_t first = WifiSnifferV.scan_init_args.first;
-    uint8_t last = WifiSnifferV.scan_init_args.last;
-    uint16_t dwell_ms = WifiSnifferV.scan_init_args.dwell_ms;
-    uint32_t now_ms = WifiSnifferV.scan_init_args.now_ms;
+    WifiScan *s = WifiSniffer.scan_init_args.s;
+    uint8_t first = WifiSniffer.scan_init_args.first;
+    uint8_t last = WifiSniffer.scan_init_args.last;
+    uint16_t dwell_ms = WifiSniffer.scan_init_args.dwell_ms;
+    uint32_t now_ms = WifiSniffer.scan_init_args.now_ms;
 
     if (!s)
     {
@@ -184,30 +184,30 @@ void protocore_wifi_sniffer_scan_init(uint8_t *restrict work)
     s->sweeps = 0;
 }
 
-void protocore_wifi_sniffer_scan_due(uint8_t *restrict work)
+static void wifi_sniffer_scan_due(uint8_t *restrict work)
 {
     (void)work;
-    const WifiScan *s = WifiSnifferV.scan_due_args.s;
-    uint32_t now_ms = WifiSnifferV.scan_due_args.now_ms;
+    const WifiScan *s = WifiSniffer.scan_due_args.s;
+    uint32_t now_ms = WifiSniffer.scan_due_args.now_ms;
 
     if (!s)
     {
-        WifiSnifferV.ok = PROTO_FALSE;
+        WifiSniffer.ok = PROTO_FALSE;
         return;
     }
     // Unsigned subtraction is correct across a millis() rollover.
-    WifiSnifferV.ok = (now_ms - s->last_hop_ms) >= s->dwell_ms;
+    WifiSniffer.ok = (now_ms - s->last_hop_ms) >= s->dwell_ms;
 }
 
-void protocore_wifi_sniffer_scan_next(uint8_t *restrict work)
+static void wifi_sniffer_scan_next(uint8_t *restrict work)
 {
     (void)work;
-    WifiScan *s = WifiSnifferV.scan_next_args.s;
-    uint32_t now_ms = WifiSnifferV.scan_next_args.now_ms;
+    WifiScan *s = WifiSniffer.scan_next_args.s;
+    uint32_t now_ms = WifiSniffer.scan_next_args.now_ms;
 
     if (!s)
     {
-        WifiSnifferV.value = 0;
+        WifiSniffer.value = 0;
         return;
     }
     if (s->channel >= s->chan_last)
@@ -220,17 +220,17 @@ void protocore_wifi_sniffer_scan_next(uint8_t *restrict work)
         s->channel++;
     }
     s->last_hop_ms = now_ms;
-    WifiSnifferV.value = s->channel;
+    WifiSniffer.value = s->channel;
 }
 
 // --- Per-channel RSSI survey ------------------------------------------------------------
 
-void protocore_wifi_sniffer_survey_reset(uint8_t *restrict work)
+static void wifi_sniffer_survey_reset(uint8_t *restrict work)
 {
     (void)work;
-    WifiSurvey *s = WifiSnifferV.survey_reset_args.s;
-    uint8_t first = WifiSnifferV.survey_reset_args.first;
-    uint8_t count = WifiSnifferV.survey_reset_args.count;
+    WifiSurvey *s = WifiSniffer.survey_reset_args.s;
+    uint8_t first = WifiSniffer.survey_reset_args.first;
+    uint8_t count = WifiSniffer.survey_reset_args.count;
 
     if (!s)
     {
@@ -260,13 +260,13 @@ static int survey_index(const WifiSurvey *s, uint8_t channel)
     return idx;
 }
 
-void protocore_wifi_sniffer_survey_add(uint8_t *restrict work)
+static void wifi_sniffer_survey_add(uint8_t *restrict work)
 {
     (void)work;
-    WifiSurvey *s = WifiSnifferV.survey_add_args.s;
-    uint8_t channel = WifiSnifferV.survey_add_args.channel;
-    int8_t rssi = WifiSnifferV.survey_add_args.rssi;
-    const WifiFrame *f = WifiSnifferV.survey_add_args.f;
+    WifiSurvey *s = WifiSniffer.survey_add_args.s;
+    uint8_t channel = WifiSniffer.survey_add_args.channel;
+    int8_t rssi = WifiSniffer.survey_add_args.rssi;
+    const WifiFrame *f = WifiSniffer.survey_add_args.f;
 
     int idx = survey_index(s, channel);
     if (idx < 0)
@@ -286,27 +286,27 @@ void protocore_wifi_sniffer_survey_add(uint8_t *restrict work)
     }
 }
 
-void protocore_wifi_sniffer_survey_get(uint8_t *restrict work)
+static void wifi_sniffer_survey_get(uint8_t *restrict work)
 {
     (void)work;
-    const WifiSurvey *s = WifiSnifferV.survey_get_args.s;
-    uint8_t channel = WifiSnifferV.survey_get_args.channel;
+    const WifiSurvey *s = WifiSniffer.survey_get_args.s;
+    uint8_t channel = WifiSniffer.survey_get_args.channel;
 
     int idx = survey_index(s, channel);
-    WifiSnifferV.ptr = (idx < 0) ? NULL : &s->ch[idx];
+    WifiSniffer.ptr = (idx < 0) ? NULL : &s->ch[idx];
 }
 
-void protocore_wifi_sniffer_survey_best(uint8_t *restrict work)
+static void wifi_sniffer_survey_best(uint8_t *restrict work)
 {
     (void)work;
-    const WifiSurvey *s = WifiSnifferV.survey_best_args.s;
-    uint8_t exclude_channel = WifiSnifferV.survey_best_args.exclude_channel;
-    uint8_t *out_channel = WifiSnifferV.survey_best_args.out_channel;
-    int8_t *out_rssi = WifiSnifferV.survey_best_args.out_rssi;
+    const WifiSurvey *s = WifiSniffer.survey_best_args.s;
+    uint8_t exclude_channel = WifiSniffer.survey_best_args.exclude_channel;
+    uint8_t *out_channel = WifiSniffer.survey_best_args.out_channel;
+    int8_t *out_rssi = WifiSniffer.survey_best_args.out_rssi;
 
     if (!s)
     {
-        WifiSnifferV.ok = PROTO_FALSE;
+        WifiSniffer.ok = PROTO_FALSE;
         return;
     }
     proto_bool found = PROTO_FALSE;
@@ -337,7 +337,7 @@ void protocore_wifi_sniffer_survey_best(uint8_t *restrict work)
             *out_rssi = best;
         }
     }
-    WifiSnifferV.ok = found;
+    WifiSniffer.ok = found;
 }
 
 /** @brief Owned state for the live channel-hopping sniff. */
@@ -380,73 +380,73 @@ static void sniffer_sink(const uint8_t *frame, uint16_t len, int8_t rssi, uint8_
     uint8_t *restrict work = protocore_wifi_sniffer_span();
 
     WifiFrame f;
-    WifiSnifferV.parse_args.frame = frame;
-    WifiSnifferV.parse_args.len = len;
-    WifiSnifferV.parse_args.out = &f;
+    WifiSniffer.parse_args.frame = frame;
+    WifiSniffer.parse_args.len = len;
+    WifiSniffer.parse_args.out = &f;
     WifiSniffer.parse(work);
-    if (!WifiSnifferV.ok)
+    if (!WifiSniffer.ok)
     {
         return;
     }
-    WifiSnifferV.stats_add_args.s = &WIFI_SNIFFER_CTX(work)->stats;
-    WifiSnifferV.stats_add_args.f = &f;
+    WifiSniffer.stats_add_args.s = &WIFI_SNIFFER_CTX(work)->stats;
+    WifiSniffer.stats_add_args.f = &f;
     WifiSniffer.stats_add(work);
-    WifiSnifferV.survey_add_args.s = &WIFI_SNIFFER_CTX(work)->survey;
-    WifiSnifferV.survey_add_args.channel = channel;
-    WifiSnifferV.survey_add_args.rssi = rssi;
-    WifiSnifferV.survey_add_args.f = &f;
+    WifiSniffer.survey_add_args.s = &WIFI_SNIFFER_CTX(work)->survey;
+    WifiSniffer.survey_add_args.channel = channel;
+    WifiSniffer.survey_add_args.rssi = rssi;
+    WifiSniffer.survey_add_args.f = &f;
     WifiSniffer.survey_add(work);
 }
 
-void protocore_wifi_sniffer_begin(uint8_t *restrict work)
+static void wifi_sniffer_begin(uint8_t *restrict work)
 {
-    uint8_t first_chan = WifiSnifferV.begin_args.first_chan;
-    uint8_t last_chan = WifiSnifferV.begin_args.last_chan;
-    uint16_t dwell_ms = WifiSnifferV.begin_args.dwell_ms;
+    uint8_t first_chan = WifiSniffer.begin_args.first_chan;
+    uint8_t last_chan = WifiSniffer.begin_args.last_chan;
+    uint16_t dwell_ms = WifiSniffer.begin_args.dwell_ms;
 
     uint32_t now = Clock.ms;
-    WifiSnifferV.stats_reset_args.s = &WIFI_SNIFFER_CTX(work)->stats;
-    protocore_wifi_sniffer_stats_reset(work);
-    WifiSnifferV.scan_init_args.s = &WIFI_SNIFFER_CTX(work)->scan;
-    WifiSnifferV.scan_init_args.first = first_chan;
-    WifiSnifferV.scan_init_args.last = last_chan;
-    WifiSnifferV.scan_init_args.dwell_ms = dwell_ms;
-    WifiSnifferV.scan_init_args.now_ms = now;
-    protocore_wifi_sniffer_scan_init(work);
-    WifiSnifferV.survey_reset_args.s = &WIFI_SNIFFER_CTX(work)->survey;
-    WifiSnifferV.survey_reset_args.first = WIFI_SNIFFER_CTX(work)->scan.chan_first;
-    WifiSnifferV.survey_reset_args.count =
+    WifiSniffer.stats_reset_args.s = &WIFI_SNIFFER_CTX(work)->stats;
+    wifi_sniffer_stats_reset(work);
+    WifiSniffer.scan_init_args.s = &WIFI_SNIFFER_CTX(work)->scan;
+    WifiSniffer.scan_init_args.first = first_chan;
+    WifiSniffer.scan_init_args.last = last_chan;
+    WifiSniffer.scan_init_args.dwell_ms = dwell_ms;
+    WifiSniffer.scan_init_args.now_ms = now;
+    wifi_sniffer_scan_init(work);
+    WifiSniffer.survey_reset_args.s = &WIFI_SNIFFER_CTX(work)->survey;
+    WifiSniffer.survey_reset_args.first = WIFI_SNIFFER_CTX(work)->scan.chan_first;
+    WifiSniffer.survey_reset_args.count =
         (uint8_t)(WIFI_SNIFFER_CTX(work)->scan.chan_last - WIFI_SNIFFER_CTX(work)->scan.chan_first + 1);
-    protocore_wifi_sniffer_survey_reset(work);
-    PromiscV.begin_args.channel = WIFI_SNIFFER_CTX(work)->scan.channel;
-    PromiscV.begin_args.sink = sniffer_sink;
+    wifi_sniffer_survey_reset(work);
+    Promisc.begin_args.channel = WIFI_SNIFFER_CTX(work)->scan.channel;
+    Promisc.begin_args.sink = sniffer_sink;
     Promisc.begin(protocore_promisc_span());
-    WIFI_SNIFFER_CTX(work)->running = PromiscV.ok;
-    WifiSnifferV.ok = WIFI_SNIFFER_CTX(work)->running;
+    WIFI_SNIFFER_CTX(work)->running = Promisc.ok;
+    WifiSniffer.ok = WIFI_SNIFFER_CTX(work)->running;
 }
 
-void protocore_wifi_sniffer_tick(uint8_t *restrict work)
+static void wifi_sniffer_tick(uint8_t *restrict work)
 {
     if (!WIFI_SNIFFER_CTX(work)->running)
     {
         return;
     }
     uint32_t now = Clock.ms;
-    WifiSnifferV.scan_due_args.s = &WIFI_SNIFFER_CTX(work)->scan;
-    WifiSnifferV.scan_due_args.now_ms = now;
-    protocore_wifi_sniffer_scan_due(work);
-    if (!WifiSnifferV.ok)
+    WifiSniffer.scan_due_args.s = &WIFI_SNIFFER_CTX(work)->scan;
+    WifiSniffer.scan_due_args.now_ms = now;
+    wifi_sniffer_scan_due(work);
+    if (!WifiSniffer.ok)
     {
         return;
     }
-    WifiSnifferV.scan_next_args.s = &WIFI_SNIFFER_CTX(work)->scan;
-    WifiSnifferV.scan_next_args.now_ms = now;
-    protocore_wifi_sniffer_scan_next(work);
-    PromiscV.set_channel_args.channel = WifiSnifferV.value;
+    WifiSniffer.scan_next_args.s = &WIFI_SNIFFER_CTX(work)->scan;
+    WifiSniffer.scan_next_args.now_ms = now;
+    wifi_sniffer_scan_next(work);
+    Promisc.set_channel_args.channel = WifiSniffer.value;
     Promisc.set_channel(protocore_promisc_span());
 }
 
-void protocore_wifi_sniffer_end(uint8_t *restrict work)
+static void wifi_sniffer_end(uint8_t *restrict work)
 {
     if (!WIFI_SNIFFER_CTX(work)->running)
     {
@@ -456,79 +456,96 @@ void protocore_wifi_sniffer_end(uint8_t *restrict work)
     WIFI_SNIFFER_CTX(work)->running = PROTO_FALSE;
 }
 
-void protocore_wifi_sniffer_stats(uint8_t *restrict work)
+static void wifi_sniffer_stats(uint8_t *restrict work)
 {
-    WifiSnifferV.stats_out = &WIFI_SNIFFER_CTX(work)->stats;
+    WifiSniffer.stats_out = &WIFI_SNIFFER_CTX(work)->stats;
 }
 
-void protocore_wifi_sniffer_survey(uint8_t *restrict work)
+static void wifi_sniffer_survey(uint8_t *restrict work)
 {
-    WifiSnifferV.survey_out = &WIFI_SNIFFER_CTX(work)->survey;
+    WifiSniffer.survey_out = &WIFI_SNIFFER_CTX(work)->survey;
 }
 
-void protocore_wifi_sniffer_scan(uint8_t *restrict work)
+static void wifi_sniffer_scan(uint8_t *restrict work)
 {
-    WifiSnifferV.scan_out = &WIFI_SNIFFER_CTX(work)->scan;
+    WifiSniffer.scan_out = &WIFI_SNIFFER_CTX(work)->scan;
 }
 
 #else // no promiscuous capture: the tables are here, nothing feeds them
 
 // The schedule and the tables are set up the same way, so a caller reads the same shape either
 // way. There is no source to put in promiscuous mode, so the sniff does not start.
-void protocore_wifi_sniffer_begin(uint8_t *restrict work)
+static void wifi_sniffer_begin(uint8_t *restrict work)
 {
-    uint8_t first_chan = WifiSnifferV.begin_args.first_chan;
-    uint8_t last_chan = WifiSnifferV.begin_args.last_chan;
-    uint16_t dwell_ms = WifiSnifferV.begin_args.dwell_ms;
+    uint8_t first_chan = WifiSniffer.begin_args.first_chan;
+    uint8_t last_chan = WifiSniffer.begin_args.last_chan;
+    uint16_t dwell_ms = WifiSniffer.begin_args.dwell_ms;
 
     const uint32_t now = Clock.ms;
-    WifiSnifferV.stats_reset_args.s = &WIFI_SNIFFER_CTX(work)->stats;
-    protocore_wifi_sniffer_stats_reset(work);
-    WifiSnifferV.scan_init_args.s = &WIFI_SNIFFER_CTX(work)->scan;
-    WifiSnifferV.scan_init_args.first = first_chan;
-    WifiSnifferV.scan_init_args.last = last_chan;
-    WifiSnifferV.scan_init_args.dwell_ms = dwell_ms;
-    WifiSnifferV.scan_init_args.now_ms = now;
-    protocore_wifi_sniffer_scan_init(work);
-    WifiSnifferV.survey_reset_args.s = &WIFI_SNIFFER_CTX(work)->survey;
-    WifiSnifferV.survey_reset_args.first = WIFI_SNIFFER_CTX(work)->scan.chan_first;
-    WifiSnifferV.survey_reset_args.count =
+    WifiSniffer.stats_reset_args.s = &WIFI_SNIFFER_CTX(work)->stats;
+    wifi_sniffer_stats_reset(work);
+    WifiSniffer.scan_init_args.s = &WIFI_SNIFFER_CTX(work)->scan;
+    WifiSniffer.scan_init_args.first = first_chan;
+    WifiSniffer.scan_init_args.last = last_chan;
+    WifiSniffer.scan_init_args.dwell_ms = dwell_ms;
+    WifiSniffer.scan_init_args.now_ms = now;
+    wifi_sniffer_scan_init(work);
+    WifiSniffer.survey_reset_args.s = &WIFI_SNIFFER_CTX(work)->survey;
+    WifiSniffer.survey_reset_args.first = WIFI_SNIFFER_CTX(work)->scan.chan_first;
+    WifiSniffer.survey_reset_args.count =
         (uint8_t)(WIFI_SNIFFER_CTX(work)->scan.chan_last - WIFI_SNIFFER_CTX(work)->scan.chan_first + 1);
-    protocore_wifi_sniffer_survey_reset(work);
+    wifi_sniffer_survey_reset(work);
     WIFI_SNIFFER_CTX(work)->running = PROTO_FALSE;
-    WifiSnifferV.ok = PROTO_FALSE;
+    WifiSniffer.ok = PROTO_FALSE;
 }
 
 // Hopping moves a capture that is not running, so the dwell schedule stands still.
-void protocore_wifi_sniffer_tick(uint8_t *restrict work)
+static void wifi_sniffer_tick(uint8_t *restrict work)
 {
     (void)work;
 }
 
-void protocore_wifi_sniffer_end(uint8_t *restrict work)
+static void wifi_sniffer_end(uint8_t *restrict work)
 {
     WIFI_SNIFFER_CTX(work)->running = PROTO_FALSE;
 }
 
-void protocore_wifi_sniffer_stats(uint8_t *restrict work)
+static void wifi_sniffer_stats(uint8_t *restrict work)
 {
-    WifiSnifferV.stats_out = &WIFI_SNIFFER_CTX(work)->stats;
+    WifiSniffer.stats_out = &WIFI_SNIFFER_CTX(work)->stats;
 }
 
-void protocore_wifi_sniffer_survey(uint8_t *restrict work)
+static void wifi_sniffer_survey(uint8_t *restrict work)
 {
-    WifiSnifferV.survey_out = &WIFI_SNIFFER_CTX(work)->survey;
+    WifiSniffer.survey_out = &WIFI_SNIFFER_CTX(work)->survey;
 }
 
-void protocore_wifi_sniffer_scan(uint8_t *restrict work)
+static void wifi_sniffer_scan(uint8_t *restrict work)
 {
-    WifiSnifferV.scan_out = &WIFI_SNIFFER_CTX(work)->scan;
+    WifiSniffer.scan_out = &WIFI_SNIFFER_CTX(work)->scan;
 }
 
 #endif // PROTOCORE_ENABLE_PROMISC
 
-/** @brief The operands and the outcome. */
-WifiSnifferVars WifiSnifferV;
+WifiSnifferNs WifiSniffer = {
+    .parse = wifi_sniffer_parse,
+    .stats_reset = wifi_sniffer_stats_reset,
+    .stats_add = wifi_sniffer_stats_add,
+    .should_roam = wifi_sniffer_should_roam,
+    .scan_init = wifi_sniffer_scan_init,
+    .scan_due = wifi_sniffer_scan_due,
+    .scan_next = wifi_sniffer_scan_next,
+    .survey_reset = wifi_sniffer_survey_reset,
+    .survey_add = wifi_sniffer_survey_add,
+    .survey_get = wifi_sniffer_survey_get,
+    .survey_best = wifi_sniffer_survey_best,
+    .begin = wifi_sniffer_begin,
+    .tick = wifi_sniffer_tick,
+    .end = wifi_sniffer_end,
+    .stats = wifi_sniffer_stats,
+    .survey = wifi_sniffer_survey,
+    .scan = wifi_sniffer_scan,
+};
 
 PROTOCORE_END_DECLS
 

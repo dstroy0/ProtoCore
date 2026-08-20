@@ -31,24 +31,24 @@ static void vector(uint64_t value, const uint8_t *bytes, size_t n)
     uint64_t v = 0;
     size_t consumed = 0;
 
-    QuicVarintV.len_args.value = value;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(n, QuicVarintV.n);
+    QuicVarint.len_args.value = value;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(n, QuicVarint.n);
 
     memset(out, 0xAA, sizeof(out));
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = sizeof(out);
-    QuicVarintV.encode_args.value = value;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = sizeof(out);
+    QuicVarint.encode_args.value = value;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(n, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(n, QuicVarint.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(bytes, out, n);
 
-    QuicVarintV.decode_args.in = bytes;
-    QuicVarintV.decode_args.len = n;
-    QuicVarintV.decode_args.value = &v;
-    QuicVarintV.decode_args.consumed = &consumed;
+    QuicVarint.decode_args.in = bytes;
+    QuicVarint.decode_args.len = n;
+    QuicVarint.decode_args.value = &v;
+    QuicVarint.decode_args.consumed = &consumed;
     QuicVarint.decode(quic_varint_work);
-    TEST_ASSERT_TRUE(QuicVarintV.ok);
+    TEST_ASSERT_TRUE(QuicVarint.ok);
     TEST_ASSERT_EQUAL_UINT(n, consumed);
     TEST_ASSERT_EQUAL_UINT64(value, v);
 }
@@ -76,22 +76,22 @@ void test_non_minimal_encoding_decodes(void)
     static const uint8_t NM[2] = {0x40, 0x25};
     uint64_t v = 0;
     size_t consumed = 0;
-    QuicVarintV.decode_args.in = NM;
-    QuicVarintV.decode_args.len = sizeof(NM);
-    QuicVarintV.decode_args.value = &v;
-    QuicVarintV.decode_args.consumed = &consumed;
+    QuicVarint.decode_args.in = NM;
+    QuicVarint.decode_args.len = sizeof(NM);
+    QuicVarint.decode_args.value = &v;
+    QuicVarint.decode_args.consumed = &consumed;
     QuicVarint.decode(quic_varint_work);
-    TEST_ASSERT_TRUE(QuicVarintV.ok);
+    TEST_ASSERT_TRUE(QuicVarint.ok);
     TEST_ASSERT_EQUAL_UINT(2u, consumed);
     TEST_ASSERT_EQUAL_UINT64(37u, v);
 
     // The encoder still emits the shortest form for the same value.
     uint8_t out[8];
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = sizeof(out);
-    QuicVarintV.encode_args.value = 37u;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = sizeof(out);
+    QuicVarint.encode_args.value = 37u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(1u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(1u, QuicVarint.n);
     TEST_ASSERT_EQUAL_HEX8(0x25, out[0]);
 }
 
@@ -99,30 +99,30 @@ void test_non_minimal_encoding_decodes(void)
 // in 8. Each pair below is the last value of one row and the first of the next.
 void test_table4_length_boundaries(void)
 {
-    QuicVarintV.len_args.value = 0u;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(1u, QuicVarintV.n);
-    QuicVarintV.len_args.value = 63u;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(1u, QuicVarintV.n);
-    QuicVarintV.len_args.value = 64u;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(2u, QuicVarintV.n);
-    QuicVarintV.len_args.value = 16383u;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(2u, QuicVarintV.n);
-    QuicVarintV.len_args.value = 16384u;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(4u, QuicVarintV.n);
-    QuicVarintV.len_args.value = 1073741823u;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(4u, QuicVarintV.n);
-    QuicVarintV.len_args.value = 1073741824u;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(8u, QuicVarintV.n);
-    QuicVarintV.len_args.value = 4611686018427387903ull;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(8u, QuicVarintV.n);
+    QuicVarint.len_args.value = 0u;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(1u, QuicVarint.n);
+    QuicVarint.len_args.value = 63u;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(1u, QuicVarint.n);
+    QuicVarint.len_args.value = 64u;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(2u, QuicVarint.n);
+    QuicVarint.len_args.value = 16383u;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(2u, QuicVarint.n);
+    QuicVarint.len_args.value = 16384u;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(4u, QuicVarint.n);
+    QuicVarint.len_args.value = 1073741823u;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(4u, QuicVarint.n);
+    QuicVarint.len_args.value = 1073741824u;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(8u, QuicVarint.n);
+    QuicVarint.len_args.value = 4611686018427387903ull;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(8u, QuicVarint.n);
 
     // 2^62-1 is the top of the last row, and QUIC_VARINT_MAX must be that same number.
     TEST_ASSERT_EQUAL_UINT64(4611686018427387903ull, (uint64_t)QUIC_VARINT_MAX);
@@ -135,43 +135,43 @@ void test_boundary_encodings_carry_their_prefix(void)
 {
     uint8_t out[8];
 
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = sizeof(out);
-    QuicVarintV.encode_args.value = 63u;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = sizeof(out);
+    QuicVarint.encode_args.value = 63u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(1u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(1u, QuicVarint.n);
     TEST_ASSERT_EQUAL_HEX8(0x3f, out[0]); // 00 111111
 
     static const uint8_t WANT64[2] = {0x40, 0x40}; // 01 000000 01000000
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = sizeof(out);
-    QuicVarintV.encode_args.value = 64u;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = sizeof(out);
+    QuicVarint.encode_args.value = 64u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(2u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(2u, QuicVarint.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT64, out, 2);
 
     static const uint8_t WANT16383[2] = {0x7f, 0xff}; // 01 111111 11111111
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = sizeof(out);
-    QuicVarintV.encode_args.value = 16383u;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = sizeof(out);
+    QuicVarint.encode_args.value = 16383u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(2u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(2u, QuicVarint.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT16383, out, 2);
 
     static const uint8_t WANT16384[4] = {0x80, 0x00, 0x40, 0x00}; // 10 + 0x00004000
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = sizeof(out);
-    QuicVarintV.encode_args.value = 16384u;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = sizeof(out);
+    QuicVarint.encode_args.value = 16384u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(4u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(4u, QuicVarint.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANT16384, out, 4);
 
     static const uint8_t WANTMAX[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; // 11 + all ones
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = sizeof(out);
-    QuicVarintV.encode_args.value = QUIC_VARINT_MAX;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = sizeof(out);
+    QuicVarint.encode_args.value = QUIC_VARINT_MAX;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(8u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(8u, QuicVarint.n);
     TEST_ASSERT_EQUAL_UINT8_ARRAY(WANTMAX, out, 8);
 }
 
@@ -179,17 +179,17 @@ void test_boundary_encodings_carry_their_prefix(void)
 void test_above_the_62_bit_range_is_refused(void)
 {
     uint8_t out[8];
-    QuicVarintV.len_args.value = QUIC_VARINT_MAX + 1u;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicVarintV.n);
-    QuicVarintV.len_args.value = 0xFFFFFFFFFFFFFFFFull;
-    QuicVarintV.len(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicVarintV.n);
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = sizeof(out);
-    QuicVarintV.encode_args.value = QUIC_VARINT_MAX + 1u;
+    QuicVarint.len_args.value = QUIC_VARINT_MAX + 1u;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(0u, QuicVarint.n);
+    QuicVarint.len_args.value = 0xFFFFFFFFFFFFFFFFull;
+    QuicVarint.len(quic_varint_work);
+    TEST_ASSERT_EQUAL_UINT(0u, QuicVarint.n);
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = sizeof(out);
+    QuicVarint.encode_args.value = QUIC_VARINT_MAX + 1u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, QuicVarint.n);
 }
 
 // A buffer shorter than the encoding writes nothing rather than a truncated integer.
@@ -197,34 +197,34 @@ void test_encode_refuses_a_short_buffer(void)
 {
     uint8_t out[8];
     memset(out, 0xAA, sizeof(out));
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = 1;
-    QuicVarintV.encode_args.value = 16384u;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = 1;
+    QuicVarint.encode_args.value = 16384u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, QuicVarint.n);
     TEST_ASSERT_EQUAL_HEX8(0xAA, out[0]);
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = 3;
-    QuicVarintV.encode_args.value = 16384u;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = 3;
+    QuicVarint.encode_args.value = 16384u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicVarintV.n);
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = 7;
-    QuicVarintV.encode_args.value = QUIC_VARINT_MAX;
+    TEST_ASSERT_EQUAL_UINT(0u, QuicVarint.n);
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = 7;
+    QuicVarint.encode_args.value = QUIC_VARINT_MAX;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicVarintV.n);
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = 0;
-    QuicVarintV.encode_args.value = 0u;
+    TEST_ASSERT_EQUAL_UINT(0u, QuicVarint.n);
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = 0;
+    QuicVarint.encode_args.value = 0u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(0u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, QuicVarint.n);
 
     // cap exactly equal to the encoding length is enough.
-    QuicVarintV.encode_args.out = out;
-    QuicVarintV.encode_args.cap = 4;
-    QuicVarintV.encode_args.value = 16384u;
+    QuicVarint.encode_args.out = out;
+    QuicVarint.encode_args.cap = 4;
+    QuicVarint.encode_args.value = 16384u;
     QuicVarint.encode(quic_varint_work);
-    TEST_ASSERT_EQUAL_UINT(4u, QuicVarintV.n);
+    TEST_ASSERT_EQUAL_UINT(4u, QuicVarint.n);
 }
 
 // The first byte announces the total length, so a buffer holding fewer bytes than that is refused
@@ -237,30 +237,30 @@ void test_decode_refuses_a_truncated_input(void)
     uint64_t v = 0xDEADBEEFu;
     size_t consumed = 99u;
 
-    QuicVarintV.decode_args.in = TRUNC4;
-    QuicVarintV.decode_args.len = sizeof(TRUNC4);
-    QuicVarintV.decode_args.value = &v;
-    QuicVarintV.decode_args.consumed = &consumed;
+    QuicVarint.decode_args.in = TRUNC4;
+    QuicVarint.decode_args.len = sizeof(TRUNC4);
+    QuicVarint.decode_args.value = &v;
+    QuicVarint.decode_args.consumed = &consumed;
     QuicVarint.decode(quic_varint_work);
-    TEST_ASSERT_FALSE(QuicVarintV.ok);
-    QuicVarintV.decode_args.in = TRUNC8;
-    QuicVarintV.decode_args.len = sizeof(TRUNC8);
-    QuicVarintV.decode_args.value = &v;
-    QuicVarintV.decode_args.consumed = &consumed;
+    TEST_ASSERT_FALSE(QuicVarint.ok);
+    QuicVarint.decode_args.in = TRUNC8;
+    QuicVarint.decode_args.len = sizeof(TRUNC8);
+    QuicVarint.decode_args.value = &v;
+    QuicVarint.decode_args.consumed = &consumed;
     QuicVarint.decode(quic_varint_work);
-    TEST_ASSERT_FALSE(QuicVarintV.ok);
-    QuicVarintV.decode_args.in = TRUNC2;
-    QuicVarintV.decode_args.len = sizeof(TRUNC2);
-    QuicVarintV.decode_args.value = &v;
-    QuicVarintV.decode_args.consumed = &consumed;
+    TEST_ASSERT_FALSE(QuicVarint.ok);
+    QuicVarint.decode_args.in = TRUNC2;
+    QuicVarint.decode_args.len = sizeof(TRUNC2);
+    QuicVarint.decode_args.value = &v;
+    QuicVarint.decode_args.consumed = &consumed;
     QuicVarint.decode(quic_varint_work);
-    TEST_ASSERT_FALSE(QuicVarintV.ok);
-    QuicVarintV.decode_args.in = TRUNC2;
-    QuicVarintV.decode_args.len = 0;
-    QuicVarintV.decode_args.value = &v;
-    QuicVarintV.decode_args.consumed = &consumed;
+    TEST_ASSERT_FALSE(QuicVarint.ok);
+    QuicVarint.decode_args.in = TRUNC2;
+    QuicVarint.decode_args.len = 0;
+    QuicVarint.decode_args.value = &v;
+    QuicVarint.decode_args.consumed = &consumed;
     QuicVarint.decode(quic_varint_work);
-    TEST_ASSERT_FALSE(QuicVarintV.ok);
+    TEST_ASSERT_FALSE(QuicVarint.ok);
 }
 
 // Encode then decode returns the same value for every length class and both ends of each row.
@@ -285,18 +285,18 @@ void test_round_trip_over_every_length_class(void)
         uint8_t buf[8];
         uint64_t v = 0;
         size_t consumed = 0;
-        QuicVarintV.encode_args.out = buf;
-        QuicVarintV.encode_args.cap = sizeof(buf);
-        QuicVarintV.encode_args.value = VALUES[i];
+        QuicVarint.encode_args.out = buf;
+        QuicVarint.encode_args.cap = sizeof(buf);
+        QuicVarint.encode_args.value = VALUES[i];
         QuicVarint.encode(quic_varint_work);
-        size_t n = QuicVarintV.n;
+        size_t n = QuicVarint.n;
         TEST_ASSERT_TRUE(n == 1u || n == 2u || n == 4u || n == 8u);
-        QuicVarintV.decode_args.in = buf;
-        QuicVarintV.decode_args.len = n;
-        QuicVarintV.decode_args.value = &v;
-        QuicVarintV.decode_args.consumed = &consumed;
+        QuicVarint.decode_args.in = buf;
+        QuicVarint.decode_args.len = n;
+        QuicVarint.decode_args.value = &v;
+        QuicVarint.decode_args.consumed = &consumed;
         QuicVarint.decode(quic_varint_work);
-        TEST_ASSERT_TRUE(QuicVarintV.ok);
+        TEST_ASSERT_TRUE(QuicVarint.ok);
         TEST_ASSERT_EQUAL_UINT(n, consumed);
         TEST_ASSERT_EQUAL_UINT64(VALUES[i], v);
     }

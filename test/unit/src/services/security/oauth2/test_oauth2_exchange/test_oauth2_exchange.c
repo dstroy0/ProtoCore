@@ -20,17 +20,17 @@
 
 void setUp(void)
 {
-    Oauth2V.client.client_id = NULL;
-    Oauth2V.client.client_secret = NULL;
-    Oauth2V.code_grant.code = NULL;
-    Oauth2V.code_grant.redirect_uri = NULL;
-    Oauth2V.code_grant.code_verifier = NULL;
-    Oauth2V.refresh_grant.refresh_token = NULL;
-    Oauth2V.request.token_endpoint = NULL;
-    Oauth2V.response.json = NULL;
-    Oauth2V.response.tokens = NULL;
-    Oauth2V.ok = PROTO_FALSE;
-    Oauth2V.i32 = 0;
+    Oauth2.client.client_id = NULL;
+    Oauth2.client.client_secret = NULL;
+    Oauth2.code_grant.code = NULL;
+    Oauth2.code_grant.redirect_uri = NULL;
+    Oauth2.code_grant.code_verifier = NULL;
+    Oauth2.refresh_grant.refresh_token = NULL;
+    Oauth2.request.token_endpoint = NULL;
+    Oauth2.response.json = NULL;
+    Oauth2.response.tokens = NULL;
+    Oauth2.ok = PROTO_FALSE;
+    Oauth2.i32 = 0;
 }
 void tearDown(void)
 {
@@ -40,12 +40,12 @@ void tearDown(void)
 // section prints.
 static void seat_code_grant(void)
 {
-    Oauth2V.client.client_id = "s6BhdRkqt3";
-    Oauth2V.client.client_secret = "gX1fBat3bV";
-    Oauth2V.code_grant.code = "SplxlOBeZQQYbYS6WxSbIA";
-    Oauth2V.code_grant.redirect_uri = "https://client.example.com/cb";
-    Oauth2V.code_grant.code_verifier = NULL;
-    Oauth2V.request.token_endpoint = "http://10.0.0.5:8080/token";
+    Oauth2.client.client_id = "s6BhdRkqt3";
+    Oauth2.client.client_secret = "gX1fBat3bV";
+    Oauth2.code_grant.code = "SplxlOBeZQQYbYS6WxSbIA";
+    Oauth2.code_grant.redirect_uri = "https://client.example.com/cb";
+    Oauth2.code_grant.code_verifier = NULL;
+    Oauth2.request.token_endpoint = "http://10.0.0.5:8080/token";
 }
 
 // ---------------------------------------------------------------------------
@@ -83,11 +83,11 @@ void test_exchange_code_builds_the_sec413_body_into_its_own_buffer(void)
                                "&client_id=s6BhdRkqt3&client_secret=gX1fBat3bV";
     uint8_t *work = protocore_oauth2_span();
     seat_code_grant();
-    Oauth2V.request.out = NULL;
-    Oauth2V.request.cap = 0;
+    Oauth2.request.out = NULL;
+    Oauth2.request.cap = 0;
     Oauth2.exchange_code(work);
-    TEST_ASSERT_EQUAL_PTR(OAUTH2_CTX(work)->body, Oauth2V.request.out);
-    TEST_ASSERT_EQUAL_size_t(PROTOCORE_OAUTH2_BODY_BUF, Oauth2V.request.cap);
+    TEST_ASSERT_EQUAL_PTR(OAUTH2_CTX(work)->body, Oauth2.request.out);
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_OAUTH2_BODY_BUF, Oauth2.request.cap);
     TEST_ASSERT_EQUAL_STRING(WANT, OAUTH2_CTX(work)->body);
 }
 
@@ -97,10 +97,10 @@ void test_refresh_builds_the_sec6_body_into_its_own_buffer(void)
     static const char WANT[] = "grant_type=refresh_token&refresh_token=tGzv3JOkF0XG5Qx2TlKWIA"
                                "&client_id=s6BhdRkqt3&client_secret=gX1fBat3bV";
     uint8_t *work = protocore_oauth2_span();
-    Oauth2V.client.client_id = "s6BhdRkqt3";
-    Oauth2V.client.client_secret = "gX1fBat3bV";
-    Oauth2V.refresh_grant.refresh_token = "tGzv3JOkF0XG5Qx2TlKWIA";
-    Oauth2V.request.token_endpoint = "http://10.0.0.5:8080/token";
+    Oauth2.client.client_id = "s6BhdRkqt3";
+    Oauth2.client.client_secret = "gX1fBat3bV";
+    Oauth2.refresh_grant.refresh_token = "tGzv3JOkF0XG5Qx2TlKWIA";
+    Oauth2.request.token_endpoint = "http://10.0.0.5:8080/token";
     Oauth2.refresh(work);
     TEST_ASSERT_EQUAL_STRING(WANT, OAUTH2_CTX(work)->body);
 }
@@ -114,16 +114,16 @@ void test_refresh_builds_the_sec6_body_into_its_own_buffer(void)
 void test_an_unbuildable_grant_reports_err_build(void)
 {
     uint8_t *work = protocore_oauth2_span();
-    Oauth2V.client.client_id = "s6BhdRkqt3";
-    Oauth2V.code_grant.code = NULL;
-    Oauth2V.code_grant.redirect_uri = "https://client.example.com/cb";
-    Oauth2V.request.token_endpoint = "http://10.0.0.5:8080/token";
+    Oauth2.client.client_id = "s6BhdRkqt3";
+    Oauth2.code_grant.code = NULL;
+    Oauth2.code_grant.redirect_uri = "https://client.example.com/cb";
+    Oauth2.request.token_endpoint = "http://10.0.0.5:8080/token";
     Oauth2.exchange_code(work);
-    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_BUILD, Oauth2V.i32);
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_BUILD, Oauth2.i32);
 
-    Oauth2V.refresh_grant.refresh_token = NULL;
+    Oauth2.refresh_grant.refresh_token = NULL;
     Oauth2.refresh(work);
-    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_BUILD, Oauth2V.i32);
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_BUILD, Oauth2.i32);
 }
 
 // The body was built and posted, and no endpoint answered. RFC 6749 sec 5 describes what a token
@@ -133,13 +133,13 @@ void test_an_exchange_that_reaches_no_endpoint_reports_err_transport(void)
     uint8_t *work = protocore_oauth2_span();
     seat_code_grant();
     Oauth2.exchange_code(work);
-    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT, Oauth2V.i32);
-    TEST_ASSERT_FALSE(Oauth2V.ok);
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT, Oauth2.i32);
+    TEST_ASSERT_FALSE(Oauth2.ok);
 
-    Oauth2V.refresh_grant.refresh_token = "tGzv3JOkF0XG5Qx2TlKWIA";
+    Oauth2.refresh_grant.refresh_token = "tGzv3JOkF0XG5Qx2TlKWIA";
     Oauth2.refresh(work);
-    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT, Oauth2V.i32);
-    TEST_ASSERT_FALSE(Oauth2V.ok);
+    TEST_ASSERT_EQUAL_INT32((int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT, Oauth2.i32);
+    TEST_ASSERT_FALSE(Oauth2.ok);
 }
 
 // The exchange posts what it built: the octets HttpClient was handed are the body buffer's, and the
@@ -149,8 +149,8 @@ void test_the_exchange_posts_the_body_it_built(void)
     uint8_t *work = protocore_oauth2_span();
     seat_code_grant();
     Oauth2.exchange_code(work);
-    TEST_ASSERT_EQUAL_PTR(OAUTH2_CTX(work)->body, (const char *)HttpClientV.request.body);
-    TEST_ASSERT_EQUAL_size_t(strlen(OAUTH2_CTX(work)->body), HttpClientV.request.body_len);
-    TEST_ASSERT_EQUAL_STRING("application/x-www-form-urlencoded", HttpClientV.request.content_type);
-    TEST_ASSERT_EQUAL_STRING("http://10.0.0.5:8080/token", HttpClientV.target.url);
+    TEST_ASSERT_EQUAL_PTR(OAUTH2_CTX(work)->body, (const char *)HttpClient.request.body);
+    TEST_ASSERT_EQUAL_size_t(strlen(OAUTH2_CTX(work)->body), HttpClient.request.body_len);
+    TEST_ASSERT_EQUAL_STRING("application/x-www-form-urlencoded", HttpClient.request.content_type);
+    TEST_ASSERT_EQUAL_STRING("http://10.0.0.5:8080/token", HttpClient.target.url);
 }

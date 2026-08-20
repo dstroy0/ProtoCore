@@ -18,6 +18,7 @@
 #define PROTOCORE_TLS_H
 #include "protocore_config.h" // the entry point: the enable gate below, and the widths
 
+
 #if PROTOCORE_TLS_SOFTWARE
 
 PROTOCORE_BEGIN_DECLS
@@ -86,6 +87,7 @@ typedef struct
     // the config leaves TLS_CIPHER_AES_128_GCM_SHA256, the sec 9.1 mandatory-to-implement suite.
     TlsCipher cipher;
 } TlsConnConfig;
+
 /**
  * @brief One TLS 1.3 handshake: the session state, and the three regions of one secure-pool borrow.
  *
@@ -99,7 +101,8 @@ typedef struct
     const TlsConnConfig *cfg; ///< the caller's, borrowed for the life of the connection
     TlsConnState state;
     TlsRole role;
-    uint8_t alert;            ///< RFC 8446 sec 6 alert code when @c state is FAILED (0 otherwise)
+    uint8_t alert; ///< RFC 8446 sec 6 alert code when @c state is FAILED (0 otherwise)
+
     uint8_t *transcript;      ///< running Transcript-Hash over the handshake messages
     Tls13KeySchedule ks;      ///< TLS 1.3 key schedule
     TlsRecordKeys hs_tx;      ///< handshake traffic keys, this end writing
@@ -109,6 +112,7 @@ typedef struct
     proto_bool hrr_sent;      ///< a HelloRetryRequest has been answered on this connection (sec 4.1.4)
     proto_bool hs_keys_ready; ///< the handshake traffic keys are installed
     proto_bool ap_keys_ready; ///< the application traffic keys are installed
+
     uint8_t *tx; ///< PROTOCORE_TLS_CONN_MSG_CAP: a message built to send, or a received record opened into it
     uint8_t *rx; ///< PROTOCORE_TLS_CONN_REC_CAP: the record the worker filled
     uint8_t
@@ -119,6 +123,7 @@ typedef struct
     Tls13ClientHello *hello; ///< the peer's parsed ClientHello
     const char *alpn;        ///< the protocol selected from TlsConnConfig::alpn, or NULL when none was
 } TlsConn;
+
 // The handle that drives one connection (network_drivers/tls/handshake). Declared here because
 // this file owns ::TlsConn: the driver acts on the resource, so the resource publishes the seam
 // and the driver defines it. A separate header would have to include this one, and this one
@@ -129,6 +134,7 @@ typedef struct
     TlsRole role;             ///< which end of the handshake this connection drives
     const TlsConnConfig *cfg; ///< the credential and this handshake's randomness
 } TlsInitArgs;
+
 /** @brief The bytes one call moves: a received record in, application data out. */
 typedef struct
 {
@@ -138,6 +144,7 @@ typedef struct
     const uint8_t *rec;  ///< the received application record an open takes
     size_t rec_len;      ///< how many bytes of it there are
 } TlsConnIoArgs;
+
 /** @brief Where a call writes, and what it wrote. */
 typedef struct
 {
@@ -145,6 +152,7 @@ typedef struct
     size_t out_cap;  ///< how much room it has
     size_t *out_len; ///< where an open reports the plaintext length, or NULL
 } TlsConnOut;
+
 /**
  * @brief One TLS 1.3 handshake over a stream. ::TlsConn is the resource; this drives it.
  *
@@ -176,21 +184,16 @@ typedef struct
 typedef struct
 {
     TlsConn *conn;
+
     TlsInitArgs init_args;
     TlsConnIoArgs io;
     TlsConnOut out_args;
+
     proto_bool ok;
     size_t n;
     int i32;
     uint8_t u8;
-} TlsConnectionVars;
 
-/** @brief The operands and the outcome. */
-extern TlsConnectionVars TlsConnectionV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const init)(uint8_t *restrict work);
     void (*const start)(uint8_t *restrict work);
     void (*const process)(uint8_t *restrict work);
@@ -198,31 +201,11 @@ typedef struct
     void (*const alert)(uint8_t *restrict work);
     void (*const seal_app)(uint8_t *restrict work);
     void (*const open_app)(uint8_t *restrict work);
+
 } TlsConnNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in TlsConnectionV or a region of the borrow at a fixed offset.
-void protocore_tls_init(uint8_t *restrict work);
-void protocore_tls_start(uint8_t *restrict work);
-void protocore_tls_process(uint8_t *restrict work);
-void protocore_tls_established(uint8_t *restrict work);
-void protocore_tls_alert(uint8_t *restrict work);
-void protocore_tls_seal_app(uint8_t *restrict work);
-void protocore_tls_open_app(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `TlsConnection.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const TlsConnNs TlsConnection __attribute__((unused)) = {
-    .init = protocore_tls_init,
-    .start = protocore_tls_start,
-    .process = protocore_tls_process,
-    .established = protocore_tls_established,
-    .alert = protocore_tls_alert,
-    .seal_app = protocore_tls_seal_app,
-    .open_app = protocore_tls_open_app,
-};
+/** @brief The one symbol this module exports. */
+extern TlsConnNs TlsConnection;
 
 /** @brief The connection standing on @p slot, or NULL when the index is out of range. */
 TlsConn *protocore_tls_conn_at(uint8_t slot);

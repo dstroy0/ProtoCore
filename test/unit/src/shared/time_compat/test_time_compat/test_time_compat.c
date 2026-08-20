@@ -29,10 +29,10 @@ void tearDown(void)
 
 static struct tm *conv(time_t epoch, struct tm *dst)
 {
-    TimeCompatV.args.epoch = epoch;
-    TimeCompatV.args.out = dst;
+    TimeCompat.args.epoch = epoch;
+    TimeCompat.args.out = dst;
     TimeCompat.gmtime(time_compat_work);
-    return TimeCompatV.tm_out;
+    return TimeCompat.tm_out;
 }
 
 // Epoch 0 is 1970-01-01 00:00:00 UTC, a Thursday, by the definition of the Unix epoch.

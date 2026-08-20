@@ -34,6 +34,7 @@ typedef struct
     size_t *out_start;
     size_t *out_end;
 } HttpRangeHttpParseByteRangeArgs;
+
 /**
  * @brief Shared single-range `Range: bytes=...` parser (RFC 7233), used by static file serving and the edge cache
  * (PROTOCORE_ENABLE_RANGE).
@@ -60,30 +61,15 @@ typedef struct
 typedef struct
 {
     HttpRangeHttpParseByteRangeArgs http_parse_byte_range_args;
+
     proto_bool ok;
     int n;
-} HttpRangeVars;
 
-/** @brief The operands and the outcome. */
-extern HttpRangeVars HttpRangeV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const http_parse_byte_range)(uint8_t *restrict work);
 } HttpRangeNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HttpRangeV or a region of the borrow at a fixed offset.
-void protocore_http_range_http_parse_byte_range(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `HttpRange.http_parse_byte_range(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HttpRangeNs HttpRange __attribute__((unused)) = {
-    .http_parse_byte_range = protocore_http_range_http_parse_byte_range,
-};
+/** @brief The one symbol this module exports. */
+extern HttpRangeNs HttpRange;
 
 PROTOCORE_END_DECLS
 

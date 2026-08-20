@@ -49,6 +49,7 @@ typedef struct
     uint8_t *pk; ///< PROTOCORE_SNTRUP761_PK_BYTES bytes
     uint8_t *sk; ///< PROTOCORE_SNTRUP761_SK_BYTES bytes
 } Sntrup761KeypairArgs;
+
 /** @brief The public key an encapsulation runs against, and where its two outputs land. */
 typedef struct
 {
@@ -56,6 +57,7 @@ typedef struct
     uint8_t *ct;       ///< PROTOCORE_SNTRUP761_CT_BYTES bytes
     uint8_t *ss;       ///< PROTOCORE_SNTRUP761_SS_BYTES bytes
 } Sntrup761EncArgs;
+
 /** @brief The secret key and ciphertext a decapsulation recovers a shared secret from. */
 typedef struct
 {
@@ -63,6 +65,7 @@ typedef struct
     const uint8_t *ct; ///< the peer's ciphertext, PROTOCORE_SNTRUP761_CT_BYTES bytes
     uint8_t *ss;       ///< PROTOCORE_SNTRUP761_SS_BYTES bytes
 } Sntrup761DecArgs;
+
 /**
  * @brief Streamlined NTRU Prime sntrup761 (p=761, q=4591, w=286).
  *
@@ -100,35 +103,16 @@ typedef struct
     Sntrup761KeypairArgs keypair_args;
     Sntrup761EncArgs enc_args;
     Sntrup761DecArgs dec_args;
+
     proto_bool ok;
-} Sntrup761Vars;
 
-/** @brief The operands and the outcome. */
-extern Sntrup761Vars Sntrup761V;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const keypair)(uint8_t *restrict work);
     void (*const enc)(uint8_t *restrict work);
     void (*const dec)(uint8_t *restrict work);
 } Sntrup761Ns;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Sntrup761V or a region of the borrow at a fixed offset.
-void protocore_sntrup761_keypair(uint8_t *restrict work);
-void protocore_sntrup761_enc(uint8_t *restrict work);
-void protocore_sntrup761_dec(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Sntrup761.keypair(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Sntrup761Ns Sntrup761 __attribute__((unused)) = {
-    .keypair = protocore_sntrup761_keypair,
-    .enc = protocore_sntrup761_enc,
-    .dec = protocore_sntrup761_dec,
-};
+/** @brief The one symbol this module exports. */
+extern Sntrup761Ns Sntrup761;
 
 PROTOCORE_END_DECLS
 

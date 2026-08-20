@@ -18,24 +18,24 @@ static uint8_t senml_work[16]; // the borrow an entry takes; Senml never reads i
 /** @brief Encode @p n Records as application/senml+json into @p out; the octets written. */
 static size_t senml_json(char *out, size_t cap, const SenmlRecord *recs, size_t n)
 {
-    SenmlV.pack.records = recs;
-    SenmlV.pack.count = n;
-    SenmlV.json.buf = out;
-    SenmlV.json.cap = cap;
+    Senml.pack.records = recs;
+    Senml.pack.count = n;
+    Senml.json.buf = out;
+    Senml.json.cap = cap;
     Senml.json_build(senml_work);
-    return SenmlV.n;
+    return Senml.n;
 }
 
 /** @brief Encode @p n Records through the CBOR codec into @p out; the octets written. */
 static size_t senml_cbor(uint8_t *out, size_t cap, const SenmlRecord *recs, size_t n)
 {
-    SenmlV.pack.records = recs;
-    SenmlV.pack.count = n;
-    SenmlV.binary.codec = &Cbor;
-    SenmlV.binary.buf = out;
-    SenmlV.binary.cap = cap;
+    Senml.pack.records = recs;
+    Senml.pack.count = n;
+    Senml.binary.codec = &Cbor;
+    Senml.binary.buf = out;
+    Senml.binary.cap = cap;
     Senml.binary_build(senml_work);
-    return SenmlV.n;
+    return Senml.n;
 }
 
 void dbench_run(void)

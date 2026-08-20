@@ -29,17 +29,17 @@ void tearDown(void)
 
 static proto_bool parse(const char *s, protocore_ip *out)
 {
-    IpV.args.text = s;
-    IpV.args.out = out;
+    Ip.args.text = s;
+    Ip.args.out = out;
     Ip.parse(ip_work);
-    return IpV.ok;
+    return Ip.ok;
 }
 
 static const char *format(const protocore_ip *ip, char *buf, size_t cap)
 {
-    IpV.args.ip = ip;
-    IpV.args.buf = buf;
-    IpV.args.cap = cap;
+    Ip.args.ip = ip;
+    Ip.args.buf = buf;
+    Ip.args.cap = cap;
     Ip.format(ip_work);
     return buf;
 }
@@ -48,9 +48,9 @@ static protocore_ip_scope scope_of(const char *s)
 {
     protocore_ip ip;
     TEST_ASSERT_TRUE_MESSAGE(parse(s, &ip), s);
-    IpV.args.ip = &ip;
+    Ip.args.ip = &ip;
     Ip.classify(ip_work);
-    return IpV.scope;
+    return Ip.scope;
 }
 
 // Parse then format must return the input unchanged, for text that is already canonical.
@@ -142,19 +142,19 @@ void test_constructors_match_the_parser(void)
     TEST_ASSERT_TRUE(parse("192.168.1.1", &parsed));
     TEST_ASSERT_EQUAL_INT(PROTOCORE_IP_V4, built.family);
 
-    IpV.args.ip = &built;
-    IpV.args.b = &parsed;
+    Ip.args.ip = &built;
+    Ip.args.b = &parsed;
     Ip.equal(ip_work);
-    TEST_ASSERT_TRUE(IpV.ok);
+    TEST_ASSERT_TRUE(Ip.ok);
 
     static const uint8_t SIX[16] = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01};
     protocore_ip v6 = protocore_ip_from_v6_bytes(SIX);
     protocore_ip p6;
     TEST_ASSERT_TRUE(parse("2001:db8::1", &p6));
-    IpV.args.ip = &v6;
-    IpV.args.b = &p6;
+    Ip.args.ip = &v6;
+    Ip.args.b = &p6;
     Ip.equal(ip_work);
-    TEST_ASSERT_TRUE(IpV.ok);
+    TEST_ASSERT_TRUE(Ip.ok);
 }
 
 // The big-endian 32-bit form a socket API wants, for v4 and for a v4-mapped v6.
@@ -178,29 +178,29 @@ void test_equal_separates_families(void)
     protocore_ip a, b;
     TEST_ASSERT_TRUE(parse("0.0.0.0", &a));
     TEST_ASSERT_TRUE(parse("::", &b));
-    IpV.args.ip = &a;
-    IpV.args.b = &b;
+    Ip.args.ip = &a;
+    Ip.args.b = &b;
     Ip.equal(ip_work);
-    TEST_ASSERT_FALSE(IpV.ok);
+    TEST_ASSERT_FALSE(Ip.ok);
 }
 
 void test_is_unspecified(void)
 {
     protocore_ip ip;
     TEST_ASSERT_TRUE(parse("0.0.0.0", &ip));
-    IpV.args.ip = &ip;
+    Ip.args.ip = &ip;
     Ip.is_unspecified(ip_work);
-    TEST_ASSERT_TRUE(IpV.ok);
+    TEST_ASSERT_TRUE(Ip.ok);
 
     TEST_ASSERT_TRUE(parse("::", &ip));
-    IpV.args.ip = &ip;
+    Ip.args.ip = &ip;
     Ip.is_unspecified(ip_work);
-    TEST_ASSERT_TRUE(IpV.ok);
+    TEST_ASSERT_TRUE(Ip.ok);
 
     TEST_ASSERT_TRUE(parse("0.0.0.1", &ip));
-    IpV.args.ip = &ip;
+    Ip.args.ip = &ip;
     Ip.is_unspecified(ip_work);
-    TEST_ASSERT_FALSE(IpV.ok);
+    TEST_ASSERT_FALSE(Ip.ok);
 }
 
 // RFC 1122 sec 3.2.1.3 loopback, RFC 1918 private, RFC 3927 link-local, RFC 5771 multicast.
@@ -240,26 +240,26 @@ void test_prefix_match(void)
     TEST_ASSERT_TRUE(parse("192.168.1.0", &net));
 
     TEST_ASSERT_TRUE(parse("192.168.1.42", &addr));
-    IpV.args.ip = &addr;
-    IpV.args.b = &net;
-    IpV.args.prefix_len = 24;
+    Ip.args.ip = &addr;
+    Ip.args.b = &net;
+    Ip.args.prefix_len = 24;
     Ip.prefix_match(ip_work);
-    TEST_ASSERT_TRUE(IpV.ok);
+    TEST_ASSERT_TRUE(Ip.ok);
 
     TEST_ASSERT_TRUE(parse("192.168.2.42", &addr));
-    IpV.args.ip = &addr;
-    IpV.args.b = &net;
-    IpV.args.prefix_len = 24;
+    Ip.args.ip = &addr;
+    Ip.args.b = &net;
+    Ip.args.prefix_len = 24;
     Ip.prefix_match(ip_work);
-    TEST_ASSERT_FALSE(IpV.ok);
+    TEST_ASSERT_FALSE(Ip.ok);
 
     // /0 contains everything
     TEST_ASSERT_TRUE(parse("8.8.8.8", &addr));
-    IpV.args.ip = &addr;
-    IpV.args.b = &net;
-    IpV.args.prefix_len = 0;
+    Ip.args.ip = &addr;
+    Ip.args.b = &net;
+    Ip.args.prefix_len = 0;
     Ip.prefix_match(ip_work);
-    TEST_ASSERT_TRUE(IpV.ok);
+    TEST_ASSERT_TRUE(Ip.ok);
 }
 
 // A buffer too small for the canonical text reports 0 rather than writing a truncated address.
@@ -268,9 +268,9 @@ void test_format_refuses_a_short_buffer(void)
     protocore_ip ip;
     char small[4];
     TEST_ASSERT_TRUE(parse("2001:db8:1:2:3:4:5:6", &ip));
-    IpV.args.ip = &ip;
-    IpV.args.buf = small;
-    IpV.args.cap = sizeof(small);
+    Ip.args.ip = &ip;
+    Ip.args.buf = small;
+    Ip.args.cap = sizeof(small);
     Ip.format(ip_work);
-    TEST_ASSERT_EQUAL_UINT(0u, IpV.n);
+    TEST_ASSERT_EQUAL_UINT(0u, Ip.n);
 }

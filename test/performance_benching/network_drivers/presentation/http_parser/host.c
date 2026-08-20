@@ -43,13 +43,13 @@ static const char *POST_REQ = "POST /api/v1/config HTTP/1.1\r\n"
 // Feed a whole request string byte-by-byte through the parser (its real per-byte state machine).
 static ParseState parse_all(HttpReq *req, const char *s, size_t n)
 {
-    HttpParserV.reset_args.req = req;
-    HttpParserV.reset(protocore_http_parser_span());
+    HttpParser.reset_args.req = req;
+    HttpParser.reset(protocore_http_parser_span());
     for (size_t i = 0; i < n; i++)
     {
-        HttpParserV.feed_args.req = req;
-        HttpParserV.feed_args.byte = (uint8_t)s[i];
-        HttpParserV.feed(protocore_http_parser_span());
+        HttpParser.feed_args.req = req;
+        HttpParser.feed_args.byte = (uint8_t)s[i];
+        HttpParser.feed(protocore_http_parser_span());
     }
     return req->parse_state;
 }
@@ -89,49 +89,49 @@ int main(void)
             500000,
             {
                 protocore_json_writer w;
-                JsonV.init_args.w = &w;
-                JsonV.init_args.buf = buf;
-                JsonV.init_args.cap = sizeof(buf);
+                Json.init_args.w = &w;
+                Json.init_args.buf = buf;
+                Json.init_args.cap = sizeof(buf);
                 Json.init(json_work);
-                JsonV.begin_object_args.w = &w;
+                Json.begin_object_args.w = &w;
                 Json.begin_object(json_work);
-                JsonV.kv_str_args.w = &w;
-                JsonV.kv_str_args.k = "status";
-                JsonV.kv_str_args.v = "ok";
+                Json.kv_str_args.w = &w;
+                Json.kv_str_args.k = "status";
+                Json.kv_str_args.v = "ok";
                 Json.kv_str(json_work);
-                JsonV.kv_int_args.w = &w;
-                JsonV.kv_int_args.k = "uptime";
-                JsonV.kv_int_args.v = 123456;
+                Json.kv_int_args.w = &w;
+                Json.kv_int_args.k = "uptime";
+                Json.kv_int_args.v = 123456;
                 Json.kv_int(json_work);
-                JsonV.kv_int_args.w = &w;
-                JsonV.kv_int_args.k = "heap";
-                JsonV.kv_int_args.v = 204800;
+                Json.kv_int_args.w = &w;
+                Json.kv_int_args.k = "heap";
+                Json.kv_int_args.v = 204800;
                 Json.kv_int(json_work);
-                JsonV.kv_bool_args.w = &w;
-                JsonV.kv_bool_args.k = "wifi";
-                JsonV.kv_bool_args.v = PROTO_TRUE;
+                Json.kv_bool_args.w = &w;
+                Json.kv_bool_args.k = "wifi";
+                Json.kv_bool_args.v = PROTO_TRUE;
                 Json.kv_bool(json_work);
-                JsonV.kv_str_args.w = &w;
-                JsonV.kv_str_args.k = "ip";
-                JsonV.kv_str_args.v = "192.168.1.42";
+                Json.kv_str_args.w = &w;
+                Json.kv_str_args.k = "ip";
+                Json.kv_str_args.v = "192.168.1.42";
                 Json.kv_str(json_work);
-                JsonV.key_args.w = &w;
-                JsonV.key_args.k = "temps";
-                JsonV.key(json_work);
-                JsonV.begin_array_args.w = &w;
+                Json.key_args.w = &w;
+                Json.key_args.k = "temps";
+                Json.key(json_work);
+                Json.begin_array_args.w = &w;
                 Json.begin_array(json_work);
-                JsonV.put_int_args.w = &w;
-                JsonV.put_int_args.v = 21;
+                Json.put_int_args.w = &w;
+                Json.put_int_args.v = 21;
                 Json.put_int(json_work);
-                JsonV.put_int_args.w = &w;
-                JsonV.put_int_args.v = 22;
+                Json.put_int_args.w = &w;
+                Json.put_int_args.v = 22;
                 Json.put_int(json_work);
-                JsonV.put_int_args.w = &w;
-                JsonV.put_int_args.v = 23;
+                Json.put_int_args.w = &w;
+                Json.put_int_args.v = 23;
                 Json.put_int(json_work);
-                JsonV.end_array_args.w = &w;
+                Json.end_array_args.w = &w;
                 Json.end_array(json_work);
-                JsonV.end_object_args.w = &w;
+                Json.end_object_args.w = &w;
                 Json.end_object(json_work);
                 sink += protocore_json_length(&w);
             },
@@ -153,22 +153,22 @@ int main(void)
         HBENCH_NS(
             500000,
             {
-                JsonV.get_str_args.json = body;
-                JsonV.get_str_args.key = "ssid";
-                JsonV.get_str_args.out = ssid;
-                JsonV.get_str_args.out_cap = sizeof(ssid);
+                Json.get_str_args.json = body;
+                Json.get_str_args.key = "ssid";
+                Json.get_str_args.out = ssid;
+                Json.get_str_args.out_cap = sizeof(ssid);
                 Json.get_str(json_work);
-                JsonV.get_int_args.json = body;
-                JsonV.get_int_args.key = "port";
-                JsonV.get_int_args.out = &port;
+                Json.get_int_args.json = body;
+                Json.get_int_args.key = "port";
+                Json.get_int_args.out = &port;
                 Json.get_int(json_work);
-                JsonV.get_bool_args.json = body;
-                JsonV.get_bool_args.key = "tls";
-                JsonV.get_bool_args.out = &tls;
+                Json.get_bool_args.json = body;
+                Json.get_bool_args.key = "tls";
+                Json.get_bool_args.out = &tls;
                 Json.get_bool(json_work);
-                JsonV.get_int_args.json = body;
-                JsonV.get_int_args.key = "chan";
-                JsonV.get_int_args.out = &chan;
+                Json.get_int_args.json = body;
+                Json.get_int_args.key = "chan";
+                Json.get_int_args.out = &chan;
                 Json.get_int(json_work);
                 sink += (size_t)ssid[0] + (size_t)port + (size_t)tls + (size_t)chan;
             },

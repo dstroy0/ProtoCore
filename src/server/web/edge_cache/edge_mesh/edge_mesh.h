@@ -85,10 +85,13 @@ typedef struct
     uint8_t *buf;     ///< caller-owned accumulation buffer
     size_t cap;       ///< its capacity (must be >= PROTOCORE_EDGE_MESH_RESP_MAX)
 } EdgeMeshFetch;
+
 /** @brief EdgeEntry, as the caller already knows it. */
 struct EdgeEntry;
+
 /** @brief EdgeFetchTransport, as the caller already knows it. */
 struct EdgeFetchTransport;
+
 /** @brief What build_request takes: digest, canon, req_hdrs, out, cap. */
 typedef struct
 {
@@ -99,6 +102,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } EdgeMeshBuildRequestArgs;
+
 /** @brief What parse_request takes: buf, len, digest_out, canon_out, ... */
 typedef struct
 {
@@ -110,6 +114,7 @@ typedef struct
     char *hdrs_out;
     size_t hdrs_cap;
 } EdgeMeshParseRequestArgs;
+
 /** @brief What serialize_entry takes: e, current_age, out, cap. */
 typedef struct
 {
@@ -118,6 +123,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } EdgeMeshSerializeEntryArgs;
+
 /** @brief What deserialize_entry takes: entry_buf, buf, len, e, now_ms. */
 typedef struct
 {
@@ -127,6 +133,7 @@ typedef struct
     struct EdgeEntry *e;
     uint32_t now_ms;
 } EdgeMeshDeserializeEntryArgs;
+
 /** @brief What build_response takes: hit, entry, entry_len, out, cap. */
 typedef struct
 {
@@ -136,6 +143,7 @@ typedef struct
     uint8_t *out;
     size_t cap;
 } EdgeMeshBuildResponseArgs;
+
 /** @brief What parse_response takes: buf, len, entry_off, entry_len. */
 typedef struct
 {
@@ -144,6 +152,7 @@ typedef struct
     size_t *entry_off;
     size_t *entry_len;
 } EdgeMeshParseResponseArgs;
+
 /** @brief What fetch_begin takes: m, t, host, port, request, req_len, ... */
 typedef struct
 {
@@ -157,6 +166,7 @@ typedef struct
     size_t cap;
     uint32_t now_ms;
 } EdgeMeshFetchBeginArgs;
+
 /** @brief What fetch_pump takes: m, t, now_ms. */
 typedef struct
 {
@@ -164,12 +174,14 @@ typedef struct
     const struct EdgeFetchTransport *t;
     uint32_t now_ms;
 } EdgeMeshFetchPumpArgs;
+
 /** @brief What fetch_end takes: m, t. */
 typedef struct
 {
     EdgeMeshFetch *m;
     const struct EdgeFetchTransport *t;
 } EdgeMeshFetchEndArgs;
+
 /**
  * @brief CDN edge-cache tier - mesh (sibling-cache) wire codec + async peer-query engine (PROTOCORE_ENABLE_EDGE_MESH).
  * ...
@@ -223,18 +235,12 @@ typedef struct
     EdgeMeshFetchBeginArgs fetch_begin_args;
     EdgeMeshFetchPumpArgs fetch_pump_args;
     EdgeMeshFetchEndArgs fetch_end_args;
+
     proto_bool ok;
     size_t n;
     EdgeMeshParse parse;
     EdgeMeshStatus status;
-} EdgeMeshVars;
 
-/** @brief The operands and the outcome. */
-extern EdgeMeshVars EdgeMeshV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const build_request)(uint8_t *restrict work);
     void (*const parse_request)(uint8_t *restrict work);
     void (*const serialize_entry)(uint8_t *restrict work);
@@ -246,33 +252,8 @@ typedef struct
     void (*const fetch_end)(uint8_t *restrict work);
 } EdgeMeshNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in EdgeMeshV or a region of the borrow at a fixed offset.
-void protocore_edge_mesh_build_request(uint8_t *restrict work);
-void protocore_edge_mesh_parse_request(uint8_t *restrict work);
-void protocore_edge_mesh_serialize_entry(uint8_t *restrict work);
-void protocore_edge_mesh_deserialize_entry(uint8_t *restrict work);
-void protocore_edge_mesh_build_response(uint8_t *restrict work);
-void protocore_edge_mesh_parse_response(uint8_t *restrict work);
-void protocore_edge_mesh_fetch_begin(uint8_t *restrict work);
-void protocore_edge_mesh_fetch_pump(uint8_t *restrict work);
-void protocore_edge_mesh_fetch_end(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `EdgeMesh.build_request(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const EdgeMeshNs EdgeMesh __attribute__((unused)) = {
-    .build_request = protocore_edge_mesh_build_request,
-    .parse_request = protocore_edge_mesh_parse_request,
-    .serialize_entry = protocore_edge_mesh_serialize_entry,
-    .deserialize_entry = protocore_edge_mesh_deserialize_entry,
-    .build_response = protocore_edge_mesh_build_response,
-    .parse_response = protocore_edge_mesh_parse_response,
-    .fetch_begin = protocore_edge_mesh_fetch_begin,
-    .fetch_pump = protocore_edge_mesh_fetch_pump,
-    .fetch_end = protocore_edge_mesh_fetch_end,
-};
+/** @brief The one symbol this module exports. */
+extern EdgeMeshNs EdgeMesh;
 
 PROTOCORE_END_DECLS
 

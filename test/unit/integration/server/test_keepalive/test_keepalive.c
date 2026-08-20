@@ -30,7 +30,7 @@ void setUp()
         conn_pool[i].state = CONN_ACTIVE;
         conn_pool[i].proto = PROTO_HTTP;
         conn_pool[i].pcb = protocore_net_host_pcb();
-        HttpConnV.slot = i;
+        HttpConn.slot = i;
         HttpConn.conn_open(protocore_http_conn_span());
     }
     Ws.init(protocore_ws_span());
@@ -46,7 +46,7 @@ void tearDown()
 static void feed_and_handle(uint8_t slot, const char *req_str)
 {
     push_str(slot, req_str);
-    HttpConnV.slot = slot;
+    HttpConn.slot = slot;
     HttpConn.parse(protocore_http_conn_span());
     handle();
 }
@@ -116,7 +116,7 @@ void test_pipelined_requests()
 {
 
     push_str(0, "GET /res HTTP/1.1\r\n\r\nGET /res HTTP/1.1\r\n\r\n");
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.parse(protocore_http_conn_span());
     for (int i = 0; i < 4; i++)
     {
@@ -166,7 +166,7 @@ void test_fresh_connection_resets_count()
     conn_pool[0].state = CONN_ACTIVE;
     conn_pool[0].proto = PROTO_HTTP;
     conn_pool[0].pcb = protocore_net_host_pcb();
-    HttpConnV.slot = 0;
+    HttpConn.slot = 0;
     HttpConn.conn_open(protocore_http_conn_span());
 
     tcp_capture_reset();
@@ -203,3 +203,4 @@ void test_conn_token_delimiter_runs_and_trailing_ows()
     TEST_ASSERT_NOT_NULL(strstr(tcp_captured(), "Connection: keep-alive"));
     TEST_ASSERT_EQUAL(CONN_ACTIVE, (ConnState)conn_pool[2].state);
 }
+

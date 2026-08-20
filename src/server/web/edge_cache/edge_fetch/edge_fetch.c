@@ -18,9 +18,9 @@ static uint8_t edge_cache_work[16]; // the borrow an entry takes; EdgeCache neve
 #include "mmgr/protostr/protostr.h" // str.has: the chunked token in a folded Transfer-Encoding
 #include "server/web/edge_cache/edge_fetch/edge_fetch.h"
 
-#include "mmgr/rawmemcpy/rawmemcpy.h"                    // raw.read: the request into this fetch's buffer
-#include "server/web/edge_cache/edge_cache/edge_cache.h" // edge_header_value
-#include "services/net/http_client/http_client.h"        // HttpClient.parse_response
+#include "mmgr/rawmemcpy/rawmemcpy.h"                       // raw.read: the request into this fetch's buffer
+#include "server/web/edge_cache/edge_cache/edge_cache.h"     // edge_header_value
+#include "services/net/http_client/http_client.h" // HttpClient.parse_response
 
 PROTOCORE_BEGIN_DECLS
 
@@ -141,31 +141,31 @@ static proto_bool has_chunked(const char *s)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_edge_fetch_edge_resp_complete(uint8_t *restrict work);
+static void edge_fetch_edge_resp_complete(uint8_t *restrict work);
 
-void protocore_edge_fetch_edge_resp_complete(uint8_t *restrict work)
+static void edge_fetch_edge_resp_complete(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *buf = EdgeFetcherV.edge_resp_complete_args.buf;
-    size_t len = EdgeFetcherV.edge_resp_complete_args.len;
-    proto_bool conn_closed = EdgeFetcherV.edge_resp_complete_args.conn_closed;
-    size_t *head_len = EdgeFetcherV.edge_resp_complete_args.head_len;
+    const uint8_t *buf = EdgeFetcher.edge_resp_complete_args.buf;
+    size_t len = EdgeFetcher.edge_resp_complete_args.len;
+    proto_bool conn_closed = EdgeFetcher.edge_resp_complete_args.conn_closed;
+    size_t *head_len = EdgeFetcher.edge_resp_complete_args.head_len;
 
     size_t h = head_end(buf, len);
     *head_len = h;
     if (h == 0)
     {
-        EdgeFetcherV.ok = conn_closed;
+        EdgeFetcher.ok = conn_closed;
         return; // no whole header block yet (a closed peer ends the wait)
     }
     char v[24];
-    EdgeCacheV.header_value_args.hdrs = (const char *)buf;
-    EdgeCacheV.header_value_args.len = h;
-    EdgeCacheV.header_value_args.name = "Content-Length";
-    EdgeCacheV.header_value_args.out = v;
-    EdgeCacheV.header_value_args.out_cap = sizeof(v);
+    EdgeCache.header_value_args.hdrs = (const char *)buf;
+    EdgeCache.header_value_args.len = h;
+    EdgeCache.header_value_args.name = "Content-Length";
+    EdgeCache.header_value_args.out = v;
+    EdgeCache.header_value_args.out_cap = sizeof(v);
     EdgeCache.header_value(edge_cache_work);
-    if (EdgeCacheV.ok)
+    if (EdgeCache.ok)
     {
         size_t cl = 0;
         proto_bool any = PROTO_FALSE;
@@ -176,36 +176,36 @@ void protocore_edge_fetch_edge_resp_complete(uint8_t *restrict work)
         }
         if (any)
         {
-            EdgeFetcherV.ok = len >= h + cl;
+            EdgeFetcher.ok = len >= h + cl;
             return;
         }
     }
     char te[40];
-    EdgeCacheV.header_value_args.hdrs = (const char *)buf;
-    EdgeCacheV.header_value_args.len = h;
-    EdgeCacheV.header_value_args.name = "Transfer-Encoding";
-    EdgeCacheV.header_value_args.out = te;
-    EdgeCacheV.header_value_args.out_cap = sizeof(te);
+    EdgeCache.header_value_args.hdrs = (const char *)buf;
+    EdgeCache.header_value_args.len = h;
+    EdgeCache.header_value_args.name = "Transfer-Encoding";
+    EdgeCache.header_value_args.out = te;
+    EdgeCache.header_value_args.out_cap = sizeof(te);
     EdgeCache.header_value(edge_cache_work);
-    if (EdgeCacheV.ok && has_chunked(te))
+    if (EdgeCache.ok && has_chunked(te))
     {
-        EdgeFetcherV.ok = chunked_complete(buf + h, len - h);
+        EdgeFetcher.ok = chunked_complete(buf + h, len - h);
         return;
     }
-    EdgeFetcherV.ok = conn_closed;
+    EdgeFetcher.ok = conn_closed;
     return; // close-delimited body
 }
 
-void protocore_edge_fetch_begin(uint8_t *restrict work)
+static void edge_fetch_begin(uint8_t *restrict work)
 {
     (void)work;
-    EdgeFetch *f = EdgeFetcherV.begin_args.f;
-    const EdgeFetchTransport *t = EdgeFetcherV.begin_args.t;
-    const char *host = EdgeFetcherV.begin_args.host;
-    uint16_t port = EdgeFetcherV.begin_args.port;
-    const void *request = EdgeFetcherV.begin_args.request;
-    size_t req_len = EdgeFetcherV.begin_args.req_len;
-    uint32_t now_ms = EdgeFetcherV.begin_args.now_ms;
+    EdgeFetch *f = EdgeFetcher.begin_args.f;
+    const EdgeFetchTransport *t = EdgeFetcher.begin_args.t;
+    const char *host = EdgeFetcher.begin_args.host;
+    uint16_t port = EdgeFetcher.begin_args.port;
+    const void *request = EdgeFetcher.begin_args.request;
+    size_t req_len = EdgeFetcher.begin_args.req_len;
+    uint32_t now_ms = EdgeFetcher.begin_args.now_ms;
 
     mem.set(f, 0, sizeof(*f));
     f->cid = -1;
@@ -228,16 +228,16 @@ void protocore_edge_fetch_begin(uint8_t *restrict work)
     f->req_len = (uint32_t)req_len;
 }
 
-void protocore_edge_fetch_pump(uint8_t *restrict work)
+static void edge_fetch_pump(uint8_t *restrict work)
 {
     (void)work;
-    EdgeFetch *f = EdgeFetcherV.pump_args.f;
-    const EdgeFetchTransport *t = EdgeFetcherV.pump_args.t;
-    uint32_t now_ms = EdgeFetcherV.pump_args.now_ms;
+    EdgeFetch *f = EdgeFetcher.pump_args.f;
+    const EdgeFetchTransport *t = EdgeFetcher.pump_args.t;
+    uint32_t now_ms = EdgeFetcher.pump_args.now_ms;
 
     if (f->st != EDGE_FETCH_STATUS_PENDING)
     {
-        EdgeFetcherV.status = f->st;
+        EdgeFetcher.status = f->st;
         return;
     }
 
@@ -246,7 +246,7 @@ void protocore_edge_fetch_pump(uint8_t *restrict work)
         if (t->closed(t->ctx, f->cid))
         {
             f->st = EDGE_FETCH_STATUS_FAILED;
-            EdgeFetcherV.status = f->st;
+            EdgeFetcher.status = f->st;
             return;
         }
         if (!t->connected(t->ctx, f->cid))
@@ -255,13 +255,13 @@ void protocore_edge_fetch_pump(uint8_t *restrict work)
             {
                 f->st = EDGE_FETCH_STATUS_FAILED;
             }
-            EdgeFetcherV.status = f->st;
+            EdgeFetcher.status = f->st;
             return;
         }
         if (!t->send(t->ctx, f->cid, f->buf, f->req_len))
         {
             f->st = EDGE_FETCH_STATUS_FAILED;
-            EdgeFetcherV.status = f->st;
+            EdgeFetcher.status = f->st;
             return;
         }
         f->sent = PROTO_TRUE;
@@ -280,58 +280,58 @@ void protocore_edge_fetch_pump(uint8_t *restrict work)
     proto_bool closed = t->closed(t->ctx, f->cid);
 
     size_t hl = 0;
-    EdgeFetcherV.edge_resp_complete_args.buf = f->buf;
-    EdgeFetcherV.edge_resp_complete_args.len = f->got;
-    EdgeFetcherV.edge_resp_complete_args.conn_closed = closed;
-    EdgeFetcherV.edge_resp_complete_args.head_len = &hl;
-    protocore_edge_fetch_edge_resp_complete(work);
-    if (EdgeFetcherV.ok)
+    EdgeFetcher.edge_resp_complete_args.buf = f->buf;
+    EdgeFetcher.edge_resp_complete_args.len = f->got;
+    EdgeFetcher.edge_resp_complete_args.conn_closed = closed;
+    EdgeFetcher.edge_resp_complete_args.head_len = &hl;
+    edge_fetch_edge_resp_complete(work);
+    if (EdgeFetcher.ok)
     {
-        HttpClientV.message.buf = f->buf;
-        HttpClientV.message.len = f->got;
+        HttpClient.message.buf = f->buf;
+        HttpClient.message.len = f->got;
         // parse_response reads the caller's buffer and holds nothing, so it takes no borrow.
         HttpClient.parse_response(NULL);
-        int status = (int)HttpClientV.status;
+        int status = (int)HttpClient.status;
         if (status < 0)
         {
             f->st = EDGE_FETCH_STATUS_FAILED;
-            EdgeFetcherV.status = f->st;
+            EdgeFetcher.status = f->st;
             return;
         }
         f->status = status;
         f->head_len = hl;
-        f->body_off = HttpClientV.body_off;
-        f->body_len = HttpClientV.body_len;
+        f->body_off = HttpClient.body_off;
+        f->body_len = HttpClient.body_len;
         f->st = EDGE_FETCH_STATUS_DONE;
-        EdgeFetcherV.status = f->st;
+        EdgeFetcher.status = f->st;
         return;
     }
     if (f->got >= sizeof(f->buf)) // full but not complete -> too big to cache
     {
         f->st = EDGE_FETCH_STATUS_OVERSIZE;
-        EdgeFetcherV.status = f->st;
+        EdgeFetcher.status = f->st;
         return;
     }
     if (closed) // origin closed before a complete response
     {
         f->st = EDGE_FETCH_STATUS_FAILED;
-        EdgeFetcherV.status = f->st;
+        EdgeFetcher.status = f->st;
         return;
     }
     if (now_ms - f->start_ms >= PROTOCORE_EDGE_FETCH_TIMEOUT_MS)
     {
         f->st = EDGE_FETCH_STATUS_FAILED;
-        EdgeFetcherV.status = f->st;
+        EdgeFetcher.status = f->st;
         return;
     }
-    EdgeFetcherV.status = EDGE_FETCH_STATUS_PENDING;
+    EdgeFetcher.status = EDGE_FETCH_STATUS_PENDING;
 }
 
-void protocore_edge_fetch_end(uint8_t *restrict work)
+static void edge_fetch_end(uint8_t *restrict work)
 {
     (void)work;
-    EdgeFetch *f = EdgeFetcherV.end_args.f;
-    const EdgeFetchTransport *t = EdgeFetcherV.end_args.t;
+    EdgeFetch *f = EdgeFetcher.end_args.f;
+    const EdgeFetchTransport *t = EdgeFetcher.end_args.t;
 
     if (f->cid >= 0)
     {
@@ -340,8 +340,10 @@ void protocore_edge_fetch_end(uint8_t *restrict work)
     }
 }
 
-/** @brief The operands and the outcome. */
-EdgeFetcherVars EdgeFetcherV;
+EdgeFetchNs EdgeFetcher = {.begin = edge_fetch_begin,
+                           .pump = edge_fetch_pump,
+                           .end = edge_fetch_end,
+                           .edge_resp_complete = edge_fetch_edge_resp_complete};
 
 PROTOCORE_END_DECLS
 

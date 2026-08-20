@@ -247,21 +247,20 @@ static void poly1305_finish(uint8_t *restrict work, const uint8_t *key, uint8_t 
 // --- the entries -----------------------------------------------------------
 
 // One-shot over the members already set: split the key, absorb the message, reduce and add s.
-void protocore_poly1305_mac(uint8_t *restrict work)
+static void poly1305_mac(uint8_t *restrict work)
 {
-    Poly1305V.ok = PROTO_FALSE;
-    if (!Poly1305V.mac_args.key || !Poly1305V.mac_args.out)
+    Poly1305.ok = PROTO_FALSE;
+    if (!Poly1305.mac_args.key || !Poly1305.mac_args.out)
     {
         return;
     }
-    poly1305_state_init(work, Poly1305V.mac_args.key);
-    poly1305_absorb(work, Poly1305V.mac_args.msg, Poly1305V.mac_args.len);
-    poly1305_finish(work, Poly1305V.mac_args.key, Poly1305V.mac_args.out);
-    Poly1305V.ok = PROTO_TRUE;
+    poly1305_state_init(work, Poly1305.mac_args.key);
+    poly1305_absorb(work, Poly1305.mac_args.msg, Poly1305.mac_args.len);
+    poly1305_finish(work, Poly1305.mac_args.key, Poly1305.mac_args.out);
+    Poly1305.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-Poly1305Vars Poly1305V;
+Poly1305Ns Poly1305 = {.mac = poly1305_mac};
 
 PROTOCORE_END_DECLS
 

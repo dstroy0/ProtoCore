@@ -35,36 +35,36 @@ static void put_hex(uint8_t *p, uint32_t value, int digits)
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_directnet_lrc(uint8_t *restrict work);
+static void directnet_lrc(uint8_t *restrict work);
 
-void protocore_directnet_lrc(uint8_t *restrict work)
+static void directnet_lrc(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *bytes = DirectnetV.lrc_args.bytes;
-    size_t len = DirectnetV.lrc_args.len;
+    const uint8_t *bytes = Directnet.lrc_args.bytes;
+    size_t len = Directnet.lrc_args.len;
 
     uint8_t lrc = 0;
     for (size_t i = 0; i < len; i++)
     {
         lrc ^= bytes[i];
     }
-    DirectnetV.value = lrc;
+    Directnet.value = lrc;
 }
 
-void protocore_directnet_header(uint8_t *restrict work)
+static void directnet_header(uint8_t *restrict work)
 {
-    uint8_t slave = DirectnetV.header_args.slave;
-    uint8_t type = DirectnetV.header_args.type;
-    uint16_t address = DirectnetV.header_args.address;
-    uint8_t blocks = DirectnetV.header_args.blocks;
-    uint8_t *out = DirectnetV.header_args.out;
-    size_t cap = DirectnetV.header_args.cap;
+    uint8_t slave = Directnet.header_args.slave;
+    uint8_t type = Directnet.header_args.type;
+    uint16_t address = Directnet.header_args.address;
+    uint8_t blocks = Directnet.header_args.blocks;
+    uint8_t *out = Directnet.header_args.out;
+    size_t cap = Directnet.header_args.cap;
 
     // SOH + slave(2) + type(1) + addr(4) + blocks(2) + ETB + LRC = 11 bytes.
     const size_t n = 1 + 2 + 1 + 4 + 2 + 1 + 1;
     if (!out || cap < n)
     {
-        DirectnetV.n = 0;
+        Directnet.n = 0;
         return;
     }
     size_t i = 0;
@@ -78,30 +78,30 @@ void protocore_directnet_header(uint8_t *restrict work)
     i += 2;
     out[i++] = DNET_ETB;
     // LRC over the framed body (slave..ETB), i.e. everything after SOH up to and including ETB.
-    DirectnetV.lrc_args.bytes = out + 1;
-    DirectnetV.lrc_args.len = i - 1;
-    protocore_directnet_lrc(work);
-    out[i] = DirectnetV.value;
+    Directnet.lrc_args.bytes = out + 1;
+    Directnet.lrc_args.len = i - 1;
+    directnet_lrc(work);
+    out[i] = Directnet.value;
     i++;
-    DirectnetV.n = i;
+    Directnet.n = i;
 }
 
-void protocore_directnet_data(uint8_t *restrict work)
+static void directnet_data(uint8_t *restrict work)
 {
-    const uint8_t *data = DirectnetV.data_args.data;
-    size_t data_len = DirectnetV.data_args.data_len;
-    uint8_t *out = DirectnetV.data_args.out;
-    size_t cap = DirectnetV.data_args.cap;
+    const uint8_t *data = Directnet.data_args.data;
+    size_t data_len = Directnet.data_args.data_len;
+    uint8_t *out = Directnet.data_args.out;
+    size_t cap = Directnet.data_args.cap;
 
     if (!out || (data_len && !data))
     {
-        DirectnetV.n = 0;
+        Directnet.n = 0;
         return;
     }
     size_t n = 1 + data_len + 1 + 1; // STX + data + ETX + LRC
     if (n > cap)
     {
-        DirectnetV.n = 0;
+        Directnet.n = 0;
         return;
     }
     size_t i = 0;
@@ -113,44 +113,44 @@ void protocore_directnet_data(uint8_t *restrict work)
     }
     out[i++] = DNET_ETX;
     // LRC over data..ETX (everything after STX up to and including ETX).
-    DirectnetV.lrc_args.bytes = out + 1;
-    DirectnetV.lrc_args.len = i - 1;
-    protocore_directnet_lrc(work);
-    out[i] = DirectnetV.value;
+    Directnet.lrc_args.bytes = out + 1;
+    Directnet.lrc_args.len = i - 1;
+    directnet_lrc(work);
+    out[i] = Directnet.value;
     i++;
-    DirectnetV.n = i;
+    Directnet.n = i;
 }
 
-void protocore_directnet_data_parse(uint8_t *restrict work)
+static void directnet_data_parse(uint8_t *restrict work)
 {
-    const uint8_t *frame = DirectnetV.data_parse_args.frame;
-    size_t len = DirectnetV.data_parse_args.len;
-    const uint8_t **data = DirectnetV.data_parse_args.data;
-    size_t *data_len = DirectnetV.data_parse_args.data_len;
+    const uint8_t *frame = Directnet.data_parse_args.frame;
+    size_t len = Directnet.data_parse_args.len;
+    const uint8_t **data = Directnet.data_parse_args.data;
+    size_t *data_len = Directnet.data_parse_args.data_len;
 
     if (!frame || len < 3) // STX + ETX + LRC minimum
     {
-        DirectnetV.ok = PROTO_FALSE;
+        Directnet.ok = PROTO_FALSE;
         return;
     }
     if (frame[0] != DNET_STX)
     {
-        DirectnetV.ok = PROTO_FALSE;
+        Directnet.ok = PROTO_FALSE;
         return;
     }
     // The byte before the LRC must be ETX.
     size_t etx_idx = len - 2;
     if (frame[etx_idx] != DNET_ETX)
     {
-        DirectnetV.ok = PROTO_FALSE;
+        Directnet.ok = PROTO_FALSE;
         return;
     }
-    DirectnetV.lrc_args.bytes = frame + 1;
-    DirectnetV.lrc_args.len = len - 2;
-    protocore_directnet_lrc(work);
-    if (DirectnetV.value != frame[len - 1]) // over data..ETX
+    Directnet.lrc_args.bytes = frame + 1;
+    Directnet.lrc_args.len = len - 2;
+    directnet_lrc(work);
+    if (Directnet.value != frame[len - 1]) // over data..ETX
     {
-        DirectnetV.ok = PROTO_FALSE;
+        Directnet.ok = PROTO_FALSE;
         return;
     }
     if (data)
@@ -161,11 +161,11 @@ void protocore_directnet_data_parse(uint8_t *restrict work)
     {
         *data_len = etx_idx - 1;
     }
-    DirectnetV.ok = PROTO_TRUE;
+    Directnet.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-DirectnetVars DirectnetV;
+DirectnetNs Directnet = {
+    .lrc = directnet_lrc, .header = directnet_header, .data = directnet_data, .data_parse = directnet_data_parse};
 
 PROTOCORE_END_DECLS
 

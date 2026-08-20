@@ -43,18 +43,21 @@ typedef struct
     size_t jws_len;          ///< readable characters of @c jws, at most PROTOCORE_JWT_MAX_LEN
     const char *credentials; ///< an Authorization field value: "Bearer" 1*SP b64token (RFC 6750 sec 2.1)
 } JwtTokenArgs;
+
 /** @brief RFC 7518 sec 3.2: the shared key the HMAC-SHA-256 runs under, 256 bits or larger. */
 typedef struct
 {
     const uint8_t *secret; ///< the key octets
     size_t secret_len;     ///< how many of them there are
 } JwtKeyArgs;
+
 /** @brief RFC 7519 sec 4.1.4 / 4.1.5: the clock `exp` and `nbf` are judged against. */
 typedef struct
 {
     long now;      ///< NumericDate now (RFC 7519 sec 2); 0 or less states there is no wall clock
     long leeway_s; ///< seconds of clock skew both claims are given
 } JwtTimeArgs;
+
 /** @brief RFC 7519 sec 4: the claim a read names, and where a string claim lands. */
 typedef struct
 {
@@ -62,12 +65,14 @@ typedef struct
     char *out;        ///< where a string claim is written, NUL-terminated
     size_t out_cap;   ///< how many bytes @c out holds
 } JwtClaimArgs;
+
 /** @brief RFC 8693 sec 4.2: the `scope` claim's value and the scope a check demands. */
 typedef struct
 {
     const char *claim;    ///< the claim value: space-delimited, case-sensitive tokens (RFC 6749 sec 3.3)
     const char *required; ///< the one scope token being looked for
 } JwtScopeArgs;
+
 /**
  * @brief The HS256 JWT verifier.
  *
@@ -128,16 +133,10 @@ typedef struct
     JwtTimeArgs time;   ///< the clock the time claims are judged against
     JwtClaimArgs claim; ///< the claim a read names
     JwtScopeArgs scope; ///< the scope claim and the scope demanded of it
+
     proto_bool ok;
     long num;
-} JwtVars;
 
-/** @brief The operands and the outcome. */
-extern JwtVars JwtV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const verify_mac)(uint8_t *restrict work);
     void (*const verify_bearer)(uint8_t *restrict work);
     void (*const time_claims_valid)(uint8_t *restrict work);
@@ -148,31 +147,8 @@ typedef struct
     void (*const scope_allows)(uint8_t *restrict work);
 } JwtNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in JwtV or a region of the borrow at a fixed offset.
-void protocore_jwt_verify_mac(uint8_t *restrict work);
-void protocore_jwt_verify_bearer(uint8_t *restrict work);
-void protocore_jwt_time_claims_valid(uint8_t *restrict work);
-void protocore_jwt_verify_mac_at(uint8_t *restrict work);
-void protocore_jwt_verify_bearer_at(uint8_t *restrict work);
-void protocore_jwt_claim_int(uint8_t *restrict work);
-void protocore_jwt_claim_str(uint8_t *restrict work);
-void protocore_jwt_scope_allows(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Jwt.verify_mac(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const JwtNs Jwt __attribute__((unused)) = {
-    .verify_mac = protocore_jwt_verify_mac,
-    .verify_bearer = protocore_jwt_verify_bearer,
-    .time_claims_valid = protocore_jwt_time_claims_valid,
-    .verify_mac_at = protocore_jwt_verify_mac_at,
-    .verify_bearer_at = protocore_jwt_verify_bearer_at,
-    .claim_int = protocore_jwt_claim_int,
-    .claim_str = protocore_jwt_claim_str,
-    .scope_allows = protocore_jwt_scope_allows,
-};
+/** @brief The one symbol this module exports. */
+extern JwtNs Jwt;
 
 PROTOCORE_END_DECLS
 

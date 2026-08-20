@@ -26,9 +26,9 @@ void dbench_run(void)
     Modbus.server_init(w);
     for (int i = 0; i < 16; i++)
     {
-        ModbusV.set_holding_reg_args.addr = (uint16_t)i;
-        ModbusV.set_holding_reg_args.value = (uint16_t)(0x1000 + i);
-        ModbusV.set_holding_reg(w);
+        Modbus.set_holding_reg_args.addr = (uint16_t)i;
+        Modbus.set_holding_reg_args.value = (uint16_t)(0x1000 + i);
+        Modbus.set_holding_reg(w);
     }
 
     // Read Holding Registers (FC 0x03), 8 regs from addr 0: MBAP(txn,proto,len,unit) + PDU(fc,addr,qty).
@@ -44,16 +44,16 @@ void dbench_run(void)
         volatile size_t sink = 0;
         // The args do not vary across iterations, so they are staged once above the timed loop and
         // only the call and its result read sit inside it.
-        ModbusV.process_adu_args.req = rd8;
-        ModbusV.process_adu_args.req_len = sizeof(rd8);
-        ModbusV.process_adu_args.resp = resp;
-        ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
-        DBENCH_OP("Modbus.process_adu read x8 (FC3)", 20000, sink += (Modbus.process_adu(w), ModbusV.n));
-        ModbusV.process_adu_args.req = wr2;
-        ModbusV.process_adu_args.req_len = sizeof(wr2);
-        ModbusV.process_adu_args.resp = resp;
-        ModbusV.process_adu_args.protocore_resp_cap = sizeof(resp);
-        DBENCH_OP("Modbus.process_adu write x2 (FC16)", 20000, sink += (Modbus.process_adu(w), ModbusV.n));
+        Modbus.process_adu_args.req = rd8;
+        Modbus.process_adu_args.req_len = sizeof(rd8);
+        Modbus.process_adu_args.resp = resp;
+        Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+        DBENCH_OP("Modbus.process_adu read x8 (FC3)", 20000, sink += (Modbus.process_adu(w), Modbus.n));
+        Modbus.process_adu_args.req = wr2;
+        Modbus.process_adu_args.req_len = sizeof(wr2);
+        Modbus.process_adu_args.resp = resp;
+        Modbus.process_adu_args.protocore_resp_cap = sizeof(resp);
+        DBENCH_OP("Modbus.process_adu write x2 (FC16)", 20000, sink += (Modbus.process_adu(w), Modbus.n));
         (void)sink;
         DBENCH_DONE();
     }

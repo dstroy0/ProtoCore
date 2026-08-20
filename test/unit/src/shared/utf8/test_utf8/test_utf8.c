@@ -28,10 +28,10 @@ void tearDown(void)
 
 static proto_bool ok_of(const void *p, size_t n)
 {
-    Utf8V.args.s = (const uint8_t *)p;
-    Utf8V.args.n = n;
+    Utf8.args.s = (const uint8_t *)p;
+    Utf8.args.n = n;
     Utf8.valid(utf8_work);
-    return Utf8V.ok;
+    return Utf8.ok;
 }
 
 // RFC 3629 sec 3, the four well-formed lengths, at their lowest legal code point each:

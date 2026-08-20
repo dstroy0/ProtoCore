@@ -68,27 +68,32 @@ typedef struct
     uint8_t channel;
     uint8_t address;
 } IolinkMcArgs;
+
 /** @brief What mc_is_read takes: mc. */
 typedef struct
 {
     uint8_t mc;
 } IolinkMcIsReadArgs;
+
 /** @brief What mc_channel takes: mc. */
 typedef struct
 {
     uint8_t mc;
 } IolinkMcChannelArgs;
+
 /** @brief What mc_address takes: mc. */
 typedef struct
 {
     uint8_t mc;
 } IolinkMcAddressArgs;
+
 /** @brief What ckt takes: mseq_type, checksum6. */
 typedef struct
 {
     uint8_t mseq_type;
     uint8_t checksum6;
 } IolinkCktArgs;
+
 /** @brief What cks takes: event, pd_invalid, checksum6. */
 typedef struct
 {
@@ -96,12 +101,14 @@ typedef struct
     proto_bool pd_invalid;
     uint8_t checksum6;
 } IolinkCksArgs;
+
 /** @brief What checksum6 takes: msg, len. */
 typedef struct
 {
     const uint8_t *msg;
     size_t len;
 } IolinkChecksum6Args;
+
 /** @brief What finalize takes: msg, len, check_idx. */
 typedef struct
 {
@@ -109,6 +116,7 @@ typedef struct
     size_t len;
     size_t check_idx;
 } IolinkFinalizeArgs;
+
 /** @brief What verify takes: msg, len, check_idx. */
 typedef struct
 {
@@ -116,6 +124,7 @@ typedef struct
     size_t len;
     size_t check_idx;
 } IolinkVerifyArgs;
+
 /**
  * @brief IO-Link (SDCI, IEC 61131-9) data-link message codec (PROTOCORE_ENABLE_IOLINK).
  *
@@ -164,16 +173,10 @@ typedef struct
     IolinkChecksum6Args checksum6_args;
     IolinkFinalizeArgs finalize_args;
     IolinkVerifyArgs verify_args;
+
     proto_bool ok;
     uint8_t value;
-} IolinkVars;
 
-/** @brief The operands and the outcome. */
-extern IolinkVars IolinkV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const mc)(uint8_t *restrict work);
     void (*const mc_is_read)(uint8_t *restrict work);
     void (*const mc_channel)(uint8_t *restrict work);
@@ -185,33 +188,8 @@ typedef struct
     void (*const verify)(uint8_t *restrict work);
 } IolinkNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in IolinkV or a region of the borrow at a fixed offset.
-void protocore_iolink_mc(uint8_t *restrict work);
-void protocore_iolink_mc_is_read(uint8_t *restrict work);
-void protocore_iolink_mc_channel(uint8_t *restrict work);
-void protocore_iolink_mc_address(uint8_t *restrict work);
-void protocore_iolink_ckt(uint8_t *restrict work);
-void protocore_iolink_cks(uint8_t *restrict work);
-void protocore_iolink_checksum6(uint8_t *restrict work);
-void protocore_iolink_finalize(uint8_t *restrict work);
-void protocore_iolink_verify(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Iolink.mc(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const IolinkNs Iolink __attribute__((unused)) = {
-    .mc = protocore_iolink_mc,
-    .mc_is_read = protocore_iolink_mc_is_read,
-    .mc_channel = protocore_iolink_mc_channel,
-    .mc_address = protocore_iolink_mc_address,
-    .ckt = protocore_iolink_ckt,
-    .cks = protocore_iolink_cks,
-    .checksum6 = protocore_iolink_checksum6,
-    .finalize = protocore_iolink_finalize,
-    .verify = protocore_iolink_verify,
-};
+/** @brief The one symbol this module exports. */
+extern IolinkNs Iolink;
 
 PROTOCORE_END_DECLS
 

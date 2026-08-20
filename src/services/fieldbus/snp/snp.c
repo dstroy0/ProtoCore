@@ -23,13 +23,13 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-void protocore_snp_bcc(uint8_t *restrict work);
+static void snp_bcc(uint8_t *restrict work);
 
-void protocore_snp_bcc(uint8_t *restrict work)
+static void snp_bcc(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *bytes = SnpV.bcc_args.bytes;
-    size_t len = SnpV.bcc_args.len;
+    const uint8_t *bytes = Snp.bcc_args.bytes;
+    size_t len = Snp.bcc_args.len;
 
     uint8_t bcc = 0;
     for (size_t i = 0; i < len; i++)
@@ -37,26 +37,26 @@ void protocore_snp_bcc(uint8_t *restrict work)
         bcc = (uint8_t)(bcc ^ bytes[i]);
         bcc = (uint8_t)((bcc << 1) | (bcc >> 7));
     }
-    SnpV.value = bcc;
+    Snp.value = bcc;
 }
 
-void protocore_snp_build(uint8_t *restrict work)
+static void snp_build(uint8_t *restrict work)
 {
-    uint8_t control = SnpV.build_args.control;
-    const uint8_t *data = SnpV.build_args.data;
-    size_t data_len = SnpV.build_args.data_len;
-    uint8_t *out = SnpV.build_args.out;
-    size_t cap = SnpV.build_args.cap;
+    uint8_t control = Snp.build_args.control;
+    const uint8_t *data = Snp.build_args.data;
+    size_t data_len = Snp.build_args.data_len;
+    uint8_t *out = Snp.build_args.out;
+    size_t cap = Snp.build_args.cap;
 
     if (!out || (data_len && !data) || data_len > 255)
     {
-        SnpV.n = 0;
+        Snp.n = 0;
         return;
     }
     size_t n = 2 + data_len + 1; // control + length + data + BCC
     if (n > cap)
     {
-        SnpV.n = 0;
+        Snp.n = 0;
         return;
     }
     out[0] = control;
@@ -65,47 +65,46 @@ void protocore_snp_build(uint8_t *restrict work)
     {
         mem.cpy(out + 2, data, data_len);
     }
-    SnpV.bcc_args.bytes = out;
-    SnpV.bcc_args.len = 2 + data_len;
-    protocore_snp_bcc(work);
-    out[2 + data_len] = SnpV.value; // BCC over control..last data
-    SnpV.n = n;
+    Snp.bcc_args.bytes = out;
+    Snp.bcc_args.len = 2 + data_len;
+    snp_bcc(work);
+    out[2 + data_len] = Snp.value; // BCC over control..last data
+    Snp.n = n;
 }
 
-void protocore_snp_parse(uint8_t *restrict work)
+static void snp_parse(uint8_t *restrict work)
 {
-    const uint8_t *frame = SnpV.parse_args.frame;
-    size_t len = SnpV.parse_args.len;
-    SnpFrame *out = SnpV.parse_args.out;
+    const uint8_t *frame = Snp.parse_args.frame;
+    size_t len = Snp.parse_args.len;
+    SnpFrame *out = Snp.parse_args.out;
 
     if (!frame || !out || len < 3) // control + length + BCC
     {
-        SnpV.ok = PROTO_FALSE;
+        Snp.ok = PROTO_FALSE;
         return;
     }
     uint8_t data_len = frame[1];
     size_t expect = 2 + (size_t)data_len + 1;
     if (len < expect)
     {
-        SnpV.ok = PROTO_FALSE;
+        Snp.ok = PROTO_FALSE;
         return;
     }
-    SnpV.bcc_args.bytes = frame;
-    SnpV.bcc_args.len = 2 + data_len;
-    protocore_snp_bcc(work);
-    if (SnpV.value != frame[2 + data_len])
+    Snp.bcc_args.bytes = frame;
+    Snp.bcc_args.len = 2 + data_len;
+    snp_bcc(work);
+    if (Snp.value != frame[2 + data_len])
     {
-        SnpV.ok = PROTO_FALSE;
+        Snp.ok = PROTO_FALSE;
         return;
     }
     out->control = frame[0];
     out->data = data_len ? (frame + 2) : NULL;
     out->data_len = data_len;
-    SnpV.ok = PROTO_TRUE;
+    Snp.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-SnpVars SnpV;
+SnpNs Snp = {.bcc = snp_bcc, .build = snp_build, .parse = snp_parse};
 
 PROTOCORE_END_DECLS
 

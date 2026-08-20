@@ -30,35 +30,35 @@ void tearDown(void)
 
 static int add(const char *name, uint32_t deadline_ms, uint32_t now)
 {
-    FailsafeV.args.name = name;
-    FailsafeV.args.deadline_ms = deadline_ms;
-    FailsafeV.args.now = now;
+    Failsafe.args.name = name;
+    Failsafe.args.deadline_ms = deadline_ms;
+    Failsafe.args.now = now;
     Failsafe.add(protocore_failsafe_span());
-    return FailsafeV.i32;
+    return Failsafe.i32;
 }
 
 static proto_bool feed(int id, uint32_t now)
 {
-    FailsafeV.args.id = id;
-    FailsafeV.args.now = now;
+    Failsafe.args.id = id;
+    Failsafe.args.now = now;
     Failsafe.feed(protocore_failsafe_span());
-    return FailsafeV.ok;
+    return Failsafe.ok;
 }
 
 static uint32_t check(uint32_t now)
 {
-    FailsafeV.args.now = now;
-    FailsafeV.check(protocore_failsafe_span());
-    return FailsafeV.breached;
+    Failsafe.args.now = now;
+    Failsafe.check(protocore_failsafe_span());
+    return Failsafe.breached;
 }
 
 static char g_json[512];
 
 static const char *report(uint32_t now)
 {
-    FailsafeV.args.now = now;
-    FailsafeV.out_args.out = g_json;
-    FailsafeV.out_args.cap = sizeof(g_json);
+    Failsafe.args.now = now;
+    Failsafe.out_args.out = g_json;
+    Failsafe.out_args.cap = sizeof(g_json);
     Failsafe.json(protocore_failsafe_span());
     return g_json;
 }
@@ -80,8 +80,8 @@ static void install(protocore_failsafe_cb cb)
     g_fires = 0;
     g_last_id = -1;
     g_last_name = NULL;
-    FailsafeV.out_args.cb = cb;
-    FailsafeV.out_args.arg = NULL;
+    Failsafe.out_args.cb = cb;
+    Failsafe.out_args.arg = NULL;
     Failsafe.on_breach(protocore_failsafe_span());
 }
 
@@ -205,7 +205,7 @@ void test_the_report_is_an_rfc8259_object(void)
                              "{\"name\":\"loop\",\"overdue\":true,\"age_ms\":260,\"deadline_ms\":50}"
                              "]}",
                              report(1260u));
-    TEST_ASSERT_EQUAL_INT((int)strlen(g_json), FailsafeV.n);
+    TEST_ASSERT_EQUAL_INT((int)strlen(g_json), Failsafe.n);
 }
 
 // An empty registry still reports a well-formed object, so a panel parses it rather than failing on
@@ -224,12 +224,12 @@ void test_the_report_stays_inside_its_buffer(void)
     }
     char small[32];
     memset(small, 'x', sizeof(small));
-    FailsafeV.args.now = 500u;
-    FailsafeV.out_args.out = small;
-    FailsafeV.out_args.cap = sizeof(small);
+    Failsafe.args.now = 500u;
+    Failsafe.out_args.out = small;
+    Failsafe.out_args.cap = sizeof(small);
     Failsafe.json(protocore_failsafe_span());
     TEST_ASSERT_LESS_THAN_size_t(sizeof(small), strlen(small));
-    TEST_ASSERT_EQUAL_INT((int)strlen(small), FailsafeV.n);
+    TEST_ASSERT_EQUAL_INT((int)strlen(small), Failsafe.n);
 }
 
 void test_the_report_refuses_null_and_zero_capacity(void)
@@ -237,16 +237,16 @@ void test_the_report_refuses_null_and_zero_capacity(void)
     (void)add("motor", 100u, 0u);
     char buf[64];
     buf[0] = 'x';
-    FailsafeV.args.now = 0u;
-    FailsafeV.out_args.out = NULL;
-    FailsafeV.out_args.cap = sizeof(buf);
+    Failsafe.args.now = 0u;
+    Failsafe.out_args.out = NULL;
+    Failsafe.out_args.cap = sizeof(buf);
     Failsafe.json(protocore_failsafe_span());
-    TEST_ASSERT_EQUAL_INT(0, FailsafeV.n);
+    TEST_ASSERT_EQUAL_INT(0, Failsafe.n);
 
-    FailsafeV.out_args.out = buf;
-    FailsafeV.out_args.cap = 0;
+    Failsafe.out_args.out = buf;
+    Failsafe.out_args.cap = 0;
     Failsafe.json(protocore_failsafe_span());
-    TEST_ASSERT_EQUAL_INT(0, FailsafeV.n);
+    TEST_ASSERT_EQUAL_INT(0, Failsafe.n);
     TEST_ASSERT_EQUAL_CHAR('x', buf[0]);
 }
 

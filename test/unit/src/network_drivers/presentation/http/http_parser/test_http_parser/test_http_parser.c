@@ -23,8 +23,8 @@ void setUp(void)
     for (int i = 0; i < CONN_POOL_SLOTS; i++)
     {
         http_pool[i].slot_id = (uint8_t)i;
-        HttpParserV.reset_args.req = &http_pool[i];
-        HttpParserV.reset(protocore_http_parser_span());
+        HttpParser.reset_args.req = &http_pool[i];
+        HttpParser.reset(protocore_http_parser_span());
     }
 }
 void tearDown(void)
@@ -35,13 +35,13 @@ void tearDown(void)
 static HttpReq *feed(const char *raw)
 {
     HttpReq *r = &http_pool[0];
-    HttpParserV.reset_args.req = r;
-    HttpParserV.reset(protocore_http_parser_span());
+    HttpParser.reset_args.req = r;
+    HttpParser.reset(protocore_http_parser_span());
     for (const char *p = raw; *p; p++)
     {
-        HttpParserV.feed_args.req = r;
-        HttpParserV.feed_args.byte = (uint8_t)*p;
-        HttpParserV.feed(protocore_http_parser_span());
+        HttpParser.feed_args.req = r;
+        HttpParser.feed_args.byte = (uint8_t)*p;
+        HttpParser.feed(protocore_http_parser_span());
     }
     return r;
 }
@@ -140,29 +140,29 @@ void test_rfc9112_3_request_line(void)
     TEST_ASSERT_EQUAL_STRING("/search", r->path);
     TEST_ASSERT_EQUAL_STRING("q=hello&n=2", r->query);
     TEST_ASSERT_EQUAL_UINT(2u, (unsigned)r->query_count);
-    HttpParserV.get_query_args.req = r;
-    HttpParserV.get_query_args.key = "q";
-    HttpParserV.get_query(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("hello", HttpParserV.text);
-    HttpParserV.get_query_args.req = r;
-    HttpParserV.get_query_args.key = "n";
-    HttpParserV.get_query(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("2", HttpParserV.text);
-    HttpParserV.get_query_args.req = r;
-    HttpParserV.get_query_args.key = "missing";
-    HttpParserV.get_query(protocore_http_parser_span());
-    TEST_ASSERT_NULL(HttpParserV.text);
+    HttpParser.get_query_args.req = r;
+    HttpParser.get_query_args.key = "q";
+    HttpParser.get_query(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("hello", HttpParser.text);
+    HttpParser.get_query_args.req = r;
+    HttpParser.get_query_args.key = "n";
+    HttpParser.get_query(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("2", HttpParser.text);
+    HttpParser.get_query_args.req = r;
+    HttpParser.get_query_args.key = "missing";
+    HttpParser.get_query(protocore_http_parser_span());
+    TEST_ASSERT_NULL(HttpParser.text);
 
     // A key with no "=" carries an empty value; the key is still present.
     r = feed("GET /?flag&k=v HTTP/1.1\r\n\r\n");
-    HttpParserV.get_query_args.req = r;
-    HttpParserV.get_query_args.key = "flag";
-    HttpParserV.get_query(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("", HttpParserV.text);
-    HttpParserV.get_query_args.req = r;
-    HttpParserV.get_query_args.key = "k";
-    HttpParserV.get_query(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("v", HttpParserV.text);
+    HttpParser.get_query_args.req = r;
+    HttpParser.get_query_args.key = "flag";
+    HttpParser.get_query(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("", HttpParser.text);
+    HttpParser.get_query_args.req = r;
+    HttpParser.get_query_args.key = "k";
+    HttpParser.get_query(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("v", HttpParser.text);
 }
 
 // RFC 9112 sec 2.3: "HTTP-version = HTTP-name '/' DIGIT '.' DIGIT", "HTTP-name = %s'HTTP'". The %s
@@ -189,51 +189,51 @@ void test_rfc9112_5_field_lines(void)
                       "\r\n");
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, r->parse_state);
     TEST_ASSERT_EQUAL_UINT(3u, (unsigned)r->header_count);
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "Host";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("example.com", HttpParserV.text);
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "HOST";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("example.com", HttpParserV.text);
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "host";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("example.com", HttpParserV.text);
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "x-trace";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("abc123", HttpParserV.text);
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "X-Absent";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_NULL(HttpParserV.text);
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "Host";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("example.com", HttpParser.text);
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "HOST";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("example.com", HttpParser.text);
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "host";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("example.com", HttpParser.text);
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "x-trace";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("abc123", HttpParser.text);
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "X-Absent";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_NULL(HttpParser.text);
 
     // sec 5.1: "OWS occurring before the first non-whitespace octet of the field line value, or
     // after the last non-whitespace octet ... is excluded by parsers when extracting the field line
     // value". Both spellings below therefore carry the same field value.
     r = feed("GET / HTTP/1.1\r\nX-A:\tone\r\nX-B:   two   \r\nX-C:three\r\n\r\n");
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "X-A";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("one", HttpParserV.text);
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "X-B";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("two", HttpParserV.text);
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "X-C";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("three", HttpParserV.text);
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "X-A";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("one", HttpParser.text);
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "X-B";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("two", HttpParser.text);
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "X-C";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("three", HttpParser.text);
 
     // An empty field value is legal.
     r = feed("GET / HTTP/1.1\r\nX-Empty:\r\n\r\n");
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, r->parse_state);
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "X-Empty";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_EQUAL_STRING("", HttpParserV.text);
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "X-Empty";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_EQUAL_STRING("", HttpParser.text);
 }
 
 // RFC 9112 sec 5.1: "No whitespace is allowed between the field name and colon ... A server MUST
@@ -331,9 +331,9 @@ void test_terminal_states_ignore_further_octets(void)
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, r->parse_state);
     for (const char *p = "GET /second HTTP/1.1\r\n\r\n"; *p; p++)
     {
-        HttpParserV.feed_args.req = r;
-        HttpParserV.feed_args.byte = (uint8_t)*p;
-        HttpParserV.feed(protocore_http_parser_span());
+        HttpParser.feed_args.req = r;
+        HttpParser.feed_args.byte = (uint8_t)*p;
+        HttpParser.feed(protocore_http_parser_span());
     }
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, r->parse_state);
     TEST_ASSERT_EQUAL_STRING("/", r->path);
@@ -342,9 +342,9 @@ void test_terminal_states_ignore_further_octets(void)
     TEST_ASSERT_EQUAL_INT(PARSE_ERROR, r->parse_state);
     for (const char *p = "GET / HTTP/1.1\r\n\r\n"; *p; p++)
     {
-        HttpParserV.feed_args.req = r;
-        HttpParserV.feed_args.byte = (uint8_t)*p;
-        HttpParserV.feed(protocore_http_parser_span());
+        HttpParser.feed_args.req = r;
+        HttpParser.feed_args.byte = (uint8_t)*p;
+        HttpParser.feed(protocore_http_parser_span());
     }
     TEST_ASSERT_EQUAL_INT(PARSE_ERROR, r->parse_state);
 }
@@ -356,18 +356,18 @@ void test_reset_clears_everything_but_the_slot(void)
 {
     HttpReq *r = &http_pool[3];
     r->slot_id = 3;
-    HttpParserV.reset_args.req = r;
-    HttpParserV.reset(protocore_http_parser_span());
+    HttpParser.reset_args.req = r;
+    HttpParser.reset(protocore_http_parser_span());
     for (const char *p = "POST /a?x=1 HTTP/1.1\r\nHost: h\r\nContent-Length: 3\r\n\r\nabc"; *p; p++)
     {
-        HttpParserV.feed_args.req = r;
-        HttpParserV.feed_args.byte = (uint8_t)*p;
-        HttpParserV.feed(protocore_http_parser_span());
+        HttpParser.feed_args.req = r;
+        HttpParser.feed_args.byte = (uint8_t)*p;
+        HttpParser.feed(protocore_http_parser_span());
     }
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, r->parse_state);
 
-    HttpParserV.reset_args.req = r;
-    HttpParserV.reset(protocore_http_parser_span());
+    HttpParser.reset_args.req = r;
+    HttpParser.reset(protocore_http_parser_span());
     TEST_ASSERT_EQUAL_INT(PARSE_METHOD, r->parse_state);
     TEST_ASSERT_EQUAL_UINT8(3u, r->slot_id);
     TEST_ASSERT_EQUAL_CHAR('\0', r->method[0]);
@@ -396,13 +396,13 @@ void test_segmentation_does_not_change_the_parse(void)
 
     // Same octets, but the second context is inspected after every single feed call.
     HttpReq *bit = &http_pool[1];
-    HttpParserV.reset_args.req = bit;
-    HttpParserV.reset(protocore_http_parser_span());
+    HttpParser.reset_args.req = bit;
+    HttpParser.reset(protocore_http_parser_span());
     for (size_t i = 0; REQ[i]; i++)
     {
-        HttpParserV.feed_args.req = bit;
-        HttpParserV.feed_args.byte = (uint8_t)REQ[i];
-        HttpParserV.feed(protocore_http_parser_span());
+        HttpParser.feed_args.req = bit;
+        HttpParser.feed_args.byte = (uint8_t)REQ[i];
+        HttpParser.feed(protocore_http_parser_span());
     }
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, bit->parse_state);
     TEST_ASSERT_EQUAL_STRING(whole->method, bit->method);
@@ -429,10 +429,10 @@ void test_headers_past_the_cap_still_frame_the_message(void)
     TEST_ASSERT_EQUAL_UINT((unsigned)MAX_HEADERS, (unsigned)r->header_count);
     TEST_ASSERT_EQUAL_UINT(2u, r->content_length);
     TEST_ASSERT_EQUAL_STRING("hi", (const char *)r->body);
-    HttpParserV.get_header_args.req = r;
-    HttpParserV.get_header_args.key = "Content-Length";
-    HttpParserV.get_header(protocore_http_parser_span());
-    TEST_ASSERT_NULL(HttpParserV.text); // past the cap: counted, not stored
+    HttpParser.get_header_args.req = r;
+    HttpParser.get_header_args.key = "Content-Length";
+    HttpParser.get_header(protocore_http_parser_span());
+    TEST_ASSERT_NULL(HttpParser.text); // past the cap: counted, not stored
 
     // The same for Host: the duplicate is caught even when neither line was stored.
     r = feed("GET / HTTP/1.1\r\n"
@@ -450,69 +450,69 @@ void test_rfc6265_cookie_extraction(void)
     HttpReq *r = feed("GET / HTTP/1.1\r\nCookie: sid=abc123; theme=dark\r\n\r\n");
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, r->parse_state);
 
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "sid";
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "sid";
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("abc123", out);
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "theme";
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "theme";
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("dark", out);
 
     // Absent, and case-mismatched, both report false and leave an empty string.
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "nope";
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "nope";
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("", out);
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "SID";
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "SID";
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
 
     // sec 4.1.1: cookie-value may be a DQUOTE-wrapped span; the quotes are not part of the value.
     r = feed("GET / HTTP/1.1\r\nCookie: q=\"quoted value\"\r\n\r\n");
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "q";
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "q";
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("quoted value", out);
 
     // A name that is a prefix of a stored one must not match it.
     r = feed("GET / HTTP/1.1\r\nCookie: session=one\r\n\r\n");
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "sess";
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "session";
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "sess";
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "session";
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
 
     // No Cookie header at all.
     r = feed("GET / HTTP/1.1\r\n\r\n");
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "sid";
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "sid";
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
 }
 
 // RFC 7239 sec 4 publishes the Forwarded examples verbatim; sec 6 defines the node identifier as an
@@ -526,102 +526,102 @@ void test_rfc7239_forwarded_client(void)
 
     // sec 4 example: "Forwarded: for=192.0.2.60;proto=http;by=203.0.113.43".
     HttpReq *r = feed("GET / HTTP/1.1\r\nForwarded: for=192.0.2.60;proto=http\r\n\r\n");
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("192.0.2.60", ip);
     TEST_ASSERT_FALSE(https);
 
     // sec 4 example: "Forwarded: for=192.0.2.43, for=198.51.100.17" - the first element is the
     // original client.
     r = feed("GET / HTTP/1.1\r\nForwarded: for=192.0.2.43, for=198.51.100.17\r\n\r\n");
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("192.0.2.43", ip);
 
     // sec 6 example: "[2001:db8:cafe::17]:47011", quoted because ":" is not a token character.
     r = feed("GET / HTTP/1.1\r\nForwarded: For=\"[2001:db8:cafe::17]:4711\"\r\n\r\n");
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("2001:db8:cafe::17", ip);
 
     // proto=https is what sets the flag.
     r = feed("GET / HTTP/1.1\r\nForwarded: for=192.0.2.60;proto=https\r\n\r\n");
     https = PROTO_FALSE;
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_TRUE(https);
 
     // sec 6.2 "unknown" and sec 6.3 obfuscated "_gazonk" name no address, so neither is returned.
     r = feed("GET / HTTP/1.1\r\nForwarded: for=unknown\r\n\r\n");
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
     r = feed("GET / HTTP/1.1\r\nForwarded: for=\"_gazonk\"\r\n\r\n");
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
 
     // The de-facto X-Forwarded-For / -Proto pair, leftmost first.
     r = feed("GET / HTTP/1.1\r\nX-Forwarded-For: 203.0.113.7, 198.51.100.2\r\n"
              "X-Forwarded-Proto: https\r\n\r\n");
     https = PROTO_FALSE;
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("203.0.113.7", ip);
     TEST_ASSERT_TRUE(https);
 
     // An IPv4 with the sec 6 optional ":" node-port keeps only the address.
     r = feed("GET / HTTP/1.1\r\nX-Forwarded-For: 203.0.113.7:47011\r\n\r\n");
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("203.0.113.7", ip);
 
     // Nothing forwarded, and a malformed literal, both report false with an empty result.
     r = feed("GET / HTTP/1.1\r\n\r\n");
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("", ip);
     r = feed("GET / HTTP/1.1\r\nX-Forwarded-For: 999.1.1.1\r\n\r\n");
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = ip;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(ip);
-    HttpParserV.forwarded_client_args.is_https = &https;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = ip;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(ip);
+    HttpParser.forwarded_client_args.is_https = &https;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
 }
 
 // An application/x-www-form-urlencoded body is the same "&"-separated key=value list the query
@@ -635,26 +635,26 @@ void test_urlencoded_form_fields(void)
                       "\r\n"
                       "user=bob&pass=s3cr3");
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, r->parse_state);
-    HttpParserV.get_form_args.req = r;
-    HttpParserV.get_form_args.key = "user";
-    HttpParserV.get_form_args.out = out;
-    HttpParserV.get_form_args.out_size = sizeof(out);
-    HttpParserV.get_form(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.get_form_args.req = r;
+    HttpParser.get_form_args.key = "user";
+    HttpParser.get_form_args.out = out;
+    HttpParser.get_form_args.out_size = sizeof(out);
+    HttpParser.get_form(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("bob", out);
-    HttpParserV.get_form_args.req = r;
-    HttpParserV.get_form_args.key = "pass";
-    HttpParserV.get_form_args.out = out;
-    HttpParserV.get_form_args.out_size = sizeof(out);
-    HttpParserV.get_form(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.get_form_args.req = r;
+    HttpParser.get_form_args.key = "pass";
+    HttpParser.get_form_args.out = out;
+    HttpParser.get_form_args.out_size = sizeof(out);
+    HttpParser.get_form(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("s3cr3", out);
-    HttpParserV.get_form_args.req = r;
-    HttpParserV.get_form_args.key = "missing";
-    HttpParserV.get_form_args.out = out;
-    HttpParserV.get_form_args.out_size = sizeof(out);
-    HttpParserV.get_form(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.get_form_args.req = r;
+    HttpParser.get_form_args.key = "missing";
+    HttpParser.get_form_args.out = out;
+    HttpParser.get_form_args.out_size = sizeof(out);
+    HttpParser.get_form(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("", out);
 
     // A field with no value is present with an empty one; a prefix of a field name is not a match.
@@ -663,19 +663,19 @@ void test_urlencoded_form_fields(void)
              "Content-Length: 12\r\n"
              "\r\n"
              "flag&user=bo");
-    HttpParserV.get_form_args.req = r;
-    HttpParserV.get_form_args.key = "flag";
-    HttpParserV.get_form_args.out = out;
-    HttpParserV.get_form_args.out_size = sizeof(out);
-    HttpParserV.get_form(protocore_http_parser_span());
-    TEST_ASSERT_TRUE(HttpParserV.ok);
+    HttpParser.get_form_args.req = r;
+    HttpParser.get_form_args.key = "flag";
+    HttpParser.get_form_args.out = out;
+    HttpParser.get_form_args.out_size = sizeof(out);
+    HttpParser.get_form(protocore_http_parser_span());
+    TEST_ASSERT_TRUE(HttpParser.ok);
     TEST_ASSERT_EQUAL_STRING("", out);
-    HttpParserV.get_form_args.req = r;
-    HttpParserV.get_form_args.key = "use";
-    HttpParserV.get_form_args.out = out;
-    HttpParserV.get_form_args.out_size = sizeof(out);
-    HttpParserV.get_form(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.get_form_args.req = r;
+    HttpParser.get_form_args.key = "use";
+    HttpParser.get_form_args.out = out;
+    HttpParser.get_form_args.out_size = sizeof(out);
+    HttpParser.get_form(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
 
     // Any other media type is not a form, whatever the body looks like.
     r = feed("POST /f HTTP/1.1\r\n"
@@ -683,12 +683,12 @@ void test_urlencoded_form_fields(void)
              "Content-Length: 8\r\n"
              "\r\n"
              "user=bob");
-    HttpParserV.get_form_args.req = r;
-    HttpParserV.get_form_args.key = "user";
-    HttpParserV.get_form_args.out = out;
-    HttpParserV.get_form_args.out_size = sizeof(out);
-    HttpParserV.get_form(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
+    HttpParser.get_form_args.req = r;
+    HttpParser.get_form_args.key = "user";
+    HttpParser.get_form_args.out = out;
+    HttpParser.get_form_args.out_size = sizeof(out);
+    HttpParser.get_form(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
 }
 
 // The lookup helpers refuse a null destination or a zero capacity rather than writing through it.
@@ -697,54 +697,54 @@ void test_lookup_helpers_refuse_a_null_destination(void)
     char out[8];
     HttpReq *r = feed("GET / HTTP/1.1\r\nCookie: sid=a\r\n\r\n");
 
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "sid";
-    HttpParserV.get_cookie_args.out = NULL;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = "sid";
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = 0;
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
-    HttpParserV.get_cookie_args.req = r;
-    HttpParserV.get_cookie_args.name = NULL;
-    HttpParserV.get_cookie_args.out = out;
-    HttpParserV.get_cookie_args.out_size = sizeof(out);
-    HttpParserV.get_cookie(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
-    HttpParserV.get_form_args.req = r;
-    HttpParserV.get_form_args.key = "x";
-    HttpParserV.get_form_args.out = NULL;
-    HttpParserV.get_form_args.out_size = sizeof(out);
-    HttpParserV.get_form(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
-    HttpParserV.get_form_args.req = r;
-    HttpParserV.get_form_args.key = "x";
-    HttpParserV.get_form_args.out = out;
-    HttpParserV.get_form_args.out_size = 0;
-    HttpParserV.get_form(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = NULL;
-    HttpParserV.forwarded_client_args.ip_cap = sizeof(out);
-    HttpParserV.forwarded_client_args.is_https = NULL;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
-    HttpParserV.forwarded_client_args.req = r;
-    HttpParserV.forwarded_client_args.ip_out = out;
-    HttpParserV.forwarded_client_args.ip_cap = 0;
-    HttpParserV.forwarded_client_args.is_https = NULL;
-    HttpParserV.forwarded_client(protocore_http_parser_span());
-    TEST_ASSERT_FALSE(HttpParserV.ok);
-    HttpParserV.get_param_args.req = r;
-    HttpParserV.get_param_args.key = NULL;
-    HttpParserV.get_param(protocore_http_parser_span());
-    TEST_ASSERT_NULL(HttpParserV.text);
-    HttpParserV.get_param_args.req = r;
-    HttpParserV.get_param_args.key = "id";
-    HttpParserV.get_param(protocore_http_parser_span());
-    TEST_ASSERT_NULL(HttpParserV.text); // nothing captured a path parameter
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "sid";
+    HttpParser.get_cookie_args.out = NULL;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = "sid";
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = 0;
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
+    HttpParser.get_cookie_args.req = r;
+    HttpParser.get_cookie_args.name = NULL;
+    HttpParser.get_cookie_args.out = out;
+    HttpParser.get_cookie_args.out_size = sizeof(out);
+    HttpParser.get_cookie(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
+    HttpParser.get_form_args.req = r;
+    HttpParser.get_form_args.key = "x";
+    HttpParser.get_form_args.out = NULL;
+    HttpParser.get_form_args.out_size = sizeof(out);
+    HttpParser.get_form(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
+    HttpParser.get_form_args.req = r;
+    HttpParser.get_form_args.key = "x";
+    HttpParser.get_form_args.out = out;
+    HttpParser.get_form_args.out_size = 0;
+    HttpParser.get_form(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = NULL;
+    HttpParser.forwarded_client_args.ip_cap = sizeof(out);
+    HttpParser.forwarded_client_args.is_https = NULL;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
+    HttpParser.forwarded_client_args.req = r;
+    HttpParser.forwarded_client_args.ip_out = out;
+    HttpParser.forwarded_client_args.ip_cap = 0;
+    HttpParser.forwarded_client_args.is_https = NULL;
+    HttpParser.forwarded_client(protocore_http_parser_span());
+    TEST_ASSERT_FALSE(HttpParser.ok);
+    HttpParser.get_param_args.req = r;
+    HttpParser.get_param_args.key = NULL;
+    HttpParser.get_param(protocore_http_parser_span());
+    TEST_ASSERT_NULL(HttpParser.text);
+    HttpParser.get_param_args.req = r;
+    HttpParser.get_param_args.key = "id";
+    HttpParser.get_param(protocore_http_parser_span());
+    TEST_ASSERT_NULL(HttpParser.text); // nothing captured a path parameter
 }

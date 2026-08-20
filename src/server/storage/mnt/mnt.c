@@ -46,52 +46,52 @@ typedef struct
 } MntPointCtx;
 static MntPointCtx s_point;
 
-void protocore_mnt_point_add(uint8_t *restrict work)
+static void mnt_point_add(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_mnt_backend *backend = MntV.args.backend;
-    const char *root = MntV.args.root;
+    const protocore_mnt_backend *backend = Mnt.args.backend;
+    const char *root = Mnt.args.root;
 
     if (s_point.count >= MAX_ROUTES)
     {
-        MntV.u8 = PROTOCORE_MNT_NONE;
+        Mnt.u8 = PROTOCORE_MNT_NONE;
         return;
     }
     MntPoint *m = &s_point.point[s_point.count];
     m->backend = backend;
     m->root = root;
-    MntV.u8 = s_point.count++;
+    Mnt.u8 = s_point.count++;
 }
 
-void protocore_mnt_point_of(uint8_t *restrict work)
+static void mnt_point_of(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t id = MntV.args.id;
+    const uint8_t id = Mnt.args.id;
 
     if (id >= s_point.count)
     {
-        MntV.backend = NULL;
+        Mnt.backend = NULL;
         return;
     }
-    MntV.backend = s_point.point[id].backend;
+    Mnt.backend = s_point.point[id].backend;
 }
 
-void protocore_mnt_root_of(uint8_t *restrict work)
+static void mnt_root_of(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t id = MntV.args.id;
+    const uint8_t id = Mnt.args.id;
 
     // Empty rather than null, because every caller wants the subtree as a path piece to compare or
     // append: handing back null would put the same null test at each of them.
     if (id >= s_point.count || s_point.point[id].root == NULL)
     {
-        MntV.text = "";
+        Mnt.text = "";
         return;
     }
-    MntV.text = s_point.point[id].root;
+    Mnt.text = s_point.point[id].root;
 }
 
-void protocore_mnt_reset(uint8_t *restrict work)
+static void mnt_reset(uint8_t *restrict work)
 {
     (void)work;
 
@@ -100,18 +100,18 @@ void protocore_mnt_reset(uint8_t *restrict work)
     s_point.count = 0;
 }
 
-void protocore_mnt_mount(uint8_t *restrict work)
+static void mnt_mount(uint8_t *restrict work)
 {
     (void)work;
-    const protocore_mnt_backend *backend = MntV.args.backend;
+    const protocore_mnt_backend *backend = Mnt.args.backend;
 
     s_hal.backend = backend;
 }
 
-void protocore_mnt_active(uint8_t *restrict work)
+static void mnt_active(uint8_t *restrict work)
 {
     (void)work;
-    MntV.backend = s_hal.backend;
+    Mnt.backend = s_hal.backend;
 }
 
 // --- the RAM disk: the part with a footprint ------------------------------------------------------
@@ -502,13 +502,13 @@ static const protocore_mnt_backend s_ram_backend = {ram_open,  ram_read,   ram_w
                                                     ram_size,  ram_exists, ram_remove,  ram_rename,  ram_mkdir,
                                                     ram_rmdir, ram_stat,   ram_opendir, ram_readdir, NULL};
 
-void protocore_mnt_ram(uint8_t *restrict work)
+static void mnt_ram(uint8_t *restrict work)
 {
     (void)work;
-    MntV.backend = &s_ram_backend;
+    Mnt.backend = &s_ram_backend;
 }
 
-void protocore_mnt_ram_format(uint8_t *restrict work)
+static void mnt_ram_format(uint8_t *restrict work)
 {
     (void)work;
 
@@ -523,5 +523,15 @@ void protocore_mnt_ram_format(uint8_t *restrict work)
 
 // Designated, so a member's position in the struct does not decide what it binds to. The two RAM
 // calls exist only where the flag compiled the backend in.
-/** @brief The operands and the outcome. */
-MntVars MntV;
+MntNs Mnt = {
+    .point_add = mnt_point_add,
+    .point_of = mnt_point_of,
+    .root_of = mnt_root_of,
+    .reset = mnt_reset,
+    .mount = mnt_mount,
+    .active = mnt_active,
+#if PROTOCORE_ENABLE_MNT
+    .ram = mnt_ram,
+    .ram_format = mnt_ram_format,
+#endif
+};

@@ -58,6 +58,7 @@ typedef struct
     const void *b; ///< the second, holding n readable bytes like the first
     size_t n;      ///< how many bytes are compared
 } CtEqEqArgs;
+
 /**
  * @brief Constant-time equality.
  *
@@ -87,30 +88,15 @@ typedef struct
 typedef struct
 {
     CtEqEqArgs eq_args;
+
     proto_bool ok;
     proto_bool equal;
-} CtEqVars;
 
-/** @brief The operands and the outcome. */
-extern CtEqVars CtEqV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const eq)(uint8_t *restrict work);
 } CtEqNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in CtEqV or a region of the borrow at a fixed offset.
-void protocore_ct_eq_eq(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `CtEq.eq(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const CtEqNs CtEq __attribute__((unused)) = {
-    .eq = protocore_ct_eq_eq,
-};
+/** @brief The one symbol this module exports. */
+extern CtEqNs CtEq;
 
 PROTOCORE_END_DECLS
 

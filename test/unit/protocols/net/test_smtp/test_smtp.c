@@ -114,6 +114,7 @@ static void mock_happy(Mock *m)
     mock_replies(m, HAPPY, HAPPY_N);
 }
 
+
 // The two records this suite was written against, and the one call that seats them. SmtpNs groups
 // its arguments by concern instead, so the fields land on session, auth, envelope and content.
 typedef struct
@@ -134,23 +135,23 @@ typedef struct
     const char *body;
 } SmtpMessage;
 
-static void seat(const SmtpConfig *c, const SmtpMessage *m, SmtpSendFn send, SmtpRecvFn recv, SmtpStartTlsFn starttls,
-                 void *ctx)
+static void seat(const SmtpConfig *c, const SmtpMessage *m, SmtpSendFn send, SmtpRecvFn recv,
+                 SmtpStartTlsFn starttls, void *ctx)
 {
-    SmtpV.session.host = c->host;
-    SmtpV.session.port = c->port;
-    SmtpV.session.security = c->security;
-    SmtpV.session.client_name = c->helo;
-    SmtpV.auth.user = c->user;
-    SmtpV.auth.pass = c->pass;
-    SmtpV.envelope.reverse_path = c->from;
-    SmtpV.envelope.forward_path = m->to;
-    SmtpV.content.subject = m->subject;
-    SmtpV.content.body = m->body;
-    SmtpV.transport.send = send;
-    SmtpV.transport.recv = recv;
-    SmtpV.transport.starttls = starttls;
-    SmtpV.transport.ctx = ctx;
+    Smtp.session.host = c->host;
+    Smtp.session.port = c->port;
+    Smtp.session.security = c->security;
+    Smtp.session.client_name = c->helo;
+    Smtp.auth.user = c->user;
+    Smtp.auth.pass = c->pass;
+    Smtp.envelope.reverse_path = c->from;
+    Smtp.envelope.forward_path = m->to;
+    Smtp.content.subject = m->subject;
+    Smtp.content.body = m->body;
+    Smtp.transport.send = send;
+    Smtp.transport.recv = recv;
+    Smtp.transport.starttls = starttls;
+    Smtp.transport.ctx = ctx;
 }
 
 // Walk the session over the seam the caller supplies.
@@ -163,7 +164,7 @@ static SmtpResult smtp_run(const SmtpConfig *c, const SmtpMessage *m, SmtpSendFn
     }
     seat(c, m, send, recv, starttls, ctx);
     Smtp.run(protocore_smtp_span());
-    return SmtpV.result;
+    return Smtp.result;
 }
 
 // The entry that opens its own transport instead of taking one.
@@ -174,8 +175,8 @@ static SmtpResult smtp_send(const SmtpConfig *c, const SmtpMessage *m)
         return SMTP_ERR_ARG;
     }
     seat(c, m, NULL, NULL, NULL, NULL);
-    SmtpV.send(protocore_smtp_span());
-    return SmtpV.result;
+    Smtp.send(protocore_smtp_span());
+    return Smtp.result;
 }
 
 static SmtpConfig base_cfg(void)
@@ -811,3 +812,4 @@ void test_command_helper_send_failure(void)
     SmtpMessage msg = base_msg();
     TEST_ASSERT_EQUAL_INT(SMTP_ERR_IO, smtp_run(&c, &msg, mock_send, mock_recv, NULL, &m));
 }
+

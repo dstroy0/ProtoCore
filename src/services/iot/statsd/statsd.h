@@ -67,12 +67,14 @@ typedef struct
     const char *addr; ///< its address as text, v4 or v6, parsed once by an init
     uint16_t port;    ///< its UDP port; 0 selects ::PROTOCORE_STATSD_PORT, the reference daemon's 8125
 } StatsdServerArgs;
+
 /** @brief The DogStatsD tag lists, "k:v,k2:v2" with no leading `#`. */
 typedef struct
 {
     const char *global; ///< the list an init stores and every metric carries; NULL or "" stores none
     const char *metric; ///< the list one format writes; a metric call stamps the stored one here
 } StatsdTagArgs;
+
 /** @brief What one line names, in the grammar `<metricname>:<value>|<type>[|@<rate>]`. */
 typedef struct
 {
@@ -80,6 +82,7 @@ typedef struct
     StatsdType type;  ///< which of the four types; a metric call stamps its own
     float rate;       ///< the sample rate in (0,1); 0 or >= 1 writes no `|@` field
 } StatsdMetricArgs;
+
 /** @brief The value a line carries, in the form the call taking it reads. */
 typedef struct
 {
@@ -88,12 +91,14 @@ typedef struct
     uint32_t ms;        ///< a timing in milliseconds
     const char *member; ///< the set member counted as one unique occurrence; NULL writes empty
 } StatsdValueArgs;
+
 /** @brief Where a formatted metric line lands. */
 typedef struct
 {
     char *out;  ///< the buffer a format writes the line into
     size_t cap; ///< how much room it has, the NUL included
 } StatsdLineArgs;
+
 /**
  * @brief The StatsD metrics client.
  *
@@ -129,16 +134,10 @@ typedef struct
     StatsdMetricArgs metric; ///< what one line names
     StatsdValueArgs value;   ///< what one line carries
     StatsdLineArgs line;     ///< where the formatted line lands
+
     proto_bool ok;
     size_t n;
-} StatsdVars;
 
-/** @brief The operands and the outcome. */
-extern StatsdVars StatsdV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const init)(uint8_t *restrict work);
     void (*const format)(uint8_t *restrict work);
     void (*const count)(uint8_t *restrict work);
@@ -148,29 +147,8 @@ typedef struct
     void (*const set)(uint8_t *restrict work);
 } StatsdNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in StatsdV or a region of the borrow at a fixed offset.
-void protocore_statsd_init(uint8_t *restrict work);
-void protocore_statsd_format(uint8_t *restrict work);
-void protocore_statsd_count(uint8_t *restrict work);
-void protocore_statsd_gauge(uint8_t *restrict work);
-void protocore_statsd_gauge_delta(uint8_t *restrict work);
-void protocore_statsd_timing(uint8_t *restrict work);
-void protocore_statsd_set(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Statsd.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const StatsdNs Statsd __attribute__((unused)) = {
-    .init = protocore_statsd_init,
-    .format = protocore_statsd_format,
-    .count = protocore_statsd_count,
-    .gauge = protocore_statsd_gauge,
-    .gauge_delta = protocore_statsd_gauge_delta,
-    .timing = protocore_statsd_timing,
-    .set = protocore_statsd_set,
-};
+/** @brief The one symbol this module exports. */
+extern StatsdNs Statsd;
 
 /**
  * @brief The PROTOCORE_STATSD_BORROW bytes this module's state lives in.

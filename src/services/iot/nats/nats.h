@@ -89,17 +89,20 @@ typedef struct
     const char *arg;        ///< the INFO options JSON or the -ERR error message
     size_t arg_len;         ///< its length
 } NatsMsg;
+
 /** @brief Where a builder writes one protocol message. */
 typedef struct
 {
     char *buf;  ///< the buffer the operation is written into
     size_t cap; ///< octets it holds, the NUL a builder adds when there is room included
 } NatsOutArgs;
+
 /** @brief What a CONNECT tells the server about the client. */
 typedef struct
 {
     const char *options; ///< the JSON object CONNECT carries: {"option_name":option_value,...}
 } NatsClientArgs;
+
 /** @brief What a PUB or an HPUB publishes. */
 typedef struct
 {
@@ -108,12 +111,14 @@ typedef struct
     const uint8_t *payload; ///< the payload octets
     size_t payload_len;     ///< how many, the #bytes a PUB writes
 } NatsPublishArgs;
+
 /** @brief The header section an HPUB carries (NATS Protocol, HPUB). */
 typedef struct
 {
     const char *block; ///< the section: the NATS/1.0 version line, name: value lines, CR LF CR LF
     size_t bytes;      ///< its length, the #header bytes field, the terminator included
 } NatsHeadersArgs;
+
 /** @brief The subscription a SUB opens and an UNSUB ends. */
 typedef struct
 {
@@ -123,12 +128,14 @@ typedef struct
     uint32_t max_msgs;       ///< UNSUB: messages to deliver before the subscription ends
     proto_bool with_max;     ///< UNSUB: write max_msgs; false ends the subscription at once
 } NatsSubscriptionArgs;
+
 /** @brief The inbound octets a parse reads. */
 typedef struct
 {
     const char *buf; ///< the receive buffer, one protocol message at its head
     size_t len;      ///< octets buffered
 } NatsInboundArgs;
+
 /**
  * @brief The NATS client protocol codec.
  *
@@ -175,18 +182,12 @@ typedef struct
     NatsHeadersArgs headers;           ///< the header section an HPUB carries
     NatsSubscriptionArgs subscription; ///< what a SUB opens or an UNSUB ends
     NatsInboundArgs in;                ///< what a parse reads
+
     proto_bool ok;
     size_t n;
     size_t consumed;
     NatsMsg msg;
-} NatsVars;
 
-/** @brief The operands and the outcome. */
-extern NatsVars NatsV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const connect)(uint8_t *restrict work);
     void (*const pub)(uint8_t *restrict work);
     void (*const hpub)(uint8_t *restrict work);
@@ -197,31 +198,8 @@ typedef struct
     void (*const parse)(uint8_t *restrict work);
 } NatsNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in NatsV or a region of the borrow at a fixed offset.
-void protocore_nats_connect(uint8_t *restrict work);
-void protocore_nats_pub(uint8_t *restrict work);
-void protocore_nats_hpub(uint8_t *restrict work);
-void protocore_nats_sub(uint8_t *restrict work);
-void protocore_nats_unsub(uint8_t *restrict work);
-void protocore_nats_ping(uint8_t *restrict work);
-void protocore_nats_pong(uint8_t *restrict work);
-void protocore_nats_parse(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Nats.connect(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const NatsNs Nats __attribute__((unused)) = {
-    .connect = protocore_nats_connect,
-    .pub = protocore_nats_pub,
-    .hpub = protocore_nats_hpub,
-    .sub = protocore_nats_sub,
-    .unsub = protocore_nats_unsub,
-    .ping = protocore_nats_ping,
-    .pong = protocore_nats_pong,
-    .parse = protocore_nats_parse,
-};
+/** @brief The one symbol this module exports. */
+extern NatsNs Nats;
 
 PROTOCORE_END_DECLS
 

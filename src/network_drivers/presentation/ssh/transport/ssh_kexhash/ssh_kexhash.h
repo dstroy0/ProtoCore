@@ -33,17 +33,20 @@ typedef struct
 {
     proto_bool is512; ///< true for a -sha512 method, false for a -sha256 one
 } SshKexHashInitArgs;
+
 /** @brief The bytes absorbed. */
 typedef struct
 {
     const uint8_t *data; ///< the bytes
     size_t len;          ///< how many
 } SshKexHashUpdateArgs;
+
 /** @brief Where the digest lands. */
 typedef struct
 {
     uint8_t *out; ///< SSH_KEXHASH_MAX_LEN bytes; the bound hash writes its own length
 } SshKexHashFinalArgs;
+
 /**
  * @brief The SSH key-exchange digest (RFC 4253 sec 8), bound to the KEX method's hash.
  *
@@ -83,36 +86,17 @@ typedef struct
     SshKexHashInitArgs init_args;
     SshKexHashUpdateArgs update_args;
     SshKexHashFinalArgs final_args;
+
     proto_bool ok;
     size_t len;
-} SshKexHashVars;
 
-/** @brief The operands and the outcome. */
-extern SshKexHashVars SshKexHashV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const init)(uint8_t *restrict work);
     void (*const update)(uint8_t *restrict work);
     void (*const final)(uint8_t *restrict work);
 } SshKexHashNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SshKexHashV or a region of the borrow at a fixed offset.
-void protocore_ssh_kexhash_init(uint8_t *restrict work);
-void protocore_ssh_kexhash_update(uint8_t *restrict work);
-void protocore_ssh_kexhash_final(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `SshKexHash.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SshKexHashNs SshKexHash __attribute__((unused)) = {
-    .init = protocore_ssh_kexhash_init,
-    .update = protocore_ssh_kexhash_update,
-    .final = protocore_ssh_kexhash_final,
-};
+/** @brief The one symbol this module exports. */
+extern SshKexHashNs SshKexHash;
 
 PROTOCORE_END_DECLS
 

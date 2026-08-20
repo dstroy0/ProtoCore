@@ -37,6 +37,7 @@ typedef struct
     size_t cap;
     const uint8_t *pub; ///< 32 bytes.
 } Tls13RpkEd25519SpkiArgs;
+
 /** @brief What ed25519_from_spki takes: spki, len, pub. */
 typedef struct
 {
@@ -44,6 +45,7 @@ typedef struct
     size_t len;
     const uint8_t **pub;
 } Tls13RpkEd25519FromSpkiArgs;
+
 /** @brief What build_certificate takes: out, cap, ed25519_pub. */
 typedef struct
 {
@@ -51,6 +53,7 @@ typedef struct
     size_t cap;
     const uint8_t *ed25519_pub; ///< 32 bytes.
 } Tls13RpkBuildCertificateArgs;
+
 /**
  * @brief The RFC 7250 RawPublicKey credential a TLS 1.3 Certificate message carries.
  *
@@ -81,36 +84,17 @@ typedef struct
     Tls13RpkEd25519SpkiArgs ed25519_spki_args;
     Tls13RpkEd25519FromSpkiArgs ed25519_from_spki_args;
     Tls13RpkBuildCertificateArgs build_certificate_args;
+
     proto_bool ok;
     size_t n;
-} Tls13RpkVars;
 
-/** @brief The operands and the outcome. */
-extern Tls13RpkVars Tls13RpkV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const ed25519_spki)(uint8_t *restrict work);
     void (*const ed25519_from_spki)(uint8_t *restrict work);
     void (*const build_certificate)(uint8_t *restrict work);
 } Tls13RpkNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in Tls13RpkV or a region of the borrow at a fixed offset.
-void protocore_tls13_rpk_ed25519_spki(uint8_t *restrict work);
-void protocore_tls13_rpk_ed25519_from_spki(uint8_t *restrict work);
-void protocore_tls13_rpk_build_certificate(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Tls13Rpk.ed25519_spki(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const Tls13RpkNs Tls13Rpk __attribute__((unused)) = {
-    .ed25519_spki = protocore_tls13_rpk_ed25519_spki,
-    .ed25519_from_spki = protocore_tls13_rpk_ed25519_from_spki,
-    .build_certificate = protocore_tls13_rpk_build_certificate,
-};
+/** @brief The one symbol this module exports. */
+extern Tls13RpkNs Tls13Rpk;
 
 PROTOCORE_END_DECLS
 

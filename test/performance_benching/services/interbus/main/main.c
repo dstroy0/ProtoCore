@@ -36,12 +36,12 @@ void dbench_run(void)
 
     // Pre-build a valid frame once so parse() and fcs() bench against a real, spec-conformant frame.
     static uint8_t frame[2 + 16 * 2 + 2]; // loopback(2) + words(32) + FCS(2) = 36 bytes
-    InterbusV.build_args.words = words;
-    InterbusV.build_args.word_count = word_count;
-    InterbusV.build_args.out = frame;
-    InterbusV.build_args.cap = sizeof(frame);
+    Interbus.build_args.words = words;
+    Interbus.build_args.word_count = word_count;
+    Interbus.build_args.out = frame;
+    Interbus.build_args.cap = sizeof(frame);
     Interbus.build(interbus_work);
-    size_t frame_len = InterbusV.n;
+    size_t frame_len = Interbus.n;
 
     static uint8_t buf[64];  // build() output scratch
     static uint16_t out[32]; // parse() decoded-words scratch
@@ -53,28 +53,29 @@ void dbench_run(void)
         volatile uint16_t sink16 = 0;
 
         // Assemble the summation frame (build words -> loopback + big-endian words + FCS).
-        InterbusV.build_args.words = words;
-        InterbusV.build_args.word_count = word_count;
-        InterbusV.build_args.out = buf;
-        InterbusV.build_args.cap = sizeof(buf);
-        DBENCH_OP("Interbus.build x16w", 20000, sink += (Interbus.build(interbus_work), InterbusV.n));
+        Interbus.build_args.words = words;
+        Interbus.build_args.word_count = word_count;
+        Interbus.build_args.out = buf;
+        Interbus.build_args.cap = sizeof(buf);
+        DBENCH_OP("Interbus.build x16w", 20000,
+                  sink += (Interbus.build(interbus_work), Interbus.n));
 
         // Disassemble + validate a received frame (loopback + FCS check, then split into words).
         DBENCH_OP("Interbus.parse x16w", 20000, {
             size_t _cnt = 0;
-            InterbusV.parse_args.frame = frame;
-            InterbusV.parse_args.len = frame_len;
-            InterbusV.parse_args.out_words = out;
-            InterbusV.parse_args.max_words = 32;
-            InterbusV.parse_args.out_count = &_cnt;
+            Interbus.parse_args.frame = frame;
+            Interbus.parse_args.len = frame_len;
+            Interbus.parse_args.out_words = out;
+            Interbus.parse_args.max_words = 32;
+            Interbus.parse_args.out_count = &_cnt;
             Interbus.parse(interbus_work);
-            sink += InterbusV.ok ? _cnt : 0;
+            sink += Interbus.ok ? _cnt : 0;
         });
 
         // The raw CRC-16/CCITT FCS over the frame bytes - bulk throughput (MB/s) over the payload.
-        InterbusV.fcs_args.bytes = frame;
-        InterbusV.fcs_args.len = frame_len;
-        DBENCH_BULK("Interbus.fcs", 20000, frame_len, sink16 += (Interbus.fcs(interbus_work), InterbusV.value));
+        Interbus.fcs_args.bytes = frame;
+        Interbus.fcs_args.len = frame_len;
+        DBENCH_BULK("Interbus.fcs", 20000, frame_len, sink16 += (Interbus.fcs(interbus_work), Interbus.value));
 
         (void)sink;
         (void)sink16;

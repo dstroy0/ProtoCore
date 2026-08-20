@@ -69,6 +69,7 @@ typedef struct
     uint16_t distance_cm;                       ///< target distance (cm); meaningless unless detected.
     uint16_t gate_energy[PROTOCORE_HMMD_GATES]; ///< per-gate energy, gate 0..15.
 } HmmdReport;
+
 /** @brief Byte-by-byte report-frame reassembler (fixed buffer, resyncs on noise). */
 typedef struct
 {
@@ -78,6 +79,7 @@ typedef struct
     uint8_t hdr_match;                     ///< header octets matched while syncing
     uint8_t phase;                         ///< 0 sync, 1 length, 2 body
 } HmmdStream;
+
 /** @brief A decoded command-ACK frame. @ref payload points into the caller's frame (not copied). */
 typedef struct
 {
@@ -85,6 +87,7 @@ typedef struct
     const uint8_t *payload; ///< octets following the command word (nullptr if none).
     size_t payload_len;     ///< octets at @ref payload.
 } HmmdAck;
+
 /** @brief What parse_report takes: frame, len, out. */
 typedef struct
 {
@@ -92,11 +95,13 @@ typedef struct
     size_t len;
     HmmdReport *out;
 } HmmdParseReportArgs;
+
 /** @brief What stream_reset takes: s. */
 typedef struct
 {
     HmmdStream *s;
 } HmmdStreamResetArgs;
+
 /** @brief What stream_push takes: s, byte, out. */
 typedef struct
 {
@@ -104,16 +109,19 @@ typedef struct
     uint8_t byte;
     HmmdReport *out;
 } HmmdStreamPushArgs;
+
 /** @brief What present takes: r. */
 typedef struct
 {
     const HmmdReport *r;
 } HmmdPresentArgs;
+
 /** @brief What distance_cm takes: r. */
 typedef struct
 {
     const HmmdReport *r;
 } HmmdDistanceCmArgs;
+
 /** @brief What cmd_build takes: buf, cap, word, value, vlen. */
 typedef struct
 {
@@ -123,36 +131,42 @@ typedef struct
     const uint8_t *value;
     size_t vlen;
 } HmmdCmdBuildArgs;
+
 /** @brief What cmd_open takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } HmmdCmdOpenArgs;
+
 /** @brief What cmd_close takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } HmmdCmdCloseArgs;
+
 /** @brief What cmd_read_firmware takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } HmmdCmdReadFirmwareArgs;
+
 /** @brief What cmd_read_serial takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } HmmdCmdReadSerialArgs;
+
 /** @brief What cmd_read_config takes: buf, cap. */
 typedef struct
 {
     uint8_t *buf;
     size_t cap;
 } HmmdCmdReadConfigArgs;
+
 /** @brief What cmd_read_register takes: buf, cap, value, vlen. */
 typedef struct
 {
@@ -161,6 +175,7 @@ typedef struct
     const uint8_t *value;
     size_t vlen;
 } HmmdCmdReadRegisterArgs;
+
 /** @brief What parse_ack takes: frame, len, out. */
 typedef struct
 {
@@ -168,18 +183,21 @@ typedef struct
     size_t len;
     HmmdAck *out;
 } HmmdParseAckArgs;
+
 /** @brief What ack_matches takes: ack, word. */
 typedef struct
 {
     const HmmdAck *ack;
     uint16_t word;
 } HmmdAckMatchesArgs;
+
 /** @brief What begin takes: rx_pin, tx_pin. */
 typedef struct
 {
     int rx_pin;
     int tx_pin;
 } HmmdBeginArgs;
+
 /**
  * @brief Waveshare HMMD 24 GHz mmWave human micro-motion radar codec (PROTOCORE_ENABLE_HMMD). The HMMD (Waveshare's ...
  *
@@ -250,18 +268,12 @@ typedef struct
     HmmdParseAckArgs parse_ack_args;
     HmmdAckMatchesArgs ack_matches_args;
     HmmdBeginArgs begin_args;
+
     proto_bool ok;
     uint16_t cm;
     size_t n;
     const HmmdReport *report;
-} HmmdVars;
 
-/** @brief The operands and the outcome. */
-extern HmmdVars HmmdV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const parse_report)(uint8_t *restrict work);
     void (*const stream_reset)(uint8_t *restrict work);
     void (*const stream_push)(uint8_t *restrict work);
@@ -281,49 +293,8 @@ typedef struct
     void (*const last)(uint8_t *restrict work);
 } HmmdNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in HmmdV or a region of the borrow at a fixed offset.
-void protocore_hmmd_parse_report(uint8_t *restrict work);
-void protocore_hmmd_stream_reset(uint8_t *restrict work);
-void protocore_hmmd_stream_push(uint8_t *restrict work);
-void protocore_hmmd_present(uint8_t *restrict work);
-void protocore_hmmd_distance_cm(uint8_t *restrict work);
-void protocore_hmmd_cmd_build(uint8_t *restrict work);
-void protocore_hmmd_cmd_open(uint8_t *restrict work);
-void protocore_hmmd_cmd_close(uint8_t *restrict work);
-void protocore_hmmd_cmd_read_firmware(uint8_t *restrict work);
-void protocore_hmmd_cmd_read_serial(uint8_t *restrict work);
-void protocore_hmmd_cmd_read_config(uint8_t *restrict work);
-void protocore_hmmd_cmd_read_register(uint8_t *restrict work);
-void protocore_hmmd_parse_ack(uint8_t *restrict work);
-void protocore_hmmd_ack_matches(uint8_t *restrict work);
-void protocore_hmmd_begin(uint8_t *restrict work);
-void protocore_hmmd_poll(uint8_t *restrict work);
-void protocore_hmmd_last(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Hmmd.parse_report(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const HmmdNs Hmmd __attribute__((unused)) = {
-    .parse_report = protocore_hmmd_parse_report,
-    .stream_reset = protocore_hmmd_stream_reset,
-    .stream_push = protocore_hmmd_stream_push,
-    .present = protocore_hmmd_present,
-    .distance_cm = protocore_hmmd_distance_cm,
-    .cmd_build = protocore_hmmd_cmd_build,
-    .cmd_open = protocore_hmmd_cmd_open,
-    .cmd_close = protocore_hmmd_cmd_close,
-    .cmd_read_firmware = protocore_hmmd_cmd_read_firmware,
-    .cmd_read_serial = protocore_hmmd_cmd_read_serial,
-    .cmd_read_config = protocore_hmmd_cmd_read_config,
-    .cmd_read_register = protocore_hmmd_cmd_read_register,
-    .parse_ack = protocore_hmmd_parse_ack,
-    .ack_matches = protocore_hmmd_ack_matches,
-    .begin = protocore_hmmd_begin,
-    .poll = protocore_hmmd_poll,
-    .last = protocore_hmmd_last,
-};
+/** @brief The one symbol this module exports. */
+extern HmmdNs Hmmd;
 
 /**
  * @brief The PROTOCORE_HMMD_BORROW bytes this module's state lives in.

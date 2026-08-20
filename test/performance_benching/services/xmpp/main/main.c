@@ -17,50 +17,50 @@ static uint8_t xmpp_work[16]; // the borrow an entry takes; Xmpp never reads it
 /** @brief Write the nine characters of the escape fixture through the predefined entities. */
 static size_t xmpp_escape(char *out, size_t cap)
 {
-    XmppV.out.buf = out;
-    XmppV.out.cap = cap;
-    XmppV.text.in = "a<b>&\"c'd";
-    XmppV.text.len = 9;
+    Xmpp.out.buf = out;
+    Xmpp.out.cap = cap;
+    Xmpp.text.in = "a<b>&\"c'd";
+    Xmpp.text.len = 9;
     Xmpp.escape(xmpp_work);
-    return XmppV.n;
+    return Xmpp.n;
 }
 
 /** @brief Build the initial stream header into @p out; the octets written. */
 static size_t xmpp_stream_open(char *out, size_t cap)
 {
-    XmppV.out.buf = out;
-    XmppV.out.cap = cap;
-    XmppV.stream.from = "rig@pc";
-    XmppV.stream.to = "pc.example";
+    Xmpp.out.buf = out;
+    Xmpp.out.cap = cap;
+    Xmpp.stream.from = "rig@pc";
+    Xmpp.stream.to = "pc.example";
     Xmpp.stream_open(xmpp_work);
-    return XmppV.n;
+    return Xmpp.n;
 }
 
 /** @brief Build a chat `<message/>` with a body into @p out; the octets written. */
 static size_t xmpp_message(char *out, size_t cap)
 {
-    XmppV.out.buf = out;
-    XmppV.out.cap = cap;
-    XmppV.common.to = "ops@pc";
-    XmppV.common.from = "rig@pc";
-    XmppV.common.type = "chat";
-    XmppV.child.body = "temp 84C over threshold";
+    Xmpp.out.buf = out;
+    Xmpp.out.cap = cap;
+    Xmpp.common.to = "ops@pc";
+    Xmpp.common.from = "rig@pc";
+    Xmpp.common.type = "chat";
+    Xmpp.child.body = "temp 84C over threshold";
     Xmpp.message(xmpp_work);
-    return XmppV.n;
+    return Xmpp.n;
 }
 
 /** @brief Build a get `<iq/>` carrying a ping extension into @p out; the octets written. */
 static size_t xmpp_iq(char *out, size_t cap)
 {
-    XmppV.out.buf = out;
-    XmppV.out.cap = cap;
-    XmppV.common.to = NULL;
-    XmppV.common.from = NULL;
-    XmppV.common.type = "get";
-    XmppV.common.id = "q1";
-    XmppV.child.extension = "<ping xmlns='urn:xmpp:ping'/>";
+    Xmpp.out.buf = out;
+    Xmpp.out.cap = cap;
+    Xmpp.common.to = NULL;
+    Xmpp.common.from = NULL;
+    Xmpp.common.type = "get";
+    Xmpp.common.id = "q1";
+    Xmpp.child.extension = "<ping xmlns='urn:xmpp:ping'/>";
     Xmpp.iq(xmpp_work);
-    return XmppV.n;
+    return Xmpp.n;
 }
 
 void dbench_run(void)

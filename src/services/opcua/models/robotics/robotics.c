@@ -257,11 +257,11 @@ uint8_t *protocore_robotics_span(void)
     return s_own.span;
 }
 
-void protocore_robotics_bind(uint8_t *restrict work);
+static void robotics_bind(uint8_t *restrict work);
 
-void protocore_robotics_bind(uint8_t *restrict work)
+static void robotics_bind(uint8_t *restrict work)
 {
-    const RoboticsMotionDeviceSystem *mds = RoboticsV.bind_args.mds;
+    const RoboticsMotionDeviceSystem *mds = Robotics.bind_args.mds;
 
     ROBOTICS_CTX(work)->mds = mds;
     build_axis_names(ROBOTICS_CTX(work));
@@ -472,18 +472,17 @@ static int32_t robotics_browse(uint16_t ns, uint32_t id, OpcUaReference *out, ui
     }
 }
 
-void protocore_robotics_install(uint8_t *restrict work)
+static void robotics_install(uint8_t *restrict work)
 {
-    const RoboticsMotionDeviceSystem *mds = RoboticsV.install_args.mds;
+    const RoboticsMotionDeviceSystem *mds = Robotics.install_args.mds;
 
-    RoboticsV.bind_args.mds = mds;
-    protocore_robotics_bind(work);
+    Robotics.bind_args.mds = mds;
+    robotics_bind(work);
     protocore_opcua_set_read_handler(robotics_read);
     protocore_opcua_set_browse_handler(robotics_browse);
 }
 
-/** @brief The operands and the outcome. */
-RoboticsVars RoboticsV;
+RoboticsNs Robotics = {.bind = robotics_bind, .install = robotics_install};
 
 PROTOCORE_END_DECLS
 

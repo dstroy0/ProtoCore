@@ -74,24 +74,28 @@ typedef struct
     uint8_t *buf; ///< the buffer the octets land in
     size_t cap;   ///< how many octets it holds
 } AmqpOutArgs;
+
 /** @brief The octets a parse reads, one frame at their head. */
 typedef struct
 {
     const uint8_t *buf; ///< the first octet of a frame
     size_t len;         ///< how many octets are buffered from there
 } AmqpInArgs;
+
 /** @brief Sec 4.2.3: the type octet and the channel a frame header carries. */
 typedef struct
 {
     uint16_t channel; ///< 0 for frames global to the connection, 1..65535 otherwise
     uint8_t type;     ///< METHOD, HEADER, BODY or HEARTBEAT
 } AmqpFrameArgs;
+
 /** @brief Sec 4.2.3: the payload the size field counts, the frame-end octet excluded. */
 typedef struct
 {
     const uint8_t *data; ///< the payload octets; a parse points this into @ref AmqpInArgs::buf
     size_t len;          ///< how many of them there are
 } AmqpPayloadArgs;
+
 /** @brief Sec 4.2.4: a method payload, `class-id method-id *amqp-field`. */
 typedef struct
 {
@@ -100,6 +104,7 @@ typedef struct
     uint16_t class_id;   ///< the class the method belongs to
     uint16_t method_id;  ///< the method within that class
 } AmqpMethodArgs;
+
 /** @brief Sec 4.2.6.1: a content header payload, less the unused weight field. */
 typedef struct
 {
@@ -109,6 +114,7 @@ typedef struct
     uint16_t class_id;            ///< matches the class-id of the method frame it follows
     uint16_t property_flags;      ///< bit 15 marks the first property, bit 0 marks a further flags field
 } AmqpContentArgs;
+
 /**
  * @brief The AMQP 0-9-1 frame codec.
  *
@@ -145,17 +151,11 @@ typedef struct
     AmqpPayloadArgs payload; ///< the framed octets
     AmqpMethodArgs method;   ///< a method payload's fields
     AmqpContentArgs content; ///< a content header payload's fields
+
     proto_bool ok;
     size_t n;
     size_t consumed;
-} AmqpVars;
 
-/** @brief The operands and the outcome. */
-extern AmqpVars AmqpV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const protocol_header)(uint8_t *restrict work);
     void (*const build_frame)(uint8_t *restrict work);
     void (*const build_method)(uint8_t *restrict work);
@@ -165,29 +165,8 @@ typedef struct
     void (*const parse_method)(uint8_t *restrict work);
 } AmqpNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in AmqpV or a region of the borrow at a fixed offset.
-void protocore_amqp_protocol_header(uint8_t *restrict work);
-void protocore_amqp_build_frame(uint8_t *restrict work);
-void protocore_amqp_build_method(uint8_t *restrict work);
-void protocore_amqp_build_content_header(uint8_t *restrict work);
-void protocore_amqp_build_heartbeat(uint8_t *restrict work);
-void protocore_amqp_parse_frame(uint8_t *restrict work);
-void protocore_amqp_parse_method(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Amqp.protocol_header(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const AmqpNs Amqp __attribute__((unused)) = {
-    .protocol_header = protocore_amqp_protocol_header,
-    .build_frame = protocore_amqp_build_frame,
-    .build_method = protocore_amqp_build_method,
-    .build_content_header = protocore_amqp_build_content_header,
-    .build_heartbeat = protocore_amqp_build_heartbeat,
-    .parse_frame = protocore_amqp_parse_frame,
-    .parse_method = protocore_amqp_parse_method,
-};
+/** @brief The one symbol this module exports. */
+extern AmqpNs Amqp;
 
 PROTOCORE_END_DECLS
 

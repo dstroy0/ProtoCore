@@ -19,12 +19,12 @@ void dbench_run(void)
         DBENCH_BANNER("sse");
         volatile int sink = 0;
         static char buf[256];
-        SseV.out.buf = buf;
-        SseV.out.cap = sizeof(buf);
-        SseV.event_args.data = "{\"temp\":21.4,\"rh\":48}";
-        SseV.event_args.event = "telemetry";
-        SseV.event_args.event_id = "42";
-        DBENCH_OP("Sse.format (data+event+id)", 200000, Sse.format(protocore_sse_span()); sink += SseV.n);
+        Sse.out.buf = buf;
+        Sse.out.cap = sizeof(buf);
+        Sse.event_args.data = "{\"temp\":21.4,\"rh\":48}";
+        Sse.event_args.event = "telemetry";
+        Sse.event_args.event_id = "42";
+        DBENCH_OP("Sse.format (data+event+id)", 200000, Sse.format(protocore_sse_span()); sink += Sse.n);
         (void)sink;
         DBENCH_DONE();
     }

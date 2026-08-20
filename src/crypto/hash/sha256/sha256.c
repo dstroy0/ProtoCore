@@ -370,45 +370,44 @@ static void sha256_finish(uint8_t *restrict work, uint8_t digest[PROTOCORE_SHA25
 
 // --- the entries -----------------------------------------------------------
 
-void protocore_sha256_init(uint8_t *restrict work)
+static void sha256_init(uint8_t *restrict work)
 {
     sha256_state_init(work);
-    Sha256V.ok = PROTO_TRUE;
+    Sha256.ok = PROTO_TRUE;
 }
 
-void protocore_sha256_update(uint8_t *restrict work)
+static void sha256_update(uint8_t *restrict work)
 {
-    sha256_absorb(work, Sha256V.update_args.data, Sha256V.update_args.len);
-    Sha256V.ok = PROTO_TRUE;
+    sha256_absorb(work, Sha256.update_args.data, Sha256.update_args.len);
+    Sha256.ok = PROTO_TRUE;
 }
 
-void protocore_sha256_final(uint8_t *restrict work)
+static void sha256_final(uint8_t *restrict work)
 {
-    if (!Sha256V.final_args.out)
+    if (!Sha256.final_args.out)
     {
-        Sha256V.ok = PROTO_FALSE;
+        Sha256.ok = PROTO_FALSE;
         return;
     }
-    sha256_finish(work, Sha256V.final_args.out);
-    Sha256V.ok = PROTO_TRUE;
+    sha256_finish(work, Sha256.final_args.out);
+    Sha256.ok = PROTO_TRUE;
 }
 
 // One-shot over the members already set: init, absorb, finish.
-void protocore_sha256_hash(uint8_t *restrict work)
+static void sha256_hash(uint8_t *restrict work)
 {
-    Sha256V.ok = PROTO_FALSE;
-    if (!Sha256V.hash_args.out)
+    Sha256.ok = PROTO_FALSE;
+    if (!Sha256.hash_args.out)
     {
         return;
     }
     sha256_state_init(work);
-    sha256_absorb(work, Sha256V.hash_args.data, Sha256V.hash_args.len);
-    sha256_finish(work, Sha256V.hash_args.out);
-    Sha256V.ok = PROTO_TRUE;
+    sha256_absorb(work, Sha256.hash_args.data, Sha256.hash_args.len);
+    sha256_finish(work, Sha256.hash_args.out);
+    Sha256.ok = PROTO_TRUE;
 }
 
-/** @brief The operands and the outcome. */
-Sha256Vars Sha256V;
+Sha256Ns Sha256 = {.init = sha256_init, .update = sha256_update, .final = sha256_final, .hash = sha256_hash};
 
 PROTOCORE_END_DECLS
 

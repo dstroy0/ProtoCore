@@ -36,45 +36,45 @@ void test_ieee754_binary32_rss_encoding(void)
 {
     // 1 = 1.0 * 2^0 -> exponent field 127 = 0x7F, significand 0
     //     0 01111111 000... = 0x3F800000
-    RadioSniffV.i2f32_args.dbm = 1;
+    RadioSniff.i2f32_args.dbm = 1;
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0x3F800000u, RadioSniffV.u32);
-    RadioSniffV.i2f32_args.dbm = -1;
+    TEST_ASSERT_EQUAL_HEX32(0x3F800000u, RadioSniff.u32);
+    RadioSniff.i2f32_args.dbm = -1;
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0xBF800000u, RadioSniffV.u32); // the same, sign set
+    TEST_ASSERT_EQUAL_HEX32(0xBF800000u, RadioSniff.u32); // the same, sign set
 
     // 2 = 1.0 * 2^1 -> exponent field 128 = 0x80
     //     0 10000000 000... = 0x40000000
-    RadioSniffV.i2f32_args.dbm = 2;
+    RadioSniff.i2f32_args.dbm = 2;
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0x40000000u, RadioSniffV.u32);
+    TEST_ASSERT_EQUAL_HEX32(0x40000000u, RadioSniff.u32);
 
     // -40 dBm, a typical near-field reading:
     //     40 = 0b101000 = 1.01 * 2^5 -> exponent field 127 + 5 = 132 = 0x84
     //     significand 0.01b -> 0100 0000 0000 0000 0000 000 = 0x200000
     //     1 10000100 01000000000000000000000
     //       = 0x80000000 | (132 << 23) | 0x200000 = 0x80000000 | 0x42000000 | 0x00200000
-    RadioSniffV.i2f32_args.dbm = -40;
+    RadioSniff.i2f32_args.dbm = -40;
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0xC2200000u, RadioSniffV.u32);
+    TEST_ASSERT_EQUAL_HEX32(0xC2200000u, RadioSniff.u32);
 
     // -128 = -(1.0 * 2^7) -> exponent field 134 = 0x86, significand 0
     //        0x80000000 | (134 << 23) = 0x80000000 | 0x43000000
-    RadioSniffV.i2f32_args.dbm = -128;
+    RadioSniff.i2f32_args.dbm = -128;
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0xC3000000u, RadioSniffV.u32);
+    TEST_ASSERT_EQUAL_HEX32(0xC3000000u, RadioSniff.u32);
 
     // 100 = 0b1100100 = 1.100100 * 2^6 -> exponent field 133 = 0x85
     //       significand 100100 followed by zeros = 0x480000
     //       (133 << 23) | 0x480000 = 0x42800000 | 0x00480000
-    RadioSniffV.i2f32_args.dbm = 100;
+    RadioSniff.i2f32_args.dbm = 100;
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0x42C80000u, RadioSniffV.u32);
+    TEST_ASSERT_EQUAL_HEX32(0x42C80000u, RadioSniff.u32);
 
     // Zero has no leading 1 to make implicit; binary32 spells it as an all-zero word.
-    RadioSniffV.i2f32_args.dbm = 0;
+    RadioSniff.i2f32_args.dbm = 0;
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0x00000000u, RadioSniffV.u32);
+    TEST_ASSERT_EQUAL_HEX32(0x00000000u, RadioSniff.u32);
 }
 
 // A magnitude wider than the 23-bit significand keeps its exponent and drops the low bits, which
@@ -83,20 +83,20 @@ void test_ieee754_binary32_wide_magnitude(void)
 {
     // 2^24 = 1.0 * 2^24 -> exponent field 151 = 0x97, significand 0
     //        151 << 23 = 0x4B800000
-    RadioSniffV.i2f32_args.dbm = 16777216;
+    RadioSniff.i2f32_args.dbm = 16777216;
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0x4B800000u, RadioSniffV.u32);
+    TEST_ASSERT_EQUAL_HEX32(0x4B800000u, RadioSniff.u32);
 
     // 2^30 -> exponent field 157 = 0x9D, 157 << 23 = 0x4E800000
-    RadioSniffV.i2f32_args.dbm = 1073741824;
+    RadioSniff.i2f32_args.dbm = 1073741824;
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0x4E800000u, RadioSniffV.u32);
+    TEST_ASSERT_EQUAL_HEX32(0x4E800000u, RadioSniff.u32);
 
     // -2^31, the most negative int32: magnitude 2^31 -> exponent field 158 = 0x9E,
     // 0x80000000 | (158 << 23) = 0x80000000 | 0x4F000000
-    RadioSniffV.i2f32_args.dbm = (int32_t)(-2147483647 - 1);
+    RadioSniff.i2f32_args.dbm = (int32_t)(-2147483647 - 1);
     RadioSniff.i2f32(radio_sniff_work);
-    TEST_ASSERT_EQUAL_HEX32(0xCF000000u, RadioSniffV.u32);
+    TEST_ASSERT_EQUAL_HEX32(0xCF000000u, RadioSniff.u32);
 }
 
 // The capture file declares its frames are TAP-framed 802.15.4: LINKTYPE_IEEE802_15_4_TAP is 283.
@@ -104,10 +104,10 @@ void test_pcap_global_header_declares_the_tap_link_type(void)
 {
     uint8_t out[32];
     memset(out, 0xAA, sizeof(out));
-    RadioSniffV.global_header_args.out = out;
-    RadioSniffV.global_header_args.cap = sizeof(out);
+    RadioSniff.global_header_args.out = out;
+    RadioSniff.global_header_args.cap = sizeof(out);
     RadioSniff.global_header(radio_sniff_work);
-    TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_GLOBAL_HDR_LEN, RadioSniffV.n);
+    TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_GLOBAL_HDR_LEN, RadioSniff.n);
 
     static const uint8_t WANT[24] = {
         0xd4, 0xc3, 0xb2, 0xa1, // magic 0xa1b2c3d4: microsecond timestamps, writer byte order
@@ -120,14 +120,14 @@ void test_pcap_global_header_declares_the_tap_link_type(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, out, sizeof(WANT));
     TEST_ASSERT_EQUAL_INT(283, PROTOCORE_DLT_IEEE802_15_4_TAP);
 
-    RadioSniffV.global_header_args.out = out;
-    RadioSniffV.global_header_args.cap = PROTOCORE_PCAP_GLOBAL_HDR_LEN - 1;
+    RadioSniff.global_header_args.out = out;
+    RadioSniff.global_header_args.cap = PROTOCORE_PCAP_GLOBAL_HDR_LEN - 1;
     RadioSniff.global_header(radio_sniff_work);
-    TEST_ASSERT_EQUAL_size_t(0, RadioSniffV.n);
-    RadioSniffV.global_header_args.out = NULL;
-    RadioSniffV.global_header_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_size_t(0, RadioSniff.n);
+    RadioSniff.global_header_args.out = NULL;
+    RadioSniff.global_header_args.cap = sizeof(out);
     RadioSniff.global_header(radio_sniff_work);
-    TEST_ASSERT_EQUAL_size_t(0, RadioSniffV.n);
+    TEST_ASSERT_EQUAL_size_t(0, RadioSniff.n);
 }
 
 // One capture record, octet for octet. TAP section 2.2.1: version, one padding octet, then the
@@ -141,16 +141,16 @@ void test_tap_record_layout(void)
     uint8_t out[64];
     memset(out, 0xEE, sizeof(out));
 
-    RadioSniffV.tap_record_args.out = out;
-    RadioSniffV.tap_record_args.cap = sizeof(out);
-    RadioSniffV.tap_record_args.frame = FRAME;
-    RadioSniffV.tap_record_args.flen = sizeof(FRAME);
-    RadioSniffV.tap_record_args.rssi_dbm = -40;
-    RadioSniffV.tap_record_args.channel = 15;
-    RadioSniffV.tap_record_args.ts_sec = 0x01020304u;
-    RadioSniffV.tap_record_args.ts_usec = 999999u;
+    RadioSniff.tap_record_args.out = out;
+    RadioSniff.tap_record_args.cap = sizeof(out);
+    RadioSniff.tap_record_args.frame = FRAME;
+    RadioSniff.tap_record_args.flen = sizeof(FRAME);
+    RadioSniff.tap_record_args.rssi_dbm = -40;
+    RadioSniff.tap_record_args.channel = 15;
+    RadioSniff.tap_record_args.ts_sec = 0x01020304u;
+    RadioSniff.tap_record_args.ts_usec = 999999u;
     RadioSniff.tap_record(radio_sniff_work);
-    const size_t n = RadioSniffV.n;
+    const size_t n = RadioSniff.n;
     TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_REC_HDR_LEN + RADIO_SNIFF_TAP_LEN + sizeof(FRAME), n);
     TEST_ASSERT_EQUAL_INT(20, RADIO_SNIFF_TAP_LEN);
 
@@ -216,16 +216,16 @@ void test_tap_record_lengths_track_the_frame(void)
 
     for (size_t flen = 1; flen <= sizeof(frame); flen *= 2)
     {
-        RadioSniffV.tap_record_args.out = out;
-        RadioSniffV.tap_record_args.cap = sizeof(out);
-        RadioSniffV.tap_record_args.frame = frame;
-        RadioSniffV.tap_record_args.flen = flen;
-        RadioSniffV.tap_record_args.rssi_dbm = -70;
-        RadioSniffV.tap_record_args.channel = 26;
-        RadioSniffV.tap_record_args.ts_sec = 7;
-        RadioSniffV.tap_record_args.ts_usec = 8;
+        RadioSniff.tap_record_args.out = out;
+        RadioSniff.tap_record_args.cap = sizeof(out);
+        RadioSniff.tap_record_args.frame = frame;
+        RadioSniff.tap_record_args.flen = flen;
+        RadioSniff.tap_record_args.rssi_dbm = -70;
+        RadioSniff.tap_record_args.channel = 26;
+        RadioSniff.tap_record_args.ts_sec = 7;
+        RadioSniff.tap_record_args.ts_usec = 8;
         RadioSniff.tap_record(radio_sniff_work);
-        const size_t n = RadioSniffV.n;
+        const size_t n = RadioSniff.n;
         TEST_ASSERT_EQUAL_size_t(PROTOCORE_PCAP_REC_HDR_LEN + RADIO_SNIFF_TAP_LEN + flen, n);
         // caplen is a little-endian 32-bit field at offset 8 of the record header.
         const uint32_t caplen =
@@ -248,31 +248,31 @@ void test_tap_channel_assignment_is_sixteen_bits(void)
     const size_t base = PROTOCORE_PCAP_REC_HDR_LEN + 16; // record header, TAP header, RSS TLV, TLV header
 
     // Channel 26, the top of the 2.4 GHz O-QPSK page 0 range.
-    RadioSniffV.tap_record_args.out = out;
-    RadioSniffV.tap_record_args.cap = sizeof(out);
-    RadioSniffV.tap_record_args.frame = FRAME;
-    RadioSniffV.tap_record_args.flen = 1;
-    RadioSniffV.tap_record_args.rssi_dbm = -55;
-    RadioSniffV.tap_record_args.channel = 26;
-    RadioSniffV.tap_record_args.ts_sec = 0;
-    RadioSniffV.tap_record_args.ts_usec = 0;
+    RadioSniff.tap_record_args.out = out;
+    RadioSniff.tap_record_args.cap = sizeof(out);
+    RadioSniff.tap_record_args.frame = FRAME;
+    RadioSniff.tap_record_args.flen = 1;
+    RadioSniff.tap_record_args.rssi_dbm = -55;
+    RadioSniff.tap_record_args.channel = 26;
+    RadioSniff.tap_record_args.ts_sec = 0;
+    RadioSniff.tap_record_args.ts_usec = 0;
     RadioSniff.tap_record(radio_sniff_work);
-    TEST_ASSERT_TRUE(RadioSniffV.n > 0);
+    TEST_ASSERT_TRUE(RadioSniff.n > 0);
     TEST_ASSERT_EQUAL_HEX8(26, out[base]);
     TEST_ASSERT_EQUAL_HEX8(0, out[base + 1]);
     TEST_ASSERT_EQUAL_HEX8(0, out[base + 2]); // channel page 0
 
     // A channel number past 255 must occupy the high octet rather than wrapping.
-    RadioSniffV.tap_record_args.out = out;
-    RadioSniffV.tap_record_args.cap = sizeof(out);
-    RadioSniffV.tap_record_args.frame = FRAME;
-    RadioSniffV.tap_record_args.flen = 1;
-    RadioSniffV.tap_record_args.rssi_dbm = -55;
-    RadioSniffV.tap_record_args.channel = 0x0123;
-    RadioSniffV.tap_record_args.ts_sec = 0;
-    RadioSniffV.tap_record_args.ts_usec = 0;
+    RadioSniff.tap_record_args.out = out;
+    RadioSniff.tap_record_args.cap = sizeof(out);
+    RadioSniff.tap_record_args.frame = FRAME;
+    RadioSniff.tap_record_args.flen = 1;
+    RadioSniff.tap_record_args.rssi_dbm = -55;
+    RadioSniff.tap_record_args.channel = 0x0123;
+    RadioSniff.tap_record_args.ts_sec = 0;
+    RadioSniff.tap_record_args.ts_usec = 0;
     RadioSniff.tap_record(radio_sniff_work);
-    TEST_ASSERT_TRUE(RadioSniffV.n > 0);
+    TEST_ASSERT_TRUE(RadioSniff.n > 0);
     TEST_ASSERT_EQUAL_HEX8(0x23, out[base]);
     TEST_ASSERT_EQUAL_HEX8(0x01, out[base + 1]);
 }
@@ -285,54 +285,54 @@ void test_tap_record_fails_closed(void)
     uint8_t out[64];
     const size_t need = PROTOCORE_PCAP_REC_HDR_LEN + RADIO_SNIFF_TAP_LEN + sizeof(FRAME);
 
-    RadioSniffV.tap_record_args.out = out;
-    RadioSniffV.tap_record_args.cap = need;
-    RadioSniffV.tap_record_args.frame = FRAME;
-    RadioSniffV.tap_record_args.flen = sizeof(FRAME);
-    RadioSniffV.tap_record_args.rssi_dbm = -40;
-    RadioSniffV.tap_record_args.channel = 11;
-    RadioSniffV.tap_record_args.ts_sec = 1;
-    RadioSniffV.tap_record_args.ts_usec = 2;
+    RadioSniff.tap_record_args.out = out;
+    RadioSniff.tap_record_args.cap = need;
+    RadioSniff.tap_record_args.frame = FRAME;
+    RadioSniff.tap_record_args.flen = sizeof(FRAME);
+    RadioSniff.tap_record_args.rssi_dbm = -40;
+    RadioSniff.tap_record_args.channel = 11;
+    RadioSniff.tap_record_args.ts_sec = 1;
+    RadioSniff.tap_record_args.ts_usec = 2;
     RadioSniff.tap_record(radio_sniff_work);
-    TEST_ASSERT_EQUAL_size_t(need, RadioSniffV.n);
-    RadioSniffV.tap_record_args.out = out;
-    RadioSniffV.tap_record_args.cap = need - 1;
-    RadioSniffV.tap_record_args.frame = FRAME;
-    RadioSniffV.tap_record_args.flen = sizeof(FRAME);
-    RadioSniffV.tap_record_args.rssi_dbm = -40;
-    RadioSniffV.tap_record_args.channel = 11;
-    RadioSniffV.tap_record_args.ts_sec = 1;
-    RadioSniffV.tap_record_args.ts_usec = 2;
+    TEST_ASSERT_EQUAL_size_t(need, RadioSniff.n);
+    RadioSniff.tap_record_args.out = out;
+    RadioSniff.tap_record_args.cap = need - 1;
+    RadioSniff.tap_record_args.frame = FRAME;
+    RadioSniff.tap_record_args.flen = sizeof(FRAME);
+    RadioSniff.tap_record_args.rssi_dbm = -40;
+    RadioSniff.tap_record_args.channel = 11;
+    RadioSniff.tap_record_args.ts_sec = 1;
+    RadioSniff.tap_record_args.ts_usec = 2;
     RadioSniff.tap_record(radio_sniff_work);
-    TEST_ASSERT_EQUAL_size_t(0, RadioSniffV.n);
-    RadioSniffV.tap_record_args.out = NULL;
-    RadioSniffV.tap_record_args.cap = sizeof(out);
-    RadioSniffV.tap_record_args.frame = FRAME;
-    RadioSniffV.tap_record_args.flen = sizeof(FRAME);
-    RadioSniffV.tap_record_args.rssi_dbm = -40;
-    RadioSniffV.tap_record_args.channel = 11;
-    RadioSniffV.tap_record_args.ts_sec = 1;
-    RadioSniffV.tap_record_args.ts_usec = 2;
+    TEST_ASSERT_EQUAL_size_t(0, RadioSniff.n);
+    RadioSniff.tap_record_args.out = NULL;
+    RadioSniff.tap_record_args.cap = sizeof(out);
+    RadioSniff.tap_record_args.frame = FRAME;
+    RadioSniff.tap_record_args.flen = sizeof(FRAME);
+    RadioSniff.tap_record_args.rssi_dbm = -40;
+    RadioSniff.tap_record_args.channel = 11;
+    RadioSniff.tap_record_args.ts_sec = 1;
+    RadioSniff.tap_record_args.ts_usec = 2;
     RadioSniff.tap_record(radio_sniff_work);
-    TEST_ASSERT_EQUAL_size_t(0, RadioSniffV.n);
-    RadioSniffV.tap_record_args.out = out;
-    RadioSniffV.tap_record_args.cap = sizeof(out);
-    RadioSniffV.tap_record_args.frame = NULL;
-    RadioSniffV.tap_record_args.flen = sizeof(FRAME);
-    RadioSniffV.tap_record_args.rssi_dbm = -40;
-    RadioSniffV.tap_record_args.channel = 11;
-    RadioSniffV.tap_record_args.ts_sec = 1;
-    RadioSniffV.tap_record_args.ts_usec = 2;
+    TEST_ASSERT_EQUAL_size_t(0, RadioSniff.n);
+    RadioSniff.tap_record_args.out = out;
+    RadioSniff.tap_record_args.cap = sizeof(out);
+    RadioSniff.tap_record_args.frame = NULL;
+    RadioSniff.tap_record_args.flen = sizeof(FRAME);
+    RadioSniff.tap_record_args.rssi_dbm = -40;
+    RadioSniff.tap_record_args.channel = 11;
+    RadioSniff.tap_record_args.ts_sec = 1;
+    RadioSniff.tap_record_args.ts_usec = 2;
     RadioSniff.tap_record(radio_sniff_work);
-    TEST_ASSERT_EQUAL_size_t(0, RadioSniffV.n);
-    RadioSniffV.tap_record_args.out = out;
-    RadioSniffV.tap_record_args.cap = sizeof(out);
-    RadioSniffV.tap_record_args.frame = FRAME;
-    RadioSniffV.tap_record_args.flen = 0;
-    RadioSniffV.tap_record_args.rssi_dbm = -40;
-    RadioSniffV.tap_record_args.channel = 11;
-    RadioSniffV.tap_record_args.ts_sec = 1;
-    RadioSniffV.tap_record_args.ts_usec = 2;
+    TEST_ASSERT_EQUAL_size_t(0, RadioSniff.n);
+    RadioSniff.tap_record_args.out = out;
+    RadioSniff.tap_record_args.cap = sizeof(out);
+    RadioSniff.tap_record_args.frame = FRAME;
+    RadioSniff.tap_record_args.flen = 0;
+    RadioSniff.tap_record_args.rssi_dbm = -40;
+    RadioSniff.tap_record_args.channel = 11;
+    RadioSniff.tap_record_args.ts_sec = 1;
+    RadioSniff.tap_record_args.ts_usec = 2;
     RadioSniff.tap_record(radio_sniff_work);
-    TEST_ASSERT_EQUAL_size_t(0, RadioSniffV.n);
+    TEST_ASSERT_EQUAL_size_t(0, RadioSniff.n);
 }

@@ -144,7 +144,7 @@ static void conn_release(uint8_t slot)
 #if PROTOCORE_ENABLE_FILE_SERVING
     if (file_send[slot].active)
     {
-        FsV.io.handle = file_send[slot].fh; // the source outlived the connection reading it
+        Fs.io.handle = file_send[slot].fh; // the source outlived the connection reading it
         Fs.close(protocore_filesystem_span());
         file_send[slot].active = PROTO_FALSE;
     }
@@ -155,17 +155,17 @@ static void conn_release(uint8_t slot)
     // whole pool, so the walk is bounded by the pool and not by the arrival rate.
     for (uint8_t i = 0; i < MAX_SSH_CONNS; i++)
     {
-        SshNetworkV.ssh_slot = i;
-        SshNetworkV.conn_slot = slot;
+        SshNetwork.ssh_slot = i;
+        SshNetwork.conn_slot = slot;
         SshNetwork.owns(protocore_ssh_network_span());
-        if (!SshNetworkV.ok)
+        if (!SshNetwork.ok)
         {
             continue;
         }
 #if PROTOCORE_ENABLE_SSH_SCP
         if (scp_conns[i].active)
         {
-            FsV.io.handle = scp_conns[i].fh; // the destination outlived the transfer writing it
+            Fs.io.handle = scp_conns[i].fh; // the destination outlived the transfer writing it
             Fs.close(protocore_filesystem_span());
             scp_conns[i].fh = -1;
             scp_conns[i].active = PROTO_FALSE;
@@ -175,7 +175,7 @@ static void conn_release(uint8_t slot)
         while (sftp_sess[i].open_mask != 0)
         {
             const int h = __builtin_ctz(sftp_sess[i].open_mask);
-            FsV.io.handle = sftp_sess[i].handles[h].fh;
+            Fs.io.handle = sftp_sess[i].handles[h].fh;
             Fs.close(protocore_filesystem_span());
             sftp_sess[i].open_mask &= ~(1u << h);
         }
@@ -197,9 +197,9 @@ static inline void dispatch_event(const TcpEvt *evt)
 
     // HttpRoute to the slot's protocol handler. PROTO_NONE and any unregistered
     // protocol have no handler, so the event is dropped.
-    ConnPoolV.slot = evt->slot_id;
+    ConnPool.slot = evt->slot_id;
     ConnPool.proto_of(protocore_conn_pool_span());
-    Protocols.proto = ConnPoolV.proto;
+    Protocols.proto = ConnPool.proto;
     proto_get(protocore_session_span());
     const ProtoHandler *h = Protocols.handler;
     if (!h)
@@ -261,15 +261,15 @@ static void server_tick(uint8_t *restrict work)
      * http_reset() call for that event is then a clean no-op. Each worker
      * sweeps only the slots it owns.
      */
-    ConnPoolV.life.worker_id = SessionV.worker_id;
-    ConnPoolV.life.conn_timeout_ms = SessionV.conn_timeout_ms;
+    ConnPool.life.worker_id = Session.worker_id;
+    ConnPool.life.conn_timeout_ms = Session.conn_timeout_ms;
     ConnPool.check_timeouts(protocore_conn_pool_span());
 
 #if PROTOCORE_NEED_UDP
     // One set of datagram rings serves the whole server rather than one per worker, so worker 0
     // drains them: the receive side runs each bound port's handler, the send side moves queued
     // frames to the wire.
-    if (SessionV.worker_id == 0)
+    if (Session.worker_id == 0)
     {
         UdpListener.poll(protocore_udp_listener_span());
     }
@@ -277,14 +277,14 @@ static void server_tick(uint8_t *restrict work)
 
 #if PROTOCORE_WORKER_COUNT > 1
     // Drain only this worker's queue: it is the sole consumer of its slots.
-    TcpListenerV.q.worker_id = SessionV.worker_id;
+    TcpListener.q.worker_id = Session.worker_id;
     TcpListener.worker_queue(protocore_tcp_listener_span());
-    if (!TcpListenerV.queue)
+    if (!TcpListener.queue)
     {
         return;
     }
     TcpEvt evt;
-    while (protocore_platform_queue_recv(TcpListenerV.queue, &evt, 0) == PROTOCORE_PLATFORM_OK)
+    while (protocore_platform_queue_recv(TcpListener.queue, &evt, 0) == PROTOCORE_PLATFORM_OK)
     {
         dispatch_event(&evt);
     }
@@ -292,15 +292,15 @@ static void server_tick(uint8_t *restrict work)
     // Single worker owns all slots; drain every listener queue.
     for (uint8_t li = 0; li < MAX_LISTENERS; li++)
     {
-        TcpListenerV.idx = li;
+        TcpListener.idx = li;
         TcpListener.listener_queue(protocore_tcp_listener_span());
-        if (!TcpListenerV.queue)
+        if (!TcpListener.queue)
         {
             continue;
         }
 
         TcpEvt evt;
-        while (protocore_platform_queue_recv(TcpListenerV.queue, &evt, 0) == PROTOCORE_PLATFORM_OK)
+        while (protocore_platform_queue_recv(TcpListener.queue, &evt, 0) == PROTOCORE_PLATFORM_OK)
         {
             dispatch_event(&evt);
         }
@@ -312,5 +312,4 @@ static void server_tick(uint8_t *restrict work)
 ProtoRegistryNs Protocols = {.register_builtins = proto_builtins, .add = proto_register, .get = proto_get};
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-SessionVars SessionV;
+SessionNs Session = {.tick = server_tick, .proto = &Protocols, .workers = &Workers};

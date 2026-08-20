@@ -52,18 +52,18 @@ uint8_t *protocore_pca9685_span(void)
     return s_own.span;
 }
 
-void protocore_pca9685_channel_reg(uint8_t *restrict work);
-void protocore_pca9685_prescale(uint8_t *restrict work);
-void protocore_pca9685_set_pwm_bytes(uint8_t *restrict work);
+static void pca9685_channel_reg(uint8_t *restrict work);
+static void pca9685_prescale(uint8_t *restrict work);
+static void pca9685_set_pwm_bytes(uint8_t *restrict work);
 
-void protocore_pca9685_prescale(uint8_t *restrict work)
+static void pca9685_prescale(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t freq_hz = Pca9685V.prescale_args.freq_hz;
+    uint32_t freq_hz = Pca9685.prescale_args.freq_hz;
 
     if (freq_hz == 0)
     {
-        Pca9685V.value = PCA9685_PRESCALE_MAX;
+        Pca9685.value = PCA9685_PRESCALE_MAX;
         return;
     }
     uint32_t denom = 4096u * freq_hz;
@@ -77,56 +77,56 @@ void protocore_pca9685_prescale(uint8_t *restrict work)
     {
         pre = PCA9685_PRESCALE_MAX;
     }
-    Pca9685V.value = (uint8_t)pre;
+    Pca9685.value = (uint8_t)pre;
 }
 
-void protocore_pca9685_channel_reg(uint8_t *restrict work)
+static void pca9685_channel_reg(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t channel = Pca9685V.channel_reg_args.channel;
+    uint8_t channel = Pca9685.channel_reg_args.channel;
 
     if (channel >= PCA9685_CHANNELS)
     {
-        Pca9685V.value = 0;
+        Pca9685.value = 0;
         return;
     }
-    Pca9685V.value = (uint8_t)(PCA9685_REG_LED0_ON_L + 4 * channel);
+    Pca9685.value = (uint8_t)(PCA9685_REG_LED0_ON_L + 4 * channel);
 }
 
-void protocore_pca9685_us_to_count(uint8_t *restrict work)
+static void pca9685_us_to_count(uint8_t *restrict work)
 {
     (void)work;
-    uint32_t microseconds = Pca9685V.us_to_count_args.microseconds;
-    uint32_t freq_hz = Pca9685V.us_to_count_args.freq_hz;
+    uint32_t microseconds = Pca9685.us_to_count_args.microseconds;
+    uint32_t freq_hz = Pca9685.us_to_count_args.freq_hz;
 
     // count = round(us * 4096 * freq / 1e6); 64-bit to avoid overflow at high pulse widths.
     uint64_t num = (uint64_t)microseconds * 4096u * freq_hz;
     uint32_t count = (uint32_t)((num + 500000u) / 1000000u);
-    Pca9685V.count = count > PCA9685_COUNT_MAX ? (uint16_t)PCA9685_COUNT_MAX : (uint16_t)count;
+    Pca9685.count = count > PCA9685_COUNT_MAX ? (uint16_t)PCA9685_COUNT_MAX : (uint16_t)count;
 }
 
-void protocore_pca9685_set_pwm_bytes(uint8_t *restrict work)
+static void pca9685_set_pwm_bytes(uint8_t *restrict work)
 {
-    uint8_t *buf = Pca9685V.set_pwm_bytes_args.buf;
-    size_t cap = Pca9685V.set_pwm_bytes_args.cap;
-    uint8_t channel = Pca9685V.set_pwm_bytes_args.channel;
-    uint16_t on = Pca9685V.set_pwm_bytes_args.on;
-    uint16_t off = Pca9685V.set_pwm_bytes_args.off;
+    uint8_t *buf = Pca9685.set_pwm_bytes_args.buf;
+    size_t cap = Pca9685.set_pwm_bytes_args.cap;
+    uint8_t channel = Pca9685.set_pwm_bytes_args.channel;
+    uint16_t on = Pca9685.set_pwm_bytes_args.on;
+    uint16_t off = Pca9685.set_pwm_bytes_args.off;
 
     if (!buf || cap < 5 || channel >= PCA9685_CHANNELS)
     {
-        Pca9685V.n = 0;
+        Pca9685.n = 0;
         return;
     }
-    Pca9685V.channel_reg_args.channel = channel;
-    protocore_pca9685_channel_reg(work);
-    buf[0] = Pca9685V.value;
+    Pca9685.channel_reg_args.channel = channel;
+    pca9685_channel_reg(work);
+    buf[0] = Pca9685.value;
     // Bit 4 of each _H register is the full-ON / full-OFF flag (count bit 12), so keep bits 4:0.
     buf[1] = (uint8_t)(on & 0xFF);
     buf[2] = (uint8_t)((on >> 8) & 0x1F);
     buf[3] = (uint8_t)(off & 0xFF);
     buf[4] = (uint8_t)((off >> 8) & 0x1F);
-    Pca9685V.n = 5;
+    Pca9685.n = 5;
 }
 
 // ---------------------------------------------------------------------------
@@ -184,64 +184,69 @@ static proto_bool wr(uint8_t *restrict work, uint8_t reg, uint8_t val)
     return protocore_i2c_write(dev_addr(work), PCA9685_CTX(work)->frame, 2);
 }
 
-void protocore_pca9685_begin(uint8_t *restrict work)
+static void pca9685_begin(uint8_t *restrict work)
 {
-    uint8_t addr = Pca9685V.begin_args.addr;
-    uint32_t freq_hz = Pca9685V.begin_args.freq_hz;
+    uint8_t addr = Pca9685.begin_args.addr;
+    uint32_t freq_hz = Pca9685.begin_args.freq_hz;
 
     PCA9685_CTX(work)->addr = addr ? addr : (uint8_t)PROTOCORE_PCA9685_I2C_ADDR;
     PCA9685_CTX(work)->freq = freq_hz ? freq_hz : (uint32_t)PROTOCORE_PCA9685_FREQ;
     protocore_i2c_begin();
     proto_bool ok = PROTO_TRUE;
     ok &= wr(work, PCA9685_REG_MODE1, 0x10); // SLEEP (required before changing PRESCALE)
-    Pca9685V.prescale_args.freq_hz = dev_freq(work);
-    protocore_pca9685_prescale(work);
-    ok &= wr(work, PCA9685_REG_PRESCALE, Pca9685V.value);
+    Pca9685.prescale_args.freq_hz = dev_freq(work);
+    pca9685_prescale(work);
+    ok &= wr(work, PCA9685_REG_PRESCALE, Pca9685.value);
     ok &= wr(work, PCA9685_REG_MODE1, 0x20); // wake, auto-increment (AI)
     protocore_delay_us(500);                 // the oscillator settles before RESTART
     ok &= wr(work, PCA9685_REG_MODE1, 0xA0); // AI + RESTART
     ok &= wr(work, PCA9685_REG_MODE2, 0x04); // OUTDRV: totem-pole outputs
-    Pca9685V.ok = ok;
+    Pca9685.ok = ok;
 }
 
-void protocore_pca9685_set_pwm(uint8_t *restrict work)
+static void pca9685_set_pwm(uint8_t *restrict work)
 {
-    uint8_t channel = Pca9685V.set_pwm_args.channel;
-    uint16_t on = Pca9685V.set_pwm_args.on;
-    uint16_t off = Pca9685V.set_pwm_args.off;
+    uint8_t channel = Pca9685.set_pwm_args.channel;
+    uint16_t on = Pca9685.set_pwm_args.on;
+    uint16_t off = Pca9685.set_pwm_args.off;
 
-    Pca9685V.set_pwm_bytes_args.buf = PCA9685_CTX(work)->frame;
-    Pca9685V.set_pwm_bytes_args.cap = sizeof(PCA9685_CTX(work)->frame);
-    Pca9685V.set_pwm_bytes_args.channel = channel;
-    Pca9685V.set_pwm_bytes_args.on = on;
-    Pca9685V.set_pwm_bytes_args.off = off;
-    protocore_pca9685_set_pwm_bytes(work);
-    if (Pca9685V.n != 5)
+    Pca9685.set_pwm_bytes_args.buf = PCA9685_CTX(work)->frame;
+    Pca9685.set_pwm_bytes_args.cap = sizeof(PCA9685_CTX(work)->frame);
+    Pca9685.set_pwm_bytes_args.channel = channel;
+    Pca9685.set_pwm_bytes_args.on = on;
+    Pca9685.set_pwm_bytes_args.off = off;
+    pca9685_set_pwm_bytes(work);
+    if (Pca9685.n != 5)
     {
-        Pca9685V.ok = PROTO_FALSE;
+        Pca9685.ok = PROTO_FALSE;
         return;
     }
-    Pca9685V.ok = protocore_i2c_write(dev_addr(work), PCA9685_CTX(work)->frame, 5);
+    Pca9685.ok = protocore_i2c_write(dev_addr(work), PCA9685_CTX(work)->frame, 5);
 }
 
-void protocore_pca9685_set_servo_us(uint8_t *restrict work)
+static void pca9685_set_servo_us(uint8_t *restrict work)
 {
-    uint8_t channel = Pca9685V.set_servo_us_args.channel;
-    uint32_t microseconds = Pca9685V.set_servo_us_args.microseconds;
+    uint8_t channel = Pca9685.set_servo_us_args.channel;
+    uint32_t microseconds = Pca9685.set_servo_us_args.microseconds;
 
     // The count is captured before the write runs: both report through the one namespace, so
     // nesting the two calls would hand set_pwm whatever the second one had already overwritten.
-    Pca9685V.us_to_count_args.microseconds = microseconds;
-    Pca9685V.us_to_count_args.freq_hz = dev_freq(work);
-    protocore_pca9685_us_to_count(work);
-    Pca9685V.set_pwm_args.channel = channel;
-    Pca9685V.set_pwm_args.on = 0;
-    Pca9685V.set_pwm_args.off = Pca9685V.count;
-    protocore_pca9685_set_pwm(work); // reports through Pca9685.ok itself
+    Pca9685.us_to_count_args.microseconds = microseconds;
+    Pca9685.us_to_count_args.freq_hz = dev_freq(work);
+    pca9685_us_to_count(work);
+    Pca9685.set_pwm_args.channel = channel;
+    Pca9685.set_pwm_args.on = 0;
+    Pca9685.set_pwm_args.off = Pca9685.count;
+    pca9685_set_pwm(work); // reports through Pca9685.ok itself
 }
 
-/** @brief The operands and the outcome. */
-Pca9685Vars Pca9685V;
+Pca9685Ns Pca9685 = {.prescale = pca9685_prescale,
+                     .channel_reg = pca9685_channel_reg,
+                     .us_to_count = pca9685_us_to_count,
+                     .set_pwm_bytes = pca9685_set_pwm_bytes,
+                     .begin = pca9685_begin,
+                     .set_pwm = pca9685_set_pwm,
+                     .set_servo_us = pca9685_set_servo_us};
 
 PROTOCORE_END_DECLS
 

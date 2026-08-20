@@ -42,7 +42,7 @@ void setUp(void)
 // Release the UDP/123 bind after every case, so a case that stops early leaves the port free.
 void tearDown(void)
 {
-    UdpListenerV.port = PROTOCORE_NTP_PORT;
+    UdpListener.port = PROTOCORE_NTP_PORT;
     UdpListener.close(protocore_udp_listener_span());
 }
 
@@ -132,29 +132,29 @@ void test_rfc5905_first_octet_packing(void)
     uint8_t out[PROTOCORE_NTP_PACKET_LEN];
 
     make_request(req, 0x1Bu, 6, 1, 1);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = sizeof req;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = sizeof out;
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = sizeof req;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = sizeof out;
     NtpServer.build_response(protocore_ntp_server_span());
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServerV.n);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServer.n);
     TEST_ASSERT_EQUAL_HEX8(0x1Cu, out[0]);
 
     make_request(req, 0x23u, 6, 1, 1);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = sizeof req;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = sizeof out;
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = sizeof req;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = sizeof out;
     NtpServer.build_response(protocore_ntp_server_span());
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServerV.n);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServer.n);
     TEST_ASSERT_EQUAL_HEX8(0x24u, out[0]);
 }
 
@@ -172,16 +172,16 @@ void test_rfc4330_version_and_poll_are_copied_intact(void)
             uint8_t out[PROTOCORE_NTP_PACKET_LEN];
             // LI 0, VN vn, Mode 3: 0 * 64 + vn * 8 + 3.
             make_request(req, (uint8_t)((vn * 8u) + 3u), POLL[i], 1, 1);
-            NtpServerV.build_response_args.req = req;
-            NtpServerV.build_response_args.req_len = sizeof req;
-            NtpServerV.build_response_args.stratum = 1;
-            NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-            NtpServerV.build_response_args.protocore_ntp_secs = 1;
-            NtpServerV.build_response_args.protocore_ntp_frac = 1;
-            NtpServerV.build_response_args.out = out;
-            NtpServerV.build_response_args.out_cap = sizeof out;
+            NtpServer.build_response_args.req = req;
+            NtpServer.build_response_args.req_len = sizeof req;
+            NtpServer.build_response_args.stratum = 1;
+            NtpServer.build_response_args.refid = 0x4C4F434Cu;
+            NtpServer.build_response_args.protocore_ntp_secs = 1;
+            NtpServer.build_response_args.protocore_ntp_frac = 1;
+            NtpServer.build_response_args.out = out;
+            NtpServer.build_response_args.out_cap = sizeof out;
             NtpServer.build_response(protocore_ntp_server_span());
-            TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServerV.n);
+            TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServer.n);
             TEST_ASSERT_EQUAL_UINT8(vn, vn_of(out[0]));
             TEST_ASSERT_EQUAL_UINT8(4u, mode_of(out[0]));
             TEST_ASSERT_EQUAL_UINT8(POLL[i], out[PROTOCORE_NTP_OFF_POLL]);
@@ -197,16 +197,16 @@ void test_rfc4330_a_zero_poll_is_copied_intact_too(void)
     uint8_t out[PROTOCORE_NTP_PACKET_LEN];
 
     make_request(req, REQ_V4_CLIENT, 0, 1, 1);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = sizeof req;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = sizeof out;
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = sizeof req;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = sizeof out;
     NtpServer.build_response(protocore_ntp_server_span());
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServerV.n);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServer.n);
     TEST_ASSERT_EQUAL_UINT8(0u, out[PROTOCORE_NTP_OFF_POLL]);
 }
 
@@ -218,16 +218,16 @@ void test_rfc4330_precision_lies_in_the_published_range(void)
     uint8_t req[PROTOCORE_NTP_PACKET_LEN];
     uint8_t out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, REQ_V4_CLIENT, 6, 1, 1);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = sizeof req;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = sizeof out;
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = sizeof req;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = sizeof out;
     NtpServer.build_response(protocore_ntp_server_span());
-    (void)NtpServerV.n;
+    (void)NtpServer.n;
 
     int prec = (int)(int8_t)out[PROTOCORE_NTP_OFF_PRECISION];
     TEST_ASSERT_LESS_OR_EQUAL_INT(-6, prec);
@@ -243,16 +243,16 @@ void test_rfc4330_a_primary_server_zeroes_delay_and_dispersion(void)
     uint8_t req[PROTOCORE_NTP_PACKET_LEN];
     uint8_t out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, REQ_V4_CLIENT, 6, 1, 1);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = sizeof req;
-    NtpServerV.build_response_args.stratum = PROTOCORE_NTP_STRATUM_PRIMARY;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = sizeof out;
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = sizeof req;
+    NtpServer.build_response_args.stratum = PROTOCORE_NTP_STRATUM_PRIMARY;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = sizeof out;
     NtpServer.build_response(protocore_ntp_server_span());
-    (void)NtpServerV.n;
+    (void)NtpServer.n;
 
     TEST_ASSERT_EQUAL_HEX32(0u, rd_be32(out + PROTOCORE_NTP_OFF_ROOT_DELAY));
     TEST_ASSERT_EQUAL_HEX32(0u, rd_be32(out + PROTOCORE_NTP_OFF_ROOT_DISP));
@@ -266,16 +266,16 @@ void test_rfc4330_origin_is_the_request_transmit_stamp(void)
     uint8_t req[PROTOCORE_NTP_PACKET_LEN];
     uint8_t out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, REQ_V4_CLIENT, 6, 0xCAFEF00Du, 0x0000FFFFu);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = sizeof req;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 0xE4A2C1F0u;
-    NtpServerV.build_response_args.protocore_ntp_frac = 0x80000000u;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = sizeof out;
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = sizeof req;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 0xE4A2C1F0u;
+    NtpServer.build_response_args.protocore_ntp_frac = 0x80000000u;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = sizeof out;
     NtpServer.build_response(protocore_ntp_server_span());
-    (void)NtpServerV.n;
+    (void)NtpServer.n;
 
     TEST_ASSERT_EQUAL_HEX8_ARRAY(req + 40, out + 24, 8);
     TEST_ASSERT_EQUAL_HEX32(0xCAFEF00Du, rd_be32(out + PROTOCORE_NTP_OFF_ORIGIN_SEC));
@@ -295,16 +295,16 @@ void test_rfc5905_stratum_and_reference_id_are_written_verbatim(void)
     for (uint8_t stratum = 1; stratum <= 15; stratum++)
     {
         make_request(req, REQ_V4_CLIENT, 6, 1, 1);
-        NtpServerV.build_response_args.req = req;
-        NtpServerV.build_response_args.req_len = sizeof req;
-        NtpServerV.build_response_args.stratum = stratum;
-        NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-        NtpServerV.build_response_args.protocore_ntp_secs = 1;
-        NtpServerV.build_response_args.protocore_ntp_frac = 1;
-        NtpServerV.build_response_args.out = out;
-        NtpServerV.build_response_args.out_cap = sizeof out;
+        NtpServer.build_response_args.req = req;
+        NtpServer.build_response_args.req_len = sizeof req;
+        NtpServer.build_response_args.stratum = stratum;
+        NtpServer.build_response_args.refid = 0x4C4F434Cu;
+        NtpServer.build_response_args.protocore_ntp_secs = 1;
+        NtpServer.build_response_args.protocore_ntp_frac = 1;
+        NtpServer.build_response_args.out = out;
+        NtpServer.build_response_args.out_cap = sizeof out;
         NtpServer.build_response(protocore_ntp_server_span());
-        (void)NtpServerV.n;
+        (void)NtpServer.n;
         TEST_ASSERT_EQUAL_UINT8(stratum, out[PROTOCORE_NTP_OFF_STRATUM]);
     }
 
@@ -330,16 +330,16 @@ void test_rfc5905_a_synchronized_reply_carries_no_zero_timestamp(void)
     const uint32_t frac = 0x80000000u;
 
     make_request(req, REQ_V4_CLIENT, 6, 1, 1);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = sizeof req;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = secs;
-    NtpServerV.build_response_args.protocore_ntp_frac = frac;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = sizeof out;
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = sizeof req;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = secs;
+    NtpServer.build_response_args.protocore_ntp_frac = frac;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = sizeof out;
     NtpServer.build_response(protocore_ntp_server_span());
-    (void)NtpServerV.n;
+    (void)NtpServer.n;
 
     TEST_ASSERT_TRUE(li_of(out[0]) != PROTOCORE_NTP_LI_UNSYNC);
     TEST_ASSERT_NOT_EQUAL(0u, rd_be32(out + PROTOCORE_NTP_OFF_REF_SEC));
@@ -362,56 +362,56 @@ void test_a_packet_short_of_the_48_octet_header_is_refused(void)
     uint8_t out[PROTOCORE_NTP_PACKET_LEN];
     make_request(req, REQ_V4_CLIENT, 6, 1, 1);
 
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = PROTOCORE_NTP_PACKET_LEN - 1;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = sizeof out;
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = PROTOCORE_NTP_PACKET_LEN - 1;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = sizeof out;
     NtpServer.build_response(protocore_ntp_server_span());
-    TEST_ASSERT_EQUAL_UINT(0, NtpServerV.n);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = sizeof req;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = PROTOCORE_NTP_PACKET_LEN - 1;
+    TEST_ASSERT_EQUAL_UINT(0, NtpServer.n);
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = sizeof req;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = PROTOCORE_NTP_PACKET_LEN - 1;
     NtpServer.build_response(protocore_ntp_server_span());
-    TEST_ASSERT_EQUAL_UINT(0, NtpServerV.n);
-    NtpServerV.build_response_args.req = NULL;
-    NtpServerV.build_response_args.req_len = PROTOCORE_NTP_PACKET_LEN;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = sizeof out;
+    TEST_ASSERT_EQUAL_UINT(0, NtpServer.n);
+    NtpServer.build_response_args.req = NULL;
+    NtpServer.build_response_args.req_len = PROTOCORE_NTP_PACKET_LEN;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = sizeof out;
     NtpServer.build_response(protocore_ntp_server_span());
-    TEST_ASSERT_EQUAL_UINT(0, NtpServerV.n);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = sizeof req;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = NULL;
-    NtpServerV.build_response_args.out_cap = PROTOCORE_NTP_PACKET_LEN;
+    TEST_ASSERT_EQUAL_UINT(0, NtpServer.n);
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = sizeof req;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = NULL;
+    NtpServer.build_response_args.out_cap = PROTOCORE_NTP_PACKET_LEN;
     NtpServer.build_response(protocore_ntp_server_span());
-    TEST_ASSERT_EQUAL_UINT(0, NtpServerV.n);
-    NtpServerV.build_response_args.req = req;
-    NtpServerV.build_response_args.req_len = PROTOCORE_NTP_PACKET_LEN;
-    NtpServerV.build_response_args.stratum = 1;
-    NtpServerV.build_response_args.refid = 0x4C4F434Cu;
-    NtpServerV.build_response_args.protocore_ntp_secs = 1;
-    NtpServerV.build_response_args.protocore_ntp_frac = 1;
-    NtpServerV.build_response_args.out = out;
-    NtpServerV.build_response_args.out_cap = PROTOCORE_NTP_PACKET_LEN;
+    TEST_ASSERT_EQUAL_UINT(0, NtpServer.n);
+    NtpServer.build_response_args.req = req;
+    NtpServer.build_response_args.req_len = PROTOCORE_NTP_PACKET_LEN;
+    NtpServer.build_response_args.stratum = 1;
+    NtpServer.build_response_args.refid = 0x4C4F434Cu;
+    NtpServer.build_response_args.protocore_ntp_secs = 1;
+    NtpServer.build_response_args.protocore_ntp_frac = 1;
+    NtpServer.build_response_args.out = out;
+    NtpServer.build_response_args.out_cap = PROTOCORE_NTP_PACKET_LEN;
     NtpServer.build_response(protocore_ntp_server_span());
-    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServerV.n);
+    TEST_ASSERT_EQUAL_UINT(PROTOCORE_NTP_PACKET_LEN, NtpServer.n);
 }
 
 static uint32_t g_epoch = 0;
@@ -438,20 +438,20 @@ static void start_server(uint32_t epoch, uint8_t stratum, uint32_t refid)
     protocore_time_source_reset();
     g_epoch = epoch;
     TEST_ASSERT_TRUE(protocore_time_source_add("test", 0, fake_clock));
-    NtpServerV.begin_args.stratum = stratum;
-    NtpServerV.begin_args.refid = refid;
+    NtpServer.begin_args.stratum = stratum;
+    NtpServer.begin_args.refid = refid;
     NtpServer.begin(protocore_ntp_server_span());
-    TEST_ASSERT_TRUE(NtpServerV.ok);
+    TEST_ASSERT_TRUE(NtpServer.ok);
 }
 
 // RFC 5905 sec 7.2 Figure 10: PORT = 123.
 void test_rfc5905_begin_binds_the_published_port(void)
 {
     protocore_net_host_reset();
-    NtpServerV.begin_args.stratum = 1;
-    NtpServerV.begin_args.refid = 0x4C4F434Cu;
+    NtpServer.begin_args.stratum = 1;
+    NtpServer.begin_args.refid = 0x4C4F434Cu;
     NtpServer.begin(protocore_ntp_server_span());
-    TEST_ASSERT_TRUE(NtpServerV.ok);
+    TEST_ASSERT_TRUE(NtpServer.ok);
     TEST_ASSERT_NOT_NULL(protocore_net_host_udp_pcb(123u));
 }
 

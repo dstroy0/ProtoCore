@@ -29,9 +29,9 @@ static const uint8_t *sent_bytes(void)
 
 static void reset_udp(void)
 {
-    UdpListenerV.port = 5683;
+    UdpListener.port = 5683;
     UdpListener.close(protocore_udp_listener_span());
-    (void)UdpListenerV.ok;
+    (void)UdpListener.ok;
     protocore_net_host_udp_reset();
 }
 
@@ -112,29 +112,29 @@ void setUp()
     g_payload_len = 0;
 
     Coap.reset(protocore_coap_span());
-    CoapV.resource.path = "/temp";
-    CoapV.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT | COAP_ALLOW_DELETE;
-    CoapV.resource.handler = h_resource;
+    Coap.resource.path = "/temp";
+    Coap.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT | COAP_ALLOW_DELETE;
+    Coap.resource.handler = h_resource;
     Coap.add_resource(protocore_coap_span());
-    CoapV.resource.path = "/ro";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_resource;
+    Coap.resource.path = "/ro";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_resource;
     Coap.add_resource(protocore_coap_span());
-    CoapV.resource.path = "/a/b";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_resource;
+    Coap.resource.path = "/a/b";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_resource;
     Coap.add_resource(protocore_coap_span());
-    CoapV.resource.path = "/longresourcename12345";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_resource;
+    Coap.resource.path = "/longresourcename12345";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_resource;
     Coap.add_resource(protocore_coap_span());
-    CoapV.resource.path = "/";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_resource;
+    Coap.resource.path = "/";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_resource;
     Coap.add_resource(protocore_coap_span());
-    CoapV.resource.path = "/big";
-    CoapV.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT;
-    CoapV.resource.handler = h_big;
+    Coap.resource.path = "/big";
+    Coap.resource.methods = COAP_ALLOW_GET | COAP_ALLOW_POST | COAP_ALLOW_PUT;
+    Coap.resource.handler = h_big;
     Coap.add_resource(protocore_coap_span());
 }
 
@@ -375,12 +375,12 @@ void test_get_content()
     uint8_t tok[] = {0xAA, 0xBB, 0xCC, 0xDD};
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 4, 0x1234, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_GREATER_THAN_UINT(0, n);
 
     CoapDec d;
@@ -405,12 +405,12 @@ void test_not_found()
     const char *paths[] = {"missing"};
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x0001, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_NOT_FOUND, d.code);
@@ -423,12 +423,12 @@ void test_method_not_allowed()
     const char *paths[] = {"ro"};
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_PUT, NULL, 0, 0x0002, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, d.code);
@@ -440,12 +440,12 @@ void test_non_request_type()
     const char *paths[] = {"temp"};
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_NON, (uint8_t)COAP_GET, NULL, 0, 0x0003, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_TYPE_NON, d.type);
@@ -459,12 +459,12 @@ void test_put_with_payload()
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_PUT, NULL, 0, 0x0004, paths, 1, NULL, 0,
                       (uint16_t)COAP_CF_TEXT, body, 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CHANGED, d.code);
@@ -481,12 +481,12 @@ void test_multi_segment_path()
     const char *paths[] = {"a", "b"};
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x0005, paths, 2, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, d.code);
@@ -500,12 +500,12 @@ void test_uri_query()
     uint8_t req[128], resp[128];
     size_t rl =
         build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x0006, paths, 1, queries, 2, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, d.code);
@@ -517,12 +517,12 @@ void test_empty_con_ping_rst()
     uint8_t req[8], resp[16];
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, 0, NULL, 0, 0x4242);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_TYPE_RST, d.type);
@@ -539,12 +539,12 @@ void test_bad_version_rst()
     req[2] = 0x12;
     req[3] = 0x34;
     uint8_t resp[16];
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = 4;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = 4;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_TYPE_RST, d.type);
@@ -557,12 +557,12 @@ void test_delete()
     uint8_t req[128], resp[128];
     size_t rl =
         build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_DELETE, NULL, 0, 0x0007, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_DELETED, d.code);
@@ -575,12 +575,12 @@ void test_token_8_bytes()
     uint8_t tok[8] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 8, 0x0008, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT(8, d.tkl);
@@ -592,12 +592,12 @@ void test_extended_option_length()
     const char *paths[] = {"longresourcename12345"};
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x0009, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, d.code);
@@ -610,12 +610,12 @@ void test_ack_ignored()
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_ACK, (uint8_t)COAP_RSP_CONTENT, NULL, 0, 0x00AA);
     uint8_t resp[16];
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_EQUAL_UINT(0, n);
 }
 
@@ -623,12 +623,12 @@ void test_root_path()
 {
     uint8_t req[16], resp[64];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x000B, NULL, 0, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, d.code);
@@ -641,12 +641,12 @@ void test_unknown_method_not_allowed()
     uint8_t req[128], resp[128];
 
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, COAP_CODE(0, 5), NULL, 0, 0x000C, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, d.code);
@@ -669,12 +669,12 @@ void test_unknown_critical_option_bad_option()
     m[k++] = 'p';
     m[k++] = (uint8_t)((6 << 4) | 1);
     m[k++] = 0x00;
-    CoapV.msg.req = m;
-    CoapV.msg.req_len = k;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = m;
+    Coap.msg.req_len = k;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_OPTION, d.code);
@@ -686,13 +686,13 @@ void test_observe_option_in_response()
     uint8_t tok[] = {0x01, 0x02};
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 2, 0x2222, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
-    CoapV.observe.seq = 5;
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
+    Coap.observe.seq = 5;
     Coap.process_observe(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_GREATER_THAN_UINT(0, n);
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
@@ -709,12 +709,12 @@ void test_response_option_overflows_buffer()
     uint8_t req[128], resp[8];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 2, 0x2222, paths, 1, NULL, 0, -1, NULL, 0);
 
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = 6;
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = 6;
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT16((uint16_t)COAP_CF_NONE, d.content_format);
@@ -725,13 +725,13 @@ void test_no_observe_option_when_seq_negative()
     const char *paths[] = {"ro"};
     uint8_t req[128], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x2223, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
-    CoapV.observe.seq = -1;
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
+    Coap.observe.seq = -1;
     Coap.process_observe(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_INT(-1, d.observe);
@@ -748,12 +748,12 @@ void test_block2_explicit_paging()
         enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, (uint16_t)(0x3000 + num));
         enc_option(&e, 11, (const uint8_t *)"big", 3);
         enc_block(&e, 23, num, 0, 2);
-        CoapV.msg.req = req;
-        CoapV.msg.req_len = e.len;
-        CoapV.msg.resp = resp;
-        CoapV.msg.resp_cap = sizeof(resp);
+        Coap.msg.req = req;
+        Coap.msg.req_len = e.len;
+        Coap.msg.resp = resp;
+        Coap.msg.resp_cap = sizeof(resp);
         Coap.process(protocore_coap_span());
-        size_t n = CoapV.n;
+        size_t n = Coap.n;
         TEST_ASSERT_GREATER_THAN_UINT(0, n);
 
         CoapDec d;
@@ -777,12 +777,12 @@ void test_block2_auto_when_large()
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x3100);
     enc_option(&e, 11, (const uint8_t *)"big", 3);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_TRUE(d.block2 >= 0);
@@ -799,12 +799,12 @@ void test_block2_szx_clamped()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x3200);
     enc_option(&e, 11, (const uint8_t *)"big", 3);
     enc_block(&e, 23, 0, 0, 6);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT(2, BLK_SZX(d.block2));
@@ -816,12 +816,12 @@ void test_block2_absent_for_small()
     const char *paths[] = {"temp"};
     uint8_t req[64], resp[128];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x3300, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_INT(-1, d.block2);
@@ -835,12 +835,12 @@ void test_block2_out_of_range()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x3400);
     enc_option(&e, 11, (const uint8_t *)"big", 3);
     enc_block(&e, 23, 10, 0, 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_REQUEST, d.code);
@@ -853,12 +853,12 @@ void test_block2_reserved_szx()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x3500);
     enc_option(&e, 11, (const uint8_t *)"big", 3);
     enc_block(&e, 23, 0, 0, 7);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     // RFC 7959 sec 2.2: "The value 7 for SZX (which would indicate a block size of 2048) is
@@ -885,12 +885,12 @@ void test_block1_upload_two_blocks()
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 27, 0, 1, 2);
     enc_payload(&e, chunk0, 64);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTINUE, d.code);
@@ -903,12 +903,12 @@ void test_block1_upload_two_blocks()
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 27, 1, 0, 2);
     enc_payload(&e, chunk1, 20);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    n = CoapV.n;
+    n = Coap.n;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CREATED, d.code);
     TEST_ASSERT_TRUE(d.block1 >= 0);
@@ -940,22 +940,22 @@ void test_block1_out_of_order()
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 27, 0, 1, 2);
     enc_payload(&e, chunk, 64);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
 
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_POST, NULL, 0, 0x3701);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 27, 2, 0, 2);
     enc_payload(&e, chunk, 64);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_REQUEST_ENTITY_INCOMPLETE, d.code);
@@ -977,12 +977,12 @@ void test_block1_too_large()
         enc_option(&e, 11, (const uint8_t *)"temp", 4);
         enc_block(&e, 27, num, 1, 2);
         enc_payload(&e, chunk, 64);
-        CoapV.msg.req = req;
-        CoapV.msg.req_len = e.len;
-        CoapV.msg.resp = resp;
-        CoapV.msg.resp_cap = sizeof(resp);
+        Coap.msg.req = req;
+        Coap.msg.req_len = e.len;
+        Coap.msg.resp = resp;
+        Coap.msg.resp_cap = sizeof(resp);
         Coap.process(protocore_coap_span());
-        size_t n = CoapV.n;
+        size_t n = Coap.n;
         TEST_ASSERT_TRUE(dec(resp, n, &d));
         if (num < 2)
         {
@@ -1001,12 +1001,12 @@ void test_well_known_core_discovery()
     const char *paths[] = {".well-known", "core"};
     uint8_t req[160], resp[256];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x0CDE, paths, 2, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, d.code);
@@ -1027,12 +1027,12 @@ void test_well_known_core_rejects_post()
     const char *paths[] = {".well-known", "core"};
     uint8_t req[160], resp[256];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_POST, NULL, 0, 0x0CDF, paths, 2, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, d.code);
@@ -1048,54 +1048,54 @@ static void h_overflow(const CoapRequest *req, CoapResponse *resp)
 
 void test_add_resource_limits()
 {
-    CoapV.resource.path = NULL;
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_resource;
+    Coap.resource.path = NULL;
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_resource;
     Coap.add_resource(protocore_coap_span());
-    TEST_ASSERT_FALSE(CoapV.ok);
-    CoapV.resource.path = "/x";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = NULL;
+    TEST_ASSERT_FALSE(Coap.ok);
+    Coap.resource.path = "/x";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = NULL;
     Coap.add_resource(protocore_coap_span());
-    TEST_ASSERT_FALSE(CoapV.ok);
+    TEST_ASSERT_FALSE(Coap.ok);
     int added = 0;
-    CoapV.resource.path = "/fill";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_resource;
+    Coap.resource.path = "/fill";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_resource;
     for (;;)
     {
         Coap.add_resource(protocore_coap_span());
-        if (!CoapV.ok || ++added > 64)
+        if (!Coap.ok || ++added > 64)
         {
             break;
         }
     }
     TEST_ASSERT_LESS_THAN(64, added);
-    CoapV.resource.path = "/nope";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_resource;
+    Coap.resource.path = "/nope";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_resource;
     Coap.add_resource(protocore_coap_span());
-    TEST_ASSERT_FALSE(CoapV.ok);
+    TEST_ASSERT_FALSE(Coap.ok);
 }
 
 void test_short_and_truncated_token()
 {
     uint8_t resp[64];
     uint8_t too_short[3] = {0x40, (uint8_t)COAP_GET, 0x00};
-    CoapV.msg.req = too_short;
-    CoapV.msg.req_len = 3;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = too_short;
+    Coap.msg.req_len = 3;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_EQUAL_UINT(0, CoapV.n);
+    TEST_ASSERT_EQUAL_UINT(0, Coap.n);
 
     uint8_t bad_tkl[4] = {(uint8_t)((1 << 6) | ((uint8_t)COAP_TYPE_CON << 4) | 3), (uint8_t)COAP_GET, 0x12, 0x34};
-    CoapV.msg.req = bad_tkl;
-    CoapV.msg.req_len = 4;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = bad_tkl;
+    Coap.msg.req_len = 4;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_EQUAL_UINT(4, n);
     TEST_ASSERT_EQUAL_UINT8((uint8_t)COAP_TYPE_RST, (resp[0] >> 4) & 0x03);
     TEST_ASSERT_EQUAL_UINT8(0, resp[1]);
@@ -1126,12 +1126,12 @@ void test_malformed_options_bad_request()
         uint8_t req[16];
         memcpy(req, hdr, 4);
         memcpy(req + 4, cases[i].opt, cases[i].olen);
-        CoapV.msg.req = req;
-        CoapV.msg.req_len = 4 + cases[i].olen;
-        CoapV.msg.resp = resp;
-        CoapV.msg.resp_cap = sizeof(resp);
+        Coap.msg.req = req;
+        Coap.msg.req_len = 4 + cases[i].olen;
+        Coap.msg.resp = resp;
+        Coap.msg.resp_cap = sizeof(resp);
         Coap.process(protocore_coap_span());
-        size_t n = CoapV.n;
+        size_t n = Coap.n;
         TEST_ASSERT_TRUE(n > 0);
         TEST_ASSERT_EQUAL_UINT_MESSAGE((uint8_t)COAP_RSP_BAD_REQUEST, resp[1], cases[i].name);
     }
@@ -1143,12 +1143,12 @@ void test_extended_delta_and_length_ignored()
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 1);
     enc_option(&e, 300, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, resp[1]);
 
@@ -1156,12 +1156,12 @@ void test_extended_delta_and_length_ignored()
     memset(big, 'x', sizeof(big));
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 2);
     enc_option(&e, 60, big, sizeof(big));
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    n = CoapV.n;
+    n = Coap.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, resp[1]);
 }
@@ -1175,23 +1175,23 @@ void test_oversized_path_and_query()
     memset(seg, 'p', sizeof(seg));
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 1);
     enc_option(&e, 11, seg, sizeof(seg));
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.n > 0);
+    TEST_ASSERT_TRUE(Coap.n > 0);
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_REQUEST, resp[1]);
 
     memset(seg, 'q', sizeof(seg));
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 2);
     enc_option(&e, 15, seg, sizeof(seg));
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.n > 0);
+    TEST_ASSERT_TRUE(Coap.n > 0);
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_REQUEST, resp[1]);
 }
 
@@ -1203,23 +1203,23 @@ void test_block_option_too_wide()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_PUT, tok, 0, 1);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_option(&e, 27, v4, 4);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.n > 0);
+    TEST_ASSERT_TRUE(Coap.n > 0);
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_REQUEST, resp[1]);
 
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 2);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_option(&e, 23, v4, 4);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.n > 0);
+    TEST_ASSERT_TRUE(Coap.n > 0);
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_REQUEST, resp[1]);
 }
 
@@ -1230,12 +1230,12 @@ void test_block1_reserved_szx()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_POST, tok, 0, 1);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_option(&e, 27, v, 1);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.n > 0);
+    TEST_ASSERT_TRUE(Coap.n > 0);
     // RFC 7959 sec 2.2: a reserved SZX of 7 "MUST lead to a 4.00 Bad Request response code upon
     // reception in a request".
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_REQUEST, resp[1]);
@@ -1251,31 +1251,31 @@ void test_block1_continue_no_space()
     enc_option(&e, 11, (const uint8_t *)"big", 3);
     enc_option(&e, 27, v, 1);
     enc_payload(&e, pl, sizeof(pl));
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_EQUAL_UINT(0, CoapV.n);
+    TEST_ASSERT_EQUAL_UINT(0, Coap.n);
 }
 
 void test_response_payload_clamped()
 {
-    CoapV.resource.path = "/of";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_overflow;
+    Coap.resource.path = "/of";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_overflow;
     Coap.add_resource(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.ok);
+    TEST_ASSERT_TRUE(Coap.ok);
     uint8_t req[32], resp[256], tok[1] = {0};
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 1);
     enc_option(&e, 11, (const uint8_t *)"of", 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, resp[1]);
 }
@@ -1286,12 +1286,12 @@ void test_response_buffer_too_small()
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 1);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_EQUAL_UINT(0, CoapV.n);
+    TEST_ASSERT_EQUAL_UINT(0, Coap.n);
 }
 
 static char g_longpaths[8][40];
@@ -1304,23 +1304,23 @@ void test_well_known_core_truncates()
         memset(g_longpaths[i], 'a' + i, 34);
         g_longpaths[i][0] = '/';
         g_longpaths[i][34] = '\0';
-        CoapV.resource.path = g_longpaths[i];
-        CoapV.resource.methods = COAP_ALLOW_GET;
-        CoapV.resource.handler = h_resource;
+        Coap.resource.path = g_longpaths[i];
+        Coap.resource.methods = COAP_ALLOW_GET;
+        Coap.resource.handler = h_resource;
         Coap.add_resource(protocore_coap_span());
-        TEST_ASSERT_TRUE(CoapV.ok);
+        TEST_ASSERT_TRUE(Coap.ok);
     }
     uint8_t req[64], resp[512], tok[1] = {0};
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 1);
     enc_option(&e, 11, (const uint8_t *)".well-known", 11);
     enc_option(&e, 11, (const uint8_t *)"core", 4);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_TRUE(n > 0);
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, resp[1]);
 }
@@ -1332,20 +1332,20 @@ void test_observe_large_seq_encoding()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 2, 1);
     enc_option(&e, 6, NULL, 0);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
-    CoapV.observe.seq = 0x0102;
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
+    Coap.observe.seq = 0x0102;
     Coap.process_observe(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.n > 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
-    CoapV.observe.seq = 0x010203;
+    TEST_ASSERT_TRUE(Coap.n > 0);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
+    Coap.observe.seq = 0x010203;
     Coap.process_observe(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.n > 0);
+    TEST_ASSERT_TRUE(Coap.n > 0);
 }
 
 void test_response_option_capacity_stop()
@@ -1354,20 +1354,20 @@ void test_response_option_capacity_stop()
     uint8_t req[64];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, NULL, 0, 0x77, paths, 1, NULL, 0, -1, NULL, 0);
     uint8_t resp[64];
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = 5;
-    CoapV.observe.seq = -1;
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = 5;
+    Coap.observe.seq = -1;
     Coap.process_observe(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_TRUE(n >= 4 && n <= 5);
 }
 
 void test_coap_udp_handler_basic()
 {
     reset_udp();
-    CoapV.bind.port = 5683;
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
 
     const char *paths[] = {"temp"};
@@ -1390,47 +1390,47 @@ void test_non_confirmable_malformed_is_silent()
     uint8_t resp[32];
 
     uint8_t bad_tkl_con[16] = {(uint8_t)((1 << 6) | ((uint8_t)COAP_TYPE_CON << 4) | 9), (uint8_t)COAP_GET, 0x01, 0x02};
-    CoapV.msg.req = bad_tkl_con;
-    CoapV.msg.req_len = sizeof(bad_tkl_con);
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = bad_tkl_con;
+    Coap.msg.req_len = sizeof(bad_tkl_con);
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_EQUAL_UINT(4, n);
     TEST_ASSERT_EQUAL_UINT8((uint8_t)COAP_TYPE_RST, (resp[0] >> 4) & 0x03);
     TEST_ASSERT_EQUAL_UINT8(0, resp[1]);
 
     uint8_t bad_ver_non[4] = {(uint8_t)((2 << 6) | ((uint8_t)COAP_TYPE_NON << 4) | 0), (uint8_t)COAP_GET, 0x01, 0x03};
-    CoapV.msg.req = bad_ver_non;
-    CoapV.msg.req_len = 4;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = bad_ver_non;
+    Coap.msg.req_len = 4;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_EQUAL_UINT(0, CoapV.n);
+    TEST_ASSERT_EQUAL_UINT(0, Coap.n);
 
     uint8_t bad_tkl_non[4] = {(uint8_t)((1 << 6) | ((uint8_t)COAP_TYPE_NON << 4) | 9), (uint8_t)COAP_GET, 0x01, 0x04};
-    CoapV.msg.req = bad_tkl_non;
-    CoapV.msg.req_len = 4;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = bad_tkl_non;
+    Coap.msg.req_len = 4;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_EQUAL_UINT(0, CoapV.n);
+    TEST_ASSERT_EQUAL_UINT(0, Coap.n);
 
     uint8_t short_tok_non[4] = {(uint8_t)((1 << 6) | ((uint8_t)COAP_TYPE_NON << 4) | 3), (uint8_t)COAP_GET, 0x01, 0x05};
-    CoapV.msg.req = short_tok_non;
-    CoapV.msg.req_len = 4;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = short_tok_non;
+    Coap.msg.req_len = 4;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_EQUAL_UINT(0, CoapV.n);
+    TEST_ASSERT_EQUAL_UINT(0, Coap.n);
 
     uint8_t empty_non[4] = {(uint8_t)((1 << 6) | ((uint8_t)COAP_TYPE_NON << 4) | 0), 0x00, 0x01, 0x06};
-    CoapV.msg.req = empty_non;
-    CoapV.msg.req_len = 4;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = empty_non;
+    Coap.msg.req_len = 4;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    TEST_ASSERT_EQUAL_UINT(0, CoapV.n);
+    TEST_ASSERT_EQUAL_UINT(0, Coap.n);
 }
 
 void test_response_code_as_request_is_method_not_allowed()
@@ -1438,12 +1438,12 @@ void test_response_code_as_request_is_method_not_allowed()
     const char *paths[] = {"temp"};
     uint8_t req[64], resp[64];
     size_t rl = build(req, (uint8_t)COAP_TYPE_CON, COAP_CODE(2, 5), NULL, 0, 0x0D01, paths, 1, NULL, 0, -1, NULL, 0);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = rl;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = rl;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_METHOD_NOT_ALLOWED, d.code);
@@ -1457,12 +1457,12 @@ void test_block1_ignored_on_get()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 0x0D02);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 27, 3, 1, 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, d.code);
@@ -1484,12 +1484,12 @@ void test_block1_block_size_change_is_incomplete()
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 27, 0, 1, 2);
     enc_payload(&e, chunk, 64);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTINUE, d.code);
 
@@ -1497,12 +1497,12 @@ void test_block1_block_size_change_is_incomplete()
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 27, 2, 0, 1);
     enc_payload(&e, chunk, 32);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    n = CoapV.n;
+    n = Coap.n;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_REQUEST_ENTITY_INCOMPLETE, d.code);
     TEST_ASSERT_FALSE(g_called);
@@ -1516,12 +1516,12 @@ void test_block1_empty_intermediate_block()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_POST, NULL, 0, 0x3A00);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 27, 0, 1, 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTINUE, d.code);
     TEST_ASSERT_FALSE(g_called);
@@ -1529,12 +1529,12 @@ void test_block1_empty_intermediate_block()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_POST, NULL, 0, 0x3A01);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 27, 1, 0, 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    n = CoapV.n;
+    n = Coap.n;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_REQUEST_ENTITY_INCOMPLETE, d.code);
 }
@@ -1549,23 +1549,23 @@ static void h_error(const CoapRequest *req, CoapResponse *resp)
 
 void test_error_response_carries_no_observe_or_block2()
 {
-    CoapV.resource.path = "/err";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_error;
+    Coap.resource.path = "/err";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_error;
     Coap.add_resource(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.ok);
+    TEST_ASSERT_TRUE(Coap.ok);
     uint8_t req[64], resp[128], tok[2] = {0x11, 0x22};
     CoapEnc e;
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 2, 0x0D03);
     enc_option(&e, 11, (const uint8_t *)"err", 3);
     enc_block(&e, 23, 0, 0, 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
-    CoapV.observe.seq = 9;
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
+    Coap.observe.seq = 9;
     Coap.process_observe(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_REQUEST, d.code);
@@ -1588,11 +1588,11 @@ static void h_exact_block(const CoapRequest *req, CoapResponse *resp)
 
 void test_block2_offset_at_end_of_representation()
 {
-    CoapV.resource.path = "/exact";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_exact_block;
+    Coap.resource.path = "/exact";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_exact_block;
     Coap.add_resource(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.ok);
+    TEST_ASSERT_TRUE(Coap.ok);
     uint8_t req[64], resp[256], tok[1] = {0};
     CoapDec d;
     CoapEnc e;
@@ -1600,12 +1600,12 @@ void test_block2_offset_at_end_of_representation()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 0x0D04);
     enc_option(&e, 11, (const uint8_t *)"exact", 5);
     enc_block(&e, 23, 0, 0, 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CONTENT, d.code);
     TEST_ASSERT_EQUAL_UINT(0, BLK_M(d.block2));
@@ -1614,12 +1614,12 @@ void test_block2_offset_at_end_of_representation()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_GET, tok, 0, 0x0D05);
     enc_option(&e, 11, (const uint8_t *)"exact", 5);
     enc_block(&e, 23, 1, 0, 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    n = CoapV.n;
+    n = Coap.n;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_BAD_REQUEST, d.code);
 }
@@ -1631,12 +1631,12 @@ void test_block2_on_empty_success_body()
     enc_init(&e, req, (uint8_t)COAP_TYPE_CON, (uint8_t)COAP_POST, tok, 0, 0x0D06);
     enc_option(&e, 11, (const uint8_t *)"temp", 4);
     enc_block(&e, 23, 0, 0, 2);
-    CoapV.msg.req = req;
-    CoapV.msg.req_len = e.len;
-    CoapV.msg.resp = resp;
-    CoapV.msg.resp_cap = sizeof(resp);
+    Coap.msg.req = req;
+    Coap.msg.req_len = e.len;
+    Coap.msg.resp = resp;
+    Coap.msg.resp_cap = sizeof(resp);
     Coap.process(protocore_coap_span());
-    size_t n = CoapV.n;
+    size_t n = Coap.n;
     CoapDec d;
     TEST_ASSERT_TRUE(dec(resp, n, &d));
     TEST_ASSERT_EQUAL_UINT((uint8_t)COAP_RSP_CREATED, d.code);
@@ -1662,7 +1662,7 @@ static size_t build_observe_get(uint8_t *buf, const char *path, int observe, con
 void test_coap_observe_over_udp()
 {
     reset_udp();
-    CoapV.bind.port = 5683;
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
     const uint8_t tok[2] = {0xAA, 0xBB};
     uint8_t req[64];
@@ -1676,16 +1676,16 @@ void test_coap_observe_over_udp()
     inject(5683, "10.0.0.9", 40000, req, rl);
 
     protocore_net_host_udp_reset();
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
     TEST_ASSERT_TRUE(sent_len() > 0);
 
     mock_udp_send_fail_after(0);
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
     mock_udp_send_fail_after(-1);
     protocore_net_host_udp_reset();
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
     TEST_ASSERT_EQUAL_UINT(0, sent_len());
 
@@ -1694,7 +1694,7 @@ void test_coap_observe_over_udp()
     rl = build_observe_get(req, "temp", 1, tok, sizeof(tok), 0x0003);
     inject(5683, "10.0.0.9", 40000, req, rl);
     protocore_net_host_udp_reset();
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
     TEST_ASSERT_EQUAL_UINT(0, sent_len());
 
@@ -1705,18 +1705,18 @@ void test_coap_observe_over_udp()
     enc_init(&re, rst, (uint8_t)COAP_TYPE_RST, 0, NULL, 0, 0x0004);
     inject(5683, "10.0.0.9", 40000, rst, re.len);
     protocore_net_host_udp_reset();
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
     TEST_ASSERT_EQUAL_UINT(0, sent_len());
 
-    CoapV.observe.path = "/no-such-resource";
+    Coap.observe.path = "/no-such-resource";
     Coap.notify(protocore_coap_span());
 }
 
 void test_coap_observe_registry_full()
 {
     reset_udp();
-    CoapV.bind.port = 5683;
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
     uint8_t req[64];
 
@@ -1728,7 +1728,7 @@ void test_coap_observe_registry_full()
         inject(5683, "10.0.0.9", 40000, req, rl);
         TEST_ASSERT_TRUE(sent_len() > 0);
     }
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
 }
 
@@ -1745,7 +1745,7 @@ static int observe_seq_of_last_reply()
 void test_coap_observe_registry_key_fields()
 {
     reset_udp();
-    CoapV.bind.port = 5683;
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
     const uint8_t tok[2] = {0xAA, 0xBB};
     uint8_t req[64];
@@ -1755,7 +1755,7 @@ void test_coap_observe_registry_key_fields()
     inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(1, observe_seq_of_last_reply());
 
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
 
     protocore_net_host_udp_reset();
@@ -1779,11 +1779,11 @@ void test_coap_observe_registry_key_fields()
     TEST_ASSERT_EQUAL_INT(1, observe_seq_of_last_reply());
 
     protocore_net_host_udp_reset();
-    CoapV.observe.path = "/ro";
+    Coap.observe.path = "/ro";
     Coap.notify(protocore_coap_span());
     TEST_ASSERT_TRUE(sent_len() > 0);
     protocore_net_host_udp_reset();
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
     TEST_ASSERT_TRUE(sent_len() > 0);
 }
@@ -1791,7 +1791,7 @@ void test_coap_observe_registry_key_fields()
 void test_coap_observe_zero_length_token()
 {
     reset_udp();
-    CoapV.bind.port = 5683;
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
     const uint8_t tok[2] = {0xAA, 0xBB};
     uint8_t req[64];
@@ -1804,7 +1804,7 @@ void test_coap_observe_zero_length_token()
     inject(5683, "10.0.0.9", 40000, req, rl);
     TEST_ASSERT_EQUAL_INT(1, observe_seq_of_last_reply());
 
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
 
     protocore_net_host_udp_reset();
@@ -1816,7 +1816,7 @@ void test_coap_observe_zero_length_token()
 void test_coap_observe_targeted_removal()
 {
     reset_udp();
-    CoapV.bind.port = 5683;
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
     const uint8_t tok_a[2] = {0xAA, 0xBB};
     const uint8_t tok_b[2] = {0xCC, 0xDD};
@@ -1826,7 +1826,7 @@ void test_coap_observe_targeted_removal()
     inject(5683, "10.0.0.9", 40000, req, rl);
     rl = build_observe_get(req, "temp", 0, tok_a, 2, 0x0402);
     inject(5683, "10.0.0.20", 40000, req, rl);
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
 
     rl = build_observe_get(req, "temp", 1, tok_b, 2, 0x0403);
@@ -1860,12 +1860,12 @@ void test_coap_observe_targeted_removal()
 void test_coap_notify_clamps_oversized_body()
 {
     reset_udp();
-    CoapV.resource.path = "/of";
-    CoapV.resource.methods = COAP_ALLOW_GET;
-    CoapV.resource.handler = h_overflow;
+    Coap.resource.path = "/of";
+    Coap.resource.methods = COAP_ALLOW_GET;
+    Coap.resource.handler = h_overflow;
     Coap.add_resource(protocore_coap_span());
-    TEST_ASSERT_TRUE(CoapV.ok);
-    CoapV.bind.port = 5683;
+    TEST_ASSERT_TRUE(Coap.ok);
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
     const uint8_t tok[1] = {0x5A};
     uint8_t req[64];
@@ -1873,7 +1873,7 @@ void test_coap_notify_clamps_oversized_body()
     inject(5683, "10.0.0.9", 40000, req, rl);
 
     protocore_net_host_udp_reset();
-    CoapV.observe.path = "/of";
+    Coap.observe.path = "/of";
     Coap.notify(protocore_coap_span());
     TEST_ASSERT_TRUE(sent_len() > 0);
     CoapDec d;
@@ -1884,7 +1884,7 @@ void test_coap_notify_clamps_oversized_body()
 void test_coap_observe_on_discovery_is_not_registered()
 {
     reset_udp();
-    CoapV.bind.port = 5683;
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
     uint8_t req[64], tok[1] = {0x77};
     CoapEnc e;
@@ -1904,7 +1904,7 @@ void test_coap_observe_on_discovery_is_not_registered()
 void test_coap_udp_edge_datagrams()
 {
     reset_udp();
-    CoapV.bind.port = 5683;
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
 
     uint8_t empty[1] = {0};
@@ -1926,7 +1926,7 @@ void test_coap_udp_edge_datagrams()
     TEST_ASSERT_EQUAL_INT(-1, d.observe);
 
     protocore_net_host_udp_reset();
-    CoapV.observe.path = "/temp";
+    Coap.observe.path = "/temp";
     Coap.notify(protocore_coap_span());
     TEST_ASSERT_EQUAL_UINT(0, sent_len());
 }
@@ -1956,21 +1956,21 @@ void test_dedup_store_lookup_roundtrip()
     at_ms(1000);
     Coap.reset(protocore_coap_span());
     const uint8_t r[] = {0x62, 0x45, 0x12, 0x34, 0xAB, 0xCD};
-    CoapV.exchange.src_ip = "192.168.1.10";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x1234;
-    CoapV.exchange.resp = r;
-    CoapV.exchange.resp_len = sizeof(r);
+    Coap.exchange.src_ip = "192.168.1.10";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x1234;
+    Coap.exchange.resp = r;
+    Coap.exchange.resp_len = sizeof(r);
     Coap.dedup_store(protocore_coap_span());
     const uint8_t *c = NULL;
     size_t cl = 0;
-    CoapV.exchange.src_ip = "192.168.1.10";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x1234;
+    Coap.exchange.src_ip = "192.168.1.10";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x1234;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_TRUE(CoapV.bytes != NULL);
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_TRUE(Coap.bytes != NULL);
     TEST_ASSERT_EQUAL_size_t(sizeof(r), cl);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(r, c, cl);
     Clock.src.fn = NULL;
@@ -1986,42 +1986,42 @@ void test_dedup_full_address_keying()
     at_ms(1000);
     Coap.reset(protocore_coap_span());
     const uint8_t r[] = {1, 2, 3};
-    CoapV.exchange.src_ip = "192.168.1.10";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x1234;
-    CoapV.exchange.resp = r;
-    CoapV.exchange.resp_len = sizeof(r);
+    Coap.exchange.src_ip = "192.168.1.10";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x1234;
+    Coap.exchange.resp = r;
+    Coap.exchange.resp_len = sizeof(r);
     Coap.dedup_store(protocore_coap_span());
     const uint8_t *c = NULL;
     size_t cl = 0;
-    CoapV.exchange.src_ip = "192.168.1.11";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x1234;
+    Coap.exchange.src_ip = "192.168.1.11";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x1234;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_FALSE(CoapV.bytes != NULL);
-    CoapV.exchange.src_ip = "192.168.1.10";
-    CoapV.exchange.src_port = 5684;
-    CoapV.exchange.mid = 0x1234;
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_FALSE(Coap.bytes != NULL);
+    Coap.exchange.src_ip = "192.168.1.10";
+    Coap.exchange.src_port = 5684;
+    Coap.exchange.mid = 0x1234;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_FALSE(CoapV.bytes != NULL);
-    CoapV.exchange.src_ip = "192.168.1.10";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x1235;
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_FALSE(Coap.bytes != NULL);
+    Coap.exchange.src_ip = "192.168.1.10";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x1235;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_FALSE(CoapV.bytes != NULL);
-    CoapV.exchange.src_ip = "192.168.1.10";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x1234;
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_FALSE(Coap.bytes != NULL);
+    Coap.exchange.src_ip = "192.168.1.10";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x1234;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_TRUE(CoapV.bytes != NULL);
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_TRUE(Coap.bytes != NULL);
     Clock.src.fn = NULL;
     Clock.src.ticks_per_second = 1000;
     Clock.set_ms(Clock.internal);
@@ -2035,30 +2035,30 @@ void test_dedup_expiry()
     at_ms(1000);
     Coap.reset(protocore_coap_span());
     const uint8_t r[] = {1, 2, 3};
-    CoapV.exchange.src_ip = "10.0.0.1";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x0001;
-    CoapV.exchange.resp = r;
-    CoapV.exchange.resp_len = sizeof(r);
+    Coap.exchange.src_ip = "10.0.0.1";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x0001;
+    Coap.exchange.resp = r;
+    Coap.exchange.resp_len = sizeof(r);
     Coap.dedup_store(protocore_coap_span());
     const uint8_t *c = NULL;
     size_t cl = 0;
     at_ms(1000 + PROTOCORE_COAP_DEDUP_LIFETIME_MS - 1);
-    CoapV.exchange.src_ip = "10.0.0.1";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x0001;
+    Coap.exchange.src_ip = "10.0.0.1";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x0001;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_TRUE(CoapV.bytes != NULL);
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_TRUE(Coap.bytes != NULL);
     at_ms(1000 + PROTOCORE_COAP_DEDUP_LIFETIME_MS);
-    CoapV.exchange.src_ip = "10.0.0.1";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x0001;
+    Coap.exchange.src_ip = "10.0.0.1";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x0001;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_FALSE(CoapV.bytes != NULL);
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_FALSE(Coap.bytes != NULL);
     Clock.src.fn = NULL;
     Clock.src.ticks_per_second = 1000;
     Clock.set_ms(Clock.internal);
@@ -2073,21 +2073,21 @@ void test_dedup_too_large_not_cached()
     Coap.reset(protocore_coap_span());
     static uint8_t big[PROTOCORE_COAP_DEDUP_RESP_MAX + 1];
     memset(big, 0xAA, sizeof(big));
-    CoapV.exchange.src_ip = "10.0.0.2";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x0002;
-    CoapV.exchange.resp = big;
-    CoapV.exchange.resp_len = sizeof(big);
+    Coap.exchange.src_ip = "10.0.0.2";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x0002;
+    Coap.exchange.resp = big;
+    Coap.exchange.resp_len = sizeof(big);
     Coap.dedup_store(protocore_coap_span());
     const uint8_t *c = NULL;
     size_t cl = 0;
-    CoapV.exchange.src_ip = "10.0.0.2";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x0002;
+    Coap.exchange.src_ip = "10.0.0.2";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x0002;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_FALSE(CoapV.bytes != NULL);
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_FALSE(Coap.bytes != NULL);
     Clock.src.fn = NULL;
     Clock.src.ticks_per_second = 1000;
     Clock.set_ms(Clock.internal);
@@ -2105,51 +2105,51 @@ void test_dedup_eviction_and_update()
         at_ms(1000 + (uint32_t)i);
         char ip[16];
         snprintf(ip, sizeof(ip), "10.0.1.%d", i);
-        CoapV.exchange.src_ip = ip;
-        CoapV.exchange.src_port = 5683;
-        CoapV.exchange.mid = (uint16_t)(0x100 + i);
-        CoapV.exchange.resp = r;
-        CoapV.exchange.resp_len = sizeof(r);
+        Coap.exchange.src_ip = ip;
+        Coap.exchange.src_port = 5683;
+        Coap.exchange.mid = (uint16_t)(0x100 + i);
+        Coap.exchange.resp = r;
+        Coap.exchange.resp_len = sizeof(r);
         Coap.dedup_store(protocore_coap_span());
     }
     at_ms(2000);
-    CoapV.exchange.src_ip = "10.0.1.99";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x999;
-    CoapV.exchange.resp = r;
-    CoapV.exchange.resp_len = sizeof(r);
+    Coap.exchange.src_ip = "10.0.1.99";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x999;
+    Coap.exchange.resp = r;
+    Coap.exchange.resp_len = sizeof(r);
     Coap.dedup_store(protocore_coap_span());
     const uint8_t *c = NULL;
     size_t cl = 0;
-    CoapV.exchange.src_ip = "10.0.1.0";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x100;
+    Coap.exchange.src_ip = "10.0.1.0";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x100;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_FALSE(CoapV.bytes != NULL);
-    CoapV.exchange.src_ip = "10.0.1.99";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x999;
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_FALSE(Coap.bytes != NULL);
+    Coap.exchange.src_ip = "10.0.1.99";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x999;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_TRUE(CoapV.bytes != NULL);
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_TRUE(Coap.bytes != NULL);
 
     const uint8_t r2[] = {7, 7, 7, 7};
-    CoapV.exchange.src_ip = "10.0.1.99";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x999;
-    CoapV.exchange.resp = r2;
-    CoapV.exchange.resp_len = sizeof(r2);
+    Coap.exchange.src_ip = "10.0.1.99";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x999;
+    Coap.exchange.resp = r2;
+    Coap.exchange.resp_len = sizeof(r2);
     Coap.dedup_store(protocore_coap_span());
-    CoapV.exchange.src_ip = "10.0.1.99";
-    CoapV.exchange.src_port = 5683;
-    CoapV.exchange.mid = 0x999;
+    Coap.exchange.src_ip = "10.0.1.99";
+    Coap.exchange.src_port = 5683;
+    Coap.exchange.mid = 0x999;
     Coap.dedup_lookup(protocore_coap_span());
-    c = CoapV.bytes;
-    cl = CoapV.n;
-    TEST_ASSERT_TRUE(CoapV.bytes != NULL);
+    c = Coap.bytes;
+    cl = Coap.n;
+    TEST_ASSERT_TRUE(Coap.bytes != NULL);
     TEST_ASSERT_EQUAL_size_t(sizeof(r2), cl);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(r2, c, cl);
     Clock.src.fn = NULL;
@@ -2164,7 +2164,7 @@ void test_dedup_handler_replays_without_rerunning()
     Clock.set_ms(Clock.internal);
     at_ms(5000);
     reset_udp();
-    CoapV.bind.port = 5683;
+    Coap.bind.port = 5683;
     Coap.begin(protocore_coap_span());
 
     const char *paths[] = {"temp"};

@@ -28,6 +28,7 @@
 
 PROTOCORE_BEGIN_DECLS
 
+
 /** @brief RFC 9113 sec 8.3: what one HEADERS + DATA response carries. */
 typedef struct
 {
@@ -36,6 +37,7 @@ typedef struct
     const char *body;         ///< its body bytes
     size_t len;               ///< how many
 } H2RespArgs;
+
 /**
  * @brief The HTTP/2 engine (RFC 9113): one connection per transport slot.
  *
@@ -57,40 +59,21 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t slot;    ///< the connection a call acts on
+    uint8_t slot; ///< the connection a call acts on
+
     H2RespArgs resp; ///< what a serialized response carries
+
     proto_bool ok;
-} H2ServerVars;
 
-/** @brief The operands and the outcome. */
-extern H2ServerVars H2ServerV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const open)(uint8_t *restrict work);
     void (*const data)(uint8_t *restrict work);
     void (*const respond)(uint8_t *restrict work);
     void (*const close)(uint8_t *restrict work);
+
 } H2ServerNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in H2ServerV or a region of the borrow at a fixed offset.
-void protocore_h2_server_open(uint8_t *restrict work);
-void protocore_h2_server_data(uint8_t *restrict work);
-void protocore_h2_server_respond(uint8_t *restrict work);
-void protocore_h2_server_close(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `H2Server.open(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const H2ServerNs H2Server __attribute__((unused)) = {
-    .open = protocore_h2_server_open,
-    .data = protocore_h2_server_data,
-    .respond = protocore_h2_server_respond,
-    .close = protocore_h2_server_close,
-};
+/** @brief The one symbol this module exports. */
+extern H2ServerNs H2Server;
 
 /** @brief Not an entry: an entry takes a borrow and this is where that borrow comes from. */
 uint8_t *protocore_h2_server_span(void);

@@ -7,7 +7,7 @@
  */
 
 #include "server/core/logbuf/logbuf.h"
-#include "mmgr/plaintext/plaintext.h"   // the persistent end this module's state is taken from
+#include "mmgr/plaintext/plaintext.h"  // the persistent end this module's state is taken from
 #include "mmgr/protoframe/protoframe.h" // the one frame engine
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
@@ -76,15 +76,15 @@ static char level_letter(uint8_t level)
     }
 }
 
-void protocore_logbuf_reset(uint8_t *restrict work)
+static void logbuf_reset(uint8_t *restrict work)
 {
     LOGBUF_CTX(work)->head = 0;
     LOGBUF_CTX(work)->count = 0;
 }
 
-void protocore_logbuf_put(uint8_t *restrict work)
+static void logbuf_put(uint8_t *restrict work)
 {
-    const uint8_t level = LogbufV.line.level;
+    const uint8_t level = Logbuf.line.level;
     uint16_t slot;
 
     if (LOGBUF_CTX(work)->count < PROTOCORE_LOG_LINES)
@@ -99,7 +99,7 @@ void protocore_logbuf_put(uint8_t *restrict work)
     }
     // A NULL msg renders empty and an over-long line empties the slot, both from the frame contract.
     frame.build(LOGBUF_CTX(work)->lines[slot], PROTOCORE_LOG_LINE_LEN, LOG_LINE,
-                (const protocore_fval[]){PROTOCORE_VCH(level_letter(level)), PROTOCORE_VSTR(LogbufV.line.msg)}, 2);
+                (const protocore_fval[]){PROTOCORE_VCH(level_letter(level)), PROTOCORE_VSTR(Logbuf.line.msg)}, 2);
     LOGBUF_CTX(work)->level[slot] = level;
 
     if (LOGBUF_CTX(work)->trap && level >= LOGBUF_CTX(work)->trap_threshold)
@@ -108,29 +108,29 @@ void protocore_logbuf_put(uint8_t *restrict work)
     }
 }
 
-void protocore_logbuf_held(uint8_t *restrict work)
+static void logbuf_held(uint8_t *restrict work)
 {
-    LogbufV.count = LOGBUF_CTX(work)->count;
+    Logbuf.count = LOGBUF_CTX(work)->count;
 }
 
-void protocore_logbuf_at(uint8_t *restrict work)
+static void logbuf_at(uint8_t *restrict work)
 {
-    const uint16_t i = LogbufV.read.i;
+    const uint16_t i = Logbuf.read.i;
 
-    LogbufV.text = NULL;
+    Logbuf.text = NULL;
     if (i >= LOGBUF_CTX(work)->count)
     {
         return;
     }
-    LogbufV.text = LOGBUF_CTX(work)->lines[(LOGBUF_CTX(work)->head + i) % PROTOCORE_LOG_LINES];
+    Logbuf.text = LOGBUF_CTX(work)->lines[(LOGBUF_CTX(work)->head + i) % PROTOCORE_LOG_LINES];
 }
 
-void protocore_logbuf_dump(uint8_t *restrict work)
+static void logbuf_dump(uint8_t *restrict work)
 {
-    char *out = LogbufV.read.out;
-    const size_t cap = LogbufV.read.cap;
+    char *out = Logbuf.read.out;
+    const size_t cap = Logbuf.read.cap;
 
-    LogbufV.n = 0;
+    Logbuf.n = 0;
     if (!out || cap == 0)
     {
         return;
@@ -155,17 +155,21 @@ void protocore_logbuf_dump(uint8_t *restrict work)
         }
     }
     out[pos] = '\0';
-    LogbufV.n = (int)pos;
+    Logbuf.n = (int)pos;
 }
 
-void protocore_logbuf_set_trap(uint8_t *restrict work)
+static void logbuf_set_trap(uint8_t *restrict work)
 {
-    LOGBUF_CTX(work)->trap_threshold = LogbufV.trap.threshold;
-    LOGBUF_CTX(work)->trap = LogbufV.trap.cb;
+    LOGBUF_CTX(work)->trap_threshold = Logbuf.trap.threshold;
+    LOGBUF_CTX(work)->trap = Logbuf.trap.cb;
 }
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-LogbufVars LogbufV;
+LogbufNs Logbuf = {.reset = logbuf_reset,
+                   .put = logbuf_put,
+                   .held = logbuf_held,
+                   .at = logbuf_at,
+                   .dump = logbuf_dump,
+                   .set_trap = logbuf_set_trap};
 
 #endif // PROTOCORE_ENABLE_LOGBUF

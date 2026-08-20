@@ -61,6 +61,7 @@ typedef struct
     int (*write_block)(void *ctx, uint32_t first, const int32_t *in, size_t n); ///< write n points (>=0 count).
     void *ctx;                                                                  ///< driver instance state (borrowed).
 } SouthboundDriver;
+
 /** @brief The one point a read or a write moves. */
 typedef struct
 {
@@ -68,6 +69,7 @@ typedef struct
     int32_t value;      ///< the value a write carries
     int32_t *value_out; ///< where a read lands the value it got
 } SouthboundPointArgs;
+
 /** @brief The contiguous span of points a block read or a block write moves in one driver call. */
 typedef struct
 {
@@ -76,6 +78,7 @@ typedef struct
     const int32_t *in; ///< the values a block write carries
     size_t n;          ///< how many points the span covers
 } SouthboundBlockArgs;
+
 /**
  * @brief The southbound facade: register drivers, then move points by driver name.
  *
@@ -102,19 +105,14 @@ typedef struct
 {
     const char *name;            ///< the driver a lookup or a dispatch addresses
     const SouthboundDriver *drv; ///< the driver an add registers
-    SouthboundPointArgs point;   ///< the one point a read or a write moves
-    SouthboundBlockArgs block;   ///< the span a block read or a block write moves
+
+    SouthboundPointArgs point; ///< the one point a read or a write moves
+    SouthboundBlockArgs block; ///< the span a block read or a block write moves
+
     int32_t i32;
     size_t n;
     const SouthboundDriver *driver;
-} SouthboundVars;
 
-/** @brief The operands and the outcome. */
-extern SouthboundVars SouthboundV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const add)(uint8_t *restrict work);
     void (*const clear)(uint8_t *restrict work);
     void (*const count)(uint8_t *restrict work);
@@ -125,31 +123,8 @@ typedef struct
     void (*const write_block)(uint8_t *restrict work);
 } SouthboundNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in SouthboundV or a region of the borrow at a fixed offset.
-void protocore_southbound_add(uint8_t *restrict work);
-void protocore_southbound_clear(uint8_t *restrict work);
-void protocore_southbound_count(uint8_t *restrict work);
-void protocore_southbound_find(uint8_t *restrict work);
-void protocore_southbound_read(uint8_t *restrict work);
-void protocore_southbound_write(uint8_t *restrict work);
-void protocore_southbound_read_block(uint8_t *restrict work);
-void protocore_southbound_write_block(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Southbound.add(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const SouthboundNs Southbound __attribute__((unused)) = {
-    .add = protocore_southbound_add,
-    .clear = protocore_southbound_clear,
-    .count = protocore_southbound_count,
-    .find = protocore_southbound_find,
-    .read = protocore_southbound_read,
-    .write = protocore_southbound_write,
-    .read_block = protocore_southbound_read_block,
-    .write_block = protocore_southbound_write_block,
-};
+/** @brief The one symbol this module exports. */
+extern SouthboundNs Southbound;
 
 /**
  * @brief The PROTOCORE_SOUTHBOUND_BORROW bytes this module's state lives in.

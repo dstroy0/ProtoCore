@@ -95,13 +95,13 @@ static void put_form_value(protocore_sb *b, const char *s)
             continue;
         }
         Sb.ch(b, '%');
-        HexV.args.upper = PROTO_TRUE;
-        HexV.args.nibble = (uint8_t)(c >> 4);
-        HexV.digit(hex_work);
-        Sb.ch(b, HexV.ch);
-        HexV.args.nibble = (uint8_t)(c & 0x0Fu);
-        HexV.digit(hex_work);
-        Sb.ch(b, HexV.ch);
+        Hex.args.upper = PROTO_TRUE;
+        Hex.args.nibble = (uint8_t)(c >> 4);
+        Hex.digit(hex_work);
+        Sb.ch(b, Hex.ch);
+        Hex.args.nibble = (uint8_t)(c & 0x0Fu);
+        Hex.digit(hex_work);
+        Sb.ch(b, Hex.ch);
     }
 }
 
@@ -120,26 +120,26 @@ static void put_param(protocore_sb *b, const char *name, const char *value)
 static void build_code_request(uint8_t *restrict work)
 {
     (void)work;
-    Oauth2V.i32 = 0;
-    if (!Oauth2V.code_grant.code || !Oauth2V.code_grant.redirect_uri || !Oauth2V.client.client_id ||
-        !Oauth2V.request.out || Oauth2V.request.cap == 0)
+    Oauth2.i32 = 0;
+    if (!Oauth2.code_grant.code || !Oauth2.code_grant.redirect_uri || !Oauth2.client.client_id || !Oauth2.request.out ||
+        Oauth2.request.cap == 0)
     {
         return;
     }
-    protocore_sb b = {Oauth2V.request.out, Oauth2V.request.cap, 0, PROTO_TRUE};
+    protocore_sb b = {Oauth2.request.out, Oauth2.request.cap, 0, PROTO_TRUE};
     Sb.put(&b, "grant_type=authorization_code");
-    put_param(&b, "code", Oauth2V.code_grant.code);
-    put_param(&b, "redirect_uri", Oauth2V.code_grant.redirect_uri);
-    put_param(&b, "client_id", Oauth2V.client.client_id);
-    if (Oauth2V.client.client_secret)
+    put_param(&b, "code", Oauth2.code_grant.code);
+    put_param(&b, "redirect_uri", Oauth2.code_grant.redirect_uri);
+    put_param(&b, "client_id", Oauth2.client.client_id);
+    if (Oauth2.client.client_secret)
     {
-        put_param(&b, "client_secret", Oauth2V.client.client_secret);
+        put_param(&b, "client_secret", Oauth2.client.client_secret);
     }
-    if (Oauth2V.code_grant.code_verifier)
+    if (Oauth2.code_grant.code_verifier)
     {
-        put_param(&b, "code_verifier", Oauth2V.code_grant.code_verifier);
+        put_param(&b, "code_verifier", Oauth2.code_grant.code_verifier);
     }
-    Oauth2V.i32 = (int32_t)Sb.finish(&b);
+    Oauth2.i32 = (int32_t)Sb.finish(&b);
 }
 
 // RFC 6749 sec 6: grant_type=refresh_token, refresh_token, client_id, and the sec 2.3.1 client
@@ -147,21 +147,21 @@ static void build_code_request(uint8_t *restrict work)
 static void build_refresh_request(uint8_t *restrict work)
 {
     (void)work;
-    Oauth2V.i32 = 0;
-    if (!Oauth2V.refresh_grant.refresh_token || !Oauth2V.client.client_id || !Oauth2V.request.out ||
-        Oauth2V.request.cap == 0)
+    Oauth2.i32 = 0;
+    if (!Oauth2.refresh_grant.refresh_token || !Oauth2.client.client_id || !Oauth2.request.out ||
+        Oauth2.request.cap == 0)
     {
         return;
     }
-    protocore_sb b = {Oauth2V.request.out, Oauth2V.request.cap, 0, PROTO_TRUE};
+    protocore_sb b = {Oauth2.request.out, Oauth2.request.cap, 0, PROTO_TRUE};
     Sb.put(&b, "grant_type=refresh_token");
-    put_param(&b, "refresh_token", Oauth2V.refresh_grant.refresh_token);
-    put_param(&b, "client_id", Oauth2V.client.client_id);
-    if (Oauth2V.client.client_secret)
+    put_param(&b, "refresh_token", Oauth2.refresh_grant.refresh_token);
+    put_param(&b, "client_id", Oauth2.client.client_id);
+    if (Oauth2.client.client_secret)
     {
-        put_param(&b, "client_secret", Oauth2V.client.client_secret);
+        put_param(&b, "client_secret", Oauth2.client.client_secret);
     }
-    Oauth2V.i32 = (int32_t)Sb.finish(&b);
+    Oauth2.i32 = (int32_t)Sb.finish(&b);
 }
 
 // RFC 6749 sec 5.1: read access_token, token_type, expires_in and refresh_token out of the reply,
@@ -170,9 +170,9 @@ static void build_refresh_request(uint8_t *restrict work)
 static void parse_token_response(uint8_t *restrict work)
 {
     (void)work;
-    Oauth2V.ok = PROTO_FALSE;
-    const char *json = Oauth2V.response.json;
-    Oauth2Tokens *t = Oauth2V.response.tokens;
+    Oauth2.ok = PROTO_FALSE;
+    const char *json = Oauth2.response.json;
+    Oauth2Tokens *t = Oauth2.response.tokens;
     if (!json || !t)
     {
         return;
@@ -183,40 +183,40 @@ static void parse_token_response(uint8_t *restrict work)
     t->token_type[0] = '\0';
     t->expires_in = 0;
 
-    JsonV.get_str_args.json = json;
-    JsonV.get_str_args.key = "access_token";
-    JsonV.get_str_args.out = t->access_token;
-    JsonV.get_str_args.out_cap = sizeof(t->access_token);
+    Json.get_str_args.json = json;
+    Json.get_str_args.key = "access_token";
+    Json.get_str_args.out = t->access_token;
+    Json.get_str_args.out_cap = sizeof(t->access_token);
     Json.get_str(json_work);
-    if (!JsonV.ok)
+    if (!Json.ok)
     {
         return;
     }
-    JsonV.get_str_args.json = json;
-    JsonV.get_str_args.key = "id_token";
-    JsonV.get_str_args.out = t->id_token;
-    JsonV.get_str_args.out_cap = sizeof(t->id_token);
+    Json.get_str_args.json = json;
+    Json.get_str_args.key = "id_token";
+    Json.get_str_args.out = t->id_token;
+    Json.get_str_args.out_cap = sizeof(t->id_token);
     Json.get_str(json_work);
-    JsonV.get_str_args.json = json;
-    JsonV.get_str_args.key = "refresh_token";
-    JsonV.get_str_args.out = t->refresh_token;
-    JsonV.get_str_args.out_cap = sizeof(t->refresh_token);
+    Json.get_str_args.json = json;
+    Json.get_str_args.key = "refresh_token";
+    Json.get_str_args.out = t->refresh_token;
+    Json.get_str_args.out_cap = sizeof(t->refresh_token);
     Json.get_str(json_work);
-    JsonV.get_str_args.json = json;
-    JsonV.get_str_args.key = "token_type";
-    JsonV.get_str_args.out = t->token_type;
-    JsonV.get_str_args.out_cap = sizeof(t->token_type);
+    Json.get_str_args.json = json;
+    Json.get_str_args.key = "token_type";
+    Json.get_str_args.out = t->token_type;
+    Json.get_str_args.out_cap = sizeof(t->token_type);
     Json.get_str(json_work);
     long e = 0;
-    JsonV.get_int_args.json = json;
-    JsonV.get_int_args.key = "expires_in";
-    JsonV.get_int_args.out = &e;
+    Json.get_int_args.json = json;
+    Json.get_int_args.key = "expires_in";
+    Json.get_int_args.out = &e;
     Json.get_int(json_work);
-    if (JsonV.ok)
+    if (Json.ok)
     {
         t->expires_in = e;
     }
-    Oauth2V.ok = PROTO_TRUE;
+    Oauth2.ok = PROTO_TRUE;
 }
 
 #if PROTOCORE_ENABLE_HTTP_CLIENT
@@ -229,59 +229,66 @@ static void post_and_parse(uint8_t *restrict work, int body_len)
 {
     if (body_len <= 0)
     {
-        Oauth2V.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_BUILD;
+        Oauth2.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_BUILD;
         return;
     }
-    HttpClientV.target.url = Oauth2V.request.token_endpoint;
-    HttpClientV.request.content_type = "application/x-www-form-urlencoded";
-    HttpClientV.request.body = (const uint8_t *)OAUTH2_CTX(work)->body;
-    HttpClientV.request.body_len = (size_t)body_len;
+    HttpClient.target.url = Oauth2.request.token_endpoint;
+    HttpClient.request.content_type = "application/x-www-form-urlencoded";
+    HttpClient.request.body = (const uint8_t *)OAUTH2_CTX(work)->body;
+    HttpClient.request.body_len = (size_t)body_len;
 #if PROTOCORE_HAS_NET_STACK
     HttpClient.post(protocore_http_client_span());
 #else
     HttpClient.post(NULL);
 #endif
-    const int32_t st = HttpClientV.status;
+    const int32_t st = HttpClient.status;
     if (st <= 0)
     {
-        Oauth2V.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT;
+        Oauth2.i32 = (int32_t)PROTOCORE_OAUTH2_ERR_TRANSPORT;
         return;
     }
     const size_t room = sizeof(OAUTH2_CTX(work)->resp) - 1;
-    const size_t k = HttpClientV.body_len < room ? HttpClientV.body_len : room;
-    if (HttpClientV.body && k)
+    const size_t k = HttpClient.body_len < room ? HttpClient.body_len : room;
+    if (HttpClient.body && k)
     {
-        mem.cpy(OAUTH2_CTX(work)->resp, HttpClientV.body, k);
+        mem.cpy(OAUTH2_CTX(work)->resp, HttpClient.body, k);
     }
     OAUTH2_CTX(work)->resp[k] = '\0';
-    Oauth2V.response.json = OAUTH2_CTX(work)->resp;
+    Oauth2.response.json = OAUTH2_CTX(work)->resp;
     parse_token_response(work);
-    Oauth2V.i32 = Oauth2V.ok ? st : (st >= 400 ? st : (int32_t)PROTOCORE_OAUTH2_ERR_RESPONSE);
+    Oauth2.i32 = Oauth2.ok ? st : (st >= 400 ? st : (int32_t)PROTOCORE_OAUTH2_ERR_RESPONSE);
 }
 
 // RFC 6749 sec 4.1.3 request, sec 4.1.4 response: the body is built into the store's own buffer, so
 // the caller sets only the endpoint, the grant members and response.tokens.
 static void exchange_code(uint8_t *restrict work)
 {
-    Oauth2V.request.out = OAUTH2_CTX(work)->body;
-    Oauth2V.request.cap = sizeof(OAUTH2_CTX(work)->body);
+    Oauth2.request.out = OAUTH2_CTX(work)->body;
+    Oauth2.request.cap = sizeof(OAUTH2_CTX(work)->body);
     build_code_request(work);
-    post_and_parse(work, (int)Oauth2V.i32);
+    post_and_parse(work, (int)Oauth2.i32);
 }
 
 // RFC 6749 sec 6: the same exchange presenting refresh_grant.refresh_token.
 static void refresh(uint8_t *restrict work)
 {
-    Oauth2V.request.out = OAUTH2_CTX(work)->body;
-    Oauth2V.request.cap = sizeof(OAUTH2_CTX(work)->body);
+    Oauth2.request.out = OAUTH2_CTX(work)->body;
+    Oauth2.request.cap = sizeof(OAUTH2_CTX(work)->body);
     build_refresh_request(work);
-    post_and_parse(work, (int)Oauth2V.i32);
+    post_and_parse(work, (int)Oauth2.i32);
 }
 
 #endif // PROTOCORE_ENABLE_HTTP_CLIENT
 
 // Designated, so a member's position in the struct does not decide what it binds to.
-/** @brief The operands and the outcome. */
-Oauth2Vars Oauth2V;
+Oauth2Ns Oauth2 = {
+    .build_code_request = build_code_request,
+    .build_refresh_request = build_refresh_request,
+    .parse_token_response = parse_token_response,
+#if PROTOCORE_ENABLE_HTTP_CLIENT
+    .exchange_code = exchange_code,
+    .refresh = refresh,
+#endif
+};
 
 #endif // PROTOCORE_ENABLE_OAUTH2

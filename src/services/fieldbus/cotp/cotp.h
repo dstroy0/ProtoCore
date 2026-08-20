@@ -61,6 +61,7 @@ typedef struct
     const uint8_t *data; ///< DT user data (points INTO the source buffer)
     size_t data_len;
 } CotpHeader;
+
 /** @brief What tpkt_build takes: buf, cap, payload, payload_len. */
 typedef struct
 {
@@ -69,6 +70,7 @@ typedef struct
     const uint8_t *payload;
     size_t payload_len;
 } CotpTpktBuildArgs;
+
 /** @brief What tpkt_parse takes: buf, len, payload, payload_len, ... */
 typedef struct
 {
@@ -78,6 +80,7 @@ typedef struct
     size_t *payload_len;
     size_t *consumed;
 } CotpTpktParseArgs;
+
 /** @brief What build_dt takes: buf, cap, data, data_len, eot. */
 typedef struct
 {
@@ -87,6 +90,7 @@ typedef struct
     size_t data_len;
     proto_bool eot;
 } CotpBuildDtArgs;
+
 /** @brief What build_cr takes: buf, cap, src_ref, tpdu_size_code, ... */
 typedef struct
 {
@@ -97,6 +101,7 @@ typedef struct
     const uint8_t *extra_params;
     size_t extra_len;
 } CotpBuildCrArgs;
+
 /** @brief What build_cc takes: buf, cap, dst_ref, src_ref, ... */
 typedef struct
 {
@@ -108,6 +113,7 @@ typedef struct
     const uint8_t *extra_params;
     size_t extra_len;
 } CotpBuildCcArgs;
+
 /** @brief What parse takes: buf, len, out. */
 typedef struct
 {
@@ -115,6 +121,7 @@ typedef struct
     size_t len;
     CotpHeader *out;
 } CotpParseArgs;
+
 /**
  * @brief TPKT (RFC 1006) + COTP / ISO 8073 X.224 class-0 frame codec (PROTOCORE_ENABLE_COTP) - zero-heap "ISO transport
  * on TCP" framing, the reusable foundation under S7comm and IEC 61850 MMS.
@@ -156,16 +163,10 @@ typedef struct
     CotpBuildCrArgs build_cr_args;
     CotpBuildCcArgs build_cc_args;
     CotpParseArgs parse_args;
+
     proto_bool ok;
     size_t n;
-} CotpVars;
 
-/** @brief The operands and the outcome. */
-extern CotpVars CotpV;
-
-/** @brief The entries. */
-typedef struct
-{
     void (*const tpkt_build)(uint8_t *restrict work);
     void (*const tpkt_parse)(uint8_t *restrict work);
     void (*const build_dt)(uint8_t *restrict work);
@@ -174,27 +175,8 @@ typedef struct
     void (*const parse)(uint8_t *restrict work);
 } CotpNs;
 
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in CotpV or a region of the borrow at a fixed offset.
-void protocore_cotp_tpkt_build(uint8_t *restrict work);
-void protocore_cotp_tpkt_parse(uint8_t *restrict work);
-void protocore_cotp_build_dt(uint8_t *restrict work);
-void protocore_cotp_build_cr(uint8_t *restrict work);
-void protocore_cotp_build_cc(uint8_t *restrict work);
-void protocore_cotp_parse(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Cotp.tpkt_build(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const CotpNs Cotp __attribute__((unused)) = {
-    .tpkt_build = protocore_cotp_tpkt_build,
-    .tpkt_parse = protocore_cotp_tpkt_parse,
-    .build_dt = protocore_cotp_build_dt,
-    .build_cr = protocore_cotp_build_cr,
-    .build_cc = protocore_cotp_build_cc,
-    .parse = protocore_cotp_parse,
-};
+/** @brief The one symbol this module exports. */
+extern CotpNs Cotp;
 
 PROTOCORE_END_DECLS
 
