@@ -800,18 +800,18 @@ static proto_bool fwd_extract_client(const char *s, size_t n, char *out, size_t 
     tok[tlen] = '\0';
 
     protocore_ip ip;
-    Ip.args.text = tok;
-    Ip.args.out = &ip;
+    IpV.args.text = tok;
+    IpV.args.out = &ip;
     Ip.parse(ip_work); // rejects "unknown" / "_obf" / malformed
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         return PROTO_FALSE;
     }
-    Ip.args.ip = &ip;
-    Ip.args.buf = out;
-    Ip.args.cap = cap;
+    IpV.args.ip = &ip;
+    IpV.args.buf = out;
+    IpV.args.cap = cap;
     Ip.format(ip_work);
-    return Ip.n > 0; // false if out is too small for the canonical text
+    return IpV.n > 0; // false if out is too small for the canonical text
 }
 
 // Index just past the DQUOTE that closes the one at @p i. RFC 7230 §3.2.6:

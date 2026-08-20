@@ -551,10 +551,10 @@ static void mdns_udp_handler(const uint8_t *data, size_t len, const struct proto
     tx[7] = (uint8_t)an;
 
     protocore_ip group = {PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = PROTOCORE_MDNS_GROUP;
-    Ip.args.out = &group;
+    IpV.args.text = PROTOCORE_MDNS_GROUP;
+    IpV.args.out = &group;
     Ip.parse(ip_work);
-    if (Ip.ok)
+    if (IpV.ok)
     {
         UdpListenerV.port = PROTOCORE_MDNS_PORT;
         UdpListenerV.send_args.dst = &group;

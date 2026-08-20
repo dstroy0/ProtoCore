@@ -97,10 +97,10 @@ uint8_t *protocore_syslog_span(void)
 // Parse the collector address and store the HEADER fields every later line carries.
 void protocore_syslog_init(uint8_t *restrict work)
 {
-    Ip.args.text = SyslogV.collector.addr;
-    Ip.args.out = &SYSLOG_CTX(work)->collector;
+    IpV.args.text = SyslogV.collector.addr;
+    IpV.args.out = &SYSLOG_CTX(work)->collector;
     Ip.parse(ip_work);
-    SYSLOG_CTX(work)->ready = Ip.ok;
+    SYSLOG_CTX(work)->ready = IpV.ok;
     SYSLOG_CTX(work)->port = SyslogV.collector.port;
     copy_field(SYSLOG_CTX(work)->hostname, sizeof(SYSLOG_CTX(work)->hostname), SyslogV.header.hostname);
     copy_field(SYSLOG_CTX(work)->app_name, sizeof(SYSLOG_CTX(work)->app_name), SyslogV.header.app_name);

@@ -718,10 +718,10 @@ void protocore_file_serving_serve_static(uint8_t *restrict work)
     fill_route_base(r, pat);
     r->type = ROUTE_STATIC;
     r->method = HTTP_GET;
-    Mnt.args.backend = file_sys;
-    Mnt.args.root = fs_root;
+    MntV.args.backend = file_sys;
+    MntV.args.root = fs_root;
     Mnt.point_add(mnt_work); // null backend is legal: whatever is mounted
-    r->mnt_id = Mnt.u8;
+    r->mnt_id = MntV.u8;
 }
 
 void protocore_file_serving_serve_static_request(uint8_t *restrict work)
@@ -752,9 +752,9 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
         return;
     }
 
-    Mnt.args.id = r->mnt_id;
+    MntV.args.id = r->mnt_id;
     Mnt.root_of(mnt_work);
-    const char *root = Mnt.text;
+    const char *root = MntV.text;
     size_t rlen = str.len(root, MAX_PATH_LEN);
     proto_bool root_slash = (rlen > 0 && root[rlen - 1] == '/');
     if (root_slash && sub[0] == '/') // avoid a doubled separator
@@ -813,11 +813,11 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
         Fs.exists(protocore_filesystem_span());
         if (gn > 0 && gn < (int)sizeof(gz) && Fs.ok)
         {
-            Mnt.args.id = r->mnt_id;
+            MntV.args.id = r->mnt_id;
             Mnt.point_of(mnt_work);
             FileServingV.serve_file_internal_args.slot_id = slot_id;
             FileServingV.serve_file_internal_args.head = head;
-            FileServingV.serve_file_internal_args.file_sys = Mnt.backend;
+            FileServingV.serve_file_internal_args.file_sys = MntV.backend;
             FileServingV.serve_file_internal_args.fs_path = gz;
             FileServingV.serve_file_internal_args.content_type = ctype;
             FileServingV.serve_file_internal_args.content_encoding = "gzip";
@@ -826,11 +826,11 @@ void protocore_file_serving_serve_static_request(uint8_t *restrict work)
         }
     }
 
-    Mnt.args.id = r->mnt_id;
+    MntV.args.id = r->mnt_id;
     Mnt.point_of(mnt_work);
     FileServingV.serve_file_internal_args.slot_id = slot_id;
     FileServingV.serve_file_internal_args.head = head;
-    FileServingV.serve_file_internal_args.file_sys = Mnt.backend;
+    FileServingV.serve_file_internal_args.file_sys = MntV.backend;
     FileServingV.serve_file_internal_args.fs_path = fs_path;
     FileServingV.serve_file_internal_args.content_type = ctype;
     FileServingV.serve_file_internal_args.content_encoding = NULL;

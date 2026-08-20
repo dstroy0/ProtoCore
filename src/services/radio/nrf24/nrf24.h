@@ -130,10 +130,16 @@ typedef struct
     Nrf24TxDoneArgs tx_done_args;
     Nrf24SetRxArgs set_rx_args;
     Nrf24RecvArgs recv_args;
-
     proto_bool ok;
     int n;
+} Nrf24Vars;
 
+/** @brief The operands and the outcome. */
+extern Nrf24Vars Nrf24V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const init)(uint8_t *restrict work);
     void (*const send)(uint8_t *restrict work);
     void (*const tx_done)(uint8_t *restrict work);
@@ -141,8 +147,25 @@ typedef struct
     void (*const recv)(uint8_t *restrict work);
 } Nrf24Ns;
 
-/** @brief The one symbol this module exports. */
-extern Nrf24Ns Nrf24;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in Nrf24V or a region of the borrow at a fixed offset.
+void protocore_nrf24_init(uint8_t *restrict work);
+void protocore_nrf24_send(uint8_t *restrict work);
+void protocore_nrf24_tx_done(uint8_t *restrict work);
+void protocore_nrf24_set_rx(uint8_t *restrict work);
+void protocore_nrf24_recv(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Nrf24.init(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const Nrf24Ns Nrf24 __attribute__((unused)) = {
+    .init = protocore_nrf24_init,
+    .send = protocore_nrf24_send,
+    .tx_done = protocore_nrf24_tx_done,
+    .set_rx = protocore_nrf24_set_rx,
+    .recv = protocore_nrf24_recv,
+};
 
 PROTOCORE_END_DECLS
 

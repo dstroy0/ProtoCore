@@ -35,12 +35,12 @@ static char g_val[64];
 // Read @p key out of @p body and return the decoded value, so each case reads as one assertion.
 static const char *field(const char *body, const char *key)
 {
-    Prov.form_field_args.body = body;
-    Prov.form_field_args.key = key;
-    Prov.form_field_args.out = g_val;
-    Prov.form_field_args.cap = sizeof(g_val);
+    ProvV.form_field_args.body = body;
+    ProvV.form_field_args.key = key;
+    ProvV.form_field_args.out = g_val;
+    ProvV.form_field_args.cap = sizeof(g_val);
     Prov.form_field(protocore_provisioning_service_span());
-    TEST_ASSERT_TRUE_MESSAGE(Prov.ok, key);
+    TEST_ASSERT_TRUE_MESSAGE(ProvV.ok, key);
     return g_val;
 }
 
@@ -97,19 +97,19 @@ void test_pairs_are_separated_by_ampersand(void)
 void test_an_empty_value_is_still_a_present_field(void)
 {
     char v[8];
-    Prov.form_field_args.body = "ssid=&psk=x";
-    Prov.form_field_args.key = "ssid";
-    Prov.form_field_args.out = v;
-    Prov.form_field_args.cap = sizeof(v);
+    ProvV.form_field_args.body = "ssid=&psk=x";
+    ProvV.form_field_args.key = "ssid";
+    ProvV.form_field_args.out = v;
+    ProvV.form_field_args.cap = sizeof(v);
     Prov.form_field(protocore_provisioning_service_span());
-    TEST_ASSERT_TRUE(Prov.ok);
+    TEST_ASSERT_TRUE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("", v);
-    Prov.form_field_args.body = "ssid=x";
-    Prov.form_field_args.key = "psk";
-    Prov.form_field_args.out = v;
-    Prov.form_field_args.cap = sizeof(v);
+    ProvV.form_field_args.body = "ssid=x";
+    ProvV.form_field_args.key = "psk";
+    ProvV.form_field_args.out = v;
+    ProvV.form_field_args.cap = sizeof(v);
     Prov.form_field(protocore_provisioning_service_span());
-    TEST_ASSERT_FALSE(Prov.ok);
+    TEST_ASSERT_FALSE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("", v);
 }
 
@@ -137,22 +137,22 @@ void test_an_incomplete_triplet_is_not_decoded(void)
 void test_the_value_is_bounded_and_terminated(void)
 {
     char v[4];
-    Prov.form_field_args.body = "ssid=abcdef";
-    Prov.form_field_args.key = "ssid";
-    Prov.form_field_args.out = v;
-    Prov.form_field_args.cap = sizeof(v);
+    ProvV.form_field_args.body = "ssid=abcdef";
+    ProvV.form_field_args.key = "ssid";
+    ProvV.form_field_args.out = v;
+    ProvV.form_field_args.cap = sizeof(v);
     Prov.form_field(protocore_provisioning_service_span());
-    TEST_ASSERT_TRUE(Prov.ok);
+    TEST_ASSERT_TRUE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("abc", v);
     TEST_ASSERT_EQUAL_size_t(3u, strlen(v));
 
     char one[1];
-    Prov.form_field_args.body = "ssid=abcdef";
-    Prov.form_field_args.key = "ssid";
-    Prov.form_field_args.out = one;
-    Prov.form_field_args.cap = sizeof(one);
+    ProvV.form_field_args.body = "ssid=abcdef";
+    ProvV.form_field_args.key = "ssid";
+    ProvV.form_field_args.out = one;
+    ProvV.form_field_args.cap = sizeof(one);
     Prov.form_field(protocore_provisioning_service_span());
-    TEST_ASSERT_TRUE(Prov.ok);
+    TEST_ASSERT_TRUE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("", one);
 }
 
@@ -160,32 +160,32 @@ void test_null_arguments_and_zero_capacity_are_refused(void)
 {
     char v[8];
     v[0] = 'x';
-    Prov.form_field_args.body = NULL;
-    Prov.form_field_args.key = "ssid";
-    Prov.form_field_args.out = v;
-    Prov.form_field_args.cap = sizeof(v);
+    ProvV.form_field_args.body = NULL;
+    ProvV.form_field_args.key = "ssid";
+    ProvV.form_field_args.out = v;
+    ProvV.form_field_args.cap = sizeof(v);
     Prov.form_field(protocore_provisioning_service_span());
-    TEST_ASSERT_FALSE(Prov.ok);
+    TEST_ASSERT_FALSE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("", v);
-    Prov.form_field_args.body = "ssid=x";
-    Prov.form_field_args.key = NULL;
-    Prov.form_field_args.out = v;
-    Prov.form_field_args.cap = sizeof(v);
+    ProvV.form_field_args.body = "ssid=x";
+    ProvV.form_field_args.key = NULL;
+    ProvV.form_field_args.out = v;
+    ProvV.form_field_args.cap = sizeof(v);
     Prov.form_field(protocore_provisioning_service_span());
-    TEST_ASSERT_FALSE(Prov.ok);
-    Prov.form_field_args.body = "ssid=x";
-    Prov.form_field_args.key = "ssid";
-    Prov.form_field_args.out = NULL;
-    Prov.form_field_args.cap = sizeof(v);
+    TEST_ASSERT_FALSE(ProvV.ok);
+    ProvV.form_field_args.body = "ssid=x";
+    ProvV.form_field_args.key = "ssid";
+    ProvV.form_field_args.out = NULL;
+    ProvV.form_field_args.cap = sizeof(v);
     Prov.form_field(protocore_provisioning_service_span());
-    TEST_ASSERT_FALSE(Prov.ok);
+    TEST_ASSERT_FALSE(ProvV.ok);
     v[0] = 'x';
-    Prov.form_field_args.body = "ssid=x";
-    Prov.form_field_args.key = "ssid";
-    Prov.form_field_args.out = v;
-    Prov.form_field_args.cap = 0;
+    ProvV.form_field_args.body = "ssid=x";
+    ProvV.form_field_args.key = "ssid";
+    ProvV.form_field_args.out = v;
+    ProvV.form_field_args.cap = 0;
     Prov.form_field(protocore_provisioning_service_span());
-    TEST_ASSERT_FALSE(Prov.ok);
+    TEST_ASSERT_FALSE(ProvV.ok);
     TEST_ASSERT_EQUAL_CHAR('x', v[0]); // zero capacity writes nothing, not even a terminator
 }
 
@@ -196,12 +196,12 @@ void test_an_empty_credential_store_reports_nothing(void)
     Prov.clear(protocore_provisioning_service_span());
     char ssid[8] = "x";
     char psk[8] = "y";
-    Prov.load_args.ssid = ssid;
-    Prov.load_args.ssid_cap = sizeof(ssid);
-    Prov.load_args.psk = psk;
-    Prov.load_args.psk_cap = sizeof(psk);
+    ProvV.load_args.ssid = ssid;
+    ProvV.load_args.ssid_cap = sizeof(ssid);
+    ProvV.load_args.psk = psk;
+    ProvV.load_args.psk_cap = sizeof(psk);
     Prov.load(protocore_provisioning_service_span());
-    TEST_ASSERT_FALSE(Prov.ok);
+    TEST_ASSERT_FALSE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("", ssid);
     TEST_ASSERT_EQUAL_STRING("", psk);
 }
@@ -211,21 +211,21 @@ void test_an_empty_credential_store_reports_nothing(void)
 void test_load_writes_only_the_destinations_it_was_given(void)
 {
     char psk[8] = "y";
-    Prov.load_args.ssid = NULL;
-    Prov.load_args.ssid_cap = 8;
-    Prov.load_args.psk = psk;
-    Prov.load_args.psk_cap = 0;
+    ProvV.load_args.ssid = NULL;
+    ProvV.load_args.ssid_cap = 8;
+    ProvV.load_args.psk = psk;
+    ProvV.load_args.psk_cap = 0;
     Prov.load(protocore_provisioning_service_span());
-    TEST_ASSERT_FALSE(Prov.ok);
+    TEST_ASSERT_FALSE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("y", psk);
 
     char ssid[8] = "z";
-    Prov.load_args.ssid = ssid;
-    Prov.load_args.ssid_cap = 0;
-    Prov.load_args.psk = NULL;
-    Prov.load_args.psk_cap = 8;
+    ProvV.load_args.ssid = ssid;
+    ProvV.load_args.ssid_cap = 0;
+    ProvV.load_args.psk = NULL;
+    ProvV.load_args.psk_cap = 8;
     Prov.load(protocore_provisioning_service_span());
-    TEST_ASSERT_FALSE(Prov.ok);
+    TEST_ASSERT_FALSE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("z", ssid);
 }
 
@@ -248,12 +248,12 @@ void test_saved_credentials_load_back(void)
 
     char ssid[33] = {0};
     char psk[64] = {0};
-    Prov.load_args.ssid = ssid;
-    Prov.load_args.ssid_cap = sizeof(ssid);
-    Prov.load_args.psk = psk;
-    Prov.load_args.psk_cap = sizeof(psk);
+    ProvV.load_args.ssid = ssid;
+    ProvV.load_args.ssid_cap = sizeof(ssid);
+    ProvV.load_args.psk = psk;
+    ProvV.load_args.psk_cap = sizeof(psk);
     Prov.load(protocore_provisioning_service_span());
-    TEST_ASSERT_TRUE(Prov.ok);
+    TEST_ASSERT_TRUE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("some-network", ssid);
     TEST_ASSERT_EQUAL_STRING("a secret", psk);
 }
@@ -267,12 +267,12 @@ void test_an_ssid_without_a_passphrase_still_loads(void)
 
     char ssid[33] = {0};
     char psk[64] = "leftover";
-    Prov.load_args.ssid = ssid;
-    Prov.load_args.ssid_cap = sizeof(ssid);
-    Prov.load_args.psk = psk;
-    Prov.load_args.psk_cap = sizeof(psk);
+    ProvV.load_args.ssid = ssid;
+    ProvV.load_args.ssid_cap = sizeof(ssid);
+    ProvV.load_args.psk = psk;
+    ProvV.load_args.psk_cap = sizeof(psk);
     Prov.load(protocore_provisioning_service_span());
-    TEST_ASSERT_TRUE(Prov.ok);
+    TEST_ASSERT_TRUE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("open-ap", ssid);
     TEST_ASSERT_EQUAL_STRING("", psk);
 }
@@ -283,20 +283,20 @@ void test_clear_takes_the_credentials_away(void)
 {
     TEST_ASSERT_TRUE(protocore_nvs_put_str(PROTOCORE_PROV_NVS_NAMESPACE, PROTOCORE_PROV_KEY_SSID, "some-network"));
     char ssid[33] = {0};
-    Prov.load_args.ssid = ssid;
-    Prov.load_args.ssid_cap = sizeof(ssid);
-    Prov.load_args.psk = NULL;
-    Prov.load_args.psk_cap = 0;
+    ProvV.load_args.ssid = ssid;
+    ProvV.load_args.ssid_cap = sizeof(ssid);
+    ProvV.load_args.psk = NULL;
+    ProvV.load_args.psk_cap = 0;
     Prov.load(protocore_provisioning_service_span());
-    TEST_ASSERT_TRUE(Prov.ok);
+    TEST_ASSERT_TRUE(ProvV.ok);
 
     Prov.clear(protocore_provisioning_service_span());
-    Prov.load_args.ssid = ssid;
-    Prov.load_args.ssid_cap = sizeof(ssid);
-    Prov.load_args.psk = NULL;
-    Prov.load_args.psk_cap = 0;
+    ProvV.load_args.ssid = ssid;
+    ProvV.load_args.ssid_cap = sizeof(ssid);
+    ProvV.load_args.psk = NULL;
+    ProvV.load_args.psk_cap = 0;
     Prov.load(protocore_provisioning_service_span());
-    TEST_ASSERT_FALSE(Prov.ok);
+    TEST_ASSERT_FALSE(ProvV.ok);
     TEST_ASSERT_EQUAL_STRING("", ssid);
 }
 
@@ -304,7 +304,7 @@ void test_clear_takes_the_credentials_away(void)
 // arm of Physical records the AP it was asked for, so the name that reached the radio is assertable.
 void test_begin_raises_the_softap_under_the_name_it_was_given(void)
 {
-    Prov.begin_args.ap_ssid = "ProtoCore-Setup";
+    ProvV.begin_args.ap_ssid = "ProtoCore-Setup";
     Prov.begin(protocore_provisioning_service_span());
     TEST_ASSERT_EQUAL_STRING("ProtoCore-Setup", PhysicalV.wifi.ssid);
     TEST_ASSERT_NULL(PhysicalV.wifi.password); // a provisioning AP is open, or nobody can reach it
@@ -314,7 +314,7 @@ void test_begin_raises_the_softap_under_the_name_it_was_given(void)
 // would leave a client's queries going to the real resolver it cannot reach.
 void test_begin_binds_the_catch_all_dns_on_port_53(void)
 {
-    Prov.begin_args.ap_ssid = "ProtoCore-Setup";
+    ProvV.begin_args.ap_ssid = "ProtoCore-Setup";
     Prov.begin(protocore_provisioning_service_span());
     TEST_ASSERT_EQUAL_UINT16(53, UdpListenerV.port);
     TEST_ASSERT_NOT_NULL(UdpListenerV.bind.handler);

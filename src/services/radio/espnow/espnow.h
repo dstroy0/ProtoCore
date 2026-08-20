@@ -168,10 +168,16 @@ typedef struct
     EspnowAddPeerArgs add_peer_args;
     EspnowSendArgs send_args;
     EspnowBroadcastArgs broadcast_args;
-
     proto_bool ok;
     size_t n;
+} EspnowVars;
 
+/** @brief The operands and the outcome. */
+extern EspnowVars EspnowV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const encode)(uint8_t *restrict work);
     void (*const decode)(uint8_t *restrict work);
     void (*const peers_reset)(uint8_t *restrict work);
@@ -185,11 +191,40 @@ typedef struct
     void (*const broadcast)(uint8_t *restrict work);
 } EspnowNs;
 
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in EspnowV or a region of the borrow at a fixed offset.
+void protocore_espnow_encode(uint8_t *restrict work);
+void protocore_espnow_decode(uint8_t *restrict work);
+void protocore_espnow_peers_reset(uint8_t *restrict work);
+void protocore_espnow_peer_add(uint8_t *restrict work);
+void protocore_espnow_peer_has(uint8_t *restrict work);
+void protocore_espnow_peer_remove(uint8_t *restrict work);
+void protocore_espnow_peer_count(uint8_t *restrict work);
+void protocore_espnow_begin(uint8_t *restrict work);
+void protocore_espnow_add_peer(uint8_t *restrict work);
+void protocore_espnow_send(uint8_t *restrict work);
+void protocore_espnow_broadcast(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Espnow.encode(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const EspnowNs Espnow __attribute__((unused)) = {
+    .encode = protocore_espnow_encode,
+    .decode = protocore_espnow_decode,
+    .peers_reset = protocore_espnow_peers_reset,
+    .peer_add = protocore_espnow_peer_add,
+    .peer_has = protocore_espnow_peer_has,
+    .peer_remove = protocore_espnow_peer_remove,
+    .peer_count = protocore_espnow_peer_count,
+    .begin = protocore_espnow_begin,
+    .add_peer = protocore_espnow_add_peer,
+    .send = protocore_espnow_send,
+    .broadcast = protocore_espnow_broadcast,
+};
+
 /** @brief The 6-octet broadcast address every peer accepts, and always a peer itself. */
 extern const uint8_t PROTOCORE_ESPNOW_BROADCAST[6];
-
-/** @brief The one symbol this module exports. */
-extern EspnowNs Espnow;
 
 /**
  * @brief The PROTOCORE_ESPNOW_BORROW bytes this module's state lives in.

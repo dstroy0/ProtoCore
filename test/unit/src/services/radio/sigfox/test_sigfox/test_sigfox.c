@@ -33,12 +33,12 @@ void test_sigfox_published_uplink_example(void)
 {
     static const uint8_t PAYLOAD[12] = {'I', 'o', 'T', 'E', 'a', 's', 't', 'e', 'r', 'E', 'g', 'g'};
     char out[64];
-    Sigfox.build_uplink_args.payload = PAYLOAD;
-    Sigfox.build_uplink_args.len = sizeof(PAYLOAD);
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = sizeof(out);
+    SigfoxV.build_uplink_args.payload = PAYLOAD;
+    SigfoxV.build_uplink_args.len = sizeof(PAYLOAD);
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = sizeof(out);
     Sigfox.build_uplink(sigfox_work);
-    const uint16_t n = Sigfox.value;
+    const uint16_t n = SigfoxV.value;
     TEST_ASSERT_EQUAL_STRING("AT$SF=496F54456173746572456767\r\n", out);
     // "AT$SF=" is 6, the hex is 2 per octet, and the command ends CR LF; the NUL is past the count.
     TEST_ASSERT_EQUAL_UINT16(6 + 24 + 2, n);
@@ -53,32 +53,32 @@ void test_hex_is_uppercase_and_msb_nibble_first(void)
 
     // 0x0A and 0xB3 separate the two nibbles and cover both halves of the digit alphabet.
     static const uint8_t NIBBLES[2] = {0x0A, 0xB3};
-    Sigfox.build_uplink_args.payload = NIBBLES;
-    Sigfox.build_uplink_args.len = sizeof(NIBBLES);
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = sizeof(out);
+    SigfoxV.build_uplink_args.payload = NIBBLES;
+    SigfoxV.build_uplink_args.len = sizeof(NIBBLES);
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = sizeof(out);
     Sigfox.build_uplink(sigfox_work);
-    (void)Sigfox.value;
+    (void)SigfoxV.value;
     TEST_ASSERT_EQUAL_STRING("AT$SF=0AB3\r\n", out);
 
     // Every hex digit, in order, from six octets.
     static const uint8_t ALL[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
-    Sigfox.build_uplink_args.payload = ALL;
-    Sigfox.build_uplink_args.len = sizeof(ALL);
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = sizeof(out);
+    SigfoxV.build_uplink_args.payload = ALL;
+    SigfoxV.build_uplink_args.len = sizeof(ALL);
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = sizeof(out);
     Sigfox.build_uplink(sigfox_work);
-    (void)Sigfox.value;
+    (void)SigfoxV.value;
     TEST_ASSERT_EQUAL_STRING("AT$SF=0123456789ABCDEF\r\n", out);
 
     // The extremes of one octet.
     static const uint8_t EDGES[2] = {0x00, 0xFF};
-    Sigfox.build_uplink_args.payload = EDGES;
-    Sigfox.build_uplink_args.len = sizeof(EDGES);
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = sizeof(out);
+    SigfoxV.build_uplink_args.payload = EDGES;
+    SigfoxV.build_uplink_args.len = sizeof(EDGES);
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = sizeof(out);
     Sigfox.build_uplink(sigfox_work);
-    (void)Sigfox.value;
+    (void)SigfoxV.value;
     TEST_ASSERT_EQUAL_STRING("AT$SF=00FF\r\n", out);
 }
 
@@ -89,26 +89,26 @@ void test_payload_cap_is_twelve_octets(void)
     char out[64];
 
     TEST_ASSERT_EQUAL_INT(12, PROTOCORE_SIGFOX_MAX_PAYLOAD);
-    Sigfox.build_uplink_args.payload = PAYLOAD;
-    Sigfox.build_uplink_args.len = 12;
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = sizeof(out);
+    SigfoxV.build_uplink_args.payload = PAYLOAD;
+    SigfoxV.build_uplink_args.len = 12;
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = sizeof(out);
     Sigfox.build_uplink(sigfox_work);
-    TEST_ASSERT_EQUAL_UINT16(6 + 24 + 2, Sigfox.value);
-    Sigfox.build_uplink_args.payload = PAYLOAD;
-    Sigfox.build_uplink_args.len = 13;
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT16(6 + 24 + 2, SigfoxV.value);
+    SigfoxV.build_uplink_args.payload = PAYLOAD;
+    SigfoxV.build_uplink_args.len = 13;
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = sizeof(out);
     Sigfox.build_uplink(sigfox_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Sigfox.value);
+    TEST_ASSERT_EQUAL_UINT16(0, SigfoxV.value);
 
     // A zero-length uplink is not a message either: AT$SF= carries no payload to send.
-    Sigfox.build_uplink_args.payload = PAYLOAD;
-    Sigfox.build_uplink_args.len = 0;
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = sizeof(out);
+    SigfoxV.build_uplink_args.payload = PAYLOAD;
+    SigfoxV.build_uplink_args.len = 0;
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = sizeof(out);
     Sigfox.build_uplink(sigfox_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Sigfox.value);
+    TEST_ASSERT_EQUAL_UINT16(0, SigfoxV.value);
 }
 
 // The command is written whole or not at all, and the room it needs is the prefix, two characters
@@ -119,70 +119,70 @@ void test_build_fails_closed(void)
     char out[32];
     const uint16_t need = 6 + 2 * 4 + 2 + 1; // 17 octets including the NUL
 
-    Sigfox.build_uplink_args.payload = PAYLOAD;
-    Sigfox.build_uplink_args.len = 4;
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = need;
+    SigfoxV.build_uplink_args.payload = PAYLOAD;
+    SigfoxV.build_uplink_args.len = 4;
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = need;
     Sigfox.build_uplink(sigfox_work);
-    TEST_ASSERT_EQUAL_UINT16(need - 1, Sigfox.value);
+    TEST_ASSERT_EQUAL_UINT16(need - 1, SigfoxV.value);
     TEST_ASSERT_EQUAL_STRING("AT$SF=DEADBEEF\r\n", out);
-    Sigfox.build_uplink_args.payload = PAYLOAD;
-    Sigfox.build_uplink_args.len = 4;
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = (uint16_t)(need - 1);
+    SigfoxV.build_uplink_args.payload = PAYLOAD;
+    SigfoxV.build_uplink_args.len = 4;
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = (uint16_t)(need - 1);
     Sigfox.build_uplink(sigfox_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Sigfox.value);
-    Sigfox.build_uplink_args.payload = PAYLOAD;
-    Sigfox.build_uplink_args.len = 4;
-    Sigfox.build_uplink_args.out = NULL;
-    Sigfox.build_uplink_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT16(0, SigfoxV.value);
+    SigfoxV.build_uplink_args.payload = PAYLOAD;
+    SigfoxV.build_uplink_args.len = 4;
+    SigfoxV.build_uplink_args.out = NULL;
+    SigfoxV.build_uplink_args.cap = sizeof(out);
     Sigfox.build_uplink(sigfox_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Sigfox.value);
-    Sigfox.build_uplink_args.payload = NULL;
-    Sigfox.build_uplink_args.len = 4;
-    Sigfox.build_uplink_args.out = out;
-    Sigfox.build_uplink_args.cap = sizeof(out);
+    TEST_ASSERT_EQUAL_UINT16(0, SigfoxV.value);
+    SigfoxV.build_uplink_args.payload = NULL;
+    SigfoxV.build_uplink_args.len = 4;
+    SigfoxV.build_uplink_args.out = out;
+    SigfoxV.build_uplink_args.cap = sizeof(out);
     Sigfox.build_uplink(sigfox_work);
-    TEST_ASSERT_EQUAL_UINT16(0, Sigfox.value);
+    TEST_ASSERT_EQUAL_UINT16(0, SigfoxV.value);
 }
 
 // The modem answers "OK" when it took the command and "ERROR" when it did not; anything else is
 // not yet an answer, so the caller keeps reading.
 void test_response_classification(void)
 {
-    Sigfox.parse_response_args.buf = "OK\r\n";
-    Sigfox.parse_response_args.len = 4;
+    SigfoxV.parse_response_args.buf = "OK\r\n";
+    SigfoxV.parse_response_args.len = 4;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_OK, Sigfox.status);
-    Sigfox.parse_response_args.buf = "\r\nOK\r\n";
-    Sigfox.parse_response_args.len = 6;
+    TEST_ASSERT_EQUAL_INT(SIGFOX_OK, SigfoxV.status);
+    SigfoxV.parse_response_args.buf = "\r\nOK\r\n";
+    SigfoxV.parse_response_args.len = 6;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_OK, Sigfox.status);
-    Sigfox.parse_response_args.buf = "ERROR\r\n";
-    Sigfox.parse_response_args.len = 7;
+    TEST_ASSERT_EQUAL_INT(SIGFOX_OK, SigfoxV.status);
+    SigfoxV.parse_response_args.buf = "ERROR\r\n";
+    SigfoxV.parse_response_args.len = 7;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_ERROR, Sigfox.status);
-    Sigfox.parse_response_args.buf = "\r\nERROR: 5\r\n";
-    Sigfox.parse_response_args.len = 12;
+    TEST_ASSERT_EQUAL_INT(SIGFOX_ERROR, SigfoxV.status);
+    SigfoxV.parse_response_args.buf = "\r\nERROR: 5\r\n";
+    SigfoxV.parse_response_args.len = 12;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_ERROR, Sigfox.status);
+    TEST_ASSERT_EQUAL_INT(SIGFOX_ERROR, SigfoxV.status);
 
     // The command echo the modem sends back first is not an answer.
-    Sigfox.parse_response_args.buf = "AT$SF=DEADBEEF\r\n";
-    Sigfox.parse_response_args.len = 16;
+    SigfoxV.parse_response_args.buf = "AT$SF=DEADBEEF\r\n";
+    SigfoxV.parse_response_args.len = 16;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, Sigfox.status);
-    Sigfox.parse_response_args.buf = "O";
-    Sigfox.parse_response_args.len = 1;
+    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, SigfoxV.status);
+    SigfoxV.parse_response_args.buf = "O";
+    SigfoxV.parse_response_args.len = 1;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, Sigfox.status); // half of "OK"
+    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, SigfoxV.status); // half of "OK"
 
     // An error answer wins over an "OK" elsewhere in the same buffer: a failed uplink must not be
     // reported as sent.
-    Sigfox.parse_response_args.buf = "OK\r\nERROR\r\n";
-    Sigfox.parse_response_args.len = 11;
+    SigfoxV.parse_response_args.buf = "OK\r\nERROR\r\n";
+    SigfoxV.parse_response_args.len = 11;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_ERROR, Sigfox.status);
+    TEST_ASSERT_EQUAL_INT(SIGFOX_ERROR, SigfoxV.status);
 }
 
 // The classification reads only the octets it is given: a match that starts inside the buffer but
@@ -192,32 +192,32 @@ void test_response_respects_the_stated_length(void)
     static const char *const BUF = "ERROR";
     for (uint16_t len = 0; len < 5; len++)
     {
-        Sigfox.parse_response_args.buf = BUF;
-        Sigfox.parse_response_args.len = len;
+        SigfoxV.parse_response_args.buf = BUF;
+        SigfoxV.parse_response_args.len = len;
         Sigfox.parse_response(sigfox_work);
-        TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, Sigfox.status);
+        TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, SigfoxV.status);
     }
-    Sigfox.parse_response_args.buf = BUF;
-    Sigfox.parse_response_args.len = 5;
+    SigfoxV.parse_response_args.buf = BUF;
+    SigfoxV.parse_response_args.len = 5;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_ERROR, Sigfox.status);
+    TEST_ASSERT_EQUAL_INT(SIGFOX_ERROR, SigfoxV.status);
 
     static const char *const OKBUF = "OK";
-    Sigfox.parse_response_args.buf = OKBUF;
-    Sigfox.parse_response_args.len = 1;
+    SigfoxV.parse_response_args.buf = OKBUF;
+    SigfoxV.parse_response_args.len = 1;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, Sigfox.status);
-    Sigfox.parse_response_args.buf = OKBUF;
-    Sigfox.parse_response_args.len = 2;
+    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, SigfoxV.status);
+    SigfoxV.parse_response_args.buf = OKBUF;
+    SigfoxV.parse_response_args.len = 2;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_OK, Sigfox.status);
+    TEST_ASSERT_EQUAL_INT(SIGFOX_OK, SigfoxV.status);
 
-    Sigfox.parse_response_args.buf = NULL;
-    Sigfox.parse_response_args.len = 10;
+    SigfoxV.parse_response_args.buf = NULL;
+    SigfoxV.parse_response_args.len = 10;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, Sigfox.status);
-    Sigfox.parse_response_args.buf = "OK";
-    Sigfox.parse_response_args.len = 0;
+    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, SigfoxV.status);
+    SigfoxV.parse_response_args.buf = "OK";
+    SigfoxV.parse_response_args.len = 0;
     Sigfox.parse_response(sigfox_work);
-    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, Sigfox.status);
+    TEST_ASSERT_EQUAL_INT(SIGFOX_PENDING, SigfoxV.status);
 }

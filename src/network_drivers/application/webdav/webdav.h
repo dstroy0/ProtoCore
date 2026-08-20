@@ -281,13 +281,19 @@ typedef struct
     WebdavLockReleaseArgs lock_release_args;
     WebdavLockCanWriteArgs lock_can_write_args;
     WebdavIfTokenArgs if_token_args;
-
     proto_bool ok;
     WebDavMethod value;
     int i32;
     size_t n;
     const DavLock *ptr;
+} WebdavVars;
 
+/** @brief The operands and the outcome. */
+extern WebdavVars WebdavV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const method)(uint8_t *restrict work);
     void (*const depth)(uint8_t *restrict work);
     void (*const xml_escape)(uint8_t *restrict work);
@@ -306,8 +312,47 @@ typedef struct
     void (*const if_token)(uint8_t *restrict work);
 } WebdavNs;
 
-/** @brief The one symbol this module exports. */
-extern WebdavNs Webdav;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WebdavV or a region of the borrow at a fixed offset.
+void protocore_webdav_method(uint8_t *restrict work);
+void protocore_webdav_depth(uint8_t *restrict work);
+void protocore_webdav_xml_escape(uint8_t *restrict work);
+void protocore_webdav_dest_path(uint8_t *restrict work);
+void protocore_webdav_ms_begin(uint8_t *restrict work);
+void protocore_webdav_ms_entry(uint8_t *restrict work);
+void protocore_webdav_ms_end(uint8_t *restrict work);
+void protocore_webdav_proppatch_ms(uint8_t *restrict work);
+void protocore_webdav_lock_init(uint8_t *restrict work);
+void protocore_webdav_lock_acquire(uint8_t *restrict work);
+void protocore_webdav_lock_sweep(uint8_t *restrict work);
+void protocore_webdav_lock_refresh(uint8_t *restrict work);
+void protocore_webdav_lock_find(uint8_t *restrict work);
+void protocore_webdav_lock_release(uint8_t *restrict work);
+void protocore_webdav_lock_can_write(uint8_t *restrict work);
+void protocore_webdav_if_token(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Webdav.method(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WebdavNs Webdav __attribute__((unused)) = {
+    .method = protocore_webdav_method,
+    .depth = protocore_webdav_depth,
+    .xml_escape = protocore_webdav_xml_escape,
+    .dest_path = protocore_webdav_dest_path,
+    .ms_begin = protocore_webdav_ms_begin,
+    .ms_entry = protocore_webdav_ms_entry,
+    .ms_end = protocore_webdav_ms_end,
+    .proppatch_ms = protocore_webdav_proppatch_ms,
+    .lock_init = protocore_webdav_lock_init,
+    .lock_acquire = protocore_webdav_lock_acquire,
+    .lock_sweep = protocore_webdav_lock_sweep,
+    .lock_refresh = protocore_webdav_lock_refresh,
+    .lock_find = protocore_webdav_lock_find,
+    .lock_release = protocore_webdav_lock_release,
+    .lock_can_write = protocore_webdav_lock_can_write,
+    .if_token = protocore_webdav_if_token,
+};
 
 PROTOCORE_END_DECLS
 

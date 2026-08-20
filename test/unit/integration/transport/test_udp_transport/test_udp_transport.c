@@ -15,8 +15,8 @@ static const protocore_ip *addr(const char *s)
 {
     static protocore_ip a;
     a = (protocore_ip){PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = s;
-    Ip.args.out = &a;
+    IpV.args.text = s;
+    IpV.args.out = &a;
     Ip.parse(ip_work);
     return &a;
 }

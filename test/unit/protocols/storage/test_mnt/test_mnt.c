@@ -14,7 +14,7 @@ static int s_root;
 void setUp()
 {
     Mnt.ram(mnt_work);
-    Mnt.args.backend = Mnt.backend;
+    MntV.args.backend = MntV.backend;
     Mnt.mount(mnt_work);
     Mnt.ram_format(mnt_work);
     Fs.mount = "/";
@@ -436,7 +436,7 @@ void test_handle_pool_exhaustion()
 
 void test_unmounted_fails_closed()
 {
-    Mnt.args.backend = NULL;
+    MntV.args.backend = NULL;
     Mnt.mount(mnt_work);
     Fs.path.root = s_root;
     Fs.path.dir = "/a";
@@ -466,7 +466,7 @@ void test_unmounted_fails_closed()
 void test_ram_guard_subconditions()
 {
     Mnt.ram(mnt_work);
-    Mnt.args.backend = Mnt.backend;
+    MntV.args.backend = MntV.backend;
     Mnt.mount(mnt_work);
     Mnt.ram_format(mnt_work);
     uint8_t b[8] = {0};
@@ -514,7 +514,7 @@ void test_ram_guard_subconditions()
 
 void test_unmounted_all_entry_points()
 {
-    Mnt.args.backend = NULL;
+    MntV.args.backend = NULL;
     Mnt.mount(mnt_work);
     uint8_t b[8] = {0};
     Fs.io.handle = 0;
@@ -549,7 +549,7 @@ void test_unmounted_all_entry_points()
     Fs.read_file(protocore_filesystem_span());
     TEST_ASSERT_TRUE(Fs.len < 0);
     Mnt.ram(mnt_work);
-    Mnt.args.backend = Mnt.backend;
+    MntV.args.backend = MntV.backend;
     Mnt.mount(mnt_work);
     Fs.path.root = s_root;
     Fs.path.dir = "/a";
@@ -870,7 +870,7 @@ static const protocore_mnt_backend s_stall_backend = {stall_open, stall_read, st
 
 void test_zero_progress_backend_terminates()
 {
-    Mnt.args.backend = &s_stall_backend;
+    MntV.args.backend = &s_stall_backend;
     Mnt.mount(mnt_work);
     char buf[16];
     Fs.path.root = s_root;
@@ -888,7 +888,7 @@ void test_zero_progress_backend_terminates()
     Fs.write_file(protocore_filesystem_span());
     TEST_ASSERT_FALSE(Fs.ok);
     Mnt.ram(mnt_work);
-    Mnt.args.backend = Mnt.backend;
+    MntV.args.backend = MntV.backend;
     Mnt.mount(mnt_work);
     Fs.path.root = s_root;
     Fs.path.dir = "/x";
@@ -1208,7 +1208,7 @@ void test_unbound_root_fails_closed()
 
 void test_null_store_is_intentional_and_says_so()
 {
-    Mnt.args.backend = NULL;
+    MntV.args.backend = NULL;
     Mnt.mount(mnt_work);
     Fs.clear(protocore_filesystem_span());
 
@@ -1242,7 +1242,7 @@ void test_null_store_is_intentional_and_says_so()
     TEST_ASSERT_EQUAL_INT32(-1, Fs.len);
 
     Mnt.ram(mnt_work);
-    Mnt.args.backend = Mnt.backend;
+    MntV.args.backend = MntV.backend;
     Mnt.mount(mnt_work);
     Mnt.ram_format(mnt_work);
     Fs.present(protocore_filesystem_span());
@@ -1302,4 +1302,3 @@ void test_status_separates_the_reasons()
     Fs.status(protocore_filesystem_span());
     TEST_ASSERT_TRUE((Fs.bits & PROTOCORE_FS_STORAGE_EXHAUSTED) != 0);
 }
-

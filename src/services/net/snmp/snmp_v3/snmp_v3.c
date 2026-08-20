@@ -820,14 +820,14 @@ void protocore_snmp_v3_process(uint8_t *restrict work)
     {
         return;
     }
-    SnmpAgent.pdu.req = pdu;
-    SnmpAgent.pdu.req_len = pdu_len;
-    SnmpAgent.pdu.allow_write = PROTO_TRUE;
-    SnmpAgent.pdu.v2c = PROTO_TRUE;
-    SnmpAgent.pdu.out = SNMP_V3_CTX(work)->v3_b;
-    SnmpAgent.pdu.out_cap = sizeof(SNMP_V3_CTX(work)->v3_b);
+    SnmpAgentV.pdu.req = pdu;
+    SnmpAgentV.pdu.req_len = pdu_len;
+    SnmpAgentV.pdu.allow_write = PROTO_TRUE;
+    SnmpAgentV.pdu.v2c = PROTO_TRUE;
+    SnmpAgentV.pdu.out = SNMP_V3_CTX(work)->v3_b;
+    SnmpAgentV.pdu.out_cap = sizeof(SNMP_V3_CTX(work)->v3_b);
     SnmpAgent.dispatch_pdu(protocore_snmp_agent_span());
-    const size_t rpdu = SnmpAgent.n;
+    const size_t rpdu = SnmpAgentV.n;
     if (rpdu == 0)
     {
         return;
@@ -933,10 +933,10 @@ static void send_notify(uint8_t *restrict work, uint8_t pdu_tag)
         return;
     }
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = SnmpV3V.notify.dst_ip;
-    Ip.args.out = &dst;
+    IpV.args.text = SnmpV3V.notify.dst_ip;
+    IpV.args.out = &dst;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         return;
     }

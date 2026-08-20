@@ -74,7 +74,7 @@ void setUp()
 
     mock_mnt_reset();
 
-    Mnt.args.backend = mock_mnt();
+    MntV.args.backend = mock_mnt();
     Mnt.mount(mnt_work);
     tcp_capture_reset();
 }

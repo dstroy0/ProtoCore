@@ -176,10 +176,10 @@ void protocore_ntp_service_begin(uint8_t *restrict work)
         NtpServiceV.ok = PROTO_FALSE; // no storage
         return;
     }
-    Ip.args.text = host;
-    Ip.args.out = &dst;
+    IpV.args.text = host;
+    IpV.args.out = &dst;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         NtpServiceV.ok = PROTO_FALSE; // a name, and this client has no resolver of its own
         return;

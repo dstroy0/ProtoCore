@@ -183,9 +183,9 @@ void protocore_tcp_listener_accept_throttle_reset(uint8_t *restrict work)
 
 void protocore_tcp_listener_accept_allowed_ip(uint8_t *restrict work)
 {
-    Ip.args.ip = TcpListenerV.gate.addr;
+    IpV.args.ip = TcpListenerV.gate.addr;
     Ip.is_unspecified(ip_work);
-    if (Ip.ok)
+    if (IpV.ok)
     {
         TcpListenerV.ok = PROTO_TRUE; // untrackable source - defer to the global accept throttle
         return;
@@ -197,10 +197,10 @@ void protocore_tcp_listener_accept_allowed_ip(uint8_t *restrict work)
     for (int i = 0; i < PROTOCORE_PER_IP_THROTTLE_SLOTS; i++)
     {
         IpThrottleBucket *b = &TCP_LISTENER_CTX(work)->iptt.buckets[i];
-        Ip.args.ip = &b->addr;
-        Ip.args.b = TcpListenerV.gate.addr;
+        IpV.args.ip = &b->addr;
+        IpV.args.b = TcpListenerV.gate.addr;
         Ip.equal(ip_work);
-        if (b->addr.family != PROTOCORE_IP_NONE && Ip.ok)
+        if (b->addr.family != PROTOCORE_IP_NONE && IpV.ok)
         {
             // Unsigned subtraction wraps correctly across the millis() rollover.
             if ((uint32_t)(TcpListenerV.gate.now_ms - b->window_start) >= PROTOCORE_PER_IP_THROTTLE_WINDOW_MS)
@@ -321,10 +321,10 @@ void protocore_tcp_listener_ip_allow_add_cidr(uint8_t *restrict work)
 
     protocore_ip net;
     net.family = PROTOCORE_IP_NONE;
-    Ip.args.text = addr;
-    Ip.args.out = &net;
+    IpV.args.text = addr;
+    IpV.args.out = &net;
     Ip.parse(ip_work);
-    if (!Ip.ok)
+    if (!IpV.ok)
     {
         return;
     }
@@ -370,11 +370,11 @@ void protocore_tcp_listener_ip_allowed(uint8_t *restrict work)
     for (uint8_t i = 0; i < TCP_LISTENER_CTX(work)->allow.count; i++)
     {
         // protocore_ip_prefix_match requires the same family, so a v4 peer never matches a v6 rule.
-        Ip.args.ip = TcpListenerV.gate.addr;
-        Ip.args.b = &TCP_LISTENER_CTX(work)->allow.rules[i].network;
-        Ip.args.prefix_len = TCP_LISTENER_CTX(work)->allow.rules[i].prefix_len;
+        IpV.args.ip = TcpListenerV.gate.addr;
+        IpV.args.b = &TCP_LISTENER_CTX(work)->allow.rules[i].network;
+        IpV.args.prefix_len = TCP_LISTENER_CTX(work)->allow.rules[i].prefix_len;
         Ip.prefix_match(ip_work);
-        if (Ip.ok)
+        if (IpV.ok)
         {
             TcpListenerV.ok = PROTO_TRUE;
             return;

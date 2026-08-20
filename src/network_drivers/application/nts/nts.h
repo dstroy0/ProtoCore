@@ -159,10 +159,16 @@ typedef struct
     NtsEfArgs ef_args;
     NtsEfUniqueIdArgs ef_unique_id_args;
     NtsEfCookieArgs ef_cookie_args;
-
     proto_bool ok;
     size_t n;
+} NtsVars;
 
+/** @brief The operands and the outcome. */
+extern NtsVars NtsV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const ke_record)(uint8_t *restrict work);
     void (*const ke_request)(uint8_t *restrict work);
     void (*const ke_parse)(uint8_t *restrict work);
@@ -171,8 +177,27 @@ typedef struct
     void (*const ef_cookie)(uint8_t *restrict work);
 } NtsNs;
 
-/** @brief The one symbol this module exports. */
-extern NtsNs Nts;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in NtsV or a region of the borrow at a fixed offset.
+void protocore_nts_ke_record(uint8_t *restrict work);
+void protocore_nts_ke_request(uint8_t *restrict work);
+void protocore_nts_ke_parse(uint8_t *restrict work);
+void protocore_nts_ef(uint8_t *restrict work);
+void protocore_nts_ef_unique_id(uint8_t *restrict work);
+void protocore_nts_ef_cookie(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Nts.ke_record(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const NtsNs Nts __attribute__((unused)) = {
+    .ke_record = protocore_nts_ke_record,
+    .ke_request = protocore_nts_ke_request,
+    .ke_parse = protocore_nts_ke_parse,
+    .ef = protocore_nts_ef,
+    .ef_unique_id = protocore_nts_ef_unique_id,
+    .ef_cookie = protocore_nts_ef_cookie,
+};
 
 PROTOCORE_END_DECLS
 

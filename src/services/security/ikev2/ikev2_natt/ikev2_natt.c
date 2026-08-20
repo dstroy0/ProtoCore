@@ -83,17 +83,17 @@ static size_t natd_hash(const uint8_t *init_spi, const uint8_t *resp_spi, const 
 // A detection payload is a Notify with Protocol ID and SPI Size zero (RFC 7296 sec 3.10).
 static size_t natd_notify_build(uint8_t *restrict work, uint16_t notify_type, const uint8_t *hash)
 {
-    Ike.out.buf = IkeNattV.out.buf;
-    Ike.out.cap = IkeNattV.out.cap;
-    Ike.pl.next_payload = IkeNattV.out.next_payload;
-    Ike.pl.data = hash;
-    Ike.pl.data_len = PROTOCORE_IKE_NATD_HASH_LEN;
-    Ike.prop.protocol_id = IKE_PROTO_NONE;
-    Ike.prop.spi = NULL;
-    Ike.prop.spi_size = 0;
-    Ike.notify.notify_type = notify_type;
+    IkeV.out.buf = IkeNattV.out.buf;
+    IkeV.out.cap = IkeNattV.out.cap;
+    IkeV.pl.next_payload = IkeNattV.out.next_payload;
+    IkeV.pl.data = hash;
+    IkeV.pl.data_len = PROTOCORE_IKE_NATD_HASH_LEN;
+    IkeV.prop.protocol_id = IKE_PROTO_NONE;
+    IkeV.prop.spi = NULL;
+    IkeV.prop.spi_size = 0;
+    IkeV.notify.notify_type = notify_type;
     Ike.notify_build(ikev2_work);
-    return Ike.n;
+    return IkeV.n;
 }
 
 // The digest matches when nothing on that axis was translated.

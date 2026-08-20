@@ -29,10 +29,10 @@ void tearDown(void)
 static protocore_ip addr(const char *text)
 {
     protocore_ip ip;
-    Ip.args.text = text;
-    Ip.args.out = &ip;
+    IpV.args.text = text;
+    IpV.args.out = &ip;
     Ip.parse(ip_work);
-    TEST_ASSERT_TRUE_MESSAGE(Ip.ok, text);
+    TEST_ASSERT_TRUE_MESSAGE(IpV.ok, text);
     return ip;
 }
 
@@ -40,9 +40,9 @@ static protocore_ip addr(const char *text)
 static const char *at(const protocore_ip *list, size_t i)
 {
     static char buf[PROTOCORE_IP_STR_MAX];
-    Ip.args.ip = &list[i];
-    Ip.args.buf = buf;
-    Ip.args.cap = sizeof(buf);
+    IpV.args.ip = &list[i];
+    IpV.args.buf = buf;
+    IpV.args.cap = sizeof(buf);
     Ip.format(ip_work);
     return buf;
 }

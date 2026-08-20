@@ -263,9 +263,9 @@ proto_bool protocore_sse_do_upgrade(uint8_t slot_id, HttpReq *req, uint8_t route
 
     // The stream is the session layer's: it takes the number, binds it to this connection and runs
     // the route's connect. This layer sent the handshake bytes.
-    Sse.slot = slot_id;
-    Sse.route.path = path;
-    Sse.id = route_id;
+    SseV.slot = slot_id;
+    SseV.route.path = path;
+    SseV.id = route_id;
     SessionSse.open(NULL);
     if (!SessionSseV.ok)
     {
@@ -376,12 +376,12 @@ void protocore_sse_send(uint8_t protocore_sse_id, const char *data, const char *
         return;
     }
     SseConn *sse = &protocore_sse_pool[protocore_sse_id];
-    Sse.stream = sse;
-    Sse.event_args.data = data;
-    Sse.event_args.event = event;
-    Sse.event_args.event_id = id;
+    SseV.stream = sse;
+    SseV.event_args.data = data;
+    SseV.event_args.event = event;
+    SseV.event_args.event_id = id;
     Sse.write(protocore_sse_span());
-    if (Sse.ok)
+    if (SseV.ok)
     {
         // has itself checked protocore_conn_active(), so the slot is still live here.
         ConnPoolV.slot = sse->slot_id;
@@ -407,12 +407,12 @@ void protocore_sse_broadcast(const char *path, const char *data, const char *eve
             continue;
         }
         SseConn *sse = &protocore_sse_pool[i];
-        Sse.stream = sse;
-        Sse.event_args.data = data;
-        Sse.event_args.event = event;
-        Sse.event_args.event_id = id;
+        SseV.stream = sse;
+        SseV.event_args.data = data;
+        SseV.event_args.event = event;
+        SseV.event_args.event_id = id;
         Sse.write(protocore_sse_span());
-        if (Sse.ok)
+        if (SseV.ok)
         {
             // connection, so the false half of this re-check is unreachable from a host test.
             ConnPoolV.slot = sse->slot_id;

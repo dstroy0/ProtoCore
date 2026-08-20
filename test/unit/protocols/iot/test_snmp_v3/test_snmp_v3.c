@@ -229,73 +229,73 @@ static proto_bool ber_skip(BerDec *d, size_t len)
 // outcome off the same handle.
 static void snmp_init(const char *ro)
 {
-    SnmpAgent.community.ro = ro;
+    SnmpAgentV.community.ro = ro;
     SnmpAgent.init(protocore_snmp_agent_span());
 }
 
 static void snmp_set_rw_community(const char *rw)
 {
-    SnmpAgent.community.rw = rw;
+    SnmpAgentV.community.rw = rw;
     SnmpAgent.set_rw_community(protocore_snmp_agent_span());
 }
 
 static void snmp_set_system(const char *descr, const char *contact, const char *name, const char *location,
                             long services)
 {
-    SnmpAgent.system.descr = descr;
-    SnmpAgent.system.contact = contact;
-    SnmpAgent.system.name = name;
-    SnmpAgent.system.location = location;
-    SnmpAgent.system.services = services;
+    SnmpAgentV.system.descr = descr;
+    SnmpAgentV.system.contact = contact;
+    SnmpAgentV.system.name = name;
+    SnmpAgentV.system.location = location;
+    SnmpAgentV.system.services = services;
     SnmpAgent.set_system(protocore_snmp_agent_span());
 }
 
 static proto_bool snmp_add_integer(const uint32_t *oid, size_t oid_len, long ival, SnmpSetFn setter)
 {
-    SnmpAgent.object.oid = oid;
-    SnmpAgent.object.oid_len = oid_len;
-    SnmpAgent.object.ival = ival;
-    SnmpAgent.object.setter = setter;
+    SnmpAgentV.object.oid = oid;
+    SnmpAgentV.object.oid_len = oid_len;
+    SnmpAgentV.object.ival = ival;
+    SnmpAgentV.object.setter = setter;
     SnmpAgent.add_integer(protocore_snmp_agent_span());
-    return SnmpAgent.ok;
+    return SnmpAgentV.ok;
 }
 
 static proto_bool snmp_add_string(const uint32_t *oid, size_t oid_len, const char *text, SnmpSetFn setter)
 {
-    SnmpAgent.object.oid = oid;
-    SnmpAgent.object.oid_len = oid_len;
-    SnmpAgent.object.text = text;
-    SnmpAgent.object.setter = setter;
+    SnmpAgentV.object.oid = oid;
+    SnmpAgentV.object.oid_len = oid_len;
+    SnmpAgentV.object.text = text;
+    SnmpAgentV.object.setter = setter;
     SnmpAgent.add_string(protocore_snmp_agent_span());
-    return SnmpAgent.ok;
+    return SnmpAgentV.ok;
 }
 
 static proto_bool snmp_add_dynamic(const uint32_t *oid, size_t oid_len, uint8_t type, SnmpGetFn getter)
 {
-    SnmpAgent.object.oid = oid;
-    SnmpAgent.object.oid_len = oid_len;
-    SnmpAgent.object.type = type;
-    SnmpAgent.object.getter = getter;
-    SnmpAgent.object.setter = NULL;
+    SnmpAgentV.object.oid = oid;
+    SnmpAgentV.object.oid_len = oid_len;
+    SnmpAgentV.object.type = type;
+    SnmpAgentV.object.getter = getter;
+    SnmpAgentV.object.setter = NULL;
     SnmpAgent.add_dynamic(protocore_snmp_agent_span());
-    return SnmpAgent.ok;
+    return SnmpAgentV.ok;
 }
 
 static proto_bool snmp_listen(uint16_t port)
 {
-    SnmpAgent.port = port;
+    SnmpAgentV.port = port;
     SnmpAgent.listen(protocore_snmp_agent_span());
-    return SnmpAgent.ok;
+    return SnmpAgentV.ok;
 }
 
 static size_t snmp_process(const uint8_t *req, size_t req_len, uint8_t *resp, size_t resp_cap)
 {
-    SnmpAgent.msg.req = req;
-    SnmpAgent.msg.req_len = req_len;
-    SnmpAgent.msg.resp = resp;
-    SnmpAgent.msg.resp_cap = resp_cap;
+    SnmpAgentV.msg.req = req;
+    SnmpAgentV.msg.req_len = req_len;
+    SnmpAgentV.msg.resp = resp;
+    SnmpAgentV.msg.resp_cap = resp_cap;
     SnmpAgent.process(protocore_snmp_agent_span());
-    return SnmpAgent.n;
+    return SnmpAgentV.n;
 }
 
 // CFB128-AES-128 over the USM privacy args (RFC 3826 sec 3.1.4).

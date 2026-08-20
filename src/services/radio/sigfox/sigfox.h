@@ -83,17 +83,34 @@ typedef struct
 {
     SigfoxBuildUplinkArgs build_uplink_args;
     SigfoxParseResponseArgs parse_response_args;
-
     proto_bool ok;
     uint16_t value;
     protocore_sigfox_result status;
+} SigfoxVars;
 
+/** @brief The operands and the outcome. */
+extern SigfoxVars SigfoxV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_uplink)(uint8_t *restrict work);
     void (*const parse_response)(uint8_t *restrict work);
 } SigfoxNs;
 
-/** @brief The one symbol this module exports. */
-extern SigfoxNs Sigfox;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SigfoxV or a region of the borrow at a fixed offset.
+void protocore_sigfox_build_uplink(uint8_t *restrict work);
+void protocore_sigfox_parse_response(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sigfox.build_uplink(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SigfoxNs Sigfox __attribute__((unused)) = {
+    .build_uplink = protocore_sigfox_build_uplink,
+    .parse_response = protocore_sigfox_parse_response,
+};
 
 PROTOCORE_END_DECLS
 

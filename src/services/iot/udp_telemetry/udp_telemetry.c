@@ -158,10 +158,10 @@ uint8_t *protocore_udp_telemetry_span(void)
 void protocore_udp_telemetry_begin(uint8_t *restrict work)
 {
 #if PROTOCORE_HAS_NET_STACK
-    Ip.args.text = UdpTelemetryV.collector.addr;
-    Ip.args.out = &UDP_TELEMETRY_CTX(work)->collector;
+    IpV.args.text = UdpTelemetryV.collector.addr;
+    IpV.args.out = &UDP_TELEMETRY_CTX(work)->collector;
     Ip.parse(ip_work);
-    UDP_TELEMETRY_CTX(work)->ready = Ip.ok;
+    UDP_TELEMETRY_CTX(work)->ready = IpV.ok;
     UDP_TELEMETRY_CTX(work)->port = UdpTelemetryV.collector.port;
     UdpTelemetryV.ok = UDP_TELEMETRY_CTX(work)->ready;
 #else

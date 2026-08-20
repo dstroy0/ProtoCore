@@ -19,44 +19,44 @@ static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 // outcome off the same handle.
 static SseConn *sse_alloc(uint8_t slot, const char *path)
 {
-    Sse.slot = slot;
-    Sse.route.path = path;
+    SseV.slot = slot;
+    SseV.route.path = path;
     Sse.alloc(protocore_sse_span());
-    return Sse.conn;
+    return SseV.conn;
 }
 
 static SseConn *sse_find(uint8_t slot)
 {
-    Sse.slot = slot;
+    SseV.slot = slot;
     Sse.find(protocore_sse_span());
-    return Sse.conn;
+    return SseV.conn;
 }
 
 static void sse_free(uint8_t slot)
 {
-    Sse.slot = slot;
+    SseV.slot = slot;
     Sse.free(protocore_sse_span());
 }
 
 static int sse_format(char *buf, size_t cap, const char *data, const char *event, const char *event_id)
 {
-    Sse.out.buf = buf;
-    Sse.out.cap = cap;
-    Sse.event_args.data = data;
-    Sse.event_args.event = event;
-    Sse.event_args.event_id = event_id;
+    SseV.out.buf = buf;
+    SseV.out.cap = cap;
+    SseV.event_args.data = data;
+    SseV.event_args.event = event;
+    SseV.event_args.event_id = event_id;
     Sse.format(protocore_sse_span());
-    return Sse.n;
+    return SseV.n;
 }
 
 static proto_bool sse_write(SseConn *stream, const char *data, const char *event, const char *event_id)
 {
-    Sse.stream = stream;
-    Sse.event_args.data = data;
-    Sse.event_args.event = event;
-    Sse.event_args.event_id = event_id;
+    SseV.stream = stream;
+    SseV.event_args.data = data;
+    SseV.event_args.event = event;
+    SseV.event_args.event_id = event_id;
     Sse.write(protocore_sse_span());
-    return Sse.ok;
+    return SseV.ok;
 }
 
 static proto_bool handler_called;
@@ -667,7 +667,7 @@ void test_mime_type_detection(void)
 void test_serve_static_file_and_mime(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
@@ -689,7 +689,7 @@ void test_serve_static_file_and_mime(void)
 void test_serve_static_cache_control(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     static const char css[] = "body{color:red}";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/style.css", css));
@@ -721,7 +721,7 @@ void test_serve_static_cache_control(void)
 void test_serve_static_index_fallback(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     static const char html[] = "<h1>home</h1>";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/index.html", html));
@@ -743,7 +743,7 @@ void test_serve_static_index_fallback(void)
 void test_serve_static_gzip_when_accepted(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     static const char gzbody[] = "\x1f\x8b"
                                  "FAKEGZIP";
@@ -766,7 +766,7 @@ void test_serve_static_gzip_when_accepted(void)
 void test_serve_static_wildcard_and_route_full(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     static const char js[] = "x=1;";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
@@ -824,7 +824,7 @@ void test_response_header_cookie_guards(void)
 void test_serve_static_no_gzip_when_not_accepted(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     static const char js[] = "console.log(1)";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/app.js", js));
@@ -846,7 +846,7 @@ void test_serve_static_no_gzip_when_not_accepted(void)
 void test_serve_static_traversal_not_leaked(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/secret", "topsecret"));
     FileServingV.serve_static_args.url_prefix = "/";
@@ -865,7 +865,7 @@ void test_serve_static_traversal_not_leaked(void)
 void test_serve_static_missing_is_404(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/www/exists.txt", "hi"));
     FileServingV.serve_static_args.url_prefix = "/";
@@ -884,7 +884,7 @@ void test_serve_static_missing_is_404(void)
 void test_serve_static_etag_conditional_get(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     FileServingV.serve_static_args.url_prefix = "/";
@@ -927,7 +927,7 @@ void test_serve_static_etag_conditional_get(void)
 void test_serve_static_inm_star_list_weak(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     FileServingV.serve_static_args.url_prefix = "/";
@@ -996,7 +996,7 @@ void test_serve_static_inm_star_list_weak(void)
 void test_serve_static_last_modified_conditional_get(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     FileServingV.serve_static_args.url_prefix = "/";
@@ -1058,7 +1058,7 @@ void test_serve_static_last_modified_conditional_get(void)
 void test_serve_static_ims_field_comparisons(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     FileServingV.serve_static_args.url_prefix = "/";
@@ -1098,7 +1098,7 @@ void test_serve_static_ims_field_comparisons(void)
 void test_serve_static_no_timestamp(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text("/www/page.html", "<html>hi</html>"));
     FileServingV.serve_static_args.url_prefix = "/";
@@ -1128,7 +1128,7 @@ void test_serve_static_no_timestamp(void)
 void test_serve_static_if_modified_since_malformed(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     TEST_ASSERT_TRUE(lfsm_write_text_at("/www/page.html", "<html>hi</html>", 1000));
     FileServingV.serve_static_args.url_prefix = "/";
@@ -1750,7 +1750,7 @@ void test_response_trailer_cors_block_and_null_disable(void)
 void test_cache_control_null_clears_header(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     static const char body[] = "x";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/c.txt", body));
@@ -1769,7 +1769,7 @@ void test_cache_control_null_clears_header(void)
     TEST_ASSERT_NULL(strstr(tcp_captured(), "Cache-Control"));
     tcp_capture_disable();
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
 }
 
@@ -1956,7 +1956,7 @@ void test_transfer_encoding_on_semantic_ingress_is_501(void)
 void test_static_mount_rejects_non_get_methods(void)
 {
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
     static const char body[] = "hi";
     TEST_ASSERT_TRUE(lfsm_write_text("/www/a.txt", body));
@@ -1973,7 +1973,7 @@ void test_static_mount_rejects_non_get_methods(void)
     TEST_ASSERT_NOT_NULL(strstr(out, "Allow: GET, HEAD\r\n"));
     tcp_capture_disable();
     lfsm_format();
-    Mnt.args.backend = lfsm();
+    MntV.args.backend = lfsm();
     Mnt.mount(mnt_work);
 }
 

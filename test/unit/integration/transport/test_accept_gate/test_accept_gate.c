@@ -34,8 +34,8 @@ static protocore_ip v6(const char *s)
 {
     protocore_ip ip;
     ip.family = PROTOCORE_IP_NONE;
-    Ip.args.text = s;
-    Ip.args.out = &ip;
+    IpV.args.text = s;
+    IpV.args.out = &ip;
     Ip.parse(ip_work);
     return ip;
 }

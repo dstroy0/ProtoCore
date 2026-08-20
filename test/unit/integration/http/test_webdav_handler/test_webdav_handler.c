@@ -110,7 +110,7 @@ void setUp()
     tcp_capture_reset();
     lfsm_format();
     davfs = lfsm();
-    Mnt.args.backend = davfs;
+    MntV.args.backend = davfs;
     Mnt.mount(mnt_work);
 
     lfsm_mkdir("/dav");

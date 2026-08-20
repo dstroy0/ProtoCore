@@ -21,7 +21,7 @@
 #ifndef PROTOCORE_WISUN_H
 #define PROTOCORE_WISUN_H
 
-#include "shared/ip/ip.h"     // the complete type a public struct below holds by value
+#include "shared/ip/ip.h" // the complete type a public struct below holds by value
 
 #include "protocore_config.h" // the entry point: protocore_types.h for the widths
 
@@ -55,7 +55,6 @@ typedef struct
     size_t count;
     size_t cap;
 } WisunFan;
-
 
 /** @brief What build_coap takes: type, code, msg_id, token, tkl, ... */
 typedef struct
@@ -158,11 +157,17 @@ typedef struct
     WisunNodeFindArgs node_find_args;
     WisunJoinedCountArgs joined_count_args;
     WisunNodesJsonArgs nodes_json_args;
-
     proto_bool ok;
     size_t n;
     int i32;
+} WisunVars;
 
+/** @brief The operands and the outcome. */
+extern WisunVars WisunV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build_coap)(uint8_t *restrict work);
     void (*const init)(uint8_t *restrict work);
     void (*const node_register)(uint8_t *restrict work);
@@ -171,8 +176,27 @@ typedef struct
     void (*const nodes_json)(uint8_t *restrict work);
 } WisunNs;
 
-/** @brief The one symbol this module exports. */
-extern WisunNs Wisun;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in WisunV or a region of the borrow at a fixed offset.
+void protocore_wisun_build_coap(uint8_t *restrict work);
+void protocore_wisun_init(uint8_t *restrict work);
+void protocore_wisun_node_register(uint8_t *restrict work);
+void protocore_wisun_node_find(uint8_t *restrict work);
+void protocore_wisun_joined_count(uint8_t *restrict work);
+void protocore_wisun_nodes_json(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Wisun.build_coap(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const WisunNs Wisun __attribute__((unused)) = {
+    .build_coap = protocore_wisun_build_coap,
+    .init = protocore_wisun_init,
+    .node_register = protocore_wisun_node_register,
+    .node_find = protocore_wisun_node_find,
+    .joined_count = protocore_wisun_joined_count,
+    .nodes_json = protocore_wisun_nodes_json,
+};
 
 PROTOCORE_END_DECLS
 

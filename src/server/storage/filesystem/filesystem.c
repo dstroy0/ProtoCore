@@ -94,7 +94,7 @@ uint8_t *protocore_filesystem_span(void)
 static const protocore_mnt_backend *store(uint8_t *restrict work)
 {
     Mnt.active(mnt_work);
-    const protocore_mnt_backend *b = Mnt.backend;
+    const protocore_mnt_backend *b = MntV.backend;
     if (b == NULL)
     {
         FILESYSTEM_CTX(work)->status |= PROTOCORE_FS_STORAGE_EXHAUSTED;
@@ -178,7 +178,7 @@ static void fs_present(uint8_t *restrict work)
     // Asked of the mount directly, not of the mask: the mask says what has failed, this says what is
     // true now. A hotswap can attach a store between the two.
     Mnt.active(mnt_work);
-    Fs.ok = Mnt.backend != NULL;
+    Fs.ok = MntV.backend != NULL;
 }
 
 static void fs_begin(uint8_t *restrict work)

@@ -13,44 +13,44 @@
 // outcome off the same handle.
 static SseConn *sse_alloc(uint8_t slot, const char *path)
 {
-    Sse.slot = slot;
-    Sse.route.path = path;
+    SseV.slot = slot;
+    SseV.route.path = path;
     Sse.alloc(protocore_sse_span());
-    return Sse.conn;
+    return SseV.conn;
 }
 
 static SseConn *sse_find(uint8_t slot)
 {
-    Sse.slot = slot;
+    SseV.slot = slot;
     Sse.find(protocore_sse_span());
-    return Sse.conn;
+    return SseV.conn;
 }
 
 static void sse_free(uint8_t slot)
 {
-    Sse.slot = slot;
+    SseV.slot = slot;
     Sse.free(protocore_sse_span());
 }
 
 static int sse_format(char *buf, size_t cap, const char *data, const char *event, const char *event_id)
 {
-    Sse.out.buf = buf;
-    Sse.out.cap = cap;
-    Sse.event_args.data = data;
-    Sse.event_args.event = event;
-    Sse.event_args.event_id = event_id;
+    SseV.out.buf = buf;
+    SseV.out.cap = cap;
+    SseV.event_args.data = data;
+    SseV.event_args.event = event;
+    SseV.event_args.event_id = event_id;
     Sse.format(protocore_sse_span());
-    return Sse.n;
+    return SseV.n;
 }
 
 static proto_bool sse_write(SseConn *stream, const char *data, const char *event, const char *event_id)
 {
-    Sse.stream = stream;
-    Sse.event_args.data = data;
-    Sse.event_args.event = event;
-    Sse.event_args.event_id = event_id;
+    SseV.stream = stream;
+    SseV.event_args.data = data;
+    SseV.event_args.event = event;
+    SseV.event_args.event_id = event_id;
     Sse.write(protocore_sse_span());
-    return Sse.ok;
+    return SseV.ok;
 }
 
 void setUp()

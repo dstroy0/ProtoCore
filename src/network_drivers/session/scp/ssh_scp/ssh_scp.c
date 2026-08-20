@@ -147,12 +147,12 @@ static void protocore_scp_on_open(uint8_t slot, uint32_t channel, const char *cm
 
     // Parsed straight into the field that keeps it. Parsing into scratch and copying would move a
     // whole path twice and then rescan the copy for a length the parse already walked past.
-    Scp.parse_cmd_args.cmd = cmd;
-    Scp.parse_cmd_args.cmd_len = cmd_len;
-    Scp.parse_cmd_args.path_out = c->dest;
-    Scp.parse_cmd_args.path_cap = sizeof(c->dest);
+    ScpV.parse_cmd_args.cmd = cmd;
+    ScpV.parse_cmd_args.cmd_len = cmd_len;
+    ScpV.parse_cmd_args.path_out = c->dest;
+    ScpV.parse_cmd_args.path_cap = sizeof(c->dest);
     Scp.parse_cmd(scp_work);
-    ScpMode mode = Scp.value;
+    ScpMode mode = ScpV.value;
     if (mode == SCP_MODE_SINK)
     {
         // A '/' terminator is what makes the target a directory, and it is also the separator the
@@ -218,14 +218,14 @@ static void protocore_scp_on_data(uint8_t slot, uint32_t channel, const uint8_t 
 
             uint32_t mode = 0;
             uint64_t size = 0;
-            Scp.parse_cline_args.line = c->cl;
-            Scp.parse_cline_args.len = c->cl_len;
-            Scp.parse_cline_args.mode_out = &mode;
-            Scp.parse_cline_args.size_out = &size;
-            Scp.parse_cline_args.name_out = SSH_SCP_CTX(work)->leaf;
-            Scp.parse_cline_args.name_cap = sizeof(SSH_SCP_CTX(work)->leaf);
+            ScpV.parse_cline_args.line = c->cl;
+            ScpV.parse_cline_args.len = c->cl_len;
+            ScpV.parse_cline_args.mode_out = &mode;
+            ScpV.parse_cline_args.size_out = &size;
+            ScpV.parse_cline_args.name_out = SSH_SCP_CTX(work)->leaf;
+            ScpV.parse_cline_args.name_cap = sizeof(SSH_SCP_CTX(work)->leaf);
             Scp.parse_cline(scp_work);
-            if (!Scp.ok)
+            if (!ScpV.ok)
             {
                 // e.g. a D/E directory record (no -r support)
                 err_ack(c, SCP_ERR_BAD_RECORD, sizeof(SCP_ERR_BAD_RECORD) - 1);

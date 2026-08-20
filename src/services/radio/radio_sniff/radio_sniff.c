@@ -63,11 +63,11 @@ void protocore_radio_sniff_global_header(uint8_t *restrict work)
     uint8_t *out = RadioSniffV.global_header_args.out;
     size_t cap = RadioSniffV.global_header_args.cap;
 
-    Pcap.args.out = out;
-    Pcap.args.cap = cap;
-    Pcap.args.linktype = PROTOCORE_DLT_IEEE802_15_4_TAP;
+    PcapV.args.out = out;
+    PcapV.args.cap = cap;
+    PcapV.args.linktype = PROTOCORE_DLT_IEEE802_15_4_TAP;
     Pcap.global_header(pcap_work);
-    RadioSniffV.n = Pcap.n;
+    RadioSniffV.n = PcapV.n;
 }
 
 void protocore_radio_sniff_tap_record(uint8_t *restrict work)
@@ -95,12 +95,12 @@ void protocore_radio_sniff_tap_record(uint8_t *restrict work)
     }
 
     // pcap record header.
-    Pcap.args.out = out;
-    Pcap.args.cap = cap;
-    Pcap.rec.ts_sec = ts_sec;
-    Pcap.rec.ts_usec = ts_usec;
-    Pcap.rec.caplen = (uint32_t)caplen;
-    Pcap.rec.origlen = (uint32_t)caplen;
+    PcapV.args.out = out;
+    PcapV.args.cap = cap;
+    PcapV.rec.ts_sec = ts_sec;
+    PcapV.rec.ts_usec = ts_usec;
+    PcapV.rec.caplen = (uint32_t)caplen;
+    PcapV.rec.origlen = (uint32_t)caplen;
     Pcap.record_header(pcap_work);
     uint8_t *p = out + PROTOCORE_PCAP_REC_HDR_LEN;
 

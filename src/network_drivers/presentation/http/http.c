@@ -1071,9 +1071,9 @@ void protocore_http_poll_slot(uint8_t *restrict work)
 
 #if PROTOCORE_ENABLE_SSE
     // SSE slot - connection stays open, nothing to parse from client
-    Sse.slot = i;
+    SseV.slot = i;
     Sse.find(protocore_sse_span());
-    if (Sse.conn)
+    if (SseV.conn)
     {
         return;
     }

@@ -39,11 +39,11 @@ static uint16_t le16(const uint8_t *p)
 void test_global_header_is_24_octets(void)
 {
     uint8_t out[PROTOCORE_PCAP_GLOBAL_HDR_LEN];
-    Pcap.args.out = out;
-    Pcap.args.cap = sizeof(out);
-    Pcap.args.linktype = PROTOCORE_DLT_ETHERNET;
+    PcapV.args.out = out;
+    PcapV.args.cap = sizeof(out);
+    PcapV.args.linktype = PROTOCORE_DLT_ETHERNET;
     Pcap.global_header(pcap_work);
-    TEST_ASSERT_EQUAL_UINT(24u, Pcap.n);
+    TEST_ASSERT_EQUAL_UINT(24u, PcapV.n);
     TEST_ASSERT_EQUAL_UINT(24u, (unsigned)PROTOCORE_PCAP_GLOBAL_HDR_LEN);
 }
 
@@ -51,9 +51,9 @@ void test_global_header_is_24_octets(void)
 void test_global_header_fields(void)
 {
     uint8_t out[PROTOCORE_PCAP_GLOBAL_HDR_LEN];
-    Pcap.args.out = out;
-    Pcap.args.cap = sizeof(out);
-    Pcap.args.linktype = PROTOCORE_DLT_IEEE802_11;
+    PcapV.args.out = out;
+    PcapV.args.cap = sizeof(out);
+    PcapV.args.linktype = PROTOCORE_DLT_IEEE802_11;
     Pcap.global_header(pcap_work);
 
     TEST_ASSERT_EQUAL_HEX32(0xa1b2c3d4u, le32(out + 0)); // usec timestamps, little-endian
@@ -70,9 +70,9 @@ void test_global_header_fields(void)
 void test_magic_octet_order_declares_little_endian(void)
 {
     uint8_t out[PROTOCORE_PCAP_GLOBAL_HDR_LEN];
-    Pcap.args.out = out;
-    Pcap.args.cap = sizeof(out);
-    Pcap.args.linktype = PROTOCORE_DLT_RAW;
+    PcapV.args.out = out;
+    PcapV.args.cap = sizeof(out);
+    PcapV.args.linktype = PROTOCORE_DLT_RAW;
     Pcap.global_header(pcap_work);
     TEST_ASSERT_EQUAL_HEX8(0xD4u, out[0]);
     TEST_ASSERT_EQUAL_HEX8(0xC3u, out[1]);
@@ -91,9 +91,9 @@ void test_linktype_reaches_the_file(void)
     for (size_t i = 0; i < sizeof(DLT) / sizeof(DLT[0]); i++)
     {
         uint8_t out[PROTOCORE_PCAP_GLOBAL_HDR_LEN];
-        Pcap.args.out = out;
-        Pcap.args.cap = sizeof(out);
-        Pcap.args.linktype = DLT[i];
+        PcapV.args.out = out;
+        PcapV.args.cap = sizeof(out);
+        PcapV.args.linktype = DLT[i];
         Pcap.global_header(pcap_work);
         TEST_ASSERT_EQUAL_UINT32(DLT[i], le32(out + 20));
     }
@@ -102,14 +102,14 @@ void test_linktype_reaches_the_file(void)
 void test_record_header_is_16_octets(void)
 {
     uint8_t out[PROTOCORE_PCAP_REC_HDR_LEN];
-    Pcap.args.out = out;
-    Pcap.args.cap = sizeof(out);
-    Pcap.rec.ts_sec = 1u;
-    Pcap.rec.ts_usec = 2u;
-    Pcap.rec.caplen = 3u;
-    Pcap.rec.origlen = 4u;
+    PcapV.args.out = out;
+    PcapV.args.cap = sizeof(out);
+    PcapV.rec.ts_sec = 1u;
+    PcapV.rec.ts_usec = 2u;
+    PcapV.rec.caplen = 3u;
+    PcapV.rec.origlen = 4u;
     Pcap.record_header(pcap_work);
-    TEST_ASSERT_EQUAL_UINT(16u, Pcap.n);
+    TEST_ASSERT_EQUAL_UINT(16u, PcapV.n);
     TEST_ASSERT_EQUAL_UINT(16u, (unsigned)PROTOCORE_PCAP_REC_HDR_LEN);
 }
 
@@ -118,12 +118,12 @@ void test_record_header_is_16_octets(void)
 void test_record_header_fields(void)
 {
     uint8_t out[PROTOCORE_PCAP_REC_HDR_LEN];
-    Pcap.args.out = out;
-    Pcap.args.cap = sizeof(out);
-    Pcap.rec.ts_sec = 0x5A5A5A5Au;
-    Pcap.rec.ts_usec = 999999u; // the largest a microsecond field carries
-    Pcap.rec.caplen = 128u;
-    Pcap.rec.origlen = 1514u; // full Ethernet frame, truncated in the capture
+    PcapV.args.out = out;
+    PcapV.args.cap = sizeof(out);
+    PcapV.rec.ts_sec = 0x5A5A5A5Au;
+    PcapV.rec.ts_usec = 999999u; // the largest a microsecond field carries
+    PcapV.rec.caplen = 128u;
+    PcapV.rec.origlen = 1514u; // full Ethernet frame, truncated in the capture
     Pcap.record_header(pcap_work);
 
     TEST_ASSERT_EQUAL_HEX32(0x5A5A5A5Au, le32(out + 0));
@@ -138,22 +138,22 @@ void test_short_buffers_write_nothing(void)
 {
     uint8_t small[PROTOCORE_PCAP_GLOBAL_HDR_LEN - 1];
     memset(small, 0xEE, sizeof(small));
-    Pcap.args.out = small;
-    Pcap.args.cap = sizeof(small);
-    Pcap.args.linktype = PROTOCORE_DLT_ETHERNET;
+    PcapV.args.out = small;
+    PcapV.args.cap = sizeof(small);
+    PcapV.args.linktype = PROTOCORE_DLT_ETHERNET;
     Pcap.global_header(pcap_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Pcap.n);
+    TEST_ASSERT_EQUAL_UINT(0u, PcapV.n);
     TEST_ASSERT_EQUAL_HEX8(0xEEu, small[0]);
 
     uint8_t rsmall[PROTOCORE_PCAP_REC_HDR_LEN - 1];
     memset(rsmall, 0xEE, sizeof(rsmall));
-    Pcap.args.out = rsmall;
-    Pcap.args.cap = sizeof(rsmall);
-    Pcap.rec.ts_sec = 1u;
-    Pcap.rec.ts_usec = 1u;
-    Pcap.rec.caplen = 1u;
-    Pcap.rec.origlen = 1u;
+    PcapV.args.out = rsmall;
+    PcapV.args.cap = sizeof(rsmall);
+    PcapV.rec.ts_sec = 1u;
+    PcapV.rec.ts_usec = 1u;
+    PcapV.rec.caplen = 1u;
+    PcapV.rec.origlen = 1u;
     Pcap.record_header(pcap_work);
-    TEST_ASSERT_EQUAL_UINT(0u, Pcap.n);
+    TEST_ASSERT_EQUAL_UINT(0u, PcapV.n);
     TEST_ASSERT_EQUAL_HEX8(0xEEu, rsmall[0]);
 }

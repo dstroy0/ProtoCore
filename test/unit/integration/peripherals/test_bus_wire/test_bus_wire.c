@@ -31,34 +31,34 @@ void test_sht3x_read_wire(void)
     uint8_t reply[6];
     reply[0] = 0x66;
     reply[1] = 0x66;
-    Sht3x.crc8_args.data = &reply[0];
-    Sht3x.crc8_args.len = 2;
+    Sht3xV.crc8_args.data = &reply[0];
+    Sht3xV.crc8_args.len = 2;
     Sht3x.crc8(protocore_sht3x_span());
-    reply[2] = Sht3x.crc;
+    reply[2] = Sht3xV.crc;
     reply[3] = 0x80;
     reply[4] = 0x00;
-    Sht3x.crc8_args.data = &reply[3];
-    Sht3x.crc8_args.len = 2;
+    Sht3xV.crc8_args.data = &reply[3];
+    Sht3xV.crc8_args.len = 2;
     Sht3x.crc8(protocore_sht3x_span());
-    reply[5] = Sht3x.crc;
+    reply[5] = Sht3xV.crc;
     protocore_bus_host_preload(reply, sizeof(reply));
 
     int32_t t = 0;
     int32_t rh = 0;
-    Sht3x.read_args.temp_mc = &t;
-    Sht3x.read_args.rh_mpct = &rh;
+    Sht3xV.read_args.temp_mc = &t;
+    Sht3xV.read_args.rh_mpct = &rh;
     Sht3x.read(protocore_sht3x_span());
-    TEST_ASSERT_TRUE(Sht3x.ok);
+    TEST_ASSERT_TRUE(Sht3xV.ok);
 
     const uint8_t want[2] = {(uint8_t)(SHT3X_CMD_SINGLE_HIGH >> 8), (uint8_t)(SHT3X_CMD_SINGLE_HIGH & 0xFF)};
     expect_tx(want, sizeof(want), "sht3x measurement command");
 
-    Sht3x.temp_mc_args.raw = 0x6666;
+    Sht3xV.temp_mc_args.raw = 0x6666;
     Sht3x.temp_mc(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(Sht3x.milli, t);
-    Sht3x.rh_mpct_args.raw = 0x8000;
+    TEST_ASSERT_EQUAL_INT32(Sht3xV.milli, t);
+    Sht3xV.rh_mpct_args.raw = 0x8000;
     Sht3x.rh_mpct(protocore_sht3x_span());
-    TEST_ASSERT_EQUAL_INT32(Sht3x.milli, rh);
+    TEST_ASSERT_EQUAL_INT32(Sht3xV.milli, rh);
 }
 
 void test_sht3x_bad_crc_rejected(void)
@@ -67,10 +67,10 @@ void test_sht3x_bad_crc_rejected(void)
     protocore_bus_host_preload(reply, sizeof(reply));
     int32_t t = 0;
     int32_t rh = 0;
-    Sht3x.read_args.temp_mc = &t;
-    Sht3x.read_args.rh_mpct = &rh;
+    Sht3xV.read_args.temp_mc = &t;
+    Sht3xV.read_args.rh_mpct = &rh;
     Sht3x.read(protocore_sht3x_span());
-    TEST_ASSERT_FALSE(Sht3x.ok);
+    TEST_ASSERT_FALSE(Sht3xV.ok);
 }
 
 void test_pca9685_set_pwm_wire(void)
@@ -130,30 +130,30 @@ void test_rtc_read_wire(void)
     protocore_bus_host_preload(regs, sizeof(regs));
 
     Rtc.read_epoch(protocore_rtc_span());
-    uint32_t epoch = Rtc.epoch;
+    uint32_t epoch = RtcV.epoch;
 
     const uint8_t want[1] = {0x00};
     expect_tx(want, sizeof(want), "rtc register pointer");
 
     uint32_t expect = 0;
-    Rtc.regs_to_epoch_args.regs = regs;
-    Rtc.regs_to_epoch_args.epoch = &expect;
+    RtcV.regs_to_epoch_args.regs = regs;
+    RtcV.regs_to_epoch_args.epoch = &expect;
     Rtc.regs_to_epoch(protocore_rtc_span());
-    TEST_ASSERT_TRUE(Rtc.ok);
+    TEST_ASSERT_TRUE(RtcV.ok);
     TEST_ASSERT_EQUAL_UINT32(expect, epoch);
 }
 
 void test_rtc_set_wire(void)
 {
     uint32_t epoch = 1700000000u;
-    Rtc.set_epoch_args.epoch = epoch;
+    RtcV.set_epoch_args.epoch = epoch;
     Rtc.set_epoch(protocore_rtc_span());
-    TEST_ASSERT_TRUE(Rtc.ok);
+    TEST_ASSERT_TRUE(RtcV.ok);
 
     uint8_t want[8];
     want[0] = 0x00;
-    Rtc.epoch_to_regs_args.epoch = epoch;
-    Rtc.epoch_to_regs_args.regs = &want[1];
+    RtcV.epoch_to_regs_args.epoch = epoch;
+    RtcV.epoch_to_regs_args.regs = &want[1];
     Rtc.epoch_to_regs(protocore_rtc_span());
     expect_tx(want, sizeof(want), "rtc set");
 }
@@ -254,7 +254,7 @@ void test_rtc_read_is_one_transaction(void)
     const uint8_t regs[7] = {0x05, 0x04, 0x03, 0x02, 0x02, 0x01, 0x24};
     protocore_bus_host_preload(regs, sizeof(regs));
     Rtc.read_epoch(protocore_rtc_span());
-    (void)Rtc.epoch;
+    (void)RtcV.epoch;
 
     TEST_ASSERT_EQUAL_UINT32(1, protocore_bus_host_count());
     const protocore_bus_host_rec *t = protocore_bus_host_txn_at(0);

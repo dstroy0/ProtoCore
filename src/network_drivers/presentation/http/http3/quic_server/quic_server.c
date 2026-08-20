@@ -166,10 +166,10 @@ static proto_bool cid_eq(const uint8_t *a, uint8_t alen, const uint8_t *b, uint8
 static void server_send(uint8_t *restrict work, const char *ip, uint16_t port, const uint8_t *data, size_t len)
 {
     protocore_ip dst = {PROTOCORE_IP_NONE, {0}};
-    Ip.args.text = ip;
-    Ip.args.out = &dst;
+    IpV.args.text = ip;
+    IpV.args.out = &dst;
     Ip.parse(ip_work);
-    if (Ip.ok)
+    if (IpV.ok)
     {
         UdpListenerV.port = QSRV_CTX(work)->port;
         UdpListenerV.send_args.dst = &dst;

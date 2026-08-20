@@ -175,11 +175,17 @@ typedef struct
     LoraTxDoneArgs tx_done_args;
     LoraSetRxArgs set_rx_args;
     LoraRecvArgs recv_args;
-
     proto_bool ok;
     uint16_t value;
     int n;
+} LoraVars;
 
+/** @brief The operands and the outcome. */
+extern LoraVars LoraV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const frame_parse)(uint8_t *restrict work);
     void (*const frame_build)(uint8_t *restrict work);
     void (*const init)(uint8_t *restrict work);
@@ -189,8 +195,29 @@ typedef struct
     void (*const recv)(uint8_t *restrict work);
 } LoraNs;
 
-/** @brief The one symbol this module exports. */
-extern LoraNs Lora;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in LoraV or a region of the borrow at a fixed offset.
+void protocore_lora_frame_parse(uint8_t *restrict work);
+void protocore_lora_frame_build(uint8_t *restrict work);
+void protocore_lora_init(uint8_t *restrict work);
+void protocore_lora_send(uint8_t *restrict work);
+void protocore_lora_tx_done(uint8_t *restrict work);
+void protocore_lora_set_rx(uint8_t *restrict work);
+void protocore_lora_recv(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Lora.frame_parse(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const LoraNs Lora __attribute__((unused)) = {
+    .frame_parse = protocore_lora_frame_parse,
+    .frame_build = protocore_lora_frame_build,
+    .init = protocore_lora_init,
+    .send = protocore_lora_send,
+    .tx_done = protocore_lora_tx_done,
+    .set_rx = protocore_lora_set_rx,
+    .recv = protocore_lora_recv,
+};
 
 PROTOCORE_END_DECLS
 
