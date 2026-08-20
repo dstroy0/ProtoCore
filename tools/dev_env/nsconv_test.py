@@ -181,7 +181,7 @@ except ValueError:
     eq("DBENCH_BULK refused", "refused", "refused")
 
 # 12. and a TEST_ASSERT, which evaluates its argument once, is still converted
-src7 = 'void t(void)\n{\n    TEST_ASSERT_EQUAL_INT(3, old_call(a));\n}\n'
+src7 = "void t(void)\n{\n    TEST_ASSERT_EQUAL_INT(3, old_call(a));\n}\n"
 pos7 = src7.index("old_call")
 end7 = N.close_paren(src7, pos7 + len("old_call("))
 eq(
@@ -193,15 +193,7 @@ eq(
 # 13. a `#if` / `#endif` bounds the arm. The walk back used to run past both and land the staging in
 # the PREVIOUS arm, so the call ran under another capability's gate and the read ran under none.
 src8 = (
-    "void t(void)\n"
-    "{\n"
-    "#if A\n"
-    "    reg(one());\n"
-    "#endif\n"
-    "#if B\n"
-    "    reg(old_call());\n"
-    "#endif\n"
-    "}\n"
+    "void t(void)\n" "{\n" "#if A\n" "    reg(one());\n" "#endif\n" "#if B\n" "    reg(old_call());\n" "#endif\n" "}\n"
 )
 pos8 = src8.index("old_call")
 end8 = N.close_paren(src8, pos8 + len("old_call("))

@@ -254,6 +254,7 @@ def _statement_before(s, pos, mask):
         i -= 1
     return "".join(reversed(out))
 
+
 # Macros that evaluate an argument more than once. Hoisting a call out of one of these is the
 # loop-condition mistake wearing a macro: DBENCH_OP(label, n, expr) runs expr n times to time it,
 # so a call lifted above it is measured once and the benchmark then times an addition. DBENCH_BULK

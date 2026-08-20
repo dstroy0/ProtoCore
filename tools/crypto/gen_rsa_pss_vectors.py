@@ -68,8 +68,20 @@ def main():
         # rsa_pss_saltlen:32 is the salt length rsa_pss_rsae_sha256 fixes (RFC 8446 sec 4.2.3
         # names the scheme; RFC 8017 sec 9.1 makes the salt a parameter, and TLS pins it to hLen).
         subprocess.run(
-            ["openssl", "dgst", "-sha256", "-sigopt", "rsa_padding_mode:pss",
-             "-sigopt", "rsa_pss_saltlen:32", "-sign", key, "-out", sf, mf],
+            [
+                "openssl",
+                "dgst",
+                "-sha256",
+                "-sigopt",
+                "rsa_padding_mode:pss",
+                "-sigopt",
+                "rsa_pss_saltlen:32",
+                "-sign",
+                key,
+                "-out",
+                sf,
+                mf,
+            ],
             check=True,
         )
         with open(sf, "rb") as f:
@@ -105,8 +117,12 @@ def main():
         }
     )
 
-    doc = {"source": "openssl dgst -sigopt rsa_padding_mode:pss (%s)" % ver, "commit": "", "file": "openssl",
-           "vectors": out}
+    doc = {
+        "source": "openssl dgst -sigopt rsa_padding_mode:pss (%s)" % ver,
+        "commit": "",
+        "file": "openssl",
+        "vectors": out,
+    }
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         json.dump(doc, f, indent=1, sort_keys=False)
     print("wrote %s (%d vectors)" % (OUT, len(out)))

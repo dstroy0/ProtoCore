@@ -1050,9 +1050,7 @@ def gen_ns(spec):
     storage_tagged = bool(re.search(r"struct\s+\w+Storage\b", c))
     if store:
         sname = ("struct " if storage_tagged else "") + store.group(1)
-        c2 = re.sub(
-            r"sizeof\(%s\.(\w+)\)" % re.escape(store.group(2)), r"sizeof(((%s *)0)->\1)" % sname, c2
-        )
+        c2 = re.sub(r"sizeof\(%s\.(\w+)\)" % re.escape(store.group(2)), r"sizeof(((%s *)0)->\1)" % sname, c2)
         # Whatever still names the instance reads the region instead. A caller here has no handle -
         # it is a callback with a fixed signature - so it asks the accessor for the borrow.
         c2 = re.sub(
@@ -1080,9 +1078,7 @@ def gen_ns(spec):
         c2 = re.sub(
             r"&%s\b(?=\s*[,)])" % re.escape(inst.group(1)),
             lambda m: (
-                m.group(0)
-                if re.search(r"\.internal\s*=\s*$", c2[max(0, m.start() - 32) : m.start()])
-                else own_borrow
+                m.group(0) if re.search(r"\.internal\s*=\s*$", c2[max(0, m.start() - 32) : m.start()]) else own_borrow
             ),
             c2,
         )
@@ -1757,7 +1753,7 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
     """
     obj = spec["object"]
     vtable = spec.get("from") == "vtable"
-    byname = {k: e for e in spec["entries"] for k in [(e.get("call") if vtable else e.get("flat"))] if k}
+    byname = {k: e for e in spec["entries"] for k in [e.get("call") if vtable else e.get("flat")] if k}
     lead = "" if vtable else r"(?<![\w.>])"
     total, skipped = 0, []
     # No flat names to look for means no call sites to rewrite. Guarded rather than assumed:
@@ -1822,8 +1818,7 @@ def rewrite_calls(spec, roots=("src", "test", "examples", "vendor", "include")):
                             raise SystemExit(
                                 "rewrite_calls: %s took %d rewrites of %s, past the %d cap.\n"
                                 "  A pass that keeps matching what it just wrote does not terminate;"
-                                " the file was NOT written."
-                                % (rel, n, m.group(1), REWRITE_CAP)
+                                " the file was NOT written." % (rel, n, m.group(1), REWRITE_CAP)
                             )
                     except ValueError as ex:
                         skipped.append((rel, s[: m.start()].count("\n") + 1, str(ex)))
@@ -2325,8 +2320,15 @@ def restructure_source(spec):
             "        protocore_span sp = %s(%s);\n"
             "        if (span.ok(sp))\n        {\n            s_own.span = sp.buf;\n%s        }\n    }\n"
             "    return s_own.span; // null while the pool was short, which every entry refuses\n}\n\n"
-        ) % (spec["borrow"], obj, obj, spec["span"].replace("()", "(void)"), pool["call"], spec["borrow"],
-             seat_defaults(spec, spec["module"].upper())[0])
+        ) % (
+            spec["borrow"],
+            obj,
+            obj,
+            spec["span"].replace("()", "(void)"),
+            pool["call"],
+            spec["borrow"],
+            seat_defaults(spec, spec["module"].upper())[0],
+        )
         pending_accessor = accessor
         if pool["include"] not in s:
             k = s.index("#include")
@@ -2696,6 +2698,8 @@ def ns_struct_span(hsrc, ns):
     if not head:
         return None
     return head.start(), i + 1, close.start(), close.end()
+
+
 HANDLE_EXTERN = re.compile(r"^[ \t]*extern[ \t]+(?P<ns>\w+Ns)[ \t]+(?P<obj>\w+)[ \t]*;[ \t]*$", re.M)
 HANDLE_FN = re.compile(
     r"^[ \t]*void[ \t]*\([ \t]*\*[ \t]*const[ \t]+(?P<name>\w+)[ \t]*\)[ \t]*"
@@ -2854,10 +2858,8 @@ def reshape_handle(hsrc, csrc, mod, ns, obj, data, entries):
         unbound = [e for e in entries if e not in bind]
         if unbound:
             raise ValueError(
-                "initializer binds %d of %d entries; unbound: %s"
-                % (len(bind), len(entries), ", ".join(unbound))
+                "initializer binds %d of %d entries; unbound: %s" % (len(bind), len(entries), ", ".join(unbound))
             )
-
 
     block = ["typedef struct", "{"] + data + ["} %s;" % vars_t, ""]
     block += ["/** @brief The operands and the outcome. */", "extern %s %s;" % (vars_t, objv), ""]
@@ -3131,7 +3133,7 @@ def insert_align_asserts(src, regions):
         if not off:
             continue
         body.append(
-            'static_assert(%s %% _Alignof(%s) == 0,\n'
+            "static_assert(%s %% _Alignof(%s) == 0,\n"
             '              "%s is not a multiple of alignof(%s) - %s() would return a misaligned "\n'
             '              "pointer; pad the region ahead of it");' % (off, typ, off, typ, macro)
         )
@@ -3438,7 +3440,9 @@ def main():
                     files.append((p, out))
                     cache[p] = out  # the next module reads what this one wrote, not the file on disk
                     total += n
-            print("handle: %-56s %s -> %s  entries=%d operands=%d(+%d own)" % (rel, obj, objv, len(entries), total, own))
+            print(
+                "handle: %-56s %s -> %s  entries=%d operands=%d(+%d own)" % (rel, obj, objv, len(entries), total, own)
+            )
             emit(hp, hout)
             emit(cp, cout)
             # The module's OWN files go back into the cache too. Without this a later module reads
@@ -3451,7 +3455,10 @@ def main():
                 emit(p, out)
             done += 1
             moved += total + own
-        print("%d module%s, %d operand site%s, %d skipped" % (done, "s"[: done != 1], moved, "s"[: moved != 1], len(skipped)))
+        print(
+            "%d module%s, %d operand site%s, %d skipped"
+            % (done, "s"[: done != 1], moved, "s"[: moved != 1], len(skipped))
+        )
         return 0
 
     if cmd == "align":

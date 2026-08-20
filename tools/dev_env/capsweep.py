@@ -29,6 +29,7 @@ Usage:
     python tools/dev_env/capsweep.py PROTOCORE_HAS_BUS
     python tools/dev_env/capsweep.py --quiet          only the modules that answer BROKEN
 """
+
 import io
 import os
 import re

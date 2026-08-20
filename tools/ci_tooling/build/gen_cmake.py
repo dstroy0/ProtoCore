@@ -415,7 +415,9 @@ def render(envs, warn, dropped):
 
 
 def main():
-    ap = argparse.ArgumentParser(prog="gen_cmake", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        prog="gen_cmake", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--check", action="store_true", help="fail if the file is stale; write nothing")
     ap.add_argument("--quiet", action="store_true", help="only report problems")
     a = ap.parse_args()

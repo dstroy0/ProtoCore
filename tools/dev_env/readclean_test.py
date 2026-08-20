@@ -7,6 +7,7 @@ Both halves are load-bearing. A pass that removes too little leaves the names it
 off; a pass that removes too much leaves text nothing can be checked against - and the second is the
 easier mistake to ship, because the output still looks blinded.
 """
+
 import os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

@@ -41,6 +41,7 @@ Usage:
 
 A PATH is a module header (its .c is read with it), a single file, or a directory.
 """
+
 import io, os, re, sys
 
 ROOT = os.getcwd()
@@ -50,41 +51,183 @@ from codemask import code_mask
 
 # C grammar. Blinding a keyword turns the code into noise instead of into structure.
 KEYWORDS = {
-    "auto", "break", "case", "char", "const", "continue", "default", "do", "double", "else", "enum",
-    "extern", "float", "for", "goto", "if", "inline", "int", "long", "register", "restrict",
-    "return", "short", "signed", "sizeof", "static", "struct", "switch", "typedef", "union",
-    "unsigned", "void", "volatile", "while", "_Alignof", "_Alignas", "_Static_assert", "_Bool",
-    "static_assert", "alignof", "bool", "true", "false", "NULL", "nullptr", "asm", "__asm__",
-    "__attribute__", "__inline__", "__restrict", "typeof", "_Generic", "_Noreturn", "_Thread_local",
+    "auto",
+    "break",
+    "case",
+    "char",
+    "const",
+    "continue",
+    "default",
+    "do",
+    "double",
+    "else",
+    "enum",
+    "extern",
+    "float",
+    "for",
+    "goto",
+    "if",
+    "inline",
+    "int",
+    "long",
+    "register",
+    "restrict",
+    "return",
+    "short",
+    "signed",
+    "sizeof",
+    "static",
+    "struct",
+    "switch",
+    "typedef",
+    "union",
+    "unsigned",
+    "void",
+    "volatile",
+    "while",
+    "_Alignof",
+    "_Alignas",
+    "_Static_assert",
+    "_Bool",
+    "static_assert",
+    "alignof",
+    "bool",
+    "true",
+    "false",
+    "NULL",
+    "nullptr",
+    "asm",
+    "__asm__",
+    "__attribute__",
+    "__inline__",
+    "__restrict",
+    "typeof",
+    "_Generic",
+    "_Noreturn",
+    "_Thread_local",
 }
 # Shared vocabulary this codebase did not choose.
 STDLIB = {
-    "uint8_t", "uint16_t", "uint32_t", "uint64_t", "int8_t", "int16_t", "int32_t", "int64_t",
-    "size_t", "ssize_t", "ptrdiff_t", "intptr_t", "uintptr_t", "uintmax_t", "intmax_t", "wchar_t",
-    "va_list", "va_start", "va_end", "va_arg", "va_copy", "FILE", "time_t", "clock_t",
-    "memcpy", "memmove", "memset", "memcmp", "memchr", "strlen", "strcmp", "strncmp", "strcpy",
-    "strncpy", "strcat", "strncat", "strchr", "strrchr", "strstr", "strtol", "strtoul", "strtoull",
-    "snprintf", "vsnprintf", "sprintf", "printf", "fprintf", "puts", "putchar", "abort", "exit",
-    "abs", "labs", "offsetof", "stderr", "stdout", "stdin", "isdigit", "isalpha", "isalnum",
-    "isspace", "isupper", "islower", "toupper", "tolower", "INT_MAX", "INT_MIN", "UINT_MAX",
-    "SIZE_MAX", "CHAR_BIT", "EOF",
+    "uint8_t",
+    "uint16_t",
+    "uint32_t",
+    "uint64_t",
+    "int8_t",
+    "int16_t",
+    "int32_t",
+    "int64_t",
+    "size_t",
+    "ssize_t",
+    "ptrdiff_t",
+    "intptr_t",
+    "uintptr_t",
+    "uintmax_t",
+    "intmax_t",
+    "wchar_t",
+    "va_list",
+    "va_start",
+    "va_end",
+    "va_arg",
+    "va_copy",
+    "FILE",
+    "time_t",
+    "clock_t",
+    "memcpy",
+    "memmove",
+    "memset",
+    "memcmp",
+    "memchr",
+    "strlen",
+    "strcmp",
+    "strncmp",
+    "strcpy",
+    "strncpy",
+    "strcat",
+    "strncat",
+    "strchr",
+    "strrchr",
+    "strstr",
+    "strtol",
+    "strtoul",
+    "strtoull",
+    "snprintf",
+    "vsnprintf",
+    "sprintf",
+    "printf",
+    "fprintf",
+    "puts",
+    "putchar",
+    "abort",
+    "exit",
+    "abs",
+    "labs",
+    "offsetof",
+    "stderr",
+    "stdout",
+    "stdin",
+    "isdigit",
+    "isalpha",
+    "isalnum",
+    "isspace",
+    "isupper",
+    "islower",
+    "toupper",
+    "tolower",
+    "INT_MAX",
+    "INT_MIN",
+    "UINT_MAX",
+    "SIZE_MAX",
+    "CHAR_BIT",
+    "EOF",
 }
 # ProtoCore's own grammar: the fixed words the shape is written in. `work` is the borrow every entry
 # takes, `ok` is where every entry states its outcome, and the DECLS macros bracket every header.
 # These say nothing about which module is being read, so blinding them costs the reader the shape
 # and buys no independence.
 SHAPE = {
-    "work", "ok", "proto_bool", "proto_u32", "proto_u16", "proto_u8", "proto_i32", "proto_i16",
-    "PROTO_TRUE", "PROTO_FALSE", "PROTOCORE_BEGIN_DECLS", "PROTOCORE_END_DECLS",
-    "PROTOCORE_ARENA_ALIGN", "PROTOCORE_ARENA_MAX_ALIGN", "protocore_config",
+    "work",
+    "ok",
+    "proto_bool",
+    "proto_u32",
+    "proto_u16",
+    "proto_u8",
+    "proto_i32",
+    "proto_i16",
+    "PROTO_TRUE",
+    "PROTO_FALSE",
+    "PROTOCORE_BEGIN_DECLS",
+    "PROTOCORE_END_DECLS",
+    "PROTOCORE_ARENA_ALIGN",
+    "PROTOCORE_ARENA_MAX_ALIGN",
+    "protocore_config",
 }
 # An __attribute__ argument is grammar too. `__attribute__((unused))` came out as
 # `__attribute__((v7))`, which reads as a call on a variable rather than as the attribute that lets
 # an unreferenced table drop.
 ATTRS = {
-    "unused", "used", "aligned", "packed", "always_inline", "noreturn", "deprecated", "fallthrough",
-    "weak", "section", "visibility", "warn_unused_result", "nonnull", "pure", "const_", "hot",
-    "cold", "constructor", "destructor", "format", "may_alias", "cleanup", "transparent_union",
+    "unused",
+    "used",
+    "aligned",
+    "packed",
+    "always_inline",
+    "noreturn",
+    "deprecated",
+    "fallthrough",
+    "weak",
+    "section",
+    "visibility",
+    "warn_unused_result",
+    "nonnull",
+    "pure",
+    "const_",
+    "hot",
+    "cold",
+    "constructor",
+    "destructor",
+    "format",
+    "may_alias",
+    "cleanup",
+    "transparent_union",
 }
 SAFE = KEYWORDS | STDLIB | SHAPE | ATTRS
 
@@ -101,9 +244,7 @@ def paths(rel):
     """A module header pairs with its .c; anything else (a test .c, a suite dir) stands alone."""
     p = os.path.join(ROOT, rel.replace("/", os.sep))
     if os.path.isdir(p):
-        return sorted(
-            os.path.join(p, n) for n in os.listdir(p) if n.endswith((".c", ".h")) and n != "unity_runner.c"
-        )
+        return sorted(os.path.join(p, n) for n in os.listdir(p) if n.endswith((".c", ".h")) and n != "unity_runner.c")
     if rel.endswith(".h"):
         return [x for x in (p, p[:-2] + ".c") if os.path.exists(x)]
     return [p] if os.path.exists(p) else []
@@ -276,9 +417,7 @@ class Blinder(object):
         return "".join(out)
 
     def legend(self):
-        return sorted(
-            (v, k) for k, v in self.table.items() if isinstance(k, str) and isinstance(v, str)
-        )
+        return sorted((v, k) for k, v in self.table.items() if isinstance(k, str) and isinstance(v, str))
 
 
 def show_code(p, _state):

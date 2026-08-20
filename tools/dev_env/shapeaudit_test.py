@@ -67,7 +67,7 @@ check("the result member is not one", mem[1] == {"name": "ok", "fnptr": False, "
 print()
 
 print("static_assert is not a prototype")
-d = design("static_assert(A + sizeof(uint32_t) * 8 <= PROTOCORE_FOO_BORROW, \"short\");\n")
+d = design('static_assert(A + sizeof(uint32_t) * 8 <= PROTOCORE_FOO_BORROW, "short");\n')
 check("read as an assert", len(one(d, "static_assert")) == 1)
 check("and not as a function", one(d, "prototype") == [])
 check("it is seen to cite the borrow", one(d, "static_assert")[0]["cites_borrow"] is True)
@@ -77,8 +77,8 @@ print("local arrays: data only, so a flash string is not pulled into RAM")
 d = design(
     "static void f(void)\n{\n"
     "    uint8_t buf[64];\n"
-    "    const char name[] = \"protocore\";\n"
-    "    const char *const tab[3] = {\"a\", \"b\", \"c\"};\n"
+    '    const char name[] = "protocore";\n'
+    '    const char *const tab[3] = {"a", "b", "c"};\n'
     "    const uint8_t k[16] = {0};\n"
     "    uint8_t vla[n];\n"
     "}\n"
@@ -89,7 +89,10 @@ check("a const data array is found too", "k" in got)
 check("a char array initialised from a string is not", "name" not in got)
 check("nor is a table of pointers to literals", "tab" not in got)
 check("a non-literal extent is still storage", "vla" in got)
-check("and it is marked as not literal", [a for a in one(d, "function")[0]["locals"] if a["name"] == "vla"][0]["literal"] is False)
+check(
+    "and it is marked as not literal",
+    [a for a in one(d, "function")[0]["locals"] if a["name"] == "vla"][0]["literal"] is False,
+)
 print()
 
 print("the offset chain is read positionally")
@@ -97,7 +100,7 @@ d = design(
     "#define F_OFF_A 0u\n"
     "#define F_OFF_B (F_OFF_A + sizeof(FCtx))\n"
     "#define F_OFF_C (F_OFF_B + 64u)\n"
-    "static_assert(F_OFF_C + 32u <= PROTOCORE_F_BORROW, \"short\");\n"
+    'static_assert(F_OFF_C + 32u <= PROTOCORE_F_BORROW, "short");\n'
 )
 t = S.traits(d, "source")
 check("first offset is zero", t["offset_first_is_zero"] is True)
@@ -109,7 +112,7 @@ d = design(
     "#define F_OFF_A 0u\n"
     "#define F_OFF_B (F_OFF_A + sizeof(FCtx))\n"
     "#define F_OFF_C (F_OFF_A + 64u)\n"
-    "static_assert(F_OFF_B + 32u <= PROTOCORE_F_BORROW, \"short\");\n"
+    'static_assert(F_OFF_B + 32u <= PROTOCORE_F_BORROW, "short");\n'
 )
 t = S.traits(d, "source")
 check("an offset chained past its predecessor breaks the chain", t["offset_chain_links"] == [True, False])
@@ -121,7 +124,7 @@ print("a cast region needs its offset asserted; a uint8_t* region does not")
 d = design(
     "#define F_OFF_A 0u\n"
     "#define F_OFF_B (F_OFF_A + sizeof(FCtx))\n"
-    "static_assert(F_OFF_A % _Alignof(FCtx) == 0, \"misaligned\");\n"
+    'static_assert(F_OFF_A % _Alignof(FCtx) == 0, "misaligned");\n'
     "#define F_CTX(w) ((FCtx *)(void *)((w) + F_OFF_A))\n"
     "#define F_BUF(w) ((w) + F_OFF_B)\n"
     "#define F_ACC(w) ((uint32_t *)(void *)((w) + F_OFF_B))\n"
@@ -134,7 +137,7 @@ check("the unasserted one is reported", "F_ACC" in " ".join(t["cast_regions_unal
 
 d = design(
     "#define F_OFF_A 0u\n"
-    "static_assert(F_OFF_A + 4u <= PROTOCORE_F_BORROW, \"short\");\n"
+    'static_assert(F_OFF_A + 4u <= PROTOCORE_F_BORROW, "short");\n'
     "#define F_CTX(w) ((FCtx *)(void *)((w) + F_OFF_A))\n"
 )
 t = S.traits(d, "source")
@@ -185,7 +188,9 @@ check("and the same call inside a string is not code", t["null_borrow_args"] == 
 print()
 
 print("a namespace is reached in one hop, and the reader can tell which hop it is")
-gsrc = io.open(S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.c", encoding="utf-8").read()
+gsrc = io.open(
+    S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.c", encoding="utf-8"
+).read()
 
 
 def deep(inject):
@@ -224,7 +229,9 @@ check(
 print()
 
 print("an entry declared in the Ns struct is bound by the table")
-ghsrc = io.open(S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8").read()
+ghsrc = io.open(
+    S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8"
+).read()
 check("the golden leaves none unbound", S.traits(design(ghsrc, ".h"), "header")["unbound_entries"] == [])
 victim = re.search(r"\(\*const (\w+)\)", ghsrc).group(1)
 dropped = re.sub(r"\n\s*\.%s\s*=[^,]*,\n" % victim, "\n", ghsrc, count=1)
@@ -297,11 +304,20 @@ typedef int U;
 #endif
 """
 check("an arm that closes mid-file is not a gate", S.module_gate(UNGATED) == "")
-check("the golden's own gate is read", S.module_gate(io.open(S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8").read()) == "PROTOCORE_ENABLE_SHA256")
+check(
+    "the golden's own gate is read",
+    S.module_gate(
+        io.open(
+            S.__file__.rsplit("shapeaudit.py", 1)[0] + "../../src/crypto/hash/sha256/sha256.h", encoding="utf-8"
+        ).read()
+    )
+    == "PROTOCORE_ENABLE_SHA256",
+)
 # A source has no include guard, so the body ends at EOF.
 check(
     "a source's gate closes at the end of the file",
-    S.module_gate('#include "protocore_config.h"\n#if PROTOCORE_ENABLE_P\nvoid f(void) {}\n#endif\n') == "PROTOCORE_ENABLE_P",
+    S.module_gate('#include "protocore_config.h"\n#if PROTOCORE_ENABLE_P\nvoid f(void) {}\n#endif\n')
+    == "PROTOCORE_ENABLE_P",
 )
 # NEED is a gate; HAS is a capability arm inside one, and a question about the board rather than
 # about the module. modbus is gated PROTOCORE_NEED_MODBUS and was read as having no gate at all.
@@ -370,7 +386,11 @@ th, tc = sized(NAMES[:2])
 check("two entries is the same design too", ask("no flat decls", th, tc) is True)
 
 # What the check is actually for.
-th, tc = sized(NAMES, "void protocore_p_reset(uint8_t *restrict work);", "void protocore_p_reset(uint8_t *restrict work) { (void)work; }")
+th, tc = sized(
+    NAMES,
+    "void protocore_p_reset(uint8_t *restrict work);",
+    "void protocore_p_reset(uint8_t *restrict work) { (void)work; }",
+)
 check("a declaration no table binds IS flat", ask("no flat decls", th, tc) is False)
 check("and its definition is unplaced", ask("functions placed", th, tc) is False)
 print()
@@ -386,7 +406,11 @@ check("so the header is not flat", ask("no flat decls", th, tc) is True)
 check("and the definition is placed", ask("functions placed", th, tc) is True)
 # By SIGNATURE, not by name: mmgr's `protocore_span protocore_secure_span(size_t, size_t)` is an
 # arena allocator and shares nothing with a borrow accessor but the word.
-th, tc = sized(NAMES, "protocore_span protocore_p_span(size_t n, size_t align);", "protocore_span protocore_p_span(size_t n, size_t align) { (void)n; (void)align; }")
+th, tc = sized(
+    NAMES,
+    "protocore_span protocore_p_span(size_t n, size_t align);",
+    "protocore_span protocore_p_span(size_t n, size_t align) { (void)n; (void)align; }",
+)
 check("a function merely NAMED _span is not one", th["borrow_accessors"] == [])
 check("so it is still flat", ask("no flat decls", th, tc) is False)
 print()

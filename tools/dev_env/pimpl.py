@@ -117,9 +117,7 @@ def convert_header(h, spec):
     # The doc block that goes with it is the one DIRECTLY above: `(?!\*/)` stops the optional
     # prefix crossing a `*/`, so it cannot start at the file's own @file block and swallow the
     # include guard, the gate and every args struct between there and this declaration.
-    h = re.sub(
-        r"(?:/\*\*(?:(?!\*/)[\s\S])*?\*/[ \t]*\n)?[ \t]*struct\s+%s\s*;[^\n]*\n" % internal, "", h, count=1
-    )
+    h = re.sub(r"(?:/\*\*(?:(?!\*/)[\s\S])*?\*/[ \t]*\n)?[ \t]*struct\s+%s\s*;[^\n]*\n" % internal, "", h, count=1)
 
     # the borrow comes from beside the namespace, as it does for rng
     span = (

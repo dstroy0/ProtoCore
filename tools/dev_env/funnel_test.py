@@ -131,7 +131,10 @@ check("both heads keep their signature", aout.count("static void on_recv(") == 2
 check("the shared body reads through the borrow", "FOO_CTX(work)->n += len" in aout)
 
 print("\nfind_context: what is not the module's context")
-check("the Internal instance is the handle, not state", find_context("static struct FooInternal s_h = {.ns = &Foo};\n") is None)
+check(
+    "the Internal instance is the handle, not state",
+    find_context("static struct FooInternal s_h = {.ns = &Foo};\n") is None,
+)
 check("the span holder is not state either", find_context("static FooOwnCtx s_own;\n") is None)
 _m = find_context("static struct FooInternal s_h = {.ns = &Foo};\n" "static FooCtx s_foo;\n")
 check("a context past the handle is still the one found", _m is not None and _m.group("name") == "s_foo")
