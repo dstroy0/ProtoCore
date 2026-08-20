@@ -15,7 +15,7 @@
 #include "crypto/asymmetric/ed25519/ed25519.h"       // protocore_ed25519 host-key sign
 #include "crypto/asymmetric/rsa/rsa.h"               // PROTOCORE_RSA_KEY_BYTES / _SIG_BYTES - the host-key sizes
 #include "crypto/cipher/aes256ctr/aes256ctr.h"       // PROTOCORE_AES256CTR_KEY_LEN / _CTR_LEN - the cipher key and IV
-#include "crypto/ct_eq/ct_eq.h"                            // protocore_ct_eq
+#include "crypto/ct_eq/ct_eq.h"                      // protocore_ct_eq
 #include "crypto/hash/sha256/sha256.h"
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "crypto/mac/hmac_sha512/hmac_sha512.h"

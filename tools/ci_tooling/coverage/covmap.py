@@ -8,14 +8,15 @@ Local coverage-raising helper. Three sub-commands:
   gaps   [--env E] [paths]  uncovered branches (from a SonarQube coverage xml),
                             annotated with the source line and the owning envs
 
-The env table is parsed from platformio.ini, which is generated from
-test/test_matrix.json - so this stays in sync with the suite automatically.
+The env table is read from test/test_matrix.json, which defines the suite. It used to be parsed
+out of platformio.ini; the native envs are not rendered there any more, since CMake builds them.
 """
 
 from __future__ import annotations
 
 import argparse
 import fnmatch
+import json
 import os
 import re
 import sys
@@ -23,55 +24,26 @@ import xml.etree.ElementTree as ET
 from tools.ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
-INI = os.path.join(ROOT, "platformio.ini")
+MATRIX = os.path.join(ROOT, "test", "test_matrix.json")
 DEFAULT_COV = os.path.join(ROOT, "test", "coverage.xml")
 
 
 def parse_envs() -> dict[str, dict]:
-    """env name -> {'src': [glob...], 'tests': [suite...]}"""
+    """env name -> {'src': [path...], 'tests': [suite...]}, from test/test_matrix.json."""
+    with open(MATRIX, "r", encoding="utf-8") as fh:
+        table = json.load(fh)
     envs: dict[str, dict] = {}
-    cur = None
-    key = None
-    with open(INI, "r", encoding="utf-8") as fh:
-        for raw in fh:
-            line = raw.rstrip("\n")
-            m = re.match(r"^\[env:([^\]]+)\]", line)
-            if m:
-                cur = {"src": [], "tests": []}
-                envs[m.group(1)] = cur
-                key = None
-                continue
-            if re.match(r"^\[", line):
-                cur = None
-                key = None
-                continue
-            if cur is None:
-                continue
-            m = re.match(r"^(\w+)\s*=\s*(.*)$", line)
-            if m:
-                key = m.group(1)
-                rest = m.group(2).strip()
-                if key == "build_src_filter" and rest:
-                    cur["src"].append(rest)
-                elif key == "test_filter" and rest:
-                    cur["tests"].append(rest)
-                continue
-            if line.startswith((" ", "\t")) and key:
-                val = line.strip()
-                if not val:
-                    continue
-                if key == "build_src_filter":
-                    cur["src"].append(val)
-                elif key == "test_filter":
-                    cur["tests"].append(val)
-    # normalize: '+<a/b.cpp>' -> 'a/b.cpp'
-    for e in envs.values():
+    for name, e in table.get("envs", {}).items():
+        # The matrix writes a source as `+<path>`; some entries carry the src/ prefix and some do
+        # not, and env_covers() below compares against a repo-relative path with it stripped.
         pats = []
-        for s in e["src"]:
-            m = re.match(r"^([+-])<(.*)>$", s)
-            if m and m.group(1) == "+":
-                pats.append(m.group(2))
-        e["src"] = pats
+        for entry in e.get("src") or []:
+            mm = re.match(r"^([+-])<(.*)>$", entry.strip())
+            if not mm or mm.group(1) != "+":
+                continue
+            q = mm.group(2)
+            pats.append(q[len("src/") :] if q.startswith("src/") else q)
+        envs[name] = {"src": pats, "tests": list(e.get("tests") or [])}
     return envs
 
 

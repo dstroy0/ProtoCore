@@ -32,9 +32,9 @@
 #ifndef PROTOCORE_TCP_SERVER_H
 #define PROTOCORE_TCP_SERVER_H
 
-#include "network_drivers/transport/tcp/evt/evt.h" // TcpEvt: the event an enqueue posts. The listener rows themselves are common.h's.
 #include "config/platform/platform.h" // the target's queues and TCP, under our names
-#include "shared/ip/ip.h"             // protocore_ip: the peer address an allowlist matches
+#include "network_drivers/transport/tcp/evt/evt.h" // TcpEvt: the event an enqueue posts. The listener rows themselves are common.h's.
+#include "shared/ip/ip.h"                          // protocore_ip: the peer address an allowlist matches
 
 #include "protocore_config.h"
 

@@ -30,7 +30,7 @@
 #endif
 #include "crypto/aead/aes128gcm/aes128gcm.h"
 #include "crypto/crypto_opt/crypto_opt.h"
-#include "crypto/ct_eq/ct_eq.h"           // protocore_ct_eq
+#include "crypto/ct_eq/ct_eq.h"     // protocore_ct_eq
 #include "crypto/mac/ghash/ghash.h" // the 4-bit-table GF(2^128) hash
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/rawmemcpy/rawmemcpy.h" // proto_raw_u32 - the aliasing-permitted word load

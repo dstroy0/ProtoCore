@@ -15,7 +15,7 @@
 
 #include "config/platform/platform.h" // the target's queues and tasks, under our names
 #include "mmgr/arena/arena.h"         // protocore_worker_set_self: identity lives with the pools it indexes
-#include "mmgr/ring/ring.h"                // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
+#include "mmgr/ring/ring.h"           // PROTO_ATOMIC_LOAD/STORE: the run flag crosses tasks
 
 // ---------------------------------------------------------------------------
 // Worker tasks

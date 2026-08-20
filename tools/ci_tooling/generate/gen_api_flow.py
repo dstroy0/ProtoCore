@@ -29,7 +29,8 @@ from tools.ci_tooling.lib import doc_region as dr
 
 ROOT = dr.repo_root(__file__)
 API_H = os.path.join(ROOT, "include", "protocore.h")
-PROTO_CPP = os.path.join(ROOT, "src", "server", "protocore_builtins.c")
+# One module per directory: protocore_builtins.c lives in a directory of its own name.
+PROTO_CPP = os.path.join(ROOT, "src", "server", "protocore_builtins", "protocore_builtins.c")
 PRESENTATION = os.path.join(ROOT, "src", "network_drivers", "presentation")
 README = os.path.join(ROOT, "README.md")
 ARCH = os.path.join(ROOT, "docs", "ARCHITECTURE.md")

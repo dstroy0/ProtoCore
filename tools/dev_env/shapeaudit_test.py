@@ -459,7 +459,9 @@ def placed(above, below):
 # list and its length is the module's own business - the golden's header needs no other header,
 # fe25519's needs ct_eq.h, and that is the same placement. A clause comparing the two below-gate
 # lists for emptiness contradicted the question the check asks, and reported 11 modules for it.
-check("a dependency below the gate is placed correctly", placed(["protocore_config.h"], ["crypto/ct_eq/ct_eq.h"]) is True)
+check(
+    "a dependency below the gate is placed correctly", placed(["protocore_config.h"], ["crypto/ct_eq/ct_eq.h"]) is True
+)
 check("a header hoisted above the gate is not", placed(["shared/ip/ip.h", "protocore_config.h"], []) is False)
 check("nor is a different header standing in for the config", placed(["mmgr/span/span.h"], []) is False)
 # With no gate, `above` is the whole file and the question has no subject. `guarded` is the check
