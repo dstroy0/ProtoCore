@@ -298,32 +298,3 @@ void test_a_server_name_is_refused(void)
     NtpService.begin(protocore_ntp_service_span());
     TEST_ASSERT_FALSE(NtpServiceV.ok);
 }
-
-// Never synced means no Date header rather than a false one. Once synced the shared IMF-fixdate
-// formatter renders the instant: RFC 9110 sec 5.6.7's own example, at its Unix epoch 784111777.
-void test_the_http_date_is_empty_until_synced(void)
-{
-    char buf[40];
-    memset(buf, 'x', sizeof buf);
-    NtpService.synced(protocore_ntp_service_span());
-    TEST_ASSERT_FALSE(NtpServiceV.ok);
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ntp_http_date(buf, sizeof buf));
-
-    NtpServiceV.set_test_epoch_args.epoch = (time_t)784111777;
-    NtpService.set_test_epoch(protocore_ntp_service_span());
-    NtpService.synced(protocore_ntp_service_span());
-    TEST_ASSERT_TRUE(NtpServiceV.ok);
-    TEST_ASSERT_EQUAL_size_t(29u, protocore_ntp_http_date(buf, sizeof buf));
-    TEST_ASSERT_EQUAL_STRING("Sun, 06 Nov 1994 08:49:37 GMT", buf);
-
-    // Seeding 0 puts the client back to never-synced.
-    NtpServiceV.set_test_epoch_args.epoch = 0;
-    NtpService.set_test_epoch(protocore_ntp_service_span());
-    NtpService.synced(protocore_ntp_service_span());
-    TEST_ASSERT_FALSE(NtpServiceV.ok);
-    NtpService.epoch(protocore_ntp_service_span());
-    TEST_ASSERT_EQUAL_UINT32(0u, (uint32_t)NtpServiceV.value);
-    NtpService.time_source(protocore_ntp_service_span());
-    TEST_ASSERT_EQUAL_UINT32(0u, NtpServiceV.ms);
-    TEST_ASSERT_EQUAL_size_t(0u, protocore_ntp_http_date(buf, sizeof buf));
-}

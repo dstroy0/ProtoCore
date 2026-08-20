@@ -77,13 +77,6 @@ static uint8_t mnt_work[16]; // the borrow an entry takes; Mnt never reads it
 #if PROTOCORE_ENABLE_METRICS || PROTOCORE_ENABLE_STATS
 #include "network_drivers/application/web_assets/web_assets.h" // PROTOCORE_METRICS_PROM / PROTOCORE_STATS_JSON (generated)
 #endif
-#if PROTOCORE_HTTP_EMIT_DATE
-#if PROTOCORE_ENABLE_TIME_SOURCE
-#include "services/timing_position/time_source/time_source.h" // protocore_time_http_date() - any NTP/GPS/RTC/... source
-#else
-#include "network_drivers/application/ntp_service/ntp_service.h" // protocore_ntp_http_date() - direct NTP (or the host test seam)
-#endif
-#endif
 // No <string.h> and no <stdio.h>: every scan, compare, copy and search on this layer goes through
 // mmgr/protostr.h, and nothing here formats. strnlen and the strcasecmp pair are POSIX rather than
 // ISO C, so they are absent under -std=c11 on a conforming libc.

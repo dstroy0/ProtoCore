@@ -1435,10 +1435,14 @@
  * The time is taken from the multi-source registry (any enabled NTP / GPS / RTC / ...
  * by priority) when PROTOCORE_ENABLE_TIME_SOURCE is set - register your sources with
  * protocore_time_source_add() (protocore_rtc_time_source, protocore_ntp_time_source, ...). Otherwise it comes
- * straight from NTP (protocore_ntp_http_date). Needs at least one such time source to emit.
+ * straight from the NTP client. Needs at least one such time source to emit.
+ *
+ * Which of the two a build has is ::HttpClock's decision, made once in server/io/http_clock rather
+ * than by each caller: this flag is what compiles that module in, and it takes
+ * ::PROTOCORE_HTTP_CLOCK_BORROW from the plaintext arena to hold the rendered value.
  */
-#ifndef PROTOCORE_HTTP_EMIT_DATE
-#define PROTOCORE_HTTP_EMIT_DATE 0
+#ifndef PROTOCORE_ENABLE_HTTP_CLOCK
+#define PROTOCORE_ENABLE_HTTP_CLOCK 0
 #endif
 
 /** @brief Maximum registered time sources (PROTOCORE_ENABLE_TIME_SOURCE). */
@@ -3530,6 +3534,20 @@
 #define PROTOCORE_PLAINTEXT_WORK_NTPSERVICE 0
 #endif
 
+// The rendered `Date` header value, held between the render and the caller reading it. One
+// IMF-fixdate plus its NUL, so it is ::PROTOCORE_HTTP_DATE_MAX and nothing else - the size is a
+// property of RFC 7231's fixed-width format rather than a tuning choice. A timestamp, no key
+// material, so the plaintext end. Taken only where a build emits the header at all.
+#ifndef PROTOCORE_HTTP_CLOCK_BORROW
+#define PROTOCORE_HTTP_CLOCK_BORROW 32u
+#endif
+
+#if PROTOCORE_ENABLE_HTTP_CLOCK
+#define PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK PROTOCORE_HTTP_CLOCK_BORROW
+#else
+#define PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK 0
+#endif
+
 // The NTP server's advertised stratum and reference id. Measured at 8 bytes. Clock metadata, no
 // key material, so the plaintext end.
 #ifndef PROTOCORE_NTP_SERVER_BORROW
@@ -3812,7 +3830,7 @@
      PROTOCORE_PLAINTEXT_WORK_NTPSERVICE + PROTOCORE_PLAINTEXT_WORK_UPLOADSERVICE +                                    \
      PROTOCORE_PLAINTEXT_WORK_MDNSADAPTIVE + PROTOCORE_PLAINTEXT_WORK_HTTPPARSER + PROTOCORE_PLAINTEXT_WORK_SSHSFTP +  \
      PROTOCORE_PLAINTEXT_WORK_SSHCOMP + PROTOCORE_PLAINTEXT_WORK_MTCONNECT + PROTOCORE_PLAINTEXT_WORK_FILESERVING +    \
-     256)
+     PROTOCORE_PLAINTEXT_WORK_HTTPCLOCK + 256)
 #endif
 
 /**

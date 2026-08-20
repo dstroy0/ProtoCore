@@ -23,20 +23,6 @@
 
 PROTOCORE_BEGIN_DECLS
 
-/**
- * @brief Format the current time as an RFC 7231 IMF-fixdate (HTTP `Date`), e.g.
- *        "Sun, 06 Nov 1994 08:49:37 GMT". Always GMT.
- *
- * Not an entry, and outside the gate below: ntp_service.c defines it on both arms of its own gate,
- * and server/io/response.c reaches it whenever no PROTOCORE_ENABLE_TIME_SOURCE registry is built,
- * whether or not NTP itself is.
- *
- * @param out      Destination buffer (>= 30 bytes recommended).
- * @param out_cap  Capacity of @p out.
- * @return characters written excluding the null, or 0 when no time is available.
- */
-size_t protocore_ntp_http_date(char *out, size_t out_cap);
-
 PROTOCORE_END_DECLS
 
 #if PROTOCORE_ENABLE_NTP

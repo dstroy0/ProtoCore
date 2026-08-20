@@ -6,14 +6,14 @@
 // async pool.ntp.org sync in protocore_ntp_begin) is real transport and is deliberately OUT OF SCOPE on
 // this rig - we never start SNTP, so nothing here touches WiFi or a socket. What IS benched is the
 // one pure, deterministic CPU path the service owns: formatting the current epoch as the RFC 7231
-// IMF-fixdate HTTP `Date` header (protocore_ntp_http_date -> shared protocore_http_date -> gmtime_r + strftime),
+// IMF-fixdate HTTP `Date` header (HttpClock.date -> shared protocore_http_date -> gmtime_r + strftime),
 // plus the cheap epoch/synced poll accessors and the time_source registry adapter.
 //
 // Time seam: PROTOCORE_ENABLE_NTP defaults to 0 (and test_matrix.json's flag set for this service does not
 // enable it), so the host branch of ntp_service.cpp is what compiles here - it exposes the
 // protocore_ntp_set_test_epoch() seam the unit tests use to inject a wall clock. We forward-declare it
 // (the header only declares it for !ARDUINO) and seed a realistic modern epoch once at task start,
-// so protocore_ntp_http_date() runs its full gmtime_r + strftime path instead of the epoch==0 fast-out.
+// so HttpClock.date runs its full gmtime_r + strftime path instead of the epoch==0 fast-out.
 //
 // Build/flash (JTAG-capable S3 over its USB-Serial/JTAG port):
 //   idf.py -C test/performance_benching/ntp_service -t upload --upload-port COM7
@@ -23,6 +23,7 @@
 #include "network_drivers/application/ntp_service/ntp_service.h"
 #include "shared/http_date/http_date.h" // protocore_http_date() - the shared IMF-fixdate formatter
 
+#include "server/io/http_clock/http_clock.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -55,8 +56,9 @@ void dbench_run(void)
         volatile uint32_t sinku = 0;
         volatile int sinkb = 0;
 
-        // The service's Date-header path end to end: read the (seeded) epoch, break it down, strftime.
-        DBENCH_OP("protocore_ntp_http_date", 20000, sinkz += protocore_ntp_http_date(datebuf, sizeof(datebuf)));
+        // The Date-header path end to end: read the (seeded) epoch, break it down, strftime. HttpClock
+        // picks the clock; with only the NTP client compiled in, that is this service.
+        DBENCH_OP("HttpClock.date", 20000, (HttpClock.date(protocore_http_clock_span()), sinkz += HttpClockV.n));
         // The shared formatter directly with a fixed spec epoch: pure gmtime_r + strftime, no clock read.
         DBENCH_OP("protocore_http_date", 20000, sinkz += protocore_http_date(rfc_epoch, datebuf, sizeof(datebuf)));
         // Cheap poll accessors the app calls to gate the Date header on / read the wall clock.

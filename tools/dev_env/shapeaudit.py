@@ -91,6 +91,13 @@ def module_gate(text):
         # quantifiers, and on the kilobyte of text that follows a mid-file `#endif` it backtracks
         # long enough to look like a hang - the tree audit stopped finishing.
         rest = re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", rest, flags=re.S))
+        # PROTOCORE_END_DECLS is not body. The golden opens DECLS INSIDE the gate, and eleven
+        # headers - cbor, protobuf, x509, tls, telnet, mnt among them - open it outside, so their
+        # gate closes with `PROTOCORE_END_DECLS` still to come. Counting that as body said those
+        # modules had no gate at all, which is wrong twice over: the header gates its declarations
+        # and CMake gates the module, because gen_modules reads the gate off the .c. The DECLS
+        # ordering IS a divergence from the golden, and `decls wrapped` is the check that owns it.
+        rest = re.sub(r"\bPROTOCORE_(?:BEGIN|END)_DECLS\b", "", rest)
         if not rest.strip():
             return g.group(1)
     return ""
@@ -699,6 +706,19 @@ def traits(design, which):
     t["public_param_shapes"] = sorted({tuple(d["params"]) for d in fns if not d["static"]})
     t["prototypes"] = sorted(d["name"] for d in design if d["kind"] == "prototype")
     t["prototype_param_shapes"] = sorted({tuple(d["params"]) for d in design if d["kind"] == "prototype"})
+    # The same list without the borrow accessor, whose `(void)` is a second shape by definition and
+    # says nothing about how operands reach an entry. Computed here rather than in the check so both
+    # the accessor exemption and its reason live in one place.
+    _acc = {
+        d["name"]
+        for d in design
+        if d["kind"] == "prototype"
+        and d.get("ret", "").replace(" ", "") == "uint8_t*"
+        and not [p for p in d.get("params", []) if p.strip() not in ("", "void")]
+    }
+    t["entry_param_shapes"] = sorted(
+        {tuple(d["params"]) for d in design if d["kind"] == "prototype" and d["name"] not in _acc}
+    )
 
     # An accessor for the module's OWN borrow: `uint8_t *protocore_<x>_span(void)`. Recognised by
     # that signature rather than by the name, so a function merely called `_span` that takes
@@ -728,8 +748,20 @@ def traits(design, which):
     asserts = [d for d in design if d["kind"] == "static_assert"]
     t.update(_offset_chain(offs, asserts))
     t.update(_region_alignment([d for d in design if d["kind"] == "define" and d.get("fn")], asserts))
+    # The module's OWN borrow pointer is not stray state. A module that publishes
+    # `protocore_<x>_span()` holds the bytes it took through one `static <X>OwnCtx s_own;` - the ONE
+    # pointer per translation unit the golden's own doctrine allows, and the storage the accessor is
+    # made of. 106 modules have exactly that, and counting it made every one of them answer no to a
+    # check about state they do not keep. The golden has none only because sha256's caller supplies
+    # the borrow, which is the same reason it publishes no accessor.
+    #
+    # Recognised by TYPE, not by name: a `static SomethingElse s_own;` is ordinary file-scope state.
+    own = {d["name"] for d in design if d["kind"] == "object" and d.get("type", "").endswith("OwnCtx")}
+    t["borrow_holders"] = sorted(own)
     t["file_statics"] = sorted(
-        d["name"] for d in design if d["kind"] == "object" and d.get("static") and not d.get("const")
+        d["name"]
+        for d in design
+        if d["kind"] == "object" and d.get("static") and not d.get("const") and d["name"] not in own
     )
 
     # Any test of the BORROW against null, in any position - not only an `if` condition. euromap77
@@ -1057,9 +1089,17 @@ CHECKS = [
         "convert gen",
     ),
     (
+        # "Has at least one Args record" is not the same question. A module whose entries take no
+        # operands has nothing to put in one and answers this vacuously - http_clock's single entry
+        # reads the build's clock and takes nothing, and tls13_rpk's header says the same of a
+        # module that holds nothing between calls. What the check is actually for is an operand
+        # arriving as a PARAMETER, and an entry's parameter list is the borrow and nothing else -
+        # which `entries take borrow` reads off the Ns struct and this reads off the declarations,
+        # so a flat function that no table binds is caught even before the table exists.
         "operands are members",
         "is every operand an args member rather than a parameter?",
-        lambda h, c, gh, gc: len(h["args_records"]) > 0 or len(gh["args_records"]) == 0,
+        lambda h, c, gh, gc: h["entry_param_shapes"] == gh["entry_param_shapes"]
+        or (not h["entry_param_shapes"] and not h["args_records"]),
         "convert gen",
     ),
     (

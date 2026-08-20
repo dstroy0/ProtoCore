@@ -7,13 +7,12 @@
 // order, first-nonzero-wins, and that a source below the one that answered is never called (reading
 // an RTC or a GPS costs time and current).
 //
-// The load-bearing case is test_rfc9110_date_from_the_active_source. protocore_time_http_date is the
-// seam the HTTP Date header draws from, and RFC 9110 sec 5.6.7 prints exactly one IMF-fixdate
-// example. Reproducing it octet for octet from the epoch a registered source reported is what proves
-// the registry and the formatter are joined correctly rather than each being right alone.
+// What this registry feeds is the HTTP Date header, and that joining - a registered source's epoch
+// rendered as RFC 9110 sec 5.6.7's own IMF-fixdate example - is test_http_clock's. It used to be
+// here because the joining lived in an escape hatch inside this module, kept outside the module's
+// own enable gate so response.c could reach it; that is what kept time_source in every binary.
 
 #include "services/timing_position/time_source/time_source.h"
-#include "shared/http_date/http_date.h"
 #include <string.h>
 
 #include <unity.h>
@@ -47,28 +46,6 @@ void setUp(void)
 void tearDown(void)
 {
     protocore_time_source_reset();
-}
-
-// RFC 9110 sec 5.6.7: "An example of the preferred format is
-//     Sun, 06 Nov 1994 08:49:37 GMT    ; IMF-fixdate"
-//
-// Its epoch, from the definition of the Unix epoch alone:
-//   1970-01-01 .. 1994-01-01 = 24 years, of which 1972/76/80/84/88/92 are leap
-//                            = 24*365 + 6            = 8766 days
-//   1994-01-01 .. 1994-11-06 = 31+28+31+30+31+30+31+31+30+31 = 304 days to Oct 31,
-//                              +6 to Nov 6, less the 1st itself = 309 days
-//   (8766 + 309) * 86400                             = 784080000
-//   08:49:37 = 8*3600 + 49*60 + 37                   =     31777
-//                                                      ----------
-//                                                      784111777
-void test_rfc9110_date_from_the_active_source(void)
-{
-    char out[PROTOCORE_HTTP_DATE_MAX];
-    g_epoch_a = 784111777u;
-    TEST_ASSERT_TRUE(protocore_time_source_add("gnss", 0, src_a));
-
-    TEST_ASSERT_EQUAL_UINT(29u, protocore_time_http_date(out, sizeof(out)));
-    TEST_ASSERT_EQUAL_STRING("Sun, 06 Nov 1994 08:49:37 GMT", out);
 }
 
 // Ascending priority, not registration order: the lower value is queried first.
@@ -182,25 +159,4 @@ void test_reset_clears_the_registry(void)
     // and the freed slot takes a registration again
     TEST_ASSERT_TRUE(protocore_time_source_add("gnss", 0, src_a));
     TEST_ASSERT_EQUAL_UINT32(321u, protocore_time_now());
-}
-
-// With no valid time the Date line is empty rather than 1970: a device that never obtained a clock
-// emits no Date header instead of a false one.
-void test_http_date_is_empty_with_no_valid_time(void)
-{
-    char out[PROTOCORE_HTTP_DATE_MAX];
-    memset(out, 'x', sizeof(out));
-    TEST_ASSERT_TRUE(protocore_time_source_add("gnss", 0, src_a)); // g_epoch_a is 0
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_time_http_date(out, sizeof(out)));
-    TEST_ASSERT_EQUAL_CHAR('\0', out[0]);
-}
-
-// A buffer shorter than the fixed 29-octet form yields nothing, never a partial date.
-void test_http_date_refuses_a_short_buffer(void)
-{
-    char small[PROTOCORE_HTTP_DATE_MAX - 1];
-    g_epoch_a = 784111777u;
-    TEST_ASSERT_TRUE(protocore_time_source_add("gnss", 0, src_a));
-    TEST_ASSERT_EQUAL_UINT(0u, protocore_time_http_date(small, sizeof(small)));
-    TEST_ASSERT_EQUAL_CHAR('\0', small[0]);
 }

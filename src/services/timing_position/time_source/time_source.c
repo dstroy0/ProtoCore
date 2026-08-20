@@ -128,15 +128,3 @@ void protocore_time_source_reset(void)
 }
 
 #endif // PROTOCORE_ENABLE_TIME_SOURCE
-
-// The current best time (protocore_time_now, any registered NTP / GPS / RTC / ... source) as an RFC 7231
-// IMF-fixdate. Defined unconditionally: with the registry disabled protocore_time_now() is 0, so this
-// returns 0 (no Date). Lets the HTTP Date header draw from whatever time source is enabled.
-size_t protocore_time_http_date(char *out, size_t out_cap)
-{
-    HttpDateV.args.epoch = (time_t)protocore_time_now();
-    HttpDateV.args.out = out;
-    HttpDateV.args.out_cap = out_cap;
-    HttpDate.format(http_date_work);
-    return HttpDateV.n;
-}
