@@ -58,6 +58,7 @@ found by any of those, so the column is a floor, not a ceiling.
 | convert a flat module to the golden             | `tools/harness.py convert scan`, then `convert gen --dry`          |
 | convert an Internal-handle module               | `tools/harness.py convert pimpl <module.h> --dry`                  |
 | move a file-static context into the borrow      | `tools/harness.py convert funnel <module.c> --dry`                 |
+| put a file's includes where the golden puts them | `tools/harness.py convert shape <file> --dry` (read the gate note) |
 | rewrite the stale flat call sites of a module   | `tools/harness.py convert nsmap <map.json> --dry`                  |
 | run every guard CI runs                         | `tools/harness.py ci check`                                        |
 | check a `src/` file against the ban list        | `tools/harness.py ci check src_banned`                             |

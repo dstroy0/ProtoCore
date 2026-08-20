@@ -270,7 +270,18 @@ CONVERT = {
         "shape <file.c|file.h> ... [--dry]",
         "The golden's file shape only: the config include above the enable gate, everything else "
         "below it, so nothing outside the capability compiles. Takes the gate from the spec, not "
-        "from the first #if it sees.",
+        "from the first #if it sees. "
+        "RUN BARE IT GUESSES THE GATE, and the guess is wrong in a way that compiles. With no spec "
+        "it takes the first `#if PROTOCORE_(ENABLE|NEED|TLS|HAS)_*` in the file, which in "
+        "protocol.h is an observability arm around one struct in the middle - hoisting that put the "
+        "includes and every type declaration under it, and eleven translation units stopped seeing "
+        "ConnState. Read the gate structurally instead (shapeaudit.module_gate: the conditional "
+        "whose #endif has nothing after it but the include guard's), and pass it. "
+        "AND ONLY MOVE INCLUDES. Moving an #include below the gate is invisible to a consumer - the "
+        "header still declares what it declared. Moving a TYPEDEF or a PROTOTYPE is an API change: "
+        "mnt.h and http_date.h had declarations above their gates, six files were reading them with "
+        "the module disabled, and putting them where the golden puts them cost 3362 errors that "
+        "named the types and never the gate. Check what would move before running it on a header.",
         ["shape"],
     ),
     "pimpl": T(
