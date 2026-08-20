@@ -384,7 +384,7 @@ void protocore_relay_listener_publish(uint8_t *restrict work)
     {
         ProtocolsV.proto = PROTO_RELAY;
         ProtocolsV.h = &s_relay_handler;
-        SessionV.proto->add(protocore_session_span());
+        Protocols.add(protocore_session_span());
         RELAY_LISTENER_CTX(work)->registered = PROTO_TRUE;
     }
     RelayListenerV.ok = PROTO_TRUE;

@@ -6,10 +6,16 @@
  * @brief Core server - per-protocol connection handler dispatch table.
  *
  * Every application protocol (HTTP, Telnet, SSH, and optional services such as
- * MQTT or Modbus) registers one ProtoHandler. The server tick (server_tick)
- * routes each connection event - and the main loop (handle())
- * polls each active slot - through this table by ProtoConn, so a new protocol
+ * MQTT or Modbus) implements one ProtoHandler and registers it with the session
+ * layer, which owns the registry and the storage behind it: the server tick
+ * (server_tick) routes each connection event - and the main loop (handle())
+ * polls each active slot - through ::Protocols by ProtoConn, so a new protocol
  * plugs in by registering a handler instead of editing the dispatchers.
+ *
+ * This file declares the callback record and nothing else. Registering a handler
+ * means opening, closing and tracking the lifetime of a connection, which is the
+ * session layer's job and not the server's - so ::Protocols is published by
+ * network_drivers/session/session.h, beside the SessionCtx field it writes.
  *
  * All callbacks are nullable, run on the main-loop task, and take the affected
  * connection slot index. The built-in HTTP/Telnet/SSH handlers are registered
@@ -44,53 +50,6 @@ typedef struct ProtoHandler
  *        policy list: this layer owns the mechanism and names no protocol.
  */
 void protocore_register_builtins(void);
-
-/**
- * @brief The protocol registry.
- *
- * A caller sets the members a call takes, invokes it through ::Protocols, and reads the outcome off
- * the same handle. The table itself is behind @ref internal.
- *
- * @var ProtoRegistryNs::proto              the protocol a call names
- * @var ProtoRegistryNs::h                  the handler an add binds to it
- * @var ProtoRegistryNs::handler            the handler a lookup reports, or NULL when none is bound
- * @var ProtoRegistryNs::register_builtins  install every handler the build compiled in
- * @var ProtoRegistryNs::add                bind one handler to one protocol
- * @var ProtoRegistryNs::get                the handler for a protocol, or null if none is bound
- */
-typedef struct
-{
-    ProtoConn proto;
-    const ProtoHandler *h;
-    const ProtoHandler *handler;
-} ProtocolsVars;
-
-/** @brief The operands and the outcome. */
-extern ProtocolsVars ProtocolsV;
-
-/** @brief The entries. */
-typedef struct
-{
-    void (*const register_builtins)(uint8_t *restrict work);
-    void (*const add)(uint8_t *restrict work);
-    void (*const get)(uint8_t *restrict work);
-} ProtoRegistryNs;
-
-// What the table binds, defined once in the .c and taking one parameter each: everything
-// else an entry needs is an operand in ProtocolsV or a region of the borrow at a fixed offset.
-void protocore_protocols_register_builtins(uint8_t *restrict work);
-void protocore_protocols_add(uint8_t *restrict work);
-void protocore_protocols_get(uint8_t *restrict work);
-
-// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
-// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
-// `Protocols.register_builtins(work)` resolves to a named function and becomes a DIRECT call. An extern table
-// leaves the call indirect and the symbol live at every level, -O2 -flto included.
-static const ProtoRegistryNs Protocols __attribute__((unused)) = {
-    .register_builtins = protocore_protocols_register_builtins,
-    .add = protocore_protocols_add,
-    .get = protocore_protocols_get,
-};
 
 PROTOCORE_END_DECLS
 

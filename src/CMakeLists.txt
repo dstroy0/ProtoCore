@@ -72,6 +72,7 @@ if(PROTOCORE_ENABLE_HTTP2)
       pc_network_drivers_presentation_http_http3_h3_server
       pc_network_drivers_presentation_http_http3_quic_server
       pc_network_drivers_presentation_http_route_http_route
+      pc_network_drivers_session
       pc_network_drivers_tls
       pc_network_drivers_transport_tcp
       pc_network_drivers_transport_tcp_common

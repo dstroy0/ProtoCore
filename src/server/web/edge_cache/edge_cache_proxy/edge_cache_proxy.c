@@ -53,6 +53,7 @@ PROTOCORE_BEGIN_DECLS
 #include "network_drivers/tls/tls.h" // protocore_tls_client_session_* (TLS upstream origin fetch)
 #endif
 #if PROTOCORE_ENABLE_EDGE_MESH
+#include "network_drivers/session/session.h" // Protocols: the registry, owned by the session layer
 #include "server/core/proto_handler.h"                 // ProtoHandler / Session.proto->add(PROTO_MESH serving)
 #include "server/web/edge_cache/edge_mesh/edge_mesh.h" // mesh sibling-cache codec + peer-query engine
 #endif
@@ -1853,7 +1854,7 @@ void protocore_edge_proxy_mesh_serve(uint8_t *restrict work)
     {
         ProtocolsV.proto = PROTO_MESH;
         ProtocolsV.h = &s_mesh_handler;
-        SessionV.proto->add(protocore_session_span());
+        Protocols.add(protocore_session_span());
         EDGE_CACHE_PROXY_CTX(work)->mesh_registered = PROTO_TRUE;
     }
 }
