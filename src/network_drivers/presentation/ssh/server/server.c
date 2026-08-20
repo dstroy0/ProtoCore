@@ -10,17 +10,17 @@
 #include "mmgr/plaintext/plaintext.h"
 #include "mmgr/secure/secure.h"
 #include "network_drivers/presentation/ssh/auth/auth.h"
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
-#include "network_drivers/transport/tcp/common.h"            // TcpConn, conn_pool: the slots a session runs on
+#include "network_drivers/transport/tcp/common/common.h"            // TcpConn, conn_pool: the slots a session runs on
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a session closes
 #include "network_drivers/transport/tcp/server/server.h"     // TcpListener: the port a forward binds
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 
 #if PROTOCORE_ENABLE_SSH_ZLIB
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"

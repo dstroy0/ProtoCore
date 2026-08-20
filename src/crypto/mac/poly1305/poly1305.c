@@ -18,7 +18,7 @@
 
 #if PROTOCORE_ENABLE_POLY1305
 
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/mac/poly1305/poly1305.h"
 #include "mmgr/protomem/protomem.h"
 

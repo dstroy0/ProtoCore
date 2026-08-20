@@ -24,7 +24,7 @@
 #ifndef PROTOCORE_TCP_PROTOCOL_H
 #define PROTOCORE_TCP_PROTOCOL_H
 
-#include "../evt.h"                   // ConnState, TcpEvt, and the observability hook
+#include "network_drivers/transport/tcp/evt/evt.h"                   // ConnState, TcpEvt, and the observability hook
 #include "config/platform/platform.h" // protocore_pcb, protocore_net_err: the types a call names
 #include "shared/ip/ip.h"             // protocore_ip: where a peer address is written
 

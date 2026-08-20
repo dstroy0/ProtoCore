@@ -20,7 +20,7 @@
 #include "server.h"
 #include "../../diffserv/diffserv.h"   // DiffServ DSCP marking for accepted connections (compiles out when off)
 #include "../../net_addr/net_addr.h"   // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
-#include "../common.h"                 // TcpConn, conn_pool: the slots an accept claims
+#include "network_drivers/transport/tcp/common/common.h"                 // TcpConn, conn_pool: the slots an accept claims
 #include "../lower/lower.h"            // TcpLower.apply_ttl: the TTL a new pcb is stamped with
 #include "../protocol/protocol.h"      // ConnPool: the slots an accept claims
 #include "../tcp.h"                    // the aggregate the halves hang off

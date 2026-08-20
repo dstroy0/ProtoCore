@@ -18,7 +18,7 @@
 #include "network_drivers/session/session.h"                 // Session.proto->add: the handler registration
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the accepted slot
 #include "network_drivers/transport/tcp/tcp.h"
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 
 PROTOCORE_BEGIN_DECLS
 

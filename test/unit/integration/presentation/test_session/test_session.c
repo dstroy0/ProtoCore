@@ -3,12 +3,12 @@
 //
 #include "network_drivers/presentation/presentation.h"
 #include "network_drivers/session/session.h"
-#include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "server/clock/clock.h"
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 #include <unity.h>
 
 // Move the virtual clock and take the pass stamp. service_once() reads the source once per pass,

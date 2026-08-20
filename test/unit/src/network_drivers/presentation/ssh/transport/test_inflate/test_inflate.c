@@ -5,7 +5,7 @@
 // zlib@openssh.com stream - what it gives back, the window it resolves back references out
 // of, and what it refuses.
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
 #include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
 #include <stdint.h>

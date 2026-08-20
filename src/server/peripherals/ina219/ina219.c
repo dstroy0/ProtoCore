@@ -18,7 +18,7 @@
 
 #include "mmgr/endian/endian.h" // endian.wr16be / endian.rd16be: the registers are big-endian
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
-#include "server/peripherals/i2c.h"
+#include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/ina219/ina219.h"
 
 PROTOCORE_BEGIN_DECLS

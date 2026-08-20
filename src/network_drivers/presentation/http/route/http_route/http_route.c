@@ -18,7 +18,7 @@
 
 #include "mmgr/protomem/protomem.h" // mem.zero: the hand-out wipe
 #include "mmgr/secure/secure.h"     // where the table lives
-#include "network_drivers/presentation/http/route/http_route.h"
+#include "network_drivers/presentation/http/route/http_route/http_route.h"
 #include "protocore.h" // completes HttpRoute; route.h names it only as an opaque tag
 
 PROTOCORE_BEGIN_DECLS

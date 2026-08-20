@@ -5,7 +5,7 @@
 // zlib@openssh.com stream - the header that opens it, the history it keeps, and the bound a
 // caller sizes its destination by.
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/inflate/inflate.h"
 #include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
 #include <stdint.h>

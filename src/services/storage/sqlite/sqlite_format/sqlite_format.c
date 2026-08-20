@@ -12,7 +12,7 @@
 
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h"
-#include "services/storage/sqlite/sqlite_format.h"
+#include "services/storage/sqlite/sqlite_format/sqlite_format.h"
 
 PROTOCORE_BEGIN_DECLS
 

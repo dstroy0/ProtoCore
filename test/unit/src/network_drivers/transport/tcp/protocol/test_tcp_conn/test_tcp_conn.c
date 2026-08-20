@@ -25,7 +25,7 @@
 // really does own: how much window it reopens and when, whether a close drains before it releases,
 // and which signal the layer above gets for a normal close versus an abort.
 
-#include "network_drivers/transport/tcp/common.h" // conn_pool, listener_pool: the rows these cases read
+#include "network_drivers/transport/tcp/common/common.h" // conn_pool, listener_pool: the rows these cases read
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"

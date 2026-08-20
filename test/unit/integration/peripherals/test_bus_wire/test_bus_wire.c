@@ -1,13 +1,13 @@
 // ProtoCore v1.0.16 - Copyright (C) 2026 Douglas Quigg (dstroy0) <dquigg123@gmail.com>
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
-#include "server/peripherals/i2c.h"
+#include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/ina219/ina219.h"
 #include "server/peripherals/pca9685/pca9685.h"
 #include "server/peripherals/rtc/rtc.h"
 #include "server/peripherals/sht3x/sht3x.h"
 #include "server/peripherals/smbus/smbus.h"
-#include "server/peripherals/spi.h"
+#include "server/peripherals/spi/spi.h"
 #include <unity.h>
 
 void setUp(void)

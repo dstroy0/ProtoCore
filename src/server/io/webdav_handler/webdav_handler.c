@@ -23,11 +23,11 @@
 #include "network_drivers/application/webdav/webdav.h"
 #include "network_drivers/presentation/http/http.h"
 #include "network_drivers/presentation/http/http_parser/http_parser.h"
-#include "network_drivers/presentation/http/route/http_route.h"
+#include "network_drivers/presentation/http/route/http_route/http_route.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
 #include "server/clock/clock.h"
-#include "server/io/webdav_handler.h"
+#include "server/io/webdav_handler/webdav_handler.h"
 #include "shared/mime/mime.h"
 
 PROTOCORE_BEGIN_DECLS

@@ -16,7 +16,7 @@
 
 #if PROTOCORE_HAS_HW_SHA
 #endif
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/sha1/sha1.h"
 #include "mmgr/endian/endian.h" // the big-endian serializers the framing and the rounds step with
 #include "mmgr/protomem/protomem.h"

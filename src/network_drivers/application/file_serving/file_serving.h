@@ -22,7 +22,7 @@
 #if PROTOCORE_ENABLE_FILE_SERVING
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // the complete type a public struct below holds by value
-#include "network_drivers/presentation/http/route/http_route.h" // the complete type a public struct below holds by value
+#include "network_drivers/presentation/http/route/http_route/http_route.h" // the complete type a public struct below holds by value
 #include "server/storage/mnt/mnt.h" // the complete type a public struct below holds by value
 
 PROTOCORE_BEGIN_DECLS
@@ -33,7 +33,7 @@ PROTOCORE_BEGIN_DECLS
 
 #include "network_drivers/presentation/http/http_parser/http_parser.h" // HttpReq: the type a parameter points at
 
-#include "network_drivers/presentation/http/route/http_route.h" // HttpRoute: the type a parameter points at
+#include "network_drivers/presentation/http/route/http_route/http_route.h" // HttpRoute: the type a parameter points at
 
 #include "server/storage/mnt/mnt.h" // protocore_mnt_backend: the type a parameter points at
 

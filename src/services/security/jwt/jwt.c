@@ -14,7 +14,7 @@
 
 #if PROTOCORE_ENABLE_JWT
 
-#include "crypto/ct_eq.h"                       // protocore_ct_eq: the RFC 7518 sec 3.2 constant-time compare
+#include "crypto/ct_eq/ct_eq.h"                       // protocore_ct_eq: the RFC 7518 sec 3.2 constant-time compare
 #include "crypto/mac/hmac_sha256/hmac_sha256.h" // the HS256 MAC (RFC 7518 sec 3.1)
 #include "mmgr/protostr/protostr.h"             // str.len / find / starts / to_long
 #include "mmgr/secure/secure.h"                 // the MAC's working set, wiped on release

@@ -21,7 +21,7 @@
 #endif
 
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
-#include "server/peripherals/i2c.h"
+#include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/smbus/smbus.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC8_SMBUS: the PEC polynomial, host-tested in test_crc
 

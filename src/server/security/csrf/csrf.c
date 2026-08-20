@@ -15,7 +15,7 @@
 
 #if PROTOCORE_ENABLE_CSRF
 
-#include "crypto/ct_eq.h" // protocore_ct_eq: the constant-time signature compare
+#include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq: the constant-time signature compare
 #include "crypto/mac/hmac_sha256/hmac_sha256.h"
 #include "mmgr/protoframe/protoframe.h" // the one frame engine
 #include "mmgr/protomem/protomem.h"

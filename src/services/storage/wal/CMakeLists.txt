@@ -5,6 +5,5 @@
 # Regenerate with:  python tools/harness.py build modules
 
 add_subdirectory(wal)
+add_subdirectory(wal_fs)
 add_subdirectory(wal_store)
-
-protocore_header_module(pc_services_storage_wal_wal_fs DEPS pc_mmgr_protomem pc_server_storage_mnt pc_services_storage_wal_wal_store)

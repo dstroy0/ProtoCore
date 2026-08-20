@@ -21,8 +21,8 @@
 #ifndef PROTOCORE_SESSION_H
 #define PROTOCORE_SESSION_H
 
-#include "network_drivers/transport/tcp/evt.h" // EvtType, TcpEvt: the events this layer drains
-#include "server/core/proto_handler.h"         // ProtoHandler: the record ::Protocols binds
+#include "network_drivers/transport/tcp/evt/evt.h" // EvtType, TcpEvt: the events this layer drains
+#include "server/core/proto_handler/proto_handler.h"         // ProtoHandler: the record ::Protocols binds
 #include "server/core/worker/worker.h"         // WorkerNs: carried below as Session.workers
 
 #include "protocore_config.h" // CONN_POOL_SLOTS, proto_bool: the tables below

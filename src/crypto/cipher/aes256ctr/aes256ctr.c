@@ -24,7 +24,7 @@
 #include "crypto/cipher/aes_block/aes_block.h" // native software AES-256 block
 #endif
 #include "crypto/cipher/aes256ctr/aes256ctr.h"
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 
 PROTOCORE_CRYPTO_HOT
 PROTOCORE_BEGIN_DECLS

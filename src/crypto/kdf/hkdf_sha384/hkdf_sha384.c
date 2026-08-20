@@ -18,7 +18,7 @@
 
 #if PROTOCORE_ENABLE_HKDF_SHA384
 
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/kdf/hkdf_sha384/hkdf_sha384.h"
 #include "crypto/mac/hmac_sha384/hmac_sha384.h"
 #include "mmgr/protomem/protomem.h"

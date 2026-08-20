@@ -9,7 +9,7 @@
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "mmgr/plaintext/plaintext.h" // the persistent end this module's state is taken from
 #include "network_drivers/presentation/ssh/auth/auth.h"
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/ssh.h" // ssh_conn_slot() + the memory map
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
@@ -19,7 +19,7 @@
 #include "network_drivers/transport/tcp/client/client.h"     // TcpClient: a dialled stream
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: an accepted stream
 #include "server/clock/clock.h"                              // protocore_millis() for the re-key timer
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 #include "server/core/worker/worker.h" // Workers.wake(): the owner drains the flagged packet
 
 // The network layer's state, owned by one instance (internal linkage): the SSH-slot -> socket-slot

@@ -8,7 +8,7 @@
 // from different places, so a handle alone does not say which pool it indexes, and every outbound
 // path has to ask before it writes.
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 #include <stdint.h>

@@ -17,7 +17,7 @@
 
 #if PROTOCORE_ENABLE_MLKEM
 
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/sha3/sha3.h"
 #include "crypto/pqc/mlkem/mlkem.h"
 #include "mmgr/protomem/protomem.h"

@@ -9,7 +9,7 @@
 #ifndef PROTOCORE_NETWORK_NETWORK_H
 #define PROTOCORE_NETWORK_NETWORK_H
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 
 PROTOCORE_BEGIN_DECLS
 

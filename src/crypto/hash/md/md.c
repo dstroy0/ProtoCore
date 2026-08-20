@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_MD
 
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/md/md.h"
 #include "mmgr/endian/endian.h"
 #include "mmgr/protomem/protomem.h"

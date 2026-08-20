@@ -11,7 +11,7 @@
  * matched route carries auth.
  */
 
-#include "crypto/ct_eq.h"              // protocore_ct_eq
+#include "crypto/ct_eq/ct_eq.h"              // protocore_ct_eq
 #include "crypto/hash/sha256/sha256.h" // protocore_sha256, PROTOCORE_SHA256_DIGEST_LEN (Digest)
 #include "mmgr/membuild/membuild.h"    // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"    // mem.chr: a span scan, for the decoded credential that carries NULs

@@ -7,17 +7,8 @@
 add_subdirectory(bus_capture)
 add_subdirectory(device_id)
 add_subdirectory(gpio_map)
+add_subdirectory(gpio_map_routes)
 add_subdirectory(hw_health)
 add_subdirectory(link_manager)
 add_subdirectory(signaling)
 add_subdirectory(trace_capture)
-
-
-if(PROTOCORE_ENABLE_GPIO_MAP)
-  protocore_module(pc_server_signaling_gpio_map_routes
-    SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/gpio_map_routes.c"
-    PRIVATE
-      pc_server_signaling_gpio_map
-      pc_shared_mime
-  )
-endif()

@@ -21,7 +21,7 @@
 #include "mmgr/rawmemcpy/rawmemcpy.h" // raw.put_u32 - one unaligned store, not four
 #include "mmgr/secure/secure.h"
 #include "network_drivers/presentation/ssh/auth/auth.h"
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"
 #include "network_drivers/presentation/ssh/network/network.h"
 #include "network_drivers/presentation/ssh/ssh.h"

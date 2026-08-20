@@ -15,7 +15,7 @@
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/protostr/protostr.h" // str.eq() - the bounded string compare the wire fields use
 #include "mmgr/secure/secure.h"
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/connection/connection.h"         // ssh_connection_dispatch()
 #include "network_drivers/presentation/ssh/network/network.h"               // SshNetwork.emit()
 #include "network_drivers/presentation/ssh/transport/ssh_rsa/ssh_rsa.h"     // Rsa, PROTOCORE_RSA_KEY_BYTES

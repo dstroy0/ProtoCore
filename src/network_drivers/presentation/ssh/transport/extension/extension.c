@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_SSH
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/extension/extension.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h" // ssh_kex_prefer_rsa()
 

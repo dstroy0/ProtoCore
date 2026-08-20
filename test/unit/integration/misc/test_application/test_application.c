@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 //
 #include "lfs_mock.h"
-#include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/tcp/common/common.h"
 #include "network_drivers/transport/tcp/protocol/protocol.h"
 #include "network_drivers/transport/tcp/server/server.h"
 #include "network_drivers/transport/tcp/tcp.h"
 #include "protocore.h"
 #include "rx_feed.h"
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 #include "server/storage/mnt/mnt.h"
 #include <string.h>
 #include <unity.h>

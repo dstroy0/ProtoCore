@@ -68,7 +68,7 @@ static_assert(LD2410_OFF_CTX % _Alignof(Ld2410Ctx) == 0,
 #define LD2410_CTX(w) ((Ld2410Ctx *)(void *)((w) + LD2410_OFF_CTX))
 
 #if PROTOCORE_HAS_BUS
-#include "server/peripherals/uart.h" // the shared UART owner
+#include "server/peripherals/uart/uart.h" // the shared UART owner
 #endif
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};
 static const uint8_t FTR[4] = {0xF8, 0xF7, 0xF6, 0xF5};

@@ -10,7 +10,7 @@
 
 #if PROTOCORE_ENABLE_DTLS
 
-#include "crypto/ct_eq.h" // protocore_ct_eq: the Finished compare
+#include "crypto/ct_eq/ct_eq.h" // protocore_ct_eq: the Finished compare
 #include "mmgr/protomem/protomem.h"
 #include "mmgr/secure/secure.h" // protocore_secure_wipe
 #include "network_drivers/presentation/security/dtls/dtls_conn/dtls_conn.h"

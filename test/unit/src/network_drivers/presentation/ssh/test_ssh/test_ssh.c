@@ -4,7 +4,7 @@
 // ssh.c: the per-slot storage handed out by ssh_conn_slot(), and the region map
 // common.h names over it (RFC 4253 sec 6.1 sizing).
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/ssh.h"
 #include <stdint.h>
 

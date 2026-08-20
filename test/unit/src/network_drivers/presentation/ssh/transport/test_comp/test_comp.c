@@ -5,7 +5,7 @@
 // over. "none" and "zlib" are the RFC's two methods; "zlib@openssh.com" is the same codec holding
 // off until authentication has succeeded, so nothing before that point is compressed.
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/comp/comp.h"
 #include "network_drivers/presentation/ssh/transport/transport/transport.h"
 #include <stdint.h>

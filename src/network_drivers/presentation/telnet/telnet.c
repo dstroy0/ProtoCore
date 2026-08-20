@@ -17,7 +17,7 @@
 #include "network_drivers/presentation/telnet/telnet.h"
 
 #include "network_drivers/transport/tcp/protocol/protocol.h" // ConnPool: the slot a call acts on
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 #include <stdarg.h>
 
 PROTOCORE_BEGIN_DECLS

@@ -64,7 +64,7 @@ static_assert(HMMD_OFF_CTX % _Alignof(HmmdCtx) == 0,
 #define HMMD_CTX(w) ((HmmdCtx *)(void *)((w) + HMMD_OFF_CTX))
 
 #if PROTOCORE_HAS_BUS
-#include "server/peripherals/uart.h" // the shared UART owner
+#include "server/peripherals/uart/uart.h" // the shared UART owner
 #endif
 
 static const uint8_t HDR[4] = {0xF4, 0xF3, 0xF2, 0xF1};

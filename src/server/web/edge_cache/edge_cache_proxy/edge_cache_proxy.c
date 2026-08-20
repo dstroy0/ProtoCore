@@ -39,7 +39,7 @@ PROTOCORE_BEGIN_DECLS
 #include "shared/mime/mime.h"                                  // PROTOCORE_MIME_TEXT_PLAIN
 #if PROTOCORE_ENABLE_EDGE_MESH
 #include "network_drivers/session/session.h"           // Protocols: the registry, owned by the session layer
-#include "server/core/proto_handler.h"                 // ProtoHandler / Session.proto->add(PROTO_MESH serving)
+#include "server/core/proto_handler/proto_handler.h"                 // ProtoHandler / Session.proto->add(PROTO_MESH serving)
 #include "server/web/edge_cache/edge_mesh/edge_mesh.h" // mesh sibling-cache codec + peer-query engine
 #endif
 

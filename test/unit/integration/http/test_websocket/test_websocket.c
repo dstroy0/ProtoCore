@@ -4,7 +4,7 @@
 #include "crypto/hash/sha1/sha1.h"
 #include "network_drivers/presentation/codec/base64/base64.h"
 #include "network_drivers/presentation/http/websocket/websocket.h"
-#include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/tcp/common/common.h"
 #include <string.h>
 
 #include "rx_feed.h"

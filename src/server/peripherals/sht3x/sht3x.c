@@ -19,7 +19,7 @@
 #include "mmgr/endian/endian.h" // endian.wr16be: the commands and words are big-endian
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/clock/clock.h" // pcdelay
-#include "server/peripherals/i2c.h"
+#include "server/peripherals/i2c/i2c.h"
 #include "server/peripherals/sht3x/sht3x.h"
 #include "shared/crc/crc.h" // PROTOCORE_CRC8_NRSC5
 

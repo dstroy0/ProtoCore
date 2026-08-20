@@ -16,7 +16,7 @@
 
 #include "protocol.h"
 #include "../../net_addr/net_addr.h" // protocore_net_addr_to_ip(): the stack's address as a protocore_ip
-#include "../common.h"               // TcpConn, conn_pool: the slots this engine drives
+#include "network_drivers/transport/tcp/common/common.h"               // TcpConn, conn_pool: the slots this engine drives
 #include "../lower/lower.h"          // every call into the stack below goes through the seam
 #include "../server/server.h"        // TcpListener.enqueue: the owning listener posts the event
 #include "config/platform/platform.h"

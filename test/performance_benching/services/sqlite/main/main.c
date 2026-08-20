@@ -8,7 +8,7 @@
 //
 // Build/flash:  idf.py -C test/performance_benching/sqlite -t upload --upload-port COM7
 #include "device_bench.h"
-#include "services/storage/sqlite/sqlite_format.h"
+#include "services/storage/sqlite/sqlite_format/sqlite_format.h"
 
 #include <stdbool.h>
 #include <stddef.h>

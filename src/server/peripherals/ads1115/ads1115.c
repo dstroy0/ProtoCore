@@ -20,7 +20,7 @@
 #include "mmgr/secure/secure.h" // the persistent end this module's state is taken from
 #include "server/clock/clock.h" // pcdelay
 #include "server/peripherals/ads1115/ads1115.h"
-#include "server/peripherals/i2c.h"
+#include "server/peripherals/i2c/i2c.h"
 
 PROTOCORE_BEGIN_DECLS
 

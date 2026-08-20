@@ -23,7 +23,7 @@
 #include "network_drivers/transport/tcp/server/server.h"      // TcpListener: the queues this tick drains
 #include "network_drivers/transport/udp/server/server.h"      // UdpListener: the datagram rings this tick drains
 #include "server/clock/clock.h"                               // Clock.ms: the pass stamp an arm takes
-#include "server/core/proto_handler.h"
+#include "server/core/proto_handler/proto_handler.h"
 #include "server/storage/filesystem/filesystem.h" // Fs: the source a released transfer still holds open
 
 // This layer is protocol-agnostic: it owns the dispatch mechanism only (register / look up /

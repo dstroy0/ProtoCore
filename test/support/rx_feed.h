@@ -11,7 +11,7 @@
 
 // TcpConn, conn_pool and RX_BUF_SIZE, named here rather than left to the includer: a suite that
 // pulled them in through some other header broke the moment they moved to common.h.
-#include "network_drivers/transport/tcp/common.h"
+#include "network_drivers/transport/tcp/common/common.h"
 
 // Append @p len bytes to slot @p slot's rx ring.
 static void push_bytes(uint8_t slot, const uint8_t *b, size_t len)

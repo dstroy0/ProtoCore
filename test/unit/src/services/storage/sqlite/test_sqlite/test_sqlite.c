@@ -12,7 +12,7 @@
 
 #include "db_multipage.h"
 #include "db_overflow.h"
-#include "services/storage/sqlite/sqlite_format.h"
+#include "services/storage/sqlite/sqlite_format/sqlite_format.h"
 #include <string.h>
 
 #include <unity.h>

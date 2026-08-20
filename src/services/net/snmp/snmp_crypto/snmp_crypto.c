@@ -15,7 +15,7 @@
 #include "mmgr/secure/secure.h"
 #include "services/net/snmp/snmp_crypto/snmp_crypto.h"
 
-#include "crypto/cipher/aes_sbox.h"
+#include "crypto/cipher/aes_sbox/aes_sbox.h"
 #include "crypto/hash/sha256/sha256.h"
 
 PROTOCORE_BEGIN_DECLS

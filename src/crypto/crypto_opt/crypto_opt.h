@@ -12,7 +12,7 @@
  *
  * @code
  *   #include "crypto/cipher/chacha20/chacha20.h"
- *   #include "crypto/crypto_opt.h"
+ *   #include "crypto/crypto_opt/crypto_opt.h"
  *   PROTOCORE_CRYPTO_HOT   // this TU builds at -O2 (or the configured level)
  * @endcode
  *
@@ -25,7 +25,7 @@
  * `PROTOCORE_CRYPTO_HOT_PEEL` / `PROTOCORE_CRYPTO_HOT_UNSWITCH` pin (the `-O2` floor + just that transform) over full
  * `-O3`, scoped inside the TU's own die guard - same speed, none of `-O3`'s extra code-size / miscompile risk:
  * @code
- *   #include "crypto/crypto_opt.h"
+ *   #include "crypto/crypto_opt/crypto_opt.h"
  *   #if defined(CONFIG_IDF_TARGET_ESP32S3) && CONFIG_IDF_TARGET_ESP32S3
  *   PROTOCORE_CRYPTO_HOT_UNSWITCH   // S3: the -O3 win here is entirely -funswitch-loops (bisected)
  *   #else

@@ -8,7 +8,6 @@ add_subdirectory(bignum)
 add_subdirectory(curve25519)
 add_subdirectory(ecdsa)
 add_subdirectory(ed25519)
+add_subdirectory(ed25519_comb_table)
 add_subdirectory(fe25519)
 add_subdirectory(rsa)
-
-protocore_header_module(pc_crypto_asymmetric_ed25519_comb_table)

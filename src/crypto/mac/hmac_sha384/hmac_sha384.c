@@ -24,7 +24,7 @@
 
 #if PROTOCORE_ENABLE_HMAC_SHA384
 
-#include "crypto/crypto_opt.h"
+#include "crypto/crypto_opt/crypto_opt.h"
 #include "crypto/hash/sha384/sha384.h" // the Sha384 entries the inner and outer hashes run through
 #include "crypto/mac/hmac_sha384/hmac_sha384.h"
 #include "mmgr/protomem/protomem.h"

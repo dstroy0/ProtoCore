@@ -11,7 +11,7 @@
 #if PROTOCORE_ENABLE_SSH_ZLIB
 
 #include "mmgr/protomem/protomem.h"
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 #include "network_drivers/presentation/ssh/transport/zlib/zlib.h"
 
 #include "mmgr/bitio/bitio.h"

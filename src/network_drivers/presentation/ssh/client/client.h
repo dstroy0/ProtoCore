@@ -9,7 +9,7 @@
 #ifndef PROTOCORE_CLIENT_CLIENT_H
 #define PROTOCORE_CLIENT_CLIENT_H
 
-#include "network_drivers/presentation/ssh/common.h"
+#include "network_drivers/presentation/ssh/common/common.h"
 
 PROTOCORE_BEGIN_DECLS
 
