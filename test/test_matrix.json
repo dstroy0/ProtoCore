@@ -1217,7 +1217,9 @@
     
     "native_x509": {
       "desc": "RFC 5280 certificate parsing and RFC 6125 name matching (crypto/x509). Checked against real certificates OpenSSL made - an Ed25519 CA with basicConstraints/keyUsage, and Ed25519, P-256 and RSA leaves under it - and against the values OpenSSL reports for them, so a field read wrong is a disagreement with an independent encoder rather than with the author. The name-matching cases are sec 6.4.3's three wildcard rules and each way a wildcard can be stretched past them: spanning a dot, matching the bare domain, and a certificate with no SAN matching nothing at all (sec 6.4.4 forbids the common-name fallback).",
-      "flags": [],
+      "flags": [
+        "-DPROTOCORE_ENABLE_X509=1"
+      ],
       "src": [
         "-<*>",
         "+<crypto/x509/x509/x509.c>",
@@ -1234,7 +1236,8 @@
     "native_x509_verify": {
       "desc": "RFC 5280 sec 6.1 path validation (crypto/x509_verify): one link checked four ways - the signature over the TBS under the issuer's key, the validity window, whether the issuer may sign at that depth, and the issuer-name match. Driven with the same OpenSSL-made certificates test_x509 parses, one CA per algorithm so the Ed25519, P-256 and RSA verification paths are each reached by a certificate an independent implementation signed.",
       "flags": [
-        "-Itest/unit/src/crypto/x509/test_x509"
+        "-Itest/unit/src/crypto/x509/test_x509",
+        "-DPROTOCORE_ENABLE_X509=1"
       ],
       "src": [
         "+<crypto/x509/x509_verify/x509_verify.c>",
@@ -9827,7 +9830,8 @@
         "-DPROTOCORE_ENABLE_TLS=1",
         "-DPROTOCORE_ENABLE_TLS_RPK=1",
         "-DMAX_TLS_CONNS=2",
-        "-Itest/unit/src/crypto/x509/test_x509"
+        "-Itest/unit/src/crypto/x509/test_x509",
+        "-DPROTOCORE_ENABLE_X509=1"
       ],
       "src": [
         "+<network_drivers/tls/handshake/handshake.c>",
@@ -9929,7 +9933,8 @@
       "flags": [
         "-DPROTOCORE_ENABLE_TLS=1",
         "-DPROTOCORE_ENABLE_TLS_RPK=1",
-        "-DPROTOCORE_HAS_NET_STACK=1"
+        "-DPROTOCORE_HAS_NET_STACK=1",
+        "-DPROTOCORE_ENABLE_X509=1"
       ],
       "src": [
         "-<*>",

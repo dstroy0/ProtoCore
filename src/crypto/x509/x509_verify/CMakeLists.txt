@@ -7,7 +7,7 @@
 protocore_module(pc_crypto_x509_x509_verify
   SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/x509_verify.c"
   PUBLIC
-    pc_crypto_x509_x509
+    pc_crypto_x509_x509_types
   PRIVATE
     pc_crypto_asymmetric_ecdsa
     pc_crypto_asymmetric_ed25519

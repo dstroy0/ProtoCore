@@ -1534,6 +1534,12 @@ wss://: run the WebSocket client over client-side TLS (needs TLS).
 
 WebSocket permessage-deflate (RFC 7692) - bidirectional compression. When set (and WEBSOCKET is on), the server negotiates the `permessage-deflate` extension and both decompresses inbound compressed (RSV1) messages via a bounded INFLATE (network_drivers/presentation/inflate._) and compresses outbound data frames via a bounded DEFLATE (network_drivers/presentation/deflate._); both borrow their table scratch from the shared per-dispatch arena. The extension is negotiated with `{client,server}_no_context_takeover` so every message (de)compresses independently - no window is carried between messages. An outbound frame that would not shrink is sent uncompressed (the per-message RSV1 flag permits this). Default off.
 
+## X.509
+
+`PROTOCORE_ENABLE_X509`
+
+RFC 5280 certificate parsing, for a TLS connection that authenticates by certificate chain rather than by raw public key. Default off. crypto/x509/x509 reads one Certificate out of the caller's DER and reports it as a VIEW - every field is a pointer into the caller's own encoding and a length, so a certificate costs the struct and nothing else, and the encoding has to outlive the view. It reports the TBSCertificate's own octets unchanged, because that is what the signature covers (sec 4.1.1.2), and it answers RFC 6125 sec 6.4 name matching from the subjectAltName dNSName entries only, never the subject common name. It verifies nothing itself: chain checks and signature verification are crypto/x509/x509_verify, and the algorithm identifiers plus the parsed view are crypto/x509/x509_types, which a raw-public-key build needs without needing this parser. The portable TLS 1.3 arm picks the credential per connection - supply `ca_der` in the TlsConnConfig and the peer's chain is parsed, verified to that anchor and name-matched; leave it null and the peer is authenticated by its RFC 7250 raw public key (PROTOCORE_ENABLE_TLS_RPK). With this flag off, a connection that supplies `ca_der` is REFUSED rather than quietly downgraded to the raw-public-key path. Pure and host-tested; costs no RAM of its own.
+
 ## XMPP
 
 `PROTOCORE_ENABLE_XMPP`

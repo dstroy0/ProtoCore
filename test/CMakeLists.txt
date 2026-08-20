@@ -14935,6 +14935,7 @@ protocore_env(native_tls_conn
     "PROTOCORE_ENABLE_TLS=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
     "MAX_TLS_CONNS=2"
+    "PROTOCORE_ENABLE_X509=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
@@ -15061,6 +15062,7 @@ protocore_env(native_tls_seam
     "PROTOCORE_ENABLE_TLS=1"
     "PROTOCORE_ENABLE_TLS_RPK=1"
     "PROTOCORE_HAS_NET_STACK=1"
+    "PROTOCORE_ENABLE_X509=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -16348,6 +16350,8 @@ protocore_env(native_x509
     "${PROTOCORE_ROOT}/src/mmgr/swar/swar.c"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509/test_x509.c"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509/unity_runner.c"
+  DEFINES
+    "PROTOCORE_ENABLE_X509=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
     "${PROTOCORE_ROOT}/test/support"
@@ -16385,6 +16389,8 @@ protocore_env(native_x509_verify
     "${PROTOCORE_ROOT}/src/crypto/mac/hmac_sha256/hmac_sha256.c"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509_verify/test_x509_verify.c"
     "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509_verify/unity_runner.c"
+  DEFINES
+    "PROTOCORE_ENABLE_X509=1"
   INCLUDES
     "${PROTOCORE_ROOT}/test/unit/src/crypto/x509/test_x509"
     "${PROTOCORE_ROOT}/test/core_setup/hal/host"
