@@ -10,8 +10,6 @@
 
 #if PROTOCORE_ENABLE_HTTP3
 
-static uint8_t quic_varint_work[16]; // the borrow an entry takes; QuicVarint never reads it
-
 #include "mmgr/protomem/protomem.h"
 #include "network_drivers/presentation/http/http3/quic_tp/quic_tp.h"
 
@@ -40,12 +38,13 @@ void protocore_quic_tp_defaults(uint8_t *restrict work)
 }
 
 // Append one parameter: ID (varint) || Length (varint) || raw value bytes.
-static proto_bool put_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, const uint8_t *val, size_t val_len)
+static proto_bool put_param(uint8_t *restrict work, uint8_t *out, size_t cap, size_t *p, uint64_t id,
+                            const uint8_t *val, size_t val_len)
 {
     QuicVarintV.encode_args.out = out + *p;
     QuicVarintV.encode_args.cap = cap - *p;
     QuicVarintV.encode_args.value = id;
-    QuicVarint.encode(quic_varint_work);
+    QuicVarint.encode(work);
     size_t n = QuicVarintV.n;
     if (!n)
     {
@@ -55,7 +54,7 @@ static proto_bool put_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, co
     QuicVarintV.encode_args.out = out + *p;
     QuicVarintV.encode_args.cap = cap - *p;
     QuicVarintV.encode_args.value = val_len;
-    QuicVarint.encode(quic_varint_work);
+    QuicVarint.encode(work);
     n = QuicVarintV.n;
     if (!n)
     {
@@ -77,19 +76,20 @@ static proto_bool put_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, co
 }
 
 // Append a varint-valued parameter (Value is itself a varint).
-static proto_bool put_varint_param(uint8_t *out, size_t cap, size_t *p, uint64_t id, uint64_t value)
+static proto_bool put_varint_param(uint8_t *restrict work, uint8_t *out, size_t cap, size_t *p, uint64_t id,
+                                   uint64_t value)
 {
     uint8_t v[8];
     QuicVarintV.encode_args.out = v;
     QuicVarintV.encode_args.cap = sizeof(v);
     QuicVarintV.encode_args.value = value;
-    QuicVarint.encode(quic_varint_work);
+    QuicVarint.encode(work);
     size_t vlen = QuicVarintV.n;
     if (!vlen)
     {
         return PROTO_FALSE;
     }
-    return put_param(out, cap, p, id, v, vlen);
+    return put_param(work, out, cap, p, id, v, vlen);
 }
 
 void protocore_quic_tp_encode(uint8_t *restrict work)
@@ -105,43 +105,43 @@ void protocore_quic_tp_encode(uint8_t *restrict work)
     {
         // This is the first assignment in the ok-chain (ok is still its line-64 default), so the
         // "ok already false" arm of this && can never fire.
-        ok = ok && put_param(out, cap, &p, QUIC_TP_ORIGINAL_DCID, tp->original_dcid, tp->original_dcid_len);
+        ok = ok && put_param(work, out, cap, &p, QUIC_TP_ORIGINAL_DCID, tp->original_dcid, tp->original_dcid_len);
     }
     if (tp->has_initial_scid)
     {
-        ok = ok && put_param(out, cap, &p, QUIC_TP_INITIAL_SCID, tp->initial_scid, tp->initial_scid_len);
+        ok = ok && put_param(work, out, cap, &p, QUIC_TP_INITIAL_SCID, tp->initial_scid, tp->initial_scid_len);
     }
     if (tp->has_retry_scid)
     {
-        ok = ok && put_param(out, cap, &p, QUIC_TP_RETRY_SCID, tp->retry_scid, tp->retry_scid_len);
+        ok = ok && put_param(work, out, cap, &p, QUIC_TP_RETRY_SCID, tp->retry_scid, tp->retry_scid_len);
     }
 
-    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_DATA, tp->initial_max_data);
-    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_SD_BIDI_LOCAL, tp->initial_max_sd_bidi_local);
-    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_SD_BIDI_REMOTE, tp->initial_max_sd_bidi_remote);
-    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_SD_UNI, tp->initial_max_sd_uni);
-    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_STREAMS_BIDI, tp->initial_max_streams_bidi);
-    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_INITIAL_MAX_STREAMS_UNI, tp->initial_max_streams_uni);
-    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_MAX_IDLE_TIMEOUT, tp->max_idle_timeout);
-    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_MAX_UDP_PAYLOAD_SIZE, tp->max_udp_payload_size);
-    ok = ok && put_varint_param(out, cap, &p, QUIC_TP_ACTIVE_CID_LIMIT, tp->active_connection_id_limit);
+    ok = ok && put_varint_param(work, out, cap, &p, QUIC_TP_INITIAL_MAX_DATA, tp->initial_max_data);
+    ok = ok && put_varint_param(work, out, cap, &p, QUIC_TP_INITIAL_MAX_SD_BIDI_LOCAL, tp->initial_max_sd_bidi_local);
+    ok = ok && put_varint_param(work, out, cap, &p, QUIC_TP_INITIAL_MAX_SD_BIDI_REMOTE, tp->initial_max_sd_bidi_remote);
+    ok = ok && put_varint_param(work, out, cap, &p, QUIC_TP_INITIAL_MAX_SD_UNI, tp->initial_max_sd_uni);
+    ok = ok && put_varint_param(work, out, cap, &p, QUIC_TP_INITIAL_MAX_STREAMS_BIDI, tp->initial_max_streams_bidi);
+    ok = ok && put_varint_param(work, out, cap, &p, QUIC_TP_INITIAL_MAX_STREAMS_UNI, tp->initial_max_streams_uni);
+    ok = ok && put_varint_param(work, out, cap, &p, QUIC_TP_MAX_IDLE_TIMEOUT, tp->max_idle_timeout);
+    ok = ok && put_varint_param(work, out, cap, &p, QUIC_TP_MAX_UDP_PAYLOAD_SIZE, tp->max_udp_payload_size);
+    ok = ok && put_varint_param(work, out, cap, &p, QUIC_TP_ACTIVE_CID_LIMIT, tp->active_connection_id_limit);
     if (tp->disable_active_migration)
     {
-        ok = ok && put_param(out, cap, &p, QUIC_TP_DISABLE_ACTIVE_MIGRATION, NULL, 0);
+        ok = ok && put_param(work, out, cap, &p, QUIC_TP_DISABLE_ACTIVE_MIGRATION, NULL, 0);
     }
 
     QuicTpV.n = ok ? p : 0;
 }
 
 // Decode the varint that IS the whole value of a varint-valued parameter (must consume exactly len).
-static proto_bool value_varint(const uint8_t *val, size_t len, uint64_t *out)
+static proto_bool value_varint(uint8_t *restrict work, const uint8_t *val, size_t len, uint64_t *out)
 {
     size_t consumed = 0;
     QuicVarintV.decode_args.in = val;
     QuicVarintV.decode_args.len = len;
     QuicVarintV.decode_args.value = out;
     QuicVarintV.decode_args.consumed = &consumed;
-    QuicVarint.decode(quic_varint_work);
+    QuicVarint.decode(work);
     if (!QuicVarintV.ok)
     {
         return PROTO_FALSE;
@@ -183,35 +183,37 @@ static proto_bool quic_tp_apply_cid(uint64_t id, const uint8_t *val, size_t vlen
 }
 
 // Apply a varint-valued transport parameter with its RFC 9000 range checks. *handled is set as above.
-static proto_bool quic_tp_apply_varint(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp,
-                                       proto_bool *handled)
+static proto_bool quic_tp_apply_varint(uint8_t *restrict work, uint64_t id, const uint8_t *val, size_t vlen,
+                                       QuicTransportParams *tp, proto_bool *handled)
 {
     *handled = PROTO_TRUE;
     switch (id)
     {
     case QUIC_TP_MAX_IDLE_TIMEOUT:
-        return value_varint(val, vlen, &tp->max_idle_timeout);
+        return value_varint(work, val, vlen, &tp->max_idle_timeout);
     case QUIC_TP_MAX_UDP_PAYLOAD_SIZE:
-        return value_varint(val, vlen, &tp->max_udp_payload_size) && tp->max_udp_payload_size >= 1200;
+        return value_varint(work, val, vlen, &tp->max_udp_payload_size) && tp->max_udp_payload_size >= 1200;
     case QUIC_TP_INITIAL_MAX_DATA:
-        return value_varint(val, vlen, &tp->initial_max_data);
+        return value_varint(work, val, vlen, &tp->initial_max_data);
     case QUIC_TP_INITIAL_MAX_SD_BIDI_LOCAL:
-        return value_varint(val, vlen, &tp->initial_max_sd_bidi_local);
+        return value_varint(work, val, vlen, &tp->initial_max_sd_bidi_local);
     case QUIC_TP_INITIAL_MAX_SD_BIDI_REMOTE:
-        return value_varint(val, vlen, &tp->initial_max_sd_bidi_remote);
+        return value_varint(work, val, vlen, &tp->initial_max_sd_bidi_remote);
     case QUIC_TP_INITIAL_MAX_SD_UNI:
-        return value_varint(val, vlen, &tp->initial_max_sd_uni);
+        return value_varint(work, val, vlen, &tp->initial_max_sd_uni);
     // RFC 9000 sec 4.6: a count past 2^60 would place a stream id outside the 62-bit varint space.
     case QUIC_TP_INITIAL_MAX_STREAMS_BIDI:
-        return value_varint(val, vlen, &tp->initial_max_streams_bidi) && tp->initial_max_streams_bidi <= (1ull << 60);
+        return value_varint(work, val, vlen, &tp->initial_max_streams_bidi) &&
+               tp->initial_max_streams_bidi <= (1ull << 60);
     case QUIC_TP_INITIAL_MAX_STREAMS_UNI:
-        return value_varint(val, vlen, &tp->initial_max_streams_uni) && tp->initial_max_streams_uni <= (1ull << 60);
+        return value_varint(work, val, vlen, &tp->initial_max_streams_uni) &&
+               tp->initial_max_streams_uni <= (1ull << 60);
     case QUIC_TP_ACK_DELAY_EXPONENT:
-        return value_varint(val, vlen, &tp->ack_delay_exponent) && tp->ack_delay_exponent <= 20;
+        return value_varint(work, val, vlen, &tp->ack_delay_exponent) && tp->ack_delay_exponent <= 20;
     case QUIC_TP_MAX_ACK_DELAY:
-        return value_varint(val, vlen, &tp->max_ack_delay) && tp->max_ack_delay < (1u << 14);
+        return value_varint(work, val, vlen, &tp->max_ack_delay) && tp->max_ack_delay < (1u << 14);
     case QUIC_TP_ACTIVE_CID_LIMIT:
-        return value_varint(val, vlen, &tp->active_connection_id_limit) && tp->active_connection_id_limit >= 2;
+        return value_varint(work, val, vlen, &tp->active_connection_id_limit) && tp->active_connection_id_limit >= 2;
     default:
         *handled = PROTO_FALSE;
         return PROTO_TRUE;
@@ -220,7 +222,8 @@ static proto_bool quic_tp_apply_varint(uint64_t id, const uint8_t *val, size_t v
 
 // Dispatch one parsed transport parameter to tp; false on a malformed / out-of-range value. Unknown
 // (GREASE) IDs are silently ignored, matching RFC 9000 §7.4.1.
-static proto_bool quic_tp_apply(uint64_t id, const uint8_t *val, size_t vlen, QuicTransportParams *tp)
+static proto_bool quic_tp_apply(uint8_t *restrict work, uint64_t id, const uint8_t *val, size_t vlen,
+                                QuicTransportParams *tp)
 {
     proto_bool handled = PROTO_FALSE;
     if (!quic_tp_apply_cid(id, val, vlen, tp, &handled))
@@ -231,7 +234,7 @@ static proto_bool quic_tp_apply(uint64_t id, const uint8_t *val, size_t vlen, Qu
     {
         return PROTO_TRUE;
     }
-    if (!quic_tp_apply_varint(id, val, vlen, tp, &handled))
+    if (!quic_tp_apply_varint(work, id, val, vlen, tp, &handled))
     {
         return PROTO_FALSE;
     }
@@ -307,7 +310,7 @@ void protocore_quic_tp_parse(uint8_t *restrict work)
             seen |= bit;
         }
 
-        if (!quic_tp_apply(id, val, vlen, tp))
+        if (!quic_tp_apply(work, id, val, vlen, tp))
         {
             QuicTpV.ok = PROTO_FALSE;
             return;

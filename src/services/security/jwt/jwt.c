@@ -12,8 +12,6 @@
 #include "mmgr/membuild/membuild.h" // protocore_sb: the quoted claim key a payload scan searches for
 #include "mmgr/protomem/protomem.h" // mem.chr / mem.cmp: the segment scan and the fixed-length alg compare
 
-static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
-
 #if PROTOCORE_ENABLE_JWT
 
 #include "crypto/ct_eq.h"                       // protocore_ct_eq: the RFC 7518 sec 3.2 constant-time compare
@@ -90,14 +88,14 @@ static proto_bool jws_split(const char *jws, size_t jws_len, JwsParts *parts)
 // RFC 7515 sec 4.1.1: `alg` names the algorithm that secures the JWS, and RFC 8725 sec 3.1 requires
 // the operation performed to be the one it names. Decode the header segment and demand HS256
 // (RFC 7518 sec 3.1), which settles `none`, RS256 and every other substitution before the MAC runs.
-static proto_bool alg_is_hs256(const char *header, size_t header_len)
+static proto_bool alg_is_hs256(uint8_t *restrict work, const char *header, size_t header_len)
 {
     uint8_t buf[JWT_JOSE_HDR_CAP];
     Base64V.url_decode_args.src = header;
     Base64V.url_decode_args.src_len = header_len;
     Base64V.url_decode_args.dst = buf;
     Base64V.url_decode_args.dst_cap = sizeof(buf) - 1u;
-    Base64.url_decode(base64_work);
+    Base64.url_decode(work);
     const size_t n = Base64V.n;
     if (n == 0)
     {
@@ -153,7 +151,8 @@ static const char *bearer_token(const char *credentials)
 // Decode the JWS Payload into @p buf and return the first character of claim @p name's value, or
 // NULL when the token is malformed or the claim is absent (RFC 7519 sec 4: the claims are the
 // members of the JSON object the payload carries).
-static const char *claim_value(const char *jws, size_t jws_len, const char *name, uint8_t *buf, size_t buf_cap)
+static const char *claim_value(uint8_t *restrict work, const char *jws, size_t jws_len, const char *name, uint8_t *buf,
+                               size_t buf_cap)
 {
     if (!jws || !name)
     {
@@ -168,7 +167,7 @@ static const char *claim_value(const char *jws, size_t jws_len, const char *name
     Base64V.url_decode_args.src_len = parts.payload_len;
     Base64V.url_decode_args.dst = buf;
     Base64V.url_decode_args.dst_cap = buf_cap - 1u;
-    Base64.url_decode(base64_work);
+    Base64.url_decode(work);
     const size_t n = Base64V.n;
     if (n == 0)
     {
@@ -201,10 +200,10 @@ static const char *claim_value(const char *jws, size_t jws_len, const char *name
 
 // The integer claim @p name, or false when the claim is absent or its value is not a number. Both
 // claim reads and the time-claim check go through this one scan.
-static proto_bool claim_num(const char *jws, size_t jws_len, const char *name, long *out)
+static proto_bool claim_num(uint8_t *restrict work, const char *jws, size_t jws_len, const char *name, long *out)
 {
     uint8_t buf[PROTOCORE_JWT_MAX_LEN];
-    const char *v = claim_value(jws, jws_len, name, buf, sizeof(buf));
+    const char *v = claim_value(work, jws, jws_len, name, buf, sizeof(buf));
     if (!v)
     {
         return PROTO_FALSE;
@@ -243,7 +242,7 @@ void protocore_jwt_verify_mac(uint8_t *restrict work)
     {
         return;
     }
-    if (!alg_is_hs256(parts.header, parts.header_len))
+    if (!alg_is_hs256(work, parts.header, parts.header_len))
     {
         return;
     }
@@ -316,14 +315,14 @@ void protocore_jwt_time_claims_valid(uint8_t *restrict work)
     }
 
     long exp = 0;
-    if (claim_num(jws, jws_len, "exp", &exp) && (exp <= 0 || now - exp > leeway_s))
+    if (claim_num(work, jws, jws_len, "exp", &exp) && (exp <= 0 || now - exp > leeway_s))
     {
         JwtV.ok = PROTO_FALSE;
         return;
     }
 
     long nbf = 0;
-    if (claim_num(jws, jws_len, "nbf", &nbf) && nbf > 0 && nbf - now > leeway_s)
+    if (claim_num(work, jws, jws_len, "nbf", &nbf) && nbf > 0 && nbf - now > leeway_s)
     {
         JwtV.ok = PROTO_FALSE;
     }
@@ -354,7 +353,7 @@ void protocore_jwt_claim_int(uint8_t *restrict work)
 {
     (void)work;
     long v = 0;
-    JwtV.ok = claim_num(JwtV.token.jws, JwtV.token.jws_len, JwtV.claim.name, &v);
+    JwtV.ok = claim_num(work, JwtV.token.jws, JwtV.token.jws_len, JwtV.claim.name, &v);
     if (JwtV.ok)
     {
         JwtV.num = v;
@@ -376,7 +375,7 @@ void protocore_jwt_claim_str(uint8_t *restrict work)
     out[0] = '\0';
 
     uint8_t buf[PROTOCORE_JWT_MAX_LEN];
-    const char *p = claim_value(JwtV.token.jws, JwtV.token.jws_len, JwtV.claim.name, buf, sizeof(buf));
+    const char *p = claim_value(work, JwtV.token.jws, JwtV.token.jws_len, JwtV.claim.name, buf, sizeof(buf));
     if (!p || *p != '"') // absent, or not a string-valued claim
     {
         return;

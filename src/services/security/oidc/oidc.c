@@ -15,8 +15,6 @@
 #include "mmgr/membuild/membuild.h" // protocore_sb frame builder
 #include "mmgr/protomem/protomem.h"
 
-static uint8_t base64_work[16]; // the borrow an entry takes; Base64 never reads it
-
 #if PROTOCORE_ENABLE_OIDC
 
 #include "crypto/asymmetric/rsa/rsa.h"
@@ -293,7 +291,7 @@ static proto_bool right_align(const uint8_t *src, size_t len, uint8_t *dst, size
 
 // The `n` and `e` parameters of one RSA JWK (RFC 7518 sec 6.3.1.1 / 6.3.1.2), base64url-decoded and
 // right-aligned into the key.
-static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key *key)
+static proto_bool parse_rsa_jwk(uint8_t *restrict work, const char *s, const char *e, protocore_oidc_key *key)
 {
     char b64[400];
     if (!get_str(s, e, "n", b64, sizeof(b64)))
@@ -305,7 +303,7 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
     Base64V.url_decode_args.src_len = str.len(b64, sizeof(b64));
     Base64V.url_decode_args.dst = tmp;
     Base64V.url_decode_args.dst_cap = sizeof(tmp);
-    Base64.url_decode(base64_work);
+    Base64.url_decode(work);
     size_t nlen = Base64V.n;
     if (nlen == 0 || !right_align(tmp, nlen, key->n, PROTOCORE_OIDC_RSA_BYTES))
     {
@@ -321,7 +319,7 @@ static proto_bool parse_rsa_jwk(const char *s, const char *e, protocore_oidc_key
     Base64V.url_decode_args.src_len = str.len(b64, sizeof(b64));
     Base64V.url_decode_args.dst = e_tmp;
     Base64V.url_decode_args.dst_cap = sizeof(e_tmp);
-    Base64.url_decode(base64_work);
+    Base64.url_decode(work);
     size_t elen = Base64V.n;
     if (elen == 0 || !right_align(e_tmp, elen, key->e, 4))
     {
@@ -427,7 +425,7 @@ void protocore_oidc_jwks_find(uint8_t *restrict work)
             want = PROTO_TRUE; // no `kid` requested -> first usable RSA JWK
         }
 
-        if (want && parse_rsa_jwk(obj, end, &OidcV.key.rsa))
+        if (want && parse_rsa_jwk(work, obj, end, &OidcV.key.rsa))
         {
             OidcV.ok = PROTO_TRUE;
             protocore_plaintext_release(scratch);

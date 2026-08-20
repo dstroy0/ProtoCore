@@ -23,8 +23,6 @@
 #include "mmgr/secure/secure.h"                      // the borrow this driver runs out of, and protocore_secure_wipe
 #include "network_drivers/presentation/http/http3/tls13_rpk/tls13_rpk.h" // the RFC 7250 RawPublicKey credential
 
-static uint8_t tls13_msg_work[16]; // the borrow an entry takes; Tls13Msg never reads it
-
 // The secure-pool term this file declares against PROTOCORE_SECURE_ARENA_SIZE: one borrow per TLS
 // connection, taken from the persistent end and held for the life of the connection.
 #define PROTOCORE_TLS_CONN_BORROW                                                                                      \
@@ -774,7 +772,7 @@ static protocore_x509_sig_alg sig_alg_of(uint16_t scheme)
 
 // CertificateVerify signs the transcript through the Certificate, so the hash is taken before this
 // message joins it (sec 4.4.3).
-static void client_on_cert_verify(const uint8_t *msg, size_t len)
+static void client_on_cert_verify(uint8_t *restrict work, const uint8_t *msg, size_t len)
 {
     TlsConn *c = TlsConnectionV.conn;
     uint16_t scheme = 0;
@@ -785,7 +783,7 @@ static void client_on_cert_verify(const uint8_t *msg, size_t len)
     Tls13MsgV.parse_cert_verify_args.scheme = &scheme;
     Tls13MsgV.parse_cert_verify_args.sig = &sig;
     Tls13MsgV.parse_cert_verify_args.sig_len = &sig_len;
-    Tls13Msg.parse_cert_verify(tls13_msg_work);
+    Tls13Msg.parse_cert_verify(work);
     if (!Tls13MsgV.ok)
     {
         fail(TLS_ALERT_DECODE_ERROR);
@@ -804,7 +802,7 @@ static void client_on_cert_verify(const uint8_t *msg, size_t len)
     Tls13MsgV.cert_verify_content_args.transcript_hash = c->terms + TLS_TERM_HASH;
     Tls13MsgV.cert_verify_content_args.hash_len = c->ks.len;
     Tls13MsgV.cert_verify_content_args.is_server = PROTO_TRUE;
-    Tls13Msg.cert_verify_content(tls13_msg_work);
+    Tls13Msg.cert_verify_content(work);
     size_t clen = Tls13MsgV.n;
     if (clen == 0)
     {
@@ -900,7 +898,7 @@ static void client_on_flight(uint8_t *restrict work, const uint8_t *msg, size_t 
         client_on_certificate(work, msg, len);
         return;
     case TLS_HS_CERTIFICATE_VERIFY:
-        client_on_cert_verify(msg, len);
+        client_on_cert_verify(work, msg, len);
         return;
     case TLS_HS_FINISHED:
         client_on_server_finished(work, msg, len);

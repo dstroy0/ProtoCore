@@ -495,7 +495,7 @@ static void on_handshake_done(void *app, uint8_t *qc)
     h3->next_uni_id = 15;
 }
 
-static void h3_conn_open(H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, void *app)
+static void h3_conn_open(uint8_t *restrict work, H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, void *app)
 {
     uint8_t *base = h3->b; // the span is the connection's, bound before this call
     mem.set(h3, 0, sizeof(*h3));
@@ -516,15 +516,15 @@ static void h3_conn_open(H3ConnCtx *h3, uint8_t *qc, H3RequestFn on_request, voi
         h3->streams[i].id = UINT64_MAX;
     }
     H3FrameV.settings_defaults_args.s = &h3->peer_settings;
-    H3Frame.settings_defaults(h3_frame_work);
+    H3Frame.settings_defaults(work);
 
     QuicConnCallbacks cb = {on_stream_data, on_handshake_done, h3};
     QuicConnV.cb = cb;
     QuicConn.callbacks(qc);
 }
 
-static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, const char *content_type,
-                                const uint8_t *body, size_t body_len)
+static proto_bool h3_conn_reply(uint8_t *restrict work, H3ConnCtx *h3, uint64_t stream_id, int status,
+                                const char *content_type, const uint8_t *body, size_t body_len)
 {
     H3Stream *st = protocore_h3_stream_get(h3, stream_id, PROTO_FALSE);
     if (st)
@@ -540,7 +540,7 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
     // QPACK field section: prefix + :status + optional content-type + content-length.
     QpackV.encode_prefix_args.out = block;
     QpackV.encode_prefix_args.cap = PROTOCORE_H3_QPACK_BLOCK;
-    Qpack.encode_prefix(qpack_work);
+    Qpack.encode_prefix(work);
     size_t bp = QpackV.n;
     char st3[4];
     st3[0] = (char)('0' + (status / 100) % 10);
@@ -553,7 +553,7 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
     QpackV.encode_header_args.name_len = 7;
     QpackV.encode_header_args.value = st3;
     QpackV.encode_header_args.value_len = 3;
-    Qpack.encode_header(qpack_work);
+    Qpack.encode_header(work);
     bp += QpackV.n;
     if (content_type)
     {
@@ -566,7 +566,7 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
         QpackV.encode_header_args.name_len = 12;
         QpackV.encode_header_args.value = content_type;
         QpackV.encode_header_args.value_len = str.len(content_type, (size_t)PROTOCORE_H3_QPACK_BLOCK * 2);
-        Qpack.encode_header(qpack_work);
+        Qpack.encode_header(work);
         bp += QpackV.n;
     }
     char clen[16];
@@ -592,7 +592,7 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
     QpackV.encode_header_args.name_len = 14;
     QpackV.encode_header_args.value = clen;
     QpackV.encode_header_args.value_len = cl;
-    Qpack.encode_header(qpack_work);
+    Qpack.encode_header(work);
     bp += QpackV.n;
 
     // HEADERS frame + DATA frame, sent on the request stream with FIN.
@@ -600,7 +600,7 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
     H3FrameV.build_headers_args.cap = PROTOCORE_H3_STREAM_BUF;
     H3FrameV.build_headers_args.block = block;
     H3FrameV.build_headers_args.len = bp;
-    H3Frame.build_headers(h3_frame_work);
+    H3Frame.build_headers(work);
     size_t op = H3FrameV.n;
     if (!op)
     {
@@ -613,7 +613,7 @@ static proto_bool h3_conn_reply(H3ConnCtx *h3, uint64_t stream_id, int status, c
         H3FrameV.build_data_args.cap = PROTOCORE_H3_STREAM_BUF - op;
         H3FrameV.build_data_args.data = body;
         H3FrameV.build_data_args.len = body_len;
-        H3Frame.build_data(h3_frame_work);
+        H3Frame.build_data(work);
         size_t dn = H3FrameV.n;
         if (!dn)
         {
@@ -647,7 +647,7 @@ void protocore_h3_conn_init(uint8_t *restrict work)
         return;
     }
     h3->b = work; // survives the wipe inside h3_conn_open
-    h3_conn_open(h3, H3ConnV.bind.qc, H3ConnV.app_args.on_request, H3ConnV.app_args.app);
+    h3_conn_open(work, h3, H3ConnV.bind.qc, H3ConnV.app_args.on_request, H3ConnV.app_args.app);
     H3ConnV.ok = (h3->b != NULL);
 }
 
@@ -660,7 +660,7 @@ void protocore_h3_conn_respond(uint8_t *restrict work)
         return;
     }
     H3ConnV.ok =
-        h3_conn_reply(h3, H3ConnV.respond_args.stream_id, H3ConnV.respond_args.status,
+        h3_conn_reply(work, h3, H3ConnV.respond_args.stream_id, H3ConnV.respond_args.status,
                       H3ConnV.respond_args.content_type, H3ConnV.respond_args.body, H3ConnV.respond_args.body_len);
 }
 

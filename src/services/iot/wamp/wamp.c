@@ -18,10 +18,8 @@
 
 #include "network_drivers/presentation/codec/json/json.h" // Json: the bounded writer a build emits through
 
-static uint8_t json_work[16]; // the borrow an entry takes; Json never reads it
-
 // Emit a uint64 as a JSON number: digits generated low end first, then reversed into the writer.
-static void emit_uint(protocore_json_writer *w, uint64_t v)
+static void emit_uint(uint8_t *restrict work, protocore_json_writer *w, uint64_t v)
 {
     char rev[20];
     size_t r = 0;
@@ -31,7 +29,7 @@ static void emit_uint(protocore_json_writer *w, uint64_t v)
     {
         JsonV.put_raw_args.w = w;
         JsonV.put_raw_args.literal = "0";
-        Json.put_raw(json_work);
+        Json.put_raw(work);
         return;
     }
     while (v)
@@ -46,7 +44,7 @@ static void emit_uint(protocore_json_writer *w, uint64_t v)
     tmp[n] = '\0';
     JsonV.put_raw_args.w = w;
     JsonV.put_raw_args.literal = tmp;
-    Json.put_raw(json_work);
+    Json.put_raw(work);
 }
 
 // Bind the writer to ns->out and open the list with its message type code (WAMP sec 3.3).
@@ -146,7 +144,7 @@ void protocore_wamp_build_subscribe(uint8_t *restrict work)
     }
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_SUBSCRIBE);
-    emit_uint(&w, WampV.id.request);
+    emit_uint(work, &w, WampV.id.request);
     JsonV.put_raw_args.w = &w;
     JsonV.put_raw_args.literal = WampV.payload.options ? WampV.payload.options : "{}";
     Json.put_raw(work);
@@ -167,8 +165,8 @@ void protocore_wamp_build_unsubscribe(uint8_t *restrict work)
     }
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_UNSUBSCRIBE);
-    emit_uint(&w, WampV.id.request);
-    emit_uint(&w, WampV.id.subscription);
+    emit_uint(work, &w, WampV.id.request);
+    emit_uint(work, &w, WampV.id.subscription);
     finish(work, &w);
 }
 
@@ -183,7 +181,7 @@ void protocore_wamp_build_publish(uint8_t *restrict work)
     }
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_PUBLISH);
-    emit_uint(&w, WampV.id.request);
+    emit_uint(work, &w, WampV.id.request);
     JsonV.put_raw_args.w = &w;
     JsonV.put_raw_args.literal = WampV.payload.options ? WampV.payload.options : "{}";
     Json.put_raw(work);
@@ -205,7 +203,7 @@ void protocore_wamp_build_call(uint8_t *restrict work)
     }
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_CALL);
-    emit_uint(&w, WampV.id.request);
+    emit_uint(work, &w, WampV.id.request);
     JsonV.put_raw_args.w = &w;
     JsonV.put_raw_args.literal = WampV.payload.options ? WampV.payload.options : "{}";
     Json.put_raw(work);
@@ -227,7 +225,7 @@ void protocore_wamp_build_register(uint8_t *restrict work)
     }
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_REGISTER);
-    emit_uint(&w, WampV.id.request);
+    emit_uint(work, &w, WampV.id.request);
     JsonV.put_raw_args.w = &w;
     JsonV.put_raw_args.literal = WampV.payload.options ? WampV.payload.options : "{}";
     Json.put_raw(work);
@@ -248,8 +246,8 @@ void protocore_wamp_build_unregister(uint8_t *restrict work)
     }
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_UNREGISTER);
-    emit_uint(&w, WampV.id.request);
-    emit_uint(&w, WampV.id.registration);
+    emit_uint(work, &w, WampV.id.request);
+    emit_uint(work, &w, WampV.id.registration);
     finish(work, &w);
 }
 
@@ -264,7 +262,7 @@ void protocore_wamp_build_yield(uint8_t *restrict work)
     }
     protocore_json_writer w = {0};
     begin_msg(work, &w, WAMP_YIELD);
-    emit_uint(&w, WampV.id.request);
+    emit_uint(work, &w, WampV.id.request);
     JsonV.put_raw_args.w = &w;
     JsonV.put_raw_args.literal = WampV.payload.options ? WampV.payload.options : "{}";
     Json.put_raw(work);
