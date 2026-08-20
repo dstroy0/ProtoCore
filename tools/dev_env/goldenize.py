@@ -341,6 +341,9 @@ def module_types(header_text):
     a whole type and left the rest of the struct behind.
     """
     out, mask = [], code_mask(header_text)
+    taken = []  # conditional blocks kept whole, so their other arms are not emitted again
+    guard = re.search(r"#ifndef (\w+)", header_text)
+    skip = (guard.group(1) if guard else "\0", "PROTOCORE_ENABLE_", "PROTOCORE_NEED_")
     # A tagged enum or struct at file scope is the module's vocabulary too, and is not a typedef:
     # ptp.h's `enum protocore_ptp_msg_type { PROTOCORE_PTP_SYNC = 0x0, ... };` was dropped, and the
     # .c that compares against those names stopped compiling.
@@ -349,6 +352,8 @@ def module_types(header_text):
     ):
         if not mask[m.end() - 1]:
             continue
+        if any(a <= m.start() < b for a, b in taken):
+            continue  # another arm of a chain already kept whole
         semi = header_text.find(";", m.end())
         # A tagged form matches through its own `{`; a typedef's brace is still ahead.
         brace = m.end() - 1 if header_text[m.end() - 1] == "{" else header_text.find("{", m.end())
@@ -356,6 +361,15 @@ def module_types(header_text):
         t = header_text[m.start() : end].strip()
         if re.search(r"\}\s*\w+(Args|Ns|Bind)\s*;\s*$", t):
             continue  # generated shapes, not the module's own
+        # A type the preprocessor CHOOSES is one arm of a choice, exactly as a macro can be:
+        # rawmemcpy selects proto_mv_word between uint64_t, uint32_t and uint16_t on PROTO_RAW_WORD.
+        # Emitting the arms unconditionally redefines the type two ways and the file stops compiling.
+        cond = enclosing_conditional(header_text, m.start(), skip)
+        if cond:
+            taken.append(cond)
+            head = comment_above(header_text, cond[0])
+            out.append(((head + "\n") if head else "") + header_text[cond[0] : cond[1]].strip())
+            continue
         out.append(t)
     return out
 
@@ -462,6 +476,46 @@ def override_block(text, name, start, end):
     return prev, (stop if stop >= 0 else len(text))
 
 
+COND_OPEN = re.compile(r"^[ \t]*#[ \t]*(if|ifdef|ifndef)\b", re.M)
+COND_ANY = re.compile(r"^[ \t]*#[ \t]*(if|ifdef|ifndef|elif|else|endif)\b", re.M)
+
+
+def enclosing_conditional(text, pos, skip=()):
+    """The innermost `#if ... #endif` containing @p pos, as (start, end), or None.
+
+    A define selected by the preprocessor is not one define, it is one ARM of a choice: rawmemcpy
+    picks PROTO_RAW_WORD from PROTO_WORD_BITS across an #if / #elif / #elif chain. Collecting the
+    arms as three separate defines drops the chain, emits all three unconditionally, and the last
+    one wins - so a 64-bit part silently moves two bytes at a time and every width in the file is
+    the wrong one. The block is kept whole instead.
+
+    Blocks whose opening line matches @p skip are stepped over, which is how the include guard and
+    the enable gate - both of which span the whole file - do not swallow every macro in it.
+
+    A bare `#ifndef NAME` is NOT treated as a choice, whatever it wraps. That spelling is the
+    overridable-constant idiom, and override_block already widens it when the name matches the
+    define; widening it here as well would take `#ifndef PROTOCORE_OTHER` around an unrelated
+    define and glue the two together.
+    """
+    opens = []
+    for m in COND_ANY.finditer(text):
+        line = text[m.start() : text.find("\n", m.start())]
+        word = m.group(1)
+        if word in ("if", "ifdef", "ifndef"):
+            opens.append((m.start(), line, word))
+        elif word == "endif":
+            if not opens:
+                continue
+            start, oline, oword = opens.pop()
+            end = text.find("\n", m.start())
+            end = len(text) if end < 0 else end + 1
+            if oword == "ifndef":
+                continue
+            if start < pos < end and not any(s in oline for s in skip):
+                return start, end
+    return None
+
+
 def module_macros(header_text, guard):
     """The constants the module's header published: lengths, caps, wire values - each contiguous run
     kept as one block, with the comment that introduces it.
@@ -472,10 +526,25 @@ def module_macros(header_text, guard):
     table at all. The include guard and anything the config owns are skipped.
     """
     runs, ends, prev_end = [], [], None
+    taken = []  # conditional blocks already emitted whole, so their other arms are not re-emitted
+    skip = (guard, "PROTOCORE_ENABLE_", "PROTOCORE_NEED_")
     for m in MACRO.finditer(header_text):
         name = m.group(1)
         if name == guard or name.endswith("_BORROW"):
             prev_end = None  # a skipped define breaks the run
+            continue
+        if any(a <= m.start() < b for a, b in taken):
+            continue  # another arm of a chain already kept whole
+        # A define the preprocessor CHOOSES is one arm of a choice, not a standalone constant: the
+        # whole `#if ... #endif` is kept, once, or the arms come out unconditional and the last wins.
+        cond = enclosing_conditional(header_text, m.start(), skip)
+        if cond:
+            taken.append(cond)
+            head = comment_above(header_text, cond[0])
+            runs.append([head] if head else [])
+            runs[-1].append(header_text[cond[0] : cond[1]].strip())
+            ends[len(runs) - 1 :] = [cond[1]]
+            prev_end = None  # a block ends the run: what follows is a different thing
             continue
         # Contiguous means nothing but ONE newline between this define and the last one kept: a
         # blank line is how the header says the next define is a different thing.

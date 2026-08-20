@@ -1047,6 +1047,12 @@
 #ifndef PROTOCORE_ENABLE_CT_EQ
 #define PROTOCORE_ENABLE_CT_EQ 1
 #endif
+// The raw byte mover, under every span copy and every unaligned fill in the tree. Stated for the
+// shape every other module has rather than as a knob: mmgr is the substrate a borrow is carved out
+// of, so a build that turns this off has no memory manager and links nothing.
+#ifndef PROTOCORE_ENABLE_RAWMEMCPY
+#define PROTOCORE_ENABLE_RAWMEMCPY 1
+#endif
 // The request parser. Every HTTP path in the library feeds it, and 53 envs build it with no flag in
 // common, so a build that turns this off serves nothing over HTTP: stated for the shape every other
 // module has, not as a knob.
