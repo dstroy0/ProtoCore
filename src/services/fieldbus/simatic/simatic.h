@@ -303,11 +303,17 @@ typedef struct
     SimaticBuildReactionRk512Args build_reaction_rk512_args;
     SimaticParseHeaderRk512Args parse_header_rk512_args;
     SimaticParseReactionRk512Args parse_reaction_rk512_args;
-
     proto_bool ok;
     uint8_t value;
     size_t n;
+} SimaticVars;
 
+/** @brief The operands and the outcome. */
+extern SimaticVars SimaticV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const bcc_3964r)(uint8_t *restrict work);
     void (*const build_block_3964r)(uint8_t *restrict work);
     void (*const parse_block_3964r)(uint8_t *restrict work);
@@ -323,8 +329,41 @@ typedef struct
     void (*const parse_reaction_rk512)(uint8_t *restrict work);
 } SimaticNs;
 
-/** @brief The one symbol this module exports. */
-extern SimaticNs Simatic;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SimaticV or a region of the borrow at a fixed offset.
+void protocore_simatic_bcc_3964r(uint8_t *restrict work);
+void protocore_simatic_build_block_3964r(uint8_t *restrict work);
+void protocore_simatic_parse_block_3964r(uint8_t *restrict work);
+void protocore_simatic_init_3964r(uint8_t *restrict work);
+void protocore_simatic_send_3964r(uint8_t *restrict work);
+void protocore_simatic_rx_byte_3964r(uint8_t *restrict work);
+void protocore_simatic_tick_3964r(uint8_t *restrict work);
+void protocore_simatic_idle_3964r(uint8_t *restrict work);
+void protocore_simatic_build_send_rk512(uint8_t *restrict work);
+void protocore_simatic_build_fetch_rk512(uint8_t *restrict work);
+void protocore_simatic_build_reaction_rk512(uint8_t *restrict work);
+void protocore_simatic_parse_header_rk512(uint8_t *restrict work);
+void protocore_simatic_parse_reaction_rk512(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Simatic.bcc_3964r(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SimaticNs Simatic __attribute__((unused)) = {
+    .bcc_3964r = protocore_simatic_bcc_3964r,
+    .build_block_3964r = protocore_simatic_build_block_3964r,
+    .parse_block_3964r = protocore_simatic_parse_block_3964r,
+    .init_3964r = protocore_simatic_init_3964r,
+    .send_3964r = protocore_simatic_send_3964r,
+    .rx_byte_3964r = protocore_simatic_rx_byte_3964r,
+    .tick_3964r = protocore_simatic_tick_3964r,
+    .idle_3964r = protocore_simatic_idle_3964r,
+    .build_send_rk512 = protocore_simatic_build_send_rk512,
+    .build_fetch_rk512 = protocore_simatic_build_fetch_rk512,
+    .build_reaction_rk512 = protocore_simatic_build_reaction_rk512,
+    .parse_header_rk512 = protocore_simatic_parse_header_rk512,
+    .parse_reaction_rk512 = protocore_simatic_parse_reaction_rk512,
+};
 
 /**
  * @brief The PROTOCORE_SIMATIC_BORROW bytes this module's state lives in.

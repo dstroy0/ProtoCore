@@ -118,19 +118,40 @@ typedef struct
     SercosIdnParseArgs idn_parse_args;
     SercosBuildArgs build_args;
     SercosParseArgs parse_args;
-
     proto_bool ok;
     uint16_t value;
     size_t n;
+} SercosVars;
 
+/** @brief The operands and the outcome. */
+extern SercosVars SercosV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const idn)(uint8_t *restrict work);
     void (*const idn_parse)(uint8_t *restrict work);
     void (*const build)(uint8_t *restrict work);
     void (*const parse)(uint8_t *restrict work);
 } SercosNs;
 
-/** @brief The one symbol this module exports. */
-extern SercosNs Sercos;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in SercosV or a region of the borrow at a fixed offset.
+void protocore_sercos_idn(uint8_t *restrict work);
+void protocore_sercos_idn_parse(uint8_t *restrict work);
+void protocore_sercos_build(uint8_t *restrict work);
+void protocore_sercos_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Sercos.idn(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const SercosNs Sercos __attribute__((unused)) = {
+    .idn = protocore_sercos_idn,
+    .idn_parse = protocore_sercos_idn_parse,
+    .build = protocore_sercos_build,
+    .parse = protocore_sercos_parse,
+};
 
 PROTOCORE_END_DECLS
 

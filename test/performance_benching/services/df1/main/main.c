@@ -39,20 +39,20 @@ void dbench_run(void)
 
     static uint8_t bcc_frame[32];
     static uint8_t crc_frame[32];
-    Df1.build_frame_args.buf = bcc_frame;
-    Df1.build_frame_args.cap = sizeof(bcc_frame);
-    Df1.build_frame_args.data = bcc_frame_data;
-    Df1.build_frame_args.data_len = sizeof(bcc_frame_data);
-    Df1.build_frame_args.check = DF1_CHECK_BCC;
+    Df1V.build_frame_args.buf = bcc_frame;
+    Df1V.build_frame_args.cap = sizeof(bcc_frame);
+    Df1V.build_frame_args.data = bcc_frame_data;
+    Df1V.build_frame_args.data_len = sizeof(bcc_frame_data);
+    Df1V.build_frame_args.check = DF1_CHECK_BCC;
     Df1.build_frame(df1_work);
-    size_t bcc_frame_len = Df1.n;
-    Df1.build_frame_args.buf = crc_frame;
-    Df1.build_frame_args.cap = sizeof(crc_frame);
-    Df1.build_frame_args.data = crc_frame_data;
-    Df1.build_frame_args.data_len = sizeof(crc_frame_data);
-    Df1.build_frame_args.check = DF1_CHECK_CRC;
+    size_t bcc_frame_len = Df1V.n;
+    Df1V.build_frame_args.buf = crc_frame;
+    Df1V.build_frame_args.cap = sizeof(crc_frame);
+    Df1V.build_frame_args.data = crc_frame_data;
+    Df1V.build_frame_args.data_len = sizeof(crc_frame_data);
+    Df1V.build_frame_args.check = DF1_CHECK_CRC;
     Df1.build_frame(df1_work);
-    size_t crc_frame_len = Df1.n;
+    size_t crc_frame_len = Df1V.n;
 
     static uint8_t out[32];
 
@@ -63,51 +63,43 @@ void dbench_run(void)
         volatile uint16_t sink16 = 0;
         size_t out_len;
 
-        Df1.bcc_args.data = bcc_data;
-        Df1.bcc_args.len = sizeof(bcc_data);
-        DBENCH_BULK("Df1.bcc", 200000, sizeof(bcc_data),
-                    sink += (Df1.bcc(df1_work), Df1.value));
+        Df1V.bcc_args.data = bcc_data;
+        Df1V.bcc_args.len = sizeof(bcc_data);
+        DBENCH_BULK("Df1.bcc", 200000, sizeof(bcc_data), sink += (Df1.bcc(df1_work), Df1V.value));
 
-        Df1.crc_args.data = crc_data;
-        Df1.crc_args.len = sizeof(crc_data) - 1;
-        DBENCH_BULK("Df1.crc", 100000, sizeof(crc_data) - 1,
-                    sink16 += (Df1.crc(df1_work), Df1.u16));
+        Df1V.crc_args.data = crc_data;
+        Df1V.crc_args.len = sizeof(crc_data) - 1;
+        DBENCH_BULK("Df1.crc", 100000, sizeof(crc_data) - 1, sink16 += (Df1.crc(df1_work), Df1V.u16));
 
-        Df1.build_frame_args.buf = bcc_frame;
-        Df1.build_frame_args.cap = sizeof(bcc_frame);
-        Df1.build_frame_args.data = bcc_frame_data;
-        Df1.build_frame_args.data_len = sizeof(bcc_frame_data);
-        Df1.build_frame_args.check = DF1_CHECK_BCC;
-        DBENCH_OP("Df1.build_frame BCC", 50000,
-                  sink += (Df1.build_frame(df1_work), Df1.n));
+        Df1V.build_frame_args.buf = bcc_frame;
+        Df1V.build_frame_args.cap = sizeof(bcc_frame);
+        Df1V.build_frame_args.data = bcc_frame_data;
+        Df1V.build_frame_args.data_len = sizeof(bcc_frame_data);
+        Df1V.build_frame_args.check = DF1_CHECK_BCC;
+        DBENCH_OP("Df1.build_frame BCC", 50000, sink += (Df1.build_frame(df1_work), Df1V.n));
 
-        Df1.build_frame_args.buf = crc_frame;
-        Df1.build_frame_args.cap = sizeof(crc_frame);
-        Df1.build_frame_args.data = crc_frame_data;
-        Df1.build_frame_args.data_len = sizeof(crc_frame_data);
-        Df1.build_frame_args.check = DF1_CHECK_CRC;
-        DBENCH_OP("Df1.build_frame CRC", 50000,
-                  sink += (Df1.build_frame(df1_work), Df1.n));
+        Df1V.build_frame_args.buf = crc_frame;
+        Df1V.build_frame_args.cap = sizeof(crc_frame);
+        Df1V.build_frame_args.data = crc_frame_data;
+        Df1V.build_frame_args.data_len = sizeof(crc_frame_data);
+        Df1V.build_frame_args.check = DF1_CHECK_CRC;
+        DBENCH_OP("Df1.build_frame CRC", 50000, sink += (Df1.build_frame(df1_work), Df1V.n));
 
-        Df1.parse_frame_args.buf = bcc_frame;
-        Df1.parse_frame_args.len = bcc_frame_len;
-        Df1.parse_frame_args.check = DF1_CHECK_BCC;
-        Df1.parse_frame_args.out = out;
-        Df1.parse_frame_args.out_cap = sizeof(out);
-        Df1.parse_frame_args.out_len = &out_len;
-        DBENCH_OP("Df1.parse_frame BCC", 50000,
-                  sink +=
-                  (Df1.parse_frame(df1_work), Df1.ok));
+        Df1V.parse_frame_args.buf = bcc_frame;
+        Df1V.parse_frame_args.len = bcc_frame_len;
+        Df1V.parse_frame_args.check = DF1_CHECK_BCC;
+        Df1V.parse_frame_args.out = out;
+        Df1V.parse_frame_args.out_cap = sizeof(out);
+        Df1V.parse_frame_args.out_len = &out_len;
+        DBENCH_OP("Df1.parse_frame BCC", 50000, sink += (Df1.parse_frame(df1_work), Df1V.ok));
 
-        Df1.parse_frame_args.buf = crc_frame;
-        Df1.parse_frame_args.len = crc_frame_len;
-        Df1.parse_frame_args.check = DF1_CHECK_CRC;
-        Df1.parse_frame_args.out = out;
-        Df1.parse_frame_args.out_cap = sizeof(out);
-        Df1.parse_frame_args.out_len = &out_len;
-        DBENCH_OP("Df1.parse_frame CRC", 50000,
-                  sink +=
-                  (Df1.parse_frame(df1_work), Df1.ok));
+        Df1V.parse_frame_args.buf = crc_frame;
+        Df1V.parse_frame_args.len = crc_frame_len;
+        Df1V.parse_frame_args.check = DF1_CHECK_CRC;
+        Df1V.parse_frame_args.out = out;
+        Df1V.parse_frame_args.out_cap = sizeof(out);
+        Df1V.parse_frame_args.out_len = &out_len;
+        DBENCH_OP("Df1.parse_frame CRC", 50000, sink += (Df1.parse_frame(df1_work), Df1V.ok));
 
         (void)sink;
         (void)sink16;

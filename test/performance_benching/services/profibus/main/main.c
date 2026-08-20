@@ -34,22 +34,22 @@ void dbench_run(void)
     // Prebuilt telegrams for the parse bench (known-good, so Profibus.parse takes the accept path).
     static uint8_t sd1_frame[8];
     static uint8_t sd2_frame[16];
-    Profibus.build_sd1_args.da = 0x03;
-    Profibus.build_sd1_args.sa = 0x02;
-    Profibus.build_sd1_args.fc = PB_FC_REQUEST_FDL_STATUS;
-    Profibus.build_sd1_args.out = sd1_frame;
-    Profibus.build_sd1_args.cap = sizeof(sd1_frame);
+    ProfibusV.build_sd1_args.da = 0x03;
+    ProfibusV.build_sd1_args.sa = 0x02;
+    ProfibusV.build_sd1_args.fc = PB_FC_REQUEST_FDL_STATUS;
+    ProfibusV.build_sd1_args.out = sd1_frame;
+    ProfibusV.build_sd1_args.cap = sizeof(sd1_frame);
     Profibus.build_sd1(profibus_work);
-    size_t sd1_len = Profibus.n;
-    Profibus.build_sd2_args.da = 0x05;
-    Profibus.build_sd2_args.sa = 0x02;
-    Profibus.build_sd2_args.fc = PB_FC_SRD_HIGH;
-    Profibus.build_sd2_args.data = data3;
-    Profibus.build_sd2_args.data_len = sizeof(data3);
-    Profibus.build_sd2_args.out = sd2_frame;
-    Profibus.build_sd2_args.cap = sizeof(sd2_frame);
+    size_t sd1_len = ProfibusV.n;
+    ProfibusV.build_sd2_args.da = 0x05;
+    ProfibusV.build_sd2_args.sa = 0x02;
+    ProfibusV.build_sd2_args.fc = PB_FC_SRD_HIGH;
+    ProfibusV.build_sd2_args.data = data3;
+    ProfibusV.build_sd2_args.data_len = sizeof(data3);
+    ProfibusV.build_sd2_args.out = sd2_frame;
+    ProfibusV.build_sd2_args.cap = sizeof(sd2_frame);
     Profibus.build_sd2(profibus_work);
-    size_t sd2_len = Profibus.n;
+    size_t sd2_len = ProfibusV.n;
 
     for (;;)
     {
@@ -58,34 +58,32 @@ void dbench_run(void)
         volatile uint8_t sink8 = 0;
         PbTelegram tg;
 
-        Profibus.fcs_args.bytes = fcs_body;
-        Profibus.fcs_args.len = sizeof(fcs_body);
-        DBENCH_OP("Profibus.fcs (DA+SA+FC)", 100000, sink8 += (Profibus.fcs(profibus_work), Profibus.value));
-        Profibus.build_sd1_args.da = 0x03;
-        Profibus.build_sd1_args.sa = 0x02;
-        Profibus.build_sd1_args.fc = PB_FC_REQUEST_FDL_STATUS;
-        Profibus.build_sd1_args.out = out;
-        Profibus.build_sd1_args.cap = sizeof(out);
-        DBENCH_OP("Profibus.build_sd1", 100000,
-                  sink += (Profibus.build_sd1(profibus_work), Profibus.n));
-        Profibus.build_sd2_args.da = 0x05;
-        Profibus.build_sd2_args.sa = 0x02;
-        Profibus.build_sd2_args.fc = PB_FC_SRD_HIGH;
-        Profibus.build_sd2_args.data = data3;
-        Profibus.build_sd2_args.data_len = sizeof(data3);
-        Profibus.build_sd2_args.out = out;
-        Profibus.build_sd2_args.cap = sizeof(out);
-        DBENCH_OP("Profibus.build_sd2 (3B data)", 50000,
-                  sink += (Profibus.build_sd2(profibus_work), Profibus.n));
-        Profibus.parse_args.frame = sd1_frame;
-        Profibus.parse_args.len = sd1_len;
-        Profibus.parse_args.out = &tg;
-        DBENCH_OP("Profibus.parse SD1", 100000, sink += (Profibus.parse(profibus_work), Profibus.ok) ? 1 : 0);
-        Profibus.parse_args.frame = sd2_frame;
-        Profibus.parse_args.len = sd2_len;
-        Profibus.parse_args.out = &tg;
+        ProfibusV.fcs_args.bytes = fcs_body;
+        ProfibusV.fcs_args.len = sizeof(fcs_body);
+        DBENCH_OP("Profibus.fcs (DA+SA+FC)", 100000, sink8 += (Profibus.fcs(profibus_work), ProfibusV.value));
+        ProfibusV.build_sd1_args.da = 0x03;
+        ProfibusV.build_sd1_args.sa = 0x02;
+        ProfibusV.build_sd1_args.fc = PB_FC_REQUEST_FDL_STATUS;
+        ProfibusV.build_sd1_args.out = out;
+        ProfibusV.build_sd1_args.cap = sizeof(out);
+        DBENCH_OP("Profibus.build_sd1", 100000, sink += (Profibus.build_sd1(profibus_work), ProfibusV.n));
+        ProfibusV.build_sd2_args.da = 0x05;
+        ProfibusV.build_sd2_args.sa = 0x02;
+        ProfibusV.build_sd2_args.fc = PB_FC_SRD_HIGH;
+        ProfibusV.build_sd2_args.data = data3;
+        ProfibusV.build_sd2_args.data_len = sizeof(data3);
+        ProfibusV.build_sd2_args.out = out;
+        ProfibusV.build_sd2_args.cap = sizeof(out);
+        DBENCH_OP("Profibus.build_sd2 (3B data)", 50000, sink += (Profibus.build_sd2(profibus_work), ProfibusV.n));
+        ProfibusV.parse_args.frame = sd1_frame;
+        ProfibusV.parse_args.len = sd1_len;
+        ProfibusV.parse_args.out = &tg;
+        DBENCH_OP("Profibus.parse SD1", 100000, sink += (Profibus.parse(profibus_work), ProfibusV.ok) ? 1 : 0);
+        ProfibusV.parse_args.frame = sd2_frame;
+        ProfibusV.parse_args.len = sd2_len;
+        ProfibusV.parse_args.out = &tg;
         DBENCH_OP("Profibus.parse SD2 (3B data)", 100000,
-                  sink += (Profibus.parse(profibus_work), Profibus.ok) ? 1 : 0);
+                  sink += (Profibus.parse(profibus_work), ProfibusV.ok) ? 1 : 0);
 
         (void)sink;
         (void)sink8;

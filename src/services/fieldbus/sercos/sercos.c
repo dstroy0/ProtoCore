@@ -20,24 +20,24 @@ PROTOCORE_BEGIN_DECLS
 // No context and no borrow: every operand is the caller's. The borrow an entry takes is
 // never read.
 
-static void sercos_idn(uint8_t *restrict work)
+void protocore_sercos_idn(uint8_t *restrict work)
 {
     (void)work;
-    proto_bool is_product = Sercos.idn_args.is_product;
-    uint8_t param_set = Sercos.idn_args.param_set;
-    uint16_t data_block = Sercos.idn_args.data_block;
+    proto_bool is_product = SercosV.idn_args.is_product;
+    uint8_t param_set = SercosV.idn_args.param_set;
+    uint16_t data_block = SercosV.idn_args.data_block;
 
-    Sercos.value =
+    SercosV.value =
         (uint16_t)(((is_product ? 1u : 0u) << 15) | ((uint32_t)(param_set & 0x7) << 12) | (data_block & 0x0FFF));
 }
 
-static void sercos_idn_parse(uint8_t *restrict work)
+void protocore_sercos_idn_parse(uint8_t *restrict work)
 {
     (void)work;
-    uint16_t idn = Sercos.idn_parse_args.idn;
-    proto_bool *is_product = Sercos.idn_parse_args.is_product;
-    uint8_t *param_set = Sercos.idn_parse_args.param_set;
-    uint16_t *data_block = Sercos.idn_parse_args.data_block;
+    uint16_t idn = SercosV.idn_parse_args.idn;
+    proto_bool *is_product = SercosV.idn_parse_args.is_product;
+    uint8_t *param_set = SercosV.idn_parse_args.param_set;
+    uint16_t *data_block = SercosV.idn_parse_args.data_block;
 
     if (is_product)
     {
@@ -53,26 +53,26 @@ static void sercos_idn_parse(uint8_t *restrict work)
     }
 }
 
-static void sercos_build(uint8_t *restrict work)
+void protocore_sercos_build(uint8_t *restrict work)
 {
     (void)work;
-    uint8_t type = Sercos.build_args.type;
-    uint8_t phase = Sercos.build_args.phase;
-    uint16_t cycle = Sercos.build_args.cycle;
-    const uint8_t *data = Sercos.build_args.data;
-    size_t data_len = Sercos.build_args.data_len;
-    uint8_t *out = Sercos.build_args.out;
-    size_t cap = Sercos.build_args.cap;
+    uint8_t type = SercosV.build_args.type;
+    uint8_t phase = SercosV.build_args.phase;
+    uint16_t cycle = SercosV.build_args.cycle;
+    const uint8_t *data = SercosV.build_args.data;
+    size_t data_len = SercosV.build_args.data_len;
+    uint8_t *out = SercosV.build_args.out;
+    size_t cap = SercosV.build_args.cap;
 
     if (!out || (data_len && !data) || (type != SERCOS_TEL_MDT && type != SERCOS_TEL_AT))
     {
-        Sercos.n = 0;
+        SercosV.n = 0;
         return;
     }
     size_t n = SERCOS_HDR_LEN + data_len;
     if (n > cap)
     {
-        Sercos.n = 0;
+        SercosV.n = 0;
         return;
     }
     out[0] = type;
@@ -83,24 +83,24 @@ static void sercos_build(uint8_t *restrict work)
     {
         mem.cpy(out + SERCOS_HDR_LEN, data, data_len);
     }
-    Sercos.n = n;
+    SercosV.n = n;
 }
 
-static void sercos_parse(uint8_t *restrict work)
+void protocore_sercos_parse(uint8_t *restrict work)
 {
     (void)work;
-    const uint8_t *frame = Sercos.parse_args.frame;
-    size_t len = Sercos.parse_args.len;
-    SercosTelegram *out = Sercos.parse_args.out;
+    const uint8_t *frame = SercosV.parse_args.frame;
+    size_t len = SercosV.parse_args.len;
+    SercosTelegram *out = SercosV.parse_args.out;
 
     if (!frame || !out || len < SERCOS_HDR_LEN)
     {
-        Sercos.ok = PROTO_FALSE;
+        SercosV.ok = PROTO_FALSE;
         return;
     }
     if (frame[0] != SERCOS_TEL_MDT && frame[0] != SERCOS_TEL_AT)
     {
-        Sercos.ok = PROTO_FALSE;
+        SercosV.ok = PROTO_FALSE;
         return;
     }
     out->type = frame[0];
@@ -108,10 +108,11 @@ static void sercos_parse(uint8_t *restrict work)
     out->cycle = (uint16_t)(frame[2] | (frame[3] << 8));
     out->data = (len > SERCOS_HDR_LEN) ? (frame + SERCOS_HDR_LEN) : NULL;
     out->data_len = len - SERCOS_HDR_LEN;
-    Sercos.ok = PROTO_TRUE;
+    SercosV.ok = PROTO_TRUE;
 }
 
-SercosNs Sercos = {.idn = sercos_idn, .idn_parse = sercos_idn_parse, .build = sercos_build, .parse = sercos_parse};
+/** @brief The operands and the outcome. */
+SercosVars SercosV;
 
 PROTOCORE_END_DECLS
 

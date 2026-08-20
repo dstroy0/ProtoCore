@@ -173,10 +173,16 @@ typedef struct
     IolinkChecksum6Args checksum6_args;
     IolinkFinalizeArgs finalize_args;
     IolinkVerifyArgs verify_args;
-
     proto_bool ok;
     uint8_t value;
+} IolinkVars;
 
+/** @brief The operands and the outcome. */
+extern IolinkVars IolinkV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const mc)(uint8_t *restrict work);
     void (*const mc_is_read)(uint8_t *restrict work);
     void (*const mc_channel)(uint8_t *restrict work);
@@ -188,8 +194,33 @@ typedef struct
     void (*const verify)(uint8_t *restrict work);
 } IolinkNs;
 
-/** @brief The one symbol this module exports. */
-extern IolinkNs Iolink;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in IolinkV or a region of the borrow at a fixed offset.
+void protocore_iolink_mc(uint8_t *restrict work);
+void protocore_iolink_mc_is_read(uint8_t *restrict work);
+void protocore_iolink_mc_channel(uint8_t *restrict work);
+void protocore_iolink_mc_address(uint8_t *restrict work);
+void protocore_iolink_ckt(uint8_t *restrict work);
+void protocore_iolink_cks(uint8_t *restrict work);
+void protocore_iolink_checksum6(uint8_t *restrict work);
+void protocore_iolink_finalize(uint8_t *restrict work);
+void protocore_iolink_verify(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Iolink.mc(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const IolinkNs Iolink __attribute__((unused)) = {
+    .mc = protocore_iolink_mc,
+    .mc_is_read = protocore_iolink_mc_is_read,
+    .mc_channel = protocore_iolink_mc_channel,
+    .mc_address = protocore_iolink_mc_address,
+    .ckt = protocore_iolink_ckt,
+    .cks = protocore_iolink_cks,
+    .checksum6 = protocore_iolink_checksum6,
+    .finalize = protocore_iolink_finalize,
+    .verify = protocore_iolink_verify,
+};
 
 PROTOCORE_END_DECLS
 

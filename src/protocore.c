@@ -574,12 +574,12 @@ proto_bool set_cache_control_swr(uint32_t max_age_s, uint32_t swr_s)
     // Build the directive with the RFC 5861 core so the header and the protocore_delivery_swr decision
     // can never drift apart.
     char directive[64];
-    HttpDelivery.cache_control_args.max_age_s = max_age_s;
-    HttpDelivery.cache_control_args.swr_s = swr_s;
-    HttpDelivery.cache_control_args.out = directive;
-    HttpDelivery.cache_control_args.cap = sizeof(directive);
+    HttpDeliveryV.cache_control_args.max_age_s = max_age_s;
+    HttpDeliveryV.cache_control_args.swr_s = swr_s;
+    HttpDeliveryV.cache_control_args.out = directive;
+    HttpDeliveryV.cache_control_args.cap = sizeof(directive);
     HttpDelivery.cache_control(http_delivery_work);
-    if (HttpDelivery.n == 0)
+    if (HttpDeliveryV.n == 0)
     {
         return PROTO_FALSE;
     }

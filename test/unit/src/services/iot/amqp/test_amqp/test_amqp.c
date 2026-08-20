@@ -35,27 +35,27 @@ void test_amqp091_protocol_header(void)
 {
     static const uint8_t WANT[8] = {0x41, 0x4D, 0x51, 0x50, 0x00, 0x00, 0x09, 0x01};
     uint8_t buf[16];
-    Amqp.out.buf = buf;
-    Amqp.out.cap = sizeof(buf);
+    AmqpV.out.buf = buf;
+    AmqpV.out.cap = sizeof(buf);
     Amqp.protocol_header(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(8u, Amqp.n);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(8u, AmqpV.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 8);
     TEST_ASSERT_EQUAL_MEMORY("AMQP", buf, 4); // literal-AMQP is the ASCII of those four octets
 
     // eight octets exactly; seven is not a protocol header
-    Amqp.out.cap = 8;
+    AmqpV.out.cap = 8;
     Amqp.protocol_header(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    Amqp.out.cap = 7;
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    AmqpV.out.cap = 7;
     Amqp.protocol_header(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Amqp.n);
+    TEST_ASSERT_FALSE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, AmqpV.n);
 
-    Amqp.out.buf = NULL;
-    Amqp.out.cap = 16;
+    AmqpV.out.buf = NULL;
+    AmqpV.out.cap = 16;
     Amqp.protocol_header(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 }
 
 // The specification's constant table: frame-method 1, frame-header 2, frame-body 3,
@@ -80,24 +80,24 @@ void test_amqp091_frame_layout(void)
                                    AMQP_FRAME_END};
     uint8_t buf[32];
 
-    Amqp.out.buf = buf;
-    Amqp.out.cap = sizeof(buf);
-    Amqp.frame.type = AMQP_FRAME_BODY;
-    Amqp.frame.channel = 0x0102;
-    Amqp.payload.data = PAYLOAD;
-    Amqp.payload.len = sizeof(PAYLOAD);
+    AmqpV.out.buf = buf;
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.frame.type = AMQP_FRAME_BODY;
+    AmqpV.frame.channel = 0x0102;
+    AmqpV.payload.data = PAYLOAD;
+    AmqpV.payload.len = sizeof(PAYLOAD);
     Amqp.build_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Amqp.n);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), AmqpV.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, sizeof(WANT));
 
     // an empty payload frames to the eight octets of overhead alone
-    Amqp.payload.data = NULL;
-    Amqp.payload.len = 0;
-    Amqp.frame.channel = 0;
+    AmqpV.payload.data = NULL;
+    AmqpV.payload.len = 0;
+    AmqpV.frame.channel = 0;
     Amqp.build_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(8u, Amqp.n);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(8u, AmqpV.n);
     static const uint8_t EMPTY[8] = {AMQP_FRAME_BODY, 0, 0, 0, 0, 0, 0, AMQP_FRAME_END};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(EMPTY, buf, 8);
 }
@@ -109,19 +109,19 @@ void test_frame_end_is_checked_before_decoding(void)
     static const uint8_t PAYLOAD[] = {1, 2, 3, 4};
     uint8_t buf[32];
 
-    Amqp.out.buf = buf;
-    Amqp.out.cap = sizeof(buf);
-    Amqp.frame.type = AMQP_FRAME_BODY;
-    Amqp.frame.channel = 1;
-    Amqp.payload.data = PAYLOAD;
-    Amqp.payload.len = sizeof(PAYLOAD);
+    AmqpV.out.buf = buf;
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.frame.type = AMQP_FRAME_BODY;
+    AmqpV.frame.channel = 1;
+    AmqpV.payload.data = PAYLOAD;
+    AmqpV.payload.len = sizeof(PAYLOAD);
     Amqp.build_frame(amqp_work);
-    size_t n = Amqp.n;
+    size_t n = AmqpV.n;
 
-    Amqp.in.buf = buf;
-    Amqp.in.len = n;
+    AmqpV.in.buf = buf;
+    AmqpV.in.len = n;
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
+    TEST_ASSERT_TRUE(AmqpV.ok);
 
     for (int v = 0; v < 256; v++)
     {
@@ -130,11 +130,11 @@ void test_frame_end_is_checked_before_decoding(void)
             continue;
         }
         buf[n - 1] = (uint8_t)v;
-        Amqp.in.buf = buf;
-        Amqp.in.len = n;
+        AmqpV.in.buf = buf;
+        AmqpV.in.len = n;
         Amqp.parse_frame(amqp_work);
-        TEST_ASSERT_FALSE(Amqp.ok);
-        TEST_ASSERT_EQUAL_UINT(0u, Amqp.consumed);
+        TEST_ASSERT_FALSE(AmqpV.ok);
+        TEST_ASSERT_EQUAL_UINT(0u, AmqpV.consumed);
     }
 }
 
@@ -145,37 +145,37 @@ void test_frame_round_trip_and_consumed(void)
     static const uint8_t PAYLOAD[] = {0xDE, 0xAD, 0xBE, 0xEF};
     uint8_t buf[64];
 
-    Amqp.out.buf = buf;
-    Amqp.out.cap = sizeof(buf);
-    Amqp.frame.type = AMQP_FRAME_BODY;
-    Amqp.frame.channel = 65535; // the widest channel the 2-octet field can name
-    Amqp.payload.data = PAYLOAD;
-    Amqp.payload.len = sizeof(PAYLOAD);
+    AmqpV.out.buf = buf;
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.frame.type = AMQP_FRAME_BODY;
+    AmqpV.frame.channel = 65535; // the widest channel the 2-octet field can name
+    AmqpV.payload.data = PAYLOAD;
+    AmqpV.payload.len = sizeof(PAYLOAD);
     Amqp.build_frame(amqp_work);
-    size_t first = Amqp.n;
+    size_t first = AmqpV.n;
 
     // a second frame right behind it, so the consumed count has something to be wrong about
-    Amqp.out.buf = buf + first;
-    Amqp.out.cap = sizeof(buf) - first;
+    AmqpV.out.buf = buf + first;
+    AmqpV.out.cap = sizeof(buf) - first;
     Amqp.build_heartbeat(amqp_work);
-    size_t total = first + Amqp.n;
+    size_t total = first + AmqpV.n;
 
-    Amqp.in.buf = buf;
-    Amqp.in.len = total;
+    AmqpV.in.buf = buf;
+    AmqpV.in.len = total;
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_BODY, Amqp.frame.type);
-    TEST_ASSERT_EQUAL_UINT16(65535u, Amqp.frame.channel);
-    TEST_ASSERT_EQUAL_UINT(sizeof(PAYLOAD), Amqp.payload.len);
-    TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, Amqp.payload.data, sizeof(PAYLOAD));
-    TEST_ASSERT_EQUAL_UINT(first, Amqp.consumed);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_BODY, AmqpV.frame.type);
+    TEST_ASSERT_EQUAL_UINT16(65535u, AmqpV.frame.channel);
+    TEST_ASSERT_EQUAL_UINT(sizeof(PAYLOAD), AmqpV.payload.len);
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD, AmqpV.payload.data, sizeof(PAYLOAD));
+    TEST_ASSERT_EQUAL_UINT(first, AmqpV.consumed);
 
-    Amqp.in.buf = buf + Amqp.consumed;
-    Amqp.in.len = total - Amqp.consumed;
+    AmqpV.in.buf = buf + AmqpV.consumed;
+    AmqpV.in.len = total - AmqpV.consumed;
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_HEARTBEAT, Amqp.frame.type);
-    TEST_ASSERT_EQUAL_UINT(0u, Amqp.payload.len);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_HEARTBEAT, AmqpV.frame.type);
+    TEST_ASSERT_EQUAL_UINT(0u, AmqpV.payload.len);
 }
 
 // A frame that is not fully buffered is a need-more, not a failure to be retried differently: every
@@ -184,31 +184,31 @@ void test_partial_frame_is_not_parsed(void)
 {
     static const uint8_t PAYLOAD[] = {1, 2, 3, 4, 5, 6, 7, 8};
     uint8_t buf[32];
-    Amqp.out.buf = buf;
-    Amqp.out.cap = sizeof(buf);
-    Amqp.frame.type = AMQP_FRAME_BODY;
-    Amqp.frame.channel = 1;
-    Amqp.payload.data = PAYLOAD;
-    Amqp.payload.len = sizeof(PAYLOAD);
+    AmqpV.out.buf = buf;
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.frame.type = AMQP_FRAME_BODY;
+    AmqpV.frame.channel = 1;
+    AmqpV.payload.data = PAYLOAD;
+    AmqpV.payload.len = sizeof(PAYLOAD);
     Amqp.build_frame(amqp_work);
-    size_t n = Amqp.n;
+    size_t n = AmqpV.n;
 
     for (size_t shorter = 0; shorter < n; shorter++)
     {
-        Amqp.in.buf = buf;
-        Amqp.in.len = shorter;
+        AmqpV.in.buf = buf;
+        AmqpV.in.len = shorter;
         Amqp.parse_frame(amqp_work);
-        TEST_ASSERT_FALSE(Amqp.ok);
-        TEST_ASSERT_EQUAL_UINT(0u, Amqp.consumed);
+        TEST_ASSERT_FALSE(AmqpV.ok);
+        TEST_ASSERT_EQUAL_UINT(0u, AmqpV.consumed);
     }
-    Amqp.in.len = n;
+    AmqpV.in.len = n;
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
+    TEST_ASSERT_TRUE(AmqpV.ok);
 
-    Amqp.in.buf = NULL;
-    Amqp.in.len = n;
+    AmqpV.in.buf = NULL;
+    AmqpV.in.len = n;
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 }
 
 // sec 4.2.4: a method payload is class-id(2) method-id(2) then the arguments. The pair below is
@@ -221,16 +221,16 @@ void test_amqp091_method_frame_layout(void)
         AMQP_FRAME_METHOD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x0A, 0x00, 0x0A, 0x00, 0x09, AMQP_FRAME_END};
     uint8_t buf[32];
 
-    Amqp.out.buf = buf;
-    Amqp.out.cap = sizeof(buf);
-    Amqp.frame.channel = 0; // connection class methods are global to the connection
-    Amqp.method.class_id = 10;
-    Amqp.method.method_id = 10;
-    Amqp.method.args = ARGS;
-    Amqp.method.args_len = sizeof(ARGS);
+    AmqpV.out.buf = buf;
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.frame.channel = 0; // connection class methods are global to the connection
+    AmqpV.method.class_id = 10;
+    AmqpV.method.method_id = 10;
+    AmqpV.method.args = ARGS;
+    AmqpV.method.args_len = sizeof(ARGS);
     Amqp.build_method(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), Amqp.n);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(sizeof(WANT), AmqpV.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, sizeof(WANT));
 }
 
@@ -260,36 +260,36 @@ void test_method_round_trip_over_the_class_table(void)
     for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++)
     {
         uint8_t buf[32];
-        Amqp.out.buf = buf;
-        Amqp.out.cap = sizeof(buf);
-        Amqp.frame.channel = CASES[i].channel;
-        Amqp.method.class_id = CASES[i].class_id;
-        Amqp.method.method_id = CASES[i].method_id;
-        Amqp.method.args = ARGS;
-        Amqp.method.args_len = sizeof(ARGS);
+        AmqpV.out.buf = buf;
+        AmqpV.out.cap = sizeof(buf);
+        AmqpV.frame.channel = CASES[i].channel;
+        AmqpV.method.class_id = CASES[i].class_id;
+        AmqpV.method.method_id = CASES[i].method_id;
+        AmqpV.method.args = ARGS;
+        AmqpV.method.args_len = sizeof(ARGS);
         Amqp.build_method(amqp_work);
-        TEST_ASSERT_TRUE(Amqp.ok);
-        size_t n = Amqp.n;
+        TEST_ASSERT_TRUE(AmqpV.ok);
+        size_t n = AmqpV.n;
 
         // scrub the handle so a value that survives is one the parse actually wrote
-        Amqp.method.class_id = 0;
-        Amqp.method.method_id = 0;
-        Amqp.method.args = NULL;
-        Amqp.method.args_len = 0;
+        AmqpV.method.class_id = 0;
+        AmqpV.method.method_id = 0;
+        AmqpV.method.args = NULL;
+        AmqpV.method.args_len = 0;
 
-        Amqp.in.buf = buf;
-        Amqp.in.len = n;
+        AmqpV.in.buf = buf;
+        AmqpV.in.len = n;
         Amqp.parse_frame(amqp_work);
-        TEST_ASSERT_TRUE(Amqp.ok);
-        TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_METHOD, Amqp.frame.type);
-        TEST_ASSERT_EQUAL_UINT16(CASES[i].channel, Amqp.frame.channel);
+        TEST_ASSERT_TRUE(AmqpV.ok);
+        TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_METHOD, AmqpV.frame.type);
+        TEST_ASSERT_EQUAL_UINT16(CASES[i].channel, AmqpV.frame.channel);
 
         Amqp.parse_method(amqp_work);
-        TEST_ASSERT_TRUE(Amqp.ok);
-        TEST_ASSERT_EQUAL_UINT16(CASES[i].class_id, Amqp.method.class_id);
-        TEST_ASSERT_EQUAL_UINT16(CASES[i].method_id, Amqp.method.method_id);
-        TEST_ASSERT_EQUAL_UINT(sizeof(ARGS), Amqp.method.args_len);
-        TEST_ASSERT_EQUAL_HEX8_ARRAY(ARGS, Amqp.method.args, sizeof(ARGS));
+        TEST_ASSERT_TRUE(AmqpV.ok);
+        TEST_ASSERT_EQUAL_UINT16(CASES[i].class_id, AmqpV.method.class_id);
+        TEST_ASSERT_EQUAL_UINT16(CASES[i].method_id, AmqpV.method.method_id);
+        TEST_ASSERT_EQUAL_UINT(sizeof(ARGS), AmqpV.method.args_len);
+        TEST_ASSERT_EQUAL_HEX8_ARRAY(ARGS, AmqpV.method.args, sizeof(ARGS));
     }
 }
 
@@ -297,25 +297,25 @@ void test_method_round_trip_over_the_class_table(void)
 void test_method_payload_shorter_than_its_indices(void)
 {
     static const uint8_t SHORT[] = {0, 10, 0};
-    Amqp.payload.data = SHORT;
-    Amqp.payload.len = sizeof(SHORT);
+    AmqpV.payload.data = SHORT;
+    AmqpV.payload.len = sizeof(SHORT);
     Amqp.parse_method(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 
     // exactly four octets is a method with no arguments
     static const uint8_t BARE[] = {0, 10, 0, 51}; // connection.close-ok
-    Amqp.payload.data = BARE;
-    Amqp.payload.len = sizeof(BARE);
+    AmqpV.payload.data = BARE;
+    AmqpV.payload.len = sizeof(BARE);
     Amqp.parse_method(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT16(10u, Amqp.method.class_id);
-    TEST_ASSERT_EQUAL_UINT16(51u, Amqp.method.method_id);
-    TEST_ASSERT_EQUAL_UINT(0u, Amqp.method.args_len);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT16(10u, AmqpV.method.class_id);
+    TEST_ASSERT_EQUAL_UINT16(51u, AmqpV.method.method_id);
+    TEST_ASSERT_EQUAL_UINT(0u, AmqpV.method.args_len);
 
-    Amqp.payload.data = NULL;
-    Amqp.payload.len = 4;
+    AmqpV.payload.data = NULL;
+    AmqpV.payload.len = 4;
     Amqp.parse_method(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 }
 
 // sec 4.2.6.1: a content header payload is class-id(2) weight(2) body-size(8) property-flags(2)
@@ -327,17 +327,17 @@ void test_amqp091_content_header_layout(void)
     static const uint8_t PROPS[] = {0x0A, 't', 'e', 'x', 't', '/', 'p', 'l', 'a', 'i', 'n'};
     uint8_t buf[64];
 
-    Amqp.out.buf = buf;
-    Amqp.out.cap = sizeof(buf);
-    Amqp.frame.channel = 1;
-    Amqp.content.class_id = 60;
-    Amqp.content.body_size = 0x0102030405060708ull;
-    Amqp.content.property_flags = 0x8000;
-    Amqp.content.property_list = PROPS;
-    Amqp.content.property_list_len = sizeof(PROPS);
+    AmqpV.out.buf = buf;
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.frame.channel = 1;
+    AmqpV.content.class_id = 60;
+    AmqpV.content.body_size = 0x0102030405060708ull;
+    AmqpV.content.property_flags = 0x8000;
+    AmqpV.content.property_list = PROPS;
+    AmqpV.content.property_list_len = sizeof(PROPS);
     Amqp.build_content_header(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(8u + 14u + sizeof(PROPS), Amqp.n);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(8u + 14u + sizeof(PROPS), AmqpV.n);
 
     TEST_ASSERT_EQUAL_HEX8(AMQP_FRAME_HEADER, buf[0]);
     static const uint8_t HDR[7] = {AMQP_FRAME_HEADER, 0x00, 0x01, 0x00, 0x00, 0x00, 0x19}; // size 25
@@ -349,17 +349,17 @@ void test_amqp091_content_header_layout(void)
                                              0x80, 0x00};                                    // property-flags
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PAYLOAD_HEAD, buf + 7, 14);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(PROPS, buf + 21, sizeof(PROPS));
-    TEST_ASSERT_EQUAL_HEX8(AMQP_FRAME_END, buf[Amqp.n - 1]);
+    TEST_ASSERT_EQUAL_HEX8(AMQP_FRAME_END, buf[AmqpV.n - 1]);
 
     // and the whole thing parses back as one frame
-    Amqp.in.buf = buf;
-    Amqp.in.len = Amqp.n;
-    size_t built = Amqp.n;
+    AmqpV.in.buf = buf;
+    AmqpV.in.len = AmqpV.n;
+    size_t built = AmqpV.n;
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_HEADER, Amqp.frame.type);
-    TEST_ASSERT_EQUAL_UINT(built, Amqp.consumed);
-    TEST_ASSERT_EQUAL_UINT(built - AMQP_FRAME_OVERHEAD, Amqp.payload.len);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_HEADER, AmqpV.frame.type);
+    TEST_ASSERT_EQUAL_UINT(built, AmqpV.consumed);
+    TEST_ASSERT_EQUAL_UINT(built - AMQP_FRAME_OVERHEAD, AmqpV.payload.len);
 }
 
 // sec 4.2.7 / the sec 4.2.1 grammar `heartbeat = %d8 %d0 %d0 frame-end`: type 8, channel 0, empty
@@ -369,27 +369,27 @@ void test_amqp091_heartbeat(void)
     static const uint8_t WANT[8] = {8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, AMQP_FRAME_END};
     uint8_t buf[16];
 
-    Amqp.out.buf = buf;
-    Amqp.out.cap = sizeof(buf);
-    Amqp.frame.channel = 1234; // ignored: a heartbeat is always channel 0
-    Amqp.payload.data = WANT;
-    Amqp.payload.len = 8;
+    AmqpV.out.buf = buf;
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.frame.channel = 1234; // ignored: a heartbeat is always channel 0
+    AmqpV.payload.data = WANT;
+    AmqpV.payload.len = 8;
     Amqp.build_heartbeat(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(8u, Amqp.n);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(8u, AmqpV.n);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, buf, 8);
 
-    Amqp.in.buf = buf;
-    Amqp.in.len = 8;
+    AmqpV.in.buf = buf;
+    AmqpV.in.len = 8;
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_HEARTBEAT, Amqp.frame.type);
-    TEST_ASSERT_EQUAL_UINT16(0u, Amqp.frame.channel);
-    TEST_ASSERT_EQUAL_UINT(0u, Amqp.payload.len);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(AMQP_FRAME_HEARTBEAT, AmqpV.frame.type);
+    TEST_ASSERT_EQUAL_UINT16(0u, AmqpV.frame.channel);
+    TEST_ASSERT_EQUAL_UINT(0u, AmqpV.payload.len);
 
-    Amqp.out.cap = 7;
+    AmqpV.out.cap = 7;
     Amqp.build_heartbeat(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 }
 
 // Every build refuses a buffer one octet short of the frame it would write, and refuses a payload
@@ -400,57 +400,57 @@ void test_builds_refuse_a_short_buffer(void)
     static const uint8_t P[] = {1, 2, 3, 4};
     uint8_t buf[64];
 
-    Amqp.out.buf = buf;
-    Amqp.frame.type = AMQP_FRAME_BODY;
-    Amqp.frame.channel = 1;
-    Amqp.payload.data = P;
-    Amqp.payload.len = sizeof(P);
-    Amqp.out.cap = 12;
+    AmqpV.out.buf = buf;
+    AmqpV.frame.type = AMQP_FRAME_BODY;
+    AmqpV.frame.channel = 1;
+    AmqpV.payload.data = P;
+    AmqpV.payload.len = sizeof(P);
+    AmqpV.out.cap = 12;
     Amqp.build_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(12u, Amqp.n);
-    Amqp.out.cap = 11;
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(12u, AmqpV.n);
+    AmqpV.out.cap = 11;
     Amqp.build_frame(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Amqp.n);
+    TEST_ASSERT_FALSE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, AmqpV.n);
 
-    Amqp.out.cap = sizeof(buf);
-    Amqp.payload.data = NULL;
-    Amqp.payload.len = 4;
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.payload.data = NULL;
+    AmqpV.payload.len = 4;
     Amqp.build_frame(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 
-    Amqp.out.buf = NULL;
-    Amqp.payload.data = P;
+    AmqpV.out.buf = NULL;
+    AmqpV.payload.data = P;
     Amqp.build_frame(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 
-    Amqp.out.buf = buf;
-    Amqp.method.args = P;
-    Amqp.method.args_len = sizeof(P);
-    Amqp.out.cap = 16; // 8 overhead + 4 indices + 4 args
+    AmqpV.out.buf = buf;
+    AmqpV.method.args = P;
+    AmqpV.method.args_len = sizeof(P);
+    AmqpV.out.cap = 16; // 8 overhead + 4 indices + 4 args
     Amqp.build_method(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    Amqp.out.cap = 15;
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    AmqpV.out.cap = 15;
     Amqp.build_method(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
-    Amqp.out.cap = sizeof(buf);
-    Amqp.method.args = NULL;
+    TEST_ASSERT_FALSE(AmqpV.ok);
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.method.args = NULL;
     Amqp.build_method(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 
-    Amqp.content.property_list = P;
-    Amqp.content.property_list_len = sizeof(P);
-    Amqp.out.cap = 26; // 8 overhead + 14 fixed fields + 4 list
+    AmqpV.content.property_list = P;
+    AmqpV.content.property_list_len = sizeof(P);
+    AmqpV.out.cap = 26; // 8 overhead + 14 fixed fields + 4 list
     Amqp.build_content_header(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    Amqp.out.cap = 25;
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    AmqpV.out.cap = 25;
     Amqp.build_content_header(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
-    Amqp.out.cap = sizeof(buf);
-    Amqp.content.property_list = NULL;
+    TEST_ASSERT_FALSE(AmqpV.ok);
+    AmqpV.out.cap = sizeof(buf);
+    AmqpV.content.property_list = NULL;
     Amqp.build_content_header(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 }
 
 // A size field naming more octets than are buffered is a need-more and never a read past the end,
@@ -467,25 +467,25 @@ void test_an_oversized_size_field_is_refused(void)
     frame[6] = 0xFF; // size 4294967295
     frame[7] = AMQP_FRAME_END;
 
-    Amqp.in.buf = frame;
-    Amqp.in.len = sizeof(frame);
+    AmqpV.in.buf = frame;
+    AmqpV.in.len = sizeof(frame);
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, Amqp.consumed);
+    TEST_ASSERT_FALSE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, AmqpV.consumed);
 
     // one octet more than is present is refused just the same
     frame[3] = 0;
     frame[4] = 0;
     frame[5] = 0;
     frame[6] = 9; // 8 overhead + 9 payload needs 17 octets
-    Amqp.in.len = sizeof(frame);
+    AmqpV.in.len = sizeof(frame);
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_FALSE(Amqp.ok);
+    TEST_ASSERT_FALSE(AmqpV.ok);
 
     frame[6] = 8; // 8 overhead + 8 payload is exactly the buffer
     frame[15] = AMQP_FRAME_END;
-    Amqp.in.len = sizeof(frame);
+    AmqpV.in.len = sizeof(frame);
     Amqp.parse_frame(amqp_work);
-    TEST_ASSERT_TRUE(Amqp.ok);
-    TEST_ASSERT_EQUAL_UINT(16u, Amqp.consumed);
+    TEST_ASSERT_TRUE(AmqpV.ok);
+    TEST_ASSERT_EQUAL_UINT(16u, AmqpV.consumed);
 }

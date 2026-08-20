@@ -456,12 +456,18 @@ typedef struct
     J1939DecodeVdArgs decode_vd_args;
     J1939DecodeCcvsArgs decode_ccvs_args;
     J1939DecodeDm1Args decode_dm1_args;
-
     proto_bool ok;
     uint64_t value;
     uint8_t u8;
     J1939TpResult tp;
+} J1939Vars;
 
+/** @brief The operands and the outcome. */
+extern J1939Vars J1939V;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const encode_id)(uint8_t *restrict work);
     void (*const decode_id)(uint8_t *restrict work);
     void (*const build_message)(uint8_t *restrict work);
@@ -483,8 +489,53 @@ typedef struct
     void (*const decode_dm1)(uint8_t *restrict work);
 } J1939Ns;
 
-/** @brief The one symbol this module exports. */
-extern J1939Ns J1939;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in J1939V or a region of the borrow at a fixed offset.
+void protocore_j1939_encode_id(uint8_t *restrict work);
+void protocore_j1939_decode_id(uint8_t *restrict work);
+void protocore_j1939_build_message(uint8_t *restrict work);
+void protocore_j1939_build_request(uint8_t *restrict work);
+void protocore_j1939_build_address_claim(uint8_t *restrict work);
+void protocore_j1939_build_name(uint8_t *restrict work);
+void protocore_j1939_tp_num_packets(uint8_t *restrict work);
+void protocore_j1939_build_bam_cm(uint8_t *restrict work);
+void protocore_j1939_build_tp_dt(uint8_t *restrict work);
+void protocore_j1939_tp_reset(uint8_t *restrict work);
+void protocore_j1939_tp_feed(uint8_t *restrict work);
+void protocore_j1939_decode_eec1(uint8_t *restrict work);
+void protocore_j1939_decode_et1(uint8_t *restrict work);
+void protocore_j1939_decode_lfe(uint8_t *restrict work);
+void protocore_j1939_decode_amb(uint8_t *restrict work);
+void protocore_j1939_decode_ic1(uint8_t *restrict work);
+void protocore_j1939_decode_vd(uint8_t *restrict work);
+void protocore_j1939_decode_ccvs(uint8_t *restrict work);
+void protocore_j1939_decode_dm1(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `J1939.encode_id(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const J1939Ns J1939 __attribute__((unused)) = {
+    .encode_id = protocore_j1939_encode_id,
+    .decode_id = protocore_j1939_decode_id,
+    .build_message = protocore_j1939_build_message,
+    .build_request = protocore_j1939_build_request,
+    .build_address_claim = protocore_j1939_build_address_claim,
+    .build_name = protocore_j1939_build_name,
+    .tp_num_packets = protocore_j1939_tp_num_packets,
+    .build_bam_cm = protocore_j1939_build_bam_cm,
+    .build_tp_dt = protocore_j1939_build_tp_dt,
+    .tp_reset = protocore_j1939_tp_reset,
+    .tp_feed = protocore_j1939_tp_feed,
+    .decode_eec1 = protocore_j1939_decode_eec1,
+    .decode_et1 = protocore_j1939_decode_et1,
+    .decode_lfe = protocore_j1939_decode_lfe,
+    .decode_amb = protocore_j1939_decode_amb,
+    .decode_ic1 = protocore_j1939_decode_ic1,
+    .decode_vd = protocore_j1939_decode_vd,
+    .decode_ccvs = protocore_j1939_decode_ccvs,
+    .decode_dm1 = protocore_j1939_decode_dm1,
+};
 
 /**
  * @brief The PROTOCORE_J1939_BORROW bytes this module's state lives in.

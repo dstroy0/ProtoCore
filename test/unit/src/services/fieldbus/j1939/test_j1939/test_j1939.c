@@ -68,22 +68,22 @@ void test_published_pgn_registry(void)
 void test_published_identifiers(void)
 {
     uint32_t id = 0;
-    J1939.encode_id_args.id = &id;
-    J1939.encode_id_args.priority = 3;
-    J1939.encode_id_args.pgn = J1939_PGN_EEC1;
-    J1939.encode_id_args.sa = 0x00;
-    J1939.encode_id_args.da = J1939_ADDR_GLOBAL;
+    J1939V.encode_id_args.id = &id;
+    J1939V.encode_id_args.priority = 3;
+    J1939V.encode_id_args.pgn = J1939_PGN_EEC1;
+    J1939V.encode_id_args.sa = 0x00;
+    J1939V.encode_id_args.da = J1939_ADDR_GLOBAL;
     J1939.encode_id(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_HEX32(0x0CF00400u, id);
 
     CanFrame f;
-    J1939.build_request_args.out = &f;
-    J1939.build_request_args.sa = 0xF9;
-    J1939.build_request_args.da = J1939_ADDR_GLOBAL;
-    J1939.build_request_args.requested_pgn = J1939_PGN_EEC1;
+    J1939V.build_request_args.out = &f;
+    J1939V.build_request_args.sa = 0xF9;
+    J1939V.build_request_args.da = J1939_ADDR_GLOBAL;
+    J1939V.build_request_args.requested_pgn = J1939_PGN_EEC1;
     J1939.build_request(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_HEX32(0x18EAFFF9u, f.id);
     TEST_ASSERT_TRUE(f.extended);
     TEST_ASSERT_FALSE(f.rtr);
@@ -93,31 +93,31 @@ void test_published_identifiers(void)
     TEST_ASSERT_EQUAL_HEX8(0xF0u, f.data[1]);
     TEST_ASSERT_EQUAL_HEX8(0x00u, f.data[2]);
 
-    J1939.build_address_claim_args.out = &f;
-    J1939.build_address_claim_args.sa = 0x80;
-    J1939.build_address_claim_args.name = 0u;
+    J1939V.build_address_claim_args.out = &f;
+    J1939V.build_address_claim_args.sa = 0x80;
+    J1939V.build_address_claim_args.name = 0u;
     J1939.build_address_claim(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_HEX32(0x18EEFF80u, f.id);
     TEST_ASSERT_EQUAL_UINT8(8u, f.dlc);
 
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x00;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_EEC1;
-    J1939.build_bam_cm_args.total_size = 16;
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x00;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_EEC1;
+    J1939V.build_bam_cm_args.total_size = 16;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_HEX32(0x1CECFF00u, f.id);
 
     static const uint8_t CHUNK[7] = {1, 2, 3, 4, 5, 6, 7};
-    J1939.build_tp_dt_args.out = &f;
-    J1939.build_tp_dt_args.sa = 0x00;
-    J1939.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
-    J1939.build_tp_dt_args.seq = 1;
-    J1939.build_tp_dt_args.chunk = CHUNK;
-    J1939.build_tp_dt_args.chunk_len = sizeof(CHUNK);
+    J1939V.build_tp_dt_args.out = &f;
+    J1939V.build_tp_dt_args.sa = 0x00;
+    J1939V.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
+    J1939V.build_tp_dt_args.seq = 1;
+    J1939V.build_tp_dt_args.chunk = CHUNK;
+    J1939V.build_tp_dt_args.chunk_len = sizeof(CHUNK);
     J1939.build_tp_dt(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_HEX32(0x1CEBFF00u, f.id);
 }
 
@@ -129,17 +129,17 @@ void test_pdu1_and_pdu2_boundary(void)
     J1939Id d;
 
     // PF 0xEF: the last PDU1 format. The PGN's low octet is dropped and the destination takes it.
-    J1939.encode_id_args.id = &id;
-    J1939.encode_id_args.priority = 6;
-    J1939.encode_id_args.pgn = 0x00EF00u;
-    J1939.encode_id_args.sa = 0x11;
-    J1939.encode_id_args.da = 0x22;
+    J1939V.encode_id_args.id = &id;
+    J1939V.encode_id_args.priority = 6;
+    J1939V.encode_id_args.pgn = 0x00EF00u;
+    J1939V.encode_id_args.sa = 0x11;
+    J1939V.encode_id_args.da = 0x22;
     J1939.encode_id(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.decode_id_args.id = id;
-    J1939.decode_id_args.out = &d;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.decode_id_args.id = id;
+    J1939V.decode_id_args.out = &d;
     J1939.decode_id(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_TRUE(d.pdu1);
     TEST_ASSERT_EQUAL_HEX32(0x00EF00u, d.pgn);
     TEST_ASSERT_EQUAL_HEX8(0x22u, d.da);
@@ -147,63 +147,63 @@ void test_pdu1_and_pdu2_boundary(void)
     TEST_ASSERT_EQUAL_HEX8(0x11u, d.sa);
 
     // PF 0xF0: the first PDU2 format. The destination argument is ignored and PS is the PGN.
-    J1939.encode_id_args.id = &id;
-    J1939.encode_id_args.priority = 6;
-    J1939.encode_id_args.pgn = 0x00F004u;
-    J1939.encode_id_args.sa = 0x11;
-    J1939.encode_id_args.da = 0x22;
+    J1939V.encode_id_args.id = &id;
+    J1939V.encode_id_args.priority = 6;
+    J1939V.encode_id_args.pgn = 0x00F004u;
+    J1939V.encode_id_args.sa = 0x11;
+    J1939V.encode_id_args.da = 0x22;
     J1939.encode_id(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.decode_id_args.id = id;
-    J1939.decode_id_args.out = &d;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.decode_id_args.id = id;
+    J1939V.decode_id_args.out = &d;
     J1939.decode_id(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_FALSE(d.pdu1);
     TEST_ASSERT_EQUAL_HEX32(0x00F004u, d.pgn);
     TEST_ASSERT_EQUAL_HEX8(J1939_ADDR_GLOBAL, d.da);
     TEST_ASSERT_EQUAL_HEX8(0x04u, d.ps);
 
     // EDP and DP are the PGN's two high bits and survive the round trip.
-    J1939.encode_id_args.id = &id;
-    J1939.encode_id_args.priority = 0;
-    J1939.encode_id_args.pgn = 0x3FF00u;
-    J1939.encode_id_args.sa = 0x33;
-    J1939.encode_id_args.da = J1939_ADDR_GLOBAL;
+    J1939V.encode_id_args.id = &id;
+    J1939V.encode_id_args.priority = 0;
+    J1939V.encode_id_args.pgn = 0x3FF00u;
+    J1939V.encode_id_args.sa = 0x33;
+    J1939V.encode_id_args.da = J1939_ADDR_GLOBAL;
     J1939.encode_id(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.decode_id_args.id = id;
-    J1939.decode_id_args.out = &d;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.decode_id_args.id = id;
+    J1939V.decode_id_args.out = &d;
     J1939.decode_id(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_HEX32(0x3FF00u, d.pgn);
     TEST_ASSERT_EQUAL_UINT8(0u, d.priority);
 
     // A priority above 7 or a PGN above 18 bits has no encoding.
-    J1939.encode_id_args.id = &id;
-    J1939.encode_id_args.priority = 8;
-    J1939.encode_id_args.pgn = J1939_PGN_EEC1;
-    J1939.encode_id_args.sa = 0;
-    J1939.encode_id_args.da = 0;
+    J1939V.encode_id_args.id = &id;
+    J1939V.encode_id_args.priority = 8;
+    J1939V.encode_id_args.pgn = J1939_PGN_EEC1;
+    J1939V.encode_id_args.sa = 0;
+    J1939V.encode_id_args.da = 0;
     J1939.encode_id(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
-    J1939.encode_id_args.id = &id;
-    J1939.encode_id_args.priority = 0;
-    J1939.encode_id_args.pgn = 0x40000u;
-    J1939.encode_id_args.sa = 0;
-    J1939.encode_id_args.da = 0;
+    TEST_ASSERT_FALSE(J1939V.ok);
+    J1939V.encode_id_args.id = &id;
+    J1939V.encode_id_args.priority = 0;
+    J1939V.encode_id_args.pgn = 0x40000u;
+    J1939V.encode_id_args.sa = 0;
+    J1939V.encode_id_args.da = 0;
     J1939.encode_id(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
-    J1939.encode_id_args.id = NULL;
-    J1939.encode_id_args.priority = 0;
-    J1939.encode_id_args.pgn = J1939_PGN_EEC1;
-    J1939.encode_id_args.sa = 0;
-    J1939.encode_id_args.da = 0;
+    TEST_ASSERT_FALSE(J1939V.ok);
+    J1939V.encode_id_args.id = NULL;
+    J1939V.encode_id_args.priority = 0;
+    J1939V.encode_id_args.pgn = J1939_PGN_EEC1;
+    J1939V.encode_id_args.sa = 0;
+    J1939V.encode_id_args.da = 0;
     J1939.encode_id(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
-    J1939.decode_id_args.id = id;
-    J1939.decode_id_args.out = NULL;
+    TEST_ASSERT_FALSE(J1939V.ok);
+    J1939V.decode_id_args.id = id;
+    J1939V.decode_id_args.out = NULL;
     J1939.decode_id(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
+    TEST_ASSERT_FALSE(J1939V.ok);
 }
 
 // J1939-81 packs NAME LSB-first: identity 0..20, manufacturer 21..31, ECU instance 32..34,
@@ -212,124 +212,124 @@ void test_pdu1_and_pdu2_boundary(void)
 // time shows each lands on its own bits, and the frame carries NAME little-endian.
 void test_name_bit_layout(void)
 {
-    J1939.build_name_args.arbitrary_address_capable = 0;
-    J1939.build_name_args.industry_group = 0;
-    J1939.build_name_args.vehicle_system_instance = 0;
-    J1939.build_name_args.vehicle_system = 0;
-    J1939.build_name_args.function = 0;
-    J1939.build_name_args.function_instance = 0;
-    J1939.build_name_args.ecu_instance = 0;
-    J1939.build_name_args.manufacturer_code = 0;
-    J1939.build_name_args.identity_number = 0x1FFFFF;
+    J1939V.build_name_args.arbitrary_address_capable = 0;
+    J1939V.build_name_args.industry_group = 0;
+    J1939V.build_name_args.vehicle_system_instance = 0;
+    J1939V.build_name_args.vehicle_system = 0;
+    J1939V.build_name_args.function = 0;
+    J1939V.build_name_args.function_instance = 0;
+    J1939V.build_name_args.ecu_instance = 0;
+    J1939V.build_name_args.manufacturer_code = 0;
+    J1939V.build_name_args.identity_number = 0x1FFFFF;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0x00000000001FFFFFull, J1939.value);
-    J1939.build_name_args.arbitrary_address_capable = 0;
-    J1939.build_name_args.industry_group = 0;
-    J1939.build_name_args.vehicle_system_instance = 0;
-    J1939.build_name_args.vehicle_system = 0;
-    J1939.build_name_args.function = 0;
-    J1939.build_name_args.function_instance = 0;
-    J1939.build_name_args.ecu_instance = 0;
-    J1939.build_name_args.manufacturer_code = 0x7FF;
-    J1939.build_name_args.identity_number = 0;
+    TEST_ASSERT_EQUAL_HEX64(0x00000000001FFFFFull, J1939V.value);
+    J1939V.build_name_args.arbitrary_address_capable = 0;
+    J1939V.build_name_args.industry_group = 0;
+    J1939V.build_name_args.vehicle_system_instance = 0;
+    J1939V.build_name_args.vehicle_system = 0;
+    J1939V.build_name_args.function = 0;
+    J1939V.build_name_args.function_instance = 0;
+    J1939V.build_name_args.ecu_instance = 0;
+    J1939V.build_name_args.manufacturer_code = 0x7FF;
+    J1939V.build_name_args.identity_number = 0;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0x00000000FFE00000ull, J1939.value);
-    J1939.build_name_args.arbitrary_address_capable = 0;
-    J1939.build_name_args.industry_group = 0;
-    J1939.build_name_args.vehicle_system_instance = 0;
-    J1939.build_name_args.vehicle_system = 0;
-    J1939.build_name_args.function = 0;
-    J1939.build_name_args.function_instance = 0;
-    J1939.build_name_args.ecu_instance = 7;
-    J1939.build_name_args.manufacturer_code = 0;
-    J1939.build_name_args.identity_number = 0;
+    TEST_ASSERT_EQUAL_HEX64(0x00000000FFE00000ull, J1939V.value);
+    J1939V.build_name_args.arbitrary_address_capable = 0;
+    J1939V.build_name_args.industry_group = 0;
+    J1939V.build_name_args.vehicle_system_instance = 0;
+    J1939V.build_name_args.vehicle_system = 0;
+    J1939V.build_name_args.function = 0;
+    J1939V.build_name_args.function_instance = 0;
+    J1939V.build_name_args.ecu_instance = 7;
+    J1939V.build_name_args.manufacturer_code = 0;
+    J1939V.build_name_args.identity_number = 0;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0x0000000700000000ull, J1939.value);
-    J1939.build_name_args.arbitrary_address_capable = 0;
-    J1939.build_name_args.industry_group = 0;
-    J1939.build_name_args.vehicle_system_instance = 0;
-    J1939.build_name_args.vehicle_system = 0;
-    J1939.build_name_args.function = 0;
-    J1939.build_name_args.function_instance = 0x1F;
-    J1939.build_name_args.ecu_instance = 0;
-    J1939.build_name_args.manufacturer_code = 0;
-    J1939.build_name_args.identity_number = 0;
+    TEST_ASSERT_EQUAL_HEX64(0x0000000700000000ull, J1939V.value);
+    J1939V.build_name_args.arbitrary_address_capable = 0;
+    J1939V.build_name_args.industry_group = 0;
+    J1939V.build_name_args.vehicle_system_instance = 0;
+    J1939V.build_name_args.vehicle_system = 0;
+    J1939V.build_name_args.function = 0;
+    J1939V.build_name_args.function_instance = 0x1F;
+    J1939V.build_name_args.ecu_instance = 0;
+    J1939V.build_name_args.manufacturer_code = 0;
+    J1939V.build_name_args.identity_number = 0;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0x000000F800000000ull, J1939.value);
-    J1939.build_name_args.arbitrary_address_capable = 0;
-    J1939.build_name_args.industry_group = 0;
-    J1939.build_name_args.vehicle_system_instance = 0;
-    J1939.build_name_args.vehicle_system = 0;
-    J1939.build_name_args.function = 0xFF;
-    J1939.build_name_args.function_instance = 0;
-    J1939.build_name_args.ecu_instance = 0;
-    J1939.build_name_args.manufacturer_code = 0;
-    J1939.build_name_args.identity_number = 0;
+    TEST_ASSERT_EQUAL_HEX64(0x000000F800000000ull, J1939V.value);
+    J1939V.build_name_args.arbitrary_address_capable = 0;
+    J1939V.build_name_args.industry_group = 0;
+    J1939V.build_name_args.vehicle_system_instance = 0;
+    J1939V.build_name_args.vehicle_system = 0;
+    J1939V.build_name_args.function = 0xFF;
+    J1939V.build_name_args.function_instance = 0;
+    J1939V.build_name_args.ecu_instance = 0;
+    J1939V.build_name_args.manufacturer_code = 0;
+    J1939V.build_name_args.identity_number = 0;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0x0000FF0000000000ull, J1939.value);
-    J1939.build_name_args.arbitrary_address_capable = 0;
-    J1939.build_name_args.industry_group = 0;
-    J1939.build_name_args.vehicle_system_instance = 0;
-    J1939.build_name_args.vehicle_system = 0x7F;
-    J1939.build_name_args.function = 0;
-    J1939.build_name_args.function_instance = 0;
-    J1939.build_name_args.ecu_instance = 0;
-    J1939.build_name_args.manufacturer_code = 0;
-    J1939.build_name_args.identity_number = 0;
+    TEST_ASSERT_EQUAL_HEX64(0x0000FF0000000000ull, J1939V.value);
+    J1939V.build_name_args.arbitrary_address_capable = 0;
+    J1939V.build_name_args.industry_group = 0;
+    J1939V.build_name_args.vehicle_system_instance = 0;
+    J1939V.build_name_args.vehicle_system = 0x7F;
+    J1939V.build_name_args.function = 0;
+    J1939V.build_name_args.function_instance = 0;
+    J1939V.build_name_args.ecu_instance = 0;
+    J1939V.build_name_args.manufacturer_code = 0;
+    J1939V.build_name_args.identity_number = 0;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0x00FE000000000000ull, J1939.value);
-    J1939.build_name_args.arbitrary_address_capable = 0;
-    J1939.build_name_args.industry_group = 0;
-    J1939.build_name_args.vehicle_system_instance = 0x0F;
-    J1939.build_name_args.vehicle_system = 0;
-    J1939.build_name_args.function = 0;
-    J1939.build_name_args.function_instance = 0;
-    J1939.build_name_args.ecu_instance = 0;
-    J1939.build_name_args.manufacturer_code = 0;
-    J1939.build_name_args.identity_number = 0;
+    TEST_ASSERT_EQUAL_HEX64(0x00FE000000000000ull, J1939V.value);
+    J1939V.build_name_args.arbitrary_address_capable = 0;
+    J1939V.build_name_args.industry_group = 0;
+    J1939V.build_name_args.vehicle_system_instance = 0x0F;
+    J1939V.build_name_args.vehicle_system = 0;
+    J1939V.build_name_args.function = 0;
+    J1939V.build_name_args.function_instance = 0;
+    J1939V.build_name_args.ecu_instance = 0;
+    J1939V.build_name_args.manufacturer_code = 0;
+    J1939V.build_name_args.identity_number = 0;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0x0F00000000000000ull, J1939.value);
-    J1939.build_name_args.arbitrary_address_capable = 0;
-    J1939.build_name_args.industry_group = 7;
-    J1939.build_name_args.vehicle_system_instance = 0;
-    J1939.build_name_args.vehicle_system = 0;
-    J1939.build_name_args.function = 0;
-    J1939.build_name_args.function_instance = 0;
-    J1939.build_name_args.ecu_instance = 0;
-    J1939.build_name_args.manufacturer_code = 0;
-    J1939.build_name_args.identity_number = 0;
+    TEST_ASSERT_EQUAL_HEX64(0x0F00000000000000ull, J1939V.value);
+    J1939V.build_name_args.arbitrary_address_capable = 0;
+    J1939V.build_name_args.industry_group = 7;
+    J1939V.build_name_args.vehicle_system_instance = 0;
+    J1939V.build_name_args.vehicle_system = 0;
+    J1939V.build_name_args.function = 0;
+    J1939V.build_name_args.function_instance = 0;
+    J1939V.build_name_args.ecu_instance = 0;
+    J1939V.build_name_args.manufacturer_code = 0;
+    J1939V.build_name_args.identity_number = 0;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0x7000000000000000ull, J1939.value);
-    J1939.build_name_args.arbitrary_address_capable = 1;
-    J1939.build_name_args.industry_group = 0;
-    J1939.build_name_args.vehicle_system_instance = 0;
-    J1939.build_name_args.vehicle_system = 0;
-    J1939.build_name_args.function = 0;
-    J1939.build_name_args.function_instance = 0;
-    J1939.build_name_args.ecu_instance = 0;
-    J1939.build_name_args.manufacturer_code = 0;
-    J1939.build_name_args.identity_number = 0;
+    TEST_ASSERT_EQUAL_HEX64(0x7000000000000000ull, J1939V.value);
+    J1939V.build_name_args.arbitrary_address_capable = 1;
+    J1939V.build_name_args.industry_group = 0;
+    J1939V.build_name_args.vehicle_system_instance = 0;
+    J1939V.build_name_args.vehicle_system = 0;
+    J1939V.build_name_args.function = 0;
+    J1939V.build_name_args.function_instance = 0;
+    J1939V.build_name_args.ecu_instance = 0;
+    J1939V.build_name_args.manufacturer_code = 0;
+    J1939V.build_name_args.identity_number = 0;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0x8000000000000000ull, J1939.value);
+    TEST_ASSERT_EQUAL_HEX64(0x8000000000000000ull, J1939V.value);
     // Bit 48 is reserved and no field reaches it.
-    J1939.build_name_args.arbitrary_address_capable = 1;
-    J1939.build_name_args.industry_group = 7;
-    J1939.build_name_args.vehicle_system_instance = 0x0F;
-    J1939.build_name_args.vehicle_system = 0x7F;
-    J1939.build_name_args.function = 0xFF;
-    J1939.build_name_args.function_instance = 0x1F;
-    J1939.build_name_args.ecu_instance = 7;
-    J1939.build_name_args.manufacturer_code = 0x7FF;
-    J1939.build_name_args.identity_number = 0x1FFFFF;
+    J1939V.build_name_args.arbitrary_address_capable = 1;
+    J1939V.build_name_args.industry_group = 7;
+    J1939V.build_name_args.vehicle_system_instance = 0x0F;
+    J1939V.build_name_args.vehicle_system = 0x7F;
+    J1939V.build_name_args.function = 0xFF;
+    J1939V.build_name_args.function_instance = 0x1F;
+    J1939V.build_name_args.ecu_instance = 7;
+    J1939V.build_name_args.manufacturer_code = 0x7FF;
+    J1939V.build_name_args.identity_number = 0x1FFFFF;
     J1939.build_name(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_HEX64(0xFFFEFFFFFFFFFFFFull, J1939.value);
+    TEST_ASSERT_EQUAL_HEX64(0xFFFEFFFFFFFFFFFFull, J1939V.value);
 
     CanFrame f;
-    J1939.build_address_claim_args.out = &f;
-    J1939.build_address_claim_args.sa = 0x80;
-    J1939.build_address_claim_args.name = 0x0123456789ABCDEFull;
+    J1939V.build_address_claim_args.out = &f;
+    J1939V.build_address_claim_args.sa = 0x80;
+    J1939V.build_address_claim_args.name = 0x0123456789ABCDEFull;
     J1939.build_address_claim(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     static const uint8_t LE[8] = {0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01};
     TEST_ASSERT_EQUAL_HEX8_ARRAY(LE, f.data, sizeof(LE));
 }
@@ -340,47 +340,47 @@ void test_single_frame_padding(void)
 {
     static const uint8_t DATA[3] = {0x11, 0x22, 0x33};
     CanFrame f;
-    J1939.build_message_args.out = &f;
-    J1939.build_message_args.priority = 3;
-    J1939.build_message_args.pgn = J1939_PGN_EEC1;
-    J1939.build_message_args.sa = 0x00;
-    J1939.build_message_args.da = J1939_ADDR_GLOBAL;
-    J1939.build_message_args.data = DATA;
-    J1939.build_message_args.len = 3;
+    J1939V.build_message_args.out = &f;
+    J1939V.build_message_args.priority = 3;
+    J1939V.build_message_args.pgn = J1939_PGN_EEC1;
+    J1939V.build_message_args.sa = 0x00;
+    J1939V.build_message_args.da = J1939_ADDR_GLOBAL;
+    J1939V.build_message_args.data = DATA;
+    J1939V.build_message_args.len = 3;
     J1939.build_message(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_UINT8(3u, f.dlc);
     TEST_ASSERT_EQUAL_HEX8_ARRAY(DATA, f.data, 3);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, f.data[3]);
     TEST_ASSERT_EQUAL_HEX8(0xFFu, f.data[7]);
 
-    J1939.build_message_args.out = &f;
-    J1939.build_message_args.priority = 3;
-    J1939.build_message_args.pgn = J1939_PGN_EEC1;
-    J1939.build_message_args.sa = 0;
-    J1939.build_message_args.da = 0xFF;
-    J1939.build_message_args.data = DATA;
-    J1939.build_message_args.len = 9;
+    J1939V.build_message_args.out = &f;
+    J1939V.build_message_args.priority = 3;
+    J1939V.build_message_args.pgn = J1939_PGN_EEC1;
+    J1939V.build_message_args.sa = 0;
+    J1939V.build_message_args.da = 0xFF;
+    J1939V.build_message_args.data = DATA;
+    J1939V.build_message_args.len = 9;
     J1939.build_message(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok); // over 8 octets
-    J1939.build_message_args.out = &f;
-    J1939.build_message_args.priority = 3;
-    J1939.build_message_args.pgn = J1939_PGN_EEC1;
-    J1939.build_message_args.sa = 0;
-    J1939.build_message_args.da = 0xFF;
-    J1939.build_message_args.data = NULL;
-    J1939.build_message_args.len = 3;
+    TEST_ASSERT_FALSE(J1939V.ok); // over 8 octets
+    J1939V.build_message_args.out = &f;
+    J1939V.build_message_args.priority = 3;
+    J1939V.build_message_args.pgn = J1939_PGN_EEC1;
+    J1939V.build_message_args.sa = 0;
+    J1939V.build_message_args.da = 0xFF;
+    J1939V.build_message_args.data = NULL;
+    J1939V.build_message_args.len = 3;
     J1939.build_message(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
-    J1939.build_message_args.out = NULL;
-    J1939.build_message_args.priority = 3;
-    J1939.build_message_args.pgn = J1939_PGN_EEC1;
-    J1939.build_message_args.sa = 0;
-    J1939.build_message_args.da = 0xFF;
-    J1939.build_message_args.data = DATA;
-    J1939.build_message_args.len = 3;
+    TEST_ASSERT_FALSE(J1939V.ok);
+    J1939V.build_message_args.out = NULL;
+    J1939V.build_message_args.priority = 3;
+    J1939V.build_message_args.pgn = J1939_PGN_EEC1;
+    J1939V.build_message_args.sa = 0;
+    J1939V.build_message_args.da = 0xFF;
+    J1939V.build_message_args.data = DATA;
+    J1939V.build_message_args.len = 3;
     J1939.build_message(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
+    TEST_ASSERT_FALSE(J1939V.ok);
 }
 
 // A TP.DT packet carries seven octets, so a message of N octets needs ceil(N / 7) packets. The BAM
@@ -388,26 +388,26 @@ void test_single_frame_padding(void)
 // transported PGN little-endian.
 void test_bam_announce(void)
 {
-    J1939.tp_num_packets_args.total_size = 9;
+    J1939V.tp_num_packets_args.total_size = 9;
     J1939.tp_num_packets(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_UINT8(2u, J1939.u8); // 7 + 2
-    J1939.tp_num_packets_args.total_size = 14;
+    TEST_ASSERT_EQUAL_UINT8(2u, J1939V.u8); // 7 + 2
+    J1939V.tp_num_packets_args.total_size = 14;
     J1939.tp_num_packets(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_UINT8(2u, J1939.u8); // exactly two full packets
-    J1939.tp_num_packets_args.total_size = 15;
+    TEST_ASSERT_EQUAL_UINT8(2u, J1939V.u8); // exactly two full packets
+    J1939V.tp_num_packets_args.total_size = 15;
     J1939.tp_num_packets(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_UINT8(3u, J1939.u8);
-    J1939.tp_num_packets_args.total_size = 16;
+    TEST_ASSERT_EQUAL_UINT8(3u, J1939V.u8);
+    J1939V.tp_num_packets_args.total_size = 16;
     J1939.tp_num_packets(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_UINT8(3u, J1939.u8);
+    TEST_ASSERT_EQUAL_UINT8(3u, J1939V.u8);
 
     CanFrame f;
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = 16;
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = 16;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     static const uint8_t WANT[8] = {
         0x20,             // BAM
         0x10, 0x00,       // 16 octets, little-endian
@@ -418,36 +418,36 @@ void test_bam_announce(void)
     TEST_ASSERT_EQUAL_HEX8_ARRAY(WANT, f.data, sizeof(WANT));
 
     // BAM is for messages the single frame cannot carry: 9 octets up to the reassembly limit.
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = 8;
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = 8;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = 9;
+    TEST_ASSERT_FALSE(J1939V.ok);
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = 9;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = PROTOCORE_J1939_TP_MAX;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = PROTOCORE_J1939_TP_MAX;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = PROTOCORE_J1939_TP_MAX + 1;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = PROTOCORE_J1939_TP_MAX + 1;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
-    J1939.build_bam_cm_args.out = NULL;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = 16;
+    TEST_ASSERT_FALSE(J1939V.ok);
+    J1939V.build_bam_cm_args.out = NULL;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = 16;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
+    TEST_ASSERT_FALSE(J1939V.ok);
 }
 
 // A whole broadcast transfer reassembles to exactly the octets that were sent, and the sequence
@@ -457,20 +457,20 @@ void test_transport_protocol_reassembly(void)
     static const uint8_t MSG[16] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
                                     0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
     J1939TpRx rx;
-    J1939.tp_reset_args.rx = &rx;
+    J1939V.tp_reset_args.rx = &rx;
     J1939.tp_reset(protocore_j1939_span());
 
     CanFrame f;
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = (uint16_t)sizeof(MSG);
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = (uint16_t)sizeof(MSG);
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.tp_feed_args.rx = &rx;
-    J1939.tp_feed_args.f = &f;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.tp_feed_args.rx = &rx;
+    J1939V.tp_feed_args.f = &f;
     J1939.tp_feed(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_INT(J1939_TP_STARTED, J1939.tp);
+    TEST_ASSERT_EQUAL_INT(J1939_TP_STARTED, J1939V.tp);
     TEST_ASSERT_EQUAL_UINT16(sizeof(MSG), rx.total_size);
     TEST_ASSERT_EQUAL_HEX32(J1939_PGN_DM1, rx.pgn);
     TEST_ASSERT_EQUAL_HEX8(0x20u, rx.sa);
@@ -479,21 +479,21 @@ void test_transport_protocol_reassembly(void)
     for (uint8_t seq = 1; sent < sizeof(MSG); seq++)
     {
         uint8_t chunk = (uint8_t)((sizeof(MSG) - sent) < 7 ? (sizeof(MSG) - sent) : 7);
-        J1939.build_tp_dt_args.out = &f;
-        J1939.build_tp_dt_args.sa = 0x20;
-        J1939.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
-        J1939.build_tp_dt_args.seq = seq;
-        J1939.build_tp_dt_args.chunk = MSG + sent;
-        J1939.build_tp_dt_args.chunk_len = chunk;
+        J1939V.build_tp_dt_args.out = &f;
+        J1939V.build_tp_dt_args.sa = 0x20;
+        J1939V.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
+        J1939V.build_tp_dt_args.seq = seq;
+        J1939V.build_tp_dt_args.chunk = MSG + sent;
+        J1939V.build_tp_dt_args.chunk_len = chunk;
         J1939.build_tp_dt(protocore_j1939_span());
-        TEST_ASSERT_TRUE(J1939.ok);
+        TEST_ASSERT_TRUE(J1939V.ok);
         TEST_ASSERT_EQUAL_HEX8(seq, f.data[0]);
         TEST_ASSERT_EQUAL_UINT8(8u, f.dlc); // always eight octets on the wire
         sent += chunk;
-        J1939.tp_feed_args.rx = &rx;
-        J1939.tp_feed_args.f = &f;
+        J1939V.tp_feed_args.rx = &rx;
+        J1939V.tp_feed_args.f = &f;
         J1939.tp_feed(protocore_j1939_span());
-        J1939TpResult r = J1939.tp;
+        J1939TpResult r = J1939V.tp;
         TEST_ASSERT_EQUAL_INT(sent < sizeof(MSG) ? J1939_TP_PROGRESS : J1939_TP_COMPLETE, r);
     }
     TEST_ASSERT_EQUAL_UINT16(sizeof(MSG), rx.received);
@@ -506,150 +506,150 @@ void test_transport_protocol_rejects_bad_sequences(void)
 {
     static const uint8_t MSG[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
     J1939TpRx rx;
-    J1939.tp_reset_args.rx = &rx;
+    J1939V.tp_reset_args.rx = &rx;
     J1939.tp_reset(protocore_j1939_span());
 
     CanFrame f;
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = 16;
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = 16;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.tp_feed_args.rx = &rx;
-    J1939.tp_feed_args.f = &f;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.tp_feed_args.rx = &rx;
+    J1939V.tp_feed_args.f = &f;
     J1939.tp_feed(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_INT(J1939_TP_STARTED, J1939.tp);
+    TEST_ASSERT_EQUAL_INT(J1939_TP_STARTED, J1939V.tp);
 
     // A packet from a different source is ignored, not merged.
-    J1939.build_tp_dt_args.out = &f;
-    J1939.build_tp_dt_args.sa = 0x21;
-    J1939.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
-    J1939.build_tp_dt_args.seq = 1;
-    J1939.build_tp_dt_args.chunk = MSG;
-    J1939.build_tp_dt_args.chunk_len = 7;
+    J1939V.build_tp_dt_args.out = &f;
+    J1939V.build_tp_dt_args.sa = 0x21;
+    J1939V.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
+    J1939V.build_tp_dt_args.seq = 1;
+    J1939V.build_tp_dt_args.chunk = MSG;
+    J1939V.build_tp_dt_args.chunk_len = 7;
     J1939.build_tp_dt(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.tp_feed_args.rx = &rx;
-    J1939.tp_feed_args.f = &f;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.tp_feed_args.rx = &rx;
+    J1939V.tp_feed_args.f = &f;
     J1939.tp_feed(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, J1939.tp);
+    TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, J1939V.tp);
 
     // Skipping packet 1 aborts the session.
-    J1939.build_tp_dt_args.out = &f;
-    J1939.build_tp_dt_args.sa = 0x20;
-    J1939.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
-    J1939.build_tp_dt_args.seq = 2;
-    J1939.build_tp_dt_args.chunk = MSG;
-    J1939.build_tp_dt_args.chunk_len = 7;
+    J1939V.build_tp_dt_args.out = &f;
+    J1939V.build_tp_dt_args.sa = 0x20;
+    J1939V.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
+    J1939V.build_tp_dt_args.seq = 2;
+    J1939V.build_tp_dt_args.chunk = MSG;
+    J1939V.build_tp_dt_args.chunk_len = 7;
     J1939.build_tp_dt(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.tp_feed_args.rx = &rx;
-    J1939.tp_feed_args.f = &f;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.tp_feed_args.rx = &rx;
+    J1939V.tp_feed_args.f = &f;
     J1939.tp_feed(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_INT(J1939_TP_ERROR, J1939.tp);
+    TEST_ASSERT_EQUAL_INT(J1939_TP_ERROR, J1939V.tp);
     TEST_ASSERT_FALSE(rx.active);
 
     // A data packet with no session open is ignored.
-    J1939.build_tp_dt_args.out = &f;
-    J1939.build_tp_dt_args.sa = 0x20;
-    J1939.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
-    J1939.build_tp_dt_args.seq = 1;
-    J1939.build_tp_dt_args.chunk = MSG;
-    J1939.build_tp_dt_args.chunk_len = 7;
+    J1939V.build_tp_dt_args.out = &f;
+    J1939V.build_tp_dt_args.sa = 0x20;
+    J1939V.build_tp_dt_args.da = J1939_ADDR_GLOBAL;
+    J1939V.build_tp_dt_args.seq = 1;
+    J1939V.build_tp_dt_args.chunk = MSG;
+    J1939V.build_tp_dt_args.chunk_len = 7;
     J1939.build_tp_dt(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
-    J1939.tp_feed_args.rx = &rx;
-    J1939.tp_feed_args.f = &f;
+    TEST_ASSERT_TRUE(J1939V.ok);
+    J1939V.tp_feed_args.rx = &rx;
+    J1939V.tp_feed_args.f = &f;
     J1939.tp_feed(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, J1939.tp);
+    TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, J1939V.tp);
 
     // An announce whose packet count contradicts its size is an error, not a session.
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = 16;
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = 16;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     f.data[3] = 2; // 16 octets need 3 packets
-    J1939.tp_feed_args.rx = &rx;
-    J1939.tp_feed_args.f = &f;
+    J1939V.tp_feed_args.rx = &rx;
+    J1939V.tp_feed_args.f = &f;
     J1939.tp_feed(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_INT(J1939_TP_ERROR, J1939.tp);
+    TEST_ASSERT_EQUAL_INT(J1939_TP_ERROR, J1939V.tp);
 
     // CTS, EOM and Abort are originator-side control, not receiver-side session starts.
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = 16;
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = 16;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     f.data[0] = J1939_TP_CM_CTS;
-    J1939.tp_feed_args.rx = &rx;
-    J1939.tp_feed_args.f = &f;
+    J1939V.tp_feed_args.rx = &rx;
+    J1939V.tp_feed_args.f = &f;
     J1939.tp_feed(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, J1939.tp);
+    TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, J1939V.tp);
 
     // A standard (11-bit) frame is never J1939.
-    J1939.build_bam_cm_args.out = &f;
-    J1939.build_bam_cm_args.sa = 0x20;
-    J1939.build_bam_cm_args.pgn = J1939_PGN_DM1;
-    J1939.build_bam_cm_args.total_size = 16;
+    J1939V.build_bam_cm_args.out = &f;
+    J1939V.build_bam_cm_args.sa = 0x20;
+    J1939V.build_bam_cm_args.pgn = J1939_PGN_DM1;
+    J1939V.build_bam_cm_args.total_size = 16;
     J1939.build_bam_cm(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     f.extended = PROTO_FALSE;
-    J1939.tp_feed_args.rx = &rx;
-    J1939.tp_feed_args.f = &f;
+    J1939V.tp_feed_args.rx = &rx;
+    J1939V.tp_feed_args.f = &f;
     J1939.tp_feed(protocore_j1939_span());
-    TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, J1939.tp);
+    TEST_ASSERT_EQUAL_INT(J1939_TP_IGNORED, J1939V.tp);
 
     static const uint8_t CHUNK[7] = {1, 2, 3, 4, 5, 6, 7};
-    J1939.build_tp_dt_args.out = &f;
-    J1939.build_tp_dt_args.sa = 0x20;
-    J1939.build_tp_dt_args.da = 0xFF;
-    J1939.build_tp_dt_args.seq = 0;
-    J1939.build_tp_dt_args.chunk = CHUNK;
-    J1939.build_tp_dt_args.chunk_len = 7;
+    J1939V.build_tp_dt_args.out = &f;
+    J1939V.build_tp_dt_args.sa = 0x20;
+    J1939V.build_tp_dt_args.da = 0xFF;
+    J1939V.build_tp_dt_args.seq = 0;
+    J1939V.build_tp_dt_args.chunk = CHUNK;
+    J1939V.build_tp_dt_args.chunk_len = 7;
     J1939.build_tp_dt(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok); // sequence is 1-based
-    J1939.build_tp_dt_args.out = &f;
-    J1939.build_tp_dt_args.sa = 0x20;
-    J1939.build_tp_dt_args.da = 0xFF;
-    J1939.build_tp_dt_args.seq = 1;
-    J1939.build_tp_dt_args.chunk = CHUNK;
-    J1939.build_tp_dt_args.chunk_len = 8;
+    TEST_ASSERT_FALSE(J1939V.ok); // sequence is 1-based
+    J1939V.build_tp_dt_args.out = &f;
+    J1939V.build_tp_dt_args.sa = 0x20;
+    J1939V.build_tp_dt_args.da = 0xFF;
+    J1939V.build_tp_dt_args.seq = 1;
+    J1939V.build_tp_dt_args.chunk = CHUNK;
+    J1939V.build_tp_dt_args.chunk_len = 8;
     J1939.build_tp_dt(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok); // at most seven octets
-    J1939.build_tp_dt_args.out = &f;
-    J1939.build_tp_dt_args.sa = 0x20;
-    J1939.build_tp_dt_args.da = 0xFF;
-    J1939.build_tp_dt_args.seq = 1;
-    J1939.build_tp_dt_args.chunk = CHUNK;
-    J1939.build_tp_dt_args.chunk_len = 0;
+    TEST_ASSERT_FALSE(J1939V.ok); // at most seven octets
+    J1939V.build_tp_dt_args.out = &f;
+    J1939V.build_tp_dt_args.sa = 0x20;
+    J1939V.build_tp_dt_args.da = 0xFF;
+    J1939V.build_tp_dt_args.seq = 1;
+    J1939V.build_tp_dt_args.chunk = CHUNK;
+    J1939V.build_tp_dt_args.chunk_len = 0;
     J1939.build_tp_dt(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
-    J1939.build_tp_dt_args.out = &f;
-    J1939.build_tp_dt_args.sa = 0x20;
-    J1939.build_tp_dt_args.da = 0xFF;
-    J1939.build_tp_dt_args.seq = 1;
-    J1939.build_tp_dt_args.chunk = NULL;
-    J1939.build_tp_dt_args.chunk_len = 7;
+    TEST_ASSERT_FALSE(J1939V.ok);
+    J1939V.build_tp_dt_args.out = &f;
+    J1939V.build_tp_dt_args.sa = 0x20;
+    J1939V.build_tp_dt_args.da = 0xFF;
+    J1939V.build_tp_dt_args.seq = 1;
+    J1939V.build_tp_dt_args.chunk = NULL;
+    J1939V.build_tp_dt_args.chunk_len = 7;
     J1939.build_tp_dt(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
+    TEST_ASSERT_FALSE(J1939V.ok);
 }
 
 // Build a PDU2 frame carrying @p data so a decoder can be handed a whole message.
 static void pdu2(CanFrame *f, uint32_t pgn, const uint8_t data[8])
 {
-    J1939.build_message_args.out = f;
-    J1939.build_message_args.priority = 3;
-    J1939.build_message_args.pgn = pgn;
-    J1939.build_message_args.sa = 0x00;
-    J1939.build_message_args.da = J1939_ADDR_GLOBAL;
-    J1939.build_message_args.data = data;
-    J1939.build_message_args.len = 8;
+    J1939V.build_message_args.out = f;
+    J1939V.build_message_args.priority = 3;
+    J1939V.build_message_args.pgn = pgn;
+    J1939V.build_message_args.sa = 0x00;
+    J1939V.build_message_args.da = J1939_ADDR_GLOBAL;
+    J1939V.build_message_args.data = data;
+    J1939V.build_message_args.len = 8;
     J1939.build_message(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
 }
 
 // EEC1 (PGN 61444), J1939-71: byte 1 low nibble is the torque mode; bytes 2 and 3 are percent
@@ -663,10 +663,10 @@ void test_decode_eec1(void)
 
     J1939Eec1 e;
     memset(&e, 0, sizeof(e));
-    J1939.decode_eec1_args.f = &f;
-    J1939.decode_eec1_args.out = &e;
+    J1939V.decode_eec1_args.f = &f;
+    J1939V.decode_eec1_args.out = &e;
     J1939.decode_eec1(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_UINT8(3u, e.torque_mode);
     TEST_ASSERT_EQUAL_INT16(0, e.drivers_demand_torque_pct); // raw 125 -> 0 %
     TEST_ASSERT_EQUAL_INT16(125, e.actual_engine_torque_pct);
@@ -681,26 +681,26 @@ void test_decode_eec1(void)
     na[3] = 0x00;
     na[4] = 0xFB;
     pdu2(&f, J1939_PGN_EEC1, na);
-    J1939.decode_eec1_args.f = &f;
-    J1939.decode_eec1_args.out = &e;
+    J1939V.decode_eec1_args.f = &f;
+    J1939V.decode_eec1_args.out = &e;
     J1939.decode_eec1(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_INT16(J1939_TORQUE_NA, e.drivers_demand_torque_pct);
     TEST_ASSERT_EQUAL_INT16(J1939_TORQUE_NA, e.actual_engine_torque_pct);
     TEST_ASSERT_FALSE(e.engine_speed_valid);
 
     // A decoder only accepts its own PGN.
     pdu2(&f, J1939_PGN_ET1, DATA);
-    J1939.decode_eec1_args.f = &f;
-    J1939.decode_eec1_args.out = &e;
+    J1939V.decode_eec1_args.f = &f;
+    J1939V.decode_eec1_args.out = &e;
     J1939.decode_eec1(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
+    TEST_ASSERT_FALSE(J1939V.ok);
     pdu2(&f, J1939_PGN_EEC1, DATA);
     f.dlc = 7;
-    J1939.decode_eec1_args.f = &f;
-    J1939.decode_eec1_args.out = &e;
+    J1939V.decode_eec1_args.f = &f;
+    J1939V.decode_eec1_args.out = &e;
     J1939.decode_eec1(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
+    TEST_ASSERT_FALSE(J1939V.ok);
 }
 
 // ET1 (PGN 65262): coolant and fuel temperature at 1 degC/bit with a -40 offset, oil temperature
@@ -716,10 +716,10 @@ void test_decode_et1(void)
 
     J1939Et1 t;
     memset(&t, 0, sizeof(t));
-    J1939.decode_et1_args.f = &f;
-    J1939.decode_et1_args.out = &t;
+    J1939V.decode_et1_args.f = &f;
+    J1939V.decode_et1_args.out = &t;
     J1939.decode_et1(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_TRUE(t.coolant_valid);
     TEST_ASSERT_EQUAL_FLOAT(40.0f, t.coolant_temp_c);
     TEST_ASSERT_TRUE(t.fuel_valid);
@@ -738,10 +738,10 @@ void test_decode_ccvs(void)
 
     J1939Ccvs c;
     memset(&c, 0, sizeof(c));
-    J1939.decode_ccvs_args.f = &f;
-    J1939.decode_ccvs_args.out = &c;
+    J1939V.decode_ccvs_args.f = &f;
+    J1939V.decode_ccvs_args.out = &c;
     J1939.decode_ccvs(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_TRUE(c.speed_valid);
     TEST_ASSERT_EQUAL_FLOAT(25.0f, c.wheel_speed_kmh);
     TEST_ASSERT_EQUAL_UINT8(1u, c.cruise_active);
@@ -758,10 +758,10 @@ void test_decode_vd(void)
 
     J1939Vd v;
     memset(&v, 0, sizeof(v));
-    J1939.decode_vd_args.f = &f;
-    J1939.decode_vd_args.out = &v;
+    J1939V.decode_vd_args.f = &f;
+    J1939V.decode_vd_args.out = &v;
     J1939.decode_vd(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_TRUE(v.trip_valid);
     TEST_ASSERT_EQUAL_DOUBLE(1000.0, v.trip_km);
     TEST_ASSERT_FALSE(v.total_valid);
@@ -769,10 +769,10 @@ void test_decode_vd(void)
     // 0xFAFFFFFF is still a reading: 4211081215 * 0.125 = 526385151.875 km.
     static const uint8_t EDGE[8] = {0xFF, 0xFF, 0xFF, 0xFA, 0xFF, 0xFF, 0xFF, 0xFA};
     pdu2(&f, J1939_PGN_VD, EDGE);
-    J1939.decode_vd_args.f = &f;
-    J1939.decode_vd_args.out = &v;
+    J1939V.decode_vd_args.f = &f;
+    J1939V.decode_vd_args.out = &v;
     J1939.decode_vd(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_TRUE(v.trip_valid);
     TEST_ASSERT_EQUAL_DOUBLE(526385151.875, v.trip_km);
 }
@@ -789,10 +789,10 @@ void test_decode_lfe_amb_ic1(void)
     pdu2(&f, J1939_PGN_LFE, LFE);
     J1939Lfe l;
     memset(&l, 0, sizeof(l));
-    J1939.decode_lfe_args.f = &f;
-    J1939.decode_lfe_args.out = &l;
+    J1939V.decode_lfe_args.f = &f;
+    J1939V.decode_lfe_args.out = &l;
     J1939.decode_lfe(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_TRUE(l.fuel_rate_valid);
     TEST_ASSERT_EQUAL_FLOAT(50.0f, l.fuel_rate_lph);
     TEST_ASSERT_EQUAL_FLOAT(1.0f, l.instant_econ_kmpl);
@@ -804,10 +804,10 @@ void test_decode_lfe_amb_ic1(void)
     pdu2(&f, J1939_PGN_AMB, AMB);
     J1939Amb a;
     memset(&a, 0, sizeof(a));
-    J1939.decode_amb_args.f = &f;
-    J1939.decode_amb_args.out = &a;
+    J1939V.decode_amb_args.f = &f;
+    J1939V.decode_amb_args.out = &a;
     J1939.decode_amb(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_TRUE(a.baro_valid);
     TEST_ASSERT_EQUAL_FLOAT(100.0f, a.baro_kpa);
     TEST_ASSERT_EQUAL_FLOAT(20.0f, a.cab_temp_c);
@@ -820,10 +820,10 @@ void test_decode_lfe_amb_ic1(void)
     pdu2(&f, J1939_PGN_IC1, IC1);
     J1939Ic1 i;
     memset(&i, 0, sizeof(i));
-    J1939.decode_ic1_args.f = &f;
-    J1939.decode_ic1_args.out = &i;
+    J1939V.decode_ic1_args.f = &f;
+    J1939V.decode_ic1_args.out = &i;
     J1939.decode_ic1(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_FLOAT(100.0f, i.trap_inlet_kpa);
     TEST_ASSERT_TRUE(i.boost_valid);
     TEST_ASSERT_EQUAL_FLOAT(200.0f, i.boost_kpa);
@@ -853,13 +853,13 @@ void test_decode_dm1(void)
     J1939Dtc dtc[4];
     memset(&d, 0, sizeof(d));
     memset(dtc, 0, sizeof(dtc));
-    J1939.decode_dm1_args.body = BODY;
-    J1939.decode_dm1_args.len = sizeof(BODY);
-    J1939.decode_dm1_args.out = &d;
-    J1939.decode_dm1_args.out_dtcs = dtc;
-    J1939.decode_dm1_args.max = 4;
+    J1939V.decode_dm1_args.body = BODY;
+    J1939V.decode_dm1_args.len = sizeof(BODY);
+    J1939V.decode_dm1_args.out = &d;
+    J1939V.decode_dm1_args.out_dtcs = dtc;
+    J1939V.decode_dm1_args.max = 4;
     J1939.decode_dm1(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
 
     // 0x54 = 01 01 01 00: MIL 1, red stop 1, amber 1, protect 0.
     TEST_ASSERT_EQUAL_UINT8(1u, d.mil);
@@ -879,53 +879,53 @@ void test_decode_dm1(void)
 
     // The all-zero DTC is the "no active fault" placeholder and is not reported as a fault.
     static const uint8_t NONE[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    J1939.decode_dm1_args.body = NONE;
-    J1939.decode_dm1_args.len = sizeof(NONE);
-    J1939.decode_dm1_args.out = &d;
-    J1939.decode_dm1_args.out_dtcs = dtc;
-    J1939.decode_dm1_args.max = 4;
+    J1939V.decode_dm1_args.body = NONE;
+    J1939V.decode_dm1_args.len = sizeof(NONE);
+    J1939V.decode_dm1_args.out = &d;
+    J1939V.decode_dm1_args.out_dtcs = dtc;
+    J1939V.decode_dm1_args.max = 4;
     J1939.decode_dm1(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_UINT8(0u, d.dtc_count);
 
     // The two status octets are the whole minimum; the lamps are readable without a DTC array.
-    J1939.decode_dm1_args.body = BODY;
-    J1939.decode_dm1_args.len = 2;
-    J1939.decode_dm1_args.out = &d;
-    J1939.decode_dm1_args.out_dtcs = NULL;
-    J1939.decode_dm1_args.max = 0;
+    J1939V.decode_dm1_args.body = BODY;
+    J1939V.decode_dm1_args.len = 2;
+    J1939V.decode_dm1_args.out = &d;
+    J1939V.decode_dm1_args.out_dtcs = NULL;
+    J1939V.decode_dm1_args.max = 0;
     J1939.decode_dm1(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_UINT8(0u, d.dtc_count);
-    J1939.decode_dm1_args.body = BODY;
-    J1939.decode_dm1_args.len = 1;
-    J1939.decode_dm1_args.out = &d;
-    J1939.decode_dm1_args.out_dtcs = dtc;
-    J1939.decode_dm1_args.max = 4;
+    J1939V.decode_dm1_args.body = BODY;
+    J1939V.decode_dm1_args.len = 1;
+    J1939V.decode_dm1_args.out = &d;
+    J1939V.decode_dm1_args.out_dtcs = dtc;
+    J1939V.decode_dm1_args.max = 4;
     J1939.decode_dm1(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
-    J1939.decode_dm1_args.body = NULL;
-    J1939.decode_dm1_args.len = 10;
-    J1939.decode_dm1_args.out = &d;
-    J1939.decode_dm1_args.out_dtcs = dtc;
-    J1939.decode_dm1_args.max = 4;
+    TEST_ASSERT_FALSE(J1939V.ok);
+    J1939V.decode_dm1_args.body = NULL;
+    J1939V.decode_dm1_args.len = 10;
+    J1939V.decode_dm1_args.out = &d;
+    J1939V.decode_dm1_args.out_dtcs = dtc;
+    J1939V.decode_dm1_args.max = 4;
     J1939.decode_dm1(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
-    J1939.decode_dm1_args.body = BODY;
-    J1939.decode_dm1_args.len = 10;
-    J1939.decode_dm1_args.out = NULL;
-    J1939.decode_dm1_args.out_dtcs = dtc;
-    J1939.decode_dm1_args.max = 4;
+    TEST_ASSERT_FALSE(J1939V.ok);
+    J1939V.decode_dm1_args.body = BODY;
+    J1939V.decode_dm1_args.len = 10;
+    J1939V.decode_dm1_args.out = NULL;
+    J1939V.decode_dm1_args.out_dtcs = dtc;
+    J1939V.decode_dm1_args.max = 4;
     J1939.decode_dm1(protocore_j1939_span());
-    TEST_ASSERT_FALSE(J1939.ok);
+    TEST_ASSERT_FALSE(J1939V.ok);
 
     // A caller array smaller than the DTC list stops at its capacity rather than overrunning.
-    J1939.decode_dm1_args.body = BODY;
-    J1939.decode_dm1_args.len = sizeof(BODY);
-    J1939.decode_dm1_args.out = &d;
-    J1939.decode_dm1_args.out_dtcs = dtc;
-    J1939.decode_dm1_args.max = 1;
+    J1939V.decode_dm1_args.body = BODY;
+    J1939V.decode_dm1_args.len = sizeof(BODY);
+    J1939V.decode_dm1_args.out = &d;
+    J1939V.decode_dm1_args.out_dtcs = dtc;
+    J1939V.decode_dm1_args.max = 1;
     J1939.decode_dm1(protocore_j1939_span());
-    TEST_ASSERT_TRUE(J1939.ok);
+    TEST_ASSERT_TRUE(J1939V.ok);
     TEST_ASSERT_EQUAL_UINT8(1u, d.dtc_count);
 }

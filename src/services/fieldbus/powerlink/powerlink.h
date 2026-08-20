@@ -168,10 +168,16 @@ typedef struct
     PowerlinkSoaArgs soa_args;
     PowerlinkAsndArgs asnd_args;
     PowerlinkParseArgs parse_args;
-
     proto_bool ok;
     size_t n;
+} PowerlinkVars;
 
+/** @brief The operands and the outcome. */
+extern PowerlinkVars PowerlinkV;
+
+/** @brief The entries. */
+typedef struct
+{
     void (*const build)(uint8_t *restrict work);
     void (*const soc)(uint8_t *restrict work);
     void (*const preq)(uint8_t *restrict work);
@@ -181,8 +187,29 @@ typedef struct
     void (*const parse)(uint8_t *restrict work);
 } PowerlinkNs;
 
-/** @brief The one symbol this module exports. */
-extern PowerlinkNs Powerlink;
+// What the table binds, defined once in the .c and taking one parameter each: everything
+// else an entry needs is an operand in PowerlinkV or a region of the borrow at a fixed offset.
+void protocore_powerlink_build(uint8_t *restrict work);
+void protocore_powerlink_soc(uint8_t *restrict work);
+void protocore_powerlink_preq(uint8_t *restrict work);
+void protocore_powerlink_pres(uint8_t *restrict work);
+void protocore_powerlink_soa(uint8_t *restrict work);
+void protocore_powerlink_asnd(uint8_t *restrict work);
+void protocore_powerlink_parse(uint8_t *restrict work);
+
+// `static const`, initialised HERE rather than `extern` against a definition in the .c: a
+// const object whose initializer every translation unit can see is a COMPILE-TIME FACT, so
+// `Powerlink.build(work)` resolves to a named function and becomes a DIRECT call. An extern table
+// leaves the call indirect and the symbol live at every level, -O2 -flto included.
+static const PowerlinkNs Powerlink __attribute__((unused)) = {
+    .build = protocore_powerlink_build,
+    .soc = protocore_powerlink_soc,
+    .preq = protocore_powerlink_preq,
+    .pres = protocore_powerlink_pres,
+    .soa = protocore_powerlink_soa,
+    .asnd = protocore_powerlink_asnd,
+    .parse = protocore_powerlink_parse,
+};
 
 PROTOCORE_END_DECLS
 

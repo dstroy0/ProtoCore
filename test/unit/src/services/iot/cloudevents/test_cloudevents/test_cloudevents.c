@@ -31,16 +31,16 @@ void setUp(void)
     HttpParserV.reset_args.req = &g_req;
     HttpParser.reset(protocore_http_parser_span());
     memset(g_out, 0, sizeof(g_out));
-    CloudEvents.attr.id = NULL;
-    CloudEvents.attr.source = NULL;
-    CloudEvents.attr.type = NULL;
-    CloudEvents.attr.subject = NULL;
-    CloudEvents.attr.datacontenttype = NULL;
-    CloudEvents.data.json = NULL;
-    CloudEvents.data.str = NULL;
-    CloudEvents.envelope.out = g_out;
-    CloudEvents.envelope.cap = sizeof(g_out);
-    CloudEvents.msg.req = NULL;
+    CloudEventsV.attr.id = NULL;
+    CloudEventsV.attr.source = NULL;
+    CloudEventsV.attr.type = NULL;
+    CloudEventsV.attr.subject = NULL;
+    CloudEventsV.attr.datacontenttype = NULL;
+    CloudEventsV.data.json = NULL;
+    CloudEventsV.data.str = NULL;
+    CloudEventsV.envelope.out = g_out;
+    CloudEventsV.envelope.cap = sizeof(g_out);
+    CloudEventsV.msg.req = NULL;
 }
 void tearDown(void)
 {
@@ -76,19 +76,19 @@ void test_binary_mode_published_request(void)
     feed(REQ);
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, g_req.parse_state);
 
-    CloudEvents.msg.req = &g_req;
+    CloudEventsV.msg.req = &g_req;
     CloudEvents.read_binary(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok); // all three REQUIRED attributes arrived
+    TEST_ASSERT_TRUE(CloudEventsV.ok); // all three REQUIRED attributes arrived
 
-    TEST_ASSERT_EQUAL_STRING("1234-1234-1234", CloudEvents.attr.id);
-    TEST_ASSERT_EQUAL_STRING("/mycontext/subcontext", CloudEvents.attr.source);
-    TEST_ASSERT_EQUAL_STRING("com.example.someevent", CloudEvents.attr.type);
+    TEST_ASSERT_EQUAL_STRING("1234-1234-1234", CloudEventsV.attr.id);
+    TEST_ASSERT_EQUAL_STRING("/mycontext/subcontext", CloudEventsV.attr.source);
+    TEST_ASSERT_EQUAL_STRING("com.example.someevent", CloudEventsV.attr.type);
     // sec 3.1.1: datacontenttype rides in Content-Type, never in a ce- header
-    TEST_ASSERT_EQUAL_STRING("application/json", CloudEvents.attr.datacontenttype);
+    TEST_ASSERT_EQUAL_STRING("application/json", CloudEventsV.attr.datacontenttype);
     // sec 3.1.2: the payload is the body, so no attribute carries it
-    TEST_ASSERT_NULL(CloudEvents.data.json);
-    TEST_ASSERT_NULL(CloudEvents.data.str);
-    TEST_ASSERT_EQUAL_UINT(0u, CloudEvents.n);
+    TEST_ASSERT_NULL(CloudEventsV.data.json);
+    TEST_ASSERT_NULL(CloudEventsV.data.str);
+    TEST_ASSERT_EQUAL_UINT(0u, CloudEventsV.n);
     // and the body is where the binding says it is
     TEST_ASSERT_EQUAL_STRING("{}", (const char *)g_req.body);
 }
@@ -106,10 +106,10 @@ void test_binary_mode_optional_subject(void)
                                "\r\n";
     feed(WITH);
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, g_req.parse_state);
-    CloudEvents.msg.req = &g_req;
+    CloudEventsV.msg.req = &g_req;
     CloudEvents.read_binary(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
-    TEST_ASSERT_EQUAL_STRING("mynewfile.jpg", CloudEvents.attr.subject);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
+    TEST_ASSERT_EQUAL_STRING("mynewfile.jpg", CloudEventsV.attr.subject);
 
     HttpParserV.reset_args.req = &g_req;
     HttpParser.reset(protocore_http_parser_span());
@@ -120,11 +120,11 @@ void test_binary_mode_optional_subject(void)
                                   "ce-type: com.example.someevent\r\n"
                                   "\r\n";
     feed(WITHOUT);
-    CloudEvents.msg.req = &g_req;
+    CloudEventsV.msg.req = &g_req;
     CloudEvents.read_binary(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
-    TEST_ASSERT_NULL(CloudEvents.attr.subject);
-    TEST_ASSERT_NULL(CloudEvents.attr.datacontenttype); // no Content-Type on this one either
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
+    TEST_ASSERT_NULL(CloudEventsV.attr.subject);
+    TEST_ASSERT_NULL(CloudEventsV.attr.datacontenttype); // no Content-Type on this one either
 }
 
 // CloudEvents 1.0.2, "REQUIRED Attributes": `id`, `source` and `type` are required and each "MUST
@@ -144,19 +144,19 @@ void test_binary_mode_requires_id_source_and_type(void)
         HttpParser.reset(protocore_http_parser_span());
         feed(MISSING[i]);
         TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, g_req.parse_state);
-        CloudEvents.msg.req = &g_req;
+        CloudEventsV.msg.req = &g_req;
         CloudEvents.read_binary(cloudevents_work);
-        TEST_ASSERT_FALSE_MESSAGE(CloudEvents.ok, MISSING[i]);
+        TEST_ASSERT_FALSE_MESSAGE(CloudEventsV.ok, MISSING[i]);
     }
 
     // no message at all clears every attribute rather than leaving the last read's values behind
-    CloudEvents.attr.id = "stale";
-    CloudEvents.msg.req = NULL;
+    CloudEventsV.attr.id = "stale";
+    CloudEventsV.msg.req = NULL;
     CloudEvents.read_binary(cloudevents_work);
-    TEST_ASSERT_FALSE(CloudEvents.ok);
-    TEST_ASSERT_NULL(CloudEvents.attr.id);
-    TEST_ASSERT_NULL(CloudEvents.attr.source);
-    TEST_ASSERT_NULL(CloudEvents.attr.type);
+    TEST_ASSERT_FALSE(CloudEventsV.ok);
+    TEST_ASSERT_NULL(CloudEventsV.attr.id);
+    TEST_ASSERT_NULL(CloudEventsV.attr.source);
+    TEST_ASSERT_NULL(CloudEventsV.attr.type);
 }
 
 // HTTP Protocol Binding 1.0.2 sec 3.2 puts the whole event in one JSON object, and the core
@@ -164,17 +164,17 @@ void test_binary_mode_requires_id_source_and_type(void)
 // attribute values are the JSON Event Format sec 3 example's.
 void test_structured_mode_required_attributes(void)
 {
-    CloudEvents.attr.id = "A234-1234-1234";
-    CloudEvents.attr.source = "/mycontext";
-    CloudEvents.attr.type = "com.example.someevent";
+    CloudEventsV.attr.id = "A234-1234-1234";
+    CloudEventsV.attr.source = "/mycontext";
+    CloudEventsV.attr.type = "com.example.someevent";
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"A234-1234-1234\","
                              "\"source\":\"/mycontext\","
                              "\"type\":\"com.example.someevent\"}",
                              g_out);
-    TEST_ASSERT_EQUAL_UINT(strlen(g_out), CloudEvents.n);
+    TEST_ASSERT_EQUAL_UINT(strlen(g_out), CloudEventsV.n);
     TEST_ASSERT_EQUAL_STRING("1.0", PROTOCORE_CLOUDEVENTS_SPECVERSION);
 }
 
@@ -189,12 +189,12 @@ void test_structured_mode_media_type(void)
 // encapsulated within `data`". A JSON value goes in as a value, not as a string.
 void test_structured_mode_json_data(void)
 {
-    CloudEvents.attr.id = "C234-1234-1234";
-    CloudEvents.attr.source = "/mycontext";
-    CloudEvents.attr.type = "com.example.someevent";
-    CloudEvents.data.json = "{\"appinfoA\":\"abc\",\"appinfoB\":123,\"appinfoC\":true}";
+    CloudEventsV.attr.id = "C234-1234-1234";
+    CloudEventsV.attr.source = "/mycontext";
+    CloudEventsV.attr.type = "com.example.someevent";
+    CloudEventsV.data.json = "{\"appinfoA\":\"abc\",\"appinfoB\":123,\"appinfoC\":true}";
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"C234-1234-1234\","
                              "\"source\":\"/mycontext\","
@@ -208,12 +208,12 @@ void test_structured_mode_json_data(void)
 // specification's fourth example, "I'm just a string".
 void test_structured_mode_string_data(void)
 {
-    CloudEvents.attr.id = "D234-1234-1234";
-    CloudEvents.attr.source = "/mycontext";
-    CloudEvents.attr.type = "com.example.someevent";
-    CloudEvents.data.str = "I'm just a string";
+    CloudEventsV.attr.id = "D234-1234-1234";
+    CloudEventsV.attr.source = "/mycontext";
+    CloudEventsV.attr.type = "com.example.someevent";
+    CloudEventsV.data.str = "I'm just a string";
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"D234-1234-1234\","
                              "\"source\":\"/mycontext\","
@@ -226,13 +226,13 @@ void test_structured_mode_string_data(void)
 // `"datacontenttype":"application/xml"` with an XML string payload is the shape that shows it.
 void test_structured_mode_stated_datacontenttype(void)
 {
-    CloudEvents.attr.id = "B234-1234-1234";
-    CloudEvents.attr.source = "/mycontext";
-    CloudEvents.attr.type = "com.example.someevent";
-    CloudEvents.attr.datacontenttype = "application/xml";
-    CloudEvents.data.str = "<much wow=\"xml\"/>";
+    CloudEventsV.attr.id = "B234-1234-1234";
+    CloudEventsV.attr.source = "/mycontext";
+    CloudEventsV.attr.type = "com.example.someevent";
+    CloudEventsV.attr.datacontenttype = "application/xml";
+    CloudEventsV.data.str = "<much wow=\"xml\"/>";
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"B234-1234-1234\","
                              "\"source\":\"/mycontext\","
@@ -246,12 +246,12 @@ void test_structured_mode_stated_datacontenttype(void)
 // the same as absent and the member is omitted rather than emitted empty.
 void test_structured_mode_optional_attributes(void)
 {
-    CloudEvents.attr.id = "A234-1234-1234";
-    CloudEvents.attr.source = "/mycontext";
-    CloudEvents.attr.type = "com.example.someevent";
-    CloudEvents.attr.subject = "mynewfile.jpg";
+    CloudEventsV.attr.id = "A234-1234-1234";
+    CloudEventsV.attr.source = "/mycontext";
+    CloudEventsV.attr.type = "com.example.someevent";
+    CloudEventsV.attr.subject = "mynewfile.jpg";
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"A234-1234-1234\","
                              "\"source\":\"/mycontext\","
@@ -259,16 +259,16 @@ void test_structured_mode_optional_attributes(void)
                              "\"subject\":\"mynewfile.jpg\"}",
                              g_out);
 
-    CloudEvents.attr.subject = "";
+    CloudEventsV.attr.subject = "";
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_NULL(strstr(g_out, "subject"));
 
     // a datacontenttype with no data at all still describes the (absent) payload
-    CloudEvents.attr.subject = NULL;
-    CloudEvents.attr.datacontenttype = "text/plain";
+    CloudEventsV.attr.subject = NULL;
+    CloudEventsV.attr.datacontenttype = "text/plain";
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_NOT_NULL(strstr(g_out, "\"datacontenttype\":\"text/plain\""));
     TEST_ASSERT_NULL(strstr(g_out, "\"data\":"));
 }
@@ -286,18 +286,18 @@ void test_structured_mode_refuses_missing_required(void)
         {
             for (int c = 0; c < 3; c++)
             {
-                CloudEvents.attr.id = ID[a];
-                CloudEvents.attr.source = SOURCE[b];
-                CloudEvents.attr.type = TYPE[c];
+                CloudEventsV.attr.id = ID[a];
+                CloudEventsV.attr.source = SOURCE[b];
+                CloudEventsV.attr.type = TYPE[c];
                 CloudEvents.build_structured(cloudevents_work);
                 if (a == 2 && b == 2 && c == 2)
                 {
-                    TEST_ASSERT_TRUE(CloudEvents.ok);
+                    TEST_ASSERT_TRUE(CloudEventsV.ok);
                 }
                 else
                 {
-                    TEST_ASSERT_FALSE(CloudEvents.ok);
-                    TEST_ASSERT_EQUAL_UINT(0u, CloudEvents.n);
+                    TEST_ASSERT_FALSE(CloudEventsV.ok);
+                    TEST_ASSERT_EQUAL_UINT(0u, CloudEventsV.n);
                 }
             }
         }
@@ -308,31 +308,31 @@ void test_structured_mode_refuses_missing_required(void)
 // the object needs is enough.
 void test_structured_mode_refuses_a_short_buffer(void)
 {
-    CloudEvents.attr.id = "A234-1234-1234";
-    CloudEvents.attr.source = "/mycontext";
-    CloudEvents.attr.type = "com.example.someevent";
+    CloudEventsV.attr.id = "A234-1234-1234";
+    CloudEventsV.attr.source = "/mycontext";
+    CloudEventsV.attr.type = "com.example.someevent";
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
-    size_t need = CloudEvents.n;
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
+    size_t need = CloudEventsV.n;
 
-    CloudEvents.envelope.cap = need + 1;
+    CloudEventsV.envelope.cap = need + 1;
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
-    TEST_ASSERT_EQUAL_UINT(need, CloudEvents.n);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
+    TEST_ASSERT_EQUAL_UINT(need, CloudEventsV.n);
 
-    CloudEvents.envelope.cap = need;
+    CloudEventsV.envelope.cap = need;
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_FALSE(CloudEvents.ok);
-    TEST_ASSERT_EQUAL_UINT(0u, CloudEvents.n);
+    TEST_ASSERT_FALSE(CloudEventsV.ok);
+    TEST_ASSERT_EQUAL_UINT(0u, CloudEventsV.n);
 
-    CloudEvents.envelope.cap = 0;
+    CloudEventsV.envelope.cap = 0;
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_FALSE(CloudEvents.ok);
+    TEST_ASSERT_FALSE(CloudEventsV.ok);
 
-    CloudEvents.envelope.out = NULL;
-    CloudEvents.envelope.cap = sizeof(g_out);
+    CloudEventsV.envelope.out = NULL;
+    CloudEventsV.envelope.cap = sizeof(g_out);
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_FALSE(CloudEvents.ok);
+    TEST_ASSERT_FALSE(CloudEventsV.ok);
 }
 
 // RFC 8259 sec 7: the quotation mark, the reverse solidus and the control characters U+0000 through
@@ -340,11 +340,11 @@ void test_structured_mode_refuses_a_short_buffer(void)
 // envelope that could would let a producer inject members into its own event.
 void test_attribute_values_are_json_escaped(void)
 {
-    CloudEvents.attr.id = "a\"b\\c";
-    CloudEvents.attr.source = "/my\tcontext";
-    CloudEvents.attr.type = "com.example\nsomeevent";
+    CloudEventsV.attr.id = "a\"b\\c";
+    CloudEventsV.attr.source = "/my\tcontext";
+    CloudEventsV.attr.type = "com.example\nsomeevent";
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"a\\\"b\\\\c\","
                              "\"source\":\"/my\\tcontext\","
@@ -366,12 +366,12 @@ void test_binary_read_feeds_a_structured_build(void)
     feed(REQ);
     TEST_ASSERT_EQUAL_INT(PARSE_COMPLETE, g_req.parse_state);
 
-    CloudEvents.msg.req = &g_req;
+    CloudEventsV.msg.req = &g_req;
     CloudEvents.read_binary(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
 
     CloudEvents.build_structured(cloudevents_work);
-    TEST_ASSERT_TRUE(CloudEvents.ok);
+    TEST_ASSERT_TRUE(CloudEventsV.ok);
     TEST_ASSERT_EQUAL_STRING("{\"specversion\":\"1.0\","
                              "\"id\":\"1234-1234-1234\","
                              "\"source\":\"/mycontext\","

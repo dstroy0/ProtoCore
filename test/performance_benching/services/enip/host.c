@@ -30,21 +30,21 @@ int main(void)
     h.status = EIP_STATUS_SUCCESS;
     h.options = 0;
     uint8_t frame[64];
-    Enip.build_args.buf = frame;
-    Enip.build_args.cap = sizeof(frame);
-    Enip.build_args.h = &h;
-    Enip.build_args.data = cip;
-    Enip.build_args.data_len = sizeof(cip);
+    EnipV.build_args.buf = frame;
+    EnipV.build_args.cap = sizeof(frame);
+    EnipV.build_args.h = &h;
+    EnipV.build_args.data = cip;
+    EnipV.build_args.data_len = sizeof(cip);
     Enip.build(enip_work);
-    size_t frame_len = Enip.n;
+    size_t frame_len = EnipV.n;
 
     uint8_t rs[64];
     const uint8_t ctx[8] = {1, 2, 3, 4, 5, 6, 7, 8};
-    Enip.build_register_session_args.buf = rs;
-    Enip.build_register_session_args.cap = sizeof(rs);
-    Enip.build_register_session_args.sender_context = ctx;
+    EnipV.build_register_session_args.buf = rs;
+    EnipV.build_register_session_args.cap = sizeof(rs);
+    EnipV.build_register_session_args.sender_context = ctx;
     Enip.build_register_session(enip_work);
-    size_t rs_len = Enip.n;
+    size_t rs_len = EnipV.n;
 
     hbench_header();
 
@@ -53,13 +53,13 @@ int main(void)
         uint8_t buf[64];
         volatile size_t sink = 0;
         double ns = 0.0;
-        Enip.build_args.buf = buf;
-        Enip.build_args.cap = sizeof(buf);
-        Enip.build_args.h = &h;
-        Enip.build_args.data = cip;
-        Enip.build_args.data_len = sizeof(cip);
+        EnipV.build_args.buf = buf;
+        EnipV.build_args.cap = sizeof(buf);
+        EnipV.build_args.h = &h;
+        EnipV.build_args.data = cip;
+        EnipV.build_args.data_len = sizeof(cip);
         Enip.build(enip_work);
-        HBENCH_NS(5000000, sink += Enip.n, ns);
+        HBENCH_NS(5000000, sink += EnipV.n, ns);
         hbench_row("enip", "Enip.build (encap)", ns, (double)frame_len);
         (void)sink;
     }
@@ -75,13 +75,13 @@ int main(void)
                 EipHeader out;
                 const uint8_t *data = NULL;
                 size_t dlen = 0;
-                Enip.parse_args.buf = frame;
-                Enip.parse_args.len = frame_len;
-                Enip.parse_args.out = &out;
-                Enip.parse_args.data = &data;
-                Enip.parse_args.data_len = &dlen;
+                EnipV.parse_args.buf = frame;
+                EnipV.parse_args.len = frame_len;
+                EnipV.parse_args.out = &out;
+                EnipV.parse_args.data = &data;
+                EnipV.parse_args.data_len = &dlen;
                 Enip.parse(enip_work);
-                if (Enip.ok)
+                if (EnipV.ok)
                 {
                     sink += dlen + out.command;
                 }
@@ -96,11 +96,11 @@ int main(void)
         uint8_t buf[64];
         volatile size_t sink = 0;
         double ns = 0.0;
-        Enip.build_register_session_args.buf = buf;
-        Enip.build_register_session_args.cap = sizeof(buf);
-        Enip.build_register_session_args.sender_context = ctx;
+        EnipV.build_register_session_args.buf = buf;
+        EnipV.build_register_session_args.cap = sizeof(buf);
+        EnipV.build_register_session_args.sender_context = ctx;
         Enip.build_register_session(enip_work);
-        HBENCH_NS(5000000, sink += Enip.n, ns);
+        HBENCH_NS(5000000, sink += EnipV.n, ns);
         hbench_row("enip", "register_session (build)", ns, (double)rs_len);
         (void)sink;
     }

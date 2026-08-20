@@ -305,17 +305,17 @@ uint8_t *protocore_ftp_session_span(void)
     return s_own.span;
 }
 
-static void ftp_session_store(uint8_t *restrict work)
+void protocore_ftp_session_store(uint8_t *restrict work)
 {
-    const FtpTarget *target = FtpSession.store_args.target;
-    const char *remote_path = FtpSession.store_args.remote_path;
-    size_t total = FtpSession.store_args.total;
-    protocore_ftp_source src = FtpSession.store_args.src;
-    void *ctx = FtpSession.store_args.ctx;
+    const FtpTarget *target = FtpSessionV.store_args.target;
+    const char *remote_path = FtpSessionV.store_args.remote_path;
+    size_t total = FtpSessionV.store_args.total;
+    protocore_ftp_source src = FtpSessionV.store_args.src;
+    void *ctx = FtpSessionV.store_args.ctx;
 
     if (!target || !target->host || !remote_path || remote_path[0] == '\0' || !src)
     {
-        FtpSession.value = PROTOCORE_FTP_FAILED;
+        FtpSessionV.value = PROTOCORE_FTP_FAILED;
         return;
     }
 
@@ -335,7 +335,7 @@ static void ftp_session_store(uint8_t *restrict work)
             PROTOCORE_LOGW(
                 LOG_CTRL_CONNECT_FAILED,
                 ((const protocore_fval[]){PROTOCORE_VSTR(target->host), PROTOCORE_VU32((uint32_t)ctrl_port)}), 2);
-            FtpSession.value = PROTOCORE_FTP_FAILED;
+            FtpSessionV.value = PROTOCORE_FTP_FAILED;
             return;
         }
         FTP_SESSION_CTX(work)->deadline = Clock.ms + PROTOCORE_FTP_TIMEOUT_MS;
@@ -358,7 +358,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED || code != 220)
@@ -377,7 +377,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED)
@@ -409,7 +409,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED || !protocore_ftp_reply_ok(code) || !ftp_send(work, "TYPE", "I"))
@@ -423,7 +423,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             // EPSV first (RFC 2428): it carries only a port, so it survives the NAT that makes
@@ -439,7 +439,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, &rlen);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED)
@@ -478,7 +478,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, &rlen);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             Ftp.ok = PROTO_FALSE;
@@ -508,7 +508,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED || protocore_ftp_reply_class(code) != 1)
@@ -555,7 +555,7 @@ static void ftp_session_store(uint8_t *restrict work)
             st = ftp_await(work, &code, NULL);
             if (st == PROTOCORE_FTP_BUSY)
             {
-                FtpSession.value = PROTOCORE_FTP_BUSY;
+                FtpSessionV.value = PROTOCORE_FTP_BUSY;
                 return;
             }
             if (st == PROTOCORE_FTP_FAILED || code != 226)
@@ -564,7 +564,7 @@ static void ftp_session_store(uint8_t *restrict work)
             }
             ftp_send(work, "QUIT", NULL); // best effort; the transfer is already decided
             ftp_teardown(work);
-            FtpSession.value = PROTOCORE_FTP_READY;
+            FtpSessionV.value = PROTOCORE_FTP_READY;
             return;
 
         case FTP_STEP_IDLE:
@@ -574,14 +574,13 @@ static void ftp_session_store(uint8_t *restrict work)
 
         ftp_send(work, "QUIT", NULL); // best effort; the transfer is already decided
         ftp_teardown(work);
-        FtpSession.value = PROTOCORE_FTP_FAILED;
+        FtpSessionV.value = PROTOCORE_FTP_FAILED;
         return;
     }
 }
 
-FtpSessionNs FtpSession = {
-    .store = ftp_session_store,
-};
+/** @brief The operands and the outcome. */
+FtpSessionVars FtpSessionV;
 
 PROTOCORE_END_DECLS
 

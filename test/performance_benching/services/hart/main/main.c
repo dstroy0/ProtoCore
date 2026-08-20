@@ -35,16 +35,16 @@ void dbench_run(void)
     // benches run over real, spec-conformant bytes (cmd 0x2A, data 11 22 33 - the roundtrip vector).
     static const uint8_t parse_data[3] = {0x11, 0x22, 0x33};
     static uint8_t parse_frame[16];
-    Hart.build_args.delimiter = HART_DELIM_STX;
-    Hart.build_args.addr = &addr_short;
-    Hart.build_args.addr_len = 1;
-    Hart.build_args.command = 0x2A;
-    Hart.build_args.data = parse_data;
-    Hart.build_args.data_len = sizeof(parse_data);
-    Hart.build_args.out = parse_frame;
-    Hart.build_args.cap = sizeof(parse_frame);
+    HartV.build_args.delimiter = HART_DELIM_STX;
+    HartV.build_args.addr = &addr_short;
+    HartV.build_args.addr_len = 1;
+    HartV.build_args.command = 0x2A;
+    HartV.build_args.data = parse_data;
+    HartV.build_args.data_len = sizeof(parse_data);
+    HartV.build_args.out = parse_frame;
+    HartV.build_args.cap = sizeof(parse_frame);
     Hart.build(hart_work);
-    size_t parse_len = Hart.n;
+    size_t parse_len = HartV.n;
 
     static uint8_t out[64];
 
@@ -56,52 +56,48 @@ void dbench_run(void)
         volatile bool sinkb = false;
 
         // Build a short-address command 0 frame (no data).
-        Hart.build_args.delimiter = HART_DELIM_STX;
-        Hart.build_args.addr = &addr_short;
-        Hart.build_args.addr_len = 1;
-        Hart.build_args.command = 0x00;
-        Hart.build_args.data = NULL;
-        Hart.build_args.data_len = 0;
-        Hart.build_args.out = out;
-        Hart.build_args.cap = sizeof(out);
-        DBENCH_OP("Hart.build short cmd0", 100000,
-                  sink += (Hart.build(hart_work), Hart.n));
+        HartV.build_args.delimiter = HART_DELIM_STX;
+        HartV.build_args.addr = &addr_short;
+        HartV.build_args.addr_len = 1;
+        HartV.build_args.command = 0x00;
+        HartV.build_args.data = NULL;
+        HartV.build_args.data_len = 0;
+        HartV.build_args.out = out;
+        HartV.build_args.cap = sizeof(out);
+        DBENCH_OP("Hart.build short cmd0", 100000, sink += (Hart.build(hart_work), HartV.n));
 
         // Build a long-address (5-byte) command 3 frame.
-        Hart.build_args.delimiter = (uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR);
-        Hart.build_args.addr = addr_long;
-        Hart.build_args.addr_len = 5;
-        Hart.build_args.command = 0x03;
-        Hart.build_args.data = NULL;
-        Hart.build_args.data_len = 0;
-        Hart.build_args.out = out;
-        Hart.build_args.cap = sizeof(out);
-        DBENCH_OP("Hart.build long addr", 100000,
-                  sink += (Hart.build(hart_work), Hart.n));
+        HartV.build_args.delimiter = (uint8_t)(HART_DELIM_STX | HART_DELIM_LONG_ADDR);
+        HartV.build_args.addr = addr_long;
+        HartV.build_args.addr_len = 5;
+        HartV.build_args.command = 0x03;
+        HartV.build_args.data = NULL;
+        HartV.build_args.data_len = 0;
+        HartV.build_args.out = out;
+        HartV.build_args.cap = sizeof(out);
+        DBENCH_OP("Hart.build long addr", 100000, sink += (Hart.build(hart_work), HartV.n));
 
         // Parse + checksum-verify a known-good short-address frame with data.
         HartFrame f;
-        Hart.parse_args.frame = parse_frame;
-        Hart.parse_args.len = parse_len;
-        Hart.parse_args.out = &f;
-        DBENCH_OP("Hart.parse w/data", 100000, sinkb ^= (Hart.parse(hart_work), Hart.ok));
+        HartV.parse_args.frame = parse_frame;
+        HartV.parse_args.len = parse_len;
+        HartV.parse_args.out = &f;
+        DBENCH_OP("Hart.parse w/data", 100000, sinkb ^= (Hart.parse(hart_work), HartV.ok));
 
         // Longitudinal XOR checksum over the full frame's byte span (bulk throughput).
-        Hart.checksum_args.bytes = parse_frame;
-        Hart.checksum_args.len = parse_len;
-        DBENCH_BULK("Hart.checksum", 100000, parse_len,
-                    sink8 ^= (Hart.checksum(hart_work), Hart.value));
+        HartV.checksum_args.bytes = parse_frame;
+        HartV.checksum_args.len = parse_len;
+        DBENCH_BULK("Hart.checksum", 100000, parse_len, sink8 ^= (Hart.checksum(hart_work), HartV.value));
 
         // Build the 8-octet HART-IP message header.
-        Hart.ip_build_header_args.msg_type = HARTIP_MSG_REQUEST;
-        Hart.ip_build_header_args.msg_id = HARTIP_ID_TOKEN_PDU;
-        Hart.ip_build_header_args.status = 0;
-        Hart.ip_build_header_args.seq = 0x1234;
-        Hart.ip_build_header_args.total_len = 13;
-        Hart.ip_build_header_args.out = out;
-        Hart.ip_build_header_args.cap = sizeof(out);
-        DBENCH_OP("Hart.ip_build_header", 200000,
-                  sink += (Hart.ip_build_header(hart_work), Hart.n));
+        HartV.ip_build_header_args.msg_type = HARTIP_MSG_REQUEST;
+        HartV.ip_build_header_args.msg_id = HARTIP_ID_TOKEN_PDU;
+        HartV.ip_build_header_args.status = 0;
+        HartV.ip_build_header_args.seq = 0x1234;
+        HartV.ip_build_header_args.total_len = 13;
+        HartV.ip_build_header_args.out = out;
+        HartV.ip_build_header_args.cap = sizeof(out);
+        DBENCH_OP("Hart.ip_build_header", 200000, sink += (Hart.ip_build_header(hart_work), HartV.n));
 
         (void)sink;
         (void)sink8;
