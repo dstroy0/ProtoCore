@@ -119,6 +119,8 @@ All notable changes to ProtoCore are documented here.
 
 ### CI / Build
 
+- update CHANGELOG.md [skip ci] ([`c29483b`](https://github.com/dstroy0/ProtoCore/commit/c29483bb538236abc6b086a4d9a7f58cf5462698))
+- update CHANGELOG.md [skip ci] ([`6c9d173`](https://github.com/dstroy0/ProtoCore/commit/6c9d1737bde0c23f9a31226153f842247c6f5c10))
 - update CHANGELOG.md [skip ci] ([`c68d6ab`](https://github.com/dstroy0/ProtoCore/commit/c68d6abca215db4d7e53b070ed99d8871b0be27b))
 - update CHANGELOG.md [skip ci] ([`af66200`](https://github.com/dstroy0/ProtoCore/commit/af662000dfcb6889ffaca4c2a8c9542b7589f588))
 - update CHANGELOG.md [skip ci] ([`3223726`](https://github.com/dstroy0/ProtoCore/commit/32237269062dcc620ef5eb30a9e0f185a9fe1455))
@@ -395,10 +397,10 @@ All notable changes to ProtoCore are documented here.
 
 ### Changes
 
-<<<<<<< Updated upstream
-=======
+- only the config include above the gate, 195 files ([`5928732`](https://github.com/dstroy0/ProtoCore/commit/5928732eea8dad9f21825c4412faa224f7f54d84))
+- read the gate, and see a static with no initializer ([`ccd315a`](https://github.com/dstroy0/ProtoCore/commit/ccd315a90f3d90602232906b8cf2d29178b9bf04))
+- compare the golden's shape, not its size ([`ec36cd7`](https://github.com/dstroy0/ProtoCore/commit/ec36cd7e236932eda3d0089ef78fd4a287eaf26b))
 - hooks commit: say to single-quote the paragraphs ([`fc5cc5e`](https://github.com/dstroy0/ProtoCore/commit/fc5cc5e73fa7fe280a54604d03f2dc7dbd3d5b08))
->>>>>>> Stashed changes
 - no call spells one as null, 63 sites ([`b03a90a`](https://github.com/dstroy0/ProtoCore/commit/b03a90aed7364cfd3034464b523926d6ae2ad9c3))
 - measure cap-sweep: compile the arm the host never answers ([`4b12dfa`](https://github.com/dstroy0/ProtoCore/commit/4b12dfabfc94af755a1fdab0bdd6c3f9ddc897ed))
 - the no-bus arms of hmmd, ld2410 and pmbus never compiled ([`2965ad1`](https://github.com/dstroy0/ProtoCore/commit/2965ad1dee204142f2ae3c884fb600e39bba0dc7))
